@@ -221,7 +221,7 @@ On `payment.captured` event: unlocks full report access (24h token stored in KV)
 
 ### 500 Internal Error
 ```json
-{ "error": "Internal server error", "request_id": "abc123", "support": "cyberdudebivash@gmail.com" }
+{ "error": "Internal server error", "request_id": "abc123", "support": "bivash@cyberdudebivash.com" }
 ```
 
 ---
@@ -255,4 +255,4 @@ npx wrangler pages deploy ../frontend --project-name cyberdudebivash-security-hu
 
 ---
 
-*CyberDudeBivash Pvt. Ltd. · cyberdudebivash@gmail.com · https://cyberdudebivash.in*
+*CyberDudeBivash Pvt. Ltd. · bivash@cyberdudebivash.com · https://cyberdudebivash.in*

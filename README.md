@@ -195,7 +195,7 @@ result = adapter.generate_compliance("Acme Corp", "iso27001")
 
 | Channel | Details |
 |---------|---------|
-| 📧 Business | cyberdudebivash@gmail.com |
+| 📧 Business | bivash@cyberdudebivash.com |
 | 📧 Enterprise | bivashnayak.ai007@gmail.com |
 | 📞 Phone | +918179881447 |
 | 💬 Discord | cybercoder127001 |
