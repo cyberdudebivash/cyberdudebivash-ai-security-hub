@@ -1,7 +1,7 @@
 name               = "cyberdudebivash-security-hub"
 main               = "src/index.js"
 compatibility_date = "2024-01-01"
-account_id         = "${CLOUDFLARE_ACCOUNT_ID}"
+account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 
 [vars]
 ENVIRONMENT = "production"
@@ -14,7 +14,7 @@ WEBSITE     = "https://cyberdudebivash.in"
 # Replace the id below with output
 [[kv_namespaces]]
 binding = "SECURITY_HUB_KV"
-id      = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id      = "95faae90943f43afa26d552b8385d339"
 
 # ── Secrets (set via: npx wrangler secret put SECRET_NAME) ────────────
 # RAZORPAY_WEBHOOK_SECRET — your Razorpay webhook secret
