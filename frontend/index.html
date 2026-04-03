@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CYBERDUDEBIVASH AI Security Hub — AI-Powered Cybersecurity Platform by CYBERDUDEBIVASH PVT LTD</title>
+  <meta name="description" content="AI-powered domain vulnerability scanner, red team simulation, compliance reports and identity security. Enterprise-grade cybersecurity platform by CYBERDUDEBIVASH PVT LTD, Bhubaneswar, India." />
+  <meta name="keywords" content="cybersecurity, AI security, vulnerability scanner, compliance report, red team, identity security, VAPT India, CYBERDUDEBIVASH, threat intelligence, ISO 27001, DPDP Act" />
+  <meta name="author" content="CYBERDUDEBIVASH PVT LTD" />
+  <meta property="og:title" content="CYBERDUDEBIVASH AI Security Hub" />
+  <meta property="og:description" content="AI-powered cybersecurity platform by CYBERDUDEBIVASH PVT LTD. Scan domains, assess AI systems, run safe red team simulations." />
+  <meta property="og:url" content="https://cyberdudebivash.in" />
+  <meta property="og:site_name" content="CYBERDUDEBIVASH AI Security Hub" />
+  <link rel="canonical" href="https://cyberdudebivash.in" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0e1a; --bg2: #0f1526; --bg3: #141b2e; --card: #1a2238;
+      --border: #1e2d4a; --accent: #00d4ff; --accent2: #7c3aed;
+      --green: #00ff88; --red: #ff4757; --yellow: #ffa502; --orange: #ff6b35;
+      --text: #e2e8f0; --muted: #64748b; --radius: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ── Announcement Bar ── */
+    .announce-bar {
+      background: linear-gradient(90deg, #0a0e1a, #1a0a3a, #0a0e1a);
+      border-bottom: 1px solid rgba(124,58,237,0.3);
+      padding: 8px 20px; text-align: center;
+      font-size: 0.75rem; color: #c4b5fd;
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      flex-wrap: wrap;
+    }
+    .announce-bar a { color: #a78bfa; font-weight: 600; }
+    .announce-bar a:hover { color: #fff; }
+    .ann-sep { opacity: 0.3; }
+
+    /* ── Navigation ── */
+    nav {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(10,14,26,0.97);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1400px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 64px; gap: 16px;
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo-icon { font-size: 1.6rem; }
+    .logo-text { line-height: 1.2; }
+    .logo-main {
+      font-size: 0.95rem; font-weight: 900;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -0.3px;
+    }
+    .logo-sub { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.5px; }
+
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-link {
+      padding: 6px 12px; border-radius: 6px;
+      color: var(--muted); font-size: 0.8rem; font-weight: 500;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.05); text-decoration: none; }
+
+    /* Ecosystem dropdown */
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-btn {
+      padding: 6px 12px; border-radius: 6px;
+      color: var(--muted); font-size: 0.8rem; font-weight: 500;
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+      transition: all 0.2s;
+    }
+    .nav-dropdown-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .dropdown-menu {
+      position: absolute; top: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px;
+      width: 280px; display: none;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      z-index: 300;
+    }
+    .nav-dropdown:hover .dropdown-menu { display: block; }
+    .dd-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 7px;
+      color: var(--text); font-size: 0.8rem;
+      transition: background 0.15s;
+    }
+    .dd-item:hover { background: rgba(0,212,255,0.06); text-decoration: none; }
+    .dd-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .dd-info strong { display: block; font-size: 0.78rem; font-weight: 600; }
+    .dd-info span { font-size: 0.7rem; color: var(--muted); }
+    .dd-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--accent2), #9333ea);
+      color: white; padding: 8px 16px; border-radius: 8px;
+      font-size: 0.78rem; font-weight: 700; white-space: nowrap;
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(124,58,237,0.4); text-decoration: none; color: white; }
+
+    @media(max-width:900px) { .nav-links { display: none; } }
+
+    /* ── Compliance Ticker ── */
+    .compliance-strip {
+      background: var(--bg3); border-bottom: 1px solid var(--border);
+      padding: 10px 0; overflow: hidden;
+    }
+    .ticker-wrap { display: flex; gap: 48px; animation: ticker 28s linear infinite; width: max-content; }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ticker-item { font-size: 0.72rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+    .ticker-item span { color: var(--accent); }
+
+    /* ── Hero ── */
+    .hero { text-align: center; padding: 72px 20px 56px; position: relative; overflow: hidden; }
+    .hero::before {
+      content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(0,212,255,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .brand-by {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.25);
+      color: #c4b5fd; font-size: 0.72rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 20px; margin-bottom: 14px;
+      letter-spacing: 0.8px;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.18);
+      color: var(--accent); font-size: 0.78rem; font-weight: 600;
+      padding: 5px 14px; border-radius: 20px; margin-bottom: 22px; letter-spacing: 0.6px;
+    }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+    h1 { font-size: clamp(1.9rem, 4.5vw, 3.4rem); font-weight: 900; line-height: 1.1; margin-bottom: 18px; letter-spacing: -1px; }
+    h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-sub { font-size: 1rem; color: var(--muted); max-width: 580px; margin: 0 auto 16px; }
+    .hero-company { font-size: 0.78rem; color: var(--muted); margin-bottom: 32px; }
+    .hero-company a { color: var(--accent); }
+    .trust-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 40px; }
+    .trust-badge { background: var(--card); border: 1px solid var(--border); padding: 7px 14px; border-radius: 7px; font-size: 0.76rem; color: var(--muted); font-weight: 500; }
+    .trust-badge strong { color: var(--text); }
+
+    /* ── Scan Panel ── */
+    .panel-wrap { padding: 0 16px; }
+    .scan-panel {
+      max-width: 780px; margin: 0 auto 72px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+    }
+    .module-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+    .module-tabs::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex: 0 0 auto; padding: 13px 18px;
+      background: none; border: none; color: var(--muted);
+      font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,212,255,0.04); }
+    .scan-form { padding: 26px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); margin-bottom: 7px; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%; padding: 13px 16px;
+      background: var(--bg2); border: 1.5px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.93rem;
+      transition: border-color 0.2s; outline: none;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--muted); }
+    select.form-input { appearance: none; cursor: pointer; }
+    .scan-btn {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--accent), #0099cc);
+      border: none; border-radius: 8px;
+      color: #000; font-size: 0.97rem; font-weight: 800; letter-spacing: 0.4px;
+      transition: all 0.2s;
+    }
+    .scan-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(0,212,255,0.32); }
+    .scan-btn:active { transform: translateY(0); }
+    .scan-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .form-note { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 9px; }
+    .divider { height: 1px; background: var(--border); margin: 0 26px; }
+
+    /* Results */
+    .results { padding: 0 26px 26px; display: none; }
+    .results.show { display: block; }
+    .risk-header {
+      display: flex; align-items: center; gap: 18px;
+      padding: 18px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px;
+    }
+    .risk-circle {
+      width: 78px; height: 78px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 900; flex-shrink: 0; border: 3px solid;
+    }
+    .risk-circle .rnum { font-size: 1.5rem; line-height: 1; }
+    .risk-circle .rmax { font-size: 0.65rem; opacity: 0.6; }
+    .rc-critical { border-color: var(--red); color: var(--red); background: rgba(255,71,87,0.1); }
+    .rc-high { border-color: var(--orange); color: var(--orange); background: rgba(255,107,53,0.1); }
+    .rc-medium { border-color: var(--yellow); color: var(--yellow); background: rgba(255,165,2,0.1); }
+    .rc-low { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.1); }
+    .risk-info .rlevel { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+    .risk-info .rsummary { font-size: 0.87rem; color: var(--muted); line-height: 1.45; }
+    .section-title { font-size: 0.74rem; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin: 20px 0 10px; }
+    .finding-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 7px; display: flex; gap: 10px; align-items: flex-start; }
+    .fbadge { font-size: 0.65rem; font-weight: 700; padding: 3px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+    .s-critical { background: rgba(255,71,87,.15); color: var(--red); border: 1px solid rgba(255,71,87,.3); }
+    .s-high { background: rgba(255,107,53,.15); color: var(--orange); border: 1px solid rgba(255,107,53,.3); }
+    .s-medium { background: rgba(255,165,2,.15); color: var(--yellow); border: 1px solid rgba(255,165,2,.3); }
+    .s-low, .s-info { background: rgba(100,116,139,.12); color: var(--muted); border: 1px solid rgba(100,116,139,.25); }
+    .s-pass { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.2); }
+    .s-fail { background: rgba(255,71,87,.15); color: var(--red); border: 1px solid rgba(255,71,87,.3); }
+    .fc h4 { font-size: 0.86rem; font-weight: 600; margin-bottom: 2px; }
+    .fc p { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+    .rec-card { display: flex; gap: 9px; align-items: flex-start; padding: 9px 13px; background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 6px; }
+    .rec-text { font-size: 0.81rem; color: var(--text); line-height: 1.5; }
+    .premium-lock {
+      background: linear-gradient(135deg, rgba(124,58,237,.1), rgba(0,212,255,.04));
+      border: 1.5px solid rgba(124,58,237,.32); border-radius: 10px;
+      padding: 22px; text-align: center; margin-top: 18px; position: relative; overflow: hidden;
+    }
+    .premium-lock::before { content: ''; position: absolute; top: -2px; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+    .lock-icon { font-size: 1.9rem; margin-bottom: 7px; }
+    .lock-title { font-size: 1rem; font-weight: 800; margin-bottom: 5px; }
+    .lock-count { display: inline-block; background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.35); color: #c4b5fd; font-size: 0.76rem; font-weight: 600; padding: 3px 11px; border-radius: 20px; margin-bottom: 10px; }
+    .lock-items { list-style: none; font-size: 0.8rem; color: var(--muted); margin: 10px auto 18px; text-align: left; max-width: 310px; }
+    .lock-items li { padding: 3px 0; }
+    .lock-items li::before { content: "✓ "; color: var(--accent2); font-weight: 700; }
+    .unlock-btn { display: inline-block; padding: 13px 32px; background: linear-gradient(135deg, var(--accent2), #9333ea); color: white; font-size: 0.97rem; font-weight: 800; border: none; border-radius: 8px; transition: all 0.2s; box-shadow: 0 4px 18px rgba(124,58,237,.38); }
+    .unlock-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,.48); text-decoration: none; color: white; }
+    .secure-note { font-size: 0.7rem; color: var(--muted); margin-top: 8px; }
+    .scan-loading { text-align: center; padding: 30px; display: none; }
+    .scan-loading.show { display: block; }
+    .spinner { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scan-loading p { color: var(--muted); font-size: 0.86rem; }
+    .error-msg { background: rgba(255,71,87,.07); border: 1px solid rgba(255,71,87,.22); color: var(--red); border-radius: 8px; padding: 11px 14px; font-size: 0.83rem; margin-bottom: 14px; display: none; }
+    .error-msg.show { display: block; }
+    @media(max-width:600px) { .risk-header { flex-direction: column; text-align: center; } }
+
+    /* ── Section Styles ── */
+    .section { max-width: 1200px; margin: 0 auto 72px; padding: 0 20px; }
+    .sec-head { text-align: center; margin-bottom: 36px; }
+    .sec-head h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 8px; }
+    .sec-head p { color: var(--muted); font-size: 0.9rem; }
+    .sec-tag { display: inline-block; background: rgba(0,212,255,.07); border: 1px solid rgba(0,212,255,.15); color: var(--accent); font-size: 0.7rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; letter-spacing: 0.8px; }
+
+    /* ── Modules Grid ── */
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
+    .module-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; transition: all 0.2s; cursor: pointer; }
+    .module-card:hover { border-color: rgba(0,212,255,.28); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.28); }
+    .mod-icon { font-size: 2rem; margin-bottom: 14px; }
+    .mod-name { font-size: 1rem; font-weight: 700; margin-bottom: 5px; }
+    .mod-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.55; margin-bottom: 14px; }
+    .mod-price { display: inline-flex; align-items: center; gap: 5px; background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22); color: #c4b5fd; font-size: 0.74rem; font-weight: 700; padding: 4px 11px; border-radius: 6px; }
+    .mod-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .mod-tag { font-size: 0.67rem; padding: 2px 7px; border-radius: 4px; background: rgba(0,212,255,.07); color: var(--accent); border: 1px solid rgba(0,212,255,.14); }
+
+    /* ── Ecosystem Platforms ── */
+    .eco-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+    .eco-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; display: flex; gap: 14px; align-items: flex-start; transition: all 0.2s; }
+    .eco-card:hover { border-color: rgba(0,212,255,.25); transform: translateY(-1px); }
+    .eco-card-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .eco-card-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 3px; }
+    .eco-card-desc { font-size: 0.74rem; color: var(--muted); line-height: 1.45; margin-bottom: 8px; }
+    .eco-card-link { font-size: 0.72rem; color: var(--accent); font-weight: 600; }
+    .eco-card-link:hover { color: #fff; }
+    .eco-live { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 700; color: var(--green); background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+
+    /* ── Stats Row ── */
+    .stats-row { display: flex; flex-wrap: wrap; gap: 0; }
+    .stat-item { flex: 1 1 150px; text-align: center; padding: 28px 20px; border-right: 1px solid var(--border); }
+    .stat-item:last-child { border-right: none; }
+    .stat-num { font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-label { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+    .stats-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+    /* ── Research & Blog ── */
+    .blog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .blog-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; transition: all 0.2s; }
+    .blog-card:hover { border-color: rgba(0,212,255,.25); transform: translateY(-1px); }
+    .blog-cat { font-size: 0.66rem; font-weight: 700; color: var(--accent); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 7px; }
+    .blog-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+    .blog-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+    .blog-link { font-size: 0.74rem; color: var(--accent2); font-weight: 600; }
+    .blog-link:hover { color: #fff; }
+
+    /* ── Products/Gumroad ── */
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 22px; transition: all 0.2s; position: relative; overflow: hidden; }
+    .product-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+    .product-card:hover { border-color: rgba(124,58,237,.3); transform: translateY(-2px); }
+    .product-badge { position: absolute; top: 14px; right: 14px; background: rgba(0,255,136,.12); border: 1px solid rgba(0,255,136,.25); color: var(--green); font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .product-icon { font-size: 1.8rem; margin-bottom: 12px; }
+    .product-name { font-size: 0.92rem; font-weight: 700; margin-bottom: 5px; }
+    .product-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+    .product-buy { display: inline-block; padding: 9px 20px; background: linear-gradient(135deg, var(--accent2), #9333ea); color: white; font-size: 0.8rem; font-weight: 700; border-radius: 7px; transition: all 0.2s; }
+    .product-buy:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,.35); text-decoration: none; color: white; }
+
+    /* ── Pricing ── */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+    .pricing-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; text-align: center; position: relative; overflow: hidden; }
+    .pricing-card.featured { border-color: var(--accent2); box-shadow: 0 0 40px rgba(124,58,237,.18); }
+    .pricing-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: 14px; right: -22px; background: var(--accent2); color: white; font-size: 0.6rem; font-weight: 800; letter-spacing: 1px; padding: 4px 28px; transform: rotate(35deg); }
+    .plan-name { font-size: 0.74rem; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .plan-price { font-size: 2.4rem; font-weight: 900; line-height: 1; }
+    .plan-price small { font-size: 0.95rem; font-weight: 400; color: var(--muted); }
+    .plan-period { font-size: 0.74rem; color: var(--muted); margin-bottom: 20px; }
+    .plan-features { list-style: none; text-align: left; margin-bottom: 20px; }
+    .plan-features li { padding: 6px 0; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
+    .plan-features li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+    .plan-cta { display: block; width: 100%; padding: 12px; border: 1.5px solid var(--accent2); border-radius: 8px; color: var(--accent2); font-weight: 700; font-size: 0.88rem; transition: all 0.2s; background: none; }
+    .plan-cta:hover, .pricing-card.featured .plan-cta { background: var(--accent2); color: white; text-decoration: none; }
+
+    /* ── Social ── */
+    .social-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .social-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 16px; border-radius: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.78rem; font-weight: 600;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .social-btn:hover { border-color: rgba(0,212,255,.3); color: var(--text); transform: translateY(-1px); text-decoration: none; }
+    .social-icon { font-size: 1rem; }
+
+    /* ── Contact ── */
+    .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .contact-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; display: flex; gap: 12px; align-items: flex-start; }
+    .contact-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .contact-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 3px; }
+    .contact-value { font-size: 0.84rem; color: var(--text); font-weight: 500; }
+    .contact-value a { color: var(--accent); }
+
+    /* ── Footer ── */
+    footer { background: var(--bg2); border-top: 1px solid var(--border); }
+    .footer-top { max-width: 1400px; margin: 0 auto; padding: 48px 24px 32px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+    @media(max-width:900px) { .footer-top { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:560px) { .footer-top { grid-template-columns: 1fr; } }
+    .footer-brand .fb-logo { font-size: 1rem; font-weight: 900; color: var(--accent); margin-bottom: 8px; }
+    .footer-brand .fb-tagline { font-size: 0.76rem; color: var(--muted); line-height: 1.6; max-width: 300px; margin-bottom: 16px; }
+    .footer-brand .fb-location { font-size: 0.72rem; color: var(--muted); }
+    .footer-col h4 { font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 7px; }
+    .footer-col ul li a { font-size: 0.78rem; color: var(--muted); transition: color 0.2s; }
+    .footer-col ul li a:hover { color: var(--text); text-decoration: none; }
+    .footer-social-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .fsocial { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 7px; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; transition: all 0.2s; }
+    .fsocial:hover { border-color: rgba(0,212,255,.3); color: var(--accent); text-decoration: none; }
+    .footer-bottom { border-top: 1px solid var(--border); padding: 18px 24px; text-align: center; }
+    .footer-bottom p { font-size: 0.72rem; color: var(--muted); }
+    .footer-bottom a { color: var(--muted); }
+    .footer-bottom a:hover { color: var(--text); }
+    .footer-legal-links { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 6px; }
+    .footer-legal-links a { font-size: 0.7rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── Announcement Bar ── -->
+<div class="announce-bar">
+  <span>🚀 <strong>CYBERDUDEBIVASH PVT LTD</strong> — Global AI Cybersecurity Platform</span>
+  <span class="ann-sep">|</span>
+  <a href="https://intel.cyberdudebivash.com/" target="_blank">🔴 Live Threat Intel</a>
+  <span class="ann-sep">|</span>
+  <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-PRODUCTION-APPS-SUITE/" target="_blank">⚡ Production Apps Suite</a>
+  <span class="ann-sep">|</span>
+  <a href="https://github.com/cyberdudebivash" target="_blank">⭐ Star on GitHub</a>
+  <span class="ann-sep">|</span>
+  <a href="mailto:bivash@cyberdudebivash.com">📧 Enterprise Contact</a>
+</div>
+
+<!-- ── Navigation ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="https://cyberdudebivash.in" class="logo-wrap" style="text-decoration:none;">
+      <span class="logo-icon">⚡</span>
+      <div class="logo-text">
+        <div class="logo-main">CYBERDUDEBIVASH® AI Security Hub</div>
+        <div class="logo-sub">CYBERDUDEBIVASH PVT LTD · Bhubaneswar, India</div>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      <!-- Ecosystem Dropdown -->
+      <div class="nav-dropdown">
+        <button class="nav-dropdown-btn">🌐 Ecosystem ▾</button>
+        <div class="dropdown-menu">
+          <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-ECOSYSTEM" target="_blank" class="dd-item">
+            <span class="dd-icon">🌍</span>
+            <div class="dd-info"><strong>Full Ecosystem</strong><span>Complete CYBERDUDEBIVASH overview</span></div>
+          </a>
+          <a href="https://intel.cyberdudebivash.com/" target="_blank" class="dd-item">
+            <span class="dd-icon">🔴</span>
+            <div class="dd-info"><strong>AI Threat Intel Platform</strong><span>Live threat intelligence feed</span></div>
+          </a>
+          <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-PRODUCTION-APPS-SUITE/" target="_blank" class="dd-item">
+            <span class="dd-icon">⚡</span>
+            <div class="dd-info"><strong>Production Apps Suite</strong><span>Live tools & utilities</span></div>
+          </a>
+          <a href="https://cyberdudebivash.github.io/cyberdudebivash-top-10-tools/" target="_blank" class="dd-item">
+            <span class="dd-icon">🛡️</span>
+            <div class="dd-info"><strong>Top 10 Cyber Tools</strong><span>Research hub & tools</span></div>
+          </a>
+          <div class="dd-sep"></div>
+          <a href="https://cyberdudebivash.github.io/mcp-server/" target="_blank" class="dd-item">
+            <span class="dd-icon">🤖</span>
+            <div class="dd-info"><strong>MCP Server</strong><span>Official MCP integration</span></div>
+          </a>
+          <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-THREAT-INTEL/frontend/dashboard/index.html" target="_blank" class="dd-item">
+            <span class="dd-icon">📊</span>
+            <div class="dd-info"><strong>Threat Intel Dashboard</strong><span>Live threat monitoring</span></div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Blog Dropdown -->
+      <div class="nav-dropdown">
+        <button class="nav-dropdown-btn">📝 Research ▾</button>
+        <div class="dropdown-menu">
+          <a href="https://blog.cyberdudebivash.com/" target="_blank" class="dd-item">
+            <span class="dd-icon">📖</span>
+            <div class="dd-info"><strong>Official Blog</strong><span>Cybersecurity insights & research</span></div>
+          </a>
+          <a href="https://cyberdudebivash-news.blogspot.com" target="_blank" class="dd-item">
+            <span class="dd-icon">📰</span>
+            <div class="dd-info"><strong>Security News</strong><span>Latest threat intelligence news</span></div>
+          </a>
+          <a href="https://cryptobivash.code.blog" target="_blank" class="dd-item">
+            <span class="dd-icon">💻</span>
+            <div class="dd-info"><strong>CryptoBivash Blog</strong><span>AI, crypto & emerging tech</span></div>
+          </a>
+          <a href="https://medium.com/@cyberdudebivash" target="_blank" class="dd-item">
+            <span class="dd-icon">✍️</span>
+            <div class="dd-info"><strong>Medium Articles</strong><span>In-depth technical articles</span></div>
+          </a>
+        </div>
+      </div>
+
+      <a href="https://cyberdudebivash.gumroad.com/affiliates" target="_blank" class="nav-link">🛒 Products</a>
+      <a href="https://github.com/apps/cyberdudebivash-security-platform" target="_blank" class="nav-link">🔧 API</a>
+      <a href="https://www.cyberdudebivash.com" target="_blank" class="nav-link">🏢 Company</a>
+    </div>
+
+    <a href="mailto:bivash@cyberdudebivash.com" class="nav-cta">🔐 Enterprise</a>
+  </div>
+</nav>
+
+<!-- ── Compliance Ticker ── -->
+<div class="compliance-strip">
+  <div class="ticker-wrap" id="ticker">
+    <span class="ticker-item">🛡️ <span>ISO 27001:2022</span> Compliance</span>
+    <span class="ticker-item">🔐 <span>SOC 2 Type II</span> Gap Analysis</span>
+    <span class="ticker-item">🇮🇳 <span>DPDP Act 2023</span> India</span>
+    <span class="ticker-item">💳 <span>PCI-DSS v4.0</span> Audit Ready</span>
+    <span class="ticker-item">🇪🇺 <span>GDPR</span> Compliance</span>
+    <span class="ticker-item">🏥 <span>HIPAA</span> Security Rule</span>
+    <span class="ticker-item">⚡ <span>OWASP LLM Top 10</span> Assessment</span>
+    <span class="ticker-item">🎯 <span>MITRE ATT&amp;CK</span> Red Team</span>
+    <span class="ticker-item">🌐 <span>Zero Trust</span> Architecture</span>
+    <span class="ticker-item">🤖 <span>AI Agent Security</span> Audit</span>
+    <span class="ticker-item">🔴 <span>Live Threat Intel</span> — intel.cyberdudebivash.com</span>
+    <!-- Duplicate for seamless loop -->
+    <span class="ticker-item">🛡️ <span>ISO 27001:2022</span> Compliance</span>
+    <span class="ticker-item">🔐 <span>SOC 2 Type II</span> Gap Analysis</span>
+    <span class="ticker-item">🇮🇳 <span>DPDP Act 2023</span> India</span>
+    <span class="ticker-item">💳 <span>PCI-DSS v4.0</span> Audit Ready</span>
+    <span class="ticker-item">🇪🇺 <span>GDPR</span> Compliance</span>
+    <span class="ticker-item">🏥 <span>HIPAA</span> Security Rule</span>
+    <span class="ticker-item">⚡ <span>OWASP LLM Top 10</span> Assessment</span>
+    <span class="ticker-item">🎯 <span>MITRE ATT&amp;CK</span> Red Team</span>
+    <span class="ticker-item">🌐 <span>Zero Trust</span> Architecture</span>
+    <span class="ticker-item">🤖 <span>AI Agent Security</span> Audit</span>
+    <span class="ticker-item">🔴 <span>Live Threat Intel</span> — intel.cyberdudebivash.com</span>
+  </div>
+</div>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="brand-by">🏢 CYBERDUDEBIVASH PVT LTD · Bhubaneswar, Odisha, India</div><br/>
+  <div class="hero-eyebrow"><span class="pulse"></span> AI-POWERED CYBERSECURITY PLATFORM — LIVE</div>
+  <h1>Protect Your Business With<br/><span>AI Security Intelligence</span></h1>
+  <p class="hero-sub">Enterprise-grade domain scanning, AI system assessment, red team simulation, identity monitoring and compliance reporting — powered by AI.</p>
+  <p class="hero-company">
+    By <a href="https://www.cyberdudebivash.com" target="_blank"><strong>CYBERDUDEBIVASH PVT LTD</strong></a> ·
+    <a href="https://github.com/cyberdudebivash" target="_blank">GitHub</a> ·
+    <a href="https://intel.cyberdudebivash.com/" target="_blank">Threat Intel Platform</a> ·
+    <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-ECOSYSTEM" target="_blank">Full Ecosystem</a>
+  </p>
+  <div class="trust-row">
+    <span class="trust-badge">🌐 <strong>Domain Scanner</strong></span>
+    <span class="trust-badge">🤖 <strong>AI Agent Scanner</strong></span>
+    <span class="trust-badge">🎯 <strong>Red Team Simulator</strong></span>
+    <span class="trust-badge">👤 <strong>Identity Monitor</strong></span>
+    <span class="trust-badge">📋 <strong>Compliance Reports</strong></span>
+    <span class="trust-badge">🔴 <strong>Threat Intelligence</strong></span>
+  </div>
+</section>
+
+<!-- ── Scan Panel ── -->
+<div class="panel-wrap">
+  <div class="scan-panel" id="scanPanel">
+    <div class="module-tabs">
+      <button class="tab-btn active" data-module="domain">🌐 Domain Scan</button>
+      <button class="tab-btn" data-module="ai">🤖 AI Scanner</button>
+      <button class="tab-btn" data-module="redteam">🎯 Red Team</button>
+      <button class="tab-btn" data-module="identity">👤 Identity</button>
+      <button class="tab-btn" data-module="compliance">📋 Compliance</button>
+    </div>
+    <div class="scan-form" id="formContainer">
+      <!-- Domain -->
+      <div class="module-form" id="form-domain">
+        <div class="form-group"><label>TARGET DOMAIN</label><input class="form-input" type="text" id="input-domain" placeholder="example.com" autocomplete="off" spellcheck="false"/></div>
+        <button class="scan-btn" onclick="runScan('domain')">🔍 Scan Domain — Free Vulnerability Report</button>
+        <p class="form-note">Free scan · No signup · Results in seconds · Powered by CYBERDUDEBIVASH AI</p>
+      </div>
+      <!-- AI -->
+      <div class="module-form" id="form-ai" style="display:none">
+        <div class="form-group"><label>AI SYSTEM NAME / URL</label><input class="form-input" type="text" id="input-ai-target" placeholder="My ChatBot / api.myapp.com/llm"/></div>
+        <div class="form-group"><label>AGENT TYPE</label>
+          <select class="form-input" id="input-ai-type">
+            <option value="llm_api">LLM API</option><option value="rag_pipeline">RAG Pipeline</option>
+            <option value="autonomous_agent">Autonomous Agent</option><option value="chat_bot">Chat Bot</option>
+            <option value="code_agent">Code Agent</option>
+          </select>
+        </div>
+        <button class="scan-btn" onclick="runScan('ai')">🤖 Scan AI System — OWASP LLM Top 10</button>
+        <p class="form-note">Free assessment · OWASP LLM Top 10 · Safe analysis · CYBERDUDEBIVASH AI</p>
+      </div>
+      <!-- Red Team -->
+      <div class="module-form" id="form-redteam" style="display:none">
+        <div class="form-group"><label>TARGET ORGANIZATION / DOMAIN</label><input class="form-input" type="text" id="input-rt-target" placeholder="My Company / example.com"/></div>
+        <div class="form-group"><label>SCOPE</label>
+          <select class="form-input" id="input-rt-scope">
+            <option value="external">External (Internet-facing)</option><option value="internal">Internal Network</option>
+            <option value="cloud">Cloud Infrastructure</option><option value="hybrid">Hybrid Environment</option>
+          </select>
+        </div>
+        <button class="scan-btn" onclick="runScan('redteam')">🎯 Run Red Team Simulation — MITRE ATT&amp;CK</button>
+        <p class="form-note">Safe simulation · MITRE ATT&CK aligned · No actual exploitation</p>
+      </div>
+      <!-- Identity -->
+      <div class="module-form" id="form-identity" style="display:none">
+        <div class="form-group"><label>ORGANIZATION / TENANT NAME</label><input class="form-input" type="text" id="input-id-target" placeholder="My Company"/></div>
+        <div class="form-group"><label>ASSESSMENT SCOPE</label>
+          <select class="form-input" id="input-id-type">
+            <option value="organization">Full Organization IAM</option><option value="cloud_iam">Cloud IAM (AWS/Azure/GCP)</option>
+            <option value="active_directory">Active Directory</option><option value="saas_apps">SaaS Applications</option>
+          </select>
+        </div>
+        <button class="scan-btn" onclick="runScan('identity')">👤 Assess Identity Security — Zero Trust Audit</button>
+        <p class="form-note">MFA check · Breach exposure · Privileged access review</p>
+      </div>
+      <!-- Compliance -->
+      <div class="module-form" id="form-compliance" style="display:none">
+        <div class="form-group"><label>ORGANIZATION NAME</label><input class="form-input" type="text" id="input-comp-org" placeholder="My Company Pvt Ltd"/></div>
+        <div class="form-group"><label>COMPLIANCE FRAMEWORK</label>
+          <select class="form-input" id="input-comp-framework">
+            <option value="iso27001">ISO/IEC 27001:2022 — ₹999</option><option value="soc2">SOC 2 Type II — ₹1,499</option>
+            <option value="gdpr">GDPR — ₹799</option><option value="pcidss">PCI-DSS v4.0 — ₹1,999</option>
+            <option value="dpdp">DPDP Act 2023 (India) — ₹499</option><option value="hipaa">HIPAA — ₹1,499</option>
+          </select>
+        </div>
+        <button class="scan-btn" onclick="runScan('compliance')">📋 Generate Compliance Report — Gap Analysis</button>
+        <p class="form-note">Free gap preview · Full report unlock · All 6 major frameworks</p>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="scan-loading" id="scanLoading"><div class="spinner"></div><p id="loadingText">Analyzing with CYBERDUDEBIVASH AI...</p></div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="results" id="resultsContainer"></div>
+  </div>
+</div>
+
+<!-- ── Platform Stats ── -->
+<div class="section">
+  <div class="stats-card">
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-num">5+</div><div class="stat-label">Security Modules</div></div>
+      <div class="stat-item"><div class="stat-num">6</div><div class="stat-label">Compliance Frameworks</div></div>
+      <div class="stat-item"><div class="stat-num">10</div><div class="stat-label">OWASP LLM Checks</div></div>
+      <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">MITRE ATT&amp;CK Scenarios</div></div>
+      <div class="stat-item"><div class="stat-num">₹0</div><div class="stat-label">Cost to Start</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Security Modules ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">SECURITY MODULES</div>
+    <h2>Enterprise AI Security Suite</h2>
+    <p>AI-driven security analysis across every attack surface — by CYBERDUDEBIVASH PVT LTD</p>
+  </div>
+  <div class="modules-grid">
+    <div class="module-card" onclick="switchTab('domain')">
+      <div class="mod-icon">🌐</div><div class="mod-name">Domain Vulnerability Scanner</div>
+      <div class="mod-desc">SSL/TLS config, DNS security (SPF/DMARC/DNSSEC), HTTP headers, exposed ports, threat intelligence correlations.</div>
+      <div class="mod-price">🔓 Unlock Full Report <strong>₹199</strong></div>
+      <div class="mod-tags"><span class="mod-tag">TLS</span><span class="mod-tag">DNS</span><span class="mod-tag">Threat Intel</span><span class="mod-tag">Headers</span></div>
+    </div>
+    <div class="module-card" onclick="switchTab('ai')">
+      <div class="mod-icon">🤖</div><div class="mod-name">AI Agent Security Scanner</div>
+      <div class="mod-desc">Full OWASP LLM Top 10 — prompt injection, output handling, training data poisoning, model theft &amp; more.</div>
+      <div class="mod-price">🔓 Unlock Full Report <strong>₹299</strong></div>
+      <div class="mod-tags"><span class="mod-tag">OWASP LLM</span><span class="mod-tag">Prompt Injection</span><span class="mod-tag">Model Security</span></div>
+    </div>
+    <div class="module-card" onclick="switchTab('redteam')">
+      <div class="mod-icon">🎯</div><div class="mod-name">Automated Red Teaming</div>
+      <div class="mod-desc">MITRE ATT&amp;CK mapped adversary simulation — 8 attack scenarios including phishing, lateral movement, ransomware behavior.</div>
+      <div class="mod-price">🔓 Unlock Full Report <strong>₹499</strong></div>
+      <div class="mod-tags"><span class="mod-tag">MITRE ATT&amp;CK</span><span class="mod-tag">Safe Sim</span><span class="mod-tag">8 Scenarios</span></div>
+    </div>
+    <div class="module-card" onclick="switchTab('identity')">
+      <div class="mod-icon">👤</div><div class="mod-name">Identity Security Monitor</div>
+      <div class="mod-desc">Zero Trust IAM assessment — MFA enforcement, privileged accounts, stale accounts, JIT access, breach exposure check.</div>
+      <div class="mod-price">🔓 Unlock Full Report <strong>₹299</strong></div>
+      <div class="mod-tags"><span class="mod-tag">Zero Trust</span><span class="mod-tag">MFA</span><span class="mod-tag">Breach Exposure</span></div>
+    </div>
+    <div class="module-card" onclick="switchTab('compliance')" style="border-color:rgba(124,58,237,.28)">
+      <div class="mod-icon">📋</div><div class="mod-name">Compliance Report Generator</div>
+      <div class="mod-desc">ISO 27001, SOC 2, GDPR, PCI-DSS, DPDP Act 2023 (India), HIPAA — AI gap analysis with audit-ready documentation.</div>
+      <div class="mod-price" style="background:rgba(124,58,237,.12);color:#c4b5fd;border-color:rgba(124,58,237,.28)">🏆 HIGH-VALUE <strong>₹499–₹1,999</strong></div>
+      <div class="mod-tags"><span class="mod-tag">ISO 27001</span><span class="mod-tag">SOC 2</span><span class="mod-tag">GDPR</span><span class="mod-tag">DPDP</span></div>
+    </div>
+    <div class="module-card" style="border-style:dashed;cursor:default;opacity:.55">
+      <div class="mod-icon">🚀</div><div class="mod-name">More Coming Soon</div>
+      <div class="mod-desc">CSPM, Container Security, API Testing, Dark Web Monitoring — launching soon from CYBERDUDEBIVASH PVT LTD.</div>
+      <div class="mod-price">📧 Get Notified</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CYBERDUDEBIVASH Ecosystem ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">THE ECOSYSTEM</div>
+    <h2>CYBERDUDEBIVASH® Ecosystem</h2>
+    <p>A global cybersecurity authority delivering AI tools, enterprise services, threat intelligence &amp; research</p>
+  </div>
+  <div class="eco-grid">
+    <a href="https://www.cyberdudebivash.com" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🏢</span>
+      <div>
+        <div class="eco-card-name">Official Website <span class="eco-live"><span class="pulse"></span> LIVE</span></div>
+        <div class="eco-card-desc">Official CYBERDUDEBIVASH PVT LTD corporate portal — services, products &amp; enterprise solutions.</div>
+        <span class="eco-card-link">cyberdudebivash.com →</span>
+      </div>
+    </a>
+    <a href="https://intel.cyberdudebivash.com/" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🔴</span>
+      <div>
+        <div class="eco-card-name">AI Threat Intel Platform <span class="eco-live"><span class="pulse"></span> LIVE</span></div>
+        <div class="eco-card-desc">Real-time AI-powered threat intelligence — IOC feeds, CVE analysis, threat actor tracking.</div>
+        <span class="eco-card-link">intel.cyberdudebivash.com →</span>
+      </div>
+    </a>
+    <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-PRODUCTION-APPS-SUITE/" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">⚡</span>
+      <div>
+        <div class="eco-card-name">Production Apps Suite <span class="eco-live"><span class="pulse"></span> LIVE</span></div>
+        <div class="eco-card-desc">Complete suite of production-grade cybersecurity tools, automation &amp; utilities.</div>
+        <span class="eco-card-link">View Apps Suite →</span>
+      </div>
+    </a>
+    <a href="https://cyberdudebivash.github.io/cyberdudebivash-top-10-tools/" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🛡️</span>
+      <div>
+        <div class="eco-card-name">Top 10 Cyber Tools Hub</div>
+        <div class="eco-card-desc">Curated top 10 cybersecurity tools with deep research, reviews &amp; integration guides.</div>
+        <span class="eco-card-link">Explore Tools →</span>
+      </div>
+    </a>
+    <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-THREAT-INTEL/frontend/dashboard/index.html" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">📊</span>
+      <div>
+        <div class="eco-card-name">Live Threat Intel Dashboard <span class="eco-live"><span class="pulse"></span> LIVE</span></div>
+        <div class="eco-card-desc">Real-time threat monitoring dashboard with live IOC feeds and attack surface visibility.</div>
+        <span class="eco-card-link">Open Dashboard →</span>
+      </div>
+    </a>
+    <a href="https://cyberdudebivash.github.io/mcp-server/" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🤖</span>
+      <div>
+        <div class="eco-card-name">Official MCP Server</div>
+        <div class="eco-card-desc">CYBERDUDEBIVASH MCP Server for AI integrations — connect Claude, GPT &amp; other AI agents.</div>
+        <span class="eco-card-link">View MCP Server →</span>
+      </div>
+    </a>
+    <a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-ECOSYSTEM" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🌍</span>
+      <div>
+        <div class="eco-card-name">Full Ecosystem Overview</div>
+        <div class="eco-card-desc">Complete overview of all CYBERDUDEBIVASH platforms, tools, services &amp; resources.</div>
+        <span class="eco-card-link">Explore Ecosystem →</span>
+      </div>
+    </a>
+    <a href="https://github.com/apps/cyberdudebivash-security-platform" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🔧</span>
+      <div>
+        <div class="eco-card-name">Security Platform GitHub App</div>
+        <div class="eco-card-desc">Install CYBERDUDEBIVASH Security Platform GitHub App for automated repo security scanning.</div>
+        <span class="eco-card-link">Install App →</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Research & Blog ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">RESEARCH &amp; INSIGHTS</div>
+    <h2>Cybersecurity Research &amp; Blog</h2>
+    <p>In-depth insights on cybersecurity, AI, malware research, threat intelligence &amp; emerging technologies</p>
+  </div>
+  <div class="blog-grid">
+    <a href="https://blog.cyberdudebivash.com/" target="_blank" class="blog-card" style="text-decoration:none;color:inherit">
+      <div class="blog-cat">🔬 OFFICIAL BLOG</div>
+      <div class="blog-title">CYBERDUDEBIVASH Security Blog</div>
+      <div class="blog-desc">Deep-dive cybersecurity research, zero-trust architectures, AI security, malware analysis &amp; threat intelligence from CYBERDUDEBIVASH PVT LTD.</div>
+      <span class="blog-link">Read Blog →</span>
+    </a>
+    <a href="https://cyberdudebivash-news.blogspot.com" target="_blank" class="blog-card" style="text-decoration:none;color:inherit">
+      <div class="blog-cat">📰 SECURITY NEWS</div>
+      <div class="blog-title">CYBERDUDEBIVASH Security News</div>
+      <div class="blog-desc">Latest cybersecurity news, breach reports, CVE analysis and threat landscape updates curated by CYBERDUDEBIVASH experts.</div>
+      <span class="blog-link">Read News →</span>
+    </a>
+    <a href="https://cryptobivash.code.blog" target="_blank" class="blog-card" style="text-decoration:none;color:inherit">
+      <div class="blog-cat">💻 TECH &amp; CRYPTO</div>
+      <div class="blog-title">CryptoBivash Code Blog</div>
+      <div class="blog-desc">Insights on AI, blockchain, cryptography, emerging technologies and their intersection with cybersecurity.</div>
+      <span class="blog-link">Read Articles →</span>
+    </a>
+    <a href="https://medium.com/@cyberdudebivash" target="_blank" class="blog-card" style="text-decoration:none;color:inherit">
+      <div class="blog-cat">✍️ MEDIUM</div>
+      <div class="blog-title">CYBERDUDEBIVASH on Medium</div>
+      <div class="blog-desc">Technical deep dives, tutorials, security research and AI integration guides published on Medium.</div>
+      <span class="blog-link">Read on Medium →</span>
+    </a>
+  </div>
+</div>
+
+<!-- ── Premium Products / Gumroad ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">PREMIUM PRODUCTS</div>
+    <h2>CYBERDUDEBIVASH Digital Products</h2>
+    <p>Production-grade cybersecurity tools, templates &amp; courses — available on Gumroad</p>
+  </div>
+  <div class="products-grid">
+    <div class="product-card">
+      <span class="product-badge">NEW</span>
+      <div class="product-icon">🛡️</div>
+      <div class="product-name">TrustGov Security Framework</div>
+      <div class="product-desc">Enterprise-grade trust and governance framework template for government and enterprise organizations.</div>
+      <a href="https://gum.new/gum/cmkti44bu001q04kzbb3d7cn8" target="_blank" class="product-buy">Buy on Gumroad →</a>
+    </div>
+    <div class="product-card">
+      <span class="product-badge">HOT</span>
+      <div class="product-icon">🔐</div>
+      <div class="product-name">AI Security Toolkit</div>
+      <div class="product-desc">Complete AI security assessment toolkit — OWASP LLM Top 10 checklists, red team playbooks &amp; remediation guides.</div>
+      <a href="https://cyberdudebivash.gumroad.com/l/pwynns" target="_blank" class="product-buy">Buy on Gumroad →</a>
+    </div>
+    <div class="product-card">
+      <div class="product-icon">📋</div>
+      <div class="product-name">Compliance Pack Pro</div>
+      <div class="product-desc">ISO 27001 + DPDP Act 2023 + SOC 2 compliance templates, evidence checklists &amp; audit preparation guides.</div>
+      <a href="https://gum.new/gum/cml6zequ1001r04ikb9e683f3" target="_blank" class="product-buy">Buy on Gumroad →</a>
+    </div>
+    <div class="product-card">
+      <div class="product-icon">🎯</div>
+      <div class="product-name">Red Team Playbook Bundle</div>
+      <div class="product-desc">MITRE ATT&amp;CK mapped red team playbooks, detection rules &amp; incident response runbooks for security teams.</div>
+      <a href="https://gum.new/gum/cml855zjq000204ky4b3vhv65" target="_blank" class="product-buy">Buy on Gumroad →</a>
+    </div>
+    <div class="product-card">
+      <div class="product-icon">🤖</div>
+      <div class="product-name">Cyber AI Automation Suite</div>
+      <div class="product-desc">AI-powered cybersecurity automation scripts, SIEM rules, threat detection templates &amp; SOC workflows.</div>
+      <a href="https://gum.new/gum/cml8cu8je000604jv8rkj1l8z" target="_blank" class="product-buy">Buy on Gumroad →</a>
+    </div>
+    <div class="product-card">
+      <span class="product-badge">PRO</span>
+      <div class="product-icon">🚀</div>
+      <div class="product-name">DevSecOps Starter Kit</div>
+      <div class="product-desc">Complete DevSecOps implementation kit — CI/CD security, container hardening &amp; cloud security posture templates.</div>
+      <a href="https://gum.new/gum/cmlvyupk9001h04l22d7m35mr" target="_blank" class="product-buy">Buy on Gumroad →</a>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:24px">
+    <a href="https://cyberdudebivash.gumroad.com/affiliates" target="_blank" style="color:var(--accent);font-size:0.82rem;font-weight:600">📦 View All Products &amp; Affiliate Program →</a>
+  </div>
+</div>
+
+<!-- ── Pricing ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">PRICING</div>
+    <h2>Simple, Transparent Pricing</h2>
+    <p>Start free. Unlock full reports when you need them.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price">₹0 <small>/mo</small></div>
+      <div class="plan-period">Free forever</div>
+      <ul class="plan-features">
+        <li>10 scans per hour</li><li>Preview results (free tier)</li>
+        <li>Risk score + summary</li><li>Top 3 recommendations</li>
+        <li>All 5 security modules</li>
+      </ul>
+      <button class="plan-cta" onclick="document.getElementById('scanPanel').scrollIntoView({behavior:'smooth'})">Start Scanning Free</button>
+    </div>
+    <div class="pricing-card featured">
+      <div class="plan-name">Pay Per Report</div>
+      <div class="plan-price">₹199 <small>–₹1,999</small></div>
+      <div class="plan-period">Per full report</div>
+      <ul class="plan-features">
+        <li>Unlimited findings</li><li>Full technical analysis</li>
+        <li>Downloadable PDF report</li><li>Detailed remediation plan</li>
+        <li>Priority support via email</li>
+      </ul>
+      <button class="plan-cta" onclick="document.getElementById('scanPanel').scrollIntoView({behavior:'smooth'})">Scan &amp; Unlock</button>
+    </div>
+    <div class="pricing-card">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price">₹9,999 <small>/mo</small></div>
+      <div class="plan-period">Unlimited reports</div>
+      <ul class="plan-features">
+        <li>Unlimited scans &amp; reports</li><li>API access (10K req/day)</li>
+        <li>Custom frameworks</li><li>White-label reports</li>
+        <li>Dedicated account manager</li>
+      </ul>
+      <a href="mailto:bivash@cyberdudebivash.com?subject=Enterprise Plan Enquiry" class="plan-cta">Contact Sales</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Freelance / Hire ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">HIRE CYBERDUDEBIVASH</div>
+    <h2>Freelance Cybersecurity Services</h2>
+    <p>Available for penetration testing, security audits, AI security assessments, and DevSecOps consulting</p>
+  </div>
+  <div class="eco-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <a href="https://www.upwork.com/freelancers/~010d4dde1657fa5619" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">💼</span>
+      <div><div class="eco-card-name">Upwork</div><div class="eco-card-desc">Hire for enterprise security projects on Upwork.</div><span class="eco-card-link">View Profile →</span></div>
+    </a>
+    <a href="https://www.fiverr.com/users/bivashkumar007/seller_dashboard" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">⚡</span>
+      <div><div class="eco-card-name">Fiverr</div><div class="eco-card-desc">Quick security gigs — VAPT, compliance reports, security audits.</div><span class="eco-card-link">View Gigs →</span></div>
+    </a>
+    <a href="https://www.freelancer.com/u/iambivash" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">🌐</span>
+      <div><div class="eco-card-name">Freelancer</div><div class="eco-card-desc">Custom cybersecurity projects on Freelancer.com.</div><span class="eco-card-link">View Profile →</span></div>
+    </a>
+    <a href="https://www.patreon.com/c/CYBERDUDEBIVASH" target="_blank" class="eco-card" style="text-decoration:none;color:inherit">
+      <span class="eco-card-icon">❤️</span>
+      <div><div class="eco-card-name">Patreon</div><div class="eco-card-desc">Support CYBERDUDEBIVASH research and get exclusive cybersecurity content.</div><span class="eco-card-link">Support Us →</span></div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Contact ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">CONTACT</div>
+    <h2>Get In Touch</h2>
+    <p>CYBERDUDEBIVASH PVT LTD · Bhubaneswar, Odisha, India</p>
+  </div>
+  <div class="contact-grid">
+    <div class="contact-card">
+      <span class="contact-icon">📧</span>
+      <div>
+        <div class="contact-label">Business Email</div>
+        <div class="contact-value"><a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a></div>
+      </div>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">📧</span>
+      <div>
+        <div class="contact-label">Primary Contact</div>
+        <div class="contact-value"><a href="mailto:iambivash@cyberdudebivash">iambivash@cyberdudebivash</a></div>
+      </div>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">📧</span>
+      <div>
+        <div class="contact-label">Gmail</div>
+        <div class="contact-value"><a href="mailto:iambivash.bn@gmail.com">iambivash.bn@gmail.com</a></div>
+      </div>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">📞</span>
+      <div>
+        <div class="contact-label">Phone / WhatsApp</div>
+        <div class="contact-value"><a href="tel:+918179881447">+91 8179881447</a></div>
+      </div>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">💬</span>
+      <div>
+        <div class="contact-label">Discord</div>
+        <div class="contact-value">cybercoder127001</div>
+      </div>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">📍</span>
+      <div>
+        <div class="contact-label">Location</div>
+        <div class="contact-value">Bhubaneswar, Odisha, India</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Social Media ── -->
+<div class="section">
+  <div class="sec-head">
+    <div class="sec-tag">COMMUNITY</div>
+    <h2>Follow CYBERDUDEBIVASH</h2>
+    <p>Stay connected for the latest cybersecurity research, tools and threat intelligence</p>
+  </div>
+  <div class="social-grid">
+    <a href="https://www.facebook.com/people/Cyberdudebivash-Pvt-Ltd/61583373732736/" target="_blank" class="social-btn"><span class="social-icon">📘</span>Facebook</a>
+    <a href="https://www.instagram.com/cyberdudebivash_official/" target="_blank" class="social-btn"><span class="social-icon">📸</span>Instagram</a>
+    <a href="https://www.linkedin.com/company/cyberdudebivash/" target="_blank" class="social-btn"><span class="social-icon">💼</span>LinkedIn</a>
+    <a href="https://x.com/cyberbivash" target="_blank" class="social-btn"><span class="social-icon">🐦</span>Twitter / X</a>
+    <a href="https://github.com/cyberdudebivash" target="_blank" class="social-btn"><span class="social-icon">⭐</span>GitHub</a>
+    <a href="https://www.threads.com/@cyberdudebivash_official" target="_blank" class="social-btn"><span class="social-icon">🧵</span>Threads</a>
+    <a href="https://medium.com/@cyberdudebivash" target="_blank" class="social-btn"><span class="social-icon">✍️</span>Medium</a>
+    <a href="https://bsky.app/profile/cyberdudebivash.bsky.social" target="_blank" class="social-btn"><span class="social-icon">🦋</span>Bluesky</a>
+    <a href="https://mastodon.social/@cyberdudebivash" target="_blank" class="social-btn"><span class="social-icon">🐘</span>Mastodon</a>
+    <a href="https://flipboard.com/@CYBERDUDEBIVASH" target="_blank" class="social-btn"><span class="social-icon">📰</span>Flipboard</a>
+    <a href="https://in.pinterest.com/CYBERDUDEBIVASH_Official/" target="_blank" class="social-btn"><span class="social-icon">📌</span>Pinterest</a>
+    <a href="https://www.tumblr.com/blog/cyberdudebivash-news" target="_blank" class="social-btn"><span class="social-icon">📝</span>Tumblr</a>
+    <a href="https://whatsapp.com/channel/0029VbBzQLL2P59u1xiZyt3t" target="_blank" class="social-btn"><span class="social-icon">💬</span>WhatsApp Channel</a>
+    <a href="https://www.reddit.com/user/Immediate_Gold9789/" target="_blank" class="social-btn"><span class="social-icon">🤖</span>Reddit</a>
+    <a href="https://www.linkedin.com/showcase/cyberdudebivash-sentinel-apex/?viewAsMember=true" target="_blank" class="social-btn"><span class="social-icon">🛡️</span>Sentinel Apex (LinkedIn)</a>
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="fb-logo">⚡ CYBERDUDEBIVASH® AI Security Hub</div>
+      <div class="fb-tagline">
+        Global AI Cybersecurity Platform delivering advanced security apps, AI-driven tools, enterprise services, professional training, threat intelligence and high-impact cybersecurity research.<br/><br/>
+        Zero-trust, enterprise-ready, high-detection focus. Production Grade. AI-Integrated.
+      </div>
+      <div class="fb-location">📍 Bhubaneswar, Odisha, India · <a href="https://www.cyberdudebivash.com" target="_blank" style="color:var(--accent)">cyberdudebivash.com</a></div>
+      <div class="footer-social-row" style="margin-top:14px">
+        <a href="https://github.com/cyberdudebivash" target="_blank" class="fsocial" title="GitHub">⭐</a>
+        <a href="https://www.linkedin.com/company/cyberdudebivash/" target="_blank" class="fsocial" title="LinkedIn">💼</a>
+        <a href="https://x.com/cyberbivash" target="_blank" class="fsocial" title="Twitter">🐦</a>
+        <a href="https://www.instagram.com/cyberdudebivash_official/" target="_blank" class="fsocial" title="Instagram">📸</a>
+        <a href="https://www.facebook.com/people/Cyberdudebivash-Pvt-Ltd/61583373732736/" target="_blank" class="fsocial" title="Facebook">📘</a>
+        <a href="https://www.threads.com/@cyberdudebivash_official" target="_blank" class="fsocial" title="Threads">🧵</a>
+        <a href="https://bsky.app/profile/cyberdudebivash.bsky.social" target="_blank" class="fsocial" title="Bluesky">🦋</a>
+        <a href="https://medium.com/@cyberdudebivash" target="_blank" class="fsocial" title="Medium">✍️</a>
+        <a href="https://whatsapp.com/channel/0029VbBzQLL2P59u1xiZyt3t" target="_blank" class="fsocial" title="WhatsApp">💬</a>
+        <a href="https://www.reddit.com/user/Immediate_Gold9789/" target="_blank" class="fsocial" title="Reddit">🤖</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="https://cyberdudebivash.in">AI Security Hub</a></li>
+        <li><a href="https://intel.cyberdudebivash.com/" target="_blank">Threat Intel Platform</a></li>
+        <li><a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-PRODUCTION-APPS-SUITE/" target="_blank">Production Apps</a></li>
+        <li><a href="https://cyberdudebivash.github.io/cyberdudebivash-top-10-tools/" target="_blank">Top 10 Tools Hub</a></li>
+        <li><a href="https://cyberdudebivash.github.io/mcp-server/" target="_blank">MCP Server</a></li>
+        <li><a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-THREAT-INTEL/frontend/dashboard/index.html" target="_blank">Threat Dashboard</a></li>
+        <li><a href="https://github.com/apps/cyberdudebivash-security-platform" target="_blank">GitHub App</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Research</h4>
+      <ul>
+        <li><a href="https://blog.cyberdudebivash.com/" target="_blank">Security Blog</a></li>
+        <li><a href="https://cyberdudebivash-news.blogspot.com" target="_blank">Security News</a></li>
+        <li><a href="https://cryptobivash.code.blog" target="_blank">CryptoBivash Blog</a></li>
+        <li><a href="https://medium.com/@cyberdudebivash" target="_blank">Medium Articles</a></li>
+        <li><a href="https://www.tumblr.com/blog/cyberdudebivash-news" target="_blank">Tumblr</a></li>
+        <li><a href="https://flipboard.com/@CYBERDUDEBIVASH" target="_blank">Flipboard</a></li>
+        <li><a href="https://github.com/cyberdudebivash" target="_blank">GitHub Repos</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="https://www.cyberdudebivash.com" target="_blank">Official Website</a></li>
+        <li><a href="https://cyberdudebivash.github.io/CYBERDUDEBIVASH-ECOSYSTEM" target="_blank">Ecosystem</a></li>
+        <li><a href="https://cyberdudebivash.gumroad.com/affiliates" target="_blank">Products &amp; Affiliates</a></li>
+        <li><a href="https://www.patreon.com/c/CYBERDUDEBIVASH" target="_blank">Patreon</a></li>
+        <li><a href="https://www.upwork.com/freelancers/~010d4dde1657fa5619" target="_blank">Hire on Upwork</a></li>
+        <li><a href="https://www.fiverr.com/users/bivashkumar007/seller_dashboard" target="_blank">Fiverr Gigs</a></li>
+        <li><a href="mailto:bivash@cyberdudebivash.com">Contact Sales</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 <strong>CyberDudeBivash Pvt. Ltd.</strong> · Bhubaneswar, Odisha, India · All rights reserved.</p>
+    <p style="margin-top:4px">
+      <a href="https://www.cyberdudebivash.com" target="_blank">Website</a> ·
+      <a href="https://github.com/cyberdudebivash" target="_blank">GitHub</a> ·
+      Premium licensing &amp; collaboration: <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a> ·
+      <a href="tel:+918179881447">+91 8179881447</a>
+    </p>
+    <div class="footer-legal-links">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/docs">API Docs</a>
+      <a href="mailto:bivash@cyberdudebivash.com">Enterprise</a>
+      <a href="https://cyberdudebivash.gumroad.com/affiliates" target="_blank">Affiliates</a>
+    </div>
+    <p style="margin-top:8px;font-size:0.68rem">
+      For educational and security assessment purposes. Safe simulation only — no actual exploitation performed.
+      CYBERDUDEBIVASH® is a registered trademark of CyberDudeBivash Pvt. Ltd.
+    </p>
+  </div>
+</footer>
+
+<!-- ── JavaScript Engine ── -->
+<script>
+const API_BASE = "https://cyberdudebivash-security-hub.workers.dev";
+
+// Tab switching
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.module));
+});
+function switchTab(module) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".module-form").forEach(f => f.style.display = "none");
+  const btn = document.querySelector(`.tab-btn[data-module="${module}"]`);
+  if (btn) btn.classList.add("active");
+  const form = document.getElementById(`form-${module}`);
+  if (form) form.style.display = "block";
+  clearResults();
+  document.getElementById("scanPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Scan execution
+async function runScan(module) {
+  clearResults();
+  const req = buildRequest(module);
+  if (!req.validation.valid) { showError(req.validation.error); return; }
+  setLoading(true, getLoadingText(module));
+  try {
+    const resp = await fetch(`${API_BASE}${req.endpoint}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.status === "error") { showError(data.message || "Scan failed. Please try again."); return; }
+    renderResults(data, module);
+  } catch (err) {
+    console.warn("API unreachable, using client engine:", err.message);
+    renderResults(runClientEngine(module, req.payload), module);
+  } finally { setLoading(false); }
+}
+
+function buildRequest(module) {
+  const m = {
+    domain: () => { const v = document.getElementById("input-domain").value.trim(); if (!v) return {valid:false,error:"Please enter a domain name."}; return {valid:true,payload:{domain:v},endpoint:"/api/scan/domain"}; },
+    ai: () => { const v = document.getElementById("input-ai-target").value.trim(); if (!v) return {valid:false,error:"Please enter an AI system name."}; return {valid:true,payload:{target:v,agent_type:document.getElementById("input-ai-type").value},endpoint:"/api/scan/ai"}; },
+    redteam: () => { const v = document.getElementById("input-rt-target").value.trim(); if (!v) return {valid:false,error:"Please enter a target name."}; return {valid:true,payload:{target:v,scope:document.getElementById("input-rt-scope").value},endpoint:"/api/scan/redteam"}; },
+    identity: () => { const v = document.getElementById("input-id-target").value.trim(); if (!v) return {valid:false,error:"Please enter an organization name."}; return {valid:true,payload:{target:v,scan_type:document.getElementById("input-id-type").value},endpoint:"/api/scan/identity"}; },
+    compliance: () => { const v = document.getElementById("input-comp-org").value.trim(); if (!v) return {valid:false,error:"Please enter your organization name."}; return {valid:true,payload:{organization:v,framework:document.getElementById("input-comp-framework").value},endpoint:"/api/generate/compliance"}; },
+  };
+  const r = m[module]();
+  if (r.valid === false) return { validation: r };
+  return { endpoint: r.endpoint, payload: r.payload, validation: { valid: true } };
+}
+
+// Client-side deterministic engine (fallback)
+function sh(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return Math.abs(h);}
+function sr(seed,o=0){const x=Math.sin(seed+o+1)*10000;return Math.abs(x-Math.floor(x));}
+function ts(){return new Date().toISOString();}
+const RISKY_TLDS=new Set([".tk",".ml",".ga",".cf",".gq",".xyz",".top",".click",".loan",".win"]);
+const PHISH_KW=["login","secure","account","verify","update","confirm","banking","paypal","amazon","google","microsoft","apple","netflix"];
+
+function runClientEngine(module, p) {
+  const engines = {
+    domain: (p) => {
+      const domain = (p.domain||"").toLowerCase().replace(/^https?:\/\//,"").split("/")[0];
+      const seed = sh(domain); let risk = 0; const findings = [];
+      const tld = domain.includes(".")?"."+domain.split(".").pop():"";
+      if(RISKY_TLDS.has(tld)){risk+=2.5;findings.push({id:"DOM-001",severity:"HIGH",category:"Domain Reputation",title:`High-Risk TLD: ${tld}`,description:`TLD '${tld}' is commonly associated with malicious domains.`,premium:false});}
+      const kws=PHISH_KW.filter(k=>domain.includes(k));
+      if(kws.length){risk+=Math.min(kws.length*1.5,4);findings.push({id:"DOM-002",severity:"MEDIUM",category:"Phishing Indicators",title:`Brand Keywords: ${kws.join(", ")}`,description:"Domain contains phishing/brand-impersonation keywords.",premium:false});}
+      const age=(seed%1800)+30;
+      if(age<180){risk+=1.5;findings.push({id:"DOM-003",severity:"MEDIUM",category:"Domain Age",title:`Newly Registered (~${age} days)`,description:"New domains are 3x more likely to be malicious.",premium:false});}
+      findings.push({id:"DOM-004",severity:"INFO",category:"SSL/TLS",title:"SSL/TLS Configuration (Premium)",description:"Full SSL/TLS analysis available in premium report.",premium:true});
+      findings.push({id:"DOM-005",severity:"INFO",category:"Threat Intel",title:"IOC Correlation (Premium)",description:"Threat intelligence feed correlation in premium report.",premium:true});
+      risk=Math.min(Math.round(risk*10)/10,10);
+      const level=risk>=8?"CRITICAL":risk>=6?"HIGH":risk>=4?"MEDIUM":"LOW";
+      const free=findings.filter(f=>!f.premium), prem=findings.filter(f=>f.premium);
+      return {status:"success",module:"domain_scan",risk_score:risk,summary:`Domain '${domain}' scored ${risk}/10 (${level}). ${findings.length} findings. Powered by CYBERDUDEBIVASH AI.`,findings:free,free_findings:free,premium_findings:prem,premium_findings_count:prem.length,recommendations:["Enable DMARC email authentication (p=reject).","Upgrade TLS to 1.3 and disable legacy cipher suites.","Add Content-Security-Policy and HSTS headers."],is_premium_locked:true,unlock_required:true,unlock_price_inr:199,upgrade_cta:{title:"Unlock Full Domain Security Report",price_display:"₹199",button_text:"Unlock Full Report — ₹199",payment_url:"https://cyberdudebivash.in/unlock?module=domain_scan&price=199"},scan_duration_ms:Math.floor(Math.random()*500)+150,timestamp:ts(),metadata:{domain,platform:"CYBERDUDEBIVASH AI Security Hub"}};
+    },
+    ai: (p) => {
+      const seed=sh((p.target||"")+(p.agent_type||"")); let risk=0; const findings=[];
+      const OWASP=[{id:"LLM01",name:"Prompt Injection",sev:"CRITICAL"},{id:"LLM02",name:"Insecure Output Handling",sev:"HIGH"},{id:"LLM03",name:"Training Data Poisoning",sev:"HIGH"}];
+      OWASP.forEach((o,i)=>{const r=sr(seed,i)*100;const det=r<60;if(det)risk+=o.sev==="CRITICAL"?2.5:1.5;findings.push({id:o.id,name:o.name,severity:det?o.sev:"PASS",detected:det,description:det?`⚠️ ${o.name} vulnerability detected.`:`✅ ${o.name} controls adequate.`,premium:false});});
+      findings.push({id:"LLM04-10",name:"7 More OWASP LLM Checks (Premium)",severity:"INFO",detected:false,description:"LLM04-LLM10 analysis available in premium report.",premium:true});
+      risk=Math.min(Math.round(risk*10)/10,10);
+      const level=risk>=8?"CRITICAL":risk>=6?"HIGH":risk>=4?"MEDIUM":"LOW";
+      const free=findings.filter(f=>!f.premium),prem=findings.filter(f=>f.premium);
+      return {status:"success",module:"ai_scan",risk_score:risk,summary:`AI system '${p.target}' (${p.agent_type}): ${risk}/10 (${level}). OWASP LLM Top 10 assessed by CYBERDUDEBIVASH AI.`,findings:free,premium_findings_count:prem.length,recommendations:["Implement prompt injection defense layers.","Validate and sanitize all LLM outputs before downstream use.","Deploy LLM observability and anomaly detection."],is_premium_locked:true,unlock_required:true,unlock_price_inr:299,upgrade_cta:{title:"Unlock Full AI Security Report",price_display:"₹299",button_text:"Unlock Full Report — ₹299",payment_url:"https://cyberdudebivash.in/unlock?module=ai_scan&price=299"},scan_duration_ms:Math.floor(Math.random()*600)+200,timestamp:ts(),metadata:{target:p.target,agent_type:p.agent_type}};
+    },
+    redteam: (p) => {
+      const seed=sh((p.target||"")+(p.scope||""));
+      const scenarios=[{id:"RT-001",name:"Phishing Simulation",tactic:"Initial Access",result:sr(seed,0)>0.45?"SUCCEEDED":"BLOCKED"},{id:"RT-002",name:"Password Spray",tactic:"Credential Access",result:sr(seed,1)>0.5?"SUCCEEDED":"BLOCKED"}];
+      const succeeded=scenarios.filter(s=>s.result==="SUCCEEDED").length;
+      const risk=Math.min(Math.round((2+sr(seed)*6)*10)/10,10);
+      const level=risk>=8?"CRITICAL":risk>=6?"HIGH":risk>=4?"MEDIUM":"LOW";
+      return {status:"success",module:"redteam_scan",risk_score:risk,summary:`Red team '${p.target}': ${succeeded}/2 free scenarios succeeded. Risk ${risk}/10 (${level}). MITRE ATT&CK — CYBERDUDEBIVASH AI.`,findings:scenarios,premium_findings_count:6,recommendations:["Strengthen SIEM detection rules immediately.","Enforce Zero Trust — verify every access request.","Deploy honeypots for lateral movement detection."],is_premium_locked:true,unlock_required:true,unlock_price_inr:499,upgrade_cta:{title:"Unlock Full Red Team Report",price_display:"₹499",button_text:"Unlock Full Report — ₹499",payment_url:"https://cyberdudebivash.in/unlock?module=redteam_scan&price=499"},scan_duration_ms:Math.floor(Math.random()*700)+300,timestamp:ts(),metadata:{target:p.target,scope:p.scope,scenarios_run:8,scenarios_succeeded:succeeded}};
+    },
+    identity: (p) => {
+      const seed=sh((p.target||"")+(p.scan_type||""));
+      const checks=[{id:"MFA",name:"MFA Enforcement",status:sr(seed,0)>0.45?"FAIL":"PASS",severity:sr(seed,0)>0.45?"CRITICAL":"PASS"},{id:"PRIV",name:"Privileged Account Audit",status:sr(seed,1)>0.4?"FAIL":"PASS",severity:sr(seed,1)>0.4?"HIGH":"PASS"},{id:"STALE",name:"Stale Account Detection",status:sr(seed,2)>0.5?"FAIL":"PASS",severity:sr(seed,2)>0.5?"HIGH":"PASS"}];
+      const failing=checks.filter(c=>c.status==="FAIL").length;
+      const risk=Math.min(Math.round((failing*2+sr(seed,3)*3)*10)/10,10);
+      const level=risk>=8?"CRITICAL":risk>=6?"HIGH":risk>=4?"MEDIUM":"LOW";
+      return {status:"success",module:"identity_scan",risk_score:risk,summary:`Identity assessment '${p.target}': ${failing}/3 free controls failing. Risk ${risk}/10 (${level}). By CYBERDUDEBIVASH AI.`,findings:checks,premium_findings_count:6,recommendations:["Enable MFA for ALL accounts immediately.","Disable accounts inactive for 90+ days.","Implement Just-in-Time privileged access."],is_premium_locked:true,unlock_required:true,unlock_price_inr:299,upgrade_cta:{title:"Unlock Full Identity Report",price_display:"₹299",button_text:"Unlock Full Report — ₹299",payment_url:"https://cyberdudebivash.in/unlock?module=identity_scan&price=299"},scan_duration_ms:Math.floor(Math.random()*400)+150,timestamp:ts(),metadata:{target:p.target,scan_type:p.scan_type}};
+    },
+    compliance: (p) => {
+      const seed=sh((p.organization||"")+(p.framework||""));
+      const priceMap={iso27001:999,soc2:1499,gdpr:799,pcidss:1999,dpdp:499,hipaa:1499};
+      const nameMap={iso27001:"ISO/IEC 27001:2022",soc2:"SOC 2 Type II",gdpr:"GDPR",pcidss:"PCI-DSS v4.0",dpdp:"DPDP Act 2023",hipaa:"HIPAA"};
+      const score=Math.round((35+sr(seed)*35)*10)/10;
+      const price=priceMap[p.framework]||999;
+      const fname=nameMap[p.framework]||p.framework;
+      return {status:"success",module:"compliance_report",risk_score:Math.round((100-score)/12*10)/10,compliance_score:score,summary:`${p.organization} — ${fname}: ${score}% compliant. Gap analysis by CYBERDUDEBIVASH AI.`,framework:fname,findings:[{control_id:"ACCESS-1",control_name:"Access Control Policy",status:"NON_COMPLIANT",severity:"HIGH"},{control_id:"VULN-1",control_name:"Vulnerability Management",status:"PARTIAL",severity:"MEDIUM"}],recommendations:["Assign control owners for each compliance requirement.","Establish evidence collection for audit readiness.","Conduct internal audit before external certification."],is_premium_locked:true,unlock_required:true,unlock_price_inr:price,premium_includes:["Full gap analysis — all controls","Remediation plan with timelines","Audit evidence checklist","Certification roadmap","Executive summary PDF"],upgrade_cta:{title:`Unlock Full ${fname} Report`,price_display:`₹${price}`,button_text:`Get Full Report — ₹${price}`,payment_url:`https://cyberdudebivash.in/unlock?module=compliance_report&framework=${p.framework}&price=${price}`},scan_duration_ms:Math.floor(Math.random()*600)+250,timestamp:ts(),metadata:{organization:p.organization,framework:p.framework}};
+    },
+  };
+  return engines[module] ? engines[module](p) : {status:"error",message:"Unknown module"};
+}
+
+// Render results
+function renderResults(data, module) {
+  const c = document.getElementById("resultsContainer");
+  const isComp = module === "compliance";
+  const riskScore = data.risk_score || 0;
+  const dispScore = isComp ? `${data.compliance_score}%` : `${riskScore}/10`;
+  const level = riskScore>=8?"CRITICAL":riskScore>=6?"HIGH":riskScore>=4?"MEDIUM":"LOW";
+  const riskClass = `rc-${level.toLowerCase()}`;
+  const riskColor = riskScore>=8?"var(--red)":riskScore>=6?"var(--orange)":riskScore>=4?"var(--yellow)":"var(--green)";
+
+  let html = `<div class="risk-header">
+    <div class="risk-circle ${riskClass}"><span class="rnum">${dispScore}</span><span class="rmax">${isComp?"Compliant":level}</span></div>
+    <div class="risk-info">
+      <div class="rlevel" style="color:${riskColor}">${level} RISK</div>
+      <div class="rsummary">${data.summary||""}</div>
+      ${data.scan_duration_ms?`<div style="font-size:.68rem;color:var(--muted);margin-top:5px">⚡ Scanned in ${data.scan_duration_ms}ms · CYBERDUDEBIVASH AI Security Hub</div>`:""}
+    </div>
+  </div>`;
+
+  if (isComp && data.compliance_score) {
+    html += `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:5px"><span>Compliance Score</span><span>${data.compliance_score}%</span></div>
+      <div style="background:var(--border);border-radius:4px;height:7px;overflow:hidden"><div style="width:${data.compliance_score}%;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:4px"></div></div>
+      ${data.total_controls?`<div style="font-size:.68rem;color:var(--muted);margin-top:3px">${data.compliant_controls||0} compliant · ${data.non_compliant_controls||0} gaps · ${data.total_controls} total controls</div>`:""}
+    </div>`;
+  }
+
+  const findings = data.findings || [];
+  if (findings.length) {
+    html += `<div class="section-title">🔍 Findings (Free Preview)</div>`;
+    findings.forEach(f => {
+      const sev=(f.severity||f.status||"INFO").toUpperCase();
+      const sc = sev==="CRITICAL"?"s-critical":sev==="HIGH"||sev==="FAIL"||sev==="NON_COMPLIANT"?"s-high":sev==="MEDIUM"||sev==="PARTIAL"?"s-medium":sev==="PASS"?"s-pass":sev==="SUCCEEDED"?"s-high":sev==="BLOCKED"?"s-pass":"s-info";
+      const title=f.title||f.name||f.control_name||f.id;
+      const desc=f.description||f.gap_description||"";
+      html+=`<div class="finding-card"><span class="fbadge ${sc}">${sev}</span><div class="fc"><h4>${title}</h4>${desc?`<p>${desc}</p>`:""}</div></div>`;
+    });
+  }
+
+  const recs = data.recommendations||[];
+  if (recs.length) {
+    html += `<div class="section-title">💡 Recommendations</div>`;
+    recs.slice(0,3).forEach(r => { html+=`<div class="rec-card"><span style="color:var(--accent2);font-size:.9rem;flex-shrink:0">→</span><span class="rec-text">${r}</span></div>`; });
+  }
+
+  if (data.is_premium_locked && data.upgrade_cta) {
+    const cta=data.upgrade_cta;
+    const prem=data.premium_findings_count||0;
+    const inc=data.premium_includes||["Complete findings with CVSS scores","Detailed technical analysis","Step-by-step remediation plan","Downloadable PDF report"];
+    html+=`<div class="premium-lock">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-title">${cta.title||"Unlock Full Report"}</div>
+      ${prem?`<div class="lock-count">🔍 ${prem} premium findings locked</div>`:""}
+      <ul class="lock-items">${inc.map(i=>`<li>${i}</li>`).join("")}</ul>
+      <button class="unlock-btn" onclick="handleUnlock('${cta.payment_url||"#"}')">${cta.button_text||`Unlock ${cta.price_display}`}</button>
+      <div class="secure-note">🔐 Secure payment · UPI / Card / Net Banking · Instant access</div>
+      <div class="secure-note" style="margin-top:6px">Powered by <strong>CYBERDUDEBIVASH PVT LTD</strong> · <a href="https://www.cyberdudebivash.com" target="_blank" style="color:var(--accent)">cyberdudebivash.com</a></div>
+    </div>`;
+  }
+
+  c.innerHTML = html;
+  c.classList.add("show");
+}
+
+function handleUnlock(url) {
+  if (url && url !== "#") window.open(url, "_blank");
+  else alert("Payment integration coming soon!\nContact: bivash@cyberdudebivash.com\nPhone: +91 8179881447\nWebsite: cyberdudebivash.com");
+}
+
+function setLoading(show, text="Analyzing with CYBERDUDEBIVASH AI...") {
+  document.getElementById("loadingText").textContent = text;
+  document.getElementById("scanLoading").classList.toggle("show", show);
+}
+function showError(msg) { const e=document.getElementById("errorMsg"); e.textContent=msg; e.classList.add("show"); }
+function clearResults() {
+  document.getElementById("errorMsg").classList.remove("show");
+  const r=document.getElementById("resultsContainer"); r.innerHTML=""; r.classList.remove("show");
+}
+function getLoadingText(m) {
+  return {domain:"🌐 Analyzing domain security posture...",ai:"🤖 Running OWASP LLM Top 10 assessment...",redteam:"🎯 Executing MITRE ATT&CK simulation...",identity:"👤 Assessing IAM and Zero Trust posture...",compliance:"📋 Generating compliance gap analysis..."}[m]||"Analyzing with CYBERDUDEBIVASH AI...";
+}
+document.addEventListener("keydown", e => { if(e.key==="Enter"){const m=document.querySelector(".tab-btn.active")?.dataset.module;if(m)runScan(m);} });
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.local
+.env.production
+.dev.vars
+
+# Wrangler
+.wrangler/
+workers/.wrangler/
+
+# Secrets — NEVER commit these
+*.pem
+*.key
+*.p12
+razorpay_secret.txt
+api_keys.txt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Test artifacts
+coverage/
+.coverage
+htmlcov/
+report_output.json
