@@ -1,16 +1,17 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Main Router v7.0
- * Enterprise SaaS: async queues, JWT auth, D1, R2, Razorpay, analytics
- * Backward-compatible with all v4/v5/v6 endpoints
+ * CYBERDUDEBIVASH AI Security Hub — Main Router v8.0
+ * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
+ * Continuous Monitoring, Multi-Tenant Orgs, Content Engine, Public API Platform
  *
  * Auth priority: JWT Bearer → API Key (cdb_*) → IP fallback (FREE)
- * New in v7.0:
- *   - POST /api/payments/create-order  → Razorpay order creation
- *   - POST /api/payments/verify        → payment verification + report unlock
- *   - GET  /api/payments/status/:id    → order status check
- *   - GET  /api/reports/download/:token → token-gated HTML report download
- *   - GET  /api/admin/analytics        → platform analytics (ENTERPRISE)
- *   - GET  /api/admin/analytics/scans  → scan job stats (ENTERPRISE)
+ *
+ * New in v8.0:
+ *   AI Brain:          GET  /api/insights/:jobId  → AI narrative from scan
+ *   Attack Graph:      POST /api/attack-graph      → D3-ready attack graph
+ *   Threat Intel:      GET  /api/threat-intel/stats
+ *   Monitoring:        CRUD /api/monitors/*        → scheduled scan monitors
+ *   Content Engine:    CRUD /api/content/*         → auto-generated posts
+ *   Org Management:    CRUD /api/orgs/*            → multi-tenant orgs + teams
  */
 
 // ─── Sync scan handlers (v4 — backward compat) ───────────────────────────────
@@ -37,7 +38,27 @@ import {
   handleReportDownload as handlePaidReportDownload,
   handleRazorpayWebhook,
 } from './handlers/payments.js';
-import { handleGetAnalytics, handleScanStats } from './handlers/analytics.js';
+import { handleGetAnalytics, handleScanStats, trackEvent } from './handlers/analytics.js';
+
+// ─── New v8.0 handlers ────────────────────────────────────────────────────────
+import {
+  handleCreateMonitor, handleListMonitors, handleGetMonitor,
+  handleUpdateMonitor, handleDeleteMonitor, handleMonitorHistory,
+  handleTriggerMonitor, runMonitoringCron,
+} from './handlers/monitoring.js';
+import {
+  handleGenerateContent, handleListContent, handleGetContent,
+  handlePublishContent, handleDeleteContent, handleContentFeed,
+} from './handlers/contentEngine.js';
+import {
+  handleCreateOrg, handleListOrgs, handleGetOrg, handleUpdateOrg, handleDeleteOrg,
+  handleOrgDashboard, handleInviteMember,
+  handleUpdateMemberRole, handleRemoveMember,
+  handleOrgScans,
+} from './handlers/orgManagement.js';
+import { generateAIInsights } from './lib/aiBrain.js';
+import { buildAttackGraph }   from './lib/attackGraph.js';
+import { correlateThreatIntel, getThreatIntelStats, purgeExpiredThreatIntel } from './lib/threatCorrelation.js';
 
 // ─── Intelligence + Sentinel ─────────────────────────────────────────────────
 import { handleSentinelFeed, handleSentinelStatus, runSentinelCron } from './lib/sentinelApex.js';
@@ -88,23 +109,21 @@ function healthResponse() {
   return Response.json({
     status:  'ok',
     service: 'CYBERDUDEBIVASH AI Security Hub',
-    version: '5.0.0',
+    version: '8.0.0',
     company: 'CyberDudeBivash Pvt. Ltd.',
     website: 'https://cyberdudebivash.in',
     tools:   'https://tools.cyberdudebivash.com',
     contact: CONTACT_EMAIL,
     telegram:'https://t.me/cyberdudebivashSentinelApex',
-    new_in_v5: [
-      'JWT authentication (15min access + 7d refresh tokens)',
-      'PBKDF2-SHA256 password hashing (200k iterations)',
-      'API key system with D1 quota tracking',
-      'Async scan queue (Cloudflare Queues)',
-      'R2 result storage',
-      'D1 scan history (queryable, user-scoped)',
-      'Telegram + Email alert engine',
-      'Priority queue (ENTERPRISE first)',
-      'Scan deduplication (1h window)',
-      'Brute-force login protection',
+    new_in_v8: [
+      'AI Cyber Brain — threat narratives, attack scenarios, executive briefs',
+      'Attack Graph Engine — D3-ready force-directed exploit path visualization',
+      'Threat Correlation — live CVE/EPSS/KEV matching with dynamic risk boosting',
+      'Continuous Monitoring — scheduled scans, drift detection, real-time alerts',
+      'Content & Distribution Engine — auto-generate blog posts, Telegram publish',
+      'Enterprise Multi-Tenant — organizations, teams, RBAC, org dashboards',
+      'Public API Platform — api_keys, quota tracking, API request logging',
+      'Razorpay monetization (V7) — pay-per-report + HTML/PDF delivery',
     ],
     modules:   ['domain','ai','redteam','identity','compliance'],
     timestamp: new Date().toISOString(),
@@ -326,6 +345,185 @@ export default {
       return withSecurityHeaders(await handleRazorpayWebhook(request, env));
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // V8.0 ROUTES — AI Brain, Attack Graph, Threat Intel, Monitoring,
+    //               Content Engine, Org Management
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── AI Cyber Brain: insights from scan result ─────────────────────────────
+    if (path === '/api/insights' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      try {
+        const body = await request.json();
+        const { scan_result, module, target } = body;
+        if (!scan_result || !module) {
+          return withSecurityHeaders(withCors(Response.json({ error: 'scan_result and module required' }, { status: 400 }), request));
+        }
+        const insights = await generateAIInsights(scan_result, module, env);
+        return withSecurityHeaders(withCors(Response.json({ success: true, module, target, insights }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // ── Attack Graph: D3-ready graph from scan result ─────────────────────────
+    if (path === '/api/attack-graph' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      try {
+        const body = await request.json();
+        const { scan_result, module } = body;
+        if (!scan_result || !module) {
+          return withSecurityHeaders(withCors(Response.json({ error: 'scan_result and module required' }, { status: 400 }), request));
+        }
+        const graph = buildAttackGraph(scan_result, module);
+        return withSecurityHeaders(withCors(Response.json({ success: true, graph }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // ── Threat Intel: correlate CVEs + stats ──────────────────────────────────
+    if (path === '/api/threat-intel/correlate' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      try {
+        const body = await request.json();
+        const { findings, scan_result, module } = body;
+        if (!findings || !module) {
+          return withSecurityHeaders(withCors(Response.json({ error: 'findings and module required' }, { status: 400 }), request));
+        }
+        const correlation = await correlateThreatIntel(findings, scan_result || {}, module, env);
+        return withSecurityHeaders(withCors(Response.json({ success: true, correlation }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+    if (path === '/api/threat-intel/stats' && method === 'GET') {
+      const stats = await getThreatIntelStats(env);
+      return withSecurityHeaders(withCors(Response.json({ success: true, stats }), request));
+    }
+
+    // ── Continuous Monitoring ─────────────────────────────────────────────────
+    if (path === '/api/monitors' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleCreateMonitor(request, env, authCtx), request));
+    }
+    if (path === '/api/monitors' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleListMonitors(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/monitors\/[^/]+$/) && method === 'GET') {
+      const authCtx   = await resolveAuthV5(request, env);
+      const monitorId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleGetMonitor(request, env, authCtx, monitorId), request));
+    }
+    if (path.match(/^\/api\/monitors\/[^/]+$/) && method === 'PUT') {
+      const authCtx   = await resolveAuthV5(request, env);
+      const monitorId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleUpdateMonitor(request, env, authCtx, monitorId), request));
+    }
+    if (path.match(/^\/api\/monitors\/[^/]+$/) && method === 'DELETE') {
+      const authCtx   = await resolveAuthV5(request, env);
+      const monitorId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleDeleteMonitor(request, env, authCtx, monitorId), request));
+    }
+    if (path.match(/^\/api\/monitors\/[^/]+\/history$/) && method === 'GET') {
+      const authCtx   = await resolveAuthV5(request, env);
+      const monitorId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleMonitorHistory(request, env, authCtx, monitorId), request));
+    }
+    if (path.match(/^\/api\/monitors\/[^/]+\/run$/) && method === 'POST') {
+      const authCtx   = await resolveAuthV5(request, env);
+      const monitorId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleTriggerMonitor(request, env, authCtx, monitorId), request));
+    }
+
+    // ── Content & Distribution Engine ─────────────────────────────────────────
+    if (path === '/api/content' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleGenerateContent(request, env, authCtx), request));
+    }
+    if (path === '/api/content' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleListContent(request, env, authCtx), request));
+    }
+    if (path === '/api/content/feed' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleContentFeed(request, env), request));
+    }
+    if (path.match(/^\/api\/content\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const postId  = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleGetContent(request, env, authCtx, postId), request));
+    }
+    if (path.match(/^\/api\/content\/[^/]+\/publish$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      const postId  = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handlePublishContent(request, env, authCtx, postId), request));
+    }
+    if (path.match(/^\/api\/content\/[^/]+$/) && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env);
+      const postId  = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleDeleteContent(request, env, authCtx, postId), request));
+    }
+
+    // ── Enterprise Multi-Tenant Orgs ──────────────────────────────────────────
+    if (path === '/api/orgs' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleCreateOrg(request, env, authCtx), request));
+    }
+    if (path === '/api/orgs' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleListOrgs(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgSlug = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleGetOrg(request, env, authCtx, orgSlug), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+$/) && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleUpdateOrg(request, env, authCtx, orgId), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+$/) && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleDeleteOrg(request, env, authCtx, orgId), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/dashboard$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleOrgDashboard(request, env, authCtx, orgId), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/members$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleInviteMember(request, env, authCtx, orgId), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/members$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleGetOrg(request, env, authCtx, orgId), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/members\/[^/]+$/) && method === 'PUT') {
+      const authCtx    = await resolveAuthV5(request, env);
+      const parts      = path.split('/');
+      const orgId      = parts[3];
+      const targetUser = parts[5];
+      return withSecurityHeaders(withCors(await handleUpdateMemberRole(request, env, authCtx, orgId, targetUser), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/members\/[^/]+$/) && method === 'DELETE') {
+      const authCtx    = await resolveAuthV5(request, env);
+      const parts      = path.split('/');
+      const orgId      = parts[3];
+      const targetUser = parts[5];
+      return withSecurityHeaders(withCors(await handleRemoveMember(request, env, authCtx, orgId, targetUser), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/scans$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleOrgScans(request, env, authCtx, orgId), request));
+    }
+
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────
     const routeKey = `${method} ${path}`;
     const route    = SYNC_ROUTES[routeKey];
@@ -361,10 +559,26 @@ export default {
   // ── Cron scheduler ───────────────────────────────────────────────────────
   async scheduled(event, env, ctx) {
     console.log('[CRON]', event.cron, event.scheduledTime);
+
+    // Run Sentinel APEX CVE feed refresh
     ctx.waitUntil(
       runSentinelCron(env)
         .then(r => console.log('[CRON] Sentinel APEX:', JSON.stringify(r)))
-        .catch(e => console.error('[CRON] Error:', e?.message))
+        .catch(e => console.error('[CRON] Sentinel error:', e?.message))
+    );
+
+    // Run continuous monitoring scans
+    ctx.waitUntil(
+      runMonitoringCron(env)
+        .then(r => console.log('[CRON] Monitoring:', JSON.stringify(r)))
+        .catch(e => console.error('[CRON] Monitoring error:', e?.message))
+    );
+
+    // Purge expired threat intel cache
+    ctx.waitUntil(
+      purgeExpiredThreatIntel(env)
+        .then(n => { if (n > 0) console.log(`[CRON] Purged ${n} expired threat intel entries`); })
+        .catch(e => console.error('[CRON] Purge error:', e?.message))
     );
   },
 };

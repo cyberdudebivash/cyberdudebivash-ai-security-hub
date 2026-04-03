@@ -169,6 +169,69 @@ select option{background:var(--surface2)}
 .activity-dl{color:var(--accent3);font-size:12px;white-space:nowrap}
 .activity-time{color:var(--text-dim);font-size:11px;white-space:nowrap}
 .btn-sm{padding:6px 14px;font-size:12px}
+
+/* ── AI Brain Panel ────────────────────────────────── */
+.ai-brain-panel{background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(0,212,255,.06));border:1px solid rgba(0,212,255,.2);border-radius:var(--radius);padding:20px;margin-top:20px}
+.ai-brain-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ai-brain-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ai-brain-title{font-weight:800;font-size:14px;color:var(--accent);letter-spacing:.3px}
+.ai-brain-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ai-brain-tab{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text-muted);padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.ai-brain-tab.active{background:rgba(0,212,255,.15);border-color:var(--accent);color:var(--accent)}
+.ai-brain-tab:hover{border-color:var(--accent2);color:var(--text)}
+.ai-brain-content{font-size:13px;color:var(--text-muted);line-height:1.7;min-height:60px}
+.ai-brain-content h2,.ai-brain-content h3,.ai-brain-content h4{color:var(--text);margin:10px 0 6px;font-size:13px;font-weight:700}
+.ai-brain-content strong{color:var(--text)}
+.ai-brain-content ul{padding-left:18px}
+.ai-brain-content li{margin-bottom:4px}
+.ai-brain-loading{display:flex;align-items:center;gap:8px;color:var(--text-dim);font-size:12px}
+
+/* ── Attack Graph ──────────────────────────────────── */
+.attack-graph-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px}
+.attack-graph-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.attack-graph-title{font-weight:800;font-size:13px;color:var(--text);letter-spacing:.3px}
+#attackGraphSvg{width:100%;height:320px;background:rgba(0,0,0,.2);border-radius:8px;overflow:hidden}
+.graph-node-label{font-size:10px;fill:var(--text-muted);pointer-events:none}
+.graph-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:11px;color:var(--text-muted)}
+.graph-legend-item{display:flex;align-items:center;gap:5px}
+.graph-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.graph-paths{margin-top:12px}
+.graph-path-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;font-size:12px}
+.graph-path-title{font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.path-likelihood{background:rgba(239,68,68,.15);color:#fca5a5;border-radius:4px;padding:2px 7px;font-size:11px}
+.path-step{color:var(--text-muted);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:8px}
+.path-step-num{color:var(--accent2);font-weight:700;min-width:16px}
+
+/* ── Monitoring Dashboard ──────────────────────────── */
+.monitor-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px}
+.monitor-section-title{font-size:13px;font-weight:800;color:var(--accent3);letter-spacing:.5px;margin-bottom:14px;text-transform:uppercase}
+.monitor-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:600px){.monitor-form{grid-template-columns:1fr}}
+.monitor-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;width:100%}
+.monitor-input:focus{outline:none;border-color:var(--accent)}
+.monitor-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px}
+.monitor-name{flex:1;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.monitor-score{font-weight:800;min-width:40px;text-align:right}
+.monitor-drift{font-size:11px;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.drift-degraded{background:rgba(239,68,68,.15);color:#fca5a5}
+.drift-improved{background:rgba(16,185,129,.15);color:#6ee7b7}
+.drift-stable{background:rgba(100,116,139,.15);color:var(--text-dim)}
+.drift-new{background:rgba(0,212,255,.15);color:var(--accent)}
+.monitor-chart{height:60px;display:flex;align-items:flex-end;gap:2px;margin-top:8px}
+.monitor-chart-bar{flex:1;background:var(--accent2);border-radius:2px 2px 0 0;min-height:4px;transition:height .3s}
+.monitor-next{font-size:11px;color:var(--text-dim);white-space:nowrap}
+
+/* ── Threat Intel Badges ───────────────────────────── */
+.threat-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;margin:2px}
+.threat-badge.kev{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fcd34d}
+.threat-badge.epss{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:#c4b5fd}
+.cve-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.threat-boost-bar{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:10px 14px;margin-top:10px;font-size:12px}
+.threat-boost-label{color:var(--danger);font-weight:700;margin-bottom:4px}
+
+/* ── Org Switcher (nav bar) ────────────────────────── */
+.org-badge{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:background .2s}
+.org-badge:hover{background:rgba(0,212,255,.2)}
 .scan-btn-row{margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 
 /* ── Progress ──────────────────────────────────── */
@@ -1154,6 +1217,11 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
 <!-- ═══════════════════════════ RECENT ACTIVITY ══════════════════════════════ -->
 <div id="recentActivity" style="display:none"></div>
 
+<!-- ══════════════════════════ MONITORING DASHBOARD ══════════════════════════ -->
+<div style="max-width:1280px;margin:0 auto;padding:20px 24px 0">
+  <div id="monitoringDashboard" class="monitor-section" style="display:none"></div>
+</div>
+
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
@@ -1379,7 +1447,7 @@ const CONFIG = {
   TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
   CONTACT_EMAIL: 'bivash@cyberdudebivash.com',
   PLATFORM_NAME: 'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:       '7.0.0',
+  VERSION:       '8.0.0',
 };
 // Convenience aliases (all existing references continue to work)
 const API_BASE     = CONFIG.API_BASE;
@@ -2421,6 +2489,600 @@ document.querySelectorAll('input[type="text"], input[type="email"]').forEach(inp
     }
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// V8.0 — AI Brain, Attack Graph, Threat Correlation, Monitoring Dashboard
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─── V8.0 State ──────────────────────────────────────────────────────────────
+let _v8ScanResult = null;   // Last scan result stored for AI Brain / Attack Graph
+let _v8Module     = null;
+let _v8Target     = null;
+
+// ─── Enhance renderResults with V8.0 panels ──────────────────────────────────
+const _origRenderResults = renderResults;
+function renderResults(module, data) {
+  _origRenderResults(module, data);
+  _v8ScanResult = data;
+  _v8Module     = module;
+  _v8Target     = _currentScan.target || data.target || 'unknown';
+
+  // Inject V8.0 panels after results render (non-blocking)
+  const panel = document.getElementById(`results-${module}`);
+  if (!panel) return;
+
+  // Defer to avoid blocking main render
+  setTimeout(() => {
+    if (!document.getElementById(`aibrain-${module}`)) {
+      panel.appendChild(buildAIBrainPanel(module, data));
+    }
+    if (!document.getElementById(`attackgraph-${module}`)) {
+      panel.appendChild(buildAttackGraphPanel(module, data));
+    }
+    if (!document.getElementById(`threatintel-${module}`)) {
+      injectThreatIntelPanel(module, data, panel);
+    }
+    // Fetch AI insights from backend
+    fetchAIInsights(module, data);
+  }, 300);
+}
+
+// ─── AI Brain Panel ──────────────────────────────────────────────────────────
+function buildAIBrainPanel(module, data) {
+  const div   = document.createElement('div');
+  div.id      = `aibrain-${module}`;
+  div.className = 'ai-brain-panel';
+
+  div.innerHTML = `
+    <div class="ai-brain-header">
+      <div class="ai-brain-icon">🧠</div>
+      <div>
+        <div class="ai-brain-title">AI CYBER BRAIN — Security Intelligence</div>
+        <div style="font-size:11px;color:var(--text-dim)">Powered by CYBERDUDEBIVASH AI Engine v8.0</div>
+      </div>
+    </div>
+    <div class="ai-brain-tabs" id="aibrain-tabs-${module}">
+      <button class="ai-brain-tab active" onclick="switchAIBrainTab('${module}','narrative')">Threat Narrative</button>
+      <button class="ai-brain-tab" onclick="switchAIBrainTab('${module}','scenario')">Attack Scenario</button>
+      <button class="ai-brain-tab" onclick="switchAIBrainTab('${module}','remediation')">Remediation Plan</button>
+      <button class="ai-brain-tab" onclick="switchAIBrainTab('${module}','forecast')">Risk Forecast</button>
+      <button class="ai-brain-tab" onclick="switchAIBrainTab('${module}','blog')">Generate Post</button>
+    </div>
+    <div class="ai-brain-content" id="aibrain-content-${module}">
+      <div class="ai-brain-loading">
+        <div class="pay-spinner" style="width:20px;height:20px;border-width:2px"></div>
+        <span>AI engine analyzing findings...</span>
+      </div>
+    </div>`;
+
+  return div;
+}
+
+function switchAIBrainTab(module, tab) {
+  document.querySelectorAll(`#aibrain-tabs-${module} .ai-brain-tab`).forEach((b, i) => {
+    const tabs = ['narrative','scenario','remediation','forecast','blog'];
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+
+  const content = document.getElementById(`aibrain-content-${module}`);
+  if (!content) return;
+
+  const cached = content._insights;
+  if (!cached) {
+    content.innerHTML = `<div class="ai-brain-loading"><div class="pay-spinner" style="width:20px;height:20px;border-width:2px"></div><span>Loading AI insights...</span></div>`;
+    fetchAIInsights(module, _v8ScanResult, tab);
+    return;
+  }
+
+  renderAIBrainTab(module, tab, cached);
+}
+
+function renderAIBrainTab(module, tab, insights) {
+  const content = document.getElementById(`aibrain-content-${module}`);
+  if (!content) return;
+
+  let html = '';
+  switch (tab) {
+    case 'narrative':
+      html = mdToHtml(insights.threat_narrative || 'No narrative available');
+      break;
+
+    case 'scenario': {
+      const sc = insights.attack_scenario;
+      if (!sc) { html = '<em>No attack scenario data</em>'; break; }
+      sc.scenarios?.forEach((s, i) => {
+        const color = s.impact === 'CRITICAL' ? '#ef4444' : s.impact === 'HIGH' ? '#f97316' : '#f59e0b';
+        html += `<div style="margin-bottom:12px;padding:12px;background:rgba(255,255,255,.03);border-left:3px solid ${color};border-radius:0 8px 8px 0">
+          <div style="font-weight:700;color:var(--text);margin-bottom:4px">${s.id}: ${s.title}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${s.description}</div>
+          <div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap">
+            <span>🎯 <b>Likelihood:</b> ${s.likelihood}%</span>
+            <span>💥 <b>Impact:</b> ${s.impact}</span>
+            <span>👤 <b>Actor:</b> ${s.threat_actor}</span>
+          </div>
+        </div>`;
+      });
+      break;
+    }
+
+    case 'remediation': {
+      const phases = insights.remediation_plan || [];
+      if (!phases.length) { html = '<em>No remediation data</em>'; break; }
+      phases.forEach(p => {
+        const col = p.color === 'CRITICAL' ? '#ef4444' : p.color === 'HIGH' ? '#f97316' : p.color === 'MEDIUM' ? '#f59e0b' : '#3b82f6';
+        html += `<div style="margin-bottom:14px"><div style="font-weight:700;color:${col};font-size:12px;margin-bottom:8px">${p.label}</div>`;
+        p.items?.forEach(item => {
+          html += `<div style="padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:6px">
+            <span style="background:${col}20;color:${col};border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700">${item.severity}</span>
+            <span style="color:var(--text);font-weight:600;margin-left:8px">${item.title}</span>
+            <div style="color:var(--text-muted);font-size:12px;margin-top:4px">${item.action}</div>
+            <div style="color:var(--text-dim);font-size:11px;margin-top:2px">⏱ Est: ${item.estimated_hours} | ✅ Validate: ${item.validation}</div>
+          </div>`;
+        });
+        html += '</div>';
+      });
+      break;
+    }
+
+    case 'forecast': {
+      const fc = insights.risk_forecast;
+      if (!fc) { html = '<em>No forecast data</em>'; break; }
+      html += `<div style="margin-bottom:12px;font-style:italic;color:var(--warn);font-size:12px">⚠️ ${fc.key_insight}</div>`;
+      html += `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="color:var(--text-dim);font-size:11px">
+          <th style="text-align:left;padding:4px 8px">Timeline</th>
+          <th style="text-align:center;padding:4px 8px">No Action</th>
+          <th style="text-align:center;padding:4px 8px">With Remediation</th>
+        </tr>`;
+      const noAction  = fc.no_action || {};
+      const withRem   = fc.with_remediation || {};
+      [['1 Month','month_1'],['3 Months','month_3'],['6 Months','month_6']].forEach(([label, key]) => {
+        const na  = noAction[key]  || {};
+        const wr  = withRem[key]   || {};
+        const naCol = na.level === 'CRITICAL' ? '#ef4444' : na.level === 'HIGH' ? '#f97316' : '#f59e0b';
+        const wrCol = wr.level === 'LOW' ? '#10b981' : wr.level === 'MEDIUM' ? '#f59e0b' : '#f97316';
+        html += `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:6px 8px;color:var(--text-muted)">${label}</td>
+          <td style="padding:6px 8px;text-align:center"><b style="color:${naCol}">${na.score || '—'}</b><span style="color:var(--text-dim);font-size:10px"> (${na.level || ''})</span></td>
+          <td style="padding:6px 8px;text-align:center"><b style="color:${wrCol}">${wr.score || '—'}</b><span style="color:var(--text-dim);font-size:10px"> (${wr.level || ''})</span></td>
+        </tr>`;
+      });
+      html += '</table>';
+      break;
+    }
+
+    case 'blog': {
+      const bp = insights.blog_post;
+      if (!bp) { html = '<em>No blog data</em>'; break; }
+      html += `<div style="margin-bottom:10px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px">${bp.title}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">${bp.word_count} words · Ready to publish</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" style="font-size:11px;padding:6px 12px;background:linear-gradient(135deg,#0088cc,#006ba6)" onclick="copyBlogPost('${module}','telegram')">📱 Copy Telegram</button>
+          <button class="btn" style="font-size:11px;padding:6px 12px;background:linear-gradient(135deg,#0a66c2,#004182)" onclick="copyBlogPost('${module}','linkedin')">💼 Copy LinkedIn</button>
+          <button class="btn" style="font-size:11px;padding:6px 12px" onclick="copyBlogPost('${module}','blog')">📋 Copy Blog Post</button>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);white-space:pre-wrap;max-height:200px;overflow-y:auto;font-family:monospace" id="blog-preview-${module}">${bp.blog_post_text || bp.body_md?.slice(0, 600) || ''}...</div>`;
+      content._blogData = bp;
+      break;
+    }
+  }
+
+  content.innerHTML = html;
+}
+
+// ─── Fetch AI insights from API ───────────────────────────────────────────────
+async function fetchAIInsights(module, data, initialTab = 'narrative') {
+  if (!data) return;
+  const content = document.getElementById(`aibrain-${module}`)?.querySelector('.ai-brain-content');
+  if (!content) return;
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/insights`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scan_result: data, module, target: _v8Target }),
+      signal: AbortSignal.timeout(8000),
+    });
+
+    let insights;
+    if (resp.ok) {
+      const r = await resp.json();
+      insights = r.insights;
+    } else {
+      // Fallback: generate client-side from scan data
+      insights = buildClientSideInsights(data, module);
+    }
+
+    content._insights = insights;
+    renderAIBrainTab(module, initialTab, insights);
+  } catch {
+    // Client-side fallback for offline/error
+    const insights = buildClientSideInsights(data, module);
+    content._insights = insights;
+    renderAIBrainTab(module, initialTab, insights);
+  }
+}
+
+function buildClientSideInsights(data, module) {
+  const findings = [...(data.findings || []), ...(data.locked_findings || [])];
+  const score    = data.risk_score || 0;
+  const level    = data.risk_level || 'MEDIUM';
+  const target   = _v8Target || 'the assessed system';
+  const crits    = findings.filter(f => f.severity === 'CRITICAL').length;
+  const highs    = findings.filter(f => f.severity === 'HIGH').length;
+
+  const moduleCtx = {
+    domain:     { actors: 'APT28 and FIN7', pattern: 'DNS hijacking + TLS interception', impact: 'data interception and brand damage' },
+    ai:         { actors: 'adversarial AI researchers', pattern: 'prompt injection + agent abuse', impact: 'system prompt leakage and unauthorized actions' },
+    redteam:    { actors: 'APT29 and ransomware groups', pattern: 'password spray + lateral movement', impact: 'ransomware and data exfiltration' },
+    identity:   { actors: 'Lapsus$ and Scattered Spider', pattern: 'MFA fatigue + token theft', impact: 'account takeover and privilege escalation' },
+    compliance: { actors: 'regulatory bodies and auditors', pattern: 'compliance gap exploitation', impact: 'regulatory fines and contract loss' },
+  };
+  const ctx = moduleCtx[module] || moduleCtx.domain;
+
+  const narrative = `## Threat Narrative for ${target}\n\n${crits > 0 ? `🚨 **CRITICAL RISK IDENTIFIED**: ${crits} critical finding(s) require immediate action.\n\n` : ''}Threat actors including **${ctx.actors}** are known to exploit ${module.toUpperCase()} vulnerabilities through **${ctx.pattern}**.\n\nWith a risk score of **${score}/100 (${level})**, ${target} presents ${score >= 70 ? 'a high-value target' : 'moderate exposure'} to sophisticated attackers. The primary business impact would be **${ctx.impact}**.\n\n${crits > 0 ? `**Immediate action required** — critical findings can be exploited within 24-72 hours by a motivated threat actor.` : highs > 0 ? `HIGH severity findings provide a viable attack path over a 1-2 week window.` : `Current posture is acceptable. Maintain monitoring cadence.`}`;
+
+  const phases = [];
+  if (crits > 0) phases.push({ id:'P1', label:'Phase 1 — Immediate (24-48h)', color:'CRITICAL', effort:'High', items: findings.filter(f=>f.severity==='CRITICAL').map(f=>({title:f.title,severity:f.severity,action:f.recommendation||f.description||'Remediate immediately',validation:'Re-run scanner to verify',estimated_hours:'4-8h'})) });
+  if (highs > 0) phases.push({ id:'P2', label:'Phase 2 — Short-Term (7 days)', color:'HIGH', effort:'Medium', items: findings.filter(f=>f.severity==='HIGH').map(f=>({title:f.title,severity:f.severity,action:f.recommendation||f.description||'Address promptly',validation:'Re-run scanner to verify',estimated_hours:'2-4h'})) });
+
+  return {
+    threat_narrative: narrative,
+    attack_scenario: {
+      overall_likelihood: Math.min(score + 10, 95),
+      scenarios: [
+        { id:'AS-01', title:`${ctx.pattern.split(' + ')[0]}`, description:`Attackers leverage ${module} weaknesses to gain initial access via ${ctx.pattern}.`, likelihood: Math.min(score, 90), impact: level, threat_actor: ctx.actors.split(' and ')[0], business_impact: ctx.impact },
+      ],
+    },
+    remediation_plan: phases,
+    risk_forecast: {
+      current: { score, level },
+      no_action: {
+        month_1: { score: Math.min(score+8, 100), level: score+8>=80?'CRITICAL':score+8>=60?'HIGH':'MEDIUM' },
+        month_3: { score: Math.min(score+18,100), level: score+18>=80?'CRITICAL':score+18>=60?'HIGH':'MEDIUM' },
+      },
+      with_remediation: {
+        month_1: { score: Math.max(score-crits*15-highs*8,5), level: 'MEDIUM' },
+        month_3: { score: Math.max(score-30,5), level: 'LOW' },
+      },
+      key_insight: crits > 0 ? `${crits} critical finding(s) elevate breach probability significantly without immediate remediation.` : `Risk is manageable with consistent remediation over 30 days.`,
+    },
+    blog_post: {
+      title: `${module.toUpperCase()} Security Assessment: ${target} — Risk Score ${score}/100`,
+      body_md: `# ${module.toUpperCase()} Security Report\n\n**Target:** ${target}\n**Risk Score:** ${score}/100 (${level})\n**Critical:** ${crits} | **High:** ${highs}\n\n${narrative}\n\n---\n*Generated by CYBERDUDEBIVASH AI Security Hub v8.0*`,
+      word_count: 150,
+      telegram_post: `🔒 Security Alert | ${module.toUpperCase()}\n\n📊 ${target}: ${score}/100 (${level})\n🔴 Critical: ${crits} | 🟠 High: ${highs}\n\nhttps://cyberdudebivash.in`,
+      linkedin_post: `Security assessment complete for ${target} — ${score}/100 risk score. ${crits > 0 ? `${crits} critical findings identified.` : ''} #Cybersecurity #AI #SecurityIntelligence`,
+    },
+  };
+}
+
+function copyBlogPost(module, type) {
+  const content = document.getElementById(`aibrain-content-${module}`);
+  if (!content?._insights?.blog_post) return;
+  const bp = content._insights.blog_post;
+  const text = type === 'telegram' ? bp.telegram_post : type === 'linkedin' ? bp.linkedin_post : bp.body_md;
+  navigator.clipboard?.writeText(text).then(() => {
+    showAlert(module, `✅ ${type.charAt(0).toUpperCase()+type.slice(1)} post copied to clipboard!`, 'success');
+    setTimeout(() => clearAlert(module), 2000);
+  }).catch(() => {
+    document.getElementById(`blog-preview-${module}`)?.select?.();
+  });
+}
+
+// ─── Attack Graph Panel ───────────────────────────────────────────────────────
+function buildAttackGraphPanel(module, data) {
+  const div   = document.createElement('div');
+  div.id      = `attackgraph-${module}`;
+  div.className = 'attack-graph-panel';
+
+  const findings   = [...(data.findings || []), ...(data.locked_findings || [])];
+  const graph      = generateClientGraph(findings, module, data.risk_score || 0);
+  const paths      = buildExploitPaths(findings, module);
+
+  div.innerHTML = `
+    <div class="attack-graph-header">
+      <div class="attack-graph-title">⚔️ ATTACK GRAPH — MITRE ATT&CK Exploit Paths</div>
+      <div style="font-size:11px;color:var(--text-dim)">${graph.nodes.length} nodes · ${paths.length} path(s) identified</div>
+    </div>
+    <svg id="attackGraphSvg-${module}" class="attack-graph-svg" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:260px;background:rgba(0,0,0,.25);border-radius:8px">
+      ${renderGraphSVG(graph)}
+    </svg>
+    <div class="graph-legend">
+      <span class="graph-legend-item"><span class="graph-legend-dot" style="background:#ef4444"></span>Attacker/Impact</span>
+      <span class="graph-legend-item"><span class="graph-legend-dot" style="background:#f97316"></span>Entry Point</span>
+      <span class="graph-legend-item"><span class="graph-legend-dot" style="background:#a855f7"></span>Finding</span>
+      <span class="graph-legend-item"><span class="graph-legend-dot" style="background:#3b82f6"></span>Pivot</span>
+      <span class="graph-legend-item"><span class="graph-legend-dot" style="background:#64748b"></span>Defense</span>
+    </div>
+    <div class="graph-paths">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin:12px 0 8px;text-transform:uppercase;letter-spacing:.5px">Simulated Attack Paths</div>
+      ${paths.map(p => `
+        <div class="graph-path-card">
+          <div class="graph-path-title">
+            ${p.id}: ${p.attack_vector || 'Attack Chain'}
+            <span class="path-likelihood">${p.likelihood}% likely</span>
+            <span style="font-size:11px;color:var(--text-dim)">${p.time_to_exploit || ''}</span>
+          </div>
+          ${p.steps.map(s => `<div class="path-step"><span class="path-step-num">${s.step}.</span><span style="color:var(--accent2);font-weight:600">[${s.tactic}]</span>&nbsp;${s.action}</div>`).join('')}
+        </div>`).join('')}
+    </div>`;
+
+  return div;
+}
+
+function generateClientGraph(findings, module, score) {
+  const nodes = [];
+  const links = [];
+  const nodeColors = { attacker: '#ef4444', entry: '#f97316', finding: '#a855f7', pivot: '#3b82f6', impact: '#ef4444', defense: '#475569' };
+  const CRITICAL_F = findings.filter(f => f.severity === 'CRITICAL');
+  const HIGH_F     = findings.filter(f => f.severity === 'HIGH');
+  const topFindings = [...CRITICAL_F, ...HIGH_F].slice(0, 5);
+
+  // Layout: left-to-right flow
+  nodes.push({ id:'attacker', label:'Attacker', x:30,  y:150, color:'#ef4444', r:14 });
+  nodes.push({ id:'entry1',   label:'Entry',    x:130, y:100, color:'#f97316', r:10 });
+  nodes.push({ id:'entry2',   label:'Service',  x:130, y:200, color:'#f97316', r:10 });
+  links.push({ s:'attacker', t:'entry1', color:'#f59e0b' });
+  links.push({ s:'attacker', t:'entry2', color:'#f59e0b' });
+
+  topFindings.slice(0, 3).forEach((f, i) => {
+    const nid = `f${i}`;
+    const y   = 80 + i * 60;
+    nodes.push({ id:nid, label:(f.title||'').slice(0,15), x:250, y, color: f.severity === 'CRITICAL' ? '#ef4444' : '#a855f7', r: f.severity === 'CRITICAL' ? 12 : 9 });
+    links.push({ s: i % 2 === 0 ? 'entry1' : 'entry2', t: nid, color:'#a855f7', animated: f.severity === 'CRITICAL' });
+  });
+
+  if (score >= 50 && topFindings.length >= 2) {
+    nodes.push({ id:'pivot', label:'Foothold', x:380, y:150, color:'#3b82f6', r:11 });
+    topFindings.slice(0, 2).forEach((_, i) => links.push({ s:`f${i}`, t:'pivot', color:'#3b82f6' }));
+    nodes.push({ id:'impact', label:'Impact', x:500, y:150, color:'#ef4444', r:14 });
+    links.push({ s:'pivot', t:'impact', color:'#ef4444', animated:true });
+  } else {
+    nodes.push({ id:'impact', label:'Impact', x:400, y:150, color:'#ef4444', r:12 });
+    if (topFindings.length) links.push({ s:'f0', t:'impact', color:'#ef4444' });
+  }
+
+  return { nodes, links };
+}
+
+function renderGraphSVG(graph) {
+  let svg = '';
+
+  // Defs for markers
+  svg += `<defs>
+    <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#ef4444"/>
+    </marker>
+  </defs>`;
+
+  // Links
+  graph.links.forEach(l => {
+    const sn = graph.nodes.find(n => n.id === l.s);
+    const tn = graph.nodes.find(n => n.id === l.t);
+    if (!sn || !tn) return;
+    const marker = l.color === '#ef4444' ? 'arrow-red' : 'arrow';
+    svg += `<line x1="${sn.x}" y1="${sn.y}" x2="${tn.x}" y2="${tn.y}" stroke="${l.color || '#475569'}" stroke-width="${l.animated ? 2 : 1}" stroke-opacity=".7" marker-end="url(#${marker})" ${l.animated ? 'stroke-dasharray="4 3"' : ''}/>`;
+  });
+
+  // Nodes
+  graph.nodes.forEach(n => {
+    svg += `<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.color}" fill-opacity=".85" stroke="${n.color}" stroke-width="1.5"/>`;
+    svg += `<text x="${n.x}" y="${n.y + n.r + 12}" text-anchor="middle" class="graph-node-label" font-size="9" fill="#94a3b8">${n.label?.slice(0, 12)}</text>`;
+  });
+
+  return svg;
+}
+
+function buildExploitPaths(findings, module) {
+  const paths = [];
+  const crits = findings.filter(f => f.severity === 'CRITICAL');
+  const highs = findings.filter(f => f.severity === 'HIGH');
+
+  const moduleEntries = { domain:'DNS/HTTP layer', ai:'API endpoint', redteam:'Phishing email', identity:'Login portal', compliance:'Audit gap' };
+  const entry = moduleEntries[module] || 'external surface';
+
+  if (crits.length > 0) {
+    paths.push({ id:'PATH-01', likelihood:80, attack_vector: entry, time_to_exploit:'24-72 hours',
+      steps:[
+        { step:1, tactic:'Reconnaissance', action:`Identify ${entry} via passive scanning` },
+        { step:2, tactic:'Initial Access',  action:`Exploit: ${crits[0]?.title || 'Critical finding'}` },
+        { step:3, tactic:'Persistence',     action:'Establish foothold + enumerate assets' },
+        { step:4, tactic:'Impact',          action:'Achieve primary objective (data exfil / ransomware)' },
+      ],
+    });
+  }
+  if (highs.length > 0) {
+    paths.push({ id:'PATH-02', likelihood:55, attack_vector:'Multi-vector chain', time_to_exploit:'1-2 weeks',
+      steps:[
+        { step:1, tactic:'Reconnaissance',      action:`Profile ${module} environment` },
+        { step:2, tactic:'Initial Access',       action:`Exploit: ${highs[0]?.title || 'High finding'}` },
+        { step:3, tactic:'Lateral Movement',     action:'Pivot to adjacent systems' },
+        { step:4, tactic:'Exfiltration',         action:'Extract sensitive data via covert channel' },
+      ],
+    });
+  }
+
+  if (!paths.length) {
+    paths.push({ id:'PATH-01', likelihood:15, attack_vector:'Opportunistic', time_to_exploit:'>4 weeks',
+      steps:[
+        { step:1, tactic:'Reconnaissance', action:`Passive scanning reveals limited attack surface on ${_v8Target}` },
+        { step:2, tactic:'N/A',            action:'No critical entry points identified — attacker moves to easier targets' },
+      ],
+    });
+  }
+
+  return paths;
+}
+
+// ─── Threat Intel Panel ───────────────────────────────────────────────────────
+async function injectThreatIntelPanel(module, data, panel) {
+  try {
+    const findings = [...(data.findings || []), ...(data.locked_findings || [])];
+    if (!findings.length) return;
+
+    const resp = await fetch(`${API_BASE}/api/threat-intel/correlate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ findings, scan_result: data, module }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) return;
+
+    const { correlation } = await resp.json();
+    if (!correlation?.active_cves?.length && !correlation?.boost_applied) return;
+
+    const div   = document.createElement('div');
+    div.id      = `threatintel-${module}`;
+
+    let html = '';
+    if (correlation.kev_matches?.length) {
+      html += `<div class="threat-boost-bar">
+        <div class="threat-boost-label">🚨 CISA KEV MATCH — Active Exploitation Confirmed</div>
+        <div class="cve-list">${correlation.kev_matches.map(c => `<span class="threat-badge kev">🔥 ${c}</span>`).join('')}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">${correlation.correlation_summary}</div>
+      </div>`;
+    }
+    if (correlation.active_cves?.length) {
+      html += `<div class="cve-list">${correlation.active_cves.slice(0,8).map(c =>
+        `<span class="threat-badge ${c.is_kev ? 'kev' : c.cvss_score >= 9 ? '' : 'epss'}" title="${c.description || ''}">${c.cve_id}${c.cvss_score ? ` (CVSS ${c.cvss_score})` : ''}</span>`
+      ).join('')}</div>`;
+    }
+    if (correlation.boost_applied > 0) {
+      html += `<div style="font-size:11px;color:#fca5a5;margin-top:8px">Risk score boosted +${correlation.boost_applied} points due to active exploitation evidence → ${correlation.boosted_score}/100</div>`;
+    }
+
+    if (html) {
+      div.innerHTML = `<div style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:8px">🎯 Threat Intelligence Correlation</div>${html}</div>`;
+      panel.appendChild(div);
+    }
+  } catch { /* silent */ }
+}
+
+// ─── Monitoring Dashboard ─────────────────────────────────────────────────────
+async function renderMonitoringDashboard() {
+  const container = document.getElementById('monitoringDashboard');
+  if (!container) return;
+
+  const jwt = sessionStorage.getItem('cbd_jwt');
+  if (!jwt) {
+    container.style.display = 'none';
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/monitors`, {
+      headers: { 'Authorization': `Bearer ${jwt}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) { container.style.display = 'none'; return; }
+
+    const { monitors } = await resp.json();
+    if (!monitors?.length) { container.style.display = 'none'; return; }
+
+    container.style.display = 'block';
+    const driftClass = d => d === 'degraded' ? 'drift-degraded' : d === 'improved' ? 'drift-improved' : d === 'new' ? 'drift-new' : 'drift-stable';
+    const driftLabel = d => d === 'degraded' ? '⬆️ Degraded' : d === 'improved' ? '⬇️ Improved' : d === 'new' ? '🆕 New' : '➡️ Stable';
+
+    let html = `<div class="monitor-section-title">📡 Continuous Monitors (${monitors.length})</div>`;
+    monitors.slice(0, 5).forEach(m => {
+      const scoreColor = !m.latest_score ? 'var(--text-dim)' : m.latest_score >= 80 ? '#ef4444' : m.latest_score >= 60 ? '#f97316' : '#10b981';
+      html += `<div class="monitor-row">
+        <div>
+          <div class="monitor-name">${m.name}</div>
+          <div style="font-size:11px;color:var(--text-dim)">${m.module?.toUpperCase()} · ${m.schedule} · ${m.run_count} runs</div>
+        </div>
+        <span class="monitor-drift ${driftClass(m.latest_drift)}">${driftLabel(m.latest_drift)}</span>
+        <span class="monitor-score" style="color:${scoreColor}">${m.latest_score || '—'}</span>
+        <span class="monitor-next" title="Next run">${m.next_run_at ? new Date(m.next_run_at).toLocaleDateString('en-IN') : '—'}</span>
+      </div>`;
+    });
+    html += `<div style="text-align:center;margin-top:8px"><a href="#" onclick="createMonitorModal();return false" style="font-size:12px;color:var(--accent)">+ Add Monitor</a></div>`;
+    container.innerHTML = html;
+  } catch {
+    container.style.display = 'none';
+  }
+}
+
+async function createMonitorModal() {
+  const module = _v8Module || 'domain';
+  const target = _v8Target || '';
+  const jwt    = sessionStorage.getItem('cbd_jwt');
+
+  if (!jwt) {
+    alert('Please sign in to create monitoring configs.');
+    return;
+  }
+  if (!target) {
+    alert('Run a scan first to set the target for monitoring.');
+    return;
+  }
+
+  const name = prompt(`Monitor name for "${target}"?`, `${module.toUpperCase()} — ${target}`);
+  if (!name) return;
+
+  const schedule = prompt('Schedule? (hourly / daily / weekly / monthly)', 'daily');
+  if (!['hourly','daily','weekly','monthly'].includes(schedule)) {
+    alert('Invalid schedule. Use: hourly, daily, weekly, or monthly');
+    return;
+  }
+
+  const targetPayload = buildTargetPayload(module, target);
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/monitors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+      body: JSON.stringify({ name, module, target_json: targetPayload, schedule }),
+    });
+    const data = await resp.json();
+    if (data.success) {
+      alert(`✅ Monitor created! Next run: ${new Date(data.next_run_at).toLocaleString('en-IN')}`);
+      renderMonitoringDashboard();
+    } else {
+      alert(`Error: ${data.error || 'Failed to create monitor'}`);
+    }
+  } catch (e) {
+    alert(`Network error: ${e.message}`);
+  }
+}
+
+function buildTargetPayload(module, target) {
+  switch (module) {
+    case 'domain':     return { domain: target };
+    case 'ai':         return { model_name: target };
+    case 'redteam':
+    case 'identity':
+    case 'compliance': return { org_name: target, target_org: target };
+    default:           return { domain: target };
+  }
+}
+
+// ─── Markdown → HTML (minimal, for AI Brain) ─────────────────────────────────
+function mdToHtml(md) {
+  return md
+    .replace(/^## (.*)/gm, '<h2>$1</h2>')
+    .replace(/^### (.*)/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\d+\. (.*)/gm, '<li>$1</li>')
+    .replace(/^- (.*)/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+// ─── Init V8.0 on page load ───────────────────────────────────────────────────
+setTimeout(() => {
+  // Load monitoring dashboard if authenticated
+  if (typeof renderMonitoringDashboard === 'function') {
+    renderMonitoringDashboard();
+  }
+}, 1500);
 </script>
 </body>
 </html>

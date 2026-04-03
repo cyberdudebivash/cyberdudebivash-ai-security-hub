@@ -6,7 +6,7 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "7.0.0"
+VERSION     = "8.0.0"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
@@ -57,6 +57,10 @@ dead_letter_queue  = "scan-jobs-dlq"
 #   ADMIN_TELEGRAM_CHAT_ID    — your admin Telegram chat ID
 #   SENTINEL_CHANNEL_ID       — Sentinel APEX channel ID (for CVE broadcasts)
 #
+# V8.0 new secrets:
+#   LINKEDIN_ACCESS_TOKEN     — Optional: LinkedIn API v2 access token (for auto-posting)
+#   WORKERS_AI_ACCOUNT_ID     — Optional: Cloudflare account ID for Workers AI binding
+#
 # V7.0 monetization setup (Razorpay):
 #   1. Create an account at https://razorpay.com
 #   2. Generate API keys in Settings → API Keys
@@ -68,10 +72,21 @@ dead_letter_queue  = "scan-jobs-dlq"
 # One-liner to generate JWT_SECRET:
 #   openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
 
+# ── Workers AI (optional — enhances AI Cyber Brain narratives) ────────────────
+# Uncomment to enable Cloudflare AI (Workers AI addon required):
+# [ai]
+# binding = "AI"
+
 # ── Cron Triggers ─────────────────────────────────────────────────────────────
+# V8.0 cron schedule:
+#   Every 6 hours  — Sentinel APEX CVE feed refresh + monitoring scans (hourly monitors)
+#   Every hour     — Continuous monitoring scans (all due monitors)
+# Note: Cloudflare Workers supports multiple cron expressions
 [triggers]
-# Sentinel APEX CVE feed — every 6 hours at UTC 0:00, 6:00, 12:00, 18:00
-crons = ["0 0,6,12,18 * * *"]
+crons = [
+  "0 * * * *",        # Hourly: run due monitoring scans + threat intel purge
+  "0 0,6,12,18 * * *" # 4x/day: Sentinel APEX CVE feed refresh
+]
 
 # ── Custom domain routes ──────────────────────────────────────────────────────
 # Uncomment after configuring DNS:
