@@ -6,8 +6,10 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "3.0.0"
+VERSION     = "4.0.0"
 WEBSITE     = "https://cyberdudebivash.in"
+TOOLS_URL   = "https://tools.cyberdudebivash.com"
+TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
 
 # ── Cloudflare KV namespace ─────────────────────────────────────────────
 # Run: npx wrangler kv:namespace create SECURITY_HUB_KV
@@ -26,9 +28,11 @@ id      = "95faae90943f43afa26d552b8385d339"
 # preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
 
 [triggers]
-crons = []
+# Sentinel APEX CVE feed refresh every 6 hours
+# Also runs at minute 0 of hours 0,6,12,18 UTC
+crons = ["0 0,6,12,18 * * *"]
 
 # ── Custom domain routes (set after DNS is configured) ─────────────────
 # [[routes]]
 # pattern   = "cyberdudebivash.in/api/*"
-# zone_name = "cyberdudebivash.in"
+# zone_name = "cyberdudebiva
