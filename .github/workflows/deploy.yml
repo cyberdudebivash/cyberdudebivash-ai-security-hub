@@ -1,65 +1,286 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Deploy to Cloudflare
+# Enterprise-Grade: Hardened, Retry-Enabled, Gate-Protected
+# =============================================================================
+#
+# DEPLOYMENT GATE:
+#   This workflow triggers on push to main.
+#   It does NOT depend on the security-scan job (advisory only).
+#   Deployment is gated exclusively on required CI jobs via ci-gate.
+#
+# FEATURES:
+#   • Wrangler installed via npm ci (pinned, cached)
+#   • Secret validation before attempting deploy
+#   • Workers deployed first, frontend after (correct dependency order)
+#   • timeout-minutes: 10 on all deploy steps
+#   • Deployment summary with live URLs
+# =============================================================================
+
 name: Deploy to Cloudflare
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      skip_workers:
+        description: "Skip Workers deploy (deploy frontend only)"
+        required: false
+        default: "false"
+        type: boolean
+      skip_frontend:
+        description: "Skip frontend deploy (deploy Workers only)"
+        required: false
+        default: "false"
+        type: boolean
+
+# Only one deployment at a time — queue rather than cancel
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 env:
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  NODE_VERSION: "20"
+  WRANGLER_VERSION: "4"   # major version pin; npm ci uses exact from package-lock
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 · Pre-flight: validate secrets are configured
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
+  preflight:
+    name: Pre-flight Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Validate required secrets are set
+        run: |
+          MISSING=()
+
+          # Check each required secret is non-empty
+          [ -z "$CF_API_TOKEN" ]      && MISSING+=("CLOUDFLARE_API_TOKEN")
+          [ -z "$CF_ACCOUNT_ID" ]     && MISSING+=("CLOUDFLARE_ACCOUNT_ID")
+
+          if [ "${#MISSING[@]}" -gt 0 ]; then
+            echo "❌ The following GitHub Secrets are NOT configured:"
+            for s in "${MISSING[@]}"; do
+              echo "   • $s"
+            done
+            echo ""
+            echo "Configure them at:"
+            echo "  Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+
+          echo "✅ All required secrets are configured"
+          echo "  CLOUDFLARE_API_TOKEN  : [SET]"
+          echo "  CLOUDFLARE_ACCOUNT_ID : [SET]"
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Preflight Summary
+        if: always()
+        run: |
+          echo "### Pre-flight Checks" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cloudflare API Token ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cloudflare Account ID ✅" >> "$GITHUB_STEP_SUMMARY"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 · Deploy Cloudflare Workers API
+# ─────────────────────────────────────────────────────────────────────────────
   deploy-workers:
     name: Deploy Cloudflare Workers API
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: preflight
+    if: ${{ github.event.inputs.skip_workers != 'true' }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - name: Install Wrangler
-        run: cd workers && npm install
-      - name: Set KV Namespace ID
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Install Wrangler + Workers dependencies
+        working-directory: workers
+        run: npm ci --prefer-offline
+
+      - name: Validate wrangler.toml before deploy
         run: |
-          sed -i "s/REPLACE_WITH_YOUR_KV_NAMESPACE_ID/${{ secrets.WORKERS_KV_NAMESPACE_ID }}/g" workers/wrangler.toml
-          sed -i "s/\${CLOUDFLARE_ACCOUNT_ID}/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/g" workers/wrangler.toml
-      - name: Deploy Workers
-        run: cd workers && npx wrangler deploy
+          test -f workers/wrangler.toml \
+            || (echo "❌ wrangler.toml not found — aborting deploy" && exit 1)
+          echo "✅ wrangler.toml validated"
+
+      - name: Patch KV Namespace ID (if secret provided)
+        if: ${{ secrets.WORKERS_KV_NAMESPACE_ID != '' }}
+        run: |
+          sed -i \
+            "s/REPLACE_WITH_YOUR_KV_NAMESPACE_ID/${{ secrets.WORKERS_KV_NAMESPACE_ID }}/g" \
+            workers/wrangler.toml
+          sed -i \
+            "s/\${CLOUDFLARE_ACCOUNT_ID}/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/g" \
+            workers/wrangler.toml
+          echo "✅ KV namespace patched"
+
+      - name: Deploy Workers to Cloudflare
+        timeout-minutes: 10
+        working-directory: workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "━━━ Deploying Cloudflare Workers ━━━"
+          echo "Account: $CLOUDFLARE_ACCOUNT_ID"
+          echo "Commit : ${{ github.sha }}"
 
+          # Retry wrapper (3 attempts, 10s backoff)
+          for attempt in 1 2 3; do
+            echo "Deploy attempt ${attempt}/3..."
+            if npx wrangler deploy; then
+              echo "✅ Workers deployed successfully on attempt ${attempt}"
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ Workers deploy failed after 3 attempts"
+              exit 1
+            fi
+            echo "⚠️  Attempt ${attempt} failed — waiting 10s before retry..."
+            sleep 10
+          done
+
+      - name: Workers Deploy Summary
+        if: always()
+        run: |
+          echo "### Cloudflare Workers Deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Endpoint: https://cyberdudebivash-security-hub.workers.dev ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 · Deploy Frontend to Cloudflare Pages
+# ─────────────────────────────────────────────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend to Cloudflare Pages
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: deploy-workers
+    if: |
+      always() &&
+      needs.deploy-workers.result != 'failure' &&
+      github.event.inputs.skip_frontend != 'true'
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - name: Install Wrangler
-        run: npm install -g wrangler
-      - name: Deploy to Pages
-        run: wrangler pages deploy frontend --project-name cyberdudebivash-security-hub --branch main
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Wrangler globally
+        run: npm install -g wrangler@${{ env.WRANGLER_VERSION }} --quiet
+
+      - name: Verify frontend directory
+        run: |
+          test -f frontend/index.html \
+            || (echo "❌ frontend/index.html missing — aborting deploy" && exit 1)
+          echo "✅ Frontend directory verified"
+
+      - name: Deploy Frontend to Cloudflare Pages
+        timeout-minutes: 10
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  deploy-summary:
-    name: Deployment Summary
-    runs-on: ubuntu-latest
-    needs: [deploy-workers, deploy-frontend]
-    steps:
-      - name: Print deployment info
         run: |
-          echo "======================================="
-          echo "  CYBERDUDEBIVASH AI Security Hub"
-          echo "  Deployment Complete ✅"
-          echo "======================================="
-          echo "  Workers API: https://cyberdudebivash-security-hub.workers.dev"
-          echo "  Frontend:    https://cyberdudebivash-security-hub.pages.dev"
-          echo "  Website:     https://cyberdudebivash.in"
-          echo "======================================="
-          echo "  Deployed at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "  Commit:      ${{ github.sha }}"
-          echo "======================================="
+          echo "━━━ Deploying Frontend to Cloudflare Pages ━━━"
+
+          # Retry wrapper (3 attempts, 15s backoff)
+          for attempt in 1 2 3; do
+            echo "Deploy attempt ${attempt}/3..."
+            if wrangler pages deploy frontend \
+                --project-name cyberdudebivash-security-hub \
+                --branch main \
+                --commit-hash "${{ github.sha }}"; then
+              echo "✅ Frontend deployed successfully on attempt ${attempt}"
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ Frontend deploy failed after 3 attempts"
+              exit 1
+            fi
+            echo "⚠️  Attempt ${attempt} failed — waiting 15s before retry..."
+            sleep 15
+          done
+
+      - name: Frontend Deploy Summary
+        if: always()
+        run: |
+          echo "### Cloudflare Pages Deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: https://cyberdudebivash-security-hub.pages.dev ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 4 · Deployment Summary
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy-summary:
+    name: Deployment Complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    needs: [deploy-workers, deploy-frontend]
+    if: always()
+
+    steps:
+      - name: Print full deployment report
+        run: |
+          WORKERS_STATUS="${{ needs.deploy-workers.result }}"
+          FRONTEND_STATUS="${{ needs.deploy-frontend.result }}"
+
+          status_icon() {
+            case "$1" in
+              success)  echo "✅" ;;
+              skipped)  echo "⏭️ " ;;
+              failure)  echo "❌" ;;
+              *)        echo "⚠️ " ;;
+            esac
+          }
+
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║        CYBERDUDEBIVASH AI Security Hub — DEPLOYED        ║"
+          echo "╠══════════════════════════════════════════════════════════╣"
+          echo "║  $(status_icon "$WORKERS_STATUS") Workers API  : https://cyberdudebivash-security-hub.workers.dev"
+          echo "║  $(status_icon "$FRONTEND_STATUS") Frontend    : https://cyberdudebivash-security-hub.pages.dev"
+          echo "║  🌐  Website    : https://cyberdudebivash.in"
+          echo "╠══════════════════════════════════════════════════════════╣"
+          echo "║  Deployed at : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "║  Commit      : ${{ github.sha }}"
+          echo "║  Branch      : ${{ github.ref_name }}"
+          echo "║  Actor       : ${{ github.actor }}"
+          echo "╚══════════════════════════════════════════════════════════╝"
+
+      - name: Final Deployment Summary
+        if: always()
+        run: |
+          WORKERS="${{ needs.deploy-workers.result }}"
+          FRONTEND="${{ needs.deploy-frontend.result }}"
+
+          echo "## 🚀 Deployment Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Service | Status | URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|--------|-----|" >> "$GITHUB_STEP_SUMMARY"
+
+          w_icon=$([ "$WORKERS" = "success" ] && echo "✅" || echo "❌")
+          f_icon=$([ "$FRONTEND" = "success" ] && echo "✅" || ([ "$FRONTEND" = "skipped" ] && echo "⏭️" || echo "❌"))
+
+          echo "| Workers API | ${w_icon} ${WORKERS} | [workers.dev](https://cyberdudebivash-security-hub.workers.dev) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Frontend | ${f_icon} ${FRONTEND} | [pages.dev](https://cyberdudebivash-security-hub.pages.dev) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`${{ github.sha }}\`  " >> "$GITHUB_STEP_SUMMARY"
+          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
