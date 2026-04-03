@@ -57,6 +57,11 @@
 }
 </script>
 
+<!-- Performance: preconnect to API origin and fonts -->
+<link rel="preconnect" href="https://cyberdudebivash-security-hub.workers.dev" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="dns-prefetch" href="https://tools.cyberdudebivash.com">
+
 <style>
 :root{
   --bg:#0a0a1a;--surface:#0f0f2e;--surface2:#13132b;--border:#1e1e4a;
@@ -411,13 +416,82 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
   .dashboard-grid{grid-template-columns:1fr 1fr}
   .dashboard-lower{grid-template-columns:1fr}
 }
+
+/* ══════════════════════════════════════════════════════
+   V6.0 ENHANCEMENTS — Real-Time Engine · Hero Scan · Sentinel
+   ══════════════════════════════════════════════════════ */
+
+/* ── Hero Quick Scan Input ────────────────────────────── */
+.hero-scan-wrap{max-width:560px;margin:0 auto 24px;padding:0 12px}
+.hero-scan-row{display:flex;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(0,212,255,.3);border-radius:12px;padding:6px;box-shadow:0 0 24px rgba(0,212,255,.1)}
+.hero-scan-input{flex:1;background:transparent;border:none;color:var(--text);padding:10px 14px;font-size:15px;outline:none}
+.hero-scan-input::placeholder{color:var(--text-dim)}
+.hero-scan-btn{white-space:nowrap;padding:10px 22px;font-size:14px;border-radius:8px}
+.hero-scan-examples{font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center}
+.hero-scan-examples a{color:var(--accent);cursor:pointer}
+.hero-scan-examples a:hover{text-decoration:underline}
+.hero-urgency{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:var(--text-muted)}
+.urgency-dot{width:7px;height:7px;border-radius:50%;background:var(--danger);flex-shrink:0;animation:urgencyPulse 1.5s ease infinite}
+@keyframes urgencyPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}50%{box-shadow:0 0 0 5px rgba(239,68,68,0)}}
+
+/* ── Sentinel APEX Feed Panel ─────────────────────────── */
+.sentinel-panel{background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border:1px solid rgba(239,68,68,.25);border-radius:16px;padding:20px;margin-top:20px}
+.sentinel-panel .dash-panel-title{color:#ef4444}
+.sentinel-feed{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;padding-right:4px}
+.sentinel-feed::-webkit-scrollbar{width:4px}
+.sentinel-feed::-webkit-scrollbar-thumb{background:rgba(239,68,68,.3);border-radius:2px}
+.sentinel-cve-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);border-radius:8px;font-size:12px;transition:border-color .2s}
+.sentinel-cve-item:hover{border-color:rgba(239,68,68,.3)}
+.sentinel-cve-sev{font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;flex-shrink:0;margin-top:1px;letter-spacing:.3px}
+.sentinel-cve-sev-CRITICAL{background:rgba(239,68,68,.2);color:#ef4444}
+.sentinel-cve-sev-HIGH{background:rgba(245,158,11,.2);color:#f59e0b}
+.sentinel-cve-id{font-family:monospace;font-size:11px;color:var(--accent);flex-shrink:0;min-width:100px}
+.sentinel-cve-title{color:var(--text);font-weight:600;line-height:1.4}
+.sentinel-cve-date{font-size:10px;color:var(--text-dim);margin-top:2px}
+.sentinel-loading{font-size:13px;color:var(--text-muted);padding:20px;text-align:center}
+.sentinel-error{font-size:12px;color:var(--text-dim);padding:12px;text-align:center;background:rgba(255,255,255,.03);border-radius:8px}
+.sentinel-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:8px}
+.sentinel-join-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#0088cc,#006bb3);color:#fff;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .2s}
+.sentinel-join-btn:hover{transform:translateY(-1px);text-decoration:none;color:#fff}
+.sentinel-last-update{font-size:10px;color:var(--text-dim)}
+.sentinel-kev-badge{font-size:10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700}
+
+/* ── Real-Time Metric Refresh ─────────────────────────── */
+.metric-live-badge{display:inline-block;font-size:9px;font-weight:800;color:#10b981;letter-spacing:.5px;text-transform:uppercase;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+
+/* ── Interactive Compliance Badges ────────────────────── */
+.trust-cert{cursor:pointer;position:relative}
+.trust-cert[data-framework]:hover::after{content:'Click to explore →';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--accent);white-space:nowrap}
+.badge-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:9998;align-items:center;justify-content:center;padding:20px}
+.badge-modal-overlay.show{display:flex}
+.badge-modal{background:var(--surface);border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:32px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.8);max-height:80vh;overflow-y:auto}
+.badge-modal h3{font-size:20px;font-weight:900;margin-bottom:6px;color:#fff}
+.badge-modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+.badge-control-row{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 16px;margin-bottom:8px}
+.badge-control-id{font-size:11px;font-family:monospace;color:var(--accent);font-weight:700;margin-bottom:2px}
+.badge-control-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.badge-control-desc{font-size:12px;color:var(--text-muted);line-height:1.5}
+.badge-modal-close{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;padding:8px 20px;margin-top:16px;width:100%;transition:background .2s}
+.badge-modal-close:hover{background:rgba(255,255,255,.1)}
+
+/* ── Urgency / Conversion Blocks ──────────────────────── */
+.conversion-urgency{display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 16px;margin-top:20px;font-size:12px}
+.conv-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:urgencyPulse 1.5s ease infinite}
+.conv-text{color:var(--text-muted)}
+.conv-text strong{color:#ef4444}
+
+@media(max-width:640px){
+  .hero-scan-row{flex-direction:column}
+  .hero-scan-btn{width:100%;justify-content:center}
+  .sentinel-footer{flex-direction:column;align-items:flex-start}
+}
 </style>
 </head>
 <body>
 
 <!-- Announcement Bar -->
 <div class="ann-bar">
-  ⚡ CYBERDUDEBIVASH AI Security Hub v4.0 — Glassmorphism Dashboard · Sentinel APEX Threat Intel · Enterprise-Grade |
+  ⚡ CYBERDUDEBIVASH AI Security Hub v5.0 — Async Scan Engine · JWT Auth · D1 Scan History · Sentinel APEX · Enterprise-Grade |
   <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">📡 Join Threat Intel</a> ·
   <a href="https://tools.cyberdudebivash.com" target="_blank">🛠️ Tools Suite</a> ·
   <a href="#enterprise">Enterprise</a>
@@ -497,8 +571,24 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
     <span class="badge">🇮🇳 DPDP Act 2023</span>
     <span class="badge">💳 Razorpay Payments</span>
   </div>
-  <a href="#scanner" class="btn btn-primary" style="font-size:16px;padding:14px 36px">
-    🚀 Start Free Scan
+  <!-- Hero Quick Scan -->
+  <div class="hero-scan-wrap">
+    <div class="hero-scan-row">
+      <input id="heroScanInput" type="text" class="hero-scan-input" placeholder="Enter domain to scan instantly (e.g. example.com)" autocomplete="off" spellcheck="false">
+      <button class="btn btn-primary hero-scan-btn" onclick="heroQuickScan()">🚀 Scan Now</button>
+    </div>
+    <div class="hero-scan-examples">
+      Try: <a onclick="heroSetDomain('example.com');return false" href="#">example.com</a> ·
+      <a onclick="heroSetDomain('github.com');return false" href="#">github.com</a> ·
+      <a onclick="heroSetDomain('google.com');return false" href="#">google.com</a>
+    </div>
+    <div class="hero-urgency">
+      <span class="urgency-dot"></span>
+      <span id="hero-urgency-text">Live threat monitoring active — <strong id="hero-live-scans">...</strong> scans run today</span>
+    </div>
+  </div>
+  <a href="#scanner" class="btn" style="font-size:13px;padding:10px 24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-muted)">
+    Explore all 5 scan modules →
   </a>
 </section>
 
@@ -642,6 +732,32 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
       </div>
 
     </div><!-- /dashboard-lower -->
+
+    <!-- Sentinel APEX Live CVE Feed -->
+    <div class="sentinel-panel" id="sentinelDashPanel">
+      <div class="dash-panel-title">
+        🛡️ Sentinel APEX — Live CVE Intelligence
+        <span class="metric-live-badge">LIVE</span>
+      </div>
+      <div class="sentinel-feed" id="sentinelFeed">
+        <div class="sentinel-loading">⟳ Fetching latest threat intelligence...</div>
+      </div>
+      <div class="sentinel-footer">
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" rel="noopener" class="sentinel-join-btn">
+          ✈️ Join Sentinel APEX for Real-Time Alerts
+        </a>
+        <span class="sentinel-last-update" id="sentinelLastUpdate"></span>
+      </div>
+    </div>
+
+    <!-- Conversion urgency block -->
+    <div class="conversion-urgency" id="dashUrgencyBlock" style="display:none">
+      <span class="conv-dot"></span>
+      <span class="conv-text">
+        <strong id="dashUrgencyThreatCount">0</strong> active threats detected in the last 24 hours.
+        Scan your domain now — <a href="#scanner" style="color:#ef4444;font-weight:700">free preview available →</a>
+      </span>
+    </div>
 
     <div style="text-align:center;margin-top:28px">
       <a href="#scanner" class="btn btn-primary" style="font-size:14px;padding:12px 32px">
@@ -929,36 +1045,37 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
     <div class="section-label">Compliance Alignment</div>
     <h2 class="section-title" style="margin-bottom:8px">Built for Regulatory Standards</h2>
     <p style="font-size:14px;color:var(--text-muted)">Every module generates findings mapped to globally recognized frameworks.</p>
+    <p style="font-size:12px;color:var(--text-dim);margin-top:4px">Click any badge to explore mapped controls →</p>
     <div class="trust-certs">
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="iso27001" onclick="openBadgeModal('iso27001')">
         <span class="trust-cert-icon">🛡️</span>
         <div><div class="trust-cert-name">ISO 27001:2022</div><div class="trust-cert-sub">ISMS Gap Analysis</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="soc2" onclick="openBadgeModal('soc2')">
         <span class="trust-cert-icon">🔒</span>
         <div><div class="trust-cert-name">SOC 2 Type II</div><div class="trust-cert-sub">Trust Service Criteria</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="gdpr" onclick="openBadgeModal('gdpr')">
         <span class="trust-cert-icon">🇪🇺</span>
         <div><div class="trust-cert-name">GDPR 2016/679</div><div class="trust-cert-sub">Data Protection Controls</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="pcidss" onclick="openBadgeModal('pcidss')">
         <span class="trust-cert-icon">💳</span>
         <div><div class="trust-cert-name">PCI-DSS v4.0</div><div class="trust-cert-sub">Payment Security</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="dpdp" onclick="openBadgeModal('dpdp')">
         <span class="trust-cert-icon">🇮🇳</span>
         <div><div class="trust-cert-name">DPDP Act 2023</div><div class="trust-cert-sub">India Data Privacy</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="owasp" onclick="openBadgeModal('owasp')">
         <span class="trust-cert-icon">⚡</span>
         <div><div class="trust-cert-name">OWASP LLM Top 10</div><div class="trust-cert-sub">AI Security Standard</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="mitre" onclick="openBadgeModal('mitre')">
         <span class="trust-cert-icon">🎯</span>
         <div><div class="trust-cert-name">MITRE ATT&CK</div><div class="trust-cert-sub">Threat Framework</div></div>
       </div>
-      <div class="trust-cert">
+      <div class="trust-cert" data-framework="nist" onclick="openBadgeModal('nist')">
         <span class="trust-cert-icon">📋</span>
         <div><div class="trust-cert-name">NIST AI RMF</div><div class="trust-cert-sub">AI Risk Management</div></div>
       </div>
@@ -1110,7 +1227,7 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
         <div class="card"><div class="card-icon">🏢</div><div class="card-title">MSSP White-Label</div><div class="card-desc">Rebrand our platform under your brand. Full white-label option available for MSSPs and consultancies.</div></div>
         <div class="card"><div class="card-icon">🤝</div><div class="card-title">Direct Contact</div>
           <div class="card-desc">
-            📧 <a href="mailto:bivashnayak.ai007@gmail.com">bivashnayak.ai007@gmail.com</a><br>
+            📧 <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a><br>
             📞 <a href="tel:+918179881447">+91 8179881447</a><br>
             💬 Discord: <strong>cybercoder127001</strong>
           </div>
@@ -1207,16 +1324,37 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
   </div>
 </footer>
 
+<!-- Compliance Badge Detail Modal -->
+<div class="badge-modal-overlay" id="badgeModalOverlay" onclick="closeBadgeModal(event)">
+  <div class="badge-modal" id="badgeModalBox">
+    <h3 id="badgeModalTitle">Framework Controls</h3>
+    <div class="badge-modal-sub" id="badgeModalSub"></div>
+    <div id="badgeModalContent"></div>
+    <button class="badge-modal-close" onclick="document.getElementById('badgeModalOverlay').classList.remove('show')">✕ Close</button>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════════════
-//  CYBERDUDEBIVASH AI Security Hub — Frontend v3.0
-//  Full API integration, lead capture, results rendering, fallback engine
+//  CYBERDUDEBIVASH AI Security Hub — Frontend v6.0
+//  Real-time metrics · Hero scan · Sentinel APEX live feed · Interactive
+//  compliance badges · Centralized config · Full API integration
 // ═══════════════════════════════════════════════════════════════════════
 
-const API_BASE      = 'https://cyberdudebivash-security-hub.workers.dev';
-const TOOLS_URL     = 'https://tools.cyberdudebivash.com';
-const TELEGRAM_URL  = 'https://t.me/cyberdudebivashSentinelApex';
-// const API_BASE = 'http://localhost:8787'; // local dev
+// ─── Centralized Config ─────────────────────────────────────────────────
+const CONFIG = {
+  API_BASE:      'https://cyberdudebivash-security-hub.workers.dev',
+  // API_BASE:   'http://localhost:8787',   // ← uncomment for local dev
+  TOOLS_URL:     'https://tools.cyberdudebivash.com',
+  TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
+  CONTACT_EMAIL: 'bivash@cyberdudebivash.com',
+  PLATFORM_NAME: 'CYBERDUDEBIVASH AI Security Hub',
+  VERSION:       '6.0.0',
+};
+// Convenience aliases (all existing references continue to work)
+const API_BASE     = CONFIG.API_BASE;
+const TOOLS_URL    = CONFIG.TOOLS_URL;
+const TELEGRAM_URL = CONFIG.TELEGRAM_URL;
 
 let pendingScanModule = null;
 let pendingScanPayload = null;
@@ -1551,7 +1689,7 @@ async function submitEnterprise() {
       showAlert('enterprise', data?.error || 'Submission failed. Email us directly.', 'error');
     }
   } catch(e) {
-    showAlert('enterprise', 'Network error. Email us: bivashnayak.ai007@gmail.com', 'error');
+    showAlert('enterprise', `Network error. Email us: <a href="mailto:${CONFIG.CONTACT_EMAIL}">${CONFIG.CONTACT_EMAIL}</a>`, 'error');
   }
   btn.disabled = false;
   btn.textContent = '📨 Send Enterprise Inquiry';
@@ -1629,7 +1767,13 @@ function localEngine(module, payload) {
     const obs = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && !animated) {
         animated = true;
-        animateCounter(document.getElementById('mc-scans'), 12847);
+        // Only animate counters with static fallbacks — real values loaded by initRealTimeMetrics
+        const mcScansEl = document.getElementById('mc-scans');
+        if (mcScansEl && /^[\d,]+$/.test(mcScansEl.textContent.trim())) {
+          // Already updated by API — skip re-animation
+        } else {
+          animateCounter(mcScansEl, 12847);
+        }
         animateCounter(document.getElementById('mc-confidence'), 947, '', '%');
         // Animate progress bars
         document.querySelectorAll('.prog-bar-fill').forEach(bar => {
@@ -1637,11 +1781,282 @@ function localEngine(module, payload) {
           bar.style.width = '0%';
           setTimeout(() => { bar.style.width = target; }, 200);
         });
+        // Trigger Sentinel feed when dashboard first comes into view
+        initSentinelFeed();
       }
     }, { threshold: 0.2 });
     obs.observe(dashSection);
   }
+
+  // Kick off real-time metrics on page load (non-blocking)
+  if (typeof initRealTimeMetrics === 'function') {
+    setTimeout(initRealTimeMetrics, 800);
+  }
 })();
+
+// ─── Hero Quick Scan ────────────────────────────────────────────────────
+function heroQuickScan() {
+  const val = document.getElementById('heroScanInput')?.value?.trim();
+  if (!val) {
+    document.getElementById('heroScanInput')?.focus();
+    return;
+  }
+  // Pre-fill domain tab + switch to it
+  const domainInput = document.getElementById('domainInput');
+  if (domainInput) domainInput.value = val;
+  switchTab('domain');
+  document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => runScan('domain'), 400);
+}
+
+function heroSetDomain(d) {
+  const inp = document.getElementById('heroScanInput');
+  if (inp) { inp.value = d; inp.focus(); }
+}
+
+document.getElementById('heroScanInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') heroQuickScan();
+});
+
+// ─── Real-Time Metrics Engine ───────────────────────────────────────────
+async function initRealTimeMetrics() {
+  try {
+    // Fetch health / status from API — best-effort, silent on failure
+    const [healthResp, sentinelResp] = await Promise.allSettled([
+      fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(4000) }),
+      fetch(`${API_BASE}/api/sentinel/status`, { signal: AbortSignal.timeout(4000) }),
+    ]);
+
+    // ── Platform scan count ──
+    if (healthResp.status === 'fulfilled' && healthResp.value.ok) {
+      const h = await healthResp.value.json();
+      const totalScans = h?.stats?.total_scans ?? h?.total_scans ?? null;
+      if (totalScans !== null) {
+        // Update mc-scans metric card
+        const mcScans = document.getElementById('mc-scans');
+        if (mcScans) {
+          mcScans.textContent = Number(totalScans).toLocaleString('en-IN');
+          const trend = mcScans.closest('.metric-card')?.querySelector('.metric-trend');
+          if (trend && h?.stats?.scans_today) trend.textContent = `↑ +${h.stats.scans_today} today`;
+        }
+        // Update hero urgency counter
+        const heroLive = document.getElementById('hero-live-scans');
+        if (heroLive && h?.stats?.scans_today) heroLive.textContent = Number(h.stats.scans_today).toLocaleString('en-IN');
+        else if (heroLive) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+      }
+    } else {
+      // Use fallback display
+      const heroLive = document.getElementById('hero-live-scans');
+      if (heroLive) heroLive.textContent = '10,000+';
+    }
+
+    // ── Sentinel threat level ──
+    if (sentinelResp.status === 'fulfilled' && sentinelResp.value.ok) {
+      const s = await sentinelResp.value.json();
+      const critCount = s?.stats?.critical_count ?? s?.critical_count ?? null;
+      if (critCount !== null) {
+        const mcThreat = document.getElementById('mc-threats');
+        if (mcThreat) {
+          const level = critCount >= 5 ? 'CRITICAL' : critCount >= 2 ? 'HIGH' : 'MODERATE';
+          mcThreat.textContent = level;
+          const card = mcThreat.closest('.metric-card');
+          if (card) card.style.setProperty('--mc-color', critCount >= 5 ? '#ef4444' : critCount >= 2 ? '#f59e0b' : '#3b82f6');
+        }
+        // Show urgency block
+        const urgBlock = document.getElementById('dashUrgencyBlock');
+        const urgCount = document.getElementById('dashUrgencyThreatCount');
+        if (urgBlock && critCount > 0) {
+          if (urgCount) urgCount.textContent = critCount;
+          urgBlock.style.display = 'flex';
+        }
+      }
+    }
+  } catch (e) {
+    // Silent failure — static values remain visible
+    const heroLive = document.getElementById('hero-live-scans');
+    if (heroLive) heroLive.textContent = '10,000+';
+  }
+}
+
+// ─── Sentinel APEX Live Feed ────────────────────────────────────────────
+async function initSentinelFeed() {
+  const feedEl   = document.getElementById('sentinelFeed');
+  const lastUpEl = document.getElementById('sentinelLastUpdate');
+  if (!feedEl) return;
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/sentinel/feed`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    const items = [
+      ...(data.nvd_cves     || []).map(c => ({ ...c, source:'NVD'  })),
+      ...(data.cisa_kev     || []).map(c => ({ ...c, source:'CISA KEV', is_kev:true })),
+    ].sort((a,b) => {
+      const sa = a.cvss_base_score ?? a.baseScore ?? 0;
+      const sb = b.cvss_base_score ?? b.baseScore ?? 0;
+      return sb - sa;
+    }).slice(0, 12);
+
+    if (items.length === 0) throw new Error('empty');
+
+    const SEV_COLOR = { CRITICAL:'sentinel-cve-sev-CRITICAL', HIGH:'sentinel-cve-sev-HIGH' };
+    let html = '';
+    items.forEach(item => {
+      const cveId    = item.cve_id || item.cveID || item.id || '—';
+      const title    = item.description?.slice(0, 90) || item.vulnerabilityName || item.title || 'No description';
+      const score    = item.cvss_base_score ?? item.baseScore ?? null;
+      const sev      = score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW';
+      const sevClass = SEV_COLOR[sev] || 'sentinel-cve-sev-HIGH';
+      const dateStr  = item.published || item.dateAdded || item.datePublished || '';
+      const dateDisp = dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '';
+      const kevBadge = item.is_kev ? '<span class="sentinel-kev-badge">KEV</span>' : '';
+
+      html += `<div class="sentinel-cve-item">
+        <span class="sentinel-cve-sev ${sevClass}">${sev}</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="sentinel-cve-id">${cveId}</span>
+            ${kevBadge}
+            ${score !== null ? `<span style="font-size:10px;color:var(--text-dim)">CVSS ${Number(score).toFixed(1)}</span>` : ''}
+          </div>
+          <div class="sentinel-cve-title">${title}${title.length >= 90 ? '…' : ''}</div>
+          ${dateDisp ? `<div class="sentinel-cve-date">${item.source} · ${dateDisp}</div>` : `<div class="sentinel-cve-date">${item.source}</div>`}
+        </div>
+      </div>`;
+    });
+    feedEl.innerHTML = html;
+
+    if (lastUpEl) {
+      const ts = data.fetched_at || data.last_run || new Date().toISOString();
+      lastUpEl.textContent = `Updated ${new Date(ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}`;
+    }
+  } catch(e) {
+    feedEl.innerHTML = `<div class="sentinel-error">
+      Live feed temporarily unavailable — join
+      <a href="${TELEGRAM_URL}" target="_blank" rel="noopener">Sentinel APEX on Telegram</a>
+      for real-time CVE alerts.
+    </div>`;
+  }
+}
+
+// ─── Interactive Compliance Badge Modals ────────────────────────────────
+const FRAMEWORK_DATA = {
+  iso27001: {
+    title: '🛡️ ISO 27001:2022',
+    sub: 'Information Security Management System — key controls mapped by our platform',
+    controls: [
+      { id:'A.5.23', title:'Information security for use of cloud services', desc:'Our platform assesses cloud-hosted AI systems and SaaS configurations against ISO controls for shared responsibility.' },
+      { id:'A.8.23', title:'Web filtering and email security', desc:'Domain Scanner checks SPF, DKIM, DMARC, MX records and blacklist status to surface email security control gaps.' },
+      { id:'A.8.28', title:'Secure coding', desc:'AI Security module detects insecure output handling and prompt injection patterns mapped to A.8.28 secure development requirements.' },
+      { id:'A.5.7',  title:'Threat intelligence', desc:'Sentinel APEX continuously ingests NVD CVE data and CISA KEV alerts, satisfying ISO 27001 A.5.7 threat intelligence obligations.' },
+      { id:'A.8.8',  title:'Management of technical vulnerabilities', desc:'Full findings reports include CVSS scores, remediation owners, and timelines — enabling structured vulnerability management.' },
+    ],
+  },
+  soc2: {
+    title: '🔒 SOC 2 Type II',
+    sub: 'Trust Service Criteria — controls assessed across our five scan modules',
+    controls: [
+      { id:'CC6.1', title:'Logical and physical access controls', desc:'Identity Scanner evaluates MFA enforcement, JIT access, Conditional Access gaps — directly evidencing CC6.1 compliance posture.' },
+      { id:'CC6.6', title:'Logical access security measures — network boundary', desc:'Domain Scanner checks DNSSEC, TLS grade, open port exposure, and HSTS to surface network boundary control weaknesses.' },
+      { id:'CC7.1', title:'Detection and monitoring of new vulnerabilities', desc:'Sentinel APEX cron (every 6 hours) ensures continuous monitoring against NIST NVD and CISA KEV feeds.' },
+      { id:'CC9.1', title:'Risk identification, analysis, and mitigation', desc:'Executive summary and remediation plan in every full report maps findings to business risk — supporting CC9.1 risk management processes.' },
+    ],
+  },
+  gdpr: {
+    title: '🇪🇺 GDPR 2016/679',
+    sub: 'General Data Protection Regulation — security of processing and breach risk',
+    controls: [
+      { id:'Art. 32', title:'Security of processing', desc:'Domain Scanner, TLS grade, and email security findings directly surface encryption-in-transit and data protection control gaps under Article 32.' },
+      { id:'Art. 33', title:'Notification of personal data breach', desc:'DNSBL blacklist detection triggers alert to signal potential compromise — enabling faster incident detection and Article 33 notification timelines.' },
+      { id:'Art. 25', title:'Data protection by design and by default', desc:'AI Security scanner detects LLM output handling risks (OWASP LLM03) that could lead to unintended personal data exposure.' },
+      { id:'Art. 35', title:'Data protection impact assessment', desc:'Compliance module generates GDPR-aligned gap analysis for supporting DPIA documentation and controller obligations.' },
+    ],
+  },
+  pcidss: {
+    title: '💳 PCI-DSS v4.0',
+    sub: 'Payment Card Industry Data Security Standard — key requirements covered',
+    controls: [
+      { id:'Req 4.2.1', title:'Strong cryptography in transit', desc:'Domain Scanner reports TLS version, cipher strength, and HSTS configuration — directly evidencing PCI Req 4.2.1 strong encryption in transit.' },
+      { id:'Req 6.3.3', title:'All software protected from known vulnerabilities', desc:'Sentinel APEX CVE feed integration surfaces relevant known vulnerabilities mapped against PCI Req 6.3.3.' },
+      { id:'Req 8.4',   title:'MFA for all access into CDE', desc:'Identity Scanner assesses MFA enrollment gaps and Conditional Access policy coverage for all administrative access paths.' },
+      { id:'Req 11.3.1', title:'External vulnerability scans', desc:'Domain Scanner and Red Team modules provide external vulnerability assessment output suitable for PCI quarterly scan requirements.' },
+    ],
+  },
+  dpdp: {
+    title: '🇮🇳 DPDP Act 2023',
+    sub: 'Digital Personal Data Protection Act (India) — obligations for Data Fiduciaries',
+    controls: [
+      { id:'Sec. 4 / 8', title:'Grounds for processing — security obligations', desc:'Email spoofing and domain impersonation risks (DOM-004/005/006) directly threaten personal data processed via email — mapped to Section 8 security obligations.' },
+      { id:'Sec. 9',     title:'Processing of children\'s data', desc:'AI Security scanner detects excessive data collection and agency risks (OWASP LLM08/09) relevant to platforms handling children\'s data.' },
+      { id:'Sec. 8(6)',  title:'Reasonable security safeguards', desc:'Full domain + identity assessment provides evidence of reasonable technical safeguards as required by Section 8(6) of the DPDP Act.' },
+      { id:'Sec. 8(7)',  title:'Personal data breach notification', desc:'DNSBL blacklist detection and threat intelligence alerts support faster breach detection to meet DPDP breach notification obligations.' },
+    ],
+  },
+  owasp: {
+    title: '⚡ OWASP LLM Top 10',
+    sub: 'AI Security standard — all 10 categories scanned by our AI Security module',
+    controls: [
+      { id:'LLM01', title:'Prompt Injection', desc:'Detects direct and indirect prompt injection vectors in LLM pipelines — the #1 AI security risk per OWASP.' },
+      { id:'LLM02', title:'Insecure Output Handling', desc:'Assesses whether model outputs are sanitized before use in downstream systems such as browsers, APIs, or code interpreters.' },
+      { id:'LLM03', title:'Training Data Poisoning', desc:'Evaluates data pipeline exposure and model fine-tuning processes for poisoning attack surface.' },
+      { id:'LLM06', title:'Sensitive Information Disclosure', desc:'Detects whether system prompt leakage, PII extraction, or model inversion attack vectors are present.' },
+      { id:'LLM08', title:'Excessive Agency', desc:'Evaluates tool permissions and autonomous action scope granted to AI agents — a critical risk for agentic deployments.' },
+      { id:'LLM09', title:'Overreliance', desc:'Assesses human-in-the-loop controls and output verification mechanisms to mitigate overreliance risks.' },
+    ],
+  },
+  mitre: {
+    title: '🎯 MITRE ATT&CK',
+    sub: 'Enterprise threat framework — 8 simulated scenarios in our Red Team module',
+    controls: [
+      { id:'T1566',     title:'Phishing / Spear Phishing', desc:'Simulates credential harvesting via spear phishing emails targeting your organization — evaluates email controls and security awareness posture.' },
+      { id:'T1110.003', title:'Password Spraying', desc:'Tests for account lockout policies and smart lockout configurations against distributed password spray attack patterns.' },
+      { id:'T1078',     title:'Valid Accounts', desc:'Identifies stale and overprivileged accounts that could be leveraged by attackers using compromised credentials.' },
+      { id:'T1046',     title:'Network Service Scanning', desc:'Detects exposed services and open ports that represent recon targets in the discovery phase of an attack chain.' },
+      { id:'T1572',     title:'Protocol Tunneling (DNS)', desc:'Simulates DNS tunneling C2 communication patterns to test DNS monitoring and egress filtering controls.' },
+      { id:'T1486',     title:'Ransomware Simulation', desc:'Validates backup integrity, lateral movement paths, and response playbook readiness against ransomware deployment scenarios.' },
+    ],
+  },
+  nist: {
+    title: '📋 NIST AI RMF',
+    sub: 'AI Risk Management Framework — GOVERN · MAP · MEASURE · MANAGE',
+    controls: [
+      { id:'GOVERN 1.1', title:'AI risk policies and organizational accountability', desc:'Compliance module generates gap analysis that supports AI governance policy documentation under the GOVERN function.' },
+      { id:'MAP 1.1',    title:'Context and risk identification', desc:'AI Security scanner maps OWASP LLM risks to organizational context — enabling structured AI risk identification for the MAP function.' },
+      { id:'MEASURE 2.5', title:'AI system performance and trustworthiness evaluation', desc:'Confidence scoring, risk score, and CVSS-mapped findings provide quantitative AI system trustworthiness metrics.' },
+      { id:'MANAGE 1.3', title:'Responses to identified AI risks', desc:'Prioritized remediation plan with owner, timeline, and effort estimate directly supports the MANAGE function risk response.' },
+      { id:'MANAGE 4.1', title:'Incident response for AI-specific risks', desc:'Sentinel APEX CVE alerts and blacklist detection provide early warning signals for AI supply chain and model attacks.' },
+    ],
+  },
+};
+
+function openBadgeModal(framework) {
+  const d = FRAMEWORK_DATA[framework];
+  if (!d) return;
+  document.getElementById('badgeModalTitle').textContent = d.title;
+  document.getElementById('badgeModalSub').textContent = d.sub;
+  let html = '';
+  d.controls.forEach(c => {
+    html += `<div class="badge-control-row">
+      <div class="badge-control-id">${c.id}</div>
+      <div class="badge-control-title">${c.title}</div>
+      <div class="badge-control-desc">${c.desc}</div>
+    </div>`;
+  });
+  html += `<div style="margin-top:14px;padding:12px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;font-size:12px;color:var(--text-muted)">
+    Full compliance gap analysis available in the <a href="#scanner" onclick="document.getElementById('badgeModalOverlay').classList.remove('show');switchTab('compliance');" style="color:var(--accent)">Compliance module</a> →
+  </div>`;
+  document.getElementById('badgeModalContent').innerHTML = html;
+  document.getElementById('badgeModalOverlay').classList.add('show');
+}
+
+function closeBadgeModal(e) {
+  if (e.target === document.getElementById('badgeModalOverlay')) {
+    document.getElementById('badgeModalOverlay').classList.remove('show');
+  }
+}
 
 // ─── Close modal on overlay click ──────────────────────────────────────
 document.getElementById('leadModal')?.addEventListener('click', function(e) {

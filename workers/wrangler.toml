@@ -71,4 +71,4 @@ crons = ["0 0,6,12,18 * * *"]
 
 # [[routes]]
 # pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebivash.com"
+# zone_name = "cyberdudebiv
