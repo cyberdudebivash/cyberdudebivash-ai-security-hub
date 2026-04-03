@@ -1,18 +1,16 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Main Router v5.0
- * Enterprise SaaS architecture: async queues, JWT auth, D1, R2
- * Backward-compatible with all v4 endpoints
+ * CYBERDUDEBIVASH AI Security Hub — Main Router v7.0
+ * Enterprise SaaS: async queues, JWT auth, D1, R2, Razorpay, analytics
+ * Backward-compatible with all v4/v5/v6 endpoints
  *
  * Auth priority: JWT Bearer → API Key (cdb_*) → IP fallback (FREE)
- * New in v5.0:
- *   - POST /api/auth/signup|login|refresh|logout
- *   - GET  /api/auth/me | PUT /api/auth/profile
- *   - POST /api/auth/alerts | POST /api/auth/test-alert
- *   - GET|POST|DELETE /api/keys | GET /api/keys/:id/usage
- *   - POST /api/scan/async/:module → job queue
- *   - GET  /api/jobs/:id | GET /api/jobs/:id/result
- *   - GET  /api/history (D1-backed for authenticated users)
- *   - GET  /api/sentinel/feed | /api/sentinel/status
+ * New in v7.0:
+ *   - POST /api/payments/create-order  → Razorpay order creation
+ *   - POST /api/payments/verify        → payment verification + report unlock
+ *   - GET  /api/payments/status/:id    → order status check
+ *   - GET  /api/reports/download/:token → token-gated HTML report download
+ *   - GET  /api/admin/analytics        → platform analytics (ENTERPRISE)
+ *   - GET  /api/admin/analytics/scans  → scan job stats (ENTERPRISE)
  */
 
 // ─── Sync scan handlers (v4 — backward compat) ───────────────────────────────
@@ -32,6 +30,14 @@ import {
 } from './handlers/auth.js';
 import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage } from './handlers/apikeys.js';
 import { handleAsyncScan, handleJobStatus, handleJobResult, handleD1History } from './handlers/jobs.js';
+
+// ─── New v7.0 handlers ────────────────────────────────────────────────────────
+import {
+  handleCreateOrder, handleVerifyPayment, handlePaymentStatus,
+  handleReportDownload as handlePaidReportDownload,
+  handleRazorpayWebhook,
+} from './handlers/payments.js';
+import { handleGetAnalytics, handleScanStats } from './handlers/analytics.js';
 
 // ─── Intelligence + Sentinel ─────────────────────────────────────────────────
 import { handleSentinelFeed, handleSentinelStatus, runSentinelCron } from './lib/sentinelApex.js';
@@ -285,9 +291,39 @@ export default {
       return withSecurityHeaders(withCors(await handleSentinelStatus(request, env), request));
     }
 
-    // ── Razorpay webhook ────────────────────────────────────────────────────
+    // ── V7.0 Payment routes ─────────────────────────────────────────────────
+    if (path === '/api/payments/create-order' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleCreateOrder(request, env, authCtx), request));
+    }
+    if (path === '/api/payments/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleVerifyPayment(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/payments/status/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handlePaymentStatus(request, env, authCtx), request));
+    }
+
+    // ── V7.0 Token-gated paid report download ────────────────────────────────
+    if (path.startsWith('/api/reports/download/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(await handlePaidReportDownload(request, env, authCtx));
+    }
+
+    // ── V7.0 Admin analytics ─────────────────────────────────────────────────
+    if (path === '/api/admin/analytics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleGetAnalytics(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/analytics/scans' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleScanStats(request, env, authCtx), request));
+    }
+
+    // ── Razorpay webhook (V7 replaces monetization middleware stub) ──────────
     if (path === '/api/webhooks/razorpay' && method === 'POST') {
-      return withSecurityHeaders(await handlePaymentWebhook(request, env));
+      return withSecurityHeaders(await handleRazorpayWebhook(request, env));
     }
 
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────

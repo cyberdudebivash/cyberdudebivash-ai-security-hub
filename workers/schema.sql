@@ -172,6 +172,72 @@ CREATE TABLE IF NOT EXISTS scan_dedup (
   expires_at  TEXT    NOT NULL
 );
 
+-- ─── Payments (Razorpay monetization) ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS payments (
+  id                   TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  user_id              TEXT    REFERENCES users(id) ON DELETE SET NULL,
+  scan_id              TEXT,
+  module               TEXT    NOT NULL,
+  target               TEXT    NOT NULL,
+  amount               INTEGER NOT NULL,          -- paise (INR × 100)
+  currency             TEXT    NOT NULL DEFAULT 'INR',
+  razorpay_order_id    TEXT    UNIQUE,
+  razorpay_payment_id  TEXT,
+  razorpay_signature   TEXT,
+  status               TEXT    NOT NULL DEFAULT 'pending'
+                         CHECK (status IN ('pending','paid','failed','refunded')),
+  plan                 TEXT    NOT NULL DEFAULT 'pay_per_report',
+  report_token         TEXT,
+  ip                   TEXT,
+  email                TEXT,
+  created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+  paid_at              TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_user       ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_razorpay   ON payments(razorpay_order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status     ON payments(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_payments_module     ON payments(module, status);
+CREATE INDEX IF NOT EXISTS idx_payments_target     ON payments(target, module);
+
+-- ─── Report Access Tokens ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS report_access (
+  id                   TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  scan_id              TEXT,
+  payment_id           TEXT    REFERENCES payments(id) ON DELETE CASCADE,
+  user_id              TEXT    REFERENCES users(id) ON DELETE SET NULL,
+  token                TEXT    NOT NULL UNIQUE,
+  module               TEXT    NOT NULL,
+  r2_key               TEXT,
+  expires_at           TEXT    NOT NULL,
+  downloaded_count     INTEGER NOT NULL DEFAULT 0,
+  last_downloaded_at   TEXT,
+  created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_token        ON report_access(token);
+CREATE INDEX IF NOT EXISTS idx_report_scan_id      ON report_access(scan_id);
+CREATE INDEX IF NOT EXISTS idx_report_user         ON report_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_report_expires      ON report_access(expires_at);
+
+-- ─── Analytics Events ──────────────────────────────────────────────────────────
+-- Tracks: scan_started, scan_completed, payment_initiated, payment_completed,
+--         report_downloaded, payment_signature_invalid, lead_captured, etc.
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id           TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  event_type   TEXT    NOT NULL,
+  module       TEXT,
+  user_id      TEXT,
+  ip           TEXT,
+  metadata     TEXT,   -- JSON blob
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_type      ON analytics_events(event_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_module    ON analytics_events(module, created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_user      ON analytics_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_date      ON analytics_events(created_at);
+
 -- ─── Seed: default admin placeholder ─────────────────────────────────────────
 -- Real users created via signup API. This is a structural placeholder only.
 -- INSERT INTO users (id, email, password_hash, password_salt, tier, full_name)

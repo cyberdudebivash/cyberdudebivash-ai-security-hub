@@ -139,8 +139,35 @@ select option{background:var(--surface2)}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(124,58,237,.5)}
 .btn-primary:disabled{opacity:.5;transform:none;cursor:not-allowed}
 .btn-success{background:linear-gradient(135deg,var(--accent3),#059669);color:#fff}
-.btn-unlock{background:linear-gradient(135deg,var(--warn),#d97706);color:#fff;width:100%;justify-content:center;margin-top:12px;font-size:15px;padding:14px}
+.btn-unlock{background:linear-gradient(135deg,var(--warn),#d97706);color:#fff;width:100%;justify-content:center;margin-top:12px;font-size:15px;padding:14px;border:none;cursor:pointer}
 .btn-unlock:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,.4)}
+.btn-unlock:disabled{opacity:.6;cursor:wait;transform:none}
+
+/* ── Payment Flow Overlay ──────────────────────────── */
+.pay-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px}
+.pay-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow)}
+.pay-spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pay-success-icon{font-size:48px;margin-bottom:12px}
+.pay-download-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--accent3),#059669);color:#fff;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-top:16px;transition:transform .2s}
+.pay-download-btn:hover{transform:translateY(-2px);text-decoration:none;color:#fff}
+
+/* ── Job Polling Status ────────────────────────────── */
+.job-poll-card{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:var(--radius);padding:20px;text-align:center;margin-top:12px}
+.job-poll-title{font-weight:700;color:var(--accent);margin-bottom:8px;font-size:14px}
+.job-poll-progress{width:100%;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:12px 0}
+.job-poll-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0%;transition:width .6s ease}
+.job-poll-status{font-size:12px;color:var(--text-muted)}
+
+/* ── Recent Activity Section ──────────────────────── */
+#recentActivity{max-width:1280px;margin:0 auto;padding:40px 24px 0}
+.activity-title{font-size:13px;font-weight:800;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px}
+.activity-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:8px;font-size:13px}
+.activity-mod{background:rgba(124,58,237,.2);color:var(--accent2);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+.activity-target{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-score{font-weight:800;min-width:32px;text-align:right}
+.activity-dl{color:var(--accent3);font-size:12px;white-space:nowrap}
+.activity-time{color:var(--text-dim);font-size:11px;white-space:nowrap}
 .btn-sm{padding:6px 14px;font-size:12px}
 .scan-btn-row{margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 
@@ -1124,6 +1151,9 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
   </div>
 </section>
 
+<!-- ═══════════════════════════ RECENT ACTIVITY ══════════════════════════════ -->
+<div id="recentActivity" style="display:none"></div>
+
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
@@ -1349,7 +1379,7 @@ const CONFIG = {
   TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
   CONTACT_EMAIL: 'bivash@cyberdudebivash.com',
   PLATFORM_NAME: 'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:       '6.0.0',
+  VERSION:       '7.0.0',
 };
 // Convenience aliases (all existing references continue to work)
 const API_BASE     = CONFIG.API_BASE;
@@ -1359,6 +1389,9 @@ const TELEGRAM_URL = CONFIG.TELEGRAM_URL;
 let pendingScanModule = null;
 let pendingScanPayload = null;
 let leadCaptured = sessionStorage.getItem('cbd_lead_captured') === '1';
+let _currentScan = { module: null, target: null };  // tracks last scan for payment flow
+let _razorpayReady = false;                          // Razorpay checkout.js loaded flag
+let _activeJobPoll = null;                           // setInterval handle for job polling
 
 // ─── Tab Switching ─────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -1443,6 +1476,12 @@ async function executeScan(module, payload) {
     compliance: '/api/generate/compliance',
   };
 
+  // Track current scan target for payment flow
+  _currentScan = {
+    module,
+    target: payload.domain || payload.model_name || payload.target_org || payload.org_name || 'unknown',
+  };
+
   setLoading(module, true, scanMsgs[module]);
 
   try {
@@ -1464,6 +1503,13 @@ async function executeScan(module, payload) {
       return;
     }
 
+    // ── Async job queued (PRO/ENTERPRISE long-running scans) ──
+    if (data.job_id && (data.status === 'queued' || data.status === 'processing')) {
+      setLoading(module, false);
+      startJobPolling(module, data.job_id);
+      return;
+    }
+
     setLoading(module, false);
     renderResults(module, data);
 
@@ -1474,6 +1520,66 @@ async function executeScan(module, payload) {
     setLoading(module, false);
     renderResults(module, fallbackData);
   }
+}
+
+// ─── Async Job Polling ──────────────────────────────────────────────────
+function startJobPolling(module, jobId) {
+  const panel = document.getElementById(`results-${module}`);
+  if (!panel) return;
+
+  panel.className = 'results-panel show';
+  let elapsed = 0;
+
+  panel.innerHTML = `
+    <div class="job-poll-card" id="poll-card-${module}">
+      <div class="job-poll-title">⏳ Scan Queued — Processing</div>
+      <div class="job-poll-progress"><div class="job-poll-fill" id="poll-fill-${module}" style="width:5%"></div></div>
+      <div class="job-poll-status" id="poll-status-${module}">Initializing scan engine...</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:8px">Job ID: ${jobId}</div>
+    </div>`;
+
+  // Clear any existing poll
+  if (_activeJobPoll) clearInterval(_activeJobPoll);
+
+  _activeJobPoll = setInterval(async () => {
+    elapsed += 2;
+    const fillPct = Math.min(5 + elapsed * 2, 90);
+    const fillEl   = document.getElementById(`poll-fill-${module}`);
+    const statusEl = document.getElementById(`poll-status-${module}`);
+    if (fillEl)   fillEl.style.width = fillPct + '%';
+    if (statusEl) statusEl.textContent = elapsed < 10 ? 'Initializing scan engine...'
+                                        : elapsed < 25 ? 'Running checks...'
+                                        : elapsed < 45 ? 'Correlating threat intelligence...'
+                                        : 'Finalizing results...';
+    try {
+      const r = await fetch(`${API_BASE}/api/jobs/${jobId}`, { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) return;
+      const job = await r.json();
+
+      if (job.status === 'completed') {
+        clearInterval(_activeJobPoll);
+        _activeJobPoll = null;
+        if (fillEl) fillEl.style.width = '100%';
+        // Fetch full result from job or use embedded data
+        const result = job.result || job;
+        renderResults(module, result);
+      } else if (job.status === 'failed') {
+        clearInterval(_activeJobPoll);
+        _activeJobPoll = null;
+        panel.innerHTML = `<div class="job-poll-card" style="border-color:rgba(239,68,68,.3)">
+          <div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ Scan Failed</div>
+          <div style="font-size:13px;color:var(--text-muted)">${job.error_message || 'An error occurred. Please try again.'}</div>
+        </div>`;
+      }
+    } catch (_) { /* silent — keep polling */ }
+
+    // Timeout safety valve at 3 minutes
+    if (elapsed >= 180) {
+      clearInterval(_activeJobPoll);
+      _activeJobPoll = null;
+      if (statusEl) statusEl.textContent = 'Scan timed out. Please try again.';
+    }
+  }, 2000);
 }
 
 // ─── Loading State ──────────────────────────────────────────────────────
@@ -1556,6 +1662,10 @@ function renderResults(module, data) {
       </div>`;
     });
     if (mon.unlock_price) {
+      // Determine payment amount: prefer backend-provided, fall back to module defaults
+      const _modAmounts = { domain:19900, ai:49900, redteam:99900, identity:79900, compliance:49900 };
+      const _payAmount  = mon.amount || _modAmounts[module] || 19900;
+      const _payTarget  = data.target || _currentScan.target || 'unknown';
       html += `<div class="unlock-cta">
         <div class="unlock-price">${mon.unlock_price} <span>one-time</span></div>
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${mon.upgrade_cta || 'Unlock full report'}</div>
@@ -1564,11 +1674,13 @@ function renderResults(module, data) {
           <span class="unlock-feat">CVSS scores</span>
           <span class="unlock-feat">Remediation steps</span>
           <span class="unlock-feat">Executive summary</span>
+          <span class="unlock-feat">Downloadable PDF report</span>
         </div>
-        <a href="${mon.payment_url || '#pricing'}" target="_blank" class="btn btn-unlock">
+        <button class="btn btn-unlock" id="pay-btn-${module}"
+          onclick="startPayment('${module}','${_payTarget.replace(/'/g,'\\x27')}',${_payAmount},'${mon.unlock_price}')">
           🔓 Unlock Full Report — ${mon.unlock_price}
-        </a>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:8px">Secure payment via Razorpay / UPI · Instant access</div>
+        </button>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:8px">🔒 Secure · Razorpay / UPI · Instant PDF access</div>
       </div>`;
     }
     html += `</div>`;
@@ -1632,6 +1744,7 @@ async function submitLead() {
   } catch(e) { /* non-blocking */ }
 
   sessionStorage.setItem('cbd_lead_captured', '1');
+  sessionStorage.setItem('cbd_lead_email', email); // Used for Razorpay prefill
   leadCaptured = true;
   hideModal('leadModal');
   btn.disabled = false;
@@ -1697,6 +1810,233 @@ async function submitEnterprise() {
 
 // ─── Local Fallback Engine (deterministic, mirrors API) ─────────────────
 function sh(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return Math.abs(h);}
+// ─── Razorpay Payment Integration ──────────────────────────────────────
+function loadRazorpay() {
+  return new Promise((resolve, reject) => {
+    if (_razorpayReady) { resolve(); return; }
+    if (document.getElementById('razorpay-sdk')) { _razorpayReady = true; resolve(); return; }
+    const s = document.createElement('script');
+    s.id  = 'razorpay-sdk';
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload  = () => { _razorpayReady = true; resolve(); };
+    s.onerror = () => reject(new Error('Razorpay SDK failed to load'));
+    document.head.appendChild(s);
+  });
+}
+
+async function startPayment(module, target, amount, priceLabel) {
+  const btn = document.getElementById(`pay-btn-${module}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparing payment...'; }
+
+  try {
+    await loadRazorpay();
+
+    // Create order on backend
+    const orderResp = await fetch(`${API_BASE}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module, target, amount }),
+    });
+    const orderData = await orderResp.json();
+
+    if (!orderResp.ok || !orderData.order_id) {
+      throw new Error(orderData.error || 'Could not create payment order');
+    }
+
+    // Configure and open Razorpay checkout modal
+    const options = {
+      key:         orderData.key_id,
+      amount:      orderData.amount,
+      currency:    orderData.currency || 'INR',
+      name:        'CYBERDUDEBIVASH AI Security Hub',
+      description: `${orderData.module_name || module.toUpperCase()} Security Report — ${target}`,
+      order_id:    orderData.order_id,
+      prefill:     { email: sessionStorage.getItem('cbd_lead_email') || '' },
+      notes:       { module, target },
+      theme:       { color: '#00d4ff' },
+      modal:       { backdropclose: false },
+      handler: async (response) => {
+        // Payment captured — verify on backend
+        await verifyAndDownload(module, target, {
+          razorpay_order_id:   response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature:  response.razorpay_signature,
+        });
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.on('payment.failed', (err) => {
+      showPaymentError(module, `Payment failed: ${err?.error?.description || 'Please try again.'}`);
+      if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
+    });
+    rzp.open();
+
+    // Re-enable button when modal closes without payment
+    if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
+
+  } catch (e) {
+    console.error('[Payment] startPayment failed:', e.message);
+    showPaymentError(module, e.message || 'Payment initialization failed. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
+  }
+}
+
+async function verifyAndDownload(module, target, paymentPayload) {
+  showPaymentOverlay('verifying');
+
+  try {
+    const verifyResp = await fetch(`${API_BASE}/api/payments/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module, target, ...paymentPayload }),
+    });
+    const verifyData = await verifyResp.json();
+
+    if (!verifyResp.ok || !verifyData.token) {
+      throw new Error(verifyData.error || 'Payment verification failed');
+    }
+
+    // Store token in sessionStorage for history access
+    const tokens = JSON.parse(sessionStorage.getItem('cbd_report_tokens') || '[]');
+    tokens.unshift({ module, target, token: verifyData.token, expires_at: verifyData.expires_at });
+    sessionStorage.setItem('cbd_report_tokens', JSON.stringify(tokens.slice(0, 10)));
+
+    showPaymentOverlay('success', {
+      downloadUrl:  `${API_BASE}/api/reports/download/${verifyData.token}`,
+      findingsCount: verifyData.findings_count,
+      expiresAt:    verifyData.expires_at,
+      module, target,
+    });
+
+    // Refresh the recent activity section
+    renderRecentActivity();
+
+  } catch (e) {
+    closePaymentOverlay();
+    const panel = document.getElementById(`results-${module}`);
+    if (panel) {
+      const errDiv = document.createElement('div');
+      errDiv.style.cssText = 'margin-top:12px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:13px;color:#fca5a5';
+      errDiv.textContent = `⚠️ Verification error: ${e.message}`;
+      panel.appendChild(errDiv);
+    }
+  }
+}
+
+function showPaymentOverlay(state, data = {}) {
+  let el = document.getElementById('payOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'payOverlay';
+    el.className = 'pay-overlay';
+    el.addEventListener('click', (e) => { if (e.target === el) closePaymentOverlay(); });
+    document.body.appendChild(el);
+  }
+
+  if (state === 'verifying') {
+    el.innerHTML = `<div class="pay-card">
+      <div class="pay-spinner"></div>
+      <div style="font-weight:700;color:var(--accent);margin-bottom:8px">Verifying Payment</div>
+      <div style="font-size:13px;color:var(--text-muted)">Please wait — confirming with Razorpay...</div>
+    </div>`;
+  } else if (state === 'success') {
+    el.innerHTML = `<div class="pay-card">
+      <div class="pay-success-icon">✅</div>
+      <div style="font-size:20px;font-weight:800;color:var(--accent3);margin-bottom:8px">Payment Successful!</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">
+        ${data.module?.toUpperCase()} report for <strong>${data.target}</strong>
+      </div>
+      ${data.findingsCount ? `<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">${data.findingsCount} findings · Full remediation roadmap · CVSS scores</div>` : ''}
+      <a href="${data.downloadUrl}" download class="pay-download-btn">
+        📥 Download Full Report (HTML/PDF)
+      </a>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:12px">
+        Link valid 30 days · Open in browser → File → Print → Save as PDF
+      </div>
+      <button onclick="closePaymentOverlay()" style="margin-top:16px;background:none;border:1px solid var(--border);color:var(--text-muted);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px">Close</button>
+    </div>`;
+  }
+  el.style.display = 'flex';
+}
+
+function closePaymentOverlay() {
+  const el = document.getElementById('payOverlay');
+  if (el) el.style.display = 'none';
+}
+
+function showPaymentError(module, msg) {
+  const ctaEl = document.querySelector(`#results-${module} .unlock-cta`);
+  if (ctaEl) {
+    const errEl = ctaEl.querySelector('.pay-err') || document.createElement('div');
+    errEl.className = 'pay-err';
+    errEl.style.cssText = 'font-size:12px;color:#fca5a5;margin-top:8px;padding:8px;background:rgba(239,68,68,.1);border-radius:6px';
+    errEl.textContent = `⚠️ ${msg}`;
+    if (!ctaEl.querySelector('.pay-err')) ctaEl.appendChild(errEl);
+  }
+}
+
+// ─── Recent Activity / User Dashboard ──────────────────────────────────
+async function renderRecentActivity() {
+  const container = document.getElementById('recentActivity');
+  if (!container) return;
+
+  const rows = [];
+
+  // 1. Check sessionStorage for completed payment tokens
+  const tokens = JSON.parse(sessionStorage.getItem('cbd_report_tokens') || '[]');
+
+  // 2. Try to fetch scan history from API (works if JWT token stored)
+  const jwt = sessionStorage.getItem('cbd_jwt');
+  if (jwt) {
+    try {
+      const r = await fetch(`${API_BASE}/api/history?limit=5`, {
+        headers: { 'Authorization': `Bearer ${jwt}` },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (r.ok) {
+        const h = await r.json();
+        (h.scans || h.history || []).slice(0,5).forEach(s => {
+          rows.push({
+            module: s.module, target: s.target,
+            score: s.risk_score, level: s.risk_level,
+            time: s.scanned_at || s.created_at,
+            token: tokens.find(t => t.target === s.target && t.module === s.module)?.token,
+          });
+        });
+      }
+    } catch (_) {}
+  }
+
+  // 3. Fallback: use sessionStorage tokens only
+  if (!rows.length && tokens.length) {
+    tokens.slice(0,5).forEach(t => {
+      rows.push({ module: t.module, target: t.target, token: t.token, time: t.expires_at });
+    });
+  }
+
+  if (!rows.length) { container.style.display = 'none'; return; }
+
+  container.style.display = 'block';
+  const scoreColor = (s) => !s ? 'var(--text-dim)' : s>=80 ? '#ef4444' : s>=60 ? '#f59e0b' : '#10b981';
+
+  let html = `<div class="activity-title">📋 Recent Scans</div>`;
+  rows.forEach(r => {
+    const timeStr = r.time ? new Date(r.time).toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) : '';
+    const dlLink  = r.token
+      ? `<a href="${API_BASE}/api/reports/download/${r.token}" class="activity-dl">📥 Report</a>`
+      : '';
+    html += `<div class="activity-row">
+      <span class="activity-mod">${r.module || '—'}</span>
+      <span class="activity-target">${r.target || '—'}</span>
+      ${r.score ? `<span class="activity-score" style="color:${scoreColor(r.score)}">${r.score}</span>` : ''}
+      ${dlLink}
+      ${timeStr ? `<span class="activity-time">${timeStr}</span>` : ''}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
 function sr2(seed,o=0){const x=Math.sin(seed+o+1)*10000;return Math.abs(x-Math.floor(x));}
 function ri2(min,max,seed,o=0){return min+Math.floor(sr2(seed,o)*(max-min+1));}
 
@@ -1791,6 +2131,11 @@ function localEngine(module, payload) {
   // Kick off real-time metrics on page load (non-blocking)
   if (typeof initRealTimeMetrics === 'function') {
     setTimeout(initRealTimeMetrics, 800);
+  }
+
+  // Populate recent activity section if tokens or auth found (non-blocking)
+  if (typeof renderRecentActivity === 'function') {
+    setTimeout(renderRecentActivity, 1200);
   }
 })();
 

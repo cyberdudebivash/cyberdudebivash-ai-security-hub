@@ -6,7 +6,7 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "5.0.0"
+VERSION     = "7.0.0"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
@@ -50,10 +50,20 @@ dead_letter_queue  = "scan-jobs-dlq"
 # ── Secrets (set via: npx wrangler secret put SECRET_NAME) ───────────────────
 # Required secrets:
 #   JWT_SECRET                — 64+ char random string (openssl rand -hex 32)
-#   RAZORPAY_WEBHOOK_SECRET   — from Razorpay dashboard
+#   RAZORPAY_KEY_ID           — Razorpay API key ID (rzp_live_... or rzp_test_...)
+#   RAZORPAY_KEY_SECRET       — Razorpay API key secret (paired with KEY_ID)
+#   RAZORPAY_WEBHOOK_SECRET   — from Razorpay dashboard webhook settings
 #   TELEGRAM_BOT_TOKEN        — from @BotFather
 #   ADMIN_TELEGRAM_CHAT_ID    — your admin Telegram chat ID
 #   SENTINEL_CHANNEL_ID       — Sentinel APEX channel ID (for CVE broadcasts)
+#
+# V7.0 monetization setup (Razorpay):
+#   1. Create an account at https://razorpay.com
+#   2. Generate API keys in Settings → API Keys
+#   3. npx wrangler secret put RAZORPAY_KEY_ID
+#   4. npx wrangler secret put RAZORPAY_KEY_SECRET
+#   5. Set up webhook in Razorpay dashboard → Webhooks (payment.captured, payment.failed)
+#   6. npx wrangler secret put RAZORPAY_WEBHOOK_SECRET
 #
 # One-liner to generate JWT_SECRET:
 #   openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
@@ -71,4 +81,4 @@ crons = ["0 0,6,12,18 * * *"]
 
 # [[routes]]
 # pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebivash.com"
+# zone_name = "cyberdudebiv
