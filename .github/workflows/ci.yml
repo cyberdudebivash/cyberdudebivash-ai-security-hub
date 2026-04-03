@@ -102,19 +102,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: |
-            ai-core/requirements*.txt
-
-      - name: Install Python dependencies (if requirements exist)
-        run: |
-          if [ -f ai-core/requirements.txt ]; then
-            pip install -r ai-core/requirements.txt --quiet
-          elif [ -f ai-core/requirements-dev.txt ]; then
-            pip install -r ai-core/requirements-dev.txt --quiet
-          else
-            echo "ℹ️  No requirements.txt found — skipping pip install"
-          fi
+          # No pip cache — ai-core uses stdlib only (hashlib, random, dataclasses, typing, datetime).
+          # Enabling pip cache with no requirements.txt causes setup-python to hard-error.
 
       - name: Syntax-check all scanner modules
         run: |
