@@ -6,33 +6,69 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "4.0.0"
+VERSION     = "5.0.0"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
+CONTACT     = "bivash@cyberdudebivash.com"
 
-# ── Cloudflare KV namespace ─────────────────────────────────────────────
-# Run: npx wrangler kv:namespace create SECURITY_HUB_KV
-# Replace the id below with output
+# ── KV Namespace ──────────────────────────────────────────────────────────────
+# Already live: npx wrangler kv:namespace create SECURITY_HUB_KV
 [[kv_namespaces]]
 binding = "SECURITY_HUB_KV"
 id      = "95faae90943f43afa26d552b8385d339"
 
-# ── Secrets (set via: npx wrangler secret put SECRET_NAME) ────────────
-# RAZORPAY_WEBHOOK_SECRET — your Razorpay webhook secret
+# ── D1 Database ───────────────────────────────────────────────────────────────
+# Setup:  npx wrangler d1 create cyberdudebivash-security-hub
+#         npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema.sql
+# Replace database_id below with output of the create command
+[[d1_databases]]
+binding      = "DB"
+database_name = "cyberdudebivash-security-hub"
+database_id  = "REPLACE_WITH_D1_DATABASE_ID"
 
-# ── Dev / Preview KV (optional) ────────────────────────────────────────
-# [[kv_namespaces]]
-# binding  = "SECURITY_HUB_KV"
-# id       = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
-# preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+# ── R2 Bucket (scan result storage) ──────────────────────────────────────────
+# Setup:  npx wrangler r2 bucket create cyberdudebivash-scan-results
+[[r2_buckets]]
+binding     = "SCAN_RESULTS"
+bucket_name = "cyberdudebivash-scan-results"
 
+# ── Cloudflare Queues ─────────────────────────────────────────────────────────
+# Setup:  npx wrangler queues create scan-jobs
+#         npx wrangler queues create scan-jobs-dlq
+[[queues.producers]]
+queue   = "scan-jobs"
+binding = "SCAN_QUEUE"
+
+[[queues.consumers]]
+queue              = "scan-jobs"
+max_batch_size     = 10        # process up to 10 jobs per batch
+max_batch_timeout  = 30        # wait up to 30s to fill batch
+max_retries        = 3
+dead_letter_queue  = "scan-jobs-dlq"
+
+# ── Secrets (set via: npx wrangler secret put SECRET_NAME) ───────────────────
+# Required secrets:
+#   JWT_SECRET                — 64+ char random string (openssl rand -hex 32)
+#   RAZORPAY_WEBHOOK_SECRET   — from Razorpay dashboard
+#   TELEGRAM_BOT_TOKEN        — from @BotFather
+#   ADMIN_TELEGRAM_CHAT_ID    — your admin Telegram chat ID
+#   SENTINEL_CHANNEL_ID       — Sentinel APEX channel ID (for CVE broadcasts)
+#
+# One-liner to generate JWT_SECRET:
+#   openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
+
+# ── Cron Triggers ─────────────────────────────────────────────────────────────
 [triggers]
-# Sentinel APEX CVE feed refresh every 6 hours
-# Also runs at minute 0 of hours 0,6,12,18 UTC
+# Sentinel APEX CVE feed — every 6 hours at UTC 0:00, 6:00, 12:00, 18:00
 crons = ["0 0,6,12,18 * * *"]
 
-# ── Custom domain routes (set after DNS is configured) ─────────────────
+# ── Custom domain routes ──────────────────────────────────────────────────────
+# Uncomment after configuring DNS:
 # [[routes]]
-# pattern   = "cyberdudebivash.in/api/*"
-# zone_name = "cyberdudebiva
+# pattern   = "api.cyberdudebivash.in/*"
+# zone_name = "cyberdudebivash.in"
+
+# [[routes]]
+# pattern   = "api.tools.cyberdudebivash.com/*"
+# zone_name = "cyberdudebivash.com"

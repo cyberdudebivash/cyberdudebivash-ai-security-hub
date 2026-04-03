@@ -169,7 +169,7 @@ export function buildReport(scanResult, meta = {}) {
     branding: {
       powered_by:  'CYBERDUDEBIVASH AI Security Hub',
       website:     'https://cyberdudebivash.in',
-      contact:     'cyberdudebivash@gmail.com',
+      contact:     'bivash@cyberdudebivash.com',
       report_tool: 'https://tools.cyberdudebivash.com',
     },
     requester: {

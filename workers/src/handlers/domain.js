@@ -197,6 +197,39 @@ function computeRealRiskScore(dns, tls, bl) {
   return Math.min(100, score);
 }
 
+// ─── buildRealResult — exported for queue consumer (no circular dep) ──────────
+export function buildRealResult(domain, dns, tls, bl) {
+  const scanId    = genScanId();
+  const riskScore = computeRealRiskScore(dns, tls, bl);
+  const findings  = buildRealFindings(domain, dns, tls, bl);
+  return {
+    module: 'domain_scanner', version: '5.0.0', target: domain,
+    risk_score: riskScore, risk_level: riskLevel(riskScore),
+    grade: riskScore >= 80 ? 'F' : riskScore >= 60 ? 'D' : riskScore >= 40 ? 'C' : riskScore >= 20 ? 'B' : 'A',
+    data_source: 'live_dns',
+    resolves: dns.resolves, ipv4: dns.ipv4, ipv6: dns.ipv6,
+    nameservers: dns.nameservers, mx_records: dns.mx.records,
+    tls_grade: tls?.tls_grade ?? 'UNKNOWN', hsts_present: tls?.hsts_present ?? false,
+    dnssec_enabled: dns.dnssec.enabled, dnssec_status: dns.dnssec.status,
+    spf_policy: dns.spf.policy, dmarc_policy: dns.dmarc.policy,
+    dkim_found: dns.dkim.found, caa_present: dns.caa.present,
+    blacklisted: bl?.any_blacklisted ?? false, threat_score: bl?.combined_threat_score ?? 0,
+    summary: `"${domain}" scanned live. Risk: ${riskScore}/100 (${riskLevel(riskScore)}). ${findings.filter(f=>['CRITICAL','HIGH'].includes(f.severity)).length} critical/high findings.`,
+    findings,
+    email_security: { spf: dns.spf, dmarc: dns.dmarc, dkim: dns.dkim },
+    threat_intelligence: bl ? {
+      any_blacklisted: bl.any_blacklisted, combined_threat_score: bl.combined_threat_score,
+      risk_label: bl.risk_label, feeds_total: bl.feeds_total, summary: bl.summary,
+    } : null,
+    scan_metadata: {
+      engine_version: '5.0.0', scan_timestamp: new Date().toISOString(), scan_id: scanId,
+      data_source: 'live_dns + cloudflare_doh + dnsbl',
+      scan_modules: ['tls_probe','dnssec','spf','dmarc','dkim','caa','dnsbl_domain','dnsbl_ip'],
+      powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+    },
+  };
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 export async function handleDomainScan(request, env, authCtx = {}) {
   const body = await parseBody(request);
