@@ -118,15 +118,25 @@ jobs:
           echo "✅ wrangler.toml validated"
 
       - name: Patch KV Namespace ID (if secret provided)
-        if: ${{ secrets.WORKERS_KV_NAMESPACE_ID != '' }}
+        # FIX: secrets.* is NOT allowed in if: conditions — it is a parse-time
+        # error. The conditional is moved into the bash run: block where secrets
+        # are safely available as environment variables at runtime.
+        env:
+          KV_NAMESPACE_ID: ${{ secrets.WORKERS_KV_NAMESPACE_ID }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          sed -i \
-            "s/REPLACE_WITH_YOUR_KV_NAMESPACE_ID/${{ secrets.WORKERS_KV_NAMESPACE_ID }}/g" \
-            workers/wrangler.toml
-          sed -i \
-            "s/\${CLOUDFLARE_ACCOUNT_ID}/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/g" \
-            workers/wrangler.toml
-          echo "✅ KV namespace patched"
+          if [ -n "$KV_NAMESPACE_ID" ]; then
+            sed -i \
+              "s/REPLACE_WITH_YOUR_KV_NAMESPACE_ID/${KV_NAMESPACE_ID}/g" \
+              workers/wrangler.toml
+            sed -i \
+              "s/\${CLOUDFLARE_ACCOUNT_ID}/${CF_ACCOUNT_ID}/g" \
+              workers/wrangler.toml
+            echo "✅ KV namespace patched (ID length: ${#KV_NAMESPACE_ID} chars)"
+          else
+            echo "ℹ️  WORKERS_KV_NAMESPACE_ID not configured — skipping KV patch"
+            echo "   Add the secret in: Settings → Secrets → Actions → New repository secret"
+          fi
 
       - name: Deploy Workers to Cloudflare
         timeout-minutes: 10
