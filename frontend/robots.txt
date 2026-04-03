@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /.env
+Disallow: /.git/
+
+Sitemap: https://cyberdudebivash.in/sitemap.xml
+
+# Crawl-delay for respectful bots
+Crawl-delay: 10

@@ -1,35 +1,19 @@
 import { identityScanEngine } from '../engine.js';
-import { checkRateLimit, addMonetizationFlags, trackUsage } from '../middleware/monetization.js';
+import { addMonetizationFlags } from '../middleware/monetization.js';
 import { validateString, validateEnum, parseBody } from '../middleware/validation.js';
+import { sanitizeString } from '../middleware/security.js';
 
-const VALID_IDPS = ['azure-ad','okta','google-workspace','auth0','onelogin','ping','keycloak','other'];
+const VALID_IDPS = ['azure-ad','okta','google-workspace','auth0','onelogin','ping','keycloak','jumpcloud','duo','other'];
+function genScanId() { return 'sc_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-export async function handleIdentityScan(request, env) {
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+export async function handleIdentityScan(request, env, authCtx = {}) {
+  const body    = await parseBody(request);
+  const orgVal  = validateString(sanitizeString(body?.org_name || body?.org || body?.organization || ''), 'org_name', 2, 120);
+  if (!orgVal.valid) return Response.json({ error: 'Validation failed', message: orgVal.message }, { status: 400 });
 
-  const rateOk = await checkRateLimit(env, ip, 'identity');
-  if (!rateOk) {
-    return Response.json({
-      error: 'Rate limit exceeded',
-      message: 'Free tier: 10 scans/hour. Upgrade at ₹799/report.',
-      upgrade_url: 'https://cyberdudebivash.in/#pricing',
-    }, { status: 429 });
-  }
-
-  const body             = await parseBody(request);
-  const orgName          = body?.org_name || body?.org || body?.organization || '';
-  const identityProvider = body?.identity_provider || body?.idp || 'other';
-
-  const orgVal = validateString(orgName, 'org_name', 2, 120);
-  if (!orgVal.valid) {
-    return Response.json({ error: 'Validation failed', message: orgVal.message }, { status: 400 });
-  }
-  const idpVal = validateEnum(identityProvider, 'identity_provider', VALID_IDPS, 'other');
-
-  const result    = identityScanEngine(orgVal.value, idpVal.value);
-  const monetized = addMonetizationFlags(result, 'identity');
-
-  if (env?.SECURITY_HUB_KV) await trackUsage(env, ip, 'identity');
-
-  return Response.json(monetized, { status: 200 });
+  const idpVal  = validateEnum(body?.identity_provider || body?.idp || 'other', 'identity_provider', VALID_IDPS, 'other');
+  const scanId  = genScanId();
+  const result  = identityScanEngine(orgVal.value, idpVal.value);
+  return Response.json(addMonetizationFlags(result, 'identity', authCtx, scanId), { status: 200,
+    headers: { 'X-Scan-ID': scanId, 'X-Module': 'identity' } });
 }

@@ -1,24 +1,34 @@
-name            = "cyberdudebivash-security-hub"
-main            = "src/index.js"
+name               = "cyberdudebivash-security-hub"
+main               = "src/index.js"
 compatibility_date = "2024-01-01"
-account_id      = "${CLOUDFLARE_ACCOUNT_ID}"
+account_id         = "${CLOUDFLARE_ACCOUNT_ID}"
 
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "2.0.0"
+VERSION     = "3.0.0"
+WEBSITE     = "https://cyberdudebivash.in"
 
-# Cloudflare KV namespace for rate limiting + usage tracking
+# ── Cloudflare KV namespace ─────────────────────────────────────────────
 # Run: npx wrangler kv:namespace create SECURITY_HUB_KV
-# Then replace the id below with the output id
+# Replace the id below with output
 [[kv_namespaces]]
 binding = "SECURITY_HUB_KV"
 id      = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
+# ── Secrets (set via: npx wrangler secret put SECRET_NAME) ────────────
+# RAZORPAY_WEBHOOK_SECRET — your Razorpay webhook secret
+
+# ── Dev / Preview KV (optional) ────────────────────────────────────────
+# [[kv_namespaces]]
+# binding  = "SECURITY_HUB_KV"
+# id       = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+# preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+
 [triggers]
 crons = []
 
-# Routes — set after deploying Pages for the frontend
+# ── Custom domain routes (set after DNS is configured) ─────────────────
 # [[routes]]
-# pattern = "cyberdudebivash.in/api/*"
+# pattern   = "cyberdudebivash.in/api/*"
 # zone_name = "cyberdudebivash.in"

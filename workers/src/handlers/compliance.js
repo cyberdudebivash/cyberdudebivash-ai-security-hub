@@ -1,35 +1,19 @@
 import { complianceEngine } from '../engine.js';
-import { checkRateLimit, addMonetizationFlags, trackUsage } from '../middleware/monetization.js';
+import { addMonetizationFlags } from '../middleware/monetization.js';
 import { validateString, validateEnum, parseBody } from '../middleware/validation.js';
+import { sanitizeString } from '../middleware/security.js';
 
 const VALID_FRAMEWORKS = ['iso27001','soc2','gdpr','pcidss','dpdp','hipaa'];
+function genScanId() { return 'sc_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-export async function handleCompliance(request, env) {
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+export async function handleCompliance(request, env, authCtx = {}) {
+  const body    = await parseBody(request);
+  const orgVal  = validateString(sanitizeString(body?.org_name || body?.org || body?.organization || ''), 'org_name', 2, 120);
+  if (!orgVal.valid) return Response.json({ error: 'Validation failed', message: orgVal.message }, { status: 400 });
 
-  const rateOk = await checkRateLimit(env, ip, 'compliance');
-  if (!rateOk) {
-    return Response.json({
-      error: 'Rate limit exceeded',
-      message: 'Free tier: 10 scans/hour. Full reports from ₹499.',
-      upgrade_url: 'https://cyberdudebivash.in/#pricing',
-    }, { status: 429 });
-  }
-
-  const body      = await parseBody(request);
-  const orgName   = body?.org_name || body?.org || body?.organization || '';
-  const framework = (body?.framework || 'iso27001').toLowerCase();
-
-  const orgVal = validateString(orgName, 'org_name', 2, 120);
-  if (!orgVal.valid) {
-    return Response.json({ error: 'Validation failed', message: orgVal.message }, { status: 400 });
-  }
-  const fwVal = validateEnum(framework, 'framework', VALID_FRAMEWORKS, 'iso27001');
-
-  const result    = complianceEngine(orgVal.value, fwVal.value);
-  const monetized = addMonetizationFlags(result, 'compliance');
-
-  if (env?.SECURITY_HUB_KV) await trackUsage(env, ip, 'compliance');
-
-  return Response.json(monetized, { status: 200 });
+  const fwVal   = validateEnum((body?.framework || 'iso27001').toLowerCase(), 'framework', VALID_FRAMEWORKS, 'iso27001');
+  const scanId  = genScanId();
+  const result  = complianceEngine(orgVal.value, fwVal.value);
+  return Response.json(addMonetizationFlags(result, 'compliance', authCtx, scanId), { status: 200,
+    headers: { 'X-Scan-ID': scanId, 'X-Module': 'compliance' } });
 }

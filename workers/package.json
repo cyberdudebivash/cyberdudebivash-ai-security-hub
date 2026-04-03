@@ -4,13 +4,13 @@
   "description": "CYBERDUDEBIVASH AI Security Hub — Cloudflare Workers Edge API",
   "type": "module",
   "scripts": {
-    "dev":    "wrangler dev --local",
+    "dev": "wrangler dev --local",
     "deploy": "wrangler deploy",
-    "tail":   "wrangler tail",
-    "lint":   "node --input-type=module --eval 'import \"./src/index.js\"' 2>&1 || true"
+    "tail": "wrangler tail",
+    "lint": "node --input-type=module --eval 'import \"./src/index.js\"' 2>&1 || true"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.80.0"
   },
   "engines": {
     "node": ">=18.0.0"

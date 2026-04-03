@@ -1,33 +1,25 @@
 import { domainScanEngine } from '../engine.js';
-import { checkRateLimit, addMonetizationFlags, trackUsage } from '../middleware/monetization.js';
+import { addMonetizationFlags } from '../middleware/monetization.js';
 import { validateDomain, parseBody } from '../middleware/validation.js';
+import { inspectForAttacks, sanitizeString } from '../middleware/security.js';
 
-export async function handleDomainScan(request, env) {
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+function genScanId() { return 'sc_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-  const rateOk = await checkRateLimit(env, ip, 'domain');
-  if (!rateOk) {
-    return Response.json({
-      error: 'Rate limit exceeded',
-      message: 'Free tier: 10 scans/hour. Upgrade for unlimited access.',
-      upgrade_url: 'https://cyberdudebivash.in/#pricing',
-    }, { status: 429 });
+export async function handleDomainScan(request, env, authCtx = {}) {
+  const body   = await parseBody(request);
+  const raw    = body?.domain || body?.target || '';
+
+  if (inspectForAttacks(raw)) {
+    return Response.json({ error: 'Invalid input detected', field: 'domain' }, { status: 400 });
   }
 
-  const body = await parseBody(request);
-  const domain = body?.domain || body?.target || '';
-
-  const validation = validateDomain(domain);
+  const validation = validateDomain(sanitizeString(raw));
   if (!validation.valid) {
-    return Response.json({ error: 'Validation failed', message: validation.message }, { status: 400 });
+    return Response.json({ error: 'Validation failed', message: validation.message, field: 'domain' }, { status: 400 });
   }
 
+  const scanId = genScanId();
   const result = domainScanEngine(validation.value);
-  const monetized = addMonetizationFlags(result, 'domain');
-
-  if (env?.SECURITY_HUB_KV) {
-    await trackUsage(env, ip, 'domain');
-  }
-
-  return Response.json(monetized, { status: 200 });
+  return Response.json(addMonetizationFlags(result, 'domain', authCtx, scanId), { status: 200,
+    headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain' } });
 }
