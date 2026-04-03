@@ -25,7 +25,7 @@ id      = "95faae90943f43afa26d552b8385d339"
 [[d1_databases]]
 binding      = "DB"
 database_name = "cyberdudebivash-security-hub"
-database_id  = "REPLACE_WITH_D1_DATABASE_ID"
+database_id  = "239a35c8-393f-488e-a7e0-30c7fde958fa"
 
 # ── R2 Bucket (scan result storage) ──────────────────────────────────────────
 # Setup:  npx wrangler r2 bucket create cyberdudebivash-scan-results
