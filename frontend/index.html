@@ -1354,10 +1354,15 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   <!-- ═══════ Threat Intel Tab ═══════ -->
   <div class="tab-panel" id="tab-threatintel">
     <div class="scan-card">
-      <h3>🛡️ Live Threat Intelligence Feed</h3>
-      <p>Real-time CVE advisories, CISA KEV exploits, and EPSS scores sourced from Sentinel APEX. Updated hourly.</p>
-      <div class="scan-btn-row">
-        <button class="btn btn-primary" onclick="loadThreatIntel()" id="btn-threatintel">🔄 Refresh Feed</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <h3 style="margin:0">🛡️ Sentinel APEX — Live Threat Intelligence</h3>
+        <span id="ti-live-indicator" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700">🟢 LIVE</span>
+      </div>
+      <p style="margin:4px 0 12px">Real CVEs from NIST NVD + CISA KEV. IOC extraction and enrichment. D1-backed persistence. Refreshed hourly by autonomous cron.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="loadThreatIntel()" id="btn-threatintel">🔄 Refresh Now</button>
+        <button onclick="loadThreatIntel({severity:'CRITICAL'})" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔴 Critical Only</button>
+        <button onclick="loadThreatIntel({severity:'HIGH'})" style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#f97316;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🟠 High Only</button>
         <div class="loading-dots" id="loading-threatintel" style="display:none">
           <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
           <span class="scan-state-msg">Fetching live threat data...</span>
@@ -2169,68 +2174,223 @@ function switchTab(tab) {
 }
 
 // ─── Threat Intel Tab ───────────────────────────────────────────────────────
-async function loadThreatIntel() {
+// ─── Threat Intel auto-refresh timer ──────────────────────────────────────────
+let _tiRefreshTimer = null;
+
+async function loadThreatIntel(filter = {}) {
   const panel  = document.getElementById('threatintel-panel');
   const btn    = document.getElementById('btn-threatintel');
   const loader = document.getElementById('loading-threatintel');
+  const liveEl = document.getElementById('ti-live-indicator');
   if (!panel) return;
 
   panel.__loaded = true;
-  if (btn)  btn.disabled = true;
+  if (btn)    btn.disabled         = true;
   if (loader) loader.style.display = 'flex';
-  panel.innerHTML = '';
+  if (liveEl) { liveEl.style.opacity = '0.4'; liveEl.textContent = '⏳ Fetching...'; }
+
+  // Build query params
+  const tier    = SUBSCRIPTION.getPlan() || 'FREE';
+  const params  = new URLSearchParams({ limit: tier === 'FREE' ? 5 : tier === 'STARTER' ? 20 : 50 });
+  if (filter.severity) params.set('severity', filter.severity);
+  if (filter.query)    params.set('q', filter.query);
+
+  let entries = [], summary = {}, planInfo = {}, upgradeCta = null, dataSource = 'unknown';
 
   try {
-    const res  = await fetch(`${API_BASE}/api/sentinel/feed`);
-    const json = await res.json();
-    const feed  = json.feed || json.data?.feed || json.advisories || [];
-    const stats = json.stats || json.summary || {};
+    // ── PRIMARY: GET /api/threat-intel (new D1-backed endpoint) ──
+    const res  = await fetch(`${API_BASE}/api/threat-intel?${params}`, {
+      headers: SUBSCRIPTION.getToken() ? { 'X-Session-Token': SUBSCRIPTION.getToken() } : {},
+    });
 
-    let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">`;
-    [
-      { label: 'Total Advisories', val: feed.length || stats.total || '—', icon: '📋' },
-      { label: 'Critical CVEs',    val: stats.critical || feed.filter(f => f.severity === 'CRITICAL').length || '—', icon: '🔴' },
-      { label: 'CISA KEV Active',  val: stats.exploited_in_wild || feed.filter(f => f.exploited).length || '—', icon: '⚡' },
-      { label: 'Last Updated',     val: json.generated_at ? new Date(json.generated_at).toLocaleTimeString() : 'Live', icon: '🕐' },
-    ].forEach(c => {
-      html += `<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:24px">${c.icon}</div>
-        <div style="font-size:22px;font-weight:800;color:var(--accent);margin:4px 0">${c.val}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${c.label}</div>
+    if (res.ok) {
+      const json = await res.json();
+      const data = json.data || json;
+      entries    = data.entries || data.results || data.advisories || [];
+      summary    = data.summary || {};
+      planInfo   = data.plan_limits || {};
+      upgradeCta = data.upgrade_cta || null;
+      dataSource = data.data_source || 'api';
+    } else {
+      throw new Error(`API returned ${res.status}`);
+    }
+  } catch (primaryErr) {
+    // ── FALLBACK: GET /api/sentinel/feed (legacy KV-backed feed) ──
+    try {
+      const res2 = await fetch(`${API_BASE}/api/sentinel/feed`);
+      if (res2.ok) {
+        const json2 = await res2.json();
+        // sentinelApex returns: { critical_cves, high_cves, actively_exploited, summary }
+        const crit = json2.critical_cves || [];
+        const high = json2.high_cves     || [];
+        const kev  = json2.actively_exploited || [];
+        // Normalize sentinel schema → threat-intel schema
+        const normalize = (item, src) => ({
+          id:              item.id || item.cve_id || `advisory-${Math.random().toString(36).slice(2)}`,
+          title:           item.description?.slice(0, 80) || item.vulnerability_name || item.id || '',
+          severity:        item.severity || src,
+          cvss:            item.score || item.cvss || null,
+          description:     item.description || item.short_description || '',
+          source:          item.source || (kev.includes(item) ? 'cisa_kev' : 'nvd'),
+          source_url:      item.nvd_url || `https://nvd.nist.gov/vuln/detail/${item.id || ''}`,
+          published_at:    item.published || item.date_added || null,
+          exploit_status:  kev.some(k => k.cve_id === item.id) ? 'confirmed' : 'unconfirmed',
+          known_ransomware: (item.tags || []).includes('Ransomware') ? 1 : 0,
+          tags:            item.tags || [],
+        });
+        entries = [
+          ...kev.map(k => normalize(k, 'CRITICAL')),
+          ...crit.map(c => normalize(c, 'CRITICAL')),
+          ...high.map(h => normalize(h, 'HIGH')),
+        ];
+        summary    = json2.summary || {};
+        dataSource = 'sentinel_kv';
+      }
+    } catch {}
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (liveEl) {
+    liveEl.style.opacity  = '1';
+    liveEl.innerHTML = `🟢 LIVE <span style="font-size:9px;opacity:.7">${new Date().toLocaleTimeString()}</span>`;
+  }
+
+  // Summary stat cards
+  const critCount  = summary.critical    ?? entries.filter(e => e.severity === 'CRITICAL').length;
+  const highCount  = summary.high        ?? entries.filter(e => e.severity === 'HIGH').length;
+  const kevCount   = summary.confirmed_exploited ?? entries.filter(e => e.exploit_status === 'confirmed').length;
+  const totalCount = summary.total       ?? entries.length;
+
+  let html = ``;
+
+  // Alert level banner
+  const alertLevel = critCount >= 5 ? 'CRITICAL' : critCount >= 1 ? 'HIGH' : highCount >= 3 ? 'ELEVATED' : 'MODERATE';
+  const alertColor = alertLevel === 'CRITICAL' ? '#ef4444' : alertLevel === 'HIGH' ? '#f97316' : alertLevel === 'ELEVATED' ? '#eab308' : '#22c55e';
+  html += `<div style="background:${alertColor}11;border:1px solid ${alertColor}33;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div style="font-weight:800;color:${alertColor};font-size:13px">⚠️ Platform Alert Level: ${alertLevel}</div>
+    <div style="font-size:11px;color:var(--text-muted)">Source: ${dataSource.replace('_', ' ')} · Auto-refreshes every 60s</div>
+  </div>`;
+
+  // Stat cards
+  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">`;
+  [
+    { label: 'Total Advisories',    val: totalCount, icon: '📋', color: 'var(--accent)' },
+    { label: 'Critical CVEs',        val: critCount,  icon: '🔴', color: '#ef4444'       },
+    { label: 'High Severity',         val: highCount,  icon: '🟠', color: '#f97316'       },
+    { label: 'Actively Exploited',    val: kevCount,   icon: '⚡', color: '#eab308'       },
+    { label: 'Avg CVSS',              val: summary.average_cvss ? `${summary.average_cvss}/10` : '—', icon: '📊', color: 'var(--accent)' },
+    { label: 'Ransomware Linked',     val: summary.ransomware_linked ?? entries.filter(e => e.known_ransomware).length, icon: '💀', color: '#ef4444' },
+  ].forEach(c => {
+    html += `<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:20px">${c.icon}</div>
+      <div style="font-size:20px;font-weight:800;color:${c.color};margin:4px 0">${c.val}</div>
+      <div style="font-size:10px;color:var(--text-muted)">${c.label}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Filter bar
+  html += `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <div style="font-size:12px;color:var(--text-muted);font-weight:600">Filter:</div>
+    ${['All','CRITICAL','HIGH','MEDIUM'].map(s => `
+      <button onclick="loadThreatIntel({severity:'${s === 'All' ? '' : s}'})"
+        style="background:${filter.severity === s || (s === 'All' && !filter.severity) ? 'rgba(124,58,237,.3)' : 'rgba(255,255,255,.05)'};border:1px solid var(--border);color:${s === 'CRITICAL' ? '#ef4444' : s === 'HIGH' ? '#f97316' : s === 'MEDIUM' ? '#eab308' : 'var(--text-muted)'};padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">
+        ${s}
+      </button>`).join('')}
+    <input id="ti-search" placeholder="Search CVEs..." onkeydown="if(event.key==='Enter')loadThreatIntel({query:this.value})"
+      style="flex:1;min-width:140px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-size:12px" />
+  </div>`;
+
+  // Upgrade CTA for FREE users
+  if (upgradeCta) {
+    html += `<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:700;color:#a78bfa;font-size:13px">🔒 ${upgradeCta.message}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">PRO includes: ${upgradeCta.features?.join(' · ') || 'Full IOCs, unlimited feed, CSV export'}</div>
+      </div>
+      <button onclick="startSubscription('PRO')" class="btn btn-primary" style="font-size:12px;padding:6px 16px">Upgrade to PRO</button>
+    </div>`;
+  }
+
+  // Advisory cards
+  if (entries.length > 0) {
+    html += `<div style="display:flex;flex-direction:column;gap:10px">`;
+    entries.forEach(item => {
+      const sev    = item.severity || 'MEDIUM';
+      const color  = sev === 'CRITICAL' ? '#ef4444' : sev === 'HIGH' ? '#f97316' : sev === 'MEDIUM' ? '#eab308' : '#6b7280';
+      const cvss   = item.cvss ?? item.cvss_score ?? '';
+      const tags   = Array.isArray(item.tags) ? item.tags : (typeof item.tags === 'string' ? JSON.parse(item.tags || '[]') : []);
+      const kev    = item.exploit_status === 'confirmed';
+      const ransom = item.known_ransomware || item.known_ransomware === 1;
+      const title  = item.title || item.vulnerability_name || item.id || 'Advisory';
+      const desc   = item.description || item.short_description || '';
+      const url    = item.source_url || item.nvd_url || (item.id?.startsWith('CVE') ? `https://nvd.nist.gov/vuln/detail/${item.id}` : null);
+      const prob   = item.exploit_probability ? Math.round(item.exploit_probability * 100) : null;
+
+      html += `<div style="background:rgba(255,255,255,.03);border:1px solid ${kev ? color + '44' : 'var(--border)'};border-radius:10px;padding:16px;transition:border-color .2s" onmouseover="this.style.borderColor='${color}66'" onmouseout="this.style.borderColor='${kev ? color + '44' : 'var(--border)'}'">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <!-- Severity column -->
+          <div style="min-width:80px;text-align:center;padding-top:2px">
+            <span style="display:block;background:${color}22;color:${color};border:1px solid ${color}44;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;letter-spacing:.3px">${sev}</span>
+            ${cvss !== '' ? `<div style="font-size:11px;color:${color};font-weight:700;margin-top:6px">CVSS ${cvss}</div>` : ''}
+            ${prob !== null ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Exploit: ${prob}%</div>` : ''}
+          </div>
+          <!-- Content -->
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <span style="font-weight:800;font-size:13px;font-family:monospace">${item.id || ''}</span>
+              ${kev    ? `<span style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid #ef444455;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">⚡ CISA KEV</span>` : ''}
+              ${ransom ? `<span style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef444433;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">💀 RANSOMWARE</span>` : ''}
+              ${item.threat_category ? `<span style="background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);border-radius:4px;padding:1px 6px;font-size:9px">${item.threat_category}</span>` : ''}
+            </div>
+            <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:var(--text-muted)">${title}</div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.6">${desc}</div>
+            ${tags.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${tags.slice(0,6).map(t => `<span style="background:rgba(255,255,255,.07);color:var(--text-muted);border-radius:4px;padding:1px 6px;font-size:10px">${t}</span>`).join('')}</div>` : ''}
+            <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap">
+              ${url ? `<a href="${url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);font-weight:600">→ View Advisory</a>` : ''}
+              ${item.published_at ? `<span style="font-size:10px;color:var(--text-muted)">Published: ${item.published_at}</span>` : ''}
+              ${item.source ? `<span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">${item.source.replace('_',' ')}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <!-- IOC row (PRO+) -->
+        ${item.iocs && !item.iocs?.gated && Array.isArray(item.iocs) && item.iocs.length > 0 ? `
+        <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">IOCs</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${item.iocs.slice(0,5).map(ioc =>
+            `<code style="background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:2px 8px;font-size:10px">${ioc.defanged || ioc.value}</code>`
+          ).join('')}</div>
+        </div>` : ''}
+        ${item.iocs?.gated ? `
+        <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--text-muted)">🔒 IOC details available on PRO plan</span>
+          <button onclick="startSubscription('PRO')" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa;padding:2px 10px;border-radius:5px;font-size:10px;cursor:pointer">Upgrade</button>
+        </div>` : ''}
       </div>`;
     });
     html += `</div>`;
-
-    if (feed.length) {
-      html += `<div style="display:flex;flex-direction:column;gap:10px">`;
-      feed.slice(0, 20).forEach(item => {
-        const sev   = item.severity || 'INFO';
-        const color = sev === 'CRITICAL' ? '#ef4444' : sev === 'HIGH' ? '#f97316' : sev === 'MEDIUM' ? '#eab308' : '#6b7280';
-        const cvss  = item.cvss_score || item.cvss || '';
-        html += `<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:14px;align-items:flex-start">
-          <div style="min-width:72px;text-align:center">
-            <span style="display:inline-block;background:${color}22;color:${color};border:1px solid ${color}44;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">${sev}</span>
-            ${cvss ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">CVSS ${cvss}</div>` : ''}
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px;margin-bottom:4px">${item.cve_id || item.id || item.title || 'Advisory'}</div>
-            <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${item.description || item.summary || ''}</div>
-            ${item.nvd_url || item.url ? `<a href="${item.nvd_url || item.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);margin-top:6px;display:inline-block">→ View on NVD</a>` : ''}
-          </div>
-          ${item.exploited ? `<div style="color:#ef4444;font-size:11px;white-space:nowrap;font-weight:700">⚡ KEV</div>` : ''}
-        </div>`;
-      });
-      html += `</div>`;
-    } else {
-      html += `<div style="text-align:center;color:var(--text-muted);padding:40px">No threat feed data available. Try refreshing.</div>`;
-    }
-    panel.innerHTML = html;
-  } catch (e) {
-    panel.innerHTML = `<div class="alert" style="background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444">Failed to load threat feed: ${e.message}</div>`;
-  } finally {
-    if (btn)    btn.disabled         = false;
-    if (loader) loader.style.display = 'none';
+  } else {
+    // Should never show with seed fallback, but keep as final safety net
+    html += `<div style="text-align:center;color:var(--text-muted);padding:40px">
+      <div style="font-size:36px;margin-bottom:12px">🔄</div>
+      <div style="font-weight:700;margin-bottom:6px">Loading threat intelligence...</div>
+      <div style="font-size:13px">Seeding database from NIST NVD and CISA KEV. Please wait 10 seconds and refresh.</div>
+      <button onclick="setTimeout(loadThreatIntel, 5000)" style="margin-top:16px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:600">Auto-Refresh in 5s</button>
+    </div>`;
   }
+
+  panel.innerHTML = html;
+
+  // Start auto-refresh every 60 seconds
+  if (_tiRefreshTimer) clearInterval(_tiRefreshTimer);
+  _tiRefreshTimer = setInterval(() => {
+    if (document.getElementById('tab-threatintel')?.classList.contains('active')) {
+      loadThreatIntel(filter);
+    }
+  }, 60000);
+
+  if (btn)    btn.disabled         = false;
+  if (loader) loader.style.display = 'none';
 }
 
 // ─── AI Simulation Tab ──────────────────────────────────────────────────────

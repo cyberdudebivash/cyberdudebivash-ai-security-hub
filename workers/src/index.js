@@ -46,6 +46,13 @@ import { handleAIAnalyze, handleAISimulate, handleAIForecast } from './handlers/
 // ─── CVE Engine (for /api/v1/cves endpoint) ───────────────────────────────────
 import { getTopCVEsForModule } from './services/cveEngine.js';
 
+// ─── Threat Intelligence Engine v2.0 (Sentinel APEX) ─────────────────────────
+import {
+  handleGetThreatIntel, handleThreatIntelStats, handleGetThreatIntelEntry,
+  handleManualIngest, handleV1ThreatIntel, handleV1IOCs,
+} from './handlers/threatIntel.js';
+import { runIngestion } from './services/threatIngestion.js';
+
 // ─── Subscription SaaS Engine (v10.0) ────────────────────────────────────────
 import {
   handleGetUserPlan, handleCreateSubscription, handleActivateSubscription, handleGetPlans,
@@ -413,9 +420,15 @@ function apiInfoResponse() {
       'GET  /api/user/plan':            'Current plan + monthly usage for authenticated user',
       'POST /api/subscription/create':  'Create Razorpay order for plan → { order_id, amount }',
       'POST /api/subscription/activate':'Verify payment + activate plan session → { session_token, features }',
+      // V11.0 — Threat Intelligence Engine v2.0 (Sentinel APEX)
+      'GET  /api/threat-intel':          'Paginated threat feed (FREE:5, STARTER:20, PRO:50, ENT:100)',
+      'GET  /api/threat-intel/stats':    'Aggregate CVE/KEV/exploit statistics',
+      'GET  /api/threat-intel/:id':      'Single advisory detail with IOC extraction',
+      'POST /api/threat-intel/ingest':   'Manual ingestion trigger (PRO/ENTERPRISE)',
       // V10.0 — Public API v1 (PRO/ENTERPRISE key required)
       'GET  /api/v1/scan':             'Scan history for your API key',
-      'GET  /api/v1/threat-intel':     'Live Sentinel APEX CVE + KEV threat feed',
+      'GET  /api/v1/threat-intel':     'D1-backed threat intel feed with IOCs (PRO+)',
+      'GET  /api/v1/iocs':             'IOC registry — IPs, domains, hashes (ENTERPRISE)',
       'POST /api/v1/analyze':          'AI threat analysis (PRO+)',
       'POST /api/v1/simulate':         'Attack simulation (ENTERPRISE only)',
       'POST /api/v1/forecast':         'Risk forecast with financial impact (PRO+)',
@@ -720,7 +733,37 @@ export default {
       }
     }
 
-    // ── Threat Intel: correlate CVEs + stats ──────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    // V11.0 SENTINEL APEX — Threat Intelligence Engine v2.0
+    // D1-backed, real NVD+CISA+GitHub ingestion, IOC extraction, enrichment
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // GET /api/threat-intel — main paginated feed (public + plan-gated)
+    if (path === '/api/threat-intel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGetThreatIntel(request, env, authCtx), request));
+    }
+
+    // GET /api/threat-intel/stats — aggregate stats (public)
+    if (path === '/api/threat-intel/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleThreatIntelStats(request, env, authCtx), request));
+    }
+
+    // POST /api/threat-intel/ingest — manual trigger (PRO/ENTERPRISE)
+    if (path === '/api/threat-intel/ingest' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleManualIngest(request, env, authCtx), request));
+    }
+
+    // GET /api/threat-intel/:id — single advisory detail
+    if (path.match(/^\/api\/threat-intel\/[^/]+$/) && method === 'GET') {
+      const entryId = path.split('/')[3];
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleGetThreatIntelEntry(request, env, authCtx, entryId), request));
+    }
+
+    // POST /api/threat-intel/correlate — legacy endpoint (scan findings → CVE correlation)
     if (path === '/api/threat-intel/correlate' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       try {
@@ -734,10 +777,6 @@ export default {
       } catch (e) {
         return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
       }
-    }
-    if (path === '/api/threat-intel/stats' && method === 'GET') {
-      const stats = await getThreatIntelStats(env);
-      return withSecurityHeaders(withCors(Response.json({ success: true, stats }), request));
     }
 
     // ── Continuous Monitoring ─────────────────────────────────────────────────
@@ -939,9 +978,14 @@ export default {
         return withSecurityHeaders(withCors(await handleD1History(request, env, authCtx), request));
       }
 
-      // GET /api/v1/threat-intel → live sentinel threat intel feed
+      // GET /api/v1/threat-intel → D1-backed threat intel feed (PRO+)
       if (v1Path === '/threat-intel' && method === 'GET') {
-        return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
+        return withSecurityHeaders(withCors(await handleV1ThreatIntel(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/iocs → IOC registry (ENTERPRISE only)
+      if (v1Path === '/iocs' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleV1IOCs(request, env, authCtx), request));
       }
 
       // POST /api/v1/analyze → AI threat analysis (rate limited per key)
@@ -1039,23 +1083,38 @@ export default {
 
   // ── Cron scheduler ───────────────────────────────────────────────────────
   async scheduled(event, env, ctx) {
-    console.log('[CRON]', event.cron, event.scheduledTime);
+    const cron = event.cron;
+    console.log('[CRON] Trigger:', cron, event.scheduledTime);
 
-    // Run Sentinel APEX CVE feed refresh
+    // ── HOURLY: Threat Intel Ingestion (Sentinel APEX v2.0 — D1-backed) ──
+    // Runs every cron trigger — priority pipeline
     ctx.waitUntil(
-      runSentinelCron(env)
-        .then(r => console.log('[CRON] Sentinel APEX:', JSON.stringify(r)))
-        .catch(e => console.error('[CRON] Sentinel error:', e?.message))
+      runIngestion(env)
+        .then(r => console.log('[CRON] Threat Ingestion:', JSON.stringify({
+          sources:  r.sources,
+          total:    r.total,
+          inserted: r.inserted,
+          errors:   r.errors,
+          duration_ms: r.duration_ms,
+        })))
+        .catch(e => console.error('[CRON] Threat Ingestion error:', e?.message))
     );
 
-    // Run continuous monitoring scans
+    // ── HOURLY: Sentinel APEX legacy KV feed refresh ──
+    ctx.waitUntil(
+      runSentinelCron(env)
+        .then(r => console.log('[CRON] Sentinel APEX KV:', JSON.stringify(r)))
+        .catch(e => console.error('[CRON] Sentinel KV error:', e?.message))
+    );
+
+    // ── HOURLY: Continuous monitoring scans ──
     ctx.waitUntil(
       runMonitoringCron(env)
         .then(r => console.log('[CRON] Monitoring:', JSON.stringify(r)))
         .catch(e => console.error('[CRON] Monitoring error:', e?.message))
     );
 
-    // Purge expired threat intel cache
+    // ── HOURLY: Purge expired legacy threat intel cache entries ──
     ctx.waitUntil(
       purgeExpiredThreatIntel(env)
         .then(n => { if (n > 0) console.log(`[CRON] Purged ${n} expired threat intel entries`); })
