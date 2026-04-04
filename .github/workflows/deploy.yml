@@ -1,5 +1,5 @@
 # =============================================================================
-# CYBERDUDEBIVASH AI Security Hub — Deploy to Cloudflare v9.1
+# CYBERDUDEBIVASH AI Security Hub — Deploy to Cloudflare v9.2
 # Enterprise-Grade CI/CD: Zero-False-Failure Validation Engine
 # =============================================================================
 #
@@ -636,6 +636,50 @@ jobs:
             echo "⚠️  version.json not accessible via any endpoint (non-fatal)"
             echo "   This is acceptable if Pages CDN is still propagating"
             echo "versionjson_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── STEP 5b: V9 AI Brain V2 endpoint validation ──────────────────────
+      # Validates the three new AI Cyber Brain V2 endpoints introduced in V9.0.
+      # Non-fatal: logs warnings but doesn't fail the pipeline (endpoints need
+      # a prior scan result to be meaningful, so we just probe for HTTP 200/400).
+      - name: Validate V9 AI Brain V2 endpoints
+        run: |
+          echo "━━━ V9 AI Brain V2 Endpoint Probe ━━━"
+          BASE="${{ env.PRIMARY_URL }}"
+          PAYLOAD='{"scan_result":{"risk_score":75,"risk_level":"HIGH","findings":[{"severity":"CRITICAL","title":"Test finding","recommendation":"Fix it"}],"target":"smoke-test.example.com"},"module":"domain","target":"smoke-test.example.com"}'
+
+          ALL_OK=true
+          for ENDPOINT in /api/ai/analyze /api/ai/simulate /api/ai/forecast; do
+            HTTP=$(curl -s -o /tmp/ai_resp.json -w "%{http_code}" \
+              --max-time 10 \
+              -X POST \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD" \
+              "${BASE}${ENDPOINT}" 2>/dev/null || echo "000")
+
+            if [ "$HTTP" = "200" ]; then
+              SUCCESS=$(python3 -c "import sys,json; d=json.load(sys.stdin); print('ok' if d.get('success') else 'fail')" < /tmp/ai_resp.json 2>/dev/null || echo "parse_error")
+              if [ "$SUCCESS" = "ok" ]; then
+                echo "  ✅ ${ENDPOINT} → HTTP 200 + success:true"
+              else
+                echo "  ⚠️  ${ENDPOINT} → HTTP 200 but success!=true"
+                ALL_OK=false
+              fi
+            elif [ "$HTTP" = "400" ]; then
+              echo "  ⚠️  ${ENDPOINT} → HTTP 400 (validation — endpoint live, check payload)"
+            elif [ "$HTTP" = "000" ]; then
+              echo "  ⚠️  ${ENDPOINT} → Unreachable (CDN propagation may be in progress)"
+              ALL_OK=false
+            else
+              echo "  ⚠️  ${ENDPOINT} → HTTP ${HTTP}"
+              ALL_OK=false
+            fi
+          done
+
+          if [ "$ALL_OK" = "true" ]; then
+            echo "✅ All V9 AI Brain V2 endpoints healthy"
+          else
+            echo "⚠️  Some V9 endpoints not yet available — non-fatal (may be CDN propagation)"
           fi
 
       # ── STEP 6: Frontend ↔ Backend version sync check ────────────────────
