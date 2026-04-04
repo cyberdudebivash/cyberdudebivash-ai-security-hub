@@ -12,12 +12,12 @@ const ALLOWED_ORIGINS = [
 ];
 
 export function corsHeaders(request) {
-  const origin = request.headers.get('Origin') || '';
+  const origin = request?.headers?.get('Origin') || '';
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin':  allowedOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Session-Token',
     'Access-Control-Max-Age':       '86400',
     'Access-Control-Allow-Credentials': 'true',
   };

@@ -52,7 +52,7 @@
     "url":"https://cyberdudebivash.in",
     "email":"bivash@cyberdudebivash.com",
     "telephone":"+918179881447",
-    "address":{"@type":"PostalAddress","addressLocality":"Hyderabad","addressCountry":"IN"}
+    "address":{"@type":"PostalAddress","streetAddress":"29, Korai - Sukinda - Ramchandrapur Rd","addressLocality":"Ragadi","addressRegion":"Odisha","postalCode":"755019","addressCountry":"IN"}
   }
 }
 </script>
@@ -190,6 +190,24 @@ select option{background:var(--surface2)}
 .v2-tab-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text-muted);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
 .v2-tab-btn:hover{border-color:var(--accent);color:var(--accent)}
 .v2-tab-active{background:rgba(0,212,255,.15) !important;border-color:var(--accent) !important;color:var(--accent) !important}
+/* ── Ecosystem Traffic Banner ───────────────────────────────────── */
+#eco-banner{background:linear-gradient(135deg,#0a0a1a 0%,#0d0d2b 40%,#0a0a1a 100%);border-bottom:1px solid rgba(0,212,255,.25);padding:0;overflow:hidden;position:relative;z-index:998}
+#eco-banner::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(0,212,255,.04) 30%,rgba(124,58,237,.06) 60%,transparent 100%);animation:eco-sweep 4s linear infinite}
+@keyframes eco-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.eco-inner{max-width:1280px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px;flex-wrap:nowrap;overflow:hidden}
+.eco-label{font-size:10px;font-weight:900;letter-spacing:2px;color:#ff6b35;white-space:nowrap;animation:eco-pulse 2s ease-in-out infinite;text-shadow:0 0 8px rgba(255,107,53,.5)}
+@keyframes eco-pulse{0%,100%{opacity:1;text-shadow:0 0 8px rgba(255,107,53,.5)}50%{opacity:.7;text-shadow:0 0 16px rgba(255,107,53,.9)}}
+.eco-track{display:flex;gap:0;flex:1;overflow:hidden;position:relative}
+.eco-items{display:flex;gap:6px;animation:eco-scroll 28s linear infinite;white-space:nowrap}
+.eco-items:hover{animation-play-state:paused}
+@keyframes eco-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.eco-item{display:inline-flex;align-items:center;gap:8px;padding:5px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-size:12px;font-weight:600;color:rgba(255,255,255,.8);text-decoration:none;transition:all .25s;cursor:pointer;flex-shrink:0}
+.eco-item:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,212,255,.2);text-decoration:none}
+.eco-item-icon{font-size:14px}
+.eco-item-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;animation:eco-dot-blink 1.8s ease-in-out infinite}
+@keyframes eco-dot-blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.eco-close{background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:16px;padding:4px 8px;flex-shrink:0;transition:color .2s;line-height:1}
+.eco-close:hover{color:rgba(255,255,255,.7)}
 /* ── Subscription / Feature Gating ─────────────────────────────── */
 .gate-blur-wrap{position:relative;overflow:hidden;border-radius:10px}
 .gate-blur-wrap .gate-blur-inner{filter:blur(5px);pointer-events:none;user-select:none;opacity:.4}
@@ -790,6 +808,82 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
     </div>
   </div>
 </nav>
+
+<!-- ═══════════════ ECOSYSTEM TRAFFIC BANNER ═══════════════════════════════ -->
+<div id="eco-banner" role="banner" aria-label="CYBERDUDEBIVASH Ecosystem">
+  <div class="eco-inner">
+    <span class="eco-label">🔥 ECOSYSTEM</span>
+    <div class="eco-track">
+      <!-- Duplicated items for seamless loop -->
+      <div class="eco-items" id="eco-items-1">
+        <a class="eco-item" href="https://cyberdudebivash.com" target="_blank" rel="noopener" data-eco="main">
+          <span class="eco-item-dot" style="background:#00d4ff"></span>
+          <span class="eco-item-icon">🌐</span>
+          <span>cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Core Platform</span>
+        </a>
+        <a class="eco-item" href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" data-eco="intel">
+          <span class="eco-item-dot" style="background:#ef4444;animation-delay:.4s"></span>
+          <span class="eco-item-icon">🛡️</span>
+          <span>intel.cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Threat Intel</span>
+        </a>
+        <a class="eco-item" href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" data-eco="tools">
+          <span class="eco-item-dot" style="background:#8b5cf6;animation-delay:.8s"></span>
+          <span class="eco-item-icon">🛠️</span>
+          <span>tools.cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Tools Store</span>
+        </a>
+        <a class="eco-item" href="https://blog.cyberdudebivash.com" target="_blank" rel="noopener" data-eco="blog">
+          <span class="eco-item-dot" style="background:#f59e0b;animation-delay:1.2s"></span>
+          <span class="eco-item-icon">📖</span>
+          <span>blog.cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Research &amp; Blog</span>
+        </a>
+        <a class="eco-item" href="https://t.me/cyberdudebivashSentinelApex" target="_blank" rel="noopener" data-eco="telegram">
+          <span class="eco-item-dot" style="background:#22c55e;animation-delay:1.6s"></span>
+          <span class="eco-item-icon">✈️</span>
+          <span>Sentinel APEX</span>
+          <span style="font-size:10px;color:var(--text-dim)">Live Threat Feed</span>
+        </a>
+      </div>
+      <!-- Clone for seamless scroll loop -->
+      <div class="eco-items" id="eco-items-2" aria-hidden="true">
+        <a class="eco-item" href="https://cyberdudebivash.com" target="_blank" rel="noopener" data-eco="main">
+          <span class="eco-item-dot" style="background:#00d4ff"></span>
+          <span class="eco-item-icon">🌐</span>
+          <span>cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Core Platform</span>
+        </a>
+        <a class="eco-item" href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" data-eco="intel">
+          <span class="eco-item-dot" style="background:#ef4444;animation-delay:.4s"></span>
+          <span class="eco-item-icon">🛡️</span>
+          <span>intel.cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Threat Intel</span>
+        </a>
+        <a class="eco-item" href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" data-eco="tools">
+          <span class="eco-item-dot" style="background:#8b5cf6;animation-delay:.8s"></span>
+          <span class="eco-item-icon">🛠️</span>
+          <span>tools.cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Tools Store</span>
+        </a>
+        <a class="eco-item" href="https://blog.cyberdudebivash.com" target="_blank" rel="noopener" data-eco="blog">
+          <span class="eco-item-dot" style="background:#f59e0b;animation-delay:1.2s"></span>
+          <span class="eco-item-icon">📖</span>
+          <span>blog.cyberdudebivash.com</span>
+          <span style="font-size:10px;color:var(--text-dim)">Research &amp; Blog</span>
+        </a>
+        <a class="eco-item" href="https://t.me/cyberdudebivashSentinelApex" target="_blank" rel="noopener" data-eco="telegram">
+          <span class="eco-item-dot" style="background:#22c55e;animation-delay:1.6s"></span>
+          <span class="eco-item-icon">✈️</span>
+          <span>Sentinel APEX</span>
+          <span style="font-size:10px;color:var(--text-dim)">Live Threat Feed</span>
+        </a>
+      </div>
+    </div>
+    <button class="eco-close" onclick="document.getElementById('eco-banner').style.display='none'" title="Dismiss">✕</button>
+  </div>
+</div>
 
 <!-- Compliance Ticker -->
 <div class="ticker">
@@ -1645,7 +1739,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
     <div class="footer-top">
       <div>
         <div class="footer-brand">⚔️ CYBERDUDEBIVASH®</div>
-        <p class="footer-desc">Enterprise AI Cybersecurity Intelligence Platform by CyberDudeBivash Pvt. Ltd. Hyderabad, India. Building the future of AI-powered security.</p>
+        <p class="footer-desc">Enterprise AI Cybersecurity Intelligence Platform by CYBERDUDEBIVASH PRIVATE LIMITED. 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India. Building the future of AI-powered security.</p>
         <div class="footer-social">
           <a class="social-btn" href="https://github.com/cyberdudebivash" target="_blank" title="GitHub">🐙</a>
           <a class="social-btn" href="https://linkedin.com/in/cyberdudebivash" target="_blank" title="LinkedIn">💼</a>
@@ -1697,7 +1791,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
       </div>
     </div>
     <div class="footer-bottom">
-      <div class="footer-copy">© 2026 CyberDudeBivash Pvt. Ltd. All rights reserved. | Hyderabad, India</div>
+      <div class="footer-copy">© 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved. | 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</div>
       <div class="footer-copy">
         Platform <span id="platform-version-footer" title="Live version from version.json">v9.0</span> ·
         📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001
@@ -4017,6 +4111,13 @@ function copyBlogPost(module, type) {
 // Called from _postRenderV8. Fetches all three V2 endpoints in parallel and
 // renders a tabbed intelligence panel above the existing AI Brain widget.
 async function fetchAIBrainV2(module, data) {
+  try { await _fetchAIBrainV2Impl(module, data); } catch (e) {
+    // If the whole function throws (DOM error etc.), show fallback
+    const c = document.getElementById(`v2-content-${module}`);
+    if (c) c.innerHTML = renderV2Error('AI Brain', 'api_error');
+  }
+}
+async function _fetchAIBrainV2Impl(module, data) {
   const target = _v8Target || data?.target || 'unknown';
   const panelId = `aibrain-v2-${module}`;
 
@@ -4060,23 +4161,39 @@ async function fetchAIBrainV2(module, data) {
     resultsPanel.appendChild(container);
   }
 
-  // Fetch all three endpoints in parallel
+  // Fetch all three endpoints in parallel with a 12s timeout guard each
+  const AI_TIMEOUT_MS = 12000;
+  function fetchWithTimeout(path, opts) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve({ ok: false, _timeout: true }), AI_TIMEOUT_MS);
+      safeFetch(path, opts)
+        .then(r => { clearTimeout(timer); resolve(r); })
+        .catch(() => { clearTimeout(timer); resolve({ ok: false, _error: true }); });
+    });
+  }
+
   const fetchOpts = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scan_result: data, module, target }),
   };
 
-  const [analyzeRes, simulateRes, forecastRes] = await Promise.allSettled([
-    safeFetch('/api/ai/analyze',   { ...fetchOpts }),
-    safeFetch('/api/ai/simulate',  { ...fetchOpts }),
-    safeFetch('/api/ai/forecast',  { ...fetchOpts }),
+  const [analyzeRes, simulateRes, forecastRes] = await Promise.all([
+    fetchWithTimeout('/api/ai/analyze',  { ...fetchOpts }),
+    fetchWithTimeout('/api/ai/simulate', { ...fetchOpts }),
+    fetchWithTimeout('/api/ai/forecast', { ...fetchOpts }),
   ]);
 
-  // Parse responses (with client-side fallback for each)
-  const analyze  = analyzeRes.status === 'fulfilled'  && analyzeRes.value.ok  ? await analyzeRes.value.json().catch(() => null)  : null;
-  const simulate = simulateRes.status === 'fulfilled' && simulateRes.value.ok ? await simulateRes.value.json().catch(() => null) : null;
-  const forecast = forecastRes.status === 'fulfilled' && forecastRes.value.ok ? await forecastRes.value.json().catch(() => null) : null;
+  // Parse responses with graceful fallback for each
+  async function safeJson(res, label) {
+    if (!res.ok) return { _failed: true, _reason: res._timeout ? 'timeout' : 'api_error', label };
+    try { return await res.json(); } catch { return { _failed: true, _reason: 'parse_error', label }; }
+  }
+  const [analyze, simulate, forecast] = await Promise.all([
+    safeJson(analyzeRes,  'analyze'),
+    safeJson(simulateRes, 'simulate'),
+    safeJson(forecastRes, 'forecast'),
+  ]);
 
   // Cache on container for tab switching
   container._v2Data = { analyze, simulate, forecast };
@@ -4101,7 +4218,7 @@ function renderV2Tab(module, tab, data) {
 
   if (tab === 'analyze') {
     const d = data.analyze;
-    if (!d) { content.innerHTML = renderV2Error('analyze'); return; }
+    if (!d || d._failed) { content.innerHTML = renderV2Error('analyze', d?._reason); return; }
     const chainHTML = (d.attack_chain || []).map((step, i) => `
       <div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start">
         <div style="min-width:28px;height:28px;background:rgba(0,212,255,.15);border:1px solid var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent)">${i+1}</div>
@@ -4139,7 +4256,7 @@ function renderV2Tab(module, tab, data) {
 
   } else if (tab === 'simulate') {
     const d = data.simulate;
-    if (!d) { content.innerHTML = renderV2Error('simulate'); return; }
+    if (!d || d._failed) { content.innerHTML = renderV2Error('simulate', d?._reason); return; }
     const stepsHTML = (d.simulation_steps || []).map(step => `
       <div style="border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
@@ -4170,7 +4287,7 @@ function renderV2Tab(module, tab, data) {
 
   } else if (tab === 'forecast') {
     const d = data.forecast;
-    if (!d) { content.innerHTML = renderV2Error('forecast'); return; }
+    if (!d || d._failed) { content.innerHTML = renderV2Error('forecast', d?._reason); return; }
     const fi = d.financial_impact || {};
     const actionsHTML = (d.priority_actions || []).map(a => `
       <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:6px">
@@ -4216,11 +4333,19 @@ function renderV2Tab(module, tab, data) {
   }
 }
 
-function renderV2Error(tab) {
-  return `<div style="text-align:center;padding:24px;color:var(--text-dim)">
-    <div style="font-size:24px;margin-bottom:8px">⚡</div>
-    <div style="font-size:13px">Running ${tab} analysis client-side…</div>
-  </div>`;
+function renderV2Error(tab, reason) {
+  const isTimeout = reason === 'timeout';
+  const icon      = isTimeout ? '⏱️' : '⚠️';
+  const title     = isTimeout ? 'Analysis timed out' : 'Analysis unavailable';
+  const msg       = isTimeout
+    ? 'The AI engine is warming up. Re-run the scan to get fresh intelligence.'
+    : 'Could not reach the AI analysis backend. Results will appear after the next scan.';
+  return `
+    <div style="text-align:center;padding:28px 20px;color:var(--text-dim)">
+      <div style="font-size:28px;margin-bottom:10px">${icon}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:6px">${title}</div>
+      <div style="font-size:12px;max-width:280px;margin:0 auto;line-height:1.6">${msg}</div>
+    </div>`;
 }
 
 // ─── Attack Graph Panel ───────────────────────────────────────────────────────

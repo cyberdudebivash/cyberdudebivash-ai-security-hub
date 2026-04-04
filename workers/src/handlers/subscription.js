@@ -4,9 +4,9 @@
  * Plans: FREE | STARTER ₹499 | PRO ₹1499 | ENTERPRISE ₹4999
  */
 
-import { TIER_LIMITS, PLAN_FEATURES, hasAccess } from '../auth/apiKeys.js';
+import { TIER_LIMITS, PLAN_FEATURES, hasAccess, resolveApiKeyFromDB } from '../auth/apiKeys.js';
 import { createRazorpayOrder, generateReceiptId, verifyPaymentSignature } from '../lib/razorpay.js';
-import { corsHeaders } from '../lib/cors.js';
+import { corsHeaders } from '../middleware/cors.js';
 
 // ─── Subscription pricing (in paise = INR × 100) ─────────────────────────────
 const SUBSCRIPTION_PLANS = {
@@ -58,7 +58,6 @@ export async function handleGetUserPlan(request, env) {
     // Try API key auth first
     if (authHeader.startsWith('Bearer cdb_')) {
       const rawKey = authHeader.slice(7);
-      const { resolveApiKeyFromDB } = await import('../auth/apiKeys.js');
       const keyRow = env.DB ? await resolveApiKeyFromDB(env.DB, rawKey) : null;
       if (keyRow) {
         userPlan = keyRow.tier || 'FREE';
