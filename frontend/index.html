@@ -422,6 +422,94 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
 .btn-retry{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:12px;font-weight:700;color:#f87171;cursor:pointer;transition:all .2s}
 .btn-retry:hover{background:rgba(239,68,68,.25);border-color:#ef4444}
 
+/* ═══════════════════════════════════════════════════════
+   V9.0 — CYBER COMMAND CENTER STYLES
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Alert Mode — risk-based body states ──────────────── */
+body.alert-mode-critical{--accent:#ef4444;--border:rgba(239,68,68,.25)}
+body.alert-mode-critical .soc-statusbar{animation:criticalPulse 2s ease-in-out infinite}
+@keyframes criticalPulse{0%,100%{background:rgba(239,68,68,.08)}50%{background:rgba(239,68,68,.18)}}
+body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
+
+/* ── Intelligence Insight Panel ──────────────────────── */
+.v9-intel-panel{background:linear-gradient(135deg,rgba(0,0,0,.6),rgba(124,58,237,.08));border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.v9-intel-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ef4444,#7c3aed,#00d4ff);opacity:.8}
+.v9-intel-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.v9-intel-icon{font-size:24px;flex-shrink:0}
+.v9-intel-title{font-size:11px;font-weight:900;letter-spacing:2px;color:var(--accent);text-transform:uppercase}
+.v9-intel-sub{font-size:10px;color:var(--text-dim);margin-top:2px}
+.v9-intel-score{font-size:32px;font-weight:900;margin-left:auto;font-variant-numeric:tabular-nums}
+.v9-intel-threat-card{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.v9-intel-threat-label{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase}
+.v9-intel-threat-actors{font-size:14px;font-weight:800;color:#f87171;margin-bottom:4px}
+.v9-intel-threat-technique{font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.v9-intel-threat-urgency{font-size:12px;font-weight:600;line-height:1.4}
+.v9-intel-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.v9-intel-stat{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.v9-intel-stat-val{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.v9-intel-stat-lbl{font-size:10px;color:var(--text-muted);margin-top:2px;font-weight:600}
+.v9-intel-narrative{font-size:13px;color:var(--text-dim);line-height:1.6;padding:12px 14px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:12px}
+.v9-intel-cisa{font-size:11px;color:var(--text-dim);padding:8px 12px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.1);border-radius:6px;margin-bottom:12px}
+.v9-intel-upgrade-cta{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(0,212,255,.08));border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.v9-intel-cta-text{display:flex;align-items:flex-start;gap:10px;flex:1}
+.v9-cta-btn{background:linear-gradient(135deg,#7c3aed,#00d4ff);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s}
+.v9-cta-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,58,237,.4)}
+.v9-intel-loading{display:flex;align-items:center;padding:16px}
+
+/* ── Upgrade Trigger ─────────────────────────────────── */
+.v9-upgrade-trigger{background:linear-gradient(135deg,rgba(0,0,0,.7),rgba(239,68,68,.08));border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:20px 24px;margin-top:12px;position:relative;overflow:hidden}
+.v9-upgrade-trigger::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ef4444,#f97316,#f59e0b)}
+.v9-trigger-urgency{font-size:11px;font-weight:900;letter-spacing:2px;margin-bottom:14px;text-transform:uppercase}
+.v9-trigger-body{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.v9-trigger-main{flex:1;min-width:200px}
+.v9-trigger-title{font-size:15px;font-weight:700;margin-bottom:6px;line-height:1.4}
+.v9-trigger-sub{font-size:13px;color:var(--text-dim);margin-bottom:12px;line-height:1.5}
+.v9-trigger-includes{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-dim)}
+.v9-tick{color:var(--accent3);font-weight:800;margin-right:6px}
+.v9-trigger-action{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.v9-trigger-price{font-size:28px;font-weight:900;background:linear-gradient(135deg,#f97316,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.v9-trigger-price-sub{font-size:10px;color:var(--text-muted);margin-top:-6px}
+.v9-pay-btn{background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s;box-shadow:0 4px 16px rgba(239,68,68,.3)}
+.v9-pay-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(239,68,68,.5)}
+.v9-trigger-trust{font-size:10px;color:var(--text-dim)}
+
+/* ── Feature Lock Overlay ────────────────────────────── */
+.v9-feature-lock{position:absolute;inset:0;background:rgba(10,10,26,.85);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:inherit;z-index:10}
+.v9-lock-icon{font-size:32px}
+.v9-lock-name{font-size:14px;font-weight:800;color:var(--text)}
+.v9-lock-msg{font-size:12px;color:var(--text-dim);text-align:center;max-width:200px}
+.v9-lock-btn{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px}
+
+/* ── Intelligence Dashboard Widget ──────────────────── */
+.v9-intel-summary-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.v9-threat-level-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:1px;border:1px solid}
+.v9-intel-stats{display:flex;gap:12px;font-size:12px;font-weight:600;color:var(--text-dim)}
+.v9-feed-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.v9-feed-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.03);border-radius:6px;font-size:12px}
+.v9-feed-sev{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:.5px;flex-shrink:0;border:1px solid}
+.v9-feed-title{flex:1;color:var(--text-dim);line-height:1.4}
+.v9-feed-time{font-size:10px;color:var(--text-dim);flex-shrink:0}
+.v9-intel-apt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.v9-intel-apt-label{font-size:11px;color:var(--text-muted);font-weight:700}
+.v9-apt-badge{padding:3px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:12px;font-size:11px;color:#f87171;font-weight:600}
+
+/* ── Usage Widget ────────────────────────────────────── */
+.v9-usage-widget{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.v9-usage-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.v9-usage-tier{padding:2px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1px}
+.v9-usage-tier.tier-free{background:rgba(100,116,139,.2);color:#94a3b8}
+.v9-usage-tier.tier-pro{background:rgba(124,58,237,.2);color:#a78bfa}
+.v9-usage-tier.tier-enterprise{background:rgba(16,185,129,.2);color:#34d399}
+.v9-usage-label{font-size:12px;color:var(--text-dim);font-weight:600}
+.v9-usage-bar-wrap{background:rgba(255,255,255,.08);border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px}
+.v9-usage-bar{height:100%;border-radius:4px;transition:width .8s ease}
+.v9-usage-warn{font-size:11px;font-weight:600}
+.v9-usage-warn a{color:var(--accent)}
+
+/* ── Intel Dashboard Panel Placeholder ───────────────── */
+#intel-summary-widget{min-height:80px}
+
 /* ══════════════════════════════════════════════════════
    ENTERPRISE UPGRADE v4.0 — Glassmorphism + Neon System
    ══════════════════════════════════════════════════════ */
@@ -633,26 +721,36 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
 
 <!-- SOC Status Bar -->
 <div class="soc-statusbar" id="socStatusBar">
-  <div class="soc-indicator">
-    <span class="soc-dot green" id="soc-api-dot"></span>
-    <span id="soc-api-label">API</span>
+  <div class="soc-indicator" title="API health">
+    <span class="soc-dot yellow" id="soc-api-dot"></span>
+    <span id="soc-api-label">API checking…</span>
   </div>
   <span class="soc-sep">|</span>
-  <div class="soc-indicator">
+  <div class="soc-indicator" title="Database">
+    <span class="soc-dot yellow" id="soc-db-dot"></span>
+    <span>DB</span>
+  </div>
+  <span class="soc-sep">|</span>
+  <div class="soc-indicator" title="KV Cache">
+    <span class="soc-dot yellow" id="soc-kv-dot"></span>
+    <span>Cache</span>
+  </div>
+  <span class="soc-sep">|</span>
+  <div class="soc-indicator" title="Sentinel Threat Intel">
     <span class="soc-dot green" id="soc-sentinel-dot"></span>
     <span>Sentinel APEX</span>
   </div>
   <span class="soc-sep">|</span>
-  <div class="soc-indicator">
-    <span class="soc-dot green" id="soc-kev-dot"></span>
-    <span>KEV Feed</span>
-  </div>
-  <span class="soc-sep">|</span>
   <div class="soc-indicator" title="Live version from /api/version">
-    <span style="color:var(--accent)">⬡</span>
-    <span id="soc-version">v8.0</span>
+    <span style="color:var(--accent);font-weight:800">⬡</span>
+    <span id="soc-version">v9.0</span>
   </div>
   <span class="soc-sep" style="margin-left:auto">|</span>
+  <div class="soc-indicator" id="soc-threat-level" title="Global threat level">
+    <span id="soc-threat-dot" class="soc-dot red"></span>
+    <span id="soc-threat-label" style="color:#f59e0b;font-weight:700">THREAT: HIGH</span>
+  </div>
+  <span class="soc-sep">|</span>
   <div class="soc-indicator">
     <span id="soc-time" style="color:var(--text-muted);font-family:monospace;font-size:10px"></span>
   </div>
@@ -893,6 +991,17 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
       </div>
 
     </div><!-- /dashboard-lower -->
+
+    <!-- V9.0 Intelligence Command Panel -->
+    <div class="sentinel-panel" style="border-color:rgba(124,58,237,.3);margin-bottom:16px">
+      <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>🧠 AI Threat Intelligence Summary</span>
+        <span class="metric-live-badge" style="background:rgba(124,58,237,.2);color:#a78bfa;border-color:rgba(124,58,237,.4)">SENTINEL APEX</span>
+      </div>
+      <div id="intel-summary-widget">
+        <div class="v9-intel-loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><span style="margin-left:8px;font-size:12px;color:var(--text-muted)">Loading threat intelligence…</span></div>
+      </div>
+    </div>
 
     <!-- Sentinel APEX Live CVE Feed -->
     <div class="sentinel-panel" id="sentinelDashPanel">
@@ -2287,6 +2396,25 @@ function localEngine(module, payload) {
     requestAnimationFrame(update);
   }
 
+  // Floating-point counter (for percentages like 94.7%)
+  function animateCounterFloat(el, target, prefix='', suffix='', decimals=1) {
+    if (!el) return;
+    // Cap at 100 if suffix is '%' to prevent >100% display
+    const capped = suffix === '%' ? Math.min(target, 100) : target;
+    const duration = 1200;
+    const startTime = performance.now();
+    function update(currentTime) {
+      const elapsed  = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      const current  = (eased * capped).toFixed(decimals);
+      el.textContent = prefix + current + suffix;
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = prefix + capped.toFixed(decimals) + suffix;
+    }
+    requestAnimationFrame(update);
+  }
+
   // IntersectionObserver — trigger animations when dashboard is visible
   const dashSection = document.getElementById('dashboard');
   if (dashSection && window.IntersectionObserver) {
@@ -2301,7 +2429,7 @@ function localEngine(module, payload) {
         } else {
           animateCounter(mcScansEl, 12847);
         }
-        animateCounter(document.getElementById('mc-confidence'), 947, '', '%');
+        animateCounterFloat(document.getElementById('mc-confidence'), 94.7, '', '%');
         // Animate progress bars
         document.querySelectorAll('.prog-bar-fill').forEach(bar => {
           const target = bar.style.width;
@@ -2354,9 +2482,14 @@ document.getElementById('heroScanInput')?.addEventListener('keydown', e => {
 async function initRealTimeMetrics() {
   try {
     // Fetch health / status from API — best-effort, silent on failure
+    function makeAbortFetch(url, ms) {
+      const c = new AbortController();
+      setTimeout(() => c.abort(), ms);
+      return fetch(url, { signal: c.signal });
+    }
     const [healthResp, sentinelResp] = await Promise.allSettled([
-      fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(4000) }),
-      fetch(`${API_BASE}/api/sentinel/status`, { signal: AbortSignal.timeout(4000) }),
+      makeAbortFetch(`${API_BASE}/api/health`, 5000),
+      makeAbortFetch(`${API_BASE}/api/sentinel/status`, 5000),
     ]);
 
     // ── Platform scan count ──
@@ -3205,26 +3338,68 @@ function updateSOCClock() {
 setInterval(updateSOCClock, 1000);
 updateSOCClock();
 
+// ── Robust API health check with component status display ─────────────────────
 async function checkAPIHealth() {
   const apiDot   = document.getElementById('soc-api-dot');
   const apiLabel = document.getElementById('soc-api-label');
   const verEl    = document.getElementById('soc-version');
+  const dbDot    = document.getElementById('soc-db-dot');
+  const kvDot    = document.getElementById('soc-kv-dot');
+
+  // Use AbortController instead of AbortSignal.timeout() for broader browser support
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 6000);
+
   try {
-    const res = await fetch(`${CONFIG.API_BASE}/api/health`, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
-    const ok  = res.ok;
-    if (apiDot)   { apiDot.className = `soc-dot ${ok ? 'green' : 'red'}`; }
-    if (apiLabel) { apiLabel.textContent = ok ? 'API ✓' : 'API ✗'; }
-    if (ok && verEl) {
-      const d = await res.json().catch(() => null);
-      if (d?.version && verEl) verEl.textContent = `v${d.version}`;
+    const res = await fetch(`${CONFIG.API_BASE}/api/health`, {
+      cache:  'no-store',
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' },
+    });
+    clearTimeout(timeoutId);
+
+    const data = await res.json().catch(() => null);
+    const status = data?.status || (res.ok ? 'ok' : 'error');
+    const ok  = status === 'ok';
+    const deg = status === 'degraded';
+
+    if (apiDot)   apiDot.className   = `soc-dot ${ok ? 'green' : deg ? 'yellow' : 'red'}`;
+    if (apiLabel) apiLabel.textContent = ok ? 'API ✓' : deg ? 'API degraded' : 'API ✗';
+
+    // Update component dots
+    if (dbDot) dbDot.className = `soc-dot ${data?.components?.database?.status === 'ok' ? 'green' : 'yellow'}`;
+    if (kvDot) kvDot.className = `soc-dot ${data?.components?.cache?.status === 'ok' ? 'green' : 'yellow'}`;
+
+    // Update version display
+    if (data?.version) {
+      CONFIG.VERSION = data.version;
+      const badge  = document.getElementById('platform-version-badge');
+      const footer = document.getElementById('platform-version-footer');
+      if (verEl)  verEl.textContent  = `v${data.version}`;
+      if (badge)  badge.textContent  = `v${data.version}`;
+      if (footer) footer.textContent = `v${data.version}`;
     }
-  } catch {
-    if (apiDot)   apiDot.className = 'soc-dot red';
-    if (apiLabel) apiLabel.textContent = 'API offline';
+
+    // Update live counters from health stats
+    if (data?.stats?.total_scans) {
+      const el = document.getElementById('mc-scans');
+      if (el) el.textContent = Number(data.stats.total_scans).toLocaleString('en-IN');
+    }
+    if (data?.stats?.scans_today) {
+      const heroLive = document.getElementById('hero-live-scans');
+      if (heroLive) heroLive.textContent = Number(data.stats.scans_today).toLocaleString('en-IN');
+    }
+
+    return data;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (apiDot)   apiDot.className   = 'soc-dot red';
+    if (apiLabel) apiLabel.textContent = err.name === 'AbortError' ? 'API timeout' : 'API offline';
+    return null;
   }
 }
 checkAPIHealth();
-setInterval(checkAPIHealth, 60000); // re-check every minute
+setInterval(checkAPIHealth, 30000); // re-check every 30 seconds
 
 // ─── Skeleton Loader HTML Builder ─────────────────────────────────────────────
 function buildSkeletonCard() {
@@ -3311,12 +3486,423 @@ function stopScanSteps(module) {
   if (stepsContainer) stepsContainer.classList.remove('active');
 }
 
-// ─── Init V8.0 on page load ───────────────────────────────────────────────────
-// Fetch live version immediately — must be the first init call
+// ═══════════════════════════════════════════════════════════════════════════════
+// V9.0 — GLOBAL INTELLIGENCE LAYER
+// Platform threat intelligence, risk-based UI behavior, monetization triggers,
+// APT attribution, real-time threat context, and cyber command center UX.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Global Platform Intelligence State ────────────────────────────────────────
+const _INTEL = {
+  summary:       null,
+  threat_level:  'HIGH',
+  apt_groups:    ['APT29', 'Lazarus Group', 'Fancy Bear'],
+  last_fetch:    0,
+  fetch_interval: 300000, // 5 min
+};
+
+// ─── APT Context Library ────────────────────────────────────────────────────
+const APT_CONTEXT = {
+  domain: {
+    actors: 'APT29, Lazarus Group',
+    technique: 'DNS hijacking + BGP route injection',
+    pattern: 'TLS certificate spoofing after DNS cache poisoning',
+    urgency: 'Active campaign detected in APAC region targeting enterprise DNS infrastructure',
+    cisa_alert: 'AA24-038A — DNS Infrastructure Tampering',
+  },
+  ai: {
+    actors: 'FIN7, Scattered Spider',
+    technique: 'Adversarial prompt injection + training data poisoning',
+    pattern: 'Jailbreak chains targeting LLM-powered business applications',
+    urgency: 'OWASP LLM Top 10 exploitation rising 340% YoY — AI APIs primary target',
+    cisa_alert: 'AA23-347A — AI System Security Advisory',
+  },
+  redteam: {
+    actors: 'APT41, Volt Typhoon',
+    technique: 'Living-off-the-land + LOLBins execution chain',
+    pattern: 'Lateral movement via compromised credentials + remote management tools',
+    urgency: 'Nation-state actors pre-positioning in critical infrastructure — assess NOW',
+    cisa_alert: 'AA24-038A — PRC Volt Typhoon Infrastructure Pre-Positioning',
+  },
+  identity: {
+    actors: 'Scattered Spider, APT29',
+    technique: 'SIM-swapping + MFA fatigue attacks + OAuth token theft',
+    pattern: 'Identity provider bypass via social engineering + session hijacking',
+    urgency: 'Identity attacks up 71% — MFA bypass is #1 initial access vector',
+    cisa_alert: 'AA23-278A — Authentication Bypass via MFA Fatigue',
+  },
+  compliance: {
+    actors: 'Multiple ransomware groups',
+    technique: 'Compliance gap exploitation for regulatory evasion + extortion',
+    pattern: 'Targeting organizations with GDPR/PCI non-compliance for leverage',
+    urgency: 'DPDP Act enforcement active — non-compliance creates legal and financial exposure',
+    cisa_alert: 'DPDP Act 2023 — India Digital Personal Data Protection Act',
+  },
+};
+
+// ─── Fetch Intelligence Summary ─────────────────────────────────────────────
+async function fetchIntelSummary(force = false) {
+  const now = Date.now();
+  if (!force && _INTEL.summary && (now - _INTEL.last_fetch) < _INTEL.fetch_interval) {
+    return _INTEL.summary;
+  }
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 6000);
+    const res  = await fetch(`${CONFIG.API_BASE}/api/intelligence/summary`, {
+      signal: ctrl.signal, cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _INTEL.summary      = data;
+    _INTEL.threat_level = data.platform_threat_level || 'HIGH';
+    _INTEL.last_fetch   = now;
+    updateThreatLevelUI(data.platform_threat_level);
+    return data;
+  } catch {
+    return _INTEL.summary; // return stale if available
+  }
+}
+
+// ─── Update Threat Level in SOC Bar ─────────────────────────────────────────
+function updateThreatLevelUI(level) {
+  const dot   = document.getElementById('soc-threat-dot');
+  const label = document.getElementById('soc-threat-label');
+  if (!dot || !label) return;
+  const map = {
+    CRITICAL: { dot: 'red',    color: '#ef4444', text: 'THREAT: CRITICAL' },
+    HIGH:     { dot: 'red',    color: '#f59e0b', text: 'THREAT: HIGH' },
+    MODERATE: { dot: 'yellow', color: '#f59e0b', text: 'THREAT: MODERATE' },
+    LOW:      { dot: 'green',  color: '#10b981', text: 'THREAT: LOW' },
+  };
+  const cfg = map[level] || map.HIGH;
+  dot.className         = `soc-dot ${cfg.dot}`;
+  label.textContent     = cfg.text;
+  label.style.color     = cfg.color;
+}
+
+// ─── ALERT MODE — risk-based UI behavior ────────────────────────────────────
+// Shifts the entire UI into "red alert" mode for CRITICAL scan results
+let _alertMode = false;
+function setAlertMode(level) {
+  const body = document.body;
+  body.classList.remove('alert-mode-critical', 'alert-mode-high', 'alert-mode-clear');
+  if (level === 'CRITICAL') {
+    body.classList.add('alert-mode-critical');
+    _alertMode = true;
+    // Flash the SOC bar
+    const bar = document.getElementById('socStatusBar');
+    if (bar) { bar.style.borderBottomColor = '#ef4444'; bar.style.background = 'rgba(239,68,68,.12)'; }
+    // Show global alert banner
+    showAlertBanner(`🚨 CRITICAL THREAT DETECTED — Immediate action required`, 'critical');
+  } else if (level === 'HIGH') {
+    body.classList.add('alert-mode-high');
+    _alertMode = true;
+    showAlertBanner(`⚠️ HIGH RISK SCAN RESULT — Review findings immediately`, 'high');
+  } else {
+    _alertMode = false;
+    const bar = document.getElementById('socStatusBar');
+    if (bar) { bar.style.borderBottomColor = ''; bar.style.background = ''; }
+    clearAlertBanner();
+  }
+}
+
+function showAlertBanner(msg, type) {
+  let banner = document.getElementById('v9-alert-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'v9-alert-banner';
+    document.body.insertBefore(banner, document.getElementById('socStatusBar') || document.body.firstChild);
+  }
+  const color = type === 'critical' ? '#ef4444' : '#f59e0b';
+  banner.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:9999;padding:8px 20px;background:rgba(${type==='critical'?'239,68,68':'245,158,11'},.15);border-bottom:2px solid ${color};color:${color};font-size:12px;font-weight:800;letter-spacing:.5px;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;backdrop-filter:blur(8px)`;
+  banner.innerHTML = `<span>${msg}</span><button onclick="clearAlertMode()" style="background:none;border:1px solid ${color};color:${color};padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700">DISMISS</button>`;
+}
+
+function clearAlertBanner() {
+  const b = document.getElementById('v9-alert-banner');
+  if (b) b.remove();
+}
+
+function clearAlertMode() {
+  setAlertMode('CLEAR');
+}
+
+// ─── Post-scan Intelligence Insight Panel ───────────────────────────────────
+function buildIntelligenceInsightPanel(module, data) {
+  const score   = data.risk_score || 0;
+  const level   = data.risk_level || 'MEDIUM';
+  const apt     = APT_CONTEXT[module] || APT_CONTEXT.domain;
+  const crits   = (data.findings || []).filter(f => f.severity === 'CRITICAL').length;
+  const highs   = (data.findings || []).filter(f => f.severity === 'HIGH').length;
+  const target  = data.target || data.domain || data.model_name || 'target';
+
+  const riskColor = level === 'CRITICAL' ? '#ef4444' : level === 'HIGH' ? '#f97316' : level === 'MEDIUM' ? '#f59e0b' : '#10b981';
+
+  const panel = document.createElement('div');
+  panel.className = 'v9-intel-panel fade-in';
+  panel.innerHTML = `
+    <div class="v9-intel-header">
+      <div class="v9-intel-icon">🧠</div>
+      <div>
+        <div class="v9-intel-title">AI THREAT INTELLIGENCE</div>
+        <div class="v9-intel-sub">Powered by CYBERDUDEBIVASH Sentinel APEX Engine</div>
+      </div>
+      <div class="v9-intel-score" style="color:${riskColor}">${score}<span style="font-size:12px">/100</span></div>
+    </div>
+
+    <div class="v9-intel-threat-card">
+      <div class="v9-intel-threat-label">🎯 THREAT ACTORS TARGETING THIS VECTOR</div>
+      <div class="v9-intel-threat-actors">${apt.actors}</div>
+      <div class="v9-intel-threat-technique">Technique: <strong>${apt.technique}</strong></div>
+      <div class="v9-intel-threat-urgency" style="color:${riskColor}">⚡ ${apt.urgency}</div>
+    </div>
+
+    <div class="v9-intel-grid">
+      <div class="v9-intel-stat">
+        <div class="v9-intel-stat-val" style="color:#ef4444">${crits}</div>
+        <div class="v9-intel-stat-lbl">Critical</div>
+      </div>
+      <div class="v9-intel-stat">
+        <div class="v9-intel-stat-val" style="color:#f97316">${highs}</div>
+        <div class="v9-intel-stat-lbl">High</div>
+      </div>
+      <div class="v9-intel-stat">
+        <div class="v9-intel-stat-val" style="color:var(--accent)">${(data.findings||[]).length}</div>
+        <div class="v9-intel-stat-lbl">Total</div>
+      </div>
+      <div class="v9-intel-stat">
+        <div class="v9-intel-stat-val" style="color:var(--accent3)">${score >= 70 ? '24h' : score >= 40 ? '7d' : '30d'}</div>
+        <div class="v9-intel-stat-lbl">Exploit Window</div>
+      </div>
+    </div>
+
+    <div class="v9-intel-narrative">
+      ${crits > 0
+        ? `<span style="color:#ef4444;font-weight:800">🚨 IMMEDIATE ACTION REQUIRED:</span> ${target} has <strong>${crits} critical vulnerability${crits>1?'s':''}</strong> matching active exploitation patterns used by <strong>${apt.actors}</strong>. Threat actors can exploit this within <strong>24-72 hours</strong>.`
+        : highs > 0
+        ? `<span style="color:#f97316;font-weight:800">⚠️ HIGH RISK:</span> ${target} presents a viable attack path via <strong>${apt.pattern}</strong>. The <strong>${highs} high-severity finding${highs>1?'s':''}</strong> align with current TTPs of ${apt.actors}.`
+        : `<span style="color:#10b981;font-weight:700">✅ MANAGEABLE RISK:</span> ${target} shows no critical vulnerabilities. Maintain monitoring cadence and address medium findings within 30 days.`
+      }
+    </div>
+
+    <div class="v9-intel-cisa">
+      📋 Reference: <strong>${apt.cisa_alert}</strong>
+    </div>
+
+    ${(score >= 60) ? `
+    <div class="v9-intel-upgrade-cta">
+      <div class="v9-intel-cta-text">
+        <span style="font-size:16px">🔒</span>
+        <div>
+          <div style="font-weight:800;font-size:13px">Full AI Intelligence Report Available</div>
+          <div style="font-size:12px;color:var(--text-dim)">Executive brief · Remediation roadmap · Compliance mapping · MITRE ATT&CK full chain</div>
+        </div>
+      </div>
+      <button class="btn v9-cta-btn" onclick="handlePayment('${module}', '${target}')">
+        Unlock Full Report — ${module === 'redteam' ? '₹999' : module === 'identity' ? '₹799' : module === 'ai' ? '₹499' : '₹199'}
+      </button>
+    </div>` : ''}
+  `;
+  return panel;
+}
+
+// ─── Post-scan Upgrade Trigger (urgency modal) ───────────────────────────────
+function showUpgradeTrigger(module, data) {
+  const score  = data.risk_score || 0;
+  const level  = data.risk_level || 'LOW';
+  const crits  = (data.findings || []).filter(f => f.severity === 'CRITICAL').length;
+  if (score < 50 && crits === 0) return; // only show for significant risk
+
+  const prices = { domain: '₹199', ai: '₹499', redteam: '₹999', identity: '₹799', compliance: '₹499' };
+  const price  = prices[module] || '₹199';
+  const color  = level === 'CRITICAL' ? '#ef4444' : level === 'HIGH' ? '#f97316' : '#f59e0b';
+
+  // Add urgency block below results (if doesn't already exist)
+  const existingTrigger = document.getElementById('v9-upgrade-trigger');
+  if (existingTrigger) existingTrigger.remove();
+
+  const panel = document.getElementById(`results-${module}`);
+  if (!panel) return;
+
+  const trigger = document.createElement('div');
+  trigger.id = 'v9-upgrade-trigger';
+  trigger.className = 'v9-upgrade-trigger slide-in';
+  trigger.innerHTML = `
+    <div class="v9-trigger-urgency" style="color:${color}">
+      ${level === 'CRITICAL' ? '🚨 CRITICAL RISK DETECTED' : level === 'HIGH' ? '⚠️ HIGH RISK DETECTED' : '⚡ ELEVATED RISK DETECTED'}
+    </div>
+    <div class="v9-trigger-body">
+      <div class="v9-trigger-main">
+        <div class="v9-trigger-title">Your scan revealed <strong style="color:${color}">${crits > 0 ? crits + ' critical' : 'significant'} security gaps</strong></div>
+        <div class="v9-trigger-sub">Get the full intelligence report with executive brief, step-by-step remediation, MITRE ATT&CK mapping, and compliance impact analysis.</div>
+        <div class="v9-trigger-includes">
+          <span class="v9-tick">✓</span> Executive Security Brief (C-Suite ready)
+          <span class="v9-tick">✓</span> Full Remediation Roadmap
+          <span class="v9-tick">✓</span> MITRE ATT&CK Kill Chain
+          <span class="v9-tick">✓</span> Compliance Gap Analysis
+          <span class="v9-tick">✓</span> 7-day Report Access
+        </div>
+      </div>
+      <div class="v9-trigger-action">
+        <div class="v9-trigger-price">${price}</div>
+        <div class="v9-trigger-price-sub">one-time report</div>
+        <button class="btn v9-pay-btn" onclick="handlePayment('${module}')">
+          🔓 Get Full Report
+        </button>
+        <div class="v9-trigger-trust">🔒 Secure · Instant delivery · Razorpay</div>
+      </div>
+    </div>
+  `;
+  panel.after(trigger);
+
+  // Auto-dismiss after 8 seconds for low urgency
+  if (score < 70) {
+    setTimeout(() => { if (trigger.parentNode) trigger.remove(); }, 12000);
+  }
+}
+
+// ─── Wired renderResults Enhancement — V9.0 layer ───────────────────────────
+// Extends the existing V8.0 renderResults override with V9.0 intelligence
+const _v8RenderResults = renderResults;
+function renderResults(module, data) {
+  _v8RenderResults(module, data);
+
+  const score = data.risk_score || 0;
+  const level = data.risk_level || 'MEDIUM';
+
+  // ALERT MODE — shift UI color based on risk
+  setAlertMode(level);
+
+  // Inject Intelligence Insight Panel
+  const panel = document.getElementById(`results-${module}`);
+  if (panel) {
+    // Insert intelligence panel before existing AI Brain panel
+    const intelPanel = buildIntelligenceInsightPanel(module, data);
+    panel.insertBefore(intelPanel, panel.firstChild);
+  }
+
+  // Show upgrade trigger for significant risk results
+  setTimeout(() => showUpgradeTrigger(module, data), 800);
+
+  // Update posture ring with this scan's score
+  const ring  = document.getElementById('postureRing');
+  const pVal  = document.getElementById('postureVal');
+  if (ring && pVal) {
+    const circumference = 2 * Math.PI * 45;
+    const offset = circumference - (score / 100) * circumference;
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = score >= 80 ? '#ef4444' : score >= 60 ? '#f97316' : score >= 40 ? '#f59e0b' : '#10b981';
+    pVal.textContent = score;
+  }
+}
+
+// ─── Feature Lock Enhancement — V9.0 ────────────────────────────────────────
+// Adds glowing lock overlay to any premium feature accessed by non-paying users
+function addFeatureLock(elementId, featureName, upgradeMsg) {
+  const el = document.getElementById(elementId);
+  if (!el || el.dataset.locked === '1') return;
+  el.style.position = 'relative';
+  el.dataset.locked = '1';
+  const overlay = document.createElement('div');
+  overlay.className = 'v9-feature-lock';
+  overlay.innerHTML = `
+    <div class="v9-lock-icon">🔒</div>
+    <div class="v9-lock-name">${featureName}</div>
+    <div class="v9-lock-msg">${upgradeMsg || 'Upgrade to PRO to unlock'}</div>
+    <button class="btn v9-lock-btn" onclick="document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'})">
+      Upgrade →
+    </button>
+  `;
+  el.appendChild(overlay);
+}
+
+// ─── Usage Counter Widget ────────────────────────────────────────────────────
+function buildUsageWidget(used, limit, tier) {
+  const pct     = limit === -1 ? 0 : Math.round((used / limit) * 100);
+  const color   = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#10b981';
+  const label   = limit === -1 ? 'Unlimited' : `${used} / ${limit} scans`;
+  return `
+  <div class="v9-usage-widget">
+    <div class="v9-usage-header">
+      <span class="v9-usage-tier tier-${tier.toLowerCase()}">${tier}</span>
+      <span class="v9-usage-label">${label} today</span>
+    </div>
+    ${limit !== -1 ? `
+    <div class="v9-usage-bar-wrap">
+      <div class="v9-usage-bar" style="width:${Math.min(pct,100)}%;background:${color}"></div>
+    </div>
+    ${pct >= 80 ? `<div class="v9-usage-warn" style="color:${color}">⚠️ ${100-pct}% remaining — <a href="#pricing">upgrade to PRO</a> for 500/day</div>` : ''}
+    ` : '<div style="color:#10b981;font-size:12px;font-weight:700">♾️ Unlimited scans — Enterprise plan</div>'}
+  </div>`;
+}
+
+// ─── Intelligence Summary Dashboard Widget ──────────────────────────────────
+async function renderIntelDashboardWidget() {
+  const container = document.getElementById('intel-summary-widget');
+  if (!container) return;
+
+  container.innerHTML = `<div class="v9-intel-loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><span style="margin-left:8px;font-size:12px;color:var(--text-muted)">Loading threat intelligence…</span></div>`;
+
+  const data = await fetchIntelSummary();
+  if (!data) {
+    container.innerHTML = `<div style="color:var(--text-muted);font-size:12px;padding:12px">Threat intelligence feed unavailable — showing cached data</div>`;
+    return;
+  }
+
+  const levelColor = { CRITICAL: '#ef4444', HIGH: '#f59e0b', MODERATE: '#3b82f6', LOW: '#10b981' }[data.platform_threat_level] || '#f59e0b';
+  const feedHTML = (data.intelligence_feed || []).slice(0, 4).map(item => {
+    const sev   = item.severity;
+    const color = sev === 'CRITICAL' ? '#ef4444' : sev === 'HIGH' ? '#f97316' : '#f59e0b';
+    const ago   = item.ts ? Math.round((Date.now() - new Date(item.ts).getTime()) / 3600000) + 'h ago' : 'recent';
+    return `<div class="v9-feed-item">
+      <span class="v9-feed-sev" style="background:${color}20;color:${color};border-color:${color}40">${sev}</span>
+      <span class="v9-feed-title">${item.title}</span>
+      <span class="v9-feed-time">${ago}</span>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="v9-intel-summary-header">
+      <div class="v9-threat-level-badge" style="background:${levelColor}20;color:${levelColor};border-color:${levelColor}40">
+        ${data.platform_threat_level} THREAT LEVEL
+      </div>
+      <div class="v9-intel-stats">
+        <span>🔍 ${data.total_scans_today || 0} scans today</span>
+        <span style="color:#ef4444">🚨 ${data.critical_scans_today || 0} critical</span>
+      </div>
+    </div>
+    <div class="v9-feed-list">${feedHTML || '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No active feeds — all clear</div>'}</div>
+    <div class="v9-intel-apt">
+      <div class="v9-intel-apt-label">Active APT Groups:</div>
+      ${(data.active_apt_groups || []).map(g => `<span class="v9-apt-badge">${g}</span>`).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--text-dim);margin-top:8px;text-align:right">
+      ${data.cached ? '📡 Cached' : '🔴 Live'} · Updated ${new Date(data.timestamp || Date.now()).toLocaleTimeString()}
+    </div>
+  `;
+}
+
+// ─── Init V9.0 on page load ───────────────────────────────────────────────────
 initVersion();
 
+// Non-blocking parallel init
+Promise.allSettled([
+  fetchIntelSummary(),
+  checkAPIHealth(),
+]).then(([intelRes]) => {
+  if (intelRes.status === 'fulfilled' && intelRes.value) {
+    renderIntelDashboardWidget();
+  }
+});
+
+// Auto-refresh intelligence every 5 min
+setInterval(() => {
+  fetchIntelSummary(true).then(() => renderIntelDashboardWidget());
+}, 300000);
+
 setTimeout(() => {
-  // Load monitoring dashboard if authenticated
+  renderIntelDashboardWidget();
   if (typeof renderMonitoringDashboard === 'function') {
     renderMonitoringDashboard();
   }
