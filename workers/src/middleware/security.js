@@ -1,5 +1,5 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Security Headers & Hardening Middleware v8.0
+ * CYBERDUDEBIVASH AI Security Hub — Security Headers & Hardening Middleware v9.0
  * Zero Trust edge security: OWASP headers, WAF, SSRF guard, input validation,
  * bot detection, per-tenant isolation, and abuse auto-ban.
  */
@@ -39,8 +39,8 @@ const SECURITY_HEADERS = {
 };
 
 const POWERED_BY_HEADERS = {
-  'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v8.0',
-  'X-API-Version':   '8.0.0',
+  'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v9.0',
+  'X-API-Version':   '9.0.0',
   'X-Security-Hub':  'cyberdudebivash.in',
   'X-Zero-Trust':    'enforced',
 };

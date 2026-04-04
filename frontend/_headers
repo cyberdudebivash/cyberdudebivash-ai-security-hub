@@ -1,3 +1,12 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Cloudflare Pages Response Headers v9.0
+# =============================================================================
+# CRITICAL: HTML must never be cached. JS/CSS can be cached if versioned.
+# Root cause of "stale v8 showing after v9 deploy" was the /* rule below
+# applying max-age=3600 to index.html. Now fixed with explicit HTML no-store.
+# =============================================================================
+
+# ── Security headers on ALL routes ──────────────────────────────────────────
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Frame-Options: DENY
@@ -6,16 +15,63 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.workers.dev https://cyberdudebivash.in https://*.cyberdudebivash.in; font-src 'self'; frame-ancestors 'none'; form-action 'self' https://rzp.io;
-  X-Powered-By: CYBERDUDEBIVASH AI Security Hub
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+  X-Powered-By: CYBERDUDEBIVASH AI Security Hub v9.0
+  Vary: Accept-Encoding
 
+# ── HTML — NEVER cache, always fresh ────────────────────────────────────────
+# This is the critical fix. index.html must be served fresh on every request
+# so users immediately see the latest deployment without manual cache busting.
+/
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/index.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/*.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# ── version.json — never cache (CI injects build-time values here) ───────────
+/version.json
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Content-Type: application/json; charset=utf-8
+
+# ── API routes — never cache ──────────────────────────────────────────────────
 /api/*
   Cache-Control: no-store, no-cache
 
-/*.json
-  Content-Type: application/json; charset=utf-8
-  Cache-Control: public, max-age=86400
+# ── Versioned static assets — cache forever (immutable) ──────────────────────
+# Only applies to assets that have a hash/version in filename (e.g. app.v9.js)
+# These are safe to cache immutably because filename changes on each deploy.
+/*.v9.*
+  Cache-Control: public, max-age=31536000, immutable
 
+# ── JSON data files — short cache (except version.json handled above) ────────
+/data/*.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+
+# ── XML sitemaps ─────────────────────────────────────────────────────────────
 /sitemap.xml
   Content-Type: application/xml; charset=utf-8
   Cache-Control: public, max-age=86400
+
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+# ── Static assets (images, fonts, icons) — moderate cache ────────────────────
+/*.png
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+/*.jpg
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+/*.jpeg
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+/*.webp
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+/*.svg
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+/*.ico
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable

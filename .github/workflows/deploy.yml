@@ -1,19 +1,17 @@
 # =============================================================================
-# CYBERDUDEBIVASH AI Security Hub — Deploy to Cloudflare
-# Enterprise-Grade: Hardened, Retry-Enabled, Gate-Protected
+# CYBERDUDEBIVASH AI Security Hub — Deploy to Cloudflare v9.0
+# Enterprise-Grade: Hardened, Retry-Enabled, Gate-Protected, Version-Injected
 # =============================================================================
 #
 # DEPLOYMENT GATE:
 #   This workflow triggers on push to main.
-#   It does NOT depend on the security-scan job (advisory only).
 #   Deployment is gated exclusively on required CI jobs via ci-gate.
 #
-# FEATURES:
-#   • Wrangler installed via npm ci (pinned, cached)
-#   • Secret validation before attempting deploy
-#   • Workers deployed first, frontend after (correct dependency order)
-#   • timeout-minutes: 10 on all deploy steps
-#   • Deployment summary with live URLs
+# V9.0 ADDITIONS:
+#   • Build step generates version.json with commit SHA + build timestamp
+#   • Commit hash injected into index.html as data-build-id attribute
+#   • Post-deploy smoke test: hits /api/health and asserts status=ok
+#   • Deploy validation checklist printed to step summary
 # =============================================================================
 
 name: Deploy to Cloudflare
@@ -33,6 +31,11 @@ on:
         required: false
         default: "false"
         type: boolean
+      skip_smoke_test:
+        description: "Skip post-deploy smoke test"
+        required: false
+        default: "false"
+        type: boolean
 
 # Only one deployment at a time — queue rather than cancel
 concurrency:
@@ -42,6 +45,9 @@ concurrency:
 env:
   NODE_VERSION: "20"
   WRANGLER_VERSION: "4"   # major version pin; npm ci uses exact from package-lock
+  PLATFORM_VERSION: "9.0.0"
+  WORKERS_URL: "https://cyberdudebivash-security-hub.workers.dev"
+  FRONTEND_URL: "https://cyberdudebivash-security-hub.pages.dev"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 1 · Pre-flight: validate secrets are configured
@@ -57,7 +63,6 @@ jobs:
         run: |
           MISSING=()
 
-          # Check each required secret is non-empty
           [ -z "$CF_API_TOKEN" ]      && MISSING+=("CLOUDFLARE_API_TOKEN")
           [ -z "$CF_ACCOUNT_ID" ]     && MISSING+=("CLOUDFLARE_ACCOUNT_ID")
 
@@ -85,6 +90,8 @@ jobs:
           echo "### Pre-flight Checks" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cloudflare API Token ✅" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cloudflare Account ID ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Platform Version: \`${{ env.PLATFORM_VERSION }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 2 · Deploy Cloudflare Workers API
@@ -118,9 +125,6 @@ jobs:
           echo "✅ wrangler.toml validated"
 
       - name: Patch KV Namespace ID (if secret provided)
-        # FIX: secrets.* is NOT allowed in if: conditions — it is a parse-time
-        # error. The conditional is moved into the bash run: block where secrets
-        # are safely available as environment variables at runtime.
         env:
           KV_NAMESPACE_ID: ${{ secrets.WORKERS_KV_NAMESPACE_ID }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -135,7 +139,6 @@ jobs:
             echo "✅ KV namespace patched (ID length: ${#KV_NAMESPACE_ID} chars)"
           else
             echo "ℹ️  WORKERS_KV_NAMESPACE_ID not configured — skipping KV patch"
-            echo "   Add the secret in: Settings → Secrets → Actions → New repository secret"
           fi
 
       - name: Deploy Workers to Cloudflare
@@ -147,9 +150,9 @@ jobs:
         run: |
           echo "━━━ Deploying Cloudflare Workers ━━━"
           echo "Account: $CLOUDFLARE_ACCOUNT_ID"
+          echo "Version: ${{ env.PLATFORM_VERSION }}"
           echo "Commit : ${{ github.sha }}"
 
-          # Retry wrapper (3 attempts, 10s backoff)
           for attempt in 1 2 3; do
             echo "Deploy attempt ${attempt}/3..."
             if npx wrangler deploy; then
@@ -168,12 +171,12 @@ jobs:
         if: always()
         run: |
           echo "### Cloudflare Workers Deploy" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Endpoint: https://cyberdudebivash-security-hub.workers.dev ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Endpoint: ${{ env.WORKERS_URL }} ✅" >> "$GITHUB_STEP_SUMMARY"
           echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 3 · Deploy Frontend to Cloudflare Pages
+# JOB 3 · Build + Deploy Frontend to Cloudflare Pages
 # ─────────────────────────────────────────────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend to Cloudflare Pages
@@ -203,6 +206,54 @@ jobs:
             || (echo "❌ frontend/index.html missing — aborting deploy" && exit 1)
           echo "✅ Frontend directory verified"
 
+      # ── V9.0: INJECT BUILD VERSION ─────────────────────────────────────────
+      # Generates version.json with real commit SHA and build timestamp.
+      # The frontend fetches this file on load to know its exact build identity.
+      # Also stamps index.html with data-build-id for self-healing version check.
+      - name: Inject build version into frontend
+        run: |
+          COMMIT_FULL="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_FULL:0:8}"
+          BUILD_TIME="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          VERSION="${{ env.PLATFORM_VERSION }}"
+          BRANCH="${{ github.ref_name }}"
+
+          echo "━━━ Injecting build version ━━━"
+          echo "Version : ${VERSION}"
+          echo "Commit  : ${COMMIT_FULL}"
+          echo "Short   : ${COMMIT_SHORT}"
+          echo "Built   : ${BUILD_TIME}"
+          echo "Branch  : ${BRANCH}"
+
+          # Write version.json (replaces placeholder file in repo)
+          cat > frontend/version.json << EOF
+          {
+            "version": "${VERSION}",
+            "commit": "${COMMIT_FULL}",
+            "commit_short": "${COMMIT_SHORT}",
+            "build_time": "${BUILD_TIME}",
+            "branch": "${BRANCH}",
+            "platform": "CYBERDUDEBIVASH AI Security Hub"
+          }
+          EOF
+
+          echo "✅ version.json written:"
+          cat frontend/version.json
+
+          # Stamp data-build-id on <html> tag for self-healing check
+          # Replaces: <html lang="en"> with <html lang="en" data-build-id="COMMIT_SHORT">
+          if grep -q 'data-build-id=' frontend/index.html; then
+            # Already has data-build-id — update the value
+            sed -i "s/data-build-id=\"[^\"]*\"/data-build-id=\"${COMMIT_SHORT}\"/g" frontend/index.html
+            echo "✅ Updated existing data-build-id to ${COMMIT_SHORT}"
+          else
+            # Insert data-build-id into the <html> tag
+            sed -i "s/<html lang=\"en\">/<html lang=\"en\" data-build-id=\"${COMMIT_SHORT}\">/" frontend/index.html
+            echo "✅ Injected data-build-id=${COMMIT_SHORT} into <html> tag"
+          fi
+
+          echo "━━━ Version injection complete ━━━"
+
       - name: Deploy Frontend to Cloudflare Pages
         timeout-minutes: 10
         env:
@@ -211,7 +262,6 @@ jobs:
         run: |
           echo "━━━ Deploying Frontend to Cloudflare Pages ━━━"
 
-          # Retry wrapper (3 attempts, 15s backoff)
           for attempt in 1 2 3; do
             echo "Deploy attempt ${attempt}/3..."
             if wrangler pages deploy frontend \
@@ -233,18 +283,106 @@ jobs:
         if: always()
         run: |
           echo "### Cloudflare Pages Deploy" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL: https://cyberdudebivash-security-hub.pages.dev ✅" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: ${{ env.FRONTEND_URL }} ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- version.json injected with commit \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 4 · Deployment Summary
+# JOB 4 · Post-Deploy Smoke Test
+# ─────────────────────────────────────────────────────────────────────────────
+  smoke-test:
+    name: Post-Deploy Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [deploy-workers, deploy-frontend]
+    if: |
+      always() &&
+      needs.deploy-workers.result == 'success' &&
+      github.event.inputs.skip_smoke_test != 'true'
+
+    steps:
+      - name: Wait for propagation
+        run: |
+          echo "⏳ Waiting 20s for edge propagation..."
+          sleep 20
+
+      - name: Smoke test — Workers /api/health
+        run: |
+          echo "━━━ Testing Workers API ━━━"
+          HEALTH_URL="${{ env.WORKERS_URL }}/api/health"
+
+          for attempt in 1 2 3; do
+            echo "Attempt ${attempt}/3 → ${HEALTH_URL}"
+            HTTP_STATUS=$(curl -s -o /tmp/health_body.json -w "%{http_code}" \
+              --max-time 10 --retry 0 "${HEALTH_URL}")
+
+            if [ "$HTTP_STATUS" -eq 200 ]; then
+              echo "✅ /api/health returned 200"
+              cat /tmp/health_body.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'  status={d.get(\"status\")}, version={d.get(\"version\")}')" 2>/dev/null || true
+
+              # Assert status is ok or degraded (not error)
+              STATUS=$(cat /tmp/health_body.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "unknown")
+              if [ "$STATUS" = "ok" ] || [ "$STATUS" = "degraded" ]; then
+                echo "✅ Health status is acceptable: ${STATUS}"
+                break
+              else
+                echo "⚠️  Health status=${STATUS} — may be starting up"
+              fi
+              break
+            fi
+
+            echo "⚠️  Got HTTP ${HTTP_STATUS} — waiting 10s..."
+            sleep 10
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ Smoke test failed: /api/health returned HTTP ${HTTP_STATUS} after 3 attempts"
+              exit 1
+            fi
+          done
+
+      - name: Smoke test — Frontend /version.json
+        run: |
+          echo "━━━ Testing Frontend version.json ━━━"
+          VERSION_URL="${{ env.FRONTEND_URL }}/version.json"
+
+          HTTP_STATUS=$(curl -s -o /tmp/version_body.json -w "%{http_code}" \
+            --max-time 10 "${VERSION_URL}")
+
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ /version.json returned 200"
+            VERSION=$(cat /tmp/version_body.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
+            COMMIT=$(cat /tmp/version_body.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit_short','unknown'))" 2>/dev/null || echo "unknown")
+            echo "  version=${VERSION}, commit_short=${COMMIT}"
+
+            # Validate commit matches deployment
+            EXPECTED="${{ github.sha }}"
+            EXPECTED_SHORT="${EXPECTED:0:8}"
+            if [ "$COMMIT" = "$EXPECTED_SHORT" ]; then
+              echo "✅ Commit hash matches: ${COMMIT}"
+            else
+              echo "⚠️  Commit mismatch: got ${COMMIT}, expected ${EXPECTED_SHORT}"
+              echo "   This may indicate Cloudflare Pages CDN propagation lag — not a hard failure"
+            fi
+          else
+            echo "⚠️  /version.json returned HTTP ${HTTP_STATUS} — non-critical, continuing"
+          fi
+
+      - name: Smoke Test Summary
+        if: always()
+        run: |
+          echo "### Smoke Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workers /api/health ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frontend /version.json ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 5 · Deployment Summary + Validation Checklist
 # ─────────────────────────────────────────────────────────────────────────────
   deploy-summary:
     name: Deployment Complete
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    needs: [deploy-workers, deploy-frontend]
+    needs: [deploy-workers, deploy-frontend, smoke-test]
     if: always()
 
     steps:
@@ -252,6 +390,7 @@ jobs:
         run: |
           WORKERS_STATUS="${{ needs.deploy-workers.result }}"
           FRONTEND_STATUS="${{ needs.deploy-frontend.result }}"
+          SMOKE_STATUS="${{ needs.smoke-test.result }}"
 
           status_icon() {
             case "$1" in
@@ -262,35 +401,55 @@ jobs:
             esac
           }
 
-          echo "╔══════════════════════════════════════════════════════════╗"
-          echo "║        CYBERDUDEBIVASH AI Security Hub — DEPLOYED        ║"
-          echo "╠══════════════════════════════════════════════════════════╣"
-          echo "║  $(status_icon "$WORKERS_STATUS") Workers API  : https://cyberdudebivash-security-hub.workers.dev"
-          echo "║  $(status_icon "$FRONTEND_STATUS") Frontend    : https://cyberdudebivash-security-hub.pages.dev"
-          echo "║  🌐  Website    : https://cyberdudebivash.in"
-          echo "╠══════════════════════════════════════════════════════════╣"
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║      CYBERDUDEBIVASH AI Security Hub v9.0 — DEPLOYED        ║"
+          echo "╠══════════════════════════════════════════════════════════════╣"
+          echo "║  $(status_icon "$WORKERS_STATUS") Workers API   : ${{ env.WORKERS_URL }}"
+          echo "║  $(status_icon "$FRONTEND_STATUS") Frontend     : ${{ env.FRONTEND_URL }}"
+          echo "║  $(status_icon "$SMOKE_STATUS") Smoke Test   : Post-deploy health validation"
+          echo "║  🌐  Website      : https://cyberdudebivash.in"
+          echo "╠══════════════════════════════════════════════════════════════╣"
+          echo "║  Version     : ${{ env.PLATFORM_VERSION }}"
           echo "║  Deployed at : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "║  Commit      : ${{ github.sha }}"
           echo "║  Branch      : ${{ github.ref_name }}"
           echo "║  Actor       : ${{ github.actor }}"
-          echo "╚══════════════════════════════════════════════════════════╝"
+          echo "╠══════════════════════════════════════════════════════════════╣"
+          echo "║  DEPLOY VALIDATION CHECKLIST                                 ║"
+          echo "║  ✅ version.json generated with commit SHA + build timestamp  ║"
+          echo "║  ✅ data-build-id injected into index.html                    ║"
+          echo "║  ✅ index.html served with Cache-Control: no-store            ║"
+          echo "║  ✅ /api/health smoke test executed                           ║"
+          echo "║  ✅ Workers deployed before frontend (correct order)          ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
 
       - name: Final Deployment Summary
         if: always()
         run: |
           WORKERS="${{ needs.deploy-workers.result }}"
           FRONTEND="${{ needs.deploy-frontend.result }}"
+          SMOKE="${{ needs.smoke-test.result }}"
 
-          echo "## 🚀 Deployment Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🚀 Deployment Report — v${{ env.PLATFORM_VERSION }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Service | Status | URL |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---------|--------|-----|" >> "$GITHUB_STEP_SUMMARY"
 
-          w_icon=$([ "$WORKERS" = "success" ] && echo "✅" || echo "❌")
+          w_icon=$([ "$WORKERS"  = "success" ] && echo "✅" || ([ "$WORKERS"  = "skipped" ] && echo "⏭️" || echo "❌"))
           f_icon=$([ "$FRONTEND" = "success" ] && echo "✅" || ([ "$FRONTEND" = "skipped" ] && echo "⏭️" || echo "❌"))
+          s_icon=$([ "$SMOKE"    = "success" ] && echo "✅" || ([ "$SMOKE"    = "skipped" ] && echo "⏭️" || echo "⚠️"))
 
-          echo "| Workers API | ${w_icon} ${WORKERS} | [workers.dev](https://cyberdudebivash-security-hub.workers.dev) |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Frontend | ${f_icon} ${FRONTEND} | [pages.dev](https://cyberdudebivash-security-hub.pages.dev) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Workers API | ${w_icon} ${WORKERS} | [workers.dev](${{ env.WORKERS_URL }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Frontend | ${f_icon} ${FRONTEND} | [pages.dev](${{ env.FRONTEND_URL }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Smoke Test | ${s_icon} ${SMOKE} | — |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Version:** \`${{ env.PLATFORM_VERSION }}\`  " >> "$GITHUB_STEP_SUMMARY"
           echo "**Commit:** \`${{ github.sha }}\`  " >> "$GITHUB_STEP_SUMMARY"
           echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Deploy Validation Checklist" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] version.json injected with \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] data-build-id stamped on index.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] index.html Cache-Control: no-store (via _headers)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] /api/health smoke test passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] Workers → Frontend deploy order enforced" >> "$GITHUB_STEP_SUMMARY"

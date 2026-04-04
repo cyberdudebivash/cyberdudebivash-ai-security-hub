@@ -713,7 +713,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 
 <!-- Announcement Bar -->
 <div class="ann-bar">
-  ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge">v8.0</span> — AI Cyber Brain · Continuous Monitoring · Threat Correlation · Enterprise Multi-Tenant |
+  ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge">v9.0</span> — AI Cyber Brain · Continuous Monitoring · Threat Correlation · Enterprise Multi-Tenant |
   <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">📡 Join Threat Intel</a> ·
   <a href="https://tools.cyberdudebivash.com" target="_blank">🛠️ Tools Suite</a> ·
   <a href="#enterprise">Enterprise</a>
@@ -1603,7 +1603,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
     <div class="footer-bottom">
       <div class="footer-copy">© 2026 CyberDudeBivash Pvt. Ltd. All rights reserved. | Hyderabad, India</div>
       <div class="footer-copy">
-        Platform <span id="platform-version-footer" title="Live version fetched from API">v8.0</span> ·
+        Platform <span id="platform-version-footer" title="Live version from version.json">v9.0</span> ·
         📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001
       </div>
     </div>
@@ -1635,29 +1635,85 @@ const CONFIG = {
   TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
   CONTACT_EMAIL: 'bivash@cyberdudebivash.com',
   PLATFORM_NAME: 'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:       'loading…',  // dynamically replaced by initVersion() on load — never hardcode
+  VERSION:       '9.0.0',     // default; immediately overridden by initVersion() from version.json
 };
 
-// ─── Dynamic Version Fetch ───────────────────────────────────────────────────
-// Fetches live version from /api/version so the UI always reflects the
-// deployed backend version without any hardcoded strings.
+// ─── Version Init — version.json first, /api/version fallback ───────────────
+// Priority order:
+//   1. /version.json  — static, no-store, injected at CI/CD build time
+//   2. /api/version   — live backend, used if version.json unavailable
+//   3. CONFIG.VERSION — hardcoded '9.0.0' default (never 'loading…')
+//
+// Self-healing: if the HTML page's data-build-id (stamped by CI/CD) does not
+// match the commit in version.json, the page was served stale from cache.
+// A warning banner is shown and the page reloads after 5 seconds.
 async function initVersion() {
+  function _applyVersion(ver) {
+    CONFIG.VERSION = ver;
+    const badge     = document.getElementById('platform-version-badge');
+    const footer    = document.getElementById('platform-version-footer');
+    const socVer    = document.getElementById('soc-version');
+    const aiEngVer  = document.getElementById('ai-engine-version');
+    const shortVer  = ver.split('.').slice(0, 2).join('.');  // e.g. "9.0" from "9.0.0"
+    if (badge)    badge.textContent    = `v${ver}`;
+    if (footer)   footer.textContent   = `v${ver}`;
+    if (socVer)   socVer.textContent   = `v${ver}`;
+    if (aiEngVer) aiEngVer.textContent = shortVer;
+  }
+
+  function _selfHealingCheck(versionData) {
+    // Get the build ID stamped into the HTML tag by CI/CD deploy step
+    const htmlBuildId = document.documentElement.getAttribute('data-build-id');
+    const jsonCommit  = versionData?.commit_short || versionData?.commit?.slice(0, 8);
+    if (!htmlBuildId || !jsonCommit) return; // no data to compare
+
+    if (htmlBuildId !== jsonCommit) {
+      console.warn(
+        `[CYBERDUDEBIVASH] Stale cache detected! HTML build=${htmlBuildId}, ` +
+        `current deploy=${jsonCommit}. Reloading in 5s…`
+      );
+      // Show a non-intrusive banner so the user knows what's happening
+      const banner = document.createElement('div');
+      banner.id    = 'stale-cache-banner';
+      banner.style.cssText = [
+        'position:fixed;bottom:0;left:0;right:0;z-index:99999',
+        'background:linear-gradient(135deg,#7c3aed,#00d4ff)',
+        'color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:700',
+        'box-shadow:0 -2px 16px rgba(0,0,0,.4)',
+      ].join(';');
+      banner.textContent = '⚡ New version deployed — updating in 5 seconds…';
+      document.body.appendChild(banner);
+      setTimeout(() => window.location.reload(true), 5000);
+    }
+  }
+
+  // Step 1: try /version.json (static, CI-injected, no-store cached)
+  try {
+    const res  = await fetch('/version.json', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      const ver  = data.version || CONFIG.VERSION;
+      _applyVersion(ver);
+      CONFIG._buildCommit = data.commit || null;
+      console.info(
+        `[CYBERDUDEBIVASH] v${ver} | commit=${data.commit_short || 'n/a'} | built=${data.build_time || 'n/a'}`
+      );
+      _selfHealingCheck(data);
+      return; // Done — no need for API call
+    }
+  } catch (_) { /* version.json unavailable — fall through to API */ }
+
+  // Step 2: fall back to /api/version (live backend)
   try {
     const res  = await fetch(`${CONFIG.API_BASE}/api/version`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    CONFIG.VERSION = data.version || CONFIG.VERSION;
-    // Update all version display elements
-    const badge   = document.getElementById('platform-version-badge');
-    const footer  = document.getElementById('platform-version-footer');
-    const socVer  = document.getElementById('soc-version');
-    if (badge)  badge.textContent  = `v${CONFIG.VERSION}`;
-    if (footer) footer.textContent = `v${CONFIG.VERSION}`;
-    if (socVer) socVer.textContent = `v${CONFIG.VERSION}`;
-    console.info(`[CYBERDUDEBIVASH] Platform version: ${CONFIG.VERSION} | env: ${data.environment}`);
+    const ver  = data.version || CONFIG.VERSION;
+    _applyVersion(ver);
+    console.info(`[CYBERDUDEBIVASH] v${ver} (from API) | env: ${data.environment}`);
   } catch (err) {
-    CONFIG.VERSION = '8.0.0';  // fallback if network unavailable
-    console.warn('[CYBERDUDEBIVASH] Version fetch failed, using fallback:', err.message);
+    // Step 3: keep hardcoded default '9.0.0'
+    console.warn('[CYBERDUDEBIVASH] Version fetch failed, using default 9.0.0:', err.message);
   }
 }
 // Convenience aliases (all existing references continue to work)
@@ -2790,7 +2846,7 @@ function buildAIBrainPanel(module, data) {
       <div class="ai-brain-icon">🧠</div>
       <div>
         <div class="ai-brain-title">AI CYBER BRAIN — Security Intelligence</div>
-        <div style="font-size:11px;color:var(--text-dim)">Powered by CYBERDUDEBIVASH AI Engine v8.0</div>
+        <div style="font-size:11px;color:var(--text-dim)">Powered by CYBERDUDEBIVASH AI Engine v<span id="ai-engine-version">9.0</span></div>
       </div>
     </div>
     <div class="ai-brain-tabs" id="aibrain-tabs-${module}">
@@ -3003,7 +3059,7 @@ function buildClientSideInsights(data, module) {
     },
     blog_post: {
       title: `${module.toUpperCase()} Security Assessment: ${target} — Risk Score ${score}/100`,
-      body_md: `# ${module.toUpperCase()} Security Report\n\n**Target:** ${target}\n**Risk Score:** ${score}/100 (${level})\n**Critical:** ${crits} | **High:** ${highs}\n\n${narrative}\n\n---\n*Generated by CYBERDUDEBIVASH AI Security Hub v8.0*`,
+      body_md: `# ${module.toUpperCase()} Security Report\n\n**Target:** ${target}\n**Risk Score:** ${score}/100 (${level})\n**Critical:** ${crits} | **High:** ${highs}\n\n${narrative}\n\n---\n*Generated by CYBERDUDEBIVASH AI Security Hub v${CONFIG.VERSION}*`,
       word_count: 150,
       telegram_post: `🔒 Security Alert | ${module.toUpperCase()}\n\n📊 ${target}: ${score}/100 (${level})\n🔴 Critical: ${crits} | 🟠 High: ${highs}\n\nhttps://cyberdudebivash.in`,
       linkedin_post: `Security assessment complete for ${target} — ${score}/100 risk score. ${crits > 0 ? `${crits} critical findings identified.` : ''} #Cybersecurity #AI #SecurityIntelligence`,
