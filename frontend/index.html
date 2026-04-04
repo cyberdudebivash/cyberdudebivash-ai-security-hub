@@ -1629,7 +1629,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 
 // ─── Centralized Config ─────────────────────────────────────────────────
 const CONFIG = {
-  API_BASE:      'https://cyberdudebivash-security-hub.workers.dev',
+  API_BASE:      'https://cyberdudebivash.in',
   // API_BASE:   'http://localhost:8787',   // ← uncomment for local dev
   TOOLS_URL:     'https://tools.cyberdudebivash.com',
   TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
@@ -1853,14 +1853,33 @@ async function executeScan(module, payload) {
     }
 
     setLoading(module, false);
-    renderResults(module, data);
+    try {
+      renderResults(module, data);
+    } catch (renderErr) {
+      console.error('[renderResults] Error rendering API response:', renderErr);
+      showErrorState(module, `Render error: ${renderErr.message}. Raw data logged to console.`, () => runScan(module));
+    }
 
   } catch (e) {
     // Fallback to client-side engine
     console.warn('[API unreachable] Using local fallback engine:', e.message);
     const fallbackData = localEngine(module, payload);
     setLoading(module, false);
-    renderResults(module, fallbackData);
+    try {
+      renderResults(module, fallbackData);
+    } catch (renderErr) {
+      console.error('[renderResults] Error rendering fallback data:', renderErr);
+      // Last-resort: show raw fallback data so user always sees output
+      const panel = document.getElementById(`results-${module}`);
+      if (panel) {
+        panel.className = 'results-panel show';
+        panel.innerHTML = `<div style="padding:24px;color:var(--text-muted);font-size:13px">
+          <div style="color:var(--accent);font-weight:700;margin-bottom:8px">⚡ Local Scan Complete (Offline Mode)</div>
+          <pre style="white-space:pre-wrap;font-size:12px;color:var(--text-dim)">${JSON.stringify(fallbackData, null, 2)}</pre>
+        </div>`;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   }
 }
 
@@ -2051,6 +2070,11 @@ function renderResults(module, data) {
 
   panel.innerHTML = html;
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // V8.0 + V9.0 post-render enhancements — called here to avoid duplicate
+  // function declarations that caused infinite recursion via hoisting.
+  if (typeof _postRenderV8 === 'function') _postRenderV8(module, data);
+  if (typeof _postRenderV9 === 'function') _postRenderV9(module, data);
 }
 
 function renderFinding(f) {
@@ -2807,19 +2831,19 @@ let _v8ScanResult = null;   // Last scan result stored for AI Brain / Attack Gra
 let _v8Module     = null;
 let _v8Target     = null;
 
-// ─── Enhance renderResults with V8.0 panels ──────────────────────────────────
-const _origRenderResults = renderResults;
-function renderResults(module, data) {
-  _origRenderResults(module, data);
+// ─── V8.0 Post-Render Enhancement — AI Brain, Attack Graph, Threat Intel ─────
+// Called from the single renderResults function above.
+// Was previously a duplicate function renderResults() that caused infinite
+// recursion due to JS function hoisting. Fixed: now a plain named function.
+function _postRenderV8(module, data) {
   _v8ScanResult = data;
   _v8Module     = module;
   _v8Target     = _currentScan.target || data.target || 'unknown';
 
-  // Inject V8.0 panels after results render (non-blocking)
   const panel = document.getElementById(`results-${module}`);
   if (!panel) return;
 
-  // Defer to avoid blocking main render
+  // Defer panel injection to avoid blocking core result render
   setTimeout(() => {
     if (!document.getElementById(`aibrain-${module}`)) {
       panel.appendChild(buildAIBrainPanel(module, data));
@@ -2830,7 +2854,6 @@ function renderResults(module, data) {
     if (!document.getElementById(`threatintel-${module}`)) {
       injectThreatIntelPanel(module, data, panel);
     }
-    // Fetch AI insights from backend
     fetchAIInsights(module, data);
   }, 300);
 }
@@ -3818,28 +3841,30 @@ function showUpgradeTrigger(module, data) {
   }
 }
 
-// ─── Wired renderResults Enhancement — V9.0 layer ───────────────────────────
-// Extends the existing V8.0 renderResults override with V9.0 intelligence
-const _v8RenderResults = renderResults;
-function renderResults(module, data) {
-  _v8RenderResults(module, data);
-
+// ─── V9.0 Post-Render Enhancement — Intel Panel, Alert Mode, Upgrade Trigger ─
+// Called from the single renderResults function.
+// Was previously a duplicate function renderResults() that caused infinite
+// recursion via hoisting. Fixed: now a plain named function.
+function _postRenderV9(module, data) {
   const score = data.risk_score || 0;
   const level = data.risk_level || 'MEDIUM';
 
   // ALERT MODE — shift UI color based on risk
-  setAlertMode(level);
+  if (typeof setAlertMode === 'function') setAlertMode(level);
 
-  // Inject Intelligence Insight Panel
+  // Inject V9 Intelligence Insight Panel at top of results
   const panel = document.getElementById(`results-${module}`);
-  if (panel) {
-    // Insert intelligence panel before existing AI Brain panel
-    const intelPanel = buildIntelligenceInsightPanel(module, data);
-    panel.insertBefore(intelPanel, panel.firstChild);
+  if (panel && typeof buildIntelligenceInsightPanel === 'function') {
+    try {
+      const intelPanel = buildIntelligenceInsightPanel(module, data);
+      panel.insertBefore(intelPanel, panel.firstChild);
+    } catch (_) {}
   }
 
   // Show upgrade trigger for significant risk results
-  setTimeout(() => showUpgradeTrigger(module, data), 800);
+  setTimeout(() => {
+    if (typeof showUpgradeTrigger === 'function') showUpgradeTrigger(module, data);
+  }, 800);
 
   // Update posture ring with this scan's score
   const ring  = document.getElementById('postureRing');
