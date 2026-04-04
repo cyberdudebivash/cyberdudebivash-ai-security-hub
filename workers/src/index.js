@@ -40,6 +40,9 @@ import {
 } from './handlers/payments.js';
 import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handleApiUsage } from './handlers/analytics.js';
 
+// ─── AI Cyber Brain V2 handlers (analyze / simulate / forecast) ──────────────
+import { handleAIAnalyze, handleAISimulate, handleAIForecast } from './handlers/aiAnalysis.js';
+
 // ─── New v8.0 handlers ────────────────────────────────────────────────────────
 import {
   handleCreateMonitor, handleListMonitors, handleGetMonitor,
@@ -382,6 +385,14 @@ function apiInfoResponse() {
       'GET  /api/orgs/:id':          'Get org details + members',
       'PUT  /api/orgs/:id':          'Update org settings',
       'GET  /api/orgs/:id/dashboard':'Org security posture dashboard',
+      // V9.2 — Payment aliases (singular form)
+      'POST /api/payment/create-order': 'Create Razorpay order → { order_id, key_id, amount, currency }',
+      'POST /api/payment/verify':       'Verify HMAC signature → { success, token, download_url }',
+      'GET  /api/payment/status/:id':   'Payment status by order ID',
+      // V9.0 — AI Cyber Brain V2
+      'POST /api/ai/analyze':        'Threat correlation → attack chain + MITRE ATT&CK + exploit probability',
+      'POST /api/ai/simulate':       'Attack simulation → step-by-step attacker path + blast radius + scenario',
+      'POST /api/ai/forecast':       'Risk forecast → exploitation likelihood + time-to-breach + financial impact',
       // V8.0 — Version
       'GET  /api/version':           'Live platform version + build metadata',
       // Admin
@@ -566,7 +577,7 @@ export default {
       return withSecurityHeaders(withCors(await handleSentinelStatus(request, env), request));
     }
 
-    // ── V7.0 Payment routes ─────────────────────────────────────────────────
+    // ── V7.0 Payment routes (plural form: /api/payments/*) ─────────────────
     if (path === '/api/payments/create-order' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleCreateOrder(request, env, authCtx), request));
@@ -576,6 +587,45 @@ export default {
       return withSecurityHeaders(withCors(await handleVerifyPayment(request, env, authCtx), request));
     }
     if (path.startsWith('/api/payments/status/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handlePaymentStatus(request, env, authCtx), request));
+    }
+
+    // ── V9.2 Payment routes (singular form: /api/payment/* — canonical aliases) ─
+    // Identical logic — both forms are permanently supported.
+    // /api/payment/create-order  →  POST  { amount, module, target?, email? }
+    //                                      Returns { order_id, key_id, amount, currency, module }
+    // /api/payment/verify        →  POST  { razorpay_order_id, razorpay_payment_id,
+    //                                       razorpay_signature, module, target }
+    //                                      Returns { success, token, download_url } or { success: false }
+    if (path === '/api/payment/create-order' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleCreateOrder(request, env, authCtx), request));
+    }
+    if (path === '/api/payment/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      // Wrap verify to always return { success: true/false } shape (never throws)
+      try {
+        const res  = await handleVerifyPayment(request, env, authCtx);
+        const data = await res.clone().json().catch(() => ({}));
+        // If backend returned an error response, normalise to { success: false }
+        if (!res.ok || data.error) {
+          return withSecurityHeaders(withCors(Response.json({
+            success: false,
+            error:   data.error || `HTTP ${res.status}`,
+            code:    'VERIFICATION_FAILED',
+          }, { status: res.ok ? 200 : res.status }), request));
+        }
+        return withSecurityHeaders(withCors(res, request));
+      } catch (err) {
+        return withSecurityHeaders(withCors(Response.json({
+          success: false,
+          error:   'Internal verification error',
+          code:    'INTERNAL_ERROR',
+        }, { status: 500 }), request));
+      }
+    }
+    if (path.startsWith('/api/payment/status/') && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handlePaymentStatus(request, env, authCtx), request));
     }
@@ -782,6 +832,38 @@ export default {
       const authCtx = await resolveAuthV5(request, env);
       const orgId   = path.split('/')[3];
       return withSecurityHeaders(withCors(await handleOrgScans(request, env, authCtx, orgId), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V9.0 AI Cyber Brain V2 — Threat Correlation, Attack Simulation, Forecast
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // POST /api/ai/analyze → attack chain + MITRE mapping + exploit probability
+    if (path === '/api/ai/analyze' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleAIAnalyze(request, env), request));
+    }
+
+    // POST /api/ai/simulate → step-by-step attacker path + blast radius
+    if (path === '/api/ai/simulate' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleAISimulate(request, env), request));
+    }
+
+    // POST /api/ai/forecast → exploitation likelihood + time-to-breach + financial impact
+    if (path === '/api/ai/forecast' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
+    }
+
+    // Convenience aliases
+    // POST /api/generate-key → alias of POST /api/keys
+    if (path === '/api/generate-key' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleCreateKey(request, env, authCtx), request));
+    }
+    // GET /api/usage → alias of GET /api/admin/api-usage
+    if (path === '/api/usage' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleApiUsage(request, env, authCtx), request));
     }
 
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────

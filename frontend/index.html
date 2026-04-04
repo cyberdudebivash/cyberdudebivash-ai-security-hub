@@ -186,6 +186,11 @@ select option{background:var(--surface2)}
 .ai-brain-content li{margin-bottom:4px}
 .ai-brain-loading{display:flex;align-items:center;gap:8px;color:var(--text-dim);font-size:12px}
 
+/* ── AI Brain V2 Tab Buttons ───────────────────────── */
+.v2-tab-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text-muted);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.v2-tab-btn:hover{border-color:var(--accent);color:var(--accent)}
+.v2-tab-active{background:rgba(0,212,255,.15) !important;border-color:var(--accent) !important;color:var(--accent) !important}
+
 /* ── Attack Graph ──────────────────────────────────── */
 .attack-graph-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px}
 .attack-graph-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -710,6 +715,9 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 </style>
 </head>
 <body>
+
+<!-- Global Error Banner (hidden by default, shown by error boundary) -->
+<div id="global-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(239,68,68,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;text-align:center;backdrop-filter:blur(4px);cursor:pointer" onclick="this.style.display='none'"></div>
 
 <!-- Announcement Bar -->
 <div class="ann-bar">
@@ -1721,12 +1729,160 @@ const API_BASE     = CONFIG.API_BASE;
 const TOOLS_URL    = CONFIG.TOOLS_URL;
 const TELEGRAM_URL = CONFIG.TELEGRAM_URL;
 
+// ─── Multi-Endpoint Fallback Config ─────────────────────────────────────────
+const API_ENDPOINTS = [
+  CONFIG.API_BASE,                                            // primary: cyberdudebivash.in
+  'https://cyberdudebivash-security-hub.workers.dev',        // fallback: workers.dev
+];
+const API_TIMEOUT_MS = 8000;    // 8s hard timeout per attempt
+const API_RETRY_DELAYS = [0, 2000, 5000]; // immediate, 2s, 5s (3 total attempts)
+
+// ─── SAFE FETCH — multi-endpoint, retry, timeout, full error capture ─────────
+async function safeFetch(path, options = {}) {
+  let lastErr = null;
+  for (const base of API_ENDPOINTS) {
+    for (let attempt = 0; attempt < API_RETRY_DELAYS.length; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, API_RETRY_DELAYS[attempt]));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+      try {
+        const resp = await fetch(`${base}${path}`, { ...options, signal: controller.signal });
+        clearTimeout(timer);
+        return resp; // success — return immediately
+      } catch (e) {
+        clearTimeout(timer);
+        lastErr = e;
+        if (e.name === 'AbortError') break; // timeout — don't retry same endpoint
+        // Network error — retry after delay
+      }
+    }
+    // All retries exhausted on this endpoint — try next
+  }
+  throw lastErr || new Error('All API endpoints unreachable');
+}
+
+// ─── Global Error Boundary ───────────────────────────────────────────────────
+(function installGlobalErrorBoundary() {
+  // Catch uncaught JS errors — never let the page go blank silently
+  window.onerror = function(msg, src, line, col, err) {
+    console.error('[GlobalBoundary] Uncaught error:', msg, { src, line, col, err });
+    // Don't surface third-party script errors to the user
+    if (src && !src.includes(location.hostname) && !src.includes('cyberdudebivash')) return false;
+    try {
+      const banner = document.getElementById('global-error-banner');
+      if (banner) {
+        banner.textContent = `⚠️ An unexpected error occurred. Please refresh the page. (${String(msg).slice(0, 80)})`;
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 8000);
+      }
+    } catch {}
+    return false; // allow default browser handling too
+  };
+
+  // Catch unhandled promise rejections — prevent silent failures
+  window.addEventListener('unhandledrejection', function(e) {
+    console.error('[GlobalBoundary] Unhandled rejection:', e.reason);
+    e.preventDefault(); // suppress browser default "uncaught" noise in console
+    // Re-surface scan-related rejections as error states
+    try {
+      const msg = e.reason?.message || String(e.reason).slice(0, 120);
+      if (msg && msg !== '[object Object]') {
+        const banner = document.getElementById('global-error-banner');
+        if (banner && !banner.dataset.locked) {
+          banner.textContent = `⚠️ Background error caught and recovered. ${msg}`;
+          banner.style.display = 'block';
+          setTimeout(() => { banner.style.display = 'none'; }, 6000);
+        }
+      }
+    } catch {}
+  });
+})();
+
 let pendingScanModule = null;
 let pendingScanPayload = null;
 let leadCaptured = sessionStorage.getItem('cbd_lead_captured') === '1';
 let _currentScan = { module: null, target: null };  // tracks last scan for payment flow
 let _razorpayReady = false;                          // Razorpay checkout.js loaded flag
 let _activeJobPoll = null;                           // setInterval handle for job polling
+
+// ═════════════════════════════════════════════════════════════════════════════
+// UNLOCK STORE — Production-grade localStorage persistence
+// Schema: localStorage['cbd_unlocks'] = JSON array of UnlockRecord:
+//   { module, target, token, download_url, expires_at, unlocked_at, findings_count }
+//
+// Security model:
+//   • Token is ONLY issued by backend after HMAC-SHA256 signature verification
+//   • localStorage stores the token + metadata — NOT the full scan data
+//   • On restore: re-renders the results panel using cached scan data from
+//     sessionStorage. If not available, shows "unlocked" badge + download link.
+//   • Entries expire after 30 days (matching backend report_access TTL)
+//   • No bypass: UI unlock only fires after server returns success:true + token
+// ═════════════════════════════════════════════════════════════════════════════
+const UNLOCK_STORE = (function() {
+  const LS_KEY = 'cbd_unlocks_v2';
+  const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  function _load() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      // Purge expired entries
+      const now = Date.now();
+      return arr.filter(r => r.expires_at && new Date(r.expires_at).getTime() > now);
+    } catch { return []; }
+  }
+
+  function _save(records) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(records)); } catch {}
+  }
+
+  return {
+    // Save a new unlock record (called after successful backend verification)
+    save(module, target, token, downloadUrl, expiresAt, findingsCount) {
+      if (!module || !target || !token) return;
+      const records = _load().filter(r => !(r.module === module && r.target === target));
+      records.unshift({
+        module,
+        target:          target.toLowerCase(),
+        token,
+        download_url:    downloadUrl,
+        expires_at:      expiresAt || new Date(Date.now() + TTL_MS).toISOString(),
+        unlocked_at:     new Date().toISOString(),
+        findings_count:  findingsCount || 0,
+        unlocked:        true,
+      });
+      _save(records.slice(0, 20)); // cap at 20 entries
+    },
+
+    // Check if a module+target is unlocked (returns record or null)
+    get(module, target) {
+      if (!module || !target) return null;
+      const t = target.toLowerCase();
+      return _load().find(r => r.module === module && r.target === t) || null;
+    },
+
+    // Check boolean
+    isUnlocked(module, target) {
+      return !!this.get(module, target);
+    },
+
+    // Get all valid unlocks (for history panel)
+    getAll() {
+      return _load();
+    },
+
+    // Revoke a specific entry (refund/support use)
+    revoke(module, target) {
+      const records = _load().filter(r => !(r.module === module && r.target === target.toLowerCase()));
+      _save(records);
+    },
+  };
+})();
+
+// Cache scan data per module+target for unlock restoration
+const _scanDataCache = {}; // key: `${module}:${target}` → full scan result object
 
 // ─── Tab Switching ─────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -1820,7 +1976,8 @@ async function executeScan(module, payload) {
   setLoading(module, true, scanMsgs[module]);
 
   try {
-    const resp = await fetch(`${API_BASE}${endpoints[module]}`, {
+    // Use safeFetch: multi-endpoint fallback + exponential backoff + 8s timeout
+    const resp = await safeFetch(endpoints[module], {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1853,6 +2010,8 @@ async function executeScan(module, payload) {
     }
 
     setLoading(module, false);
+    // Persist scan to session history
+    _saveScanToHistory(module, data);
     try {
       renderResults(module, data);
     } catch (renderErr) {
@@ -1865,6 +2024,8 @@ async function executeScan(module, payload) {
     console.warn('[API unreachable] Using local fallback engine:', e.message);
     const fallbackData = localEngine(module, payload);
     setLoading(module, false);
+    // Persist local engine result to history too
+    _saveScanToHistory(module, fallbackData);
     try {
       renderResults(module, fallbackData);
     } catch (renderErr) {
@@ -1913,7 +2074,7 @@ function startJobPolling(module, jobId) {
                                         : elapsed < 45 ? 'Correlating threat intelligence...'
                                         : 'Finalizing results...';
     try {
-      const r = await fetch(`${API_BASE}/api/jobs/${jobId}`, { signal: AbortSignal.timeout(5000) });
+      const r = await safeFetch(`/api/jobs/${jobId}`, { signal: AbortSignal.timeout(5000) });
       if (!r.ok) return;
       const job = await r.json();
 
@@ -1985,6 +2146,29 @@ function renderResults(module, data) {
   const panel = document.getElementById(`results-${module}`);
   if (!panel) return;
   panel.className = 'results-panel show fade-in';
+
+  // ── Unlock check: if this module+target was already paid for, strip paywall ──
+  const scanTarget = data.target || _currentScan?.target || '';
+  const cacheKey   = `${module}:${scanTarget.toLowerCase()}`;
+  _scanDataCache[cacheKey] = data; // always cache for unlock engine
+
+  if (_isAlreadyUnlocked(module, scanTarget)) {
+    // User already paid — merge locked findings and clear monetization flags
+    const merged = {
+      ...data,
+      findings:          [...(data.findings || []), ...(data.locked_findings || [])],
+      locked_findings:   [],
+      is_premium_locked: false,
+      monetization:      null,
+    };
+    _scanDataCache[cacheKey] = merged;
+    data = merged; // render without paywall
+    // Re-inject download button after render
+    const unlockRec = UNLOCK_STORE.get(module, scanTarget);
+    if (unlockRec) {
+      setTimeout(() => _injectDownloadButton(module, scanTarget, unlockRec.token, unlockRec.download_url), 200);
+    }
+  }
 
   const score    = data.risk_score || 0;
   const level    = data.risk_level || 'MEDIUM';
@@ -2112,7 +2296,7 @@ async function submitLead() {
   btn.textContent = 'Capturing...';
 
   try {
-    await fetch(`${API_BASE}/api/leads/capture`, {
+    await safeFetch('/api/leads/capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, module: pendingScanModule, source: 'homepage' }),
@@ -2163,7 +2347,7 @@ async function submitEnterprise() {
   btn.textContent = 'Submitting...';
 
   try {
-    const resp = await fetch(`${API_BASE}/api/contact/enterprise`, {
+    const resp = await safeFetch('/api/contact/enterprise', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_name: company, email, domain, requirements: req, package: pkg }),
@@ -2200,6 +2384,183 @@ function loadRazorpay() {
   });
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// UNLOCK RESULTS UI ENGINE
+// Called after backend returns { success: true, token, download_url }
+// Performs all visual unlock operations atomically:
+//   1. Merge locked_findings into visible findings panel
+//   2. Remove blur/lock overlays from all locked finding cards
+//   3. Hide .unlock-cta paywall block
+//   4. Enable AI insights, AI Brain V2, Attack Graph
+//   5. Show PDF download button
+//   6. Persist unlock record to localStorage via UNLOCK_STORE
+//   7. Refresh scan history panel
+// ═════════════════════════════════════════════════════════════════════════════
+function unlockResultsUI(module, target, verifyData) {
+  const { token, download_url, expires_at, findings_count, risk_score, risk_level } = verifyData;
+  if (!token) { console.error('[Unlock] No token in verify response'); return; }
+
+  // 1. Persist to localStorage — ONLY after verified server token
+  UNLOCK_STORE.save(module, target, token,
+    download_url || `${CONFIG.API_BASE}/api/reports/download/${token}`,
+    expires_at, findings_count
+  );
+
+  // 2. Get the results panel
+  const panel = document.getElementById(`results-${module}`);
+  if (!panel) return;
+
+  // 3. Remove the paywall / unlock-cta block
+  panel.querySelectorAll('.unlock-cta').forEach(el => el.remove());
+
+  // 4. Unmask locked findings
+  panel.querySelectorAll('.locked-findings-block').forEach(block => {
+    block.querySelectorAll('.locked-finding-preview').forEach(el => {
+      el.style.filter = 'none';
+      el.style.userSelect = 'auto';
+      el.style.color = 'var(--text-muted)';
+    });
+    block.querySelectorAll('.lock-icon').forEach(el => {
+      el.textContent = '🔓';
+    });
+    const header = block.querySelector('h4');
+    if (header) header.textContent = header.textContent.replace('Locked', 'Unlocked');
+  });
+
+  // 5. If we have cached full scan data, re-render without monetization flags
+  const cacheKey = `${module}:${target.toLowerCase()}`;
+  const cachedData = _scanDataCache[cacheKey];
+  if (cachedData) {
+    // Merge locked_findings into findings
+    const allFindings = [
+      ...(cachedData.findings || []),
+      ...(cachedData.locked_findings || []),
+    ];
+    const fullData = {
+      ...cachedData,
+      findings:        allFindings,
+      locked_findings: [],
+      is_premium_locked: false,
+      monetization:    null,
+    };
+    _scanDataCache[cacheKey] = fullData; // update cache
+    // Re-render the full results
+    try { renderResults(module, fullData); } catch {}
+  }
+
+  // 6. Inject download button
+  _injectDownloadButton(module, target, token, download_url);
+
+  // 7. Show unlock success toast
+  _showUnlockToast(module, findings_count);
+
+  // 8. Re-trigger AI Brain V2 with full data (if we have it)
+  if (cachedData || _v8ScanResult) {
+    const data = cachedData || _v8ScanResult;
+    setTimeout(() => {
+      try { fetchAIBrainV2(module, data); } catch {}
+    }, 500);
+  }
+
+  // 9. Refresh history panel
+  setTimeout(renderRecentActivity, 300);
+}
+
+// ─── Inject PDF/HTML Download Button ─────────────────────────────────────────
+function _injectDownloadButton(module, target, token, downloadUrl) {
+  const panel = document.getElementById(`results-${module}`);
+  if (!panel) return;
+
+  // Remove any existing download banner
+  panel.querySelectorAll('.unlock-download-banner').forEach(el => el.remove());
+
+  const url = downloadUrl || `${CONFIG.API_BASE}/api/reports/download/${token}`;
+  const banner = document.createElement('div');
+  banner.className = 'unlock-download-banner';
+  banner.style.cssText = `
+    background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,255,.08));
+    border:1px solid rgba(16,185,129,.4);border-radius:12px;padding:20px;
+    margin-top:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  `;
+  banner.innerHTML = `
+    <div style="flex:1;min-width:200px">
+      <div style="font-weight:800;font-size:15px;color:#10b981;margin-bottom:4px">
+        ✅ Full Report Unlocked
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">
+        ${findings_count || ''} findings · CVSS scores · Remediation roadmap · Valid 30 days
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="${url}" target="_blank"
+         style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:10px 20px;
+                border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;
+                display:inline-flex;align-items:center;gap:6px;white-space:nowrap">
+        📥 Download Report
+      </a>
+      <button onclick="navigator.clipboard?.writeText('${url}').then(()=>alert('Link copied!'))"
+              style="background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text-muted);
+                     padding:10px 16px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap">
+        🔗 Copy Link
+      </button>
+    </div>
+    <div style="width:100%;font-size:10px;color:var(--text-dim);margin-top:4px">
+      Open in browser → File → Print → Save as PDF for a polished report
+    </div>
+  `.replace(/\bfindings_count\b/g, String(findings_count || ''));
+
+  // Insert at top of panel
+  panel.insertBefore(banner, panel.firstChild);
+}
+
+// ─── Unlock Success Toast ─────────────────────────────────────────────────────
+function _showUnlockToast(module, findingsCount) {
+  let toast = document.getElementById('unlock-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'unlock-toast';
+    toast.style.cssText = `
+      position:fixed;bottom:24px;right:24px;z-index:99999;
+      background:linear-gradient(135deg,rgba(16,185,129,.95),rgba(5,150,105,.95));
+      color:#fff;padding:16px 24px;border-radius:12px;font-weight:700;font-size:14px;
+      box-shadow:0 8px 32px rgba(16,185,129,.4);transform:translateY(80px);opacity:0;
+      transition:all .4s cubic-bezier(.175,.885,.32,1.275);
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `✅ Report Unlocked! ${findingsCount ? findingsCount + ' findings' : ''} · PDF ready for download`;
+  toast.style.transform = 'translateY(0)';
+  toast.style.opacity   = '1';
+  setTimeout(() => {
+    toast.style.transform = 'translateY(80px)';
+    toast.style.opacity   = '0';
+  }, 4500);
+}
+
+// ─── Restore Unlocked State on Page Load ─────────────────────────────────────
+// Called once at DOMContentLoaded. Checks localStorage for any valid unlock
+// records and re-applies download buttons if the scan panel exists.
+function _applyRestoredUnlocks() {
+  const unlocks = UNLOCK_STORE.getAll();
+  if (!unlocks.length) return;
+  unlocks.forEach(record => {
+    const panel = document.getElementById(`results-${record.module}`);
+    if (!panel || !panel.classList.contains('show')) return; // panel not visible
+    // Panel is visible — re-inject download button if not already present
+    if (!panel.querySelector('.unlock-download-banner')) {
+      _injectDownloadButton(record.module, record.target, record.token, record.download_url);
+      // Also remove paywall UI if present
+      panel.querySelectorAll('.unlock-cta').forEach(el => el.remove());
+    }
+  });
+}
+
+// ─── Check unlock before rendering paywall ───────────────────────────────────
+// Called at top of renderResults to skip monetization gates for paid users.
+function _isAlreadyUnlocked(module, target) {
+  return UNLOCK_STORE.isUnlocked(module, (target || '').toLowerCase());
+}
+
 async function startPayment(module, target, amount, priceLabel) {
   const btn = document.getElementById(`pay-btn-${module}`);
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparing payment...'; }
@@ -2207,8 +2568,16 @@ async function startPayment(module, target, amount, priceLabel) {
   try {
     await loadRazorpay();
 
-    // Create order on backend
-    const orderResp = await fetch(`${API_BASE}/api/payments/create-order`, {
+    // Guard: if already unlocked (e.g. refreshed page), skip payment
+    if (_isAlreadyUnlocked(module, target)) {
+      const rec = UNLOCK_STORE.get(module, target);
+      if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
+      _injectDownloadButton(module, target, rec.token, rec.download_url);
+      return;
+    }
+
+    // Create order on backend — try singular path first, plural as fallback
+    const orderResp = await safeFetch('/api/payment/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ module, target, amount }),
@@ -2258,46 +2627,101 @@ async function startPayment(module, target, amount, priceLabel) {
   }
 }
 
+// ─── verifyAndDownload — production payment verification engine ───────────────
+// Security guarantee:
+//   • Uses BOTH /api/payment/verify (canonical) and /api/payments/verify (legacy)
+//   • NO unlock without { success: true, token: <64-char hex> } from server
+//   • HMAC-SHA256 verification happens on the server; client cannot forge
+//   • If server returns success:false or missing token → hard fail, no unlock
+//   • Unlock is written to localStorage ONLY after successful server verification
 async function verifyAndDownload(module, target, paymentPayload) {
   showPaymentOverlay('verifying');
 
-  try {
-    const verifyResp = await fetch(`${API_BASE}/api/payments/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ module, target, ...paymentPayload }),
-    });
-    const verifyData = await verifyResp.json();
+  let verifyData = null;
+  let verifyErr  = null;
 
-    if (!verifyResp.ok || !verifyData.token) {
-      throw new Error(verifyData.error || 'Payment verification failed');
+  // Try canonical path first, then legacy plural path
+  const verifyPaths = ['/api/payment/verify', '/api/payments/verify'];
+
+  for (const vPath of verifyPaths) {
+    try {
+      const resp = await safeFetch(vPath, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ module, target, ...paymentPayload }),
+      });
+      const data = await resp.json();
+
+      // ── SECURITY: strict success check ────────────────────────────────────
+      // success must be explicit true AND token must be present (≥32 chars)
+      if (data.success === true && data.token && data.token.length >= 32) {
+        verifyData = data;
+        verifyErr  = null;
+        break; // verified — stop trying
+      } else {
+        // Server returned a definitive failure — no point retrying other paths
+        // unless this is a network/infra error (captured below)
+        verifyErr = data.error || 'Verification rejected by server';
+        if (resp.ok) break; // HTTP 200 with success:false = definitive rejection
+        // HTTP error → try next path
+      }
+    } catch (e) {
+      verifyErr = e.message;
+      // Network error → try next path
     }
+  }
 
-    // Store token in sessionStorage for history access
-    const tokens = JSON.parse(sessionStorage.getItem('cbd_report_tokens') || '[]');
-    tokens.unshift({ module, target, token: verifyData.token, expires_at: verifyData.expires_at });
-    sessionStorage.setItem('cbd_report_tokens', JSON.stringify(tokens.slice(0, 10)));
-
-    showPaymentOverlay('success', {
-      downloadUrl:  `${API_BASE}/api/reports/download/${verifyData.token}`,
-      findingsCount: verifyData.findings_count,
-      expiresAt:    verifyData.expires_at,
-      module, target,
-    });
-
-    // Refresh the recent activity section
-    renderRecentActivity();
-
-  } catch (e) {
+  // ── Handle verification failure ────────────────────────────────────────────
+  if (!verifyData) {
     closePaymentOverlay();
     const panel = document.getElementById(`results-${module}`);
     if (panel) {
       const errDiv = document.createElement('div');
-      errDiv.style.cssText = 'margin-top:12px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:13px;color:#fca5a5';
-      errDiv.textContent = `⚠️ Verification error: ${e.message}`;
+      errDiv.id = `pay-verify-err-${module}`;
+      errDiv.style.cssText = 'margin-top:12px;padding:14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;font-size:13px;color:#fca5a5';
+      errDiv.innerHTML = `
+        <div style="font-weight:700;margin-bottom:4px">⚠️ Payment Verification Failed</div>
+        <div style="font-size:12px;color:var(--text-dim)">
+          ${verifyErr || 'Unknown error'}
+        </div>
+        <div style="font-size:11px;margin-top:8px;color:var(--text-dim)">
+          If payment was deducted, contact
+          <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a>
+          with your payment ID: <code>${paymentPayload.razorpay_payment_id || 'unknown'}</code>
+        </div>`;
+      // Remove any previous error div
+      document.getElementById(`pay-verify-err-${module}`)?.remove();
       panel.appendChild(errDiv);
     }
+    console.error('[Payment] Verification failed:', verifyErr);
+    return; // HARD STOP — no unlock
   }
+
+  // ── Verification succeeded ─────────────────────────────────────────────────
+  // Store token in sessionStorage for history (backward compat)
+  try {
+    const tokens = JSON.parse(sessionStorage.getItem('cbd_report_tokens') || '[]');
+    tokens.unshift({ module, target, token: verifyData.token, expires_at: verifyData.expires_at });
+    sessionStorage.setItem('cbd_report_tokens', JSON.stringify(tokens.slice(0, 10)));
+  } catch {}
+
+  // ── Full UI Unlock (localStorage-persisted) ────────────────────────────────
+  unlockResultsUI(module, target, verifyData);
+
+  // ── Show success overlay ───────────────────────────────────────────────────
+  const downloadUrl = verifyData.download_url
+    ? `${CONFIG.API_BASE}${verifyData.download_url}`
+    : `${CONFIG.API_BASE}/api/reports/download/${verifyData.token}`;
+
+  showPaymentOverlay('success', {
+    downloadUrl,
+    findingsCount: verifyData.findings_count,
+    expiresAt:     verifyData.expires_at,
+    module, target,
+  });
+
+  // Refresh the recent activity / history section
+  renderRecentActivity();
 }
 
 function showPaymentOverlay(state, data = {}) {
@@ -2352,6 +2776,33 @@ function showPaymentError(module, msg) {
   }
 }
 
+// ─── Session Scan History (no auth required) ────────────────────────────────
+// Persists each scan result to sessionStorage so the history panel is always
+// populated even for unauthenticated (free tier) users.
+const SESSION_HISTORY_KEY = 'cbd_session_scans';
+const SESSION_HISTORY_MAX = 10;
+
+function _saveScanToHistory(module, data) {
+  if (!data || !module) return;
+  try {
+    const entry = {
+      module,
+      target:     data.target || _currentScan?.target || 'unknown',
+      risk_score: data.risk_score || null,
+      risk_level: data.risk_level || null,
+      scanned_at: new Date().toISOString(),
+      scan_id:    data.scan_id || null,
+    };
+    const history = JSON.parse(sessionStorage.getItem(SESSION_HISTORY_KEY) || '[]');
+    // Deduplicate: remove previous entry with same module+target
+    const filtered = history.filter(h => !(h.module === module && h.target === entry.target));
+    filtered.unshift(entry);
+    sessionStorage.setItem(SESSION_HISTORY_KEY, JSON.stringify(filtered.slice(0, SESSION_HISTORY_MAX)));
+    // Re-render history panel
+    setTimeout(renderRecentActivity, 200);
+  } catch {}
+}
+
 // ─── Recent Activity / User Dashboard ──────────────────────────────────
 async function renderRecentActivity() {
   const container = document.getElementById('recentActivity');
@@ -2366,7 +2817,7 @@ async function renderRecentActivity() {
   const jwt = sessionStorage.getItem('cbd_jwt');
   if (jwt) {
     try {
-      const r = await fetch(`${API_BASE}/api/history?limit=5`, {
+      const r = await safeFetch('/api/history?limit=5', {
         headers: { 'Authorization': `Bearer ${jwt}` },
         signal: AbortSignal.timeout(4000),
       });
@@ -2384,7 +2835,20 @@ async function renderRecentActivity() {
     } catch (_) {}
   }
 
-  // 3. Fallback: use sessionStorage tokens only
+  // 3. Session-based scan history (unauthenticated users)
+  if (!rows.length) {
+    const sessionScans = JSON.parse(sessionStorage.getItem(SESSION_HISTORY_KEY) || '[]');
+    sessionScans.slice(0, 5).forEach(s => {
+      rows.push({
+        module: s.module, target: s.target,
+        score:  s.risk_score, level: s.risk_level,
+        time:   s.scanned_at,
+        token:  tokens.find(t => t.target === s.target && t.module === s.module)?.token,
+      });
+    });
+  }
+
+  // 4. Fallback: use payment tokens only
   if (!rows.length && tokens.length) {
     tokens.slice(0,5).forEach(t => {
       rows.push({ module: t.module, target: t.target, token: t.token, time: t.expires_at });
@@ -2630,7 +3094,7 @@ async function initSentinelFeed() {
   if (!feedEl) return;
 
   try {
-    const resp = await fetch(`${API_BASE}/api/sentinel/feed`, {
+    const resp = await safeFetch('/api/sentinel/feed', {
       signal: AbortSignal.timeout(6000),
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -2855,6 +3319,8 @@ function _postRenderV8(module, data) {
       injectThreatIntelPanel(module, data, panel);
     }
     fetchAIInsights(module, data);
+    // AI Brain V2 — parallel fetch of analyze/simulate/forecast
+    fetchAIBrainV2(module, data);
   }, 300);
 }
 
@@ -3010,7 +3476,7 @@ async function fetchAIInsights(module, data, initialTab = 'narrative') {
   if (!content) return;
 
   try {
-    const resp = await fetch(`${API_BASE}/api/insights`, {
+    const resp = await safeFetch('/api/insights', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scan_result: data, module, target: _v8Target }),
@@ -3101,6 +3567,216 @@ function copyBlogPost(module, type) {
   }).catch(() => {
     document.getElementById(`blog-preview-${module}`)?.select?.();
   });
+}
+
+// ─── AI Cyber Brain V2 — Analyze / Simulate / Forecast ───────────────────────
+// Called from _postRenderV8. Fetches all three V2 endpoints in parallel and
+// renders a tabbed intelligence panel above the existing AI Brain widget.
+async function fetchAIBrainV2(module, data) {
+  const target = _v8Target || data?.target || 'unknown';
+  const panelId = `aibrain-v2-${module}`;
+
+  // Remove stale panel if re-running
+  const existingPanel = document.getElementById(panelId);
+  if (existingPanel) existingPanel.remove();
+
+  // Build container
+  const resultsPanel = document.getElementById(`results-${module}`);
+  if (!resultsPanel) return;
+
+  const container = document.createElement('div');
+  container.id = panelId;
+  container.className = 'ai-brain-panel';
+  container.style.cssText = 'margin-top:16px;border:1px solid rgba(0,212,255,.2);border-radius:12px;overflow:hidden';
+  container.innerHTML = `
+    <div style="padding:16px 20px;background:rgba(0,212,255,.06);border-bottom:1px solid rgba(0,212,255,.12);display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">🧠</span>
+      <div>
+        <div style="font-weight:700;color:var(--accent);font-size:14px">AI Cyber Brain V2</div>
+        <div style="font-size:11px;color:var(--text-dim)">Threat Correlation · Attack Simulation · Risk Forecast</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button onclick="switchV2Tab('${module}','analyze')" id="v2tab-analyze-${module}" class="v2-tab-btn v2-tab-active">⚔️ Analyze</button>
+        <button onclick="switchV2Tab('${module}','simulate')" id="v2tab-simulate-${module}" class="v2-tab-btn">🎯 Simulate</button>
+        <button onclick="switchV2Tab('${module}','forecast')" id="v2tab-forecast-${module}" class="v2-tab-btn">📈 Forecast</button>
+      </div>
+    </div>
+    <div id="v2-content-${module}" style="padding:20px;min-height:160px">
+      <div style="text-align:center;padding:32px;color:var(--text-dim)">
+        <div class="loading-pulse" style="width:32px;height:32px;border-radius:50%;background:var(--accent);margin:0 auto 12px;animation:pulse 1.4s infinite"></div>
+        <div>Running AI intelligence analysis…</div>
+      </div>
+    </div>`;
+
+  // Insert before the existing AI brain panel
+  const existingBrain = document.getElementById(`aibrain-${module}`);
+  if (existingBrain) {
+    resultsPanel.insertBefore(container, existingBrain);
+  } else {
+    resultsPanel.appendChild(container);
+  }
+
+  // Fetch all three endpoints in parallel
+  const fetchOpts = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scan_result: data, module, target }),
+  };
+
+  const [analyzeRes, simulateRes, forecastRes] = await Promise.allSettled([
+    safeFetch('/api/ai/analyze',   { ...fetchOpts }),
+    safeFetch('/api/ai/simulate',  { ...fetchOpts }),
+    safeFetch('/api/ai/forecast',  { ...fetchOpts }),
+  ]);
+
+  // Parse responses (with client-side fallback for each)
+  const analyze  = analyzeRes.status === 'fulfilled'  && analyzeRes.value.ok  ? await analyzeRes.value.json().catch(() => null)  : null;
+  const simulate = simulateRes.status === 'fulfilled' && simulateRes.value.ok ? await simulateRes.value.json().catch(() => null) : null;
+  const forecast = forecastRes.status === 'fulfilled' && forecastRes.value.ok ? await forecastRes.value.json().catch(() => null) : null;
+
+  // Cache on container for tab switching
+  container._v2Data = { analyze, simulate, forecast };
+
+  // Render default tab
+  renderV2Tab(module, 'analyze', container._v2Data);
+}
+
+function switchV2Tab(module, tab) {
+  const container = document.getElementById(`aibrain-v2-${module}`);
+  if (!container?._v2Data) return;
+  ['analyze','simulate','forecast'].forEach(t => {
+    const btn = document.getElementById(`v2tab-${t}-${module}`);
+    if (btn) btn.className = `v2-tab-btn${t === tab ? ' v2-tab-active' : ''}`;
+  });
+  renderV2Tab(module, tab, container._v2Data);
+}
+
+function renderV2Tab(module, tab, data) {
+  const content = document.getElementById(`v2-content-${module}`);
+  if (!content) return;
+
+  if (tab === 'analyze') {
+    const d = data.analyze;
+    if (!d) { content.innerHTML = renderV2Error('analyze'); return; }
+    const chainHTML = (d.attack_chain || []).map((step, i) => `
+      <div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start">
+        <div style="min-width:28px;height:28px;background:rgba(0,212,255,.15);border:1px solid var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent)">${i+1}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px;color:var(--text-bright)">${step.phase}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${step.description}</div>
+          ${step.technique ? `<div style="margin-top:4px"><a href="${step.technique.url}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;background:rgba(0,212,255,.08);padding:2px 6px;border-radius:4px">${step.technique.id} · ${step.technique.name}</a></div>` : ''}
+        </div>
+        <div style="text-align:right;min-width:60px">
+          <div style="font-size:13px;font-weight:700;color:${step.probability >= 0.7 ? 'var(--danger)' : step.probability >= 0.4 ? '#f97316' : '#10b981'}">${Math.round((step.probability||0)*100)}%</div>
+          <div style="font-size:10px;color:var(--text-dim)">prob.</div>
+        </div>
+      </div>`).join('');
+
+    const mitreHTML = (d.mitre_mapping || []).map(t => `
+      <a href="${t.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:4px 8px;font-size:11px;color:#fca5a5;text-decoration:none;margin:3px">
+        <span style="color:#ef4444;font-weight:700">${t.id}</span> ${t.name}
+      </a>`).join('');
+
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:#ef4444">${d.exploit_probability}%</div>
+          <div style="font-size:11px;color:var(--text-dim)">Exploit Probability</div>
+        </div>
+        <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:var(--accent)">${(d.threat_actors||[]).slice(0,1)[0] || 'APT/Cybercrime'}</div>
+          <div style="font-size:11px;color:var(--text-dim)">Primary Threat Actor</div>
+        </div>
+      </div>
+      <div style="font-weight:700;font-size:13px;color:var(--text-bright);margin-bottom:10px">Attack Chain (${(d.attack_chain||[]).length} phases)</div>
+      ${chainHTML}
+      <div style="font-weight:700;font-size:13px;color:var(--text-bright);margin:14px 0 8px">MITRE ATT&CK Mapping</div>
+      <div>${mitreHTML}</div>`;
+
+  } else if (tab === 'simulate') {
+    const d = data.simulate;
+    if (!d) { content.innerHTML = renderV2Error('simulate'); return; }
+    const stepsHTML = (d.simulation_steps || []).map(step => `
+      <div style="border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="font-weight:700;font-size:13px;color:var(--accent)">Step ${step.step} — ${step.phase}</div>
+          <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${step.detection_difficulty==='HARD'?'rgba(239,68,68,.15)':step.detection_difficulty==='MEDIUM'?'rgba(249,115,22,.15)':'rgba(16,185,129,.15)'};color:${step.detection_difficulty==='HARD'?'#fca5a5':step.detection_difficulty==='MEDIUM'?'#fed7aa':'#6ee7b7'}">${step.detection_difficulty} detection</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${step.action}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          ${(step.tools||[]).map(t=>`<span style="font-size:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;color:var(--text-dim)">${t}</span>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--text-dim)">⏱ ${step.time_estimate?.label || '?'} · 🛡 ${step.mitigation || 'Apply defense-in-depth'}</div>
+      </div>`).join('');
+
+    const br = d.blast_radius || {};
+    content.innerHTML = `
+      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:13px;color:#ef4444;margin-bottom:8px">💥 Blast Radius Assessment</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+          <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#ef4444">${br.systems_at_risk||'?'}</div><div style="font-size:11px;color:var(--text-dim)">Systems</div></div>
+          <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#f97316">${br.user_accounts_at_risk||'?'}</div><div style="font-size:11px;color:var(--text-dim)">Accounts</div></div>
+          <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#f59e0b">${br.data_exposure_gb||'?'} GB</div><div style="font-size:11px;color:var(--text-dim)">Data Exposure</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted)">${br.business_impact||''} · Ransomware risk: <strong style="color:${br.ransomware_risk==='HIGH'?'#ef4444':'#f59e0b'}">${br.ransomware_risk||'?'}</strong></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">⏱ Total attack time: ~${d.total_attack_time||0}h · ${d.scenario?.attack_duration||''}</div>
+      </div>
+      <div style="font-weight:700;font-size:13px;color:var(--text-bright);margin-bottom:10px">Attack Simulation Steps</div>
+      ${stepsHTML}`;
+
+  } else if (tab === 'forecast') {
+    const d = data.forecast;
+    if (!d) { content.innerHTML = renderV2Error('forecast'); return; }
+    const fi = d.financial_impact || {};
+    const actionsHTML = (d.priority_actions || []).map(a => `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:6px">
+        <div style="min-width:24px;height:24px;background:${a.priority===1?'rgba(239,68,68,.2)':'rgba(249,115,22,.15)'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${a.priority===1?'#ef4444':'#f97316'}">P${a.priority}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:var(--text-bright)">${a.action}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px">Effort: ${a.effort} · Impact: ${a.impact} · ${a.timeframe}</div>
+        </div>
+      </div>`).join('');
+
+    const trendHTML = (d.risk_trend_90d || []).map(p => {
+      const pct = Math.round(p.risk_score);
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div style="height:${Math.round(pct * 0.4)}px;width:18px;background:${pct>=80?'#ef4444':pct>=60?'#f97316':'#f59e0b'};border-radius:3px 3px 0 0;min-height:4px"></div>
+        <div style="font-size:9px;color:var(--text-dim)">D${p.day}</div>
+      </div>`;
+    }).join('');
+
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:26px;font-weight:800;color:#ef4444">${Math.round((d.exploitation_likelihood||0)*100)}%</div>
+          <div style="font-size:11px;color:var(--text-dim)">Exploitation Likelihood</div>
+        </div>
+        <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:#f97316">${d.time_to_breach_label||'?'}</div>
+          <div style="font-size:11px;color:var(--text-dim)">Time to Breach</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:8px">💰 Financial Impact Estimate</div>
+        <div style="display:flex;gap:16px;margin-bottom:6px">
+          <div><div style="font-size:13px;color:var(--text-dim)">Expected</div><div style="font-size:18px;font-weight:800;color:#f59e0b">${fi.formatted?.avg||'?'}</div></div>
+          <div><div style="font-size:13px;color:var(--text-dim)">Range</div><div style="font-size:14px;color:var(--text-muted)">${fi.formatted?.low||'?'} – ${fi.formatted?.high||'?'}</div></div>
+          <div style="margin-left:auto;text-align:right"><div style="font-size:13px;color:var(--text-dim)">Remediation ROI</div><div style="font-size:16px;font-weight:800;color:#10b981">${d.remediation_analysis?.roi_multiple||'?'}x</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim)">${d.remediation_analysis?.roi_label||''}</div>
+      </div>
+      <div style="font-weight:700;font-size:13px;color:var(--text-bright);margin-bottom:6px">90-Day Risk Trend (unpatched)</div>
+      <div style="display:flex;align-items:flex-end;height:80px;gap:4px;padding:8px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:16px">${trendHTML}</div>
+      <div style="font-weight:700;font-size:13px;color:var(--text-bright);margin-bottom:8px">Priority Actions</div>
+      ${actionsHTML}`;
+  }
+}
+
+function renderV2Error(tab) {
+  return `<div style="text-align:center;padding:24px;color:var(--text-dim)">
+    <div style="font-size:24px;margin-bottom:8px">⚡</div>
+    <div style="font-size:13px">Running ${tab} analysis client-side…</div>
+  </div>`;
 }
 
 // ─── Attack Graph Panel ───────────────────────────────────────────────────────
@@ -3257,7 +3933,7 @@ async function injectThreatIntelPanel(module, data, panel) {
     const findings = [...(data.findings || []), ...(data.locked_findings || [])];
     if (!findings.length) return;
 
-    const resp = await fetch(`${API_BASE}/api/threat-intel/correlate`, {
+    const resp = await safeFetch('/api/threat-intel/correlate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ findings, scan_result: data, module }),
@@ -3307,7 +3983,7 @@ async function renderMonitoringDashboard() {
   }
 
   try {
-    const resp = await fetch(`${API_BASE}/api/monitors`, {
+    const resp = await safeFetch('/api/monitors', {
       headers: { 'Authorization': `Bearer ${jwt}` },
       signal: AbortSignal.timeout(5000),
     });
@@ -3366,7 +4042,7 @@ async function createMonitorModal() {
   const targetPayload = buildTargetPayload(module, target);
 
   try {
-    const resp = await fetch(`${API_BASE}/api/monitors`, {
+    const resp = await safeFetch('/api/monitors', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
       body: JSON.stringify({ name, module, target_json: targetPayload, schedule }),
@@ -3964,8 +4640,38 @@ async function renderIntelDashboardWidget() {
   `;
 }
 
-// ─── Init V9.0 on page load ───────────────────────────────────────────────────
+// ─── Init V9.2 on page load ───────────────────────────────────────────────────
 initVersion();
+
+// Restore any previously unlocked scan panels (localStorage → UI)
+// Fires after DOM is ready — deferred so panels have time to render
+setTimeout(_applyRestoredUnlocks, 800);
+
+// Re-apply unlocks whenever a new scan result panel appears
+// (MutationObserver watches for results-* panels becoming visible)
+(function watchForScanPanels() {
+  if (typeof MutationObserver === 'undefined') return;
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        const id = node.id || '';
+        if (id.startsWith('results-')) {
+          const module = id.replace('results-', '');
+          // Check if we have an unlock for ANY target in this module
+          const unlocks = UNLOCK_STORE.getAll().filter(r => r.module === module);
+          unlocks.forEach(rec => {
+            if (!node.querySelector('.unlock-download-banner')) {
+              _injectDownloadButton(module, rec.target, rec.token, rec.download_url);
+              node.querySelectorAll('.unlock-cta').forEach(el => el.remove());
+            }
+          });
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
 
 // Non-blocking parallel init
 Promise.allSettled([
