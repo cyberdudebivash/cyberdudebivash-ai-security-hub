@@ -43,6 +43,9 @@ import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handl
 // ─── AI Cyber Brain V2 handlers (analyze / simulate / forecast) ──────────────
 import { handleAIAnalyze, handleAISimulate, handleAIForecast } from './handlers/aiAnalysis.js';
 
+// ─── CVE Engine (for /api/v1/cves endpoint) ───────────────────────────────────
+import { getTopCVEsForModule } from './services/cveEngine.js';
+
 // ─── Subscription SaaS Engine (v10.0) ────────────────────────────────────────
 import {
   handleGetUserPlan, handleCreateSubscription, handleActivateSubscription, handleGetPlans,
@@ -157,6 +160,12 @@ async function runSyncPipeline(request, env, routeKey, route) {
   const authCtx  = await resolveAuthV5(request, env);
   if (!authCtx.authenticated) return unauthorized(authCtx.error || 'invalid');
 
+  // Monthly scan quota enforcement for STARTER plan (backend gate)
+  if (authCtx.tier === 'STARTER') {
+    const monthlyCheck = await checkMonthlyQuota(request, env);
+    if (monthlyCheck) return monthlyCheck; // returns 429 if quota exceeded
+  }
+
   // D1-based quota (API keys) or KV-based rate limit (IP/JWT)
   if (authCtx.method === 'api_key') {
     const quota = await enforceQuota(env, authCtx, route.module);
@@ -239,7 +248,7 @@ async function healthResponseAsync(env) {
   return Response.json({
     status,
     service:   'CYBERDUDEBIVASH AI Security Hub',
-    version:   '9.0.0',
+    version:   '10.0.0',
     company:   'CyberDudeBivash Pvt. Ltd.',
     website:   'https://cyberdudebivash.in',
     tools:     'https://tools.cyberdudebivash.com',
@@ -329,7 +338,7 @@ async function handleIntelligenceSummary(env) {
 function apiInfoResponse() {
   return Response.json({
     name:    'CYBERDUDEBIVASH AI Security Hub API',
-    version: '9.0.0',
+    version: '10.0.0',
     auth_methods: {
       jwt:     'Authorization: Bearer <access_token>  (from /api/auth/login)',
       api_key: 'x-api-key: cdb_<key>  (from /api/keys)',
@@ -404,6 +413,13 @@ function apiInfoResponse() {
       'GET  /api/user/plan':            'Current plan + monthly usage for authenticated user',
       'POST /api/subscription/create':  'Create Razorpay order for plan → { order_id, amount }',
       'POST /api/subscription/activate':'Verify payment + activate plan session → { session_token, features }',
+      // V10.0 — Public API v1 (PRO/ENTERPRISE key required)
+      'GET  /api/v1/scan':             'Scan history for your API key',
+      'GET  /api/v1/threat-intel':     'Live Sentinel APEX CVE + KEV threat feed',
+      'POST /api/v1/analyze':          'AI threat analysis (PRO+)',
+      'POST /api/v1/simulate':         'Attack simulation (ENTERPRISE only)',
+      'POST /api/v1/forecast':         'Risk forecast with financial impact (PRO+)',
+      'GET  /api/v1/cves':             'Top exploited CVEs for a module (PRO+)',
       // V8.0 — Version
       'GET  /api/version':           'Live platform version + build metadata',
       // Admin
@@ -887,6 +903,93 @@ export default {
     // POST /api/subscription/activate → verify payment + activate plan session
     if (path === '/api/subscription/activate' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleActivateSubscription(request, env), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V10.0 PUBLIC API v1 — Versioned API for PRO/ENTERPRISE key holders
+    // All /api/v1/* routes require a valid API key (cdb_* header).
+    // Returns consistent { success, data, error, timestamp } shape.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    if (path.startsWith('/api/v1/')) {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated || authCtx.method !== 'api_key') {
+        return withSecurityHeaders(withCors(Response.json({
+          success: false,
+          error:   'API v1 requires a valid API key (x-api-key: cdb_*). Obtain one at /api/keys.',
+          code:    'ERR_API_KEY_REQUIRED',
+          docs:    'GET /api',
+        }, { status: 401 }), request));
+      }
+
+      // PRO/ENTERPRISE gate for versioned API
+      if (!['PRO', 'ENTERPRISE'].includes(authCtx.tier)) {
+        return withSecurityHeaders(withCors(Response.json({
+          success: false,
+          error:   `API v1 access requires PRO or ENTERPRISE plan. Current plan: ${authCtx.tier}.`,
+          code:    'ERR_PLAN_UPGRADE_REQUIRED',
+          upgrade: 'https://tools.cyberdudebivash.com/#pricing',
+        }, { status: 403 }), request));
+      }
+
+      const v1Path = path.slice(7); // strip /api/v1 → /scan, /threat-intel, /analyze
+
+      // GET /api/v1/scan → recent scan history for this API key
+      if (v1Path === '/scan' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleD1History(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/threat-intel → live sentinel threat intel feed
+      if (v1Path === '/threat-intel' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
+      }
+
+      // POST /api/v1/analyze → AI threat analysis (rate limited per key)
+      if (v1Path === '/analyze' && method === 'POST') {
+        const quota = await enforceQuota(env, authCtx, 'ai');
+        if (!quota.allowed) return withSecurityHeaders(withCors(
+          rateLimitResponse({ ...quota, reason: 'daily_limit_reached' }, 'ai'), request
+        ));
+        return withSecurityHeaders(withCors(await handleAIAnalyze(request, env), request));
+      }
+
+      // POST /api/v1/simulate → attack simulation (ENTERPRISE only)
+      if (v1Path === '/simulate' && method === 'POST') {
+        if (authCtx.tier !== 'ENTERPRISE') {
+          return withSecurityHeaders(withCors(Response.json({
+            success: false,
+            error:   'Attack simulation via API requires ENTERPRISE plan.',
+            code:    'ERR_ENTERPRISE_REQUIRED',
+          }, { status: 403 }), request));
+        }
+        return withSecurityHeaders(withCors(await handleAISimulate(request, env), request));
+      }
+
+      // POST /api/v1/forecast → risk forecast
+      if (v1Path === '/forecast' && method === 'POST') {
+        return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
+      }
+
+      // GET /api/v1/cves?module=domain → top exploited CVEs for a module
+      if (v1Path === '/cves' && method === 'GET') {
+        const mod   = url.searchParams.get('module') || 'domain';
+        const limit = Math.min(20, parseInt(url.searchParams.get('limit') || '10', 10));
+        const cves  = getTopCVEsForModule(mod, limit);
+        return withSecurityHeaders(withCors(Response.json({
+          success:   true,
+          data:      { module: mod, cves, total: cves.length },
+          error:     null,
+          timestamp: new Date().toISOString(),
+        }), request));
+      }
+
+      // Unknown /api/v1/* path
+      return withSecurityHeaders(withCors(Response.json({
+        success: false,
+        error:   `Unknown API v1 endpoint: ${method} ${path}`,
+        code:    'ERR_NOT_FOUND',
+        available: ['GET /api/v1/scan', 'GET /api/v1/threat-intel', 'POST /api/v1/analyze', 'POST /api/v1/simulate', 'POST /api/v1/forecast'],
+      }, { status: 404 }), request));
     }
 
     // Convenience aliases

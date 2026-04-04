@@ -1172,6 +1172,9 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
     <button class="tab-btn" onclick="switchTab('redteam')" data-tab="redteam">🎯 Red Team</button>
     <button class="tab-btn" onclick="switchTab('identity')" data-tab="identity">🔐 Identity</button>
     <button class="tab-btn" onclick="switchTab('compliance')" data-tab="compliance">📋 Compliance</button>
+    <button class="tab-btn" onclick="switchTab('threatintel')" data-tab="threatintel">🛡️ Threat Intel</button>
+    <button class="tab-btn" onclick="switchTab('simulation')" data-tab="simulation">⚔️ Simulation</button>
+    <button class="tab-btn" onclick="switchTab('reports')" data-tab="reports">📊 Reports</button>
   </div>
 
   <!-- Domain Tab -->
@@ -1347,6 +1350,88 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
     </div>
     <div class="results-panel" id="results-compliance"></div>
   </div>
+
+  <!-- ═══════ Threat Intel Tab ═══════ -->
+  <div class="tab-panel" id="tab-threatintel">
+    <div class="scan-card">
+      <h3>🛡️ Live Threat Intelligence Feed</h3>
+      <p>Real-time CVE advisories, CISA KEV exploits, and EPSS scores sourced from Sentinel APEX. Updated hourly.</p>
+      <div class="scan-btn-row">
+        <button class="btn btn-primary" onclick="loadThreatIntel()" id="btn-threatintel">🔄 Refresh Feed</button>
+        <div class="loading-dots" id="loading-threatintel" style="display:none">
+          <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
+          <span class="scan-state-msg">Fetching live threat data...</span>
+        </div>
+      </div>
+    </div>
+    <div id="threatintel-panel" style="margin-top:16px"></div>
+  </div>
+
+  <!-- ═══════ AI Simulation Tab ═══════ -->
+  <div class="tab-panel" id="tab-simulation">
+    <div class="scan-card">
+      <h3>⚔️ AI Attack Simulation Engine <span style="font-size:11px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle">PRO+</span></h3>
+      <p>Run a full MITRE ATT&CK kill-chain simulation against your last scan result. Reveals attacker paths, blast radius, and time-to-breach estimates.</p>
+      <div id="sim-gate" style="display:none;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:20px;text-align:center;margin:12px 0">
+        <div style="font-size:32px;margin-bottom:8px">🔒</div>
+        <div style="font-weight:700;color:#a78bfa;margin-bottom:6px">PRO Plan Required</div>
+        <div style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Attack simulation is available on PRO and ENTERPRISE plans.</div>
+        <button class="btn btn-primary" onclick="startSubscription('PRO')" style="font-size:13px">Upgrade to PRO — ₹1,499/mo</button>
+      </div>
+      <div id="sim-controls">
+        <div class="form-row" style="margin-top:8px">
+          <div class="form-group">
+            <label>Module to Simulate</label>
+            <select id="simModule">
+              <option value="domain">🌐 Domain</option>
+              <option value="ai">🤖 AI Security</option>
+              <option value="redteam">🎯 Red Team</option>
+              <option value="identity">🔐 Identity</option>
+              <option value="compliance">📋 Compliance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target (optional)</label>
+            <input id="simTarget" type="text" placeholder="e.g. example.com">
+          </div>
+        </div>
+        <p style="color:var(--text-muted);font-size:12px;margin-top:4px">💡 Run a module scan first to get richer simulation results. Or simulate with a synthetic risk profile.</p>
+        <div class="scan-btn-row">
+          <button class="btn btn-primary" onclick="runSimulation()" id="btn-simulation">⚔️ Run Simulation</button>
+          <div class="loading-dots" id="loading-simulation" style="display:none">
+            <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
+            <span class="scan-state-msg">Simulating attack kill chain...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="simulation-panel" style="margin-top:16px"></div>
+  </div>
+
+  <!-- ═══════ Reports Tab ═══════ -->
+  <div class="tab-panel" id="tab-reports">
+    <div class="scan-card">
+      <h3>📊 Security Reports</h3>
+      <p>Download detailed PDF/JSON security reports from your completed scans. Reports are generated on-demand and available for 7 days.</p>
+      <div id="reports-gate" style="display:none;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:20px;text-align:center;margin:12px 0">
+        <div style="font-size:32px;margin-bottom:8px">🔒</div>
+        <div style="font-weight:700;color:#a78bfa;margin-bottom:6px">STARTER Plan or Above Required</div>
+        <div style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Report downloads are available on STARTER, PRO, and ENTERPRISE plans.</div>
+        <button class="btn btn-primary" onclick="startSubscription('STARTER')" style="font-size:13px">Get STARTER — ₹499/mo</button>
+      </div>
+      <div id="reports-controls">
+        <div class="scan-btn-row">
+          <button class="btn btn-primary" onclick="loadReportHistory()" id="btn-reports">📂 Load Report History</button>
+          <div class="loading-dots" id="loading-reports" style="display:none">
+            <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
+            <span class="scan-state-msg">Loading reports...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="reports-panel" style="margin-top:16px"></div>
+  </div>
+
 </div>
 
 <!-- Lead Capture Modal -->
@@ -2071,8 +2156,267 @@ const _scanDataCache = {}; // key: `${module}:${target}` → full scan result ob
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
+  document.getElementById(`tab-${tab}`)?.classList.add('active');
+
+  // Auto-load data tabs on first visit
+  if (tab === 'threatintel') {
+    const panel = document.getElementById('threatintel-panel');
+    if (panel && !panel.__loaded) loadThreatIntel();
+  }
+  if (tab === 'simulation') initSimulationTab();
+  if (tab === 'reports')    initReportsTab();
+}
+
+// ─── Threat Intel Tab ───────────────────────────────────────────────────────
+async function loadThreatIntel() {
+  const panel  = document.getElementById('threatintel-panel');
+  const btn    = document.getElementById('btn-threatintel');
+  const loader = document.getElementById('loading-threatintel');
+  if (!panel) return;
+
+  panel.__loaded = true;
+  if (btn)  btn.disabled = true;
+  if (loader) loader.style.display = 'flex';
+  panel.innerHTML = '';
+
+  try {
+    const res  = await fetch(`${API_BASE}/api/sentinel/feed`);
+    const json = await res.json();
+    const feed  = json.feed || json.data?.feed || json.advisories || [];
+    const stats = json.stats || json.summary || {};
+
+    let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">`;
+    [
+      { label: 'Total Advisories', val: feed.length || stats.total || '—', icon: '📋' },
+      { label: 'Critical CVEs',    val: stats.critical || feed.filter(f => f.severity === 'CRITICAL').length || '—', icon: '🔴' },
+      { label: 'CISA KEV Active',  val: stats.exploited_in_wild || feed.filter(f => f.exploited).length || '—', icon: '⚡' },
+      { label: 'Last Updated',     val: json.generated_at ? new Date(json.generated_at).toLocaleTimeString() : 'Live', icon: '🕐' },
+    ].forEach(c => {
+      html += `<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:24px">${c.icon}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--accent);margin:4px 0">${c.val}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${c.label}</div>
+      </div>`;
+    });
+    html += `</div>`;
+
+    if (feed.length) {
+      html += `<div style="display:flex;flex-direction:column;gap:10px">`;
+      feed.slice(0, 20).forEach(item => {
+        const sev   = item.severity || 'INFO';
+        const color = sev === 'CRITICAL' ? '#ef4444' : sev === 'HIGH' ? '#f97316' : sev === 'MEDIUM' ? '#eab308' : '#6b7280';
+        const cvss  = item.cvss_score || item.cvss || '';
+        html += `<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:14px;align-items:flex-start">
+          <div style="min-width:72px;text-align:center">
+            <span style="display:inline-block;background:${color}22;color:${color};border:1px solid ${color}44;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">${sev}</span>
+            ${cvss ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">CVSS ${cvss}</div>` : ''}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px">${item.cve_id || item.id || item.title || 'Advisory'}</div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${item.description || item.summary || ''}</div>
+            ${item.nvd_url || item.url ? `<a href="${item.nvd_url || item.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);margin-top:6px;display:inline-block">→ View on NVD</a>` : ''}
+          </div>
+          ${item.exploited ? `<div style="color:#ef4444;font-size:11px;white-space:nowrap;font-weight:700">⚡ KEV</div>` : ''}
+        </div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div style="text-align:center;color:var(--text-muted);padding:40px">No threat feed data available. Try refreshing.</div>`;
+    }
+    panel.innerHTML = html;
+  } catch (e) {
+    panel.innerHTML = `<div class="alert" style="background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444">Failed to load threat feed: ${e.message}</div>`;
+  } finally {
+    if (btn)    btn.disabled         = false;
+    if (loader) loader.style.display = 'none';
+  }
+}
+
+// ─── AI Simulation Tab ──────────────────────────────────────────────────────
+function initSimulationTab() {
+  const gate     = document.getElementById('sim-gate');
+  const controls = document.getElementById('sim-controls');
+  if (!gate || !controls) return;
+  const hasPro = SUBSCRIPTION.isAtLeast('PRO');
+  gate.style.display     = hasPro ? 'none' : 'block';
+  controls.style.display = hasPro ? 'block' : 'none';
+}
+
+async function runSimulation() {
+  if (!SUBSCRIPTION.isAtLeast('PRO')) { startSubscription('PRO'); return; }
+  const module  = document.getElementById('simModule')?.value || 'domain';
+  const target  = document.getElementById('simTarget')?.value?.trim() || 'example.com';
+  const panel   = document.getElementById('simulation-panel');
+  const btn     = document.getElementById('btn-simulation');
+  const loader  = document.getElementById('loading-simulation');
+  if (!panel) return;
+
+  btn.disabled         = true;
+  loader.style.display = 'flex';
+  panel.innerHTML      = '';
+
+  const cachedKey  = Object.keys(_scanDataCache).find(k => k.startsWith(module + ':'));
+  const scanResult = cachedKey ? _scanDataCache[cachedKey] : {
+    target, risk_score: 65, risk_level: 'HIGH',
+    findings: [{ title: 'Synthetic test finding', severity: 'HIGH', detail: 'Simulation without prior scan' }],
+  };
+
+  try {
+    const res  = await SUBSCRIPTION.fetch(`${API_BASE}/api/ai/simulate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scan_result: scanResult, module, target }),
+    });
+    const json = res.ok ? await res.json() : null;
+    const sim  = json?.data || json;
+    if (!sim || !res.ok) throw new Error(json?.error || 'Simulation failed');
+
+    const rc = sim.risk_context || {};
+    let html = `<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:800;font-size:15px">⚔️ Attack Simulation: ${sim.target || target}</div>
+          <div style="color:var(--text-muted);font-size:12px;margin-top:4px">Module: ${module.toUpperCase()} · Risk: <strong style="color:#ef4444">${rc.engine_risk_score ?? sim.risk_score ?? '—'}/10</strong> · Severity: <strong>${rc.engine_severity || sim.risk_level || '—'}</strong></div>
+        </div>
+        <span style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid #ef444455;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700">KEV: ${rc.cisa_kev_applicable ? '✅ YES' : '❌ No'}</span>
+      </div></div>`;
+
+    const chain = sim.kill_chain || sim.simulation_steps || [];
+    if (chain.length) {
+      html += `<div style="margin-bottom:16px"><div style="font-weight:700;margin-bottom:10px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Kill Chain</div><div style="display:flex;flex-direction:column;gap:8px">`;
+      chain.forEach((step, i) => {
+        const diff   = step.detection_difficulty || '';
+        const dColor = diff === 'HARD' ? '#ef4444' : diff === 'MEDIUM' ? '#f97316' : '#22c55e';
+        html += `<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:12px">
+          <div style="min-width:32px;height:32px;background:rgba(124,58,237,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#a78bfa">${i+1}</div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+              <span style="font-weight:700;font-size:13px">${step.phase || step.tactic || `Step ${i+1}`}</span>
+              ${diff ? `<span style="font-size:10px;color:${dColor};border:1px solid ${dColor}55;border-radius:4px;padding:1px 6px">Detection: ${diff}</span>` : ''}
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${step.action || step.description || ''}</div>
+            ${step.technique ? `<div style="font-size:11px"><a href="${step.technique.url||'#'}" target="_blank" rel="noopener" style="color:var(--accent)">${step.technique.id} — ${step.technique.name}</a></div>` : ''}
+            ${step.tools?.length ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Tools: ${step.tools.join(', ')}</div>` : ''}
+            ${step.mitigation ? `<div style="font-size:11px;color:#22c55e;margin-top:4px">🛡️ ${step.mitigation}</div>` : ''}
+          </div></div>`;
+      });
+      html += `</div></div>`;
+    }
+
+    const br = sim.blast_radius || sim.impact_analysis || {};
+    if (Object.keys(br).length) {
+      html += `<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:10px">💥 Blast Radius</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">`;
+      [['Systems at Risk', br.systems_at_risk||'—'], ['Users at Risk', br.user_accounts_at_risk||'—'],
+       ['Data Exposure', br.data_exposure_gb ? br.data_exposure_gb+'GB' : '—'],
+       ['Ransomware Risk', br.ransomware_risk||'—'], ['Breach Risk', br.data_breach_risk||'—']].forEach(([l,v]) => {
+        html += `<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:17px;font-weight:800;color:#ef4444">${v}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${l}</div></div>`;
+      });
+      html += `</div>`;
+      if (br.business_impact) html += `<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">Business Impact: <strong>${br.business_impact}</strong></div>`;
+      html += `</div>`;
+    }
+
+    panel.innerHTML = html || '<div style="text-align:center;color:var(--text-muted);padding:30px">No simulation data returned.</div>';
+  } catch (e) {
+    panel.innerHTML = `<div class="alert" style="background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444">Simulation error: ${e.message}</div>`;
+  } finally {
+    btn.disabled         = false;
+    loader.style.display = 'none';
+  }
+}
+
+// ─── Reports Tab ────────────────────────────────────────────────────────────
+function initReportsTab() {
+  const gate     = document.getElementById('reports-gate');
+  const controls = document.getElementById('reports-controls');
+  if (!gate || !controls) return;
+  const hasSub = SUBSCRIPTION.isAtLeast('STARTER');
+  gate.style.display     = hasSub ? 'none' : 'block';
+  controls.style.display = hasSub ? 'block' : 'none';
+}
+
+async function loadReportHistory() {
+  if (!SUBSCRIPTION.isAtLeast('STARTER')) { startSubscription('STARTER'); return; }
+  const panel  = document.getElementById('reports-panel');
+  const btn    = document.getElementById('btn-reports');
+  const loader = document.getElementById('loading-reports');
+  if (!panel) return;
+
+  btn.disabled         = true;
+  loader.style.display = 'flex';
+  panel.innerHTML      = '';
+
+  try {
+    const res   = await SUBSCRIPTION.fetch(`${API_BASE}/api/history`);
+    const json  = res.ok ? await res.json() : null;
+    const scans = json?.data || json?.scans || json?.results || [];
+
+    if (!scans.length) {
+      panel.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">
+        <div style="font-size:40px;margin-bottom:12px">📭</div>
+        <div style="font-weight:700;margin-bottom:6px">No scan history yet</div>
+        <div style="font-size:13px">Run a scan from any module tab, then return here to generate a report.</div>
+      </div>`;
+      return;
+    }
+
+    let html = `<div style="display:flex;flex-direction:column;gap:10px">`;
+    scans.slice(0, 20).forEach(scan => {
+      const mod    = scan.module || scan.type || '—';
+      const target = scan.target || scan.domain || '—';
+      const risk   = scan.risk_level || scan.severity || '—';
+      const score  = scan.risk_score ?? '—';
+      const date   = scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '—';
+      const rColor = risk === 'CRITICAL' ? '#ef4444' : risk === 'HIGH' ? '#f97316' : risk === 'MEDIUM' ? '#eab308' : '#6b7280';
+      html += `<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:700;font-size:13px">${target}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${mod.toUpperCase()} · ${date}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:${rColor}22;color:${rColor};border:1px solid ${rColor}44;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">${risk} · ${score}</span>
+          <button onclick="generateReportFor('${scan.id||scan.job_id||''}','${mod}','${target}')"
+            style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">
+            📄 Generate Report
+          </button>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    panel.innerHTML = html;
+  } catch (e) {
+    panel.innerHTML = `<div class="alert" style="background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444">Failed to load history: ${e.message}</div>`;
+  } finally {
+    btn.disabled         = false;
+    loader.style.display = 'none';
+  }
+}
+
+async function generateReportFor(scanId, module, target) {
+  if (!scanId) { alert('No scan ID available. Run a scan first.'); return; }
+  const panel = document.getElementById('reports-panel');
+  const el    = document.createElement('div');
+  el.style.cssText = 'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:14px;margin-top:10px;font-size:13px;color:var(--text-muted)';
+  el.textContent   = '⏳ Generating report...';
+  panel.prepend(el);
+
+  try {
+    const res  = await SUBSCRIPTION.fetch(`${API_BASE}/api/report/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scan_id: scanId, module, format: 'pdf' }),
+    });
+    const json = await res.json();
+    const url  = json?.data?.download_url || json?.download_url;
+    if (url) {
+      el.innerHTML = `✅ Report ready! <a href="${url}" target="_blank" style="color:var(--accent);font-weight:700">Download PDF →</a>`;
+    } else {
+      el.textContent = `⚠️ ${json?.error || 'Report generation failed. Upgrade to PRO for premium reports.'}`;
+    }
+  } catch (e) {
+    el.textContent = `❌ Error: ${e.message}`;
+  }
 }
 
 // ─── Collect Payload Per Module ─────────────────────────────────────────
