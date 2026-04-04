@@ -190,6 +190,18 @@ select option{background:var(--surface2)}
 .v2-tab-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text-muted);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
 .v2-tab-btn:hover{border-color:var(--accent);color:var(--accent)}
 .v2-tab-active{background:rgba(0,212,255,.15) !important;border-color:var(--accent) !important;color:var(--accent) !important}
+/* ── Subscription / Feature Gating ─────────────────────────────── */
+.gate-blur-wrap{position:relative;overflow:hidden;border-radius:10px}
+.gate-blur-wrap .gate-blur-inner{filter:blur(5px);pointer-events:none;user-select:none;opacity:.4}
+.gate-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(10,10,26,.6);backdrop-filter:blur(2px);border-radius:10px;z-index:10;padding:20px;text-align:center}
+.gate-overlay-icon{font-size:28px}
+.gate-overlay-title{font-size:14px;font-weight:800;color:#fff}
+.gate-overlay-sub{font-size:12px;color:var(--text-muted);max-width:240px}
+.gate-overlay-btn{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s}
+.gate-overlay-btn:hover{transform:translateY(-1px)}
+.sub-modal-plan-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;margin-bottom:12px}
+.sub-quota-bar-wrap{background:rgba(255,255,255,.06);border-radius:4px;height:6px;margin-top:6px;overflow:hidden}
+.sub-quota-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#00d4ff,#7c3aed);transition:width .6s}
 
 /* ── Attack Graph ──────────────────────────────────── */
 .attack-graph-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px}
@@ -773,6 +785,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
       <a href="#dashboard">Dashboard</a>
       <a href="#pricing">Pricing</a>
       <a href="https://tools.cyberdudebivash.com" target="_blank">Tools Suite</a>
+      <span id="nav-plan-badge" style="display:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
       <a href="#enterprise" class="nav-cta">Enterprise</a>
     </div>
   </div>
@@ -1418,59 +1431,134 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
-    <div class="section-label">Monetization</div>
-    <h2 class="section-title">Simple, Transparent Pricing</h2>
-    <p class="section-sub">Free preview on every module. Pay only for full reports or upgrade for unlimited access.</p>
-    <div class="pricing-grid">
-      <div class="price-card">
-        <div class="price-name">STARTER</div>
+    <div class="section-label">SaaS Pricing</div>
+    <h2 class="section-title">Upgrade Your Security Posture</h2>
+    <p class="section-sub">Start free. Upgrade when you need more scans, AI insights, or API access. Cancel anytime.</p>
+
+    <!-- Current plan indicator (shown when user has active subscription) -->
+    <div id="current-plan-bar" style="display:none;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,58,237,.1));border:1px solid rgba(0,212,255,.3);border-radius:12px;padding:14px 20px;margin-bottom:28px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:22px">✅</span>
+        <div>
+          <div style="font-weight:800;font-size:14px">Active Subscription: <span id="current-plan-name" style="color:var(--accent)">—</span></div>
+          <div style="font-size:12px;color:var(--text-muted)">Scans used: <span id="current-plan-usage">—</span> · Resets: <span id="current-plan-reset">—</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="current-plan-usage-bar" style="width:120px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">
+          <div id="current-plan-usage-fill" style="height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);border-radius:3px;transition:width .5s"></div>
+        </div>
+        <span id="current-plan-pct" style="font-size:11px;color:var(--text-muted)"></span>
+      </div>
+    </div>
+
+    <!-- 4-column plan grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:32px">
+
+      <!-- FREE -->
+      <div class="price-card" id="plan-card-free">
+        <div class="price-name" style="color:var(--text-muted)">FREE</div>
         <div class="price-amount">₹0</div>
-        <div class="price-period">Free forever</div>
+        <div class="price-period">Forever free</div>
         <ul class="price-features">
           <li>5 scans/day (IP-based)</li>
-          <li>2–3 free findings per scan</li>
-          <li>Risk score on every scan</li>
-          <li>Actionable recommendations</li>
+          <li>50 scans/month</li>
+          <li>2–3 preview findings</li>
+          <li>Risk score + recommendations</li>
           <li>All 5 security modules</li>
         </ul>
-        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="document.getElementById('scanner').scrollIntoView({behavior:'smooth'})">Start Free Scan</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="document.getElementById('scanner').scrollIntoView({behavior:'smooth'})">Start Free Scan</button>
       </div>
-      <div class="price-card featured">
-        <div class="featured-label">MOST POPULAR</div>
-        <div class="price-name">PAY-PER-REPORT</div>
-        <div class="price-amount">₹199+</div>
-        <div class="price-period">Per full report</div>
+
+      <!-- STARTER -->
+      <div class="price-card" id="plan-card-starter">
+        <div class="price-name" style="color:#3b82f6">STARTER</div>
+        <div class="price-amount">₹499</div>
+        <div class="price-period">/month · 10 scans</div>
         <ul class="price-features">
-          <li>Domain full report — ₹199</li>
-          <li>AI Security report — ₹499</li>
-          <li>Red Team report — ₹999</li>
-          <li>Identity report — ₹799</li>
-          <li>Compliance report — ₹499–₹1,999</li>
-          <li>Full findings + recommendations</li>
-          <li>Secure Razorpay / UPI payment</li>
+          <li>10 full scans/month</li>
+          <li>AI Threat Analysis (Analyze)</li>
+          <li>PDF Report downloads</li>
+          <li>2 API Keys</li>
+          <li>Full findings unlocked</li>
+          <li>Email support</li>
         </ul>
-        <a href="https://rzp.io/l/cyberdudebivash-domain" target="_blank" class="btn btn-success" style="width:100%;justify-content:center">🔓 Get Full Report</a>
-        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:8px">📥 PDF Download · Razorpay · UPI · Instant Access</div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#2563eb,#3b82f6)" onclick="startSubscription('STARTER')">⚡ Get Starter</button>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">Razorpay · UPI · Cards · Instant</div>
       </div>
-      <div class="price-card">
-        <div class="price-name">ENTERPRISE</div>
-        <div class="price-amount">₹9,999</div>
-        <div class="price-period">/month · Custom available</div>
+
+      <!-- PRO (featured) -->
+      <div class="price-card featured" id="plan-card-pro">
+        <div class="featured-label">MOST POPULAR</div>
+        <div class="price-name" style="color:#8b5cf6">PRO</div>
+        <div class="price-amount">₹1,499</div>
+        <div class="price-period">/month · Unlimited scans</div>
         <ul class="price-features">
           <li>Unlimited scans/month</li>
-          <li>API key access (500+ req/day)</li>
-          <li>Full findings on all modules</li>
-          <li>Export PDF/JSON reports</li>
-          <li>Dedicated security analyst</li>
-          <li>SLA guarantee</li>
-          <li>White-label option</li>
-          <li>Priority support</li>
+          <li>Full AI Brain V2 Suite</li>
+          <li>Attack Simulation + Forecast</li>
+          <li>API Access (500 req/day)</li>
+          <li>5 API Keys</li>
+          <li>Advanced PDF Reports</li>
+          <li>Priority Support</li>
         </ul>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#4f46e5)" onclick="document.getElementById('enterprise').scrollIntoView({behavior:'smooth'})">Contact Us</button>
+        <button class="btn btn-success" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#8b5cf6)" onclick="startSubscription('PRO')">🚀 Get Pro</button>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">Razorpay · UPI · Cards · Instant</div>
       </div>
+
+      <!-- ENTERPRISE -->
+      <div class="price-card" id="plan-card-enterprise">
+        <div class="price-name" style="color:#f59e0b">ENTERPRISE</div>
+        <div class="price-amount">₹4,999</div>
+        <div class="price-period">/month · Multi-user</div>
+        <ul class="price-features">
+          <li>Unlimited scans/month</li>
+          <li>Full AI Brain V2 Suite</li>
+          <li>20 API Keys</li>
+          <li>Multi-User (10 seats)</li>
+          <li>Custom integrations</li>
+          <li>Dedicated support</li>
+          <li>SLA Guarantee</li>
+          <li>White-label option</li>
+        </ul>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000" onclick="startSubscription('ENTERPRISE')">🏢 Get Enterprise</button>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">Razorpay · UPI · Cards · Instant</div>
+      </div>
+    </div>
+
+    <!-- Feature comparison mini-table -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600">Feature</th>
+            <th style="text-align:center;padding:8px 12px;color:var(--text-muted)">Free</th>
+            <th style="text-align:center;padding:8px 12px;color:#3b82f6">Starter</th>
+            <th style="text-align:center;padding:8px 12px;color:#8b5cf6">Pro</th>
+            <th style="text-align:center;padding:8px 12px;color:#f59e0b">Enterprise</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">Monthly Scans</td><td style="text-align:center;color:var(--text-muted)">50</td><td style="text-align:center;color:#3b82f6">10</td><td style="text-align:center;color:#8b5cf6">∞</td><td style="text-align:center;color:#f59e0b">∞</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">AI Threat Analysis</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">Attack Simulation</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">Risk Forecast</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">PDF Reports</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr><td style="padding:8px 12px">Multi-User</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
+
+<!-- ═══════════════════ SUBSCRIPTION CHECKOUT MODAL ═══════════════════════ -->
+<div id="sub-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div id="sub-modal" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;max-height:90vh;overflow-y:auto;position:relative">
+    <button onclick="closeSubModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+    <div id="sub-modal-content"><!-- injected --></div>
+  </div>
+</div>
 
 <!-- ════════════════════════════════ ENTERPRISE ════════════════════════════ -->
 <section id="enterprise" style="background:var(--surface2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
@@ -1637,13 +1725,14 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 
 // ─── Centralized Config ─────────────────────────────────────────────────
 const CONFIG = {
-  API_BASE:      'https://cyberdudebivash.in',
-  // API_BASE:   'http://localhost:8787',   // ← uncomment for local dev
-  TOOLS_URL:     'https://tools.cyberdudebivash.com',
-  TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
-  CONTACT_EMAIL: 'bivash@cyberdudebivash.com',
-  PLATFORM_NAME: 'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:       '9.0.0',     // default; immediately overridden by initVersion() from version.json
+  API_BASE:        'https://cyberdudebivash.in',
+  // API_BASE:     'http://localhost:8787',   // ← uncomment for local dev
+  TOOLS_URL:       'https://tools.cyberdudebivash.com',
+  TELEGRAM_URL:    'https://t.me/cyberdudebivashSentinelApex',
+  CONTACT_EMAIL:   'bivash@cyberdudebivash.com',
+  PLATFORM_NAME:   'CYBERDUDEBIVASH AI Security Hub',
+  VERSION:         '9.0.0',     // default; immediately overridden by initVersion() from version.json
+  RAZORPAY_KEY_ID: '',          // injected at runtime from order API response
 };
 
 // ─── Version Init — version.json first, /api/version fallback ───────────────
@@ -1972,6 +2061,17 @@ async function executeScan(module, payload) {
     module,
     target: payload.domain || payload.model_name || payload.target_org || payload.org_name || 'unknown',
   };
+
+  // ── Subscription quota gate (client-side UX check before API call) ───────────
+  // Real enforcement happens on the backend; this just provides instant UX feedback.
+  const subCache = SUBSCRIPTION.getCache();
+  if (subCache) {
+    const u = subCache.usage || {};
+    if (u.scans_limit > 0 && u.scans_used >= u.scans_limit) {
+      showQuotaUpgradeCTA(module);
+      return; // Do NOT call API — quota exceeded
+    }
+  }
 
   setLoading(module, true, scanMsgs[module]);
 
@@ -2724,6 +2824,348 @@ async function verifyAndDownload(module, target, paymentPayload) {
   renderRecentActivity();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SUBSCRIPTION ENGINE v10.0 — Plan management, feature gating, Razorpay billing
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Session subscription state ──────────────────────────────────────────────
+const SUBSCRIPTION = (function() {
+  const SS_KEY = 'cbd_sub_token_v1';
+  let _cache = null; // in-memory plan cache { plan, features, usage, token }
+
+  function _loadToken() {
+    try { return sessionStorage.getItem(SS_KEY) || localStorage.getItem(SS_KEY) || null; } catch { return null; }
+  }
+  function _saveToken(token) {
+    try { sessionStorage.setItem(SS_KEY, token); localStorage.setItem(SS_KEY, token); } catch {}
+  }
+
+  return {
+    getToken() { return _loadToken(); },
+    saveToken(t) { _saveToken(t); },
+    clearToken() { try { sessionStorage.removeItem(SS_KEY); localStorage.removeItem(SS_KEY); } catch {} _cache = null; },
+    getCache() { return _cache; },
+    setCache(data) { _cache = data; },
+
+    async fetch() {
+      const token = _loadToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['X-Session-Token'] = token;
+      try {
+        const resp = await safeFetch('/api/user/plan', { headers });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (data.success) { _cache = data; return data; }
+      } catch {}
+      return null;
+    },
+
+    // hasAccess(feature) — checks cached plan features
+    hasAccess(feature) {
+      const f = _cache?.features;
+      if (!f) return false;
+      return f[feature] === true;
+    },
+
+    getPlan() { return _cache?.plan || 'FREE'; },
+    isAtLeast(minPlan) {
+      const order = ['FREE','STARTER','PRO','ENTERPRISE'];
+      const cur   = order.indexOf((_cache?.plan || 'FREE').toUpperCase());
+      const min   = order.indexOf(minPlan.toUpperCase());
+      return cur >= min;
+    },
+  };
+})();
+
+// Plan colors / labels
+const PLAN_META = {
+  FREE:       { label: 'FREE',       color: '#6b7280', emoji: '🆓' },
+  STARTER:    { label: 'STARTER',    color: '#3b82f6', emoji: '⚡' },
+  PRO:        { label: 'PRO',        color: '#8b5cf6', emoji: '🚀' },
+  ENTERPRISE: { label: 'ENTERPRISE', color: '#f59e0b', emoji: '🏢' },
+};
+
+// ─── Render nav plan badge + current-plan bar ─────────────────────────────────
+function renderPlanBadge() {
+  const data = SUBSCRIPTION.getCache();
+  if (!data) return;
+
+  const plan = (data.plan || 'FREE').toUpperCase();
+  const meta = PLAN_META[plan] || PLAN_META.FREE;
+
+  // Nav badge
+  const badge = document.getElementById('nav-plan-badge');
+  if (badge) {
+    badge.textContent = `${meta.emoji} ${meta.label}`;
+    badge.style.background = plan === 'FREE'
+      ? 'rgba(255,255,255,.1)'
+      : `linear-gradient(135deg,${meta.color}cc,${meta.color})`;
+    badge.style.display = 'inline-flex';
+  }
+
+  // Current plan bar (only show when subscribed)
+  if (plan !== 'FREE') {
+    const bar = document.getElementById('current-plan-bar');
+    if (bar) {
+      const u = data.usage || {};
+      const used  = u.scans_used || 0;
+      const limit = u.scans_limit === -1 ? 'Unlimited' : (u.scans_limit || '—');
+      const pct   = u.scans_limit > 0 ? Math.min(100, Math.round((used / u.scans_limit) * 100)) : 0;
+
+      document.getElementById('current-plan-name').textContent = meta.emoji + ' ' + meta.label;
+      document.getElementById('current-plan-usage').textContent = `${used} / ${limit}`;
+      document.getElementById('current-plan-reset').textContent = u.reset_date || '—';
+
+      const fill = document.getElementById('current-plan-usage-fill');
+      if (fill) fill.style.width = (u.scans_limit === -1 ? 0 : pct) + '%';
+
+      const pctEl = document.getElementById('current-plan-pct');
+      if (pctEl) pctEl.textContent = u.scans_limit === -1 ? '∞' : pct + '%';
+
+      bar.style.display = 'flex';
+
+      // Highlight active plan card
+      ['free','starter','pro','enterprise'].forEach(p => {
+        const card = document.getElementById(`plan-card-${p}`);
+        if (card) card.style.outline = p === plan.toLowerCase() ? `2px solid ${meta.color}` : 'none';
+      });
+    }
+  }
+}
+
+// ─── Quota-exceeded upgrade CTA ───────────────────────────────────────────────
+function showQuotaUpgradeCTA(module) {
+  const resultsEl = document.getElementById(`results-${module}`);
+  if (!resultsEl) return;
+  const plan = SUBSCRIPTION.getPlan();
+  const nextPlan = plan === 'FREE' ? 'STARTER (₹499/mo)' : plan === 'STARTER' ? 'PRO (₹1,499/mo)' : 'Enterprise';
+  resultsEl.innerHTML = `
+    <div style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(124,58,237,.08));border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:28px;text-align:center;margin:20px 0">
+      <div style="font-size:36px;margin-bottom:12px">🚫</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:8px;color:#ef4444">Monthly Scan Limit Reached</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px">Your <strong>${plan}</strong> plan allows a limited number of scans per month.<br>Upgrade to continue scanning immediately.</div>
+      <button class="btn btn-success" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);margin:0 auto" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'});closeSubModal()">
+        🚀 Upgrade to ${nextPlan}
+      </button>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:10px">Resets on <strong>${SUBSCRIPTION.getCache()?.usage?.reset_date || 'next month'}</strong></div>
+    </div>`;
+}
+
+// ─── Feature gating overlay injector ─────────────────────────────────────────
+// Wraps a DOM element with a blur overlay if the user lacks access to a feature.
+// targetEl: the element to gate   feature: e.g. 'ai_simulate'  minPlan: 'PRO'
+function applyFeatureGate(targetEl, feature, minPlan, featureLabel) {
+  if (!targetEl) return;
+  if (SUBSCRIPTION.hasAccess(feature)) return; // already has access — skip
+
+  // Build wrapper if not already gated
+  if (targetEl.dataset.gated === '1') return;
+  targetEl.dataset.gated = '1';
+
+  const inner = targetEl.innerHTML;
+  const meta  = PLAN_META[(minPlan || 'PRO').toUpperCase()] || PLAN_META.PRO;
+
+  targetEl.innerHTML = `
+    <div class="gate-blur-wrap">
+      <div class="gate-blur-inner">${inner}</div>
+      <div class="gate-overlay">
+        <div class="gate-overlay-icon">🔒</div>
+        <div class="gate-overlay-title">${featureLabel || feature} — ${meta.label} Required</div>
+        <div class="gate-overlay-sub">Upgrade to <strong>${meta.emoji} ${meta.label}</strong> to unlock this feature.</div>
+        <button class="gate-overlay-btn" onclick="startSubscription('${minPlan}')">Upgrade — ${minPlan === 'STARTER' ? '₹499' : minPlan === 'PRO' ? '₹1,499' : '₹4,999'}/mo</button>
+      </div>
+    </div>`;
+}
+
+// ─── Apply gating to AI Brain tabs after render ───────────────────────────────
+function applyAIBrainGating(module) {
+  // Only gate if user loaded — otherwise wait
+  const data = SUBSCRIPTION.getCache();
+  if (!data) return;
+
+  const simulateEl = document.getElementById(`v2-tab-content-simulate-${module}`);
+  const forecastEl = document.getElementById(`v2-tab-content-forecast-${module}`);
+
+  if (simulateEl && !SUBSCRIPTION.hasAccess('ai_simulate')) {
+    applyFeatureGate(simulateEl, 'ai_simulate', 'PRO', 'Attack Simulation');
+  }
+  if (forecastEl && !SUBSCRIPTION.hasAccess('ai_forecast')) {
+    applyFeatureGate(forecastEl, 'ai_forecast', 'PRO', 'Risk Forecast');
+  }
+}
+
+// ─── Subscription purchase flow ───────────────────────────────────────────────
+const PLAN_INFO = {
+  STARTER:    { label: 'Starter',    price: '₹499',   amount: 49900,  color: '#3b82f6', emoji: '⚡', desc: '10 scans/month · AI Analyze · PDF Reports' },
+  PRO:        { label: 'Pro',        price: '₹1,499', amount: 149900, color: '#8b5cf6', emoji: '🚀', desc: 'Unlimited scans · Full AI Suite · API Access' },
+  ENTERPRISE: { label: 'Enterprise', price: '₹4,999', amount: 499900, color: '#f59e0b', emoji: '🏢', desc: 'Multi-user · 20 API Keys · Dedicated Support' },
+};
+
+function openSubModal() {
+  const overlay = document.getElementById('sub-modal-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+function closeSubModal() {
+  const overlay = document.getElementById('sub-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function startSubscription(planKey) {
+  const plan = PLAN_INFO[(planKey || '').toUpperCase()];
+  if (!plan) return;
+
+  const modal = document.getElementById('sub-modal-content');
+  if (!modal) { document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'}); return; }
+
+  // Show email collection form
+  modal.innerHTML = `
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:36px;margin-bottom:8px">${plan.emoji}</div>
+      <div style="font-size:20px;font-weight:800">${plan.label} Plan</div>
+      <div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,${plan.color},#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:4px 0">${plan.price}<span style="font-size:14px;font-weight:500;-webkit-text-fill-color:var(--text-muted)">/month</span></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${plan.desc}</div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label for="sub-email" style="font-size:12px;font-weight:600;color:var(--text-muted)">Email Address <span style="color:#ef4444">*</span></label>
+      <input id="sub-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label for="sub-name" style="font-size:12px;font-weight:600;color:var(--text-muted)">Full Name</label>
+      <input id="sub-name" type="text" placeholder="Your Name" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+    </div>
+    <button id="sub-pay-btn" class="btn btn-success" style="width:100%;justify-content:center;background:linear-gradient(135deg,${plan.color},${plan.color}cc);font-size:15px;font-weight:800" onclick="proceedSubPayment('${planKey}')">
+      🔐 Pay ${plan.price} securely
+    </button>
+    <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:10px">Secured by Razorpay · UPI · Cards · Net Banking · No hidden charges</div>
+    <div id="sub-pay-error" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:12px;color:#ef4444;text-align:center"></div>`;
+
+  openSubModal();
+}
+
+async function proceedSubPayment(planKey) {
+  const email   = (document.getElementById('sub-email')?.value || '').trim();
+  const name    = (document.getElementById('sub-name')?.value || '').trim();
+  const plan    = PLAN_INFO[(planKey || '').toUpperCase()];
+  const errEl   = document.getElementById('sub-pay-error');
+  const btn     = document.getElementById('sub-pay-btn');
+
+  if (!email || !email.includes('@')) {
+    if (errEl) { errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating order...'; }
+
+  try {
+    await loadRazorpay();
+
+    // Create order
+    const orderResp = await safeFetch('/api/subscription/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: planKey, email, name }),
+    });
+    const orderData = await orderResp.json();
+    if (!orderResp.ok || !orderData.order_id) throw new Error(orderData.error || 'Could not create subscription order');
+
+    // Open Razorpay checkout
+    const options = {
+      key:         CONFIG.RAZORPAY_KEY_ID || orderData.key_id || '',
+      amount:      orderData.amount,
+      currency:    'INR',
+      name:        'CYBERDUDEBIVASH AI Security Hub',
+      description: `${plan.label} Plan — ${plan.desc}`,
+      order_id:    orderData.order_id,
+      prefill:     { email, name },
+      notes:       { plan: planKey, type: 'subscription' },
+      theme:       { color: plan.color },
+      modal:       { backdropclose: false },
+      handler: async (response) => {
+        if (btn) { btn.textContent = '⏳ Activating plan...'; }
+        await activateSubscription(planKey, response, email);
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.on('payment.failed', (err) => {
+      if (errEl) { errEl.textContent = `Payment failed: ${err?.error?.description || 'Please try again.'}`; errEl.style.display = 'block'; }
+      if (btn) { btn.disabled = false; btn.textContent = `🔐 Pay ${plan.price} securely`; }
+    });
+    rzp.open();
+    if (btn) { btn.disabled = false; btn.textContent = `🔐 Pay ${plan.price} securely`; }
+
+  } catch (e) {
+    if (errEl) { errEl.textContent = e.message || 'Payment setup failed. Please try again.'; errEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.textContent = `🔐 Pay ${plan.price} securely`; }
+  }
+}
+
+async function activateSubscription(planKey, rzpResponse, email) {
+  const modal   = document.getElementById('sub-modal-content');
+  const plan    = PLAN_INFO[(planKey || '').toUpperCase()];
+
+  try {
+    const resp = await safeFetch('/api/subscription/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        razorpay_order_id:   rzpResponse.razorpay_order_id,
+        razorpay_payment_id: rzpResponse.razorpay_payment_id,
+        razorpay_signature:  rzpResponse.razorpay_signature,
+        email,
+      }),
+    });
+    const data = await resp.json();
+
+    if (!data.success || !data.session_token) throw new Error(data.error || 'Activation failed');
+
+    // Persist token
+    SUBSCRIPTION.saveToken(data.session_token);
+
+    // Refresh plan cache
+    const planData = await SUBSCRIPTION.fetch();
+    if (planData) renderPlanBadge();
+
+    // Show success screen
+    if (modal) {
+      modal.innerHTML = `
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:52px;margin-bottom:12px">🎉</div>
+          <div style="font-size:22px;font-weight:900;color:var(--accent)">${plan.emoji} ${plan.label} Plan Activated!</div>
+          <div style="font-size:14px;color:var(--text-muted);margin:12px 0">${plan.desc}</div>
+          <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;margin:16px 0;font-size:12px;color:var(--text-muted)">
+            🔑 Your subscription is active and linked to this device.<br>Token saved — valid for 90 days.
+          </div>
+          <button class="btn btn-success" onclick="closeSubModal();document.getElementById('scanner').scrollIntoView({behavior:'smooth'})" style="margin:0 auto">
+            🚀 Start Scanning Now
+          </button>
+        </div>`;
+    }
+
+    // Pulse nav badge
+    setTimeout(() => {
+      const b = document.getElementById('nav-plan-badge');
+      if (b) { b.style.transform = 'scale(1.2)'; setTimeout(() => { b.style.transform = ''; }, 400); }
+    }, 200);
+
+  } catch (e) {
+    if (modal) {
+      modal.innerHTML += `<div style="margin-top:16px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:12px;color:#ef4444;text-align:center">Activation failed: ${e.message}<br><small>Please contact support with your payment ID: ${rzpResponse.razorpay_payment_id}</small></div>`;
+    }
+  }
+}
+
+// ─── Init subscription state on page load ────────────────────────────────────
+async function initSubscription() {
+  const data = await SUBSCRIPTION.fetch();
+  if (data) renderPlanBadge();
+}
+
+// Close sub modal on backdrop click
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'sub-modal-overlay') closeSubModal();
+});
+
 function showPaymentOverlay(state, data = {}) {
   let el = document.getElementById('payOverlay');
   if (!el) {
@@ -3321,6 +3763,8 @@ function _postRenderV8(module, data) {
     fetchAIInsights(module, data);
     // AI Brain V2 — parallel fetch of analyze/simulate/forecast
     fetchAIBrainV2(module, data);
+    // Apply feature gating overlays after tabs render
+    setTimeout(() => applyAIBrainGating(module), 600);
   }, 300);
 }
 
@@ -4640,8 +5084,11 @@ async function renderIntelDashboardWidget() {
   `;
 }
 
-// ─── Init V9.2 on page load ───────────────────────────────────────────────────
+// ─── Init V10.0 on page load ─────────────────────────────────────────────────
 initVersion();
+
+// Load subscription plan state (non-blocking, shows badge + usage bar if active)
+initSubscription();
 
 // Restore any previously unlocked scan panels (localStorage → UI)
 // Fires after DOM is ready — deferred so panels have time to render

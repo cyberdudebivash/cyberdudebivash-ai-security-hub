@@ -43,6 +43,12 @@ import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handl
 // ─── AI Cyber Brain V2 handlers (analyze / simulate / forecast) ──────────────
 import { handleAIAnalyze, handleAISimulate, handleAIForecast } from './handlers/aiAnalysis.js';
 
+// ─── Subscription SaaS Engine (v10.0) ────────────────────────────────────────
+import {
+  handleGetUserPlan, handleCreateSubscription, handleActivateSubscription, handleGetPlans,
+  checkMonthlyQuota,
+} from './handlers/subscription.js';
+
 // ─── New v8.0 handlers ────────────────────────────────────────────────────────
 import {
   handleCreateMonitor, handleListMonitors, handleGetMonitor,
@@ -393,6 +399,11 @@ function apiInfoResponse() {
       'POST /api/ai/analyze':        'Threat correlation → attack chain + MITRE ATT&CK + exploit probability',
       'POST /api/ai/simulate':       'Attack simulation → step-by-step attacker path + blast radius + scenario',
       'POST /api/ai/forecast':       'Risk forecast → exploitation likelihood + time-to-breach + financial impact',
+      // V10.0 — Subscription SaaS Engine
+      'GET  /api/subscription/plans':   'Public plan listing → STARTER/PRO/ENTERPRISE with pricing',
+      'GET  /api/user/plan':            'Current plan + monthly usage for authenticated user',
+      'POST /api/subscription/create':  'Create Razorpay order for plan → { order_id, amount }',
+      'POST /api/subscription/activate':'Verify payment + activate plan session → { session_token, features }',
       // V8.0 — Version
       'GET  /api/version':           'Live platform version + build metadata',
       // Admin
@@ -403,9 +414,10 @@ function apiInfoResponse() {
       'POST /api/webhooks/razorpay': 'Razorpay payment webhook',
     },
     tiers: {
-      FREE:       { daily_limit:  5, burst: '2/min',  key_limit: 2, queue_priority: 'low'  },
-      PRO:        { daily_limit: 500, burst: '20/min', key_limit: 5, queue_priority: 'normal' },
-      ENTERPRISE: { daily_limit: -1, burst: '60/min', key_limit: 20, queue_priority: 'high' },
+      FREE:       { daily_limit:  5, burst: '2/min',  scan_limit: 50,  key_limit: 2,  price_inr: 0,    queue_priority: 'low'    },
+      STARTER:    { daily_limit: 20, burst: '5/min',  scan_limit: 10,  key_limit: 2,  price_inr: 499,  queue_priority: 'normal' },
+      PRO:        { daily_limit: 500, burst: '20/min', scan_limit: -1,  key_limit: 5,  price_inr: 1499, queue_priority: 'normal' },
+      ENTERPRISE: { daily_limit: -1, burst: '60/min', scan_limit: -1,  key_limit: 20, price_inr: 4999, queue_priority: 'high'   },
     },
     contact: CONTACT_EMAIL,
     pricing: 'https://tools.cyberdudebivash.com/#pricing',
@@ -851,6 +863,30 @@ export default {
     // POST /api/ai/forecast → exploitation likelihood + time-to-breach + financial impact
     if (path === '/api/ai/forecast' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V10.0 SUBSCRIPTION SaaS ENGINE — Plan management, billing, feature gating
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // GET /api/subscription/plans → public plan listing for pricing page
+    if (path === '/api/subscription/plans' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPlans(request, env), request));
+    }
+
+    // GET /api/user/plan → current plan + usage for authenticated/session user
+    if (path === '/api/user/plan' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetUserPlan(request, env), request));
+    }
+
+    // POST /api/subscription/create → create Razorpay order for a plan
+    if (path === '/api/subscription/create' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleCreateSubscription(request, env), request));
+    }
+
+    // POST /api/subscription/activate → verify payment + activate plan session
+    if (path === '/api/subscription/activate' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleActivateSubscription(request, env), request));
     }
 
     // Convenience aliases

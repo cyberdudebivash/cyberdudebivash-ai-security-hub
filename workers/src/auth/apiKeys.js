@@ -10,10 +10,26 @@ const KEY_BYTES  = 32; // 32 random bytes → 64 hex chars
 
 // ─── Tier defaults ────────────────────────────────────────────────────────────
 export const TIER_LIMITS = {
-  FREE:       { daily_limit: 5,     monthly_limit: 50,    burst_per_min: 2  },
-  PRO:        { daily_limit: 500,   monthly_limit: 10000, burst_per_min: 20 },
-  ENTERPRISE: { daily_limit: -1,    monthly_limit: -1,    burst_per_min: 60 },
+  FREE:       { daily_limit: 5,     monthly_limit: 50,    burst_per_min: 2,  price_inr: 0,    scan_limit: 50,    api_keys: 2,  ai_access: 'none'    },
+  STARTER:    { daily_limit: 20,    monthly_limit: 10,    burst_per_min: 5,  price_inr: 499,  scan_limit: 10,    api_keys: 2,  ai_access: 'limited' },
+  PRO:        { daily_limit: 500,   monthly_limit: 10000, burst_per_min: 20, price_inr: 1499, scan_limit: -1,    api_keys: 5,  ai_access: 'full'    },
+  ENTERPRISE: { daily_limit: -1,    monthly_limit: -1,    burst_per_min: 60, price_inr: 4999, scan_limit: -1,    api_keys: 20, ai_access: 'full'    },
 };
+
+// ─── Plan features matrix ─────────────────────────────────────────────────────
+export const PLAN_FEATURES = {
+  FREE:       { ai_analyze: false, ai_simulate: false, ai_forecast: false, api_access: false, multi_user: false, reports: false, priority_support: false },
+  STARTER:    { ai_analyze: true,  ai_simulate: false, ai_forecast: false, api_access: false, multi_user: false, reports: true,  priority_support: false },
+  PRO:        { ai_analyze: true,  ai_simulate: true,  ai_forecast: true,  api_access: true,  multi_user: false, reports: true,  priority_support: false },
+  ENTERPRISE: { ai_analyze: true,  ai_simulate: true,  ai_forecast: true,  api_access: true,  multi_user: true,  reports: true,  priority_support: true  },
+};
+
+// ─── Feature gate check ───────────────────────────────────────────────────────
+export function hasAccess(feature, plan) {
+  const tier = (plan || 'FREE').toUpperCase();
+  const features = PLAN_FEATURES[tier] || PLAN_FEATURES.FREE;
+  return features[feature] === true;
+}
 
 // ─── Generate a new API key ───────────────────────────────────────────────────
 export function generateRawApiKey() {
