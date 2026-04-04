@@ -38,7 +38,7 @@ import {
   handleReportDownload as handlePaidReportDownload,
   handleRazorpayWebhook,
 } from './handlers/payments.js';
-import { handleGetAnalytics, handleScanStats, trackEvent } from './handlers/analytics.js';
+import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handleApiUsage } from './handlers/analytics.js';
 
 // ─── New v8.0 handlers ────────────────────────────────────────────────────────
 import {
@@ -68,7 +68,12 @@ import { processQueueBatch }   from './lib/queue.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
-import { withSecurityHeaders, checkBodySize, inspectForAttacks, logSuspicious } from './middleware/security.js';
+import {
+  withSecurityHeaders, checkBodySize,
+  inspectForAttacks, inspectBodyForAttacks, sanitizeString,
+  logSuspicious, isIPAbusive, validateDomain, getBotScore,
+  validateSchema, SCHEMAS,
+} from './middleware/security.js';
 import { handlePaymentWebhook }                                        from './middleware/monetization.js';
 
 // ─── Sync scan route map (v4 backward compat) ─────────────────────────────────
@@ -88,6 +93,19 @@ async function runSyncPipeline(request, env, routeKey, route) {
   const sizeErr = checkBodySize(request, 32768);
   if (sizeErr) return sizeErr;
 
+  // Deep body inspection for injection attacks
+  let parsedBody = null;
+  if (request.headers.get('Content-Type')?.includes('application/json')) {
+    try {
+      const cloned = request.clone();
+      parsedBody   = await cloned.json();
+      if (inspectBodyForAttacks(parsedBody)) {
+        logSuspicious(env, request, 'body_attack').catch(() => {});
+        return Response.json({ error: 'Invalid request payload' }, { status: 400 });
+      }
+    } catch {}
+  }
+
   const authCtx  = await resolveAuthV5(request, env);
   if (!authCtx.authenticated) return unauthorized(authCtx.error || 'invalid');
 
@@ -100,7 +118,22 @@ async function runSyncPipeline(request, env, routeKey, route) {
     if (!rl.allowed) return rateLimitResponse(rl, route.module);
   }
 
-  const response = await route.handler(request, env, authCtx);
+  const startTime = Date.now();
+  const response  = await route.handler(request, env, authCtx);
+  const latency   = Date.now() - startTime;
+
+  // Fire-and-forget API metering (non-blocking)
+  meterApiRequest(env, {
+    api_key_id: authCtx.method === 'api_key' ? authCtx.keyId : null,
+    user_id:    authCtx.userId || null,
+    endpoint:   routeKey,
+    method:     request.method,
+    status_code: response.status,
+    latency_ms:  latency,
+    ip:         request.headers.get('CF-Connecting-IP') || null,
+    ua:         request.headers.get('User-Agent') || null,
+  }).catch(() => {});
+
   return injectRateLimitHeaders(response, { tier: authCtx.tier, remaining: '?' });
 }
 
@@ -134,7 +167,7 @@ function healthResponse() {
 function apiInfoResponse() {
   return Response.json({
     name:    'CYBERDUDEBIVASH AI Security Hub API',
-    version: '5.0.0',
+    version: '8.0.0',
     auth_methods: {
       jwt:     'Authorization: Bearer <access_token>  (from /api/auth/login)',
       api_key: 'x-api-key: cdb_<key>  (from /api/keys)',
@@ -174,6 +207,33 @@ function apiInfoResponse() {
       // Intelligence
       'GET  /api/sentinel/feed':     'Live CVE + KEV threat feed',
       'GET  /api/sentinel/status':   'Feed metadata + last refresh',
+      // V8.0 — AI Brain + Attack Graph
+      'GET  /api/insights/:jobId':   'AI narrative + MITRE mapping for a completed scan',
+      'POST /api/attack-graph':      'D3-ready force-directed attack graph from scan data',
+      'GET  /api/threat-intel/stats':'CVE/KEV/EPSS threat intel statistics',
+      // V8.0 — Continuous Monitoring
+      'GET  /api/monitors':          'List your scan monitors',
+      'POST /api/monitors':          'Create a scheduled scan monitor',
+      'GET  /api/monitors/:id':      'Get monitor details',
+      'PUT  /api/monitors/:id':      'Update monitor config',
+      'DELETE /api/monitors/:id':    'Delete a monitor',
+      'POST /api/monitors/:id/trigger': 'Manually trigger a monitor scan',
+      'GET  /api/monitors/:id/history': 'Monitor scan history',
+      // V8.0 — Content Engine
+      'POST /api/content/generate':  'Generate blog/linkedin/telegram post from scan',
+      'GET  /api/content':           'List generated content posts',
+      'GET  /api/content/feed':      'Public content feed (no auth)',
+      // V8.0 — Organizations
+      'GET  /api/orgs':              'List your organizations',
+      'POST /api/orgs':              'Create organization',
+      'GET  /api/orgs/:id':          'Get org details + members',
+      'PUT  /api/orgs/:id':          'Update org settings',
+      'GET  /api/orgs/:id/dashboard':'Org security posture dashboard',
+      // V8.0 — Version
+      'GET  /api/version':           'Live platform version + build metadata',
+      // Admin
+      'GET  /api/admin/analytics':   'Platform analytics (ENTERPRISE only)',
+      'GET  /api/admin/api-usage':   'API metering + latency stats (ENTERPRISE only)',
       // Other
       'GET  /api/health':            'Service health',
       'POST /api/webhooks/razorpay': 'Razorpay payment webhook',
@@ -206,9 +266,42 @@ export default {
       return withSecurityHeaders(withCors(Response.json({ error: 'Bad request' }, { status: 400 }), request));
     }
 
+    // Block banned IPs (Zero Trust — all requests checked)
+    const clientIP = request.headers.get('CF-Connecting-IP') || '';
+    if (clientIP && await isIPAbusive(env, clientIP)) {
+      return withSecurityHeaders(withCors(
+        Response.json({ error: 'Access denied', code: 'IP_BANNED' }, { status: 403 }), request
+      ));
+    }
+
+    // Reject extreme bot signals on write endpoints (allow reads)
+    if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+      const botScore = getBotScore(request);
+      if (botScore >= 60) {
+        logSuspicious(env, request, `bot_score_${botScore}`).catch(() => {});
+        // Warn but don't hard-block — some legitimate automated API clients exist
+        // If score is extreme (>=80) AND no auth header, reject
+        const hasAuth = request.headers.get('Authorization') || request.headers.get('x-api-key');
+        if (botScore >= 80 && !hasAuth) {
+          return withSecurityHeaders(withCors(
+            Response.json({ error: 'Automated request detected', hint: 'Add Authorization header' }, { status: 403 }), request
+          ));
+        }
+      }
+    }
+
     // ── Static / no-auth routes ─────────────────────────────────────────────
     if (path === '/api/health' && method === 'GET') {
       return withSecurityHeaders(withCors(healthResponse(), request));
+    }
+    if (path === '/api/version' && method === 'GET') {
+      return withSecurityHeaders(withCors(Response.json({
+        version:     '8.0.0',
+        commit:      (env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id) || 'unknown',
+        timestamp:   new Date().toISOString(),
+        environment: env.ENVIRONMENT || 'production',
+        name:        env.APP_NAME    || 'CYBERDUDEBIVASH AI Security Hub',
+      }), request));
     }
     if ((path === '/api' || path === '') && method === 'GET') {
       return withSecurityHeaders(withCors(apiInfoResponse(), request));
@@ -338,6 +431,10 @@ export default {
     if (path === '/api/admin/analytics/scans' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleScanStats(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/api-usage' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleApiUsage(request, env, authCtx), request));
     }
 
     // ── Razorpay webhook (V7 replaces monetization middleware stub) ──────────

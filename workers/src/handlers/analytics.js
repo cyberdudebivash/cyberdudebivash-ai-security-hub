@@ -161,3 +161,108 @@ export async function handleScanStats(request, env, authCtx = {}) {
     total_pages: Math.ceil((countRow?.count ?? 0) / limit),
   });
 }
+
+// ─── API Request Metering (fire-and-forget) ──────────────────────────────────
+// Writes to api_requests table for usage tracking, billing, and audit logs.
+// Call with ctx.waitUntil() so it never slows down the main response.
+export async function meterApiRequest(env, {
+  api_key_id = null,
+  user_id    = null,
+  endpoint,
+  method,
+  status_code = null,
+  latency_ms  = null,
+  ip          = null,
+  ua          = null,
+} = {}) {
+  if (!env?.DB || !endpoint) return;
+  try {
+    const id = crypto.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2);
+    await env.DB.prepare(
+      `INSERT INTO api_requests
+         (id, api_key_id, user_id, endpoint, method, status_code, latency_ms, ip, ua, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      id,
+      api_key_id || null,
+      user_id    || null,
+      endpoint.slice(0, 200),
+      method     || 'GET',
+      status_code || null,
+      latency_ms  || null,
+      ip ? ip.slice(0, 45) : null,
+      ua ? ua.slice(0, 300) : null,
+    ).run();
+  } catch (e) {
+    console.warn('[Metering] meterApiRequest failed:', e?.message);
+  }
+}
+
+// ─── GET /api/admin/api-usage ────────────────────────────────────────────────
+// Returns API usage breakdown by endpoint, user, and key for the last N days.
+export async function handleApiUsage(request, env, authCtx = {}) {
+  if (authCtx.tier !== 'ENTERPRISE' && authCtx.identity !== 'system') {
+    return Response.json({ error: 'Admin access required' }, { status: 403 });
+  }
+  if (!env.DB) return Response.json({ error: 'Database not available' }, { status: 503 });
+
+  const url  = new URL(request.url);
+  const days = Math.min(parseInt(url.searchParams.get('days') || '7', 10), 90);
+
+  try {
+    const [topEndpoints, topUsers, topKeys, errorRate, latencyAvg] = await Promise.all([
+      env.DB.prepare(
+        `SELECT endpoint, method, COUNT(*) as requests,
+                AVG(latency_ms) as avg_latency_ms,
+                SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as errors
+         FROM api_requests
+         WHERE created_at > datetime('now', '-' || ? || ' days')
+         GROUP BY endpoint, method ORDER BY requests DESC LIMIT 20`
+      ).bind(days).all(),
+
+      env.DB.prepare(
+        `SELECT user_id, COUNT(*) as requests,
+                COUNT(DISTINCT endpoint) as unique_endpoints
+         FROM api_requests
+         WHERE user_id IS NOT NULL
+         AND created_at > datetime('now', '-' || ? || ' days')
+         GROUP BY user_id ORDER BY requests DESC LIMIT 20`
+      ).bind(days).all(),
+
+      env.DB.prepare(
+        `SELECT api_key_id, COUNT(*) as requests,
+                AVG(latency_ms) as avg_latency_ms
+         FROM api_requests
+         WHERE api_key_id IS NOT NULL
+         AND created_at > datetime('now', '-' || ? || ' days')
+         GROUP BY api_key_id ORDER BY requests DESC LIMIT 20`
+      ).bind(days).all(),
+
+      env.DB.prepare(
+        `SELECT
+           COUNT(*) as total,
+           SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as errors,
+           ROUND(100.0 * SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) / COUNT(*), 2) as error_rate_pct
+         FROM api_requests
+         WHERE created_at > datetime('now', '-' || ? || ' days')`
+      ).bind(days).first(),
+
+      env.DB.prepare(
+        `SELECT AVG(latency_ms) as avg_ms, MAX(latency_ms) as max_ms, MIN(latency_ms) as min_ms
+         FROM api_requests
+         WHERE latency_ms IS NOT NULL
+         AND created_at > datetime('now', '-' || ? || ' days')`
+      ).bind(days).first(),
+    ]);
+
+    return Response.json({
+      period_days:    days,
+      summary:        { ...errorRate, ...latencyAvg },
+      top_endpoints:  topEndpoints?.results  ?? [],
+      top_users:      topUsers?.results      ?? [],
+      top_api_keys:   topKeys?.results       ?? [],
+    });
+  } catch (e) {
+    return Response.json({ error: 'Query failed', detail: e?.message }, { status: 500 });
+  }
+}

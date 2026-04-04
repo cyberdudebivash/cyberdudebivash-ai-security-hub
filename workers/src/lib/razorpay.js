@@ -1,8 +1,11 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Razorpay Integration v1.0
+ * CYBERDUDEBIVASH AI Security Hub — Razorpay Integration v8.0
  * Handles order creation and payment signature verification
  * Uses only Cloudflare Workers Web Crypto API — no SDK required
+ * Circuit breaker + retry via resilience.js
  */
+
+import { resilientFetch } from './resilience.js';
 
 // ─── Module pricing (amount in paise = INR × 100) ────────────────────────────
 export const MODULE_PRICES = {
@@ -19,11 +22,11 @@ export async function createRazorpayOrder(env, { amount, currency = 'INR', recei
     throw new Error('Razorpay credentials not configured — set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET secrets');
   }
   const auth = btoa(`${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`);
-  const resp = await fetch('https://api.razorpay.com/v1/orders', {
+  const resp = await resilientFetch('razorpay', env, 'https://api.razorpay.com/v1/orders', {
     method:  'POST',
     headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify({ amount, currency, receipt, notes }),
-  });
+  }, 10000);
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
     throw new Error(err?.error?.description || `Razorpay API error ${resp.status}`);

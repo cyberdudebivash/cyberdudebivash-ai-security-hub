@@ -370,13 +370,57 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
 
 /* ── Animations ──────────────────────────────────── */
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.4)}70%{box-shadow:0 0 0 8px rgba(0,212,255,0)}}
 .loading-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1s ease infinite}
 .loading-dots{display:flex;gap:4px;align-items:center}
 .loading-dots .loading-dot:nth-child(2){animation-delay:.2s}
 .loading-dots .loading-dot:nth-child(3){animation-delay:.4s}
 .scan-state-msg{font-size:13px;color:var(--text-muted);margin-left:8px}
 .fade-in{animation:fadeIn .4s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.slide-in{animation:slideInRight .35s ease}
+
+/* ── Skeleton Loaders ─────────────────────────────── */
+.skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 75%);background-size:400px 100%;animation:shimmer 1.4s ease infinite;border-radius:6px}
+.skeleton-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px}
+.skeleton-title{height:20px;width:55%;margin-bottom:14px}
+.skeleton-line{height:13px;margin-bottom:10px}
+.skeleton-line.w-full{width:100%}
+.skeleton-line.w-3q{width:75%}
+.skeleton-line.w-half{width:50%}
+.skeleton-badge{height:24px;width:80px;border-radius:20px;display:inline-block}
+.skeleton-score{height:56px;width:56px;border-radius:50%;margin-right:16px}
+.skeleton-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+
+/* ── SOC Status Bar ───────────────────────────────── */
+.soc-statusbar{background:rgba(0,0,0,.4);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;align-items:center;gap:16px;font-size:11px;font-weight:600;letter-spacing:.5px;overflow-x:auto;white-space:nowrap}
+.soc-indicator{display:flex;align-items:center;gap:5px;color:var(--text-dim)}
+.soc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.soc-dot.green{background:#10b981;box-shadow:0 0 4px #10b981}
+.soc-dot.yellow{background:#f59e0b;box-shadow:0 0 4px #f59e0b}
+.soc-dot.red{background:#ef4444;box-shadow:0 0 4px #ef4444;animation:pulse 1.5s infinite}
+.soc-sep{color:var(--border);padding:0 4px}
+
+/* ── Scan Progress Steps ──────────────────────────── */
+.scan-steps{display:none;flex-direction:column;gap:6px;margin-top:12px;padding:12px 16px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:8px}
+.scan-steps.active{display:flex}
+.scan-step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);transition:color .3s}
+.scan-step.done{color:var(--accent3)}
+.scan-step.active-step{color:var(--accent);font-weight:600}
+.scan-step-icon{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;background:rgba(255,255,255,.08)}
+.scan-step.done .scan-step-icon{background:var(--accent3);color:#fff}
+.scan-step.active-step .scan-step-icon{background:var(--accent);color:#fff;animation:scanPulse 1.5s infinite}
+
+/* ── Error State Card ─────────────────────────────── */
+.error-state-card{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:16px 20px;display:flex;align-items:flex-start;gap:12px}
+.error-state-icon{font-size:20px;flex-shrink:0;margin-top:2px}
+.error-state-body{flex:1}
+.error-state-title{font-weight:700;color:#f87171;font-size:14px;margin-bottom:4px}
+.error-state-msg{font-size:13px;color:var(--text-dim);line-height:1.5}
+.btn-retry{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:12px;font-weight:700;color:#f87171;cursor:pointer;transition:all .2s}
+.btn-retry:hover{background:rgba(239,68,68,.25);border-color:#ef4444}
 
 /* ══════════════════════════════════════════════════════
    ENTERPRISE UPGRADE v4.0 — Glassmorphism + Neon System
@@ -581,10 +625,37 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
 
 <!-- Announcement Bar -->
 <div class="ann-bar">
-  ⚡ CYBERDUDEBIVASH AI Security Hub v5.0 — Async Scan Engine · JWT Auth · D1 Scan History · Sentinel APEX · Enterprise-Grade |
+  ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge">v8.0</span> — AI Cyber Brain · Continuous Monitoring · Threat Correlation · Enterprise Multi-Tenant |
   <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">📡 Join Threat Intel</a> ·
   <a href="https://tools.cyberdudebivash.com" target="_blank">🛠️ Tools Suite</a> ·
   <a href="#enterprise">Enterprise</a>
+</div>
+
+<!-- SOC Status Bar -->
+<div class="soc-statusbar" id="socStatusBar">
+  <div class="soc-indicator">
+    <span class="soc-dot green" id="soc-api-dot"></span>
+    <span id="soc-api-label">API</span>
+  </div>
+  <span class="soc-sep">|</span>
+  <div class="soc-indicator">
+    <span class="soc-dot green" id="soc-sentinel-dot"></span>
+    <span>Sentinel APEX</span>
+  </div>
+  <span class="soc-sep">|</span>
+  <div class="soc-indicator">
+    <span class="soc-dot green" id="soc-kev-dot"></span>
+    <span>KEV Feed</span>
+  </div>
+  <span class="soc-sep">|</span>
+  <div class="soc-indicator" title="Live version from /api/version">
+    <span style="color:var(--accent)">⬡</span>
+    <span id="soc-version">v8.0</span>
+  </div>
+  <span class="soc-sep" style="margin-left:auto">|</span>
+  <div class="soc-indicator">
+    <span id="soc-time" style="color:var(--text-muted);font-family:monospace;font-size:10px"></span>
+  </div>
 </div>
 
 <!-- Nav -->
@@ -898,6 +969,7 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
           <span class="scan-state-msg" id="msg-domain">Scanning TLS, DNS, headers...</span>
         </div>
       </div>
+      <div class="scan-steps" id="scan-steps-domain"></div>
       <div class="progress-bar" id="progress-domain"><div class="progress-fill"></div></div>
     </div>
     <div class="results-panel" id="results-domain"></div>
@@ -935,6 +1007,7 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
           <span class="scan-state-msg" id="msg-ai">Checking OWASP LLM Top 10...</span>
         </div>
       </div>
+      <div class="scan-steps" id="scan-steps-ai"></div>
       <div class="progress-bar" id="progress-ai"><div class="progress-fill"></div></div>
     </div>
     <div class="results-panel" id="results-ai"></div>
@@ -970,6 +1043,7 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
           <span class="scan-state-msg" id="msg-redteam">Running MITRE ATT&CK scenarios...</span>
         </div>
       </div>
+      <div class="scan-steps" id="scan-steps-redteam"></div>
       <div class="progress-bar" id="progress-redteam"><div class="progress-fill"></div></div>
     </div>
     <div class="results-panel" id="results-redteam"></div>
@@ -1008,6 +1082,7 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
           <span class="scan-state-msg" id="msg-identity">Assessing Zero Trust posture...</span>
         </div>
       </div>
+      <div class="scan-steps" id="scan-steps-identity"></div>
       <div class="progress-bar" id="progress-identity"><div class="progress-fill"></div></div>
     </div>
     <div class="results-panel" id="results-identity"></div>
@@ -1043,6 +1118,7 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
           <span class="scan-state-msg" id="msg-compliance">Analyzing compliance gaps...</span>
         </div>
       </div>
+      <div class="scan-steps" id="scan-steps-compliance"></div>
       <div class="progress-bar" id="progress-compliance"><div class="progress-fill"></div></div>
     </div>
     <div class="results-panel" id="results-compliance"></div>
@@ -1417,7 +1493,10 @@ footer{background:var(--surface2);border-top:1px solid var(--border);padding:48p
     </div>
     <div class="footer-bottom">
       <div class="footer-copy">© 2026 CyberDudeBivash Pvt. Ltd. All rights reserved. | Hyderabad, India</div>
-      <div class="footer-copy">📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001</div>
+      <div class="footer-copy">
+        Platform <span id="platform-version-footer" title="Live version fetched from API">v8.0</span> ·
+        📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001
+      </div>
     </div>
   </div>
 </footer>
@@ -1447,8 +1526,31 @@ const CONFIG = {
   TELEGRAM_URL:  'https://t.me/cyberdudebivashSentinelApex',
   CONTACT_EMAIL: 'bivash@cyberdudebivash.com',
   PLATFORM_NAME: 'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:       '8.0.0',
+  VERSION:       'loading…',  // dynamically replaced by initVersion() on load — never hardcode
 };
+
+// ─── Dynamic Version Fetch ───────────────────────────────────────────────────
+// Fetches live version from /api/version so the UI always reflects the
+// deployed backend version without any hardcoded strings.
+async function initVersion() {
+  try {
+    const res  = await fetch(`${CONFIG.API_BASE}/api/version`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    CONFIG.VERSION = data.version || CONFIG.VERSION;
+    // Update all version display elements
+    const badge   = document.getElementById('platform-version-badge');
+    const footer  = document.getElementById('platform-version-footer');
+    const socVer  = document.getElementById('soc-version');
+    if (badge)  badge.textContent  = `v${CONFIG.VERSION}`;
+    if (footer) footer.textContent = `v${CONFIG.VERSION}`;
+    if (socVer) socVer.textContent = `v${CONFIG.VERSION}`;
+    console.info(`[CYBERDUDEBIVASH] Platform version: ${CONFIG.VERSION} | env: ${data.environment}`);
+  } catch (err) {
+    CONFIG.VERSION = '8.0.0';  // fallback if network unavailable
+    console.warn('[CYBERDUDEBIVASH] Version fetch failed, using fallback:', err.message);
+  }
+}
 // Convenience aliases (all existing references continue to work)
 const API_BASE     = CONFIG.API_BASE;
 const TOOLS_URL    = CONFIG.TOOLS_URL;
@@ -1562,12 +1664,19 @@ async function executeScan(module, payload) {
 
     if (!resp.ok) {
       const msg = data?.message || data?.error || `HTTP ${resp.status}`;
-      if (resp.status === 429) {
-        showAlert(module, `Rate limit: ${msg}. <a href="#pricing">Upgrade your plan</a> for more scans.`, 'error');
-      } else {
-        showAlert(module, msg, 'error');
-      }
       setLoading(module, false);
+      if (resp.status === 429) {
+        showErrorState(module,
+          `Rate limit reached: ${msg}. <a href="#pricing" style="color:var(--accent)">Upgrade your plan</a> for more scans per day.`,
+          () => runScan(module)
+        );
+      } else if (resp.status === 403) {
+        showErrorState(module, `Access denied: ${msg}. Please <a href="#" onclick="showModal('loginModal')" style="color:var(--accent)">log in</a> to continue.`);
+      } else if (resp.status >= 500) {
+        showErrorState(module, `Server error (${resp.status}): ${msg}. Our team has been notified.`, () => runScan(module));
+      } else {
+        showErrorState(module, msg, () => runScan(module));
+      }
       return;
     }
 
@@ -1656,12 +1765,22 @@ function setLoading(module, on, msg = '') {
   const dots     = document.getElementById(`loading-${module}`);
   const msgEl    = document.getElementById(`msg-${module}`);
   const progress = document.getElementById(`progress-${module}`);
+  const panel    = document.getElementById(`results-${module}`);
+
   if (btn)  btn.disabled = on;
   if (dots) dots.style.display = on ? 'flex' : 'none';
   if (msgEl && msg) msgEl.textContent = msg;
   if (progress) {
     progress.style.display = on ? 'block' : 'none';
     if (on) { const fill = progress.querySelector('.progress-fill'); if (fill) { fill.style.width='0'; void fill.offsetWidth; fill.style.width='90%'; } }
+  }
+
+  if (on) {
+    // Show skeleton loader in results panel while scanning
+    if (panel) panel.innerHTML = buildSkeletonCard();
+    startScanSteps(module);
+  } else {
+    stopScanSteps(module);
   }
 }
 
@@ -3076,7 +3195,126 @@ function mdToHtml(md) {
     .replace(/\n/g, '<br>');
 }
 
+// ─── SOC Status Bar ───────────────────────────────────────────────────────────
+function updateSOCClock() {
+  const el = document.getElementById('soc-time');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+setInterval(updateSOCClock, 1000);
+updateSOCClock();
+
+async function checkAPIHealth() {
+  const apiDot   = document.getElementById('soc-api-dot');
+  const apiLabel = document.getElementById('soc-api-label');
+  const verEl    = document.getElementById('soc-version');
+  try {
+    const res = await fetch(`${CONFIG.API_BASE}/api/health`, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+    const ok  = res.ok;
+    if (apiDot)   { apiDot.className = `soc-dot ${ok ? 'green' : 'red'}`; }
+    if (apiLabel) { apiLabel.textContent = ok ? 'API ✓' : 'API ✗'; }
+    if (ok && verEl) {
+      const d = await res.json().catch(() => null);
+      if (d?.version && verEl) verEl.textContent = `v${d.version}`;
+    }
+  } catch {
+    if (apiDot)   apiDot.className = 'soc-dot red';
+    if (apiLabel) apiLabel.textContent = 'API offline';
+  }
+}
+checkAPIHealth();
+setInterval(checkAPIHealth, 60000); // re-check every minute
+
+// ─── Skeleton Loader HTML Builder ─────────────────────────────────────────────
+function buildSkeletonCard() {
+  return `
+  <div class="skeleton-card fade-in">
+    <div class="skeleton-row">
+      <div class="skeleton skeleton-score"></div>
+      <div style="flex:1">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-line w-half"></div>
+      </div>
+    </div>
+    <div class="skeleton skeleton-line w-full"></div>
+    <div class="skeleton skeleton-line w-3q"></div>
+    <div class="skeleton skeleton-line w-full"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-badge"></div>
+    </div>
+  </div>`;
+}
+
+// ─── Enhanced Error Display ────────────────────────────────────────────────────
+function showErrorState(module, message, retryFn = null) {
+  const panel = document.getElementById(`results-${module}`);
+  if (!panel) return;
+  const retryBtn = retryFn
+    ? `<button class="btn-retry" onclick="(${retryFn.toString()})()">↻ Retry</button>`
+    : '';
+  panel.innerHTML = `
+  <div class="error-state-card fade-in">
+    <div class="error-state-icon">⚠️</div>
+    <div class="error-state-body">
+      <div class="error-state-title">Scan Error</div>
+      <div class="error-state-msg">${message}</div>
+      ${retryBtn}
+    </div>
+  </div>`;
+}
+
+// ─── Scan Step Tracker ────────────────────────────────────────────────────────
+const SCAN_STEPS = {
+  domain:     ['DNS Resolution', 'TLS/Certificate Check', 'DNSSEC Validation', 'Header Scan', 'DNSBL Lookup', 'Risk Analysis'],
+  ai:         ['Model Identification', 'OWASP LLM Top 10 Check', 'Prompt Injection Test', 'Supply Chain Analysis', 'Risk Scoring'],
+  redteam:    ['Reconnaissance', 'Initial Access Vectors', 'Lateral Movement', 'Privilege Escalation', 'Exfiltration Paths', 'MITRE Mapping'],
+  identity:   ['MFA Assessment', 'SSO Configuration', 'Privileged Access Review', 'Zero Trust Posture', 'Identity Risk Score'],
+  compliance: ['Framework Mapping', 'Control Gap Analysis', 'Policy Review', 'Risk Register', 'Remediation Plan'],
+};
+
+let _scanStepInterval = null;
+
+function startScanSteps(module) {
+  const stepsContainer = document.getElementById(`scan-steps-${module}`);
+  if (!stepsContainer) return;
+  const steps = SCAN_STEPS[module] || [];
+  stepsContainer.innerHTML = steps.map((s, i) =>
+    `<div class="scan-step" id="scan-step-${module}-${i}">
+      <div class="scan-step-icon">${i + 1}</div>
+      <span>${s}</span>
+    </div>`
+  ).join('');
+  stepsContainer.classList.add('active');
+
+  let current = 0;
+  const totalTime  = 4000; // total animation ~4s
+  const stepDelay  = totalTime / steps.length;
+
+  _scanStepInterval = setInterval(() => {
+    if (current > 0) {
+      const prev = document.getElementById(`scan-step-${module}-${current - 1}`);
+      if (prev) { prev.classList.remove('active-step'); prev.classList.add('done'); prev.querySelector('.scan-step-icon').textContent = '✓'; }
+    }
+    const cur = document.getElementById(`scan-step-${module}-${current}`);
+    if (cur) cur.classList.add('active-step');
+    current++;
+    if (current >= steps.length) clearInterval(_scanStepInterval);
+  }, stepDelay);
+}
+
+function stopScanSteps(module) {
+  if (_scanStepInterval) { clearInterval(_scanStepInterval); _scanStepInterval = null; }
+  const stepsContainer = document.getElementById(`scan-steps-${module}`);
+  if (stepsContainer) stepsContainer.classList.remove('active');
+}
+
 // ─── Init V8.0 on page load ───────────────────────────────────────────────────
+// Fetch live version immediately — must be the first init call
+initVersion();
+
 setTimeout(() => {
   // Load monitoring dashboard if authenticated
   if (typeof renderMonitoringDashboard === 'function') {

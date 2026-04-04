@@ -1,28 +1,26 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Alert Engine v5.0
+ * CYBERDUDEBIVASH AI Security Hub — Alert Engine v8.0
  * Real-time security alerts via Telegram Bot + Email
- * Async, retry-safe, user-configurable per-account settings
+ * Async, retry-safe with circuit breaker, user-configurable per-account settings
  *
  * Channels: Telegram Bot API | Cloudflare Email Workers (SMTP relay)
  * Triggers: high_risk_scan | blacklist_detected | critical_cve
  */
 
+import { resilientFetch } from './resilience.js';
+
 const CONTACT_EMAIL     = 'bivash@cyberdudebivash.com';
 const PLATFORM_URL      = 'https://tools.cyberdudebivash.com';
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
-const ALERT_TIMEOUT     = 6000; // 6s per alert delivery
+const ALERT_TIMEOUT     = 8000; // 8s per alert delivery
 
-// ─── Safe fetch for external alert APIs ──────────────────────────────────────
-async function safeFetch(url, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ALERT_TIMEOUT);
+// ─── Safe fetch for external alert APIs (resilience-backed) ──────────────────
+async function safeFetch(env, url, options = {}) {
   try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(timer);
+    const res = await resilientFetch('telegram', env, url, options, ALERT_TIMEOUT);
     return { ok: res.ok, status: res.status };
-  } catch {
-    clearTimeout(timer);
-    return { ok: false, status: 0, error: 'timeout_or_network' };
+  } catch (err) {
+    return { ok: false, status: 0, error: err.message || 'timeout_or_network' };
   }
 }
 
@@ -76,7 +74,7 @@ function buildTelegramMessage(scanResult, triggerType, extra = {}) {
 }
 
 // ─── Send Telegram message ────────────────────────────────────────────────────
-async function sendTelegramAlert(botToken, chatId, text) {
+async function sendTelegramAlert(env, botToken, chatId, text) {
   const url  = `${TELEGRAM_API_BASE}${botToken}/sendMessage`;
   const body = JSON.stringify({
     chat_id:    chatId,
@@ -85,20 +83,14 @@ async function sendTelegramAlert(botToken, chatId, text) {
     disable_web_page_preview: true,
   });
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await safeFetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    });
-    if (res.ok) return { success: true, channel: 'telegram', attempt };
-    if (res.status === 429) {
-      await new Promise(r => setTimeout(r, attempt * 1000)); // backoff
-      continue;
-    }
-    return { success: false, channel: 'telegram', status: res.status, attempt };
-  }
-  return { success: false, channel: 'telegram', error: 'max_retries' };
+  // resilientFetch handles retry + circuit breaker internally
+  const res = await safeFetch(env, url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  if (res.ok) return { success: true, channel: 'telegram' };
+  return { success: false, channel: 'telegram', status: res.status, error: res.error };
 }
 
 // ─── Send Email via Cloudflare Email Workers ──────────────────────────────────
@@ -208,7 +200,7 @@ export async function triggerAlerts(env, scanResult, authCtx = {}) {
     // Telegram
     if (config.telegram_enabled && config.telegram_chat_id && env?.TELEGRAM_BOT_TOKEN) {
       const msg    = buildTelegramMessage(scanResult, triggerType);
-      const result = await sendTelegramAlert(env.TELEGRAM_BOT_TOKEN, config.telegram_chat_id, msg);
+      const result = await sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, config.telegram_chat_id, msg);
       deliveries.push(result);
       await logAlert(env, userId, 'telegram', triggerType, scanResult.target, result.success ? 'sent' : 'failed', msg.slice(0, 100));
     }
@@ -229,7 +221,7 @@ export async function triggerAlerts(env, scanResult, authCtx = {}) {
 // ─── Platform-level admin alert (uses Worker-level bot token + chat) ──────────
 export async function sendAdminAlert(env, message) {
   if (!env?.TELEGRAM_BOT_TOKEN || !env?.ADMIN_TELEGRAM_CHAT_ID) return;
-  return sendTelegramAlert(env.TELEGRAM_BOT_TOKEN, env.ADMIN_TELEGRAM_CHAT_ID, message);
+  return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.ADMIN_TELEGRAM_CHAT_ID, message);
 }
 
 // ─── CVE alert broadcast (Sentinel APEX integration) ─────────────────────────
@@ -253,7 +245,7 @@ export async function broadcastCVEAlert(env, cve) {
     `[Join Sentinel APEX](https://t.me/cyberdudebivashSentinelApex)`,
   ].join('\n');
 
-  return sendTelegramAlert(env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
+  return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
 }
 
 // ─── Test alert (for user to verify their config) ────────────────────────────
@@ -278,7 +270,7 @@ export async function sendTestAlert(env, userId) {
 
   if (config.telegram_enabled && config.telegram_chat_id && env?.TELEGRAM_BOT_TOKEN) {
     const msg = buildTelegramMessage(testMsg, 'high_risk_scan') + '\n\n✅ *Test alert — your Telegram is configured correctly!*';
-    const r   = await sendTelegramAlert(env.TELEGRAM_BOT_TOKEN, config.telegram_chat_id, msg);
+    const r   = await sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, config.telegram_chat_id, msg);
     results.push({ channel: 'telegram', ...r });
   }
 
