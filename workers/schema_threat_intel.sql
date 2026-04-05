@@ -89,6 +89,72 @@ CREATE INDEX IF NOT EXISTS idx_correlation_cve        ON cve_correlations(cve_id
 CREATE INDEX IF NOT EXISTS idx_hunting_severity       ON hunting_alerts(severity);
 CREATE INDEX IF NOT EXISTS idx_hunting_resolved       ON hunting_alerts(resolved);
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SOC Automation Tables (Sentinel APEX v3)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- SOC Detection Alerts — output from detectionEngine.js
+CREATE TABLE IF NOT EXISTS soc_alerts (
+  id              TEXT PRIMARY KEY,
+  alert_type      TEXT NOT NULL,
+  severity        TEXT NOT NULL,
+  cve_id          TEXT,
+  title           TEXT,
+  asset           TEXT,
+  recommendation  TEXT,
+  evidence        TEXT DEFAULT '{}',   -- JSON
+  resolved        INTEGER DEFAULT 0,
+  created_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- AI Decision Engine Results — output from decisionEngine.js
+CREATE TABLE IF NOT EXISTS soc_decisions (
+  id              TEXT PRIMARY KEY,
+  cve_id          TEXT NOT NULL,
+  decision        TEXT NOT NULL,   -- escalate | auto_contain | fast_patch | monitor_closely | low_priority
+  priority        TEXT NOT NULL,   -- P1-CRITICAL | P2-HIGH | P3-MEDIUM | P4-LOW
+  confidence      INTEGER DEFAULT 0,
+  risk_score      INTEGER DEFAULT 0,
+  reason          TEXT,
+  factors         TEXT DEFAULT '{}',   -- JSON
+  created_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- SOC Response Actions — output from responseEngine.js
+CREATE TABLE IF NOT EXISTS soc_response_actions (
+  id              TEXT PRIMARY KEY,
+  action          TEXT NOT NULL,    -- block_ip | patch_advisory | waf_rule | ...
+  priority        TEXT NOT NULL,    -- immediate | high | medium | low
+  alert_id        TEXT,
+  cve_id          TEXT,
+  status          TEXT DEFAULT 'recommended',
+  payload         TEXT DEFAULT '{}',    -- JSON
+  created_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- Autonomous Defense Actions — output from defenseEngine.js
+CREATE TABLE IF NOT EXISTS soc_defense_actions (
+  id              TEXT PRIMARY KEY,
+  rule_id         TEXT,
+  defense_action  TEXT NOT NULL,    -- auto_block | waf_deploy | isolate_segment | ...
+  target          TEXT,
+  target_type     TEXT,
+  duration        TEXT,
+  status          TEXT DEFAULT 'triggered',
+  payload         TEXT DEFAULT '{}',   -- JSON
+  created_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- SOC indexes
+CREATE INDEX IF NOT EXISTS idx_soc_alerts_severity    ON soc_alerts(severity);
+CREATE INDEX IF NOT EXISTS idx_soc_alerts_type        ON soc_alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_soc_alerts_created     ON soc_alerts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_soc_decisions_priority ON soc_decisions(priority);
+CREATE INDEX IF NOT EXISTS idx_soc_decisions_created  ON soc_decisions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_soc_response_priority  ON soc_response_actions(priority);
+CREATE INDEX IF NOT EXISTS idx_soc_defense_action     ON soc_defense_actions(defense_action);
+CREATE INDEX IF NOT EXISTS idx_soc_defense_created    ON soc_defense_actions(created_at DESC);
+
 -- Migration: add new columns to existing threat_intel table (safe — ignored if already exist)
 -- Run these if upgrading from schema v1.0:
 -- ALTER TABLE threat_intel ADD COLUMN epss_score REAL;

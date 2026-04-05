@@ -53,7 +53,19 @@ import {
   handleThreatIntelStream,
   handleV1Correlations, handleV1Graph, handleV1Hunting,
 } from './handlers/threatIntel.js';
-import { runIngestion } from './services/threatIngestion.js';
+import { runIngestion }  from './services/threatIngestion.js';
+
+// ─── Sentinel APEX v3 — SOC Automation + Autonomous Defense ──────────────────
+import {
+  handleGetAlerts, handleGetDecisions, handleGetDefenseActions,
+  handleGetFederation, handleSOCAnalyze, handleGetSOCPosture,
+  handleSOCDashboard,
+} from './handlers/soc.js';
+import { runFederation }            from './services/federationEngine.js';
+import { runDetection, storeDetectionResults } from './services/detectionEngine.js';
+import { runDecisionEngine, storeDecisions }   from './services/decisionEngine.js';
+import { runAutonomousDefense, storeDefenseActions } from './services/defenseEngine.js';
+import { buildResponsePlan, storeResponsePlan }      from './services/responseEngine.js';
 
 // ─── Subscription SaaS Engine (v10.0) ────────────────────────────────────────
 import {
@@ -760,6 +772,12 @@ export default {
       return await handleThreatIntelStream(request, env, authCtx);
     }
 
+    // GET /api/soc/dashboard — Full SOC dashboard (plan-gated, public route)
+    if (path === '/api/soc/dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleSOCDashboard(request, env, authCtx), request));
+    }
+
     // POST /api/threat-intel/ingest — manual trigger (PRO/ENTERPRISE)
     if (path === '/api/threat-intel/ingest' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
@@ -1055,6 +1073,38 @@ export default {
         return withSecurityHeaders(withCors(await handleV1Hunting(request, env, authCtx), request));
       }
 
+      // ── Sentinel APEX v3: SOC Automation + Defense ─────────────────────────
+
+      // GET /api/v1/alerts → SOC detection alerts (STARTER+)
+      if (v1Path === '/alerts' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleGetAlerts(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/decisions → AI decision engine (ENTERPRISE)
+      if (v1Path === '/decisions' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleGetDecisions(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/defense-actions → Autonomous defense log (ENTERPRISE)
+      if (v1Path === '/defense-actions' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleGetDefenseActions(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/federation → Global threat feed + source scores (PRO+)
+      if (v1Path === '/federation' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleGetFederation(request, env, authCtx), request));
+      }
+
+      // POST /api/v1/soc/analyze → Full SOC pipeline on-demand (ENTERPRISE)
+      if (v1Path === '/soc/analyze' && method === 'POST') {
+        return withSecurityHeaders(withCors(await handleSOCAnalyze(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/soc/posture → SOC defense posture summary (STARTER+)
+      if (v1Path === '/soc/posture' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleGetSOCPosture(request, env, authCtx), request));
+      }
+
       // Unknown /api/v1/* path
       return withSecurityHeaders(withCors(Response.json({
         success: false,
@@ -1065,6 +1115,8 @@ export default {
           'POST /api/v1/analyze', 'POST /api/v1/simulate', 'POST /api/v1/forecast',
           'GET /api/v1/cves', 'GET /api/v1/iocs',
           'GET /api/v1/correlations', 'GET /api/v1/graph', 'GET /api/v1/hunting',
+          'GET /api/v1/alerts', 'GET /api/v1/decisions', 'GET /api/v1/defense-actions',
+          'GET /api/v1/federation', 'POST /api/v1/soc/analyze', 'GET /api/v1/soc/posture',
         ],
       }, { status: 404 }), request));
     }
@@ -1153,5 +1205,64 @@ export default {
         .then(n => { if (n > 0) console.log(`[CRON] Purged ${n} expired threat intel entries`); })
         .catch(e => console.error('[CRON] Purge error:', e?.message))
     );
+
+    // ── Sentinel APEX v3: Global Federation + SOC Automation Pipeline ────────
+    // Non-blocking — runs after ingestion, uses the freshly-written D1 data
+    // Phase 6: Async pipeline integration (federation → detection → decisions → defense)
+    ctx.waitUntil((async () => {
+      try {
+        // 1. Wait a moment for ingestion to settle, then run federation
+        await new Promise(r => setTimeout(r, 3000));
+
+        // 2. Run global feed federation (adds ExploitDB + RSS + VT to existing D1 entries)
+        const fedResult = await runFederation(env, []);
+        console.log('[CRON] Federation:', JSON.stringify({
+          total:    fedResult.total_entries,
+          sources:  fedResult.sources_active,
+          confidence: fedResult.confidence,
+          ms:       fedResult.federation_ms,
+        }));
+
+        // 3. Run SOC detection on federated feed (already enriched by federation pipeline)
+        const enriched  = fedResult.global_feed.slice(0, 100);  // entries enriched during ingestion
+        const detResult = runDetection(enriched);
+        console.log('[CRON] SOC Detection:', JSON.stringify({
+          alerts: detResult.total,
+          critical: detResult.by_severity?.CRITICAL || 0,
+        }));
+
+        // 4. Run AI decision engine
+        const decResult = runDecisionEngine(enriched, detResult);
+        console.log('[CRON] SOC Decisions:', JSON.stringify({
+          total:        decResult.total,
+          threat_level: decResult.overall_threat_level,
+          escalations:  decResult.p1_count,
+        }));
+
+        // 5. Run autonomous defense
+        const defResult = runAutonomousDefense(enriched, decResult.decisions);
+        console.log('[CRON] Autonomous Defense:', JSON.stringify({
+          actions:  defResult.total_actions,
+          posture:  defResult.posture_level,
+        }));
+
+        // 6. Store all SOC results (batch, non-blocking)
+        await Promise.all([
+          storeDetectionResults(env, detResult),
+          storeDecisions(env, decResult),
+          storeDefenseActions(env, defResult),
+        ]);
+
+        // 7. Invalidate hot cache so next API request hits fresh D1
+        if (env?.SECURITY_HUB_KV) {
+          env.SECURITY_HUB_KV.delete('threat_intel:hot:v2').catch(() => {});
+          env.SECURITY_HUB_KV.delete('sentinel:federation:latest').catch(() => {});
+        }
+
+        console.log('[CRON] Sentinel APEX v3 SOC pipeline complete');
+      } catch (e) {
+        console.error('[CRON] SOC pipeline error:', e?.message);
+      }
+    })());
   },
 };
