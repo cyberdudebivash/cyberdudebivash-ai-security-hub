@@ -73,6 +73,21 @@ import {
   checkMonthlyQuota,
 } from './handlers/subscription.js';
 
+// ─── GTM Growth Engine (v12.0) ────────────────────────────────────────────────
+import {
+  handleEmailCapture, handleScanEvent, handleUpgradeCheck,
+  handleFunnelDashboard, handleGetLeads,
+  handleRunSalesPipeline, handleGetOutreach, handleMarkOutreachSent,
+  handleRunContentAutomation, handleGetContentQueue,
+  handleRunDrip, handleEmailTrack,
+  handleProvisionApiKey, handleGetApiUsage,
+  handleBillingCallback, handleCreatePaymentLink,
+  handleRevenueDashboard, handleUpgradeLead,
+} from './handlers/growth.js';
+import { runDripAutomation }   from './services/emailEngine.js';
+import { runSalesPipeline }    from './services/salesEngine.js';
+import { runContentAutomation as runContentPipeline } from './services/contentEngine.js';
+
 // ─── New v8.0 handlers ────────────────────────────────────────────────────────
 import {
   handleCreateMonitor, handleListMonitors, handleGetMonitor,
@@ -1134,6 +1149,101 @@ export default {
       return withSecurityHeaders(withCors(await handleApiUsage(request, env, authCtx), request));
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // V12.0 GTM GROWTH ENGINE — Revenue + Funnel + Email + Sales + Analytics
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // POST /api/growth/capture — email capture + drip enroll (public)
+    if (path === '/api/growth/capture' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleEmailCapture(request, env), request));
+    }
+
+    // POST /api/growth/scan — record scan event + upgrade check (public)
+    if (path === '/api/growth/scan' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleScanEvent(request, env), request));
+    }
+
+    // GET /api/growth/upgrade-check — get upgrade trigger status (public)
+    if (path === '/api/growth/upgrade-check' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleUpgradeCheck(request, env), request));
+    }
+
+    // POST /api/growth/upgrade — mark lead as upgraded (public)
+    if (path === '/api/growth/upgrade' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleUpgradeLead(request, env), request));
+    }
+
+    // GET /api/growth/analytics — revenue dashboard (admin, no strict auth for now)
+    if (path === '/api/growth/analytics' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleRevenueDashboard(request, env), request));
+    }
+
+    // GET /api/growth/funnel — funnel conversion metrics (admin)
+    if (path === '/api/growth/funnel' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleFunnelDashboard(request, env), request));
+    }
+
+    // GET /api/growth/leads — lead list (admin)
+    if (path === '/api/growth/leads' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetLeads(request, env), request));
+    }
+
+    // POST /api/growth/sales/run — run enterprise sales pipeline
+    if (path === '/api/growth/sales/run' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleRunSalesPipeline(request, env), request));
+    }
+
+    // GET /api/growth/sales/outreach — get outreach queue
+    if (path === '/api/growth/sales/outreach' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetOutreach(request, env), request));
+    }
+
+    // POST /api/growth/sales/outreach/:id/send — mark sent
+    if (path.match(/^\/api\/growth\/sales\/outreach\/[^/]+\/send$/) && method === 'POST') {
+      const outreachId = path.split('/')[5];
+      return withSecurityHeaders(withCors(await handleMarkOutreachSent(request, env, null, outreachId), request));
+    }
+
+    // POST /api/growth/content/run — run content automation pipeline
+    if (path === '/api/growth/content/run' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleRunContentAutomation(request, env), request));
+    }
+
+    // GET /api/growth/content/queue — get content queue
+    if (path === '/api/growth/content/queue' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetContentQueue(request, env), request));
+    }
+
+    // POST /api/growth/email/run — run drip email automation
+    if (path === '/api/growth/email/run' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleRunDrip(request, env), request));
+    }
+
+    // GET /api/growth/email/track — 1×1 pixel / redirect for email tracking
+    if (path === '/api/growth/email/track' && method === 'GET') {
+      return await handleEmailTrack(request, env);
+    }
+
+    // POST /api/growth/api-key — provision API key
+    if (path === '/api/growth/api-key' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleProvisionApiKey(request, env), request));
+    }
+
+    // GET /api/growth/api-usage — get API usage summary
+    if (path === '/api/growth/api-usage' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetApiUsage(request, env), request));
+    }
+
+    // POST /api/billing/callback — Razorpay webhook / payment callback
+    if (path === '/api/billing/callback' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleBillingCallback(request, env), request));
+    }
+
+    // POST /api/billing/create-link — generate Razorpay payment link payload
+    if (path === '/api/billing/create-link' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleCreatePaymentLink(request, env), request));
+    }
+
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────
     const routeKey = `${method} ${path}`;
     const route    = SYNC_ROUTES[routeKey];
@@ -1262,6 +1372,36 @@ export default {
         console.log('[CRON] Sentinel APEX v3 SOC pipeline complete');
       } catch (e) {
         console.error('[CRON] SOC pipeline error:', e?.message);
+      }
+    })());
+
+    // ── GTM Growth Engine v12: Email Drip + Sales + Content pipelines ─────────
+    ctx.waitUntil((async () => {
+      try {
+        // 1. Run email drip automation (send due sequence emails)
+        const dripResult = await runDripAutomation(env);
+        console.log('[CRON] GTM Drip Emails:', JSON.stringify(dripResult));
+
+        // 2. Run enterprise sales pipeline (detect + generate outreach)
+        const salesResult = await runSalesPipeline(env);
+        console.log('[CRON] GTM Sales Pipeline:', JSON.stringify(salesResult));
+
+        // 3. Run content automation (CRITICAL CVEs → LinkedIn/Twitter/Telegram)
+        const criticalRows = await env.DB.prepare(
+          `SELECT * FROM threat_intel WHERE severity = 'CRITICAL' ORDER BY cvss DESC, published_at DESC LIMIT 5`
+        ).all().catch(() => ({ results: [] }));
+
+        if ((criticalRows.results || []).length > 0) {
+          const contentResult = await runContentPipeline(env, criticalRows.results);
+          console.log('[CRON] GTM Content:', JSON.stringify({
+            generated: contentResult.generated,
+            posted:    contentResult.telegram_posted,
+          }));
+        }
+
+        console.log('[CRON] GTM Growth Engine pipeline complete');
+      } catch (e) {
+        console.error('[CRON] GTM pipeline error:', e?.message);
       }
     })());
   },

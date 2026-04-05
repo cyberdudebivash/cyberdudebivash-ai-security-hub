@@ -162,3 +162,147 @@ CREATE INDEX IF NOT EXISTS idx_soc_defense_created    ON soc_defense_actions(cre
 -- ALTER TABLE threat_intel ADD COLUMN actively_exploited INTEGER DEFAULT 0;
 -- ALTER TABLE threat_intel ADD COLUMN exploit_available INTEGER DEFAULT 0;
 -- ALTER TABLE threat_intel ADD COLUMN ioc_list TEXT DEFAULT '[]';
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- GTM Growth Engine Tables (Sentinel APEX GTM v1)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Leads — captured emails, plan info, lead score
+CREATE TABLE IF NOT EXISTS leads (
+  id              TEXT PRIMARY KEY,
+  email           TEXT UNIQUE NOT NULL,
+  name            TEXT,
+  domain          TEXT,
+  source          TEXT DEFAULT 'scan',       -- 'scan' | 'blog' | 'linkedin' | 'api' | 'referral'
+  is_enterprise   INTEGER DEFAULT 0,         -- 1 = corporate email domain
+  plan            TEXT DEFAULT 'free',       -- 'free' | 'starter' | 'pro' | 'enterprise'
+  lead_score      INTEGER DEFAULT 0,         -- 0–100
+  funnel_stage    TEXT DEFAULT 'visitor',    -- visitor | scan_start | scan_done | email_captured | report_viewed | upgrade_cta_shown | converted | churned
+  scan_count      INTEGER DEFAULT 0,
+  converted_at    TEXT,
+  created_at      TEXT DEFAULT (datetime('now')),
+  updated_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- Funnel events — granular event log per user
+CREATE TABLE IF NOT EXISTS funnel_events (
+  id          TEXT PRIMARY KEY,
+  email       TEXT NOT NULL,
+  stage       TEXT NOT NULL,
+  meta        TEXT DEFAULT '{}',             -- JSON: arbitrary event properties
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- Email sequences — drip enrollment tracker
+CREATE TABLE IF NOT EXISTS email_sequences (
+  id              TEXT PRIMARY KEY,
+  email           TEXT NOT NULL,
+  sequence_id     TEXT NOT NULL,             -- 'welcome' | 'enterprise' | 'trial_expiry'
+  current_step    INTEGER DEFAULT 0,
+  status          TEXT DEFAULT 'active',     -- 'active' | 'completed' | 'unsubscribed'
+  meta            TEXT DEFAULT '{}',         -- JSON: scanData, etc.
+  enrolled_at     TEXT DEFAULT (datetime('now')),
+  next_send_at    TEXT,
+  last_sent_at    TEXT
+);
+
+-- Email tracking — open/click/sent events
+CREATE TABLE IF NOT EXISTS email_tracking (
+  id          TEXT PRIMARY KEY,
+  email       TEXT NOT NULL,
+  sequence_id TEXT,
+  step        INTEGER DEFAULT 0,
+  event       TEXT NOT NULL,                 -- 'sent' | 'open' | 'click' | 'unsubscribe'
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- Content queue — generated content waiting to be published
+CREATE TABLE IF NOT EXISTS content_queue (
+  id          TEXT PRIMARY KEY,
+  cve_id      TEXT,
+  platform    TEXT NOT NULL,                 -- 'linkedin' | 'twitter' | 'telegram' | 'blog' | 'email'
+  content     TEXT NOT NULL,                 -- JSON blob of generated content
+  status      TEXT DEFAULT 'pending',        -- 'pending' | 'posted' | 'failed'
+  posted_at   TEXT,
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- API keys — per-user API credentials
+CREATE TABLE IF NOT EXISTS api_keys (
+  id          TEXT PRIMARY KEY,
+  email       TEXT UNIQUE NOT NULL,
+  plan        TEXT DEFAULT 'starter',
+  api_key     TEXT UNIQUE NOT NULL,
+  active      INTEGER DEFAULT 1,
+  created_at  TEXT DEFAULT (datetime('now')),
+  updated_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- API usage log — per-request log
+CREATE TABLE IF NOT EXISTS api_usage_log (
+  id          TEXT PRIMARY KEY,
+  api_key     TEXT NOT NULL,
+  email       TEXT,
+  endpoint    TEXT,
+  status_code INTEGER,
+  latency_ms  INTEGER DEFAULT 0,
+  weight      INTEGER DEFAULT 1,
+  logged_at   TEXT DEFAULT (datetime('now'))
+);
+
+-- Sales outreach — generated email/linkedin drafts
+CREATE TABLE IF NOT EXISTS sales_outreach (
+  id              TEXT PRIMARY KEY,
+  email           TEXT NOT NULL,
+  outreach_type   TEXT,                      -- 'send_email_and_linkedin' | 'send_proposal' | 'send_email'
+  subject         TEXT,
+  body            TEXT,
+  status          TEXT DEFAULT 'draft',      -- 'draft' | 'sent' | 'replied' | 'closed'
+  sent_at         TEXT,
+  created_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- Billing events — payment history
+CREATE TABLE IF NOT EXISTS billing_events (
+  id          TEXT PRIMARY KEY,
+  email       TEXT NOT NULL,
+  plan        TEXT,
+  payment_id  TEXT,
+  order_id    TEXT,
+  event_type  TEXT,                          -- 'payment_success' | 'subscription_cancelled' | 'refund'
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- Growth analytics — raw event stream
+CREATE TABLE IF NOT EXISTS growth_analytics (
+  id          TEXT PRIMARY KEY,
+  event       TEXT NOT NULL,
+  properties  TEXT DEFAULT '{}',
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- GTM Indexes
+CREATE INDEX IF NOT EXISTS idx_leads_email       ON leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_plan        ON leads(plan);
+CREATE INDEX IF NOT EXISTS idx_leads_score       ON leads(lead_score DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_enterprise  ON leads(is_enterprise);
+CREATE INDEX IF NOT EXISTS idx_leads_created     ON leads(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_funnel_email      ON funnel_events(email);
+CREATE INDEX IF NOT EXISTS idx_funnel_stage      ON funnel_events(stage);
+CREATE INDEX IF NOT EXISTS idx_funnel_created    ON funnel_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_seq_email   ON email_sequences(email);
+CREATE INDEX IF NOT EXISTS idx_email_seq_status  ON email_sequences(status);
+CREATE INDEX IF NOT EXISTS idx_email_seq_next    ON email_sequences(next_send_at);
+CREATE INDEX IF NOT EXISTS idx_email_track_email ON email_tracking(email);
+CREATE INDEX IF NOT EXISTS idx_email_track_event ON email_tracking(event);
+CREATE INDEX IF NOT EXISTS idx_content_platform  ON content_queue(platform);
+CREATE INDEX IF NOT EXISTS idx_content_status    ON content_queue(status);
+CREATE INDEX IF NOT EXISTS idx_api_usage_email   ON api_usage_log(email);
+CREATE INDEX IF NOT EXISTS idx_api_usage_logged  ON api_usage_log(logged_at DESC);
+CREATE INDEX IF NOT EXISTS idx_api_keys_email    ON api_keys(email);
+CREATE INDEX IF NOT EXISTS idx_api_keys_key      ON api_keys(api_key);
+CREATE INDEX IF NOT EXISTS idx_outreach_email    ON sales_outreach(email);
+CREATE INDEX IF NOT EXISTS idx_outreach_status   ON sales_outreach(status);
+CREATE INDEX IF NOT EXISTS idx_billing_email     ON billing_events(email);
+CREATE INDEX IF NOT EXISTS idx_growth_event      ON growth_analytics(event);
+CREATE INDEX IF NOT EXISTS idx_growth_created    ON growth_analytics(created_at DESC);
