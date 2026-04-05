@@ -83,7 +83,14 @@ import {
   handleProvisionApiKey, handleGetApiUsage,
   handleBillingCallback, handleCreatePaymentLink,
   handleRevenueDashboard, handleUpgradeLead,
+  // Phase 7: Global Expansion
+  handleGetRegionContext, handleGlobalDashboard,
+  // Phase 9/10: Upsell + Pricing + LinkedIn
+  handleEvaluateUpsell, handleUpsellConverted, handleUpsellMetrics,
+  handleFeatureWall, handleGetPricing,
+  handleLinkedInToday, handleRunLinkedIn,
 } from './handlers/growth.js';
+import { runLinkedInAutomation }  from './services/upsellEngine.js';
 import { runDripAutomation }   from './services/emailEngine.js';
 import { runSalesPipeline }    from './services/salesEngine.js';
 import { runContentAutomation as runContentPipeline } from './services/contentEngine.js';
@@ -1244,6 +1251,54 @@ export default {
       return withSecurityHeaders(withCors(await handleCreatePaymentLink(request, env), request));
     }
 
+    // ── Phase 7: Global Expansion ───────────────────────────────────────────
+    // GET /api/growth/region — region context + localized pricing + compliance
+    if (path === '/api/growth/region' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetRegionContext(request, env), request));
+    }
+
+    // GET /api/growth/global — global expansion dashboard (region stats + pricing)
+    if (path === '/api/growth/global' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGlobalDashboard(request, env), request));
+    }
+
+    // ── Phase 9: Upsell + Revenue Maximization ──────────────────────────────
+    // POST /api/growth/upsell/evaluate — evaluate upsell triggers for a session
+    if (path === '/api/growth/upsell/evaluate' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleEvaluateUpsell(request, env), request));
+    }
+
+    // POST /api/growth/upsell/converted — mark a upsell as converted
+    if (path === '/api/growth/upsell/converted' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleUpsellConverted(request, env), request));
+    }
+
+    // GET /api/growth/upsell/metrics — upsell + A/B test results
+    if (path === '/api/growth/upsell/metrics' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleUpsellMetrics(request, env), request));
+    }
+
+    // GET /api/growth/feature-wall — get upgrade wall for a locked feature
+    if (path === '/api/growth/feature-wall' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleFeatureWall(request, env), request));
+    }
+
+    // GET /api/growth/pricing — region-aware pricing with A/B variant
+    if (path === '/api/growth/pricing' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPricing(request, env), request));
+    }
+
+    // ── Phase 9: LinkedIn Domination Engine ─────────────────────────────────
+    // GET /api/growth/linkedin/today — get today's LinkedIn post (pre-generated)
+    if (path === '/api/growth/linkedin/today' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleLinkedInToday(request, env), request));
+    }
+
+    // POST /api/growth/linkedin/run — generate + queue today's LinkedIn post
+    if (path === '/api/growth/linkedin/run' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleRunLinkedIn(request, env), request));
+    }
+
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────
     const routeKey = `${method} ${path}`;
     const route    = SYNC_ROUTES[routeKey];
@@ -1397,6 +1452,12 @@ export default {
             generated: contentResult.generated,
             posted:    contentResult.telegram_posted,
           }));
+        }
+
+        // 4. LinkedIn authority post automation (Mon/Tue/Thu/Fri only)
+        const linkedInResult = await runLinkedInAutomation(env, criticalRows.results || [], {});
+        if (!linkedInResult.skipped) {
+          console.log('[CRON] GTM LinkedIn:', JSON.stringify(linkedInResult));
         }
 
         console.log('[CRON] GTM Growth Engine pipeline complete');

@@ -6,6 +6,21 @@
 import { ok, fail, withErrorBoundary }       from '../lib/response.js';
 
 import {
+  detectRegion, buildRegionContext, getLocalizedPricing,
+  getComplianceBadges, buildGlobalDashboard, trackRegionEvent,
+  getRegionalValueProp,
+}                                            from '../services/globalExpansionEngine.js';
+
+import {
+  evaluateUpsellTriggers, assignPricingVariant, getPricingForVariant,
+  trackPricingVariant, getPricingExperimentResults,
+  getEnterpriseCTA, buildFeatureUpgradeWall,
+  trackUpsellEvent, markUpsellConverted, getUpsellMetrics,
+  generateLinkedInAuthorityPost, runLinkedInAutomation, getTodayContentType,
+  ENTERPRISE_CTAS,
+}                                            from '../services/upsellEngine.js';
+
+import {
   captureEmail, getLead, checkUpgradeTriggers,
   recordScanEvent, recordFunnelEvent, getFunnelMetrics,
   getHotLeads, listLeads, upgradeLead, parseScanContext,
@@ -397,4 +412,198 @@ export const handleUpgradeLead = withErrorBoundary(async (request, env) => {
   await trackGrowthEvent(env, 'lead_upgraded', { email, plan });
 
   return ok(request, { upgraded: true, email, plan });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REGION CONTEXT — GET /api/growth/region
+// Returns region, localized pricing, compliance badges
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleGetRegionContext = withErrorBoundary(async (request, env) => {
+  const url   = new URL(request.url);
+  const email = url.searchParams.get('email');
+  const page  = url.searchParams.get('page') || '/';
+
+  const regionCtx = buildRegionContext(request);
+
+  // Track non-blocking
+  trackRegionEvent(env, request, email, page).catch(() => {});
+
+  return ok(request, regionCtx);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL DASHBOARD — GET /api/growth/global
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleGlobalDashboard = withErrorBoundary(async (request, env) => {
+  const dashboard = await buildGlobalDashboard(env);
+  return ok(request, dashboard);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPSELL EVALUATE — POST /api/growth/upsell/evaluate
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleEvaluateUpsell = withErrorBoundary(async (request, env) => {
+  const body = await request.json().catch(() => ({}));
+  const {
+    email, plan = 'free', lead_score = 0,
+    scans_today = 0, scan_limit_day = 3,
+    critical_found = false, kev_found = false,
+    high_epss = false, api_calls_today = 0,
+    api_quota_day = 0, days_since_last_scan = 0,
+    scan_count = 0,
+  } = body;
+
+  const result = evaluateUpsellTriggers({
+    plan, lead_score, scans_today, scan_limit_day,
+    critical_found, kev_found, high_epss,
+    api_calls_today, api_quota_day, days_since_last_scan, scan_count,
+  });
+
+  // Track if upsell is being shown
+  if (result.should_upsell && email) {
+    trackUpsellEvent(env, email, result.trigger, plan, result.suggested_plan).catch(() => {});
+  }
+
+  // Also return pricing variant for this user
+  const variantId = assignPricingVariant(email);
+  const variant   = getPricingForVariant(variantId);
+  if (email) {
+    trackPricingVariant(env, email, variantId, 'impression').catch(() => {});
+  }
+
+  return ok(request, {
+    ...result,
+    pricing_variant: { id: variantId, ...variant },
+    enterprise_cta:  result.should_upsell ? (ENTERPRISE_CTAS.demo) : null,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPSELL CONVERTED — POST /api/growth/upsell/converted
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleUpsellConverted = withErrorBoundary(async (request, env) => {
+  const body = await request.json().catch(() => ({}));
+  const { email, trigger_type, plan, revenue_inr } = body;
+
+  if (!email) return fail(request, 'email required', 400);
+
+  await Promise.all([
+    markUpsellConverted(env, email, trigger_type),
+    trackPricingVariant(env, email, assignPricingVariant(email), 'conversion', revenue_inr || 0),
+    trackGrowthEvent(env, 'upsell_converted', { email, trigger_type, plan }),
+  ]).catch(() => {});
+
+  return ok(request, { recorded: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPSELL METRICS — GET /api/growth/upsell/metrics
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleUpsellMetrics = withErrorBoundary(async (request, env) => {
+  const [upsellMetrics, abResults] = await Promise.all([
+    getUpsellMetrics(env),
+    getPricingExperimentResults(env),
+  ]);
+
+  return ok(request, {
+    upsell_triggers:   upsellMetrics,
+    pricing_ab_test:   abResults,
+    enterprise_ctas:   ENTERPRISE_CTAS,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE WALL — GET /api/growth/feature-wall
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleFeatureWall = withErrorBoundary(async (request, env) => {
+  const url     = new URL(request.url);
+  const feature = url.searchParams.get('feature') || 'api_access';
+  const plan    = url.searchParams.get('plan')    || 'free';
+
+  const wall = buildFeatureUpgradeWall(feature, plan);
+  if (!wall) return ok(request, { locked: false, feature, plan });
+
+  // Attach region-localized pricing
+  const region  = detectRegion(request);
+  const pricing = getLocalizedPricing(region.currency, region.symbol);
+  wall.localized_price = pricing[wall.unlock_plan]?.formatted || wall.unlock_price;
+
+  return ok(request, wall);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRICING — GET /api/growth/pricing
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleGetPricing = withErrorBoundary(async (request, env) => {
+  const url    = new URL(request.url);
+  const email  = url.searchParams.get('email');
+
+  const region  = detectRegion(request);
+  const pricing = getLocalizedPricing(region.currency, region.symbol);
+
+  const variantId = assignPricingVariant(email);
+  const variant   = getPricingForVariant(variantId);
+
+  if (email) {
+    trackPricingVariant(env, email, variantId, 'impression').catch(() => {});
+  }
+
+  return ok(request, {
+    region:        region.resolved_region,
+    currency:      region.currency,
+    symbol:        region.symbol,
+    locale:        region.locale,
+    plans:         pricing,
+    ab_variant:    { id: variantId, name: variant.name, cta_text: variant.cta_text, cta_color: variant.cta_color },
+    compliance:    getComplianceBadges(region.resolved_region),
+    value_prop:    getRegionalValueProp(region.resolved_region),
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LINKEDIN POST — GET /api/growth/linkedin/today
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleLinkedInToday = withErrorBoundary(async (request, env) => {
+  const url   = new URL(request.url);
+  const type  = url.searchParams.get('type') || getTodayContentType() || 'cve_alert';
+
+  // Get top CRITICAL entry for context
+  const topEntry = await env.DB.prepare(
+    `SELECT * FROM threat_intel WHERE severity='CRITICAL' ORDER BY cvss DESC LIMIT 1`
+  ).first().catch(() => null);
+
+  // Get stats
+  const stats = await env.DB.prepare(
+    `SELECT
+       SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical_cves,
+       SUM(CASE WHEN exploit_status='confirmed' THEN 1 ELSE 0 END) as kev_entries
+     FROM threat_intel WHERE published_at >= date('now','-7 days')`
+  ).first().catch(() => ({ critical_cves: 0, kev_entries: 0 }));
+
+  const post = generateLinkedInAuthorityPost({ entry: topEntry, stats, insight_type: type });
+
+  return ok(request, {
+    post,
+    scheduled_time: post.best_time,
+    comment_hooks:  post.comment_hooks,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LINKEDIN AUTOMATION — POST /api/growth/linkedin/run
+// ─────────────────────────────────────────────────────────────────────────────
+export const handleRunLinkedIn = withErrorBoundary(async (request, env) => {
+  const critRows = await env.DB.prepare(
+    `SELECT * FROM threat_intel WHERE severity='CRITICAL' ORDER BY cvss DESC LIMIT 5`
+  ).all().catch(() => ({ results: [] }));
+
+  const statsRow = await env.DB.prepare(
+    `SELECT
+       SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical_cves,
+       SUM(CASE WHEN exploit_status='confirmed' THEN 1 ELSE 0 END) as kev_entries
+     FROM threat_intel WHERE published_at >= date('now','-7 days')`
+  ).first().catch(() => ({ critical_cves: 0, kev_entries: 0 }));
+
+  const result = await runLinkedInAutomation(env, critRows.results || [], statsRow || {});
+  return ok(request, { pipeline: 'linkedin', ...result });
 });

@@ -155,13 +155,12 @@ CREATE INDEX IF NOT EXISTS idx_soc_response_priority  ON soc_response_actions(pr
 CREATE INDEX IF NOT EXISTS idx_soc_defense_action     ON soc_defense_actions(defense_action);
 CREATE INDEX IF NOT EXISTS idx_soc_defense_created    ON soc_defense_actions(created_at DESC);
 
--- Migration: add new columns to existing threat_intel table (safe — ignored if already exist)
--- Run these if upgrading from schema v1.0:
--- ALTER TABLE threat_intel ADD COLUMN epss_score REAL;
--- ALTER TABLE threat_intel ADD COLUMN epss_percentile REAL;
--- ALTER TABLE threat_intel ADD COLUMN actively_exploited INTEGER DEFAULT 0;
--- ALTER TABLE threat_intel ADD COLUMN exploit_available INTEGER DEFAULT 0;
--- ALTER TABLE threat_intel ADD COLUMN ioc_list TEXT DEFAULT '[]';
+-- ── Migration: v2 columns for existing threat_intel table ────────────────────
+-- IMPORTANT: Run schema_migrations_v2.sql FIRST if upgrading an existing DB.
+-- The ALTER TABLE statements are in that file to avoid "no such column" errors
+-- when creating indexes on a fresh schema run.
+-- These columns are already present in the CREATE TABLE statement above (fresh installs).
+-- schema_migrations_v2.sql handles the ALTER for existing production tables.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- GTM Growth Engine Tables (Sentinel APEX GTM v1)
