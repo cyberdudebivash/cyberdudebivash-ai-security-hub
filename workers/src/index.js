@@ -50,6 +50,8 @@ import { getTopCVEsForModule } from './services/cveEngine.js';
 import {
   handleGetThreatIntel, handleThreatIntelStats, handleGetThreatIntelEntry,
   handleManualIngest, handleV1ThreatIntel, handleV1IOCs,
+  handleThreatIntelStream,
+  handleV1Correlations, handleV1Graph, handleV1Hunting,
 } from './handlers/threatIntel.js';
 import { runIngestion } from './services/threatIngestion.js';
 
@@ -750,17 +752,28 @@ export default {
       return withSecurityHeaders(withCors(await handleThreatIntelStats(request, env, authCtx), request));
     }
 
+    // GET /api/threat-intel/stream — SSE real-time feed (Phase 1)
+    // Must be BEFORE the /:id catch-all
+    if (path === '/api/threat-intel/stream' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      // SSE does not use withCors wrapper (returns streaming Response directly)
+      return await handleThreatIntelStream(request, env, authCtx);
+    }
+
     // POST /api/threat-intel/ingest — manual trigger (PRO/ENTERPRISE)
     if (path === '/api/threat-intel/ingest' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleManualIngest(request, env, authCtx), request));
     }
 
-    // GET /api/threat-intel/:id — single advisory detail
+    // GET /api/threat-intel/:id — single advisory detail (after /stats and /stream)
     if (path.match(/^\/api\/threat-intel\/[^/]+$/) && method === 'GET') {
       const entryId = path.split('/')[3];
-      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
-      return withSecurityHeaders(withCors(await handleGetThreatIntelEntry(request, env, authCtx, entryId), request));
+      // Avoid matching sub-routes already handled above
+      if (!['stats', 'stream', 'ingest'].includes(entryId)) {
+        const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+        return withSecurityHeaders(withCors(await handleGetThreatIntelEntry(request, env, authCtx, entryId), request));
+      }
     }
 
     // POST /api/threat-intel/correlate — legacy endpoint (scan findings → CVE correlation)
@@ -1027,12 +1040,32 @@ export default {
         }), request));
       }
 
+      // GET /api/v1/correlations → CVE correlation engine (PRO/ENTERPRISE)
+      if (v1Path === '/correlations' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleV1Correlations(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/graph → IOC relationship graph (PRO/ENTERPRISE)
+      if (v1Path === '/graph' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleV1Graph(request, env, authCtx), request));
+      }
+
+      // GET /api/v1/hunting → threat hunting alerts (PRO/ENTERPRISE)
+      if (v1Path === '/hunting' && method === 'GET') {
+        return withSecurityHeaders(withCors(await handleV1Hunting(request, env, authCtx), request));
+      }
+
       // Unknown /api/v1/* path
       return withSecurityHeaders(withCors(Response.json({
         success: false,
         error:   `Unknown API v1 endpoint: ${method} ${path}`,
         code:    'ERR_NOT_FOUND',
-        available: ['GET /api/v1/scan', 'GET /api/v1/threat-intel', 'POST /api/v1/analyze', 'POST /api/v1/simulate', 'POST /api/v1/forecast'],
+        available: [
+          'GET /api/v1/scan', 'GET /api/v1/threat-intel',
+          'POST /api/v1/analyze', 'POST /api/v1/simulate', 'POST /api/v1/forecast',
+          'GET /api/v1/cves', 'GET /api/v1/iocs',
+          'GET /api/v1/correlations', 'GET /api/v1/graph', 'GET /api/v1/hunting',
+        ],
       }, { status: 404 }), request));
     }
 

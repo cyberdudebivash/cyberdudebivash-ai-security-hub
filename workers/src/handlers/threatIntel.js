@@ -18,10 +18,17 @@
 import { runIngestion, SEED_ENTRIES }  from '../services/threatIngestion.js';
 import { enrichBatch, buildFeedSummary } from '../services/enrichment.js';
 import { extractIOCsFromText }           from '../services/iocExtractor.js';
+import { correlateEntry, buildCorrelationSummary } from '../services/correlationEngine.js';
+import { buildGraphFromD1, buildGraph }  from '../services/graphEngine.js';
+import { runHunting }                    from '../services/huntingEngine.js';
 import { ok, fail }                      from '../lib/response.js';
 
-const FEED_CACHE_KEY   = 'threat_intel:feed:v2';
-const FEED_CACHE_TTL   = 3600; // 1 hour KV cache
+const FEED_CACHE_KEY    = 'threat_intel:feed:v2';
+const FEED_CACHE_TTL    = 3600;  // 1 hour — long-term KV cache (full feed)
+const HOT_CACHE_KEY     = 'threat_intel:hot:v2';
+const HOT_CACHE_TTL     = 60;   // Phase 8: 60s hot cache for frequent queries
+const STATS_CACHE_KEY   = 'threat_intel:stats:v2';
+const STATS_CACHE_TTL   = 120;  // 2 min stats cache
 
 // ─── Parse + sanitize pagination params ──────────────────────────────────────
 function parsePagination(url) {
@@ -126,14 +133,22 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
 }
 
 // ─── Get feed from KV cache ───────────────────────────────────────────────────
-async function getFromKVCache(env) {
+async function getFromKVCache(env, hot = false) {
   if (!env?.SECURITY_HUB_KV) return null;
   try {
-    const cached = await env.SECURITY_HUB_KV.get(FEED_CACHE_KEY, { type: 'json' });
+    // Phase 8: Try hot cache first (60s TTL), then fall back to full cache
+    const key    = hot ? HOT_CACHE_KEY : FEED_CACHE_KEY;
+    const cached = await env.SECURITY_HUB_KV.get(key, { type: 'json' });
     return cached;
   } catch {
     return null;
   }
+}
+
+// ─── Write to KV hot cache (Phase 8) ─────────────────────────────────────────
+async function writeHotCache(env, data) {
+  if (!env?.SECURITY_HUB_KV) return;
+  env.SECURITY_HUB_KV.put(HOT_CACHE_KEY, JSON.stringify(data), { expirationTtl: HOT_CACHE_TTL }).catch(() => {});
 }
 
 // ─── Build feed from seed + enrichment (ultimate fallback) ───────────────────
@@ -159,6 +174,29 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
   let total    = 0;
   let dataSource = 'seed';
 
+  // ── Phase 8: Try 60s hot cache for unfiltered requests (most common) ──
+  const isUnfiltered = !pagination.severity && !pagination.source && !pagination.query && !nocache;
+  if (isUnfiltered) {
+    const hotCached = await getFromKVCache(env, true);
+    if (hotCached?.entries?.length > 0) {
+      const hotEntries = hotCached.entries.slice(effectiveOffset, effectiveOffset + effectiveLimit);
+      const gatedHot   = hotEntries.map(e => applyMonetizationGate(e, planLimits));
+      return ok(request, {
+        entries:     gatedHot,
+        total:       hotCached.total || gatedHot.length,
+        page:        pagination.page,
+        limit:       effectiveLimit,
+        total_pages: Math.ceil((hotCached.total || gatedHot.length) / effectiveLimit),
+        summary:     buildFeedSummary(hotEntries),
+        data_source: 'kv_hot',
+        plan:        tier,
+        plan_limits: planLimits,
+        last_updated: hotCached.cached_at || new Date().toISOString(),
+        cache_ttl:   HOT_CACHE_TTL,
+      });
+    }
+  }
+
   // ── 1. Try D1 database (primary) ──
   const d1Result = await queryD1(env?.DB, {
     limit:    effectiveLimit + 5, // fetch a few extra for dedup
@@ -173,10 +211,15 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
     entries    = d1Result.entries;
     total      = d1Result.total;
     dataSource = 'd1';
+
+    // Phase 8: Populate hot cache on cache miss (only for unfiltered, page 1)
+    if (isUnfiltered && pagination.page === 1) {
+      writeHotCache(env, { entries, total, cached_at: new Date().toISOString() });
+    }
   } else {
     // ── 2. Try KV cache ──
     if (!nocache) {
-      const kvFeed = await getFromKVCache(env);
+      const kvFeed = await getFromKVCache(env, false);
       if (kvFeed?.entries?.length > 0) {
         let kvEntries = kvFeed.entries;
         // Apply filters manually
@@ -259,6 +302,16 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
 export async function handleThreatIntelStats(request, env, authCtx = {}) {
   let stats = null;
 
+  // Phase 8: Try KV stats cache (2 min TTL)
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const cached = await env.SECURITY_HUB_KV.get(STATS_CACHE_KEY, { type: 'json' });
+      if (cached?.stats) {
+        return ok(request, { ...cached, cache_hit: true });
+      }
+    } catch {}
+  }
+
   // Try D1 for aggregate stats
   if (env?.DB) {
     try {
@@ -311,7 +364,14 @@ export async function handleThreatIntelStats(request, env, authCtx = {}) {
     };
   }
 
-  return ok(request, { stats, generated_at: new Date().toISOString() });
+  const result = { stats, generated_at: new Date().toISOString() };
+
+  // Phase 8: Cache stats in KV
+  if (env?.SECURITY_HUB_KV && stats) {
+    env.SECURITY_HUB_KV.put(STATS_CACHE_KEY, JSON.stringify(result), { expirationTtl: STATS_CACHE_TTL }).catch(() => {});
+  }
+
+  return ok(request, result);
 }
 
 // ─── GET /api/threat-intel/:id ────────────────────────────────────────────────
@@ -450,4 +510,302 @@ export async function handleV1IOCs(request, env, authCtx = {}) {
   } catch (e) {
     return fail(request, `IOC query failed: ${e.message}`, 500);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 1: SERVER-SENT EVENTS — GET /api/threat-intel/stream
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cloudflare Workers SSE via TransformStream + snapshot approach.
+// No Durable Objects needed — sends a one-shot snapshot then heartbeats.
+// Client uses EventSource with auto-reconnect built-in.
+// ───────────────────────────────────────────────────────────────────────────────
+export async function handleThreatIntelStream(request, env, authCtx = {}) {
+  const tier       = authCtx?.tier || 'FREE';
+  const planLimits = getPlanLimits(tier);
+  const url        = new URL(request.url);
+  const since      = url.searchParams.get('since') || null; // ISO date watermark
+
+  // Get watermark — only send entries newer than this
+  const watermarkDate = since ? new Date(since) : null;
+
+  // ── Fetch current snapshot of feed ────────────────────────────────────────
+  async function getSnapshot() {
+    // Try D1 first
+    if (env?.DB) {
+      try {
+        const sinceFilter = watermarkDate
+          ? `WHERE (updated_at > '${watermarkDate.toISOString()}' OR created_at > '${watermarkDate.toISOString()}')`
+          : '';
+        const rows = await env.DB.prepare(
+          `SELECT id, title, severity, cvss, exploit_status, known_ransomware,
+                  epss_score, actively_exploited, exploit_available,
+                  source, source_url, published_at, tags, description, weakness_types
+           FROM threat_intel
+           ${sinceFilter}
+           ORDER BY CASE severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 ELSE 1 END DESC, cvss DESC
+           LIMIT ?`
+        ).bind(planLimits.max_results).all();
+        return (rows?.results || []).map(e => applyMonetizationGate(e, planLimits));
+      } catch {}
+    }
+    // Fallback to seed
+    return buildSeedFeed().slice(0, planLimits.max_results).map(e => applyMonetizationGate(e, planLimits));
+  }
+
+  // ── Build TransformStream for SSE ─────────────────────────────────────────
+  const { readable, writable } = new TransformStream();
+  const writer  = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  function sseWrite(eventName, data) {
+    const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
+    return writer.write(encoder.encode(payload));
+  }
+
+  function sseComment(comment) {
+    return writer.write(encoder.encode(`: ${comment}\n\n`));
+  }
+
+  // ── Stream loop (async, runs concurrently with response) ──────────────────
+  const streamLoop = async () => {
+    try {
+      // 1. Send connection event
+      await sseWrite('connected', {
+        message:    'Sentinel APEX stream connected',
+        tier,
+        plan_limits: planLimits,
+        timestamp:  new Date().toISOString(),
+      });
+
+      // 2. Send initial snapshot
+      const snapshot = await getSnapshot();
+      await sseWrite('snapshot', {
+        entries:    snapshot,
+        count:      snapshot.length,
+        watermark:  new Date().toISOString(),
+        data_source: env?.DB ? 'd1' : 'seed',
+      });
+
+      // 3. Heartbeat loop — CF Workers timeout after ~100s of inactivity
+      //    We send a heartbeat every 25s to keep alive, then re-snapshot every 60s
+      let ticks = 0;
+      const HEARTBEAT_INTERVAL_MS = 25000;
+      const REFRESH_EVERY_N_TICKS = 2; // refresh snapshot every 50s
+
+      const heartbeatFn = async () => {
+        ticks++;
+
+        if (ticks % REFRESH_EVERY_N_TICKS === 0) {
+          // Send a mini-refresh of critical entries
+          try {
+            const refresh = await getSnapshot();
+            const newEntries = watermarkDate
+              ? refresh // already filtered by since
+              : refresh.slice(0, 5); // send top 5 as live update
+
+            if (newEntries.length > 0) {
+              await sseWrite('update', {
+                entries:   newEntries,
+                count:     newEntries.length,
+                watermark: new Date().toISOString(),
+              });
+            }
+          } catch {}
+        } else {
+          await sseComment(`heartbeat ${new Date().toISOString()}`);
+        }
+      };
+
+      // Cloudflare Workers: use a series of awaited promises instead of setInterval
+      // Max 4 heartbeats (covering ~100s) before worker timeout
+      for (let i = 0; i < 4; i++) {
+        await new Promise(resolve => setTimeout(resolve, HEARTBEAT_INTERVAL_MS));
+        await heartbeatFn();
+      }
+
+      // Send stream end event
+      await sseWrite('end', { message: 'Stream cycle complete. Reconnect for updates.', timestamp: new Date().toISOString() });
+    } catch (err) {
+      // Client disconnected or error — close gracefully
+      try {
+        await sseWrite('error', { message: 'Stream error — reconnecting automatically', code: err?.message });
+      } catch {}
+    } finally {
+      writer.close().catch(() => {});
+    }
+  };
+
+  // Use waitUntil to keep the stream alive past response headers send
+  if (env?.waitUntil) {
+    env.waitUntil(streamLoop());
+  } else {
+    // Fallback: fire and forget (CF Workers will keep it alive)
+    streamLoop().catch(() => {});
+  }
+
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      'Content-Type':                'text/event-stream; charset=utf-8',
+      'Cache-Control':               'no-cache, no-store, must-revalidate',
+      'Connection':                  'keep-alive',
+      'X-Accel-Buffering':           'no',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers':'Authorization, Content-Type',
+      'X-Sentinel-Stream':           'v2',
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 7: ENTERPRISE API — GET /api/v1/correlations
+// ═══════════════════════════════════════════════════════════════════════════════
+export async function handleV1Correlations(request, env, authCtx = {}) {
+  if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
+    return fail(request, 'Correlation API requires PRO or ENTERPRISE plan', 403, 'PLAN_REQUIRED');
+  }
+
+  const url   = new URL(request.url);
+  const cveId = url.searchParams.get('cve') || '';
+  const limit = Math.min(50, parseInt(url.searchParams.get('limit') || '20', 10));
+
+  let entries = [];
+
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT * FROM threat_intel
+         ORDER BY CASE severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 ELSE 1 END DESC
+         LIMIT 100`
+      ).all();
+      entries = rows?.results || [];
+    } catch {}
+  }
+
+  if (entries.length === 0) {
+    entries = SEED_ENTRIES.map(e => ({ ...e }));
+  }
+
+  // If specific CVE requested: correlate just that one
+  if (cveId) {
+    const target = entries.find(e => e.id === cveId);
+    if (!target) {
+      return fail(request, `CVE ${cveId} not found in feed`, 404, 'NOT_FOUND');
+    }
+    const correlation = await correlateEntry(target, entries, env);
+    return ok(request, { correlation, entry: applyMonetizationGate(target, getPlanLimits(authCtx.tier)) });
+  }
+
+  // Otherwise: return correlation summary + top correlated pairs
+  const summary = buildCorrelationSummary(entries);
+
+  // Correlate top 10 CRITICAL entries
+  const topEntries = entries
+    .filter(e => e.severity === 'CRITICAL' || (e.cvss || 0) >= 9.0)
+    .slice(0, limit);
+
+  const correlations = [];
+  for (const entry of topEntries) {
+    const corr = await correlateEntry(entry, entries, env);
+    if (corr.threat_actor || corr.related_cves.length > 0) {
+      correlations.push({ cve_id: entry.id, severity: entry.severity, cvss: entry.cvss, ...corr });
+    }
+  }
+
+  return ok(request, {
+    summary,
+    correlations,
+    total: correlations.length,
+    plan:  authCtx.tier,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 4+7: ENTERPRISE API — GET /api/v1/graph
+// ═══════════════════════════════════════════════════════════════════════════════
+export async function handleV1Graph(request, env, authCtx = {}) {
+  if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
+    return fail(request, 'IOC graph API requires PRO or ENTERPRISE plan', 403, 'PLAN_REQUIRED');
+  }
+
+  const url      = new URL(request.url);
+  const nodeId   = url.searchParams.get('node') || '';
+  const limit    = Math.min(100, parseInt(url.searchParams.get('limit') || '50', 10));
+
+  const graph = await buildGraphFromD1(env, limit);
+
+  // If specific node requested: return its neighborhood
+  if (nodeId) {
+    const { getNeighborhood } = await Promise.resolve({ getNeighborhood: (g, id) => {
+      const n = g.nodes.find(nd => nd.id === id || nd.value === id);
+      if (!n) return { nodes: [], edges: [] };
+      const edgeList = g.edges.filter(e => e.source === n.id || e.target === n.id);
+      const nodeIds  = new Set([n.id, ...edgeList.map(e => e.source), ...edgeList.map(e => e.target)]);
+      return { nodes: g.nodes.filter(nd => nodeIds.has(nd.id)), edges: edgeList };
+    }});
+    const neighborhood = getNeighborhood(graph, nodeId);
+    return ok(request, { graph: neighborhood, root_node: nodeId });
+  }
+
+  return ok(request, {
+    graph,
+    plan: authCtx.tier,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 5+7: ENTERPRISE API — GET /api/v1/hunting
+// ═══════════════════════════════════════════════════════════════════════════════
+export async function handleV1Hunting(request, env, authCtx = {}) {
+  if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
+    return fail(request, 'Threat hunting API requires PRO or ENTERPRISE plan', 403, 'PLAN_REQUIRED');
+  }
+
+  const url       = new URL(request.url);
+  const minSev    = url.searchParams.get('min_severity') || 'medium';
+  const limit     = Math.min(100, parseInt(url.searchParams.get('limit') || '100', 10));
+
+  let entries = [];
+
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT * FROM threat_intel
+         WHERE severity IN ('CRITICAL', 'HIGH')
+         ORDER BY cvss DESC LIMIT ?`
+      ).bind(limit).all();
+      entries = rows?.results || [];
+    } catch {}
+  }
+
+  if (entries.length === 0) {
+    entries = SEED_ENTRIES.map(e => ({ ...e }));
+  }
+
+  const huntResults = runHunting(entries);
+
+  // Filter alerts by minimum severity
+  const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  const minOrder = sevOrder[minSev] ?? 2;
+  huntResults.alerts = huntResults.alerts.filter(a => (sevOrder[a.severity] ?? 4) <= minOrder);
+
+  // Store critical alerts in D1 if ENTERPRISE
+  if (authCtx.tier === 'ENTERPRISE' && env?.DB && huntResults.alerts.length > 0) {
+    const critAlerts = huntResults.alerts.filter(a => a.severity === 'critical');
+    for (const alert of critAlerts.slice(0, 10)) {
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO hunting_alerts (id, type, severity, message, evidence)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(
+        alert.id, alert.type, alert.severity, alert.message,
+        JSON.stringify(alert.evidence || {})
+      ).run().catch(() => {});
+    }
+  }
+
+  return ok(request, {
+    ...huntResults,
+    plan:         authCtx.tier,
+    entry_count:  entries.length,
+  });
 }

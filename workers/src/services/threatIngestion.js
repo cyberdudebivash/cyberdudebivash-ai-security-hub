@@ -10,12 +10,14 @@
  *   5. Built-in seed        — curated high-value entries for cold-start
  */
 
-import { extractIOCs, extractIOCsFromText } from './iocExtractor.js';
-import { enrichEntry, enrichBatch }         from './enrichment.js';
+import { extractIOCs, extractIOCsFromText }   from './iocExtractor.js';
+import { enrichEntry, enrichBatch }           from './enrichment.js';
+import { triggerIntelAlerts }                 from '../lib/alerts.js';
 
 const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
 const GITHUB_RSS_URL = 'https://github.com/advisories.atom';
+const EPSS_API_BASE  = 'https://api.first.org/data/1.0/epss';
 const FETCH_TIMEOUT  = 10000; // 10s per source
 
 // ─── Built-in seed data — REAL current CVEs, never empty feed ─────────────────
@@ -372,6 +374,67 @@ export async function fetchGitHubAdvisories() {
   return entries;
 }
 
+// ─── MODULE 4: Fetch EPSS Scores from FIRST.org ──────────────────────────────
+// EPSS = Exploit Prediction Scoring System (0–1, higher = more likely exploited)
+export async function fetchEPSSScores(cveIds = []) {
+  if (!cveIds.length) return {};
+
+  const epssMap = {};
+
+  // Batch in groups of 30 to stay within URL length limits
+  for (let i = 0; i < cveIds.length; i += 30) {
+    const batch = cveIds.slice(i, i + 30);
+    const url   = `${EPSS_API_BASE}?cve=${batch.join(',')}`;
+    const data  = await safeFetch(url, {
+      headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/2.0' },
+    }, 8000);
+
+    if (data?.data && Array.isArray(data.data)) {
+      for (const item of data.data) {
+        epssMap[item.cve] = {
+          epss_score:      parseFloat(item.epss) || 0,
+          epss_percentile: parseFloat(item.percentile) || 0,
+          epss_date:       item.date || null,
+        };
+      }
+    }
+
+    // Polite delay between EPSS batches
+    if (i + 30 < cveIds.length) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  return epssMap;
+}
+
+// ─── Apply EPSS scores to entries ────────────────────────────────────────────
+export function applyEPSSScores(entries, epssMap) {
+  for (const entry of entries) {
+    const epss = epssMap[entry.id];
+    if (epss) {
+      entry.epss_score      = epss.epss_score;
+      entry.epss_percentile = epss.epss_percentile;
+      entry.epss_date       = epss.epss_date;
+
+      // If EPSS ≥ 0.5 and not already confirmed, mark as high-risk
+      if (epss.epss_score >= 0.5 && entry.exploit_status !== 'confirmed') {
+        entry.exploit_status = 'poc_available'; // Likely being tested/exploited
+      }
+      // Synthesize exploit_available flag
+      entry.exploit_available = epss.epss_score >= 0.3 || entry.exploit_status !== 'unconfirmed';
+    } else {
+      entry.epss_score        = null;
+      entry.epss_percentile   = null;
+      entry.exploit_available = entry.exploit_status !== 'unconfirmed';
+    }
+
+    // actively_exploited flag: confirmed OR KEV-listed
+    entry.actively_exploited = entry.exploit_status === 'confirmed' || !!entry.known_ransomware;
+  }
+  return entries;
+}
+
 // ─── Deduplicate entries by ID ────────────────────────────────────────────────
 function deduplicateEntries(entries) {
   const seen = new Map();
@@ -413,15 +476,21 @@ export async function storeInD1(db, entries) {
       INSERT INTO threat_intel
         (id, title, severity, cvss, cvss_vector, description, source, source_url,
          published_at, exploit_status, known_ransomware, tags, iocs,
-         affected_products, weakness_types, enriched, updated_at)
+         affected_products, weakness_types, enriched,
+         epss_score, epss_percentile, actively_exploited, exploit_available,
+         updated_at)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(id) DO UPDATE SET
-        severity        = CASE WHEN excluded.severity = 'CRITICAL' THEN 'CRITICAL' ELSE threat_intel.severity END,
-        cvss            = COALESCE(excluded.cvss, threat_intel.cvss),
-        exploit_status  = CASE WHEN excluded.exploit_status = 'confirmed' THEN 'confirmed' ELSE threat_intel.exploit_status END,
-        known_ransomware= MAX(excluded.known_ransomware, threat_intel.known_ransomware),
-        updated_at      = datetime('now')
+        severity          = CASE WHEN excluded.severity = 'CRITICAL' THEN 'CRITICAL' ELSE threat_intel.severity END,
+        cvss              = COALESCE(excluded.cvss, threat_intel.cvss),
+        exploit_status    = CASE WHEN excluded.exploit_status = 'confirmed' THEN 'confirmed' ELSE threat_intel.exploit_status END,
+        known_ransomware  = MAX(excluded.known_ransomware, threat_intel.known_ransomware),
+        epss_score        = COALESCE(excluded.epss_score, threat_intel.epss_score),
+        epss_percentile   = COALESCE(excluded.epss_percentile, threat_intel.epss_percentile),
+        actively_exploited= MAX(excluded.actively_exploited, threat_intel.actively_exploited),
+        exploit_available = MAX(excluded.exploit_available, threat_intel.exploit_available),
+        updated_at        = datetime('now')
     `).bind(
       e.id, e.title, e.severity, e.cvss ?? null, e.cvss_vector ?? null,
       e.description || '', e.source, e.source_url || null,
@@ -432,6 +501,10 @@ export async function storeInD1(db, entries) {
       typeof e.affected_products === 'string' ? e.affected_products : JSON.stringify(e.affected_products || []),
       typeof e.weakness_types === 'string' ? e.weakness_types : JSON.stringify(e.weakness_types || []),
       e.enriched ?? 0,
+      e.epss_score ?? null,
+      e.epss_percentile ?? null,
+      e.actively_exploited ? 1 : 0,
+      e.exploit_available  ? 1 : 0,
     ));
 
     try {
@@ -545,11 +618,36 @@ export async function runIngestion(env) {
     } catch {}
   }
 
+  // 7b. Fetch EPSS scores for all CVE IDs
+  try {
+    const cveIds  = deduped.filter(e => /^CVE-\d{4}-\d{4,}$/.test(e.id)).map(e => e.id);
+    const epssMap = await fetchEPSSScores(cveIds);
+    applyEPSSScores(deduped, epssMap);
+    sources.push(`epss(${Object.keys(epssMap).length})`);
+  } catch (e) {
+    errors.push(`EPSS: ${e.message}`);
+    // Fallback: set exploit_available from existing fields
+    for (const entry of deduped) {
+      entry.actively_exploited = entry.exploit_status === 'confirmed' || !!entry.known_ransomware;
+      entry.exploit_available  = entry.exploit_status !== 'unconfirmed';
+      entry.epss_score         = null;
+    }
+  }
+
   // 8. Store in D1 (if available)
   let stored = { inserted: 0, updated: 0, errors: [] };
   if (env?.DB) {
     stored = await storeInD1(env.DB, deduped);
     errors.push(...stored.errors);
+  }
+
+  // 8b. Phase 6: Broadcast threat alerts for newly ingested high-risk entries
+  // Runs asynchronously — does not block ingestion result
+  const alertCandidates = deduped.filter(e =>
+    (parseFloat(e.cvss || 0) >= 9.0 || e.exploit_status === 'confirmed' || (e.epss_score || 0) >= 0.8)
+  );
+  if (alertCandidates.length > 0) {
+    triggerIntelAlerts(env, alertCandidates).catch(() => {});
   }
 
   // 9. Log ingestion run

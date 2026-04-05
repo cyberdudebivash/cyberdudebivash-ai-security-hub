@@ -248,6 +248,147 @@ export async function broadcastCVEAlert(env, cve) {
   return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
 }
 
+// ─── Sentinel APEX v2 — Threat Intel Alert (Phase 6) ─────────────────────────
+// Triggers on: CVSS ≥ 9.0 | CISA KEV confirmed | EPSS ≥ 0.8 | exploit_available
+// Sends to SENTINEL_CHANNEL_ID (Telegram channel for subscribers)
+export async function broadcastThreatAlert(env, entry, trigger = 'critical_cve') {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return { skipped: true };
+
+  const cvss        = entry.cvss ?? 'N/A';
+  const epss        = entry.epss_score != null ? (parseFloat(entry.epss_score) * 100).toFixed(1) + '%' : 'N/A';
+  const exploited   = entry.actively_exploited || entry.exploit_status === 'confirmed';
+  const epssScore   = parseFloat(entry.epss_score || 0);
+
+  // Severity emoji
+  let emoji = '🔴';
+  if (parseFloat(cvss) >= 9.0) emoji = '🚨';
+  if (exploited && parseFloat(cvss) >= 9.0) emoji = '☢️';
+
+  // Trigger label
+  const triggerLabels = {
+    critical_cve:      '🚨 CRITICAL CVE DETECTED',
+    kev_match:         '⚠️ CISA KEV — EXPLOITED IN THE WILD',
+    exploit_available: '💣 EXPLOIT PUBLICLY AVAILABLE',
+    epss_spike:        '📈 HIGH EPSS SCORE — IMMINENT EXPLOITATION',
+    ransomware_link:   '🔒 RANSOMWARE CAMPAIGN LINK',
+    hunting_alert:     '🎯 THREAT HUNTING ALERT',
+  };
+  const triggerLabel = triggerLabels[trigger] || '🔔 SENTINEL APEX ALERT';
+
+  // Build tags string
+  let tags = [];
+  try { tags = typeof entry.tags === 'string' ? JSON.parse(entry.tags) : (entry.tags || []); } catch {}
+
+  // Build exploit status badge
+  const exploitBadge = exploited
+    ? '🚨 *EXPLOITED IN THE WILD*'
+    : entry.exploit_available
+      ? '💣 Exploit Available'
+      : entry.exploit_status === 'poc_available'
+        ? '⚡ PoC Available'
+        : '✅ No public exploit';
+
+  const msg = [
+    `${emoji} *SENTINEL APEX v2 — ${triggerLabel}*`,
+    ``,
+    `*${entry.id ?? 'Unknown'}*`,
+    `*CVSS:* \`${cvss}\` | *EPSS:* \`${epss}\``,
+    `*Severity:* ${entry.severity ?? 'UNKNOWN'}`,
+    exploitBadge,
+    ``,
+    (entry.title ?? '').slice(0, 150),
+    ``,
+    (entry.description ?? '').slice(0, 280) + (((entry.description || '').length > 280) ? '…' : ''),
+    ``,
+    tags.length ? `*Tags:* ${tags.slice(0, 5).join(' · ')}` : '',
+    entry.known_ransomware ? `🔒 *Ransomware Campaign Link Confirmed*` : '',
+    ``,
+    `*Source:* ${entry.source ?? 'Unknown'} | *Published:* ${entry.published_at ?? 'N/A'}`,
+    ``,
+    `[🔗 NVD](https://nvd.nist.gov/vuln/detail/${entry.id}) | [🛡️ Dashboard](https://tools.cyberdudebivash.com) | [📡 Channel](https://t.me/cyberdudebivashSentinelApex)`,
+  ].filter(line => line !== '').join('\n');
+
+  const result = await sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
+  return { ...result, trigger, cve_id: entry.id };
+}
+
+// ─── Batch alert trigger for ingestion results ────────────────────────────────
+// Called from runIngestion() after EPSS + enrichment pass
+// Only sends for newly ingested entries (not seen before)
+export async function triggerIntelAlerts(env, entries = []) {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return [];
+
+  const results  = [];
+  const DELAY_MS = 500; // rate limit: 1 alert per 500ms to avoid Telegram flood
+
+  for (const entry of entries) {
+    const cvss        = parseFloat(entry.cvss || 0);
+    const epssScore   = parseFloat(entry.epss_score || 0);
+    const exploited   = entry.actively_exploited || entry.exploit_status === 'confirmed';
+    const isKEV       = exploited && entry.source === 'cisa_kev';
+    const isExploit   = entry.exploit_available;
+    const isHighEPSS  = epssScore >= 0.8;
+    const isCritical  = cvss >= 9.0 || entry.severity === 'CRITICAL';
+
+    // Determine trigger type
+    let trigger = null;
+    if (isKEV)              trigger = 'kev_match';
+    else if (isCritical && exploited) trigger = 'critical_cve';
+    else if (isHighEPSS)    trigger = 'epss_spike';
+    else if (isExploit && cvss >= 8.0) trigger = 'exploit_available';
+    else if (entry.known_ransomware)   trigger = 'ransomware_link';
+
+    if (!trigger) continue;
+
+    // Check if already alerted for this CVE (KV dedup)
+    if (env?.SECURITY_HUB_KV) {
+      const alertKey = `sentinel:alerted:${entry.id}`;
+      const alreadyAlerted = await env.SECURITY_HUB_KV.get(alertKey).catch(() => null);
+      if (alreadyAlerted) continue;
+      // Mark as alerted (TTL 7 days)
+      env.SECURITY_HUB_KV.put(alertKey, '1', { expirationTtl: 604800 }).catch(() => {});
+    }
+
+    const result = await broadcastThreatAlert(env, entry, trigger);
+    results.push(result);
+
+    // Rate limit to avoid Telegram flood protection
+    if (results.length < entries.length) {
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
+
+    // Max 5 alerts per ingestion run to avoid spam
+    if (results.length >= 5) break;
+  }
+
+  return results;
+}
+
+// ─── Hunting alert broadcast ──────────────────────────────────────────────────
+export async function broadcastHuntingAlert(env, huntAlert) {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return;
+
+  const sevEmoji = { critical: '☢️', high: '🔴', medium: '🟡', low: '🟢' }[huntAlert.severity] || '⚪';
+
+  const msg = [
+    `${sevEmoji} *SENTINEL APEX — THREAT HUNTING ALERT*`,
+    ``,
+    `*Type:* ${huntAlert.type.replace(/_/g, ' ').toUpperCase()}`,
+    `*Severity:* ${huntAlert.severity.toUpperCase()}`,
+    ``,
+    huntAlert.message,
+    ``,
+    huntAlert.evidence?.cve_ids?.length
+      ? `*CVEs:* ${huntAlert.evidence.cve_ids.slice(0, 4).join(', ')}`
+      : '',
+    huntAlert.evidence?.vendor ? `*Vendor:* ${huntAlert.evidence.vendor}` : '',
+    ``,
+    `[🛡️ Sentinel APEX Dashboard](https://tools.cyberdudebivash.com) | [📡 Channel](https://t.me/cyberdudebivashSentinelApex)`,
+  ].filter(l => l !== '').join('\n');
+
+  return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
+}
+
 // ─── Test alert (for user to verify their config) ────────────────────────────
 export async function sendTestAlert(env, userId) {
   const config = await getUserAlertConfig(env, userId);
