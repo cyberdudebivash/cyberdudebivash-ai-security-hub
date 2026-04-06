@@ -742,6 +742,220 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   .hero-scan-btn{width:100%;justify-content:center}
   .sentinel-footer{flex-direction:column;align-items:flex-start}
 }
+
+/* ════════════════════════════════════════════════════
+   CYBERDUDEBIVASH AI Security Hub — World-Class UX v10.0
+   CrowdStrike-level design: SOC Command Center + Attack Simulator
+   + Live Threat Intelligence + Conversion Engine
+   ════════════════════════════════════════════════════ */
+
+/* ── Live Stat Counters ────────────────────────────── */
+.stat-live-indicator{display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;margin-left:6px;animation:statLivePulse 2s ease infinite;vertical-align:middle}
+@keyframes statLivePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+
+/* ── Hero Attack Counter ────────────────────────────── */
+.hero-attack-counter{display:flex;justify-content:center;gap:0;margin:20px auto 28px;flex-wrap:wrap;max-width:760px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+.hac-item{text-align:center;padding:16px 24px;flex:1;min-width:120px;border-right:1px solid rgba(255,255,255,.07);position:relative}
+.hac-item:last-child{border-right:none}
+.hac-num{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;display:block;line-height:1;background:linear-gradient(135deg,#ef4444,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hac-num.positive{background:linear-gradient(135deg,#10b981,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hac-num.warn{background:linear-gradient(135deg,#f59e0b,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hac-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-top:5px;display:block}
+
+/* ── Social Proof Bar ──────────────────────────────── */
+.hero-social-proof{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:24px;flex-wrap:wrap}
+.hsp-avatars{display:flex;align-items:center}
+.hsp-avatar{width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);margin-right:-7px;font-size:9px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center}
+.hsp-text{font-size:13px;color:var(--text-muted);padding-left:14px}
+.hsp-text strong{color:#fff;font-weight:800}
+.hsp-live-dot{width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;margin-right:5px;vertical-align:middle;animation:statLivePulse 1.5s ease infinite}
+.hsp-sep{color:rgba(255,255,255,.15);font-size:16px}
+
+/* ── AI SOC Command Center ─────────────────────────── */
+.soc-command-section{padding:64px 24px;background:linear-gradient(180deg,#07071a 0%,#050510 100%);position:relative;overflow:hidden;border-top:1px solid rgba(239,68,68,.12)}
+.soc-command-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 100%,rgba(124,58,237,.08) 0%,transparent 70%);pointer-events:none}
+.soc-command-inner{max-width:1200px;margin:0 auto}
+.soc-command-header{text-align:center;margin-bottom:40px}
+.soc-command-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:20px;padding:6px 16px;font-size:10px;font-weight:900;color:#ef4444;margin-bottom:16px;letter-spacing:1.5px;text-transform:uppercase}
+.soc-command-badge-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;animation:statLivePulse 1s ease infinite;flex-shrink:0}
+.soc-command-title{font-size:clamp(22px,4vw,36px);font-weight:900;margin-bottom:10px;background:linear-gradient(135deg,#fff 0%,var(--accent) 50%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.soc-command-sub{font-size:14px;color:var(--text-muted);max-width:560px;margin:0 auto}
+
+/* SOC Panel Layout */
+.soc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+@media(max-width:900px){.soc-grid{grid-template-columns:1fr}}
+.soc-grid-3{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+@media(max-width:900px){.soc-grid-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){.soc-grid-3{grid-template-columns:repeat(2,1fr)}}
+
+/* SOC Alert Feed */
+.soc-alert-panel{background:rgba(8,8,22,.95);backdrop-filter:blur(16px);border:1px solid rgba(239,68,68,.2);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.soc-alert-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ef4444,#f97316,#7c3aed)}
+.soc-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.soc-panel-title{font-size:10px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.soc-panel-title.danger{color:#ef4444}
+.soc-panel-title.intel{color:var(--accent2)}
+.soc-alert-count-badge{background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:2px 10px;font-size:10px;font-weight:800}
+.soc-alert-list{display:flex;flex-direction:column;gap:7px;max-height:300px;overflow-y:auto}
+.soc-alert-list::-webkit-scrollbar{width:3px}
+.soc-alert-list::-webkit-scrollbar-thumb{background:rgba(239,68,68,.3);border-radius:2px}
+.soc-alert-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:11px;transition:border-color .2s;animation:alertSlideIn .3s ease}
+.soc-alert-item.new-alert{animation:alertSlideIn .4s ease,alertHighlight 2s ease forwards}
+@keyframes alertSlideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+@keyframes alertHighlight{0%,20%{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35)}100%{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.06)}}
+.soc-alert-sev{flex-shrink:0;width:7px;height:7px;border-radius:50%;margin-top:3px}
+.soc-alert-sev.critical{background:#ef4444;box-shadow:0 0 5px #ef4444;animation:statLivePulse 1s infinite}
+.soc-alert-sev.high{background:#f59e0b;box-shadow:0 0 4px #f59e0b}
+.soc-alert-sev.medium{background:#3b82f6}.soc-alert-sev.low{background:#10b981}
+.soc-alert-body{flex:1;min-width:0}
+.soc-alert-type{font-size:9px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.soc-alert-type.critical{color:#ef4444}.soc-alert-type.high{color:#f59e0b}
+.soc-alert-type.medium{color:#60a5fa}.soc-alert-type.low{color:#10b981}
+.soc-alert-msg{color:var(--text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px}
+.soc-alert-meta{font-size:9px;color:var(--text-dim);margin-top:2px;display:flex;gap:10px}
+.soc-alert-time{font-family:monospace}
+
+/* SOC AI Decision Panel */
+.soc-decision-panel{background:rgba(8,8,22,.95);backdrop-filter:blur(16px);border:1px solid rgba(124,58,237,.2);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.soc-decision-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#7c3aed,#00d4ff,#10b981)}
+.soc-decision-item{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:8px;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.12);margin-bottom:8px;font-size:11px;transition:all .2s}
+.soc-decision-item:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3)}
+.soc-decision-icon{font-size:16px;flex-shrink:0}
+.soc-decision-body{flex:1}
+.soc-decision-label{font-size:9px;font-weight:900;color:var(--accent2);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px}
+.soc-decision-action{font-weight:700;color:var(--text);line-height:1.4}
+.soc-decision-result{font-size:10px;color:#10b981;margin-top:3px}
+
+/* SOC Stat Cards */
+.soc-stat-card{background:rgba(15,15,46,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:20px;text-align:center;position:relative;overflow:hidden;transition:transform .2s,border-color .3s}
+.soc-stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc-color,#00d4ff)}
+.soc-stat-card:hover{transform:translateY(-4px);border-color:rgba(0,212,255,.2)}
+.soc-stat-num{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;margin-bottom:4px}
+.soc-stat-label{font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.3px}
+.soc-stat-delta{font-size:10px;margin-top:5px;font-weight:700}
+.soc-stat-delta.up{color:#10b981}.soc-stat-delta.down{color:#ef4444}.soc-stat-delta.neu{color:#64748b}
+
+/* ── Attack Flow Simulator ──────────────────────────── */
+.attack-sim-panel{background:rgba(5,5,16,.97);backdrop-filter:blur(20px);border:1px solid rgba(239,68,68,.18);border-radius:16px;padding:24px;position:relative;overflow:hidden}
+.attack-sim-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ef4444,#f97316,#f59e0b)}
+.attack-sim-title{font-size:10px;font-weight:900;color:#ef4444;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sim-status-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:12px;flex-shrink:0}
+.sim-status-badge.blocked{background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.25)}
+.sim-status-badge.live{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);animation:statLivePulse 2s ease infinite}
+
+/* Attack Flow Nodes */
+.attack-flow{display:flex;align-items:center;justify-content:space-around;gap:4px;margin-bottom:20px;padding:16px 0;overflow-x:auto}
+.attack-node{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;transition:transform .2s;min-width:64px}
+.attack-node:hover{transform:translateY(-4px)}
+.attack-node-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid;transition:all .3s}
+.attack-node-icon.attacker{border-color:#ef4444;background:rgba(239,68,68,.1);box-shadow:0 0 12px rgba(239,68,68,.15);animation:attackerPulse 2s ease infinite}
+@keyframes attackerPulse{0%,100%{box-shadow:0 0 8px rgba(239,68,68,.15)}50%{box-shadow:0 0 20px rgba(239,68,68,.4)}}
+.attack-node-icon.victim{border-color:#f59e0b;background:rgba(245,158,11,.08)}
+.attack-node-icon.data{border-color:#8b5cf6;background:rgba(139,92,246,.08)}
+.attack-node-icon.shield{border-color:#10b981;background:rgba(16,185,129,.1);box-shadow:0 0 12px rgba(16,185,129,.2)}
+.attack-node-icon.safe{border-color:#10b981;background:rgba(16,185,129,.08)}
+.attack-node-label{font-size:9px;font-weight:700;color:var(--text-muted);text-align:center;line-height:1.3}
+.attack-node-status{font-size:8px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;text-align:center}
+.attack-node-status.danger{color:#ef4444}.attack-node-status.blocked{color:#10b981}.attack-node-status.warn{color:#f59e0b}
+
+/* Attack Flow Arrows */
+.attack-arrow{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;min-width:36px}
+.arrow-line{width:100%;height:2px;position:relative;overflow:hidden;border-radius:1px;min-width:28px}
+.arrow-line::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;animation:arrowFlow 1.5s linear infinite}
+.arrow-line.danger{background:rgba(239,68,68,.18)}
+.arrow-line.danger::after{background:linear-gradient(90deg,transparent,#ef4444,transparent)}
+.arrow-line.blocked{background:rgba(16,185,129,.15)}
+.arrow-line.blocked::after{background:linear-gradient(90deg,transparent,#10b981,transparent);animation:arrowFlow 3s linear infinite}
+.arrow-line.warn{background:rgba(245,158,11,.15)}
+.arrow-line.warn::after{background:linear-gradient(90deg,transparent,#f59e0b,transparent);animation:arrowFlow 2s linear infinite}
+@keyframes arrowFlow{0%{left:-100%}100%{left:100%}}
+.arrow-head{font-size:9px;color:var(--text-dim);margin-top:-2px}
+.arrow-label{font-size:8px;color:var(--text-dim);text-align:center;line-height:1.2;max-width:40px}
+
+/* Attack Technique List */
+.attack-technique-list{display:flex;flex-direction:column;gap:7px}
+.attack-technique-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;font-size:11px;transition:border-color .2s}
+.attack-technique-item:hover{border-color:rgba(239,68,68,.3)}
+.atk-mitre{font-size:9px;font-family:monospace;color:var(--accent2);font-weight:800;min-width:68px;flex-shrink:0}
+.atk-name{flex:1;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atk-status{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.atk-status.blocked{background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.2)}
+.atk-status.detected{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.atk-status.simulated{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+
+/* ── Defense Actions Row ─────────────────────────────── */
+.defense-actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
+.defense-chip{display:flex;align-items:center;gap:5px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:20px;padding:5px 12px;font-size:10px;font-weight:700;color:#10b981;cursor:pointer;transition:all .2s}
+.defense-chip:hover{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.4)}
+.defense-chip.active{background:rgba(16,185,129,.18);border-color:rgba(16,185,129,.5);box-shadow:0 0 8px rgba(16,185,129,.2)}
+.defense-chip.cyan{background:rgba(0,212,255,.06);border-color:rgba(0,212,255,.2);color:var(--accent)}
+.defense-chip.cyan:hover{background:rgba(0,212,255,.14)}
+.defense-chip.cyan.active{background:rgba(0,212,255,.15);border-color:var(--accent)}
+
+/* ── Global Trust Strip ─────────────────────────────── */
+.trust-layer-section{padding:48px 24px;background:var(--surface2);border-top:1px solid var(--border)}
+.trust-layer-inner{max-width:1100px;margin:0 auto}
+.trust-layer-title{text-align:center;font-size:11px;font-weight:800;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:28px}
+.trust-compliance-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:36px}
+.trust-cert-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:all .2s}
+.trust-cert-card:hover{border-color:var(--accent);background:rgba(0,212,255,.05);transform:translateY(-2px)}
+.trust-cert-icon{font-size:22px;margin-bottom:6px}
+.trust-cert-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px}
+.trust-cert-desc{font-size:10px;color:var(--text-dim)}
+.trust-global-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:28px;padding-top:28px;border-top:1px solid var(--border)}
+.tgs-item{background:rgba(15,15,46,.6);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:16px;text-align:center}
+.tgs-num{font-size:24px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-variant-numeric:tabular-nums;display:block}
+.tgs-label{font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px}
+
+/* ── Conversion Urgency Banner ──────────────────────── */
+#conv-urgency-banner{position:fixed;bottom:0;left:0;right:0;z-index:8000;background:linear-gradient(135deg,rgba(124,58,237,.97),rgba(79,70,229,.97));backdrop-filter:blur(16px);border-top:1px solid rgba(124,58,237,.6);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;transform:translateY(100%);transition:transform .45s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 -8px 32px rgba(124,58,237,.4)}
+#conv-urgency-banner.show{transform:translateY(0)}
+.cub-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.cub-icon{font-size:20px;flex-shrink:0}
+.cub-text{font-size:13px;font-weight:600;color:#fff;min-width:0}
+.cub-text strong{font-weight:900}
+.cub-countdown{font-size:12px;color:rgba(255,255,255,.9);font-variant-numeric:tabular-nums;background:rgba(0,0,0,.3);border-radius:6px;padding:3px 10px;font-family:monospace;font-weight:700;flex-shrink:0;white-space:nowrap}
+.cub-cta-btn{background:#fff;color:#7c3aed;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:800;border:none;cursor:pointer;white-space:nowrap;transition:transform .15s,box-shadow .15s;flex-shrink:0}
+.cub-cta-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.cub-dismiss{background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;transition:color .2s;flex-shrink:0}
+.cub-dismiss:hover{color:#fff}
+
+/* ── Live Activity Strip ────────────────────────────── */
+.live-activity-strip{background:rgba(0,0,0,.3);border:1px solid rgba(16,185,129,.12);border-radius:8px;padding:7px 14px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);margin-top:10px;flex-wrap:wrap;gap:12px}
+.las-dot{width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0;animation:statLivePulse 1.5s ease infinite}
+.las-text strong{color:#10b981}
+
+/* ── Enhanced Threat Ticker ─────────────────────────── */
+.threat-ticker-critical{background:rgba(239,68,68,.06);border-top:1px solid rgba(239,68,68,.15);border-bottom:1px solid rgba(239,68,68,.15);overflow:hidden;padding:7px 0;display:flex;align-items:center;gap:0}
+.ttc-label{background:rgba(239,68,68,.15);border-right:1px solid rgba(239,68,68,.25);padding:0 14px;font-size:9px;font-weight:900;color:#ef4444;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;height:100%;display:flex;align-items:center;flex-shrink:0}
+.ttc-track{overflow:hidden;flex:1;position:relative}
+.ttc-items{display:flex;gap:0;animation:tick 30s linear infinite;white-space:nowrap;width:max-content}
+.ttc-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#f87171;padding:0 28px;border-right:1px solid rgba(239,68,68,.12)}
+.ttc-item::before{content:'';width:4px;height:4px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0}
+
+/* ── Upsell Trigger Bar ─────────────────────────────── */
+.upsell-trigger-bar{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(245,158,11,.06));border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.utb-icon{font-size:18px;flex-shrink:0}
+.utb-body{flex:1;min-width:0}
+.utb-headline{font-size:13px;font-weight:700;color:#fff}
+.utb-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.utb-cta{background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+.utb-cta:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(239,68,68,.4)}
+
+/* ── Responsive (v10 additions) ──────────────────────── */
+@media(max-width:768px){
+  .hero-attack-counter{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;border-radius:12px}
+  .hac-item{min-width:110px;padding:12px 14px}
+  .soc-grid{grid-template-columns:1fr}
+  .soc-grid-3{grid-template-columns:repeat(2,1fr)}
+  .attack-flow{gap:2px;padding:10px 0}
+  .attack-node-icon{width:40px;height:40px;font-size:17px}
+  .attack-node{min-width:48px}
+  .arrow-line{min-width:20px}
+  .trust-compliance-grid{grid-template-columns:repeat(2,1fr)}
+  #conv-urgency-banner{flex-direction:column;padding:12px 16px;gap:10px}
+  .cub-left{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>

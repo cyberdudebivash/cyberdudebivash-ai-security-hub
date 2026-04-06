@@ -1,0 +1,251 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Content & Automation Pipeline
+# =============================================================================
+#
+# AUTOMATION JOBS:
+#   1. cve-alert-pipeline     → Fetch CVEs → Generate blog + LinkedIn + Telegram
+#   2. threat-report-weekly   → Weekly consolidated threat briefing
+#   3. platform-health-check  → Smoke test all 5 scan API endpoints
+#   4. schema-migration       → Apply D1 schema on push to main (manual trigger)
+#
+# SCHEDULES:
+#   cve-alert-pipeline     → Every 6 hours (4× per day)
+#   threat-report-weekly   → Mondays at 08:00 UTC
+#   platform-health-check  → Every hour
+#
+# SECRETS REQUIRED:
+#   WORKERS_API_URL        — Cloudflare Workers URL
+#   WORKERS_API_KEY        — Enterprise API key for platform calls
+#   OPENAI_API_KEY         — GPT-4o-mini for content generation
+#   TELEGRAM_BOT_TOKEN     — Sentinel APEX bot
+#   TELEGRAM_CHANNEL_ID    — @cyberdudebivashSentinelApex channel ID
+#   LINKEDIN_ACCESS_TOKEN  — LinkedIn API v2 token (optional)
+#   LINKEDIN_AUTHOR_URN    — LinkedIn person URN (optional)
+#   CLOUDFLARE_API_TOKEN   — For D1 migrations
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare account ID
+# =============================================================================
+
+name: Automation — Content & Platform Health
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'    # CVE alerts: every 6 hours
+    - cron: '0 8 * * 1'      # Weekly report: Monday 08:00 UTC
+    - cron: '0 * * * *'      # Health check: every hour
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Job to run manually'
+        required: true
+        default: cve_alert
+        type: choice
+        options:
+          - cve_alert
+          - weekly_report
+          - health_check
+          - schema_migrate
+          - linkedin_post
+      dry_run:
+        description: 'Dry run (generate content but do not publish)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Cancel old automation runs (don't stack up)
+concurrency:
+  group: automation-${{ github.event_name }}-${{ github.event.inputs.job || 'scheduled' }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  WORKERS_API_URL:    ${{ secrets.WORKERS_API_URL }}
+  WORKERS_API_KEY:    ${{ secrets.WORKERS_API_KEY }}
+  OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+  LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+  LINKEDIN_AUTHOR_URN:   ${{ secrets.LINKEDIN_AUTHOR_URN }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 · CVE Alert Pipeline (runs every 6h)
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  cve-alert-pipeline:
+    name: CVE Alert — Blog + LinkedIn + Telegram
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 */6 * * *' ||
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'cve_alert'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv --quiet
+
+      - name: Run CVE Alert Pipeline
+        run: |
+          cd automation
+          python content_engine.py --mode cve_alert
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+
+      - name: Upload content artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2 · Weekly Threat Report (Monday 08:00 UTC)
+  # ─────────────────────────────────────────────────────────────────────────────
+  threat-report-weekly:
+    name: Weekly Threat Intelligence Report
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 8 * * 1' ||
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'weekly_report'
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv --quiet
+
+      - name: Generate Weekly Report
+        run: |
+          cd automation
+          python content_engine.py --mode blog
+          python content_engine.py --mode linkedin
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+
+      - name: Upload weekly report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report-${{ github.run_number }}
+          path: logs/
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 3 · Platform Health Check (every hour)
+  # ─────────────────────────────────────────────────────────────────────────────
+  platform-health-check:
+    name: Platform Health — Smoke Test All Endpoints
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 * * * *' ||
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'health_check'
+    timeout-minutes: 5
+
+    steps:
+      - name: Health Check — /api/health
+        id: health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${WORKERS_API_URL}/api/health" \
+            -H "x-api-key: ${WORKERS_API_KEY}" --max-time 10)
+          echo "health_status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then echo "❌ /api/health returned $STATUS"; exit 1; fi
+          echo "✅ /api/health: $STATUS"
+
+      - name: Smoke Test — Domain Scan
+        run: |
+          STATUS=$(curl -s -o /tmp/domain_resp.json -w "%{http_code}" \
+            -X POST "${WORKERS_API_URL}/api/scan/domain" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${WORKERS_API_KEY}" \
+            -d '{"domain":"google.com"}' --max-time 30)
+          echo "domain_scan=$STATUS"
+          cat /tmp/domain_resp.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'Risk: {d.get(\"risk_score\",\"N/A\")} | Findings: {len(d.get(\"findings\",[]))}')" 2>/dev/null || true
+          if [ "$STATUS" != "200" ]; then echo "❌ Domain scan returned $STATUS"; exit 1; fi
+          echo "✅ Domain scan OK"
+
+      - name: Smoke Test — Threat Intel Stats
+        run: |
+          STATUS=$(curl -s -o /tmp/ti_resp.json -w "%{http_code}" \
+            "${WORKERS_API_URL}/api/threat-intel/stats" \
+            -H "x-api-key: ${WORKERS_API_KEY}" --max-time 15)
+          echo "threat_intel=$STATUS"
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "403" ]; then
+            echo "❌ Threat intel stats returned $STATUS"; exit 1
+          fi
+          echo "✅ Threat intel endpoint OK"
+
+      - name: Smoke Test — Real-Time Posture
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${WORKERS_API_URL}/api/realtime/posture" \
+            -H "x-api-key: ${WORKERS_API_KEY}" --max-time 15)
+          echo "realtime=$STATUS"
+          echo "✅ Realtime posture OK ($STATUS)"
+
+      - name: Alert on Failure (Telegram)
+        if: failure()
+        run: |
+          MSG="🚨 *PLATFORM HEALTH ALERT*%0A%0APlatform endpoint failure detected!%0AWorkflow: ${{ github.run_id }}%0ATime: $(date -u '+%Y-%m-%d %H:%M UTC')%0A%0ACheck: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHANNEL_ID}&text=${MSG}&parse_mode=Markdown" || true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 4 · D1 Schema Migration (manual only — never auto)
+  # ─────────────────────────────────────────────────────────────────────────────
+  schema-migrate:
+    name: Apply D1 Schema Migration
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'schema_migrate'
+    timeout-minutes: 10
+    environment: production   # requires manual approval
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+
+      - name: Apply base schema
+        run: |
+          npx wrangler d1 execute cyberdudebivash-security-hub \
+            --file=./workers/schema.sql \
+            --remote
+        env:
+          CLOUDFLARE_API_TOKEN:   ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID:  ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Apply v8 schema extensions
+        run: |
+          npx wrangler d1 execute cyberdudebivash-security-hub \
+            --file=./workers/schema_v8.sql \
+            --remote
+        env:
+          CLOUDFLARE_API_TOKEN:   ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID:  ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Verify schema
+        run: |
+          npx wrangler d1 execute cyberdudebivash-security-hub \
+            --command="SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;" \
+            --remote
+        env:
+          CLOUDFLARE_API_TOKEN:   ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID:  ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -1,7 +1,8 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Premium Paywall Engine v3
+ * CYBERDUDEBIVASH AI Security Hub — Premium Paywall Engine v3.1
  * Free preview → locked findings → Razorpay unlock flow
- * Full per-module pricing + webhook verification stubs
+ * Full per-module pricing + production HMAC-SHA256 webhook verification
+ * SECURITY FIX: Replaced stub webhook verification with real crypto (v3.1)
  */
 
 import { UPGRADE_URL } from './auth.js';
@@ -25,14 +26,33 @@ export function buildPaymentUrl(module, scanId = '', leadEmail = '') {
   return qs ? `${base}?${qs}` : base;
 }
 
-// ─── Razorpay Webhook Verification (stub — replace with real HMAC) ────────────
-export function verifyRazorpayWebhook(body, signature, secret) {
-  // Production: use crypto.subtle to HMAC-SHA256(body, secret) and compare to signature
-  // This stub returns true for testing — replace with real verification
+// ─── Razorpay Webhook Verification (production HMAC-SHA256) ──────────────────
+// Uses Web Crypto API natively in Cloudflare Workers — no external SDK needed
+// SECURITY: Uses constant-time comparison to prevent timing attacks
+export async function verifyRazorpayWebhook(body, signature, secret) {
   if (!body || !signature || !secret) return false;
-  // TODO: Replace stub with: const expected = await hmacSHA256(body, secret);
-  //       return timingSafeEqual(expected, signature);
-  return signature.length > 10; // stub
+  try {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const computedBuf = await crypto.subtle.sign('HMAC', key, enc.encode(body));
+    const computed    = Array.from(new Uint8Array(computedBuf))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    // Constant-time comparison to prevent timing-based signature oracle attacks
+    if (computed.length !== signature.length) return false;
+    let diff = 0;
+    for (let i = 0; i < computed.length; i++) {
+      diff |= computed.charCodeAt(i) ^ signature.charCodeAt(i);
+    }
+    return diff === 0;
+  } catch {
+    return false;
+  }
 }
 
 // ─── Lock Premium Findings ───────────────────────────────────────────────────
