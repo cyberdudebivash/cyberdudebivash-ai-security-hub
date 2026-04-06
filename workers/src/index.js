@@ -1411,6 +1411,70 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // V8.1 SIEM EXPORT — JSON / CEF / STIX 2.1 / Sigma / CSV / NDJSON
     // ═══════════════════════════════════════════════════════════════════════
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // V8.1 AFFILIATE + REVENUE TRACKING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // POST /api/affiliate/click — track affiliate link click (public, fire-and-forget)
+    if (path === '/api/affiliate/click' && method === 'POST') {
+      // Non-blocking — always return 204
+      (async () => {
+        try {
+          const body = await request.clone().json().catch(() => ({}));
+          const ip   = request.headers.get('CF-Connecting-IP') || '';
+          const country = request.cf?.country || '';
+          const ua  = (request.headers.get('User-Agent') || '').slice(0, 300);
+          if (env?.DB && body.link_id) {
+            const id = crypto.randomUUID();
+            await env.DB.prepare(
+              `INSERT INTO affiliate_clicks (id, program, link_id, link_url, ref_page, ip, country, user_agent, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+            ).bind(
+              id,
+              (body.program || 'unknown').slice(0, 64),
+              (body.link_id || 'unknown').slice(0, 128),
+              (body.link_url || '').slice(0, 500),
+              (body.ref_page || '').slice(0, 500),
+              ip, country,
+              ua.slice(0, 200),
+            ).run().catch(() => {});
+          }
+        } catch {}
+      })();
+      return withSecurityHeaders(withCors(new Response(null, { status: 204 }), request));
+    }
+
+    // GET /api/revenue/dashboard — revenue analytics (ENTERPRISE only)
+    if (path === '/api/revenue/dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (authCtx.tier !== 'ENTERPRISE') {
+        return withSecurityHeaders(withCors(Response.json({
+          success: false, error: 'Revenue dashboard requires ENTERPRISE plan.',
+          code: 'ERR_ENTERPRISE_REQUIRED',
+        }, { status: 403 }), request));
+      }
+      try {
+        const days = parseInt(new URL(request.url).searchParams.get('days') || '30', 10);
+        const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+        const [payments, affiliates, gumroad] = await Promise.all([
+          env.DB?.prepare(`SELECT source, SUM(amount_inr) as total_inr, COUNT(*) as count FROM revenue_events WHERE created_at >= ? GROUP BY source ORDER BY total_inr DESC`).bind(cutoff).all().catch(() => ({ results: [] })),
+          env.DB?.prepare(`SELECT program, COUNT(*) as clicks, SUM(converted) as conversions, SUM(revenue) as revenue FROM affiliate_clicks WHERE created_at >= ? GROUP BY program ORDER BY clicks DESC`).bind(cutoff).all().catch(() => ({ results: [] })),
+          env.DB?.prepare(`SELECT product_permalink, COUNT(*) as licenses, tier_granted FROM gumroad_licenses WHERE created_at >= ? GROUP BY product_permalink ORDER BY licenses DESC`).bind(cutoff).all().catch(() => ({ results: [] })),
+        ]);
+        return withSecurityHeaders(withCors(Response.json({
+          success: true,
+          period_days: days,
+          revenue_by_source: payments?.results || [],
+          affiliate_performance: affiliates?.results || [],
+          gumroad_licenses: gumroad?.results || [],
+          generated_at: new Date().toISOString(),
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));
+      }
+    }
+
     // GET /api/export/siem — export capabilities info (public)
     if (path === '/api/export/siem' && method === 'GET') {
       return withSecurityHeaders(withCors(handleSiemInfo(), request));
