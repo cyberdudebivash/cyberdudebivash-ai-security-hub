@@ -420,9 +420,54 @@ export async function advanceSequence(env, sequenceRowId, nextStep, delayDays) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Send a single email via MailChannels API (Cloudflare-native, free)
+ * Send a single email.
+ *
+ * Provider cascade (in priority order):
+ *   1. Resend (resend.com) — primary; requires env.RESEND_API_KEY secret
+ *   2. MailChannels         — Cloudflare-native fallback (still works on paid plans)
+ *
+ * Set secrets:
+ *   npx wrangler secret put RESEND_API_KEY   ← get free key at resend.com (3,000 emails/mo)
+ *
+ * Resend setup:
+ *   1. Sign up at https://resend.com (free tier: 3,000 emails/month)
+ *   2. Verify your domain (cyberdudebivash.in) in the Resend dashboard
+ *   3. Create an API key and run: npx wrangler secret put RESEND_API_KEY
  */
 export async function sendEmail(env, { to, subject, html, text, replyTo = REPLY_TO }) {
+  // ── 1. Resend (primary) ──────────────────────────────────────────────────
+  if (env?.RESEND_API_KEY) {
+    try {
+      const payload = {
+        from: FROM_EMAIL,
+        to:   [to],
+        subject,
+        html,
+        text,
+        reply_to: replyTo,
+        headers: { 'X-Platform': 'CYBERDUDEBIVASH-SentinelAPEX-8.1' },
+      };
+      const resp = await fetch('https://api.resend.com/emails', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (resp.status === 200 || resp.status === 201) {
+        const body = await resp.json().catch(() => ({}));
+        return { success: true, provider: 'resend', message_id: body.id };
+      }
+      const errBody = await resp.text().catch(() => '');
+      console.warn('[emailEngine] Resend error:', resp.status, errBody.slice(0, 200));
+      // Fall through to MailChannels
+    } catch (err) {
+      console.warn('[emailEngine] Resend fetch error:', err.message);
+    }
+  }
+
+  // ── 2. MailChannels (fallback) ────────────────────────────────────────────
   try {
     const payload = {
       personalizations: [{ to: [{ email: to }] }],
@@ -430,22 +475,20 @@ export async function sendEmail(env, { to, subject, html, text, replyTo = REPLY_
       reply_to: { email: replyTo },
       subject,
       content: [
-        { type: 'text/plain', value: text },
-        { type: 'text/html',  value: html  },
+        { type: 'text/plain', value: text || '' },
+        { type: 'text/html',  value: html  || '' },
       ],
     };
-
     const resp = await fetch('https://api.mailchannels.net/tx/v1/send', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload),
     });
-
     const success = resp.status === 202 || resp.status === 200;
-    return { success, status: resp.status };
+    return { success, provider: 'mailchannels', status: resp.status };
   } catch (err) {
-    console.error('[emailEngine] sendEmail error:', err.message);
-    return { success: false, error: err.message };
+    console.error('[emailEngine] MailChannels error:', err.message);
+    return { success: false, provider: 'none', error: err.message };
   }
 }
 

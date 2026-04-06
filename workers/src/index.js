@@ -1,5 +1,5 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Main Router v8.0
+ * CYBERDUDEBIVASH AI Security Hub — Main Router v8.1
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
  * Continuous Monitoring, Multi-Tenant Orgs, Content Engine, Public API Platform
  *
@@ -12,6 +12,17 @@
  *   Monitoring:        CRUD /api/monitors/*        → scheduled scan monitors
  *   Content Engine:    CRUD /api/content/*         → auto-generated posts
  *   Org Management:    CRUD /api/orgs/*            → multi-tenant orgs + teams
+ *
+ * New in v8.1:
+ *   Real-Time Feed:    GET  /api/realtime/feed        → SSE live threat alert stream
+ *   Realtime Posture:  GET  /api/realtime/posture     → Defense posture JSON
+ *   Realtime Stats:    GET  /api/realtime/stats       → Live platform stats
+ *   Gumroad Webhook:   POST /api/webhooks/gumroad     → Purchase webhook (HMAC)
+ *   Gumroad Verify:    POST /api/gumroad/verify       → License key activation
+ *   Gumroad Products:  GET  /api/gumroad/products     → Public product catalog
+ *   SIEM Info:         GET  /api/export/siem          → Export format docs
+ *   SIEM Export:       POST /api/export/siem          → JSON/CEF/STIX/Sigma/CSV export
+ *   SIEM Stream:       GET  /api/export/siem/stream   → Streaming NDJSON (ENTERPRISE)
  */
 
 // ─── Sync scan handlers (v4 — backward compat) ───────────────────────────────
@@ -118,6 +129,11 @@ import { correlateThreatIntel, getThreatIntelStats, purgeExpiredThreatIntel } fr
 // ─── Intelligence + Sentinel ─────────────────────────────────────────────────
 import { handleSentinelFeed, handleSentinelStatus, runSentinelCron } from './lib/sentinelApex.js';
 import { processQueueBatch }   from './lib/queue.js';
+
+// ─── New v8.1 handlers — Real-Time Feed + Gumroad Revenue Engine + SIEM ──────
+import { handleRealtimeFeed, handleRealtimePosture, handleRealtimeStats } from './handlers/realtime.js';
+import { handleGumroadWebhook, handleLicenseActivation, handleProductCatalog } from './services/gumroadEngine.js';
+import { handleSiemInfo, handleSiemExport, handleSiemStream } from './handlers/siemExport.js';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
@@ -474,6 +490,18 @@ function apiInfoResponse() {
       // Admin
       'GET  /api/admin/analytics':   'Platform analytics (ENTERPRISE only)',
       'GET  /api/admin/api-usage':   'API metering + latency stats (ENTERPRISE only)',
+      // V8.1 — SIEM Export
+      'GET  /api/export/siem':       'SIEM export capabilities + format list (public)',
+      'POST /api/export/siem':       'Export threat data — JSON/CEF/STIX/Sigma/CSV (PRO+)',
+      'GET  /api/export/siem/stream':'Streaming NDJSON export for Logstash/Fluentd (ENTERPRISE)',
+      // V8.1 — Real-Time Feed (SSE)
+      'GET  /api/realtime/feed':     'SSE live threat alert stream (PRO/ENTERPRISE)',
+      'GET  /api/realtime/posture':  'Defense posture snapshot JSON (authenticated)',
+      'GET  /api/realtime/stats':    'Live platform stats (public)',
+      // V8.1 — Gumroad Revenue Engine
+      'POST /api/webhooks/gumroad':  'Gumroad purchase webhook (HMAC verified)',
+      'POST /api/gumroad/verify':    'Activate Gumroad license key → provision tier',
+      'GET  /api/gumroad/products':  'Public product catalog with pricing + SKUs',
       // Other
       'GET  /api/health':            'Service health',
       'POST /api/webhooks/razorpay': 'Razorpay payment webhook',
@@ -1226,6 +1254,43 @@ export default {
       return withSecurityHeaders(withCors(await handleRunDrip(request, env), request));
     }
 
+    // GET /api/unsubscribe — global one-click unsubscribe (public, no auth)
+    // Linked from every email footer; marks lead as unsubscribed in D1.
+    if (path === '/api/unsubscribe' && method === 'GET') {
+      const email = url.searchParams.get('email') || '';
+      const token = url.searchParams.get('token') || '';
+      if (!email) {
+        return withSecurityHeaders(withCors(
+          Response.json({ success: false, error: 'email param required' }, { status: 400 }), request
+        ));
+      }
+      try {
+        if (env?.DB) {
+          await env.DB.prepare(
+            `UPDATE leads SET unsubscribed = 1, unsubscribed_at = datetime('now') WHERE email = ?`
+          ).bind(email.toLowerCase()).run();
+        }
+        // Return a clean HTML confirmation page
+        return new Response(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Unsubscribed — CYBERDUDEBIVASH</title>
+<style>body{background:#0a0e1a;color:#e2e8f0;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.box{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:40px;max-width:420px;text-align:center}
+h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4ff}</style></head>
+<body><div class="box"><h2>✅ Unsubscribed</h2>
+<p><strong>${email}</strong> has been removed from all marketing emails.</p>
+<p style="margin-top:16px">You will still receive critical security alerts if you have an active account.</p>
+<p style="margin-top:16px"><a href="https://cyberdudebivash.in">← Return to Sentinel APEX</a></p>
+</div></body></html>`, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+        });
+      } catch (e) {
+        return withSecurityHeaders(withCors(
+          Response.json({ success: false, error: e.message }, { status: 500 }), request
+        ));
+      }
+    }
+
     // GET /api/growth/email/track — 1×1 pixel / redirect for email tracking
     if (path === '/api/growth/email/track' && method === 'GET') {
       return await handleEmailTrack(request, env);
@@ -1297,6 +1362,73 @@ export default {
     // POST /api/growth/linkedin/run — generate + queue today's LinkedIn post
     if (path === '/api/growth/linkedin/run' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleRunLinkedIn(request, env), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V8.1 REAL-TIME FEED — SSE threat alerts + posture + stats
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // GET /api/realtime/feed — SSE live threat alert stream (PRO/ENTERPRISE)
+    if (path === '/api/realtime/feed' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      // SSE streams cannot use withCors wrapper — returns raw streaming Response
+      return await handleRealtimeFeed(request, env, authCtx);
+    }
+
+    // GET /api/realtime/posture — Defense posture JSON (authenticated)
+    if (path === '/api/realtime/posture' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      return withSecurityHeaders(withCors(await handleRealtimePosture(request, env, authCtx), request));
+    }
+
+    // GET /api/realtime/stats — Live platform stats (public)
+    if (path === '/api/realtime/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      return withSecurityHeaders(withCors(await handleRealtimeStats(request, env, authCtx), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V8.1 GUMROAD REVENUE ENGINE — License verification + webhook + catalog
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // POST /api/webhooks/gumroad — Gumroad purchase webhook (no auth — HMAC verified)
+    if (path === '/api/webhooks/gumroad' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleGumroadWebhook(request, env), request));
+    }
+
+    // POST /api/gumroad/verify — License key activation (optionally authenticated)
+    if (path === '/api/gumroad/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      return withSecurityHeaders(withCors(await handleLicenseActivation(request, env, authCtx), request));
+    }
+
+    // GET /api/gumroad/products — Public product catalog
+    if (path === '/api/gumroad/products' && method === 'GET') {
+      return withSecurityHeaders(withCors(handleProductCatalog(request, env), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V8.1 SIEM EXPORT — JSON / CEF / STIX 2.1 / Sigma / CSV / NDJSON
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // GET /api/export/siem — export capabilities info (public)
+    if (path === '/api/export/siem' && method === 'GET') {
+      return withSecurityHeaders(withCors(handleSiemInfo(), request));
+    }
+
+    // POST /api/export/siem — generate export file (PRO/ENTERPRISE)
+    if (path === '/api/export/siem' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleSiemExport(request, env, authCtx), request));
+    }
+
+    // GET /api/export/siem/stream — streaming NDJSON (ENTERPRISE only)
+    if (path === '/api/export/siem/stream' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      // Streaming response — no withCors wrapper (returns raw stream)
+      return await handleSiemStream(request, env, authCtx);
     }
 
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────

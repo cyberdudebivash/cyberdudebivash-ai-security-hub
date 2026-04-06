@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Account — CYBERDUDEBIVASH AI Security Hub</title>
+  <meta name="description" content="Manage your scans, billing, API keys, and account settings." />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Preload brand font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════════════
+       DESIGN SYSTEM — Cyberpunk Dark
+    ═══════════════════════════════════════════════ */
+    :root {
+      --bg:        #0a0e1a;
+      --bg2:       #0f1628;
+      --bg3:       #141c35;
+      --card:      #111827;
+      --card2:     #1a2540;
+      --border:    #1e3a5f;
+      --accent:    #00d4ff;
+      --accent2:   #7c3aed;
+      --accent3:   #10b981;
+      --danger:    #ef4444;
+      --warn:      #f59e0b;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --mono:      'Share Tech Mono', monospace;
+      --sans:      'Inter', sans-serif;
+      --radius:    10px;
+      --glow:      0 0 20px rgba(0,212,255,.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Top Nav ── */
+    .topnav {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topnav-brand {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 1rem;
+      letter-spacing: .05em;
+    }
+    .topnav-brand span { color: var(--text); }
+    .topnav-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .83rem;
+      transition: all .2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .avatar {
+      width: 34px; height: 34px;
+      background: var(--accent2);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* ── Shell ── */
+    .shell { display: flex; flex: 1; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      flex-shrink: 0;
+    }
+    .sidebar-section { margin-bottom: 8px; }
+    .sidebar-label {
+      font-size: .68rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 20px;
+      margin-bottom: 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: .88rem;
+      border-left: 3px solid transparent;
+      transition: all .18s;
+      user-select: none;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(0,212,255,.06); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,212,255,.08); }
+    .nav-icon { font-size: 1rem; width: 18px; text-align: center; }
+
+    /* ── Main ── */
+    .main { flex: 1; padding: 32px 36px; overflow-y: auto; }
+
+    /* ── Section Pages ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .page-subtitle {
+      color: var(--muted);
+      font-size: .88rem;
+      margin-bottom: 28px;
+    }
+
+    /* ── Stat Cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .stat-label { font-size: .75rem; color: var(--muted); margin-bottom: 6px; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+    .stat-sub { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Tables ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title { font-size: .95rem; font-weight: 600; }
+    .card-body { padding: 0; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    thead th {
+      background: var(--bg3);
+      padding: 10px 16px;
+      text-align: left;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    tbody td { padding: 11px 16px; color: var(--text); vertical-align: middle; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .badge-green  { background: rgba(16,185,129,.15); color: #10b981; }
+    .badge-blue   { background: rgba(0,212,255,.12);  color: var(--accent); }
+    .badge-purple { background: rgba(124,58,237,.2);  color: #a78bfa; }
+    .badge-red    { background: rgba(239,68,68,.15);  color: #ef4444; }
+    .badge-gray   { background: rgba(100,116,139,.15);color: var(--muted); }
+    .badge-warn   { background: rgba(245,158,11,.15); color: var(--warn); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: .84rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .18s;
+      border: none;
+    }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #00b8d9; }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-outline {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { padding: 4px 10px; font-size: .78rem; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-size: .88rem;
+      font-family: var(--sans);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-hint { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Plan card ── */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .plan-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+      transition: border-color .2s;
+    }
+    .plan-card:hover { border-color: var(--accent2); }
+    .plan-card.current { border-color: var(--accent); }
+    .plan-badge {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #000;
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      letter-spacing: .05em;
+    }
+    .plan-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .plan-price {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .plan-price span { font-size: .8rem; color: var(--muted); }
+    .plan-feature { font-size: .8rem; color: var(--muted); margin-bottom: 5px; }
+    .plan-feature::before { content: '✓ '; color: var(--accent3); }
+
+    /* ── API key row ── */
+    .key-val {
+      font-family: var(--mono);
+      font-size: .78rem;
+      color: var(--accent);
+      background: var(--bg3);
+      padding: 3px 8px;
+      border-radius: 4px;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── Copy button ── */
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: .8rem;
+      padding: 3px 7px;
+      border-radius: 4px;
+      transition: color .18s;
+    }
+    .copy-btn:hover { color: var(--accent); }
+
+    /* ── Usage bar ── */
+    .usage-bar {
+      background: var(--bg3);
+      border-radius: 20px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .usage-fill {
+      height: 100%;
+      border-radius: 20px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width .5s ease;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      width: 440px;
+      max-width: 96vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+    /* ── Alert box ── */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: .85rem;
+      margin-bottom: 20px;
+    }
+    .alert-info  { background: rgba(0,212,255,.08); border: 1px solid rgba(0,212,255,.2); color: var(--accent); }
+    .alert-warn  { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2); color: var(--warn); }
+    .alert-error { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.2);  color: var(--danger); }
+    .alert-ok    { background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2); color: var(--accent3); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--card2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: .84rem;
+      z-index: 999;
+      transform: translateY(60px);
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Loading ── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Login overlay ── */
+    #login-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 380px;
+      max-width: 96vw;
+      box-shadow: var(--glow);
+    }
+    .login-logo {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+    .login-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+    .login-sub { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { padding: 20px 16px; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+  LOGIN OVERLAY — shown until authenticated
+═══════════════════════════════════════════════ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">⚔️ CYBERDUDEBIVASH</div>
+    <div class="login-title">Sign in to your account</div>
+    <div class="login-sub">AI Security Hub — Command Center</div>
+
+    <div id="login-err" class="alert alert-error" style="display:none"></div>
+
+    <div class="form-group">
+      <label class="form-label">Email address</label>
+      <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">
+      <span id="login-spinner" style="display:none" class="spinner"></span>
+      Sign In
+    </button>
+    <p style="text-align:center;margin-top:16px;font-size:.83rem;color:var(--muted)">
+      No account? <a href="/">Get started free</a>
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+  TOP NAV
+═══════════════════════════════════════════════ -->
+<nav class="topnav">
+  <div class="topnav-brand">⚔️ CYBERDUDEBIVASH <span>/ Account</span></div>
+  <div class="topnav-actions">
+    <button class="btn-ghost" onclick="window.open('/', '_blank')">← Back to Hub</button>
+    <div class="avatar" id="nav-avatar" title="Account">?</div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════
+  SHELL
+═══════════════════════════════════════════════ -->
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Overview</div>
+      <div class="nav-item active" data-page="overview" onclick="showPage('overview',this)">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Intelligence</div>
+      <div class="nav-item" data-page="scans" onclick="showPage('scans',this)">
+        <span class="nav-icon">🔍</span> Scan History
+      </div>
+      <div class="nav-item" data-page="reports" onclick="showPage('reports',this)">
+        <span class="nav-icon">📄</span> My Reports
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Developer</div>
+      <div class="nav-item" data-page="apikeys" onclick="showPage('apikeys',this)">
+        <span class="nav-icon">🔑</span> API Keys
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Account</div>
+      <div class="nav-item" data-page="billing" onclick="showPage('billing',this)">
+        <span class="nav-icon">💳</span> Billing & Plan
+      </div>
+      <div class="nav-item" data-page="settings" onclick="showPage('settings',this)">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+      <div class="nav-item" onclick="doLogout()" style="margin-top:8px">
+        <span class="nav-icon">🚪</span> Sign Out
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div id="page-overview" class="page active">
+      <div class="page-title">Welcome back, <span id="user-name">—</span></div>
+      <div class="page-subtitle" id="user-email-sub">Loading your account…</div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Current Plan</div>
+          <div class="stat-value" id="stat-plan" style="font-size:1.1rem">—</div>
+          <div class="stat-sub" id="stat-plan-sub"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Scans Today</div>
+          <div class="stat-value" id="stat-scans-today">—</div>
+          <div class="stat-sub" id="stat-quota">of — daily limit</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-value" id="stat-scans-total">—</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">API Keys</div>
+          <div class="stat-value" id="stat-keys">—</div>
+          <div class="stat-sub" id="stat-key-limit">of — allowed</div>
+        </div>
+      </div>
+
+      <!-- Recent scans mini table -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Scans</span>
+          <button class="btn btn-outline btn-sm" onclick="showPage('scans',null)">View all →</button>
+        </div>
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Module</th><th>Target</th><th>Risk Score</th><th>Status</th><th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="recent-scans">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+                <span class="spinner"></span> Loading…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Usage bar -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Daily Usage</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.83rem">
+            <span>API calls today</span>
+            <span id="usage-label" style="color:var(--accent)">0 / —</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill" id="usage-fill" style="width:0%"></div></div>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:8px">Resets at midnight UTC</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCAN HISTORY ══ -->
+    <div id="page-scans" class="page">
+      <div class="page-title">Scan History</div>
+      <div class="page-subtitle">All scans associated with your account</div>
+
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <input class="form-input" id="scan-search" placeholder="Filter by domain or module…" style="max-width:320px" oninput="filterScans()" />
+        <select class="form-input" id="scan-module-filter" style="max-width:160px" onchange="filterScans()">
+          <option value="">All Modules</option>
+          <option>domain</option><option>ai</option><option>redteam</option>
+          <option>identity</option><option>compliance</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Module</th><th>Target</th><th>Risk Score</th><th>Findings</th><th>Date</th><th>Report</th>
+              </tr>
+            </thead>
+            <tbody id="all-scans">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">
+                <span class="spinner"></span> Loading scan history…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="scans-pagination" style="text-align:center;margin-top:12px"></div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div id="page-reports" class="page">
+      <div class="page-title">My Reports</div>
+      <div class="page-subtitle">Paid HTML reports purchased via the Security Hub</div>
+
+      <div class="alert alert-info">
+        Reports are available for 7 days after purchase. Download before they expire.
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr><th>Module</th><th>Target</th><th>Price Paid</th><th>Expires</th><th>Download</th></tr>
+            </thead>
+            <tbody id="reports-table">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+                <span class="spinner"></span> Loading reports…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ API KEYS ══ -->
+    <div id="page-apikeys" class="page">
+      <div class="page-title">API Keys</div>
+      <div class="page-subtitle">Use these keys to call the Sentinel API programmatically</div>
+
+      <div class="alert alert-warn" id="key-limit-warn" style="display:none">
+        You have reached your plan's API key limit. Upgrade to create more.
+      </div>
+
+      <div style="margin-bottom:20px">
+        <button class="btn btn-primary" onclick="openCreateKeyModal()">
+          + Create New Key
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Key</th><th>Scopes</th><th>Created</th><th>Last Used</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="keys-table">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">
+                <span class="spinner"></span> Loading keys…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Usage</span></div>
+        <div class="card-body" style="padding:20px">
+          <table>
+            <thead><tr><th>Date</th><th>Requests</th><th>Module</th></tr></thead>
+            <tbody id="key-usage-table">
+              <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">
+                Select a key to view usage
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BILLING ══ -->
+    <div id="page-billing" class="page">
+      <div class="page-title">Billing & Plan</div>
+      <div class="page-subtitle">Manage your subscription and payment history</div>
+
+      <div class="plan-grid" id="plan-grid">
+        <!-- Plans rendered by JS -->
+        <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted)">
+          <span class="spinner"></span> Loading plans…
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Payment History</span></div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>Date</th><th>Amount</th><th>Module / Plan</th><th>Status</th><th>Receipt</th></tr></thead>
+            <tbody id="payment-history">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+                <span class="spinner"></span> Loading payments…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div id="page-settings" class="page">
+      <div class="page-title">Account Settings</div>
+      <div class="page-subtitle">Update your profile and notification preferences</div>
+
+      <div class="card" style="max-width:560px">
+        <div class="card-header"><span class="card-title">Profile</span></div>
+        <div class="card-body" style="padding:24px">
+          <div id="settings-err" class="alert alert-error" style="display:none"></div>
+          <div id="settings-ok"  class="alert alert-ok"    style="display:none"></div>
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input id="s-name" class="form-input" placeholder="Your name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input id="s-email" class="form-input" type="email" disabled style="opacity:.6" />
+            <div class="form-hint">Email changes require support contact.</div>
+          </div>
+          <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:560px;margin-top:24px">
+        <div class="card-header"><span class="card-title">Change Password</span></div>
+        <div class="card-body" style="padding:24px">
+          <div id="pw-err" class="alert alert-error" style="display:none"></div>
+          <div id="pw-ok"  class="alert alert-ok"    style="display:none"></div>
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input id="pw-current" class="form-input" type="password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input id="pw-new" class="form-input" type="password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input id="pw-confirm" class="form-input" type="password" />
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:560px;margin-top:24px">
+        <div class="card-header"><span class="card-title">Alert Notifications</span></div>
+        <div class="card-body" style="padding:24px">
+          <div class="form-group">
+            <label class="form-label">Email Alerts</label>
+            <select id="alert-email" class="form-input" style="max-width:240px">
+              <option value="all">All critical CVEs</option>
+              <option value="critical_only">Critical severity only</option>
+              <option value="none">Disabled</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telegram Channel</label>
+            <input id="alert-tg" class="form-input" placeholder="@your_channel or chat ID" style="max-width:300px" />
+          </div>
+          <button class="btn btn-primary" onclick="saveAlerts()">Save Alert Preferences</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:560px;margin-top:24px;border-color:rgba(239,68,68,.3)">
+        <div class="card-header"><span class="card-title" style="color:var(--danger)">Danger Zone</span></div>
+        <div class="card-body" style="padding:24px">
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">
+            Deleting your account is permanent and will remove all scan history, API keys, and reports.
+          </p>
+          <button class="btn btn-danger" onclick="confirmDelete()">Delete My Account</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+  MODALS
+═══════════════════════════════════════════════ -->
+
+<!-- Create API Key -->
+<div class="modal-overlay" id="modal-create-key">
+  <div class="modal">
+    <div class="modal-title">🔑 Create API Key</div>
+    <div class="form-group">
+      <label class="form-label">Key Name</label>
+      <input id="new-key-name" class="form-input" placeholder="e.g. Production Bot" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Scopes</label>
+      <select id="new-key-scopes" class="form-input">
+        <option value="scan:read,scan:write">Scan (read + write)</option>
+        <option value="scan:read">Scan (read only)</option>
+        <option value="intel:read">Threat Intel (read only)</option>
+        <option value="scan:read,scan:write,intel:read">All Read + Scan</option>
+      </select>
+    </div>
+    <div id="new-key-result" class="alert alert-ok" style="display:none">
+      <strong>Copy your key — it won't be shown again:</strong><br/>
+      <code id="new-key-val" style="font-family:var(--mono);font-size:.8rem;word-break:break-all"></code>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-create-key')">Close</button>
+      <button class="btn btn-primary" id="create-key-btn" onclick="createKey()">Create Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- Revoke Key confirm -->
+<div class="modal-overlay" id="modal-revoke-key">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--danger)">⚠️ Revoke API Key?</div>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:8px">
+      Key: <code id="revoke-key-display" style="font-family:var(--mono);color:var(--accent)"></code>
+    </p>
+    <p style="font-size:.85rem;color:var(--muted)">
+      This action is permanent. Any integrations using this key will stop working immediately.
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-revoke-key')">Cancel</button>
+      <button class="btn btn-danger" onclick="revokeKeyConfirmed()">Yes, Revoke</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════
+  JAVASCRIPT
+═══════════════════════════════════════════════ -->
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const API_BASE = 'https://cyberdudebivash-security-hub.workers.dev';
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let _token = null;
+  let _user  = null;
+  let _plan  = null;
+  let _allScans = [];
+  let _revokeTarget = null;
+
+  // ── Auth helpers ────────────────────────────────────────────────────────────
+  function saveTokens(access, refresh) {
+    sessionStorage.setItem('cdb_access',  access);
+    sessionStorage.setItem('cdb_refresh', refresh || '');
+  }
+  function loadToken()   { return sessionStorage.getItem('cdb_access'); }
+  function clearTokens() { sessionStorage.removeItem('cdb_access'); sessionStorage.removeItem('cdb_refresh'); }
+
+  async function apiFetch(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (_token) headers['Authorization'] = `Bearer ${_token}`;
+    const res = await fetch(API_BASE + path, { ...opts, headers });
+    if (res.status === 401) {
+      // Try refresh
+      const refresh = sessionStorage.getItem('cdb_refresh');
+      if (refresh) {
+        const r2 = await fetch(API_BASE + '/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        if (r2.ok) {
+          const d = await r2.json();
+          _token = d.access_token;
+          saveTokens(_token, d.refresh_token || refresh);
+          headers['Authorization'] = `Bearer ${_token}`;
+          return fetch(API_BASE + path, { ...opts, headers });
+        }
+      }
+      doLogout();
+      throw new Error('Unauthorized');
+    }
+    return res;
+  }
+
+  // ── Login ───────────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-err');
+    const spin  = document.getElementById('login-spinner');
+    errEl.style.display = 'none';
+    if (!email || !pass) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return; }
+    spin.style.display = 'inline-block';
+    try {
+      const res = await fetch(API_BASE + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Login failed');
+      _token = d.access_token;
+      _user  = d.user;
+      saveTokens(_token, d.refresh_token);
+      document.getElementById('login-overlay').style.display = 'none';
+      initDashboard();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    } finally {
+      spin.style.display = 'none';
+    }
+  }
+
+  document.getElementById('login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  function doLogout() {
+    clearTokens();
+    _token = _user = _plan = null;
+    document.getElementById('login-overlay').style.display = 'flex';
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  async function initDashboard() {
+    // Try saved token
+    if (!_token) {
+      _token = loadToken();
+      if (!_token) return; // leave login overlay visible
+    }
+    try {
+      const res = await apiFetch('/api/auth/profile');
+      if (!res.ok) { doLogout(); return; }
+      const d = await res.json();
+      _user = d.user;
+      document.getElementById('login-overlay').style.display = 'none';
+    } catch { doLogout(); return; }
+
+    // Populate nav
+    const initial = (_user.name || _user.email || '?').charAt(0).toUpperCase();
+    document.getElementById('nav-avatar').textContent  = initial;
+    document.getElementById('user-name').textContent   = _user.name || _user.email;
+    document.getElementById('user-email-sub').textContent = _user.email;
+    document.getElementById('s-name').value  = _user.name || '';
+    document.getElementById('s-email').value = _user.email || '';
+
+    // Load data in parallel
+    await Promise.allSettled([loadPlan(), loadScans(), loadKeys(), loadPayments()]);
+  }
+
+  // ── Plan / Stats ─────────────────────────────────────────────────────────────
+  async function loadPlan() {
+    try {
+      const res = await apiFetch('/api/user/plan');
+      if (!res.ok) return;
+      const d = await res.json();
+      _plan = d;
+
+      const tier = d.tier || 'FREE';
+      const used = d.usage?.today_count || 0;
+      const limit = d.plan?.daily_limit === -1 ? '∞' : (d.plan?.daily_limit || 5);
+      const keyLimit = d.plan?.key_limit || 2;
+      const pct = limit === '∞' ? 40 : Math.min(100, (used / Number(limit)) * 100);
+
+      document.getElementById('stat-plan').textContent    = tier;
+      document.getElementById('stat-plan-sub').textContent = `₹${d.plan?.price_inr || 0}/mo`;
+      document.getElementById('stat-scans-today').textContent = used;
+      document.getElementById('stat-quota').textContent   = `of ${limit} daily limit`;
+      document.getElementById('stat-key-limit').textContent   = `of ${keyLimit} allowed`;
+      document.getElementById('usage-label').textContent  = `${used} / ${limit}`;
+      document.getElementById('usage-fill').style.width   = pct + '%';
+
+      renderPlans(tier, d.plan);
+    } catch (e) { console.error('loadPlan:', e); }
+  }
+
+  function renderPlans(currentTier, currentPlan) {
+    const plans = [
+      { name: 'FREE', price: 0, features: ['5 scans/day', '2 API keys', 'Basic modules', 'Community support'] },
+      { name: 'STARTER', price: 499, features: ['20 scans/day', '2 API keys', 'All modules', 'Email support'] },
+      { name: 'PRO', price: 1499, features: ['500 scans/day', '5 API keys', 'AI Brain + API v1', 'Priority support'] },
+      { name: 'ENTERPRISE', price: 4999, features: ['Unlimited scans', '20 API keys', 'SOC + SOAR + Decision AI', 'SLA 99.9%'] },
+    ];
+    const grid = document.getElementById('plan-grid');
+    grid.innerHTML = plans.map(p => `
+      <div class="plan-card ${p.name === currentTier ? 'current' : ''}">
+        ${p.name === currentTier ? '<div class="plan-badge">CURRENT PLAN</div>' : ''}
+        <div class="plan-name">${p.name}</div>
+        <div class="plan-price">₹${p.price.toLocaleString()}<span>/mo</span></div>
+        ${p.features.map(f => `<div class="plan-feature">${f}</div>`).join('')}
+        ${p.name !== currentTier ? `<button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:14px" onclick="openUpgrade('${p.name}')">
+          ${p.name === 'FREE' ? 'Downgrade' : 'Upgrade →'}
+        </button>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function openUpgrade(plan) {
+    showToast('Redirecting to upgrade page…');
+    setTimeout(() => window.open('/#pricing', '_blank'), 600);
+  }
+
+  // ── Scans ────────────────────────────────────────────────────────────────────
+  async function loadScans() {
+    try {
+      const res = await apiFetch('/api/history?limit=50');
+      if (!res.ok) return;
+      const d = await res.json();
+      _allScans = d.history || d.scans || [];
+
+      const totalEl = document.getElementById('stat-scans-total');
+      totalEl.textContent = _allScans.length >= 50 ? '50+' : _allScans.length;
+
+      renderRecentScans(_allScans.slice(0, 5));
+      renderAllScans(_allScans);
+    } catch (e) { console.error('loadScans:', e); }
+  }
+
+  function renderRecentScans(scans) {
+    const tbody = document.getElementById('recent-scans');
+    if (!scans.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No scans yet. <a href="/" target="_blank">Run your first scan →</a></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = scans.map(s => `
+      <tr>
+        <td><span class="badge badge-blue">${s.module || '—'}</span></td>
+        <td style="font-family:var(--mono);font-size:.8rem">${s.target || '—'}</td>
+        <td><span style="color:${riskColor(s.risk_score)}">${s.risk_score ?? '—'}</span></td>
+        <td><span class="badge ${s.status === 'completed' ? 'badge-green' : 'badge-gray'}">${s.status || 'done'}</span></td>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.created_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderAllScans(scans) {
+    const tbody = document.getElementById('all-scans');
+    if (!scans.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No scans found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = scans.map(s => `
+      <tr>
+        <td><span class="badge badge-blue">${s.module || '—'}</span></td>
+        <td style="font-family:var(--mono);font-size:.8rem">${s.target || '—'}</td>
+        <td><span style="color:${riskColor(s.risk_score)}">${s.risk_score ?? '—'}/100</span></td>
+        <td>${s.findings_count ?? (s.findings?.length ?? '—')}</td>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.created_at)}</td>
+        <td>${s.report_url ? `<a href="${s.report_url}" target="_blank" class="btn btn-outline btn-sm">Download</a>` : '<span style="color:var(--muted);font-size:.78rem">—</span>'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function filterScans() {
+    const q   = document.getElementById('scan-search').value.toLowerCase();
+    const mod = document.getElementById('scan-module-filter').value;
+    const filtered = _allScans.filter(s =>
+      (!q   || (s.target || '').toLowerCase().includes(q) || (s.module || '').toLowerCase().includes(q)) &&
+      (!mod || s.module === mod)
+    );
+    renderAllScans(filtered);
+  }
+
+  // ── API Keys ─────────────────────────────────────────────────────────────────
+  async function loadKeys() {
+    try {
+      const res = await apiFetch('/api/keys');
+      if (!res.ok) return;
+      const d = await res.json();
+      const keys = d.keys || [];
+      document.getElementById('stat-keys').textContent = keys.length;
+      renderKeys(keys);
+
+      const keyLimit = _plan?.plan?.key_limit || 2;
+      if (keys.length >= keyLimit) document.getElementById('key-limit-warn').style.display = 'block';
+    } catch (e) { console.error('loadKeys:', e); }
+  }
+
+  function renderKeys(keys) {
+    const tbody = document.getElementById('keys-table');
+    if (!keys.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No API keys yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = keys.map(k => `
+      <tr>
+        <td>${k.name || '—'}</td>
+        <td>
+          <span class="key-val" title="${k.key_prefix || ''}…">${k.key_prefix ? k.key_prefix + '•••••••••••••••••' : 'cdb_•••'}</span>
+        </td>
+        <td style="font-size:.78rem;color:var(--muted)">${(k.scopes || []).join(', ') || 'scan:all'}</td>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(k.created_at)}</td>
+        <td style="color:var(--muted);font-size:.8rem">${k.last_used ? fmtDate(k.last_used) : 'Never'}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="openRevokeKey('${k.id}', '${k.key_prefix || k.id}')">Revoke</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openCreateKeyModal() {
+    document.getElementById('new-key-result').style.display = 'none';
+    document.getElementById('new-key-name').value = '';
+    document.getElementById('create-key-btn').disabled = false;
+    openModal('modal-create-key');
+  }
+
+  async function createKey() {
+    const name   = document.getElementById('new-key-name').value.trim();
+    const scopes = document.getElementById('new-key-scopes').value;
+    if (!name) { showToast('Enter a key name', 'err'); return; }
+    document.getElementById('create-key-btn').disabled = true;
+    try {
+      const res = await apiFetch('/api/keys', {
+        method: 'POST',
+        body: JSON.stringify({ name, scopes: scopes.split(',') }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to create key');
+      document.getElementById('new-key-val').textContent = d.key;
+      document.getElementById('new-key-result').style.display = 'block';
+      showToast('API key created — copy it now!');
+      loadKeys();
+    } catch (e) {
+      showToast(e.message, 'err');
+      document.getElementById('create-key-btn').disabled = false;
+    }
+  }
+
+  function openRevokeKey(id, prefix) {
+    _revokeTarget = id;
+    document.getElementById('revoke-key-display').textContent = prefix + '…';
+    openModal('modal-revoke-key');
+  }
+
+  async function revokeKeyConfirmed() {
+    if (!_revokeTarget) return;
+    try {
+      const res = await apiFetch(`/api/keys/${_revokeTarget}`, { method: 'DELETE' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      closeModal('modal-revoke-key');
+      showToast('Key revoked.');
+      loadKeys();
+    } catch (e) { showToast(e.message, 'err'); }
+  }
+
+  // ── Payments ─────────────────────────────────────────────────────────────────
+  async function loadPayments() {
+    try {
+      // Fetch recent payment history via analytics events (plan-gated)
+      const res = await apiFetch('/api/admin/analytics?type=payments&limit=20');
+      const tbody = document.getElementById('payment-history');
+      const repTbody = document.getElementById('reports-table');
+      if (!res.ok) {
+        tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Upgrade to PRO to view payment history.</td></tr>`;
+        repTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports found.</td></tr>`;
+        return;
+      }
+      const d = await res.json();
+      const payments = d.payments || d.events || [];
+      if (!payments.length) {
+        tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No payments yet.</td></tr>`;
+        repTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = payments.map(p => `
+        <tr>
+          <td style="font-size:.8rem;color:var(--muted)">${fmtDate(p.created_at)}</td>
+          <td>₹${((p.amount || 0)/100).toLocaleString()}</td>
+          <td>${p.module || p.description || '—'}</td>
+          <td><span class="badge badge-green">${p.status || 'captured'}</span></td>
+          <td>${p.report_url ? `<a href="${p.report_url}" target="_blank" class="btn btn-outline btn-sm">Download</a>` : '—'}</td>
+        </tr>
+      `).join('');
+      repTbody.innerHTML = payments.filter(p => p.report_url).map(p => `
+        <tr>
+          <td><span class="badge badge-blue">${p.module || '—'}</span></td>
+          <td style="font-family:var(--mono);font-size:.8rem">${p.target || '—'}</td>
+          <td>₹${((p.amount || 0)/100).toLocaleString()}</td>
+          <td style="color:var(--muted);font-size:.8rem">${fmtDate(p.expires_at || p.created_at)}</td>
+          <td><a href="${p.report_url}" target="_blank" class="btn btn-primary btn-sm">⬇ Download</a></td>
+        </tr>
+      `).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports yet.</td></tr>`;
+    } catch (e) { console.error('loadPayments:', e); }
+  }
+
+  // ── Settings ─────────────────────────────────────────────────────────────────
+  async function saveProfile() {
+    const name = document.getElementById('s-name').value.trim();
+    const errEl = document.getElementById('settings-err');
+    const okEl  = document.getElementById('settings-ok');
+    errEl.style.display = okEl.style.display = 'none';
+    try {
+      const res = await apiFetch('/api/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Update failed');
+      document.getElementById('user-name').textContent = name;
+      okEl.textContent = 'Profile updated!';
+      okEl.style.display = 'block';
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  async function changePassword() {
+    const cur     = document.getElementById('pw-current').value;
+    const newPw   = document.getElementById('pw-new').value;
+    const confirm = document.getElementById('pw-confirm').value;
+    const errEl   = document.getElementById('pw-err');
+    const okEl    = document.getElementById('pw-ok');
+    errEl.style.display = okEl.style.display = 'none';
+    if (!cur || !newPw) { errEl.textContent = 'Fill all fields.'; errEl.style.display='block'; return; }
+    if (newPw !== confirm) { errEl.textContent = 'New passwords do not match.'; errEl.style.display='block'; return; }
+    if (newPw.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display='block'; return; }
+    try {
+      const res = await apiFetch('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: cur, new_password: newPw }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed');
+      okEl.textContent = 'Password updated!';
+      okEl.style.display = 'block';
+      document.getElementById('pw-current').value = document.getElementById('pw-new').value = document.getElementById('pw-confirm').value = '';
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  async function saveAlerts() {
+    const emailPref = document.getElementById('alert-email').value;
+    const tg        = document.getElementById('alert-tg').value.trim();
+    try {
+      const res = await apiFetch('/api/auth/alert-config', {
+        method: 'POST',
+        body: JSON.stringify({ email_alerts: emailPref, telegram_channel: tg }),
+      });
+      if (res.ok) { showToast('Alert preferences saved.'); }
+      else { const d = await res.json(); throw new Error(d.error); }
+    } catch (e) { showToast(e.message, 'err'); }
+  }
+
+  function confirmDelete() {
+    if (confirm('⚠️ This will permanently delete your account and all data. Type DELETE to confirm, then click OK.')) {
+      const confirmText = prompt('Type DELETE to confirm:');
+      if (confirmText === 'DELETE') {
+        apiFetch('/api/auth/delete-account', { method: 'DELETE' })
+          .then(() => { showToast('Account deleted.'); setTimeout(doLogout, 1200); })
+          .catch(e => showToast(e.message, 'err'));
+      }
+    }
+  }
+
+  // ── Page navigation ──────────────────────────────────────────────────────────
+  function showPage(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (el) el.classList.add('active');
+    else {
+      const found = document.querySelector(`.nav-item[data-page="${id}"]`);
+      if (found) found.classList.add('active');
+    }
+  }
+
+  // ── Modals ───────────────────────────────────────────────────────────────────
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function riskColor(score) {
+    if (score == null) return 'var(--muted)';
+    if (score >= 80) return '#ef4444';
+    if (score >= 60) return '#f59e0b';
+    if (score >= 40) return '#00d4ff';
+    return '#10b981';
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    } catch { return iso; }
+  }
+
+  function showToast(msg, type = 'ok') {
+    const el = document.getElementById('toast');
+    el.textContent  = msg;
+    el.style.color  = type === 'err' ? 'var(--danger)' : 'var(--accent)';
+    el.style.borderColor = type === 'err' ? 'var(--danger)' : 'var(--accent)';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => {});
+  }
+
+  // ── Bootstrap ────────────────────────────────────────────────────────────────
+  initDashboard();
+</script>
+</body>
+</html>

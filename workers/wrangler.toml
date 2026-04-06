@@ -6,7 +6,7 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "8.0.0"
+VERSION     = "8.1.0"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
@@ -61,6 +61,14 @@ dead_letter_queue  = "scan-jobs-dlq"
 #   LINKEDIN_ACCESS_TOKEN     — Optional: LinkedIn API v2 access token (for auto-posting)
 #   WORKERS_AI_ACCOUNT_ID     — Optional: Cloudflare account ID for Workers AI binding
 #
+# V8.1 new secrets:
+#   RESEND_API_KEY            — Primary email provider (resend.com free tier: 3,000/mo)
+#                               Get key: https://resend.com → API Keys → Create
+#                               Verify domain cyberdudebivash.in in Resend dashboard first
+#                               Run: npx wrangler secret put RESEND_API_KEY
+#   GUMROAD_SELLER_ID         — Your Gumroad seller ID (from gumroad.com/settings/advanced)
+#                               Run: npx wrangler secret put GUMROAD_SELLER_ID
+#
 # V7.0 monetization setup (Razorpay):
 #   1. Create an account at https://razorpay.com
 #   2. Generate API keys in Settings → API Keys
@@ -73,9 +81,10 @@ dead_letter_queue  = "scan-jobs-dlq"
 #   openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
 
 # ── Workers AI (optional — enhances AI Cyber Brain narratives) ────────────────
-# Uncomment to enable Cloudflare AI (Workers AI addon required):
-# [ai]
-# binding = "AI"
+# Enabled in v8.1 — requires Workers AI addon in Cloudflare dashboard
+# If you do NOT have the addon, comment these 2 lines out again.
+[ai]
+binding = "AI"
 
 # ── Cron Triggers ─────────────────────────────────────────────────────────────
 # V8.0 cron schedule:
