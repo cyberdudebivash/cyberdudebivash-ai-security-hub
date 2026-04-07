@@ -2085,11 +2085,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           // Capture daily revenue snapshot
           const today = new Date().toISOString().slice(0, 10);
           const [subRow, defRow, totalUsers] = await Promise.allSettled([
-            env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount) as rev FROM revenue_events WHERE event_type='subscription_payment' AND DATE(created_at)=?`).bind(today).first(),
-            env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
-            env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
+            env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount) as rev FROM revenue_events WHERE event_type='subscription_payment' AND DATE(created_at)=?`).bind(today).first(),
+            env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
+            env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
           ]);
-          await env.SECURITY_HUB_DB?.prepare(
+          await env.DB?.prepare(
             `INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users)
              VALUES (?,?,?,?,?,?)`
           ).bind(

@@ -58,7 +58,7 @@ export async function handleGetSolutions(request, env, authCtx = {}) {
     const orderBy = orderMap[sort] || orderMap.demand;
 
     const [rows, countRow, stats] = await Promise.all([
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT id, cve_id, title, description, category, price_inr, price_usd,
                 demand_score, severity, cvss_score, preview, difficulty,
                 apt_groups, mitre_techniques, purchase_count, view_count,
@@ -67,11 +67,11 @@ export async function handleGetSolutions(request, env, authCtx = {}) {
          ORDER BY ${orderBy} LIMIT ? OFFSET ?`
       ).bind(...params, limit, offset).all(),
 
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT COUNT(*) as total FROM defense_solutions ${whereClause}`
       ).bind(...params).first(),
 
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT severity, COUNT(*) as cnt FROM defense_solutions WHERE is_active=1 GROUP BY severity`
       ).all(),
     ]);
@@ -84,7 +84,7 @@ export async function handleGetSolutions(request, env, authCtx = {}) {
     // Increment view count async
     if (rows.results?.length) {
       const ids = rows.results.map(r => `'${r.id}'`).join(',');
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `UPDATE defense_solutions SET view_count = view_count + 1 WHERE id IN (${ids})`
       ).run().catch(() => {});
     }
@@ -111,7 +111,7 @@ export async function handleGetFeatured(request, env, authCtx = {}) {
     const cached   = await env.SECURITY_HUB_KV?.get(cacheKey, 'json');
     if (cached) return json({ success: true, cached: true, featured: cached });
 
-    const rows = await env.SECURITY_HUB_DB.prepare(
+    const rows = await env.DB.prepare(
       `SELECT id, cve_id, title, description, category, price_inr, price_usd,
               demand_score, severity, cvss_score, preview, difficulty,
               apt_groups, mitre_techniques, purchase_count, view_count, is_featured, generated_at
@@ -134,7 +134,7 @@ export async function handleGetSolution(request, env, authCtx, solutionId) {
   try {
     if (!solutionId) return json({ success: false, error: 'Solution ID required' }, 400);
 
-    const row = await env.SECURITY_HUB_DB.prepare(
+    const row = await env.DB.prepare(
       `SELECT * FROM defense_solutions WHERE id = ? AND is_active = 1`
     ).bind(solutionId).first();
 
@@ -151,7 +151,7 @@ export async function handleGetSolution(request, env, authCtx, solutionId) {
     }
 
     // Increment view count
-    env.SECURITY_HUB_DB.prepare(
+    env.DB.prepare(
       `UPDATE defense_solutions SET view_count = view_count + 1 WHERE id = ?`
     ).bind(solutionId).run().catch(() => {});
 
@@ -177,7 +177,7 @@ export async function handleInitiatePurchase(request, env, authCtx, solutionId) 
     const body     = await request.json().catch(() => ({}));
     const currency = body.currency === 'USD' ? 'USD' : 'INR';
 
-    const row = await env.SECURITY_HUB_DB.prepare(
+    const row = await env.DB.prepare(
       `SELECT * FROM defense_solutions WHERE id = ? AND is_active = 1`
     ).bind(solutionId).first();
     if (!row) return json({ success: false, error: 'Solution not found' }, 404);
@@ -209,7 +209,7 @@ export async function handleInitiatePurchase(request, env, authCtx, solutionId) 
     }
 
     // Record pending purchase
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO defense_purchases (id, solution_id, user_id, email, razorpay_order_id, amount_inr, currency, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
     ).bind(receiptId, solutionId, authCtx?.userId || null, authCtx?.email || body.email || null,
@@ -252,7 +252,7 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
     }
 
     // Grant access
-    const row = await env.SECURITY_HUB_DB.prepare(
+    const row = await env.DB.prepare(
       `SELECT * FROM defense_solutions WHERE id = ?`
     ).bind(solutionId).first();
     if (!row) return json({ success: false, error: 'Solution not found' }, 404);
@@ -263,10 +263,10 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
 
     await Promise.all([
       env.SECURITY_HUB_KV?.put(accessKey, JSON.stringify({ granted_at: new Date().toISOString(), payment_id: razorpay_payment_id }), { expirationTtl }),
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `UPDATE defense_purchases SET status='paid', razorpay_payment_id=?, access_key=?, access_expires_at=? WHERE razorpay_order_id=?`
       ).bind(razorpay_payment_id, accessKey, expiresAt, razorpay_order_id).run(),
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `UPDATE defense_solutions SET purchase_count = purchase_count + 1 WHERE id = ?`
       ).bind(solutionId).run(),
     ]);
@@ -330,7 +330,7 @@ export async function handleGetMarketplaceStats(request, env) {
     if (cached) return json({ success: true, cached: true, ...cached });
 
     const [totals, top5, recentPurchases, revenue] = await Promise.all([
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT COUNT(*) as total_solutions,
                 SUM(purchase_count) as total_sales,
                 SUM(view_count) as total_views,
@@ -338,18 +338,18 @@ export async function handleGetMarketplaceStats(request, env) {
          FROM defense_solutions WHERE is_active=1`
       ).first(),
 
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT id, cve_id, title, category, price_inr, purchase_count, severity
          FROM defense_solutions WHERE is_active=1 ORDER BY purchase_count DESC LIMIT 5`
       ).all(),
 
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT dp.created_at, ds.title, dp.amount_inr
          FROM defense_purchases dp JOIN defense_solutions ds ON dp.solution_id=ds.id
          WHERE dp.status='paid' ORDER BY dp.created_at DESC LIMIT 10`
       ).all(),
 
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT SUM(dp.amount_inr) as total_revenue
          FROM defense_purchases dp WHERE dp.status='paid'`
       ).first(),
@@ -379,7 +379,7 @@ export async function handleGetMarketplaceStats(request, env) {
 // ─── GET /api/defense/fomo — recent social proof events ──────────────────────
 export async function handleGetFOMO(request, env) {
   try {
-    const rows = await env.SECURITY_HUB_DB.prepare(
+    const rows = await env.DB.prepare(
       `SELECT event_type, entity_type, display_name, ip_country, created_at
        FROM fomo_events ORDER BY created_at DESC LIMIT 20`
     ).all();
@@ -405,7 +405,7 @@ export async function handleCustomSolutionRequest(request, env, authCtx) {
     if (!email || !description) return json({ success: false, error: 'Email and description required' }, 400);
 
     const id = crypto.randomUUID();
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO custom_solution_requests (id, user_id, email, cve_id, solution_types, tech_stack, description, budget_range, deadline)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(id, authCtx?.userId || null, email, cve_id || null,
@@ -510,7 +510,7 @@ function getMockFeatured() {
 
 async function trackFOMO(env, eventType, entityType, entityId, displayName) {
   try {
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO fomo_events (id, event_type, entity_type, entity_id, display_name) VALUES (?, ?, ?, ?, ?)`
     ).bind(crypto.randomUUID(), eventType, entityType, entityId, displayName?.slice(0, 80)).run();
   } catch { /* non-critical */ }

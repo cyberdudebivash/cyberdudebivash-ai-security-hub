@@ -6,8 +6,8 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "8.1.0"
-PLATFORM_VERSION = "8.1.0"
+VERSION     = "11.0.0"
+PLATFORM_VERSION = "11.0.0"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
@@ -124,9 +124,4 @@ crons = [
 
 # [[routes]]
 # pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebivash
-
-[[d1_databases]]
-binding = "SECURITY_HUB_DB"
-database_name = "cyberdudebivash-db"
-database_id = "239a35c8-393f-488e-a7e0-30c7fde958fa"
+# zone_name = "cyberdudebiv

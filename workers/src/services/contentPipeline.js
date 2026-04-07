@@ -68,7 +68,7 @@ export async function generateBlogPost(env, intel) {
   // Store in D1
   try {
     const id = crypto.randomUUID();
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT OR REPLACE INTO blog_posts
        (id,cve_id,slug,title,excerpt,content,html_content,author,tags,category,
         seo_title,seo_description,seo_keywords,status,published_at,solution_cta)
@@ -260,7 +260,7 @@ export async function runContentPipeline(env, intel) {
 
     // Update blog LinkedIn status
     if (blogPost.id) {
-      await env.SECURITY_HUB_DB?.prepare(
+      await env.DB?.prepare(
         `UPDATE blog_posts SET linkedin_posted=1 WHERE id=?`
       ).bind(blogPost.id).run().catch(() => {});
     }
@@ -272,13 +272,13 @@ export async function runContentPipeline(env, intel) {
 
     // Update blog Telegram status
     if (blogPost.id && tgResult.success) {
-      await env.SECURITY_HUB_DB?.prepare(
+      await env.DB?.prepare(
         `UPDATE blog_posts SET telegram_posted=1 WHERE id=?`
       ).bind(blogPost.id).run().catch(() => {});
     }
 
     // Step 4: Track funnel event
-    await env.SECURITY_HUB_DB?.prepare(
+    await env.DB?.prepare(
       `INSERT INTO fomo_events (id, event_type, entity_type, entity_id, display_name) VALUES (?,?,?,?,?)`
     ).bind(crypto.randomUUID(), 'view', 'blog_post', blogPost.id || '', blogPost.title?.slice(0, 80)).run().catch(() => {});
 
@@ -303,7 +303,7 @@ export async function runContentPipeline(env, intel) {
 export async function runBulkContentPipeline(env, limit = 5) {
   try {
     // Fetch unprocessed intel
-    const rows = await env.SECURITY_HUB_DB?.prepare(
+    const rows = await env.DB?.prepare(
       `SELECT ti.*, GROUP_CONCAT(ds.id) as solution_ids
        FROM threat_intel ti
        LEFT JOIN defense_solutions ds ON ds.cve_id = ti.cve_id
@@ -335,7 +335,7 @@ export async function runBulkContentPipeline(env, limit = 5) {
       results.push(result);
 
       // Mark as published in threat_intel
-      await env.SECURITY_HUB_DB?.prepare(
+      await env.DB?.prepare(
         `UPDATE threat_intel SET blog_published=1 WHERE cve_id=?`
       ).bind(item.cve_id).run().catch(() => {});
     }
@@ -366,11 +366,11 @@ export async function handleGetBlogPosts(request, env) {
     if (cveId) { where += ' AND cve_id=?';    params.push(cveId); }
 
     const [rows, countRow] = await Promise.all([
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT id,cve_id,slug,title,excerpt,category,tags,seo_description,published_at,views,solution_cta
          FROM blog_posts ${where} ORDER BY published_at DESC LIMIT ? OFFSET ?`
       ).bind(...params, limit, offset).all(),
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT COUNT(*) as total FROM blog_posts ${where}`
       ).bind(...params).first(),
     ]);
@@ -394,16 +394,16 @@ export async function handleGetBlogPost(request, env, slug) {
     const kvKey  = `blog:post:${slug}`;
     const cached = await env.SECURITY_HUB_KV?.get(kvKey, 'json');
     if (cached) {
-      env.SECURITY_HUB_DB?.prepare(`UPDATE blog_posts SET views=views+1 WHERE slug=?`).bind(slug).run().catch(() => {});
+      env.DB?.prepare(`UPDATE blog_posts SET views=views+1 WHERE slug=?`).bind(slug).run().catch(() => {});
       return json({ success: true, cached: true, post: cached });
     }
 
-    const post = await env.SECURITY_HUB_DB.prepare(
+    const post = await env.DB.prepare(
       `SELECT * FROM blog_posts WHERE slug=? AND status='published'`
     ).bind(slug).first();
     if (!post) return json({ success: false, error: 'Post not found' }, 404);
 
-    env.SECURITY_HUB_DB.prepare(`UPDATE blog_posts SET views=views+1 WHERE slug=?`).bind(slug).run().catch(() => {});
+    env.DB.prepare(`UPDATE blog_posts SET views=views+1 WHERE slug=?`).bind(slug).run().catch(() => {});
     await env.SECURITY_HUB_KV?.put(kvKey, JSON.stringify(post), { expirationTtl: 3600 });
     return json({ success: true, post });
   } catch (err) {

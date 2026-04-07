@@ -348,7 +348,7 @@ export async function handleMSSPApplication(request, env) {
     if (!email || !company_name) return json({ success: false, error: 'Company name and email required' }, 400);
 
     const id = crypto.randomUUID();
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO enterprise_leads (id, company_name, email, domain, requirements, package_interest, source, status)
        VALUES (?,?,?,?,?,?,?,?)`
     ).bind(id, company_name, email, website || null,
