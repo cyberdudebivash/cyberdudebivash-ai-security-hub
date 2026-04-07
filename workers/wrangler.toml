@@ -70,6 +70,20 @@ dead_letter_queue  = "scan-jobs-dlq"
 #   GUMROAD_SELLER_ID         — Your Gumroad seller ID (from gumroad.com/settings/advanced)
 #                               Run: npx wrangler secret put GUMROAD_SELLER_ID
 #
+# V10.0 new secrets (Phase 4 — Content Automation):
+#   TELEGRAM_BOT_TOKEN        — Bot token from @BotFather for auto-posting CVE alerts
+#                               Run: npx wrangler secret put TELEGRAM_BOT_TOKEN
+#   TELEGRAM_CHANNEL_ID       — Your Telegram channel ID (e.g. @cyberdudebivash or -100xxxxxxxx)
+#                               Run: npx wrangler secret put TELEGRAM_CHANNEL_ID
+#   LINKEDIN_ACCESS_TOKEN     — LinkedIn API v2 OAuth token for auto-posting
+#                               Get from: https://developer.linkedin.com → OAuth 2.0
+#                               Run: npx wrangler secret put LINKEDIN_ACCESS_TOKEN
+#   LINKEDIN_ORG_ID           — LinkedIn organization ID (for company page posting)
+#                               Run: npx wrangler secret put LINKEDIN_ORG_ID
+#
+# V10.0 new env vars (non-secret, plain text):
+#   Already set: TELEGRAM = "https://t.me/cyberdudebivashSentinelApex" (channel link)
+#
 # V7.0 monetization setup (Razorpay):
 #   1. Create an account at https://razorpay.com
 #   2. Generate API keys in Settings → API Keys
@@ -88,14 +102,18 @@ dead_letter_queue  = "scan-jobs-dlq"
 binding = "AI"
 
 # ── Cron Triggers ─────────────────────────────────────────────────────────────
-# V8.0 cron schedule:
-#   Every 6 hours  — Sentinel APEX CVE feed refresh + monitoring scans (hourly monitors)
-#   Every hour     — Continuous monitoring scans (all due monitors)
-# Note: Cloudflare Workers supports multiple cron expressions
+# v10.0 cron schedule (expanded):
+#   Hourly:   Monitoring scans + threat intel purge
+#   6 AM:     CVE → Blog → LinkedIn → Telegram content pipeline
+#   Every 12h: Defense product generation from live CVEs
+#   11 PM:    Daily revenue snapshot capture
 [triggers]
 crons = [
-  "0 * * * *",        # Hourly: run due monitoring scans + threat intel purge
-  "0 0,6,12,18 * * *" # 4x/day: Sentinel APEX CVE feed refresh
+  "0 * * * *",       # Hourly:   run due monitoring scans + threat intel purge
+  "0 0,6,12,18 * * *", # 4x/day:  Sentinel APEX CVE feed refresh
+  "0 */12 * * *",    # Every 12h: v10 Defense product generation
+  "0 6 * * *",       # 6 AM:     v10 Content pipeline (CVE→Blog→Social)
+  "0 23 * * *"       # 11 PM:    v10 Daily revenue snapshot
 ]
 
 # ── Custom domain routes ──────────────────────────────────────────────────────
@@ -106,4 +124,9 @@ crons = [
 
 # [[routes]]
 # pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebiv
+# zone_name = "cyberdudebivash
+
+[[d1_databases]]
+binding = "SECURITY_HUB_DB"
+database_name = "cyberdudebivash-db"
+database_id = "239a35c8-393f-488e-a7e0-30c7fde958fa"
