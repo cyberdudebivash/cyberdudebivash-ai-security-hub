@@ -6141,10 +6141,483 @@ if ('serviceWorker' in navigator) {
 // ─── AdSense — Push display ads after page load ───────────────────────────────
 window.addEventListener('load', () => {
   try {
-    // Trigger any remaining ad units
     (window.adsbygoogle = window.adsbygoogle || []);
   } catch {}
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HIGH-CONVERSION UX ENGINE v8.2
+// Urgency banners · Locked features · Upgrade triggers · Social proof
+// ═══════════════════════════════════════════════════════════════════════════
+
+(function MonetizationUX() {
+  'use strict';
+
+  // ── Config ──────────────────────────────────────────────────────────────
+  const API  = window.CONFIG?.API_BASE || 'https://cyberdudebivash-security-hub.workers.dev';
+  const AUTH = (() => {
+    try { return JSON.parse(localStorage.getItem('cdb_auth') || '{}'); } catch { return {}; }
+  })();
+  const PLAN     = AUTH.plan     || 'free';
+  const USER_ID  = AUTH.user_id  || null;
+  const IS_AUTH  = !!AUTH.token;
+
+  // ── Plan gating definitions ─────────────────────────────────────────────
+  const GATED_FEATURES = {
+    'siem-export':    { requiredPlan: 'pro',        label: 'SIEM Export'       },
+    'threat-hunt':    { requiredPlan: 'pro',        label: 'Threat Hunting'    },
+    'api-access':     { requiredPlan: 'starter',    label: 'API Access'        },
+    'full-report':    { requiredPlan: 'starter',    label: 'Full PDF Report'   },
+    'correlation':    { requiredPlan: 'pro',        label: 'Threat Correlation'},
+    'enterprise-feed':{ requiredPlan: 'enterprise', label: 'Enterprise Feed'   },
+  };
+
+  const PLAN_RANK = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+
+  function planAtLeast(required) {
+    return (PLAN_RANK[PLAN] || 0) >= (PLAN_RANK[required] || 0);
+  }
+
+  // ── Urgency banner ───────────────────────────────────────────────────────
+  function injectUrgencyBanner() {
+    if (planAtLeast('pro')) return; // pro+ users: no banner
+
+    const existing = document.getElementById('cdb-urgency-banner');
+    if (existing) return;
+
+    // Countdown: 24h from first visit, stored in sessionStorage
+    let expiresAt = parseInt(sessionStorage.getItem('cdb_offer_expires') || '0', 10);
+    if (!expiresAt || expiresAt < Date.now()) {
+      expiresAt = Date.now() + 24 * 3600 * 1000;
+      sessionStorage.setItem('cdb_offer_expires', String(expiresAt));
+    }
+
+    const banner = document.createElement('div');
+    banner.id = 'cdb-urgency-banner';
+    banner.style.cssText = `
+      position:fixed; top:0; left:0; right:0; z-index:9999;
+      background:linear-gradient(90deg,#4f46e5,#7c3aed);
+      color:#fff; padding:10px 16px; display:flex;
+      align-items:center; justify-content:center; gap:16px;
+      font-size:13px; font-family:sans-serif; box-shadow:0 2px 12px rgba(0,0,0,.3);
+    `;
+
+    const plans = { free: { upgrade: 'STARTER', price: '₹499/mo', discount: '₹299 today' }, starter: { upgrade: 'PRO', price: '₹1,499/mo', discount: '₹1,199 today' } };
+    const offer = plans[PLAN] || plans.free;
+
+    banner.innerHTML = `
+      <span>⚡ Limited-time offer — Upgrade to <strong>${offer.upgrade}</strong> for just <strong>${offer.discount}</strong></span>
+      <span id="cdb-countdown" style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-weight:700;min-width:80px;text-align:center">24:00:00</span>
+      <a href="/upgrade?plan=${offer.upgrade.toLowerCase()}&ref=urgency_banner&discount=1"
+         style="background:#fff;color:#4f46e5;padding:6px 16px;border-radius:20px;font-weight:700;text-decoration:none;white-space:nowrap;font-size:12px">
+        Upgrade Now →
+      </a>
+      <button onclick="this.closest('#cdb-urgency-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;line-height:1;margin-left:8px">×</button>
+    `;
+
+    document.body.prepend(banner);
+    document.body.style.paddingTop = (parseInt(document.body.style.paddingTop || '0') + 44) + 'px';
+
+    // Live countdown
+    function updateCountdown() {
+      const remaining = Math.max(0, expiresAt - Date.now());
+      const h = String(Math.floor(remaining / 3600000)).padStart(2, '0');
+      const m = String(Math.floor((remaining % 3600000) / 60000)).padStart(2, '0');
+      const s = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+      const el = document.getElementById('cdb-countdown');
+      if (el) el.textContent = `${h}:${m}:${s}`;
+      if (remaining <= 0) { clearInterval(timer); if (el) el.textContent = 'EXPIRED'; }
+    }
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+  }
+
+  // ── Lock gated feature elements ──────────────────────────────────────────
+  function lockGatedFeatures() {
+    for (const [featureId, config] of Object.entries(GATED_FEATURES)) {
+      if (planAtLeast(config.requiredPlan)) continue;
+
+      const els = document.querySelectorAll(`[data-feature="${featureId}"], #${featureId}, .feature-${featureId}`);
+      els.forEach(el => {
+        if (el.dataset.locked) return;
+        el.dataset.locked = '1';
+        el.style.position = 'relative';
+        el.style.pointerEvents = 'none';
+        el.style.userSelect = 'none';
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:absolute; inset:0; background:rgba(15,15,30,.7);
+          backdrop-filter:blur(4px); display:flex; flex-direction:column;
+          align-items:center; justify-content:center; z-index:10;
+          border-radius:inherit; cursor:pointer;
+        `;
+        overlay.innerHTML = `
+          <div style="text-align:center;padding:16px">
+            <div style="font-size:28px">🔒</div>
+            <div style="color:#fff;font-weight:700;margin:8px 0 4px">${config.label}</div>
+            <div style="color:#a5b4fc;font-size:12px;margin-bottom:12px">Requires ${config.requiredPlan.toUpperCase()} plan</div>
+            <a href="/upgrade?plan=${config.requiredPlan}&ref=feature_lock_${featureId}"
+               style="background:#4f46e5;color:#fff;padding:8px 18px;border-radius:20px;text-decoration:none;font-size:13px;font-weight:600"
+               onclick="event.stopPropagation()">Unlock →</a>
+          </div>
+        `;
+        overlay.addEventListener('click', () => {
+          window.location.href = `/upgrade?plan=${config.requiredPlan}&ref=feature_lock_click_${featureId}`;
+        });
+        el.style.pointerEvents = '';
+        el.appendChild(overlay);
+      });
+    }
+  }
+
+  // ── Social proof ticker ─────────────────────────────────────────────────
+  function injectSocialProof() {
+    if (IS_AUTH && planAtLeast('pro')) return; // not for pro+ users
+
+    const msgs = [
+      '🔥 47 security teams upgraded this week',
+      '⭐ "Best threat intel platform I\'ve used" — SOC Lead, Mumbai',
+      '📊 2,400+ scans run today across 83 countries',
+      '🛡 15 enterprises use CYBERDUDEBIVASH for real-time intel',
+      '💳 3 users just upgraded to PRO in the last hour',
+    ];
+
+    const existing = document.getElementById('cdb-social-proof');
+    if (existing) return;
+
+    const ticker = document.createElement('div');
+    ticker.id = 'cdb-social-proof';
+    ticker.style.cssText = `
+      position:fixed; bottom:80px; left:20px; z-index:8000;
+      background:#1e1b4b; border:1px solid #4f46e5; border-radius:10px;
+      padding:10px 16px; font-size:12px; color:#c7d2fe; max-width:280px;
+      box-shadow:0 4px 20px rgba(79,70,229,.3); opacity:0;
+      transition:opacity .4s; font-family:sans-serif;
+    `;
+
+    let idx = 0;
+    function showNext() {
+      ticker.style.opacity = '0';
+      setTimeout(() => {
+        ticker.textContent = msgs[idx % msgs.length];
+        ticker.style.opacity = '1';
+        idx++;
+      }, 400);
+    }
+
+    showNext();
+    document.body.appendChild(ticker);
+
+    // Show every 8 seconds for 5 cycles then hide
+    let cycles = 0;
+    const iv = setInterval(() => {
+      showNext();
+      cycles++;
+      if (cycles >= 5) { clearInterval(iv); setTimeout(() => { ticker.style.opacity = '0'; setTimeout(() => ticker.remove(), 400); }, 8000); }
+    }, 8000);
+  }
+
+  // ── Post-scan upsell modal ───────────────────────────────────────────────
+  window.showScanUpsell = function(scanData) {
+    if (planAtLeast('pro')) return;
+
+    const existing = document.getElementById('cdb-scan-upsell');
+    if (existing) existing.remove();
+
+    const critCount = scanData?.critical_count || 0;
+    const highCount = scanData?.high_count || 0;
+
+    if (critCount === 0 && highCount < 2) return; // no urgency — skip
+
+    const modal = document.createElement('div');
+    modal.id = 'cdb-scan-upsell';
+    modal.style.cssText = `
+      position:fixed; inset:0; z-index:10000; display:flex;
+      align-items:center; justify-content:center;
+      background:rgba(0,0,0,.7); backdrop-filter:blur(6px);
+      font-family:sans-serif;
+    `;
+    modal.innerHTML = `
+      <div style="background:#0f0f1e;border:1px solid #4f46e5;border-radius:16px;padding:32px;max-width:460px;width:90%;position:relative">
+        <button onclick="document.getElementById('cdb-scan-upsell').remove()"
+          style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer">×</button>
+
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:48px">⚠️</div>
+          <h2 style="color:#f87171;margin:8px 0 4px">
+            ${critCount > 0 ? `${critCount} Critical Threat${critCount > 1 ? 's' : ''} Detected` : `${highCount} High-Risk Vulnerabilities`}
+          </h2>
+          <p style="color:#94a3b8;font-size:14px">Your scan revealed active threats requiring immediate response</p>
+        </div>
+
+        <div style="background:#1e1b4b;border-radius:10px;padding:16px;margin-bottom:20px">
+          <p style="color:#c7d2fe;margin:0 0 12px;font-weight:600">Get instant defense tools:</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="color:#94a3b8;font-size:13px">🛡 Firewall Rules</span>
+            <a href="/api/checkout?product=firewall_rules&price=199&ref=scan_upsell"
+               style="background:#4f46e5;color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;text-decoration:none">₹199</a>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="color:#94a3b8;font-size:13px">📋 IR Playbook</span>
+            <a href="/api/checkout?product=ir_playbook&price=999&ref=scan_upsell"
+               style="background:#4f46e5;color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;text-decoration:none">₹999</a>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #2d2b52;padding-top:12px">
+            <span style="color:#fbbf24;font-size:13px;font-weight:700">📦 Full Defense Pack</span>
+            <a href="/api/checkout?product=full_defense_pack&price=2499&ref=scan_upsell"
+               style="background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;padding:4px 14px;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none">₹2,499 →</a>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <a href="/upgrade?plan=${PLAN === 'free' ? 'starter' : 'pro'}&ref=scan_upsell_modal"
+             style="flex:1;background:#4f46e5;color:#fff;padding:12px;border-radius:10px;text-align:center;font-weight:700;text-decoration:none">
+            ${PLAN === 'free' ? 'Upgrade to STARTER — ₹299' : 'Upgrade to PRO — ₹1,199'}
+          </a>
+        </div>
+
+        <p style="color:#475569;font-size:11px;text-align:center;margin:12px 0 0">
+          🔒 Secure payment via Razorpay · Instant access after payment
+        </p>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Track upsell view
+    fetch(`${API}/api/revenue/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'product_view', source: 'scan_upsell', metadata: { critical: critCount, high: highCount } }),
+    }).catch(() => {});
+  };
+
+  // ── Scan result upgrade gate ─────────────────────────────────────────────
+  window.applyReportGate = function(container, plan) {
+    if (planAtLeast('starter')) return;
+    if (!container) return;
+
+    const gate = document.createElement('div');
+    gate.style.cssText = `
+      position:relative; overflow:hidden; border-radius:12px;
+    `;
+
+    // Blur the existing content
+    container.style.filter = 'blur(6px)';
+    container.style.pointerEvents = 'none';
+    container.style.userSelect = 'none';
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position:absolute; inset:0; background:rgba(10,10,20,.85);
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; z-index:20; border-radius:12px; padding:24px;
+    `;
+    overlay.innerHTML = `
+      <div style="text-align:center;font-family:sans-serif">
+        <div style="font-size:40px">🔒</div>
+        <h3 style="color:#fff;margin:12px 0 8px">Full Report Locked</h3>
+        <p style="color:#94a3b8;font-size:13px;margin:0 0 20px">Upgrade to STARTER to unlock all CVE details, IOCs, CVSS breakdown, and remediation steps</p>
+        <a href="/upgrade?plan=starter&ref=report_gate"
+           style="display:block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;text-decoration:none;margin-bottom:10px">
+          Unlock Full Report — ₹299 first month
+        </a>
+        <a href="/api/checkout?product=basic_report&price=199&ref=report_gate_buy"
+           style="display:block;background:transparent;border:1px solid #4f46e5;color:#818cf8;padding:10px 24px;border-radius:10px;font-size:13px;text-decoration:none">
+          Buy this report only — ₹199
+        </a>
+      </div>
+    `;
+
+    container.style.position = 'relative';
+    container.appendChild(overlay);
+
+    // Track gate impression
+    fetch(`${API}/api/revenue/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'feature_blocked', source: 'report_gate' }),
+    }).catch(() => {});
+  };
+
+  // ── Upgrade trigger on plan-gated button clicks ──────────────────────────
+  function wireUpgradeButtons() {
+    document.querySelectorAll('[data-upgrade-plan]').forEach(btn => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', (e) => {
+        const plan = btn.dataset.upgradePlan || 'starter';
+        const ref  = btn.dataset.upgradeRef  || 'button_click';
+        if (!planAtLeast(plan)) {
+          e.preventDefault();
+          window.location.href = `/upgrade?plan=${plan}&ref=${ref}`;
+        }
+      });
+    });
+  }
+
+  // ── Load AI upsell from API ──────────────────────────────────────────────
+  async function loadAIUpsell() {
+    if (!IS_AUTH || planAtLeast('pro')) return;
+    try {
+      const token = AUTH.token;
+      const res   = await fetch(`${API}/api/monetize/upsell?context=dashboard`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const upsell = data.upsell;
+      if (!upsell || upsell.type === 'none' || upsell.urgency !== 'HARD') return;
+
+      // Inject hard upsell notification
+      const notif = document.createElement('div');
+      notif.style.cssText = `
+        position:fixed; bottom:20px; right:20px; z-index:9000;
+        background:#1e1b4b; border:1px solid #4f46e5; border-radius:12px;
+        padding:16px 20px; max-width:300px; box-shadow:0 8px 30px rgba(79,70,229,.4);
+        font-family:sans-serif; animation:slideInRight .4s ease;
+      `;
+      notif.innerHTML = `
+        <button onclick="this.closest('[style]').remove()" style="float:right;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px">×</button>
+        <div style="color:#818cf8;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px">⚡ Upgrade Available</div>
+        <div style="color:#fff;font-weight:700;margin-bottom:4px;font-size:14px">${upsell.headline || 'Unlock More Power'}</div>
+        <div style="color:#94a3b8;font-size:12px;margin-bottom:12px">${upsell.price_offer ? `Special price: ₹${upsell.price_offer}/mo` : ''}</div>
+        <a href="/upgrade?plan=${upsell.to_plan}&ref=ai_upsell_notif&discount=1"
+           style="display:block;background:#4f46e5;color:#fff;padding:8px 16px;border-radius:8px;text-align:center;font-weight:700;text-decoration:none;font-size:13px">
+          ${upsell.cta || 'Upgrade Now →'}
+        </a>
+      `;
+      document.body.appendChild(notif);
+      setTimeout(() => { notif.style.opacity = '0'; notif.style.transition = 'opacity .4s'; setTimeout(() => notif.remove(), 400); }, 15000);
+    } catch { /* non-blocking */ }
+  }
+
+  // ── Exit intent detection ────────────────────────────────────────────────
+  function initExitIntent() {
+    if (planAtLeast('starter') || sessionStorage.getItem('cdb_exit_shown')) return;
+
+    let triggered = false;
+    document.addEventListener('mouseleave', (e) => {
+      if (e.clientY > 10 || triggered) return;
+      triggered = true;
+      sessionStorage.setItem('cdb_exit_shown', '1');
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position:fixed; inset:0; z-index:10001; display:flex;
+        align-items:center; justify-content:center;
+        background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+        font-family:sans-serif;
+      `;
+      overlay.innerHTML = `
+        <div style="background:#0f0f1e;border:1px solid #4f46e5;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center">
+          <div style="font-size:48px">😢</div>
+          <h2 style="color:#fff;margin:12px 0 8px">Wait — Before You Go</h2>
+          <p style="color:#94a3b8;margin:0 0 20px">Get <strong style="color:#4f46e5">50% off your first month</strong> of STARTER — just ₹249 (reg. ₹499)</p>
+          <a href="/upgrade?plan=starter&price=249&discount=50&ref=exit_intent"
+             style="display:block;background:#4f46e5;color:#fff;padding:14px;border-radius:10px;font-weight:700;text-decoration:none;margin-bottom:10px;font-size:16px">
+            Claim 50% Off — ₹249 →
+          </a>
+          <button onclick="this.closest('[style]').remove()"
+            style="background:none;border:none;color:#64748b;cursor:pointer;font-size:13px">No thanks, I'll pay full price later</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      // Track exit intent
+      fetch(`${API}/api/funnel/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: 'feature_blocked', metadata: { type: 'exit_intent' } }),
+      }).catch(() => {});
+    });
+  }
+
+  // ── Revenue tracking — track ad impressions ──────────────────────────────
+  function trackAdImpressions() {
+    if (!window.IntersectionObserver) return;
+    const adEls = document.querySelectorAll('.adsbygoogle');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          fetch(`${API}/api/revenue/track`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event:    'ad_impression',
+              source:   'adsense',
+              metadata: { ad_unit: entry.target.dataset.adSlot || 'unknown' },
+            }),
+          }).catch(() => {});
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    adEls.forEach(el => observer.observe(el));
+  }
+
+  // ── Init all UX modules ─────────────────────────────────────────────────
+  function init() {
+    // Urgency banner — show after 3s for free/starter users
+    if (!planAtLeast('pro')) {
+      setTimeout(injectUrgencyBanner, 3000);
+    }
+
+    // Social proof ticker — show after 8s for non-auth or free
+    if (!IS_AUTH || PLAN === 'free') {
+      setTimeout(injectSocialProof, 8000);
+    }
+
+    // Lock gated features immediately
+    lockGatedFeatures();
+
+    // Wire upgrade buttons
+    wireUpgradeButtons();
+
+    // Observe DOM for dynamic elements (for SPA-like updates)
+    const mo = new MutationObserver(() => {
+      lockGatedFeatures();
+      wireUpgradeButtons();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    // AI upsell — load after 5s (non-blocking)
+    if (IS_AUTH) setTimeout(loadAIUpsell, 5000);
+
+    // Exit intent
+    setTimeout(initExitIntent, 10000);
+
+    // Ad impression tracking
+    window.addEventListener('load', trackAdImpressions, { once: true });
+
+    // Track page visit in funnel
+    fetch(`${API}/api/funnel/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage: 'visit', metadata: { path: location.pathname, plan: PLAN } }),
+    }).catch(() => {});
+  }
+
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // CSS animation for slide-in
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    [data-locked] .lock-overlay { pointer-events: all !important; }
+  `;
+  document.head.appendChild(style);
+
+})();
 </script><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8343951291888650"
      crossorigin="anonymous"></script>
 </body>
