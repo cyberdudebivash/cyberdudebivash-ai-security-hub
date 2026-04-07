@@ -135,6 +135,20 @@ import { handleRealtimeFeed, handleRealtimePosture, handleRealtimeStats } from '
 import { handleGumroadWebhook, handleLicenseActivation, handleProductCatalog } from './services/gumroadEngine.js';
 import { handleSiemInfo, handleSiemExport, handleSiemStream } from './handlers/siemExport.js';
 
+// ─── P0 Mission: Agentic AI + Anomaly + Predictive Engines (v12.0) ────────────
+import { handleAgentRequest }      from './handlers/agentHandler.js';
+import { handleAnomalyRequest }    from './handlers/anomalyHandler.js';
+import { handlePredictiveRequest } from './handlers/predictiveHandler.js';
+import { runAnomalyBatch }         from './services/anomalyEngine.js';
+import { runPredictiveBatch }      from './services/predictiveEngine.js';
+import { runPatchingBatch, expireStalePatches } from './agents/patchingAgent.js';
+import { consumeEvents, ackEvent, publishCVEEvents } from './agents/agentBus.js';
+import { processCVEEvent }         from './agents/threatResponseAgent.js';
+import { decideAnomalyResponse }   from './agents/decisionEngine.js';
+import { autoBlockIP }             from './agents/isolationAgent.js';
+import { autoRotateOnAnomaly }     from './agents/credentialRotationAgent.js';
+import { isIPBlocked, isSessionDisabled } from './agents/isolationAgent.js';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
@@ -1859,6 +1873,40 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return await handleSiemStream(request, env, authCtx);
     }
 
+    // ── P0 MISSION v12: Agentic AI Autonomous Remediation Engine (System 1) ───
+    // POST /api/agent/execute, GET /api/agent/logs, GET /api/agent/status,
+    // POST /api/agent/rollback, GET|POST /api/agent/waf/*, POST /api/agent/process-queue
+    if (path.startsWith('/api/agent/')) {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const subpath = path.replace('/api/agent/', '');
+      const res = await handleAgentRequest(request, env, authCtx, subpath);
+      return withSecurityHeaders(withCors(res, request));
+    }
+
+    // ── P0 MISSION v12: Behavioral Anomaly Detection Engine (System 2) ────────
+    // GET /api/anomaly/stats, GET /api/anomaly/:user_id,
+    // GET /api/anomaly/:user_id/history, POST /api/anomaly/scan,
+    // POST /api/anomaly/record, POST /api/anomaly/batch
+    if (path.startsWith('/api/anomaly/') || path === '/api/anomaly') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const subpath = path.replace('/api/anomaly', '').replace(/^\//, '');
+      const res = await handleAnomalyRequest(request, env, authCtx, subpath);
+      return withSecurityHeaders(withCors(res, request));
+    }
+
+    // ── P0 MISSION v12: Predictive Threat Intelligence Engine (System 3) ──────
+    // GET /api/predict/threats, GET /api/predict/stats, GET /api/predict/:cve_id,
+    // GET /api/predict/:cve_id/trend, POST /api/predict/batch, POST /api/predict/score
+    if (path.startsWith('/api/predict/') || path === '/api/predict') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const subpath = path.replace('/api/predict', '').replace(/^\//, '');
+      const res = await handlePredictiveRequest(request, env, authCtx, subpath);
+      return withSecurityHeaders(withCors(res, request));
+    }
+
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────
     const routeKey = `${method} ${path}`;
     const route    = SYNC_ROUTES[routeKey];
@@ -2105,5 +2153,87 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         }
       })());
     }
+
+    // ── v12 P0 MISSION: Agentic AI Engine — Agent Event Queue Processing ───────
+    ctx.waitUntil((async () => {
+      try {
+        // Process pending events from agent bus (CVE detections, anomaly events)
+        const events = await consumeEvents(env, 20);
+        let processed = 0;
+        for (const event of events) {
+          try {
+            if (event.event_type === 'cve_detected') {
+              await processCVEEvent(env, event);
+            } else if (event.event_type === 'anomaly_detected') {
+              const decision = decideAnomalyResponse(event.payload || {});
+              for (const action of decision.actions) {
+                if (action.action_type === 'block_ip' && action.target) {
+                  await autoBlockIP(env, action.target, 'anomaly_cron', decision.risk_level, event.id);
+                }
+                if ((action.action_type === 'rotate_credentials' || action.action_type === 'disable_session') && action.target) {
+                  await autoRotateOnAnomaly(env, action.target, event.payload || {});
+                }
+              }
+            }
+            await ackEvent(env, event.id, true);
+            processed++;
+          } catch (evErr) {
+            await ackEvent(env, event.id, false, evErr.message);
+          }
+        }
+        if (processed > 0) console.log(`[CRON] v12 Agent Bus: processed ${processed} events`);
+      } catch (e) {
+        console.error('[CRON] v12 Agent Bus error:', e?.message);
+      }
+    })());
+
+    // ── v12 P0 MISSION: Behavioral Anomaly Detection — batch scan (every 15 min)
+    ctx.waitUntil((async () => {
+      try {
+        const result = await runAnomalyBatch(env);
+        if (result.anomalies_detected > 0) {
+          console.log(`[CRON] v12 Anomaly Engine: ${result.scanned} users scanned, ${result.anomalies_detected} anomalies (${result.high_risk} CRITICAL/HIGH)`);
+        }
+      } catch (e) {
+        console.error('[CRON] v12 Anomaly Engine error:', e?.message);
+      }
+    })());
+
+    // ── v12 P0 MISSION: Predictive Threat Intelligence — batch (every 1h) ──────
+    if (cron === '0 * * * *' || cron === '*/15 * * * *' || cron === '0 */2 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const result = await runPredictiveBatch(env);
+          if (result.predictions > 0) {
+            console.log(`[CRON] v12 Predictive Engine: ${result.analyzed} CVEs analyzed, ${result.critical_count} CRITICAL, ${result.high_count} HIGH`);
+          }
+        } catch (e) {
+          console.error('[CRON] v12 Predictive Engine error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v12 P0 MISSION: Virtual WAF Patching — expire stale patches + batch ────
+    ctx.waitUntil((async () => {
+      try {
+        // Get recent HIGH+KEV CVEs for auto-patching
+        const recentCVEs = await env.DB?.prepare(`
+          SELECT cve_id, cvss_score as cvss, epss_score as epss, is_kev,
+                 description, cvss_vector
+          FROM threat_intel
+          WHERE (cvss_score >= 7.0 OR is_kev = 1)
+            AND published_date > datetime('now', '-3 days')
+          ORDER BY cvss_score DESC LIMIT 20
+        `).all().catch(() => ({ results: [] }));
+
+        const patchResult = await runPatchingBatch(env, recentCVEs?.results || []);
+        if (patchResult.patched > 0 || patchResult.expired > 0) {
+          console.log(`[CRON] v12 Patching Agent: ${patchResult.patched} patches applied, ${patchResult.expired} expired`);
+        }
+      } catch (e) {
+        console.error('[CRON] v12 Patching Agent error:', e?.message);
+      }
+    })());
+
   },
 };
