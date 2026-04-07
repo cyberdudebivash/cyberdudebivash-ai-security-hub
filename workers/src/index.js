@@ -1475,6 +1475,175 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }
     }
 
+    // ── v8.2 Revenue + Monetization + Automation Routes ──────────────────────
+
+    // GET /api/revenue/snapshot — lightweight KPI snapshot (all plans)
+    if (path === '/api/revenue/snapshot' && method === 'GET') {
+      const { handleRevenueSnapshot } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleRevenueSnapshot(request, env, authCtx), request));
+    }
+
+    // GET /api/revenue/metrics — plan-gated full metrics
+    if (path === '/api/revenue/metrics' && method === 'GET') {
+      const { handleRevenueMetrics } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRevenueMetrics(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role, email: authCtx.email }), request));
+    }
+
+    // GET /api/revenue/products — product catalog with live sales data (public)
+    if (path === '/api/revenue/products' && method === 'GET') {
+      const { handleRevenueProducts } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleRevenueProducts(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role } : null), request));
+    }
+
+    // GET /api/revenue/recommendations — admin recommendations
+    if (path === '/api/revenue/recommendations' && method === 'GET') {
+      const { handleRevenueRecommendations } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRevenueRecommendations(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
+    }
+
+    // POST /api/revenue/event — record revenue event (admin/internal)
+    if (path === '/api/revenue/event' && method === 'POST') {
+      const { handleRevenueEvent } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRevenueEvent(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // POST /api/revenue/track — track any revenue action (public)
+    if (path === '/api/revenue/track' && method === 'POST') {
+      const { handleRevenueTrack } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleRevenueTrack(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), email: authCtx.email } : null), request));
+    }
+
+    // GET /api/revenue/dashboard/enhanced — charts-ready enhanced dashboard (PRO+)
+    if (path === '/api/revenue/dashboard/enhanced' && method === 'GET') {
+      const { handleEnhancedDashboard } = await import('./handlers/revenueDashboard.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleEnhancedDashboard(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
+    }
+
+    // GET /api/revenue/trends — trend analytics (PRO+)
+    if (path === '/api/revenue/trends' && method === 'GET') {
+      const { handleRevenueTrends } = await import('./handlers/revenueDashboard.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRevenueTrends(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
+    }
+
+    // GET /api/revenue/growth — growth score + levers
+    if (path === '/api/revenue/growth' && method === 'GET') {
+      const { handleRevenueGrowth } = await import('./handlers/revenueDashboard.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRevenueGrowth(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
+    }
+
+    // GET /api/monetize/upsell — AI upsell trigger (auth or anon)
+    if (path === '/api/monetize/upsell' && method === 'GET') {
+      const { handleUpsellTrigger } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleUpsellTrigger(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase() } : null), request));
+    }
+
+    // GET /api/monetize/products — AI product recommendations
+    if (path === '/api/monetize/products' && method === 'GET') {
+      const { handleProductRecommendations } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleProductRecommendations(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase() } : null), request));
+    }
+
+    // GET /api/monetize/churn-risk — churn risk assessment (PRO+)
+    if (path === '/api/monetize/churn-risk' && method === 'GET') {
+      const { handleChurnRisk } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleChurnRisk(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
+    }
+
+    // POST /api/monetize/optimize — full AI optimization pass (auth required)
+    if (path === '/api/monetize/optimize' && method === 'POST') {
+      const { handleRevenueOptimize } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRevenueOptimize(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase() }), request));
+    }
+
+    // POST /api/monetize/bulk-optimize — bulk AI pass (admin only)
+    if (path === '/api/monetize/bulk-optimize' && method === 'POST') {
+      const { handleBulkOptimize } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleBulkOptimize(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // GET  /api/funnel/metrics — conversion funnel data (ENTERPRISE/admin)
+    if (path === '/api/funnel/metrics' && method === 'GET') {
+      const { handleFunnelMetrics } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleFunnelMetrics(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
+    }
+
+    // POST /api/funnel/event — record funnel stage event (public, fire-and-forget)
+    if (path === '/api/funnel/event' && method === 'POST') {
+      const { handleFunnelEvent } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFunnelEvent(request, env, authCtx ? { userId: authCtx.userId } : null), request));
+    }
+
+    // GET  /api/defense/catalog — defense product catalog (public)
+    if (path === '/api/defense/catalog' && method === 'GET') {
+      const { handleDefenseCatalog } = await import('./handlers/revenue.js');
+      return withSecurityHeaders(withCors(await handleDefenseCatalog(request, env, null), request));
+    }
+
+    // GET  /api/defense/preview — defense product preview with paywall
+    if (path === '/api/defense/preview' && method === 'GET') {
+      const { handleDefensePreview } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDefensePreview(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase() } : null), request));
+    }
+
+    // POST /api/checkout — initiate Razorpay checkout
+    if (path === '/api/checkout' && method === 'POST') {
+      const { handleCheckoutInitiate } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCheckoutInitiate(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email, name: authCtx.name } : null), request));
+    }
+
+    // POST /api/checkout/verify — verify Razorpay payment + grant access
+    if (path === '/api/checkout/verify' && method === 'POST') {
+      const { handleCheckoutVerify } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCheckoutVerify(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : null), request));
+    }
+
+    // GET  /api/affiliate/stats — affiliate click stats (admin)
+    if (path === '/api/affiliate/stats' && method === 'GET') {
+      const { handleAffiliateStats } = await import('./handlers/revenue.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleAffiliateStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // POST /api/automation/run — manual automation trigger (admin only)
+    if (path === '/api/automation/run' && method === 'POST') {
+      const { handleAutomationRun } = await import('./services/automationEngine.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleAutomationRun(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // ── End v8.2 routes ───────────────────────────────────────────────────────
+
     // GET /api/export/siem — export capabilities info (public)
     if (path === '/api/export/siem' && method === 'GET') {
       return withSecurityHeaders(withCors(handleSiemInfo(), request));
@@ -1659,6 +1828,23 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         console.log('[CRON] GTM Growth Engine pipeline complete');
       } catch (e) {
         console.error('[CRON] GTM pipeline error:', e?.message);
+      }
+    })());
+
+    // ── v8.2 Revenue Automation Pipeline ─────────────────────────────────────
+    ctx.waitUntil((async () => {
+      try {
+        const { runAutomationCron } = await import('./services/automationEngine.js');
+        const autoResult = await runAutomationCron(env, event.cron);
+        console.log('[CRON] Revenue Automation:', JSON.stringify({
+          jobs_run:    autoResult.jobs_run,
+          duration_ms: autoResult.duration_ms,
+          defense_products_generated: autoResult.results?.defense_products?.generated || 0,
+          upsell_emails_processed:    autoResult.results?.upsell_emails?.processed    || 0,
+          churn_flagged:              autoResult.results?.churn_prevention?.at_risk    || 0,
+        }));
+      } catch (e) {
+        console.error('[CRON] Revenue Automation error:', e?.message);
       }
     })());
   },
