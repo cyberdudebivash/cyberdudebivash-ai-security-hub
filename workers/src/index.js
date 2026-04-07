@@ -440,7 +440,6 @@ function apiInfoResponse() {
       // V8.0 — AI Brain + Attack Graph
       'GET  /api/insights/:jobId':   'AI narrative + MITRE mapping for a completed scan',
       'POST /api/attack-graph':      'D3-ready force-directed attack graph from scan data',
-      'GET  /api/threat-intel/stats':'CVE/KEV/EPSS threat intel statistics',
       // V8.0 — Continuous Monitoring
       'GET  /api/monitors':          'List your scan monitors',
       'POST /api/monitors':          'Create a scheduled scan monitor',
@@ -1642,6 +1641,202 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleAutomationRun(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // v10.0 ROUTES — Defense Solutions Marketplace, Enterprise, Global Scale
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── Defense Solutions Marketplace (Phase 1+2) ─────────────────────────
+
+    // GET /api/defense/solutions — list marketplace solutions (public with filter)
+    if (path === '/api/defense/solutions' && method === 'GET') {
+      const { handleGetSolutions } = await import('./handlers/defenseMarketplace.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGetSolutions(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), email: authCtx.email } : {}), request));
+    }
+
+    // GET /api/defense/solutions/featured — featured solutions (public)
+    if (path === '/api/defense/solutions/featured' && method === 'GET') {
+      const { handleGetFeatured } = await import('./handlers/defenseMarketplace.js');
+      return withSecurityHeaders(withCors(await handleGetFeatured(request, env), request));
+    }
+
+    // GET /api/defense/stats — marketplace aggregate stats (public)
+    if (path === '/api/defense/stats' && method === 'GET') {
+      const { handleGetMarketplaceStats } = await import('./handlers/defenseMarketplace.js');
+      return withSecurityHeaders(withCors(await handleGetMarketplaceStats(request, env), request));
+    }
+
+    // GET /api/defense/fomo — FOMO social proof events (public)
+    if (path === '/api/defense/fomo' && method === 'GET') {
+      const { handleGetFOMO } = await import('./handlers/defenseMarketplace.js');
+      return withSecurityHeaders(withCors(await handleGetFOMO(request, env), request));
+    }
+
+    // POST /api/defense/generate — admin: trigger on-demand generation
+    if (path === '/api/defense/generate' && method === 'POST') {
+      const { handleGenerateSolutions } = await import('./handlers/defenseMarketplace.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleGenerateSolutions(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // POST /api/defense/custom-request — submit custom solution request (public)
+    if (path === '/api/defense/custom-request' && method === 'POST') {
+      const { handleCustomSolutionRequest } = await import('./handlers/defenseMarketplace.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCustomSolutionRequest(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}), request));
+    }
+
+    // GET /api/defense/solutions/:id — single solution detail
+    if (path.startsWith('/api/defense/solutions/') && !path.includes('/purchase') && !path.includes('/verify') && method === 'GET') {
+      const { handleGetSolution } = await import('./handlers/defenseMarketplace.js');
+      const solutionId = path.replace('/api/defense/solutions/', '').split('/')[0];
+      const authCtx    = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGetSolution(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), email: authCtx.email } : {}, solutionId), request));
+    }
+
+    // POST /api/defense/purchase/:id — initiate Razorpay checkout for solution
+    if (path.startsWith('/api/defense/purchase/') && method === 'POST') {
+      const { handleInitiatePurchase } = await import('./handlers/defenseMarketplace.js');
+      const solutionId = path.replace('/api/defense/purchase/', '').split('/')[0];
+      const authCtx    = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleInitiatePurchase(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}, solutionId), request));
+    }
+
+    // POST /api/defense/verify/:id — verify Razorpay payment for solution
+    if (path.startsWith('/api/defense/verify/') && method === 'POST') {
+      const { handleVerifyPurchase } = await import('./handlers/defenseMarketplace.js');
+      const solutionId = path.replace('/api/defense/verify/', '').split('/')[0];
+      const authCtx    = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleVerifyPurchase(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}, solutionId), request));
+    }
+
+    // ── Scan → Upsell Engine (Phase 3) ───────────────────────────────────
+
+    // POST /api/scan/upsell — evaluate scan result for upsell opportunity
+    if (path === '/api/scan/upsell' && method === 'POST') {
+      const { handleScanUpsell } = await import('./services/scanUpsellEngine.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleScanUpsell(request, env, authCtx ? { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), email: authCtx.email } : {}), request));
+    }
+
+    // GET /api/scan/upsell/stats — upsell impression/conversion stats (admin)
+    if (path === '/api/scan/upsell/stats' && method === 'GET') {
+      const { handleUpsellStats } = await import('./services/scanUpsellEngine.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleUpsellStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // ── Content Pipeline / Blog (Phase 4) ────────────────────────────────
+
+    // GET /api/blog/posts — list published blog posts (public)
+    if (path === '/api/blog/posts' && method === 'GET') {
+      const { handleGetBlogPosts } = await import('./services/contentPipeline.js');
+      return withSecurityHeaders(withCors(await handleGetBlogPosts(request, env), request));
+    }
+
+    // GET /api/blog/posts/:slug — single blog post (public)
+    if (path.startsWith('/api/blog/posts/') && method === 'GET') {
+      const { handleGetBlogPost } = await import('./services/contentPipeline.js');
+      const slug = path.replace('/api/blog/posts/', '').split('/')[0];
+      return withSecurityHeaders(withCors(await handleGetBlogPost(request, env, slug), request));
+    }
+
+    // POST /api/content/run — manually trigger content pipeline (admin)
+    if (path === '/api/content/run' && method === 'POST') {
+      const { handleRunContentPipeline } = await import('./services/contentPipeline.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleRunContentPipeline(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // ── Enterprise Layer (Phase 5) ────────────────────────────────────────
+
+    // GET /api/enterprise/packages — list enterprise packages (public)
+    if (path === '/api/enterprise/packages' && method === 'GET') {
+      const { handleGetPackages } = await import('./handlers/enterpriseLayer.js');
+      return withSecurityHeaders(withCors(await handleGetPackages(request, env), request));
+    }
+
+    // POST /api/enterprise/book — consultation booking (public)
+    if (path === '/api/enterprise/book' && method === 'POST') {
+      const { handleBookConsultation } = await import('./handlers/enterpriseLayer.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleBookConsultation(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}), request));
+    }
+
+    // POST /api/enterprise/report — order threat report with Razorpay (public)
+    if (path === '/api/enterprise/report' && method === 'POST') {
+      const { handleOrderReport } = await import('./handlers/enterpriseLayer.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleOrderReport(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}), request));
+    }
+
+    // POST /api/enterprise/verify — verify enterprise Razorpay payment
+    if (path === '/api/enterprise/verify' && method === 'POST') {
+      const { handleVerifyEnterprisePayment } = await import('./handlers/enterpriseLayer.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleVerifyEnterprisePayment(request, env, authCtx ? { userId: authCtx.userId } : {}), request));
+    }
+
+    // GET /api/enterprise/stats — admin: enterprise leads overview
+    if (path === '/api/enterprise/stats' && method === 'GET') {
+      const { handleEnterpriseStats } = await import('./handlers/enterpriseLayer.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleEnterpriseStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // ── Global Scale Engine (Phase 6) ─────────────────────────────────────
+
+    // GET /api/global/pricing — geo-detected multi-currency pricing (public)
+    if (path === '/api/global/pricing' && method === 'GET') {
+      const { handleGetGlobalPricing } = await import('./services/globalScale.js');
+      return withSecurityHeaders(withCors(await handleGetGlobalPricing(request, env), request));
+    }
+
+    // GET /api/global/compliance-packs — compliance pack catalog with geo sort (public)
+    if (path === '/api/global/compliance-packs' && method === 'GET') {
+      const { handleGetCompliancePacks } = await import('./services/globalScale.js');
+      return withSecurityHeaders(withCors(await handleGetCompliancePacks(request, env), request));
+    }
+
+    // POST /api/global/compliance-packs/purchase — purchase compliance pack
+    if (path === '/api/global/compliance-packs/purchase' && method === 'POST') {
+      const { handlePurchaseCompliancePack } = await import('./services/globalScale.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handlePurchaseCompliancePack(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}), request));
+    }
+
+    // GET /api/global/mssp — MSSP tier info + pricing (public)
+    if (path === '/api/global/mssp' && method === 'GET') {
+      const { handleGetMSSPInfo } = await import('./services/globalScale.js');
+      return withSecurityHeaders(withCors(await handleGetMSSPInfo(request, env), request));
+    }
+
+    // POST /api/global/mssp/apply — MSSP partner application (public)
+    if (path === '/api/global/mssp/apply' && method === 'POST') {
+      const { handleMSSPApplication } = await import('./services/globalScale.js');
+      return withSecurityHeaders(withCors(await handleMSSPApplication(request, env), request));
+    }
+
+    // ── Cron-driven content pipeline hook ─────────────────────────────────
+    // POST /api/content/pipeline/run — trigger full CVE→blog→social pipeline (admin)
+    if (path === '/api/content/pipeline/run' && method === 'POST') {
+      const { runBulkContentPipeline } = await import('./services/contentPipeline.js');
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (authCtx.role !== 'admin') return withSecurityHeaders(withCors(new Response(JSON.stringify({ error: 'Admin only' }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
+      const body  = await request.json().catch(() => ({}));
+      const result = await runBulkContentPipeline(env, body.limit || 3);
+      return withSecurityHeaders(withCors(new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } }), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // END v10.0 ROUTES
+    // ══════════════════════════════════════════════════════════════════════
+
     // ── End v8.2 routes ───────────────────────────────────────────────────────
 
     // GET /api/export/siem — export capabilities info (public)
@@ -1847,5 +2042,68 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         console.error('[CRON] Revenue Automation error:', e?.message);
       }
     })());
+
+    // ── v10.0 Sentinel APEX Defense Product Generation (every 12h) ───────────
+    if (cron === '0 */12 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const { generateAndStoreAll, fetchLiveIntel } = await import('./services/sentinelDefenseEngine.js');
+          const intel = await fetchLiveIntel(env, { limit: 10, severity: 'HIGH' });
+          let generated = 0;
+          for (const item of intel.slice(0, 5)) {
+            const r = await generateAndStoreAll(env, item);
+            generated += r.stored || 0;
+          }
+          console.log(`[CRON] v10 Defense Products: ${generated} stored for ${intel.length} CVEs`);
+        } catch (e) {
+          console.error('[CRON] v10 Defense generation error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v10.0 Content Pipeline — CVE→Blog→LinkedIn→Telegram (every 24h) ─────
+    if (cron === '0 6 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const { runBulkContentPipeline } = await import('./services/contentPipeline.js');
+          const result = await runBulkContentPipeline(env, 3);
+          console.log('[CRON] v10 Content Pipeline:', JSON.stringify({
+            processed:  result.processed,
+            linkedin:   result.results?.filter(r => r.linkedin?.success).length || 0,
+            telegram:   result.results?.filter(r => r.telegram?.success).length || 0,
+          }));
+        } catch (e) {
+          console.error('[CRON] v10 Content Pipeline error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v10.0 Revenue Snapshot — daily KPI capture ────────────────────────────
+    if (cron === '0 23 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          // Capture daily revenue snapshot
+          const today = new Date().toISOString().slice(0, 10);
+          const [subRow, defRow, totalUsers] = await Promise.allSettled([
+            env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount) as rev FROM revenue_events WHERE event_type='subscription_payment' AND DATE(created_at)=?`).bind(today).first(),
+            env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
+            env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
+          ]);
+          await env.SECURITY_HUB_DB?.prepare(
+            `INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users)
+             VALUES (?,?,?,?,?,?)`
+          ).bind(
+            crypto.randomUUID(), today,
+            (subRow.value?.rev || 0) + (defRow.value?.rev || 0),
+            defRow.value?.cnt || 0,
+            defRow.value?.rev || 0,
+            totalUsers.value?.total || 0,
+          ).run();
+          console.log(`[CRON] v10 Revenue Snapshot: ${today} captured`);
+        } catch (e) {
+          console.error('[CRON] v10 Revenue Snapshot error:', e?.message);
+        }
+      })());
+    }
   },
 };
