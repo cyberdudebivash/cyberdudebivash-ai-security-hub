@@ -299,15 +299,74 @@ a:hover{text-decoration:underline}
 .ann-marquee{display:inline-block;animation:marquee 30s linear infinite;white-space:nowrap}
 @keyframes marquee{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
 
-/* ── Nav ───────────────────────────────────────── */
-nav{background:rgba(10,10,26,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:999;padding:0 24px}
-.nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
-.nav-brand{font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
-.nav-links{display:flex;gap:24px;align-items:center;font-size:13px;font-weight:600}
-.nav-links a{color:var(--text-muted);transition:color .2s}
+/* ── Nav v12 ─────────────────────────────────────── */
+nav{background:rgba(10,10,26,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:999;padding:0 24px;transition:box-shadow .3s}
+nav.nav-scrolled{box-shadow:0 4px 32px rgba(0,0,0,.55)}
+.nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;position:relative}
+a.nav-brand{font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;text-decoration:none!important;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s;flex-shrink:0}
+a.nav-brand:hover{opacity:.82}
+.nav-links{display:flex;gap:20px;align-items:center;font-size:13px;font-weight:600}
+.nav-links a{color:var(--text-muted);transition:color .2s;position:relative;padding-bottom:3px;text-decoration:none}
 .nav-links a:hover{color:var(--accent);text-decoration:none}
+.nav-links a.nav-active{color:var(--accent)!important}
+.nav-links a.nav-active::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
 .nav-cta{background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff!important;padding:8px 16px;border-radius:8px;transition:transform .2s,box-shadow .2s!important}
 .nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,58,237,.4)!important}
+/* ── Nav Dropdown ── */
+.nav-dropdown{position:relative}
+.nav-dd-toggle{cursor:pointer;display:flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--text-muted);padding:0;transition:color .2s;font-family:inherit}
+.nav-dd-toggle:hover{color:var(--accent)}
+.nav-dd-menu{display:none;position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);min-width:218px;background:rgba(8,8,20,.98);border:1px solid rgba(0,212,255,.15);border-radius:12px;padding:8px;backdrop-filter:blur(24px);box-shadow:0 20px 60px rgba(0,0,0,.7);z-index:9999}
+.nav-dd-menu::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:12px;height:6px;background:rgba(8,8,20,.98);border-top:1px solid rgba(0,212,255,.15);border-left:1px solid rgba(0,212,255,.15);border-radius:2px 2px 0 0;clip-path:polygon(0 100%,50% 0,100% 100%)}
+.nav-dd-menu.open{display:flex;flex-direction:column;gap:2px;animation:ndFadeIn .15s ease}
+@keyframes ndFadeIn{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.nav-dd-menu a{color:var(--text-muted)!important;padding:9px 13px!important;border-radius:8px;font-size:12px!important;font-weight:600;transition:all .15s;text-decoration:none!important;display:flex;align-items:center;gap:8px}
+.nav-dd-menu a:hover{color:#fff!important;background:rgba(0,212,255,.07)!important;text-decoration:none!important}
+/* ── Hamburger ── */
+.nav-hamburger{display:none;flex-direction:column;gap:5px;background:none;border:1px solid rgba(255,255,255,.08);cursor:pointer;padding:9px 10px;border-radius:8px;transition:all .2s}
+.nav-hamburger:hover{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.05)}
+.nav-hamburger span{width:20px;height:2px;background:rgba(255,255,255,.6);border-radius:2px;transition:all .25s;display:block}
+.nav-hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+.nav-hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.nav-hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+/* ── Mobile Drawer ── */
+.nav-mobile-drawer{display:none;flex-direction:column;background:rgba(6,6,18,.98);border-top:1px solid rgba(0,212,255,.08);padding:10px 16px 18px;gap:2px}
+.nav-mobile-drawer.open{display:flex;animation:ndSlide .2s ease}
+@keyframes ndSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.nav-mobile-drawer a{color:var(--text-muted);padding:11px 14px;border-radius:8px;font-size:14px;font-weight:600;transition:all .15s;text-decoration:none;display:flex;align-items:center;gap:9px}
+.nav-mobile-drawer a:hover,.nav-mobile-drawer a.nav-active{color:var(--accent);background:rgba(0,212,255,.06)}
+.nav-mob-sep{height:1px;background:rgba(255,255,255,.05);margin:5px 0}
+/* ── Scroll progress ── */
+.nav-progress{position:absolute;bottom:-1px;left:0;height:2px;background:linear-gradient(90deg,#00d4ff,#7c3aed,#a78bfa);width:0%;transition:width .08s linear;pointer-events:none;border-radius:0 2px 2px 0}
+/* ── Breadcrumb ── */
+.page-breadcrumb{background:rgba(8,8,20,.88);border-bottom:1px solid rgba(255,255,255,.04);backdrop-filter:blur(10px);padding:7px 0;font-size:12px;position:sticky;top:64px;z-index:997;display:none}
+.breadcrumb-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.breadcrumb-inner a{color:rgba(255,255,255,.35);text-decoration:none;transition:color .2s;display:flex;align-items:center;gap:4px}
+.breadcrumb-inner a:hover{color:var(--accent)}
+.bc-sep{color:rgba(255,255,255,.2);font-size:13px}
+#bc-current{color:rgba(255,255,255,.6);font-weight:600}
+/* ── Back to top ── */
+#back-to-top{position:fixed;bottom:28px;right:28px;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#000;font-size:20px;font-weight:900;cursor:pointer;z-index:9990;box-shadow:0 4px 24px rgba(0,212,255,.35);transition:all .25s;align-items:center;justify-content:center;display:none;line-height:1}
+#back-to-top:hover{transform:translateY(-4px) scale(1.1);box-shadow:0 10px 36px rgba(0,212,255,.6)}
+/* ── Nav actions ── */
+.nav-actions{display:flex;align-items:center;gap:10px}
+/* ── Legal modal ── */
+.legal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:10001;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.legal-overlay.open{display:flex;animation:ndFadeIn .2s ease}
+.legal-box{background:var(--surface);border:1px solid rgba(0,212,255,.12);border-radius:16px;max-width:760px;width:100%;padding:36px 32px;position:relative;max-height:80vh;overflow-y:auto;margin:auto}
+.legal-box h2{font-size:20px;font-weight:800;margin-bottom:18px;color:var(--accent);padding-right:36px}
+.legal-box h3{font-size:14px;font-weight:700;margin:18px 0 7px;color:var(--text)}
+.legal-box p,.legal-box li{font-size:13px;color:var(--text-muted);line-height:1.8}
+.legal-box ul{padding-left:20px;margin:8px 0}
+.legal-box-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-muted);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.legal-box-close:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#ef4444}
+/* ── Responsive ── */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .nav-hamburger{display:flex}
+  #back-to-top{bottom:18px;right:14px;width:42px;height:42px;font-size:17px}
+  .breadcrumb-inner{padding:0 16px}
+}
 
 /* ── Ticker ────────────────────────────────────── */
 .ticker{background:var(--surface2);border-bottom:1px solid var(--border);overflow:hidden;padding:6px 0}
@@ -879,7 +938,6 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 
 /* ── Mobile ──────────────────────────────────────────── */
 @media(max-width:640px){
-  .nav-links{gap:10px;font-size:12px}
   .tg-live-strip{flex-direction:column;align-items:flex-start}
   .why-pillars{grid-template-columns:1fr}
   .dashboard-grid{grid-template-columns:1fr 1fr}
@@ -1228,20 +1286,80 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   </div>
 </div>
 
-<!-- Nav -->
-<nav>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- NAV v12.0 — Professional SPA Navigation System               -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<nav id="main-nav">
   <div class="nav-inner">
-    <div class="nav-brand">⚔️ CYBERDUDEBIVASH AI</div>
-    <div class="nav-links">
-      <a href="#scanner">Scanner</a>
-      <a href="#dashboard">Dashboard</a>
-      <a href="#pricing">Pricing</a>
-      <a href="https://tools.cyberdudebivash.com" target="_blank">Tools Suite</a>
-      <span id="nav-plan-badge" style="display:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
-      <a href="#enterprise" class="nav-cta">Enterprise</a>
+
+    <!-- Logo — always navigates home -->
+    <a class="nav-brand" href="#home" onclick="cdbNavigate('hero');return false" aria-label="CYBERDUDEBIVASH AI — Home">
+      <span>⚔️</span>
+      <span>CYBERDUDEBIVASH AI</span>
+    </a>
+
+    <!-- Desktop links -->
+    <div class="nav-links" id="nav-links-desktop">
+      <a href="#dashboard"  data-section="dashboard"  onclick="cdbNavigate('dashboard');return false">Dashboard</a>
+      <a href="#scanner"    data-section="scanner"    onclick="cdbNavigate('scanner');return false">Scanner</a>
+
+      <!-- Products dropdown -->
+      <div class="nav-dropdown">
+        <button class="nav-dd-toggle" onclick="cdbToggleDropdown(event,'nav-dd-products')" aria-expanded="false">
+          Products <span style="font-size:9px;opacity:.7">▼</span>
+        </button>
+        <div class="nav-dd-menu" id="nav-dd-products" role="menu">
+          <a href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseDropdowns();return false">🛡 Defense Marketplace</a>
+          <a href="#pricing"           onclick="cdbNavigate('pricing');cdbCloseDropdowns();return false">💰 Pricing Plans</a>
+          <a href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseDropdowns();return false">🌐 Global Compliance</a>
+          <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseDropdowns()">🛠 Tools Suite ↗</a>
+        </div>
+      </div>
+
+      <a href="#pricing"    data-section="pricing"    onclick="cdbNavigate('pricing');return false">Pricing</a>
+
+      <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
+
+      <a href="#enterprise" data-section="enterprise" onclick="cdbNavigate('enterprise');return false" class="nav-cta">Enterprise</a>
     </div>
+
+    <!-- Right actions -->
+    <div class="nav-actions">
+      <button class="nav-hamburger" id="nav-hamburger" onclick="cdbToggleMobileNav()" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Scroll progress bar -->
+    <div class="nav-progress" id="nav-progress"></div>
+  </div>
+
+  <!-- Mobile drawer -->
+  <div class="nav-mobile-drawer" id="nav-mobile-drawer" aria-hidden="true">
+    <a href="#home"              data-section="hero"              onclick="cdbNavigate('hero');cdbCloseMobileNav();return false">🏠 Home</a>
+    <a href="#dashboard"         data-section="dashboard"         onclick="cdbNavigate('dashboard');cdbCloseMobileNav();return false">📊 Dashboard</a>
+    <a href="#scanner"           data-section="scanner"           onclick="cdbNavigate('scanner');cdbCloseMobileNav();return false">🔍 Scanner</a>
+    <div class="nav-mob-sep"></div>
+    <a href="#defense-solutions" data-section="defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseMobileNav();return false">🛡 Defense Marketplace</a>
+    <a href="#pricing"           data-section="pricing"           onclick="cdbNavigate('pricing');cdbCloseMobileNav();return false">💰 Pricing</a>
+    <a href="#enterprise"        data-section="enterprise"        onclick="cdbNavigate('enterprise');cdbCloseMobileNav();return false">🏢 Enterprise</a>
+    <div class="nav-mob-sep"></div>
+    <a href="#compliance-global" data-section="compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false">🌐 Global Compliance</a>
+    <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseMobileNav()">🛠 Tools Suite ↗</a>
   </div>
 </nav>
+
+<!-- Breadcrumb — shows when not at hero -->
+<div id="page-breadcrumb" class="page-breadcrumb" role="navigation" aria-label="Breadcrumb">
+  <div class="breadcrumb-inner">
+    <a href="#home" onclick="cdbNavigate('hero');return false">🏠 Home</a>
+    <span class="bc-sep">›</span>
+    <span id="bc-current">Dashboard</span>
+  </div>
+</div>
+
+<!-- Back-to-top button -->
+<button id="back-to-top" onclick="cdbNavigate('hero')" aria-label="Back to top / Home" title="Back to Home">↑</button>
 
 <!-- ═══════════════ ECOSYSTEM TRAFFIC BANNER ═══════════════════════════════ -->
 <div id="eco-banner" role="banner" aria-label="CYBERDUDEBIVASH Ecosystem">
@@ -3493,18 +3611,18 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
       <div class="footer-col">
         <h5>Legal</h5>
         <ul>
-          <li><a href="#">Privacy Policy</a></li>
-          <li><a href="#">Terms of Service</a></li>
-          <li><a href="#">Refund Policy</a></li>
-          <li><a href="#">DPDP Compliance</a></li>
-          <li><a href="#">Cookie Policy</a></li>
+          <li><a href="#" onclick="cdbOpenLegal('privacy');return false">Privacy Policy</a></li>
+          <li><a href="#" onclick="cdbOpenLegal('terms');return false">Terms of Service</a></li>
+          <li><a href="#" onclick="cdbOpenLegal('refund');return false">Refund Policy</a></li>
+          <li><a href="#" onclick="cdbOpenLegal('dpdp');return false">DPDP Compliance</a></li>
+          <li><a href="#" onclick="cdbOpenLegal('cookies');return false">Cookie Policy</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <div class="footer-copy">© 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved. | 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</div>
       <div class="footer-copy">
-        Platform <span id="platform-version-footer" title="Live version from version.json">v8.1</span> ·
+        Platform <span id="platform-version-footer" title="Live version from /api/version">v11.0</span> ·
         📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001
       </div>
     </div>
@@ -8125,7 +8243,303 @@ window.addEventListener('load', () => {
   document.head.appendChild(style);
 
 })();
-</script><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8343951291888650"
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- CDB v12.0 — PROFESSIONAL SPA NAVIGATION ROUTER                   -->
+<!-- Features: Hash routing · History API · IntersectionObserver      -->
+<!--            Active nav · Breadcrumbs · Back-to-top · Mobile drawer -->
+<!--            Dropdowns · Legal modals · ESC support · Deep links    -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+'use strict';
+
+// ── Section registry ──────────────────────────────────────────────────
+const CDB_SECTIONS = {
+  'hero':              { label: 'Home',                navKey: 'hero'              },
+  'dashboard':         { label: 'Dashboard',           navKey: 'dashboard'         },
+  'scanner':           { label: 'Scanner',             navKey: 'scanner'           },
+  'defense-solutions': { label: 'Defense Marketplace', navKey: 'defense-solutions' },
+  'pricing':           { label: 'Pricing',             navKey: 'pricing'           },
+  'enterprise':        { label: 'Enterprise',          navKey: 'enterprise'        },
+  'compliance-global': { label: 'Global Compliance',   navKey: 'compliance-global' },
+  'why':               { label: 'Why Choose Us',       navKey: 'why'               },
+  'monetization-zone': { label: 'Monetization',        navKey: 'monetization-zone' },
+};
+
+let _currentSection = 'hero';
+let _scrollRafPending = false;
+
+// ── Core navigate function ─────────────────────────────────────────────
+window.cdbNavigate = function(sectionId) {
+  cdbCloseDropdowns();
+  cdbCloseMobileNav();
+
+  if (sectionId === 'hero' || sectionId === 'home' || !sectionId) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    _currentSection = 'hero';
+    _updateNavState('hero');
+    history.pushState({ section: 'hero' }, '', '#home');
+    return;
+  }
+
+  const el = document.getElementById(sectionId);
+  if (!el) {
+    // fallback — try scroll to a section that contains the id string
+    const fallback = document.querySelector('[id*="' + sectionId.replace(/[^a-z0-9-]/gi,'') + '"]');
+    if (fallback) { fallback.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    return;
+  }
+
+  const navEl   = document.getElementById('main-nav');
+  const bcEl    = document.getElementById('page-breadcrumb');
+  const navH    = (navEl  ? navEl.offsetHeight  : 64);
+  const bcH     = (bcEl && bcEl.style.display !== 'none' ? bcEl.offsetHeight : 0);
+  const topOffset = el.getBoundingClientRect().top + window.scrollY - navH - bcH - 8;
+
+  window.scrollTo({ top: Math.max(0, topOffset), behavior: 'smooth' });
+  _currentSection = sectionId;
+  _updateNavState(sectionId);
+  history.pushState({ section: sectionId }, '', '#' + sectionId);
+};
+
+// ── Update active nav state + breadcrumb ──────────────────────────────
+function _updateNavState(sectionId) {
+  const info = CDB_SECTIONS[sectionId] || { label: sectionId, navKey: sectionId };
+
+  // Active desktop + mobile links
+  document.querySelectorAll(
+    '.nav-links a[data-section], .nav-mobile-drawer a[data-section]'
+  ).forEach(function(a) {
+    a.classList.toggle('nav-active', a.dataset.section === info.navKey || a.dataset.section === sectionId);
+  });
+
+  // Breadcrumb
+  const bc = document.getElementById('page-breadcrumb');
+  const bcCur = document.getElementById('bc-current');
+  if (bc) {
+    if (sectionId === 'hero' || sectionId === 'home') {
+      bc.style.display = 'none';
+    } else {
+      if (bcCur) bcCur.textContent = info.label;
+      bc.style.display = 'block';
+    }
+  }
+
+  // Back-to-top
+  _updateBackToTop();
+
+  // Nav shadow on scroll
+  const nav = document.getElementById('main-nav');
+  if (nav) nav.classList.toggle('nav-scrolled', window.scrollY > 20);
+}
+
+// ── Scroll progress bar ───────────────────────────────────────────────
+function _updateScrollProgress() {
+  const bar = document.getElementById('nav-progress');
+  if (!bar) return;
+  const scrollTop = document.documentElement.scrollTop;
+  const docH      = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  bar.style.width = (docH > 0 ? (scrollTop / docH) * 100 : 0) + '%';
+}
+
+// ── Back-to-top button ────────────────────────────────────────────────
+function _updateBackToTop() {
+  const btn = document.getElementById('back-to-top');
+  if (btn) btn.style.display = window.scrollY > 500 ? 'flex' : 'none';
+}
+
+// ── IntersectionObserver: auto-detect active section ─────────────────
+function _initSectionObserver() {
+  const navH = (document.getElementById('main-nav')?.offsetHeight || 64) + 2;
+  const obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting && CDB_SECTIONS[entry.target.id]) {
+        _updateNavState(entry.target.id);
+        _currentSection = entry.target.id;
+      }
+    });
+  }, {
+    rootMargin: '-' + navH + 'px 0px -55% 0px',
+    threshold: 0,
+  });
+
+  Object.keys(CDB_SECTIONS).forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+}
+
+// ── Mobile nav ────────────────────────────────────────────────────────
+window.cdbToggleMobileNav = function() {
+  const drawer = document.getElementById('nav-mobile-drawer');
+  const btn    = document.getElementById('nav-hamburger');
+  if (!drawer) return;
+  const isOpen = drawer.classList.toggle('open');
+  if (btn) {
+    btn.classList.toggle('open', isOpen);
+    btn.setAttribute('aria-expanded', String(isOpen));
+  }
+  if (drawer) drawer.setAttribute('aria-hidden', String(!isOpen));
+};
+window.cdbCloseMobileNav = function() {
+  const drawer = document.getElementById('nav-mobile-drawer');
+  const btn    = document.getElementById('nav-hamburger');
+  if (drawer) { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+  if (btn)    { btn.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+};
+
+// ── Dropdown ──────────────────────────────────────────────────────────
+window.cdbToggleDropdown = function(e, id) {
+  e.preventDefault(); e.stopPropagation();
+  const menu = document.getElementById(id);
+  if (!menu) return;
+  const willOpen = !menu.classList.contains('open');
+  cdbCloseDropdowns();
+  if (willOpen) {
+    menu.classList.add('open');
+    // close on outside click
+    setTimeout(function() {
+      document.addEventListener('click', function _outsideClose(ev) {
+        if (!menu.contains(ev.target)) {
+          menu.classList.remove('open');
+          document.removeEventListener('click', _outsideClose);
+        }
+      });
+    }, 10);
+  }
+};
+window.cdbCloseDropdowns = function() {
+  document.querySelectorAll('.nav-dd-menu.open').forEach(function(m) { m.classList.remove('open'); });
+};
+
+// ── Browser back / forward ────────────────────────────────────────────
+window.addEventListener('popstate', function(e) {
+  const sec = (e.state && e.state.section) || location.hash.replace('#','') || 'hero';
+  if (sec === 'hero' || sec === 'home') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    _updateNavState('hero');
+  } else {
+    const el = document.getElementById(sec);
+    if (el) {
+      const navH = document.getElementById('main-nav')?.offsetHeight || 64;
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - navH - 8, behavior: 'smooth' });
+    }
+    _updateNavState(sec);
+  }
+});
+
+// ── Scroll handler ────────────────────────────────────────────────────
+window.addEventListener('scroll', function() {
+  if (!_scrollRafPending) {
+    _scrollRafPending = true;
+    requestAnimationFrame(function() {
+      _updateScrollProgress();
+      _updateBackToTop();
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('nav-scrolled', window.scrollY > 20);
+      _scrollRafPending = false;
+    });
+  }
+}, { passive: true });
+
+// ── ESC key handler ───────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    cdbCloseDropdowns();
+    cdbCloseMobileNav();
+    cdbCloseLegal();
+  }
+});
+
+// ── Handle deep link on page load ────────────────────────────────────
+function _handleInitialHash() {
+  const hash = location.hash.replace('#','');
+  if (hash && hash !== 'home') {
+    setTimeout(function() { cdbNavigate(hash); }, 350);
+  } else {
+    history.replaceState({ section: 'hero' }, '', location.href);
+    _updateNavState('hero');
+  }
+}
+
+// ── Live version in footer ────────────────────────────────────────────
+function _liveVersion() {
+  fetch('/api/version').then(function(r){ return r.ok ? r.json() : null; }).then(function(d) {
+    if (!d) return;
+    const v = d.version || d.platform_version || '11.0.0';
+    const el = document.getElementById('platform-version-footer');
+    if (el) el.textContent = 'v' + v;
+  }).catch(function(){});
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// LEGAL MODALS
+// ══════════════════════════════════════════════════════════════════════
+const CDB_LEGAL = {
+  privacy: {
+    title: '🔒 Privacy Policy',
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>1. What We Collect</h3><p>We collect information you provide when using our platform — email addresses, domain names submitted for scanning, API usage logs, and payment information processed securely via Razorpay. We also collect usage analytics to improve service quality.</p><h3>2. How We Use It</h3><p>Data is used to provide security scanning services, send threat intelligence alerts, process payments, and improve our platform. We never sell your personal data to third parties for advertising.</p><h3>3. Data Security</h3><p>All data is encrypted in transit (TLS 1.3) and at rest. Our platform is protected by the same security tools we sell — we follow OWASP guidelines and conduct regular penetration tests.</p><h3>4. Data Retention</h3><p>Scan results are retained for 90 days. Email subscriptions are maintained until unsubscription. Payment records are retained as required by the Indian Income Tax Act.</p><h3>5. Your Rights (DPDP Act 2023)</h3><p>You have the right to access, correct, and erase your personal data. Submit requests to <a href="mailto:privacy@cyberdudebivash.com" style="color:var(--accent)">privacy@cyberdudebivash.com</a>.</p><h3>6. Cookies</h3><p>We use essential cookies for authentication only. No third-party advertising cookies.</p><h3>7. Contact</h3><p>CYBERDUDEBIVASH PRIVATE LIMITED | 29, Korai-Sukinda-Ramchandrapur Rd, Ragadi, Odisha 755019 | <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a></p>'
+  },
+  terms: {
+    title: '📋 Terms of Service',
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>1. Acceptance</h3><p>By using CYBERDUDEBIVASH AI Security Hub, you agree to these terms. If you disagree, do not use the platform.</p><h3>2. Permitted Use</h3><p>You may only scan domains and systems you own or have explicit written permission to test. Unauthorized scanning of third-party systems is strictly prohibited and may violate the IT Act, 2000 (India).</p><h3>3. Account Responsibility</h3><p>You are responsible for maintaining the confidentiality of your credentials and all activity under your account.</p><h3>4. Intellectual Property</h3><p>All platform code, scan algorithms, threat intelligence feeds, AI models, defense products, and content are the intellectual property of CYBERDUDEBIVASH PRIVATE LIMITED.</p><h3>5. Limitation of Liability</h3><p>Our liability is limited to the amount you paid in the past 12 months. We are not liable for indirect, incidental, or consequential damages arising from platform use.</p><h3>6. Governing Law</h3><p>These terms are governed by Indian law. All disputes are subject to the exclusive jurisdiction of courts in Odisha, India.</p><h3>7. Contact</h3><p><a href="mailto:legal@cyberdudebivash.com" style="color:var(--accent)">legal@cyberdudebivash.com</a> | +91 8179881447</p>'
+  },
+  refund: {
+    title: '💳 Refund Policy',
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>Digital Defense Products & Scan Reports</h3><p>Due to the digital nature of defense solutions and reports — which are delivered instantly upon payment — refunds are generally not available once the product has been accessed or downloaded. Exceptions apply when the product was not delivered due to a technical fault on our side.</p><h3>Subscription Plans</h3><p>Subscriptions can be cancelled at any time from your account settings. No refunds are issued for the current billing period, but access continues until the period ends. You will not be charged again after cancellation.</p><h3>Enterprise Packages</h3><p>Enterprise packages carry a <strong>7-day satisfaction guarantee</strong>. If unsatisfied within 7 days of purchase, contact us for a full refund — no questions asked.</p><h3>How to Request a Refund</h3><p>Email <a href="mailto:billing@cyberdudebivash.com" style="color:var(--accent)">billing@cyberdudebivash.com</a> with your order ID and reason. We respond within 2 business days.</p><h3>Processing Time</h3><p>Approved refunds are processed within 5–7 business days to your original Razorpay payment method.</p>'
+  },
+  dpdp: {
+    title: '🇮🇳 DPDP Act 2023 Compliance',
+    body: '<p>CYBERDUDEBIVASH PRIVATE LIMITED is committed to full compliance with the <strong>Digital Personal Data Protection Act, 2023</strong> (India).</p><h3>Data Fiduciary</h3><p>CYBERDUDEBIVASH PRIVATE LIMITED is the Data Fiduciary for all personal data processed through this platform.</p><h3>Lawful Basis for Processing</h3><ul><li>Consent obtained at signup or first scan</li><li>Contractual necessity for delivering security services</li><li>Legitimate interests in platform security improvement</li></ul><h3>Your Rights as Data Principal</h3><ul><li>Right to access your personal data</li><li>Right to correct inaccurate or incomplete data</li><li>Right to erasure of your data</li><li>Right to grievance redressal within 30 days</li><li>Right to nominate a representative</li></ul><h3>Grievance Officer</h3><p><strong>Name:</strong> Bivash Krishnamurthy<br><strong>Email:</strong> <a href="mailto:dpo@cyberdudebivash.com" style="color:var(--accent)">dpo@cyberdudebivash.com</a><br><strong>Address:</strong> 29, Korai-Sukinda Rd, Ragadi, Odisha 755019<br><strong>Response time:</strong> Within 30 days</p><h3>Cross-border Data</h3><p>Data is processed on Cloudflare\'s global edge network (GDPR-compliant infrastructure). No data is shared with unauthorized foreign entities.</p>'
+  },
+  cookies: {
+    title: '🍪 Cookie Policy',
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>Cookies We Use</h3><ul><li><strong>auth_token</strong> — Authentication session (essential, 7-day expiry, HttpOnly)</li><li><strong>cdb_plan</strong> — Your subscription tier for UI (functional, 1-day expiry)</li><li><strong>cdb_scan_history</strong> — Recent scan results for history panel (sessionStorage only)</li></ul><h3>What We Don\'t Use</h3><p>We do not set third-party advertising, retargeting, or cross-site tracking cookies. Google AdSense may set cookies per their policy, but we do not use them to profile users.</p><h3>Managing Cookies</h3><p>You can clear all cookies via your browser\'s settings. Note: clearing the <code>auth_token</code> cookie will log you out of the platform.</p><h3>Consent</h3><p>By continuing to use the platform after this notice, you consent to our use of the essential cookies listed above.</p><h3>Contact</h3><p><a href="mailto:privacy@cyberdudebivash.com" style="color:var(--accent)">privacy@cyberdudebivash.com</a></p>'
+  }
+};
+
+window.cdbOpenLegal = function(type) {
+  const data = CDB_LEGAL[type];
+  if (!data) return;
+  let overlay = document.getElementById('cdb-legal-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'cdb-legal-overlay';
+    overlay.className = 'legal-overlay';
+    overlay.innerHTML = '<div class="legal-box"><button class="legal-box-close" onclick="cdbCloseLegal()" aria-label="Close">✕</button><h2 id="cdb-legal-title"></h2><div id="cdb-legal-body"></div></div>';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) cdbCloseLegal(); });
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('cdb-legal-title').textContent = data.title;
+  document.getElementById('cdb-legal-body').innerHTML = data.body;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+window.cdbCloseLegal = function() {
+  const o = document.getElementById('cdb-legal-overlay');
+  if (o) { o.classList.remove('open'); document.body.style.overflow = ''; }
+};
+
+// ── Init ──────────────────────────────────────────────────────────────
+function _init() {
+  _handleInitialHash();
+  _initSectionObserver();
+  _updateScrollProgress();
+  _updateBackToTop();
+  _liveVersion();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _init);
+} else {
+  _init();
+}
+
+})();
+</script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8343951291888650"
      crossorigin="anonymous"></script>
 </body>
 </html>
