@@ -116,7 +116,7 @@ export async function handleBookConsultation(request, env, authCtx) {
     }
 
     const id = crypto.randomUUID();
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO enterprise_leads
        (id, company_name, contact_name, email, phone, domain, requirements,
         package_interest, team_size, industry, annual_budget, urgency, source, status, notes)
@@ -158,7 +158,7 @@ export async function handleBookConsultation(request, env, authCtx) {
     );
 
     // Track funnel event
-    await env.SECURITY_HUB_DB?.prepare(
+    await env.DB?.prepare(
       `INSERT INTO fomo_events (id, event_type, entity_type, display_name) VALUES (?,?,?,?)`
     ).bind(crypto.randomUUID(), 'signup', 'enterprise_lead', company_name?.slice(0, 40) || email).run().catch(() => {});
 
@@ -218,7 +218,7 @@ export async function handleOrderReport(request, env, authCtx) {
     }
 
     // Store lead
-    await env.SECURITY_HUB_DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO enterprise_leads
        (id, company_name, email, domain, requirements, package_interest, industry, source, status, notes)
        VALUES (?,?,?,?,?,?,?,?,?,?)`
@@ -263,7 +263,7 @@ export async function handleVerifyEnterprisePayment(request, env, authCtx) {
 
     // Update lead status
     if (enterprise_order_id) {
-      await env.SECURITY_HUB_DB.prepare(
+      await env.DB.prepare(
         `UPDATE enterprise_leads SET status='qualified', notes=? WHERE id=?`
       ).bind(`Payment confirmed: ${razorpay_payment_id}`, enterprise_order_id).run();
     }
@@ -294,13 +294,13 @@ export async function handleEnterpriseStats(request, env, authCtx) {
   if (authCtx?.role !== 'admin') return json({ error: 'Admin only' }, 403);
   try {
     const [total, byStatus, recent] = await Promise.all([
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT COUNT(*) as total, package_interest FROM enterprise_leads GROUP BY package_interest`
       ).all(),
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT status, COUNT(*) as cnt FROM enterprise_leads GROUP BY status`
       ).all(),
-      env.SECURITY_HUB_DB.prepare(
+      env.DB.prepare(
         `SELECT id, company_name, email, package_interest, status, urgency, created_at
          FROM enterprise_leads ORDER BY created_at DESC LIMIT 10`
       ).all(),

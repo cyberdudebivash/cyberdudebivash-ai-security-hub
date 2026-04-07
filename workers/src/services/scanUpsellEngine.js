@@ -132,13 +132,13 @@ export async function evaluateScanUpsell(env, scanResult, authCtx = {}) {
 
     // Fetch relevant defense solutions for product upsells
     let products = [];
-    if (primary.products?.length && env.SECURITY_HUB_DB) {
+    if (primary.products?.length && env.DB) {
       try {
         const cats   = primary.products.slice(0, 3);
         const query  = `SELECT id, cve_id, title, category, price_inr, severity, preview, demand_score
                         FROM defense_solutions WHERE is_active=1 AND category IN (${cats.map(() => '?').join(',')})
                         ORDER BY demand_score DESC, severity DESC LIMIT 3`;
-        const rows   = await env.SECURITY_HUB_DB.prepare(query).bind(...cats).all();
+        const rows   = await env.DB.prepare(query).bind(...cats).all();
         products     = rows.results || [];
       } catch { /* fallback to empty */ }
     }
@@ -188,8 +188,8 @@ async function buildFOMOSignals(env, scanResult, urgency) {
 
   // Recent purchases in same category
   try {
-    if (env.SECURITY_HUB_DB) {
-      const row = await env.SECURITY_HUB_DB.prepare(
+    if (env.DB) {
+      const row = await env.DB.prepare(
         `SELECT COUNT(*) as cnt FROM defense_purchases WHERE status='paid'
          AND created_at >= datetime('now','-24 hours')`
       ).first();
@@ -235,7 +235,7 @@ export async function handleUpsellStats(request, env, authCtx) {
 
     const [impressions, conversions] = await Promise.all([
       env.SECURITY_HUB_KV?.list({ prefix: 'upsell:impression:' }).then(l => l?.keys?.length || 0).catch(() => 0),
-      env.SECURITY_HUB_DB?.prepare(`SELECT COUNT(*) as cnt FROM revenue_events WHERE event_type='subscription_payment' AND created_at >= datetime('now','-30 days')`).first().catch(() => null),
+      env.DB?.prepare(`SELECT COUNT(*) as cnt FROM revenue_events WHERE event_type='subscription_payment' AND created_at >= datetime('now','-30 days')`).first().catch(() => null),
     ]);
 
     const stats = {

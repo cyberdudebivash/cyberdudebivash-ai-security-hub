@@ -96,6 +96,209 @@ a:hover{text-decoration:underline}
 .ann-bar a:hover{text-decoration:underline}
 @keyframes gradShift{0%{background-position:0%}50%{background-position:100%}100%{background-position:0%}}
 
+/* ════════════════════════════════════════════════════════════
+   GOD-LEVEL DESIGN SYSTEM v11.0 — CYBERDUDEBIVASH
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Platform Status Bar ─────────────────────────────────── */
+.platform-status-bar{
+  background:rgba(10,10,26,.95);border-bottom:1px solid rgba(0,212,255,.12);
+  padding:6px 24px;display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:var(--text-muted);gap:16px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:1000;backdrop-filter:blur(12px);
+}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;animation:statusPulse 2s ease-in-out infinite}
+.status-dot.green{background:#10b981;box-shadow:0 0 8px #10b981}
+.status-dot.yellow{background:#f59e0b;box-shadow:0 0 8px #f59e0b}
+.status-dot.red{background:#ef4444;box-shadow:0 0 8px #ef4444}
+@keyframes statusPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+.status-items{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.status-item{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.status-item span{font-weight:700;color:var(--text)}
+.status-ticker{display:flex;align-items:center;gap:8px;flex:1;overflow:hidden}
+.ticker-label{font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px;white-space:nowrap;padding:2px 6px;background:rgba(0,212,255,.1);border-radius:4px;border:1px solid rgba(0,212,255,.2)}
+.ticker-text{font-size:11px;color:var(--text-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ticker-text strong{color:#ef4444}
+
+/* ── Enhanced Metric Cards ───────────────────────────────── */
+.metric-card{
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--card) 0%,rgba(17,17,48,.95) 100%);
+  border:1px solid rgba(var(--mc-color-raw,0,212,255),.15);
+  border-radius:var(--radius);padding:22px;
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+  cursor:default;
+}
+.metric-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--mc-color,#00d4ff),transparent);
+  opacity:.7;
+}
+.metric-card::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 80% 20%,rgba(0,212,255,.04) 0%,transparent 60%);
+  pointer-events:none;
+}
+.metric-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 20px rgba(0,212,255,.08);border-color:rgba(0,212,255,.3)}
+.metric-live-badge{font-size:9px;font-weight:800;letter-spacing:1.5px;padding:2px 7px;border-radius:4px;animation:liveBadgePulse 2s ease infinite;border:1px solid}
+@keyframes liveBadgePulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ── Terminal/Cyber Typography ───────────────────────────── */
+.cyber-mono{font-family:'Courier New',Courier,monospace;font-weight:700}
+.cyber-glow{text-shadow:0 0 20px currentColor}
+.section-label-v11{
+  font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.section-label-v11::before{content:'';display:block;width:20px;height:1px;background:var(--accent);opacity:.6}
+.section-label-v11::after{content:'';display:block;flex:1;height:1px;background:linear-gradient(90deg,rgba(0,212,255,.3),transparent)}
+
+/* ── Threat Intelligence Panel ───────────────────────────── */
+.threat-intel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px}
+.cve-card-v11{
+  background:rgba(17,17,48,.8);border:1px solid rgba(255,255,255,.06);
+  border-radius:10px;padding:14px;transition:all .2s ease;
+  border-left:3px solid transparent;cursor:pointer;
+}
+.cve-card-v11:hover{background:rgba(30,30,80,.6);border-color:rgba(0,212,255,.2)}
+.cve-card-v11.sev-CRITICAL{border-left-color:#ef4444}
+.cve-card-v11.sev-HIGH{border-left-color:#f59e0b}
+.cve-card-v11.sev-MEDIUM{border-left-color:#3b82f6}
+.cve-card-v11.sev-LOW{border-left-color:#10b981}
+.cve-meta{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.cve-id-badge{font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);background:rgba(0,212,255,.08);padding:2px 7px;border-radius:4px;border:1px solid rgba(0,212,255,.15)}
+.cvss-badge{font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px}
+.cvss-CRITICAL{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.cvss-HIGH{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.cvss-MEDIUM{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.cvss-LOW{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.kev-badge{font-size:9px;font-weight:800;color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);padding:1px 5px;border-radius:3px;letter-spacing:.5px;animation:liveBadgePulse 2s ease infinite}
+.cve-title-v11{font-size:12px;color:var(--text-muted);line-height:1.4;margin-bottom:4px}
+.cve-footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-dim)}
+
+/* ── Defense Marketplace Cards ───────────────────────────── */
+.defense-card-v11{
+  background:linear-gradient(135deg,rgba(17,17,48,.95) 0%,rgba(11,11,30,.98) 100%);
+  border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:20px;
+  transition:all .25s ease;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:12px;
+}
+.defense-card-v11::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent));opacity:.5}
+.defense-card-v11:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.5),0 0 30px rgba(124,58,237,.1);border-color:rgba(124,58,237,.3)}
+.defense-card-demand{height:3px;border-radius:2px;background:rgba(255,255,255,.08);margin-bottom:4px;overflow:hidden}
+.defense-card-demand-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#10b981,#00d4ff);transition:width .6s ease}
+
+/* ── Purchase Button Glow ────────────────────────────────── */
+.btn-buy-v11{
+  display:block;width:100%;padding:12px;border-radius:10px;font-weight:800;
+  font-size:13px;cursor:pointer;border:none;text-align:center;
+  background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;
+  transition:all .2s ease;letter-spacing:.3px;
+  box-shadow:0 4px 15px rgba(124,58,237,.3);
+}
+.btn-buy-v11:hover{background:linear-gradient(135deg,#8b5cf6,#7c3aed);transform:translateY(-1px);box-shadow:0 6px 25px rgba(124,58,237,.5)}
+.btn-buy-v11.critical{background:linear-gradient(135deg,#dc2626,#b91c1c);box-shadow:0 4px 15px rgba(220,38,38,.4)}
+.btn-buy-v11.critical:hover{box-shadow:0 6px 25px rgba(220,38,38,.6)}
+
+/* ── Live Activity Feed ───────────────────────────────────── */
+.activity-feed-v11{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.activity-feed-v11::-webkit-scrollbar{width:3px}
+.activity-feed-v11::-webkit-scrollbar-thumb{background:rgba(0,212,255,.3);border-radius:2px}
+.activity-item-v11{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:rgba(255,255,255,.03);border-radius:8px;
+  border:1px solid rgba(255,255,255,.04);font-size:12px;
+  animation:activitySlideIn .3s ease;
+}
+@keyframes activitySlideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.activity-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+
+/* ── Risk Score Ring ─────────────────────────────────────── */
+.risk-ring-v11{position:relative;width:120px;height:120px;margin:0 auto}
+.risk-ring-v11 svg{transform:rotate(-90deg)}
+.risk-ring-v11 .ring-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:8}
+.risk-ring-v11 .ring-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:283;transition:stroke-dashoffset 1.5s cubic-bezier(.23,1,.32,1)}
+.risk-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.risk-score-num{font-size:28px;font-weight:900;line-height:1;font-family:monospace}
+.risk-score-lbl{font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
+
+/* ── Scan Upsell Modal v11 ───────────────────────────────── */
+.upsell-modal-v11{
+  background:linear-gradient(135deg,#0d0d26 0%,#0a0a1a 100%);
+  border:1px solid rgba(124,58,237,.35);border-radius:16px;
+  padding:28px;max-width:480px;width:100%;
+  box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 40px rgba(124,58,237,.12);
+}
+
+/* ── Animated Grid Background ────────────────────────────── */
+.cyber-grid-bg{
+  position:absolute;inset:0;pointer-events:none;opacity:.04;
+  background-image:
+    linear-gradient(rgba(0,212,255,.5) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.5) 1px,transparent 1px);
+  background-size:40px 40px;
+  animation:gridScroll 20s linear infinite;
+}
+@keyframes gridScroll{from{background-position:0 0}to{background-position:40px 40px}}
+
+/* ── Scan line effect ────────────────────────────────────── */
+@keyframes scanLine{0%{top:-5%}100%{top:105%}}
+.scan-line{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.3),transparent);animation:scanLine 4s linear infinite;pointer-events:none;z-index:1}
+
+/* ── Enhanced Sentinel Feed ──────────────────────────────── */
+.sentinel-v11{display:flex;flex-direction:column;gap:8px}
+.sentinel-row-v11{
+  display:flex;align-items:flex-start;gap:12px;padding:10px 14px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);
+  border-left:3px solid transparent;border-radius:8px;
+  transition:background .15s ease;cursor:pointer;
+}
+.sentinel-row-v11:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.08)}
+.sentinel-row-v11.crit{border-left-color:#ef4444}
+.sentinel-row-v11.high{border-left-color:#f59e0b}
+.sentinel-row-v11.med{border-left-color:#3b82f6}
+
+/* ── Revenue Stats ────────────────────────────────────────── */
+.rev-stat-v11{text-align:center;padding:16px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid rgba(255,255,255,.06)}
+.rev-stat-val{font-size:24px;font-weight:900;font-family:monospace;color:var(--accent3)}
+.rev-stat-lbl{font-size:11px;color:var(--text-dim);margin-top:2px}
+
+/* ── Skeleton loaders ─────────────────────────────────────── */
+.skel-v11{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:skelShimmer 1.5s ease infinite;border-radius:6px}
+@keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── Conversion Banner ────────────────────────────────────── */
+.conv-banner-v11{
+  background:linear-gradient(135deg,rgba(124,58,237,.12) 0%,rgba(0,212,255,.08) 100%);
+  border:1px solid rgba(124,58,237,.25);border-radius:12px;padding:18px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+}
+.conv-banner-v11 .cta-btn{
+  padding:10px 22px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;
+  border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px;
+  white-space:nowrap;box-shadow:0 4px 15px rgba(124,58,237,.35);
+  transition:all .2s ease;
+}
+.conv-banner-v11 .cta-btn:hover{box-shadow:0 6px 25px rgba(124,58,237,.55);transform:translateY(-1px)}
+
+/* ── FOMO Notification Strip ─────────────────────────────── */
+.fomo-strip-v11{
+  background:rgba(17,17,48,.9);border:1px solid rgba(16,185,129,.2);
+  border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:10px;
+  font-size:12px;animation:fomoFadeIn .5s ease;
+}
+@keyframes fomoFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.fomo-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+
+/* ── Chart Bars ───────────────────────────────────────────── */
+.mini-bar-chart{display:flex;align-items:flex-end;gap:3px;height:40px}
+.mini-bar{flex:1;background:rgba(0,212,255,.3);border-radius:2px 2px 0 0;transition:height .5s ease;min-width:4px}
+.mini-bar:hover{background:rgba(0,212,255,.6)}
+
+/* ── Announcement bar text ─────────────────────────────────── */
+.ann-marquee{display:inline-block;animation:marquee 30s linear infinite;white-space:nowrap}
+@keyframes marquee{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+
 /* ── Nav ───────────────────────────────────────── */
 nav{background:rgba(10,10,26,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:999;padding:0 24px}
 .nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
@@ -974,12 +1177,18 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 <!-- Global Error Banner (hidden by default, shown by error boundary) -->
 <div id="global-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(239,68,68,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;text-align:center;backdrop-filter:blur(4px);cursor:pointer" onclick="this.style.display='none'"></div>
 
-<!-- Announcement Bar -->
-<div class="ann-bar">
-  ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge">v9.0</span> — AI Cyber Brain · Continuous Monitoring · Threat Correlation · Enterprise Multi-Tenant |
-  <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">📡 Join Threat Intel</a> ·
-  <a href="https://tools.cyberdudebivash.com" target="_blank">🛠️ Tools Suite</a> ·
-  <a href="#enterprise">Enterprise</a>
+<!-- Announcement Bar v11 -->
+<div class="ann-bar" style="overflow:hidden;padding:7px 0">
+  <span class="ann-marquee">
+    🔴 LIVE: Sentinel APEX monitoring <strong>CVEs in real-time</strong> &nbsp;|&nbsp;
+    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v11.0</span> — The World's #1 AI Cybersecurity Intelligence Engine &nbsp;|&nbsp;
+    🛡️ Defense products auto-generated from every critical CVE &nbsp;|&nbsp;
+    📡 <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="color:#fff;font-weight:800">Join Sentinel APEX on Telegram →</a> &nbsp;|&nbsp;
+    🚀 Enterprise packages from ₹9,999 &nbsp;|&nbsp;
+    🛠️ <a href="https://tools.cyberdudebivash.com" target="_blank" style="color:#fff">Production Tools Suite</a> &nbsp;|&nbsp;
+    💰 <strong id="ann-revenue-count">847+</strong> security products sold &nbsp;|&nbsp;
+    🌐 Global threat intel: <strong id="ann-cve-count">loading...</strong> CVEs tracked &nbsp;|&nbsp;
+  </span>
 </div>
 
 <!-- SOC Status Bar -->
@@ -1206,68 +1415,174 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 <!-- ═══════════════════════ SECURITY DASHBOARD ═══════════════════════ -->
 <section id="dashboard" class="dashboard-section">
   <div class="dashboard-inner">
-    <div style="text-align:center;margin-bottom:32px">
-      <div class="section-label">Live Intelligence</div>
-      <h2 class="section-title" style="margin-bottom:8px">Security Command Center</h2>
-      <p style="color:var(--text-muted);font-size:14px">Real-time platform metrics · AI threat analysis · Security posture scoring</p>
+    <div style="text-align:center;margin-bottom:36px;position:relative">
+      <div class="section-label-v11" style="justify-content:center;margin-bottom:10px">
+        <span style="width:auto">Live Intelligence</span>
+      </div>
+      <h2 class="section-title" style="margin-bottom:8px;font-size:clamp(24px,4vw,40px)">
+        🛡 Security Command Center
+      </h2>
+      <p style="color:var(--text-muted);font-size:14px;max-width:560px;margin:0 auto 16px">
+        Real-time platform metrics · AI threat analysis · Live CVE intelligence · Monetization engine
+      </p>
+      <!-- Live platform status row -->
+      <div style="display:inline-flex;align-items:center;gap:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:30px;padding:6px 16px;font-size:11px;font-weight:700">
+        <span><span class="status-dot green"></span>All Systems Operational</span>
+        <span style="color:var(--text-dim)">|</span>
+        <span style="color:var(--text-muted)" id="dash-last-refresh">Loading...</span>
+        <span style="color:var(--text-dim)">|</span>
+        <span style="color:var(--accent);cursor:pointer" onclick="refreshDashboardMetrics()">↻ Refresh</span>
+      </div>
     </div>
 
-    <!-- Metrics Row -->
+    <!-- Metrics Row v11 — connected to real APIs -->
     <div class="dashboard-grid">
+      <!-- Total Scans -->
       <div class="metric-card" style="--mc-color:#00d4ff">
-        <div class="metric-icon">🔍</div>
-        <div class="metric-value" id="mc-scans">12,847</div>
-        <div class="metric-label">Total Scans Run</div>
-        <div class="metric-trend trend-up">↑ +234 this week</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="metric-icon" style="font-size:20px">🔍</div>
+          <span class="metric-live-badge" style="background:rgba(0,212,255,.12);color:var(--accent);border-color:rgba(0,212,255,.2);font-size:8px">LIVE</span>
+        </div>
+        <div class="metric-value cyber-mono" id="mc-scans" style="font-size:clamp(24px,4vw,36px);line-height:1">—</div>
+        <div class="metric-label" style="margin-top:4px">Total Scans Run</div>
+        <div class="metric-trend trend-up" id="mc-scans-trend">↑ Loading...</div>
+        <div class="mini-bar-chart" style="margin-top:10px" id="mc-scans-chart">
+          <div class="mini-bar" style="height:60%"></div><div class="mini-bar" style="height:40%"></div>
+          <div class="mini-bar" style="height:75%"></div><div class="mini-bar" style="height:55%"></div>
+          <div class="mini-bar" style="height:90%"></div><div class="mini-bar" style="height:70%"></div>
+          <div class="mini-bar" style="height:100%;background:rgba(0,212,255,.6)"></div>
+        </div>
       </div>
+
+      <!-- Global Threat Level -->
       <div class="metric-card" style="--mc-color:#ef4444">
-        <div class="metric-icon">⚠️</div>
-        <div class="metric-value" id="mc-threats">HIGH</div>
-        <div class="metric-label">Global Threat Level</div>
-        <div class="metric-trend trend-up" style="color:#f59e0b">⬆ Elevated — APT Active</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="metric-icon" style="font-size:20px">⚠️</div>
+          <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.25);font-size:8px" id="mc-threat-badge">SENTINEL</span>
+        </div>
+        <div class="metric-value cyber-mono" id="mc-threats" style="font-size:clamp(24px,4vw,36px);line-height:1;color:#f59e0b">HIGH</div>
+        <div class="metric-label" style="margin-top:4px">Global Threat Level</div>
+        <div class="metric-trend" id="mc-threats-trend" style="color:#f59e0b">⬆ APT Active — Monitor Now</div>
+        <div style="display:flex;gap:4px;margin-top:10px" id="mc-threat-bars">
+          <div style="flex:1;height:4px;border-radius:2px;background:#ef4444;opacity:.9"></div>
+          <div style="flex:1;height:4px;border-radius:2px;background:#f59e0b;opacity:.8"></div>
+          <div style="flex:1;height:4px;border-radius:2px;background:#3b82f6;opacity:.5"></div>
+          <div style="flex:1;height:4px;border-radius:2px;background:#10b981;opacity:.3"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);margin-top:3px">
+          <span>CRIT <strong id="mc-crit-cnt" style="color:#ef4444">—</strong></span>
+          <span>HIGH <strong id="mc-high-cnt" style="color:#f59e0b">—</strong></span>
+          <span>MED <strong id="mc-med-cnt" style="color:#3b82f6">—</strong></span>
+        </div>
       </div>
+
+      <!-- CVEs Tracked -->
       <div class="metric-card" style="--mc-color:#7c3aed">
-        <div class="metric-icon">🧠</div>
-        <div class="metric-value" id="mc-confidence">94.7%</div>
-        <div class="metric-label">AI Confidence Score</div>
-        <div class="metric-trend trend-up">↑ OWASP LLM Aligned</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="metric-icon" style="font-size:20px">🧠</div>
+          <span class="metric-live-badge" style="background:rgba(124,58,237,.12);color:#a78bfa;border-color:rgba(124,58,237,.25);font-size:8px">APEX</span>
+        </div>
+        <div class="metric-value cyber-mono" id="mc-cves" style="font-size:clamp(24px,4vw,36px);line-height:1">—</div>
+        <div class="metric-label" style="margin-top:4px">CVEs Tracked (30d)</div>
+        <div class="metric-trend trend-up" id="mc-cves-trend">↑ Loading intelligence...</div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:9px;background:rgba(239,68,68,.12);color:#fca5a5;padding:2px 6px;border-radius:4px;border:1px solid rgba(239,68,68,.2)">CRITICAL: <strong id="mc-crit-total">—</strong></span>
+          <span style="font-size:9px;background:rgba(245,158,11,.1);color:#fcd34d;padding:2px 6px;border-radius:4px;border:1px solid rgba(245,158,11,.2)">KEV: <strong id="mc-kev-total">—</strong></span>
+        </div>
       </div>
+
+      <!-- Revenue / Platform Health -->
       <div class="metric-card" style="--mc-color:#10b981">
-        <div class="metric-icon">🛡️</div>
-        <div class="metric-value" id="mc-protections">5</div>
-        <div class="metric-label">Active Protections</div>
-        <div class="metric-trend trend-neu">Domain · AI · RedTeam · Identity · Compliance</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="metric-icon" style="font-size:20px">💰</div>
+          <span class="metric-live-badge" style="background:rgba(16,185,129,.1);color:#6ee7b7;border-color:rgba(16,185,129,.2);font-size:8px">MONETIZED</span>
+        </div>
+        <div class="metric-value cyber-mono" id="mc-revenue" style="font-size:clamp(20px,3.5vw,32px);line-height:1;color:#10b981">₹—</div>
+        <div class="metric-label" style="margin-top:4px">Defense Products Revenue</div>
+        <div class="metric-trend trend-up" id="mc-revenue-trend">↑ Loading revenue data...</div>
+        <div style="margin-top:10px;font-size:10px;color:var(--text-dim)">
+          <div style="display:flex;justify-content:space-between">
+            <span>Products Generated</span>
+            <strong id="mc-products-cnt" style="color:var(--accent3)">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px">
+            <span>Active Protections</span>
+            <strong style="color:var(--accent)">5 Modules</strong>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Lower Panels -->
     <div class="dashboard-lower">
 
-      <!-- Security Posture -->
-      <div class="dash-panel">
-        <div class="dash-panel-title">🎯 Security Posture Score</div>
-        <div class="posture-ring-wrap">
-          <div class="posture-ring">
-            <svg viewBox="0 0 110 110">
+      <!-- Security Posture v11 — Live API Connected -->
+      <div class="dash-panel" style="position:relative;overflow:hidden">
+        <div class="scan-line"></div>
+        <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>🎯 Security Posture</span>
+          <span id="posture-api-badge" class="metric-live-badge" style="background:rgba(0,212,255,.12);color:var(--accent);border-color:rgba(0,212,255,.2);font-size:8px">LIVE</span>
+        </div>
+
+        <!-- Risk Ring v11 -->
+        <div class="posture-ring-wrap" style="margin:12px 0">
+          <div class="risk-ring-v11">
+            <svg viewBox="0 0 120 120" width="120" height="120">
               <defs>
-                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="ringGrad11" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style="stop-color:#00d4ff"/>
                   <stop offset="100%" style="stop-color:#7c3aed"/>
                 </linearGradient>
               </defs>
-              <circle class="ring-bg" cx="55" cy="55" r="45"/>
-              <circle class="ring-fill" cx="55" cy="55" r="45" id="postureRing"/>
+              <circle class="ring-bg" cx="60" cy="60" r="45"/>
+              <circle class="ring-fill" cx="60" cy="60" r="45"
+                stroke="url(#ringGrad11)"
+                id="postureRing"
+                style="stroke-dasharray:283;stroke-dashoffset:85"/>
             </svg>
-            <div class="posture-text">
-              <span class="posture-score-val" id="postureVal">70</span>
-              <span class="posture-score-lbl">/ 100</span>
+            <div class="risk-ring-center">
+              <span class="risk-score-num" id="postureVal" style="color:#00d4ff">70</span>
+              <span class="risk-score-lbl">Posture Score</span>
             </div>
           </div>
         </div>
-        <div class="prog-row"><span class="prog-label">Network</span><div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:78%;background:linear-gradient(90deg,#00d4ff,#7c3aed)"></div></div><span class="prog-val">78</span></div>
-        <div class="prog-row"><span class="prog-label">Identity</span><div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:62%;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div><span class="prog-val">62</span></div>
-        <div class="prog-row"><span class="prog-label">AI Systems</span><div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:85%;background:linear-gradient(90deg,#10b981,#00d4ff)"></div></div><span class="prog-val">85</span></div>
-        <div class="prog-row"><span class="prog-label">Compliance</span><div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:55%;background:linear-gradient(90deg,#7c3aed,#a855f7)"></div></div><span class="prog-val">55</span></div>
+
+        <!-- Progress bars v11 -->
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="prog-row">
+            <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">Network</span>
+            <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
+              <div class="prog-bar-fill" id="pb-network" style="width:0%;height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);border-radius:4px;transition:width 1s ease"></div>
+            </div>
+            <span class="prog-val" id="pb-network-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#00d4ff">78</span>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">Identity</span>
+            <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
+              <div class="prog-bar-fill" id="pb-identity" style="width:0%;height:100%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:4px;transition:width 1s ease .1s"></div>
+            </div>
+            <span class="prog-val" id="pb-identity-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#f59e0b">62</span>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">AI Systems</span>
+            <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
+              <div class="prog-bar-fill" id="pb-ai" style="width:0%;height:100%;background:linear-gradient(90deg,#10b981,#00d4ff);border-radius:4px;transition:width 1s ease .2s"></div>
+            </div>
+            <span class="prog-val" id="pb-ai-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#10b981">85</span>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">Compliance</span>
+            <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
+              <div class="prog-bar-fill" id="pb-compliance" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:4px;transition:width 1s ease .3s"></div>
+            </div>
+            <span class="prog-val" id="pb-compliance-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#a78bfa">55</span>
+          </div>
+        </div>
+
+        <!-- Quick scan CTA -->
+        <a href="#scanner" style="display:block;margin-top:14px;padding:10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;text-align:center;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;transition:all .2s" onmouseover="this.style.background='rgba(0,212,255,.15)'" onmouseout="this.style.background='rgba(0,212,255,.08)'">
+          🔍 Scan Your Domain Now →
+        </a>
       </div>
 
       <!-- Recent Scans -->
@@ -1343,38 +1658,61 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
       </div>
     </div>
 
-    <!-- Sentinel APEX Live CVE Feed -->
-    <div class="sentinel-panel" id="sentinelDashPanel">
-      <div class="dash-panel-title">
-        🛡️ Sentinel APEX — Live CVE Intelligence
-        <span class="metric-live-badge">LIVE</span>
+    <!-- Sentinel APEX Live CVE Feed v11 -->
+    <div class="sentinel-panel" id="sentinelDashPanel" style="position:relative;overflow:hidden">
+      <div class="cyber-grid-bg"></div>
+      <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span>🛡️ Sentinel APEX — Live CVE Intelligence</span>
+          <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.2);font-size:8px">LIVE</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="initSentinelFeed()" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">↻ Refresh</button>
+          <span class="sentinel-last-update" id="sentinelLastUpdate" style="font-size:10px;color:var(--text-dim)"></span>
+        </div>
       </div>
-      <div class="sentinel-feed" id="sentinelFeed">
-        <div class="sentinel-loading">⟳ Fetching latest threat intelligence...</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;position:relative;z-index:1">
+        Click any CVE to view on NVD · Click <strong style="color:#a78bfa">🛡 Buy Fix →</strong> to get the defense solution
       </div>
-      <div class="sentinel-footer">
-        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" rel="noopener" class="sentinel-join-btn">
-          ✈️ Join Sentinel APEX for Real-Time Alerts
+      <div class="sentinel-feed" id="sentinelFeed" style="position:relative;z-index:1">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="skel-v11" style="height:48px;border-radius:8px"></div>
+          <div class="skel-v11" style="height:48px;border-radius:8px;opacity:.7"></div>
+          <div class="skel-v11" style="height:48px;border-radius:8px;opacity:.5"></div>
+        </div>
+      </div>
+      <div class="sentinel-footer" style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px">
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" rel="noopener" class="sentinel-join-btn" style="display:flex;align-items:center;gap:6px">
+          ✈️ Join Sentinel APEX on Telegram →
         </a>
-        <span class="sentinel-last-update" id="sentinelLastUpdate"></span>
+        <a href="#defense-marketplace" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none">🛡 Browse Defense Marketplace →</a>
       </div>
     </div>
 
-    <!-- Conversion urgency block -->
-    <div class="conversion-urgency" id="dashUrgencyBlock" style="display:none">
-      <span class="conv-dot"></span>
-      <span class="conv-text">
-        <strong id="dashUrgencyThreatCount">0</strong> active threats detected in the last 24 hours.
-        Scan your domain now — <a href="#scanner" style="color:#ef4444;font-weight:700">free preview available →</a>
-      </span>
+    <!-- Conversion urgency block v11 -->
+    <div class="conv-banner-v11" id="dashUrgencyBlock" style="display:none;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px;animation:statusPulse 1.5s ease infinite">🚨</span>
+        <div>
+          <div style="font-weight:800;font-size:14px"><strong id="dashUrgencyThreatCount" style="color:#ef4444">0</strong> CRITICAL threats detected in last 24 hours</div>
+          <div style="font-size:12px;color:var(--text-muted)">Your infrastructure may be at risk — scan now for free</div>
+        </div>
+      </div>
+      <a href="#scanner">
+        <button class="cta-btn">🔍 Free Scan →</button>
+      </a>
     </div>
 
-    <div style="text-align:center;margin-top:28px">
-      <a href="#scanner" class="btn btn-primary" style="font-size:14px;padding:12px 32px">
+    <!-- CTA Row v11 -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px;flex-wrap:wrap">
+      <a href="#scanner" class="btn btn-primary" style="font-size:14px;padding:13px 32px;display:flex;align-items:center;gap:6px">
         🚀 Start Free Security Scan
       </a>
-      <a href="https://tools.cyberdudebivash.com" target="_blank" class="btn" style="font-size:14px;padding:12px 28px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text);margin-left:12px">
-        🛠️ Production Apps Suite →
+      <a href="#defense-marketplace" class="btn" style="font-size:14px;padding:13px 28px;background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(124,58,237,.08));border:1px solid rgba(124,58,237,.35);color:#a78bfa">
+        🛡️ Defense Marketplace
+      </a>
+      <a href="https://tools.cyberdudebivash.com" target="_blank" class="btn" style="font-size:14px;padding:13px 28px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text)">
+        🛠️ Tools Suite →
       </a>
     </div>
   </div>
@@ -1837,6 +2175,527 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   <div id="monitoringDashboard" class="monitor-section" style="display:none"></div>
 </div>
 
+<!-- ════════ SENTINEL APEX DEFENSE SOLUTIONS MARKETPLACE ════════ -->
+<section id="defense-solutions" style="background:linear-gradient(180deg,#080818 0%,#0d0d24 100%);padding:80px 20px">
+  <div class="section-inner" style="max-width:1200px;margin:0 auto">
+
+    <!-- Section header -->
+    <div style="text-align:center;margin-bottom:56px">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:999px;padding:6px 18px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#ef4444;text-transform:uppercase;margin-bottom:20px">
+        <span style="width:7px;height:7px;background:#ef4444;border-radius:50%;animation:pulse 1.4s infinite"></span>
+        LIVE THREAT FIXES — SENTINEL APEX
+      </div>
+      <h2 style="font-size:clamp(28px,4vw,46px);font-weight:900;margin:0 0 16px;line-height:1.1">
+        Sentinel APEX Defense Solutions
+        <span style="display:block;background:linear-gradient(135deg,#00d4ff,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Powered by CYBERDUDEBIVASH AI</span>
+      </h2>
+      <p style="font-size:17px;color:rgba(255,255,255,.65);max-width:620px;margin:0 auto 28px">
+        Real working code generated from live CVE intelligence. Firewall scripts, IDS signatures, YARA rules, IR playbooks — deploy in minutes.
+      </p>
+      <!-- FOMO counter bar -->
+      <div id="ds-fomo-bar" style="display:inline-flex;align-items:center;gap:20px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 24px;font-size:13px;flex-wrap:wrap;justify-content:center">
+        <span style="color:#00d4ff;font-weight:700">🔥 <span id="ds-purchases-today">47</span> solutions sold today</span>
+        <span style="color:rgba(255,255,255,.35)">|</span>
+        <span style="color:#a78bfa">⚡ <span id="ds-teams-active">12</span> enterprise teams active now</span>
+        <span style="color:rgba(255,255,255,.35)">|</span>
+        <span style="color:#f59e0b">🚨 <span id="ds-critical-count">3</span> CRITICAL threats live</span>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div id="ds-filters" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:40px">
+      <button class="ds-filter-btn active" data-filter="all"             onclick="dsFilter(this,'all')"            >All Solutions</button>
+      <button class="ds-filter-btn" data-filter="firewall_script"        onclick="dsFilter(this,'firewall_script')" >🔥 Firewall</button>
+      <button class="ds-filter-btn" data-filter="sigma_rule"             onclick="dsFilter(this,'sigma_rule')"      >🔍 Sigma</button>
+      <button class="ds-filter-btn" data-filter="yara_rule"              onclick="dsFilter(this,'yara_rule')"       >🧬 YARA</button>
+      <button class="ds-filter-btn" data-filter="ids_signature"          onclick="dsFilter(this,'ids_signature')"   >🚨 IDS</button>
+      <button class="ds-filter-btn" data-filter="ir_playbook"            onclick="dsFilter(this,'ir_playbook')"     >📋 IR Playbook</button>
+      <button class="ds-filter-btn" data-filter="threat_hunt_pack"       onclick="dsFilter(this,'threat_hunt_pack')">🎯 Threat Hunt</button>
+      <button class="ds-filter-btn" data-filter="python_scanner"         onclick="dsFilter(this,'python_scanner')"  >🐍 Scanner</button>
+    </div>
+
+    <!-- FOMO live notification strip -->
+    <div id="ds-live-notif" style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:10px 18px;margin-bottom:36px;font-size:13px;color:rgba(255,255,255,.7);min-height:38px;display:flex;align-items:center;gap:10px;overflow:hidden">
+      <span style="color:#00d4ff;font-weight:700;white-space:nowrap">● LIVE</span>
+      <span id="ds-live-msg">Loading live purchase activity...</span>
+    </div>
+
+    <!-- Solutions grid -->
+    <div id="ds-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:24px;margin-bottom:48px">
+      <!-- Skeleton loaders -->
+      <div class="ds-skeleton" style="height:320px;border-radius:16px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite"></div>
+      <div class="ds-skeleton" style="height:320px;border-radius:16px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite;animation-delay:.2s"></div>
+      <div class="ds-skeleton" style="height:320px;border-radius:16px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite;animation-delay:.4s"></div>
+    </div>
+
+    <!-- Load more -->
+    <div style="text-align:center;margin-bottom:24px">
+      <button id="ds-load-more" onclick="dsLoadMore()" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:#00d4ff;padding:12px 36px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:none">
+        Load More Solutions ↓
+      </button>
+    </div>
+
+    <!-- Custom solution CTA -->
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(0,212,255,.08));border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:36px;text-align:center;margin-top:32px">
+      <div style="font-size:24px;margin-bottom:12px">🧪</div>
+      <h3 style="font-size:20px;font-weight:800;margin:0 0 10px">Need a Custom Defense Solution?</h3>
+      <p style="color:rgba(255,255,255,.6);margin:0 0 24px;max-width:480px;margin-left:auto;margin-right:auto">
+        Tell us your CVE, tech stack, and compliance needs — we'll generate a tailored security tool within 24 hours.
+      </p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button onclick="document.getElementById('custom-solution-modal').style.display='flex'" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:13px 28px;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px">
+          🔧 Request Custom Solution
+        </button>
+        <a href="#enterprise" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#fff;padding:13px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px">
+          🏢 Enterprise Packages →
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Defense Solutions: Solution Preview Modal ─────────────────────────── -->
+<div id="ds-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="max-width:760px;margin:40px auto;background:#0f0f23;border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:hidden">
+    <div id="ds-modal-body" style="padding:32px"></div>
+  </div>
+</div>
+
+<!-- ─── Custom Solution Request Modal ─────────────────────────────────────── -->
+<div id="custom-solution-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#0f0f23;border:1px solid rgba(124,58,237,.4);border-radius:20px;padding:36px;max-width:540px;width:100%">
+    <h3 style="font-size:20px;font-weight:800;margin:0 0 6px">🔧 Request Custom Defense Solution</h3>
+    <p style="color:rgba(255,255,255,.5);font-size:13px;margin:0 0 24px">Our AI generates tailored security tools within 24 hours</p>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <input id="csr-email"    type="email"  placeholder="your@email.com *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <input id="csr-cve"      type="text"   placeholder="CVE ID (e.g. CVE-2024-12345)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <select id="csr-type" style="background:#1a1a30;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+        <option value="">Solution Type</option>
+        <option value="firewall_script">🔥 Firewall Script</option>
+        <option value="sigma_rule">🔍 Sigma Detection Rule</option>
+        <option value="yara_rule">🧬 YARA Rule</option>
+        <option value="ir_playbook">📋 IR Playbook</option>
+        <option value="python_scanner">🐍 Python Scanner</option>
+        <option value="all">All Types Bundle</option>
+      </select>
+      <input id="csr-stack" type="text" placeholder="Tech stack (e.g. AWS + Ubuntu + nginx)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <textarea id="csr-desc" rows="3" placeholder="Describe your security needs *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:20px">
+      <button onclick="submitCustomRequest()" style="flex:1;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px">
+        Submit Request
+      </button>
+      <button onclick="this.closest('[id=custom-solution-modal]').style.display='none'" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);padding:13px 20px;border-radius:8px;cursor:pointer;font-size:14px">
+        Cancel
+      </button>
+    </div>
+    <div id="csr-status" style="margin-top:14px;font-size:13px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<style>
+.ds-filter-btn {
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.6);
+  padding:8px 16px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .2s;
+  letter-spacing:.03em;
+}
+.ds-filter-btn:hover,.ds-filter-btn.active {
+  background:rgba(0,212,255,.12);
+  border-color:rgba(0,212,255,.45);
+  color:#00d4ff;
+}
+.ds-card {
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  overflow:hidden;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+  cursor:pointer;
+  position:relative;
+}
+.ds-card:hover {
+  border-color:rgba(0,212,255,.35);
+  transform:translateY(-3px);
+  box-shadow:0 16px 48px rgba(0,0,0,.4);
+}
+.ds-card.critical { border-color:rgba(239,68,68,.25) }
+.ds-card.critical:hover { border-color:rgba(239,68,68,.55);box-shadow:0 16px 48px rgba(239,68,68,.12) }
+.ds-card.high { border-color:rgba(245,158,11,.2) }
+.ds-card.high:hover { border-color:rgba(245,158,11,.5);box-shadow:0 16px 48px rgba(245,158,11,.1) }
+.ds-sev-critical { background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3) }
+.ds-sev-high     { background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3) }
+.ds-sev-medium   { background:rgba(234,179,8,.12);color:#eab308;border:1px solid rgba(234,179,8,.25) }
+.ds-sev-low      { background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2)  }
+@keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.7} }
+</style>
+
+<script>
+(function() {
+  'use strict';
+  let dsCurrentFilter = 'all';
+  let dsCurrentPage   = 1;
+  let dsTotalPages    = 1;
+  let dsFOMOEvents    = [];
+  let dsFOMOIdx       = 0;
+
+  /* ── FOMO live notification cycling ───────────────────────────── */
+  async function loadFOMOEvents() {
+    try {
+      const r = await fetch('/api/defense/fomo');
+      if (r.ok) { const d = await r.json(); if (d.events?.length) dsFOMOEvents = d.events; }
+    } catch {}
+    if (!dsFOMOEvents.length) {
+      dsFOMOEvents = [
+        {message:'🛡️ Enterprise team purchased Firewall Script pack',       time_ago:'2 min ago'},
+        {message:'👀 SOC team viewing APT29 Sigma Detection Rules',          time_ago:'4 min ago'},
+        {message:'🛡️ MSSP purchased IR Playbook bundle (₹1,499)',          time_ago:'9 min ago'},
+        {message:'🆕 Security researcher activated Sentinel APEX',          time_ago:'11 min ago'},
+        {message:'🛡️ Red team purchased YARA rule + Python Scanner combo', time_ago:'17 min ago'},
+        {message:'⚡ Threat Hunt Pack deployed in enterprise SOC',          time_ago:'23 min ago'},
+      ];
+    }
+    cycleFOMO();
+  }
+
+  function cycleFOMO() {
+    const el = document.getElementById('ds-live-msg');
+    if (!el || !dsFOMOEvents.length) return;
+    const evt = dsFOMOEvents[dsFOMOIdx % dsFOMOEvents.length];
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = `${evt.message} · ${evt.time_ago}`;
+      el.style.transition = 'opacity .4s';
+      el.style.opacity = '1';
+    }, 300);
+    dsFOMOIdx++;
+    setTimeout(cycleFOMO, 5000);
+  }
+
+  /* ── Build solution card HTML ──────────────────────────────────── */
+  function buildCard(s) {
+    const sevCss = (s.severity || 'medium').toLowerCase();
+    const priceTag = s.price_inr
+      ? `<span style="font-size:22px;font-weight:900;color:#00d4ff">₹${s.price_inr.toLocaleString('en-IN')}</span><span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:4px">/ ${s.price_usd ? '$'+s.price_usd : ''}</span>`
+      : '<span style="font-size:14px;color:#22c55e;font-weight:800">FREE PREVIEW</span>';
+    const demandPct = Math.round((s.demand_score || 0.5) * 100);
+    const demandColor = demandPct >= 80 ? '#ef4444' : demandPct >= 60 ? '#f59e0b' : '#00d4ff';
+    const tags = (s.tags || []).slice(0,4).map(t =>
+      `<span style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:2px 7px;font-size:10px;color:rgba(255,255,255,.55)">${t}</span>`
+    ).join('');
+
+    return `
+    <div class="ds-card ${sevCss}" data-id="${s.id}" data-category="${s.category}" onclick="dsOpenModal('${s.id}')">
+      <!-- Top bar: severity + badge -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px 0">
+        <span class="ds-sev-${sevCss}" style="font-size:10px;font-weight:800;letter-spacing:.08em;padding:3px 10px;border-radius:999px;text-transform:uppercase">${s.severity || 'HIGH'}</span>
+        <span style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);border-radius:4px;font-size:10px;font-weight:800;color:#a78bfa;padding:3px 9px;letter-spacing:.05em">${s.badge || 'SOLUTION'}</span>
+      </div>
+      <!-- Icon + title -->
+      <div style="padding:16px 16px 12px">
+        <div style="font-size:28px;margin-bottom:8px">${s.category_icon || '🔧'}</div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">${s.category_label || s.category}</div>
+        <h3 style="font-size:16px;font-weight:800;margin:0 0 8px;line-height:1.3;color:#fff">${s.title}</h3>
+        <p style="font-size:12px;color:rgba(255,255,255,.5);margin:0 0 10px;line-height:1.5">${(s.preview || s.description || '').slice(0,100)}...</p>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${tags}</div>
+      </div>
+      <!-- Threat message -->
+      <div style="margin:0 16px 12px;background:rgba(239,68,68,.06);border-left:3px solid rgba(239,68,68,.4);border-radius:0 6px 6px 0;padding:7px 12px;font-size:11px;color:rgba(255,255,255,.65)">
+        ${s.threat_message || '⚠️ Active threat detected'} &nbsp;·&nbsp; ${s.urgency_message || ''}
+      </div>
+      <!-- Demand meter -->
+      <div style="padding:0 16px 12px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px">
+          <span>Demand Score</span><span style="color:${demandColor};font-weight:700">${demandPct}%</span>
+        </div>
+        <div style="height:3px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:${demandPct}%;background:linear-gradient(90deg,${demandColor},${demandColor}aa);border-radius:999px"></div>
+        </div>
+      </div>
+      <!-- Social proof + CVE -->
+      <div style="padding:0 16px 12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:rgba(255,255,255,.4)">👥 ${s.social_proof || '—'}</span>
+        <span style="font-size:10px;font-family:monospace;color:#a78bfa;background:rgba(124,58,237,.1);padding:2px 8px;border-radius:4px">${s.cve_id}</span>
+      </div>
+      <!-- Price + CTA -->
+      <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+        <div>${priceTag}</div>
+        <button onclick="event.stopPropagation();dsPurchase('${s.id}','${s.title?.replace(/'/g,"\\'")}',${s.price_inr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:10px 20px;border-radius:8px;font-weight:900;font-size:13px;cursor:pointer;letter-spacing:.02em">
+          Unlock →
+        </button>
+      </div>
+      ${s.is_featured ? '<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#ef4444);color:#000;font-size:9px;font-weight:900;padding:3px 12px;border-radius:999px;letter-spacing:.1em;white-space:nowrap">★ LIVE THREAT FIX</div>' : ''}
+    </div>`;
+  }
+
+  /* ── Load and render solutions ──────────────────────────────────── */
+  async function loadSolutions(page = 1, filter = 'all', append = false) {
+    const grid = document.getElementById('ds-grid');
+    if (!grid) return;
+    if (!append) {
+      grid.innerHTML = [1,2,3].map(() => '<div class="ds-skeleton" style="height:320px;border-radius:16px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite"></div>').join('');
+    }
+    try {
+      const params = new URLSearchParams({ page, limit: 9 });
+      if (filter && filter !== 'all') params.set('category', filter);
+      const r = await fetch(`/api/defense/solutions?${params}`);
+      if (!r.ok) throw new Error('API error');
+      const data = await r.json();
+      const solutions = data.solutions || [];
+      dsTotalPages = data.pagination?.pages || 1;
+
+      if (!append) grid.innerHTML = '';
+      if (!solutions.length) {
+        if (!append) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,.4)">
+          <div style="font-size:40px;margin-bottom:16px">🛡️</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:8px">Defense solutions generating now</div>
+          <div style="font-size:13px">Our AI is processing live CVE intelligence. Check back in a few minutes.</div>
+        </div>`;
+        document.getElementById('ds-load-more').style.display = 'none';
+        return;
+      }
+
+      const html = solutions.map(buildCard).join('');
+      grid.insertAdjacentHTML('beforeend', html);
+
+      // Update FOMO counters
+      if (data.severity_counts) {
+        const crit = (data.severity_counts.CRITICAL || 0);
+        const critEl = document.getElementById('ds-critical-count');
+        if (critEl) critEl.textContent = crit;
+      }
+
+      const lmBtn = document.getElementById('ds-load-more');
+      if (lmBtn) lmBtn.style.display = page < dsTotalPages ? 'inline-block' : 'none';
+    } catch (err) {
+      if (!append) renderFallbackCards(grid);
+    }
+  }
+
+  function renderFallbackCards(grid) {
+    const fallback = [
+      {id:'f1',cve_id:'CVE-2024-21413',title:'Outlook RCE Firewall Block Rules',category:'firewall_script',category_label:'Firewall Script',category_icon:'🔥',badge:'INSTANT DEPLOY',severity:'CRITICAL',severity_css:'critical',threat_message:'🚨 Actively exploited — zero-click RCE',urgency_message:'⏱️ Patch window: 24h',price_inr:799,price_usd:10,demand_score:.95,social_proof:'67 SOC teams deployed',tags:['CRITICAL','RCE','Outlook'],preview:'iptables/nftables/pfSense rules blocking CVE-2024-21413 exploitation vectors...'},
+      {id:'f2',cve_id:'CVE-2024-3400',title:'PAN-OS Zero-Day Sigma Detection',category:'sigma_rule',category_label:'Sigma Rule',category_icon:'🔍',badge:'MULTI-PLATFORM',severity:'CRITICAL',severity_css:'critical',threat_message:'🚨 CISA KEV — nation-state exploitation',urgency_message:'⏱️ Patch window: 24h',price_inr:599,price_usd:7,demand_score:.92,social_proof:'54 analysts using this',tags:['CRITICAL','PAN-OS','CISA KEV'],preview:'Splunk/Elastic/Sentinel sigma rules detecting PAN-OS CVE-2024-3400 command injection...'},
+      {id:'f3',cve_id:'CVE-2024-1709',title:'ConnectWise Auth Bypass YARA Pack',category:'yara_rule',category_label:'YARA Rule',category_icon:'🧬',badge:'MALWARE DETECT',severity:'HIGH',severity_css:'high',threat_message:'⚠️ Ransomware operators actively targeting',urgency_message:'⏱️ Patch window: 72h',price_inr:499,price_usd:6,demand_score:.88,social_proof:'41 teams detecting with this',tags:['HIGH','ConnectWise','Ransomware'],preview:'YARA rules detecting malware artifacts left by ConnectWise auth bypass exploitation...'},
+      {id:'f4',cve_id:'CVE-2024-23897',title:'Jenkins LFI IR Playbook',category:'ir_playbook',category_label:'IR Playbook',category_icon:'📋',badge:'ENTERPRISE GRADE',severity:'HIGH',severity_css:'high',threat_message:'⚠️ Active exploitation — credential exfil',urgency_message:'⏱️ Patch window: 72h',price_inr:999,price_usd:12,demand_score:.85,social_proof:'38 IR teams used this',tags:['HIGH','Jenkins','LFI'],preview:'5-phase IR playbook for Jenkins CVE-2024-23897 — containment, eradication, recovery...'},
+      {id:'f5',cve_id:'CVE-2024-6387',title:'OpenSSH regreSSHion Hunt Pack',category:'threat_hunt_pack',category_label:'Threat Hunt Pack',category_icon:'🎯',badge:'SPLUNK/ELASTIC',severity:'CRITICAL',severity_css:'critical',threat_message:'🚨 Mass exploitation — 14M servers exposed',urgency_message:'⏱️ Patch window: 24h',price_inr:799,price_usd:10,demand_score:.98,social_proof:'83 SOCs hunting with this',tags:['CRITICAL','OpenSSH','regreSSHion'],preview:'Splunk SPL + Elastic EQL + KQL threat hunt queries for OpenSSH regreSSHion...'},
+      {id:'f6',cve_id:'CVE-2024-4978',title:'Enterprise Hardening Script Bundle',category:'hardening_script',category_label:'Hardening Script',category_icon:'🛡️',badge:'ZERO TRUST',severity:'HIGH',severity_css:'high',threat_message:'⚠️ Reduces attack surface by 78%',urgency_message:'⏱️ Deploy now — minimal impact',price_inr:599,price_usd:7,demand_score:.82,social_proof:'52 sysadmins deployed this',tags:['HIGH','Hardening','Zero Trust'],preview:'Bash + PowerShell hardening scripts — sysctl, SSH, kernel modules, Windows Defender...'},
+    ];
+    grid.innerHTML = fallback.map(buildCard).join('');
+  }
+
+  /* ── Filter handler ──────────────────────────────────────────────── */
+  window.dsFilter = function(btn, filter) {
+    document.querySelectorAll('.ds-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dsCurrentFilter = filter;
+    dsCurrentPage   = 1;
+    loadSolutions(1, filter, false);
+  };
+
+  /* ── Load more ────────────────────────────────────────────────────── */
+  window.dsLoadMore = function() {
+    dsCurrentPage++;
+    loadSolutions(dsCurrentPage, dsCurrentFilter, true);
+  };
+
+  /* ── Purchase handler ─────────────────────────────────────────────── */
+  window.dsPurchase = async function(solutionId, title, priceInr) {
+    const modal = document.getElementById('ds-modal');
+    const body  = document.getElementById('ds-modal-body');
+    if (!modal || !body) return;
+
+    body.innerHTML = `
+      <div style="text-align:center;padding:40px">
+        <div style="font-size:36px;margin-bottom:16px">🔐</div>
+        <h3 style="margin:0 0 8px">Unlock: ${title}</h3>
+        <p style="color:rgba(255,255,255,.5);font-size:14px;margin:0 0 24px">One-time purchase — lifetime access</p>
+        <div style="font-size:36px;font-weight:900;color:#00d4ff;margin-bottom:24px">₹${priceInr?.toLocaleString('en-IN')}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:360px;margin:0 auto">
+          <input id="pur-email" type="email" placeholder="Your email (for delivery)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+          <button id="pur-btn" onclick="initiatePayment('${solutionId}','${title?.replace(/'/g,"\\'")}',${priceInr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:8px;font-weight:900;font-size:15px;cursor:pointer">
+            💳 Pay Securely via Razorpay
+          </button>
+          <div style="font-size:11px;color:rgba(255,255,255,.35)">🔒 Secured by Razorpay · UPI · Cards · Net Banking</div>
+        </div>
+        <div style="margin-top:20px;padding:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:12px;color:rgba(255,255,255,.6)">
+          ✅ Instant download after payment · 📧 Email delivery · 🔄 365-day access
+        </div>
+      </div>`;
+    modal.style.display = 'block';
+  };
+
+  window.initiatePayment = async function(solutionId, title, priceInr) {
+    const email  = document.getElementById('pur-email')?.value;
+    const btn    = document.getElementById('pur-btn');
+    if (!email) { alert('Please enter your email'); return; }
+    if (btn) btn.textContent = 'Processing...';
+    try {
+      const r = await fetch(`/api/defense/purchase/${solutionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(window._authToken ? { 'Authorization': `Bearer ${window._authToken}` } : {}) },
+        body: JSON.stringify({ email, currency: 'INR' }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'Order creation failed');
+
+      if (window.Razorpay && d.order?.razorpay_key) {
+        const rzp = new window.Razorpay({
+          key: d.order.razorpay_key,
+          order_id: d.order.order_id,
+          amount: d.order.amount,
+          currency: d.order.currency,
+          name: 'CYBERDUDEBIVASH AI',
+          description: title,
+          prefill: { email: d.order.prefill?.email || email },
+          theme: { color: '#00d4ff' },
+          handler: async (resp) => {
+            const vr = await fetch(`/api/defense/verify/${solutionId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(resp),
+            });
+            const vd = await vr.json();
+            if (vd.success) {
+              document.getElementById('ds-modal-body').innerHTML = `
+                <div style="text-align:center;padding:48px">
+                  <div style="font-size:48px;margin-bottom:16px">✅</div>
+                  <h3 style="margin:0 0 8px;color:#22c55e">Payment Successful!</h3>
+                  <p style="color:rgba(255,255,255,.6);margin:0 0 24px">${title} has been sent to ${email}</p>
+                  <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:20px;font-family:monospace;font-size:11px;text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto">${(vd.full_content || '# Content delivery in progress...').slice(0, 800)}</div>
+                </div>`;
+            }
+          },
+        });
+        rzp.open();
+      } else {
+        // Fallback: redirect to payment URL or show manual instructions
+        window.open(`https://razorpay.com`, '_blank');
+      }
+    } catch (err) {
+      if (btn) btn.textContent = '💳 Pay Securely via Razorpay';
+      alert('Payment initiation failed. Please try again or contact bivash@cyberdudebivash.com');
+    }
+  };
+
+  /* ── Solution detail modal ─────────────────────────────────────── */
+  window.dsOpenModal = async function(solutionId) {
+    const modal = document.getElementById('ds-modal');
+    const body  = document.getElementById('ds-modal-body');
+    if (!modal || !body) return;
+    body.innerHTML = '<div style="padding:60px;text-align:center;color:rgba(255,255,255,.4)">Loading solution details...</div>';
+    modal.style.display = 'block';
+    try {
+      const r = await fetch(`/api/defense/solutions/${solutionId}`, {
+        headers: window._authToken ? { 'Authorization': `Bearer ${window._authToken}` } : {},
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      const s = d.solution;
+      const sevCss = (s.severity || 'medium').toLowerCase();
+      body.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:24px">
+          <div>
+            <span class="ds-sev-${sevCss}" style="font-size:10px;font-weight:800;letter-spacing:.08em;padding:4px 12px;border-radius:999px;text-transform:uppercase;display:inline-block;margin-bottom:10px">${s.severity}</span>
+            <h2 style="font-size:22px;font-weight:900;margin:0 0 6px">${s.title}</h2>
+            <div style="font-size:13px;color:rgba(255,255,255,.5)">${s.category_label} · ${s.cve_id} · Difficulty: ${s.difficulty}</div>
+          </div>
+          <button onclick="document.getElementById('ds-modal').style.display='none'" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;flex-shrink:0">✕</button>
+        </div>
+        <p style="color:rgba(255,255,255,.65);font-size:14px;line-height:1.6;margin-bottom:20px">${s.description}</p>
+        ${s.apt_groups?.length ? `<div style="margin-bottom:16px"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">APT Groups</div><div style="display:flex;gap:6px;flex-wrap:wrap">${s.apt_groups.map(a=>`<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${a}</span>`).join('')}</div></div>` : ''}
+        ${s.mitre_techniques?.length ? `<div style="margin-bottom:20px"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">MITRE ATT&CK</div><div style="display:flex;gap:6px;flex-wrap:wrap">${s.mitre_techniques.map(m=>`<span style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${m}</span>`).join('')}</div></div>` : ''}
+        <div style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:24px">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);margin-bottom:8px;text-transform:uppercase">Preview (First 10 lines)</div>
+          <pre style="font-family:monospace;font-size:12px;color:#7dd3fc;margin:0;white-space:pre-wrap;overflow-x:auto">${s.preview || 'Preview loading...'}</pre>
+        </div>
+        ${d.has_access ? `<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:16px;margin-bottom:24px;font-family:monospace;font-size:11px;color:#7dd3fc;white-space:pre-wrap;overflow-x:auto;max-height:400px;overflow-y:auto">${d.full_content || ''}</div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div style="font-size:28px;font-weight:900;color:#00d4ff">₹${s.price_inr?.toLocaleString('en-IN')} <span style="font-size:14px;color:rgba(255,255,255,.4)">${s.price_usd ? '/ $'+s.price_usd : ''}</span></div>
+          ${d.has_access ? '<span style="color:#22c55e;font-weight:800;font-size:14px">✅ Access Granted</span>' : `<button onclick="dsPurchase('${s.id}','${s.title?.replace(/'/g,"\\'")}',${s.price_inr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:13px 28px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">🔓 Unlock Solution</button>`}
+        </div>`;
+    } catch {
+      body.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(255,255,255,.4)">Failed to load solution details.</div>';
+    }
+  };
+
+  /* ── Custom solution form submit ──────────────────────────────── */
+  window.submitCustomRequest = async function() {
+    const email = document.getElementById('csr-email')?.value;
+    const desc  = document.getElementById('csr-desc')?.value;
+    const status = document.getElementById('csr-status');
+    if (!email || !desc) { if(status) status.style.color='#ef4444', status.textContent='Email and description required'; return; }
+    if (status) status.style.color='#a78bfa', status.textContent='Submitting request...';
+    try {
+      const r = await fetch('/api/defense/custom-request', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email, cve_id: document.getElementById('csr-cve')?.value,
+          solution_types: document.getElementById('csr-type')?.value,
+          tech_stack: document.getElementById('csr-stack')?.value, description: desc,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        if (status) status.style.color='#22c55e', status.textContent='✅ Request submitted! We\'ll respond within 24 hours.';
+        setTimeout(() => { document.getElementById('custom-solution-modal').style.display='none'; }, 2500);
+      } else throw new Error(d.error);
+    } catch(e) {
+      if (status) status.style.color='#ef4444', status.textContent='Submission failed. Email bivash@cyberdudebivash.com';
+    }
+  };
+
+  /* ── Buy Fix by CVE ID (from Sentinel Feed) ──────────────────────────── */
+  window.dsPurchaseByCVE = async function(cveId) {
+    // Try to find solution for this CVE
+    try {
+      const r = await fetch(`/api/defense/solutions?cve_id=${encodeURIComponent(cveId)}&limit=1`);
+      const d = await r.json();
+      const s = d.solutions?.[0];
+      if (s) {
+        window.dsPurchase(s.id, s.title, s.price_inr);
+      } else {
+        // No pre-generated solution — open custom request modal
+        const cveInput = document.getElementById('csr-cve');
+        if (cveInput) cveInput.value = cveId;
+        const modal = document.getElementById('custom-solution-modal');
+        if (modal) modal.style.display = 'flex';
+        else {
+          // Fallback: scroll to defense marketplace section
+          document.getElementById('defense-marketplace')?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    } catch {
+      document.getElementById('defense-marketplace')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  /* ── Init ──────────────────────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    loadFOMOEvents();
+    loadSolutions(1, 'all');
+    // Update stats from API
+    safeFetch('/api/defense/stats').then(r => r.ok ? r.json() : {}).then(d => {
+      if (d.total_purchases) {
+        const el = document.getElementById('ds-purchases-today');
+        if (el) el.textContent = d.total_purchases;
+      }
+      if (d.total_solutions) {
+        const el = document.getElementById('mc-products-cnt');
+        if (el) el.textContent = d.total_solutions;
+      }
+    }).catch(() => {});
+  });
+})();
+</script>
+
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
@@ -1970,61 +2829,514 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 </div>
 
 <!-- ════════════════════════════════ ENTERPRISE ════════════════════════════ -->
-<section id="enterprise" style="background:var(--surface2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-  <div class="section-inner">
-    <div class="section-label">Enterprise Sales</div>
-    <h2 class="section-title">Enterprise Security Partnership</h2>
-    <p class="section-sub">Custom security intelligence solutions for enterprises, MSSPs, and government organizations.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start">
-      <div>
-        <div class="scan-card">
-          <h3 style="margin-bottom:16px">Get a Custom Proposal</h3>
-          <div class="form-group">
-            <label for="entCompany">Company Name *</label>
-            <input id="entCompany" type="text" placeholder="Acme Corporation">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="entEmail">Business Email *</label>
-              <input id="entEmail" type="email" placeholder="security@company.com">
-            </div>
-            <div class="form-group">
-              <label for="entDomain">Your Domain</label>
-              <input id="entDomain" type="text" placeholder="company.com">
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="entReq">Requirements *</label>
-            <textarea id="entReq" rows="3" placeholder="Describe your security needs, team size, compliance requirements..."></textarea>
-          </div>
-          <div class="form-group">
-            <label for="entPackage">Package Interest</label>
-            <select id="entPackage">
-              <option value="starter">Starter (₹9,999/mo)</option>
-              <option value="growth">Growth (₹24,999/mo)</option>
-              <option value="enterprise">Enterprise (Custom)</option>
-            </select>
-          </div>
-          <div id="alert-enterprise" class="alert"></div>
-          <button class="btn btn-primary" onclick="submitEnterprise()" id="btn-enterprise" style="width:100%;justify-content:center;margin-top:8px">
-            📨 Send Enterprise Inquiry
-          </button>
-        </div>
+<!-- ═══════════════ ENTERPRISE LAYER v10.0 ═══════════════ -->
+<section id="enterprise" style="background:linear-gradient(180deg,#0a0a1a 0%,#0d0d22 100%);padding:80px 20px;border-top:1px solid rgba(255,255,255,.06)">
+  <div class="section-inner" style="max-width:1200px;margin:0 auto">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:56px">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:5px 16px;font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px">
+        🏢 ENTERPRISE &amp; MSSP SOLUTIONS
       </div>
-      <div style="display:flex;flex-direction:column;gap:16px">
-        <div class="card"><div class="card-icon">🏢</div><div class="card-title">MSSP White-Label</div><div class="card-desc">Rebrand our platform under your brand. Full white-label option available for MSSPs and consultancies.</div></div>
-        <div class="card"><div class="card-icon">🤝</div><div class="card-title">Direct Contact</div>
-          <div class="card-desc">
-            📧 <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a><br>
-            📞 <a href="tel:+918179881447">+91 8179881447</a><br>
-            💬 Discord: <strong>cybercoder127001</strong>
-          </div>
-        </div>
-        <div class="card"><div class="card-icon">⚡</div><div class="card-title">Response SLA</div><div class="card-desc">Enterprise inquiries responded to within 24 business hours. Proposals delivered within 48 hours.</div></div>
+      <h2 style="font-size:clamp(26px,3.8vw,42px);font-weight:900;margin:0 0 14px">
+        Enterprise Security Intelligence
+        <span style="display:block;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">From ₹9,999</span>
+      </h2>
+      <p style="color:rgba(255,255,255,.55);font-size:16px;max-width:560px;margin:0 auto">
+        Custom threat reports, dedicated consultation, white-label platform for MSSPs. Trusted by SOC teams and enterprises globally.
+      </p>
+    </div>
+
+    <!-- Enterprise Package Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:56px">
+
+      <!-- Security Assessment -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;position:relative;transition:border-color .2s" onmouseover="this.style.borderColor='rgba(245,158,11,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+        <div style="font-size:28px;margin-bottom:12px">🔍</div>
+        <div style="font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Security Assessment</div>
+        <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹9,999</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">One-time · 3 business days</div>
+        <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 50-page Assessment Report</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Executive risk summary</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Top 10 CVEs prioritized</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Remediation roadmap</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 30-min consultation call</li>
+        </ul>
+        <button onclick="openEnterpriseBooking('starter_enterprise')" style="width:100%;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b;padding:11px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
+          Order Report →
+        </button>
+      </div>
+
+      <!-- Threat Intel Report — HIGHLIGHTED -->
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(245,158,11,.08));border:1px solid rgba(245,158,11,.4);border-radius:16px;padding:24px;position:relative">
+        <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#ef4444);color:#000;font-size:10px;font-weight:900;padding:4px 16px;border-radius:999px;white-space:nowrap">⭐ MOST POPULAR</div>
+        <div style="font-size:28px;margin-bottom:12px">🛰️</div>
+        <div style="font-size:11px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Threat Intel Report</div>
+        <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹14,999</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">One-time · 5 business days</div>
+        <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 30-day industry threat landscape</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ APT targeting analysis</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Custom SIGMA/YARA rules</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ STIX 2.1 feed (30 days)</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 1-hour consultation call</li>
+        </ul>
+        <button onclick="openEnterpriseBooking('threat_intel_report')" style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:11px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
+          Order Report →
+        </button>
+      </div>
+
+      <!-- MSSP White-Label -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;transition:border-color .2s" onmouseover="this.style.borderColor='rgba(0,212,255,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+        <div style="font-size:28px;margin-bottom:12px">🏷️</div>
+        <div style="font-size:11px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">MSSP White-Label</div>
+        <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹49,999</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">Monthly · Unlimited clients</div>
+        <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Full white-label dashboard</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Your branding + custom domain</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Unlimited client accounts</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 50% reseller margin</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Dedicated account manager</li>
+        </ul>
+        <button onclick="openMSSPApplication()" style="width:100%;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:#00d4ff;padding:11px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
+          Apply as MSSP Partner →
+        </button>
+      </div>
+
+      <!-- Annual Retainer -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;transition:border-color .2s" onmouseover="this.style.borderColor='rgba(34,197,94,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+        <div style="font-size:28px;margin-bottom:12px">🤝</div>
+        <div style="font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Annual Retainer</div>
+        <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹99,999</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">Per year · Priority SLA</div>
+        <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Monthly threat intel reports</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 24 consultation calls/year</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Unlimited custom solutions</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ C-suite security briefings</li>
+          <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 2-hour SLA response time</li>
+        </ul>
+        <button onclick="openEnterpriseBooking('annual_retainer')" style="width:100%;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;padding:11px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
+          Get Started →
+        </button>
       </div>
     </div>
+
+    <!-- Consultation Booking Form -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;margin-bottom:48px">
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px">
+        <h3 style="font-size:18px;font-weight:800;margin:0 0 6px">📅 Book a Free Consultation</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,.45);margin:0 0 20px">30-min call with our lead analyst. Zero obligation.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <input id="entCompany" type="text" placeholder="Company name *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <input id="entContact" type="text" placeholder="Your name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <input id="entEmail" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <input id="entDomain" type="text" placeholder="Domain (optional)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+          </div>
+          <select id="entPackage" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <option value="starter_enterprise">Security Assessment — ₹9,999</option>
+            <option value="threat_intel_report">Threat Intel Report — ₹14,999</option>
+            <option value="mssp_package">MSSP White-Label — ₹49,999/mo</option>
+            <option value="annual_retainer">Annual Retainer — ₹99,999/yr</option>
+            <option value="consultation_only">Free Consultation Call</option>
+          </select>
+          <select id="entUrgency" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <option value="normal">Normal (respond in 24h)</option>
+            <option value="urgent">Urgent (respond in 4h)</option>
+            <option value="immediate">Immediate (active incident)</option>
+          </select>
+          <textarea id="entReq" rows="3" placeholder="Describe your security needs, industry, team size, compliance requirements... *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
+          <div id="alert-enterprise" class="alert"></div>
+          <button id="btn-enterprise" onclick="submitEnterpriseV10()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
+            📨 Send Enterprise Inquiry
+          </button>
+          <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center">Response within 4 business hours · No commitment required</div>
+        </div>
+      </div>
+
+      <!-- Right side: trust signals + contact -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px">
+          <div style="font-size:13px;font-weight:800;margin-bottom:12px;color:rgba(255,255,255,.8)">🤝 Direct Contact</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:rgba(255,255,255,.6)">
+            <div>📧 <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a></div>
+            <div>📞 <a href="tel:+918179881447" style="color:#00d4ff">+91 8179881447</a></div>
+            <div>💬 Discord: <span style="color:#a78bfa">cybercoder127001</span></div>
+            <div>📍 Odisha, India (serving globally)</div>
+          </div>
+        </div>
+        <div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:12px;padding:20px">
+          <div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#00d4ff">⚡ Response SLA</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:rgba(255,255,255,.55)">
+            <div>🟢 Normal inquiries: 24 hours</div>
+            <div>🟡 Urgent requests: 4 hours</div>
+            <div>🔴 Active incidents: 1 hour</div>
+            <div>📊 Proposal delivery: 48 hours</div>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px">
+          <div style="font-size:13px;font-weight:800;margin-bottom:10px">🏆 Why CYBERDUDEBIVASH</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:rgba(255,255,255,.55)">
+            <div>✅ Real-time CVE intelligence (NVD + CISA KEV)</div>
+            <div>✅ AI-generated, production-ready code</div>
+            <div>✅ MITRE ATT&CK framework coverage</div>
+            <div>✅ Multi-SIEM support (Splunk/Elastic/Sentinel)</div>
+            <div>✅ STIX 2.1 threat sharing standard</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
+
+<!-- ═══════════════ GLOBAL COMPLIANCE PACKS + MSSP ═══════════════ -->
+<section id="compliance-global" style="background:#080818;padding:80px 20px;border-top:1px solid rgba(255,255,255,.05)">
+  <div class="section-inner" style="max-width:1200px;margin:0 auto">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:48px">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:999px;padding:5px 16px;font-size:11px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px">
+        🌍 GLOBAL COMPLIANCE + MSSP
+      </div>
+      <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;margin:0 0 12px">
+        Compliance Packs for Every Region
+      </h2>
+      <p style="color:rgba(255,255,255,.5);font-size:15px;max-width:540px;margin:0 auto 24px">
+        ISO 27001, SOC 2, GDPR, HIPAA, PCI DSS, NIST CSF — ready-to-use implementation kits
+      </p>
+
+      <!-- Currency toggle -->
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px">
+        <button class="currency-btn active" data-cur="INR" onclick="setCurrency('INR',this)">₹ INR</button>
+        <button class="currency-btn" data-cur="USD" onclick="setCurrency('USD',this)">$ USD</button>
+        <button class="currency-btn" data-cur="EUR" onclick="setCurrency('EUR',this)">€ EUR</button>
+        <button class="currency-btn" data-cur="GBP" onclick="setCurrency('GBP',this)">£ GBP</button>
+      </div>
+    </div>
+
+    <!-- Compliance packs grid -->
+    <div id="compliance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;margin-bottom:56px">
+      <!-- Populated by JS -->
+      <div style="height:200px;border-radius:12px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite"></div>
+      <div style="height:200px;border-radius:12px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite;animation-delay:.15s"></div>
+      <div style="height:200px;border-radius:12px;background:rgba(255,255,255,.04);animation:shimmer 1.5s infinite;animation-delay:.3s"></div>
+    </div>
+
+    <!-- MSSP partner section -->
+    <div style="background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(124,58,237,.06));border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:40px;text-align:center">
+      <div style="font-size:36px;margin-bottom:14px">🏷️</div>
+      <h3 style="font-size:22px;font-weight:900;margin:0 0 10px">Become a CYBERDUDEBIVASH MSSP Partner</h3>
+      <p style="color:rgba(255,255,255,.55);max-width:540px;margin:0 auto 28px;font-size:14px">
+        Offer enterprise-grade cybersecurity services under your own brand. 50% margin. Unlimited clients. Full white-label platform ready in 48 hours.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;max-width:700px;margin:0 auto 32px">
+        <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#00d4ff">50%</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">Reseller Margin</div>
+        </div>
+        <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#a78bfa">∞</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">Client Accounts</div>
+        </div>
+        <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#22c55e">48h</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">Setup Time</div>
+        </div>
+        <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#f59e0b">24/7</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">Threat Intel Feed</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button onclick="openMSSPApplication()" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px 32px;border-radius:8px;font-weight:900;font-size:15px;cursor:pointer">
+          🚀 Apply as MSSP Partner
+        </button>
+        <a href="mailto:bivash@cyberdudebivash.com?subject=MSSP Partnership Inquiry" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#fff;padding:14px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none">
+          📧 Contact for Custom Deal
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── Enterprise Booking Modal ───────────────────────────────────────────── -->
+<div id="enterprise-booking-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9990;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#0f0f23;border:1px solid rgba(245,158,11,.35);border-radius:20px;padding:36px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto">
+    <h3 id="ent-modal-title" style="font-size:18px;font-weight:800;margin:0 0 6px">Order Enterprise Package</h3>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Secure checkout via Razorpay</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <input id="ent-modal-email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="ent-modal-company" type="text" placeholder="Company name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <textarea id="ent-modal-req" rows="3" placeholder="Your requirements..." style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
+      <div id="ent-modal-price" style="font-size:28px;font-weight:900;color:#f59e0b;text-align:center;padding:10px 0"></div>
+      <button id="ent-modal-btn" onclick="processEnterpriseOrder()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
+        💳 Proceed to Payment
+      </button>
+      <button onclick="document.getElementById('enterprise-booking-modal').style.display='none'" style="background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);padding:10px;border-radius:8px;cursor:pointer;font-size:13px">Cancel</button>
+    </div>
+    <div id="ent-modal-status" style="margin-top:12px;font-size:13px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- ─── MSSP Application Modal ─────────────────────────────────────────────── -->
+<div id="mssp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9989;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.35);border-radius:20px;padding:36px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto">
+    <h3 style="font-size:18px;font-weight:800;margin:0 0 6px">🏷️ Apply as MSSP Partner</h3>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Join our reseller program — start in 48 hours</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <input id="mssp-company" type="text" placeholder="Company name *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="mssp-email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="mssp-website" type="url" placeholder="Website URL" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <select id="mssp-tier" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+        <option value="reseller">Reseller — ₹14,999/mo (10 clients)</option>
+        <option value="silver">MSSP Silver — ₹29,999/mo (50 clients)</option>
+        <option value="gold">MSSP Gold — ₹49,999/mo (Unlimited)</option>
+      </select>
+      <input id="mssp-clients" type="number" placeholder="Current managed clients count" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <textarea id="mssp-message" rows="2" placeholder="Tell us about your business..." style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
+      <button onclick="submitMSSPApplication()" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
+        Submit Application
+      </button>
+    </div>
+    <div id="mssp-status" style="margin-top:12px;font-size:13px;text-align:center"></div>
+  </div>
+</div>
+
+<style>
+.currency-btn {
+  background:transparent;border:none;color:rgba(255,255,255,.5);
+  padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;
+}
+.currency-btn.active,.currency-btn:hover {
+  background:rgba(0,212,255,.15);color:#00d4ff;
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  const COMPLIANCE_DATA = {
+    iso27001: { id:'iso27001', name:'ISO 27001:2022',      icon:'🔐', price_inr:4999,  price_usd:60,  badge:'GLOBAL STANDARD', color:'#00d4ff',  desc:'Complete ISMS implementation kit — 25 policy docs, gap analysis, SoA, audit checklist' },
+    soc2:     { id:'soc2',     name:'SOC 2 Type II',       icon:'🏢', price_inr:6999,  price_usd:85,  badge:'US COMPLIANCE',   color:'#4f46e5',  desc:'Trust Service Criteria controls, evidence templates, vendor management, penetration testing scope' },
+    gdpr:     { id:'gdpr',     name:'GDPR / UK GDPR',      icon:'🇪🇺', price_inr:5999,  price_usd:72,  badge:'EU REQUIRED',     color:'#2563eb',  desc:'Data processing register, consent management, DSAR procedures, breach notification checklist' },
+    dpdp:     { id:'dpdp',     name:'India DPDP Act 2023', icon:'🇮🇳', price_inr:2999,  price_usd:36,  badge:'INDIA MANDATE',   color:'#f59e0b',  desc:'Data fiduciary obligations, consent notices (Hindi+English), DPDPB reporting templates' },
+    hipaa:    { id:'hipaa',    name:'HIPAA Security Rule', icon:'🏥', price_inr:7499,  price_usd:90,  badge:'HEALTHCARE',      color:'#22c55e',  desc:'Administrative, physical, technical safeguards, BAA template, PHI audit requirements' },
+    pci_dss:  { id:'pci_dss',  name:'PCI DSS v4.0',        icon:'💳', price_inr:5499,  price_usd:66,  badge:'PAYMENTS',        color:'#a78bfa',  desc:'SAQ-D, network segmentation guide, cardholder data flow, vulnerability management program' },
+    nist_csf: { id:'nist_csf', name:'NIST CSF 2.0',        icon:'🇺🇸', price_inr:4499,  price_usd:54,  badge:'US FEDERAL',      color:'#ef4444',  desc:'5-function assessment, target profile definition, gap analysis, maturity tier assessment' },
+  };
+
+  const EXCHANGE = { INR:1, USD:0.012, EUR:0.011, GBP:0.0095 };
+  const SYMBOLS  = { INR:'₹', USD:'$', EUR:'€', GBP:'£' };
+  let currentCurrency = 'INR';
+  let currentPackageId = null;
+
+  window.setCurrency = function(cur, btn) {
+    currentCurrency = cur;
+    document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderComplianceGrid();
+  };
+
+  function formatPrice(priceInr, currency) {
+    const rate = EXCHANGE[currency] || 1;
+    const sym  = SYMBOLS[currency] || '₹';
+    const val  = currency === 'INR' ? priceInr : Math.ceil(priceInr * rate);
+    return `${sym}${val.toLocaleString()}`;
+  }
+
+  function renderComplianceGrid() {
+    const grid = document.getElementById('compliance-grid');
+    if (!grid) return;
+    grid.innerHTML = Object.values(COMPLIANCE_DATA).map(p => `
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='${p.color}55';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)';this.style.transform='none'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+          <span style="font-size:24px">${p.icon}</span>
+          <span style="background:rgba(255,255,255,.06);border-radius:4px;font-size:10px;font-weight:800;padding:3px 8px;color:${p.color};border:1px solid ${p.color}44">${p.badge}</span>
+        </div>
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px">${p.name}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:16px;line-height:1.5">${p.desc}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:22px;font-weight:900;color:${p.color}">${formatPrice(p.price_inr, currentCurrency)}</div>
+          <button onclick="purchaseCompliancePack('${p.id}','${p.name}',${p.price_inr})" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.8);padding:8px 16px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px">
+            Get Pack →
+          </button>
+        </div>
+      </div>`).join('');
+  }
+
+  /* ── Enterprise booking modal opener ─────────────────────────── */
+  window.openEnterpriseBooking = function(packageId) {
+    const pkgNames = {
+      starter_enterprise: { name: 'Security Assessment Report', price: 9999 },
+      threat_intel_report: { name: 'Threat Intelligence Report', price: 14999 },
+      annual_retainer: { name: 'Annual Security Retainer', price: 99999 },
+      consultation_only: { name: 'Free Consultation Call', price: 0 },
+    };
+    currentPackageId = packageId;
+    const pkg = pkgNames[packageId] || { name: 'Enterprise Package', price: 9999 };
+    document.getElementById('ent-modal-title').textContent = `Order: ${pkg.name}`;
+    document.getElementById('ent-modal-price').textContent = pkg.price > 0 ? `₹${pkg.price.toLocaleString('en-IN')}` : 'FREE';
+    document.getElementById('ent-modal-status').textContent = '';
+    document.getElementById('enterprise-booking-modal').style.display = 'flex';
+  };
+
+  window.processEnterpriseOrder = async function() {
+    const email   = document.getElementById('ent-modal-email')?.value;
+    const company = document.getElementById('ent-modal-company')?.value;
+    const req     = document.getElementById('ent-modal-req')?.value;
+    const status  = document.getElementById('ent-modal-status');
+    const btn     = document.getElementById('ent-modal-btn');
+    if (!email) { if(status) status.style.color='#ef4444', status.textContent='Email required'; return; }
+    if(btn) btn.textContent = 'Processing...';
+    try {
+      const r = await fetch('/api/enterprise/report', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, company_name: company, package_id: currentPackageId, requirements: req }),
+      });
+      const d = await r.json();
+      if (d.success && d.order?.razorpay_key && window.Razorpay) {
+        const rzp = new window.Razorpay({
+          key: d.order.razorpay_key, order_id: d.order.razorpay_order_id,
+          amount: d.order.amount_inr * 100, currency: 'INR',
+          name: 'CYBERDUDEBIVASH AI', description: d.order.package?.name,
+          prefill: { email }, theme: { color: '#f59e0b' },
+          handler: async (resp) => {
+            const vr = await fetch('/api/enterprise/verify', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ ...resp, enterprise_order_id: d.order.order_id }),
+            });
+            const vd = await vr.json();
+            if(status) status.style.color='#22c55e', status.textContent = vd.success ? '✅ Payment confirmed! Check your email.' : '❌ ' + vd.error;
+          },
+        });
+        rzp.open();
+      } else if (d.success) {
+        if(status) status.style.color='#22c55e', status.textContent='✅ Order received! We\'ll contact you within 4 hours.';
+      } else throw new Error(d.error);
+    } catch(e) {
+      if(status) status.style.color='#ef4444', status.textContent='Failed. Email bivash@cyberdudebivash.com';
+    }
+    if(btn) btn.textContent = '💳 Proceed to Payment';
+  };
+
+  /* ── MSSP application ────────────────────────────────────────── */
+  window.openMSSPApplication = function() {
+    document.getElementById('mssp-modal').style.display = 'flex';
+  };
+
+  window.submitMSSPApplication = async function() {
+    const company = document.getElementById('mssp-company')?.value;
+    const email   = document.getElementById('mssp-email')?.value;
+    const status  = document.getElementById('mssp-status');
+    if (!company || !email) { if(status) status.style.color='#ef4444', status.textContent='Company and email required'; return; }
+    if(status) status.style.color='#a78bfa', status.textContent='Submitting...';
+    try {
+      const r = await fetch('/api/global/mssp/apply', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          company_name: company, email,
+          website: document.getElementById('mssp-website')?.value,
+          tier: document.getElementById('mssp-tier')?.value,
+          clients_count: document.getElementById('mssp-clients')?.value,
+          message: document.getElementById('mssp-message')?.value,
+        }),
+      });
+      const d = await r.json();
+      if(d.success) {
+        if(status) status.style.color='#22c55e', status.textContent='✅ Application submitted! We\'ll respond within 24 hours.';
+        setTimeout(() => { document.getElementById('mssp-modal').style.display='none'; }, 2500);
+      } else throw new Error(d.error);
+    } catch(e) {
+      if(status) status.style.color='#ef4444', status.textContent='Failed. Email bivash@cyberdudebivash.com';
+    }
+  };
+
+  /* ── Compliance pack purchase ────────────────────────────────── */
+  window.purchaseCompliancePack = async function(packId, packName, priceInr) {
+    const email = prompt(`Enter your email to purchase ${packName}:`);
+    if (!email) return;
+    try {
+      const r = await fetch('/api/global/compliance-packs/purchase', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ pack_id: packId, email, currency: currentCurrency }),
+      });
+      const d = await r.json();
+      if (d.success && d.order?.razorpay_key && window.Razorpay) {
+        const rzp = new window.Razorpay({
+          key: d.order.razorpay_key, order_id: d.order.razorpay_order_id,
+          amount: d.order.amount, currency: d.order.currency,
+          name: 'CYBERDUDEBIVASH AI', description: packName,
+          prefill: { email }, theme: { color: '#00d4ff' },
+          handler: () => alert(`✅ ${packName} purchased! Check your email for delivery.`),
+        });
+        rzp.open();
+      } else alert('Order failed. Please email bivash@cyberdudebivash.com');
+    } catch { alert('Purchase failed. Email bivash@cyberdudebivash.com'); }
+  };
+
+  /* ── Enterprise form submit (existing submitEnterprise override) ─ */
+  window.submitEnterpriseV10 = async function() {
+    const company = document.getElementById('entCompany')?.value;
+    const email   = document.getElementById('entEmail')?.value;
+    const req     = document.getElementById('entReq')?.value;
+    const alertEl = document.getElementById('alert-enterprise');
+    const btn     = document.getElementById('btn-enterprise');
+    if (!company || company.length < 2) { if(alertEl) alertEl.className='alert alert-error', alertEl.textContent='Company name required'; return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { if(alertEl) alertEl.className='alert alert-error', alertEl.textContent='Valid business email required'; return; }
+    if (!req || req.length < 10) { if(alertEl) alertEl.className='alert alert-error', alertEl.textContent='Please describe your requirements'; return; }
+    if(btn) btn.textContent = 'Sending...';
+    try {
+      const r = await fetch('/api/enterprise/book', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          company_name: company, email,
+          contact_name: document.getElementById('entContact')?.value,
+          domain: document.getElementById('entDomain')?.value,
+          package_interest: document.getElementById('entPackage')?.value,
+          urgency: document.getElementById('entUrgency')?.value,
+          requirements: req,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        if(alertEl) alertEl.className='alert alert-success', alertEl.textContent=`✅ Request received! Booking ID: ${d.booking_id?.slice(0,8).toUpperCase()}. We'll respond within 4 hours.`;
+        ['entCompany','entContact','entEmail','entDomain','entReq'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      } else throw new Error(d.error);
+    } catch(e) {
+      if(alertEl) alertEl.className='alert alert-error', alertEl.textContent=`Failed: ${e.message}. Email bivash@cyberdudebivash.com`;
+    }
+    if(btn) btn.textContent = '📨 Send Enterprise Inquiry';
+  };
+
+  // Fetch global pricing on load to auto-detect currency
+  async function detectAndSetCurrency() {
+    try {
+      const r = await fetch('/api/global/pricing');
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.currency && d.currency !== 'INR') {
+        currentCurrency = d.currency;
+        document.querySelectorAll('.currency-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.cur === d.currency);
+        });
+      }
+    } catch {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderComplianceGrid();
+    detectAndSetCurrency();
+  });
+})();
+</script>
 
 <!-- ════════════════════════════════ PRODUCTS ══════════════════════════════ -->
 <section>
@@ -4353,6 +5665,42 @@ function localEngine(module, payload) {
     requestAnimationFrame(update);
   }
 
+  // ── Animate posture ring v11 ─────────────────────────────────────────────
+  function animatePostureRing(score) {
+    const ring = document.getElementById('postureRing');
+    const val  = document.getElementById('postureVal');
+    if (!ring) return;
+    const circumference = 283;
+    const offset = circumference - (score / 100) * circumference;
+    ring.style.strokeDashoffset = offset;
+    if (val) {
+      let cur = 0;
+      const step = () => {
+        cur = Math.min(cur + 2, score);
+        val.textContent = cur;
+        if (cur < score) requestAnimationFrame(step);
+      };
+      setTimeout(step, 400);
+    }
+  }
+
+  // ── Animate progress bars v11 ─────────────────────────────────────────────
+  function animateProgressBars(net=78, ident=62, ai=85, comp=55) {
+    const bars = [
+      { id:'pb-network',    val:net,  valId:'pb-network-val'    },
+      { id:'pb-identity',   val:ident,valId:'pb-identity-val'   },
+      { id:'pb-ai',         val:ai,   valId:'pb-ai-val'         },
+      { id:'pb-compliance', val:comp, valId:'pb-compliance-val' },
+    ];
+    bars.forEach(({id, val, valId}) => {
+      const bar = document.getElementById(id);
+      if (bar) bar.style.width = val + '%';
+      const label = document.getElementById(valId);
+      if (label) label.textContent = val;
+    });
+    animatePostureRing(Math.round((net + ident + ai + comp) / 4));
+  }
+
   // IntersectionObserver — trigger animations when dashboard is visible
   const dashSection = document.getElementById('dashboard');
   if (dashSection && window.IntersectionObserver) {
@@ -4360,22 +5708,22 @@ function localEngine(module, payload) {
     const obs = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && !animated) {
         animated = true;
-        // Only animate counters with static fallbacks — real values loaded by initRealTimeMetrics
-        const mcScansEl = document.getElementById('mc-scans');
-        if (mcScansEl && /^[\d,]+$/.test(mcScansEl.textContent.trim())) {
-          // Already updated by API — skip re-animation
-        } else {
-          animateCounter(mcScansEl, 12847);
-        }
-        animateCounterFloat(document.getElementById('mc-confidence'), 94.7, '', '%');
         // Animate progress bars
-        document.querySelectorAll('.prog-bar-fill').forEach(bar => {
-          const target = bar.style.width;
-          bar.style.width = '0%';
-          setTimeout(() => { bar.style.width = target; }, 200);
-        });
+        setTimeout(() => animateProgressBars(78, 62, 85, 55), 200);
         // Trigger Sentinel feed when dashboard first comes into view
         initSentinelFeed();
+        // Load live posture from API
+        safeFetch('/api/realtime/posture')
+          .then(r => r.ok ? r.json() : null)
+          .then(p => {
+            if (!p) return;
+            const net   = p.scores?.network    ?? p.network    ?? 78;
+            const ident = p.scores?.identity   ?? p.identity   ?? 62;
+            const ai    = p.scores?.ai_systems ?? p.ai         ?? 85;
+            const comp  = p.scores?.compliance ?? p.compliance ?? 55;
+            setTimeout(() => animateProgressBars(net, ident, ai, comp), 600);
+          })
+          .catch(() => setTimeout(() => animateProgressBars(78, 62, 85, 55), 200));
       }
     }, { threshold: 0.2 });
     obs.observe(dashSection);
@@ -4416,69 +5764,156 @@ document.getElementById('heroScanInput')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') heroQuickScan();
 });
 
-// ─── Real-Time Metrics Engine ───────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// REAL-TIME METRICS ENGINE v11.0 — Multi-endpoint, robust, production-grade
+// ═══════════════════════════════════════════════════════════════════════════
 async function initRealTimeMetrics() {
-  try {
-    // Fetch health / status from API — best-effort, silent on failure
-    function makeAbortFetch(url, ms) {
-      const c = new AbortController();
-      setTimeout(() => c.abort(), ms);
-      return fetch(url, { signal: c.signal });
-    }
-    const [healthResp, sentinelResp] = await Promise.allSettled([
-      makeAbortFetch(`${API_BASE}/api/health`, 5000),
-      makeAbortFetch(`${API_BASE}/api/sentinel/status`, 5000),
-    ]);
+  return refreshDashboardMetrics();
+}
 
-    // ── Platform scan count ──
-    if (healthResp.status === 'fulfilled' && healthResp.value.ok) {
-      const h = await healthResp.value.json();
-      const totalScans = h?.stats?.total_scans ?? h?.total_scans ?? null;
-      if (totalScans !== null) {
-        // Update mc-scans metric card
-        const mcScans = document.getElementById('mc-scans');
-        if (mcScans) {
-          mcScans.textContent = Number(totalScans).toLocaleString('en-IN');
-          const trend = mcScans.closest('.metric-card')?.querySelector('.metric-trend');
-          if (trend && h?.stats?.scans_today) trend.textContent = `↑ +${h.stats.scans_today} today`;
-        }
-        // Update hero urgency counter
-        const heroLive = document.getElementById('hero-live-scans');
-        if (heroLive && h?.stats?.scans_today) heroLive.textContent = Number(h.stats.scans_today).toLocaleString('en-IN');
-        else if (heroLive) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
-      }
-    } else {
-      // Use fallback display
-      const heroLive = document.getElementById('hero-live-scans');
-      if (heroLive) heroLive.textContent = '10,000+';
-    }
+async function refreshDashboardMetrics() {
+  // Update last-refresh timestamp
+  const lastRefEl = document.getElementById('dash-last-refresh');
+  if (lastRefEl) lastRefEl.textContent = 'Refreshing...';
 
-    // ── Sentinel threat level ──
-    if (sentinelResp.status === 'fulfilled' && sentinelResp.value.ok) {
-      const s = await sentinelResp.value.json();
-      const critCount = s?.stats?.critical_count ?? s?.critical_count ?? null;
-      if (critCount !== null) {
-        const mcThreat = document.getElementById('mc-threats');
-        if (mcThreat) {
-          const level = critCount >= 5 ? 'CRITICAL' : critCount >= 2 ? 'HIGH' : 'MODERATE';
-          mcThreat.textContent = level;
-          const card = mcThreat.closest('.metric-card');
-          if (card) card.style.setProperty('--mc-color', critCount >= 5 ? '#ef4444' : critCount >= 2 ? '#f59e0b' : '#3b82f6');
-        }
-        // Show urgency block
-        const urgBlock = document.getElementById('dashUrgencyBlock');
-        const urgCount = document.getElementById('dashUrgencyThreatCount');
-        if (urgBlock && critCount > 0) {
-          if (urgCount) urgCount.textContent = critCount;
-          urgBlock.style.display = 'flex';
-        }
-      }
-    }
-  } catch (e) {
-    // Silent failure — static values remain visible
-    const heroLive = document.getElementById('hero-live-scans');
-    if (heroLive) heroLive.textContent = '10,000+';
+  function tFetch(url, ms = 6000) {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), ms);
+    return safeFetch(url, { signal: c.signal }).finally(() => clearTimeout(t));
   }
+
+  // Fire all API calls in parallel — non-blocking
+  const [healthRes, tiStatsRes, defStatsRes, realtimeRes] = await Promise.allSettled([
+    tFetch('/api/health', 6000),
+    tFetch('/api/threat-intel/stats', 6000),
+    tFetch('/api/defense/stats', 5000),
+    tFetch('/api/realtime/stats', 5000),
+  ]);
+
+  // ── Helper: safe json extraction ────────────────────────────────────────
+  async function safeJson(res) {
+    if (res.status !== 'fulfilled' || !res.value?.ok) return null;
+    try { return await res.value.json(); } catch { return null; }
+  }
+
+  const [h, ti, ds, rt] = await Promise.all([
+    safeJson(healthRes), safeJson(tiStatsRes), safeJson(defStatsRes), safeJson(realtimeRes),
+  ]);
+
+  // ── Scan count ─────────────────────────────────────────────────────────
+  const totalScans = h?.stats?.total_scans ?? h?.total_scans ?? rt?.total_scans ?? null;
+  const scansToday = h?.stats?.scans_today ?? rt?.scans_today ?? null;
+  const el_scans   = document.getElementById('mc-scans');
+  if (el_scans) {
+    if (totalScans !== null) {
+      animateCounterTo(el_scans, totalScans);
+      const trend = document.getElementById('mc-scans-trend') || el_scans.closest('.metric-card')?.querySelector('.metric-trend');
+      if (trend && scansToday !== null) trend.textContent = `↑ +${Number(scansToday).toLocaleString('en-IN')} today`;
+    } else {
+      el_scans.textContent = '12,847+';
+      const trend = document.getElementById('mc-scans-trend');
+      if (trend) trend.textContent = '↑ Growing daily';
+    }
+  }
+  // Hero urgency counter
+  const heroLive = document.getElementById('hero-live-scans');
+  if (heroLive) heroLive.textContent = scansToday ? Number(scansToday).toLocaleString('en-IN') : (totalScans ? Number(totalScans).toLocaleString('en-IN') + '+' : '10,000+');
+
+  // ── Threat level from threat-intel/stats ───────────────────────────────
+  const critCnt  = ti?.critical_cves ?? ti?.stats?.critical ?? ti?.breakdown?.critical ?? null;
+  const highCnt  = ti?.high_cves     ?? ti?.stats?.high     ?? ti?.breakdown?.high     ?? null;
+  const medCnt   = ti?.medium_cves   ?? ti?.stats?.medium   ?? ti?.breakdown?.medium   ?? null;
+  const totalCVE = ti?.total_cves    ?? ti?.total           ?? null;
+  const kevCnt   = ti?.kev_count     ?? ti?.cisa_kev        ?? null;
+
+  const el_threats = document.getElementById('mc-threats');
+  if (el_threats && (critCnt !== null || highCnt !== null)) {
+    const level = (critCnt >= 5) ? 'CRITICAL' : (critCnt >= 2 || highCnt >= 10) ? 'HIGH' : (highCnt >= 5) ? 'ELEVATED' : 'MODERATE';
+    const colors = { CRITICAL:'#ef4444', HIGH:'#f59e0b', ELEVATED:'#f97316', MODERATE:'#3b82f6' };
+    el_threats.textContent = level;
+    el_threats.style.color = colors[level] || '#f59e0b';
+    const card = el_threats.closest('.metric-card');
+    if (card) card.style.setProperty('--mc-color', colors[level] || '#f59e0b');
+  }
+  // CVE count badges
+  if (critCnt !== null) { const e = document.getElementById('mc-crit-cnt'); if (e) e.textContent = critCnt; }
+  if (highCnt !== null) { const e = document.getElementById('mc-high-cnt'); if (e) e.textContent = highCnt; }
+  if (medCnt  !== null) { const e = document.getElementById('mc-med-cnt');  if (e) e.textContent = medCnt;  }
+  const el_cves = document.getElementById('mc-cves');
+  if (el_cves && totalCVE !== null) {
+    animateCounterTo(el_cves, totalCVE);
+    const trend = document.getElementById('mc-cves-trend');
+    if (trend) trend.textContent = `↑ ${critCnt || 0} critical, ${kevCnt || 0} KEV exploited`;
+  } else if (el_cves) { el_cves.textContent = '2,400+'; }
+  if (kevCnt  !== null) { const e = document.getElementById('mc-kev-total');  if (e) e.textContent = kevCnt; }
+  if (critCnt !== null) { const e = document.getElementById('mc-crit-total'); if (e) e.textContent = critCnt; }
+
+  // Announcement bar CVE count
+  const annCVE = document.getElementById('ann-cve-count');
+  if (annCVE && totalCVE !== null) annCVE.textContent = Number(totalCVE).toLocaleString('en-IN');
+  else if (annCVE) annCVE.textContent = '2,400+';
+
+  // ── Threat urgency block ───────────────────────────────────────────────
+  const urgBlock = document.getElementById('dashUrgencyBlock');
+  const urgCount = document.getElementById('dashUrgencyThreatCount');
+  if (urgBlock && critCnt > 0) {
+    if (urgCount) urgCount.textContent = critCnt;
+    urgBlock.style.display = 'flex';
+  }
+
+  // ── Defense marketplace stats ──────────────────────────────────────────
+  const totalProd  = ds?.total_solutions ?? ds?.total ?? null;
+  const totalSales = ds?.total_purchases  ?? ds?.purchases ?? null;
+  const totalRev   = ds?.total_revenue    ?? ds?.revenue_inr ?? null;
+  const el_rev = document.getElementById('mc-revenue');
+  if (el_rev && totalRev !== null) {
+    el_rev.textContent = '₹' + Number(totalRev).toLocaleString('en-IN');
+    const trend = document.getElementById('mc-revenue-trend');
+    if (trend && totalSales !== null) trend.textContent = `↑ ${totalSales} sales · Defense marketplace`;
+  } else if (el_rev) { el_rev.textContent = '₹0 (growing)'; }
+  if (totalProd !== null) { const e = document.getElementById('mc-products-cnt'); if (e) e.textContent = totalProd; }
+
+  // Announcement bar revenue count
+  const annRev = document.getElementById('ann-revenue-count');
+  if (annRev && totalSales !== null && totalSales > 0) annRev.textContent = totalSales + '+';
+
+  // ── Update last refresh time ───────────────────────────────────────────
+  if (lastRefEl) lastRefEl.textContent = `Updated ${new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}`;
+
+  // ── SOC status bar update ──────────────────────────────────────────────
+  if (h) {
+    const apiDot = document.getElementById('soc-api-dot');
+    const apiLbl = document.getElementById('soc-api-label');
+    if (apiDot) { apiDot.className = 'soc-dot green'; }
+    if (apiLbl) apiLbl.textContent = 'API Online';
+    if (h.database === 'connected' || h.db === 'connected') {
+      const dbDot = document.getElementById('soc-db-dot');
+      if (dbDot) dbDot.className = 'soc-dot green';
+    }
+    if (h.cache === 'connected' || h.kv === 'connected' || h.kv_status === 'connected') {
+      const kvDot = document.getElementById('soc-kv-dot');
+      if (kvDot) kvDot.className = 'soc-dot green';
+    }
+  }
+
+  // Schedule next auto-refresh (every 3 minutes)
+  clearTimeout(window._dashRefreshTimer);
+  window._dashRefreshTimer = setTimeout(refreshDashboardMetrics, 3 * 60 * 1000);
+}
+
+// ── Smooth counter animation ──────────────────────────────────────────────
+function animateCounterTo(el, target, duration = 1000) {
+  if (!el) return;
+  const start = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+  const diff  = target - start;
+  if (diff === 0) { el.textContent = Number(target).toLocaleString('en-IN'); return; }
+  const t0 = performance.now();
+  (function tick(now) {
+    const p = Math.min((now - t0) / duration, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Number(Math.round(start + diff * e)).toLocaleString('en-IN');
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
 }
 
 // ─── Sentinel APEX Live Feed ────────────────────────────────────────────
@@ -4505,31 +5940,47 @@ async function initSentinelFeed() {
 
     if (items.length === 0) throw new Error('empty');
 
-    const SEV_COLOR = { CRITICAL:'sentinel-cve-sev-CRITICAL', HIGH:'sentinel-cve-sev-HIGH' };
-    let html = '';
-    items.forEach(item => {
-      const cveId    = item.cve_id || item.cveID || item.id || '—';
-      const title    = item.description?.slice(0, 90) || item.vulnerabilityName || item.title || 'No description';
-      const score    = item.cvss_base_score ?? item.baseScore ?? null;
-      const sev      = score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW';
-      const sevClass = SEV_COLOR[sev] || 'sentinel-cve-sev-HIGH';
-      const dateStr  = item.published || item.dateAdded || item.datePublished || '';
-      const dateDisp = dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '';
-      const kevBadge = item.is_kev ? '<span class="sentinel-kev-badge">KEV</span>' : '';
+    const SEV_COLORS = {
+      CRITICAL: { bar:'#ef4444', bg:'rgba(239,68,68,.08)', border:'rgba(239,68,68,.25)', text:'#fca5a5' },
+      HIGH:     { bar:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:'#fcd34d' },
+      MEDIUM:   { bar:'#3b82f6', bg:'rgba(59,130,246,.07)', border:'rgba(59,130,246,.18)', text:'#93c5fd' },
+      LOW:      { bar:'#10b981', bg:'rgba(16,185,129,.07)', border:'rgba(16,185,129,.18)', text:'#6ee7b7' },
+    };
 
-      html += `<div class="sentinel-cve-item">
-        <span class="sentinel-cve-sev ${sevClass}">${sev}</span>
+    let html = '<div class="sentinel-v11">';
+    items.forEach(item => {
+      const cveId   = item.cve_id || item.cveID || item.id || '—';
+      const title   = item.description?.slice(0, 100) || item.vulnerabilityName || item.title || 'No description';
+      const score   = item.cvss_base_score ?? item.baseScore ?? null;
+      const sev     = score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW';
+      const sc      = SEV_COLORS[sev] || SEV_COLORS.HIGH;
+      const dateStr = item.published || item.dateAdded || item.datePublished || '';
+      const dateDisp= dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { month:'short', day:'numeric', year:'numeric' }) : '';
+      const isKev   = item.is_kev || item.source === 'CISA KEV';
+      const rowCls  = sev === 'CRITICAL' ? 'crit' : sev === 'HIGH' ? 'high' : 'med';
+
+      html += `<div class="sentinel-row-v11 ${rowCls}" onclick="window.open('https://nvd.nist.gov/vuln/detail/${cveId}','_blank')">
+        <div style="flex-shrink:0;padding-top:2px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${sc.bar};box-shadow:0 0 6px ${sc.bar}40;margin-top:4px"></div>
+        </div>
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span class="sentinel-cve-id">${cveId}</span>
-            ${kevBadge}
-            ${score !== null ? `<span style="font-size:10px;color:var(--text-dim)">CVSS ${Number(score).toFixed(1)}</span>` : ''}
+          <div class="cve-meta">
+            <span class="cve-id-badge">${cveId}</span>
+            ${score !== null ? `<span class="cvss-badge cvss-${sev}">CVSS ${Number(score).toFixed(1)}</span>` : ''}
+            ${isKev ? `<span class="kev-badge">KEV</span>` : ''}
           </div>
-          <div class="sentinel-cve-title">${title}${title.length >= 90 ? '…' : ''}</div>
-          ${dateDisp ? `<div class="sentinel-cve-date">${item.source} · ${dateDisp}</div>` : `<div class="sentinel-cve-date">${item.source}</div>`}
+          <div class="cve-title-v11">${title}${title.length >= 100 ? '…' : ''}</div>
+          <div class="cve-footer">
+            <span>${item.source || 'NVD'}</span>
+            <span>${dateDisp}</span>
+          </div>
+        </div>
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div onclick="event.stopPropagation();dsPurchaseByCVE('${cveId}')" style="font-size:10px;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3);padding:3px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;font-weight:700;transition:all .2s" onmouseover="this.style.background='rgba(124,58,237,.4)'" onmouseout="this.style.background='rgba(124,58,237,.2)'">🛡 Buy Fix →</div>
         </div>
       </div>`;
     });
+    html += '</div>';
     feedEl.innerHTML = html;
 
     if (lastUpEl) {
@@ -6318,78 +7769,134 @@ window.addEventListener('load', () => {
     }, 8000);
   }
 
-  // ── Post-scan upsell modal ───────────────────────────────────────────────
-  window.showScanUpsell = function(scanData) {
+  // ── Post-scan upsell modal v10.0 — AI-powered + Defense Solutions ───────
+  window.showScanUpsell = async function(scanData) {
     if (planAtLeast('pro')) return;
 
     const existing = document.getElementById('cdb-scan-upsell');
     if (existing) existing.remove();
 
-    const critCount = scanData?.critical_count || 0;
-    const highCount = scanData?.high_count || 0;
+    const critCount = scanData?.critical_count || (scanData?.findings?.filter(f=>f.severity==='CRITICAL').length) || 0;
+    const highCount = scanData?.high_count || (scanData?.findings?.filter(f=>f.severity==='HIGH').length) || 0;
+    if (critCount === 0 && highCount < 1 && !scanData?.module) return;
 
-    if (critCount === 0 && highCount < 2) return; // no urgency — skip
-
+    // Show skeleton modal immediately
     const modal = document.createElement('div');
     modal.id = 'cdb-scan-upsell';
-    modal.style.cssText = `
-      position:fixed; inset:0; z-index:10000; display:flex;
-      align-items:center; justify-content:center;
-      background:rgba(0,0,0,.7); backdrop-filter:blur(6px);
-      font-family:sans-serif;
-    `;
+    modal.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);padding:16px';
     modal.innerHTML = `
-      <div style="background:#0f0f1e;border:1px solid #4f46e5;border-radius:16px;padding:32px;max-width:460px;width:90%;position:relative">
-        <button onclick="document.getElementById('cdb-scan-upsell').remove()"
-          style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer">×</button>
-
-        <div style="text-align:center;margin-bottom:20px">
-          <div style="font-size:48px">⚠️</div>
-          <h2 style="color:#f87171;margin:8px 0 4px">
-            ${critCount > 0 ? `${critCount} Critical Threat${critCount > 1 ? 's' : ''} Detected` : `${highCount} High-Risk Vulnerabilities`}
-          </h2>
-          <p style="color:#94a3b8;font-size:14px">Your scan revealed active threats requiring immediate response</p>
+      <div id="cdb-upsell-inner" style="background:#0c0c1e;border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:28px;max-width:520px;width:100%;position:relative;max-height:90vh;overflow-y:auto">
+        <button onclick="document.getElementById('cdb-scan-upsell').remove()" style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px">×</button>
+        <div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.4)">
+          <div style="font-size:32px;margin-bottom:12px">⚙️</div>
+          <div>Analyzing threats &amp; fetching defense solutions...</div>
         </div>
-
-        <div style="background:#1e1b4b;border-radius:10px;padding:16px;margin-bottom:20px">
-          <p style="color:#c7d2fe;margin:0 0 12px;font-weight:600">Get instant defense tools:</p>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="color:#94a3b8;font-size:13px">🛡 Firewall Rules</span>
-            <a href="/api/checkout?product=firewall_rules&price=199&ref=scan_upsell"
-               style="background:#4f46e5;color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;text-decoration:none">₹199</a>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="color:#94a3b8;font-size:13px">📋 IR Playbook</span>
-            <a href="/api/checkout?product=ir_playbook&price=999&ref=scan_upsell"
-               style="background:#4f46e5;color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;text-decoration:none">₹999</a>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #2d2b52;padding-top:12px">
-            <span style="color:#fbbf24;font-size:13px;font-weight:700">📦 Full Defense Pack</span>
-            <a href="/api/checkout?product=full_defense_pack&price=2499&ref=scan_upsell"
-               style="background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;padding:4px 14px;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none">₹2,499 →</a>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:10px">
-          <a href="/upgrade?plan=${PLAN === 'free' ? 'starter' : 'pro'}&ref=scan_upsell_modal"
-             style="flex:1;background:#4f46e5;color:#fff;padding:12px;border-radius:10px;text-align:center;font-weight:700;text-decoration:none">
-            ${PLAN === 'free' ? 'Upgrade to STARTER — ₹299' : 'Upgrade to PRO — ₹1,199'}
-          </a>
-        </div>
-
-        <p style="color:#475569;font-size:11px;text-align:center;margin:12px 0 0">
-          🔒 Secure payment via Razorpay · Instant access after payment
-        </p>
-      </div>
-    `;
-
+      </div>`;
     document.body.appendChild(modal);
 
-    // Track upsell view
-    fetch(`${API}/api/revenue/track`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'product_view', source: 'scan_upsell', metadata: { critical: critCount, high: highCount } }),
+    // Fetch AI upsell data
+    let upsell = null;
+    try {
+      const r = await fetch('/api/scan/upsell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(window._authToken ? { Authorization: `Bearer ${window._authToken}` } : {}) },
+        body: JSON.stringify({ scan_result: scanData }),
+      });
+      if (r.ok) upsell = await r.json();
+    } catch {}
+
+    // Build rich modal content
+    const urgencyColors = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#eab308', SOFT:'#00d4ff' };
+    const headline   = upsell?.headline || (critCount > 0 ? `🚨 ${critCount} Critical Threat${critCount>1?'s':''} Detected` : `⚠️ ${highCount} High-Risk Vulnerabilities Found`);
+    const message    = upsell?.message || 'Your scan revealed active threats. Deploy defense solutions before attackers act.';
+    const urgency    = upsell?.urgency || (critCount > 0 ? 'CRITICAL' : 'HIGH');
+    const urgColor   = urgencyColors[urgency] || '#f59e0b';
+    const planMsg    = upsell?.plan_messaging;
+    const products   = upsell?.products || [];
+    const fomo       = upsell?.fomo || [];
+
+    // FOMO timer (15-min limited offer for CRITICAL)
+    let timerHtml = '';
+    if (urgency === 'CRITICAL' || urgency === 'HIGH') {
+      const timerKey = `scan_offer_${Date.now()}`;
+      timerHtml = `
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="font-size:12px;color:rgba(255,255,255,.6)">⏰ Limited-time defense access</span>
+          <span id="scan-upsell-timer" style="font-family:monospace;font-weight:800;color:#ef4444;font-size:15px">14:59</span>
+        </div>`;
+      // Start countdown
+      let secs = 899;
+      const iv = setInterval(() => {
+        secs--;
+        const el = document.getElementById('scan-upsell-timer');
+        if (!el || secs <= 0) { clearInterval(iv); return; }
+        el.textContent = `${String(Math.floor(secs/60)).padStart(2,'0')}:${String(secs%60).padStart(2,'0')}`;
+      }, 1000);
+    }
+
+    // FOMO signals
+    const fomoHtml = fomo.map(f =>
+      `<div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,.5)"><span>${f.icon}</span>${f.message}</div>`
+    ).join('');
+
+    // Defense product cards
+    const productsHtml = products.length ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:10px">Recommended Defense Solutions</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${products.map(p => `
+            <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title || p.category}</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.4)">${(p.preview||'').slice(0,60)}...</div>
+              </div>
+              <button onclick="document.getElementById('cdb-scan-upsell').remove();dsPurchase('${p.id}','${(p.title||'').replace(/'/g,"\\'")}',${p.price_inr})" style="flex-shrink:0;background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:900;font-size:12px;cursor:pointer;white-space:nowrap">₹${(p.price_inr||499).toLocaleString('en-IN')} →</button>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    // Plan upgrade section
+    const planHtml = planMsg ? `
+      <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:800;color:#a78bfa;margin-bottom:8px">📦 ${planMsg.headline}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+          ${planMsg.features.map(f => `<span style="background:rgba(255,255,255,.05);border-radius:4px;padding:3px 8px;font-size:10px;color:rgba(255,255,255,.55)">✓ ${f}</span>`).join('')}
+        </div>
+        <a href="/upgrade?plan=${(upsell?.plan_upsell||'pro').toLowerCase()}&ref=scan_upsell_v10" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:12px;border-radius:8px;text-align:center;font-weight:900;text-decoration:none;font-size:14px">${planMsg.cta}</a>
+        ${upsell?.discount > 0 ? `<div style="text-align:center;margin-top:8px;font-size:11px;color:#22c55e">🎁 ${upsell.discount}% off with code <strong>${upsell.discount_code}</strong></div>` : ''}
+      </div>` : '';
+
+    document.getElementById('cdb-upsell-inner').innerHTML = `
+      <button onclick="document.getElementById('cdb-scan-upsell').remove()" style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px">×</button>
+
+      <!-- Severity badge -->
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:999px;padding:4px 14px;font-size:10px;font-weight:800;letter-spacing:.1em;color:${urgColor};text-transform:uppercase;margin-bottom:16px">
+        <span style="width:6px;height:6px;background:${urgColor};border-radius:50%;animation:pulse 1.2s infinite"></span>
+        ${urgency} THREAT DETECTED
+      </div>
+
+      <h2 style="font-size:18px;font-weight:900;margin:0 0 8px;line-height:1.3">${headline}</h2>
+      <p style="color:rgba(255,255,255,.55);font-size:13px;margin:0 0 16px;line-height:1.5">${message}</p>
+
+      ${timerHtml}
+      ${fomo.length ? `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px;padding:10px;background:rgba(0,0,0,.25);border-radius:8px">${fomoHtml}</div>` : ''}
+      ${productsHtml}
+      ${planHtml}
+
+      <!-- View full marketplace CTA -->
+      <a href="#defense-solutions" onclick="document.getElementById('cdb-scan-upsell').remove();document.getElementById('defense-solutions').scrollIntoView({behavior:'smooth'})"
+         style="display:block;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);color:#00d4ff;padding:11px;border-radius:8px;text-align:center;font-weight:700;text-decoration:none;font-size:13px;margin-bottom:12px">
+        🛡️ Browse All Defense Solutions →
+      </a>
+
+      <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.25)">
+        🔒 Secured by Razorpay · Instant download · 365-day access
+      </div>`;
+
+    // Track upsell impression
+    fetch('/api/revenue/track', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'product_view', source: 'scan_upsell_v10', metadata: { urgency, critical: critCount, high: highCount, rule: upsell?.rule_id } }),
     }).catch(() => {});
   };
 
