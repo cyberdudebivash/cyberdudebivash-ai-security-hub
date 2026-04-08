@@ -28,6 +28,6 @@
 --
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Indexes for threat_intel EPSS + exploit columns (idempotent)
-CREATE INDEX IF NOT EXISTS idx_threat_intel_epss   ON threat_intel(epss_score DESC);
-CREATE INDEX IF NOT EXISTS idx_threat_intel_active ON threat_intel(actively_exploited);
+-- Indexes already defined in schema_threat_intel.sql (CREATE INDEX IF NOT EXISTS).
+-- Removed from this file to keep schema ownership unambiguous.
+-- idx_threat_intel_epss and idx_threat_intel_active are owned by schema_threat_intel.sql.
