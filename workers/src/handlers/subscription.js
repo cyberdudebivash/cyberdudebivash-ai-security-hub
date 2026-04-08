@@ -167,6 +167,7 @@ export async function handleCreateSubscription(request, env) {
     return new Response(JSON.stringify({
       success:    true,
       order_id:   order.id,
+      key_id:     env.RAZORPAY_KEY_ID || '',   // required by frontend Razorpay checkout
       amount:     planInfo.amount,
       currency:   'INR',
       plan:       planKey,

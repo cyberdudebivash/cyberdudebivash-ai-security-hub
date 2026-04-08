@@ -533,6 +533,13 @@ function apiInfoResponse() {
 // ─── Main fetch handler ───────────────────────────────────────────────────────
 export default {
   async fetch(request, env, ctx) {
+    // ── Binding alias normalisation ──────────────────────────────────────────
+    // wrangler.toml binds D1 as SECURITY_HUB_DB and KV as SECURITY_HUB_KV.
+    // All handlers reference env.DB and env.KV (shorter aliases).
+    // Normalise here so every downstream handler works without change.
+    if (env.SECURITY_HUB_DB && !env.DB) env.DB = env.SECURITY_HUB_DB;
+    if (env.SECURITY_HUB_KV && !env.KV) env.KV = env.SECURITY_HUB_KV;
+
     const url    = new URL(request.url);
     const path   = url.pathname.replace(/\/+$/, '') || '/';
     const method = request.method.toUpperCase();

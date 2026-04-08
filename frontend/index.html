@@ -3733,6 +3733,15 @@ async function initVersion() {
     if (!htmlBuildId || !jsonCommit) return; // no data to compare
 
     if (htmlBuildId !== jsonCommit) {
+      // Only auto-reload ONCE per session to prevent reload loops.
+      // If the user already reloaded this session and still sees a mismatch,
+      // the CDN hasn't propagated yet — just log and skip.
+      const reloadKey = `_cdb_reload_${jsonCommit}`;
+      if (sessionStorage.getItem(reloadKey)) {
+        console.info(`[CYBERDUDEBIVASH] Version mismatch persists after reload (CDN propagation lag) — skipping.`);
+        return;
+      }
+      sessionStorage.setItem(reloadKey, '1');
       console.warn(
         `[CYBERDUDEBIVASH] Stale cache detected! HTML build=${htmlBuildId}, ` +
         `current deploy=${jsonCommit}. Reloading in 5s…`
@@ -7450,7 +7459,7 @@ function buildIntelligenceInsightPanel(module, data) {
           <div style="font-size:12px;color:var(--text-dim)">Executive brief · Remediation roadmap · Compliance mapping · MITRE ATT&CK full chain</div>
         </div>
       </div>
-      <button class="btn v9-cta-btn" onclick="handlePayment('${module}', '${target}')">
+      <button class="btn v9-cta-btn" onclick="startPayment('${module}','${(_payTarget||target||'unknown').replace(/'/g,String.fromCharCode(39))}',${({'redteam':99900,'identity':79900,'ai':49900,'compliance':49900})[module]||19900},'${module === 'redteam' ? '₹999' : module === 'identity' ? '₹799' : module === 'ai' ? '₹499' : '₹199'}')">
         Unlock Full Report — ${module === 'redteam' ? '₹999' : module === 'identity' ? '₹799' : module === 'ai' ? '₹499' : '₹199'}
       </button>
     </div>` : ''}
@@ -7498,7 +7507,7 @@ function showUpgradeTrigger(module, data) {
       <div class="v9-trigger-action">
         <div class="v9-trigger-price">${price}</div>
         <div class="v9-trigger-price-sub">one-time report</div>
-        <button class="btn v9-pay-btn" onclick="handlePayment('${module}')">
+        <button class="btn v9-pay-btn" onclick="startPayment('${module}','${(target||'unknown').replace(/'/g,String.fromCharCode(39))}',${amount||19900},'${price}')">
           🔓 Get Full Report
         </button>
         <div class="v9-trigger-trust">🔒 Secure · Instant delivery · Razorpay</div>
