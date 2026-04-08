@@ -1,16 +1,33 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- Sentinel APEX — Schema Migration v2
--- Run this ONCE on existing databases BEFORE running schema_gtm_only.sql
--- Safe to run on remote D1: npx wrangler d1 execute <db> --remote --file=./schema_migrations_v2.sql
+-- Sentinel APEX — Schema Migration v2  (PRODUCTION-SAFE REWRITE)
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- ROOT CAUSE OF PRIOR FAILURE:
+--   Bare ALTER TABLE statements have NO idempotency in SQLite/D1.
+--   D1 runs each --file as a single atomic transaction.
+--   If epss_score already exists (added in a prior run), the ALTER fires
+--   "duplicate column name: epss_score: SQLITE_ERROR" and the ENTIRE file
+--   rolls back → exit code 1.
+--
+--   SQLite / D1 does NOT support:
+--     ALTER TABLE t ADD COLUMN c IF NOT EXISTS  ← SYNTAX ERROR
+--
+-- FIX:
+--   All ALTER TABLE statements removed from this file.
+--   They are now handled exclusively in the automation.yml drift-patch step
+--   which runs each ALTER as an INDIVIDUAL wrangler API call with || true
+--   suppression — making them permanently idempotent.
+--
+--   This file now contains ONLY:
+--     - CREATE INDEX IF NOT EXISTS  (always safe to re-run)
+--
+--   The columns (epss_score, epss_percentile, actively_exploited,
+--   exploit_available, ioc_list) are already present in the
+--   CREATE TABLE IF NOT EXISTS block in schema_threat_intel.sql for
+--   fresh installs, and are guaranteed by the drift patch for existing DBs.
+--
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Add EPSS + exploit columns to threat_intel (added in Sentinel APEX v2)
-ALTER TABLE threat_intel ADD COLUMN epss_score REAL;
-ALTER TABLE threat_intel ADD COLUMN epss_percentile REAL;
-ALTER TABLE threat_intel ADD COLUMN actively_exploited INTEGER DEFAULT 0;
-ALTER TABLE threat_intel ADD COLUMN exploit_available INTEGER DEFAULT 0;
-ALTER TABLE threat_intel ADD COLUMN ioc_list TEXT DEFAULT '[]';
-
--- Indexes for new columns (idempotent)
+-- Indexes for threat_intel EPSS + exploit columns (idempotent)
 CREATE INDEX IF NOT EXISTS idx_threat_intel_epss   ON threat_intel(epss_score DESC);
 CREATE INDEX IF NOT EXISTS idx_threat_intel_active ON threat_intel(actively_exploited);
