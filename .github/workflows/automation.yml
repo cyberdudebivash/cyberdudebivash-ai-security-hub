@@ -431,13 +431,7 @@ jobs:
           if [ "${CURL_EXIT}" -ne 0 ]; then
             echo "⚠️  Domain scan unreachable (exit ${CURL_EXIT})"
           elif [ "${HTTP_CODE}" = "200" ]; then
-            python3 -c "
-import json
-try:
-    d = json.load(open('/tmp/domain_resp.json'))
-    print(f'  Risk: {d.get(\"risk_score\",\"N/A\")} | Findings: {len(d.get(\"findings\",[]))}')
-except: pass
-" 2>/dev/null || true
+            python3 -c 'import json; d=json.load(open("/tmp/domain_resp.json")); print("  Risk:", d.get("risk_score","N/A"), "| Findings:", len(d.get("findings",[])))' 2>/dev/null || true
             echo "✅ Domain scan: OK (200)"
           elif [ "${HTTP_CODE}" = "429" ]; then
             echo "⚠️  Rate limited — endpoint IS reachable ✅"
@@ -827,14 +821,7 @@ except: pass
           fi
 
           echo "Response: ${HTTP_CODE:-no response}"
-          python3 -c "
-import json, sys
-try:
-    d = json.load(open('/tmp/defense_gen.json'))
-    r = d.get('result', {}).get('defense_products', {})
-    print(f'Generated: {r.get(\"generated\",0)} | Processed: {r.get(\"processed\",0)}')
-except: pass
-" 2>/dev/null || true
+          python3 -c 'import json; d=json.load(open("/tmp/defense_gen.json")); r=d.get("result",{}).get("defense_products",{}); print("Generated:", r.get("generated",0), "| Processed:", r.get("processed",0))' 2>/dev/null || true
 
           echo "✅ Defense solutions generation triggered (${HTTP_CODE:-000})"
           exit 0
@@ -857,15 +844,7 @@ except: pass
           CVE_DATA=$(curl -s --max-time 10 --connect-timeout 8 \
             "${INTEL_FEED_URL}/api/cves?severity=CRITICAL&limit=1" 2>/dev/null || echo "{}")
 
-          CVE_ID=$(python3 -c "
-import json, sys
-try:
-    d = json.loads('''${CVE_DATA}''')
-    items = d.get('cves', d.get('items', d.get('data', [])))
-    if items: print(items[0].get('cve_id', items[0].get('id', 'N/A')))
-    else: print('N/A')
-except: print('N/A')
-" 2>/dev/null || echo "N/A")
+          CVE_ID=$(CVE_DATA_RAW="${CVE_DATA}" python3 -c 'import json,os; d=json.loads(os.environ.get("CVE_DATA_RAW","{}") or "{}"); items=d.get("cves",d.get("items",d.get("data",[]))); print(items[0].get("cve_id",items[0].get("id","N/A")) if items else "N/A")' 2>/dev/null || echo "N/A")
 
           if [ "${CVE_ID}" = "N/A" ]; then
             echo "ℹ️  No critical CVE data available — skipping Telegram post"
