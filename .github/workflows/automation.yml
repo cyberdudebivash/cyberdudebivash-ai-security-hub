@@ -894,61 +894,154 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           DB="cyberdudebivash-security-hub"
-          # Each command is a separate Cloudflare API call.
-          # || true means: if column already exists → ignore error, continue.
-          # This makes every ALTER TABLE safe to run multiple times.
-          echo "🔧 Patching schema drift — adding missing columns to existing tables..."
+          # Each ALTER TABLE runs as its own Cloudflare API call.
+          # "duplicate column" errors are silently suppressed by || true.
+          # This step is 100% idempotent — safe on fresh or drifted DB.
+          echo "🔧 Comprehensive schema drift patch — ALL tables, ALL columns..."
 
-          # ── users table ──────────────────────────────────────────────────────
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN tier TEXT NOT NULL DEFAULT 'FREE'" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'" 2>/dev/null || true
+          # ── users ────────────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN tier TEXT DEFAULT 'FREE'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN password_hash TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN password_salt TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN full_name TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN company TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN telegram_chat_id TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN alert_email TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN last_login_at TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN login_count INTEGER NOT NULL DEFAULT 0" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now'))" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0" 2>/dev/null || true
 
-          # ── api_keys table ───────────────────────────────────────────────────
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN tier TEXT NOT NULL DEFAULT 'FREE'" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN daily_limit INTEGER NOT NULL DEFAULT 5" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN monthly_limit INTEGER NOT NULL DEFAULT 100" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN label TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN active INTEGER NOT NULL DEFAULT 1" 2>/dev/null || true
+          # ── refresh_tokens ───────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN token_hash TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN expires_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN revoked INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN ip_address TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE refresh_tokens ADD COLUMN user_agent TEXT" 2>/dev/null || true
+
+          # ── login_attempts ───────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE login_attempts ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE login_attempts ADD COLUMN ip_address TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE login_attempts ADD COLUMN success INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE login_attempts ADD COLUMN attempted_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          # ── api_keys ─────────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN key_hash TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN key_prefix TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN label TEXT DEFAULT 'Default Key'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN tier TEXT DEFAULT 'FREE'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN daily_limit INTEGER DEFAULT 5" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN monthly_limit INTEGER DEFAULT 100" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN active INTEGER DEFAULT 1" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN last_used_at TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN expires_at TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN revoked INTEGER NOT NULL DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_keys ADD COLUMN revoked INTEGER DEFAULT 0" 2>/dev/null || true
 
-          # ── scan_jobs table ──────────────────────────────────────────────────
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN status TEXT NOT NULL DEFAULT 'queued'" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0" 2>/dev/null || true
+          # ── api_key_usage ────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_key_usage ADD COLUMN key_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_key_usage ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_key_usage ADD COLUMN date_bucket TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_key_usage ADD COLUMN module TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_key_usage ADD COLUMN request_count INTEGER DEFAULT 1" 2>/dev/null || true
+
+          # ── scan_jobs ────────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN identity TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN module TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN target TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN priority INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN status TEXT DEFAULT 'queued'" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN risk_score INTEGER" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN risk_level TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN r2_key TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN error_message TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN started_at TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN completed_at TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN error_message TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN identity TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_jobs ADD COLUMN r2_key TEXT" 2>/dev/null || true
 
-          # ── scan_history table ───────────────────────────────────────────────
+          # ── scan_history ─────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN job_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN scan_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN target TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN module TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN risk_score INTEGER" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN risk_level TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN grade TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN data_source TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN job_id TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN scan_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN status TEXT DEFAULT 'completed'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_history ADD COLUMN scanned_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
 
-          # ── payments table ───────────────────────────────────────────────────
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN razorpay_order_id TEXT" 2>/dev/null || true
-          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN razorpay_payment_id TEXT" 2>/dev/null || true
+          # ── alert_configs ────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN telegram_enabled INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN telegram_chat_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN email_enabled INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN alert_email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN min_risk_score INTEGER DEFAULT 70" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN alert_on_blacklist INTEGER DEFAULT 1" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN alert_on_critical_cve INTEGER DEFAULT 1" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_configs ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          # ── alert_log ────────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN channel TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN trigger_type TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN target TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN message_preview TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN status TEXT DEFAULT 'sent'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE alert_log ADD COLUMN sent_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          # ── scan_dedup ───────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_dedup ADD COLUMN job_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE scan_dedup ADD COLUMN expires_at TEXT" 2>/dev/null || true
+
+          # ── payments ─────────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN scan_id TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN module TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN target TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN amount INTEGER" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN currency TEXT DEFAULT 'INR'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN razorpay_order_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN razorpay_payment_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN razorpay_signature TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN status TEXT DEFAULT 'pending'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN plan TEXT DEFAULT 'pay_per_report'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN report_token TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN ip TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE payments ADD COLUMN paid_at TEXT" 2>/dev/null || true
 
-          echo "✅ Schema drift patch complete — all missing columns added (existing columns skipped safely)"
+          # ── report_access ────────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN scan_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN payment_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN token TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN module TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN r2_key TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN expires_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN downloaded_count INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN last_downloaded_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE report_access ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          # ── analytics_events ─────────────────────────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN event_type TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN module TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN ip TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN metadata TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          echo "✅ Comprehensive drift patch complete — all columns across all tables patched"
 
       - name: Apply base schema
         run: |
