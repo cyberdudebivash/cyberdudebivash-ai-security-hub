@@ -3,9 +3,8 @@
 -- Deploy: npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema.sql
 -- ============================================================
 
--- Enable WAL mode for better concurrency
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
+-- NOTE: PRAGMA journal_mode and foreign_keys are managed by Cloudflare D1 internally.
+-- Do NOT use PRAGMA statements — D1 blocks them with SQLITE_AUTH.
 
 -- ─── Users ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
