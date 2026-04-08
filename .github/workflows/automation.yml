@@ -1041,6 +1041,59 @@ jobs:
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN metadata TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE analytics_events ADD COLUMN created_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
 
+          # ── leads (v8 extended columns — not in schema_threat_intel.sql) ────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN company TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN ip TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN country TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN is_enterprise INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN converted INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN unsubscribed INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN unsubscribed_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN drip_sequence TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN drip_step INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN drip_enrolled_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN last_scan_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN metadata TEXT DEFAULT '{}'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          # ── email_tracking (v8 extended columns) ─────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN sequence_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN step INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN metadata TEXT DEFAULT '{}'" 2>/dev/null || true
+
+          # ── leads (v8 extended columns not in schema_threat_intel.sql) ─────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN company TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN ip TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN country TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN is_enterprise INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN converted INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN unsubscribed INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN unsubscribed_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN drip_sequence TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN drip_step INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN drip_enrolled_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN last_scan_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN metadata TEXT DEFAULT '{}'" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))" 2>/dev/null || true
+
+          # ── email_tracking (v8 extended columns not in schema_threat_intel.sql) ──
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN sequence_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN step INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN metadata TEXT DEFAULT '{}'" 2>/dev/null || true
+
+          # ── Organizations (v8 new table columns — belt-and-suspenders) ───────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE organizations ADD COLUMN logo_url TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE organizations ADD COLUMN domain TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE organizations ADD COLUMN industry TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE organizations ADD COLUMN settings_json TEXT DEFAULT '{}'" 2>/dev/null || true
+
+          # ── Gumroad Licenses (v8.1 new table columns) ────────────────────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN buyer_name TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN user_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN credits_granted INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN expires_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN sale_id TEXT" 2>/dev/null || true
+
           echo "✅ Comprehensive drift patch complete — all columns across all tables patched"
 
       - name: Apply base schema
