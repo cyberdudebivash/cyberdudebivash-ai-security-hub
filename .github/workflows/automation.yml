@@ -1141,6 +1141,18 @@ jobs:
           CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Apply GTM growth engine schema
+        run: |
+          if [ -f workers/schema_gtm_only.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_gtm_only.sql --remote
+            echo "✅ schema_gtm_only.sql applied (leads, funnel_events, email_sequences, email_tracking, content_queue, api_usage_log, sales_outreach, billing_events, growth_analytics, region_events, upsell_events, pricing_experiments)"
+          else
+            echo "ℹ️  schema_gtm_only.sql not found — skipping"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Apply threat intel schema (Sentinel APEX v3)
         run: |
           if [ -f workers/schema_threat_intel.sql ]; then

@@ -67,16 +67,9 @@ CREATE TABLE IF NOT EXISTS content_queue (
   created_at  TEXT DEFAULT (datetime('now'))
 );
 
--- API keys — per-user API credentials
-CREATE TABLE IF NOT EXISTS api_keys (
-  id          TEXT PRIMARY KEY,
-  email       TEXT UNIQUE NOT NULL,
-  plan        TEXT DEFAULT 'starter',
-  api_key     TEXT UNIQUE NOT NULL,
-  active      INTEGER DEFAULT 1,
-  created_at  TEXT DEFAULT (datetime('now')),
-  updated_at  TEXT DEFAULT (datetime('now'))
-);
+-- NOTE: api_keys is owned by schema.sql (user_id/key_hash/tier schema).
+-- The GTM-style api_keys (email/api_key) was an alternate design that is no longer
+-- used. Removed to prevent SQLITE_ERROR when CREATE INDEX fires on missing columns.
 
 -- API usage log — per-request log
 CREATE TABLE IF NOT EXISTS api_usage_log (
@@ -172,8 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_content_platform  ON content_queue(platform);
 CREATE INDEX IF NOT EXISTS idx_content_status    ON content_queue(status);
 CREATE INDEX IF NOT EXISTS idx_api_usage_email   ON api_usage_log(email);
 CREATE INDEX IF NOT EXISTS idx_api_usage_logged  ON api_usage_log(logged_at DESC);
-CREATE INDEX IF NOT EXISTS idx_api_keys_email    ON api_keys(email);
-CREATE INDEX IF NOT EXISTS idx_api_keys_key      ON api_keys(api_key);
+-- idx_api_keys_email / idx_api_keys_key removed — api_keys owned by schema.sql
 CREATE INDEX IF NOT EXISTS idx_outreach_email    ON sales_outreach(email);
 CREATE INDEX IF NOT EXISTS idx_outreach_status   ON sales_outreach(status);
 CREATE INDEX IF NOT EXISTS idx_billing_email     ON billing_events(email);
