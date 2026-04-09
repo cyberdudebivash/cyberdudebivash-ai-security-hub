@@ -538,7 +538,7 @@ echo "[!] Critical: Management plane must NOT be internet-exposed"
 # ============================================================
 
 set -euo pipefail
-MGMT_ALLOWED_IPS="${MGMT_ALLOWED_IPS:-10.0.0.0/8}"  # override via env
+MGMT_ALLOWED_IPS="\${MGMT_ALLOWED_IPS:-10.0.0.0/8}"  # override via env
 LOGFILE="/var/log/pan-hardening-$(date +%Y%m%d).log"
 
 echo "[$(date -u)] Starting PAN-OS CVE-2024-0012 hardening..." | tee -a "$LOGFILE"
@@ -547,11 +547,11 @@ echo "[$(date -u)] Starting PAN-OS CVE-2024-0012 hardening..." | tee -a "$LOGFIL
 echo "[+] Applying external firewall rules for management interface..."
 # Block all external access to PAN-OS management port (port 443/4443)
 # iptables rules for edge firewall:
-iptables -I INPUT -p tcp --dport 443 -s "${MGMT_ALLOWED_IPS}" -j ACCEPT
+iptables -I INPUT -p tcp --dport 443 -s "\${MGMT_ALLOWED_IPS}" -j ACCEPT
 iptables -I INPUT -p tcp --dport 443 -j DROP
-iptables -I INPUT -p tcp --dport 4443 -s "${MGMT_ALLOWED_IPS}" -j ACCEPT
+iptables -I INPUT -p tcp --dport 4443 -s "\${MGMT_ALLOWED_IPS}" -j ACCEPT
 iptables -I INPUT -p tcp --dport 4443 -j DROP
-iptables -I INPUT -p tcp --dport 22 -s "${MGMT_ALLOWED_IPS}" -j ACCEPT
+iptables -I INPUT -p tcp --dport 22 -s "\${MGMT_ALLOWED_IPS}" -j ACCEPT
 iptables -I INPUT -p tcp --dport 22 -j DROP
 iptables-save > /etc/iptables/rules.v4
 echo "[+] iptables rules saved"
@@ -623,7 +623,11 @@ export async function seedDefenseSolutions(env) {
       // Store full content in KV (so purchase handler can retrieve it)
       const kvKey = `defense:full:${sol.id}`;
       if (env.SECURITY_HUB_KV) {
-        await env.SECURITY_HUB_KV.put(kvKey, sol.full_content, { expirationTtl: 0 }); // no TTL = permanent
+        try {
+          await env.SECURITY_HUB_KV.put(kvKey, sol.full_content);  // no TTL = permanent
+        } catch (kvErr) {
+          errors.push({ id: sol.id, kvWarning: kvErr.message });  // non-fatal — D1 insert continues
+        }
       }
 
       // Insert into D1 — INSERT OR IGNORE for idempotency
