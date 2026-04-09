@@ -611,7 +611,7 @@ export default {
     if (path === '/api/version' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
         version:     env.VERSION || env.PLATFORM_VERSION || '11.0.0',
-        commit:      (env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id) || 'unknown',
+        commit:      env.COMMIT || (env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id) || 'unknown',
         timestamp:   new Date().toISOString(),
         environment: env.ENVIRONMENT || 'production',
         name:        env.APP_NAME    || 'CYBERDUDEBIVASH AI Security Hub',
@@ -874,6 +874,11 @@ export default {
     if (path === '/api/threat-intel/ingest' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleManualIngest(request, env, authCtx), request));
+    }
+
+    // GET /api/threat-intel/live — alias for /api/sentinel/feed (KV-backed live CVE feed)
+    if (path === '/api/threat-intel/live' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
     }
 
     // GET /api/threat-intel/:id — single advisory detail (after /stats and /stream)
