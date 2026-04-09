@@ -2373,14 +2373,14 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 </section>
 
 <!-- ─── Defense Solutions: Solution Preview Modal ─────────────────────────── -->
-<div id="ds-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+<div id="ds-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px" onclick="_modalBackdropClose(event)">
   <div style="max-width:760px;margin:40px auto;background:#0f0f23;border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:hidden">
     <div id="ds-modal-body" style="padding:32px"></div>
   </div>
 </div>
 
 <!-- ─── Custom Solution Request Modal ─────────────────────────────────────── -->
-<div id="custom-solution-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+<div id="custom-solution-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px" onclick="_modalBackdropClose(event)">
   <div style="background:#0f0f23;border:1px solid rgba(124,58,237,.4);border-radius:20px;padding:36px;max-width:540px;width:100%">
     <h3 style="font-size:20px;font-weight:800;margin:0 0 6px">🔧 Request Custom Defense Solution</h3>
     <p style="color:rgba(255,255,255,.5);font-size:13px;margin:0 0 24px">Our AI generates tailored security tools within 24 hours</p>
@@ -2651,12 +2651,26 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   };
 
   window.initiatePayment = async function(solutionId, title, priceInr) {
-    const email  = document.getElementById('pur-email')?.value;
-    const btn    = document.getElementById('pur-btn');
-    if (!email) { alert('Please enter your email'); return; }
-    if (btn) btn.textContent = 'Processing...';
+    const emailEl = document.getElementById('pur-email');
+    const email   = (emailEl?.value || '').trim();
+    const btn     = document.getElementById('pur-btn');
+    const modalBody = document.getElementById('ds-modal-body');
+
+    // Inline validation — no alert()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      if (emailEl) {
+        emailEl.style.borderColor = '#ef4444';
+        emailEl.placeholder = '⚠️ Valid email required';
+        emailEl.focus();
+      }
+      return;
+    }
+    if (emailEl) emailEl.style.borderColor = '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing...'; }
+
     try {
-      const r = await fetch(`/api/defense/purchase/${solutionId}`, {
+      await loadRazorpay();
+      const r = await safeFetch(`/api/defense/purchase/${solutionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(window._authToken ? { 'Authorization': `Bearer ${window._authToken}` } : {}) },
         body: JSON.stringify({ email, currency: 'INR' }),
@@ -2664,50 +2678,69 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
       const d = await r.json();
       if (!d.success) throw new Error(d.error || 'Order creation failed');
 
-      if (window.Razorpay && d.order?.razorpay_key) {
-        const rzp = new window.Razorpay({
-          key: d.order.razorpay_key,
-          order_id: d.order.order_id,
-          amount: d.order.amount,
-          currency: d.order.currency,
-          name: 'CYBERDUDEBIVASH AI',
-          description: title,
-          prefill: { email: d.order.prefill?.email || email },
-          theme: { color: '#00d4ff' },
-          handler: async (resp) => {
-            const vr = await fetch(`/api/defense/verify/${solutionId}`, {
+      const rzpKey = d.key_id || d.order?.key_id || d.order?.razorpay_key || CONFIG.RAZORPAY_KEY_ID;
+      const rzpOrderId = d.order_id || d.order?.order_id || d.order?.razorpay_order_id;
+      const rzpAmount  = d.amount  || d.order?.amount;
+
+      if (!rzpKey || !rzpOrderId) throw new Error('Payment configuration error. Please try again.');
+
+      const rzp = new window.Razorpay({
+        key: rzpKey,
+        order_id: rzpOrderId,
+        amount: rzpAmount,
+        currency: d.currency || d.order?.currency || 'INR',
+        name: 'CYBERDUDEBIVASH AI Security Hub',
+        description: title,
+        prefill: { email: d.order?.prefill?.email || email },
+        theme: { color: '#00d4ff' },
+        modal: { backdropclose: false },
+        handler: async (resp) => {
+          if (btn) btn.textContent = '⏳ Verifying...';
+          try {
+            const vr = await safeFetch(`/api/defense/verify/${solutionId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(resp),
             });
             const vd = await vr.json();
             if (vd.success) {
-              document.getElementById('ds-modal-body').innerHTML = `
+              if (modalBody) modalBody.innerHTML = `
                 <div style="text-align:center;padding:48px">
-                  <div style="font-size:48px;margin-bottom:16px">✅</div>
+                  <div style="font-size:52px;margin-bottom:16px">✅</div>
                   <h3 style="margin:0 0 8px;color:#22c55e">Payment Successful!</h3>
-                  <p style="color:rgba(255,255,255,.6);margin:0 0 24px">${title} has been sent to ${email}</p>
-                  <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:20px;font-family:monospace;font-size:11px;text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto">${(vd.full_content || '# Content delivery in progress...').slice(0, 800)}</div>
+                  <p style="color:rgba(255,255,255,.6);margin:0 0 8px">${title} delivered to <strong>${email}</strong></p>
+                  <p style="color:rgba(255,255,255,.4);font-size:12px;margin:0 0 20px">Check your inbox (including spam folder)</p>
+                  ${vd.full_content ? `<div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:16px;font-family:monospace;font-size:11px;text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto">${vd.full_content.slice(0, 800)}</div>` : ''}
                 </div>`;
-            }
-          },
-        });
-        rzp.open();
-      } else {
-        // Fallback: redirect to payment URL or show manual instructions
-        window.open(`https://razorpay.com`, '_blank');
-      }
+            } else throw new Error(vd.error || 'Verification failed');
+          } catch (verifyErr) {
+            if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
+            if (modalBody) modalBody.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5">
+              <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+              <div style="font-weight:700;margin-bottom:8px">Verification Failed</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:12px">${verifyErr.message}</div>
+              <a href="mailto:bivash@cyberdudebivash.com?subject=Defense%20Payment%20Issue&body=Payment%20ID%3A%20${resp.razorpay_payment_id}" style="color:var(--accent);font-size:12px">📧 Contact Support</a></div>`;
+          }
+        },
+      });
+      rzp.on('payment.failed', (err) => {
+        console.error('[Defense] Payment failed:', err?.error);
+        if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
+        if (modalBody) modalBody.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5">
+          <div style="font-size:36px;margin-bottom:12px">❌</div>
+          <div style="font-weight:700">Payment Failed</div>
+          <div style="font-size:13px;margin-top:8px;color:rgba(255,255,255,.5)">${err?.error?.description || 'Please try again.'}</div></div>`;
+      });
+      rzp.open();
+      if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
     } catch (err) {
       console.error('[Defense] Payment initiation failed:', err.message);
       if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
-      const modalBody = document.getElementById('ds-modal-body');
-      const errMsg = `<div style="text-align:center;padding:24px;color:#fca5a5">
+      if (modalBody) modalBody.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5">
         <div style="font-size:36px;margin-bottom:12px">⚠️</div>
-        <div style="font-weight:700;margin-bottom:8px">Payment Failed</div>
-        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">${err.message || 'Please try again or contact support.'}</div>
-        <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent);font-size:12px">Contact bivash@cyberdudebivash.com</a>
-      </div>`;
-      if (modalBody) { modalBody.innerHTML = errMsg; } else { alert('Payment failed: ' + err.message); }
+        <div style="font-weight:700;margin-bottom:8px">Payment Setup Failed</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">${err.message || 'Please try again.'}</div>
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent);font-size:12px">📧 Contact bivash@cyberdudebivash.com</a></div>`;
     }
   };
 
@@ -3193,7 +3226,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 </section>
 
 <!-- ─── Enterprise Booking Modal ───────────────────────────────────────────── -->
-<div id="enterprise-booking-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9990;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+<div id="enterprise-booking-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9990;align-items:center;justify-content:center;padding:20px" onclick="_modalBackdropClose(event)">
   <div style="background:#0f0f23;border:1px solid rgba(245,158,11,.35);border-radius:20px;padding:36px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto">
     <h3 id="ent-modal-title" style="font-size:18px;font-weight:800;margin:0 0 6px">Order Enterprise Package</h3>
     <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Secure checkout via Razorpay</p>
@@ -3212,7 +3245,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 </div>
 
 <!-- ─── MSSP Application Modal ─────────────────────────────────────────────── -->
-<div id="mssp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9989;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+<div id="mssp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9989;align-items:center;justify-content:center;padding:20px" onclick="_modalBackdropClose(event)">
   <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.35);border-radius:20px;padding:36px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto">
     <h3 style="font-size:18px;font-weight:800;margin:0 0 6px">🏷️ Apply as MSSP Partner</h3>
     <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Join our reseller program — start in 48 hours</p>
@@ -3315,42 +3348,64 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   };
 
   window.processEnterpriseOrder = async function() {
-    const email   = document.getElementById('ent-modal-email')?.value;
-    const company = document.getElementById('ent-modal-company')?.value;
-    const req     = document.getElementById('ent-modal-req')?.value;
+    const email   = (document.getElementById('ent-modal-email')?.value   || '').trim();
+    const company = (document.getElementById('ent-modal-company')?.value || '').trim();
+    const req     = (document.getElementById('ent-modal-req')?.value     || '').trim();
     const status  = document.getElementById('ent-modal-status');
     const btn     = document.getElementById('ent-modal-btn');
-    if (!email) { if(status) status.style.color='#ef4444', status.textContent='Email required'; return; }
-    if(btn) btn.textContent = 'Processing...';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      if (status) { status.style.color = '#ef4444'; status.textContent = 'Valid email required'; }
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing...'; }
+    if (status) { status.style.color = '#a78bfa'; status.textContent = 'Creating secure order...'; }
     try {
-      const r = await fetch('/api/enterprise/report', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+      await loadRazorpay();
+      const r = await safeFetch('/api/enterprise/report', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, company_name: company, package_id: currentPackageId, requirements: req }),
       });
       const d = await r.json();
-      if (d.success && d.order?.razorpay_key && window.Razorpay) {
-        const rzp = new window.Razorpay({
-          key: d.order.razorpay_key, order_id: d.order.razorpay_order_id,
-          amount: d.order.amount_inr * 100, currency: 'INR',
-          name: 'CYBERDUDEBIVASH AI', description: d.order.package?.name,
-          prefill: { email }, theme: { color: '#f59e0b' },
-          handler: async (resp) => {
-            const vr = await fetch('/api/enterprise/verify', {
-              method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ ...resp, enterprise_order_id: d.order.order_id }),
-            });
-            const vd = await vr.json();
-            if(status) status.style.color='#22c55e', status.textContent = vd.success ? '✅ Payment confirmed! Check your email.' : '❌ ' + vd.error;
-          },
-        });
-        rzp.open();
-      } else if (d.success) {
-        if(status) status.style.color='#22c55e', status.textContent='✅ Order received! We\'ll contact you within 4 hours.';
-      } else throw new Error(d.error);
-    } catch(e) {
-      if(status) status.style.color='#ef4444', status.textContent='Failed. Email bivash@cyberdudebivash.com';
+      if (d.success && window.Razorpay) {
+        const rzpKey     = d.key_id || d.order?.key_id || d.order?.razorpay_key || CONFIG.RAZORPAY_KEY_ID;
+        const rzpOrderId = d.order_id || d.order?.order_id || d.order?.razorpay_order_id;
+        const rzpAmount  = d.amount  || (d.order?.amount_inr ? d.order.amount_inr * 100 : d.order?.amount);
+        if (rzpKey && rzpOrderId) {
+          const rzp = new window.Razorpay({
+            key: rzpKey, order_id: rzpOrderId, amount: rzpAmount, currency: 'INR',
+            name: 'CYBERDUDEBIVASH AI Security Hub', description: d.order?.package?.name || 'Enterprise Package',
+            prefill: { email }, theme: { color: '#f59e0b' }, modal: { backdropclose: false },
+            handler: async (resp) => {
+              if (status) { status.style.color = '#a78bfa'; status.textContent = '⏳ Verifying payment...'; }
+              try {
+                const vr = await safeFetch('/api/enterprise/verify', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ...resp, enterprise_order_id: d.order?.order_id || d.order_id }),
+                });
+                const vd = await vr.json();
+                if (status) {
+                  status.style.color = vd.success ? '#22c55e' : '#ef4444';
+                  status.textContent = vd.success ? '✅ Payment confirmed! Check your email.' : '❌ ' + (vd.error || 'Verification failed');
+                }
+              } catch (verifyErr) {
+                if (status) { status.style.color = '#ef4444'; status.textContent = 'Verification error. Contact bivash@cyberdudebivash.com'; }
+              }
+            },
+          });
+          rzp.on('payment.failed', (err) => {
+            if (status) { status.style.color = '#ef4444'; status.textContent = `Payment failed: ${err?.error?.description || 'Please try again.'}`; }
+            if (btn) { btn.disabled = false; btn.textContent = '💳 Proceed to Payment'; }
+          });
+          rzp.open();
+        } else {
+          if (status) { status.style.color = '#22c55e'; status.textContent = '✅ Order received! We\'ll contact you within 4 hours.'; }
+        }
+      } else throw new Error(d.error || 'Order creation failed');
+    } catch (e) {
+      console.error('[Enterprise] Order failed:', e.message);
+      if (status) { status.style.color = '#ef4444'; status.textContent = `Failed: ${e.message}. Email bivash@cyberdudebivash.com`; }
     }
-    if(btn) btn.textContent = '💳 Proceed to Payment';
+    if (btn) { btn.disabled = false; btn.textContent = '💳 Proceed to Payment'; }
   };
 
   /* ── MSSP application ────────────────────────────────────────── */
@@ -3359,53 +3414,120 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
   };
 
   window.submitMSSPApplication = async function() {
-    const company = document.getElementById('mssp-company')?.value;
-    const email   = document.getElementById('mssp-email')?.value;
+    const company = (document.getElementById('mssp-company')?.value || '').trim();
+    const email   = (document.getElementById('mssp-email')?.value   || '').trim();
     const status  = document.getElementById('mssp-status');
-    if (!company || !email) { if(status) status.style.color='#ef4444', status.textContent='Company and email required'; return; }
-    if(status) status.style.color='#a78bfa', status.textContent='Submitting...';
+    const btn     = document.querySelector('#mssp-modal button[onclick*="submitMSSP"]') ||
+                    document.querySelector('#mssp-modal .mssp-submit-btn');
+    if (!company || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      if (status) { status.style.color = '#ef4444'; status.textContent = 'Valid company name and email are required'; }
+      return;
+    }
+    if (status) { status.style.color = '#a78bfa'; status.textContent = '⏳ Submitting application...'; }
+    if (btn) { btn.disabled = true; }
     try {
-      const r = await fetch('/api/global/mssp/apply', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+      const r = await safeFetch('/api/global/mssp/apply', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           company_name: company, email,
-          website: document.getElementById('mssp-website')?.value,
-          tier: document.getElementById('mssp-tier')?.value,
-          clients_count: document.getElementById('mssp-clients')?.value,
-          message: document.getElementById('mssp-message')?.value,
+          website:       (document.getElementById('mssp-website')?.value  || '').trim(),
+          tier:          document.getElementById('mssp-tier')?.value      || 'standard',
+          clients_count: document.getElementById('mssp-clients')?.value   || '',
+          message:       (document.getElementById('mssp-message')?.value  || '').trim(),
         }),
       });
       const d = await r.json();
-      if(d.success) {
-        if(status) status.style.color='#22c55e', status.textContent='✅ Application submitted! We\'ll respond within 24 hours.';
-        setTimeout(() => { document.getElementById('mssp-modal').style.display='none'; }, 2500);
-      } else throw new Error(d.error);
-    } catch(e) {
-      if(status) status.style.color='#ef4444', status.textContent='Failed. Email bivash@cyberdudebivash.com';
+      if (d.success) {
+        if (status) { status.style.color = '#22c55e'; status.textContent = '✅ Application submitted! We\'ll respond within 24 hours.'; }
+        setTimeout(() => { document.getElementById('mssp-modal').style.display = 'none'; }, 2500);
+      } else throw new Error(d.error || 'Submission failed');
+    } catch (e) {
+      console.error('[MSSP] Submit failed:', e.message);
+      if (status) { status.style.color = '#ef4444'; status.textContent = `Failed: ${e.message}. Email bivash@cyberdudebivash.com`; }
+      if (btn) btn.disabled = false;
     }
   };
 
   /* ── Compliance pack purchase ────────────────────────────────── */
   window.purchaseCompliancePack = async function(packId, packName, priceInr) {
-    const email = prompt(`Enter your email to purchase ${packName}:`);
-    if (!email) return;
-    try {
-      const r = await fetch('/api/global/compliance-packs/purchase', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ pack_id: packId, email, currency: currentCurrency }),
-      });
-      const d = await r.json();
-      if (d.success && d.order?.razorpay_key && window.Razorpay) {
+    // Show inline email capture modal instead of prompt()
+    const existing = document.getElementById('compliance-pay-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'compliance-pay-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = `
+      <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.35);border-radius:16px;padding:32px;max-width:420px;width:100%;text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">🔒</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:6px">${packName}</div>
+        <div style="font-size:22px;font-weight:900;color:var(--accent);margin-bottom:16px">₹${priceInr?.toLocaleString?.() || priceInr}</div>
+        <input id="cpay-email" type="email" placeholder="your@business.com" autocomplete="email"
+          style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:8px">
+        <div id="cpay-err" style="font-size:12px;color:#fca5a5;min-height:16px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:10px">
+          <button id="cpay-btn" style="flex:1;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:12px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer">
+            🔐 Pay Securely
+          </button>
+          <button onclick="document.getElementById('compliance-pay-modal')?.remove()"
+            style="background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);padding:12px 16px;border-radius:8px;cursor:pointer;font-size:13px">Cancel</button>
+        </div>
+        <div id="cpay-status" style="margin-top:12px;font-size:13px;min-height:18px"></div>
+        <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.3)">🔒 Secured by Razorpay · Instant delivery</div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const btn    = document.getElementById('cpay-btn');
+    const errEl  = document.getElementById('cpay-err');
+    const statEl = document.getElementById('cpay-status');
+
+    btn.onclick = async () => {
+      const email = (document.getElementById('cpay-email')?.value || '').trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        errEl.textContent = 'Valid email required';
+        document.getElementById('cpay-email')?.focus();
+        return;
+      }
+      errEl.textContent = '';
+      btn.disabled = true; btn.textContent = '⏳ Creating order...';
+      try {
+        await loadRazorpay();
+        const r = await safeFetch('/api/global/compliance-packs/purchase', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pack_id: packId, email, currency: currentCurrency || 'INR' }),
+        });
+        const d = await r.json();
+        if (!r.ok || !d.success) throw new Error(d.error || 'Order creation failed');
+
+        const rzpKey = d.key_id || d.order?.key_id || d.order?.razorpay_key || CONFIG.RAZORPAY_KEY_ID;
+        const rzpOrderId = d.order_id || d.order?.order_id || d.order?.razorpay_order_id;
+        if (!rzpKey || !rzpOrderId) throw new Error('Payment configuration missing. Try again.');
+
         const rzp = new window.Razorpay({
-          key: d.order.razorpay_key, order_id: d.order.razorpay_order_id,
-          amount: d.order.amount, currency: d.order.currency,
-          name: 'CYBERDUDEBIVASH AI', description: packName,
+          key: rzpKey, order_id: rzpOrderId,
+          amount: d.amount || d.order?.amount,
+          currency: d.currency || d.order?.currency || 'INR',
+          name: 'CYBERDUDEBIVASH AI Security Hub', description: packName,
           prefill: { email }, theme: { color: '#00d4ff' },
-          handler: () => alert(`✅ ${packName} purchased! Check your email for delivery.`),
+          modal: { backdropclose: false },
+          handler: (resp) => {
+            statEl.style.color = '#22c55e';
+            statEl.textContent = `✅ ${packName} purchased! Delivery sent to ${email}`;
+            btn.textContent = '✅ Purchased';
+            setTimeout(() => modal.remove(), 4000);
+          },
+        });
+        rzp.on('payment.failed', (err) => {
+          errEl.textContent = `Payment failed: ${err?.error?.description || 'Please try again.'}`;
+          btn.disabled = false; btn.textContent = '🔐 Pay Securely';
         });
         rzp.open();
-      } else alert('Order failed. Please email bivash@cyberdudebivash.com');
-    } catch { alert('Purchase failed. Email bivash@cyberdudebivash.com'); }
+        btn.disabled = false; btn.textContent = '🔐 Pay Securely';
+      } catch (e) {
+        console.error('[Compliance] Purchase failed:', e.message);
+        errEl.textContent = e.message || 'Purchase failed. Please try again.';
+        btn.disabled = false; btn.textContent = '🔐 Pay Securely';
+      }
+    };
   };
 
   /* ── Enterprise form submit (existing submitEnterprise override) ─ */
@@ -4203,7 +4325,7 @@ async function loadThreatIntel(filter = {}) {
       <div style="font-size:36px;margin-bottom:12px">🔄</div>
       <div style="font-weight:700;margin-bottom:6px">Loading threat intelligence...</div>
       <div style="font-size:13px">Seeding database from NIST NVD and CISA KEV. Please wait 10 seconds and refresh.</div>
-      <button onclick="setTimeout(loadThreatIntel, 5000)" style="margin-top:16px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:600">Auto-Refresh in 5s</button>
+      <button onclick="this.disabled=true;this.textContent='⏳ Refreshing...';setTimeout(loadThreatIntel,5000)" style="margin-top:16px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:600">Auto-Refresh in 5s</button>
     </div>`;
   }
 
@@ -4383,7 +4505,17 @@ async function loadReportHistory() {
 }
 
 async function generateReportFor(scanId, module, target) {
-  if (!scanId) { alert('No scan ID available. Run a scan first.'); return; }
+  if (!scanId) {
+    const panel = document.getElementById('reports-panel');
+    if (panel) {
+      const note = document.createElement('div');
+      note.style.cssText = 'background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px 14px;font-size:13px;color:#fca5a5;margin-top:8px';
+      note.textContent = '⚠️ No scan ID available. Run a scan first.';
+      panel.prepend(note);
+      setTimeout(() => note.remove(), 4000);
+    }
+    return;
+  }
   const panel = document.getElementById('reports-panel');
   const el    = document.createElement('div');
   el.style.cssText = 'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:14px;margin-top:10px;font-size:13px;color:var(--text-muted)';
@@ -5024,7 +5156,7 @@ function _injectDownloadButton(module, target, token, downloadUrl) {
                 display:inline-flex;align-items:center;gap:6px;white-space:nowrap">
         📥 Download Report
       </a>
-      <button onclick="navigator.clipboard?.writeText('${url}').then(()=>alert('Link copied!'))"
+      <button onclick="navigator.clipboard?.writeText('${url}').then(()=>{const t=document.createElement('div');t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22c55e;color:#000;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.3)';t.textContent='✅ Link copied!';document.body.appendChild(t);setTimeout(()=>t.remove(),2500)})"
               style="background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text-muted);
                      padding:10px 16px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap">
         🔗 Copy Link
@@ -5494,7 +5626,7 @@ async function proceedSubPayment(planKey) {
 
     // Open Razorpay checkout
     const options = {
-      key:         CONFIG.RAZORPAY_KEY_ID || orderData.key_id || '',
+      key:         orderData.key_id || CONFIG.RAZORPAY_KEY_ID || '',
       amount:      orderData.amount,
       currency:    'INR',
       name:        'CYBERDUDEBIVASH AI Security Hub',
@@ -7092,42 +7224,102 @@ async function createMonitorModal() {
   const target = _v8Target || '';
   const jwt    = sessionStorage.getItem('cbd_jwt');
 
-  if (!jwt) {
-    alert('Please sign in to create monitoring configs.');
-    return;
-  }
-  if (!target) {
-    alert('Run a scan first to set the target for monitoring.');
-    return;
-  }
+  // Remove any existing monitor modal
+  document.getElementById('_monitor-modal')?.remove();
 
-  const name = prompt(`Monitor name for "${target}"?`, `${module.toUpperCase()} — ${target}`);
-  if (!name) return;
+  const overlay = document.createElement('div');
+  overlay.id = '_monitor-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-  const schedule = prompt('Schedule? (hourly / daily / weekly / monthly)', 'daily');
-  if (!['hourly','daily','weekly','monthly'].includes(schedule)) {
-    alert('Invalid schedule. Use: hourly, daily, weekly, or monthly');
-    return;
-  }
+  // Auth / pre-condition checks shown inline
+  const needsAuth  = !jwt;
+  const needsScan  = !target;
+  const defaultName = `${module.toUpperCase()} — ${target || 'target'}`;
 
-  const targetPayload = buildTargetPayload(module, target);
+  overlay.innerHTML = needsAuth ? `
+    <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.3);border-radius:16px;padding:32px;max-width:400px;width:100%;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🔒</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">Sign In Required</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">Please sign in to create monitoring configurations.</div>
+      <button onclick="document.getElementById('_monitor-modal')?.remove()"
+        style="background:var(--accent);border:none;color:#000;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer">OK</button>
+    </div>` : needsScan ? `
+    <div style="background:#0f0f23;border:1px solid rgba(245,158,11,.3);border-radius:16px;padding:32px;max-width:400px;width:100%;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🔍</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">Run a Scan First</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">A scan target is required before creating a monitor. Run any scan to set the target.</div>
+      <button onclick="document.getElementById('_monitor-modal')?.remove()"
+        style="background:#f59e0b;border:none;color:#000;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer">Got it</button>
+    </div>` : `
+    <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.3);border-radius:16px;padding:32px;max-width:440px;width:100%">
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px">📡 Create Monitor</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:20px">Auto-scan <strong style="color:var(--accent)">${target}</strong> on schedule</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.5);display:block;margin-bottom:4px">Monitor Name</label>
+          <input id="_mon-name" type="text" value="${defaultName}"
+            style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.5);display:block;margin-bottom:4px">Schedule</label>
+          <select id="_mon-schedule" style="width:100%;background:#1a1a30;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
+            <option value="hourly">⚡ Hourly</option>
+            <option value="daily" selected>📅 Daily</option>
+            <option value="weekly">📆 Weekly</option>
+            <option value="monthly">🗓️ Monthly</option>
+          </select>
+        </div>
+        <div id="_mon-err" style="font-size:12px;color:#fca5a5;min-height:16px"></div>
+        <div style="display:flex;gap:10px">
+          <button id="_mon-btn" style="flex:1;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:11px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer">
+            📡 Create Monitor
+          </button>
+          <button onclick="document.getElementById('_monitor-modal')?.remove()"
+            style="background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);padding:11px 16px;border-radius:8px;cursor:pointer;font-size:13px">Cancel</button>
+        </div>
+      </div>
+    </div>`;
 
-  try {
-    const resp = await safeFetch('/api/monitors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
-      body: JSON.stringify({ name, module, target_json: targetPayload, schedule }),
-    });
-    const data = await resp.json();
-    if (data.success) {
-      alert(`✅ Monitor created! Next run: ${new Date(data.next_run_at).toLocaleString('en-IN')}`);
-      renderMonitoringDashboard();
-    } else {
-      alert(`Error: ${data.error || 'Failed to create monitor'}`);
+  document.body.appendChild(overlay);
+  if (needsAuth || needsScan) return;
+
+  document.getElementById('_mon-btn').onclick = async () => {
+    const name     = (document.getElementById('_mon-name')?.value || '').trim();
+    const schedule = document.getElementById('_mon-schedule')?.value || 'daily';
+    const errEl    = document.getElementById('_mon-err');
+    const btn      = document.getElementById('_mon-btn');
+    if (!name) { errEl.textContent = 'Monitor name is required'; return; }
+    errEl.textContent = '';
+    btn.disabled = true; btn.textContent = '⏳ Creating...';
+    try {
+      const targetPayload = buildTargetPayload(module, target);
+      const resp = await safeFetch('/api/monitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+        body: JSON.stringify({ name, module, target_json: targetPayload, schedule }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        overlay.innerHTML = `<div style="background:#0f0f23;border:1px solid rgba(34,197,94,.3);border-radius:16px;padding:32px;max-width:400px;width:100%;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">✅</div>
+          <div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:8px">Monitor Created!</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:4px">${name}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.35);margin-bottom:20px">Next run: ${data.next_run_at ? new Date(data.next_run_at).toLocaleString('en-IN') : 'Scheduled'}</div>
+          <button onclick="document.getElementById('_monitor-modal')?.remove()"
+            style="background:#22c55e;border:none;color:#000;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer">Done</button>
+        </div>`;
+        renderMonitoringDashboard();
+      } else {
+        errEl.textContent = data.error || 'Failed to create monitor';
+        btn.disabled = false; btn.textContent = '📡 Create Monitor';
+      }
+    } catch (e) {
+      console.error('[Monitor] Create failed:', e.message);
+      errEl.textContent = `Network error: ${e.message}`;
+      btn.disabled = false; btn.textContent = '📡 Create Monitor';
     }
-  } catch (e) {
-    alert(`Network error: ${e.message}`);
-  }
+  };
 }
 
 function buildTargetPayload(module, target) {
@@ -7711,7 +7903,11 @@ async function renderIntelDashboardWidget() {
   `;
 }
 
-// ─── Init V10.0 on page load ─────────────────────────────────────────────────
+// ─── Modal backdrop close helper — used by modal overlay onclick ─────────────
+function _modalBackdropClose(event) {
+  if (event.target === event.currentTarget) event.currentTarget.style.display = 'none';
+}
+
 // _loadConfig: fetches /api/config to populate CONFIG.RAZORPAY_KEY_ID reliably.
 // Runs once, caches in sessionStorage (5min TTL), non-blocking.
 async function _loadConfig() {
