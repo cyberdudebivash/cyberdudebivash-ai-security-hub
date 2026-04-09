@@ -2698,8 +2698,16 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
         window.open(`https://razorpay.com`, '_blank');
       }
     } catch (err) {
-      if (btn) btn.textContent = '💳 Pay Securely via Razorpay';
-      alert('Payment initiation failed. Please try again or contact bivash@cyberdudebivash.com');
+      console.error('[Defense] Payment initiation failed:', err.message);
+      if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
+      const modalBody = document.getElementById('ds-modal-body');
+      const errMsg = `<div style="text-align:center;padding:24px;color:#fca5a5">
+        <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+        <div style="font-weight:700;margin-bottom:8px">Payment Failed</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">${err.message || 'Please try again or contact support.'}</div>
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent);font-size:12px">Contact bivash@cyberdudebivash.com</a>
+      </div>`;
+      if (modalBody) { modalBody.innerHTML = errMsg; } else { alert('Payment failed: ' + err.message); }
     }
   };
 
@@ -3402,36 +3410,63 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
 
   /* ── Enterprise form submit (existing submitEnterprise override) ─ */
   window.submitEnterpriseV10 = async function() {
-    const company = document.getElementById('entCompany')?.value;
-    const email   = document.getElementById('entEmail')?.value;
-    const req     = document.getElementById('entReq')?.value;
+    const company = (document.getElementById('entCompany')?.value || '').trim();
+    const email   = (document.getElementById('entEmail')?.value   || '').trim();
+    const req     = (document.getElementById('entReq')?.value     || '').trim();
     const alertEl = document.getElementById('alert-enterprise');
     const btn     = document.getElementById('btn-enterprise');
-    if (!company || company.length < 2) { if(alertEl) alertEl.className='alert alert-error', alertEl.textContent='Company name required'; return; }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { if(alertEl) alertEl.className='alert alert-error', alertEl.textContent='Valid business email required'; return; }
-    if (!req || req.length < 10) { if(alertEl) alertEl.className='alert alert-error', alertEl.textContent='Please describe your requirements'; return; }
-    if(btn) btn.textContent = 'Sending...';
+
+    // ── Client-side validation ─────────────────────────────────────────────
+    const _err = (msg) => {
+      if (alertEl) { alertEl.className = 'alert alert-error'; alertEl.textContent = msg; alertEl.style.display = 'block'; }
+    };
+    if (!company || company.length < 2)                           return _err('Company name is required');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return _err('Valid business email is required');
+    if (!req || req.length < 10)                                  return _err('Please describe your requirements (min 10 chars)');
+
+    // ── Loading state ──────────────────────────────────────────────────────
+    if (alertEl) alertEl.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Sending inquiry...'; }
+
     try {
-      const r = await fetch('/api/enterprise/book', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+      const r = await safeFetch('/api/enterprise/book', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          company_name: company, email,
-          contact_name: document.getElementById('entContact')?.value,
-          domain: document.getElementById('entDomain')?.value,
-          package_interest: document.getElementById('entPackage')?.value,
-          urgency: document.getElementById('entUrgency')?.value,
-          requirements: req,
+          company_name:     company,
+          email,
+          contact_name:     (document.getElementById('entContact')?.value  || '').trim(),
+          domain:           (document.getElementById('entDomain')?.value   || '').trim(),
+          package_interest: document.getElementById('entPackage')?.value   || 'enterprise',
+          urgency:          document.getElementById('entUrgency')?.value   || 'normal',
+          requirements:     req,
         }),
       });
-      const d = await r.json();
-      if (d.success) {
-        if(alertEl) alertEl.className='alert alert-success', alertEl.textContent=`✅ Request received! Booking ID: ${d.booking_id?.slice(0,8).toUpperCase()}. We'll respond within 4 hours.`;
-        ['entCompany','entContact','entEmail','entDomain','entReq'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-      } else throw new Error(d.error);
-    } catch(e) {
-      if(alertEl) alertEl.className='alert alert-error', alertEl.textContent=`Failed: ${e.message}. Email bivash@cyberdudebivash.com`;
+
+      let d;
+      try { d = await r.json(); } catch { throw new Error('Server returned an invalid response. Please try again.'); }
+
+      if (!r.ok || !d.success) throw new Error(d.error || `Server error (HTTP ${r.status})`);
+
+      // ── Success ────────────────────────────────────────────────────────
+      if (alertEl) {
+        alertEl.className = 'alert alert-success';
+        const ref = d.booking_id ? d.booking_id.slice(0, 8).toUpperCase() : '';
+        alertEl.innerHTML = `✅ Inquiry received! ${ref ? `Reference: <strong>${ref}</strong>. ` : ''}Our team will respond within 4 business hours.`;
+        alertEl.style.display = 'block';
+      }
+      // Clear form fields
+      ['entCompany','entContact','entEmail','entDomain','entReq'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      if (btn) { btn.disabled = true; btn.textContent = '✅ Inquiry Sent'; }
+
+    } catch (e) {
+      console.error('[Enterprise] Booking failed:', e.message);
+      _err(`Failed: ${e.message} — or email bivash@cyberdudebivash.com directly.`);
+      if (btn) { btn.disabled = false; btn.textContent = '📨 Send Enterprise Inquiry'; }
     }
-    if(btn) btn.textContent = '📨 Send Enterprise Inquiry';
   };
 
   // Fetch global pricing on load to auto-detect currency
@@ -3655,7 +3690,7 @@ const CONFIG = {
   CONTACT_EMAIL:   'bivash@cyberdudebivash.com',
   PLATFORM_NAME:   'CYBERDUDEBIVASH AI Security Hub',
   VERSION:         '8.1.0',     // default; immediately overridden by initVersion() from version.json
-  RAZORPAY_KEY_ID: '',          // injected at runtime from order API response
+  RAZORPAY_KEY_ID: '',          // populated by _loadConfig() on page init — DO NOT set manually
   ADSENSE_CLIENT:  'ca-pub-8343951291888650',  // ← Replace with your AdSense publisher ID
 };
 
@@ -5164,27 +5199,25 @@ async function verifyAndDownload(module, target, paymentPayload) {
 
   // ── Handle verification failure ────────────────────────────────────────────
   if (!verifyData) {
-    closePaymentOverlay();
+    // Show the payment overlay in error state (primary feedback — always visible)
+    showPaymentOverlay('error', {
+      message:   verifyErr || 'Could not verify payment with server.',
+      paymentId: paymentPayload.razorpay_payment_id || null,
+    });
+
+    // Also inject an inline error inside the scan results panel for context
     const panel = document.getElementById(`results-${module}`);
     if (panel) {
+      document.getElementById(`pay-verify-err-${module}`)?.remove();
       const errDiv = document.createElement('div');
       errDiv.id = `pay-verify-err-${module}`;
       errDiv.style.cssText = 'margin-top:12px;padding:14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;font-size:13px;color:#fca5a5';
-      errDiv.innerHTML = `
-        <div style="font-weight:700;margin-bottom:4px">⚠️ Payment Verification Failed</div>
-        <div style="font-size:12px;color:var(--text-dim)">
-          ${verifyErr || 'Unknown error'}
-        </div>
-        <div style="font-size:11px;margin-top:8px;color:var(--text-dim)">
-          If payment was deducted, contact
-          <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a>
-          with your payment ID: <code>${paymentPayload.razorpay_payment_id || 'unknown'}</code>
-        </div>`;
-      // Remove any previous error div
-      document.getElementById(`pay-verify-err-${module}`)?.remove();
+      errDiv.innerHTML = `<div style="font-weight:700;margin-bottom:4px">⚠️ Payment Verification Failed</div>
+        <div style="font-size:12px;color:var(--text-dim)">${verifyErr || 'Unknown error'}</div>
+        <div style="font-size:11px;margin-top:8px;color:var(--text-dim)">Payment ID: <code>${paymentPayload.razorpay_payment_id || 'unknown'}</code></div>`;
       panel.appendChild(errDiv);
     }
-    console.error('[Payment] Verification failed:', verifyErr);
+    console.error('[Payment] Verification failed:', verifyErr, 'payment_id:', paymentPayload.razorpay_payment_id);
     return; // HARD STOP — no unlock
   }
 
@@ -5483,7 +5516,8 @@ async function proceedSubPayment(planKey) {
       if (btn) { btn.disabled = false; btn.textContent = `🔐 Pay ${plan.price} securely`; }
     });
     rzp.open();
-    if (btn) { btn.disabled = false; btn.textContent = `🔐 Pay ${plan.price} securely`; }
+    // NOTE: do NOT re-enable button here — Razorpay modal is still open.
+    // Button is re-enabled only on payment.failed or on catch below.
 
   } catch (e) {
     if (errEl) { errEl.textContent = e.message || 'Payment setup failed. Please try again.'; errEl.style.display = 'block'; }
@@ -5540,8 +5574,24 @@ async function activateSubscription(planKey, rzpResponse, email) {
     }, 200);
 
   } catch (e) {
+    console.error('[Subscription] Activation failed:', e.message, 'order:', rzpResponse.razorpay_order_id);
     if (modal) {
-      modal.innerHTML += `<div style="margin-top:16px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:12px;color:#ef4444;text-align:center">Activation failed: ${e.message}<br><small>Please contact support with your payment ID: ${rzpResponse.razorpay_payment_id}</small></div>`;
+      modal.innerHTML = `
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:44px;margin-bottom:12px">❌</div>
+          <div style="font-size:18px;font-weight:800;color:#ef4444;margin-bottom:10px">Activation Failed</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">${e.message || 'Could not activate plan. Payment may have been captured — contact support.'}</div>
+          <div style="font-size:11px;color:var(--text-dim);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-family:monospace;text-align:left">
+            Payment ID: ${rzpResponse.razorpay_payment_id || 'unknown'}<br>
+            Order ID: ${rzpResponse.razorpay_order_id || 'unknown'}
+          </div>
+          <a href="mailto:bivash@cyberdudebivash.com?subject=Subscription%20Activation%20Issue&body=Payment%20ID%3A%20${rzpResponse.razorpay_payment_id}%0AOrder%20ID%3A%20${rzpResponse.razorpay_order_id}"
+             style="display:inline-block;background:var(--accent);color:#000;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:10px">
+            📧 Contact Support
+          </a>
+          <br>
+          <button onclick="closeSubModal()" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;margin-top:8px">Close</button>
+        </div>`;
     }
   }
 }
@@ -5588,6 +5638,22 @@ function showPaymentOverlay(state, data = {}) {
         Link valid 30 days · Open in browser → File → Print → Save as PDF
       </div>
       <button onclick="closePaymentOverlay()" style="margin-top:16px;background:none;border:1px solid var(--border);color:var(--text-muted);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px">Close</button>
+    </div>`;
+  } else if (state === 'error') {
+    el.innerHTML = `<div class="pay-card">
+      <div style="font-size:44px;margin-bottom:12px">❌</div>
+      <div style="font-size:18px;font-weight:800;color:#ef4444;margin-bottom:8px">Payment Verification Failed</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${data.message || 'Could not verify payment with server.'}</div>
+      ${data.paymentId ? `<div style="font-size:11px;color:var(--text-dim);background:rgba(239,68,68,.08);padding:8px 12px;border-radius:6px;margin-bottom:16px;font-family:monospace">Payment ID: ${data.paymentId}</div>` : ''}
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">
+        If your amount was deducted, contact
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a>
+        with the Payment ID above.
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        ${data.retryFn ? `<button onclick="${data.retryFn}" style="background:var(--accent);border:none;color:#000;padding:10px 22px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">↩ Retry Payment</button>` : ''}
+        <button onclick="closePaymentOverlay()" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:10px 22px;border-radius:8px;cursor:pointer;font-size:13px">Close</button>
+      </div>
     </div>`;
   }
   el.style.display = 'flex';
@@ -7646,6 +7712,31 @@ async function renderIntelDashboardWidget() {
 }
 
 // ─── Init V10.0 on page load ─────────────────────────────────────────────────
+// _loadConfig: fetches /api/config to populate CONFIG.RAZORPAY_KEY_ID reliably.
+// Runs once, caches in sessionStorage (5min TTL), non-blocking.
+async function _loadConfig() {
+  try {
+    const CACHE_KEY = '_cbd_cfg', CACHE_TTL = 300000;
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const c = JSON.parse(cached);
+        if (c._ts && Date.now() - c._ts < CACHE_TTL) {
+          if (c.razorpay_key_id) CONFIG.RAZORPAY_KEY_ID = c.razorpay_key_id;
+          return;
+        }
+      } catch {}
+    }
+    const r = await fetch(`${CONFIG.API_BASE}/api/config`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.razorpay_key_id) {
+      CONFIG.RAZORPAY_KEY_ID = d.razorpay_key_id;
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...d, _ts: Date.now() }));
+    }
+  } catch {}
+}
+_loadConfig(); // fire non-blocking — CONFIG.RAZORPAY_KEY_ID will be ready before any payment click
 initVersion();
 
 // Load subscription plan state (non-blocking, shows badge + usage bar if active)
