@@ -109,7 +109,10 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       notes:   { module, target, scan_id: scan_id || '', platform: 'cyberdudebivash' },
     });
   } catch (err) {
-    console.error('[Payments] Order creation failed:', err.message);
+    console.error('[Payments] Order creation failed:', err.message, 'module:', module, 'target:', target);
+    // Non-blocking: log failure event to analytics
+    trackEvent(env, 'payment_order_failed', module, authCtx?.user_id || null,
+      request.headers?.get?.('CF-Connecting-IP'), { error: err.message, target }).catch(() => {});
     return Response.json({
       error:   'Payment gateway error. Please try again.',
       details: err.message,

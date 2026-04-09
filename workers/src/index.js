@@ -583,6 +583,28 @@ export default {
     if (path === '/api/health' && method === 'GET') {
       return withSecurityHeaders(withCors(await healthResponseAsync(env), request));
     }
+
+    // ── /api/config — public frontend config (Razorpay key, feature flags) ──
+    // Safe: only exposes publishable key (KEY_ID), never KEY_SECRET.
+    // Cached on Cloudflare edge (Cache-Control: public, max-age=300).
+    if (path === '/api/config' && method === 'GET') {
+      return withSecurityHeaders(withCors(Response.json({
+        razorpay_key_id:  env.RAZORPAY_KEY_ID  || '',
+        razorpay_mode:    (env.RAZORPAY_KEY_ID  || '').startsWith('rzp_live') ? 'live' : 'test',
+        platform:         env.APP_NAME         || 'CYBERDUDEBIVASH AI Security Hub',
+        version:          env.VERSION           || '11.0.0',
+        contact_email:    env.CONTACT           || 'bivash@cyberdudebivash.com',
+        features: {
+          subscriptions: true,
+          per_report_payments: true,
+          enterprise_booking: true,
+          gumroad: true,
+        },
+      }, {
+        headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=60' },
+      }), request));
+    }
+
     if (path === '/api/intelligence/summary' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleIntelligenceSummary(env), request));
     }
