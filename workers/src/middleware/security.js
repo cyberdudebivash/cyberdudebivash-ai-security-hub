@@ -39,8 +39,8 @@ const SECURITY_HEADERS = {
 };
 
 const POWERED_BY_HEADERS = {
-  'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v9.0',
-  'X-API-Version':   '9.0.0',
+  'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v11.0',
+  'X-API-Version':   '11.0.0',
   'X-Security-Hub':  'cyberdudebivash.in',
   'X-Zero-Trust':    'enforced',
 };
@@ -230,9 +230,11 @@ export async function logSuspicious(env, request, reason) {
     const cur  = parseInt(await env.SECURITY_HUB_KV.get(key) || '0', 10);
     const next = cur + 1;
     await env.SECURITY_HUB_KV.put(key, String(next), { expirationTtl: 86400 });
-    // Auto-ban after 5 suspicious hits (tightened from 10)
-    if (next >= 5) {
-      await env.SECURITY_HUB_KV.put(`abuse:ip:${ip}`, reason, { expirationTtl: 86400 * 3 });
+    // Auto-ban after 20 suspicious hits in a day (raised from 5 to reduce false-positive bans
+    // on legitimate API users/developers running test scripts).
+    // Ban TTL: 1 hour (reduced from 3 days — shorter TTL prevents permanent lockouts).
+    if (next >= 20) {
+      await env.SECURITY_HUB_KV.put(`abuse:ip:${ip}`, reason, { expirationTtl: 3600 });
     }
   } catch {}
 }

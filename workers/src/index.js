@@ -321,7 +321,7 @@ async function healthResponseAsync(env) {
   return Response.json({
     status,
     service:   'CYBERDUDEBIVASH AI Security Hub',
-    version:   '10.0.0',
+    version:   env.VERSION || env.PLATFORM_VERSION || '11.0.0',
     company:   'CyberDudeBivash Pvt. Ltd.',
     website:   'https://cyberdudebivash.in',
     tools:     'https://tools.cyberdudebivash.com',
@@ -610,7 +610,7 @@ export default {
     }
     if (path === '/api/version' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
-        version:     '9.0.0',
+        version:     env.VERSION || env.PLATFORM_VERSION || '11.0.0',
         commit:      (env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id) || 'unknown',
         timestamp:   new Date().toISOString(),
         environment: env.ENVIRONMENT || 'production',
