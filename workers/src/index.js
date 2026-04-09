@@ -290,7 +290,7 @@ async function healthResponseAsync(env) {
     // Sentinel check — cached value only (no external call)
     (async () => {
       if (!env?.SECURITY_HUB_KV) return { ok: false, reason: 'kv_unavailable' };
-      const cached = await env.SECURITY_HUB_KV.get('sentinel:feed:cache');
+      const cached = await env.SECURITY_HUB_KV.get('sentinel:apex:feed:v1');
       return { ok: !!cached, cached: !!cached };
     })(),
   ]);
@@ -1721,6 +1721,65 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env);
       if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleGenerateSolutions(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
+    }
+
+    // ═══ ROUTE ALIASES: fix 404s hit by the frontend ══════════════════════════
+    // GET /api/threat-intel/live  → alias → /api/sentinel/feed
+    if (path === '/api/threat-intel/live' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
+    }
+
+    // GET /api/defense/list  → alias → /api/defense/solutions
+    if (path === '/api/defense/list' && method === 'GET') {
+      const { handleGetSolutions } = await import('./handlers/defenseMarketplace.js');
+      return withSecurityHeaders(withCors(await handleGetSolutions(request, env, {}), request));
+    }
+
+    // GET /api/analytics/dashboard  → live platform metrics from D1
+    if (path === '/api/analytics/dashboard' && method === 'GET') {
+      try {
+        const [scansRow, revenueRow, defenseRow, usersRow, threatRow] = await Promise.all([
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN created_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today FROM scan_history`).first().catch(()=>null),
+          env.DB?.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid'`).first().catch(()=>null),
+          env.DB?.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as rev FROM payments WHERE status='paid' AND module LIKE 'defense%'`).first().catch(()=>null),
+          env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first().catch(()=>null),
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical FROM threat_intel WHERE is_active=1`).first().catch(()=>null),
+        ]);
+        return withSecurityHeaders(withCors(Response.json({
+          success: true,
+          scans:        { total: scansRow?.total||0, today: scansRow?.today||0 },
+          revenue:      { total_inr: revenueRow?.total||0, defense_inr: defenseRow?.rev||0 },
+          defense:      { products: defenseRow?.cnt||0 },
+          users:        { total: usersRow?.total||0 },
+          threat_intel: { total: threatRow?.total||0, critical: threatRow?.critical||0 },
+          timestamp:    new Date().toISOString(),
+        }), request));
+      } catch(e) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // POST /api/admin/bootstrap  — seed threat intel + defense marketplace
+    if (path === '/api/admin/bootstrap' && method === 'POST') {
+      // Simple token auth — pass Authorization: Bearer bootstrap-cyberdude-2026
+      const authHeader = request.headers.get('Authorization') || '';
+      if (!authHeader.includes('bootstrap-cyberdude-2026')) {
+        return withSecurityHeaders(withCors(Response.json({ error: 'Unauthorized' }, { status: 401 }), request));
+      }
+      const results = { threat_intel: null, defense: null };
+      // 1. Seed threat intel D1
+      try {
+        const ir = await runIngestion(env);
+        results.threat_intel = { inserted: ir.inserted, total: ir.total, sources: ir.sources };
+      } catch(e) { results.threat_intel = { error: e.message }; }
+      // 2. Seed defense solutions D1
+      try {
+        const { seedDefenseSolutions } = await import('./handlers/defenseSeed.js');
+        results.defense = await seedDefenseSolutions(env);
+      } catch(e) { results.defense = { error: e.message }; }
+      return withSecurityHeaders(withCors(Response.json({
+        success: true, bootstrap: results, timestamp: new Date().toISOString(),
+      }), request));
     }
 
     // POST /api/defense/custom-request — submit custom solution request (public)

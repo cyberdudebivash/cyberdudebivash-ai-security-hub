@@ -3549,6 +3549,7 @@ body.alert-mode-high .soc-statusbar{border-bottom-color:rgba(245,158,11,.6)}
     // ── Loading state ──────────────────────────────────────────────────────
     if (alertEl) alertEl.style.display = 'none';
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Sending inquiry...'; }
+    CDB_TRACK.enterpriseSubmit();
 
     try {
       const r = await safeFetch('/api/enterprise/book', {
@@ -3814,6 +3815,261 @@ const CONFIG = {
   VERSION:         '8.1.0',     // default; immediately overridden by initVersion() from version.json
   RAZORPAY_KEY_ID: '',          // populated by _loadConfig() on page init — DO NOT set manually
   ADSENSE_CLIENT:  'ca-pub-8343951291888650',  // ← Replace with your AdSense publisher ID
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCALE ENGINE v1.0 — Toast System, Conversion Tracking, Payment Recovery,
+//                     Share/Viral Loop, Growth Analytics
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─── Toast / Notification System ─────────────────────────────────────────────
+const TOAST = {
+  _container: null,
+  _get() {
+    if (!this._container) {
+      this._container = document.createElement('div');
+      this._container.id = '_toast-container';
+      this._container.style.cssText = [
+        'position:fixed', 'bottom:24px', 'right:24px', 'z-index:99999',
+        'display:flex', 'flex-direction:column', 'gap:10px',
+        'max-width:360px', 'pointer-events:none',
+      ].join(';');
+      document.body.appendChild(this._container);
+    }
+    return this._container;
+  },
+  show(message, type = 'info', duration = 4000) {
+    const colors = {
+      success: { bg: '#22c55e', color: '#000', icon: '✅' },
+      error:   { bg: '#ef4444', color: '#fff', icon: '❌' },
+      warning: { bg: '#f59e0b', color: '#000', icon: '⚠️' },
+      info:    { bg: 'rgba(0,212,255,.9)', color: '#000', icon: 'ℹ️' },
+      payment: { bg: '#8b5cf6', color: '#fff', icon: '💳' },
+    };
+    const style = colors[type] || colors.info;
+    const el = document.createElement('div');
+    el.style.cssText = [
+      `background:${style.bg}`, `color:${style.color}`,
+      'padding:12px 16px', 'border-radius:10px',
+      'font-size:13px', 'font-weight:600',
+      'box-shadow:0 4px 20px rgba(0,0,0,.35)',
+      'pointer-events:all', 'cursor:pointer',
+      'display:flex', 'align-items:center', 'gap:8px',
+      'animation:_toastIn .25s ease',
+      'max-width:360px', 'line-height:1.4',
+    ].join(';');
+    el.innerHTML = `<span style="font-size:16px;flex-shrink:0">${style.icon}</span><span>${message}</span>`;
+    el.onclick = () => el.remove();
+    this._get().appendChild(el);
+    const t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(110%)'; el.style.transition = 'all .3s'; setTimeout(() => el.remove(), 300); }, duration);
+    // Inject keyframe once
+    if (!document.getElementById('_toast-style')) {
+      const s = document.createElement('style');
+      s.id = '_toast-style';
+      s.textContent = '@keyframes _toastIn{from{opacity:0;transform:translateX(110%)}to{opacity:1;transform:translateX(0)}}';
+      document.head.appendChild(s);
+    }
+    return el;
+  },
+  success(msg, dur) { return this.show(msg, 'success', dur); },
+  error(msg, dur)   { return this.show(msg, 'error', dur || 6000); },
+  warning(msg, dur) { return this.show(msg, 'warning', dur); },
+  info(msg, dur)    { return this.show(msg, 'info', dur); },
+  payment(msg, dur) { return this.show(msg, 'payment', dur); },
+};
+
+// ─── Centralized Error Handler ────────────────────────────────────────────────
+window.onerror = (msg, src, line, col, err) => {
+  console.error('[GLOBAL ERROR]', msg, `${src}:${line}`);
+  // Only show UI for payment-critical errors
+  if (src && (src.includes('razorpay') || src.includes('payment'))) {
+    TOAST.error('Payment error. Please refresh and try again.');
+  }
+  return false; // don't suppress
+};
+window.onunhandledrejection = (evt) => {
+  console.error('[UNHANDLED PROMISE]', evt.reason);
+  const msg = evt.reason?.message || String(evt.reason);
+  if (msg.includes('payment') || msg.includes('razorpay') || msg.includes('order')) {
+    TOAST.error('Payment setup failed. Please try again.');
+  }
+};
+
+// ─── Conversion + Revenue Tracking ───────────────────────────────────────────
+const CDB_TRACK = {
+  // Fire-and-forget event tracker → D1 via /api/gtm/event
+  _queue: [],
+  _flush: null,
+  event(name, props = {}) {
+    try {
+      const evt = {
+        event:     name,
+        props:     { ...props, url: location.pathname, ts: Date.now() },
+        session:   sessionStorage.getItem('_cdb_session') || _initSession(),
+        referrer:  document.referrer?.split('?')[0] || '',
+      };
+      this._queue.push(evt);
+      if (!this._flush) {
+        this._flush = setTimeout(() => this._send(), 1500);
+      }
+    } catch {}
+  },
+  async _send() {
+    this._flush = null;
+    if (!this._queue.length) return;
+    const batch = this._queue.splice(0, 10);
+    try {
+      await fetch(`${CONFIG.API_BASE}/api/gtm/events/batch`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events: batch }),
+        keepalive: true,
+      });
+    } catch {}
+  },
+  // Convenience wrappers
+  pageView()                  { this.event('page_view'); },
+  scanStart(module)           { this.event('scan_start', { module }); },
+  scanComplete(module, score) { this.event('scan_complete', { module, risk_score: score }); },
+  payClick(module, amount)    { this.event('pay_click', { module, amount }); },
+  payAttempt(module, amount)  { this.event('pay_attempt', { module, amount }); },
+  paySuccess(module, amount, orderId) { this.event('pay_success', { module, amount, order_id: orderId }); },
+  payFail(module, reason)     { this.event('pay_fail', { module, reason }); },
+  subClick(plan)              { this.event('sub_click', { plan }); },
+  subSuccess(plan, amount)    { this.event('sub_success', { plan, amount }); },
+  enterpriseSubmit()          { this.event('enterprise_submit'); },
+  shareClick(module)          { this.event('share_click', { module }); },
+  upgradePrompt(module, plan) { this.event('upgrade_prompt', { module, plan }); },
+};
+
+function _initSession() {
+  const id = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+  sessionStorage.setItem('_cdb_session', id);
+  return id;
+}
+
+// ─── Payment Recovery System ──────────────────────────────────────────────────
+const PAYMENT_RECOVERY = {
+  _key: '_cdb_pending_payment',
+  save(data) {
+    try { localStorage.setItem(this._key, JSON.stringify({ ...data, saved_at: Date.now() })); } catch {}
+  },
+  get() {
+    try {
+      const raw = localStorage.getItem(this._key);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      // Expire after 30 minutes
+      if (Date.now() - d.saved_at > 30 * 60 * 1000) { this.clear(); return null; }
+      return d;
+    } catch { return null; }
+  },
+  clear() {
+    try { localStorage.removeItem(this._key); } catch {}
+  },
+  // Check on page load — show recovery banner if pending payment exists
+  checkOnLoad() {
+    const pending = this.get();
+    if (!pending) return;
+    // Don't show if they just completed a payment this session
+    if (sessionStorage.getItem('_payment_just_completed')) return;
+    setTimeout(() => {
+      const banner = document.createElement('div');
+      banner.id = '_payment-recovery-banner';
+      banner.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9998',
+        'background:linear-gradient(135deg,#7c3aed,#00d4ff)',
+        'color:#fff', 'padding:12px 20px',
+        'display:flex', 'align-items:center', 'justify-content:space-between',
+        'flex-wrap:wrap', 'gap:10px', 'font-size:13px',
+      ].join(';');
+      const label = pending.plan
+        ? `Resume ${pending.plan} subscription — ₹${pending.price || ''}`
+        : `Resume payment for ${pending.module?.toUpperCase() || ''} report`;
+      banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">💳</span>
+          <span><strong>Incomplete payment detected.</strong> ${label}</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-shrink:0">
+          <button onclick="PAYMENT_RECOVERY._resume()" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">Resume →</button>
+          <button onclick="PAYMENT_RECOVERY._dismiss()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px">Dismiss</button>
+        </div>`;
+      document.body.prepend(banner);
+    }, 1500);
+  },
+  _resume() {
+    const pending = this.get();
+    if (!pending) { this._dismiss(); return; }
+    document.getElementById('_payment-recovery-banner')?.remove();
+    if (pending.plan) {
+      // Subscription recovery
+      document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => startSubscription(pending.plan), 800);
+    } else if (pending.module) {
+      // Per-report recovery
+      startPayment(pending.module, pending.target || '', pending.amount, pending.priceLabel || '');
+    }
+    CDB_TRACK.event('payment_recovery_resume', { type: pending.plan ? 'subscription' : 'report' });
+  },
+  _dismiss() {
+    document.getElementById('_payment-recovery-banner')?.remove();
+    this.clear();
+  },
+};
+
+// ─── Viral Share System ───────────────────────────────────────────────────────
+const SHARE_ENGINE = {
+  // Generate a branded shareable URL for a scan result
+  buildShareUrl(module, target, riskScore) {
+    const params = new URLSearchParams({ m: module, t: target, s: riskScore, ref: 'share' });
+    return `${CONFIG.API_BASE || 'https://cyberdudebivash.in'}/?${params}#scanner`;
+  },
+  // Render the share bar HTML (injected after scan results)
+  renderShareBar(module, target, riskScore, containerId) {
+    const url = this.buildShareUrl(module, target, riskScore);
+    const text = `🔍 Security scan of ${target}: Risk Score ${riskScore}/100 — Check yours free at CYBERDUDEBIVASH AI Security Hub`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const bar = document.createElement('div');
+    bar.className = '_share-bar';
+    bar.style.cssText = 'margin-top:16px;padding:14px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;display:flex;align-items:center;flex-wrap:wrap;gap:10px';
+    bar.innerHTML = `
+      <span style="font-size:13px;color:rgba(255,255,255,.6);flex:1;min-width:120px">Share your security score:</span>
+      <a href="${twitterUrl}" target="_blank" rel="noopener" onclick="CDB_TRACK.shareClick('${module}')"
+         style="background:rgba(29,161,242,.15);border:1px solid rgba(29,161,242,.3);color:#1da1f2;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">𝕏 Twitter</a>
+      <a href="${linkedinUrl}" target="_blank" rel="noopener" onclick="CDB_TRACK.shareClick('${module}')"
+         style="background:rgba(0,119,181,.15);border:1px solid rgba(0,119,181,.3);color:#0077b5;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">in LinkedIn</a>
+      <button onclick="SHARE_ENGINE._copyLink('${url}','${module}')"
+         style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:7px 14px;border-radius:7px;font-size:12px;cursor:pointer">🔗 Copy Link</button>`;
+    // Remove any existing share bar
+    el.querySelector('._share-bar')?.remove();
+    el.appendChild(bar);
+  },
+  _copyLink(url, module) {
+    navigator.clipboard?.writeText(url).then(() => {
+      TOAST.success('Share link copied!');
+      CDB_TRACK.shareClick(module);
+    }).catch(() => TOAST.info('Copy: ' + url));
+  },
+};
+
+// ─── Upsell / Upgrade Prompt Engine ──────────────────────────────────────────
+const UPSELL = {
+  // Show upsell nudge after scan completes — non-blocking
+  showAfterScan(module, riskScore, currentPlan) {
+    if (currentPlan === 'ENTERPRISE' || currentPlan === 'PRO') return;
+    if (riskScore < 40) return; // only upsell on moderate+ risk
+    setTimeout(() => {
+      const plan = currentPlan === 'STARTER' ? 'PRO' : 'STARTER';
+      const msg  = riskScore >= 70
+        ? `🚨 High risk detected! Upgrade to ${plan} for full remediation roadmap`
+        : `💡 Upgrade to ${plan} for unlimited scans + PDF reports`;
+      TOAST.payment(msg, 8000);
+      CDB_TRACK.upgradePrompt(module, plan);
+    }, 3000);
+  },
 };
 
 // ─── Affiliate & AdSense Tracking ────────────────────────────────────────────
@@ -4586,6 +4842,7 @@ async function runScan(module) {
   if (err) { showAlert(module, err, 'error'); return; }
 
   clearAlert(module);
+  CDB_TRACK.scanStart(module); // track scan initiation
 
   // Lead capture gate (first time only)
   if (!leadCaptured) {
@@ -5122,6 +5379,14 @@ function unlockResultsUI(module, target, verifyData) {
 
   // 9. Refresh history panel
   setTimeout(renderRecentActivity, 300);
+
+  // 10. Inject viral share bar after unlock (scan result becomes shareable)
+  try {
+    SHARE_ENGINE.renderShareBar(module, target, risk_score || 0, `results-${module}`);
+  } catch {}
+
+  // 11. Track scan completion + trigger upsell nudge
+  CDB_TRACK.scanComplete(module, risk_score || 0);
 }
 
 // ─── Inject PDF/HTML Download Button ─────────────────────────────────────────
@@ -5223,6 +5488,10 @@ async function startPayment(module, target, amount, priceLabel) {
   const btn = document.getElementById(`pay-btn-${module}`);
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparing payment...'; }
 
+  // Track click + save recovery state before Razorpay opens
+  CDB_TRACK.payClick(module, amount);
+  PAYMENT_RECOVERY.save({ module, target, amount, priceLabel, type: 'report' });
+
   try {
     await loadRazorpay();
 
@@ -5259,7 +5528,8 @@ async function startPayment(module, target, amount, priceLabel) {
       theme:       { color: '#00d4ff' },
       modal:       { backdropclose: false },
       handler: async (response) => {
-        // Payment captured — verify on backend
+        // Payment captured — track attempt then verify on backend
+        CDB_TRACK.payAttempt(module, amount);
         await verifyAndDownload(module, target, {
           razorpay_order_id:   response.razorpay_order_id,
           razorpay_payment_id: response.razorpay_payment_id,
@@ -5354,6 +5624,12 @@ async function verifyAndDownload(module, target, paymentPayload) {
   }
 
   // ── Verification succeeded ─────────────────────────────────────────────────
+  // Track success, clear recovery state, session flag
+  CDB_TRACK.paySuccess(module, verifyData.amount_paid || 0, paymentPayload.razorpay_order_id);
+  PAYMENT_RECOVERY.clear();
+  sessionStorage.setItem('_payment_just_completed', '1');
+  TOAST.success(`✅ Payment verified! Your ${module.toUpperCase()} report is ready.`);
+
   // Store token in sessionStorage for history (backward compat)
   try {
     const tokens = JSON.parse(sessionStorage.getItem('cbd_report_tokens') || '[]');
@@ -5611,6 +5887,7 @@ async function proceedSubPayment(planKey) {
   }
   if (errEl) errEl.style.display = 'none';
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating order...'; }
+  CDB_TRACK.subClick(planKey); // track subscription funnel entry
 
   try {
     await loadRazorpay();
@@ -5638,6 +5915,8 @@ async function proceedSubPayment(planKey) {
       modal:       { backdropclose: false },
       handler: async (response) => {
         if (btn) { btn.textContent = '⏳ Activating plan...'; }
+        // Save recovery state until activation confirmed
+        PAYMENT_RECOVERY.save({ plan: planKey, price: plan.price_inr, type: 'subscription' });
         await activateSubscription(planKey, response, email);
       },
     };
@@ -5678,6 +5957,9 @@ async function activateSubscription(planKey, rzpResponse, email) {
 
     // Persist token
     SUBSCRIPTION.saveToken(data.session_token);
+    PAYMENT_RECOVERY.clear();
+    sessionStorage.setItem('_payment_just_completed', '1');
+    CDB_TRACK.subSuccess(planKey, PLAN_INFO[(planKey||'').toUpperCase()]?.amount || 0);
 
     // Refresh plan cache
     const planData = await SUBSCRIPTION.fetch();
@@ -7908,6 +8190,7 @@ function _modalBackdropClose(event) {
   if (event.target === event.currentTarget) event.currentTarget.style.display = 'none';
 }
 
+// ─── Init V10.0 on page load ─────────────────────────────────────────────────
 // _loadConfig: fetches /api/config to populate CONFIG.RAZORPAY_KEY_ID reliably.
 // Runs once, caches in sessionStorage (5min TTL), non-blocking.
 async function _loadConfig() {
@@ -7934,6 +8217,11 @@ async function _loadConfig() {
 }
 _loadConfig(); // fire non-blocking — CONFIG.RAZORPAY_KEY_ID will be ready before any payment click
 initVersion();
+// Growth systems init — non-blocking
+setTimeout(() => {
+  CDB_TRACK.pageView();
+  PAYMENT_RECOVERY.checkOnLoad();
+}, 500);
 
 // Load subscription plan state (non-blocking, shows badge + usage bar if active)
 initSubscription();
