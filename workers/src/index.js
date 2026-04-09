@@ -1744,11 +1744,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/analytics/dashboard' && method === 'GET') {
       try {
         const [scansRow, revenueRow, defenseRow, usersRow, threatRow] = await Promise.all([
-          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN created_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today FROM scan_history`).first().catch(()=>null),
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today FROM scan_history`).first().catch(()=>null),
           env.DB?.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid'`).first().catch(()=>null),
           env.DB?.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as rev FROM payments WHERE status='paid' AND module LIKE 'defense%'`).first().catch(()=>null),
           env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first().catch(()=>null),
-          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical FROM threat_intel WHERE is_active=1`).first().catch(()=>null),
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical FROM threat_intel`).first().catch(()=>null),
         ]);
         return withSecurityHeaders(withCors(Response.json({
           success: true,
@@ -1782,6 +1782,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         const { seedDefenseSolutions } = await import('./handlers/defenseSeed.js');
         results.defense = await seedDefenseSolutions(env);
       } catch(e) { results.defense = { error: e.message }; }
+      // 3. Populate sentinel KV feed so /api/threat-intel/live returns data immediately
+      try {
+        results.sentinel = await runSentinelCron(env);
+      } catch(e) { results.sentinel = { error: e.message }; }
       return withSecurityHeaders(withCors(Response.json({
         success: true, bootstrap: results, timestamp: new Date().toISOString(),
       }), request));
