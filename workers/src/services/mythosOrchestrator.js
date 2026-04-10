@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CYBERDUDEBIVASH MYTHOS ORCHESTRATOR CORE v1.0
  * ═══════════════════════════════════════════════════════════════════════
  * FULLY AUTONOMOUS AI CYBERSECURITY RESPONSE ENGINE
@@ -75,7 +75,7 @@ async function executeToolTask(task, intel, analysis, env) {
         // ── STAGE 10: Marketplace Publisher ────────────────────────────
         const pricing = calculatePrice(intel, task.tool_type);
         await storeDefenseSolution(env, intel, task.tool_type, content, pricing);
-        return { success: true, tool_type: task.tool_type, attempts, content_length: content.length,
+        return { success: true, tool_type: task.tool_type, attempt, content_length: content.length,
                  score: validation.score, price_inr: pricing?.inr || pricing?.price_inr || 0 };
       }
 
@@ -87,15 +87,15 @@ async function executeToolTask(task, intel, analysis, env) {
         if (content.length > 300 && validation.errors.length <= 2 && validation.safe) {
           const pricing = calculatePrice(intel, task.tool_type);
           await storeDefenseSolution(env, intel, task.tool_type, content, pricing);
-          return { success: true, tool_type: task.tool_type, attempts, content_length: content.length,
+          return { success: true, tool_type: task.tool_type, attempt, content_length: content.length,
                    score: validation.score, quality: 'MARGINAL', price_inr: pricing?.inr || 0 };
         }
         return { success: false, error: `Validation failed after ${MAX} attempts`,
-                 tool_type: task.tool_type, last_errors: validation.errors, attempts };
+                 tool_type: task.tool_type, last_errors: validation.errors, attempts: attempt };
       }
     } catch (err) {
       console.error(`[MYTHOS] ${task.id} attempt ${attempt} threw:`, err.message);
-      if (attempt === MAX) return { success: false, error: err.message, tool_type: task.tool_type, attempts };
+      if (attempt === MAX) return { success: false, error: err.message, tool_type: task.tool_type, attempts: attempt };
     }
   }
   return { success: false, error: 'Max retries exceeded', tool_type: task.tool_type };
