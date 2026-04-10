@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CYBERDUDEBIVASH MYTHOS — Solution Templates Extension v2.0
  * ══════════════════════════════════════════════════════════════
  * Adds 4 missing generators to complete the 10-category marketplace:
@@ -253,7 +253,7 @@ cat << 'HUNT_SCRIPT'
 set -euo pipefail
 CVE="${cve}"
 SEVERITY="${severity}"
-LOG_FILE="/tmp/hunt_${cve//[-]/_}_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="/tmp/hunt_${cve.replace(/-/g, "_")}_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "════════════════════════════════════════════════"
