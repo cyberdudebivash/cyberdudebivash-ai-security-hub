@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CYBERDUDEBIVASH AI Security Hub — Main Router v8.1
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
  * Continuous Monitoring, Multi-Tenant Orgs, Content Engine, Public API Platform
@@ -1835,8 +1835,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // ── MYTHOS ORCHESTRATOR CORE v1.0 ────────────────────────────────────────
     // POST /api/mythos/run — trigger autonomous orchestration loop (admin)
     if (path === '/api/mythos/run' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => ({ role: null }));
-      return withSecurityHeaders(withCors(await handleMythosRun(request, env, { role: authCtx?.role }), request));
+      const adminKey = request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key');
+      const isAdmin  = adminKey && env.ADMIN_KEY && adminKey === env.ADMIN_KEY;
+      if (!isAdmin) return withSecurityHeaders(withCors(new Response(JSON.stringify({ success: false, error: 'Admin access required', hint: 'Provide x-admin-key header' }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
+      return withSecurityHeaders(withCors(await handleMythosRun(request, env, { role: 'admin' }), request));
     }
     // GET /api/mythos/status — live pipeline status (public)
     if (path === '/api/mythos/status' && method === 'GET') {
