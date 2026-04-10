@@ -243,7 +243,7 @@ export async function handleGetGlobalPricing(request, env) {
   const { country, currency } = detectCurrency(request);
 
   const plans = {
-    free:       { price_inr: 0,    name: 'Free',       ...(currency !== 'INR' ? { price_local: convertPrice(0, currency) } : {}) },
+    freemium:   { price_inr: 0,    name: 'Freemium',   description: 'Limited access, no CC required', scans: 5, ...(currency !== 'INR' ? { price_local: convertPrice(0, currency) } : {}) },
     starter:    { price_inr: 499,  name: 'Starter',    ...(currency !== 'INR' ? { price_local: convertPrice(499, currency) } : {}) },
     pro:        { price_inr: 1499, name: 'Pro',        ...(currency !== 'INR' ? { price_local: convertPrice(1499, currency) } : {}) },
     enterprise: { price_inr: 4999, name: 'Enterprise', ...(currency !== 'INR' ? { price_local: convertPrice(4999, currency) } : {}) },
