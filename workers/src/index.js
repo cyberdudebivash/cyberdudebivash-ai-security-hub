@@ -149,6 +149,13 @@ import { autoBlockIP }             from './agents/isolationAgent.js';
 import { autoRotateOnAnomaly }     from './agents/credentialRotationAgent.js';
 import { isIPBlocked, isSessionDisabled } from './agents/isolationAgent.js';
 
+// ─── MYTHOS ORCHESTRATOR CORE v1.0 ──────────────────────────────────────────
+import {
+  handleMythosRun, handleMythosStatus, handleMythosJob,
+  handleMythosValidate, handleMythosAnalyze, handleMythosMetrics,
+} from './handlers/mythosHandler.js';
+import { runMythosCron } from './services/mythosOrchestrator.js';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
@@ -1825,6 +1832,35 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // ── Scan → Upsell Engine (Phase 3) ───────────────────────────────────
 
     // POST /api/scan/upsell — evaluate scan result for upsell opportunity
+    // ── MYTHOS ORCHESTRATOR CORE v1.0 ────────────────────────────────────────
+    // POST /api/mythos/run — trigger autonomous orchestration loop (admin)
+    if (path === '/api/mythos/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ role: null }));
+      return withSecurityHeaders(withCors(await handleMythosRun(request, env, { role: authCtx?.role }), request));
+    }
+    // GET /api/mythos/status — live pipeline status (public)
+    if (path === '/api/mythos/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMythosStatus(request, env, {}), request));
+    }
+    // GET /api/mythos/metrics — lifetime metrics (public)
+    if (path === '/api/mythos/metrics' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMythosMetrics(request, env, {}), request));
+    }
+    // GET /api/mythos/jobs/:jobId — job details (public, polls job state)
+    if (path.startsWith('/api/mythos/jobs/') && method === 'GET') {
+      const jobId = path.replace('/api/mythos/jobs/', '').split('/')[0];
+      return withSecurityHeaders(withCors(await handleMythosJob(request, env, {}, jobId), request));
+    }
+    // POST /api/mythos/validate — validate any security artifact
+    if (path === '/api/mythos/validate' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleMythosValidate(request, env, {}), request));
+    }
+    // POST /api/mythos/analyze — AI-powered CVE deep analysis + task plan
+    if (path === '/api/mythos/analyze' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMythosAnalyze(request, env, authCtx || {}), request));
+    }
+
     if (path === '/api/scan/upsell' && method === 'POST') {
       const { handleScanUpsell } = await import('./services/scanUpsellEngine.js');
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
@@ -2331,6 +2367,18 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         console.error('[CRON] v12 Patching Agent error:', e?.message);
       }
     })());
+
+    // ── MYTHOS ORCHESTRATOR CORE — autonomous tool generation (every 12h) ──────
+    if (cron === '0 */12 * * *' || cron === '0 6 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const result = await runMythosCron(env);
+          console.log(`[CRON] MYTHOS: ${result.total_tools} tools generated, ${result.total_published} published, ${result.total_failed} failed`);
+        } catch (e) {
+          console.error('[CRON] MYTHOS Orchestrator error:', e?.message);
+        }
+      })());
+    }
 
   },
 };

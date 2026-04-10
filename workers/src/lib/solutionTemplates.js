@@ -1646,3 +1646,6 @@ function generateUUID(seed) {
   const p5 = h(seed + 'de');
   return `${p1}-${p2.slice(0,4)}-4${p2.slice(5,8)}-${p3.slice(0,4)}-${p4}${p5.slice(0,8)}`;
 }
+
+// ── MYTHOS Extension: re-export V2 generators (YARA, ThreatHunt, ExecBriefing, APIModule) ──
+export { generateYARARule, generateThreatHuntPack, generateExecutiveBriefing, generateAPISecurityModule } from './solutionTemplatesV2.js';
