@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CYBERDUDEBIVASH AI Security Hub — Intel Ingestion Engine v1.0
  * ═══════════════════════════════════════════════════════════════
  * Sentinel APEX Defense Solutions — Powered by CYBERDUDEBIVASH
@@ -479,15 +479,15 @@ export async function getPendingSolutionIntel(env, limit = 10) {
         AND severity IN ('CRITICAL', 'HIGH')
       ORDER BY
         CASE severity WHEN 'CRITICAL' THEN 2 WHEN 'HIGH' THEN 1 ELSE 0 END DESC,
-        cvss_score DESC
+        cvss DESC
       LIMIT ?
     `).bind(limit).all();
 
     return (rows.results || []).map(row => ({
       ...row,
-      mitre_mapping:    JSON.parse(row.mitre_json || '[]'),
-      affected_systems: JSON.parse(row.affected_systems || '[]'),
-      iocs:             JSON.parse(row.iocs_json || '[]'),
+      mitre_mapping:    JSON.parse(row.tags || '[]'),
+      affected_systems: JSON.parse(row.affected_products || '[]'),
+      iocs:             JSON.parse(row.ioc_list || row.iocs || '[]'),
     }));
   } catch (err) {
     console.error('[Ingestion] getPendingSolutionIntel error:', err.message);
@@ -499,7 +499,7 @@ export async function getPendingSolutionIntel(env, limit = 10) {
 export async function markSolutionGenerated(env, intelId, productId) {
   if (!env.DB) return;
   await env.DB.prepare(
-    `UPDATE threat_intel SET solution_generated = 1, product_id = ? WHERE cve_id = ?`
+    `UPDATE threat_intel SET solution_generated = 1, product_id = ? WHERE id = ?`
   ).bind(productId, intelId).run().catch(() => {});
 }
 
