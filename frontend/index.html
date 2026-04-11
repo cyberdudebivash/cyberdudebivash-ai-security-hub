@@ -2138,7 +2138,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 <div class="ann-bar" style="overflow:hidden;padding:7px 0">
   <span class="ann-marquee">
     🔴 LIVE: Sentinel APEX monitoring <strong>CVEs in real-time</strong> &nbsp;|&nbsp;
-    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v11.0</span> — The World's #1 AI Cybersecurity Intelligence Engine &nbsp;|&nbsp;
+    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v13.0</span> — The World's #1 AI Cybersecurity Intelligence Engine &nbsp;|&nbsp;
     🛡️ Defense products auto-generated from every critical CVE &nbsp;|&nbsp;
     📡 <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="color:#fff;font-weight:800">Join Sentinel APEX on Telegram →</a> &nbsp;|&nbsp;
     🚀 Enterprise packages from ₹9,999 &nbsp;|&nbsp;
@@ -2394,7 +2394,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
     <span class="badge">🎯 MITRE ATT&CK</span>
     <span class="badge">🔐 Zero Trust Ready</span>
     <span class="badge">🇮🇳 DPDP Act 2023</span>
-    <span class="badge">💳 Razorpay Payments</span>
+    <span class="badge">💳 UPI · Bank · PayPal · Crypto</span>
   </div>
   <!-- Hero Quick Scan -->
   <div class="hero-scan-wrap">
@@ -3685,9 +3685,9 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
         <div style="display:flex;flex-direction:column;gap:10px;max-width:360px;margin:0 auto">
           <input id="pur-email" type="email" placeholder="Your email (for delivery)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
           <button id="pur-btn" onclick="initiatePayment('${solutionId}','${title?.replace(/'/g,"\\'")}',${priceInr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:8px;font-weight:900;font-size:15px;cursor:pointer">
-            💳 Pay Securely via Razorpay
+            💳 Secure Checkout
           </button>
-          <div style="font-size:11px;color:rgba(255,255,255,.35)">🔒 Secured by Razorpay · UPI · Cards · Net Banking</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35)">🔒 UPI · Bank Transfer · PayPal · Crypto · Instant Activation</div>
         </div>
         <div style="margin-top:20px;padding:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:12px;color:rgba(255,255,255,.6)">
           ✅ Instant download after payment · 📧 Email delivery · 🔄 365-day access
@@ -3699,10 +3699,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
   window.initiatePayment = async function(solutionId, title, priceInr) {
     const emailEl = document.getElementById('pur-email');
     const email   = (emailEl?.value || '').trim();
-    const btn     = document.getElementById('pur-btn');
-    const modalBody = document.getElementById('ds-modal-body');
 
-    // Inline validation — no alert()
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       if (emailEl) {
         emailEl.style.borderColor = '#ef4444';
@@ -3712,82 +3709,18 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
       return;
     }
     if (emailEl) emailEl.style.borderColor = '';
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing...'; }
 
-    try {
-      await loadRazorpay();
-      const r = await safeFetch(`/api/defense/purchase/${solutionId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(window._authToken ? { 'Authorization': `Bearer ${window._authToken}` } : {}) },
-        body: JSON.stringify({ email, currency: 'INR' }),
-      });
-      const d = await r.json();
-      if (!d.success) throw new Error(d.error || 'Order creation failed');
+    // Close the defense modal and open unified payment
+    const dsModal = document.getElementById('ds-modal');
+    if (dsModal) dsModal.style.display = 'none';
 
-      const rzpKey = d.key_id || d.order?.key_id || d.order?.razorpay_key || CONFIG.RAZORPAY_KEY_ID;
-      const rzpOrderId = d.order_id || d.order?.order_id || d.order?.razorpay_order_id;
-      const rzpAmount  = d.amount  || d.order?.amount;
-
-      if (!rzpKey || !rzpOrderId) throw new Error('Payment configuration error. Please try again.');
-
-      const rzp = new window.Razorpay({
-        key: rzpKey,
-        order_id: rzpOrderId,
-        amount: rzpAmount,
-        currency: d.currency || d.order?.currency || 'INR',
-        name: 'CYBERDUDEBIVASH AI Security Hub',
-        description: title,
-        prefill: { email: d.order?.prefill?.email || email },
-        theme: { color: '#00d4ff' },
-        modal: { backdropclose: false },
-        handler: async (resp) => {
-          if (btn) btn.textContent = '⏳ Verifying...';
-          try {
-            const vr = await safeFetch(`/api/defense/verify/${solutionId}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(resp),
-            });
-            const vd = await vr.json();
-            if (vd.success) {
-              if (modalBody) modalBody.innerHTML = `
-                <div style="text-align:center;padding:48px">
-                  <div style="font-size:52px;margin-bottom:16px">✅</div>
-                  <h3 style="margin:0 0 8px;color:#22c55e">Payment Successful!</h3>
-                  <p style="color:rgba(255,255,255,.6);margin:0 0 8px">${title} delivered to <strong>${email}</strong></p>
-                  <p style="color:rgba(255,255,255,.4);font-size:12px;margin:0 0 20px">Check your inbox (including spam folder)</p>
-                  ${vd.full_content ? `<div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:16px;font-family:monospace;font-size:11px;text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto">${vd.full_content.slice(0, 800)}</div>` : ''}
-                </div>`;
-            } else throw new Error(vd.error || 'Verification failed');
-          } catch (verifyErr) {
-            if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
-            if (modalBody) modalBody.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5">
-              <div style="font-size:36px;margin-bottom:12px">⚠️</div>
-              <div style="font-weight:700;margin-bottom:8px">Verification Failed</div>
-              <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:12px">${verifyErr.message}</div>
-              <a href="mailto:bivash@cyberdudebivash.com?subject=Defense%20Payment%20Issue&body=Payment%20ID%3A%20${resp.razorpay_payment_id}" style="color:var(--accent);font-size:12px">📧 Contact Support</a></div>`;
-          }
-        },
-      });
-      rzp.on('payment.failed', (err) => {
-        console.error('[Defense] Payment failed:', err?.error);
-        if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
-        if (modalBody) modalBody.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5">
-          <div style="font-size:36px;margin-bottom:12px">❌</div>
-          <div style="font-weight:700">Payment Failed</div>
-          <div style="font-size:13px;margin-top:8px;color:rgba(255,255,255,.5)">${err?.error?.description || 'Please try again.'}</div></div>`;
-      });
-      rzp.open();
-      if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
-    } catch (err) {
-      console.error('[Defense] Payment initiation failed:', err.message);
-      if (btn) { btn.disabled = false; btn.textContent = '💳 Pay Securely via Razorpay'; }
-      if (modalBody) modalBody.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5">
-        <div style="font-size:36px;margin-bottom:12px">⚠️</div>
-        <div style="font-weight:700;margin-bottom:8px">Payment Setup Failed</div>
-        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">${err.message || 'Please try again.'}</div>
-        <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent);font-size:12px">📧 Contact bivash@cyberdudebivash.com</a></div>`;
-    }
+    CDB_PAYMENT.open({
+      product: 'defense-' + solutionId,
+      productLabel: title || ('Defense Solution: ' + solutionId),
+      amountLabel: priceInr ? '₹' + Number(priceInr).toLocaleString('en-IN') : '',
+      amount: priceInr ? String(priceInr) : '',
+      email: email,
+    });
   };
 
   /* ── Solution detail modal ─────────────────────────────────────── */
@@ -3957,7 +3890,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
           <li>Email support</li>
         </ul>
         <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#2563eb,#3b82f6)" onclick="startSubscription('STARTER')">⚡ Get Starter</button>
-        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">Razorpay · UPI · Cards · Instant</div>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
       </div>
 
       <!-- PRO (featured) -->
@@ -3976,7 +3909,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
           <li>Priority Support</li>
         </ul>
         <button class="btn btn-success" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#8b5cf6)" onclick="startSubscription('PRO')">🚀 Get Pro</button>
-        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">Razorpay · UPI · Cards · Instant</div>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
       </div>
 
       <!-- ENTERPRISE -->
@@ -3995,7 +3928,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
           <li>White-label option</li>
         </ul>
         <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000" onclick="startSubscription('ENTERPRISE')">🏢 Get Enterprise</button>
-        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">Razorpay · UPI · Cards · Instant</div>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
       </div>
     </div>
 
@@ -4275,7 +4208,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 <div id="enterprise-booking-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9990;align-items:center;justify-content:center;padding:20px" onclick="_modalBackdropClose(event)">
   <div style="background:#0f0f23;border:1px solid rgba(245,158,11,.35);border-radius:20px;padding:36px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto">
     <h3 id="ent-modal-title" style="font-size:18px;font-weight:800;margin:0 0 6px">Order Enterprise Package</h3>
-    <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Secure checkout via Razorpay</p>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Manual payment — UPI · Bank · PayPal · Crypto</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <input id="ent-modal-email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
       <input id="ent-modal-company" type="text" placeholder="Company name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
@@ -4394,64 +4327,29 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
   };
 
   window.processEnterpriseOrder = async function() {
-    const email   = (document.getElementById('ent-modal-email')?.value   || '').trim();
+    const email   = (document.getElementById('ent-modal-email')?.value || '').trim();
     const company = (document.getElementById('ent-modal-company')?.value || '').trim();
-    const req     = (document.getElementById('ent-modal-req')?.value     || '').trim();
-    const status  = document.getElementById('ent-modal-status');
-    const btn     = document.getElementById('ent-modal-btn');
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-      if (status) { status.style.color = '#ef4444'; status.textContent = 'Valid email required'; }
+    const req     = (document.getElementById('ent-modal-req')?.value || '').trim();
+    const price   = document.getElementById('ent-modal-price')?.textContent || '';
+    const title   = document.getElementById('ent-modal-title')?.textContent || 'Enterprise Package';
+    const statusEl = document.getElementById('ent-modal-status');
+
+    if (!email || !email.includes('@')) {
+      if (statusEl) { statusEl.textContent = '⚠️ Business email required'; statusEl.style.color = '#ef4444'; }
+      document.getElementById('ent-modal-email')?.focus();
       return;
     }
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing...'; }
-    if (status) { status.style.color = '#a78bfa'; status.textContent = 'Creating secure order...'; }
-    try {
-      await loadRazorpay();
-      const r = await safeFetch('/api/enterprise/report', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, company_name: company, package_id: currentPackageId, requirements: req }),
-      });
-      const d = await r.json();
-      if (d.success && window.Razorpay) {
-        const rzpKey     = d.key_id || d.order?.key_id || d.order?.razorpay_key || CONFIG.RAZORPAY_KEY_ID;
-        const rzpOrderId = d.order_id || d.order?.order_id || d.order?.razorpay_order_id;
-        const rzpAmount  = d.amount  || (d.order?.amount_inr ? d.order.amount_inr * 100 : d.order?.amount);
-        if (rzpKey && rzpOrderId) {
-          const rzp = new window.Razorpay({
-            key: rzpKey, order_id: rzpOrderId, amount: rzpAmount, currency: 'INR',
-            name: 'CYBERDUDEBIVASH AI Security Hub', description: d.order?.package?.name || 'Enterprise Package',
-            prefill: { email }, theme: { color: '#f59e0b' }, modal: { backdropclose: false },
-            handler: async (resp) => {
-              if (status) { status.style.color = '#a78bfa'; status.textContent = '⏳ Verifying payment...'; }
-              try {
-                const vr = await safeFetch('/api/enterprise/verify', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ ...resp, enterprise_order_id: d.order?.order_id || d.order_id }),
-                });
-                const vd = await vr.json();
-                if (status) {
-                  status.style.color = vd.success ? '#22c55e' : '#ef4444';
-                  status.textContent = vd.success ? '✅ Payment confirmed! Check your email.' : '❌ ' + (vd.error || 'Verification failed');
-                }
-              } catch (verifyErr) {
-                if (status) { status.style.color = '#ef4444'; status.textContent = 'Verification error. Contact bivash@cyberdudebivash.com'; }
-              }
-            },
-          });
-          rzp.on('payment.failed', (err) => {
-            if (status) { status.style.color = '#ef4444'; status.textContent = `Payment failed: ${err?.error?.description || 'Please try again.'}`; }
-            if (btn) { btn.disabled = false; btn.textContent = '💳 Proceed to Payment'; }
-          });
-          rzp.open();
-        } else {
-          if (status) { status.style.color = '#22c55e'; status.textContent = '✅ Order received! We\'ll contact you within 4 hours.'; }
-        }
-      } else throw new Error(d.error || 'Order creation failed');
-    } catch (e) {
-      console.error('[Enterprise] Order failed:', e.message);
-      if (status) { status.style.color = '#ef4444'; status.textContent = `Failed: ${e.message}. Email bivash@cyberdudebivash.com`; }
-    }
-    if (btn) { btn.disabled = false; btn.textContent = '💳 Proceed to Payment'; }
+
+    // Close enterprise modal and open unified payment
+    const entModal = document.getElementById('enterprise-booking-modal');
+    if (entModal) entModal.style.display = 'none';
+
+    CDB_PAYMENT.open({
+      product: 'enterprise-' + (window._currentEnterprisePack || 'package'),
+      productLabel: title + (company ? ' — ' + company : ''),
+      amountLabel: price,
+      email: email,
+    });
   };
 
   /* ── MSSP application ────────────────────────────────────────── */
@@ -4496,84 +4394,12 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 
   /* ── Compliance pack purchase ────────────────────────────────── */
   window.purchaseCompliancePack = async function(packId, packName, priceInr) {
-    // Show inline email capture modal instead of prompt()
-    const existing = document.getElementById('compliance-pay-modal');
-    if (existing) existing.remove();
-    const modal = document.createElement('div');
-    modal.id = 'compliance-pay-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
-    modal.innerHTML = `
-      <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.35);border-radius:16px;padding:32px;max-width:420px;width:100%;text-align:center">
-        <div style="font-size:36px;margin-bottom:12px">🔒</div>
-        <div style="font-size:18px;font-weight:800;margin-bottom:6px">${packName}</div>
-        <div style="font-size:22px;font-weight:900;color:var(--accent);margin-bottom:16px">₹${priceInr?.toLocaleString?.() || priceInr}</div>
-        <input id="cpay-email" type="email" placeholder="your@business.com" autocomplete="email"
-          style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:8px">
-        <div id="cpay-err" style="font-size:12px;color:#fca5a5;min-height:16px;margin-bottom:10px"></div>
-        <div style="display:flex;gap:10px">
-          <button id="cpay-btn" style="flex:1;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:12px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer">
-            🔐 Pay Securely
-          </button>
-          <button onclick="document.getElementById('compliance-pay-modal')?.remove()"
-            style="background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);padding:12px 16px;border-radius:8px;cursor:pointer;font-size:13px">Cancel</button>
-        </div>
-        <div id="cpay-status" style="margin-top:12px;font-size:13px;min-height:18px"></div>
-        <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.3)">🔒 Secured by Razorpay · Instant delivery</div>
-      </div>`;
-    document.body.appendChild(modal);
-
-    const btn    = document.getElementById('cpay-btn');
-    const errEl  = document.getElementById('cpay-err');
-    const statEl = document.getElementById('cpay-status');
-
-    btn.onclick = async () => {
-      const email = (document.getElementById('cpay-email')?.value || '').trim();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-        errEl.textContent = 'Valid email required';
-        document.getElementById('cpay-email')?.focus();
-        return;
-      }
-      errEl.textContent = '';
-      btn.disabled = true; btn.textContent = '⏳ Creating order...';
-      try {
-        await loadRazorpay();
-        const r = await safeFetch('/api/global/compliance-packs/purchase', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pack_id: packId, email, currency: currentCurrency || 'INR' }),
-        });
-        const d = await r.json();
-        if (!r.ok || !d.success) throw new Error(d.error || 'Order creation failed');
-
-        const rzpKey = d.key_id || d.order?.key_id || d.order?.razorpay_key || CONFIG.RAZORPAY_KEY_ID;
-        const rzpOrderId = d.order_id || d.order?.order_id || d.order?.razorpay_order_id;
-        if (!rzpKey || !rzpOrderId) throw new Error('Payment configuration missing. Try again.');
-
-        const rzp = new window.Razorpay({
-          key: rzpKey, order_id: rzpOrderId,
-          amount: d.amount || d.order?.amount,
-          currency: d.currency || d.order?.currency || 'INR',
-          name: 'CYBERDUDEBIVASH AI Security Hub', description: packName,
-          prefill: { email }, theme: { color: '#00d4ff' },
-          modal: { backdropclose: false },
-          handler: (resp) => {
-            statEl.style.color = '#22c55e';
-            statEl.textContent = `✅ ${packName} purchased! Delivery sent to ${email}`;
-            btn.textContent = '✅ Purchased';
-            setTimeout(() => modal.remove(), 4000);
-          },
-        });
-        rzp.on('payment.failed', (err) => {
-          errEl.textContent = `Payment failed: ${err?.error?.description || 'Please try again.'}`;
-          btn.disabled = false; btn.textContent = '🔐 Pay Securely';
-        });
-        rzp.open();
-        btn.disabled = false; btn.textContent = '🔐 Pay Securely';
-      } catch (e) {
-        console.error('[Compliance] Purchase failed:', e.message);
-        errEl.textContent = e.message || 'Purchase failed. Please try again.';
-        btn.disabled = false; btn.textContent = '🔐 Pay Securely';
-      }
-    };
+    CDB_PAYMENT.open({
+      product: 'compliance-' + packId,
+      productLabel: packName || ('Compliance Pack: ' + packId),
+      amountLabel: priceInr ? '₹' + Number(priceInr).toLocaleString('en-IN') : '',
+      amount: priceInr ? String(priceInr) : '',
+    });
   };
 
   /* ── Enterprise form submit (existing submitEnterprise override) ─ */
@@ -4806,6 +4632,8 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
           <li><a href="https://github.com/cyberdudebivash" target="_blank">GitHub</a></li>
           <li><a href="#enterprise">Enterprise</a></li>
           <li><a href="mailto:bivash@cyberdudebivash.com">Contact</a></li>
+          <li><a href="/blog/">Security Blog</a></li>
+          <li><a href="/about.html">About Us</a></li>
         </ul>
         <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="tg-community-card">
           <span style="font-size:22px">✈️</span>
@@ -4815,18 +4643,19 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
       <div class="footer-col">
         <h5>Legal</h5>
         <ul>
-          <li><a href="#" onclick="cdbOpenLegal('privacy');return false">Privacy Policy</a></li>
-          <li><a href="#" onclick="cdbOpenLegal('terms');return false">Terms of Service</a></li>
-          <li><a href="#" onclick="cdbOpenLegal('refund');return false">Refund Policy</a></li>
-          <li><a href="#" onclick="cdbOpenLegal('dpdp');return false">DPDP Compliance</a></li>
-          <li><a href="#" onclick="cdbOpenLegal('cookies');return false">Cookie Policy</a></li>
+          <li><a href="/privacy-policy.html">Privacy Policy</a></li>
+          <li><a href="/terms-of-service.html">Terms of Service</a></li>
+          <li><a href="/refund-policy.html">Refund Policy</a></li>
+          <li><a href="/about.html">About Us</a></li>
+          <li><a href="/contact.html">Contact</a></li>
+          <li><a href="/blog/">Security Blog</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <div class="footer-copy">© 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved. | 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</div>
       <div class="footer-copy">
-        Platform <span id="platform-version-footer" title="Live version from /api/version">v11.0</span> ·
+        Platform <span id="platform-version-footer" title="Live version from /api/version">v13.0</span> ·
         📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001
       </div>
     </div>
@@ -4859,8 +4688,11 @@ const CONFIG = {
   CONTACT_EMAIL:   'bivash@cyberdudebivash.com',
   PLATFORM_NAME:   'CYBERDUDEBIVASH AI Security Hub',
   VERSION:         '8.1.0',     // default; immediately overridden by initVersion() from version.json
-  RAZORPAY_KEY_ID: '',          // populated by _loadConfig() on page init — DO NOT set manually
-  ADSENSE_CLIENT:  'ca-pub-8343951291888650',  // ← Replace with your AdSense publisher ID
+  RAZORPAY_KEY_ID: '',          // DEPRECATED — removed; manual payment system active
+  ADSENSE_CLIENT:  'ca-pub-8343951291888650',
+  // ── DEPRECATED: Lemon Squeezy config (replaced by CDB_PAYMENT manual system) ──
+  // All payment flows now use: CDB_PAYMENT.open() → UPI / Bank / PayPal / Crypto
+  LEMON: { store: '', plans: {}, one_time: {}, overlay: false }, // inactive
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -6196,7 +6028,7 @@ function renderResults(module, data) {
           onclick="startPayment('${module}','${_payTarget.replace(/'/g,'\\x27')}',${_payAmount},'${mon.unlock_price}')">
           🔓 Unlock Full Report — ${mon.unlock_price}
         </button>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:8px">🔒 Secure · Razorpay / UPI · Instant PDF access</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:8px">🔒 UPI · Bank · PayPal · Crypto · Access in 2–4 hrs</div>
       </div>`;
     }
     html += `</div>`;
@@ -6331,19 +6163,192 @@ async function submitEnterprise() {
 
 // ─── Local Fallback Engine (deterministic, mirrors API) ─────────────────
 function sh(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return Math.abs(h);}
-// ─── Razorpay Payment Integration ──────────────────────────────────────
-function loadRazorpay() {
-  return new Promise((resolve, reject) => {
-    if (_razorpayReady) { resolve(); return; }
-    if (document.getElementById('razorpay-sdk')) { _razorpayReady = true; resolve(); return; }
-    const s = document.createElement('script');
-    s.id  = 'razorpay-sdk';
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.onload  = () => { _razorpayReady = true; resolve(); };
-    s.onerror = () => reject(new Error('Razorpay SDK failed to load'));
-    document.head.appendChild(s);
-  });
-}
+// ─── Lemon Squeezy Payment Integration ──────────────────────────────────────
+// ─── CYBERDUDEBIVASH Unified Payment Engine v3.0 ─────────────────────────────
+// Manual payment: UPI / Bank Transfer / PayPal / Crypto
+// No external SDKs. No Razorpay. No LemonSqueezy.
+
+function loadRazorpay() { return Promise.resolve(); } // kept for compatibility
+
+const CDB_PAYMENT = {
+  _current: {},
+
+  open(opts) {
+    // opts: { product, productLabel, amount, amountLabel, email, onSuccess }
+    this._current = opts || {};
+    const modal = document.getElementById('cdb-pay-modal');
+    if (!modal) return;
+
+    const label = opts.productLabel || opts.product || 'Selected Plan';
+    const amtLabel = opts.amountLabel || opts.amount || '';
+    const prefillEmail = opts.email || '';
+
+    document.getElementById('cdb-pay-product-label').textContent = label;
+    document.getElementById('cdb-pay-amount-label').textContent = amtLabel ? `Amount: ${amtLabel}` : '';
+    if (prefillEmail) {
+      const em = document.getElementById('cdb-pay-email');
+      if (em) em.value = prefillEmail;
+    }
+
+    // Reset to tab 1 (UPI)
+    CDB_PAYMENT.switchTab('upi');
+    document.getElementById('cdb-pay-txn').value = '';
+    document.getElementById('cdb-pay-status').textContent = '';
+    document.getElementById('cdb-pay-status').className = '';
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  },
+
+  close() {
+    const modal = document.getElementById('cdb-pay-modal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+  },
+
+  switchTab(tab) {
+    ['upi','bank','paypal','crypto'].forEach(t => {
+      const btn = document.getElementById('cdb-tab-' + t);
+      const pane = document.getElementById('cdb-pane-' + t);
+      const active = t === tab;
+      if (btn) {
+        btn.style.background = active ? 'rgba(0,212,255,.15)' : 'rgba(255,255,255,.04)';
+        btn.style.borderColor = active ? 'var(--accent)' : 'rgba(255,255,255,.1)';
+        btn.style.color = active ? 'var(--accent)' : 'rgba(255,255,255,.55)';
+      }
+      if (pane) pane.style.display = active ? 'block' : 'none';
+    });
+  },
+
+  copyText(text, btnId) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById(btnId);
+      if (btn) { const orig = btn.textContent; btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = orig, 2000); }
+    }).catch(() => {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      const btn = document.getElementById(btnId);
+      if (btn) { const orig = btn.textContent; btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = orig, 2000); }
+    });
+  },
+
+  async submit() {
+    const txnId = (document.getElementById('cdb-pay-txn')?.value || '').trim();
+    const email = (document.getElementById('cdb-pay-email')?.value || '').trim();
+    const method = (document.getElementById('cdb-pay-method')?.value || 'UPI').trim();
+    const statusEl = document.getElementById('cdb-pay-status');
+    const btn = document.getElementById('cdb-pay-submit');
+
+    if (!txnId) {
+      if (statusEl) { statusEl.textContent = '⚠️ Transaction ID is required'; statusEl.className = 'cdb-pay-err'; }
+      document.getElementById('cdb-pay-txn')?.focus();
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      if (statusEl) { statusEl.textContent = '⚠️ Valid email required to receive confirmation'; statusEl.className = 'cdb-pay-err'; }
+      document.getElementById('cdb-pay-email')?.focus();
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting...'; }
+    if (statusEl) { statusEl.textContent = 'Sending confirmation...'; statusEl.className = ''; }
+
+    const payload = {
+      txnId,
+      method: method.toUpperCase().replace(/ /g,'_'),
+      product: this._current.product || 'unknown',
+      user: email,
+      amount: this._current.amount || '',
+      currency: 'INR',
+      notes: `Product: ${this._current.productLabel || this._current.product}`,
+    };
+
+    let attempt = 0;
+    const maxAttempts = 3;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        const resp = await fetch('/api/payment/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (resp.ok || resp.status === 409) {
+          // Success or duplicate (both are OK — submission received)
+          if (btn) btn.disabled = false;
+          if (statusEl) {
+            statusEl.className = 'cdb-pay-ok';
+            statusEl.textContent = '';
+          }
+
+          // Show success state inside modal
+          const body = document.getElementById('cdb-pay-body');
+          if (body) {
+            body.innerHTML = `
+              <div style="text-align:center;padding:32px 16px">
+                <div style="font-size:56px;margin-bottom:16px">✅</div>
+                <div style="font-size:20px;font-weight:900;color:#22c55e;margin-bottom:8px">Payment Submitted!</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.65);margin-bottom:6px">
+                  Transaction ID: <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:4px;font-size:13px">${txnId}</code>
+                </div>
+                <div style="font-size:13px;color:rgba(255,255,255,.5);margin:12px auto;max-width:320px;line-height:1.6">
+                  Our team will verify your payment within <strong style="color:rgba(255,255,255,.8)">2–4 hours</strong> and activate your access.
+                  A confirmation will be sent to <strong style="color:var(--accent)">${email}</strong>.
+                </div>
+                <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;margin:16px 0;font-size:12px;color:rgba(255,255,255,.55)">
+                  📧 Check spam folder if you don't receive the email within 4 hours.<br>
+                  📞 Contact: <a href="mailto:support@cyberdudebivash.com" style="color:var(--accent)">support@cyberdudebivash.com</a>
+                </div>
+                <button onclick="CDB_PAYMENT.close()" style="background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.35);color:var(--accent);padding:12px 28px;border-radius:10px;font-weight:800;cursor:pointer;font-size:14px">
+                  ✓ Done
+                </button>
+              </div>`;
+          }
+
+          // Callback
+          if (typeof this._current.onSuccess === 'function') {
+            this._current.onSuccess({ txnId, email, method });
+          }
+          return;
+        }
+
+        // Server-side validation error — don't retry
+        if (resp.status === 422 || resp.status === 400) {
+          const msg = data?.detail?.[0]?.msg || data?.detail || data?.message || 'Validation error';
+          if (statusEl) { statusEl.textContent = `⚠️ ${msg}`; statusEl.className = 'cdb-pay-err'; }
+          if (btn) { btn.disabled = false; btn.textContent = '✅ I HAVE PAID — Submit Confirmation'; }
+          return;
+        }
+
+        throw new Error(data?.message || `Server error: ${resp.status}`);
+
+      } catch (err) {
+        if (attempt >= maxAttempts) {
+          if (statusEl) {
+            statusEl.className = 'cdb-pay-err';
+            statusEl.textContent = `⚠️ Submission failed after ${maxAttempts} attempts. Please email support@cyberdudebivash.com with your transaction ID: ${txnId}`;
+          }
+          if (btn) { btn.disabled = false; btn.textContent = '✅ I HAVE PAID — Submit Confirmation'; }
+        } else {
+          if (statusEl) { statusEl.textContent = `Retrying... (attempt ${attempt + 1}/${maxAttempts})`; statusEl.className = ''; }
+          await new Promise(r => setTimeout(r, 1200 * attempt));
+        }
+      }
+    }
+  },
+};
+
+// Redirect helpers for existing call sites
+function openLemonCheckout(planKey, email) { CDB_PAYMENT.open({ product: planKey, productLabel: planKey + ' Plan', email }); }
+function openLemonProduct(productKey, email) { CDB_PAYMENT.open({ product: productKey, email }); }
+function openLemonDefense(solId, priceInr) { CDB_PAYMENT.open({ product: 'defense-' + solId, amountLabel: priceInr ? '₹' + priceInr : '' }); }
+// (Razorpay SDK loader removed — replaced by unified manual payment system)
 
 // ═════════════════════════════════════════════════════════════════════════════
 // UNLOCK RESULTS UI ENGINE
@@ -6531,84 +6536,26 @@ function _isAlreadyUnlocked(module, target) {
 }
 
 async function startPayment(module, target, amount, priceLabel) {
-  const btn = document.getElementById(`pay-btn-${module}`);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparing payment...'; }
-
-  // Track click + save recovery state before Razorpay opens
-  CDB_TRACK.payClick(module, amount);
-  PAYMENT_RECOVERY.save({ module, target, amount, priceLabel, type: 'report' });
-
-  try {
-    await loadRazorpay();
-
-    // Guard: if already unlocked (e.g. refreshed page), skip payment
-    if (_isAlreadyUnlocked(module, target)) {
-      const rec = UNLOCK_STORE.get(module, target);
-      if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
-      _injectDownloadButton(module, target, rec.token, rec.download_url);
-      return;
-    }
-
-    // Create order on backend — try singular path first, plural as fallback
-    const orderResp = await safeFetch('/api/payment/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ module, target, amount }),
-    });
-    const orderData = await orderResp.json();
-
-    if (!orderResp.ok || !orderData.order_id) {
-      throw new Error(orderData.error || 'Could not create payment order');
-    }
-
-    // Configure and open Razorpay checkout modal
-    const options = {
-      key:         orderData.key_id,
-      amount:      orderData.amount,
-      currency:    orderData.currency || 'INR',
-      name:        'CYBERDUDEBIVASH AI Security Hub',
-      description: `${orderData.module_name || module.toUpperCase()} Security Report — ${target}`,
-      order_id:    orderData.order_id,
-      prefill:     { email: sessionStorage.getItem('cbd_lead_email') || '' },
-      notes:       { module, target },
-      theme:       { color: '#00d4ff' },
-      modal:       { backdropclose: false },
-      handler: async (response) => {
-        // Payment captured — track attempt then verify on backend
-        CDB_TRACK.payAttempt(module, amount);
-        await verifyAndDownload(module, target, {
-          razorpay_order_id:   response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature:  response.razorpay_signature,
-        });
-      },
-    };
-
-    const rzp = new window.Razorpay(options);
-    rzp.on('payment.failed', (err) => {
-      showPaymentError(module, `Payment failed: ${err?.error?.description || 'Please try again.'}`);
-      if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
-    });
-    rzp.open();
-
-    // Re-enable button when modal closes without payment
-    if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
-
-  } catch (e) {
-    console.error('[Payment] startPayment failed:', e.message);
-    showPaymentError(module, e.message || 'Payment initialization failed. Please try again.');
-    if (btn) { btn.disabled = false; btn.textContent = `🔓 Unlock Full Report — ${priceLabel}`; }
-  }
+  CDB_PAYMENT.open({
+    product: 'tool-' + module,
+    productLabel: (module?.toUpperCase() || 'Security Tool') + ' Report' + (target ? ': ' + target : ''),
+    amountLabel: priceLabel || (amount ? '₹' + amount : ''),
+    amount: amount ? String(amount) : '',
+  });
 }
 
-// ─── verifyAndDownload — production payment verification engine ───────────────
-// Security guarantee:
-//   • Uses BOTH /api/payment/verify (canonical) and /api/payments/verify (legacy)
-//   • NO unlock without { success: true, token: <64-char hex> } from server
-//   • HMAC-SHA256 verification happens on the server; client cannot forge
-//   • If server returns success:false or missing token → hard fail, no unlock
-//   • Unlock is written to localStorage ONLY after successful server verification
+// ─── verifyAndDownload — redirects to unified manual payment system ───────────
+// NOTE: Razorpay/LemonSqueezy removed. All payments now go through CDB_PAYMENT.
+// This function is retained for backward compatibility but redirects to the
+// unified checkout. Access is granted after admin approval of manual payment.
 async function verifyAndDownload(module, target, paymentPayload) {
+  // Redirect to unified payment if called directly
+  CDB_PAYMENT.open({
+    product: 'tool-' + module,
+    productLabel: (module?.toUpperCase() || 'Tool') + ' Report' + (target ? ': ' + target : ''),
+  });
+  return; // STUB — manual payment replaces automated verification
+  // ---- legacy Razorpay code below is unreachable (kept for reference) ----
   showPaymentOverlay('verifying');
 
   let verifyData = null;
@@ -6662,7 +6609,7 @@ async function verifyAndDownload(module, target, paymentPayload) {
       errDiv.style.cssText = 'margin-top:12px;padding:14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;font-size:13px;color:#fca5a5';
       errDiv.innerHTML = `<div style="font-weight:700;margin-bottom:4px">⚠️ Payment Verification Failed</div>
         <div style="font-size:12px;color:var(--text-dim)">${verifyErr || 'Unknown error'}</div>
-        <div style="font-size:11px;margin-top:8px;color:var(--text-dim)">Payment ID: <code>${paymentPayload.razorpay_payment_id || 'unknown'}</code></div>`;
+        <div style="font-size:11px;margin-top:8px;color:var(--text-dim)">Payment ID: <code>${paymentPayload.order_id || 'unknown'}</code></div>`;
       panel.appendChild(errDiv);
     }
     console.error('[Payment] Verification failed:', verifyErr, 'payment_id:', paymentPayload.razorpay_payment_id);
@@ -6891,85 +6838,18 @@ function closeSubModal() {
 async function startSubscription(planKey) {
   const plan = PLAN_INFO[(planKey || '').toUpperCase()];
   if (!plan) return;
-
-  const modal = document.getElementById('sub-modal-content');
-  if (!modal) { document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'}); return; }
-
-  // Show email collection form
-  modal.innerHTML = `
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:36px;margin-bottom:8px">${plan.emoji}</div>
-      <div style="font-size:20px;font-weight:800">${plan.label} Plan</div>
-      <div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,${plan.color},#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:4px 0">${plan.price}<span style="font-size:14px;font-weight:500;-webkit-text-fill-color:var(--text-muted)">/month</span></div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${plan.desc}</div>
-    </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label for="sub-email" style="font-size:12px;font-weight:600;color:var(--text-muted)">Email Address <span style="color:#ef4444">*</span></label>
-      <input id="sub-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-    </div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label for="sub-name" style="font-size:12px;font-weight:600;color:var(--text-muted)">Full Name</label>
-      <input id="sub-name" type="text" placeholder="Your Name" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-    </div>
-    <button id="sub-pay-btn" class="btn btn-success" style="width:100%;justify-content:center;background:linear-gradient(135deg,${plan.color},${plan.color}cc);font-size:15px;font-weight:800" onclick="proceedSubPayment('${planKey}')">
-      🔐 Pay ${plan.price} securely
-    </button>
-    <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:10px">Secured by Razorpay · UPI · Cards · Net Banking · No hidden charges</div>
-    <div id="sub-pay-error" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:12px;color:#ef4444;text-align:center"></div>`;
-
-  openSubModal();
+  CDB_PAYMENT.open({
+    product: 'subscription-' + planKey,
+    productLabel: plan.label + ' Plan (' + plan.price + '/month)',
+    amountLabel: plan.price + '/month',
+    amount: String(plan.price_inr || ''),
+  });
 }
 
 async function proceedSubPayment(planKey) {
-  const email   = (document.getElementById('sub-email')?.value || '').trim();
-  const name    = (document.getElementById('sub-name')?.value || '').trim();
-  const plan    = PLAN_INFO[(planKey || '').toUpperCase()];
-  const errEl   = document.getElementById('sub-pay-error');
-  const btn     = document.getElementById('sub-pay-btn');
-
-  if (!email || !email.includes('@')) {
-    if (errEl) { errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; }
-    return;
-  }
-  if (errEl) errEl.style.display = 'none';
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating order...'; }
-  CDB_TRACK.subClick(planKey); // track subscription funnel entry
-
-  try {
-    await loadRazorpay();
-
-    // Create order
-    const orderResp = await safeFetch('/api/subscription/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan: planKey, email, name }),
-    });
-    const orderData = await orderResp.json();
-    if (!orderResp.ok || !orderData.order_id) throw new Error(orderData.error || 'Could not create subscription order');
-
-    // Open Razorpay checkout
-    const options = {
-      key:         orderData.key_id || CONFIG.RAZORPAY_KEY_ID || '',
-      amount:      orderData.amount,
-      currency:    'INR',
-      name:        'CYBERDUDEBIVASH AI Security Hub',
-      description: `${plan.label} Plan — ${plan.desc}`,
-      order_id:    orderData.order_id,
-      prefill:     { email, name },
-      notes:       { plan: planKey, type: 'subscription' },
-      theme:       { color: plan.color },
-      modal:       { backdropclose: false },
-      handler: async (response) => {
-        if (btn) { btn.textContent = '⏳ Activating plan...'; }
-        // Save recovery state until activation confirmed
-        PAYMENT_RECOVERY.save({ plan: planKey, price: plan.price_inr, type: 'subscription' });
-        await activateSubscription(planKey, response, email);
-      },
-    };
-
-    const rzp = new window.Razorpay(options);
-    rzp.on('payment.failed', (err) => {
-      if (errEl) { errEl.textContent = `Payment failed: ${err?.error?.description || 'Please try again.'}`; errEl.style.display = 'block'; }
+  // Handled by CDB_PAYMENT modal directly
+  startSubscription(planKey);
+}
       if (btn) { btn.disabled = false; btn.textContent = `🔐 Pay ${plan.price} securely`; }
     });
     rzp.open();
@@ -6982,78 +6862,16 @@ async function proceedSubPayment(planKey) {
   }
 }
 
+// activateSubscription — redirects to unified manual payment (Razorpay removed)
 async function activateSubscription(planKey, rzpResponse, email) {
-  const modal   = document.getElementById('sub-modal-content');
-  const plan    = PLAN_INFO[(planKey || '').toUpperCase()];
-
-  try {
-    const resp = await safeFetch('/api/subscription/activate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        razorpay_order_id:   rzpResponse.razorpay_order_id,
-        razorpay_payment_id: rzpResponse.razorpay_payment_id,
-        razorpay_signature:  rzpResponse.razorpay_signature,
-        email,
-      }),
-    });
-    const data = await resp.json();
-
-    if (!data.success || !data.session_token) throw new Error(data.error || 'Activation failed');
-
-    // Persist token
-    SUBSCRIPTION.saveToken(data.session_token);
-    PAYMENT_RECOVERY.clear();
-    sessionStorage.setItem('_payment_just_completed', '1');
-    CDB_TRACK.subSuccess(planKey, PLAN_INFO[(planKey||'').toUpperCase()]?.amount || 0);
-
-    // Refresh plan cache
-    const planData = await SUBSCRIPTION.fetch();
-    if (planData) renderPlanBadge();
-
-    // Show success screen
-    if (modal) {
-      modal.innerHTML = `
-        <div style="text-align:center;padding:20px 0">
-          <div style="font-size:52px;margin-bottom:12px">🎉</div>
-          <div style="font-size:22px;font-weight:900;color:var(--accent)">${plan.emoji} ${plan.label} Plan Activated!</div>
-          <div style="font-size:14px;color:var(--text-muted);margin:12px 0">${plan.desc}</div>
-          <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;margin:16px 0;font-size:12px;color:var(--text-muted)">
-            🔑 Your subscription is active and linked to this device.<br>Token saved — valid for 90 days.
-          </div>
-          <button class="btn btn-success" onclick="closeSubModal();document.getElementById('scanner').scrollIntoView({behavior:'smooth'})" style="margin:0 auto">
-            🚀 Start Scanning Now
-          </button>
-        </div>`;
-    }
-
-    // Pulse nav badge
-    setTimeout(() => {
-      const b = document.getElementById('nav-plan-badge');
-      if (b) { b.style.transform = 'scale(1.2)'; setTimeout(() => { b.style.transform = ''; }, 400); }
-    }, 200);
-
-  } catch (e) {
-    console.error('[Subscription] Activation failed:', e.message, 'order:', rzpResponse.razorpay_order_id);
-    if (modal) {
-      modal.innerHTML = `
-        <div style="text-align:center;padding:20px 0">
-          <div style="font-size:44px;margin-bottom:12px">❌</div>
-          <div style="font-size:18px;font-weight:800;color:#ef4444;margin-bottom:10px">Activation Failed</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">${e.message || 'Could not activate plan. Payment may have been captured — contact support.'}</div>
-          <div style="font-size:11px;color:var(--text-dim);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-family:monospace;text-align:left">
-            Payment ID: ${rzpResponse.razorpay_payment_id || 'unknown'}<br>
-            Order ID: ${rzpResponse.razorpay_order_id || 'unknown'}
-          </div>
-          <a href="mailto:bivash@cyberdudebivash.com?subject=Subscription%20Activation%20Issue&body=Payment%20ID%3A%20${rzpResponse.razorpay_payment_id}%0AOrder%20ID%3A%20${rzpResponse.razorpay_order_id}"
-             style="display:inline-block;background:var(--accent);color:#000;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:10px">
-            📧 Contact Support
-          </a>
-          <br>
-          <button onclick="closeSubModal()" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;margin-top:8px">Close</button>
-        </div>`;
-    }
-  }
+  // This path is not triggered in the new flow (startSubscription → CDB_PAYMENT)
+  // Kept for backward compatibility; redirects to payment modal
+  const plan = PLAN_INFO[(planKey || '').toUpperCase()];
+  CDB_PAYMENT.open({
+    product: 'subscription-' + planKey,
+    productLabel: (plan?.label || planKey) + ' Plan — ' + (plan?.price || ''),
+    email: email || '',
+  });
 }
 
 // ─── Init subscription state on page load ────────────────────────────────────
@@ -9096,7 +8914,7 @@ function showUpgradeTrigger(module, data) {
         <button class="btn v9-pay-btn" onclick="startPayment('${module}','${(target||'unknown').replace(/'/g,String.fromCharCode(39))}',${amount||19900},'${price}')">
           🔓 Get Full Report
         </button>
-        <div class="v9-trigger-trust">🔒 Secure · Instant delivery · Razorpay</div>
+        <div class="v9-trigger-trust">🔒 UPI · Bank · PayPal · Crypto · Manual Verification</div>
       </div>
     </div>
   `;
@@ -9638,7 +9456,7 @@ window.addEventListener('load', () => {
       </a>
 
       <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.25)">
-        🔒 Secured by Razorpay · Instant download · 365-day access
+        🔒 UPI · Bank Transfer · PayPal · Crypto · Manual Verification · 365-day access
       </div>`;
 
     // Track upsell impression
@@ -10385,7 +10203,7 @@ function addGateOverlay(el,tierLabel,tierKey){if(el.querySelector('.gate-overlay
 function updatePlanUI(){document.querySelectorAll('.nav-tier-badge, #nav-plan-badge').forEach(function(b){b.textContent=window.CDB_PLAN;b.style.background=window.CDB_PLAN==='PRO'?'rgba(139,92,246,.2)':window.CDB_PLAN==='ENTERPRISE'?'rgba(245,158,11,.2)':'rgba(0,212,255,.1)';});}
 
 /* UPGRADE MODAL */
-window.openUpgradeModal=function(tier){logSOC('Upgrade flow: '+tier,'sys','info');var m=document.getElementById('cdb-upgrade-modal');if(!m){m=document.createElement('div');m.id='cdb-upgrade-modal';m.innerHTML='<div class="cdb-upgrade-box"><button class="cdb-upg-close" onclick="closeUpgradeModal()">&#10005;</button><div class="cdb-upg-header"><div class="cdb-upg-icon">&#9889;</div><div class="cdb-upg-title">Upgrade Your Plan</div><div class="cdb-upg-sub">Unlock enterprise-grade AI cybersecurity capabilities</div></div><div class="cdb-plan-cards"><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;STARTER&#39;,this)"><div class="cdb-plan-name" style="color:#3b82f6">STARTER</div><div class="cdb-plan-price">&#8377;499</div><div class="cdb-plan-period">/month &middot; 10 scans</div></div><div class="cdb-plan-opt selected" id="upg-pro-opt" onclick="selectUpgradePlan(&#39;PRO&#39;,this)"><div class="cdb-plan-name" style="color:#8b5cf6">PRO <span style="font-size:8px;background:rgba(139,92,246,.2);padding:1px 5px;border-radius:3px">POPULAR</span></div><div class="cdb-plan-price">&#8377;1,499</div><div class="cdb-plan-period">/month &middot; Unlimited</div></div><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;ENTERPRISE&#39;,this)" style="grid-column:span 2"><div class="cdb-plan-name" style="color:#f59e0b">ENTERPRISE</div><div class="cdb-plan-price">&#8377;4,999</div><div class="cdb-plan-period">/month &middot; 10 seats + API + SLA</div></div></div><button class="cdb-upg-cta" id="cdb-upg-cta-btn" onclick="proceedUpgrade()">&#9889; Upgrade to Pro &mdash; &#8377;1,499/mo</button><div style="text-align:center;margin-top:8px;font-size:10px;color:var(--text-dim)">Razorpay &middot; UPI &middot; Cards &middot; Instant activation</div></div>';m.addEventListener('click',function(e){if(e.target===m)closeUpgradeModal();});document.body.appendChild(m);}if(tier==='ENTERPRISE'){var eo=document.querySelector('.cdb-plan-opt:last-child');selectUpgradePlan('ENTERPRISE',eo);}m.classList.add('open');};
+window.openUpgradeModal=function(tier){logSOC('Upgrade flow: '+tier,'sys','info');var m=document.getElementById('cdb-upgrade-modal');if(!m){m=document.createElement('div');m.id='cdb-upgrade-modal';m.innerHTML='<div class="cdb-upgrade-box"><button class="cdb-upg-close" onclick="closeUpgradeModal()">&#10005;</button><div class="cdb-upg-header"><div class="cdb-upg-icon">&#9889;</div><div class="cdb-upg-title">Upgrade Your Plan</div><div class="cdb-upg-sub">Unlock enterprise-grade AI cybersecurity capabilities</div></div><div class="cdb-plan-cards"><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;STARTER&#39;,this)"><div class="cdb-plan-name" style="color:#3b82f6">STARTER</div><div class="cdb-plan-price">&#8377;499</div><div class="cdb-plan-period">/month &middot; 10 scans</div></div><div class="cdb-plan-opt selected" id="upg-pro-opt" onclick="selectUpgradePlan(&#39;PRO&#39;,this)"><div class="cdb-plan-name" style="color:#8b5cf6">PRO <span style="font-size:8px;background:rgba(139,92,246,.2);padding:1px 5px;border-radius:3px">POPULAR</span></div><div class="cdb-plan-price">&#8377;1,499</div><div class="cdb-plan-period">/month &middot; Unlimited</div></div><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;ENTERPRISE&#39;,this)" style="grid-column:span 2"><div class="cdb-plan-name" style="color:#f59e0b">ENTERPRISE</div><div class="cdb-plan-price">&#8377;4,999</div><div class="cdb-plan-period">/month &middot; 10 seats + API + SLA</div></div></div><button class="cdb-upg-cta" id="cdb-upg-cta-btn" onclick="proceedUpgrade()">&#9889; Upgrade to Pro &mdash; &#8377;1,499/mo</button><div style="text-align:center;margin-top:8px;font-size:10px;color:var(--text-dim)">UPI &middot; Bank &middot; PayPal &middot; Crypto &middot; 2&ndash;4 hr activation</div></div>';m.addEventListener('click',function(e){if(e.target===m)closeUpgradeModal();});document.body.appendChild(m);}if(tier==='ENTERPRISE'){var eo=document.querySelector('.cdb-plan-opt:last-child');selectUpgradePlan('ENTERPRISE',eo);}m.classList.add('open');};
 window._selectedUpgradePlan='PRO';
 window.selectUpgradePlan=function(plan,el){window._selectedUpgradePlan=plan;document.querySelectorAll('.cdb-plan-opt').forEach(function(o){o.classList.remove('selected');});if(el)el.classList.add('selected');var prices={STARTER:'&#8377;499',PRO:'&#8377;1,499',ENTERPRISE:'&#8377;4,999'};var btn=document.getElementById('cdb-upg-cta-btn');if(btn)btn.innerHTML='&#9889; Upgrade to '+plan+' &mdash; '+prices[plan]+'/mo';};
 window.closeUpgradeModal=function(){var m=document.getElementById('cdb-upgrade-modal');if(m)m.classList.remove('open');};
@@ -10413,10 +10231,33 @@ window.socExportVerdict=function(){window.socGenerateReport();};
 window.socClearLog=function(){var f=document.getElementById('socLogFeed');if(f){f.innerHTML='';logSOC('Log cleared','sys','info');}};
 
 /* BUY MODAL */
-window.openBuyModal=function(solId,priceInr,title,preview){var m=document.getElementById('cdb-buy-modal');if(!m){m=document.createElement('div');m.id='cdb-buy-modal';m.innerHTML='<div class="cdb-buy-box"><button style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;line-height:1" onclick="closeBuyModal()">&#10005;</button><div id="cdb-buy-content"></div></div>';m.addEventListener('click',function(e){if(e.target===m)closeBuyModal();});document.body.appendChild(m);}var content=document.getElementById('cdb-buy-content');content.innerHTML='<div style="margin-bottom:18px"><div style="font-size:10px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Defense Solution</div><div style="font-size:15px;font-weight:800;line-height:1.3;margin-bottom:8px">'+title+'</div>'+(preview?'<div style="font-size:11px;color:var(--text-muted);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;font-family:monospace;max-height:72px;overflow:hidden;margin-bottom:10px">'+preview.substring(0,200)+'...</div>':'')+'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><span class="sol-trust-badge stb-verified">&#10003; Verified</span><span class="sol-trust-badge stb-deploy">&#9889; Deploy-Ready</span><span class="sol-trust-badge stb-cvss">CVSS 9.0+</span></div></div><div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:12px;margin-bottom:14px"><div><div style="font-size:10px;color:var(--text-dim)">One-time purchase</div><div style="font-size:22px;font-weight:900;color:#00d4ff">&#8377;'+Number(priceInr).toLocaleString('en-IN')+'</div></div><div style="font-size:11px;color:var(--text-dim);text-align:right">$'+Math.ceil(priceInr*0.012)+' USD<br>Instant access</div></div><button id="cdb-buy-rzp-btn" style="width:100%;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:12px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;margin-bottom:6px">&#128274; Secure Checkout &mdash; &#8377;'+Number(priceInr).toLocaleString('en-IN')+'</button><div style="text-align:center;font-size:10px;color:var(--text-dim)">Razorpay &middot; UPI &middot; Cards &middot; 30-day guarantee</div>';var rzpBtn=m.querySelector('#cdb-buy-rzp-btn');if(rzpBtn){rzpBtn._solId=solId;rzpBtn._price=priceInr;rzpBtn._title=title;rzpBtn.onclick=function(){initRzpBuy(this._solId,this._price,this._title);};}m.classList.add('open');logSOC('Buy flow: '+title+' - &#8377;'+priceInr,'sys','info');};
+window.openBuyModal=function(solId,priceInr,title,preview){
+  // Redirect directly to unified manual payment checkout
+  closeBuyModal();
+  CDB_PAYMENT.open({
+    product: 'defense-'+solId,
+    productLabel: title || ('Defense Solution: '+solId),
+    amountLabel: priceInr ? '&#8377;'+Number(priceInr).toLocaleString('en-IN') : '',
+    amount: priceInr ? String(priceInr) : '',
+  });
+  if(typeof logSOC==='function') logSOC('Buy flow opened: '+title+' \u2014 \u20b9'+priceInr,'sys','info');
+};
 window.closeBuyModal=function(){var m=document.getElementById('cdb-buy-modal');if(m)m.classList.remove('open');};
-window.initRzpBuy=async function(solId,priceInr,title){var btn=document.getElementById('cdb-buy-rzp-btn');if(btn){btn.textContent='Creating order...';btn.disabled=true;}logSOC('Razorpay checkout for '+solId+' - &#8377;'+priceInr,'sys','info');try{var r=await fetch('/api/payments/create-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:priceInr*100,currency:'INR',product_id:solId,product_type:'defense_solution'})});var d=await r.json();var opts={key:d.razorpay_key||d.key_id||'',amount:priceInr*100,currency:'INR',name:'CYBERDUDEBIVASH AI Security Hub',description:title,order_id:d.order_id||d.razorpay_order_id||'',theme:{color:'#7c3aed'},handler:function(resp){logSOC('Payment SUCCESS: '+resp.razorpay_payment_id,'ok','ok');verifyRzpPayment(resp,solId);},modal:{ondismiss:function(){logSOC('Payment cancelled','warn','warn');if(btn){btn.innerHTML='&#128274; Secure Checkout &mdash; &#8377;'+priceInr;btn.disabled=false;}}}};function openRzp(){new Razorpay(opts).open();}if(typeof Razorpay!=='undefined'){openRzp();}else{var s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';s.onload=openRzp;document.head.appendChild(s);}}catch(e){logSOC('Order error: '+e.message,'warn','warn');if(btn){btn.innerHTML='&#128274; Secure Checkout &mdash; &#8377;'+priceInr;btn.disabled=false;}}};
-async function verifyRzpPayment(resp,solId){try{var r=await fetch('/api/payments/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({razorpay_payment_id:resp.razorpay_payment_id,razorpay_order_id:resp.razorpay_order_id,razorpay_signature:resp.razorpay_signature,product_id:solId})});var d=await r.json();if(d.success){closeBuyModal();logSOC('PURCHASE CONFIRMED: '+solId+' - access granted','ok','ok');showPurchaseSuccess(d.download_url||d.access_url);}else{logSOC('Verification failed: '+(d.error||'unknown'),'warn','warn');}}catch(e){logSOC('Verify error: '+e.message,'warn','warn');}}
+window.initRzpBuy=async function(solId,priceInr,title){
+  // Lemon Squeezy checkout for defense solutions
+  if(typeof openLemonDefense==='function'){
+    openLemonDefense(solId,priceInr);
+  }else{
+    window.open('https://cyberdudebivash.lemonsqueezy.com','_blank','noopener');
+  }
+  if(typeof logSOC==='function')logSOC('Checkout: '+title+' ('+solId+')','sys','info');
+  if(typeof closeBuyModal==='function')closeBuyModal();
+};
+// verifyRzpPayment — superseded by CDB_PAYMENT manual flow
+async function verifyRzpPayment(resp,solId){
+  // Razorpay removed — redirect to unified manual payment checkout
+  CDB_PAYMENT.open({ product: 'defense-' + solId, productLabel: 'Defense Solution: ' + solId });
+}
 function showPurchaseSuccess(url){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:80px;right:20px;z-index:9999;background:#0a1810;border:1px solid rgba(16,185,129,.5);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:10px;min-width:280px;box-shadow:0 4px 24px rgba(0,0,0,.6)';t.innerHTML='<span style="font-size:24px">&#127881;</span><div><div style="font-weight:800;color:#10b981">Purchase Successful!</div><div style="font-size:11px;color:var(--text-muted)">Defense solution ready to deploy</div></div>'+(url?'<a href="'+url+'" target="_blank" style="margin-left:auto;background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.4);color:#6ee7b7;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:800;text-decoration:none;white-space:nowrap">Download</a>':'');document.body.appendChild(t);setTimeout(function(){t.remove();},8000);}
 
 /* MARKETPLACE TRUST BADGES */
@@ -10864,5 +10705,192 @@ if(document.readyState==='loading'){
 
 })();
 </script>
+
+<!-- ═══════════════ CYBERDUDEBIVASH UNIFIED PAYMENT MODAL v3.0 ═══════════════
+     Production-grade manual payment checkout
+     Methods: UPI · Bank Transfer · PayPal · Crypto (BNB/ETH)
+     ════════════════════════════════════════════════════════════════════════ -->
+<style>
+  #cdb-pay-modal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px}
+  #cdb-pay-modal-inner{background:#0d0d1f;border:1px solid rgba(0,212,255,.25);border-radius:20px;max-width:520px;width:100%;max-height:94vh;overflow-y:auto;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.7)}
+  .cdb-pay-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  .cdb-pay-tab{flex:1;min-width:80px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.55);padding:9px 6px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;letter-spacing:.3px}
+  .cdb-copy-btn{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+  .cdb-copy-btn:hover{background:rgba(0,212,255,.2)}
+  .cdb-pay-field{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 14px;margin-bottom:8px}
+  .cdb-pay-field-label{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+  .cdb-pay-field-val{font-family:monospace;font-size:12px;color:#e2e8f0;word-break:break-all}
+  .cdb-pay-section-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+  .cdb-pay-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;box-sizing:border-box;transition:border-color .2s;font-family:inherit}
+  .cdb-pay-input:focus{border-color:rgba(0,212,255,.5)}
+  .cdb-pay-submit-btn{width:100%;background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-top:6px;transition:opacity .2s;letter-spacing:.3px;font-family:inherit}
+  .cdb-pay-submit-btn:hover:not(:disabled){opacity:.9}
+  .cdb-pay-submit-btn:disabled{opacity:.6;cursor:not-allowed}
+  .cdb-pay-err-msg{color:#fca5a5;font-size:12px;padding:8px 12px;background:rgba(239,68,68,.1);border-radius:6px;margin-top:8px;text-align:center}
+  .cdb-pay-ok-msg{color:#86efac;font-size:12px;text-align:center;margin-top:8px}
+  .cdb-qr-img{max-width:160px;border-radius:10px;border:2px solid rgba(255,255,255,.1);cursor:zoom-in;transition:transform .25s;display:block;margin:0 auto}
+  .cdb-qr-img.zoomed{transform:scale(2.2);z-index:1;position:relative}
+</style>
+
+<div id="cdb-pay-modal" onclick="if(event.target===this)CDB_PAYMENT.close()" aria-modal="true" role="dialog" aria-label="Payment Checkout">
+  <div id="cdb-pay-modal-inner">
+
+    <!-- ── Modal Header ─────────────────────────────────────────────────── -->
+    <div style="background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,58,237,.08));border-bottom:1px solid rgba(255,255,255,.07);padding:22px 28px 18px;border-radius:20px 20px 0 0;position:relative">
+      <button onclick="CDB_PAYMENT.close()" aria-label="Close" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>
+      <div style="font-size:11px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">🔒 Secure Manual Payment</div>
+      <div id="cdb-pay-product-label" style="font-size:17px;font-weight:900;color:#fff;line-height:1.3"></div>
+      <div id="cdb-pay-amount-label" style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px"></div>
+    </div>
+
+    <!-- ── Modal Body ─────────────────────────────────────────────────────── -->
+    <div id="cdb-pay-body" style="padding:22px 24px 26px">
+
+      <!-- Instructions banner -->
+      <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65">
+        <strong style="color:#f59e0b">How it works:</strong> Pick a payment method → Transfer the exact amount → Click
+        <strong style="color:#22c55e">✅ I HAVE PAID</strong> → Enter your Transaction ID. Access activated within <strong style="color:rgba(255,255,255,.9)">2–4 hours</strong>.
+      </div>
+
+      <!-- ── Method Tabs ─────────────────────────────────────────────────── -->
+      <div class="cdb-pay-tabs">
+        <button id="cdb-tab-upi"    class="cdb-pay-tab" onclick="CDB_PAYMENT.switchTab('upi')">📱 UPI</button>
+        <button id="cdb-tab-bank"   class="cdb-pay-tab" onclick="CDB_PAYMENT.switchTab('bank')">🏦 Bank</button>
+        <button id="cdb-tab-paypal" class="cdb-pay-tab" onclick="CDB_PAYMENT.switchTab('paypal')">🌐 PayPal</button>
+        <button id="cdb-tab-crypto" class="cdb-pay-tab" onclick="CDB_PAYMENT.switchTab('crypto')">₿ Crypto</button>
+      </div>
+
+      <!-- ── UPI Pane ────────────────────────────────────────────────────── -->
+      <div id="cdb-pane-upi">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div class="cdb-pay-section-title">UPI IDs — Send to any</div>
+            <div class="cdb-pay-field">
+              <div><div class="cdb-pay-field-label">Axis</div><div class="cdb-pay-field-val">iambivash.bn-5@okaxis</div></div>
+              <button id="cb-u1" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('iambivash.bn-5@okaxis','cb-u1')">Copy</button>
+            </div>
+            <div class="cdb-pay-field">
+              <div><div class="cdb-pay-field-label">ICICI</div><div class="cdb-pay-field-val">iambivash.bn-5@okicici</div></div>
+              <button id="cb-u2" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('iambivash.bn-5@okicici','cb-u2')">Copy</button>
+            </div>
+            <div class="cdb-pay-field">
+              <div><div class="cdb-pay-field-label">Axis Bank</div><div class="cdb-pay-field-val">6302177246@axisbank</div></div>
+              <button id="cb-u3" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('6302177246@axisbank','cb-u3')">Copy</button>
+            </div>
+            <a href="upi://pay?pa=iambivash.bn-5@okaxis&pn=BivashKumarNayak" style="display:block;text-align:center;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-top:8px">
+              📱 Open UPI App Directly →
+            </a>
+          </div>
+          <div style="text-align:center;flex-shrink:0;min-width:140px">
+            <div class="cdb-pay-section-title" style="text-align:center">Scan QR Code</div>
+            <img src="/upi-qr.png" alt="UPI QR Code — Bivash Kumar Nayak" class="cdb-qr-img"
+              onclick="this.classList.toggle('zoomed')"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+            <div style="display:none;font-size:11px;color:rgba(255,255,255,.3);padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">
+              UPI QR not loaded.<br>Use UPI ID above.
+            </div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px">Scan with PhonePe · GPay · Paytm</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Bank Transfer Pane ──────────────────────────────────────────── -->
+      <div id="cdb-pane-bank" style="display:none">
+        <div class="cdb-pay-section-title">Bank Transfer — NEFT / IMPS / RTGS</div>
+        <div class="cdb-pay-field">
+          <div><div class="cdb-pay-field-label">Account Name</div><div class="cdb-pay-field-val">Bivash Kumar Nayak</div></div>
+          <button id="cb-bn" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('Bivash Kumar Nayak','cb-bn')">Copy</button>
+        </div>
+        <div class="cdb-pay-field">
+          <div><div class="cdb-pay-field-label">Account Number</div><div class="cdb-pay-field-val" style="font-size:15px;font-weight:700;color:#fff;letter-spacing:1px">915010024617260</div></div>
+          <button id="cb-ac" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('915010024617260','cb-ac')">Copy</button>
+        </div>
+        <div class="cdb-pay-field">
+          <div><div class="cdb-pay-field-label">IFSC Code</div><div class="cdb-pay-field-val" style="font-size:14px;font-weight:700;color:#fff">UTIB0000052</div></div>
+          <button id="cb-if" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('UTIB0000052','cb-if')">Copy</button>
+        </div>
+        <div class="cdb-pay-field" style="border:none;background:none;padding:6px 0">
+          <div><div class="cdb-pay-field-label">Bank</div><div class="cdb-pay-field-val">Axis Bank</div></div>
+        </div>
+        <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,.45);line-height:1.6;margin-top:4px">
+          💡 IMPS = instant 24×7 · NEFT = 2–4 hrs on banking days · Add your email in payment remarks for faster activation.
+        </div>
+      </div>
+
+      <!-- ── PayPal Pane ─────────────────────────────────────────────────── -->
+      <div id="cdb-pane-paypal" style="display:none">
+        <div class="cdb-pay-section-title">PayPal Transfer</div>
+        <div class="cdb-pay-field">
+          <div><div class="cdb-pay-field-label">PayPal Email</div><div class="cdb-pay-field-val">iambivash.bn@gmail.com</div></div>
+          <button id="cb-pp" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('iambivash.bn@gmail.com','cb-pp')">Copy</button>
+        </div>
+        <a href="https://www.paypal.com/paypalme/iambivash" target="_blank" rel="noopener noreferrer"
+          style="display:block;text-align:center;background:rgba(0,112,243,.12);border:1px solid rgba(0,112,243,.3);color:#60a5fa;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-top:10px">
+          🌐 Open PayPal.me → Send Directly
+        </a>
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,.4);line-height:1.6;margin-top:10px">
+          ⚠️ Select <strong style="color:rgba(255,255,255,.65)">"Friends &amp; Family"</strong> to avoid fees. Add product name + your email in the note for faster activation.
+        </div>
+      </div>
+
+      <!-- ── Crypto Pane ─────────────────────────────────────────────────── -->
+      <div id="cdb-pane-crypto" style="display:none">
+        <div class="cdb-pay-section-title">Crypto Transfer — BNB / ETH</div>
+        <div class="cdb-pay-field" style="align-items:flex-start">
+          <div style="flex:1">
+            <div class="cdb-pay-field-label">Wallet Address</div>
+            <div class="cdb-pay-field-val" style="font-size:11px;line-height:1.6;margin-top:2px">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</div>
+          </div>
+          <button id="cb-cr" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796','cb-cr')">Copy</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
+          <div style="background:rgba(240,185,11,.07);border:1px solid rgba(240,185,11,.2);border-radius:8px;padding:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.6)">
+            ✅ BNB Smart Chain<br><span style="color:#f0b90b;font-weight:800;font-size:12px">BEP20</span>
+          </div>
+          <div style="background:rgba(98,126,234,.07);border:1px solid rgba(98,126,234,.2);border-radius:8px;padding:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.6)">
+            ✅ Ethereum Mainnet<br><span style="color:#627eea;font-weight:800;font-size:12px">ERC20</span>
+          </div>
+        </div>
+        <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,.45);line-height:1.6">
+          ⚠️ Send <strong style="color:rgba(255,255,255,.7)">ONLY on BNB Smart Chain or Ethereum</strong>. Wrong network = permanently lost funds. After sending, your <strong style="color:rgba(255,255,255,.7)">TX Hash</strong> is the Transaction ID.
+        </div>
+      </div>
+
+      <!-- ── Divider ─────────────────────────────────────────────────────── -->
+      <div style="border-top:1px solid rgba(255,255,255,.07);margin:20px 0 16px"></div>
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.55);margin-bottom:14px;text-align:center;letter-spacing:.5px">
+        ↓ AFTER PAYING — SUBMIT YOUR CONFIRMATION ↓
+      </div>
+
+      <!-- ── Confirmation Form ───────────────────────────────────────────── -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <select id="cdb-pay-method" class="cdb-pay-input" style="appearance:auto;cursor:pointer;color:rgba(255,255,255,.85)">
+          <option value="UPI">📱 UPI Transfer</option>
+          <option value="BANK">🏦 Bank Transfer (NEFT / IMPS)</option>
+          <option value="PAYPAL">🌐 PayPal</option>
+          <option value="CRYPTO_BNB">₿ Crypto — BNB (BEP20)</option>
+          <option value="CRYPTO_ETH">₿ Crypto — ETH (ERC20)</option>
+        </select>
+        <input id="cdb-pay-txn" class="cdb-pay-input" type="text" autocomplete="off" spellcheck="false"
+          placeholder="Transaction ID / UTR Number / TX Hash *" />
+        <input id="cdb-pay-email" class="cdb-pay-input" type="email" autocomplete="email"
+          placeholder="Your email — for confirmation &amp; access activation *" />
+      </div>
+
+      <div id="cdb-pay-status" style="margin-top:10px;min-height:20px;font-size:12px;text-align:center"></div>
+
+      <button id="cdb-pay-submit" class="cdb-pay-submit-btn" onclick="CDB_PAYMENT.submit()">
+        ✅ I HAVE PAID — Submit Confirmation
+      </button>
+
+      <div style="text-align:center;margin-top:14px;font-size:11px;color:rgba(255,255,255,.22);line-height:1.7">
+        🔒 Verified manually by our team · Access activated within 2–4 hours<br>
+        Questions? <a href="mailto:support@cyberdudebivash.com" style="color:rgba(0,212,255,.5)">support@cyberdudebivash.com</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ═══════════════ END UNIFIED PAYMENT MODAL ═══════════════ -->
+
 </body>
 </html>

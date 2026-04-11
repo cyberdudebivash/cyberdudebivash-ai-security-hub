@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Admin — CYBERDUDEBIVASH AI Security Hub</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #08080f;
+      --surface: #0d0d1f;
+      --surface2: #131327;
+      --border: rgba(255,255,255,.08);
+      --accent: #00d4ff;
+      --accent2: #8b5cf6;
+      --text: #e2e8f0;
+      --muted: #718096;
+      --dim: rgba(255,255,255,.3);
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+    }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+
+    /* ── Header ── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 20px; height: 56px; position: sticky; top: 0; z-index: 100; }
+    header h1 { font-size: 15px; font-weight: 900; color: var(--accent); letter-spacing: .5px; }
+    .header-badge { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    #auth-status { font-size: 12px; color: var(--muted); }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+    /* ── Auth Gate ── */
+    #auth-gate { display: flex; align-items: center; justify-content: center; min-height: 70vh; }
+    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; max-width: 380px; width: 100%; text-align: center; }
+    .auth-card h2 { font-size: 18px; font-weight: 900; color: var(--text); margin-bottom: 8px; }
+    .auth-card p { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+    /* ── Stats Row ── */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+    .stat-val { font-size: 28px; font-weight: 900; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+    .filter-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
+    .filter-btn.active, .filter-btn:hover { background: rgba(0,212,255,.1); border-color: rgba(0,212,255,.35); color: var(--accent); }
+    .search-input { flex: 1; min-width: 200px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--text); font-size: 13px; outline: none; transition: border-color .2s; }
+    .search-input:focus { border-color: rgba(0,212,255,.4); }
+    .refresh-btn { background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.3); color: var(--accent); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
+    .refresh-btn:hover { background: rgba(0,212,255,.2); }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { background: var(--surface2); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    td { padding: 14px 16px; font-size: 13px; vertical-align: top; }
+
+    /* ── Status Badges ── */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+    .badge-pending  { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); color: #f59e0b; }
+    .badge-approved { background: rgba(34,197,94,.12);  border: 1px solid rgba(34,197,94,.3);  color: #22c55e; }
+    .badge-rejected { background: rgba(239,68,68,.12);  border: 1px solid rgba(239,68,68,.3);  color: #ef4444; }
+    .badge-method   { background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.3); color: #a78bfa; }
+
+    /* ── Action Buttons ── */
+    .btn-approve { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); color: #22c55e; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; transition: all .2s; white-space: nowrap; }
+    .btn-approve:hover { background: rgba(34,197,94,.25); }
+    .btn-reject  { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.25); color: #ef4444;  padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; transition: all .2s; white-space: nowrap; }
+    .btn-reject:hover { background: rgba(239,68,68,.2); }
+    .btn-approve:disabled, .btn-reject:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Inputs ── */
+    .inp { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; width: 100%; transition: border-color .2s; font-family: inherit; }
+    .inp:focus { border-color: rgba(0,212,255,.4); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #0099cc); border: none; color: #000; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 900; cursor: pointer; transition: opacity .2s; font-family: inherit; }
+    .btn-primary:hover { opacity: .9; }
+    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    /* ── Toast ── */
+    #toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 600; color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,.5); display: none; z-index: 9999; min-width: 220px; }
+    #toast.show { display: block; animation: slideUp .3s ease; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Empty State ── */
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty div { font-size: 40px; margin-bottom: 12px; }
+
+    /* ── Loading ── */
+    .loader { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+    .spin { display: inline-block; animation: spin .8s linear infinite; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; max-width: 440px; width: 100%; }
+    .modal-card h3 { font-size: 16px; font-weight: 900; margin-bottom: 6px; }
+    .modal-card p { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+    /* ── Detail expand ── */
+    .txn-code { font-family: monospace; font-size: 12px; color: var(--accent); background: rgba(0,212,255,.06); padding: 2px 7px; border-radius: 4px; word-break: break-all; }
+    .user-email { font-size: 12px; color: var(--dim); }
+    .product-cell { font-size: 12px; color: rgba(255,255,255,.7); max-width: 200px; word-break: break-word; }
+
+    @media (max-width: 700px) {
+      td:nth-child(4), th:nth-child(4), td:nth-child(6), th:nth-child(6) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚔️ CYBERDUDEBIVASH — Payment Admin</h1>
+  <span class="header-badge">🔐 Admin Only</span>
+  <div class="header-right">
+    <span id="auth-status">Not authenticated</span>
+    <button class="btn-ghost" style="padding:5px 12px;font-size:11px" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<!-- Auth Gate -->
+<div id="auth-gate">
+  <div class="auth-card">
+    <div style="font-size:40px;margin-bottom:12px">🔐</div>
+    <h2>Admin Authentication</h2>
+    <p>Enter your admin secret to access the payment dashboard.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input id="secret-inp" class="inp" type="password" placeholder="Admin secret key" onkeydown="if(event.key==='Enter')login()">
+      <button class="btn-primary" onclick="login()">Authenticate →</button>
+    </div>
+    <div id="auth-err" style="margin-top:10px;font-size:12px;color:#fca5a5;display:none"></div>
+  </div>
+</div>
+
+<!-- Main Dashboard (hidden until auth) -->
+<main id="dashboard" style="display:none">
+
+  <!-- Stats Row -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-val" id="stat-total" style="color:var(--accent)">—</div>
+      <div class="stat-label">Total Payments</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-pending" style="color:#f59e0b">—</div>
+      <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-approved" style="color:#22c55e">—</div>
+      <div class="stat-label">Approved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-rejected" style="color:#ef4444">—</div>
+      <div class="stat-label">Rejected</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-upi" style="color:#a78bfa">—</div>
+      <div class="stat-label">UPI Payments</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-bank" style="color:#60a5fa">—</div>
+      <div class="stat-label">Bank Transfers</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="filter-btn active" data-status="" onclick="setFilter('')">All</button>
+    <button class="filter-btn" data-status="pending" onclick="setFilter('pending')">⏳ Pending</button>
+    <button class="filter-btn" data-status="approved" onclick="setFilter('approved')">✅ Approved</button>
+    <button class="filter-btn" data-status="rejected" onclick="setFilter('rejected')">❌ Rejected</button>
+    <input class="search-input" id="search-inp" placeholder="Search by email, product, TXN ID..." oninput="renderTable()">
+    <button class="refresh-btn" onclick="loadPayments()">↻ Refresh</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div id="table-loading" class="loader"><span class="spin">⚙️</span> Loading payments...</div>
+    <table id="payments-table" style="display:none">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Status</th>
+          <th>Method</th>
+          <th>Product</th>
+          <th>User / Email</th>
+          <th>TXN ID</th>
+          <th>Amount</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+    <div id="table-empty" class="empty" style="display:none">
+      <div>📭</div>
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px">No payments found</div>
+      <div style="font-size:12px">Try changing the filter or search query.</div>
+    </div>
+  </div>
+</main>
+
+<!-- Approve/Reject Confirmation Modal -->
+<div class="modal-overlay" id="confirm-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-card">
+    <h3 id="modal-title">Confirm Action</h3>
+    <p id="modal-desc">Are you sure?</p>
+    <div id="modal-record" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.7"></div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Admin Notes (optional)</label>
+      <textarea id="admin-notes" class="inp" rows="2" placeholder="Add notes about this decision..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button id="modal-confirm-btn" class="btn-primary" onclick="executeAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+let SECRET = '';
+let payments = [];
+let filteredStatus = '';
+let pendingAction = null; // { record_id, action }
+
+// ── Auth ───────────────────────────────────────────────────────
+function login() {
+  const s = document.getElementById('secret-inp')?.value?.trim();
+  if (!s) return;
+  SECRET = s;
+  loadPayments();
+}
+
+function logout() {
+  SECRET = '';
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('auth-status').textContent = 'Not authenticated';
+}
+
+// ── API helpers ────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': SECRET, ...(opts.headers || {}) },
+  });
+  if (res.status === 403) { logout(); throw new Error('Invalid admin secret'); }
+  return res;
+}
+
+// ── Load payments ──────────────────────────────────────────────
+async function loadPayments() {
+  document.getElementById('table-loading').style.display = 'block';
+  document.getElementById('payments-table').style.display = 'none';
+  document.getElementById('table-empty').style.display = 'none';
+
+  try {
+    const r = await apiFetch('/api/payment/admin/list');
+    if (!r.ok) throw new Error('Failed to load');
+    const d = await r.json();
+    payments = d.payments || [];
+
+    // Auth success — show dashboard
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('auth-status').textContent = '✅ Authenticated';
+    document.getElementById('auth-err').style.display = 'none';
+
+    await loadStats();
+    renderTable();
+  } catch (e) {
+    if (e.message === 'Invalid admin secret') {
+      document.getElementById('auth-err').textContent = '❌ Invalid secret';
+      document.getElementById('auth-err').style.display = 'block';
+    } else {
+      toast(`⚠️ ${e.message}`, 'err');
+    }
+    document.getElementById('table-loading').style.display = 'none';
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await apiFetch('/api/payment/admin/stats');
+    const d = await r.json();
+    document.getElementById('stat-total').textContent    = d.total    || 0;
+    document.getElementById('stat-pending').textContent  = d.pending  || 0;
+    document.getElementById('stat-approved').textContent = d.approved || 0;
+    document.getElementById('stat-rejected').textContent = d.rejected || 0;
+    document.getElementById('stat-upi').textContent      = (d.by_method?.UPI || 0);
+    document.getElementById('stat-bank').textContent     = (d.by_method?.BANK || 0);
+  } catch {}
+}
+
+// ── Filter ─────────────────────────────────────────────────────
+function setFilter(status) {
+  filteredStatus = status;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === status);
+  });
+  renderTable();
+}
+
+// ── Render table ───────────────────────────────────────────────
+function renderTable() {
+  const q = (document.getElementById('search-inp')?.value || '').toLowerCase().trim();
+  let rows = payments;
+
+  if (filteredStatus) rows = rows.filter(p => p.status === filteredStatus);
+  if (q) rows = rows.filter(p =>
+    (p.user || '').toLowerCase().includes(q) ||
+    (p.product || '').toLowerCase().includes(q) ||
+    (p.txnId || '').toLowerCase().includes(q) ||
+    (p.method || '').toLowerCase().includes(q)
+  );
+
+  const loading = document.getElementById('table-loading');
+  const table   = document.getElementById('payments-table');
+  const empty   = document.getElementById('table-empty');
+  const tbody   = document.getElementById('table-body');
+
+  loading.style.display = 'none';
+
+  if (rows.length === 0) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  table.style.display = 'table';
+  empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map((p, i) => `
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${i + 1}</td>
+      <td><span class="badge badge-${p.status}">${statusIcon(p.status)} ${p.status?.toUpperCase()}</span></td>
+      <td><span class="badge badge-method">${p.method || '—'}</span></td>
+      <td class="product-cell">${esc(p.product || '—')}</td>
+      <td>
+        <div class="user-email">${esc(p.user || '—')}</div>
+        ${p.amount ? `<div style="font-size:11px;color:var(--dim);margin-top:2px">${esc(p.currency || 'INR')} ${esc(p.amount)}</div>` : ''}
+      </td>
+      <td><span class="txn-code">${esc((p.txnId || '—').slice(0, 24))}${(p.txnId||'').length > 24 ? '…' : ''}</span></td>
+      <td style="font-size:12px;color:var(--dim)">${p.amount ? p.currency + ' ' + p.amount : '—'}</td>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${formatDate(p.created_at)}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${p.status === 'pending' ? `
+            <button class="btn-approve" onclick="confirmAction('${p.record_id}','approve',${JSON.stringify(esc(p.user||''))},${JSON.stringify(esc(p.product||''))})">✅ Approve</button>
+            <button class="btn-reject"  onclick="confirmAction('${p.record_id}','reject',${JSON.stringify(esc(p.user||''))},${JSON.stringify(esc(p.product||''))})">❌ Reject</button>
+          ` : `<span style="font-size:11px;color:var(--muted)">—</span>`}
+        </div>
+        ${p.admin_notes ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">Note: ${esc(p.admin_notes)}</div>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function statusIcon(s) {
+  return { pending: '⏳', approved: '✅', rejected: '❌' }[s] || '❓';
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      '<br><span style="color:var(--dim);font-size:10px">' +
+      d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span>';
+  } catch { return iso.slice(0, 10); }
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Action Modal ───────────────────────────────────────────────
+function confirmAction(recordId, action, user, product) {
+  pendingAction = { record_id: recordId, action };
+  const isApprove = action === 'approve';
+  document.getElementById('modal-title').textContent = isApprove ? '✅ Approve Payment' : '❌ Reject Payment';
+  document.getElementById('modal-desc').textContent  = isApprove
+    ? 'This will mark the payment as approved and activate user access.'
+    : 'This will mark the payment as rejected. User will not get access.';
+  document.getElementById('modal-record').innerHTML =
+    `<strong>User:</strong> ${esc(user)}<br><strong>Product:</strong> ${esc(product)}<br><strong>Record ID:</strong> <code>${esc(recordId)}</code>`;
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  confirmBtn.textContent = isApprove ? '✅ Approve & Activate' : '❌ Reject Payment';
+  confirmBtn.style.background = isApprove ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'linear-gradient(135deg,#ef4444,#dc2626)';
+  document.getElementById('admin-notes').value = '';
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  pendingAction = null;
+}
+
+async function executeAction() {
+  if (!pendingAction) return;
+  const { record_id, action } = pendingAction;
+  const notes = document.getElementById('admin-notes')?.value?.trim() || null;
+  const btn = document.getElementById('modal-confirm-btn');
+  btn.disabled = true; btn.textContent = '⏳ Processing...';
+
+  try {
+    const r = await apiFetch(`/api/payment/admin/${action}/${record_id}`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d?.detail || 'Action failed');
+
+    toast(`${action === 'approve' ? '✅ Approved' : '❌ Rejected'}: ${record_id.slice(0,8)}…`, action === 'approve' ? 'ok' : 'err');
+    closeModal();
+    await loadPayments();
+  } catch (e) {
+    toast(`⚠️ ${e.message}`, 'err');
+    btn.disabled = false; btn.textContent = pendingAction.action === 'approve' ? '✅ Approve & Activate' : '❌ Reject Payment';
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = type === 'ok' ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)';
+  el.style.color = type === 'ok' ? '#86efac' : '#fca5a5';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── Init ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Auto-load if secret stored in sessionStorage
+const savedSecret = sessionStorage.getItem('cdb_admin_secret');
+if (savedSecret) {
+  SECRET = savedSecret;
+  document.getElementById('secret-inp').value = SECRET;
+  loadPayments();
+}
+
+// Save secret on successful auth
+document.getElementById('secret-inp').addEventListener('blur', () => {
+  if (SECRET) sessionStorage.setItem('cdb_admin_secret', SECRET);
+});
+</script>
+</body>
+</html>

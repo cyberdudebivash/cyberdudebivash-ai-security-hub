@@ -570,6 +570,318 @@ function SastRunner() {
   );
 }
 
+// ── Payment Checkout Component ────────────────────────────────
+const PAYMENT_DETAILS = {
+  upi: ["iambivash.bn-5@okaxis", "iambivash.bn-5@okicici", "6302177246@axisbank"],
+  bank: { name: "Bivash Kumar Nayak", account: "915010024617260", ifsc: "UTIB0000052", bank: "Axis Bank" },
+  paypal: "iambivash.bn@gmail.com",
+  crypto: { address: "0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796", networks: ["BNB Smart Chain (BEP20)", "Ethereum (ERC20)"] },
+};
+
+const PLANS = [
+  { key: "STARTER", label: "Starter", price: "₹499", priceVal: 499, emoji: "⚡", color: "#3b82f6", desc: "10 scans/month · PDF reports · 2 API keys" },
+  { key: "PRO",     label: "Pro",     price: "₹1,499", priceVal: 1499, emoji: "🚀", color: "#8b5cf6", desc: "Unlimited scans · Full AI analysis · Priority support", popular: true },
+  { key: "ENTERPRISE", label: "Enterprise", price: "₹4,999", priceVal: 4999, emoji: "🏢", color: "#f59e0b", desc: "White-label · Multi-user · Dedicated support" },
+];
+
+function CopyBtn({ text }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+  return (
+    <button onClick={copy} style={{
+      background: copied ? "rgba(34,197,94,.15)" : "rgba(99,179,237,.1)",
+      border: `1px solid ${copied ? "rgba(34,197,94,.4)" : "rgba(99,179,237,.3)"}`,
+      color: copied ? "#86efac" : "#63b3ed",
+      padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700,
+      cursor: "pointer", whiteSpace: "nowrap", transition: "all .2s", flexShrink: 0,
+    }}>{copied ? "✅ Copied!" : "Copy"}</button>
+  );
+}
+
+function FieldRow({ label, value }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
+      <div>
+        <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 2 }}>{label}</div>
+        <div style={{ fontFamily: "monospace", fontSize: 13, color: "#e2e8f0", wordBreak: "break-all" }}>{value}</div>
+      </div>
+      <CopyBtn text={value} />
+    </div>
+  );
+}
+
+function PaymentCheckout({ product, productLabel, amountLabel, onSuccess }) {
+  const [activeTab, setActiveTab] = useState("upi");
+  const [method, setMethod] = useState("UPI");
+  const [txnId, setTxnId] = useState("");
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState(null); // null | {type, msg}
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [recordId, setRecordId] = useState(null);
+
+  const tabStyle = (t) => ({
+    flex: 1, background: activeTab === t ? "rgba(99,179,237,.12)" : "rgba(255,255,255,.04)",
+    border: `1px solid ${activeTab === t ? "rgba(99,179,237,.5)" : "rgba(255,255,255,.1)"}`,
+    color: activeTab === t ? "#63b3ed" : "rgba(255,255,255,.5)",
+    padding: "8px 6px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+    cursor: "pointer", textAlign: "center", transition: "all .2s",
+  });
+
+  const submit = async () => {
+    if (!txnId.trim()) { setStatus({ type: "err", msg: "⚠️ Transaction ID is required" }); return; }
+    if (!email.trim() || !email.includes("@")) { setStatus({ type: "err", msg: "⚠️ Valid email required" }); return; }
+    setLoading(true); setStatus(null);
+    const payload = { txnId: txnId.trim(), method, product: product || "unknown", user: email.trim(), amount: amountLabel || "", currency: "INR" };
+    let attempt = 0;
+    while (attempt < 3) {
+      attempt++;
+      try {
+        const r = await fetch("/api/payment/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const d = await r.json();
+        if (r.ok || r.status === 409) {
+          setSubmitted(true); setRecordId(d.record_id);
+          if (onSuccess) onSuccess({ txnId: txnId.trim(), email: email.trim() });
+          setLoading(false); return;
+        }
+        if (r.status === 422 || r.status === 400) {
+          const msg = d?.detail?.[0]?.msg || d?.detail || d?.message || "Validation error";
+          setStatus({ type: "err", msg: `⚠️ ${msg}` }); setLoading(false); return;
+        }
+        throw new Error(d?.message || `Server error ${r.status}`);
+      } catch (e) {
+        if (attempt >= 3) { setStatus({ type: "err", msg: `⚠️ Failed after 3 attempts. Email: support@cyberdudebivash.com with TXN: ${txnId}` }); setLoading(false); return; }
+        await new Promise(res => setTimeout(res, 1200 * attempt));
+      }
+    }
+  };
+
+  if (submitted) return (
+    <div style={{ textAlign: "center", padding: "32px 16px" }}>
+      <div style={{ fontSize: 52, marginBottom: 14 }}>✅</div>
+      <div style={{ fontSize: 20, fontWeight: 900, color: "#22c55e", marginBottom: 8 }}>Payment Submitted!</div>
+      <div style={{ fontSize: 13, color: "rgba(255,255,255,.6)", marginBottom: 6 }}>
+        TXN ID: <code style={{ background: "rgba(255,255,255,.08)", padding: "2px 8px", borderRadius: 4 }}>{txnId}</code>
+      </div>
+      {recordId && <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 12 }}>Record: {recordId}</div>}
+      <div style={{ background: "rgba(34,197,94,.06)", border: "1px solid rgba(34,197,94,.2)", borderRadius: 10, padding: 14, fontSize: 12, color: "rgba(255,255,255,.6)", lineHeight: 1.7, maxWidth: 360, margin: "0 auto 20px" }}>
+        Our team will verify within <strong style={{ color: "#fff" }}>2–4 hours</strong> and activate access for <strong style={{ color: "#63b3ed" }}>{email}</strong>.<br />
+        📧 Check spam if you don't get confirmation.
+      </div>
+      <a href="mailto:support@cyberdudebivash.com" style={{ color: "#63b3ed", fontSize: 12 }}>support@cyberdudebivash.com</a>
+    </div>
+  );
+
+  return (
+    <div>
+      {(productLabel || amountLabel) && (
+        <div style={{ background: "rgba(99,179,237,.06)", border: "1px solid rgba(99,179,237,.15)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 14 }}>{productLabel || product}</span>
+          {amountLabel && <span style={{ fontSize: 18, fontWeight: 900, color: "#63b3ed" }}>{amountLabel}</span>}
+        </div>
+      )}
+      <div style={{ background: "rgba(245,158,11,.06)", border: "1px solid rgba(245,158,11,.2)", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 12, color: "rgba(255,255,255,.7)", lineHeight: 1.65 }}>
+        <strong style={{ color: "#f59e0b" }}>How it works:</strong> Choose a payment method → Transfer funds → Click <strong style={{ color: "#22c55e" }}>I HAVE PAID</strong> → Enter Transaction ID. Access activated in 2–4 hrs.
+      </div>
+
+      {/* Method Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+        {[["upi","📱 UPI"],["bank","🏦 Bank"],["paypal","🌐 PayPal"],["crypto","₿ Crypto"]].map(([t,l]) => (
+          <button key={t} style={tabStyle(t)} onClick={() => setActiveTab(t)}>{l}</button>
+        ))}
+      </div>
+
+      {/* UPI */}
+      {activeTab === "upi" && (
+        <div>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              {PAYMENT_DETAILS.upi.map((id, i) => (
+                <FieldRow key={i} label={i === 0 ? "Axis" : i === 1 ? "ICICI" : "Axis Bank"} value={id} />
+              ))}
+              <a href="upi://pay?pa=iambivash.bn-5@okaxis&pn=BivashKumarNayak"
+                style={{ display: "block", textAlign: "center", background: "rgba(99,179,237,.1)", border: "1px solid rgba(99,179,237,.3)", color: "#63b3ed", padding: 9, borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: "none", marginTop: 8 }}>
+                📱 Open UPI App →
+              </a>
+            </div>
+            <div style={{ textAlign: "center", flexShrink: 0 }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>Scan QR</div>
+              <img src="/upi-qr.png" alt="UPI QR" style={{ maxWidth: 140, borderRadius: 10, border: "2px solid rgba(255,255,255,.1)", cursor: "zoom-in" }}
+                onError={e => { e.target.style.display = "none"; }} />
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginTop: 6 }}>GPay · PhonePe · Paytm</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank */}
+      {activeTab === "bank" && (
+        <div>
+          <FieldRow label="Account Name" value={PAYMENT_DETAILS.bank.name} />
+          <FieldRow label="Account Number" value={PAYMENT_DETAILS.bank.account} />
+          <FieldRow label="IFSC Code" value={PAYMENT_DETAILS.bank.ifsc} />
+          <FieldRow label="Bank" value={PAYMENT_DETAILS.bank.bank} />
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 8, lineHeight: 1.6, padding: "8px 12px", background: "rgba(0,212,255,.04)", borderRadius: 8, border: "1px solid rgba(0,212,255,.1)" }}>
+            💡 IMPS = instant 24×7 · NEFT = 2–4 hrs · Add your email in remarks for faster activation.
+          </div>
+        </div>
+      )}
+
+      {/* PayPal */}
+      {activeTab === "paypal" && (
+        <div>
+          <FieldRow label="PayPal Email" value={PAYMENT_DETAILS.paypal} />
+          <a href="https://www.paypal.com/paypalme/iambivash" target="_blank" rel="noopener noreferrer"
+            style={{ display: "block", textAlign: "center", background: "rgba(0,112,243,.12)", border: "1px solid rgba(0,112,243,.3)", color: "#60a5fa", padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none", marginTop: 10 }}>
+            🌐 Open PayPal.me →
+          </a>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 10, lineHeight: 1.6 }}>
+            ⚠️ Select <strong style={{ color: "#e2e8f0" }}>"Friends &amp; Family"</strong> to avoid fees. Add product name + email in the note.
+          </div>
+        </div>
+      )}
+
+      {/* Crypto */}
+      {activeTab === "crypto" && (
+        <div>
+          <FieldRow label="Wallet Address (BNB / ETH)" value={PAYMENT_DETAILS.crypto.address} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+            <div style={{ background: "rgba(240,185,11,.07)", border: "1px solid rgba(240,185,11,.2)", borderRadius: 8, padding: 10, textAlign: "center", fontSize: 11, color: "rgba(255,255,255,.6)" }}>
+              ✅ BNB Smart Chain<br /><strong style={{ color: "#f0b90b" }}>BEP20</strong>
+            </div>
+            <div style={{ background: "rgba(98,126,234,.07)", border: "1px solid rgba(98,126,234,.2)", borderRadius: 8, padding: 10, textAlign: "center", fontSize: 11, color: "rgba(255,255,255,.6)" }}>
+              ✅ Ethereum<br /><strong style={{ color: "#627eea" }}>ERC20</strong>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 10, lineHeight: 1.6, padding: "8px 12px", background: "rgba(239,68,68,.05)", borderRadius: 8, border: "1px solid rgba(239,68,68,.15)" }}>
+            ⚠️ Wrong network = lost funds. TX Hash = your Transaction ID after sending.
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Form */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,.07)", margin: "18px 0 14px" }} />
+      <div style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,.55)", textAlign: "center", letterSpacing: ".5px", marginBottom: 12 }}>↓ AFTER PAYING — SUBMIT YOUR CONFIRMATION ↓</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <select value={method} onChange={e => setMethod(e.target.value)} style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 13, cursor: "pointer" }}>
+          <option value="UPI">📱 UPI Transfer</option>
+          <option value="BANK">🏦 Bank Transfer (NEFT/IMPS)</option>
+          <option value="PAYPAL">🌐 PayPal</option>
+          <option value="CRYPTO_BNB">₿ Crypto — BNB (BEP20)</option>
+          <option value="CRYPTO_ETH">₿ Crypto — ETH (ERC20)</option>
+        </select>
+        <input value={txnId} onChange={e => setTxnId(e.target.value)} placeholder="Transaction ID / UTR / TX Hash *"
+          style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 13 }} />
+        <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Your email (for confirmation & access) *"
+          style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 13 }} />
+      </div>
+      {status && <div style={{ marginTop: 10, fontSize: 12, padding: "8px 12px", borderRadius: 6, background: status.type === "err" ? "rgba(239,68,68,.1)" : "rgba(34,197,94,.1)", color: status.type === "err" ? "#fca5a5" : "#86efac", textAlign: "center" }}>{status.msg}</div>}
+      <button onClick={submit} disabled={loading} style={{ width: "100%", background: "linear-gradient(135deg,#00d4ff,#0099cc)", border: "none", color: "#000", padding: 14, borderRadius: 10, fontWeight: 900, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", marginTop: 8, opacity: loading ? .7 : 1, fontFamily: "inherit" }}>
+        {loading ? "⏳ Submitting..." : "✅ I HAVE PAID — Submit Confirmation"}
+      </button>
+      <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: "rgba(255,255,255,.25)", lineHeight: 1.7 }}>
+        🔒 Manual verification · Access in 2–4 hrs · <a href="mailto:support@cyberdudebivash.com" style={{ color: "rgba(99,179,237,.5)" }}>support@cyberdudebivash.com</a>
+      </div>
+    </div>
+  );
+}
+
+// ── Billing / Plans Tab ───────────────────────────────────────
+function Billing() {
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [checkStatus, setCheckStatus] = useState({});
+  const [recordId, setRecordId] = useState("");
+  const [statusResult, setStatusResult] = useState(null);
+
+  const checkPaymentStatus = async () => {
+    if (!recordId.trim()) return;
+    try {
+      const r = await fetch(`/api/payment/status/${recordId.trim()}`);
+      const d = await r.json();
+      setStatusResult(d);
+    } catch { setStatusResult({ status: "error", message: "Could not fetch status" }); }
+  };
+
+  const statusColor = { pending: "#f59e0b", approved: "#22c55e", rejected: "#ef4444" };
+
+  return (
+    <div>
+      <Card title="💳 Upgrade Your Plan">
+        <p style={{ color: "#718096", fontSize: 13, marginBottom: 20 }}>
+          Choose a plan, complete payment via UPI / Bank / PayPal / Crypto, and submit your confirmation. Access activated within 2–4 hours.
+        </p>
+        {!selectedPlan ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+            {PLANS.map(p => (
+              <div key={p.key} style={{ background: p.popular ? "rgba(139,92,246,.08)" : "rgba(255,255,255,.03)", border: `1px solid ${p.popular ? "rgba(139,92,246,.4)" : "rgba(255,255,255,.1)"}`, borderRadius: 14, padding: 20, position: "relative" }}>
+                {p.popular && <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: p.color, color: "#000", fontSize: 9, fontWeight: 900, padding: "3px 12px", borderRadius: 999, whiteSpace: "nowrap" }}>⭐ MOST POPULAR</div>}
+                <div style={{ fontSize: 24, marginBottom: 8 }}>{p.emoji}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: p.color, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{p.label}</div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: "#fff", marginBottom: 2 }}>{p.price}</div>
+                <div style={{ fontSize: 11, color: "#718096", marginBottom: 14 }}>/month</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", marginBottom: 18, lineHeight: 1.5 }}>{p.desc}</div>
+                <button onClick={() => setSelectedPlan(p)} style={{ width: "100%", background: `linear-gradient(135deg,${p.color},${p.color}cc)`, border: "none", color: "#fff", padding: "10px 0", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
+                  {p.emoji} Get {p.label}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>
+            <button onClick={() => setSelectedPlan(null)} style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", color: "#718096", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: 12, marginBottom: 16 }}>← Back to Plans</button>
+            <PaymentCheckout product={`subscription-${selectedPlan.key}`} productLabel={`${selectedPlan.emoji} ${selectedPlan.label} Plan`} amountLabel={`${selectedPlan.price}/month`} onSuccess={() => {}} />
+          </div>
+        )}
+      </Card>
+
+      <Card title="📋 All Payment Methods">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          {[
+            { icon: "📱", label: "UPI", detail: "iambivash.bn-5@okaxis", sub: "Instant · Any UPI App" },
+            { icon: "🏦", label: "Bank Transfer", detail: "A/C: 915010024617260", sub: "IFSC: UTIB0000052 · Axis Bank" },
+            { icon: "🌐", label: "PayPal", detail: "iambivash.bn@gmail.com", sub: "International · Friends & Family" },
+            { icon: "₿", label: "Crypto", detail: "BNB / ETH", sub: "0xa824c...796 · BEP20/ERC20" },
+          ].map((m, i) => (
+            <div key={i} style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 10, padding: 14 }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>{m.icon}</div>
+              <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 13, marginBottom: 3 }}>{m.label}</div>
+              <div style={{ fontFamily: "monospace", fontSize: 11, color: "#63b3ed", marginBottom: 3 }}>{m.detail}</div>
+              <div style={{ fontSize: 10, color: "#718096" }}>{m.sub}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card title="🔍 Check Payment Status">
+        <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+          <input value={recordId} onChange={e => setRecordId(e.target.value)} placeholder="Enter your Record ID"
+            style={{ flex: 1, background: "#2d3748", border: "1px solid #4a5568", borderRadius: 6, padding: "8px 12px", color: "#e2e8f0", fontSize: 13 }} />
+          <button onClick={checkPaymentStatus} style={{ background: "#4299e1", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Check</button>
+        </div>
+        {statusResult && (
+          <div style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 8, padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", background: statusColor[statusResult.status] || "#4a5568", color: "#000", padding: "2px 8px", borderRadius: 4 }}>{statusResult.status}</span>
+              <span style={{ fontSize: 12, color: "#a0aec0" }}>{statusResult.product}</span>
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)", lineHeight: 1.6 }}>{statusResult.message}</div>
+          </div>
+        )}
+      </Card>
+
+      <Card title="🛡️ Enterprise & Custom Plans">
+        <p style={{ color: "#718096", fontSize: 13, marginBottom: 16 }}>Need white-label, MSSP, or a custom enterprise plan? Contact us directly.</p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <a href="mailto:enterprise@cyberdudebivash.com" style={{ background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.3)", color: "#f59e0b", padding: "10px 20px", borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: "none" }}>📧 Enterprise Inquiry</a>
+          <button onClick={() => setSelectedPlan(PLANS[2])} style={{ background: "rgba(245,158,11,.08)", border: "1px solid rgba(245,158,11,.2)", color: "#f59e0b", padding: "10px 20px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>🏢 Enterprise Plan ₹4,999/mo</button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ── App Shell ─────────────────────────────────────────────────
 const TABS = [
   { id: "dashboard", label: "🖥️ Dashboard" },
@@ -579,6 +891,7 @@ const TABS = [
   { id: "audit", label: "🔐 Audit" },
   { id: "osint", label: "🌐 OSINT" },
   { id: "generate", label: "⚡ AI Generate" },
+  { id: "billing", label: "💳 Billing" },
   { id: "admin", label: "⚙️ Admin" },
 ];
 
@@ -615,6 +928,7 @@ export default function App() {
         {tab === "audit" && <SecurityAudit />}
         {tab === "osint" && <OSINT />}
         {tab === "generate" && <AIGenerate />}
+        {tab === "billing" && <Billing />}
         {tab === "admin" && <Admin />}
       </div>
 

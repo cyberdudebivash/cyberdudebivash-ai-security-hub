@@ -1,0 +1,9 @@
+@echo off
+cd /d C:\Users\Administrator\Desktop\cyberdudebivash-ai-security-hub\workers
+echo Adding solution_generated column...
+npx wrangler d1 execute cyberdudebivash-security-hub --remote --command "ALTER TABLE threat_intel ADD COLUMN solution_generated INTEGER DEFAULT 0;"
+echo Adding product_id column...
+npx wrangler d1 execute cyberdudebivash-security-hub --remote --command "ALTER TABLE threat_intel ADD COLUMN product_id TEXT;"
+echo Verifying columns...
+npx wrangler d1 execute cyberdudebivash-security-hub --remote --command "SELECT COUNT(*) as total, SUM(solution_generated) as solved FROM threat_intel;"
+echo EXIT=%ERRORLEVEL%
