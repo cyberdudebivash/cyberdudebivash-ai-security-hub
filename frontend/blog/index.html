@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Expert cybersecurity articles on CVEs, threat intelligence, MITRE ATT&CK, zero-day vulnerabilities, and AI-powered security.">
+    <meta name="keywords" content="cybersecurity, CVE, threat intelligence, MITRE ATT&CK, zero-day, ransomware, OWASP, AI security">
+    <meta property="og:title" content="Cybersecurity Insights | CYBERDUDEBIVASH AI Security Hub">
+    <meta property="og:description" content="Expert cybersecurity articles on CVEs, threat intelligence, MITRE ATT&CK, zero-day vulnerabilities, and AI-powered security.">
+    <meta property="og:type" content="website">
+    <link rel="canonical" href="https://cyberdudebivash.com/blog/">
+    <title>Cybersecurity Insights | CYBERDUDEBIVASH AI Security Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #060612;
+            color: #e2e8f0;
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+        }
+
+        header {
+            background: rgba(0,0,0,0.9);
+            border-bottom: 1px solid rgba(0,212,255,0.2);
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        nav a {
+            color: #e2e8f0;
+            text-decoration: none;
+            margin-left: 24px;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #00d4ff;
+        }
+
+        .blog-hero {
+            background: linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(138,43,226,0.05) 100%);
+            border-bottom: 1px solid rgba(0,212,255,0.1);
+            padding: 60px 24px;
+            text-align: center;
+        }
+
+        .blog-hero h1 {
+            font-size: 2.5rem;
+            color: #00d4ff;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .blog-hero p {
+            font-size: 18px;
+            color: rgba(255,255,255,0.7);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 32px;
+            margin-bottom: 60px;
+        }
+
+        .article-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(0,212,255,0.15);
+            border-radius: 8px;
+            padding: 28px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .article-card:hover {
+            background: rgba(0,212,255,0.05);
+            border-color: rgba(0,212,255,0.4);
+            transform: translateY(-4px);
+        }
+
+        .article-tag {
+            display: inline-block;
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.3);
+            color: #00d4ff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            width: fit-content;
+        }
+
+        .article-card h3 {
+            color: #e2e8f0;
+            font-size: 18px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .article-card p {
+            color: rgba(255,255,255,0.65);
+            font-size: 14px;
+            margin-bottom: 20px;
+            flex-grow: 1;
+            line-height: 1.7;
+        }
+
+        .article-meta {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 16px;
+        }
+
+        .read-more {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .read-more:hover {
+            color: #4dd9ff;
+        }
+
+        footer {
+            background: #030310;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 32px 24px;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .blog-hero h1 {
+                font-size: 2rem;
+            }
+
+            .articles-grid {
+                grid-template-columns: 1fr;
+            }
+
+            nav a {
+                margin-left: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="/" class="logo">CYBERDUDEBIVASH AI Security Hub</a>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/blog/">Blog</a>
+                <a href="/#features">Features</a>
+                <a href="/#contact">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="blog-hero">
+        <h1>Cybersecurity Insights</h1>
+        <p>Expert articles on threat intelligence, vulnerabilities, AI-powered defense, and emerging security trends.</p>
+    </div>
+
+    <div class="container">
+        <div class="articles-grid">
+            <article class="article-card">
+                <span class="article-tag">CVE & Vulnerabilities</span>
+                <h3>What is a CVE? Understanding Common Vulnerabilities and Exposures</h3>
+                <p>Learn what CVEs are, how CVSS scoring works, and why vulnerability management is critical to your security posture. Discover real-world examples like Log4Shell and how to protect your infrastructure.</p>
+                <div class="article-meta">Apr 11, 2026 • 8 min read</div>
+                <a href="what-is-cve.html" class="read-more">Read More →</a>
+            </article>
+
+            <article class="article-card">
+                <span class="article-tag">Threat Intelligence</span>
+                <h3>Zero-Day Vulnerabilities: What They Are and How to Defend Against Them</h3>
+                <p>Understand zero-day exploits, the attackers who weaponize them, and proven defense strategies. From behavioral detection to threat intelligence, learn how to protect against unknown vulnerabilities.</p>
+                <div class="article-meta">Apr 11, 2026 • 9 min read</div>
+                <a href="zero-day-vulnerabilities-explained.html" class="read-more">Read More →</a>
+            </article>
+
+            <article class="article-card">
+                <span class="article-tag">Threat Hunting</span>
+                <h3>The MITRE ATT&CK Framework: A Complete Guide for Security Teams</h3>
+                <p>Master the MITRE ATT&CK Framework—the industry standard for mapping threat tactics and techniques. Learn how to use it for threat hunting, incident response, and defense gap analysis.</p>
+                <div class="article-meta">Apr 11, 2026 • 10 min read</div>
+                <a href="mitre-attack-framework-guide.html" class="read-more">Read More →</a>
+            </article>
+
+            <article class="article-card">
+                <span class="article-tag">Web Security</span>
+                <h3>OWASP Top 10 2024: Web Application Security Risks Explained</h3>
+                <p>The definitive guide to the OWASP Top 10 vulnerabilities. Understand each risk, real-world attack scenarios, and practical mitigation strategies to secure your web applications.</p>
+                <div class="article-meta">Apr 11, 2026 • 11 min read</div>
+                <a href="owasp-top-10-2024.html" class="read-more">Read More →</a>
+            </article>
+
+            <article class="article-card">
+                <span class="article-tag">AI & Security</span>
+                <h3>How AI is Transforming Cybersecurity in 2026</h3>
+                <p>Explore the intersection of AI and cybersecurity. From threat detection to autonomous defense generation, discover how AI is reshaping the future of security operations and threat response.</p>
+                <div class="article-meta">Apr 11, 2026 • 9 min read</div>
+                <a href="ai-cybersecurity-future.html" class="read-more">Read More →</a>
+            </article>
+
+            <article class="article-card">
+                <span class="article-tag">Enterprise Security</span>
+                <h3>Complete Guide to Ransomware Protection for Enterprises</h3>
+                <p>A comprehensive guide to defending against ransomware. Learn about major threat groups, infection vectors, incident response procedures, and technical controls that save organizations millions.</p>
+                <div class="article-meta">Apr 11, 2026 • 12 min read</div>
+                <a href="how-to-protect-against-ransomware.html" class="read-more">Read More →</a>
+            </article>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 CYBERDUDEBIVASH AI Security Hub. All rights reserved. | <a href="/" style="color: #00d4ff; text-decoration: none;">Back to Platform</a></p>
+    </footer>
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Cybersecurity Insights",
+        "description": "Expert cybersecurity articles on CVEs, threat intelligence, MITRE ATT&CK, zero-day vulnerabilities, and AI-powered security.",
+        "url": "https://cyberdudebivash.com/blog/",
+        "creator": {
+            "@type": "Person",
+            "name": "CyberDudeBivash",
+            "jobTitle": "Principal Security Architect"
+        }
+    }
+    </script>
+</body>
+</html>

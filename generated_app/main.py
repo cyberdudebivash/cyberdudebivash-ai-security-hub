@@ -33,6 +33,7 @@ START_TIME = time.time()
 from generated_app.routers import auth, cyber, task, generate, user, admin, billing, dashboard
 from generated_app.routers import enterprise
 from generated_app.routers import toolgen
+from generated_app.routers import payment as payment_router
 
 
 # ============================================================
@@ -230,7 +231,8 @@ app.include_router(billing.router)
 app.include_router(dashboard.router)
 app.include_router(enterprise.router)
 app.include_router(toolgen.router)
-logger.info("All routers registered (including enterprise)")
+app.include_router(payment_router.router, prefix="/api")
+logger.info("All routers registered (including enterprise + payment)")
 
 
 # ============================================================
