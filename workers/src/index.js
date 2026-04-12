@@ -220,7 +220,14 @@ import {
   handleMarkProposalSent, handleAcceptProposal, handleGetPackages,
 } from './handlers/proposalGenerator.js';
 
-// ─── PHASE 4: Affiliate & Partner System ─────────────────────────────────────
+// ─── Manual Payment System ───────────────────────────────────────────────────
+import {
+  handleSubmitPayment, handleGetPaymentStatus,
+  handleListPayments, handleVerifyPayment,
+  handleGetPaymentConfig,
+} from './handlers/manualPayments.js';
+
+// ─── Affiliate & Partner System ───────────────────────────────────────────────
 import {
   handleJoin, handleGetStatus as handleAffStatus,
   handleGetDashboard as handleAffDashboard,
@@ -2453,7 +2460,33 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleUpsellStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
-    // ── Content Pipeline / Blog (Phase 4) ────────────────────────────────
+    // ── Manual Payment System ─────────────────────────────────────────────────
+    // GET /api/payments/config — payment methods + product catalog (public)
+    if (path === '/api/payments/config' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPaymentConfig(request, env), request));
+    }
+    // POST /api/payments/submit — submit payment for verification
+    if (path === '/api/payments/submit' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleSubmitPayment(request, env), request));
+    }
+    // GET /api/payments/status — check payment status by payment_id or email
+    if (path === '/api/payments/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPaymentStatus(request, env), request));
+    }
+    // GET /api/payments/admin — list all payments (admin only)
+    if (path === '/api/payments/admin' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleListPayments(request, env), request));
+    }
+    // POST /api/payments/verify — approve or reject payment (admin only)
+    if (path === '/api/payments/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleVerifyPayment(request, env), request));
+    }
+
+    // ── Content Pipeline ──────────────────────────────────────────────────────
 
     // GET /api/blog/posts — list published blog posts (public)
     if (path === '/api/blog/posts' && method === 'GET') {
