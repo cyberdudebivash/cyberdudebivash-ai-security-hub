@@ -3610,11 +3610,14 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
         <span style="font-size:10px;font-family:monospace;color:#a78bfa;background:rgba(124,58,237,.1);padding:2px 8px;border-radius:4px">${s.cve_id}</span>
       </div>
       <!-- Price + CTA -->
-      <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
-        <div>${priceTag}</div>
-        <button onclick="event.stopPropagation();dsPurchase('${s.id}','${s.title?.replace(/'/g,"\\'")}',${s.price_inr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:10px 20px;border-radius:8px;font-weight:900;font-size:13px;cursor:pointer;letter-spacing:.02em">
-          Unlock →
-        </button>
+      <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>${priceTag}</div>
+          <button onclick="event.stopPropagation();dsPurchase('${s.id}','${s.title?.replace(/'/g,"\\'")}',${s.price_inr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:10px 20px;border-radius:8px;font-weight:900;font-size:13px;cursor:pointer;letter-spacing:.02em">
+            Unlock →
+          </button>
+        </div>
+        <div style="text-align:right;margin-top:6px"><a href="#" onclick="event.stopPropagation();window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
       </div>
       ${s.is_featured ? '<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#ef4444);color:#000;font-size:9px;font-weight:900;padding:3px 12px;border-radius:999px;letter-spacing:.1em;white-space:nowrap">★ LIVE THREAT FIX</div>' : ''}
     </div>`;
@@ -3912,6 +3915,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
         </ul>
         <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#2563eb,#3b82f6)" onclick="startSubscription('STARTER')">⚡ Get Starter</button>
         <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
+        <div style="text-align:center;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
       </div>
 
       <!-- PRO (featured) -->
@@ -3931,6 +3935,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
         </ul>
         <button class="btn btn-success" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#8b5cf6)" onclick="startSubscription('PRO')">🚀 Get Pro</button>
         <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
+        <div style="text-align:center;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
       </div>
 
       <!-- ENTERPRISE -->
@@ -3950,6 +3955,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
         </ul>
         <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000" onclick="startSubscription('ENTERPRISE')">🏢 Get Enterprise</button>
         <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
+        <div style="text-align:center;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
       </div>
     </div>
 
@@ -4115,6 +4121,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
             📨 Send Enterprise Inquiry
           </button>
           <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center">Response within 4 business hours · No commitment required</div>
+          <div style="text-align:center;margin-top:6px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:12px;color:#00d4ff;text-decoration:underline;opacity:.8">📋 View Payment Instructions</a></div>
         </div>
       </div>
 
@@ -4329,6 +4336,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
             Get Pack →
           </button>
         </div>
+        <div style="text-align:right;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
       </div>`).join('');
   }
 
@@ -4435,11 +4443,22 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 
     // ── Client-side validation ─────────────────────────────────────────────
     const _err = (msg) => {
-      if (alertEl) { alertEl.className = 'alert alert-error'; alertEl.textContent = msg; alertEl.style.display = 'block'; }
+      if (alertEl) {
+        alertEl.className = 'alert alert-error';
+        alertEl.textContent = msg;
+        alertEl.style.display = 'block';
+        alertEl.style.background = 'rgba(239,68,68,.15)';
+        alertEl.style.border = '1px solid rgba(239,68,68,.4)';
+        alertEl.style.borderRadius = '8px';
+        alertEl.style.padding = '10px 14px';
+        alertEl.style.color = '#fca5a5';
+        alertEl.style.fontSize = '13px';
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     };
-    if (!company || company.length < 2)                           return _err('Company name is required');
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return _err('Valid business email is required');
-    if (!req || req.length < 10)                                  return _err('Please describe your requirements (min 10 chars)');
+    if (!company || company.length < 2)                           return _err('⚠️ Company name is required');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return _err('⚠️ Valid business email is required');
+    if (!req || req.length < 5)                                   return _err('⚠️ Please describe your requirements (at least 5 characters)');
 
     // ── Loading state ──────────────────────────────────────────────────────
     if (alertEl) alertEl.style.display = 'none';
@@ -6218,6 +6237,12 @@ const CDB_PAYMENT = {
     document.getElementById('cdb-pay-txn').value = '';
     document.getElementById('cdb-pay-status').textContent = '';
     document.getElementById('cdb-pay-status').className = '';
+    // Reset screenshot
+    const ssInput = document.getElementById('cdb-pay-screenshot');
+    const ssPreview = document.getElementById('cdb-pay-screenshot-preview');
+    if(ssInput) ssInput.value = '';
+    if(ssPreview) ssPreview.style.display = 'none';
+    this._screenshotB64 = null;
 
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -6287,6 +6312,7 @@ const CDB_PAYMENT = {
       amount: this._current.amount || '',
       currency: 'INR',
       notes: `Product: ${this._current.productLabel || this._current.product}`,
+      screenshot_attached: !!this._screenshotB64,
     };
 
     let attempt = 0;
@@ -6365,13 +6391,53 @@ const CDB_PAYMENT = {
       }
     }
   },
+
+  /* Screenshot upload handler — called by onchange on the file input */
+  _onScreenshot(input){
+    const file = input?.files?.[0];
+    if(!file) return;
+    const preview = document.getElementById('cdb-pay-screenshot-preview');
+    const img = document.getElementById('cdb-pay-screenshot-img');
+    if(file.type.startsWith('image/')){
+      const reader = new FileReader();
+      reader.onload = e => {
+        if(img){ img.src = e.target.result; }
+        if(preview){ preview.style.display='block'; }
+        this._screenshotB64 = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      this._screenshotB64 = '[file:'+file.name+']';
+      if(preview){ preview.style.display='block'; }
+      if(img){ img.alt='File attached: '+file.name; img.removeAttribute('src'); }
+    }
+  },
+
+  _screenshotB64: null,
 };
 
+// ── Global payment entry points ──────────────────────────────────────────────
 // Redirect helpers for existing call sites
 function openLemonCheckout(planKey, email) { CDB_PAYMENT.open({ product: planKey, productLabel: planKey + ' Plan', email }); }
 function openLemonProduct(productKey, email) { CDB_PAYMENT.open({ product: productKey, email }); }
 function openLemonDefense(solId, priceInr) { CDB_PAYMENT.open({ product: 'defense-' + solId, amountLabel: priceInr ? '₹' + priceInr : '' }); }
-// (Razorpay SDK loader removed — replaced by unified manual payment system)
+
+// Global: show how-to-pay instructions
+window.showPaymentInstructions = function(){
+  const m = document.getElementById('cdb-pay-howto');
+  if(m) m.classList.add('open');
+};
+
+// Alias: any stray Razorpay call silently routes to CDB_PAYMENT
+window.Razorpay = function(opts){ return { open: ()=> CDB_PAYMENT.open({
+  product: opts?.notes?.pack_id || opts?.name || 'purchase',
+  productLabel: opts?.description || opts?.name || 'Purchase',
+  amountLabel: opts?.amount ? '₹' + (opts.amount/100).toLocaleString('en-IN') : '',
+  email: opts?.prefill?.email || '',
+})}; };
+
+// (Razorpay SDK loader replaced by unified manual payment system)
+const _noop = ()=>{};
 
 // ═════════════════════════════════════════════════════════════════════════════
 // UNLOCK RESULTS UI ENGINE
@@ -6912,7 +6978,7 @@ function showPaymentOverlay(state, data = {}) {
     el.innerHTML = `<div class="pay-card">
       <div class="pay-spinner"></div>
       <div style="font-weight:700;color:var(--accent);margin-bottom:8px">Verifying Payment</div>
-      <div style="font-size:13px;color:var(--text-muted)">Please wait — confirming with Razorpay...</div>
+      <div style="font-size:13px;color:var(--text-muted)">Please wait — verifying your payment...</div>
     </div>`;
   } else if (state === 'success') {
     el.innerHTML = `<div class="pay-card">
@@ -9942,7 +10008,7 @@ function _liveVersion() {
 const CDB_LEGAL = {
   privacy: {
     title: '🔒 Privacy Policy',
-    body: '<p><strong>Last updated: April 2026</strong></p><h3>1. What We Collect</h3><p>We collect information you provide when using our platform — email addresses, domain names submitted for scanning, API usage logs, and payment information processed securely via Razorpay. We also collect usage analytics to improve service quality.</p><h3>2. How We Use It</h3><p>Data is used to provide security scanning services, send threat intelligence alerts, process payments, and improve our platform. We never sell your personal data to third parties for advertising.</p><h3>3. Data Security</h3><p>All data is encrypted in transit (TLS 1.3) and at rest. Our platform is protected by the same security tools we sell — we follow OWASP guidelines and conduct regular penetration tests.</p><h3>4. Data Retention</h3><p>Scan results are retained for 90 days. Email subscriptions are maintained until unsubscription. Payment records are retained as required by the Indian Income Tax Act.</p><h3>5. Your Rights (DPDP Act 2023)</h3><p>You have the right to access, correct, and erase your personal data. Submit requests to <a href="mailto:privacy@cyberdudebivash.com" style="color:var(--accent)">privacy@cyberdudebivash.com</a>.</p><h3>6. Cookies</h3><p>We use essential cookies for authentication only. No third-party advertising cookies.</p><h3>7. Contact</h3><p>CYBERDUDEBIVASH PRIVATE LIMITED | 29, Korai-Sukinda-Ramchandrapur Rd, Ragadi, Odisha 755019 | <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a></p>'
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>1. What We Collect</h3><p>We collect information you provide when using our platform — email addresses, domain names submitted for scanning, API usage logs, and payment information processed securely via our manual verification system. We also collect usage analytics to improve service quality.</p><h3>2. How We Use It</h3><p>Data is used to provide security scanning services, send threat intelligence alerts, process payments, and improve our platform. We never sell your personal data to third parties for advertising.</p><h3>3. Data Security</h3><p>All data is encrypted in transit (TLS 1.3) and at rest. Our platform is protected by the same security tools we sell — we follow OWASP guidelines and conduct regular penetration tests.</p><h3>4. Data Retention</h3><p>Scan results are retained for 90 days. Email subscriptions are maintained until unsubscription. Payment records are retained as required by the Indian Income Tax Act.</p><h3>5. Your Rights (DPDP Act 2023)</h3><p>You have the right to access, correct, and erase your personal data. Submit requests to <a href="mailto:privacy@cyberdudebivash.com" style="color:var(--accent)">privacy@cyberdudebivash.com</a>.</p><h3>6. Cookies</h3><p>We use essential cookies for authentication only. No third-party advertising cookies.</p><h3>7. Contact</h3><p>CYBERDUDEBIVASH PRIVATE LIMITED | 29, Korai-Sukinda-Ramchandrapur Rd, Ragadi, Odisha 755019 | <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a></p>'
   },
   terms: {
     title: '📋 Terms of Service',
@@ -9950,7 +10016,7 @@ const CDB_LEGAL = {
   },
   refund: {
     title: '💳 Refund Policy',
-    body: '<p><strong>Last updated: April 2026</strong></p><h3>Digital Defense Products & Scan Reports</h3><p>Due to the digital nature of defense solutions and reports — which are delivered instantly upon payment — refunds are generally not available once the product has been accessed or downloaded. Exceptions apply when the product was not delivered due to a technical fault on our side.</p><h3>Subscription Plans</h3><p>Subscriptions can be cancelled at any time from your account settings. No refunds are issued for the current billing period, but access continues until the period ends. You will not be charged again after cancellation.</p><h3>Enterprise Packages</h3><p>Enterprise packages carry a <strong>7-day satisfaction guarantee</strong>. If unsatisfied within 7 days of purchase, contact us for a full refund — no questions asked.</p><h3>How to Request a Refund</h3><p>Email <a href="mailto:billing@cyberdudebivash.com" style="color:var(--accent)">billing@cyberdudebivash.com</a> with your order ID and reason. We respond within 2 business days.</p><h3>Processing Time</h3><p>Approved refunds are processed within 5–7 business days to your original Razorpay payment method.</p>'
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>Digital Defense Products & Scan Reports</h3><p>Due to the digital nature of defense solutions and reports — which are delivered instantly upon payment — refunds are generally not available once the product has been accessed or downloaded. Exceptions apply when the product was not delivered due to a technical fault on our side.</p><h3>Subscription Plans</h3><p>Subscriptions can be cancelled at any time from your account settings. No refunds are issued for the current billing period, but access continues until the period ends. You will not be charged again after cancellation.</p><h3>Enterprise Packages</h3><p>Enterprise packages carry a <strong>7-day satisfaction guarantee</strong>. If unsatisfied within 7 days of purchase, contact us for a full refund — no questions asked.</p><h3>How to Request a Refund</h3><p>Email <a href="mailto:billing@cyberdudebivash.com" style="color:var(--accent)">billing@cyberdudebivash.com</a> with your order ID and reason. We respond within 2 business days.</p><h3>Processing Time</h3><p>Approved refunds are processed within 5–7 business days to your original payment method (UPI / Bank / PayPal / Crypto).</p>'
   },
   dpdp: {
     title: '🇮🇳 DPDP Act 2023 Compliance',
@@ -10873,14 +10939,14 @@ if(document.readyState==='loading'){
       <!-- ── Divider ─────────────────────────────────────────────────────── -->
       <div style="border-top:1px solid rgba(255,255,255,.07);margin:20px 0 16px"></div>
       <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.55);margin-bottom:14px;text-align:center;letter-spacing:.5px">
-        ↓ AFTER PAYING — SUBMIT YOUR CONFIRMATION ↓
+        ↓ AFTER PAYING — SUBMIT YOUR CONFIRMATION BELOW ↓
       </div>
 
       <!-- ── Confirmation Form ───────────────────────────────────────────── -->
       <div style="display:flex;flex-direction:column;gap:10px">
         <select id="cdb-pay-method" class="cdb-pay-input" style="appearance:auto;cursor:pointer;color:rgba(255,255,255,.85)">
           <option value="UPI">📱 UPI Transfer</option>
-          <option value="BANK">🏦 Bank Transfer (NEFT / IMPS)</option>
+          <option value="BANK">🏦 Bank Transfer (NEFT / IMPS / RTGS)</option>
           <option value="PAYPAL">🌐 PayPal</option>
           <option value="CRYPTO_BNB">₿ Crypto — BNB (BEP20)</option>
           <option value="CRYPTO_ETH">₿ Crypto — ETH (ERC20)</option>
@@ -10889,6 +10955,24 @@ if(document.readyState==='loading'){
           placeholder="Transaction ID / UTR Number / TX Hash *" />
         <input id="cdb-pay-email" class="cdb-pay-input" type="email" autocomplete="email"
           placeholder="Your email — for confirmation &amp; access activation *" />
+
+        <!-- Screenshot upload -->
+        <div style="background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.15);border-radius:8px;padding:12px 14px">
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+            📸 Upload Payment Screenshot (recommended)
+          </div>
+          <input id="cdb-pay-screenshot" type="file" accept="image/*,.pdf"
+            style="font-size:11px;color:rgba(255,255,255,.55);width:100%;cursor:pointer"
+            onchange="CDB_PAYMENT._onScreenshot(this)" />
+          <div id="cdb-pay-screenshot-preview" style="margin-top:8px;display:none">
+            <img id="cdb-pay-screenshot-img" src="" alt="Payment proof"
+              style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid rgba(255,255,255,.1);object-fit:contain" />
+            <div style="font-size:10px;color:rgba(34,197,94,.8);margin-top:4px">✅ Screenshot attached</div>
+          </div>
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px;line-height:1.5">
+            Upload your payment confirmation screenshot for faster verification (optional but speeds up activation)
+          </div>
+        </div>
       </div>
 
       <div id="cdb-pay-status" style="margin-top:10px;min-height:20px;font-size:12px;text-align:center"></div>
@@ -10900,11 +10984,86 @@ if(document.readyState==='loading'){
       <div style="text-align:center;margin-top:14px;font-size:11px;color:rgba(255,255,255,.22);line-height:1.7">
         🔒 Verified manually by our team · Access activated within 2–4 hours<br>
         Questions? <a href="mailto:support@cyberdudebivash.com" style="color:rgba(0,212,255,.5)">support@cyberdudebivash.com</a>
+        &nbsp;|&nbsp; <a href="tel:+918179881447" style="color:rgba(0,212,255,.5)">+91 8179881447</a>
       </div>
     </div>
   </div>
 </div>
 <!-- ═══════════════ END UNIFIED PAYMENT MODAL ═══════════════ -->
+
+<!-- ═══════════════ HOW TO PAY — PAYMENT INSTRUCTIONS MODAL ═══════════════ -->
+<style>
+#cdb-pay-howto{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:16px}
+#cdb-pay-howto.open{display:flex}
+#cdb-pay-howto-inner{background:#0a0a1e;border:1px solid rgba(0,212,255,.2);border-radius:20px;max-width:600px;width:100%;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.8)}
+</style>
+<div id="cdb-pay-howto" onclick="if(event.target===this)document.getElementById('cdb-pay-howto').classList.remove('open')">
+  <div id="cdb-pay-howto-inner">
+    <div style="background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,58,237,.08));border-bottom:1px solid rgba(255,255,255,.07);padding:22px 28px 18px;border-radius:20px 20px 0 0;position:relative">
+      <button onclick="document.getElementById('cdb-pay-howto').classList.remove('open')" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      <div style="font-size:11px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">💡 HOW TO PAY ON CYBERDUDEBIVASH</div>
+      <div style="font-size:20px;font-weight:900;color:#fff">Simple 3-Step Payment Process</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.45);margin-top:4px">No credit card required · No Razorpay · Direct & instant</div>
+    </div>
+    <div style="padding:24px 28px 28px">
+      <!-- Step 1 -->
+      <div style="display:flex;gap:16px;margin-bottom:24px;align-items:flex-start">
+        <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(0,212,255,.15);border:2px solid rgba(0,212,255,.4);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#00d4ff">1</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:4px">Click any payment button → Choose your method</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">Select from <strong style="color:rgba(255,255,255,.75)">UPI · Bank Transfer · PayPal · Crypto</strong>. Payment details appear instantly. No account creation needed.</div>
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div style="display:flex;gap:16px;margin-bottom:24px;align-items:flex-start">
+        <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,.12);border:2px solid rgba(34,197,94,.35);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#22c55e">2</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:4px">Transfer the exact amount to our details</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">
+            <strong style="color:rgba(255,255,255,.7)">UPI IDs:</strong> iambivash.bn-5@okaxis · iambivash.bn-5@okicici · 6302177246@axisbank<br>
+            <strong style="color:rgba(255,255,255,.7)">Bank:</strong> Bivash Kumar Nayak · A/C 915010024617260 · IFSC UTIB0000052 · Axis Bank<br>
+            <strong style="color:rgba(255,255,255,.7)">PayPal:</strong> iambivash.bn@gmail.com (Friends &amp; Family)<br>
+            <strong style="color:rgba(255,255,255,.7)">Crypto:</strong> 0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796 (BEP20/ERC20)
+          </div>
+        </div>
+      </div>
+      <!-- Step 3 -->
+      <div style="display:flex;gap:16px;margin-bottom:28px;align-items:flex-start">
+        <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(245,158,11,.12);border:2px solid rgba(245,158,11,.35);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#f59e0b">3</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:4px">Submit your Transaction ID + screenshot → Done!</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">
+            After paying, click <strong style="color:#22c55e">✅ I HAVE PAID</strong>, enter your Transaction ID (UTR/TX Hash), upload a screenshot of the payment, and submit. Our team verifies and activates your access within <strong style="color:rgba(255,255,255,.8)">2–4 hours</strong>. You'll receive a confirmation email.
+          </div>
+        </div>
+      </div>
+
+      <!-- SLA Box -->
+      <div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.18);border-radius:12px;padding:16px 20px;margin-bottom:20px">
+        <div style="font-size:12px;font-weight:800;color:#00d4ff;margin-bottom:10px">⚡ Activation SLA</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+          <div style="color:rgba(255,255,255,.55)">🟢 UPI / IMPS — usually <strong style="color:rgba(255,255,255,.8)">within 2 hours</strong></div>
+          <div style="color:rgba(255,255,255,.55)">🟡 NEFT / Bank — up to <strong style="color:rgba(255,255,255,.8)">4 hours</strong> (banking hours)</div>
+          <div style="color:rgba(255,255,255,.55)">🔵 PayPal — up to <strong style="color:rgba(255,255,255,.8)">4 hours</strong> after confirmation</div>
+          <div style="color:rgba(255,255,255,.55)">⛓ Crypto — up to <strong style="color:rgba(255,255,255,.8)">6 hours</strong> (on-chain confirm)</div>
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 18px;font-size:12px;color:rgba(255,255,255,.5);line-height:1.8">
+        📧 Support: <a href="mailto:support@cyberdudebivash.com" style="color:#00d4ff">support@cyberdudebivash.com</a><br>
+        📧 Billing: <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a><br>
+        📞 Phone / WhatsApp: <a href="tel:+918179881447" style="color:#00d4ff">+91 8179881447</a><br>
+        💬 Discord: <a href="https://discord.gg/cybercoder127001" target="_blank" rel="noopener" style="color:#00d4ff">cybercoder127001</a>
+      </div>
+
+      <button onclick="CDB_PAYMENT.open({product:'general',productLabel:'Select a product to purchase'})" style="width:100%;margin-top:16px;background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:13px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer">
+        🛒 Open Payment Checkout →
+      </button>
+    </div>
+  </div>
+</div>
+<!-- ═══════════════ END HOW-TO-PAY MODAL ═══════════════ -->
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      CYBERDUDEBIVASH v13.0 — COMPREHENSIVE PLATFORM ENHANCEMENTS
@@ -11768,10 +11927,10 @@ const CDB_ONBOARD = window.CDB_ONBOARD = (() => {
       action:{label:'Try Scanner →', fn:()=>{if(typeof cdbNavigate==='function') cdbNavigate('scanner');}},
     },
     {
-      target:'#cdb-soc-v12',
+      target:'#main-nav',
       title:'🛡 SOC Command Center',
-      body:'Real-time threat feed, live attack graphs, and AI verdict engine — all synchronized with Sentinel APEX and live CVE data.',
-      pos:'top', arrow:'arrow-bottom',
+      body:'Real-time threat feed, live attack graphs, and AI verdict engine — all synchronized with Sentinel APEX and live CVE data. Access from the navigation menu.',
+      pos:'bottom', arrow:'arrow-top',
     },
     {
       target:'#defense-solutions',
@@ -11789,43 +11948,66 @@ const CDB_ONBOARD = window.CDB_ONBOARD = (() => {
     },
     {
       target:'#main-nav',
-      title:'🚀 You\'re Ready!',
-      body:'Use the navigation to explore all features. Click 🔔 for real-time alerts. Pro/Enterprise users can access the Agentic AI Console for v12 engine status.',
+      title:'🚀 You\'re All Set!',
+      body:'Use the navigation to explore all features. Click the 🔔 bell for real-time alerts. All payments via UPI · Bank · PayPal · Crypto — no Razorpay required.',
       pos:'bottom', arrow:'arrow-top',
       action:{label:'Start Scanning →', fn:()=>{if(typeof cdbNavigate==='function') cdbNavigate('scanner');}},
     }
   ];
 
   let _step = 0;
-  let _overlay = null;
   let _spotlight = null;
   let _card = null;
+  let _escHandler = null;
 
-  function _getTargetRect(sel){
+  /* Returns element rect if visible, null if hidden/zero-size */
+  function _getVisibleRect(sel){
     const el = document.querySelector(sel);
     if(!el) return null;
     const r = el.getBoundingClientRect();
-    return {top:r.top+window.scrollY, left:r.left, width:r.width, height:r.height, el};
+    // Element must have positive dimensions AND be reasonably in view
+    if(r.width < 4 || r.height < 4) return null;
+    return {top:r.top, left:r.left, width:r.width, height:r.height,
+            absTop:r.top+window.scrollY, el};
+  }
+
+  /* Viewport-centre fallback position for the card */
+  function _centrePos(){
+    const cW=320, cH=220;
+    return {
+      top: window.scrollY + Math.max(80, (window.innerHeight - cH)/2),
+      left: Math.max(12, (window.innerWidth - cW)/2),
+    };
   }
 
   function _show(idx){
     if(idx >= STEPS.length){ _finish(); return; }
     _step = idx;
     const s = STEPS[idx];
-    const rect = _getTargetRect(s.target);
+    const rect = _getVisibleRect(s.target);
 
-    // Spotlight
+    /* ── Spotlight ── */
     if(!_spotlight){
       _spotlight = document.createElement('div');
       _spotlight.className = 'cdb-onboard-spotlight';
       document.body.appendChild(_spotlight);
     }
     if(rect){
-      _spotlight.style.cssText = `top:${rect.top-8+window.scrollY}px;left:${rect.left-8}px;width:${rect.width+16}px;height:${rect.height+16}px;`;
-      rect.el.scrollIntoView({behavior:'smooth',block:'center'});
+      /* Real visible element — spotlight it and scroll into view */
+      const pad = 10;
+      _spotlight.style.cssText =
+        `top:${rect.absTop-pad}px;left:${rect.left-pad}px;`+
+        `width:${rect.width+pad*2}px;height:${rect.height+pad*2}px;`+
+        `opacity:1;transition:all .35s ease`;
+      try{ rect.el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+    } else {
+      /* Element hidden / not found — collapse spotlight to 1px invisible dot,
+         do NOT spread the 9999px box-shadow across the full viewport */
+      _spotlight.style.cssText =
+        `top:0px;left:0px;width:0px;height:0px;opacity:0;transition:none`;
     }
 
-    // Card
+    /* ── Card ── */
     if(!_card){
       _card = document.createElement('div');
       _card.className = 'cdb-onboard-card arrow-top';
@@ -11833,53 +12015,74 @@ const CDB_ONBOARD = window.CDB_ONBOARD = (() => {
     }
     _card.className = `cdb-onboard-card ${s.arrow||'arrow-top'}`;
 
-    // Position card
-    setTimeout(()=>{
-      const cr = _getTargetRect(s.target);
-      const cW = 320, cH = 200;
+    /* Compute card position after a short delay to let any scroll settle */
+    const _positionCard = ()=>{
+      const cW = 320, cH = 220;
       let top, left;
-      if(s.pos==='bottom'){
-        top = (cr?.top||100) + (cr?.height||60) + window.scrollY + 18;
-        left = (cr?.left||0) + (cr?.width||600)/2 - cW/2;
+      const cr = _getVisibleRect(s.target);
+      if(cr){
+        if(s.pos==='bottom'){
+          top  = cr.absTop + cr.height + 18;
+          left = cr.left + cr.width/2 - cW/2;
+        } else {
+          top  = cr.absTop - cH - 18;
+          left = cr.left + cr.width/2 - cW/2;
+        }
+        /* Keep within viewport horizontally */
+        left = Math.max(12, Math.min(left, window.innerWidth - cW - 12));
+        /* If card would go above viewport, flip to bottom */
+        if(top + window.scrollY < window.scrollY + 8){
+          top = cr.absTop + cr.height + 18;
+        }
       } else {
-        top = (cr?.top||300) + window.scrollY - cH - 18;
-        left = (cr?.left||0) + (cr?.width||600)/2 - cW/2;
+        /* Fallback: centre of viewport */
+        const cp = _centrePos();
+        top = cp.top; left = cp.left;
       }
-      left = Math.max(12, Math.min(left, window.innerWidth - cW - 12));
       _card.style.cssText = `top:${top}px;left:${left}px;`;
-    }, 100);
+    };
 
-    const dots = STEPS.map((_,i)=>`<div class="cdb-onboard-dot${i===idx?' active':''}"></div>`).join('');
+    /* Position immediately, then re-position after scroll animation */
+    _positionCard();
+    setTimeout(_positionCard, 180);
+    setTimeout(_positionCard, 400);
+
+    const dots = STEPS.map((_,i)=>
+      `<div class="cdb-onboard-dot${i===idx?' active':''}"></div>`).join('');
+
     _card.innerHTML = `
       <div style="font-size:11px;font-weight:900;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Step ${idx+1} of ${STEPS.length}</div>
       <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;line-height:1.3">${s.title}</div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:14px">${s.body}</div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="CDB_ONBOARD.prev()" class="v13-btn v13-btn-ghost" style="font-size:11px;padding:6px 12px;${idx===0?'visibility:hidden':''}">&larr; Back</button>
-        <div style="flex:1"></div>
+        <div style="flex:1;min-width:4px"></div>
         ${s.action ? `<button onclick="(${s.action.fn.toString()})()" class="v13-btn v13-btn-ghost" style="font-size:11px;padding:6px 12px">${s.action.label}</button>` : ''}
         <button onclick="CDB_ONBOARD.next()" class="v13-btn v13-btn-primary" style="font-size:11px;padding:6px 14px">${idx===STEPS.length-1?'Done ✓':'Next →'}</button>
-        <button onclick="CDB_ONBOARD.dismiss()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:11px;padding:6px">Skip</button>
+        <button onclick="CDB_ONBOARD.dismiss()" style="background:none;border:none;color:rgba(255,255,255,.25);cursor:pointer;font-size:11px;padding:6px;line-height:1" title="Skip tour">✕ Skip</button>
       </div>
-      <div class="cdb-onboard-step-dots">${dots}</div>`;
+      <div class="cdb-onboard-step-dots" style="margin-top:12px">${dots}</div>`;
   }
-
-  return {
-    start(force=false){
-      if(!force && stored('onboard_done')==='1') return;
-      setTimeout(()=>_show(0), 1800);
-    },
-    next(){ _show(_step+1); },
-    prev(){ if(_step>0) _show(_step-1); },
-    dismiss(){ _finish(); },
-    _finish: _finish
-  };
 
   function _finish(){
     store('onboard_done','1');
     if(_spotlight){ _spotlight.remove(); _spotlight=null; }
     if(_card){ _card.remove(); _card=null; }
+    if(_escHandler){ document.removeEventListener('keydown',_escHandler); _escHandler=null; }
   }
+
+  return {
+    start(force=false){
+      if(!force && stored('onboard_done')==='1') return;
+      /* Attach escape-key dismiss */
+      _escHandler = (e)=>{ if(e.key==='Escape') _finish(); };
+      document.addEventListener('keydown', _escHandler);
+      setTimeout(()=>_show(0), 1800);
+    },
+    next(){ _show(_step+1); },
+    prev(){ if(_step>0) _show(_step-1); },
+    dismiss(){ _finish(); },
+  };
 })();
 
 
