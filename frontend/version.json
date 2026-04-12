@@ -1,8 +1,23 @@
 {
-  "version": "9.0.0",
+  "version": "13.0.0",
   "commit": "INJECT_AT_BUILD",
   "commit_short": "INJECT_AT_BUILD",
   "build_time": "INJECT_AT_BUILD",
   "branch": "main",
-  "platform": "CYBERDUDEBIVASH AI Security Hub"
+  "platform": "CYBERDUDEBIVASH AI Security Hub",
+  "engines": {
+    "sentinel_apex": "3.0",
+    "mythos_orchestrator": "1.0",
+    "anomaly_detection": "1.0",
+    "predictive_intel": "1.0",
+    "agentic_ai": "1.0",
+    "virtual_waf": "1.0"
+  },
+  "capabilities": [
+    "domain_scan", "ai_scan", "redteam", "identity", "compliance",
+    "soc_automation", "threat_intel", "attack_graph", "ai_brain",
+    "realtime_feed", "siem_export", "defense_marketplace",
+    "agentic_remediation", "behavioral_anomaly", "predictive_threats",
+    "virtual_patching", "mythos_tools", "global_scale", "mssp"
+  ]
 }
