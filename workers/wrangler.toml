@@ -104,23 +104,27 @@ dead_letter_queue  = "scan-jobs-dlq"
 binding = "AI"
 
 # ── Cron Triggers ─────────────────────────────────────────────────────────────
-# v13.0 cron schedule (full engine coverage):
-#   Every 15m:  v12 Behavioral anomaly detection batch + agent event bus drain
-#   Every 2h:   v12 Predictive threat intelligence scoring
-#   Hourly:     Monitoring scans + threat intel purge + agent bus drain
-#   4x/day:     Sentinel APEX CVE feed refresh
-#   Every 12h:  v10 Defense product generation + MYTHOS tool generation
-#   6 AM:       v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
-#   11 PM:      v10 Daily revenue snapshot
+# v13.0 cron schedule — EXACTLY 5 entries (Cloudflare Free plan hard limit: 5)
+#
+# Engine execution per trigger (all v12 engines run on every scheduled event):
+#   runAnomalyBatch()  — unconditional on every cron invocation → hourly via slot 1
+#   consumeEvents()    — unconditional on every cron invocation → hourly via slot 1
+#   runPredictiveBatch()— cron==='0 * * * *' condition → hourly via slot 1
+#   runPatchingBatch() — unconditional on every cron invocation
+#   runMythosCron()    — cron==='0 */12 * * *' || cron==='0 6 * * *' → slots 3+4
+#
+#   Slot 1: Hourly    — v12 Anomaly + Predictive + Agent Bus + Monitoring + Purge
+#   Slot 2: 4×/day   — Sentinel APEX CVE feed refresh
+#   Slot 3: Every 12h — v10 Defense product generation + MYTHOS generation
+#   Slot 4: 6 AM      — v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
+#   Slot 5: 11 PM     — v10 Daily revenue snapshot
 [triggers]
 crons = [
-  "*/15 * * * *",      # Every 15m: v12 Anomaly Detection + Agent Bus drain
-  "0 */2 * * *",       # Every 2h:  v12 Predictive Threat Intelligence scoring
-  "0 * * * *",         # Hourly:    Monitoring scans + threat intel purge
-  "0 0,6,12,18 * * *", # 4x/day:   Sentinel APEX CVE feed refresh
-  "0 */12 * * *",      # Every 12h: v10 Defense products + MYTHOS generation
-  "0 6 * * *",         # 6 AM:      v10 Content pipeline + MYTHOS daily run
-  "0 23 * * *"         # 11 PM:     v10 Daily revenue snapshot
+  "0 * * * *",         # Slot 1 — Hourly:    v12 Anomaly + Predictive + Agent Bus + Monitoring
+  "0 0,6,12,18 * * *", # Slot 2 — 4x/day:   Sentinel APEX CVE feed refresh
+  "0 */12 * * *",      # Slot 3 — Every 12h: v10 Defense products + MYTHOS generation
+  "0 6 * * *",         # Slot 4 — 6 AM:      v10 Content pipeline + MYTHOS daily run
+  "0 23 * * *"         # Slot 5 — 11 PM:     v10 Daily revenue snapshot
 ]
 
 # ── Custom domain routes ──────────────────────────────────────────────────────
