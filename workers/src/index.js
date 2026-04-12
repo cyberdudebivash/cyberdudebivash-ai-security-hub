@@ -53,7 +53,8 @@ import {
 import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handleApiUsage } from './handlers/analytics.js';
 
 // ─── AI Cyber Brain V2 handlers (analyze / simulate / forecast) ──────────────
-import { handleAIAnalyze, handleAISimulate, handleAIForecast } from './handlers/aiAnalysis.js';
+import { handleAIAnalyze, handleAISimulate, handleAIForecast,
+         handleAIChat, handleGenerateRules } from './handlers/aiAnalysis.js';
 
 // ─── CVE Engine (for /api/v1/cves endpoint) ───────────────────────────────────
 import { getTopCVEsForModule } from './services/cveEngine.js';
@@ -1116,6 +1117,14 @@ export default {
       return withSecurityHeaders(withCors(await handleAISimulate(request, env), request));
     }
 
+    // POST /api/ai/chat → MYTHOS conversational analyst (multi-turn, intent routing)
+    if (path === '/api/ai/chat' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleAIChat(request, env), request));
+    }
+    // POST /api/ai/generate-rules → SOAR rule generation (Sigma/Splunk/KQL/YARA/Elastic)
+    if (path === '/api/ai/generate-rules' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleGenerateRules(request, env), request));
+    }
     // POST /api/ai/forecast → exploitation likelihood + time-to-breach + financial impact
     if (path === '/api/ai/forecast' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
