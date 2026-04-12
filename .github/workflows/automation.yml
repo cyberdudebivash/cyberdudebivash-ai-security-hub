@@ -622,6 +622,108 @@ jobs:
           fi
           exit 0
 
+      # ── v13 Agent Actions (Agentic AI) ───────────────────────────────────
+      - name: Smoke Test v13 — Agent Actions API
+        id: agent_actions
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/v1/agent-actions"
+
+          HTTP_CODE=$(curl -s -o /tmp/agent_resp.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/v1/agent-actions" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "agent_status=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  Agent actions endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/agent_resp.json")); print("  Actions:", d.get("total","N/A"))' 2>/dev/null || true
+            echo "✅ v13 Agent Actions: OK (200)"
+          elif [ "${HTTP_CODE}" = "401" ] || [ "${HTTP_CODE}" = "403" ]; then
+            echo "✅ v13 Agent Actions: Endpoint live (auth required)"
+          else
+            echo "ℹ️  v13 Agent Actions: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
+      # ── v13 Predictive Threats ────────────────────────────────────────────
+      - name: Smoke Test v13 — Predictive Threats API
+        id: predictive
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/v1/predictive/threats"
+
+          HTTP_CODE=$(curl -s -o /tmp/pred_resp.json -w "%{http_code}" \
+            --max-time 12 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/v1/predictive/threats?limit=5" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "predictive_status=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  Predictive threats endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/pred_resp.json")); print("  Predictions:", len(d.get("predictions",[])), "| Critical:", d.get("summary",{}).get("critical","N/A"))' 2>/dev/null || true
+            echo "✅ v13 Predictive Threats: OK (200)"
+          else
+            echo "ℹ️  v13 Predictive Threats: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
+      # ── v13 Platform Status ────────────────────────────────────────────────
+      - name: Smoke Test v13 — Comprehensive Status Endpoint
+        id: v13_status
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/v13/status"
+
+          HTTP_CODE=$(curl -s -o /tmp/v13_resp.json -w "%{http_code}" \
+            --max-time 15 --connect-timeout 10 --retry 2 \
+            "${API_URL}/api/v13/status" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "v13_status=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  v13 status endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/v13_resp.json")); engines=d.get("engines",{}); online=sum(1 for v in engines.values() if v=="online"); print(f"  Engines online: {online}/{len(engines)} | Version: {d.get(\"version\",\"N/A\")}") ' 2>/dev/null || true
+            echo "✅ v13 Platform Status: OK (200)"
+          else
+            echo "ℹ️  v13 Platform Status: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
+      # ── v13 MYTHOS Orchestrator ────────────────────────────────────────────
+      - name: Smoke Test v13 — MYTHOS Orchestrator Status
+        id: mythos_status
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/mythos/status"
+
+          HTTP_CODE=$(curl -s -o /tmp/mythos_resp.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/mythos/status" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "mythos_status_code=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  MYTHOS endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/mythos_resp.json")); s=d.get("status",d); print(f"  Tools: {s.get(\"total_tools\",\"N/A\")} | Published: {s.get(\"total_published\",\"N/A\")}") ' 2>/dev/null || true
+            echo "✅ MYTHOS Orchestrator: OK (200)"
+          else
+            echo "ℹ️  MYTHOS Status: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
       # ── Intel Feed Connectivity ───────────────────────────────────────────
       - name: Smoke Test — Intel Feed (intel.cyberdudebivash.com)
         id: intel_feed
@@ -649,7 +751,7 @@ jobs:
         run: |
           set +e
           {
-            echo "## 🛡 CYBERDUDEBIVASH Platform Health Report — v11.0"
+            echo "## 🛡 CYBERDUDEBIVASH Platform Health Report — v13.0"
             echo ""
             echo "> Run: [\`${{ github.run_number }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) | **$(date -u '+%Y-%m-%d %H:%M:%S UTC')**"
             echo "> API URL: \`${{ steps.resolve.outputs.api_url }}\`"
@@ -667,6 +769,11 @@ jobs:
             echo "| \`/api/global/pricing\` | \`${{ steps.global_pricing.outputs.pricing_status || 'N/A' }}\` | Global pricing |"
             echo "| \`/api/blog/posts\` | \`${{ steps.blog.outputs.blog_status || 'N/A' }}\` | Content API |"
             echo "| \`intel.cyberdudebivash.com\` | \`${{ steps.intel_feed.outputs.intel_status || 'N/A' }}\` | Intel feed |"
+            echo "| **v13 Engines** | | |"
+            echo "| \`/api/v13/status\` | \`${{ steps.v13_status.outputs.v13_status || 'N/A' }}\` | v13 comprehensive status |"
+            echo "| \`/api/v1/agent-actions\` | \`${{ steps.agent_actions.outputs.agent_status || 'N/A' }}\` | Agentic AI actions |"
+            echo "| \`/api/v1/predictive/threats\` | \`${{ steps.predictive.outputs.predictive_status || 'N/A' }}\` | Predictive threat intel |"
+            echo "| \`/api/mythos/status\` | \`${{ steps.mythos_status.outputs.mythos_status_code || 'N/A' }}\` | MYTHOS Orchestrator |"
             echo ""
             echo "**Legend:** \`200\` = OK ✅ | \`401/403\` = Auth required (reachable) ✅ | \`429\` = Rate limited (reachable) ✅ | \`000\` = CI network issue (non-fatal) ⚠️ | \`5xx\` = Server error ❌"
             echo ""

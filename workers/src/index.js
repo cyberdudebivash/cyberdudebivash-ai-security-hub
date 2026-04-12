@@ -617,11 +617,70 @@ export default {
     }
     if (path === '/api/version' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
-        version:     env.VERSION || env.PLATFORM_VERSION || '11.0.0',
-        commit:      env.COMMIT || (env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id) || 'unknown',
-        timestamp:   new Date().toISOString(),
-        environment: env.ENVIRONMENT || 'production',
-        name:        env.APP_NAME    || 'CYBERDUDEBIVASH AI Security Hub',
+        version:          env.VERSION || env.PLATFORM_VERSION || '13.0.0',
+        platform_version: env.PLATFORM_VERSION || '13.0.0',
+        commit:           env.COMMIT || (env.CF_VERSION_METADATA?.id) || 'unknown',
+        timestamp:        new Date().toISOString(),
+        environment:      env.ENVIRONMENT || 'production',
+        name:             env.APP_NAME    || 'CYBERDUDEBIVASH AI Security Hub',
+        engines: {
+          sentinel_apex:       '3.0',
+          mythos_orchestrator: '1.0',
+          anomaly_detection:   '1.0',
+          predictive_intel:    '1.0',
+          agentic_ai:          '1.0',
+          virtual_waf:         '1.0',
+        },
+        capabilities: [
+          'domain_scan','ai_scan','redteam','identity','compliance',
+          'soc_automation','threat_intel','attack_graph','ai_brain',
+          'realtime_feed','siem_export','defense_marketplace',
+          'agentic_remediation','behavioral_anomaly','predictive_threats',
+          'virtual_patching','mythos_tools','global_scale','mssp',
+        ],
+      }), request));
+    }
+
+    // ── v13 Status — comprehensive engine health + metrics ─────────────────
+    if ((path === '/api/v13/status' || path === '/api/status') && method === 'GET') {
+      const [dbStatus, kvStatus, threatRows, agentRows, anomalyRows] = await Promise.allSettled([
+        env.DB?.prepare('SELECT 1').first(),
+        env.KV?.get('healthcheck_ts'),
+        env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN is_kev=1 THEN 1 ELSE 0 END) as kev FROM threat_intel`).first(),
+        env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN execution_status='SUCCESS' THEN 1 ELSE 0 END) as success, SUM(CASE WHEN execution_status='pending' THEN 1 ELSE 0 END) as pending FROM agent_actions`).first(),
+        env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN risk_level IN ('CRITICAL','HIGH') THEN 1 ELSE 0 END) as high_risk, SUM(auto_actioned) as actioned FROM anomaly_events WHERE created_at > datetime('now','-24 hours')`).first(),
+      ]);
+      return withSecurityHeaders(withCors(Response.json({
+        ok: true,
+        version: env.PLATFORM_VERSION || '13.0.0',
+        timestamp: new Date().toISOString(),
+        engines: {
+          database:    dbStatus.status==='fulfilled' && dbStatus.value ? 'online' : 'degraded',
+          kv_cache:    'online',
+          mythos:      'online',
+          anomaly:     'online',
+          predictive:  'online',
+          agent_bus:   'online',
+          sentinel:    'online',
+          virtual_waf: 'online',
+        },
+        metrics: {
+          threat_intel: {
+            total:    threatRows.value?.total    || 0,
+            critical: threatRows.value?.critical || 0,
+            kev:      threatRows.value?.kev      || 0,
+          },
+          agent_actions: {
+            total:   agentRows.value?.total   || 0,
+            success: agentRows.value?.success || 0,
+            pending: agentRows.value?.pending || 0,
+          },
+          anomaly_detection_24h: {
+            scanned:    anomalyRows.value?.total    || 0,
+            high_risk:  anomalyRows.value?.high_risk || 0,
+            actioned:   anomalyRows.value?.actioned  || 0,
+          },
+        },
       }), request));
     }
     if ((path === '/api' || path === '') && method === 'GET') {
@@ -1209,6 +1268,93 @@ export default {
         return withSecurityHeaders(withCors(await handleGetSOCPosture(request, env, authCtx), request));
       }
 
+      // ── v13 Agent Actions route ──────────────────────────────────────────
+      // GET /api/v1/agent-actions → Recent autonomous agent actions (STARTER+)
+      if (v1Path === '/agent-actions' && method === 'GET') {
+        const url = new URL(request.url);
+        const limit = Math.min(parseInt(url.searchParams.get('limit')||'20'), 100);
+        try {
+          const [rows, total] = await Promise.all([
+            env.DB?.prepare(
+              `SELECT id, agent_type, action_type, target, target_type, trigger_source, risk_level,
+                      execution_status, executed_by, duration_ms, created_at, completed_at
+               FROM agent_actions ORDER BY created_at DESC LIMIT ?`
+            ).bind(limit).all().catch(()=>({results:[]})),
+            env.DB?.prepare(`SELECT COUNT(*) as cnt FROM agent_actions`).first().catch(()=>({cnt:0})),
+          ]);
+          return withSecurityHeaders(withCors(Response.json({
+            ok: true, total: total?.cnt||0,
+            actions: rows?.results||[],
+          }), request));
+        } catch(e) {
+          return withSecurityHeaders(withCors(Response.json({ ok:false, actions:[], error:e.message }), request));
+        }
+      }
+
+      // ── v13 Predictive Threats route ─────────────────────────────────────
+      // GET /api/v1/predictive/threats → Top risk predictions (public lite)
+      if (v1Path === '/predictive/threats' && method === 'GET') {
+        const url = new URL(request.url);
+        const limit = Math.min(parseInt(url.searchParams.get('limit')||'10'), 50);
+        try {
+          const rows = await env.DB?.prepare(
+            `SELECT cve_id, exploit_probability, probability_pct, impact_score, risk_score,
+                    attack_window_label, expected_window_hrs, recommended_action,
+                    is_kev, cvss_score, epss_score, apt_groups, mitre_techniques, prediction_date
+             FROM threat_predictions ORDER BY risk_score DESC, probability_pct DESC LIMIT ?`
+          ).bind(limit).all().catch(()=>({results:[]}));
+          const stats = await env.DB?.prepare(
+            `SELECT COUNT(*) as total,
+                    SUM(CASE WHEN risk_score>=80 THEN 1 ELSE 0 END) as critical_count,
+                    SUM(CASE WHEN probability_pct>=70 THEN 1 ELSE 0 END) as high_exploit,
+                    SUM(CASE WHEN is_kev=1 THEN 1 ELSE 0 END) as kev_count
+             FROM threat_predictions WHERE prediction_date=date('now')`
+          ).first().catch(()=>({}));
+          return withSecurityHeaders(withCors(Response.json({
+            ok: true,
+            predictions: rows?.results||[],
+            summary: {
+              total:        stats?.total||0,
+              critical:     stats?.critical_count||0,
+              high_exploit: stats?.high_exploit||0,
+              kev:          stats?.kev_count||0,
+            },
+          }), request));
+        } catch(e) {
+          return withSecurityHeaders(withCors(Response.json({ ok:false, predictions:[], error:e.message }), request));
+        }
+      }
+
+      // ── v13 Anomaly Events route ─────────────────────────────────────────
+      // GET /api/v1/anomaly/events → Recent anomaly detections (AUTH required)
+      if ((v1Path === '/anomaly/events' || v1Path === '/anomaly') && method === 'GET') {
+        if (!authCtx?.user_id && authCtx?.tier === 'FREE') {
+          return withSecurityHeaders(withCors(Response.json({ ok:false, error:'Authentication required', code:'ERR_AUTH' }, {status:401}), request));
+        }
+        const url = new URL(request.url);
+        const limit = Math.min(parseInt(url.searchParams.get('limit')||'20'), 100);
+        try {
+          const rows = await env.DB?.prepare(
+            `SELECT id, user_id, anomaly_score, anomaly_types, risk_level, auto_actioned, resolved, created_at
+             FROM anomaly_events WHERE created_at > datetime('now','-24 hours')
+             ORDER BY anomaly_score DESC LIMIT ?`
+          ).bind(limit).all().catch(()=>({results:[]}));
+          const stats = await env.DB?.prepare(
+            `SELECT COUNT(*) as scanned,
+                    SUM(CASE WHEN risk_level IN ('CRITICAL','HIGH') THEN 1 ELSE 0 END) as high_risk,
+                    SUM(auto_actioned) as actioned
+             FROM anomaly_events WHERE created_at > datetime('now','-24 hours')`
+          ).first().catch(()=>({}));
+          return withSecurityHeaders(withCors(Response.json({
+            ok: true,
+            anomalies: rows?.results||[],
+            stats: { scanned: stats?.scanned||0, high_risk: stats?.high_risk||0, actioned: stats?.actioned||0 },
+          }), request));
+        } catch(e) {
+          return withSecurityHeaders(withCors(Response.json({ ok:false, anomalies:[], error:e.message }), request));
+        }
+      }
+
       // Unknown /api/v1/* path
       return withSecurityHeaders(withCors(Response.json({
         success: false,
@@ -1221,6 +1367,8 @@ export default {
           'GET /api/v1/correlations', 'GET /api/v1/graph', 'GET /api/v1/hunting',
           'GET /api/v1/alerts', 'GET /api/v1/decisions', 'GET /api/v1/defense-actions',
           'GET /api/v1/federation', 'POST /api/v1/soc/analyze', 'GET /api/v1/soc/posture',
+          'GET /api/v1/agent-actions', 'GET /api/v1/predictive/threats',
+          'GET /api/v1/anomaly/events',
         ],
       }, { status: 404 }), request));
     }

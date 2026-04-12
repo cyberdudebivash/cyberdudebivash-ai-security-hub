@@ -6,9 +6,9 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "11.0.0"
-PLATFORM_VERSION = "11.0.0"
-COMMIT          = "2753ff7"
+VERSION     = "13.0.0"
+PLATFORM_VERSION = "13.0.0"
+COMMIT          = "INJECT_AT_BUILD"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
@@ -104,18 +104,23 @@ dead_letter_queue  = "scan-jobs-dlq"
 binding = "AI"
 
 # ── Cron Triggers ─────────────────────────────────────────────────────────────
-# v10.0 cron schedule (expanded):
-#   Hourly:   Monitoring scans + threat intel purge
-#   6 AM:     CVE → Blog → LinkedIn → Telegram content pipeline
-#   Every 12h: Defense product generation from live CVEs
-#   11 PM:    Daily revenue snapshot capture
+# v13.0 cron schedule (full engine coverage):
+#   Every 15m:  v12 Behavioral anomaly detection batch + agent event bus drain
+#   Every 2h:   v12 Predictive threat intelligence scoring
+#   Hourly:     Monitoring scans + threat intel purge + agent bus drain
+#   4x/day:     Sentinel APEX CVE feed refresh
+#   Every 12h:  v10 Defense product generation + MYTHOS tool generation
+#   6 AM:       v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
+#   11 PM:      v10 Daily revenue snapshot
 [triggers]
 crons = [
-  "0 * * * *",       # Hourly:   run due monitoring scans + threat intel purge
-  "0 0,6,12,18 * * *", # 4x/day:  Sentinel APEX CVE feed refresh
-  "0 */12 * * *",    # Every 12h: v10 Defense product generation
-  "0 6 * * *",       # 6 AM:     v10 Content pipeline (CVE→Blog→Social)
-  "0 23 * * *"       # 11 PM:    v10 Daily revenue snapshot
+  "*/15 * * * *",      # Every 15m: v12 Anomaly Detection + Agent Bus drain
+  "0 */2 * * *",       # Every 2h:  v12 Predictive Threat Intelligence scoring
+  "0 * * * *",         # Hourly:    Monitoring scans + threat intel purge
+  "0 0,6,12,18 * * *", # 4x/day:   Sentinel APEX CVE feed refresh
+  "0 */12 * * *",      # Every 12h: v10 Defense products + MYTHOS generation
+  "0 6 * * *",         # 6 AM:      v10 Content pipeline + MYTHOS daily run
+  "0 23 * * *"         # 11 PM:     v10 Daily revenue snapshot
 ]
 
 # ── Custom domain routes ──────────────────────────────────────────────────────
