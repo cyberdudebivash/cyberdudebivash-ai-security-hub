@@ -158,6 +158,25 @@ import {
 } from './handlers/mythosHandler.js';
 import { runMythosCron } from './services/mythosOrchestrator.js';
 
+// ─── PHASE 2: Autonomous SOC Mode ────────────────────────────────────────────
+import {
+  handleGetMode, handleSetMode, handleGetPipeline, handleRunPipeline,
+  handleGetSchedule, handleSetSchedule, handleGetLog, handleGetLatestRules,
+  runAutoSocCron,
+} from './handlers/autonomousSocMode.js';
+
+// ─── PHASE 2: SIEM Integration Deploy ────────────────────────────────────────
+import {
+  handleListIntegrations, handleConfigure, handleDeploy,
+  handleTestIntegration, handleDeployLog, handleDeleteIntegration,
+} from './handlers/siemDeploy.js';
+
+// ─── PHASE 2: Organization Memory v2 ─────────────────────────────────────────
+import {
+  handleGetMemory, handleRecordEvent, handleGetHistory,
+  handleGetPatterns, handleGetRecommendations, handleClearMemory,
+} from './handlers/orgMemoryV2.js';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
@@ -2027,6 +2046,92 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMythosAnalyze(request, env, authCtx || {}), request));
     }
 
+    // ── PHASE 2: Autonomous SOC Mode ──────────────────────────────────────────
+    if (path === '/api/auto-soc/mode' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetMode(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/mode' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleSetMode(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/pipeline' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetPipeline(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleRunPipeline(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/schedule' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetSchedule(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/schedule' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleSetSchedule(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/log' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetLog(request, env, authCtx), request));
+    }
+    if (path === '/api/auto-soc/latest-rules' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetLatestRules(request, env, authCtx), request));
+    }
+
+    // ── PHASE 2: SIEM Integration Deploy ──────────────────────────────────────
+    if (path === '/api/integrations' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleListIntegrations(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/configure' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleConfigure(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/deploy' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDeploy(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/test' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleTestIntegration(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/deploy-log' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDeployLog(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/integrations/') && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDeleteIntegration(request, env, authCtx), request));
+    }
+
+    // ── PHASE 2: Organization Memory v2 ───────────────────────────────────────
+    if (path === '/api/org-memory' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetMemory(request, env, authCtx), request));
+    }
+    if (path === '/api/org-memory/record' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleRecordEvent(request, env, authCtx), request));
+    }
+    if (path === '/api/org-memory/history' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetHistory(request, env, authCtx), request));
+    }
+    if (path === '/api/org-memory/patterns' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetPatterns(request, env, authCtx), request));
+    }
+    if (path === '/api/org-memory/recommend' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetRecommendations(request, env, authCtx), request));
+    }
+    if (path === '/api/org-memory' && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleClearMemory(request, env, authCtx), request));
+    }
+
     if (path === '/api/scan/upsell' && method === 'POST') {
       const { handleScanUpsell } = await import('./services/scanUpsellEngine.js');
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
@@ -2545,6 +2650,16 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         }
       })());
     }
+
+    // ── PHASE 2: Autonomous SOC Mode cron check ───────────────────────────────
+    ctx.waitUntil((async () => {
+      try {
+        await runAutoSocCron(env);
+        console.log('[CRON] AutoSOC: cron check complete');
+      } catch (e) {
+        console.error('[CRON] AutoSOC error:', e?.message);
+      }
+    })());
 
   },
 };
