@@ -48,6 +48,7 @@ import {
   handleCreateOrder, handleVerifyPayment, handlePaymentStatus,
   handleReportDownload as handlePaidReportDownload,
   handleRazorpayWebhook,
+  handlePaymentConfirm,
 } from './handlers/payments.js';
 import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handleApiUsage } from './handlers/analytics.js';
 
@@ -841,6 +842,12 @@ export default {
     if (path.startsWith('/api/payment/status/') && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handlePaymentStatus(request, env, authCtx), request));
+    }
+
+    // ── CDB Manual payment confirmation (UPI/Bank/Crypto/PayPal) ─────────────
+    // POST /api/payment/confirm  →  { txnId, method, product, user, amount }
+    if (path === '/api/payment/confirm' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handlePaymentConfirm(request, env), request));
     }
 
     // ── V7.0 Token-gated paid report download ────────────────────────────────

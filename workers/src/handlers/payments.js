@@ -517,3 +517,106 @@ function buildPayload(module, target, scan_id) {
     default:           return { domain: target };
   }
 }
+
+// ─── POST /api/payment/confirm ────────────────────────────────────────────────
+// Manual payment confirmation — customer submits txn ID after paying via UPI/Bank/Crypto/PayPal
+// Sends admin notification email + customer confirmation email
+export async function handlePaymentConfirm(request, env) {
+  let body;
+  try { body = await request.json(); }
+  catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  const { txnId, method, product, user: customerEmail, amount, notes, currency = 'INR' } = body;
+
+  if (!txnId || typeof txnId !== 'string' || txnId.trim().length < 4) {
+    return Response.json({ error: 'Transaction ID is required (min 4 chars)' }, { status: 422 });
+  }
+  if (!customerEmail || !customerEmail.includes('@')) {
+    return Response.json({ error: 'Valid customer email required' }, { status: 422 });
+  }
+
+  const confirmId = 'CDB-' + Date.now().toString(36).toUpperCase();
+  const ts        = new Date().toUTCString();
+
+  // ── Persist to D1 if available ──────────────────────────────────────────────
+  try {
+    if (env.DB) {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO payment_confirmations
+         (id, txn_id, method, product, customer_email, amount, currency, notes, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_verification', ?)`
+      ).bind(confirmId, txnId.trim(), method || 'UNKNOWN', product || 'unknown',
+             customerEmail, amount || '', currency, notes || '', ts).run();
+    }
+  } catch (dbErr) {
+    console.warn('[PaymentConfirm] DB write skipped:', dbErr.message);
+  }
+
+  // ── Send admin notification email ───────────────────────────────────────────
+  try {
+    const { sendEmail } = await import('../services/emailEngine.js');
+    const adminHtml = `
+<div style="font-family:monospace;background:#0a0e1a;color:#e2e8f0;padding:24px;border-radius:10px;border:2px solid #f59e0b">
+  <h2 style="color:#f59e0b;margin:0 0 16px">💰 NEW PAYMENT CONFIRMATION</h2>
+  <table style="width:100%;border-collapse:collapse">
+    <tr><td style="padding:6px 0;color:#94a3b8;width:140px">Confirm ID</td><td style="color:#00d4ff;font-weight:700">${confirmId}</td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Transaction ID</td><td style="color:#22c55e;font-weight:900;font-size:16px">${txnId}</td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Method</td><td>${method || 'Not specified'}</td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Product</td><td style="color:#a78bfa">${product || 'Unknown'}</td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Amount</td><td style="color:#f59e0b;font-weight:700">${amount ? (currency + ' ' + amount) : 'See txn'}</td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Customer</td><td><a href="mailto:${customerEmail}" style="color:#00d4ff">${customerEmail}</a></td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Notes</td><td style="color:rgba(255,255,255,.6)">${notes || '—'}</td></tr>
+    <tr><td style="padding:6px 0;color:#94a3b8">Received At</td><td>${ts}</td></tr>
+  </table>
+  <div style="margin-top:20px;padding:14px;background:rgba(245,158,11,.1);border-radius:8px;border:1px solid rgba(245,158,11,.3)">
+    ⚡ <strong>ACTION REQUIRED:</strong> Verify transaction on UPI/Bank/Crypto and activate customer access within 2–4 hours.
+  </div>
+</div>`;
+
+    await sendEmail(env, {
+      to:      'bivash@cyberdudebivash.com',
+      subject: `[CDB PAYMENT] New confirmation — ${txnId} — ${product || 'unknown product'}`,
+      html:    adminHtml,
+      text:    `New payment confirmation:\nID: ${confirmId}\nTxn: ${txnId}\nMethod: ${method}\nProduct: ${product}\nAmount: ${amount} ${currency}\nCustomer: ${customerEmail}\nTime: ${ts}`,
+    });
+  } catch (emailErr) {
+    console.error('[PaymentConfirm] Admin email failed:', emailErr.message);
+    // Don't fail the request — log and continue
+  }
+
+  // ── Send customer confirmation email ────────────────────────────────────────
+  try {
+    const { sendEmail } = await import('../services/emailEngine.js');
+    const custHtml = `
+<div style="font-family:'Segoe UI',Arial,sans-serif;background:#0a0e1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:560px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:48px">✅</div>
+    <h1 style="color:#22c55e;font-size:22px;margin:8px 0">Payment Received!</h1>
+    <p style="color:#94a3b8;margin:0">Your confirmation has been logged successfully.</p>
+  </div>
+  <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:20px;margin-bottom:20px">
+    <div style="font-size:12px;color:#6b7280;margin-bottom:4px">TRANSACTION ID</div>
+    <div style="font-size:18px;font-weight:700;color:#00d4ff;font-family:monospace">${txnId}</div>
+  </div>
+  <p style="color:#94a3b8;line-height:1.7">Our team will verify your payment and <strong style="color:#e2e8f0">activate your access within 2–4 hours</strong>. You'll receive an access confirmation at this email once verified.</p>
+  <p style="color:#94a3b8">Questions? Contact us at <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a> or WhatsApp <a href="tel:+918179881447" style="color:#00d4ff">+91 8179881447</a></p>
+  <div style="text-align:center;margin-top:24px;font-size:11px;color:#374151">CYBERDUDEBIVASH PRIVATE LIMITED · Odisha, India</div>
+</div>`;
+
+    await sendEmail(env, {
+      to:      customerEmail,
+      subject: `✅ Payment Confirmed — ${product || 'Your Purchase'} | Ref: ${confirmId}`,
+      html:    custHtml,
+      text:    `Payment confirmed! Transaction ID: ${txnId}\nRef: ${confirmId}\nProduct: ${product}\nOur team will activate access within 2-4 hours.\nContact: bivash@cyberdudebivash.com`,
+    });
+  } catch (emailErr) {
+    console.error('[PaymentConfirm] Customer email failed:', emailErr.message);
+  }
+
+  return Response.json({
+    success:    true,
+    confirm_id: confirmId,
+    message:    'Payment confirmation received. Access will be activated within 2–4 hours.',
+    txn_id:     txnId,
+  });
+}
