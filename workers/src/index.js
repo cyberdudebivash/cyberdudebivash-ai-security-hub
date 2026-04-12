@@ -177,6 +177,34 @@ import {
   handleGetPatterns, handleGetRecommendations, handleClearMemory,
 } from './handlers/orgMemoryV2.js';
 
+// ─── PHASE 3: Autonomous Defense Engine ──────────────────────────────────────
+import {
+  handleGetDefenseMode, handleSetDefenseMode, handleExecuteDefense,
+  handleApprove, handleRollback, handleGetExecutions,
+  handleGetDefensePosture, handleGetPending,
+} from './handlers/autoDefenseEngine.js';
+
+// ─── PHASE 3: Threat Confidence + Exploitability Engine ──────────────────────
+import {
+  handleScoreThreats, handleGetKEV, handleEnrichThreat,
+  handleGetFeed as handleGetTCFeed, handleGetStats as handleGetTCStats,
+} from './handlers/threatConfidence.js';
+
+// ─── PHASE 3: Executive Report Engine ────────────────────────────────────────
+import {
+  handleGetDashboard, handleGetMRR, handleSetMRRConfig,
+  handleGenerateReport, handleListReports, handleGetReport,
+} from './handlers/executiveReport.js';
+
+// ─── PHASE 3: MSSP Multi-Tenant Panel ────────────────────────────────────────
+import {
+  handleListClients, handleOnboardClient, handleGetClient,
+  handleUpdateClient, handleOffboardClient,
+  handleGetSummary as handleMSSPSummary,
+  handleGetAlerts as handleMSSPAlerts,
+  handleSetWhitelabel, handleGetWhitelabel,
+} from './handlers/msspPanel.js';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
@@ -2130,6 +2158,126 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/org-memory' && method === 'DELETE') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleClearMemory(request, env, authCtx), request));
+    }
+
+    // ── PHASE 3: Autonomous Defense Engine ───────────────────────────────────
+    if (path === '/api/defense-engine/mode' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetDefenseMode(request, env, authCtx), request));
+    }
+    if (path === '/api/defense-engine/mode' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleSetDefenseMode(request, env, authCtx), request));
+    }
+    if (path === '/api/defense-engine/execute' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleExecuteDefense(request, env, authCtx), request));
+    }
+    if (path === '/api/defense-engine/pending' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetPending(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/defense-engine/approve/') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleApprove(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/defense-engine/rollback/') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleRollback(request, env, authCtx), request));
+    }
+    if (path === '/api/defense-engine/executions' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetExecutions(request, env, authCtx), request));
+    }
+    if (path === '/api/defense-engine/posture' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetDefensePosture(request, env, authCtx), request));
+    }
+
+    // ── PHASE 3: Threat Confidence Engine ────────────────────────────────────
+    if (path === '/api/threat-confidence/score' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleScoreThreats(request, env, authCtx), request));
+    }
+    if (path === '/api/threat-confidence/kev' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetKEV(request, env, authCtx), request));
+    }
+    if (path === '/api/threat-confidence/enrich' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleEnrichThreat(request, env, authCtx), request));
+    }
+    if (path === '/api/threat-confidence/feed' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetTCFeed(request, env, authCtx), request));
+    }
+    if (path === '/api/threat-confidence/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetTCStats(request, env, authCtx), request));
+    }
+
+    // ── PHASE 3: Executive Report Engine ─────────────────────────────────────
+    if (path === '/api/executive/dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetDashboard(request, env, authCtx), request));
+    }
+    if (path === '/api/executive/mrr' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetMRR(request, env, authCtx), request));
+    }
+    if (path === '/api/executive/mrr/config' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleSetMRRConfig(request, env, authCtx), request));
+    }
+    if (path === '/api/executive/report' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGenerateReport(request, env, authCtx), request));
+    }
+    if (path === '/api/executive/reports' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleListReports(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/executive/report/') && path !== '/api/executive/report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetReport(request, env, authCtx), request));
+    }
+
+    // ── PHASE 3: MSSP Multi-Tenant Panel ─────────────────────────────────────
+    if (path === '/api/mssp/clients' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleListClients(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/clients' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleOnboardClient(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/mssp/clients/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetClient(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/mssp/clients/') && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleUpdateClient(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/mssp/clients/') && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleOffboardClient(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/summary' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleMSSPSummary(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/alerts' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleMSSPAlerts(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/whitelabel' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleSetWhitelabel(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/whitelabel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetWhitelabel(request, env, authCtx), request));
     }
 
     if (path === '/api/scan/upsell' && method === 'POST') {
