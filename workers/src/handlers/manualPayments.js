@@ -4,7 +4,19 @@
  * Handles UPI / Bank / PayPal / Crypto payment records + admin verification
  */
 
-import { jsonOk, jsonErr } from '../lib/response.js';
+// Local response helpers — standalone, no request object required
+function jsonOk(data, status = 200) {
+  return new Response(JSON.stringify({ success: true, data, error: null, timestamp: new Date().toISOString() }), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'X-Platform': 'CYBERDUDEBIVASH-AI-HUB' },
+  });
+}
+function jsonErr(message, status = 500) {
+  return new Response(JSON.stringify({ success: false, data: null, error: message, timestamp: new Date().toISOString() }), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'X-Platform': 'CYBERDUDEBIVASH-AI-HUB' },
+  });
+}
 
 // ── Payment method config (update these before go-live) ─────────────────────
 export const PAYMENT_CONFIG = {

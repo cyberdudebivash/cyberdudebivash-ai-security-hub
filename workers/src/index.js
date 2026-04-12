@@ -223,7 +223,7 @@ import {
 // ─── Manual Payment System ───────────────────────────────────────────────────
 import {
   handleSubmitPayment, handleGetPaymentStatus,
-  handleListPayments, handleVerifyPayment,
+  handleListPayments, handleVerifyPayment as handleVerifyManualPayment,
   handleGetPaymentConfig,
 } from './handlers/manualPayments.js';
 
@@ -632,6 +632,7 @@ export default {
     // Normalise here so every downstream handler works without change.
     if (env.SECURITY_HUB_DB && !env.DB) env.DB = env.SECURITY_HUB_DB;
     if (env.SECURITY_HUB_KV && !env.KV) env.KV = env.SECURITY_HUB_KV;
+    if (env.SECURITY_HUB_KV && !env.CDB_KV) env.CDB_KV = env.SECURITY_HUB_KV; // alias for manualPayments.js
 
     const url    = new URL(request.url);
     const path   = url.pathname.replace(/\/+$/, '') || '/';
@@ -2479,11 +2480,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleListPayments(request, env), request));
     }
-    // POST /api/payments/verify — approve or reject payment (admin only)
+    // POST /api/payments/verify — approve or reject manual payment (admin only)
     if (path === '/api/payments/verify' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
-      return withSecurityHeaders(withCors(await handleVerifyPayment(request, env), request));
+      return withSecurityHeaders(withCors(await handleVerifyManualPayment(request, env), request));
     }
 
     // ── Content Pipeline ──────────────────────────────────────────────────────
