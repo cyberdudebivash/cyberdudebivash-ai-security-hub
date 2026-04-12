@@ -4917,6 +4917,579 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
   </div>
 </div>
 
+<!-- ══════════════════════════ PHASE 4: ENTERPRISE SALES ══════════════════════════ -->
+<section id="enterprise-sales" style="background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.15)">
+  <div style="max-width:1400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:56px">
+      <span style="display:inline-block;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#f59e0b;text-transform:uppercase;margin-bottom:16px">Enterprise Sales Engine</span>
+      <h2 style="font-size:clamp(28px,4vw,48px);font-weight:800;color:#fff;margin:0 0 16px">Close ₹1CR in Enterprise Deals</h2>
+      <p style="color:#94a3b8;font-size:16px;max-width:600px;margin:0 auto">AI-powered CRM pipeline, ICP scoring, demo booking, and automated proposal generation — all in one command center.</p>
+    </div>
+
+    <!-- Authority Strip -->
+    <div id="p4-authority-strip" style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:48px">
+      <div class="p4-authority-pill">
+        <span class="p4-auth-num" id="p4-scan-count">12,847+</span>
+        <span class="p4-auth-lbl">Security Scans</span>
+      </div>
+      <div class="p4-authority-pill">
+        <span class="p4-auth-num" id="p4-threat-count">3,291+</span>
+        <span class="p4-auth-lbl">Threats Neutralized</span>
+      </div>
+      <div class="p4-authority-pill">
+        <span class="p4-auth-num" id="p4-user-count">847+</span>
+        <span class="p4-auth-lbl">Protected Organizations</span>
+      </div>
+      <div class="p4-authority-pill">
+        <span class="p4-auth-num">99.97%</span>
+        <span class="p4-auth-lbl">Platform Uptime SLA</span>
+      </div>
+      <div class="p4-authority-pill">
+        <span class="p4-auth-num">#1</span>
+        <span class="p4-auth-lbl">AI CyberSec Platform India</span>
+      </div>
+    </div>
+
+    <!-- Two-column: Lead Form + Demo Booking -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px">
+
+      <!-- Enterprise Inquiry Form -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+          <div style="width:40px;height:40px;background:rgba(245,158,11,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎯</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Enterprise Inquiry</div>
+            <div style="font-size:12px;color:#64748b">ICP-scored. Auto-qualified.</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <input id="p4-lead-name" class="p4-input" type="text" placeholder="Full Name *">
+          <input id="p4-lead-email" class="p4-input" type="email" placeholder="Work Email *">
+          <input id="p4-lead-company" class="p4-input" type="text" placeholder="Company Name *">
+          <input id="p4-lead-title" class="p4-input" type="text" placeholder="Job Title (e.g. CISO)">
+          <select id="p4-lead-sector" class="p4-input">
+            <option value="">Industry Sector *</option>
+            <option value="finance">Finance / FinTech</option>
+            <option value="banking">Banking</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="government">Government</option>
+            <option value="defense">Defense / Aerospace</option>
+            <option value="telecom">Telecom</option>
+            <option value="energy">Energy / Utilities</option>
+            <option value="retail">Retail / eCommerce</option>
+            <option value="technology">Technology / SaaS</option>
+            <option value="manufacturing">Manufacturing</option>
+            <option value="education">Education</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="p4-lead-size" class="p4-input">
+            <option value="">Company Size *</option>
+            <option value="1-50">1–50 employees</option>
+            <option value="51-200">51–200 employees</option>
+            <option value="201-1000">201–1,000 employees</option>
+            <option value="1001-5000">1,001–5,000 employees</option>
+            <option value="5000+">5,000+ employees</option>
+          </select>
+          <select id="p4-lead-budget" class="p4-input">
+            <option value="">Annual Security Budget</option>
+            <option value="<5L">Under ₹5 Lakhs</option>
+            <option value="5L-25L">₹5L – ₹25L</option>
+            <option value="25L-1CR">₹25L – ₹1 Crore</option>
+            <option value=">1CR">₹1 Crore+</option>
+          </select>
+          <select id="p4-lead-urgency" class="p4-input">
+            <option value="">Urgency Level</option>
+            <option value="critical">Critical — Active incident</option>
+            <option value="high">High — Deploy within 30 days</option>
+            <option value="medium">Medium — Next quarter</option>
+            <option value="low">Low — Evaluating</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;margin-bottom:12px">
+          <input id="p4-lead-phone" class="p4-input" type="text" placeholder="Phone / WhatsApp" style="width:100%;box-sizing:border-box">
+        </div>
+        <textarea id="p4-lead-notes" class="p4-input" placeholder="Describe your security challenge..." style="width:100%;height:80px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
+        <button onclick="p4CreateLead()" class="p4-btn-primary" style="width:100%">⚡ Submit Enterprise Inquiry</button>
+        <div id="p4-lead-result" style="margin-top:12px;font-size:13px;color:#10b981;display:none"></div>
+      </div>
+
+      <!-- Demo Booking -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+          <div style="width:40px;height:40px;background:rgba(99,102,241,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📅</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Book Live Demo</div>
+            <div style="font-size:12px;color:#64748b">45-min personalized security briefing</div>
+          </div>
+        </div>
+        <div id="p4-demo-slots" style="margin-bottom:16px">
+          <div style="color:#64748b;font-size:13px;text-align:center;padding:20px">Loading available slots…</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <input id="p4-demo-name" class="p4-input" type="text" placeholder="Your Name *">
+          <input id="p4-demo-email" class="p4-input" type="email" placeholder="Work Email *">
+          <input id="p4-demo-company" class="p4-input" type="text" placeholder="Company *">
+          <input id="p4-demo-phone" class="p4-input" type="text" placeholder="Phone / WhatsApp">
+        </div>
+        <button onclick="p4BookDemo()" class="p4-btn-secondary" style="width:100%;margin-bottom:12px">📅 Confirm Demo Booking</button>
+        <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px">
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;font-weight:600">What You'll Get:</div>
+          <div style="font-size:12px;color:#64748b;line-height:1.8">
+            ✓ Live threat landscape for your sector<br>
+            ✓ Custom ROI analysis for your org size<br>
+            ✓ Technical deep-dive: AI detection engine<br>
+            ✓ Compliance gap assessment (ISO27001/GDPR)<br>
+            ✓ Enterprise pricing & deployment roadmap
+          </div>
+        </div>
+        <div id="p4-demo-result" style="margin-top:12px;font-size:13px;color:#10b981;display:none"></div>
+      </div>
+    </div>
+
+    <!-- CRM Pipeline Board -->
+    <div class="p4-card" style="margin-bottom:32px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:gap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;background:rgba(16,185,129,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">CRM Pipeline</div>
+            <div style="font-size:12px;color:#64748b">Live deal tracking — ₹1CR revenue goal</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="p4-pipeline-revenue" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:700;color:#10b981">₹0 pipeline</div>
+          <button onclick="p4LoadPipeline()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 16px;color:#94a3b8;cursor:pointer;font-size:12px">↻ Refresh</button>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-bottom:6px">
+          <span>Revenue Goal Progress</span>
+          <span id="p4-goal-pct">0% of ₹1CR</span>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border-radius:100px;height:8px">
+          <div id="p4-goal-bar" style="background:linear-gradient(90deg,#f59e0b,#ef4444);height:8px;border-radius:100px;width:0%;transition:width .8s ease"></div>
+        </div>
+      </div>
+      <!-- Kanban columns -->
+      <div id="p4-pipeline-board" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:20px;grid-column:1/-1">Loading pipeline…</div>
+      </div>
+    </div>
+
+    <!-- Sales Metrics Row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px" id="p4-sales-metrics">
+      <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-leads">—</div><div class="p4-metric-lbl">Total Leads</div></div>
+      <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-qualified">—</div><div class="p4-metric-lbl">Qualified</div></div>
+      <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-demos">—</div><div class="p4-metric-lbl">Demos Booked</div></div>
+      <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-won">—</div><div class="p4-metric-lbl">Deals Won</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PHASE 4: PROPOSAL GENERATOR ══════════════════════════ -->
+<section id="proposal-gen" style="background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)">
+  <div style="max-width:1400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:56px">
+      <span style="display:inline-block;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#6366f1;text-transform:uppercase;margin-bottom:16px">AI Proposal Engine</span>
+      <h2 style="font-size:clamp(28px,4vw,48px);font-weight:800;color:#fff;margin:0 0 16px">Generate Enterprise Proposals in 30 Seconds</h2>
+      <p style="color:#94a3b8;font-size:16px;max-width:600px;margin:0 auto">AI-crafted proposals with ROI analysis, GST-inclusive pricing, 4-week implementation timeline, and CISO-level executive summaries.</p>
+    </div>
+
+    <!-- Enterprise Package Catalog -->
+    <div style="margin-bottom:40px">
+      <h3 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 20px;text-align:center">Enterprise Package Catalog</h3>
+      <div id="p4-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px">
+        <!-- Injected by JS -->
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:40px;grid-column:1/-1">Loading packages…</div>
+      </div>
+    </div>
+
+    <!-- ROI Calculator + Proposal Generator -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px">
+
+      <!-- ROI Calculator -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+          <div style="width:40px;height:40px;background:rgba(16,185,129,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">💰</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">ROI Calculator</div>
+            <div style="font-size:12px;color:#64748b">Sector-specific breach cost vs. platform cost</div>
+          </div>
+        </div>
+        <div style="display:grid;gap:12px;margin-bottom:20px">
+          <select id="p4-roi-sector" class="p4-input" onchange="p4CalcROI()">
+            <option value="default">Select Industry Sector</option>
+            <option value="finance">Finance / FinTech (₹2CR avg breach cost)</option>
+            <option value="banking">Banking (₹2.5CR avg breach cost)</option>
+            <option value="healthcare">Healthcare (₹1.8CR avg breach cost)</option>
+            <option value="government">Government (₹1.5CR avg breach cost)</option>
+            <option value="default">Other (₹1CR avg breach cost)</option>
+          </select>
+          <select id="p4-roi-plan" class="p4-input" onchange="p4CalcROI()">
+            <option value="STARTER_PLUS">Starter Plus — ₹49,900/yr</option>
+            <option value="PROFESSIONAL" selected>Professional — ₹1,49,900/yr</option>
+            <option value="ENTERPRISE_SHIELD">Enterprise Shield — ₹4,99,900/yr</option>
+            <option value="MSSP_COMMAND">MSSP Command — ₹14,99,900/yr</option>
+          </select>
+        </div>
+        <div id="p4-roi-result" style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:20px;text-align:center">
+          <div style="font-size:13px;color:#64748b;margin-bottom:8px">Select sector to calculate ROI</div>
+        </div>
+      </div>
+
+      <!-- Proposal Generator -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+          <div style="width:40px;height:40px;background:rgba(245,158,11,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📄</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Generate Proposal</div>
+            <div style="font-size:12px;color:#64748b">CISO-grade, GST-inclusive, board-ready</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <input id="p4-prop-company" class="p4-input" type="text" placeholder="Client Company *">
+          <input id="p4-prop-contact" class="p4-input" type="text" placeholder="Contact Name *">
+          <input id="p4-prop-email" class="p4-input" type="email" placeholder="Contact Email *">
+          <select id="p4-prop-sector" class="p4-input">
+            <option value="default">Industry *</option>
+            <option value="finance">Finance / FinTech</option>
+            <option value="banking">Banking</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="government">Government</option>
+            <option value="technology">Technology</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="p4-prop-size" class="p4-input">
+            <option value="medium">Org Size *</option>
+            <option value="small">Small (1–50)</option>
+            <option value="medium">Medium (51–500)</option>
+            <option value="large">Large (501–5000)</option>
+            <option value="enterprise">Enterprise (5000+)</option>
+          </select>
+          <select id="p4-prop-package" class="p4-input">
+            <option value="PROFESSIONAL">Select Package *</option>
+            <option value="STARTER_PLUS">Starter Plus</option>
+            <option value="PROFESSIONAL">Professional</option>
+            <option value="ENTERPRISE_SHIELD">Enterprise Shield</option>
+            <option value="MSSP_COMMAND">MSSP Command</option>
+            <option value="CUSTOM_ENTERPRISE">Custom Enterprise</option>
+          </select>
+        </div>
+        <textarea id="p4-prop-challenges" class="p4-input" placeholder="Key security challenges / compliance requirements…" style="width:100%;height:70px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
+        <button onclick="p4GenerateProposal()" class="p4-btn-primary" style="width:100%">📄 Generate Enterprise Proposal</button>
+        <div id="p4-prop-result" style="margin-top:12px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Proposals List -->
+    <div class="p4-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-weight:700;color:#fff;font-size:16px">📋 Proposal History</div>
+        <button onclick="p4LoadProposals()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 14px;color:#94a3b8;cursor:pointer;font-size:12px">↻ Refresh</button>
+      </div>
+      <div id="p4-proposals-list" style="display:flex;flex-direction:column;gap:10px">
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:20px">No proposals generated yet.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PHASE 4: AFFILIATE HUB ══════════════════════════ -->
+<section id="affiliate-hub" style="background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)">
+  <div style="max-width:1400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:56px">
+      <span style="display:inline-block;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:16px">Partner & Affiliate Program</span>
+      <h2 style="font-size:clamp(28px,4vw,48px);font-weight:800;color:#fff;margin:0 0 16px">Earn While You Protect</h2>
+      <p style="color:#94a3b8;font-size:16px;max-width:600px;margin:0 auto">India's highest-paying cybersecurity affiliate program. Up to 25% recurring commission. Tier up from Affiliate → Partner → Reseller → Strategic.</p>
+    </div>
+
+    <!-- Tier Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px" id="p4-tier-cards">
+      <div class="p4-tier-card p4-tier-affiliate">
+        <div class="p4-tier-badge">AFFILIATE</div>
+        <div class="p4-tier-commission">10%</div>
+        <div class="p4-tier-label">Commission</div>
+        <div class="p4-tier-req">Starting tier</div>
+        <ul class="p4-tier-perks">
+          <li>Referral tracking link</li>
+          <li>Marketing banner kit</li>
+          <li>Real-time dashboard</li>
+          <li>Monthly payouts</li>
+        </ul>
+      </div>
+      <div class="p4-tier-card p4-tier-partner">
+        <div class="p4-tier-badge">PARTNER</div>
+        <div class="p4-tier-commission">15%</div>
+        <div class="p4-tier-label">Commission</div>
+        <div class="p4-tier-req">3 referrals · ₹1.5L rev</div>
+        <ul class="p4-tier-perks">
+          <li>Everything in Affiliate</li>
+          <li>Co-branded materials</li>
+          <li>Priority support</li>
+          <li>Dedicated partner Slack</li>
+        </ul>
+      </div>
+      <div class="p4-tier-card p4-tier-reseller">
+        <div class="p4-tier-badge">RESELLER</div>
+        <div class="p4-tier-commission">20%</div>
+        <div class="p4-tier-label">Commission</div>
+        <div class="p4-tier-req">10 referrals · ₹5L rev</div>
+        <ul class="p4-tier-perks">
+          <li>White-label option</li>
+          <li>Volume deal pricing</li>
+          <li>Technical onboarding</li>
+          <li>Quarterly reviews</li>
+        </ul>
+      </div>
+      <div class="p4-tier-card p4-tier-strategic">
+        <div class="p4-tier-badge">STRATEGIC</div>
+        <div class="p4-tier-commission">25%</div>
+        <div class="p4-tier-label">Commission</div>
+        <div class="p4-tier-req">25 referrals · ₹20L rev</div>
+        <ul class="p4-tier-perks">
+          <li>Full resale rights</li>
+          <li>Custom API access</li>
+          <li>Revenue share model</li>
+          <li>Executive partnership</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Join + Dashboard Row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px">
+
+      <!-- Join / Status Panel -->
+      <div class="p4-card">
+        <div id="p4-aff-join-panel">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+            <div style="width:40px;height:40px;background:rgba(168,85,247,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🚀</div>
+            <div>
+              <div style="font-weight:700;color:#fff;font-size:16px">Join Affiliate Program</div>
+              <div style="font-size:12px;color:#64748b">Start earning in under 2 minutes</div>
+            </div>
+          </div>
+          <div style="display:grid;gap:12px;margin-bottom:16px">
+            <input id="p4-aff-name" class="p4-input" type="text" placeholder="Your Full Name *">
+            <input id="p4-aff-email" class="p4-input" type="email" placeholder="Email Address *">
+            <input id="p4-aff-company" class="p4-input" type="text" placeholder="Company / Brand (optional)">
+            <select id="p4-aff-type" class="p4-input">
+              <option value="individual">Individual / Freelancer</option>
+              <option value="agency">Security Agency</option>
+              <option value="mssp">MSSP / VAR</option>
+              <option value="influencer">Content Creator / Influencer</option>
+              <option value="consultant">Security Consultant</option>
+            </select>
+          </div>
+          <button onclick="p4JoinAffiliate()" class="p4-btn-purple" style="width:100%;margin-bottom:12px">⚡ Join & Get Referral Link</button>
+          <div style="text-align:center;font-size:12px;color:#64748b">Already a member? <a href="#" onclick="p4LoadAffStatus()" style="color:#a855f7;text-decoration:none">View Dashboard →</a></div>
+        </div>
+        <div id="p4-aff-status-panel" style="display:none">
+          <!-- Filled by JS after join/load -->
+        </div>
+      </div>
+
+      <!-- Affiliate Dashboard -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+          <div style="width:40px;height:40px;background:rgba(16,185,129,.15);border-radius:10px;display:flex;align-items:center;justify-content:justify;font-size:20px">📈</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Affiliate Dashboard</div>
+            <div style="font-size:12px;color:#64748b">Your earnings & referral performance</div>
+          </div>
+        </div>
+        <div id="p4-aff-dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="p4-aff-stat"><div class="p4-aff-stat-val" id="p4-aff-referrals">—</div><div class="p4-aff-stat-lbl">Total Referrals</div></div>
+          <div class="p4-aff-stat"><div class="p4-aff-stat-val" id="p4-aff-conversions">—</div><div class="p4-aff-stat-lbl">Conversions</div></div>
+          <div class="p4-aff-stat"><div class="p4-aff-stat-val" id="p4-aff-earnings">₹—</div><div class="p4-aff-stat-lbl">Total Earnings</div></div>
+          <div class="p4-aff-stat"><div class="p4-aff-stat-val" id="p4-aff-pending">₹—</div><div class="p4-aff-stat-lbl">Pending Payout</div></div>
+        </div>
+        <div id="p4-aff-ref-link-box" style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px;margin-bottom:12px;display:none">
+          <div style="font-size:11px;color:#a855f7;font-weight:600;margin-bottom:6px">YOUR REFERRAL LINK</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <code id="p4-aff-ref-link" style="font-size:11px;color:#c4b5fd;flex:1;word-break:break-all"></code>
+            <button onclick="p4CopyRefLink()" style="background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.3);border-radius:6px;padding:6px 10px;color:#a855f7;cursor:pointer;font-size:11px;white-space:nowrap">📋 Copy</button>
+          </div>
+        </div>
+        <button onclick="p4RequestPayout()" class="p4-btn-purple" style="width:100%;font-size:13px">💰 Request Payout</button>
+        <div id="p4-payout-result" style="margin-top:8px;font-size:12px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="p4-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-weight:700;color:#fff;font-size:16px">🏆 Top Affiliates Leaderboard</div>
+        <button onclick="p4LoadLeaderboard()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 14px;color:#94a3b8;cursor:pointer;font-size:12px">↻ Refresh</button>
+      </div>
+      <div id="p4-leaderboard" style="display:flex;flex-direction:column;gap:8px">
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:20px">Loading leaderboard…</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PHASE 4: GROWTH ANALYTICS ══════════════════════════ -->
+<section id="growth-analytics" style="background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)">
+  <div style="max-width:1400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:56px">
+      <span style="display:inline-block;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#ec4899;text-transform:uppercase;margin-bottom:16px">Growth Intelligence</span>
+      <h2 style="font-size:clamp(28px,4vw,48px);font-weight:800;color:#fff;margin:0 0 16px">Revenue Analytics Command Center</h2>
+      <p style="color:#94a3b8;font-size:16px;max-width:600px;margin:0 auto">Real-time conversion funnel, behavior-based upgrade triggers, CTA performance, and automated re-engagement — all in one view.</p>
+    </div>
+
+    <!-- Funnel Visualization -->
+    <div class="p4-card" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;background:rgba(236,72,153,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🔻</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Conversion Funnel</div>
+            <div style="font-size:12px;color:#64748b">FREE → PRO → ENTERPRISE pipeline</div>
+          </div>
+        </div>
+        <button onclick="p4LoadFunnel()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 14px;color:#94a3b8;cursor:pointer;font-size:12px">↻ Refresh</button>
+      </div>
+      <div id="p4-funnel-viz" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px">
+        <!-- Injected by JS -->
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:20px;grid-column:1/-1">Loading funnel…</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="p4-funnel-metrics">
+        <div class="p4-metric-card"><div class="p4-metric-val" id="p4-f-visitors">—</div><div class="p4-metric-lbl">Total Sessions</div></div>
+        <div class="p4-metric-card"><div class="p4-metric-val" id="p4-f-signups">—</div><div class="p4-metric-lbl">Signups</div></div>
+        <div class="p4-metric-card"><div class="p4-metric-val" id="p4-f-upgrades">—</div><div class="p4-metric-lbl">Upgrades</div></div>
+        <div class="p4-metric-card"><div class="p4-metric-val" id="p4-f-revenue">—</div><div class="p4-metric-lbl">Funnel Revenue</div></div>
+      </div>
+    </div>
+
+    <!-- Trigger Engine + CTA Performance Row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+
+      <!-- Behavior Trigger Engine -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="width:40px;height:40px;background:rgba(245,158,11,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">⚡</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Conversion Trigger Engine</div>
+            <div style="font-size:12px;color:#64748b">Behavior-based upgrade prompts</div>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">Simulate behavior event to test triggers:</div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+            <select id="p4-trigger-event" class="p4-input" style="font-size:12px">
+              <option value="scan_completed">scan_completed (scans_today++)</option>
+              <option value="ai_query">ai_query (ai_queries_today++)</option>
+              <option value="api_call">api_call (api_calls_month++)</option>
+              <option value="threat_detected">threat_detected (critical_threats_found++)</option>
+              <option value="siem_access_attempt">siem_access_attempt</option>
+              <option value="report_access_attempt">report_access_attempt</option>
+              <option value="session_start">session_start</option>
+            </select>
+            <button onclick="p4FireEvent()" class="p4-btn-primary" style="padding:10px 16px;font-size:12px">Fire</button>
+          </div>
+        </div>
+        <div id="p4-triggers-list" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto">
+          <div style="color:#64748b;font-size:12px;text-align:center;padding:16px">No active triggers.</div>
+        </div>
+      </div>
+
+      <!-- CTA Performance -->
+      <div class="p4-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="width:40px;height:40px;background:rgba(16,185,129,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎯</div>
+          <div>
+            <div style="font-weight:700;color:#fff;font-size:16px">Smart CTA Engine</div>
+            <div style="font-size:12px;color:#64748b">Context-aware upgrade prompts</div>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">Preview CTA for plan/context:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">
+            <select id="p4-cta-plan" class="p4-input" style="font-size:12px">
+              <option value="FREE">FREE plan</option>
+              <option value="STARTER">STARTER plan</option>
+              <option value="PRO">PRO plan</option>
+              <option value="ENTERPRISE">ENTERPRISE plan</option>
+            </select>
+            <select id="p4-cta-context" class="p4-input" style="font-size:12px">
+              <option value="scan">scan</option>
+              <option value="ai">ai</option>
+              <option value="api">api</option>
+              <option value="siem">siem</option>
+              <option value="report">report</option>
+              <option value="defense">defense</option>
+            </select>
+            <button onclick="p4PreviewCTA()" class="p4-btn-secondary" style="padding:10px 14px;font-size:12px">Preview</button>
+          </div>
+        </div>
+        <div id="p4-cta-preview" style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:16px;margin-bottom:12px;min-height:80px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#64748b;font-size:12px">Select plan + context to preview CTA</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:16px;font-weight:700;color:#10b981" id="p4-cta-impressions">—</div>
+            <div style="font-size:10px;color:#64748b">CTA Impressions</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:16px;font-weight:700;color:#f59e0b" id="p4-cta-clicks">—</div>
+            <div style="font-size:10px;color:#64748b">CTA Clicks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Authority / Social Proof -->
+    <div class="p4-card">
+      <div style="text-align:center;padding:20px 0 28px">
+        <div style="font-size:12px;color:#ec4899;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Trusted Globally</div>
+        <h3 style="font-size:24px;font-weight:800;color:#fff;margin:0 0 8px">#1 AI-Powered Cybersecurity Platform in India</h3>
+        <p style="color:#94a3b8;font-size:14px;max-width:500px;margin:0 auto 28px">Protecting organizations across BFSI, Healthcare, Government, and Critical Infrastructure.</p>
+        <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">
+          <div class="p4-proof-badge">🛡️ SOC 2 Ready Architecture</div>
+          <div class="p4-proof-badge">📋 ISO 27001 Aligned</div>
+          <div class="p4-proof-badge">🔒 GDPR / PDPB Compliant</div>
+          <div class="p4-proof-badge">⚡ 2-Min Threat Response</div>
+          <div class="p4-proof-badge">🤖 GPT-4 Threat Analysis</div>
+          <div class="p4-proof-badge">☁️ Cloudflare Edge Infra</div>
+        </div>
+        <div style="display:flex;gap:32px;justify-content:center;flex-wrap:wrap" id="p4-live-counters">
+          <div style="text-align:center">
+            <div style="font-size:32px;font-weight:800;color:#6366f1" id="p4-cnt-scans">12,847</div>
+            <div style="font-size:12px;color:#64748b">Scans Completed</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:32px;font-weight:800;color:#ef4444" id="p4-cnt-threats">3,291</div>
+            <div style="font-size:12px;color:#64748b">Threats Blocked</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:32px;font-weight:800;color:#10b981" id="p4-cnt-orgs">847</div>
+            <div style="font-size:12px;color:#64748b">Organizations Protected</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:32px;font-weight:800;color:#f59e0b" id="p4-cnt-uptime">99.97%</div>
+            <div style="font-size:12px;color:#64748b">Platform Uptime</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Conversion Trigger Overlay Modal -->
+<div id="p4-paywall-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:linear-gradient(135deg,#0a0a1a,#111128);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:40px;max-width:480px;width:90%;text-align:center;box-shadow:0 0 80px rgba(99,102,241,.15)">
+    <div id="p4-paywall-icon" style="font-size:48px;margin-bottom:16px">🔒</div>
+    <div id="p4-paywall-title" style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px">Upgrade Required</div>
+    <div id="p4-paywall-sub" style="font-size:14px;color:#94a3b8;margin-bottom:24px">This feature requires a higher plan.</div>
+    <div id="p4-paywall-roi" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:12px;margin-bottom:20px;font-size:13px;color:#10b981;display:none"></div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button id="p4-paywall-cta" onclick="window.location.hash='#pricing'" class="p4-btn-primary" style="flex:1;max-width:200px">View Plans</button>
+      <button onclick="document.getElementById('p4-paywall-modal').style.display='none'" style="flex:1;max-width:120px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#94a3b8;cursor:pointer;font-size:14px">Dismiss</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
@@ -15242,6 +15815,356 @@ function renderPipeline(stages) {
 .p3-exec-PENDING   { background: rgba(245,158,11,.15); color: #f59e0b; }
 .p3-exec-REJECTED  { background: rgba(239,68,68,.15); color: #f87171; }
 .p3-exec-RECOMMEND { background: rgba(99,102,241,.15); color: #818cf8; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 4 CSS — Enterprise Sales + Proposal + Affiliate + Growth Analytics
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── P4: Authority Strip ──────────────────────────────────────────────────── */
+.p4-authority-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px 20px;
+  min-width: 120px;
+}
+.p4-auth-num {
+  font-size: 20px;
+  font-weight: 800;
+  color: #f59e0b;
+  line-height: 1.2;
+}
+.p4-auth-lbl {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── P4: Generic Card ─────────────────────────────────────────────────────── */
+.p4-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 16px;
+  padding: 24px;
+  transition: border-color .3s;
+}
+.p4-card:hover { border-color: rgba(255,255,255,.12); }
+
+/* ── P4: Inputs ───────────────────────────────────────────────────────────── */
+.p4-input {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color .2s;
+}
+.p4-input:focus { border-color: rgba(99,102,241,.4); }
+.p4-input option { background: #0f0f1a; color: #e2e8f0; }
+
+/* ── P4: Buttons ──────────────────────────────────────────────────────────── */
+.p4-btn-primary {
+  background: linear-gradient(135deg,#6366f1,#4f46e5);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+}
+.p4-btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+.p4-btn-primary:active { transform: translateY(0); }
+
+.p4-btn-secondary {
+  background: rgba(99,102,241,.12);
+  border: 1px solid rgba(99,102,241,.3);
+  border-radius: 10px;
+  padding: 12px 20px;
+  color: #818cf8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.p4-btn-secondary:hover { background: rgba(99,102,241,.2); }
+
+.p4-btn-purple {
+  background: linear-gradient(135deg,#a855f7,#7c3aed);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.p4-btn-purple:hover { opacity: .9; }
+
+/* ── P4: Metric Cards ─────────────────────────────────────────────────────── */
+.p4-metric-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.p4-metric-val {
+  font-size: 24px;
+  font-weight: 800;
+  color: #6366f1;
+  line-height: 1.2;
+}
+.p4-metric-lbl {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ── P4: Pipeline Kanban Column ──────────────────────────────────────────── */
+.p4-kanban-col {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  padding: 12px;
+}
+.p4-kanban-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.p4-kanban-card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.p4-kanban-card:hover { border-color: rgba(99,102,241,.3); }
+.p4-kanban-card .p4-kc-name { color: #e2e8f0; font-weight: 600; margin-bottom: 4px; }
+.p4-kanban-card .p4-kc-val { color: #10b981; font-size: 11px; }
+.p4-kanban-card .p4-kc-score { color: #f59e0b; font-size: 10px; }
+
+/* ── P4: Package Cards ──────────────────────────────────────────────────── */
+.p4-pkg-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  transition: border-color .3s, transform .2s;
+  cursor: pointer;
+}
+.p4-pkg-card:hover { border-color: rgba(99,102,241,.3); transform: translateY(-3px); }
+.p4-pkg-card.p4-pkg-popular {
+  border-color: rgba(99,102,241,.4);
+  box-shadow: 0 0 30px rgba(99,102,241,.1);
+}
+.p4-pkg-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg,#6366f1,#4f46e5);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.p4-pkg-name { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; }
+.p4-pkg-price-inr { font-size: 24px; font-weight: 800; color: #fff; }
+.p4-pkg-price-sub { font-size: 11px; color: #64748b; margin-bottom: 12px; }
+.p4-pkg-feature { font-size: 12px; color: #94a3b8; padding: 3px 0; }
+.p4-pkg-feature::before { content: '✓ '; color: #10b981; }
+
+/* ── P4: Proposal List Item ─────────────────────────────────────────────── */
+.p4-proposal-item {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color .2s;
+}
+.p4-proposal-item:hover { border-color: rgba(99,102,241,.25); }
+.p4-prop-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+.p4-prop-DRAFT     { background: rgba(100,116,139,.15); color: #94a3b8; }
+.p4-prop-SENT      { background: rgba(99,102,241,.15); color: #818cf8; }
+.p4-prop-ACCEPTED  { background: rgba(16,185,129,.15); color: #10b981; }
+.p4-prop-EXPIRED   { background: rgba(239,68,68,.1); color: #f87171; }
+
+/* ── P4: Affiliate Tier Cards ───────────────────────────────────────────── */
+.p4-tier-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 24px 20px;
+  text-align: center;
+  transition: transform .2s, border-color .3s;
+}
+.p4-tier-card:hover { transform: translateY(-4px); }
+.p4-tier-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  display: inline-block;
+}
+.p4-tier-commission {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.p4-tier-label { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+.p4-tier-req { font-size: 11px; color: #64748b; margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,.07); padding-top: 8px; }
+.p4-tier-perks { list-style: none; margin: 0; padding: 0; text-align: left; }
+.p4-tier-perks li { font-size: 12px; color: #94a3b8; padding: 3px 0; }
+.p4-tier-perks li::before { content: '✓ '; color: #10b981; }
+
+.p4-tier-affiliate { border-color: rgba(100,116,139,.2); }
+.p4-tier-affiliate .p4-tier-badge { background: rgba(100,116,139,.15); color: #94a3b8; }
+.p4-tier-affiliate .p4-tier-commission { color: #94a3b8; }
+
+.p4-tier-partner { border-color: rgba(16,185,129,.2); }
+.p4-tier-partner .p4-tier-badge { background: rgba(16,185,129,.15); color: #10b981; }
+.p4-tier-partner .p4-tier-commission { color: #10b981; }
+
+.p4-tier-reseller { border-color: rgba(99,102,241,.25); }
+.p4-tier-reseller .p4-tier-badge { background: rgba(99,102,241,.15); color: #818cf8; }
+.p4-tier-reseller .p4-tier-commission { color: #818cf8; }
+
+.p4-tier-strategic {
+  border-color: rgba(245,158,11,.3);
+  box-shadow: 0 0 30px rgba(245,158,11,.08);
+}
+.p4-tier-strategic .p4-tier-badge { background: rgba(245,158,11,.15); color: #f59e0b; }
+.p4-tier-strategic .p4-tier-commission { color: #f59e0b; }
+
+/* ── P4: Affiliate Stats ────────────────────────────────────────────────── */
+.p4-aff-stat {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.p4-aff-stat-val { font-size: 22px; font-weight: 800; color: #a855f7; }
+.p4-aff-stat-lbl { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+/* ── P4: Leaderboard Row ────────────────────────────────────────────────── */
+.p4-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 12px 16px;
+  transition: border-color .2s;
+}
+.p4-lb-row:hover { border-color: rgba(168,85,247,.2); }
+.p4-lb-rank { font-size: 16px; font-weight: 800; min-width: 28px; color: #64748b; }
+.p4-lb-rank.top1 { color: #f59e0b; }
+.p4-lb-rank.top2 { color: #94a3b8; }
+.p4-lb-rank.top3 { color: #cd7f32; }
+.p4-lb-name { flex: 1; font-size: 13px; color: #e2e8f0; font-weight: 600; }
+.p4-lb-tier { font-size: 10px; padding: 3px 8px; border-radius: 100px; background: rgba(168,85,247,.15); color: #a855f7; }
+.p4-lb-earnings { font-size: 13px; font-weight: 700; color: #10b981; }
+
+/* ── P4: Funnel Visualization ───────────────────────────────────────────── */
+.p4-funnel-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.p4-funnel-bar-wrap {
+  width: 100%;
+  background: rgba(255,255,255,.05);
+  border-radius: 8px;
+  height: 80px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.p4-funnel-bar {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  transition: height .8s ease;
+}
+.p4-funnel-label { font-size: 10px; color: #64748b; text-align: center; white-space: nowrap; }
+.p4-funnel-count { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.p4-funnel-pct { font-size: 10px; color: #94a3b8; }
+
+/* ── P4: Trigger Card ───────────────────────────────────────────────────── */
+.p4-trigger-card {
+  background: rgba(245,158,11,.05);
+  border: 1px solid rgba(245,158,11,.2);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.p4-trigger-card.p4-trig-critical { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.05); }
+.p4-trigger-card.p4-trig-high { border-color: rgba(245,158,11,.3); }
+.p4-trigger-card .p4-trig-icon { font-size: 20px; }
+.p4-trigger-card .p4-trig-text { flex: 1; }
+.p4-trigger-card .p4-trig-title { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+.p4-trigger-card .p4-trig-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.p4-trigger-dismiss { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 16px; padding: 4px; }
+
+/* ── P4: Social Proof Badge ─────────────────────────────────────────────── */
+.p4-proof-badge {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 100px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* ── P4: Animations ─────────────────────────────────────────────────────── */
+@keyframes p4SlideUp    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes p4FadeIn     { from{opacity:0} to{opacity:1} }
+@keyframes p4CountUp    { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
+@keyframes p4PulseAmber { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0)} 50%{box-shadow:0 0 20px rgba(245,158,11,.2)} }
 </style>
 <!-- ════════════════ END PHASE 3 CSS ════════════════ -->
 
@@ -15710,6 +16633,741 @@ if (document.readyState === 'loading') {
 })(); // END PHASE 3 ENGINE
 </script>
 <!-- ════════════════ END PHASE 3 ENGINE ════════════════ -->
+
+<!-- ════════════════ PHASE 4 REVENUE ENGINE ════════════════ -->
+<script>
+(function() {
+'use strict';
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PHASE 4 REVENUE ENGINE — CYBERDUDEBIVASH AI Security Hub
+   Modules: Sales CRM · Proposal Generator · Affiliate System ·
+            Conversion Triggers · Paywall · Growth Analytics
+   ───────────────────────────────────────────────────────────────────────── */
+
+var API = '';
+var P4_SESSION = null;
+
+function p4Api(path, opts) {
+  return fetch(API + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts || {}))
+    .then(function(r) { return r.json(); })
+    .catch(function(e) { return { error: e.message }; });
+}
+
+function p4Post(path, body) {
+  return p4Api(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+function p4Get(path) { return p4Api(path); }
+
+/* ── Nav injection ─────────────────────────────────────────────────────── */
+function p4InjectNav() {
+  var links = [
+    { href: '#enterprise-sales', label: 'Sales' },
+    { href: '#proposal-gen',     label: 'Proposals' },
+    { href: '#affiliate-hub',    label: 'Affiliate' },
+    { href: '#growth-analytics', label: 'Growth' }
+  ];
+  var navEl = document.getElementById('p3-dynamic-nav') || document.querySelector('.cdb-nav-links') || document.querySelector('nav');
+  if (!navEl) return;
+  links.forEach(function(l) {
+    if (navEl.querySelector('[href="' + l.href + '"]')) return;
+    var a = document.createElement('a');
+    a.href = l.href;
+    a.textContent = l.label;
+    a.style.cssText = 'color:#94a3b8;text-decoration:none;font-size:14px;padding:6px 12px;border-radius:8px;transition:color .2s';
+    a.addEventListener('mouseenter', function() { a.style.color = '#e2e8f0'; });
+    a.addEventListener('mouseleave', function() { a.style.color = '#94a3b8'; });
+    navEl.appendChild(a);
+  });
+}
+
+/* ── IntersectionObserver lazy-load ────────────────────────────────────── */
+function p4SetupObserver() {
+  if (!('IntersectionObserver' in window)) {
+    p4LoadAll();
+    return;
+  }
+  var loaded = {};
+  var sectionLoaders = {
+    'enterprise-sales': function() { p4LoadDemoSlots(); p4LoadPipeline(); p4LoadSalesMetrics(); },
+    'proposal-gen':     function() { p4LoadPackages(); p4LoadProposals(); },
+    'affiliate-hub':    function() { p4LoadLeaderboard(); p4InitAffDashboard(); },
+    'growth-analytics': function() { p4LoadFunnel(); p4InitCounters(); }
+  };
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting && !loaded[e.target.id]) {
+        loaded[e.target.id] = true;
+        var fn = sectionLoaders[e.target.id];
+        if (fn) { setTimeout(fn, 80); }
+      }
+    });
+  }, { threshold: 0.05 });
+  ['enterprise-sales','proposal-gen','affiliate-hub','growth-analytics'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+}
+
+function p4LoadAll() {
+  p4LoadDemoSlots(); p4LoadPipeline(); p4LoadSalesMetrics();
+  p4LoadPackages(); p4LoadProposals();
+  p4LoadLeaderboard(); p4InitAffDashboard();
+  p4LoadFunnel(); p4InitCounters();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ENTERPRISE SALES
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Lead Creation ─────────────────────────────────────────────────────── */
+window.p4CreateLead = function() {
+  var name    = (document.getElementById('p4-lead-name')    || {}).value || '';
+  var email   = (document.getElementById('p4-lead-email')   || {}).value || '';
+  var company = (document.getElementById('p4-lead-company') || {}).value || '';
+  var title   = (document.getElementById('p4-lead-title')   || {}).value || '';
+  var sector  = (document.getElementById('p4-lead-sector')  || {}).value || '';
+  var size    = (document.getElementById('p4-lead-size')    || {}).value || '';
+  var budget  = (document.getElementById('p4-lead-budget')  || {}).value || '';
+  var urgency = (document.getElementById('p4-lead-urgency') || {}).value || '';
+  var phone   = (document.getElementById('p4-lead-phone')   || {}).value || '';
+  var notes   = (document.getElementById('p4-lead-notes')   || {}).value || '';
+  var resEl   = document.getElementById('p4-lead-result');
+
+  if (!name || !email || !company || !sector || !size) {
+    if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#f87171'; resEl.textContent = '⚠ Please fill all required fields.'; }
+    return;
+  }
+  if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Submitting inquiry…'; }
+
+  p4Post('/api/sales/leads', {
+    contact_name: name, contact_email: email, company_name: company,
+    contact_title: title, sector: sector, company_size: size,
+    annual_budget: budget, urgency: urgency, phone: phone, notes: notes
+  }).then(function(d) {
+    if (d.lead) {
+      resEl.style.color = '#10b981';
+      resEl.innerHTML = '✅ Inquiry submitted! ICP Score: <strong>' + (d.lead.icp_score || '—') + '/100</strong> · Est. Deal Value: <strong>₹' + ((d.lead.estimated_deal_value_inr || 0).toLocaleString('en-IN')) + '</strong>';
+      p4RecordBehaviorEvent('enterprise_inquiry', { score: d.lead.icp_score });
+      setTimeout(p4LoadPipeline, 800);
+    } else {
+      resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Submission failed.');
+    }
+  });
+};
+
+/* ── Demo Slots ─────────────────────────────────────────────────────────── */
+function p4LoadDemoSlots() {
+  var el = document.getElementById('p4-demo-slots');
+  if (!el) return;
+  p4Get('/api/sales/demo/slots').then(function(d) {
+    if (!d.slots || !d.slots.length) {
+      el.innerHTML = '<div style="color:#64748b;font-size:12px;text-align:center;padding:12px">No slots available.</div>';
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto">';
+    d.slots.slice(0, 6).forEach(function(s) {
+      html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">' +
+        '<input type="radio" name="p4-demo-slot" value="' + s.slot_id + '" style="accent-color:#6366f1">' +
+        '<span style="font-size:12px;color:#94a3b8">' + s.display + '</span>' +
+        '</label>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+window.p4BookDemo = function() {
+  var slotEl = document.querySelector('input[name="p4-demo-slot"]:checked');
+  var name    = (document.getElementById('p4-demo-name')    || {}).value || '';
+  var email   = (document.getElementById('p4-demo-email')   || {}).value || '';
+  var company = (document.getElementById('p4-demo-company') || {}).value || '';
+  var phone   = (document.getElementById('p4-demo-phone')   || {}).value || '';
+  var resEl   = document.getElementById('p4-demo-result');
+
+  if (!slotEl || !name || !email || !company) {
+    if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#f87171'; resEl.textContent = '⚠ Select a slot and fill required fields.'; }
+    return;
+  }
+  if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Booking demo…'; }
+
+  p4Post('/api/sales/demo/book', {
+    slot_id: slotEl.value, name: name, email: email, company: company, phone: phone
+  }).then(function(d) {
+    if (d.booking) {
+      resEl.style.color = '#10b981';
+      resEl.textContent = '✅ Demo confirmed! Ref: ' + d.booking.booking_ref + ' — Check your email.';
+    } else {
+      resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Booking failed.');
+    }
+  });
+};
+
+/* ── CRM Pipeline ───────────────────────────────────────────────────────── */
+var PIPELINE_STAGES = ['NEW','QUALIFIED','DEMO_BOOKED','DEMO_DONE','PROPOSAL_SENT','NEGOTIATION','CLOSED_WON'];
+var STAGE_COLORS = {
+  NEW: '#64748b', QUALIFIED: '#6366f1', DEMO_BOOKED: '#8b5cf6', DEMO_DONE: '#a855f7',
+  PROPOSAL_SENT: '#f59e0b', NEGOTIATION: '#ef4444', CLOSED_WON: '#10b981'
+};
+
+window.p4LoadPipeline = function() {
+  var board = document.getElementById('p4-pipeline-board');
+  if (!board) return;
+  p4Get('/api/sales/pipeline').then(function(d) {
+    if (!d.pipeline) { board.innerHTML = '<div style="color:#f87171;text-align:center;padding:20px;grid-column:1/-1">Error loading pipeline.</div>'; return; }
+    var pipe = d.pipeline;
+    var totalVal = 0;
+    var html = '';
+    PIPELINE_STAGES.forEach(function(stage) {
+      var leads = pipe[stage] || [];
+      var stageVal = leads.reduce(function(s, l) { return s + (l.estimated_deal_value_inr || 0); }, 0);
+      totalVal += stageVal;
+      html += '<div class="p4-kanban-col">' +
+        '<div class="p4-kanban-header" style="color:' + STAGE_COLORS[stage] + '">' + stage.replace(/_/g,' ') + ' (' + leads.length + ')</div>';
+      if (!leads.length) {
+        html += '<div style="color:#334155;font-size:11px;text-align:center;padding:8px">—</div>';
+      } else {
+        leads.slice(0, 3).forEach(function(l) {
+          html += '<div class="p4-kanban-card">' +
+            '<div class="p4-kc-name">' + (l.company_name || 'Unknown') + '</div>' +
+            '<div class="p4-kc-val">₹' + ((l.estimated_deal_value_inr || 0).toLocaleString('en-IN')) + '</div>' +
+            '<div class="p4-kc-score">ICP: ' + (l.icp_score || 0) + '/100</div>' +
+            '</div>';
+        });
+        if (leads.length > 3) html += '<div style="font-size:10px;color:#64748b;text-align:center;padding:4px">+' + (leads.length - 3) + ' more</div>';
+      }
+      html += '</div>';
+    });
+    board.innerHTML = html;
+    // Update revenue display
+    var revEl = document.getElementById('p4-pipeline-revenue');
+    var barEl = document.getElementById('p4-goal-bar');
+    var pctEl = document.getElementById('p4-goal-pct');
+    var goal = 10000000; // ₹1CR
+    var pct = Math.min(100, Math.round((totalVal / goal) * 100));
+    if (revEl) revEl.textContent = '₹' + totalVal.toLocaleString('en-IN') + ' pipeline';
+    if (barEl) barEl.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '% of ₹1CR';
+  });
+};
+
+function p4LoadSalesMetrics() {
+  p4Get('/api/sales/metrics').then(function(d) {
+    if (!d.metrics) return;
+    var m = d.metrics;
+    var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    set('p4-m-leads',     m.total_leads     || 0);
+    set('p4-m-qualified', m.qualified_leads || 0);
+    set('p4-m-demos',     m.demos_booked    || 0);
+    set('p4-m-won',       m.closed_won      || 0);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROPOSAL GENERATOR
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var P4_PACKAGES_CACHE = null;
+
+function p4LoadPackages() {
+  var grid = document.getElementById('p4-packages-grid');
+  if (!grid) return;
+  p4Get('/api/proposals/packages').then(function(d) {
+    if (!d.packages) { grid.innerHTML = '<div style="color:#f87171;text-align:center;padding:20px;grid-column:1/-1">Error loading packages.</div>'; return; }
+    P4_PACKAGES_CACHE = d.packages;
+    var html = '';
+    d.packages.forEach(function(pkg) {
+      var isPopular = pkg.id === 'PROFESSIONAL';
+      html += '<div class="p4-pkg-card' + (isPopular ? ' p4-pkg-popular' : '') + '" onclick="p4SelectPackage(\'' + pkg.id + '\')">' +
+        (isPopular ? '<div class="p4-pkg-badge">⭐ MOST POPULAR</div>' : '') +
+        '<div class="p4-pkg-name">' + pkg.name + '</div>' +
+        '<div class="p4-pkg-price-inr">₹' + (pkg.price_inr ? pkg.price_inr.toLocaleString('en-IN') : 'Custom') + '</div>' +
+        '<div class="p4-pkg-price-sub">' + (pkg.price_inr ? '/year + 18% GST' : 'Contact for pricing') + '</div>';
+      (pkg.features || []).slice(0, 5).forEach(function(f) {
+        html += '<div class="p4-pkg-feature">' + f + '</div>';
+      });
+      html += '<button onclick="event.stopPropagation();p4SelectPackage(\'' + pkg.id + '\')" class="p4-btn-primary" style="width:100%;margin-top:14px;font-size:12px">Select Package</button>' +
+        '</div>';
+    });
+    grid.innerHTML = html;
+  });
+}
+
+window.p4SelectPackage = function(pkgId) {
+  var sel = document.getElementById('p4-prop-package');
+  if (sel) sel.value = pkgId;
+  var sel2 = document.getElementById('p4-roi-plan');
+  if (sel2) sel2.value = pkgId;
+  p4CalcROI();
+  var propSec = document.getElementById('proposal-gen');
+  if (propSec) propSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/* ── ROI Calculator ─────────────────────────────────────────────────────── */
+var BREACH_COSTS = { finance: 20000000, banking: 25000000, healthcare: 18000000, government: 15000000, default: 10000000 };
+var PLAN_PRICES = { STARTER_PLUS: 49900, PROFESSIONAL: 149900, ENTERPRISE_SHIELD: 499900, MSSP_COMMAND: 1499900 };
+
+window.p4CalcROI = function() {
+  var sector  = (document.getElementById('p4-roi-sector') || {}).value || 'default';
+  var plan    = (document.getElementById('p4-roi-plan')   || {}).value || 'PROFESSIONAL';
+  var resEl   = document.getElementById('p4-roi-result');
+  if (!resEl) return;
+  var breachCost = BREACH_COSTS[sector] || BREACH_COSTS['default'];
+  var planCost   = PLAN_PRICES[plan] || 149900;
+  var annualRisk = breachCost * 0.27; // 27% annual breach probability
+  var roi = Math.round(annualRisk / planCost);
+  var prevented = Math.round(annualRisk);
+
+  resEl.innerHTML =
+    '<div style="font-size:28px;font-weight:800;color:#10b981;margin-bottom:4px">' + roi + 'x ROI</div>' +
+    '<div style="font-size:12px;color:#64748b;margin-bottom:12px">Return on Security Investment</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:14px;font-weight:700;color:#10b981">₹' + prevented.toLocaleString('en-IN') + '</div>' +
+        '<div style="font-size:10px;color:#64748b">Annual Risk Prevented</div>' +
+      '</div>' +
+      '<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:14px;font-weight:700;color:#818cf8">₹' + planCost.toLocaleString('en-IN') + '</div>' +
+        '<div style="font-size:10px;color:#64748b">Platform Cost / Year</div>' +
+      '</div>' +
+    '</div>';
+};
+
+/* ── Proposal Generation ────────────────────────────────────────────────── */
+window.p4GenerateProposal = function() {
+  var company    = (document.getElementById('p4-prop-company')    || {}).value || '';
+  var contact    = (document.getElementById('p4-prop-contact')    || {}).value || '';
+  var email      = (document.getElementById('p4-prop-email')      || {}).value || '';
+  var sector     = (document.getElementById('p4-prop-sector')     || {}).value || 'default';
+  var size       = (document.getElementById('p4-prop-size')       || {}).value || 'medium';
+  var pkg        = (document.getElementById('p4-prop-package')    || {}).value || 'PROFESSIONAL';
+  var challenges = (document.getElementById('p4-prop-challenges') || {}).value || '';
+  var resEl = document.getElementById('p4-prop-result');
+
+  if (!company || !contact || !email) {
+    if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#f87171'; resEl.textContent = '⚠ Fill company, contact name, and email.'; }
+    return;
+  }
+  if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Generating enterprise proposal…'; }
+
+  p4Post('/api/proposals/generate', {
+    client_company: company, client_contact: contact, client_email: email,
+    sector: sector, org_size: size, package_id: pkg, challenges: challenges
+  }).then(function(d) {
+    if (d.proposal) {
+      var p = d.proposal;
+      resEl.style.color = '#10b981';
+      resEl.innerHTML = '✅ Proposal <strong>' + p.proposal_number + '</strong> generated! ' +
+        'Total: <strong>₹' + ((p.pricing && p.pricing.total_with_gst_inr || 0).toLocaleString('en-IN')) + '</strong> (incl. GST) · ' +
+        'ROI: <strong>' + (p.roi_analysis && p.roi_analysis.roi_multiplier || '—') + 'x</strong>';
+      setTimeout(p4LoadProposals, 600);
+    } else {
+      resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Generation failed.');
+    }
+  });
+};
+
+function p4LoadProposals() {
+  var el = document.getElementById('p4-proposals-list');
+  if (!el) return;
+  p4Get('/api/proposals').then(function(d) {
+    if (!d.proposals || !d.proposals.length) {
+      el.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px">No proposals generated yet.</div>';
+      return;
+    }
+    var html = '';
+    d.proposals.slice(0, 8).forEach(function(p) {
+      var status = p.status || 'DRAFT';
+      html += '<div class="p4-proposal-item">' +
+        '<span class="p4-prop-status p4-prop-' + status + '">' + status + '</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:600;color:#e2e8f0">' + (p.client_company || '—') + '</div>' +
+          '<div style="font-size:11px;color:#64748b">' + (p.proposal_number || '') + ' · ' + (p.package_id || '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:13px;font-weight:700;color:#10b981">₹' + ((p.total_inr || 0).toLocaleString('en-IN')) + '</div>' +
+          '<div style="font-size:10px;color:#64748b">' + (p.roi_multiplier || '—') + 'x ROI</div>' +
+        '</div>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AFFILIATE SYSTEM
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var P4_AFF_USER_ID = null;
+
+window.p4JoinAffiliate = function() {
+  var name    = (document.getElementById('p4-aff-name')    || {}).value || '';
+  var email   = (document.getElementById('p4-aff-email')   || {}).value || '';
+  var company = (document.getElementById('p4-aff-company') || {}).value || '';
+  var type    = (document.getElementById('p4-aff-type')    || {}).value || 'individual';
+
+  if (!name || !email) {
+    p4Toast('⚠ Name and email are required.', '#f87171'); return;
+  }
+  p4Toast('⏳ Joining affiliate program…', '#94a3b8');
+
+  var userId = 'aff_' + email.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  P4_AFF_USER_ID = userId;
+  p4Post('/api/affiliate/join', {
+    user_id: userId, name: name, email: email, company: company, affiliate_type: type
+  }).then(function(d) {
+    if (d.affiliate) {
+      localStorage.setItem('p4_aff_user_id', userId);
+      p4RenderAffStatus(d.affiliate);
+      p4Toast('✅ Welcome to the Affiliate Program!', '#10b981');
+    } else {
+      p4Toast('✗ ' + (d.error || 'Join failed.'), '#f87171');
+    }
+  });
+};
+
+function p4RenderAffStatus(aff) {
+  var joinPanel   = document.getElementById('p4-aff-join-panel');
+  var statusPanel = document.getElementById('p4-aff-status-panel');
+  if (!statusPanel) return;
+  if (joinPanel) joinPanel.style.display = 'none';
+  statusPanel.style.display = 'block';
+
+  var tierColors = { AFFILIATE: '#94a3b8', PARTNER: '#10b981', RESELLER: '#818cf8', STRATEGIC: '#f59e0b' };
+  var tc = tierColors[aff.tier] || '#94a3b8';
+
+  statusPanel.innerHTML =
+    '<div style="text-align:center;margin-bottom:20px">' +
+      '<div style="font-size:12px;color:#64748b;margin-bottom:4px">CURRENT TIER</div>' +
+      '<div style="font-size:28px;font-weight:800;color:' + tc + '">' + aff.tier + '</div>' +
+      '<div style="font-size:14px;color:#64748b">' + (aff.commission_rate * 100).toFixed(0) + '% Commission</div>' +
+    '</div>' +
+    '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:12px">' +
+      '<div style="font-size:11px;color:#a855f7;font-weight:600;margin-bottom:6px">REFERRAL LINK</div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<code id="p4-status-ref-link" style="font-size:11px;color:#c4b5fd;flex:1;word-break:break-all">' + (aff.referral_url || '') + '</code>' +
+        '<button onclick="p4CopyText(\'' + (aff.referral_url || '') + '\')" style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:4px 8px;color:#a855f7;cursor:pointer;font-size:11px">Copy</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+      '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:16px;font-weight:700;color:#a855f7">' + (aff.total_referrals || 0) + '</div>' +
+        '<div style="font-size:10px;color:#64748b">Referrals</div>' +
+      '</div>' +
+      '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:16px;font-weight:700;color:#10b981">₹' + (aff.total_earned_inr || 0).toLocaleString('en-IN') + '</div>' +
+        '<div style="font-size:10px;color:#64748b">Earned</div>' +
+      '</div>' +
+    '</div>';
+
+  // Update dashboard panel
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+  set('p4-aff-referrals',  aff.total_referrals  || 0);
+  set('p4-aff-conversions', aff.total_conversions || 0);
+  set('p4-aff-earnings',   '₹' + (aff.total_earned_inr || 0).toLocaleString('en-IN'));
+  set('p4-aff-pending',    '₹' + (aff.pending_payout_inr || 0).toLocaleString('en-IN'));
+
+  var linkBox = document.getElementById('p4-aff-ref-link-box');
+  var linkEl  = document.getElementById('p4-aff-ref-link');
+  if (linkBox && aff.referral_url) {
+    linkBox.style.display = 'block';
+    if (linkEl) linkEl.textContent = aff.referral_url;
+  }
+}
+
+window.p4LoadAffStatus = function() {
+  var userId = P4_AFF_USER_ID || localStorage.getItem('p4_aff_user_id');
+  if (!userId) { p4Toast('⚠ No affiliate account found. Please join first.', '#f87171'); return; }
+  P4_AFF_USER_ID = userId;
+  p4Get('/api/affiliate/status?user_id=' + userId).then(function(d) {
+    if (d.affiliate) { p4RenderAffStatus(d.affiliate); }
+    else { p4Toast('Account not found.', '#f87171'); }
+  });
+};
+
+function p4InitAffDashboard() {
+  var userId = localStorage.getItem('p4_aff_user_id');
+  if (userId) { P4_AFF_USER_ID = userId; p4LoadAffStatus(); }
+}
+
+window.p4CopyRefLink = function() {
+  var el = document.getElementById('p4-aff-ref-link');
+  if (el) { navigator.clipboard && navigator.clipboard.writeText(el.textContent); p4Toast('✅ Link copied!', '#10b981'); }
+};
+
+window.p4CopyText = function(text) {
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  p4Toast('✅ Copied!', '#10b981');
+};
+
+window.p4RequestPayout = function() {
+  var userId = P4_AFF_USER_ID || localStorage.getItem('p4_aff_user_id');
+  if (!userId) { p4Toast('⚠ No affiliate account.', '#f87171'); return; }
+  var resEl = document.getElementById('p4-payout-result');
+  if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Processing payout request…'; }
+  p4Post('/api/affiliate/payout', { user_id: userId, method: 'bank_transfer' }).then(function(d) {
+    if (resEl) {
+      if (d.payout) {
+        resEl.style.color = '#10b981'; resEl.textContent = '✅ Payout ₹' + (d.payout.amount_inr || 0).toLocaleString('en-IN') + ' requested!';
+      } else {
+        resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Payout failed.');
+      }
+    }
+  });
+};
+
+window.p4LoadLeaderboard = function() {
+  var el = document.getElementById('p4-leaderboard');
+  if (!el) return;
+  p4Get('/api/affiliate/leaderboard').then(function(d) {
+    if (!d.leaderboard || !d.leaderboard.length) {
+      el.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px">No leaderboard data yet.</div>';
+      return;
+    }
+    var html = '';
+    d.leaderboard.forEach(function(entry, i) {
+      var rank = i + 1;
+      var rankCls = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+      html += '<div class="p4-lb-row">' +
+        '<div class="p4-lb-rank ' + rankCls + '">' + (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank) + '</div>' +
+        '<div class="p4-lb-name">' + (entry.name || 'Anonymous') + '</div>' +
+        '<span class="p4-lb-tier">' + (entry.tier || 'AFFILIATE') + '</span>' +
+        '<div class="p4-lb-earnings">₹' + ((entry.total_earned_inr || 0).toLocaleString('en-IN')) + '</div>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+  });
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GROWTH ANALYTICS — Conversion Triggers, Funnel, CTA
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Behavior Event Recorder ────────────────────────────────────────────── */
+function p4RecordBehaviorEvent(eventType, metadata) {
+  var userId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
+  p4Post('/api/conversion/event', { user_id: userId, event_type: eventType, metadata: metadata || {} })
+    .then(function(d) {
+      if (d.triggers && d.triggers.length) {
+        p4ShowTriggers(d.triggers);
+      }
+    });
+}
+
+/* ── Fire Event (from UI) ───────────────────────────────────────────────── */
+window.p4FireEvent = function() {
+  var evtEl = document.getElementById('p4-trigger-event');
+  if (!evtEl) return;
+  var evt = evtEl.value;
+  p4RecordBehaviorEvent(evt, { simulated: true });
+  p4Toast('⚡ Event fired: ' + evt, '#f59e0b');
+  setTimeout(p4LoadTriggers, 500);
+};
+
+/* ── Load Active Triggers ───────────────────────────────────────────────── */
+function p4LoadTriggers() {
+  var userId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
+  var el = document.getElementById('p4-triggers-list');
+  if (!el) return;
+  p4Get('/api/conversion/triggers?user_id=' + userId).then(function(d) {
+    if (!d.triggers || !d.triggers.length) {
+      el.innerHTML = '<div style="color:#64748b;font-size:12px;text-align:center;padding:16px">No active triggers.</div>';
+      return;
+    }
+    var html = '';
+    d.triggers.slice(0, 5).forEach(function(t) {
+      var urgCls = t.urgency === 'CRITICAL' ? 'p4-trig-critical' : t.urgency === 'HIGH' ? 'p4-trig-high' : '';
+      html += '<div class="p4-trigger-card ' + urgCls + '">' +
+        '<div class="p4-trig-icon">' + (t.urgency === 'CRITICAL' ? '🚨' : '⚡') + '</div>' +
+        '<div class="p4-trig-text">' +
+          '<div class="p4-trig-title">' + (t.trigger_id || '') + '</div>' +
+          '<div class="p4-trig-sub">' + (t.cta_text || '') + '</div>' +
+        '</div>' +
+        '<button class="p4-trigger-dismiss" onclick="p4DismissTrigger(\'' + (t.trigger_id || '') + '\')">✕</button>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+  });
+}
+
+function p4ShowTriggers(triggers) {
+  if (!triggers || !triggers.length) return;
+  var first = triggers[0];
+  // Show paywall modal for critical triggers
+  if (first.urgency === 'CRITICAL' || first.trigger_id === 'HIGH_THREAT_DETECTED') {
+    p4ShowPaywallModal(first.feature_name || 'Auto-Defense', first.required_plan || 'PRO', first.roi_message || '');
+  } else {
+    p4Toast('⚡ ' + (first.cta_text || 'Upgrade for more'), '#f59e0b');
+  }
+  var el = document.getElementById('p4-triggers-list');
+  if (el) { p4LoadTriggers(); }
+}
+
+window.p4DismissTrigger = function(triggerId) {
+  var userId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
+  p4Post('/api/conversion/dismiss', { user_id: userId, trigger_id: triggerId });
+  p4LoadTriggers();
+};
+
+/* ── Paywall Modal ──────────────────────────────────────────────────────── */
+window.p4ShowPaywallModal = function(featureName, requiredPlan, roiMsg) {
+  var modal   = document.getElementById('p4-paywall-modal');
+  var titleEl = document.getElementById('p4-paywall-title');
+  var subEl   = document.getElementById('p4-paywall-sub');
+  var roiEl   = document.getElementById('p4-paywall-roi');
+  var ctaEl   = document.getElementById('p4-paywall-cta');
+  if (!modal) return;
+  if (titleEl) titleEl.textContent = featureName + ' — Upgrade Required';
+  if (subEl) subEl.textContent = 'This feature requires ' + requiredPlan + ' or higher.';
+  if (roiEl) {
+    if (roiMsg) { roiEl.style.display = 'block'; roiEl.textContent = roiMsg; }
+    else { roiEl.style.display = 'none'; }
+  }
+  modal.style.display = 'flex';
+};
+
+/* ── Paywall Gate (called from other parts of the app) ─────────────────── */
+window.p4CheckPaywall = function(featureId, onAllowed) {
+  p4Get('/api/conversion/paywall?feature_id=' + featureId).then(function(d) {
+    if (!d.gated) {
+      if (onAllowed) onAllowed();
+    } else {
+      p4ShowPaywallModal(d.feature_name || featureId, d.required_plan || 'PRO', d.roi_message || '');
+      p4RecordBehaviorEvent(d.upsell_trigger || featureId + '_access_attempt', {});
+    }
+  });
+};
+
+/* ── CTA Preview ────────────────────────────────────────────────────────── */
+window.p4PreviewCTA = function() {
+  var plan    = (document.getElementById('p4-cta-plan')    || {}).value || 'FREE';
+  var context = (document.getElementById('p4-cta-context') || {}).value || 'scan';
+  var el      = document.getElementById('p4-cta-preview');
+  if (!el) return;
+  p4Get('/api/conversion/cta?plan=' + plan + '&context=' + context).then(function(d) {
+    if (d.cta) {
+      var c = d.cta;
+      el.innerHTML =
+        '<div style="width:100%">' +
+          '<button style="background:' + (c.color || '#6366f1') + ';border:none;border-radius:10px;padding:12px 24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;width:100%">' + (c.text || 'Upgrade') + '</button>' +
+          '<div style="font-size:11px;color:#64748b;text-align:center">' + (c.sub || '') + '</div>' +
+        '</div>';
+    } else {
+      el.innerHTML = '<span style="color:#64748b;font-size:12px">No CTA configured for this combination.</span>';
+    }
+  });
+};
+
+/* ── Conversion Funnel ──────────────────────────────────────────────────── */
+window.p4LoadFunnel = function() {
+  var el = document.getElementById('p4-funnel-viz');
+  if (!el) return;
+  p4Get('/api/conversion/funnel').then(function(d) {
+    if (!d.funnel) {
+      el.innerHTML = '<div style="color:#64748b;text-align:center;padding:20px;grid-column:1/-1">No funnel data yet.</div>';
+      return;
+    }
+    var f = d.funnel;
+    var steps = [
+      { label: 'Visits',     count: f.total_sessions  || 0, color: '#6366f1' },
+      { label: 'Signups',    count: f.signups         || 0, color: '#8b5cf6' },
+      { label: 'Scans',      count: f.scans           || 0, color: '#a855f7' },
+      { label: 'Upgrades',   count: f.upgrades        || 0, color: '#10b981' },
+      { label: 'Enterprise', count: f.enterprise      || 0, color: '#f59e0b' }
+    ];
+    var maxCount = Math.max.apply(null, steps.map(function(s) { return s.count; })) || 1;
+    var html = '';
+    steps.forEach(function(s, i) {
+      var hPct = Math.max(10, Math.round((s.count / maxCount) * 100));
+      var convPct = i > 0 && steps[i-1].count ? Math.round((s.count / steps[i-1].count) * 100) : 100;
+      html += '<div class="p4-funnel-step">' +
+        '<div class="p4-funnel-bar-wrap">' +
+          '<div class="p4-funnel-bar" style="background:' + s.color + ';opacity:.7;height:' + hPct + '%;min-height:8px"></div>' +
+        '</div>' +
+        '<div class="p4-funnel-count">' + s.count.toLocaleString() + '</div>' +
+        (i > 0 ? '<div class="p4-funnel-pct">' + convPct + '%</div>' : '<div class="p4-funnel-pct">—</div>') +
+        '<div class="p4-funnel-label">' + s.label + '</div>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+
+    // Update metrics
+    var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+    set('p4-f-visitors', (f.total_sessions || 0).toLocaleString());
+    set('p4-f-signups',  (f.signups        || 0).toLocaleString());
+    set('p4-f-upgrades', (f.upgrades       || 0).toLocaleString());
+    set('p4-f-revenue',  '₹' + ((f.revenue_inr || 0).toLocaleString('en-IN')));
+
+    // CTA stats
+    var imp = document.getElementById('p4-cta-impressions');
+    var clk = document.getElementById('p4-cta-clicks');
+    if (imp) imp.textContent = (f.cta_impressions || 0).toLocaleString();
+    if (clk) clk.textContent = (f.cta_clicks      || 0).toLocaleString();
+  });
+};
+
+/* ── Live Counter Animation ─────────────────────────────────────────────── */
+function p4InitCounters() {
+  var counters = [
+    { id: 'p4-cnt-scans',   base: 12847, delta: 5,  interval: 8000  },
+    { id: 'p4-cnt-threats', base: 3291,  delta: 2,  interval: 12000 },
+    { id: 'p4-cnt-orgs',    base: 847,   delta: 1,  interval: 30000 }
+  ];
+  counters.forEach(function(c) {
+    var current = c.base;
+    setInterval(function() {
+      current += Math.floor(Math.random() * c.delta) + 1;
+      var el = document.getElementById(c.id);
+      if (el) { el.textContent = current.toLocaleString(); }
+      // Also update authority strip
+      var strip = {
+        'p4-cnt-scans':   'p4-scan-count',
+        'p4-cnt-threats': 'p4-threat-count',
+        'p4-cnt-orgs':    'p4-user-count'
+      };
+      var stripEl = strip[c.id] ? document.getElementById(strip[c.id]) : null;
+      if (stripEl) stripEl.textContent = current.toLocaleString() + '+';
+    }, c.interval);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GLOBAL HELPERS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Toast Notification ─────────────────────────────────────────────────── */
+function p4Toast(msg, color) {
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:#0f0f1a;border:1px solid ' + (color || '#6366f1') + ';border-radius:10px;' +
+    'color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;' +
+    'max-width:400px;z-index:99999;text-align:center;animation:p4SlideUp .3s ease-out;' +
+    'box-shadow:0 8px 30px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+/* ── Init ───────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+  p4InjectNav();
+  p4SetupObserver();
+  // Pre-trigger auto-calc for default ROI display
+  var roiSector = document.getElementById('p4-roi-sector');
+  if (roiSector) { roiSector.value = 'finance'; p4CalcROI(); }
+  // Expose paywall hook for Phase 3 sections
+  window.P4_PAYWALL = p4ShowPaywallModal;
+  window.P4_RECORD_EVENT = p4RecordBehaviorEvent;
+});
+
+// Fallback for sync execution
+p4InjectNav();
+p4SetupObserver();
+
+})(); // END PHASE 4 REVENUE ENGINE
+</script>
+<!-- ════════════════ END PHASE 4 REVENUE ENGINE ════════════════ -->
 
 </body>
 </html>
