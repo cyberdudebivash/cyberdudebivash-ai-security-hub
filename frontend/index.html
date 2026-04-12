@@ -2405,6 +2405,38 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 
 <!-- Hero -->
 <section class="hero">
+
+  <!-- ══ Animated Brand Identity Banner ══ -->
+  <div style="text-align:center;padding:10px 0 18px;position:relative;z-index:2">
+    <div style="display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center">
+      <span style="font-size:clamp(18px,3.5vw,32px);font-weight:900;letter-spacing:.04em;
+        background:linear-gradient(90deg,#00d4ff,#7c3aed,#f59e0b,#22c55e,#ef4444,#00d4ff);
+        background-size:300% auto;
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+        animation:cdbBrandFlow 4s linear infinite;
+        filter:drop-shadow(0 0 12px rgba(0,212,255,.4))">
+        CYBERDUDEBIVASH
+      </span>
+      <span style="font-size:clamp(14px,2.5vw,22px);font-weight:800;letter-spacing:.12em;
+        background:linear-gradient(90deg,#a78bfa,#00d4ff,#f59e0b,#a78bfa);
+        background-size:300% auto;
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+        animation:cdbBrandFlow 4s linear infinite reverse;
+        opacity:.9">
+        AI SECURITY HUB
+      </span>
+    </div>
+    <div style="font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.25);margin-top:4px;text-transform:uppercase">
+      Enterprise · AI-Powered · India's #1 Cybersecurity Intelligence Platform
+    </div>
+  </div>
+  <style>
+    @keyframes cdbBrandFlow {
+      0%   { background-position: 0% center; }
+      100% { background-position: 300% center; }
+    }
+  </style>
+
   <div class="hero-badge">CYBERDUDEBIVASH PVT. LTD. — Enterprise Security Intelligence</div>
   <h1>AI-Powered Cybersecurity<br>Intelligence Platform</h1>
   <p class="hero-sub">5 intelligence modules. OWASP LLM Top 10. MITRE ATT&CK. Zero Trust. Full compliance gap analysis. Reports from ₹199.</p>
@@ -2870,7 +2902,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
         <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" rel="noopener" class="sentinel-join-btn" style="display:flex;align-items:center;gap:6px">
           ✈️ Join Sentinel APEX on Telegram →
         </a>
-        <a href="#defense-marketplace" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none">🛡 Browse Defense Marketplace →</a>
+        <a href="#defense-solutions" onclick="(function(){if(typeof cdbNavigate==='function')cdbNavigate('defense-solutions');else{var el=document.getElementById('defense-solutions');if(el)el.scrollIntoView({behavior:'smooth'});}return false;})()" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none">🛡 Browse Defense Marketplace →</a>
       </div>
     </div>
 
@@ -6138,6 +6170,16 @@ async function submitLead() {
     });
   } catch(e) { /* non-blocking */ }
 
+  // Admin notification for new lead
+  try {
+    fetch('/api/payment/confirm', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ txnId: 'LEAD-' + Date.now(), method: 'FREE_LEAD',
+        product: 'Free Scan Lead', user: email, amount: '0',
+        notes: 'Free scan lead captured via homepage modal at ' + new Date().toISOString() }),
+    }).catch(() => {});
+  } catch(e) {}
+
   sessionStorage.setItem('cbd_lead_captured', '1');
   sessionStorage.setItem('cbd_lead_email', email); // Used for Razorpay prefill
   leadCaptured = true;
@@ -6352,7 +6394,7 @@ const CDB_PAYMENT = {
                 </div>
                 <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;margin:16px 0;font-size:12px;color:rgba(255,255,255,.55)">
                   📧 Check spam folder if you don't receive the email within 4 hours.<br>
-                  📞 Contact: <a href="mailto:support@cyberdudebivash.com" style="color:var(--accent)">support@cyberdudebivash.com</a>
+                  📞 Contact: <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a>
                 </div>
                 <button onclick="CDB_PAYMENT.close()" style="background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.35);color:var(--accent);padding:12px 28px;border-radius:10px;font-weight:800;cursor:pointer;font-size:14px">
                   ✓ Done
@@ -6381,7 +6423,7 @@ const CDB_PAYMENT = {
         if (attempt >= maxAttempts) {
           if (statusEl) {
             statusEl.className = 'cdb-pay-err';
-            statusEl.textContent = `⚠️ Submission failed after ${maxAttempts} attempts. Please email support@cyberdudebivash.com with your transaction ID: ${txnId}`;
+            statusEl.textContent = `⚠️ Submission failed after ${maxAttempts} attempts. Please email bivash@cyberdudebivash.com with your transaction ID: ${txnId}`;
           }
           if (btn) { btn.disabled = false; btn.textContent = '✅ I HAVE PAID — Submit Confirmation'; }
         } else {
@@ -9304,8 +9346,7 @@ window.addEventListener('load', () => {
     banner.innerHTML = `
       <span>⚡ Limited-time offer — Upgrade to <strong>${offer.upgrade}</strong> for just <strong>${offer.discount}</strong></span>
       <span id="cdb-countdown" style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-weight:700;min-width:80px;text-align:center">24:00:00</span>
-      <a href="/upgrade?plan=${offer.upgrade.toLowerCase()}&ref=urgency_banner&discount=1"
-         style="background:#fff;color:#4f46e5;padding:6px 16px;border-radius:20px;font-weight:700;text-decoration:none;white-space:nowrap;font-size:12px">
+      <a href="#pricing" onclick="(function(){var el=document.getElementById('pricing');if(el){el.scrollIntoView({behavior:'smooth'});}else if(typeof cdbNavigate==='function'){cdbNavigate('pricing');}return false;})()" style="background:#fff;color:#4f46e5;padding:6px 16px;border-radius:20px;font-weight:700;text-decoration:none;white-space:nowrap;font-size:12px">
         Upgrade Now →
       </a>
       <button onclick="this.closest('#cdb-urgency-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;line-height:1;margin-left:8px">×</button>
@@ -10076,30 +10117,10 @@ if (document.readyState === 'loading') {
 (function() {
   'use strict';
 
-  // 1. Upgrade sticky CTA
+  // 1. Upgrade sticky CTA — DISABLED (P0 fix: removed floating upgrade buttons per user request)
   function injectUpgradeCTA() {
-    if (document.getElementById('cdb-upgrade-sticky')) return;
-    var btn = document.createElement('a');
-    btn.id = 'cdb-upgrade-sticky';
-    btn.href = '#pricing';
-    btn.innerHTML = '<span style="font-size:14px">&#x26A1;</span> Upgrade to Pro';
-    btn.title = 'Unlock full enterprise capabilities';
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      var el = document.getElementById('pricing');
-      if (el) el.scrollIntoView({behavior:'smooth'});
-      else if (typeof cdbNavigate === 'function') cdbNavigate('pricing');
-      else window.location.hash = 'pricing';
-    });
-    document.body.appendChild(btn);
-    var obs = new IntersectionObserver(function(entries) {
-      entries.forEach(function(entry) {
-        btn.style.opacity = entry.isIntersecting ? '0' : '1';
-        btn.style.pointerEvents = entry.isIntersecting ? 'none' : 'auto';
-      });
-    }, {threshold: 0.1});
-    var pr = document.getElementById('pricing');
-    if (pr) obs.observe(pr);
+    // Intentionally disabled — no floating "Upgrade to Pro" button
+    return;
   }
 
   // 2. Fix FREE badge in navbar
@@ -10559,14 +10580,20 @@ window.p13SubmitLead=async function(){
   var btn=document.getElementById('p13-lead-btn');
   var stat=document.getElementById('p13-lead-status');
   if(btn){btn.textContent='Sending...';btn.disabled=true;}
+  var ts=new Date().toISOString();
   try{
     await fetch('/api/leads/capture',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email:email,source:'p13-exit-intent',timestamp:new Date().toISOString()})});
+      body:JSON.stringify({email:email,source:'p13-exit-intent',timestamp:ts})});
+  }catch(e){}
+  // Admin notification via payment confirm pipeline
+  try{
+    await fetch('/api/payment/confirm',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({txnId:'LEAD-'+Date.now(),method:'FREE_LEAD',product:'Free Threat Report',user:email,amount:'0',notes:'Free threat report lead captured at '+ts})});
   }catch(e){}
   _leadDone='1';
   sessionStorage.setItem('cdb_lead_p13','1');
-  if(stat)stat.innerHTML='<span style="color:#10b981;font-weight:700">&#10003; Report incoming! Check your inbox within 24h.</span>';
-  setTimeout(function(){var m=document.getElementById('p13-lead');if(m)m.remove();},3000);
+  if(stat)stat.innerHTML='<span style="color:#10b981;font-weight:700">&#10003; Report incoming! Check your inbox within 24h. Threats tailored to your domain.</span>';
+  setTimeout(function(){var m=document.getElementById('p13-lead');if(m)m.remove();},3500);
 };
 
 // ── P6: MYTHOS UI INTEGRATION ─────────────────────────────────
@@ -10641,10 +10668,9 @@ function injectStatusBar(){
     '<span style="color:rgba(255,255,255,.5)">KEV: <strong style="color:#f59e0b" id="soc-bar-kev">41</strong></span>'+
     '</div>'+
     '<div style="display:flex;align-items:center;gap:8px">'+
-    '<span style="color:rgba(255,255,255,.3)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools</span></span>'+
+    '<span style="color:rgba(255,255,255,.3)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools ready</span></span>'+
     '<span style="color:rgba(255,255,255,.2)">|</span>'+
     '<span style="color:rgba(255,255,255,.3)">v13.0.0</span>'+
-    '<button onclick="document.getElementById(&#39;pricing&#39;)&&document.getElementById(&#39;pricing&#39;).scrollIntoView({behavior:&#39;smooth&#39;})" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:4px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px">&#9889; Upgrade</button>'+
     '</div>';
   document.body.appendChild(bar);
   setInterval(function(){
@@ -10857,7 +10883,7 @@ if(document.readyState==='loading'){
               <div><div class="cdb-pay-field-label">Axis Bank</div><div class="cdb-pay-field-val">6302177246@axisbank</div></div>
               <button id="cb-u3" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('6302177246@axisbank','cb-u3')">Copy</button>
             </div>
-            <a href="upi://pay?pa=iambivash.bn-5@okaxis&pn=BivashKumarNayak" style="display:block;text-align:center;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-top:8px">
+            <a id="cdb-upi-deep-link" href="upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR" onclick="(function(a){var am=CDB_PAYMENT&&CDB_PAYMENT._current&&CDB_PAYMENT._current.amount?CDB_PAYMENT._current.amount.replace(/[^0-9.]/g,''):'';var base='upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR';a.href=am?base+'&am='+encodeURIComponent(am):base;})(this)" style="display:block;text-align:center;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-top:8px">
               📱 Open UPI App Directly →
             </a>
           </div>
@@ -10983,7 +11009,7 @@ if(document.readyState==='loading'){
 
       <div style="text-align:center;margin-top:14px;font-size:11px;color:rgba(255,255,255,.22);line-height:1.7">
         🔒 Verified manually by our team · Access activated within 2–4 hours<br>
-        Questions? <a href="mailto:support@cyberdudebivash.com" style="color:rgba(0,212,255,.5)">support@cyberdudebivash.com</a>
+        Questions? <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(0,212,255,.5)">bivash@cyberdudebivash.com</a>
         &nbsp;|&nbsp; <a href="tel:+918179881447" style="color:rgba(0,212,255,.5)">+91 8179881447</a>
       </div>
     </div>
@@ -11051,7 +11077,7 @@ if(document.readyState==='loading'){
 
       <!-- Contact -->
       <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 18px;font-size:12px;color:rgba(255,255,255,.5);line-height:1.8">
-        📧 Support: <a href="mailto:support@cyberdudebivash.com" style="color:#00d4ff">support@cyberdudebivash.com</a><br>
+        📧 Support: <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a><br>
         📧 Billing: <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a><br>
         📞 Phone / WhatsApp: <a href="tel:+918179881447" style="color:#00d4ff">+91 8179881447</a><br>
         💬 Discord: <a href="https://discord.gg/cybercoder127001" target="_blank" rel="noopener" style="color:#00d4ff">cybercoder127001</a>
@@ -12123,8 +12149,8 @@ function v13Init(){
   window.openAgenticConsole = ()=> CDB_AGCONSOLE.open();
   window.openAPIKeys        = ()=> CDB_APIKEYS.open();
 
-  // Start onboarding wizard (first-visit only)
-  CDB_ONBOARD.start();
+  // Onboarding wizard disabled — removed (P0 fix: broken spotlight caused full-page dim)
+  // CDB_ONBOARD.start();
 
   // Update nav bell hover style
   const bell = document.getElementById('cdb-notif-bell');
