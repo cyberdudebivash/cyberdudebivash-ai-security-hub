@@ -205,6 +205,36 @@ import {
   handleSetWhitelabel, handleGetWhitelabel,
 } from './handlers/msspPanel.js';
 
+// ─── PHASE 4: Sales CRM Pipeline ─────────────────────────────────────────────
+import {
+  handleCreateLead, handleListLeads, handleGetLead,
+  handleAdvanceStage, handleAddNote, handleQualifyLead, handleCloseLead,
+  handleBookDemo, handleGetDemoSlots,
+  handleGetPipeline as handleGetSalesPipeline,
+  handleGetMetrics as handleGetSalesMetrics,
+} from './handlers/salesPipeline.js';
+
+// ─── PHASE 4: Proposal Generator ─────────────────────────────────────────────
+import {
+  handleGenerateProposal, handleListProposals, handleGetProposal,
+  handleMarkProposalSent, handleAcceptProposal, handleGetPackages,
+} from './handlers/proposalGenerator.js';
+
+// ─── PHASE 4: Affiliate & Partner System ─────────────────────────────────────
+import {
+  handleJoin, handleGetStatus as handleAffStatus,
+  handleGetDashboard as handleAffDashboard,
+  handleTrackReferral, handleGetReferrals,
+  handleGetLeaderboard, handleGetTiers, handleRequestPayout,
+} from './handlers/affiliateSystem.js';
+
+// ─── PHASE 4: Conversion Triggers & Paywall ──────────────────────────────────
+import {
+  handleRecordEvent as handleConvEvent,
+  handleGetTriggers, handleGetPaywall, handleDismissTrigger,
+  handleGetFunnel, handleGetCTA, handleRetarget,
+} from './handlers/conversionTriggers.js';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
@@ -2278,6 +2308,135 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/mssp/whitelabel' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleGetWhitelabel(request, env, authCtx), request));
+    }
+
+    // ── PHASE 4: Sales CRM Pipeline ──────────────────────────────────────────
+    if (path === '/api/sales/leads' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleCreateLead(request, env), request));
+    }
+    if (path === '/api/sales/leads' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleListLeads(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/sales/leads/') && path.endsWith('/stage') && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleAdvanceStage(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/sales/leads/') && path.endsWith('/note') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleAddNote(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/sales/leads/') && path.endsWith('/qualify') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleQualifyLead(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/sales/leads/') && path.endsWith('/close') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleCloseLead(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/sales/leads/') && method === 'GET' && !path.includes('/stage') && !path.includes('/note')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetLead(request, env, authCtx), request));
+    }
+    if (path === '/api/sales/demo/book' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleBookDemo(request, env), request));
+    }
+    if (path === '/api/sales/demo/slots' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetDemoSlots(request, env), request));
+    }
+    if (path === '/api/sales/pipeline' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetSalesPipeline(request, env, authCtx), request));
+    }
+    if (path === '/api/sales/metrics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetSalesMetrics(request, env, authCtx), request));
+    }
+
+    // ── PHASE 4: Proposal Generator ──────────────────────────────────────────
+    if (path === '/api/proposals/packages' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPackages(request, env), request));
+    }
+    if (path === '/api/proposals/generate' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGenerateProposal(request, env, authCtx), request));
+    }
+    if (path === '/api/proposals' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleListProposals(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/proposals/') && path.endsWith('/send') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleMarkProposalSent(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/proposals/') && path.endsWith('/accept') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleAcceptProposal(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/proposals/') && !path.endsWith('/generate') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetProposal(request, env, authCtx), request));
+    }
+
+    // ── PHASE 4: Affiliate & Partner System ──────────────────────────────────
+    if (path === '/api/affiliate/join' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleJoin(request, env, authCtx), request));
+    }
+    if (path === '/api/affiliate/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleAffStatus(request, env, authCtx), request));
+    }
+    if (path === '/api/affiliate/dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleAffDashboard(request, env, authCtx), request));
+    }
+    if (path === '/api/affiliate/track' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleTrackReferral(request, env), request));
+    }
+    if (path === '/api/affiliate/referrals' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetReferrals(request, env, authCtx), request));
+    }
+    if (path === '/api/affiliate/leaderboard' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetLeaderboard(request, env), request));
+    }
+    if (path === '/api/affiliate/tiers' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetTiers(request, env), request));
+    }
+    if (path === '/api/affiliate/payout/request' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleRequestPayout(request, env, authCtx), request));
+    }
+
+    // ── PHASE 4: Conversion Triggers & Paywall ────────────────────────────────
+    if (path === '/api/conversion/event' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleConvEvent(request, env, authCtx), request));
+    }
+    if (path === '/api/conversion/triggers' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetTriggers(request, env, authCtx), request));
+    }
+    if (path === '/api/conversion/paywall' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetPaywall(request, env, authCtx), request));
+    }
+    if (path === '/api/conversion/dismiss' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDismissTrigger(request, env, authCtx), request));
+    }
+    if (path === '/api/conversion/funnel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetFunnel(request, env, authCtx), request));
+    }
+    if (path === '/api/conversion/cta' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetCTA(request, env, authCtx), request));
+    }
+    if (path === '/api/conversion/retarget' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleRetarget(request, env, authCtx), request));
     }
 
     if (path === '/api/scan/upsell' && method === 'POST') {
