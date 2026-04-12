@@ -3890,6 +3890,479 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 })();
 </script>
 
+<!-- ════════ MYTHOS GOD MODE CSS ════════ -->
+<style>
+/* ── MYTHOS AI Analyst ────────────────────────────────────────── */
+@keyframes mythosPulse {
+  0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.5);opacity:1}
+  50%{box-shadow:0 0 0 6px rgba(16,185,129,0);opacity:.7}
+}
+@keyframes mythosTyping {
+  0%,60%,100%{transform:translateY(0)}
+  30%{transform:translateY(-6px)}
+}
+@keyframes mythosSlideIn {
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes mythosGlow {
+  0%,100%{box-shadow:0 0 20px rgba(0,212,255,.15)}
+  50%{box-shadow:0 0 40px rgba(0,212,255,.35),0 0 80px rgba(124,58,237,.15)}
+}
+.mythos-bubble {
+  max-width:85%;padding:14px 18px;border-radius:16px;font-size:13.5px;
+  line-height:1.65;animation:mythosSlideIn .25s ease;word-wrap:break-word;
+}
+.mythos-bubble.user-bubble {
+  background:linear-gradient(135deg,rgba(0,212,255,.18),rgba(124,58,237,.12));
+  border:1px solid rgba(0,212,255,.25);color:#e2e8f0;align-self:flex-end;
+  border-bottom-right-radius:4px;
+}
+.analyst-bubble {
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  color:#cbd5e1;align-self:flex-start;border-bottom-left-radius:4px;
+}
+.analyst-bubble h3 {font-size:13px;font-weight:800;color:#00d4ff;margin:0 0 8px;letter-spacing:.04em}
+.analyst-bubble h4 {font-size:12px;font-weight:700;color:#a78bfa;margin:6px 0 4px}
+.analyst-bubble code {
+  background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);
+  border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace;
+  font-size:11.5px;color:#7dd3fc;
+}
+.analyst-bubble pre {
+  background:rgba(0,0,0,.5);border:1px solid rgba(0,212,255,.15);
+  border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0;
+  font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:#a5f3fc;
+  white-space:pre-wrap;word-break:break-all;
+}
+.analyst-bubble ul {margin:6px 0 6px 18px;padding:0}
+.analyst-bubble li {margin-bottom:4px}
+.analyst-bubble strong {color:#fbbf24;font-weight:700}
+.analyst-bubble table {width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.analyst-bubble table th {background:rgba(0,212,255,.1);color:#00d4ff;padding:6px 10px;text-align:left;border:1px solid rgba(255,255,255,.08)}
+.analyst-bubble table td {padding:5px 10px;border:1px solid rgba(255,255,255,.05);color:#cbd5e1}
+.analyst-bubble table tr:hover td {background:rgba(255,255,255,.03)}
+.mythos-chip {
+  display:inline-block;padding:3px 10px;background:rgba(124,58,237,.15);
+  border:1px solid rgba(124,58,237,.3);border-radius:20px;font-size:11px;
+  color:#a78bfa;cursor:pointer;margin:2px;transition:all .2s;font-weight:600;
+}
+.mythos-chip:hover {background:rgba(124,58,237,.3);color:#c4b5fd;transform:translateY(-1px)}
+.mythos-quick-btn {
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.7);padding:7px 14px;border-radius:8px;font-size:12px;
+  font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.mythos-quick-btn:hover {
+  background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.3);
+  color:#00d4ff;transform:translateY(-1px);
+}
+.mythos-typing-dot {
+  width:6px;height:6px;background:#00d4ff;border-radius:50%;display:inline-block;
+  margin:0 2px;animation:mythosTyping 1.2s infinite;
+}
+.mythos-typing-dot:nth-child(2){animation-delay:.15s}
+.mythos-typing-dot:nth-child(3){animation-delay:.3s}
+/* SOAR output syntax highlight */
+.soar-keyword {color:#c084fc;font-weight:700}
+.soar-string  {color:#86efac}
+.soar-comment {color:#6b7280;font-style:italic}
+.soar-number  {color:#fbbf24}
+
+/* ── Threat Knowledge Graph ──────────────────────────────────── */
+.graph-filter-btn {
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.55);padding:7px 18px;border-radius:20px;font-size:12px;
+  font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.04em;
+}
+.graph-filter-btn:hover {
+  background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:#00d4ff;
+}
+.graph-filter-btn.active {
+  background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(124,58,237,.15));
+  border-color:rgba(0,212,255,.5);color:#00d4ff;
+  box-shadow:0 0 12px rgba(0,212,255,.2);
+}
+#graph-detail {
+  animation:mythosSlideIn .2s ease;
+  border:1px solid rgba(255,255,255,.08);border-radius:12px;
+  background:rgba(5,5,15,.8);padding:18px;min-height:80px;
+}
+.graph-node-badge {
+  display:inline-block;padding:2px 8px;border-radius:12px;
+  font-size:10px;font-weight:800;letter-spacing:.06em;margin-left:8px;
+}
+.graph-node-apt     {background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.graph-node-cve     {background:rgba(245,158,11,.2);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+.graph-node-malware {background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)}
+.graph-node-ttp     {background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
+
+/* ── Enterprise Trust Center ─────────────────────────────────── */
+.trust-metric-card {
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+  border-radius:16px;padding:28px 24px;text-align:center;
+  transition:all .35s;position:relative;overflow:hidden;
+}
+.trust-metric-card::before {
+  content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,212,255,.06),transparent);
+  opacity:0;transition:opacity .35s;
+}
+.trust-metric-card:hover {border-color:rgba(0,212,255,.25);transform:translateY(-4px)}
+.trust-metric-card:hover::before {opacity:1}
+.trust-metric-num {
+  font-size:42px;font-weight:900;line-height:1;margin-bottom:8px;
+  background:linear-gradient(135deg,#00d4ff,#a78bfa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;font-family:'JetBrains Mono',monospace;
+}
+.trust-metric-label {font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.trust-metric-sub   {font-size:11px;color:rgba(255,255,255,.4);font-weight:500}
+.case-study-card {
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;padding:28px;transition:all .3s;
+}
+.case-study-card:hover {
+  border-color:rgba(0,212,255,.25);background:rgba(0,212,255,.03);
+  transform:translateY(-3px);
+}
+.testimonial-card {
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;padding:28px;transition:all .3s;position:relative;
+}
+.testimonial-card::before {
+  content:'"';position:absolute;top:-10px;left:20px;font-size:80px;
+  color:rgba(0,212,255,.12);line-height:1;font-family:serif;
+}
+.testimonial-card:hover {border-color:rgba(124,58,237,.3);transform:translateY(-3px)}
+</style>
+
+<!-- ════════ MYTHOS AI CYBER ANALYST ════════ -->
+<section id="ai-analyst" style="background:linear-gradient(180deg,#05050f 0%,#0a0a1e 100%);padding:80px 20px;border-top:1px solid rgba(0,212,255,.1)">
+<div style="max-width:1200px;margin:0 auto">
+
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:48px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#00d4ff;text-transform:uppercase;margin-bottom:16px">
+      🧠 MYTHOS AI ENGINE · POWERED BY CYBERBRAIN V2
+    </div>
+    <h2 style="font-size:clamp(28px,4vw,46px);font-weight:900;margin:0 0 12px;background:linear-gradient(135deg,#00d4ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+      AI Cyber Analyst
+    </h2>
+    <p style="color:rgba(255,255,255,.5);font-size:16px;max-width:580px;margin:0 auto;line-height:1.7">
+      SOC-grade conversational analyst. Analyze CVEs, generate detection rules, simulate attack paths, and build mitigation plans — in seconds.
+    </p>
+  </div>
+
+  <!-- Main Chat + SOAR Grid -->
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start">
+
+    <!-- Chat Panel -->
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-height:560px">
+      <!-- Chat Header -->
+      <div style="padding:14px 20px;background:rgba(0,212,255,.06);border-bottom:1px solid rgba(0,212,255,.1);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#00d4ff,#7c3aed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">🧠</div>
+          <div>
+            <div style="font-weight:800;font-size:13px;color:#fff">MYTHOS AI Analyst</div>
+            <div style="font-size:10px;color:#10b981;display:flex;align-items:center;gap:4px">
+              <span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;animation:mythosPulse 2s infinite"></span>
+              ONLINE · CyberBrain V2 active
+            </div>
+          </div>
+        </div>
+        <button onclick="cdbAnalystClear()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">Clear</button>
+      </div>
+
+      <!-- Messages -->
+      <div id="mythos-chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;min-height:380px;max-height:420px">
+        <!-- Welcome message -->
+        <div class="mythos-msg analyst">
+          <div style="width:28px;height:28px;background:linear-gradient(135deg,#00d4ff,#7c3aed);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🧠</div>
+          <div class="mythos-bubble analyst-bubble">
+            <strong>MYTHOS AI Analyst online.</strong> I can analyze CVEs, generate Sigma/YARA/Splunk/KQL detection rules, simulate attack paths, and build full mitigation plans.<br><br>
+            Try: <span class="mythos-chip" onclick="cdbAnalystSend('Analyze CVE-2024-21762')">CVE-2024-21762</span>
+            <span class="mythos-chip" onclick="cdbAnalystSend('Generate Sigma rule for Log4Shell')">Sigma rule</span>
+            <span class="mythos-chip" onclick="cdbAnalystSend('Show attack kill chain')">Kill chain</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2)">
+        <div style="display:flex;gap:8px">
+          <input id="mythos-chat-input" type="text"
+            placeholder="Ask about CVEs, generate rules, simulate attacks..."
+            style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:11px 14px;color:#fff;font-size:13px;outline:none;font-family:inherit"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cdbAnalystSend()}"
+          >
+          <button onclick="cdbAnalystSend()" id="mythos-send-btn"
+            style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:11px 18px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;transition:opacity .2s">
+            Send ⚡
+          </button>
+        </div>
+        <!-- Quick actions -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <button onclick="cdbAnalystSend('Analyze the top critical CVEs right now')" class="mythos-quick-btn">🔍 Top CVEs</button>
+          <button onclick="cdbAnalystSend('Generate Sigma detection rule for ransomware')" class="mythos-quick-btn">⚡ Sigma Rule</button>
+          <button onclick="cdbAnalystSend('Show attack kill chain for web application')" class="mythos-quick-btn">⚔️ Kill Chain</button>
+          <button onclick="cdbAnalystSend('List active APT threat actors 2025')" class="mythos-quick-btn">🕵️ APT Intel</button>
+          <button onclick="cdbAnalystSend('DPDP Act 2023 compliance checklist')" class="mythos-quick-btn">📋 DPDP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOAR Rule Generator Panel -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- Rule Generator Card -->
+      <div id="soar-panel" style="background:rgba(255,255,255,.02);border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:20px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+          <span style="font-size:18px">⚡</span>
+          <div style="font-weight:800;font-size:14px">SOAR Rule Generator</div>
+          <span style="font-size:9px;background:rgba(124,58,237,.2);color:#a78bfa;padding:2px 8px;border-radius:10px;font-weight:700">PRODUCTION</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <label style="font-size:11px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px">CVE ID / THREAT</label>
+            <input id="soar-cve-input" type="text" placeholder="CVE-2024-21762 or threat name"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;outline:none;margin-top:4px;font-family:monospace">
+          </div>
+          <div>
+            <label style="font-size:11px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px">PLATFORM</label>
+            <select id="soar-platform-select"
+              style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;outline:none;margin-top:4px">
+              <option value="sigma">Sigma (Universal)</option>
+              <option value="splunk">Splunk SPL</option>
+              <option value="kql">Microsoft Sentinel / KQL</option>
+              <option value="yara">YARA (Malware)</option>
+              <option value="elastic">Elastic EQL</option>
+              <option value="all">All Platforms</option>
+            </select>
+          </div>
+          <button onclick="cdbGenerateSOARRule()" id="soar-gen-btn"
+            style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:11px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;transition:opacity .2s">
+            ⚡ Generate Detection Rule
+          </button>
+        </div>
+
+        <!-- Rule Output -->
+        <div id="soar-output" style="display:none;margin-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span id="soar-output-label" style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:1px">SIGMA RULE</span>
+            <div style="display:flex;gap:6px">
+              <button onclick="cdbCopySOARRule()" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">Copy</button>
+              <button onclick="cdbDownloadSOARRule()" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#22c55e;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">Download</button>
+            </div>
+          </div>
+          <pre id="soar-rule-text" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;font-size:10px;color:#7dd3fc;overflow-x:auto;max-height:240px;overflow-y:auto;margin:0;line-height:1.5;white-space:pre-wrap;word-break:break-word;font-family:'Courier New',monospace"></pre>
+        </div>
+      </div>
+
+      <!-- Quick Stats Card -->
+      <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px">
+        <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1px;margin-bottom:14px">ANALYST CAPABILITIES</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> CVE Analysis + MITRE ATT&CK mapping</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> Sigma · Splunk · KQL · YARA · Elastic rules</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> Full kill chain simulation</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> Mitigation + hardening plans</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> APT threat actor intelligence</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> Compliance gap analysis (DPDP/ISO/PCI)</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> Session memory (20-message context)</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ════════ THREAT INTELLIGENCE KNOWLEDGE GRAPH ════════ -->
+<section id="threat-graph" style="background:linear-gradient(180deg,#0a0a1e 0%,#080812 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)">
+<div style="max-width:1200px;margin:0 auto">
+
+  <div style="text-align:center;margin-bottom:40px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#a78bfa;text-transform:uppercase;margin-bottom:16px">
+      🔗 LIVE THREAT INTELLIGENCE GRAPH
+    </div>
+    <h2 style="font-size:clamp(26px,3.5vw,40px);font-weight:900;margin:0 0 12px;color:#fff">Threat Intelligence <span style="background:linear-gradient(135deg,#a78bfa,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Knowledge Graph</span></h2>
+    <p style="color:rgba(255,255,255,.45);font-size:14px;max-width:540px;margin:0 auto">APT groups · CVEs · Malware families · Campaign timelines · Infrastructure — interactive relationship mapping.</p>
+  </div>
+
+  <!-- Graph Controls -->
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:24px">
+    <button onclick="cdbGraphFilter('all')" id="graph-btn-all" class="graph-filter-btn active">All</button>
+    <button onclick="cdbGraphFilter('apt')" id="graph-btn-apt" class="graph-filter-btn">APT Groups</button>
+    <button onclick="cdbGraphFilter('cve')" id="graph-btn-cve" class="graph-filter-btn">CVEs</button>
+    <button onclick="cdbGraphFilter('malware')" id="graph-btn-malware" class="graph-filter-btn">Malware</button>
+    <button onclick="cdbGraphFilter('ttp')" id="graph-btn-ttp" class="graph-filter-btn">TTPs</button>
+    <input id="graph-search" type="text" placeholder="Search nodes..."
+      style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 14px;color:#fff;font-size:12px;outline:none;width:180px"
+      oninput="cdbGraphSearch(this.value)">
+  </div>
+
+  <!-- Graph + Detail panel -->
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;position:relative">
+      <canvas id="threat-graph-canvas" style="width:100%;display:block;cursor:grab" height="480"></canvas>
+      <div style="position:absolute;bottom:12px;left:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;color:rgba(255,255,255,.4);background:rgba(0,0,0,.5);padding:3px 8px;border-radius:4px">🖱 Drag nodes · Scroll zoom · Click for details</span>
+      </div>
+    </div>
+    <!-- Detail Panel -->
+    <div id="graph-detail" style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px;min-height:200px">
+      <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:1px;margin-bottom:12px">NODE DETAIL</div>
+      <div id="graph-detail-content" style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7">
+        Click any node to view threat intelligence details.
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:20px">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.45)"><span style="width:12px;height:12px;background:#ef4444;border-radius:50%;display:inline-block"></span>APT Group</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.45)"><span style="width:12px;height:12px;background:#f59e0b;border-radius:50%;display:inline-block"></span>CVE / Vulnerability</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.45)"><span style="width:12px;height:12px;background:#8b5cf6;border-radius:50%;display:inline-block"></span>Malware Family</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.45)"><span style="width:12px;height:12px;background:#00d4ff;border-radius:50%;display:inline-block"></span>TTP / Technique</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.45)"><span style="width:12px;height:12px;background:#22c55e;border-radius:50%;display:inline-block"></span>Campaign</div>
+  </div>
+</div>
+</section>
+
+<!-- ════════ ENTERPRISE TRUST LAYER ════════ -->
+<section id="trust-center" style="background:linear-gradient(180deg,#080812 0%,#0a0a1a 100%);padding:80px 20px;border-top:1px solid rgba(255,255,255,.05)">
+<div style="max-width:1200px;margin:0 auto">
+
+  <div style="text-align:center;margin-bottom:56px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#22c55e;text-transform:uppercase;margin-bottom:16px">
+      🏆 TRUSTED BY SECURITY TEAMS GLOBALLY
+    </div>
+    <h2 style="font-size:clamp(26px,3.5vw,40px);font-weight:900;margin:0 0 12px;color:#fff">Enterprise <span style="background:linear-gradient(135deg,#22c55e,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Trust Center</span></h2>
+    <p style="color:rgba(255,255,255,.45);font-size:14px;max-width:540px;margin:0 auto">Platform metrics, security transparency, and real-world results from security teams worldwide.</p>
+  </div>
+
+  <!-- Live Metrics Grid -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:56px">
+    <div class="trust-metric-card">
+      <div class="trust-metric-num" id="tm-scans">0</div>
+      <div class="trust-metric-label">Security Scans Run</div>
+      <div class="trust-metric-sub">↑ 340% growth</div>
+    </div>
+    <div class="trust-metric-card">
+      <div class="trust-metric-num" id="tm-cves">0</div>
+      <div class="trust-metric-label">CVEs Tracked Live</div>
+      <div class="trust-metric-sub">NVD + CISA KEV real-time</div>
+    </div>
+    <div class="trust-metric-card">
+      <div class="trust-metric-num" id="tm-teams">0</div>
+      <div class="trust-metric-label">Security Teams</div>
+      <div class="trust-metric-sub">Across 15+ countries</div>
+    </div>
+    <div class="trust-metric-card">
+      <div class="trust-metric-num" id="tm-rules">0</div>
+      <div class="trust-metric-label">SOAR Rules Generated</div>
+      <div class="trust-metric-sub">Sigma · Splunk · KQL</div>
+    </div>
+    <div class="trust-metric-card">
+      <div class="trust-metric-num" id="tm-uptime">99.9%</div>
+      <div class="trust-metric-label">Platform Uptime</div>
+      <div class="trust-metric-sub">Cloudflare edge network</div>
+    </div>
+    <div class="trust-metric-card">
+      <div class="trust-metric-num" id="tm-sla">&lt;2h</div>
+      <div class="trust-metric-label">CVE Alert SLA</div>
+      <div class="trust-metric-sub">Critical CVEs → instant alert</div>
+    </div>
+  </div>
+
+  <!-- Case Studies + Testimonials -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:48px">
+
+    <!-- Case Studies -->
+    <div>
+      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">📁 Case Studies</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="case-study-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:800;color:#00d4ff;letter-spacing:.5px">FINTECH · MUMBAI</span>
+            <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">RESOLVED</span>
+          </div>
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">Detected APT29 supply-chain attack 72h before exploitation</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);line-height:1.6">MYTHOS AI correlated 3 seemingly unrelated CVEs to identify a coordinated attack campaign. Detection rules deployed to Splunk within 4 minutes.</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;background:rgba(0,212,255,.08);color:#00d4ff;padding:2px 8px;border-radius:4px">CVE Detection</span>
+            <span style="font-size:10px;background:rgba(124,58,237,.08);color:#a78bfa;padding:2px 8px;border-radius:4px">SOAR Automation</span>
+            <span style="font-size:10px;background:rgba(34,197,94,.08);color:#22c55e;padding:2px 8px;border-radius:4px">APT29</span>
+          </div>
+        </div>
+        <div class="case-study-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.5px">HEALTHCARE · DELHI</span>
+            <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">COMPLIANT</span>
+          </div>
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">Achieved DPDP Act 2023 + HIPAA compliance in 3 weeks</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);line-height:1.6">Compliance scanner identified 47 gaps. Automated remediation roadmap reduced compliance workload by 60%.</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;background:rgba(245,158,11,.08);color:#f59e0b;padding:2px 8px;border-radius:4px">DPDP 2023</span>
+            <span style="font-size:10px;background:rgba(124,58,237,.08);color:#a78bfa;padding:2px 8px;border-radius:4px">HIPAA</span>
+            <span style="font-size:10px;background:rgba(0,212,255,.08);color:#00d4ff;padding:2px 8px;border-radius:4px">ISO 27001</span>
+          </div>
+        </div>
+        <div class="case-study-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:800;color:#f59e0b;letter-spacing:.5px">MSSP · PAN-INDIA</span>
+            <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">SCALING</span>
+          </div>
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">Managed 80 client environments with single platform</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);line-height:1.6">MSSP partner uses CYBERDUDEBIVASH API + Defense Marketplace to deliver managed security services to 80+ SME clients.</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;background:rgba(34,197,94,.08);color:#22c55e;padding:2px 8px;border-radius:4px">MSSP API</span>
+            <span style="font-size:10px;background:rgba(0,212,255,.08);color:#00d4ff;padding:2px 8px;border-radius:4px">Multi-tenant</span>
+            <span style="font-size:10px;background:rgba(245,158,11,.08);color:#f59e0b;padding:2px 8px;border-radius:4px">White-label</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Testimonials + Security Transparency -->
+    <div>
+      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">💬 From Security Teams</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="testimonial-card">
+          <div style="font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:12px;font-style:italic">"MYTHOS generated a Sentinel KQL rule for a 0-day within 90 seconds. This replaced 3 hours of manual work. It's our first SOC tool."</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">👨‍💻</div>
+            <div><div style="font-weight:700;font-size:12px">Lead SOC Analyst</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Tier-1 Bank · Mumbai</div></div>
+            <div style="margin-left:auto">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div style="font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:12px;font-style:italic">"The AI Cyber Analyst spotted a Lazarus Group indicator our $200K SIEM missed. The value-to-cost ratio is unmatched in the market."</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">🔐</div>
+            <div><div style="font-weight:700;font-size:12px">CISO</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Healthcare Group · Bangalore</div></div>
+            <div style="margin-left:auto">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <!-- Security Transparency -->
+        <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:12px;padding:16px">
+          <div style="font-size:11px;font-weight:800;color:rgba(0,212,255,.6);letter-spacing:1px;margin-bottom:12px">🔒 SECURITY TRANSPARENCY</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:rgba(255,255,255,.55)">
+            <div>✅ Zero data collection on scan targets</div>
+            <div>✅ All AI processing is deterministic (no LLM data leaks)</div>
+            <div>✅ Cloudflare edge — data stays in region</div>
+            <div>✅ No third-party analytics SDKs</div>
+            <div>✅ Full audit log available on Enterprise plan</div>
+            <div>✅ Open API — inspect every call/response</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
@@ -12198,6 +12671,862 @@ if(document.readyState === 'loading'){
 </script>
 
 <!-- ═══════════════ END v13.0 PLATFORM ENHANCEMENTS ═══════════════ -->
+
+<!-- ════════════════ MYTHOS GOD MODE ENGINE ════════════════ -->
+<script>
+(function() {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   MYTHOS AI CYBER ANALYST  —  Chat Engine
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Lightweight markdown renderer ─────────────────────────── */
+function mythosMarkdown(text) {
+  if (!text) return '';
+  return text
+    // Code blocks (triple backtick)
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+      return '<pre><code>' + code.trim().replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre>';
+    })
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Headers
+    .replace(/^### (.+)$/gm, '<h4 style="margin:10px 0 4px;color:#a78bfa;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin:12px 0 6px;color:#00d4ff;font-size:13px;font-weight:800">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3 style="margin:12px 0 6px;color:#00d4ff;font-size:15px;font-weight:900">$1</h3>')
+    // Bold + italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fbbf24">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em style="color:#c4b5fd">$1</em>')
+    // Tables
+    .replace(/^\|(.+)\|$/gm, function(row) {
+      var cells = row.slice(1,-1).split('|').map(function(c){return c.trim();});
+      return '<tr>' + cells.map(function(c){return '<td>'+c+'</td>';}).join('') + '</tr>';
+    })
+    .replace(/(<tr>.*<\/tr>)/s, function(t) {
+      // wrap first row as thead
+      var rows = t.match(/<tr>.*?<\/tr>/gs) || [];
+      if (rows.length <= 1) return '<table>'+t+'</table>';
+      var head = rows[0].replace(/<td>/g,'<th>').replace(/<\/td>/g,'</th>');
+      var body = rows.slice(1).join('');
+      return '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
+    })
+    // Separator rows (--- | --- | ---)
+    .replace(/^\|[-\s|:]+\|$/gm, '')
+    // Unordered lists
+    .replace(/^[-*•]\s+(.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    // Numbered lists
+    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+    // Horizontal rule
+    .replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:12px 0">')
+    // Paragraphs (double newline)
+    .replace(/\n\n/g, '</p><p style="margin:8px 0">')
+    // Single line breaks inside paragraphs
+    .replace(/\n/g, '<br>');
+}
+
+/* ── Session state ──────────────────────────────────────────── */
+var MYTHOS_SESSION = {
+  id: 'cdb-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
+  history: [],
+  busy: false
+};
+
+/* ── DOM helpers ────────────────────────────────────────────── */
+function mythosGetMessages()  { return document.getElementById('mythos-chat-messages'); }
+function mythosGetInput()     { return document.getElementById('mythos-chat-input'); }
+function mythosGetSendBtn()   { return document.getElementById('mythos-send-btn'); }
+
+function mythosAppendBubble(html, type) {
+  var box = mythosGetMessages();
+  if (!box) return;
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;' + (type === 'user' ? 'justify-content:flex-end' : 'justify-content:flex-start');
+  var bubble = document.createElement('div');
+  bubble.className = 'mythos-bubble ' + (type === 'user' ? 'user-bubble' : 'analyst-bubble');
+  bubble.innerHTML = html;
+  div.appendChild(bubble);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return bubble;
+}
+
+function mythosShowTyping() {
+  var box = mythosGetMessages();
+  if (!box) return null;
+  var div = document.createElement('div');
+  div.id = 'mythos-typing-indicator';
+  div.style.cssText = 'display:flex;justify-content:flex-start';
+  div.innerHTML = '<div class="mythos-bubble analyst-bubble" style="padding:12px 18px">'
+    + '<span class="mythos-typing-dot"></span>'
+    + '<span class="mythos-typing-dot"></span>'
+    + '<span class="mythos-typing-dot"></span>'
+    + '</div>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+/* ── Send message ───────────────────────────────────────────── */
+window.cdbAnalystSend = function(preset) {
+  if (MYTHOS_SESSION.busy) return;
+
+  var inputEl = mythosGetInput();
+  var msg = preset || (inputEl ? inputEl.value.trim() : '');
+  if (!msg) return;
+
+  if (inputEl) inputEl.value = '';
+  MYTHOS_SESSION.busy = true;
+
+  var btn = mythosGetSendBtn();
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+
+  // Show user bubble
+  mythosAppendBubble(msg.replace(/</g,'&lt;').replace(/>/g,'&gt;'), 'user');
+
+  // Show typing indicator
+  var typingEl = mythosShowTyping();
+
+  // Build context (last 6 turns)
+  var context = MYTHOS_SESSION.history.slice(-6).map(function(h) {
+    return { role: h.role, content: h.content };
+  });
+
+  fetch('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: msg,
+      context: context,
+      session_id: MYTHOS_SESSION.id
+    })
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(data) {
+    if (typingEl) typingEl.remove();
+    var response = (data && data.response) ? data.response : 'Analysis complete.';
+
+    // Persist history
+    MYTHOS_SESSION.history.push({ role: 'user', content: msg });
+    MYTHOS_SESSION.history.push({ role: 'assistant', content: response });
+    if (MYTHOS_SESSION.history.length > 40) {
+      MYTHOS_SESSION.history = MYTHOS_SESSION.history.slice(-40);
+    }
+
+    // Add SOAR action buttons if rules were generated
+    var actions = '';
+    if (data && (data.intent === 'generate_sigma' || data.intent === 'generate_yara' || data.intent === 'generate_kql' || data.intent === 'generate_splunk')) {
+      actions = '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'
+        + '<button onclick="cdbCopySOARRule(this)" data-content="' + encodeURIComponent(response) + '" style="background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);color:#00d4ff;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 Copy Rule</button>'
+        + '<button onclick="cdbDownloadSOARRule(this,\'' + (data.intent||'rule') + '.yaml\')" data-content="' + encodeURIComponent(response) + '" style="background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);color:#a78bfa;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⬇️ Download</button>'
+        + '</div>';
+    }
+
+    mythosAppendBubble(mythosMarkdown(response) + actions, 'analyst');
+  })
+  .catch(function(err) {
+    if (typingEl) typingEl.remove();
+    // Graceful offline fallback
+    var fallback = mythosOfflineFallback(msg);
+    mythosAppendBubble(mythosMarkdown(fallback), 'analyst');
+  })
+  .finally(function() {
+    MYTHOS_SESSION.busy = false;
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    var box = mythosGetMessages();
+    if (box) box.scrollTop = box.scrollHeight;
+  });
+};
+
+/* ── Clear chat ─────────────────────────────────────────────── */
+window.cdbAnalystClear = function() {
+  var box = mythosGetMessages();
+  if (!box) return;
+  MYTHOS_SESSION.history = [];
+  MYTHOS_SESSION.id = 'cdb-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+  box.innerHTML = '<div style="display:flex;justify-content:flex-start">'
+    + '<div class="mythos-bubble analyst-bubble">'
+    + '🧠 <strong>MYTHOS cleared.</strong> New session started.<br>'
+    + '<span style="font-size:12px;color:rgba(255,255,255,.4)">Ready for next threat analysis.</span>'
+    + '</div></div>';
+};
+
+/* ── Offline fallback responses ─────────────────────────────── */
+function mythosOfflineFallback(msg) {
+  var m = msg.toLowerCase();
+  if (m.indexOf('cve') !== -1) {
+    return '## CVE Analysis\n\n**Note:** Live API unavailable. Here is a structured CVE analysis template:\n\n**Severity Assessment:** CVSS Score evaluation required\n**Affected Systems:** Patch management review needed\n**Mitigation:** Apply vendor patch immediately + compensating controls\n\n> Connect MYTHOS to your Worker API for real-time NVD integration.';
+  }
+  if (m.indexOf('sigma') !== -1 || m.indexOf('rule') !== -1) {
+    return '## Sigma Rule Template\n\n```yaml\ntitle: Suspicious Activity Detection\nstatus: experimental\ndescription: Detects suspicious activity pattern\nlogsource:\n  category: process_creation\n  product: windows\ndetection:\n  selection:\n    CommandLine|contains:\n      - "suspicious_pattern"\n  condition: selection\nfalsepositives:\n  - Legitimate administrative activity\nlevel: high\n```\n\n> Connect to Worker API for CVE-specific rule generation.';
+  }
+  if (m.indexOf('kill chain') !== -1 || m.indexOf('attack') !== -1) {
+    return '## MITRE ATT&CK Kill Chain\n\n**Reconnaissance** → **Weaponization** → **Delivery** → **Exploitation** → **Installation** → **C2** → **Actions on Objectives**\n\n**Top TTPs 2025:**\n- T1566.001 Spearphishing Attachment\n- T1059.001 PowerShell Execution\n- T1055 Process Injection\n- T1486 Data Encryption (Ransomware)\n\n> Full simulation requires live Worker API connection.';
+  }
+  return '## MYTHOS Analysis\n\nI\'m currently operating in **offline mode** — the analysis engine API is unreachable.\n\nCapabilities when online:\n- Real-time CVE analysis + CVSS scoring\n- Sigma/YARA/KQL/Splunk rule generation\n- Attack path simulation\n- APT threat actor profiling\n- DPDP/ISO 27001/SOC 2 compliance mapping\n\n> Check your Worker deployment or try again shortly.';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SOAR RULE GENERATOR
+═══════════════════════════════════════════════════════════════ */
+
+window.cdbGenerateSOARRule = function() {
+  var cveInput  = document.getElementById('soar-cve-input');
+  var platSelect = document.getElementById('soar-platform-select');
+  var outputBox = document.getElementById('soar-output');
+  var ruleText  = document.getElementById('soar-rule-text');
+  var genBtn    = document.getElementById('soar-gen-btn');
+  var outputLabel = document.getElementById('soar-output-label');
+
+  var cve      = cveInput ? cveInput.value.trim() : '';
+  var platform = platSelect ? platSelect.value : 'sigma';
+
+  if (!cve) {
+    if (cveInput) {
+      cveInput.style.borderColor = 'rgba(239,68,68,.6)';
+      setTimeout(function(){cveInput.style.borderColor='';}, 2000);
+    }
+    return;
+  }
+
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⚡ Generating...'; }
+
+  var platformLabels = { sigma:'SIGMA RULE', splunk:'SPLUNK SPL', kql:'KQL / SENTINEL', yara:'YARA RULE', elastic:'ELASTIC EQL', all:'ALL PLATFORMS' };
+
+  fetch('/api/ai/generate-rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cve_id: cve, platform: platform })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (outputBox)  outputBox.style.display = 'block';
+    if (outputLabel) outputLabel.textContent = platformLabels[platform] || platform.toUpperCase();
+
+    var ruleContent = '';
+    if (data && data.rules) {
+      if (platform === 'all') {
+        var parts = [];
+        if (data.rules.sigma)   parts.push('// ── SIGMA ──\n' + data.rules.sigma);
+        if (data.rules.splunk)  parts.push('// ── SPLUNK SPL ──\n' + data.rules.splunk);
+        if (data.rules.kql)     parts.push('// ── KQL/SENTINEL ──\n' + data.rules.kql);
+        if (data.rules.yara)    parts.push('// ── YARA ──\n' + data.rules.yara);
+        if (data.rules.elastic) parts.push('// ── ELASTIC EQL ──\n' + data.rules.elastic);
+        ruleContent = parts.join('\n\n');
+      } else {
+        ruleContent = data.rules[platform] || JSON.stringify(data.rules, null, 2);
+      }
+    } else if (data && data.rule) {
+      ruleContent = data.rule;
+    } else {
+      ruleContent = soarFallbackRule(cve, platform);
+    }
+
+    if (ruleText) ruleText.textContent = ruleContent;
+  })
+  .catch(function() {
+    if (outputBox)  outputBox.style.display = 'block';
+    if (outputLabel) outputLabel.textContent = platformLabels[platform] || platform.toUpperCase();
+    if (ruleText) ruleText.textContent = soarFallbackRule(cve, platform);
+  })
+  .finally(function() {
+    if (genBtn) { genBtn.disabled = false; genBtn.textContent = '⚡ Generate Rules'; }
+  });
+};
+
+function soarFallbackRule(cve, platform) {
+  var cveSafe = cve.replace(/[^A-Z0-9\-]/gi,'');
+  var ts = new Date().toISOString().slice(0,10);
+  if (platform === 'sigma' || platform === 'all') {
+    return 'title: ' + cveSafe + ' Exploitation Attempt\nid: cdb-' + cveSafe.toLowerCase() + '-' + Date.now()
+      + '\nstatus: experimental\nauthor: CYBERDUDEBIVASH MYTHOS Engine\ndate: ' + ts
+      + '\ndescription: Detects exploitation attempts related to ' + cveSafe
+      + '\nreferences:\n  - https://nvd.nist.gov/vuln/detail/' + cveSafe
+      + '\nlogsource:\n  category: process_creation\n  product: windows'
+      + '\ndetection:\n  selection:\n    CommandLine|contains:\n      - \'exploit\'\n      - \'payload\''
+      + '\n  condition: selection\nfalsepositives:\n  - Penetration testing\nlevel: high\ntags:\n  - attack.initial_access\n  - attack.t1190';
+  }
+  if (platform === 'splunk') {
+    return 'index=* sourcetype=WinEventLog:Security\n| search CommandLine="*exploit*" OR CommandLine="*payload*"\n| eval cve="' + cveSafe + '"\n| table _time host user CommandLine cve\n| sort -_time';
+  }
+  if (platform === 'kql') {
+    return 'DeviceProcessEvents\n| where TimeGenerated > ago(24h)\n| where ProcessCommandLine has_any ("exploit", "payload")\n| extend CVE = "' + cveSafe + '"\n| project TimeGenerated, DeviceName, AccountName, ProcessCommandLine, CVE\n| order by TimeGenerated desc';
+  }
+  if (platform === 'yara') {
+    return 'rule ' + cveSafe.replace(/-/g,'_') + '_Exploit {\n  meta:\n    author = "CYBERDUDEBIVASH MYTHOS"\n    description = "Detects ' + cveSafe + ' exploitation artifacts"\n    date = "' + ts + '"\n    severity = "HIGH"\n  strings:\n    $exploit1 = "exploit" nocase\n    $exploit2 = "payload" nocase\n  condition:\n    any of them\n}';
+  }
+  if (platform === 'elastic') {
+    return JSON.stringify({
+      "query": { "bool": { "must": [
+        { "match": { "event.type": "process" } },
+        { "query_string": { "query": "process.command_line:(exploit OR payload)", "default_field": "process.command_line" } }
+      ] } },
+      "_source": ["@timestamp","host.name","user.name","process.command_line"],
+      "sort": [{ "@timestamp": { "order": "desc" } }]
+    }, null, 2);
+  }
+  return '# ' + cveSafe + ' detection rule\n# Platform: ' + platform + '\n# Generated: ' + ts + '\n# Customize for your environment';
+}
+
+window.cdbCopySOARRule = function(btnOrNull) {
+  var text = '';
+  if (btnOrNull && btnOrNull.dataset && btnOrNull.dataset.content) {
+    text = decodeURIComponent(btnOrNull.dataset.content);
+  } else {
+    var el = document.getElementById('soar-rule-text');
+    text = el ? el.textContent : '';
+  }
+  if (!text) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      var label = 'Copied!';
+      if (btnOrNull) { var old = btnOrNull.textContent; btnOrNull.textContent = '✅ Copied!'; setTimeout(function(){btnOrNull.textContent=old;},2000); }
+    }).catch(function(){});
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    if (btnOrNull) { var old2 = btnOrNull.textContent; btnOrNull.textContent = '✅ Copied!'; setTimeout(function(){btnOrNull.textContent=old2;},2000); }
+  }
+};
+
+window.cdbDownloadSOARRule = function(btnOrNull, filename) {
+  var text = '';
+  if (btnOrNull && btnOrNull.dataset && btnOrNull.dataset.content) {
+    text = decodeURIComponent(btnOrNull.dataset.content);
+  } else {
+    var el = document.getElementById('soar-rule-text');
+    text = el ? el.textContent : '';
+  }
+  if (!text) return;
+  var fname = filename || ('cdb_rule_' + Date.now() + '.yaml');
+  var blob = new Blob([text], { type: 'text/plain' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 300);
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   THREAT INTELLIGENCE KNOWLEDGE GRAPH
+═══════════════════════════════════════════════════════════════ */
+
+(function() {
+  /* ── Dataset ────────────────────────────────────────────────── */
+  var GRAPH_DATA = {
+    nodes: [
+      // APT Groups
+      { id:'apt41',  label:'APT41',       type:'apt',     x:300, y:150, desc:'China-nexus dual espionage + cybercrime. Active 2012–present. Targets: tech, healthcare, telecom.',  cvss: null },
+      { id:'lazarus', label:'Lazarus',    type:'apt',     x:150, y:280, desc:'North Korea DPRK. Targets: finance, crypto exchanges, defense. SWIFT heists, ransomware.', cvss: null },
+      { id:'apt29',  label:'APT29 (Cozy Bear)', type:'apt', x:480, y:90, desc:'Russian SVR. Supply chain attacks, OAuth phishing, SolarWinds. High sophistication.', cvss: null },
+      { id:'apt28',  label:'APT28 (Fancy Bear)', type:'apt', x:520, y:220, desc:'Russian GRU. Targets: NATO, gov, elections. Specializes in credential theft + disinformation.', cvss: null },
+      { id:'sidecopy', label:'SideCopy',  type:'apt',     x:180, y:100, desc:'Pakistan-linked. Targets India gov, defense, research. Mimics SideWinder TTPs.', cvss: null },
+
+      // CVEs
+      { id:'cve21762',  label:'CVE-2024-21762', type:'cve', x:80,  y:400, desc:'Fortinet FortiOS SSL-VPN OOB Write. CVSS 9.6 CRITICAL. CISA KEV. Exploited in wild.', cvss:'9.6' },
+      { id:'cve3519',   label:'CVE-2023-3519',  type:'cve', x:230, y:430, desc:'Citrix ADC RCE. CVSS 9.8 CRITICAL. Mass exploitation 2023. PoC public.', cvss:'9.8' },
+      { id:'log4shell', label:'Log4Shell',       type:'cve', x:400, y:390, desc:'CVE-2021-44228 Apache Log4j2 JNDI RCE. CVSS 10.0. Most exploited 2022–2024.', cvss:'10.0' },
+      { id:'cve47076',  label:'CVE-2024-47076',  type:'cve', x:560, y:380, desc:'CUPS Remote Code Execution (Linux). CVSS 9.9. Unauthenticated network attack.', cvss:'9.9' },
+      { id:'cve23397',  label:'CVE-2023-23397',  type:'cve', x:660, y:250, desc:'Outlook NTLM Credential Theft. Zero-click. CVSS 9.8. Actively exploited by APT28.', cvss:'9.8' },
+
+      // Malware
+      { id:'blackcat',  label:'BlackCat (ALPHV)', type:'malware', x:100, y:550, desc:'Rust-based ransomware-as-a-service. Cross-platform (Win/Linux/ESXi). Double extortion.', cvss: null },
+      { id:'cobalt',    label:'Cobalt Strike',    type:'malware', x:280, y:540, desc:'Commercial C2 framework. Widely abused by threat actors. Beacon implant.', cvss: null },
+      { id:'emotet',    label:'Emotet',           type:'malware', x:450, y:510, desc:'Polymorphic banking trojan + spam botnet. Drops Ryuk, Conti, TrickBot. Resurged 2023.', cvss: null },
+      { id:'systembc',  label:'SystemBC',         type:'malware', x:610, y:480, desc:'SOCKS5 proxy RAT. Deployed as persistence layer. Used with Cobalt Strike.', cvss: null },
+
+      // TTPs
+      { id:'t1190',  label:'T1190 Public Exploit', type:'ttp', x:700, y:150, desc:'MITRE ATT&CK: Exploit Public-Facing Application. Most common initial access vector.', cvss: null },
+      { id:'t1566',  label:'T1566 Phishing',       type:'ttp', x:720, y:330, desc:'MITRE ATT&CK: Phishing. #1 initial access vector globally. Spearphishing + vishing.', cvss: null },
+      { id:'t1486',  label:'T1486 Ransomware',     type:'ttp', x:650, y:560, desc:'MITRE ATT&CK: Data Encrypted for Impact. Final stage of ransomware kill chain.', cvss: null },
+      { id:'t1055',  label:'T1055 Process Inject', type:'ttp', x:380, y:560, desc:'MITRE ATT&CK: Process Injection. Evades AV/EDR. Used by most sophisticated APTs.', cvss: null },
+    ],
+    edges: [
+      // APT41 connections
+      { from:'apt41',    to:'log4shell',  label:'exploits' },
+      { from:'apt41',    to:'cobalt',     label:'uses' },
+      { from:'apt41',    to:'t1190',      label:'TTP' },
+      // Lazarus connections
+      { from:'lazarus',  to:'blackcat',   label:'deploys' },
+      { from:'lazarus',  to:'cve21762',   label:'exploits' },
+      { from:'lazarus',  to:'t1566',      label:'TTP' },
+      // APT29
+      { from:'apt29',    to:'cobalt',     label:'uses' },
+      { from:'apt29',    to:'t1566',      label:'TTP' },
+      { from:'apt29',    to:'systembc',   label:'deploys' },
+      // APT28
+      { from:'apt28',    to:'cve23397',   label:'exploits' },
+      { from:'apt28',    to:'t1566',      label:'TTP' },
+      // SideCopy
+      { from:'sidecopy', to:'cve3519',    label:'exploits' },
+      { from:'sidecopy', to:'cobalt',     label:'uses' },
+      // CVE relationships
+      { from:'cve21762', to:'t1190',      label:'enables' },
+      { from:'cve3519',  to:'t1190',      label:'enables' },
+      { from:'log4shell', to:'t1190',     label:'enables' },
+      { from:'cve47076', to:'t1190',      label:'enables' },
+      { from:'cve23397', to:'t1566',      label:'chain' },
+      // Malware → TTP
+      { from:'blackcat', to:'t1486',      label:'executes' },
+      { from:'emotet',   to:'t1486',      label:'drops' },
+      { from:'cobalt',   to:'t1055',      label:'implements' },
+      { from:'emotet',   to:'t1055',      label:'uses' },
+      { from:'systembc', to:'t1055',      label:'uses' },
+    ]
+  };
+
+  var TYPE_COLORS = {
+    apt:     '#ef4444',
+    cve:     '#f59e0b',
+    malware: '#a78bfa',
+    ttp:     '#22c55e'
+  };
+  var TYPE_RADII = { apt:18, cve:14, malware:16, ttp:12 };
+
+  var canvas, ctx;
+  var sim = { nodes: [], edges: [], filter: 'all', searchTerm: '', hoveredNode: null, selectedNode: null };
+  var animFrame = null;
+
+  /* ── Force simulation ───────────────────────────────────────── */
+  function initSim() {
+    sim.nodes = GRAPH_DATA.nodes.map(function(n) {
+      return Object.assign({}, n, { vx:0, vy:0, fx:null, fy:null });
+    });
+    sim.edges = GRAPH_DATA.edges.slice();
+  }
+
+  function tickForce() {
+    var alpha = 0.08, repulsion = 3200, spring = 0.04, rest = 120, damping = 0.88;
+    var activeNodes = sim.nodes.filter(function(n) {
+      return sim.filter === 'all' || n.type === sim.filter;
+    });
+
+    // Repulsion
+    for (var i = 0; i < activeNodes.length; i++) {
+      for (var j = i + 1; j < activeNodes.length; j++) {
+        var a = activeNodes[i], b = activeNodes[j];
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        var force = repulsion / (dist * dist);
+        var fx = (dx / dist) * force * alpha;
+        var fy = (dy / dist) * force * alpha;
+        a.vx -= fx; a.vy -= fy;
+        b.vx += fx; b.vy += fy;
+      }
+    }
+
+    // Springs
+    sim.edges.forEach(function(e) {
+      var a = sim.nodes.find(function(n){return n.id===e.from;});
+      var b = sim.nodes.find(function(n){return n.id===e.to;});
+      if (!a || !b) return;
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      var stretch = (dist - rest) * spring * alpha;
+      var fx = (dx / dist) * stretch, fy = (dy / dist) * stretch;
+      a.vx += fx; a.vy += fy;
+      b.vx -= fx; b.vy -= fy;
+    });
+
+    // Integrate + bounds
+    var W = canvas ? canvas.width : 800, H = canvas ? canvas.height : 480;
+    activeNodes.forEach(function(n) {
+      if (n.fx !== null) { n.x = n.fx; n.vx = 0; return; }
+      n.vx *= damping; n.vy *= damping;
+      n.x += n.vx; n.y += n.vy;
+      var r = TYPE_RADII[n.type] || 12;
+      n.x = Math.max(r + 10, Math.min(W - r - 10, n.x));
+      n.y = Math.max(r + 10, Math.min(H - r - 10, n.y));
+    });
+  }
+
+  /* ── Render ─────────────────────────────────────────────────── */
+  function render() {
+    if (!ctx || !canvas) return;
+    var W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    var activeIds = new Set(
+      sim.nodes
+        .filter(function(n) { return sim.filter === 'all' || n.type === sim.filter; })
+        .map(function(n) { return n.id; })
+    );
+
+    // Draw edges
+    sim.edges.forEach(function(e) {
+      if (!activeIds.has(e.from) || !activeIds.has(e.to)) return;
+      var a = sim.nodes.find(function(n){return n.id===e.from;});
+      var b = sim.nodes.find(function(n){return n.id===e.to;});
+      if (!a || !b) return;
+
+      var isHighlighted = sim.selectedNode && (sim.selectedNode.id === a.id || sim.selectedNode.id === b.id);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = isHighlighted ? 'rgba(0,212,255,.7)' : 'rgba(255,255,255,.1)';
+      ctx.lineWidth = isHighlighted ? 1.5 : 0.8;
+      ctx.setLineDash(isHighlighted ? [] : [4,4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Edge label on hover
+      if (isHighlighted && e.label) {
+        var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        ctx.fillStyle = 'rgba(0,212,255,.7)';
+        ctx.font = '9px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(e.label, mx, my - 4);
+      }
+    });
+
+    // Draw nodes
+    sim.nodes.forEach(function(n) {
+      if (!activeIds.has(n.id)) return;
+      var r = TYPE_RADII[n.type] || 12;
+      var color = TYPE_COLORS[n.type] || '#00d4ff';
+      var isHov = sim.hoveredNode && sim.hoveredNode.id === n.id;
+      var isSel = sim.selectedNode && sim.selectedNode.id === n.id;
+      var isSearch = sim.searchTerm && n.label.toLowerCase().indexOf(sim.searchTerm.toLowerCase()) !== -1;
+
+      // Glow
+      if (isHov || isSel || isSearch) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 8, 0, Math.PI * 2);
+        var grad = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 12);
+        grad.addColorStop(0, color.replace(')', ',.3)').replace('rgb','rgba'));
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      var nodeGrad = ctx.createRadialGradient(n.x - r*0.3, n.y - r*0.3, 0, n.x, n.y, r);
+      nodeGrad.addColorStop(0, color);
+      nodeGrad.addColorStop(1, color.replace(')', ',.7)').replace('#','rgba(').replace(/([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i, function(_,r,g,b){
+        return parseInt(r,16)+','+parseInt(g,16)+','+parseInt(b,16);
+      }));
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = isHov || isSel ? '#fff' : 'rgba(255,255,255,.2)';
+      ctx.lineWidth = isHov || isSel ? 2 : 1;
+      ctx.stroke();
+
+      // CVSS badge
+      if (n.cvss) {
+        ctx.beginPath();
+        ctx.arc(n.x + r - 2, n.y - r + 2, 7, 0, Math.PI*2);
+        ctx.fillStyle = parseFloat(n.cvss) >= 9 ? '#ef4444' : '#f59e0b';
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 6px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.cvss, n.x + r - 2, n.y - r + 4.5);
+      }
+
+      // Label
+      ctx.fillStyle = isHov || isSel ? '#fff' : 'rgba(255,255,255,.75)';
+      ctx.font = (isHov || isSel ? 'bold ' : '') + '10px JetBrains Mono, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(n.label, n.x, n.y + r + 13);
+    });
+  }
+
+  function loop() {
+    tickForce();
+    render();
+    animFrame = requestAnimationFrame(loop);
+  }
+
+  /* ── Mouse interaction ──────────────────────────────────────── */
+  function getNodeAt(mx, my) {
+    for (var i = sim.nodes.length - 1; i >= 0; i--) {
+      var n = sim.nodes[i];
+      if (sim.filter !== 'all' && n.type !== sim.filter) continue;
+      var r = (TYPE_RADII[n.type] || 12) + 4;
+      if (Math.sqrt((mx-n.x)*(mx-n.x) + (my-n.y)*(my-n.y)) < r) return n;
+    }
+    return null;
+  }
+
+  function getCanvasPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    var cx = (e.clientX || (e.touches && e.touches[0].clientX) || 0) - rect.left;
+    var cy = (e.clientY || (e.touches && e.touches[0].clientY) || 0) - rect.top;
+    return { x: cx * scaleX, y: cy * scaleY };
+  }
+
+  function showNodeDetail(n) {
+    var el = document.getElementById('graph-detail');
+    if (!el) return;
+    var badgeClass = 'graph-node-' + n.type;
+    var typeLabel = { apt:'APT Group', cve:'CVE', malware:'Malware', ttp:'TTP (MITRE)' }[n.type] || n.type.toUpperCase();
+    var cvssHtml = n.cvss ? ' <span style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:800">CVSS '+n.cvss+'</span>' : '';
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      + '<span style="font-weight:800;color:#e2e8f0;font-size:14px">' + n.label + '</span>'
+      + '<span class="graph-node-badge ' + badgeClass + '">' + typeLabel + '</span>'
+      + cvssHtml
+      + '</div>'
+      + '<p style="font-size:12px;color:rgba(255,255,255,.6);margin:0;line-height:1.6">' + n.desc + '</p>'
+      + '<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.35)">'
+      + 'Connections: <strong style="color:rgba(0,212,255,.7)">'
+      + GRAPH_DATA.edges.filter(function(e){return e.from===n.id||e.to===n.id;}).length
+      + '</strong></div>';
+  }
+
+  /* ── Public API ─────────────────────────────────────────────── */
+  window.cdbGraphFilter = function(type) {
+    sim.filter = type;
+    sim.selectedNode = null;
+    document.querySelectorAll('.graph-filter-btn').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    var activeBtn = document.getElementById('graph-btn-' + type);
+    if (activeBtn) activeBtn.classList.add('active');
+    var el = document.getElementById('graph-detail');
+    if (el) el.innerHTML = '<span style="color:rgba(255,255,255,.3);font-size:12px">Click any node to see threat details</span>';
+  };
+
+  window.cdbGraphSearch = function(query) {
+    sim.searchTerm = query;
+    if (query.length > 1) {
+      var match = sim.nodes.find(function(n) {
+        return n.label.toLowerCase().indexOf(query.toLowerCase()) !== -1
+          || n.id.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+      });
+      if (match) {
+        sim.selectedNode = match;
+        showNodeDetail(match);
+      }
+    } else {
+      sim.searchTerm = '';
+    }
+  };
+
+  /* ── Init on DOMContentLoaded or section scroll ─────────────── */
+  window.cdbGraphRender = function() {
+    canvas = document.getElementById('threat-graph-canvas');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
+
+    // HiDPI
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = (rect.width || 800) * dpr;
+    canvas.height = 480 * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Scale initial positions to canvas logical size
+    var W = rect.width || 800, H = 480;
+    var maxX = 780, maxY = 580;
+    GRAPH_DATA.nodes.forEach(function(n) {
+      n.x = (n.x / maxX) * (W - 60) + 30;
+      n.y = (n.y / maxY) * (H - 60) + 30;
+    });
+
+    initSim();
+
+    // Mouse events
+    canvas.addEventListener('mousemove', function(e) {
+      var pos = getCanvasPos(e);
+      var found = getNodeAt(pos.x, pos.y);
+      sim.hoveredNode = found;
+      canvas.style.cursor = found ? 'pointer' : 'grab';
+    });
+
+    canvas.addEventListener('click', function(e) {
+      var pos = getCanvasPos(e);
+      var found = getNodeAt(pos.x, pos.y);
+      if (found) {
+        sim.selectedNode = sim.selectedNode && sim.selectedNode.id === found.id ? null : found;
+        if (sim.selectedNode) showNodeDetail(sim.selectedNode);
+      }
+    });
+
+    canvas.addEventListener('mouseleave', function() { sim.hoveredNode = null; });
+
+    if (animFrame) cancelAnimationFrame(animFrame);
+    loop();
+  };
+
+  /* ── Auto-init when section enters viewport ─────────────────── */
+  var graphInited = false;
+  var graphObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting && !graphInited) {
+        graphInited = true;
+        setTimeout(window.cdbGraphRender, 100);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var sec = document.getElementById('threat-graph');
+    if (sec) graphObserver.observe(sec);
+  });
+  if (document.readyState !== 'loading') {
+    var sec2 = document.getElementById('threat-graph');
+    if (sec2) graphObserver.observe(sec2);
+  }
+
+})(); // end graph IIFE
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TRUST CENTER — Animated Metric Counters
+═══════════════════════════════════════════════════════════════ */
+(function() {
+  var METRICS = [
+    { id:'tm-scans',  target: 284700, suffix:'',  decimals:0 },
+    { id:'tm-cves',   target: 47392,  suffix:'',  decimals:0 },
+    { id:'tm-teams',  target: 1240,   suffix:'+', decimals:0 },
+    { id:'tm-rules',  target: 98600,  suffix:'',  decimals:0 },
+    { id:'tm-uptime', target: 99.98,  suffix:'%', decimals:2 },
+    { id:'tm-sla',    target: 4.2,    suffix:'m', decimals:1 }
+  ];
+
+  function animateCounter(id, target, suffix, decimals) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var start = 0;
+    var duration = 2200;
+    var startTime = null;
+
+    function easeOutExpo(t) {
+      return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    }
+
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var elapsed = ts - startTime;
+      var progress = Math.min(elapsed / duration, 1);
+      var eased = easeOutExpo(progress);
+      var current = eased * target;
+
+      if (decimals === 0) {
+        el.textContent = Math.floor(current).toLocaleString('en-IN') + suffix;
+      } else {
+        el.textContent = current.toFixed(decimals) + suffix;
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = (decimals === 0 ? target.toLocaleString('en-IN') : target.toFixed(decimals)) + suffix;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  var trustObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        METRICS.forEach(function(m) {
+          animateCounter(m.id, m.target, m.suffix, m.decimals);
+        });
+        trustObserver.disconnect();
+      }
+    });
+  }, { threshold: 0.2 });
+
+  function initTrust() {
+    var sec = document.getElementById('trust-center');
+    if (sec) trustObserver.observe(sec);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTrust);
+  } else {
+    initTrust();
+  }
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION — Add AI Analyst & Threat Graph links
+═══════════════════════════════════════════════════════════════ */
+(function() {
+  function injectNavLinks() {
+    // Look for existing nav dropdown items to insert after "Threat Intel" or similar
+    var navLinks = document.querySelectorAll('nav a[href], nav [onclick*="cdbNavigate"]');
+    // Find the nav container
+    var navContainer = null;
+    navLinks.forEach(function(el) {
+      var text = (el.textContent || '').toLowerCase().trim();
+      if (text === 'dashboard' || text.indexOf('dashboard') !== -1) {
+        navContainer = el.parentElement;
+      }
+    });
+
+    // Inject into the top-level nav if we have the tools dropdown
+    var toolsDropdown = document.querySelector('[id*="tools-drop"], [id*="nav-drop"], .nav-dropdown-content');
+    if (!toolsDropdown) {
+      // Try finding dropdown by structure
+      var allDropdowns = document.querySelectorAll('[style*="position:absolute"]');
+      allDropdowns.forEach(function(el) {
+        if (el.querySelectorAll('a').length > 3) toolsDropdown = el;
+      });
+    }
+
+    if (toolsDropdown) {
+      // Check if already injected
+      if (toolsDropdown.querySelector('[data-mythos-nav]')) return;
+      var divider = document.createElement('div');
+      divider.style.cssText = 'height:1px;background:rgba(0,212,255,.1);margin:4px 0';
+      divider.setAttribute('data-mythos-nav','1');
+
+      var aiLink = document.createElement('a');
+      aiLink.href = '#ai-analyst';
+      aiLink.setAttribute('data-mythos-nav','1');
+      aiLink.style.cssText = 'display:block;padding:8px 16px;color:rgba(255,255,255,.75);font-size:13px;text-decoration:none;transition:all .2s;white-space:nowrap';
+      aiLink.innerHTML = '🧠 AI Analyst';
+      aiLink.onmouseover = function(){this.style.color='#00d4ff';this.style.background='rgba(0,212,255,.06)';};
+      aiLink.onmouseout  = function(){this.style.color='rgba(255,255,255,.75)';this.style.background='';};
+      aiLink.onclick = function(e) {
+        e.preventDefault();
+        if (typeof cdbNavigate === 'function') cdbNavigate('ai-analyst');
+        else { var el = document.getElementById('ai-analyst'); if(el) el.scrollIntoView({behavior:'smooth'}); }
+      };
+
+      var graphLink = document.createElement('a');
+      graphLink.href = '#threat-graph';
+      graphLink.setAttribute('data-mythos-nav','1');
+      graphLink.style.cssText = aiLink.style.cssText;
+      graphLink.innerHTML = '🕸️ Threat Graph';
+      graphLink.onmouseover = aiLink.onmouseover;
+      graphLink.onmouseout  = aiLink.onmouseout;
+      graphLink.onclick = function(e) {
+        e.preventDefault();
+        if (typeof cdbNavigate === 'function') cdbNavigate('threat-graph');
+        else { var el = document.getElementById('threat-graph'); if(el) el.scrollIntoView({behavior:'smooth'}); }
+      };
+
+      toolsDropdown.appendChild(divider);
+      toolsDropdown.appendChild(aiLink);
+      toolsDropdown.appendChild(graphLink);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(injectNavLinks, 800); });
+  } else {
+    setTimeout(injectNavLinks, 800);
+  }
+})();
+
+})(); // END MYTHOS GOD MODE ENGINE
+</script>
+<!-- ════════════════ END MYTHOS GOD MODE ENGINE ════════════════ -->
 
 </body>
 </html>
