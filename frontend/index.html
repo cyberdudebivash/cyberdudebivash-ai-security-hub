@@ -7148,13 +7148,13 @@ async function loadThreatIntel(filter = {}) {
 
   panel.innerHTML = html;
 
-  // Start auto-refresh every 60 seconds
+  // KV OPT: auto-refresh was 60s → 300s (threat intel data changes slowly; KV-cached 5min anyway)
   if (_tiRefreshTimer) clearInterval(_tiRefreshTimer);
   _tiRefreshTimer = setInterval(() => {
     if (document.getElementById('tab-threatintel')?.classList.contains('active')) {
       loadThreatIntel(filter);
     }
-  }, 60000);
+  }, 300000);
 
   if (btn)    btn.disabled         = false;
   if (loader) loader.style.display = 'none';
@@ -10240,6 +10240,19 @@ async function checkAPIHealth() {
   const dbDot    = document.getElementById('soc-db-dot');
   const kvDot    = document.getElementById('soc-kv-dot');
 
+  // KV OPT: Browser-level cache (120s) — prevents duplicate calls on tab focus/blur cycles.
+  // The server-side response is also edge-cached 60s, so total effective TTL is 120s client-side.
+  const _HEALTH_CACHE_KEY = '_cdb_health_ts';
+  const _HEALTH_CACHE_TTL = 120000; // 120s
+  try {
+    const lastFetch = parseInt(sessionStorage.getItem(_HEALTH_CACHE_KEY) || '0', 10);
+    if (lastFetch && (Date.now() - lastFetch) < _HEALTH_CACHE_TTL) {
+      // Within cache window — skip the fetch entirely (already reflected in UI from last call)
+      return null;
+    }
+    sessionStorage.setItem(_HEALTH_CACHE_KEY, String(Date.now()));
+  } catch { /* sessionStorage unavailable — proceed */ }
+
   // Use AbortController instead of AbortSignal.timeout() for broader browser support
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), 6000);
@@ -10293,7 +10306,7 @@ async function checkAPIHealth() {
   }
 }
 checkAPIHealth();
-setInterval(checkAPIHealth, 30000); // re-check every 30 seconds
+setInterval(checkAPIHealth, 120000); // KV OPT: was 30s → 120s (edge-cached 60s anyway — 4× reduction in KV load)
 
 // ─── Skeleton Loader HTML Builder ─────────────────────────────────────────────
 function buildSkeletonCard() {
@@ -12915,7 +12928,7 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
   return {
     init(){
       _fetch();
-      _timer = setInterval(_fetch, 60000);
+      _timer = setInterval(_fetch, 180000); // KV OPT: was 60s → 180s (security alerts are edge-cached 60s; 3× reduction)
       document.addEventListener('click',e=>{
         if(_open && !document.getElementById('cdb-notif-wrap')?.contains(e.target)) this.close();
       });
@@ -14744,7 +14757,7 @@ var ASOC = {
   autoMode:      false,
   pollInterval:  null,
   pipelineData:  null,
-  POLL_MS:       8000,
+  POLL_MS:       30000, // KV OPT: was 8000ms (7.5×/min) → 30000ms (2×/min) — 75% reduction in KV reads
 };
 
 var PIPELINE_STAGES = [
