@@ -81,20 +81,42 @@ function getRemediationUrgency(tier) {
   return map[tier] || map['LOW_THEORETICAL'];
 }
 
-// ── CISA KEV Fetch (with KV cache) ────────────────────────────────────────────
+// ── CISA KEV Fetch — KV OPTIMIZATION: L0 edge cache primary, KV as fallback ──
+// The KEV catalog (~1000 CVEs) was being stored in and read from KV every 24h.
+// Now: Cloudflare CDN edge cache is the primary layer (24h TTL, FREE).
+// KV is kept as a fallback for cross-PoP consistency and cron-based refresh.
+const _KEV_EDGE_CACHE_URL = 'https://cdb-edge-cache/cisa-kev-catalog:v1';
+
 async function fetchKEVCatalog(env) {
-  // Try KV cache first
+  // L0: Cloudflare CDN edge cache (FREE — no KV quota, served in <1ms)
+  try {
+    const hit = await caches.default.match(new Request(_KEV_EDGE_CACHE_URL));
+    if (hit) {
+      const d = await hit.json().catch(() => null);
+      if (d && d.fetched_at) return d; // valid edge cache hit
+    }
+  } catch {}
+
+  // L2: KV fallback (only if edge cache miss — happens once per 24h per PoP)
   if (env?.SECURITY_HUB_KV) {
     try {
       const cached = await env.SECURITY_HUB_KV.get(KV_KEV_CACHE_KEY, { type: 'json' });
       if (cached && cached.fetched_at) {
         const age = (Date.now() - new Date(cached.fetched_at).getTime()) / 1000;
-        if (age < KV_KEV_TTL) return cached;
+        if (age < KV_KEV_TTL) {
+          // Warm edge cache from KV hit (fire-and-forget)
+          try {
+            caches.default.put(new Request(_KEV_EDGE_CACHE_URL), new Response(JSON.stringify(cached), {
+              headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${KV_KEV_TTL}, s-maxage=${KV_KEV_TTL}` },
+            })).catch(() => {});
+          } catch {}
+          return cached;
+        }
       }
     } catch {}
   }
 
-  // Fetch from CISA
+  // Fetch from CISA (only on full cache miss — once per 24h globally)
   let kevData = null;
   try {
     const res = await fetch(CISA_KEV_URL, {
@@ -103,7 +125,6 @@ async function fetchKEVCatalog(env) {
     });
     if (res.ok) {
       const raw = await res.json();
-      // Build lookup map: CVE-ID → entry
       const lookup = {};
       (raw.vulnerabilities || []).forEach(v => {
         lookup[v.cveID] = {
@@ -117,15 +138,20 @@ async function fetchKEVCatalog(env) {
         };
       });
       kevData = {
-        total:       raw.vulnerabilities?.length || 0,
+        total:           raw.vulnerabilities?.length || 0,
         catalog_version: raw.catalogVersion || 'unknown',
-        date_released: raw.dateReleased || null,
-        fetched_at:  new Date().toISOString(),
+        date_released:   raw.dateReleased || null,
+        fetched_at:      new Date().toISOString(),
         lookup,
       };
-      // Cache in KV
+      // Populate L0 edge cache (primary) + L2 KV (backup) simultaneously
+      try {
+        caches.default.put(new Request(_KEV_EDGE_CACHE_URL), new Response(JSON.stringify(kevData), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${KV_KEV_TTL}, s-maxage=${KV_KEV_TTL}` },
+        })).catch(() => {});
+      } catch {}
       if (env?.SECURITY_HUB_KV) {
-        await env.SECURITY_HUB_KV.put(KV_KEV_CACHE_KEY, JSON.stringify(kevData), { expirationTtl: KV_KEV_TTL });
+        env.SECURITY_HUB_KV.put(KV_KEV_CACHE_KEY, JSON.stringify(kevData), { expirationTtl: KV_KEV_TTL }).catch(() => {});
       }
     }
   } catch (e) {
