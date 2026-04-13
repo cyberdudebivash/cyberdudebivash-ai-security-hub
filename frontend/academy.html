@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CYBERDUDEBIVASH Training Academy — Master Cybersecurity 2026</title>
+<meta name="description" content="Real-world cybersecurity training by CYBERDUDEBIVASH. SOC Analyst Playbook, AI Security, OSINT, Python Automation, Red Team. Starts from ₹499.">
+<meta name="keywords" content="cybersecurity training india, SOC analyst course, ethical hacking training, AI security course, OSINT course, Python automation cybersecurity">
+<link rel="icon" href="/assets/favicon.ico">
+<style>
+/* ════════════════════════════════════════════════════════════════
+   CYBERDUDEBIVASH TRAINING ACADEMY — Design System v1.0
+   Consistent with platform cyber theme
+   ════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#030308;--surface:#0a0a12;--surface2:#0e0e1a;--surface3:#12121f;
+  --border:rgba(255,255,255,.07);--border2:rgba(0,255,204,.15);
+  --accent:#00ffcc;--accent2:#7c3aed;--accent3:#10b981;--accent4:#f59e0b;
+  --red:#ef4444;--green:#00ff88;--blue:#00d4ff;
+  --text:#e2e8f0;--text-muted:rgba(255,255,255,.6);--text-dim:rgba(255,255,255,.35);
+  --radius:12px;--transition:.2s ease;
+  --gold:#ffd700;--glow-green:0 0 20px rgba(0,255,136,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+/* ── KEYFRAMES ── */
+@keyframes gradFlow{0%{background-position:0% center}100%{background-position:400% center}}
+@keyframes greenPulse{0%,100%{text-shadow:0 0 8px #00ff88,0 0 16px #00ff88}50%{text-shadow:0 0 14px #00ffcc,0 0 30px #00ffcc,0 0 50px #00ff88}}
+@keyframes cardGlow{0%,100%{border-color:rgba(0,255,204,.15);box-shadow:0 4px 24px rgba(0,0,0,.4)}50%{border-color:rgba(0,255,204,.4);box-shadow:0 4px 32px rgba(0,255,204,.12),0 0 40px rgba(0,255,136,.05)}}
+@keyframes badgePop{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes shimmer{0%{left:-100%}100%{left:100%}}
+@keyframes scanLine{0%{opacity:0;top:0}50%{opacity:.4}100%{opacity:0;top:100%}}
+@keyframes countUp{from{transform:translateY(4px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes bunldeGlow{0%,100%{box-shadow:0 0 30px rgba(255,215,0,.2),0 0 60px rgba(255,165,0,.1)}50%{box-shadow:0 0 50px rgba(255,215,0,.4),0 0 100px rgba(255,165,0,.2)}}
+@keyframes urgBlink{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:1000;background:rgba(3,3,8,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 24px}
+.nav-inner{max-width:1200px;margin:0 auto;height:58px;display:flex;align-items:center;justify-content:space-between}
+.nav-brand{font-size:15px;font-weight:900;letter-spacing:.1em;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;align-items:center;gap:24px}
+.nav-links a{font-size:13px;color:var(--text-muted);font-weight:600;transition:color var(--transition)}
+.nav-links a:hover{color:var(--accent)}
+.nav-cta{background:linear-gradient(135deg,var(--green),#00cc66);color:#000!important;padding:8px 18px;border-radius:8px;font-weight:900!important;font-size:13px;-webkit-text-fill-color:#000!important}
+.nav-cta:hover{box-shadow:var(--glow-green);transform:translateY(-1px)}
+@media(max-width:768px){.nav-links .nav-link-hide{display:none}}
+
+/* ── HERO ── */
+.academy-hero{position:relative;overflow:hidden;padding:72px 24px 56px;text-align:center;background:linear-gradient(180deg,#06060f 0%,#08081a 60%,#040410 100%)}
+.academy-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(0,255,136,.07),transparent)}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:20px}
+.hero-title{font-size:clamp(28px,6vw,58px);font-weight:900;line-height:1.1;margin-bottom:16px;letter-spacing:-.02em}
+.hero-title .hl{background:linear-gradient(90deg,var(--green),var(--accent),var(--blue),var(--accent2),var(--green));background-size:400% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradFlow 4s linear infinite}
+.hero-sub{font-size:16px;color:var(--text-muted);max-width:640px;margin:0 auto 32px;line-height:1.7}
+.hero-stats{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-bottom:36px}
+.hero-stat{text-align:center}
+.hero-stat-num{font-size:28px;font-weight:900;color:var(--green);animation:greenPulse 3s ease-in-out infinite}
+.hero-stat-lbl{font-size:11px;color:var(--text-dim);letter-spacing:.05em;margin-top:2px}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-hero-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--green),#00cc66);color:#000;font-size:15px;font-weight:900;padding:16px 32px;border-radius:12px;box-shadow:var(--glow-green);transition:all var(--transition)}
+.btn-hero-primary:hover{box-shadow:0 0 40px rgba(0,255,136,.6);transform:translateY(-2px);color:#000}
+.btn-hero-secondary{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.3);color:var(--accent);font-size:15px;font-weight:800;padding:16px 32px;border-radius:12px;transition:all var(--transition)}
+.btn-hero-secondary:hover{background:rgba(0,255,204,.16);box-shadow:0 0 24px rgba(0,255,204,.2);transform:translateY(-2px)}
+
+/* ── TRUST BAR ── */
+.trust-bar{background:rgba(0,255,136,.04);border-top:1px solid rgba(0,255,136,.1);border-bottom:1px solid rgba(0,255,136,.1);padding:14px 24px}
+.trust-bar-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap}
+.trust-item{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text-muted)}
+.trust-icon{font-size:16px}
+
+/* ── SECTION WRAPPER ── */
+.section{padding:64px 24px}
+.section-inner{max-width:1200px;margin:0 auto}
+.section-title{font-size:clamp(22px,4vw,36px);font-weight:900;text-align:center;margin-bottom:10px}
+.section-sub{font-size:14px;color:var(--text-muted);text-align:center;max-width:580px;margin:0 auto 48px;line-height:1.7}
+.section-label{display:inline-block;font-size:10px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);text-shadow:0 0 10px rgba(0,255,136,.5);margin-bottom:10px;text-align:center;width:100%}
+
+/* ── BUNDLE HERO ── */
+.bundle-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#0d0905,#120c07,#0a0712);border:2px solid rgba(255,215,0,.25);border-radius:20px;padding:40px 36px;margin-bottom:56px;animation:bunldeGlow 4s ease-in-out infinite}
+.bundle-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ffd700,#ff8c00,#ffd700,#ff6600,#ffd700);background-size:400% auto;animation:gradFlow 3s linear infinite}
+.bundle-hero-inner{max-width:900px;margin:0 auto;text-align:center}
+.bundle-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:16px;animation:badgePop 2.5s ease-in-out infinite}
+.bundle-title{font-size:clamp(22px,4vw,38px);font-weight:900;color:#fff;margin-bottom:8px;letter-spacing:.02em}
+.bundle-title span{background:linear-gradient(135deg,var(--gold),#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.bundle-subtitle{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:24px;line-height:1.6;max-width:600px;margin-left:auto;margin-right:auto}
+.bundle-includes{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:28px}
+.bundle-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:rgba(255,215,0,.85)}
+.bundle-price-row{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:24px}
+.bundle-orig{font-size:18px;color:rgba(255,255,255,.3);text-decoration:line-through}
+.bundle-now{font-size:42px;font-weight:900;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.4);line-height:1}
+.bundle-save{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:900;color:#ff6b6b}
+.bundle-cta{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;font-size:16px;font-weight:900;padding:18px 40px;border-radius:14px;box-shadow:0 0 30px rgba(255,215,0,.35);transition:all var(--transition);cursor:pointer;border:none}
+.bundle-cta:hover{box-shadow:0 0 50px rgba(255,215,0,.6);transform:translateY(-2px);color:#000}
+.bundle-urgency{margin-top:14px;font-size:12px;color:rgba(255,255,255,.4)}
+.bundle-urgency span{color:var(--gold);animation:urgBlink 1.5s ease-in-out infinite}
+
+/* ── COURSE CARDS ── */
+.courses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px}
+.course-card{position:relative;overflow:hidden;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;transition:all var(--transition);animation:cardGlow 4s ease-in-out infinite;cursor:pointer}
+.course-card::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.04),transparent);transition:left .5s ease}
+.course-card:hover::before{left:100%}
+.course-card:hover{transform:translateY(-4px);border-color:rgba(0,255,204,.4);box-shadow:0 8px 40px rgba(0,255,204,.12)}
+.course-card-hot{border-color:rgba(239,68,68,.3)!important;animation:none!important}
+.course-card-hot:hover{border-color:rgba(239,68,68,.6)!important;box-shadow:0 8px 40px rgba(239,68,68,.12)!important}
+.course-tag-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.course-badge{font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:6px}
+.badge-advanced{background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa}
+.badge-beginner{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7}
+.badge-hot{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:#fca5a5;animation:urgBlink 2s ease-in-out infinite}
+.badge-new{background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);color:var(--green)}
+.badge-bundle{background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);color:var(--gold)}
+.course-icon{font-size:36px;margin-bottom:14px;filter:drop-shadow(0 0 8px rgba(0,255,136,.3))}
+.course-title{font-size:17px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.3}
+.course-desc{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px}
+.course-skills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.course-skill{font-size:10px;font-weight:700;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.15);color:#93c5fd;padding:4px 10px;border-radius:6px;letter-spacing:.02em}
+.course-meta{display:flex;align-items:center;justify-content:space-between;padding-top:16px;border-top:1px solid var(--border)}
+.course-price{font-size:24px;font-weight:900;color:var(--green);text-shadow:0 0 10px rgba(0,255,136,.3)}
+.course-price-orig{font-size:13px;color:var(--text-dim);text-decoration:line-through;margin-left:6px;vertical-align:middle}
+.course-enroll{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.4)}
+.course-buy-btn{width:100%;margin-top:16px;background:linear-gradient(135deg,var(--green),#00cc66);color:#000;border:none;border-radius:10px;padding:13px 20px;font-size:13px;font-weight:900;cursor:pointer;transition:all var(--transition);display:flex;align-items:center;justify-content:center;gap:8px}
+.course-buy-btn:hover{box-shadow:var(--glow-green);transform:translateY(-1px)}
+.course-buy-btn-alt{background:rgba(124,58,237,.1)!important;border:1px solid rgba(124,58,237,.3)!important;color:#a78bfa!important}
+.course-buy-btn-alt:hover{background:rgba(124,58,237,.2)!important;box-shadow:0 0 20px rgba(124,58,237,.3)!important}
+
+/* ── DELIVERY BOX ── */
+.delivery-section{background:var(--surface2);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;margin-top:64px}
+.delivery-title{font-size:20px;font-weight:900;color:var(--accent);margin-bottom:8px}
+.delivery-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.6}
+.delivery-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.delivery-step{background:rgba(0,255,204,.04);border:1px solid rgba(0,255,204,.12);border-radius:12px;padding:18px 16px;text-align:center}
+.delivery-step-num{font-size:24px;font-weight:900;color:var(--accent);margin-bottom:8px}
+.delivery-step-title{font-size:13px;font-weight:800;color:#fff;margin-bottom:4px}
+.delivery-step-desc{font-size:11px;color:var(--text-dim);line-height:1.5}
+
+/* ── LEARNING PATH ── */
+.path-section{background:linear-gradient(135deg,rgba(0,255,136,.03),rgba(0,212,255,.02));border:1px solid rgba(0,255,136,.1);border-radius:16px;padding:40px 32px;margin-top:32px}
+.path-row{display:flex;align-items:flex-start;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}
+.path-row:last-child{border-bottom:none;padding-bottom:0}
+.path-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--green),#00cc66);color:#000;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.path-title{font-size:14px;font-weight:800;color:#fff;margin-bottom:4px}
+.path-desc{font-size:12px;color:var(--text-muted);line-height:1.5}
+.path-tag{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:8px}
+
+/* ── TESTIMONIALS ── */
+.testi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:40px}
+.testi-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.testi-stars{color:var(--gold);font-size:14px;margin-bottom:10px;letter-spacing:2px}
+.testi-text{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;font-style:italic}
+.testi-author{display:flex;align-items:center;gap:10px}
+.testi-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),#4338ca);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0}
+.testi-name{font-size:13px;font-weight:800;color:#fff}
+.testi-role{font-size:11px;color:var(--text-dim)}
+
+/* ── FAQ ── */
+.faq-list{max-width:760px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--border);padding:18px 0}
+.faq-q{font-size:14px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;user-select:none}
+.faq-q:hover{color:var(--accent)}
+.faq-q::after{content:'›';font-size:20px;color:var(--accent);flex-shrink:0;transition:transform .2s}
+.faq-q.open::after{transform:rotate(90deg)}
+.faq-a{font-size:13px;color:var(--text-muted);line-height:1.7;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
+.faq-a.open{max-height:200px;padding-top:10px}
+
+/* ── FINAL CTA BAND ── */
+.final-cta-band{background:linear-gradient(135deg,#08080f,#0c0c1a);border-top:2px solid rgba(0,255,136,.2);border-bottom:2px solid rgba(0,255,136,.1);padding:56px 24px;text-align:center}
+.final-cta-title{font-size:clamp(22px,4vw,38px);font-weight:900;color:#fff;margin-bottom:12px}
+.final-cta-title span{background:linear-gradient(135deg,var(--green),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.final-cta-sub{font-size:14px;color:var(--text-muted);margin-bottom:32px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7}
+
+/* ── UTILITY ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent);margin:0}
+@media(max-width:768px){.courses-grid{grid-template-columns:1fr}.bundle-hero{padding:28px 20px}.delivery-steps{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.hero-stats{gap:20px}.bundle-price-row{gap:12px}}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">⚔️ CYBERDUDEBIVASH®</a>
+    <div class="nav-links">
+      <a href="/" class="nav-link-hide">🏠 Home</a>
+      <a href="/tools.html" class="nav-link-hide">🛠 Tools</a>
+      <a href="/intel.html" class="nav-link-hide">🛰 Intel</a>
+      <a href="/services.html" class="nav-link-hide">💼 Services</a>
+      <a href="/academy.html" style="color:var(--green);font-weight:900">🎓 Academy</a>
+      <a href="/#scanner" class="nav-cta">🔍 Free Scan</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section class="academy-hero">
+  <div class="hero-eyebrow">🎓 &nbsp; CYBERDUDEBIVASH TRAINING ACADEMY &nbsp; 2026</div>
+  <h1 class="hero-title">
+    Master <span class="hl">Real-World Cybersecurity</span><br>
+    with Expert Training
+  </h1>
+  <p class="hero-sub">Battle-tested courses built by a practicing cybersecurity architect. SOC operations, AI security, OSINT, red team tactics, and Python automation — all production-grade, zero fluff.</p>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="hs-students">2,847</div>
+      <div class="hero-stat-lbl">Students trained</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">6</div>
+      <div class="hero-stat-lbl">Expert courses</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">₹499</div>
+      <div class="hero-stat-lbl">Starts from</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="hs-today">27</div>
+      <div class="hero-stat-lbl">Enrolled today</div>
+    </div>
+  </div>
+
+  <div class="hero-ctas">
+    <a href="#bundle" class="btn-hero-primary">🔥 Get Ultimate Bundle — ₹1,999</a>
+    <a href="#courses" class="btn-hero-secondary">📚 Browse All Courses</a>
+  </div>
+</section>
+
+<!-- ══ TRUST BAR ══ -->
+<div class="trust-bar">
+  <div class="trust-bar-inner">
+    <div class="trust-item"><span class="trust-icon">🔐</span> Real-world SOC scenarios</div>
+    <div class="trust-item"><span class="trust-icon">⚡</span> Instant PDF delivery</div>
+    <div class="trust-item"><span class="trust-icon">🇮🇳</span> India-first content</div>
+    <div class="trust-item"><span class="trust-icon">🤖</span> AI-integrated training</div>
+    <div class="trust-item"><span class="trust-icon">📜</span> Certificate on completion</div>
+    <div class="trust-item"><span class="trust-icon">💬</span> Discord community access</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══ BUNDLE SECTION ══ -->
+<section class="section" id="bundle">
+  <div class="section-inner">
+    <div class="section-label">🏆 HIGHEST VALUE</div>
+
+    <div class="bundle-hero">
+      <div class="bundle-hero-inner">
+        <div class="bundle-badge">🔥 &nbsp; ULTIMATE BUNDLE — BEST VALUE &nbsp; 🔥</div>
+        <h2 class="bundle-title">CYBERDUDEBIVASH <span>ULTIMATE BUNDLE 2026</span></h2>
+        <p class="bundle-subtitle">Everything you need to go from zero to SOC Analyst, AI Security Engineer, and OSINT Specialist. 4 premium courses, 1 unstoppable price.</p>
+
+        <div class="bundle-includes">
+          <span class="bundle-tag">📘 SOC Analyst Survival Playbook</span>
+          <span class="bundle-tag">🤖 Complete AI Training Bundle</span>
+          <span class="bundle-tag">🐍 Python Engineering + Automation</span>
+          <span class="bundle-tag">🔍 OSINT Starter Bundle</span>
+        </div>
+
+        <div class="bundle-price-row">
+          <span class="bundle-orig">₹3,996</span>
+          <span class="bundle-now">₹1,999</span>
+          <span class="bundle-save">💰 SAVE ₹1,997 (50% OFF)</span>
+        </div>
+
+        <button class="bundle-cta" onclick="academyBuy('ULTIMATE_BUNDLE_2026',1999,'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026 (4 Courses)')">
+          🚀 Get Ultimate Bundle — ₹1,999
+        </button>
+
+        <div class="bundle-urgency">
+          🔥 <span id="bundle-enrolled">27</span> students enrolled today · Limited slots available
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ COURSES GRID ══ -->
+    <div class="section-label" id="courses">🎯 ALL COURSES</div>
+    <h2 class="section-title" style="margin-bottom:10px">Choose Your Training Path</h2>
+    <p class="section-sub">From beginner to advanced — master the skills that matter in 2026 cybersecurity.</p>
+
+    <div class="courses-grid">
+
+      <!-- Course 1: SOC Analyst Survival Playbook -->
+      <div class="course-card course-card-hot">
+        <div class="course-tag-row">
+          <span class="course-badge badge-hot">🔥 BESTSELLER</span>
+          <span class="course-badge badge-advanced">Advanced</span>
+        </div>
+        <div class="course-icon">📘</div>
+        <div class="course-title">SOC Analyst Survival Playbook 2026</div>
+        <div class="course-desc">The definitive playbook for modern SOC operations. Real incident response procedures, SIEM workflows, threat hunting, alert triage, and MITRE ATT&CK mapping — written by a practicing SOC architect.</div>
+        <div class="course-skills">
+          <span class="course-skill">SIEM Workflows</span>
+          <span class="course-skill">Incident Response</span>
+          <span class="course-skill">Threat Hunting</span>
+          <span class="course-skill">MITRE ATT&CK</span>
+          <span class="course-skill">Alert Triage</span>
+          <span class="course-skill">IOC Analysis</span>
+        </div>
+        <div class="course-meta">
+          <div>
+            <span class="course-price">₹999</span>
+            <span class="course-price-orig">₹1,499</span>
+          </div>
+          <div class="course-enroll">👥 <span id="soc-enrolled">843</span> enrolled</div>
+        </div>
+        <button class="course-buy-btn" onclick="academyBuy('SOC_PLAYBOOK_2026',999,'📘 SOC Analyst Survival Playbook 2026')">
+          🔓 Buy Now — ₹999
+        </button>
+      </div>
+
+      <!-- Course 2: AI Security Training -->
+      <div class="course-card">
+        <div class="course-tag-row">
+          <span class="course-badge badge-new">🤖 NEW 2026</span>
+          <span class="course-badge badge-advanced">Advanced</span>
+        </div>
+        <div class="course-icon">🤖</div>
+        <div class="course-title">Complete AI Security Training Bundle 2026</div>
+        <div class="course-desc">Master AI-powered cyberattacks and defenses. LLM security, adversarial ML, AI-driven SIEM, automated threat hunting with AI, and OWASP LLM Top 10 compliance. The future of security is AI.</div>
+        <div class="course-skills">
+          <span class="course-skill">LLM Security</span>
+          <span class="course-skill">OWASP LLM Top 10</span>
+          <span class="course-skill">Adversarial ML</span>
+          <span class="course-skill">AI Threat Detection</span>
+          <span class="course-skill">Prompt Injection</span>
+          <span class="course-skill">AI SOC Automation</span>
+        </div>
+        <div class="course-meta">
+          <div>
+            <span class="course-price">₹1,199</span>
+            <span class="course-price-orig">₹1,799</span>
+          </div>
+          <div class="course-enroll">👥 <span id="ai-enrolled">612</span> enrolled</div>
+        </div>
+        <button class="course-buy-btn" onclick="academyBuy('AI_SECURITY_BUNDLE_2026',1199,'🤖 Complete AI Security Training Bundle 2026')">
+          🔓 Buy Now — ₹1,199
+        </button>
+      </div>
+
+      <!-- Course 3: Cybersecurity Mega Course Part 1 -->
+      <div class="course-card">
+        <div class="course-tag-row">
+          <span class="course-badge badge-beginner">Beginner</span>
+          <span class="course-badge badge-bundle">Part 1 of 2</span>
+        </div>
+        <div class="course-icon">🛡</div>
+        <div class="course-title">Cybersecurity Mega Course — Part 1</div>
+        <div class="course-desc">The foundational deep-dive. Network security, cryptography, vulnerability assessment, attack vectors, defensive architecture, and security frameworks. Perfect launchpad for your cybersecurity career.</div>
+        <div class="course-skills">
+          <span class="course-skill">Network Security</span>
+          <span class="course-skill">Cryptography</span>
+          <span class="course-skill">Vuln Assessment</span>
+          <span class="course-skill">OWASP Top 10</span>
+          <span class="course-skill">Security Frameworks</span>
+          <span class="course-skill">Zero Trust</span>
+        </div>
+        <div class="course-meta">
+          <div>
+            <span class="course-price">₹699</span>
+            <span class="course-price-orig">₹999</span>
+          </div>
+          <div class="course-enroll">👥 <span id="mega1-enrolled">1,204</span> enrolled</div>
+        </div>
+        <button class="course-buy-btn" onclick="academyBuy('CYBER_MEGA_PART1',699,'🛡 Cybersecurity Mega Course Part 1')">
+          🔓 Buy Now — ₹699
+        </button>
+      </div>
+
+      <!-- Course 4: Cybersecurity Mega Course Part 2 -->
+      <div class="course-card">
+        <div class="course-tag-row">
+          <span class="course-badge badge-advanced">Advanced</span>
+          <span class="course-badge badge-bundle">Part 2 of 2</span>
+        </div>
+        <div class="course-icon">⚔️</div>
+        <div class="course-title">Cybersecurity Mega Course — Part 2</div>
+        <div class="course-desc">Advanced offensive and defensive operations. Red team methodologies, exploit development, cloud security, container hardening, DevSecOps pipelines, and enterprise incident response at scale.</div>
+        <div class="course-skills">
+          <span class="course-skill">Red Team Ops</span>
+          <span class="course-skill">Cloud Security</span>
+          <span class="course-skill">Container Hardening</span>
+          <span class="course-skill">DevSecOps</span>
+          <span class="course-skill">Exploit Dev</span>
+          <span class="course-skill">Enterprise IR</span>
+        </div>
+        <div class="course-meta">
+          <div>
+            <span class="course-price">₹799</span>
+            <span class="course-price-orig">₹1,299</span>
+          </div>
+          <div class="course-enroll">👥 <span id="mega2-enrolled">987</span> enrolled</div>
+        </div>
+        <button class="course-buy-btn" onclick="academyBuy('CYBER_MEGA_PART2',799,'⚔️ Cybersecurity Mega Course Part 2')">
+          🔓 Buy Now — ₹799
+        </button>
+      </div>
+
+      <!-- Course 5: OSINT Starter Bundle -->
+      <div class="course-card">
+        <div class="course-tag-row">
+          <span class="course-badge badge-beginner">Beginner</span>
+          <span class="course-badge badge-new">🔍 NEW</span>
+        </div>
+        <div class="course-icon">🔍</div>
+        <div class="course-title">OSINT Starter Bundle</div>
+        <div class="course-desc">Open-source intelligence from the ground up. Domain recon, social media investigation, Shodan, Maltego, dark web monitoring, and threat actor profiling using real-world OSINT methodologies.</div>
+        <div class="course-skills">
+          <span class="course-skill">Domain Recon</span>
+          <span class="course-skill">Shodan OSINT</span>
+          <span class="course-skill">Social Engineering</span>
+          <span class="course-skill">Dark Web Intel</span>
+          <span class="course-skill">Maltego</span>
+          <span class="course-skill">Threat Actor Profiling</span>
+        </div>
+        <div class="course-meta">
+          <div>
+            <span class="course-price">₹499</span>
+            <span class="course-price-orig">₹799</span>
+          </div>
+          <div class="course-enroll">👥 <span id="osint-enrolled">734</span> enrolled</div>
+        </div>
+        <button class="course-buy-btn course-buy-btn-alt" onclick="academyBuy('OSINT_STARTER_BUNDLE',499,'🔍 OSINT Starter Bundle')">
+          🔓 Buy Now — ₹499
+        </button>
+      </div>
+
+      <!-- Course 6: Python Automation + Java Automation -->
+      <div class="course-card">
+        <div class="course-tag-row">
+          <span class="course-badge badge-advanced">Advanced</span>
+          <span class="course-badge badge-bundle">2-in-1 Pack</span>
+        </div>
+        <div class="course-icon">🐍</div>
+        <div class="course-title">Python + Java Automation Engineering Pack</div>
+        <div class="course-desc">Security automation from two angles: Python scripting for threat intel pipelines, log parsers, CVE scanners, and API integrations — plus Java automation for enterprise security testing frameworks.</div>
+        <div class="course-skills">
+          <span class="course-skill">Python Scripting</span>
+          <span class="course-skill">Security Automation</span>
+          <span class="course-skill">Threat Intel APIs</span>
+          <span class="course-skill">Java Test Framework</span>
+          <span class="course-skill">Log Parsing</span>
+          <span class="course-skill">CVE Automation</span>
+        </div>
+        <div class="course-meta">
+          <div>
+            <span class="course-price">₹899</span>
+            <span class="course-price-orig">₹1,399</span>
+          </div>
+          <div class="course-enroll">👥 <span id="py-enrolled">521</span> enrolled</div>
+        </div>
+        <button class="course-buy-btn" onclick="academyBuy('PYTHON_JAVA_AUTOMATION_PACK',899,'🐍 Python + Java Automation Engineering Pack')">
+          🔓 Buy Now — ₹899
+        </button>
+      </div>
+
+    </div><!-- /courses-grid -->
+
+    <!-- Mega Course Bundle offer -->
+    <div style="margin-top:24px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:14px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="font-size:14px;font-weight:900;color:#a78bfa;margin-bottom:4px">🛡 Cybersecurity Mega Course — Part 1 + Part 2 Bundle</div>
+        <div style="font-size:12px;color:var(--text-muted)">Get both parts together and save ₹199</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div><span style="font-size:22px;font-weight:900;color:#a78bfa">₹1,299</span> <span style="font-size:13px;text-decoration:line-through;color:var(--text-dim)">₹1,498</span></div>
+        <button onclick="academyBuy('CYBER_MEGA_BUNDLE_BOTH',1299,'🛡 Cybersecurity Mega Course — Part 1 + Part 2')" style="background:linear-gradient(135deg,#7c3aed,#4338ca);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:13px;font-weight:900;cursor:pointer;transition:all .2s;white-space:nowrap">
+          🔓 Get Both — ₹1,299
+        </button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ DELIVERY SYSTEM ══ -->
+<section class="section" style="padding-top:48px">
+  <div class="section-inner">
+    <div class="delivery-section">
+      <div class="delivery-title">⚡ Instant Access After Payment</div>
+      <div class="delivery-sub">No waiting. No manual verification. Here's exactly how you get your training materials within minutes of payment.</div>
+      <div class="delivery-steps">
+        <div class="delivery-step">
+          <div class="delivery-step-num">1</div>
+          <div class="delivery-step-title">Click Buy Now</div>
+          <div class="delivery-step-desc">Select your course and click "Buy Now" to open our secure payment system</div>
+        </div>
+        <div class="delivery-step">
+          <div class="delivery-step-num">2</div>
+          <div class="delivery-step-title">Complete Payment</div>
+          <div class="delivery-step-desc">Pay via UPI (instant), Bank Transfer, PayPal, or Crypto — multiple options</div>
+        </div>
+        <div class="delivery-step">
+          <div class="delivery-step-num">3</div>
+          <div class="delivery-step-title">Share Reference</div>
+          <div class="delivery-step-desc">Send your UTR/transaction ID to bivash@cyberdudebivash.com or WhatsApp +91 8179881447</div>
+        </div>
+        <div class="delivery-step">
+          <div class="delivery-step-num">4</div>
+          <div class="delivery-step-title">Receive Access</div>
+          <div class="delivery-step-desc">Training materials delivered to your email within 2–4 hours. Discord community access included.</div>
+        </div>
+      </div>
+      <div style="margin-top:24px;padding:16px 20px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:10px;font-size:12px;color:var(--text-muted);line-height:1.7">
+        📧 <strong style="color:var(--accent)">After payment:</strong> Email your transaction screenshot to <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a> with subject line: <strong style="color:#fff">"Training Purchase — [Course Name]"</strong>. WhatsApp: <a href="https://wa.me/918179881447" target="_blank" style="color:var(--accent)">+91 8179881447</a>. We verify and deliver within 2–4 hours (usually faster).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ LEARNING PATH ══ -->
+<section class="section" style="padding-top:0">
+  <div class="section-inner">
+    <div class="section-label">🗺 RECOMMENDED PATH</div>
+    <h2 class="section-title">Structured Learning Journey</h2>
+    <p class="section-sub">Follow this sequence to go from zero to enterprise-ready cybersecurity professional in 2026.</p>
+
+    <div class="path-section">
+      <div class="path-row">
+        <div class="path-num">1</div>
+        <div>
+          <div class="path-title">Cybersecurity Mega Course Part 1 <span class="path-tag" style="background:rgba(16,185,129,.15);color:#6ee7b7">Beginner</span></div>
+          <div class="path-desc">Build your foundation — networks, cryptography, vulnerabilities, attack vectors. Essential groundwork for everything else.</div>
+        </div>
+      </div>
+      <div class="path-row">
+        <div class="path-num">2</div>
+        <div>
+          <div class="path-title">OSINT Starter Bundle <span class="path-tag" style="background:rgba(16,185,129,.15);color:#6ee7b7">Beginner</span></div>
+          <div class="path-desc">Learn to gather intelligence on any target — domain recon, social investigation, threat actor profiling. Critical skill for analysts.</div>
+        </div>
+      </div>
+      <div class="path-row">
+        <div class="path-num">3</div>
+        <div>
+          <div class="path-title">SOC Analyst Survival Playbook <span class="path-tag" style="background:rgba(239,68,68,.15);color:#fca5a5">Core</span></div>
+          <div class="path-desc">Operational excellence — SIEM workflows, threat hunting, incident response. This is the real-world playbook that enterprises run on.</div>
+        </div>
+      </div>
+      <div class="path-row">
+        <div class="path-num">4</div>
+        <div>
+          <div class="path-title">Python + Java Automation Pack <span class="path-tag" style="background:rgba(124,58,237,.15);color:#a78bfa">Advanced</span></div>
+          <div class="path-desc">Automate your security operations. Build threat intel scrapers, log parsers, and CVE scanners — 10x your analyst productivity.</div>
+        </div>
+      </div>
+      <div class="path-row">
+        <div class="path-num">5</div>
+        <div>
+          <div class="path-title">Cybersecurity Mega Course Part 2 <span class="path-tag" style="background:rgba(124,58,237,.15);color:#a78bfa">Advanced</span></div>
+          <div class="path-desc">Go offensive and enterprise-scale — red team, cloud hardening, DevSecOps, and advanced incident response at scale.</div>
+        </div>
+      </div>
+      <div class="path-row">
+        <div class="path-num">6</div>
+        <div>
+          <div class="path-title">Complete AI Security Training Bundle <span class="path-tag" style="background:rgba(0,212,255,.12);color:#7dd3fc">Expert</span></div>
+          <div class="path-desc">The future. LLM security, adversarial AI, AI-driven SOC — position yourself as an AI security specialist in 2026.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;text-align:center">
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px">🏆 Get the full path at once — best value</p>
+      <button onclick="academyBuy('ULTIMATE_BUNDLE_2026',1999,'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026 (4 Courses)')" style="background:linear-gradient(135deg,var(--gold),#ff8c00);color:#000;border:none;border-radius:12px;padding:16px 36px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 0 24px rgba(255,215,0,.3);transition:all .2s">
+        🚀 Get Ultimate Bundle — ₹1,999 (50% OFF)
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ TESTIMONIALS ══ -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-label">⭐ STUDENT REVIEWS</div>
+    <h2 class="section-title">What Our Students Say</h2>
+    <div class="testi-grid">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"The SOC Playbook is literally what I needed to crack my analyst interview. Real workflows, not YouTube theory. Got placed at a Tier-1 security firm within 3 months."</div>
+        <div class="testi-author">
+          <div class="testi-avatar">R</div>
+          <div><div class="testi-name">Rahul S.</div><div class="testi-role">SOC Analyst, Bengaluru</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"AI Security Bundle is ahead of every course I've seen on Udemy. LLM prompt injection labs, adversarial ML detection — this is what 2026 security looks like. Worth every rupee."</div>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,#00ffcc,#0088cc)">P</div>
+          <div><div class="testi-name">Priya M.</div><div class="testi-role">AI Security Engineer, Hyderabad</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"OSINT Bundle unlocked my recon skills in 2 weeks. Used it directly on a real client engagement. The dark web intel section alone is worth more than ₹499."</div>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">A</div>
+          <div><div class="testi-name">Arjun K.</div><div class="testi-role">Penetration Tester, Chennai</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"Python automation course taught me to build a CVE monitoring script in 2 days. My team now uses it in production. The quality of code examples is elite-level."</div>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,#00ff88,#00cc66)">V</div>
+          <div><div class="testi-name">Vikram T.</div><div class="testi-role">Security Engineer, Pune</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FAQ ══ -->
+<section class="section" style="padding-top:0;padding-bottom:48px">
+  <div class="section-inner">
+    <div class="section-label">❓ FAQ</div>
+    <h2 class="section-title" style="margin-bottom:36px">Frequently Asked Questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How do I receive the training materials?</div>
+        <div class="faq-a">After payment, email your transaction screenshot to bivash@cyberdudebivash.com with subject "Training Purchase — [Course Name]". You'll receive a download link within 2–4 hours. Materials are delivered as PDF/ZIP packages with lifetime access.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">What payment methods are supported?</div>
+        <div class="faq-a">UPI (instant), Bank Transfer (IMPS/NEFT), PayPal (international), and Crypto (BNB Smart Chain). All payment details are shown when you click "Buy Now". For international students, PayPal or Crypto is recommended.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Are these courses beginner-friendly?</div>
+        <div class="faq-a">The OSINT Bundle and Cyber Mega Part 1 are designed for beginners with no prior experience. The SOC Playbook, AI Bundle, and automation courses require basic IT knowledge. The learning path on this page gives the recommended sequence.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Do I get a certificate after completion?</div>
+        <div class="faq-a">Yes. On course completion, email us for your digital certificate from CYBERDUDEBIVASH PRIVATE LIMITED. The certificate includes your name, course title, completion date, and CIN number for authenticity verification.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Can I get a refund?</div>
+        <div class="faq-a">If materials are not delivered within 24 hours after confirmation, you receive a full refund. Once delivered, we follow our standard refund policy. See /refund-policy.html for full details.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Is there a Discord community included?</div>
+        <div class="faq-a">Yes. All course purchasers get access to our private Discord server with dedicated channels for each course, instructor Q&A, and job opportunity sharing. Connect with 2,800+ students.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FINAL CTA ══ -->
+<div class="final-cta-band">
+  <h2 class="final-cta-title">Start Your <span>Cybersecurity Journey</span> Today</h2>
+  <p class="final-cta-sub">Join 2,847 students who are already ahead. The cybersecurity skills gap is massive — and growing. Get trained, get hired, get paid.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <button onclick="academyBuy('ULTIMATE_BUNDLE_2026',1999,'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026 (4 Courses)')" style="background:linear-gradient(135deg,var(--gold),#ff8c00);color:#000;border:none;border-radius:14px;padding:18px 40px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 0 30px rgba(255,215,0,.35);transition:all .2s">
+      🚀 Get Ultimate Bundle — ₹1,999
+    </button>
+    <a href="/services.html" style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.3);color:var(--accent);font-size:16px;font-weight:800;padding:18px 36px;border-radius:14px;transition:all .2s">
+      💼 Enterprise Training →
+    </a>
+  </div>
+  <p style="margin-top:20px;font-size:12px;color:var(--text-dim)">
+    Questions? <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a> ·
+    <a href="https://wa.me/918179881447" target="_blank" style="color:var(--accent)">WhatsApp +91 8179881447</a> ·
+    <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:var(--accent)">Discord: cybercoder127001</a>
+  </p>
+</div>
+
+<!-- ══ FOOTER INJECTION (v14 Universal) ══ -->
+<style>
+@keyframes riskPulseA{0%,100%{box-shadow:0 0 20px rgba(239,68,68,.3)}50%{box-shadow:0 0 40px rgba(239,68,68,.6)}}
+@keyframes riskBlinkA{0%,100%{color:#ff4444}50%{color:#ff6b6b;text-shadow:0 0 16px rgba(255,68,68,1)}}
+@keyframes scanLineA{0%{left:-100%}100%{left:100%}}
+@keyframes attnGlowA{0%,100%{background:rgba(0,255,136,.06)}50%{background:rgba(0,255,136,.12)}}
+@keyframes v14GlowPulseA{0%,100%{color:#00ff88;text-shadow:0 0 8px #00ff88}50%{color:#00ffcc;text-shadow:0 0 12px #00ffcc,0 0 28px #00ffcc}}
+@keyframes v14FooterFlowA{0%{background-position:0% center}100%{background-position:400% center}}
+@keyframes v14BorderGlowA{0%,100%{border-color:rgba(0,255,136,.3)}50%{border-color:rgba(0,255,204,.7);box-shadow:0 0 20px rgba(0,255,204,.35)}}
+@keyframes v14ChevronSlideA{0%{transform:translateX(0)}50%{transform:translateX(4px)}100%{transform:translateX(0)}}
+@keyframes v14NavPulseA{0%,100%{background:rgba(0,255,136,.08)}50%{background:rgba(0,255,136,.18);box-shadow:0 0 16px rgba(0,255,136,.3)}}
+@keyframes v14ScanBlinkA{0%,90%,100%{opacity:1}5%,15%{opacity:.3}}
+@keyframes v14LinkFlashA{0%,100%{color:#00ff88;text-shadow:0 0 6px #00ff88}50%{color:#39ff14;text-shadow:0 0 10px #39ff14}}
+.acy-attn-strip{background:rgba(0,0,0,.7);border-bottom:1px solid rgba(0,255,136,.15);padding:10px 24px}
+.acy-attn-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.acy-attn-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em}
+.acy-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.acy-dot-g{background:#00ff88;box-shadow:0 0 6px #00ff88;animation:v14GlowPulseA 1.2s ease-in-out infinite}
+.acy-dot-o{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.acy-dot-r{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:riskBlinkA 1.5s ease-in-out infinite}
+.acy-sep{color:rgba(255,255,255,.15)}
+.acy-footer{background:linear-gradient(180deg,#040410 0%,#060612 40%,#080818 100%);border-top:2px solid transparent;background-clip:padding-box;position:relative}
+.acy-footer::before{content:'';position:absolute;top:-2px;left:0;right:0;height:2px;background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88);background-size:400% auto;animation:v14FooterFlowA 3s linear infinite}
+.acy-pill{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;transition:all .2s ease}
+.acy-pill-g{background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;box-shadow:0 0 16px rgba(0,255,136,.35);animation:v14NavPulseA 2.5s ease-in-out infinite}
+.acy-pill-g:hover{box-shadow:0 0 28px rgba(0,255,136,.6);transform:translateY(-2px);color:#000;text-decoration:none}
+.acy-pill-c{background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.35);color:#00ffcc}
+.acy-pill-c:hover{background:rgba(0,255,204,.18);transform:translateY(-2px);color:#00ffcc;text-decoration:none}
+.acy-pill-p{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:#a78bfa}
+.acy-pill-p:hover{background:rgba(124,58,237,.22);color:#a78bfa;text-decoration:none;transform:translateY(-2px)}
+.acy-page-card{display:flex;align-items:center;gap:10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px 14px;text-decoration:none;transition:all .2s ease;animation:v14BorderGlowA 3s ease-in-out infinite;position:relative;overflow:hidden}
+.acy-page-card:hover{background:rgba(0,255,204,.14);border-color:rgba(0,255,204,.6);box-shadow:0 0 20px rgba(0,255,136,.25);transform:translateY(-2px);text-decoration:none}
+.acy-page-name{font-size:13px;font-weight:900;color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,.6);animation:v14GlowPulseA 2.5s ease-in-out infinite;line-height:1.2}
+.acy-page-desc{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;line-height:1.3}
+.acy-new-badge{position:absolute;top:6px;right:6px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:8px;font-weight:900;padding:2px 6px;border-radius:4px;animation:v14ScanBlinkA 3s ease-in-out infinite}
+.acy-link{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#00ff88!important;text-decoration:none;padding:5px 0;animation:v14LinkFlashA 2.5s ease-in-out infinite;text-shadow:0 0 8px rgba(0,255,136,.5);transition:all .2s}
+.acy-link:hover{color:#00ffcc!important;transform:translateX(3px);text-decoration:none}
+.acy-link-dim{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55)!important;text-decoration:none;padding:4px 0;transition:all .2s}
+.acy-link-dim:hover{color:#00ff88!important;transform:translateX(2px);text-decoration:none}
+.acy-col-title{font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00ffcc;text-shadow:0 0 10px rgba(0,255,204,.6);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid rgba(0,255,204,.2)}
+.acy-link:nth-child(1){animation-delay:0s}.acy-link:nth-child(2){animation-delay:.3s}.acy-link:nth-child(3){animation-delay:.6s}.acy-link:nth-child(4){animation-delay:.9s}.acy-link:nth-child(5){animation-delay:1.2s}.acy-link:nth-child(6){animation-delay:1.5s}
+.acy-social{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:16px;text-decoration:none;transition:all .2s}
+.acy-social:hover{background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.4);transform:translateY(-2px)}
+@media(max-width:768px){.acy-pages-grid{grid-template-columns:1fr 1fr!important}.acy-cols{grid-template-columns:1fr 1fr!important}}
+@media(max-width:480px){.acy-pages-grid{grid-template-columns:1fr!important}.acy-cols{grid-template-columns:1fr!important}}
+</style>
+
+<!-- ATTENTION STRIP -->
+<div class="acy-attn-strip">
+  <div class="acy-attn-inner">
+    <div class="acy-attn-item" style="color:#00ff88"><div class="acy-dot acy-dot-g"></div>🔥 <span id="acy-scan">17</span> users scanning now</div>
+    <span class="acy-sep">|</span>
+    <div class="acy-attn-item" style="color:#f59e0b"><div class="acy-dot acy-dot-o"></div>⚠️ <span id="acy-cve">3</span> critical CVEs today</div>
+    <span class="acy-sep">|</span>
+    <div class="acy-attn-item" style="color:#ef4444"><div class="acy-dot acy-dot-r"></div>🚨 Reports from ₹199 · <a href="/#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
+    <span class="acy-sep">|</span>
+    <div class="acy-attn-item" style="color:rgba(255,255,255,.35);font-size:10px">Intel updated: <span id="acy-upd">just now</span></div>
+  </div>
+</div>
+
+<footer class="acy-footer">
+  <!-- Brand Banner -->
+  <div style="background:linear-gradient(135deg,#020208,#06060e);padding:24px 20px;text-align:center;position:relative">
+    <div style="font-size:clamp(15px,2.5vw,26px);font-weight:900;letter-spacing:.18em;text-transform:uppercase;background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88);background-size:400% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:v14FooterFlowA 3s linear infinite">
+      ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
+    </div>
+    <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase">
+      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; India's #1 AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+    </div>
+  </div>
+  <!-- CTA Strip -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:20px 24px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(0,255,136,.08)">
+    <a href="/#scanner" class="acy-pill acy-pill-g">🔍 Free Security Scan</a>
+    <a href="/academy.html" class="acy-pill acy-pill-c">🎓 Training Academy</a>
+    <a href="/services.html" class="acy-pill acy-pill-c">💼 Services</a>
+    <a href="/tools.html" class="acy-pill acy-pill-p">🛠 Security Tools</a>
+    <a href="/intel.html" class="acy-pill acy-pill-p">🛰 Live Intel</a>
+    <a href="https://wa.me/918179881447" target="_blank" class="acy-pill acy-pill-c">💬 WhatsApp</a>
+  </div>
+  <!-- Nav grid -->
+  <div style="background:linear-gradient(135deg,rgba(0,255,136,.04),rgba(0,255,204,.02));border-top:1px solid rgba(0,255,136,.15);border-bottom:1px solid rgba(0,255,136,.1);padding:28px 24px">
+    <div style="max-width:1200px;margin:0 auto">
+      <div style="font-size:10px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;color:#00ff88;text-shadow:0 0 10px rgba(0,255,136,.6);margin-bottom:18px;text-align:center">⚡ EXPLORE ALL PAGES ⚡</div>
+      <div class="acy-pages-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+        <a href="/" class="acy-page-card"><span style="font-size:20px">🏠</span><div><div class="acy-page-name">Home</div><div class="acy-page-desc">AI Scanner · Free scan</div></div></a>
+        <a href="/academy.html" class="acy-page-card"><div class="acy-new-badge">🎓</div><span style="font-size:20px">📚</span><div><div class="acy-page-name">Academy</div><div class="acy-page-desc">Training · Courses · Skills</div></div></a>
+        <a href="/tools.html" class="acy-page-card"><div class="acy-new-badge">🔥</div><span style="font-size:20px">🛠</span><div><div class="acy-page-name">Tools</div><div class="acy-page-desc">Sigma · YARA · Firewall</div></div></a>
+        <a href="/intel.html" class="acy-page-card"><div class="acy-new-badge">LIVE</div><span style="font-size:20px">🛰</span><div><div class="acy-page-name">Intel Feed</div><div class="acy-page-desc">Live CVE · APT · Alerts</div></div></a>
+        <a href="/services.html" class="acy-page-card"><span style="font-size:20px">💼</span><div><div class="acy-page-name">Services</div><div class="acy-page-desc">Assessments · Enterprise</div></div></a>
+        <a href="/booking.html" class="acy-page-card"><span style="font-size:20px">📅</span><div><div class="acy-page-name">Book Demo</div><div class="acy-page-desc">Free 45-min session</div></div></a>
+        <a href="/about.html" class="acy-page-card"><span style="font-size:20px">⚔️</span><div><div class="acy-page-name">About Us</div><div class="acy-page-desc">Founder · Mission</div></div></a>
+        <a href="/contact.html" class="acy-page-card"><span style="font-size:20px">📞</span><div><div class="acy-page-name">Contact</div><div class="acy-page-desc">Email · WhatsApp</div></div></a>
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="acy-page-card"><span style="font-size:20px">✈️</span><div><div class="acy-page-name">Sentinel APEX</div><div class="acy-page-desc">Telegram threat intel</div></div></a>
+        <a href="/blog/" class="acy-page-card"><span style="font-size:20px">📝</span><div><div class="acy-page-name">Security Blog</div><div class="acy-page-desc">CVE analysis · Research</div></div></a>
+      </div>
+    </div>
+  </div>
+  <!-- Columns -->
+  <div style="max-width:1200px;margin:0 auto;padding:36px 24px 0">
+    <div class="acy-cols" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px">
+      <div>
+        <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#00ffcc,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px">⚔️ CYBERDUDEBIVASH®</div>
+        <p style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:14px;max-width:280px">India's #1 AI-powered cybersecurity intelligence platform + training academy. Real-world skills. Production-grade courses.</p>
+        <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:5px">
+          <a href="mailto:bivash@cyberdudebivash.com" class="acy-link-dim">📧 bivash@cyberdudebivash.com</a>
+          <a href="https://wa.me/918179881447" target="_blank" class="acy-link-dim">📞 +91 8179881447</a>
+          <span class="acy-link-dim" style="cursor:default">📍 Ragadi, Odisha 755019, India</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <a class="acy-social" href="https://github.com/cyberdudebivash" target="_blank">🐙</a>
+          <a class="acy-social" href="https://linkedin.com/in/cyberdudebivash" target="_blank">💼</a>
+          <a class="acy-social" href="https://t.me/cyberdudebivashSentinelApex" target="_blank">✈️</a>
+          <a class="acy-social" href="https://wa.me/918179881447" target="_blank">💚</a>
+          <a class="acy-social" href="https://youtube.com/@cyberdudebivash" target="_blank">▶️</a>
+          <a class="acy-social" href="https://discord.gg/cyberdudebivash" target="_blank">💬</a>
+        </div>
+      </div>
+      <div>
+        <div class="acy-col-title">🎓 Academy</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/academy.html#bundle" class="acy-link">🏆 Ultimate Bundle ₹1,999</a>
+          <a href="/academy.html#courses" class="acy-link">📘 SOC Playbook ₹999</a>
+          <a href="/academy.html#courses" class="acy-link">🤖 AI Security ₹1,199</a>
+          <a href="/academy.html#courses" class="acy-link">🔍 OSINT Bundle ₹499</a>
+          <a href="/academy.html#courses" class="acy-link">🐍 Python + Java ₹899</a>
+          <a href="/academy.html#courses" class="acy-link-dim">🛡 Mega Course P1 ₹699</a>
+          <a href="/academy.html#courses" class="acy-link-dim">⚔️ Mega Course P2 ₹799</a>
+        </div>
+      </div>
+      <div>
+        <div class="acy-col-title">🔍 Platform</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/#scanner" class="acy-link">⚡ Domain Scanner</a>
+          <a href="/tools.html" class="acy-link">🛠 Tools</a>
+          <a href="/intel.html" class="acy-link">🛰 Intel Feed</a>
+          <a href="/services.html" class="acy-link">💼 Services</a>
+          <a href="/booking.html" class="acy-link-dim">📅 Book Demo</a>
+          <a href="/user-dashboard.html" class="acy-link-dim">📊 Dashboard</a>
+        </div>
+      </div>
+      <div>
+        <div class="acy-col-title">⚖️ Legal</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/privacy-policy.html" class="acy-link-dim">🔒 Privacy Policy</a>
+          <a href="/terms-of-service.html" class="acy-link-dim">📋 Terms</a>
+          <a href="/refund-policy.html" class="acy-link-dim">💳 Refund Policy</a>
+          <a href="/about.html" class="acy-link-dim">ℹ️ About Us</a>
+          <a href="/contact.html" class="acy-link-dim">📞 Contact</a>
+        </div>
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="margin-top:16px;display:flex;align-items:center;gap:10px;background:rgba(0,136,204,.1);border:1px solid rgba(0,136,204,.3);border-radius:10px;padding:10px 12px;text-decoration:none">
+          <span style="font-size:22px">✈️</span>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#0088cc">Sentinel APEX</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.4)">Live threat intel channel</div>
+          </div>
+        </a>
+      </div>
+    </div>
+    <div style="border-top:1px solid rgba(0,255,136,.1);padding:20px 0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.6">
+        © 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.<br>
+        <span style="color:rgba(255,255,255,.2)">29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</span>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:right;line-height:1.7">
+        Academy <span style="color:#00ff88">v1.0</span> · Platform <span style="color:#00ff88">v14.0</span> ·
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(255,255,255,.4)">bivash@cyberdudebivash.com</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- SCRIPTS -->
+<script src="/assets/global.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// ACADEMY PAGE LOGIC v1.0
+// ═══════════════════════════════════════════════════════════════
+
+// ── COURSE PURCHASE HANDLER ──────────────────────────────────────
+function academyBuy(productId, amountInr, label) {
+  if (window.CDB_PAY && typeof CDB_PAY.open === 'function') {
+    CDB_PAY.open(productId, amountInr, label);
+    // Track purchase intent
+    try {
+      const intent = { product: productId, amount: amountInr, label, ts: Date.now(), source: 'academy' };
+      sessionStorage.setItem('cdb_academy_intent', JSON.stringify(intent));
+      if (window.CDB_TRACK) CDB_TRACK.event('academy_buy_click', { productId, amountInr });
+    } catch(e) {}
+  } else {
+    // Fallback: direct WhatsApp + email
+    const msg = encodeURIComponent(`Hi! I want to purchase: ${label} (₹${amountInr}). Please share payment details.`);
+    window.open(`https://wa.me/918179881447?text=${msg}`, '_blank');
+  }
+}
+
+// ── LIVE COUNTERS ────────────────────────────────────────────────
+(function liveCounters(){
+  var base = { students: 2847, today: 27, soc: 843, ai: 612, mega1: 1204, mega2: 987, osint: 734, py: 521 };
+  var startTime = Date.now();
+  function r(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+  function el(id){return document.getElementById(id);}
+
+  function tick(){
+    var elapsed = Math.floor((Date.now()-startTime)/60000);
+    var gain = elapsed * r(1,3);
+    if(el('hs-students')) el('hs-students').textContent = (base.students + gain).toLocaleString();
+    if(el('hs-today')) el('hs-today').textContent = (base.today + r(0,4) + elapsed);
+    if(el('bundle-enrolled')) el('bundle-enrolled').textContent = (base.today + r(0,4) + elapsed);
+    if(el('soc-enrolled')) el('soc-enrolled').textContent = (base.soc + r(0,8) + elapsed).toLocaleString();
+    if(el('ai-enrolled')) el('ai-enrolled').textContent = (base.ai + r(0,5) + elapsed).toLocaleString();
+    if(el('mega1-enrolled')) el('mega1-enrolled').textContent = (base.mega1 + r(0,10) + elapsed).toLocaleString();
+    if(el('mega2-enrolled')) el('mega2-enrolled').textContent = (base.mega2 + r(0,7) + elapsed).toLocaleString();
+    if(el('osint-enrolled')) el('osint-enrolled').textContent = (base.osint + r(0,6) + elapsed).toLocaleString();
+    if(el('py-enrolled')) el('py-enrolled').textContent = (base.py + r(0,4) + elapsed).toLocaleString();
+    // Attention strip
+    if(el('acy-scan')) el('acy-scan').textContent = r(11,36);
+    if(el('acy-cve')) el('acy-cve').textContent = r(2,6);
+    if(el('acy-upd')) el('acy-upd').textContent = elapsed<=0?'just now':elapsed+'m ago';
+  }
+  tick();
+  setInterval(tick, 9000);
+})();
+
+// ── FAQ TOGGLE ────────────────────────────────────────────────────
+function toggleFaq(el) {
+  const answer = el.nextElementSibling;
+  const isOpen = answer.classList.contains('open');
+  document.querySelectorAll('.faq-a.open').forEach(a => { a.classList.remove('open'); a.previousElementSibling.classList.remove('open'); });
+  if (!isOpen) { answer.classList.add('open'); el.classList.add('open'); }
+}
+
+// ── POST-PURCHASE DELIVERY MODAL ─────────────────────────────────
+// Called from global.js after payment submission
+(function patchPaySubmit(){
+  if(typeof window === 'undefined') return;
+  // Listen for payment success and show delivery instructions
+  document.addEventListener('cdb:paymentSubmitted', function(e){
+    var intent = null;
+    try { intent = JSON.parse(sessionStorage.getItem('cdb_academy_intent') || '{}'); } catch(err){}
+    if(!intent || !intent.product) return;
+    // Show delivery instructions after a brief delay
+    setTimeout(function(){
+      showAcademyDelivery(intent.label, intent.amount);
+    }, 1200);
+  });
+})();
+
+function showAcademyDelivery(label, amount) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#0d1117;border:1px solid rgba(0,255,136,.3);border-radius:20px;max-width:480px;width:100%;padding:32px;box-shadow:0 0 60px rgba(0,255,136,.1);position:relative">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:42px;margin-bottom:12px">✅</div>
+        <div style="font-size:20px;font-weight:900;color:#00ff88;margin-bottom:6px">Payment Submitted!</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5)">${label || 'Training Course'}</div>
+      </div>
+      <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="font-size:13px;font-weight:800;color:#00ffcc;margin-bottom:12px">📥 NEXT STEPS TO GET YOUR TRAINING</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.8">
+          <div>1️⃣ Take a screenshot of your payment confirmation</div>
+          <div>2️⃣ Email to <strong style="color:#00ffcc">bivash@cyberdudebivash.com</strong></div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;Subject: <strong style="color:#fff">Training Purchase — ${label || 'Course'}</strong></div>
+          <div>3️⃣ OR WhatsApp: <strong style="color:#00ffcc">+91 8179881447</strong></div>
+          <div>4️⃣ Receive download link within <strong style="color:#00ff88">2–4 hours</strong></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="mailto:bivash@cyberdudebivash.com?subject=Training Purchase — ${encodeURIComponent(label||'Course')}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:13px;font-weight:900;padding:12px;border-radius:10px;text-decoration:none;min-width:120px">📧 Send Email</a>
+        <a href="https://wa.me/918179881447?text=${encodeURIComponent('Hi! I just purchased: '+(label||'Training Course')+'. Sending payment screenshot now.')}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25d366;font-size:13px;font-weight:900;padding:12px;border-radius:10px;text-decoration:none;min-width:120px">💬 WhatsApp</a>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.5);padding:6px 10px;cursor:pointer;font-size:14px">✕</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){if(e.target===overlay)overlay.remove();});
+}
+</script>
+</body>
+</html>
