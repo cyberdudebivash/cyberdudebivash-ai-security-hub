@@ -264,7 +264,30 @@ import {
   handleRecordEvent as handleConvEvent,
   handleGetTriggers, handleGetPaywall, handleDismissTrigger,
   handleGetFunnel, handleGetCTA, handleRetarget,
+  handleGetBundleOffer, handleGetUrgency,
 } from './handlers/conversionTriggers.js';
+
+// ─── GOD MODE v15: Delivery Engine ───────────────────────────────────────────
+import {
+  handleDeliveryActivate, handleDeliveryAccess,
+  handleMyPurchases, handleResendDelivery,
+  handleVerifyDeliveryToken, handleDeliveryCatalog,
+  handleUserReports,
+} from './handlers/delivery.js';
+
+// ─── GOD MODE v15: MCP Shadow Engine ─────────────────────────────────────────
+import {
+  handleMCPRecommend, handleMCPUpsell,
+  handleMCPTrainingMap, handleMCPHealth,
+} from './services/mcpEngine.js';
+
+// ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
+import {
+  handleGetSeededThreats, handleGetSeededCVEs,
+  handleGetPlatformStats, handleGetSOCMetrics,
+  handleGetSIEMStream, handleGetAPTProfiles,
+  handleGetSeedAll,
+} from './services/seedEngine.js';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
@@ -2540,6 +2563,39 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleGetSalesMetrics(request, env, authCtx), request));
     }
 
+    // ── GOD MODE v15: /api/leads/* alias routes → salesPipeline engine ────────
+    // These provide clean REST aliases for the frontend & external CRM integrations.
+    // POST /api/leads/create — create a new lead (public; no auth required)
+    if (path === '/api/leads/create' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleCreateLead(request, env), request));
+    }
+    // PUT /api/leads/update — update lead stage / fields (admin)
+    if (path === '/api/leads/update' && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const body = await request.json().catch(() => ({}));
+      const leadId = body.id || body.lead_id;
+      if (!leadId) return withSecurityHeaders(withCors(Response.json({ error: 'lead_id required' }, { status: 400 }), request));
+      // Proxy to stage update handler (reuse existing handler pattern)
+      const stageReq = new Request(`${request.url}/api/sales/leads/${leadId}/stage`, {
+        method: 'PUT',
+        headers: request.headers,
+        body: JSON.stringify(body),
+      });
+      return withSecurityHeaders(withCors(await handleAdvanceStage(stageReq, env, authCtx, leadId), request));
+    }
+    // GET /api/pipeline — pipeline board view (alias for /api/sales/pipeline)
+    if (path === '/api/pipeline' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetSalesPipeline(request, env, authCtx), request));
+    }
+    // GET /api/leads — list all leads (alias for GET /api/sales/leads)
+    if (path === '/api/leads' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleListLeads(request, env, authCtx), request));
+    }
+
     // ── PHASE 4: Proposal Generator ──────────────────────────────────────────
     if (path === '/api/proposals/packages' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleGetPackages(request, env), request));
@@ -2624,6 +2680,18 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/conversion/retarget' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleRetarget(request, env, authCtx), request));
+    }
+
+    // GET /api/conversion/bundle — time-limited bundle offer with countdown timer
+    if (path === '/api/conversion/bundle' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetBundleOffer(request, env, authCtx), request));
+    }
+
+    // GET /api/conversion/urgency — personalized urgency signals for frontend CTAs
+    if (path === '/api/conversion/urgency' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetUrgency(request, env, authCtx), request));
     }
 
     if (path === '/api/scan/upsell' && method === 'POST') {
@@ -2829,6 +2897,147 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const subpath = path.replace('/api/predict', '').replace(/^\//, '');
       const res = await handlePredictiveRequest(request, env, authCtx, subpath);
       return withSecurityHeaders(withCors(res, request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v15 — DELIVERY ENGINE  (/api/delivery/*)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/delivery/activate — admin: activate delivery for a verified payment
+    if (path === '/api/delivery/activate' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleDeliveryActivate(request, env, authCtx), request));
+    }
+
+    // GET /api/delivery/access — public: access purchased content via token
+    if (path === '/api/delivery/access' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleDeliveryAccess(request, env), request));
+    }
+
+    // GET /api/delivery/my-purchases — authenticated: list own deliveries
+    if (path === '/api/delivery/my-purchases' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleMyPurchases(request, env, authCtx), request));
+    }
+
+    // POST /api/delivery/resend — admin: resend delivery instructions
+    if (path === '/api/delivery/resend' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleResendDelivery(request, env, authCtx), request));
+    }
+
+    // GET /api/delivery/verify-token — public: validate a delivery token
+    if (path === '/api/delivery/verify-token' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleVerifyDeliveryToken(request, env), request));
+    }
+
+    // GET /api/delivery/catalog — admin: list full delivery catalog
+    if (path === '/api/delivery/catalog' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleDeliveryCatalog(request, env, authCtx), request));
+    }
+
+    // GET /api/user/reports — authenticated: list user's purchased scan reports
+    // Also accepts GET /api/user/trainings and /api/user/tools (convenience aliases)
+    if (path === '/api/user/reports' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleUserReports(request, env, authCtx), request));
+    }
+
+    // GET /api/user/trainings — convenience: my-purchases filtered to trainings/bundles
+    if (path === '/api/user/trainings' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      // Reuse handleMyPurchases — frontend already filters by product_type
+      return withSecurityHeaders(withCors(await handleMyPurchases(request, env, authCtx), request));
+    }
+
+    // GET /api/user/tools — returns tool access based on user plan tier
+    if (path === '/api/user/tools' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const TOOL_ACCESS = {
+        FREE:       ['domain_scanner', 'ai_scan', 'threat_feed', 'basic_reports'],
+        PRO:        ['domain_scanner', 'ai_scan', 'threat_feed', 'basic_reports', 'redteam_scan', 'identity_scan', 'compliance_scan', 'api_keys', 'monitoring', 'full_reports', 'siem_export', 'org_memory'],
+        ENTERPRISE: ['domain_scanner', 'ai_scan', 'threat_feed', 'basic_reports', 'redteam_scan', 'identity_scan', 'compliance_scan', 'api_keys', 'monitoring', 'full_reports', 'siem_export', 'org_memory', 'mssp_panel', 'custom_branding', 'sla_support', 'threat_graph', 'autonomous_soc'],
+      };
+      const tier  = (authCtx.tier || 'FREE').toUpperCase();
+      const tools = TOOL_ACCESS[tier] || TOOL_ACCESS.FREE;
+      return withSecurityHeaders(withCors(Response.json({ tools, tier, total: tools.length }), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v15 — MCP SHADOW ENGINE  (/mcp/*)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /mcp/recommend — AI-powered scan recommendations (MCP → local fallback)
+    if (path === '/mcp/recommend' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPRecommend(request, env, authCtx), request));
+    }
+
+    // POST /mcp/upsell — rule-based upsell evaluation
+    if (path === '/mcp/upsell' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPUpsell(request, env, authCtx), request));
+    }
+
+    // POST /mcp/training-map — map scan findings to training courses
+    if (path === '/mcp/training-map' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPTrainingMap(request, env, authCtx), request));
+    }
+
+    // GET /mcp/health — MCP server health + fallback status
+    if (path === '/mcp/health' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMCPHealth(request, env), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v15 — DATA SEEDING ENGINE  (/api/seed/*)
+    // All endpoints are public — deterministic PRNG, no KV abuse
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/seed/threats — seeded threat event feed (20 events)
+    if (path === '/api/seed/threats' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetSeededThreats(request, env), request));
+    }
+
+    // GET /api/seed/cves — seeded CVE feed (15 real 2025 CVEs)
+    if (path === '/api/seed/cves' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetSeededCVEs(request, env), request));
+    }
+
+    // GET /api/seed/stats — platform stats (scan counts, users, revenue)
+    if (path === '/api/seed/stats' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPlatformStats(request, env), request));
+    }
+
+    // GET /api/seed/soc — SOC metrics (MTTD, MTTR, alerts, incidents)
+    if (path === '/api/seed/soc' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetSOCMetrics(request, env), request));
+    }
+
+    // GET /api/seed/siem — SIEM event stream (30 events)
+    if (path === '/api/seed/siem' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetSIEMStream(request, env), request));
+    }
+
+    // GET /api/seed/apt — APT group profiles (5 detailed)
+    if (path === '/api/seed/apt' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetAPTProfiles(request, env), request));
+    }
+
+    // GET /api/seed/all — single-call anti-empty-state bundle (threats+CVEs+stats+SOC+SIEM+APTs)
+    // Perfect for frontend initial load — one fetch hydrates every dashboard panel
+    if (path === '/api/seed/all' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGetSeedAll(request, env, authCtx), request));
     }
 
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────

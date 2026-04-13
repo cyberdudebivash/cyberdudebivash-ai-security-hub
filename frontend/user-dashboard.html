@@ -678,6 +678,18 @@
       </div>
     </div>
     <div class="sidebar-section">
+      <div class="sidebar-label">My Purchases</div>
+      <div class="nav-item" data-page="trainings" onclick="showPage('trainings',this);loadMyTrainings()">
+        <span class="nav-icon">🎓</span> My Trainings
+      </div>
+      <div class="nav-item" data-page="deliveries" onclick="showPage('deliveries',this);loadMyDeliveries()">
+        <span class="nav-icon">📦</span> My Purchases
+      </div>
+      <div class="nav-item" data-page="mytools" onclick="showPage('mytools',this);loadMyTools()">
+        <span class="nav-icon">🛡️</span> My Tools
+      </div>
+    </div>
+    <div class="sidebar-section">
       <div class="sidebar-label">Developer</div>
       <div class="nav-item" data-page="apikeys" onclick="showPage('apikeys',this)">
         <span class="nav-icon">🔑</span> API Keys
@@ -893,6 +905,148 @@
               </td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MY TRAININGS ══ -->
+    <div id="page-trainings" class="page">
+      <div class="page-title">My Trainings</div>
+      <div class="page-subtitle">Your purchased courses and learning resources from CyberDudeBivash Academy</div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:28px">
+        <div class="stat-card">
+          <div class="stat-label">Courses Owned</div>
+          <div class="stat-value" id="tr-count">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Access</div>
+          <div class="stat-value" id="tr-active">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Invested</div>
+          <div class="stat-value" id="tr-invested">—</div>
+        </div>
+      </div>
+
+      <div id="trainings-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:28px">
+        <div class="card" style="text-align:center;padding:32px;grid-column:1/-1">
+          <span class="spinner"></span>
+          <p style="color:var(--muted);margin-top:12px">Loading your trainings…</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-weight:600">Access Your Training Materials</div>
+            <a href="/academy.html" class="btn btn-primary" style="font-size:.83rem;padding:7px 16px">Browse More Courses →</a>
+          </div>
+          <div class="alert alert-info">
+            After purchase, your training content is delivered via WhatsApp (+91 XXXXX) and email within <strong>2 hours</strong>.
+            Use your unique access token below to verify delivery status.
+          </div>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <input id="tr-token-input" type="text" placeholder="Paste your cdb_dlv_... access token"
+              style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:6px;font-size:.88rem" />
+            <button class="btn btn-primary" onclick="verifyDeliveryToken()" style="white-space:nowrap">Verify Token</button>
+          </div>
+          <div id="tr-token-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MY PURCHASES ══ -->
+    <div id="page-deliveries" class="page">
+      <div class="page-title">My Purchases</div>
+      <div class="page-subtitle">All your paid orders — platform access, reports, training bundles</div>
+
+      <div class="alert alert-info" style="margin-bottom:20px">
+        Purchases are linked to your registered email.
+        If a purchase is missing, <a href="/contact.html">contact support</a> with your payment reference.
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body">
+          <div style="font-weight:600;margin-bottom:12px">Lookup by Payment ID / Email</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input id="dlv-search" type="text" placeholder="Payment ID or email address"
+              style="flex:1;min-width:220px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:6px;font-size:.88rem" />
+            <button class="btn btn-primary" onclick="searchDelivery()">Search</button>
+          </div>
+          <div id="dlv-search-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>Expires</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="deliveries-table">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">
+                <span class="spinner"></span> Loading purchases…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MY TOOLS ══ -->
+    <div id="page-mytools" class="page">
+      <div class="page-title">My Tools</div>
+      <div class="page-subtitle">Security scanning tools and platform features available on your plan</div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:28px">
+        <div class="stat-card">
+          <div class="stat-label">Plan Tier</div>
+          <div class="stat-value" id="mt-tier" style="font-size:1rem">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Scans Today</div>
+          <div class="stat-value" id="mt-scans-today">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly Quota</div>
+          <div class="stat-value" id="mt-quota">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">API Keys</div>
+          <div class="stat-value" id="mt-keys">—</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px" id="tools-grid">
+        <!-- Injected by loadMyTools() -->
+        <div class="card" style="text-align:center;padding:32px;grid-column:1/-1">
+          <span class="spinner"></span>
+          <p style="color:var(--muted);margin-top:12px">Loading tools…</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div style="font-weight:600;margin-bottom:8px">Plan Comparison</div>
+          <div style="color:var(--muted);font-size:.88rem;margin-bottom:16px">
+            Upgrade to unlock more scans, advanced modules, and enterprise features.
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="window.CDB_PAY && CDB_PAY.open('PRO','2999','Pro Plan — Unlimited Scans')">
+              ⚡ Upgrade to Pro — ₹2,999/mo
+            </button>
+            <button class="btn" style="border:1px solid var(--accent2);color:var(--accent2)" onclick="window.CDB_PAY && CDB_PAY.open('ENTERPRISE','9999','Enterprise Plan')">
+              🏢 Enterprise — ₹9,999/mo
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2561,6 +2715,427 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   function copyText(text) {
     navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => {});
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v15 — MY TRAININGS ENGINE
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const TRAINING_CATALOG = {
+    SOC_PLAYBOOK_2026:        { name: 'SOC Analyst Survival Playbook 2026', price: 999,  icon: '🛡️', type: 'training', level: 'Advanced',  topics: ['Threat Hunting','SIEM/SOAR','Incident Response','IOC Analysis'] },
+    AI_SECURITY_BUNDLE_2026:  { name: 'Complete AI Security Bundle 2026',   price: 1199, icon: '🤖', type: 'training', level: 'Expert',    topics: ['LLM Security','Prompt Injection','AI Red Team','Model Poisoning'] },
+    CYBER_MEGA_PART1:         { name: 'Cybersecurity Mega Course Part 1',   price: 699,  icon: '🔐', type: 'training', level: 'Beginner', topics: ['Network Security','Malware Basics','OSCP Prep','Linux Hardening'] },
+    CYBER_MEGA_PART2:         { name: 'Cybersecurity Mega Course Part 2',   price: 799,  icon: '🔴', type: 'training', level: 'Advanced', topics: ['Exploit Dev','Web App Attacks','Active Directory Pwning','C2'] },
+    CYBER_MEGA_BUNDLE_BOTH:   { name: 'Cyber Mega Bundle (Part 1+2)',       price: 1299, icon: '💎', type: 'bundle',   level: 'Full Path', topics: ['All Part 1 Topics','All Part 2 Topics','Bonus OSINT Module'] },
+    OSINT_STARTER_BUNDLE:     { name: 'OSINT Starter Bundle',               price: 499,  icon: '🔭', type: 'training', level: 'Beginner', topics: ['Google Dorking','Maltego','Social OSINT','Dark Web Recon'] },
+    PYTHON_JAVA_AUTOMATION:   { name: 'Python + Java Automation Pack',      price: 899,  icon: '🐍', type: 'training', level: 'Intermediate', topics: ['Security Scripting','Port Scanning','Log Analysis','API Testing'] },
+    ULTIMATE_BUNDLE_2026:     { name: 'Ultimate Bundle 2026 (4 Courses)',   price: 1999, icon: '👑', type: 'bundle',   level: 'All Levels', topics: ['SOC Playbook','AI Security','Mega Course P1+P2','OSINT'] },
+  };
+
+  async function loadMyTrainings() {
+    const token = localStorage.getItem('cdb_token');
+    const email = localStorage.getItem('cdb_email');
+    if (!token && !email) {
+      renderTrainingsEmpty('Sign in to view your training purchases.');
+      return;
+    }
+
+    try {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const url = token
+        ? `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases`
+        : `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
+
+      const res  = await fetch(url, { headers }).catch(() => null);
+      const data = res?.ok ? await res.json().catch(() => null) : null;
+
+      // Filter to training/bundle only
+      const purchases = (data?.deliveries || []).filter(d =>
+        d.product_type === 'training' || d.product_type === 'bundle'
+      );
+
+      // Populate stats
+      const active = purchases.filter(p => p.status === 'activated');
+      const invested = purchases.reduce((s, p) => {
+        const cat = Object.values(TRAINING_CATALOG).find(c => c.name === p.product_name);
+        return s + (cat?.price || 0);
+      }, 0);
+
+      document.getElementById('tr-count').textContent   = purchases.length;
+      document.getElementById('tr-active').textContent  = active.length;
+      document.getElementById('tr-invested').textContent = invested > 0 ? `₹${invested.toLocaleString('en-IN')}` : '₹0';
+
+      if (purchases.length === 0) {
+        renderTrainingsEmpty('No training purchases found. Browse the Academy to get started.');
+        return;
+      }
+
+      renderTrainingCards(purchases);
+    } catch (e) {
+      // Fallback: show all from sessionStorage purchase intent
+      const intent = sessionStorage.getItem('cdb_purchase_intent');
+      if (intent) {
+        try {
+          const parsed = JSON.parse(intent);
+          renderTrainingCards([parsed]);
+        } catch {}
+      } else {
+        renderTrainingsEmpty('Could not load trainings. Please try again.');
+      }
+    }
+  }
+
+  function renderTrainingCards(purchases) {
+    const grid = document.getElementById('trainings-grid');
+    if (!purchases?.length) { renderTrainingsEmpty('No trainings yet.'); return; }
+
+    grid.innerHTML = purchases.map(p => {
+      const cat   = Object.values(TRAINING_CATALOG).find(c => c.name === p.product_name)
+                    || { icon: '📚', level: 'Course', topics: [] };
+      const exp   = p.expires_at ? new Date(p.expires_at) : null;
+      const isExp = exp && exp < new Date();
+      const badge = isExp
+        ? `<span style="background:rgba(239,68,68,.15);color:#ef4444;padding:3px 8px;border-radius:4px;font-size:.72rem">EXPIRED</span>`
+        : `<span style="background:rgba(16,185,129,.15);color:#10b981;padding:3px 8px;border-radius:4px;font-size:.72rem">ACTIVE</span>`;
+
+      const topics = (cat.topics || []).slice(0, 3).map(t =>
+        `<span style="background:var(--bg3);border:1px solid var(--border);padding:2px 8px;border-radius:4px;font-size:.72rem;color:var(--muted)">${t}</span>`
+      ).join(' ');
+
+      return `
+        <div class="card" style="border-left:3px solid var(--accent2);position:relative">
+          <div class="card-body">
+            <div style="font-size:2rem;margin-bottom:8px">${cat.icon}</div>
+            <div style="font-weight:700;margin-bottom:4px;font-size:.95rem">${p.product_name}</div>
+            <div style="margin-bottom:10px">${badge}
+              <span style="color:var(--muted);font-size:.75rem;margin-left:8px">${cat.level}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">${topics}</div>
+            ${p.access_details?.whatsapp_number
+              ? `<a href="https://wa.me/${p.access_details.whatsapp_number}?text=Hi%2C%20I%20need%20my%20training%20delivery%20for%20${encodeURIComponent(p.product_name)}"
+                   target="_blank" class="btn btn-primary" style="font-size:.8rem;padding:7px 14px;display:inline-block">
+                   💬 Get on WhatsApp
+                 </a>`
+              : `<a href="https://wa.me/919999999999?text=Hi%2C%20I%20purchased%20${encodeURIComponent(p.product_name)}"
+                   target="_blank" class="btn btn-primary" style="font-size:.8rem;padding:7px 14px;display:inline-block">
+                   💬 Get on WhatsApp
+                 </a>`
+            }
+            <div style="color:var(--muted);font-size:.73rem;margin-top:10px">
+              Activated: ${fmtDate(p.activated_at)}
+              ${exp ? ` · Expires: ${fmtDate(p.expires_at)}` : ' · Lifetime Access'}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderTrainingsEmpty(msg) {
+    document.getElementById('tr-count').textContent  = '0';
+    document.getElementById('tr-active').textContent = '0';
+    document.getElementById('tr-invested').textContent = '₹0';
+    document.getElementById('trainings-grid').innerHTML = `
+      <div class="card" style="text-align:center;padding:40px;grid-column:1/-1">
+        <div style="font-size:3rem;margin-bottom:12px">🎓</div>
+        <div style="color:var(--muted);margin-bottom:20px">${msg}</div>
+        <a href="/academy.html" class="btn btn-primary">Browse Academy →</a>
+      </div>`;
+  }
+
+  async function verifyDeliveryToken() {
+    const token = document.getElementById('tr-token-input').value.trim();
+    const resultEl = document.getElementById('tr-token-result');
+    if (!token || !token.startsWith('cdb_dlv_')) {
+      resultEl.innerHTML = `<div class="alert alert-warn">Token must start with <code>cdb_dlv_</code></div>`;
+      return;
+    }
+    resultEl.innerHTML = `<div style="color:var(--muted)"><span class="spinner"></span> Verifying…</div>`;
+    try {
+      const res  = await fetch(`${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/access?token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (res.ok) {
+        resultEl.innerHTML = `
+          <div class="alert alert-info" style="border-color:var(--accent3)">
+            <strong>✅ Valid Token</strong><br>
+            <b>Product:</b> ${data.product_name}<br>
+            <b>Status:</b> ${data.status}<br>
+            <b>Expires:</b> ${fmtDate(data.expires_at)}<br>
+            ${data.access_details?.discord_invite ? `<b>Discord:</b> <a href="${data.access_details.discord_invite}" target="_blank">Join Community</a><br>` : ''}
+          </div>`;
+      } else {
+        resultEl.innerHTML = `<div class="alert alert-warn">❌ ${data.error || 'Token not found or expired.'}</div>`;
+      }
+    } catch {
+      resultEl.innerHTML = `<div class="alert alert-warn">Could not verify token. Check your connection.</div>`;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v15 — MY PURCHASES (DELIVERY) ENGINE
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  async function loadMyDeliveries() {
+    const token = localStorage.getItem('cdb_token');
+    const email = localStorage.getItem('cdb_email');
+    const tbody = document.getElementById('deliveries-table');
+
+    if (!token && !email) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sign in to view your purchases.</td></tr>`;
+      return;
+    }
+
+    try {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const url = token
+        ? `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases`
+        : `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
+
+      const res  = await fetch(url, { headers }).catch(() => null);
+      const data = res?.ok ? await res.json().catch(() => null) : null;
+      const deliveries = data?.deliveries || [];
+
+      if (!deliveries.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No purchases found for this account.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = deliveries.map(d => {
+        const exp    = d.expires_at ? new Date(d.expires_at) : null;
+        const isExp  = exp && exp < new Date();
+        const badge  = isExp
+          ? `<span style="color:#ef4444;font-size:.78rem">Expired</span>`
+          : `<span style="color:#10b981;font-size:.78rem">Active</span>`;
+        const typeColor = { training:'#7c3aed', bundle:'#f59e0b', platform_access:'#00d4ff', report_access:'#10b981' };
+        const typeBg    = typeColor[d.product_type] || 'var(--muted)';
+
+        return `<tr>
+          <td><b style="font-size:.88rem">${d.product_name}</b></td>
+          <td><span style="color:${typeBg};font-size:.78rem;text-transform:uppercase">${d.product_type?.replace('_',' ')}</span></td>
+          <td style="font-size:.82rem;color:var(--muted)">${fmtDate(d.activated_at)}</td>
+          <td style="font-size:.82rem;color:var(--muted)">${exp ? fmtDate(d.expires_at) : 'Lifetime'}</td>
+          <td>${badge}</td>
+          <td>
+            ${d.status === 'activated' && !isExp
+              ? `<button class="btn btn-primary" style="font-size:.75rem;padding:4px 10px"
+                   onclick="accessDelivery('${d.delivery_id}')">Access</button>`
+              : `<button class="btn" style="font-size:.75rem;padding:4px 10px;opacity:.5" disabled>Expired</button>`
+            }
+          </td>
+        </tr>`;
+      }).join('');
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Failed to load. Please try again.</td></tr>`;
+    }
+  }
+
+  async function searchDelivery() {
+    const query  = document.getElementById('dlv-search').value.trim();
+    const result = document.getElementById('dlv-search-result');
+    if (!query) return;
+
+    result.innerHTML = `<div style="color:var(--muted)"><span class="spinner"></span> Searching…</div>`;
+    try {
+      const res  = await fetch(
+        `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/resend`,
+        { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ payer_email: query, payment_id: query }) }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        result.innerHTML = `<div class="alert alert-info" style="border-color:var(--accent3)">
+          ✅ Found <b>${data.product_name}</b> — Access instructions resent to <b>${data.payer_email}</b> via WhatsApp/Email.
+        </div>`;
+      } else {
+        result.innerHTML = `<div class="alert alert-warn">❌ ${data.error || 'No purchase found for that query.'}</div>`;
+      }
+    } catch {
+      result.innerHTML = `<div class="alert alert-warn">Search failed. Check your connection.</div>`;
+    }
+  }
+
+  function accessDelivery(deliveryId) {
+    showToast('Opening access details…');
+    window.open(`${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/access?delivery_id=${deliveryId}`, '_blank');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v15 — MY TOOLS ENGINE
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const TOOL_CATALOG = [
+    { id: 'domain',     name: 'Domain Security Scanner',   icon: '🌐', desc: 'TLS, DNS, WHOIS, Security Headers deep scan', tiers: ['FREE','STARTER','PRO','ENTERPRISE'], path: '/#domain' },
+    { id: 'ai',         name: 'AI Threat Analyzer',        icon: '🤖', desc: 'AI-powered threat surface analysis', tiers: ['STARTER','PRO','ENTERPRISE'], path: '/#ai' },
+    { id: 'redteam',    name: 'Red Team Simulator',        icon: '🔴', desc: 'ATT&CK-based attack path simulation', tiers: ['PRO','ENTERPRISE'], path: '/#redteam' },
+    { id: 'identity',   name: 'Identity Risk Scanner',     icon: '👤', desc: 'Credential exposure & breach detection', tiers: ['STARTER','PRO','ENTERPRISE'], path: '/#identity' },
+    { id: 'compliance', name: 'Compliance Auditor',        icon: '📋', desc: 'PCI DSS, HIPAA, SOC2, ISO 27001 check', tiers: ['PRO','ENTERPRISE'], path: '/#compliance' },
+    { id: 'darkscan',   name: 'Dark Web Intelligence',     icon: '🕵️', desc: 'Dark web exposure and leak monitoring', tiers: ['ENTERPRISE'], path: '/#darkscan' },
+    { id: 'cloudsec',   name: 'Cloud Security Auditor',    icon: '☁️', desc: 'AWS/GCP/Azure misconfiguration scanner', tiers: ['PRO','ENTERPRISE'], path: '/#cloudsec' },
+    { id: 'appsec',     name: 'Application Security',      icon: '🔒', desc: 'OWASP Top 10 vulnerability scanner', tiers: ['PRO','ENTERPRISE'], path: '/#appsec' },
+  ];
+
+  const PLAN_QUOTA = {
+    FREE:       { monthly: 5,    daily: 2,   keys: 1,  api: false },
+    STARTER:    { monthly: 50,   daily: 10,  keys: 3,  api: true  },
+    PRO:        { monthly: 500,  daily: 50,  keys: 10, api: true  },
+    ENTERPRISE: { monthly: 9999, daily: 999, keys: 50, api: true  },
+  };
+
+  async function loadMyTools() {
+    const token = localStorage.getItem('cdb_token');
+    const tier  = localStorage.getItem('cdb_tier') || 'FREE';
+
+    // Stat bar
+    const quota = PLAN_QUOTA[tier] || PLAN_QUOTA.FREE;
+    document.getElementById('mt-tier').textContent        = tier;
+    document.getElementById('mt-quota').textContent       = `${quota.monthly}/mo`;
+
+    // Try to get real usage counts
+    try {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res  = await fetch(`${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/usage`, { headers }).catch(() => null);
+      const data = res?.ok ? await res.json().catch(() => null) : null;
+      if (data) {
+        document.getElementById('mt-scans-today').textContent = data.scans_today ?? '—';
+        document.getElementById('mt-keys').textContent        = data.api_keys ?? '—';
+      } else {
+        document.getElementById('mt-scans-today').textContent = '—';
+        document.getElementById('mt-keys').textContent        = '—';
+      }
+    } catch {
+      document.getElementById('mt-scans-today').textContent = '—';
+      document.getElementById('mt-keys').textContent        = '—';
+    }
+
+    // Render tool cards
+    const grid = document.getElementById('tools-grid');
+    grid.innerHTML = TOOL_CATALOG.map(tool => {
+      const hasAccess = tool.tiers.includes(tier);
+      const lockedMsg = tool.tiers[0] === 'ENTERPRISE' ? 'Enterprise'
+        : tool.tiers[0] === 'PRO' ? 'Pro+'
+        : tool.tiers[0] === 'STARTER' ? 'Starter+' : 'Free';
+
+      return `
+        <div class="card" style="border-left:3px solid ${hasAccess ? 'var(--accent3)' : 'var(--border)'};opacity:${hasAccess ? 1 : 0.6}">
+          <div class="card-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-size:1.8rem">${tool.icon}</div>
+              ${hasAccess
+                ? `<span style="background:rgba(16,185,129,.15);color:#10b981;padding:2px 8px;border-radius:4px;font-size:.72rem">UNLOCKED</span>`
+                : `<span style="background:rgba(100,116,139,.15);color:var(--muted);padding:2px 8px;border-radius:4px;font-size:.72rem">🔒 ${lockedMsg}</span>`
+              }
+            </div>
+            <div style="font-weight:700;margin-bottom:4px">${tool.name}</div>
+            <div style="color:var(--muted);font-size:.83rem;margin-bottom:14px">${tool.desc}</div>
+            ${hasAccess
+              ? `<a href="${tool.path}" class="btn btn-primary" style="font-size:.8rem;padding:7px 14px">Launch Tool →</a>`
+              : `<button class="btn btn-primary" style="font-size:.8rem;padding:7px 14px"
+                   onclick="window.CDB_PAY && CDB_PAY.open('PRO','2999','Pro Plan — Unlock All Tools')">
+                   Upgrade to Unlock
+                 </button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v15 — MY REPORTS ENGINE
+  // Loads user's paid scan reports from /api/user/reports (filter: report_access)
+  // Falls back gracefully to /api/delivery/my-purchases if needed.
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  async function loadUserReports() {
+    const token = localStorage.getItem('cdb_token');
+    const email = localStorage.getItem('cdb_email');
+    const tbody = document.getElementById('reports-table');
+    if (!tbody) return;
+
+    if (!token && !email) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+        Sign in to view your purchased reports.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+      <span class="spinner"></span> Loading reports…</td></tr>`;
+
+    try {
+      const base = window.API_BASE || 'https://api.cyberdudebivash.in';
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      // Primary: dedicated reports endpoint
+      let reports = [];
+      const res = await fetch(`${base}/api/user/reports`, { headers }).catch(() => null);
+      if (res?.ok) {
+        const d = await res.json().catch(() => null);
+        reports = d?.reports || d?.deliveries || [];
+      }
+
+      // Fallback: filter my-purchases for report_access type
+      if (!reports.length) {
+        const url2 = token
+          ? `${base}/api/delivery/my-purchases`
+          : `${base}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
+        const res2 = await fetch(url2, { headers }).catch(() => null);
+        if (res2?.ok) {
+          const d2 = await res2.json().catch(() => null);
+          const all = d2?.deliveries || d2?.purchases || [];
+          reports = all.filter(r => r.product_type === 'report_access' || r.product_type === 'report');
+        }
+      }
+
+      if (!reports.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px">
+          <div style="color:var(--muted);font-size:.9rem;margin-bottom:12px">No paid reports found yet.</div>
+          <a href="/#scanner" style="color:var(--accent);text-decoration:none;font-size:.85rem">
+            → Run a Domain or AI Security Scan to generate your first report</a>
+        </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = reports.map(r => {
+        const now     = Date.now();
+        const expMs   = r.expires_at ? new Date(r.expires_at).getTime() : null;
+        const isExp   = expMs && expMs < now;
+        const expLabel = expMs
+          ? (isExp ? `<span style="color:#ef4444">Expired</span>` : `<span style="color:#10b981">${fmtDate(r.expires_at)}</span>`)
+          : `<span style="color:var(--muted)">—</span>`;
+        const modLabel = (r.product_id || r.module || r.product_name || '').replace(/_/g,' ');
+        const target   = r.target || r.scan_target || r.domain || '—';
+        const price    = r.amount_paid ? `₹${Number(r.amount_paid).toLocaleString('en-IN')}` : (r.price_paid || '—');
+
+        const dlBtn = isExp
+          ? `<span style="color:#ef4444;font-size:.78rem">Expired</span>`
+          : r.delivery_id
+            ? `<button class="btn btn-primary" style="font-size:.75rem;padding:4px 12px"
+                onclick="accessDelivery('${r.delivery_id}')">Download</button>`
+            : r.download_url
+              ? `<a href="${r.download_url}" target="_blank" class="btn btn-primary" style="font-size:.75rem;padding:4px 12px">Download</a>`
+              : `<span style="color:var(--muted);font-size:.78rem">Processing</span>`;
+
+        return `<tr>
+          <td style="font-size:.83rem;text-transform:capitalize">${modLabel || 'Report'}</td>
+          <td style="font-size:.82rem;color:var(--muted);font-family:monospace">${target}</td>
+          <td style="font-size:.82rem;color:#10b981">${price}</td>
+          <td style="font-size:.82rem">${expLabel}</td>
+          <td>${dlBtn}</td>
+        </tr>`;
+      }).join('');
+
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+        Could not load reports. Please refresh or contact support.</td></tr>`;
+    }
+  }
+
+  // ── Wire reports tab: load on navigation ──────────────────────────────────────
+  (function wireReportsTab() {
+    // Find all nav items / sidebar links that show the reports page
+    document.querySelectorAll('[data-page="reports"], [onclick*="reports"]').forEach(el => {
+      el.addEventListener('click', () => setTimeout(loadUserReports, 100));
+    });
+    // Also fire immediately if reports page is the active page on load
+    const active = document.querySelector('.page.active');
+    if (active?.id === 'page-reports') loadUserReports();
+  })();
 
   // ── Bootstrap ────────────────────────────────────────────────────────────────
   initDashboard();

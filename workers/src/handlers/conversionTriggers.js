@@ -119,6 +119,63 @@ const TRIGGERS = {
     icon:        '✨',
     fire_after:  { metric: 'days_inactive', threshold: 7 },
   },
+
+  // ── GOD MODE v15: New high-conversion triggers ────────────────────────────
+
+  BUNDLE_OFFER: {
+    id:          'BUNDLE_OFFER',
+    title:       '🎁 Bundle & Save 60%',
+    description: 'Get all 4 training courses + SOC Playbook for ₹1,999 instead of ₹4,895. Limited spots.',
+    cta:         'Claim Bundle — ₹1,999',
+    upgrade_url: '/academy.html#bundle',
+    plan_target: 'BUNDLE',
+    urgency:     'HIGH',
+    icon:        '💎',
+    fire_after:  { metric: 'trainings_viewed', threshold: 2 },
+    // Time-limited: show for 72 hours per session (regenerate countdown each time)
+    time_limited:   true,
+    expiry_hours:   72,
+    discount_pct:   60,
+  },
+
+  EXIT_INTENT: {
+    id:          'EXIT_INTENT',
+    title:       '⚡ Wait — Complete Your Security Scan',
+    description: 'You haven\'t downloaded your full security report yet. Get it now with a 7-day money-back guarantee.',
+    cta:         'Get Full Report — ₹199',
+    upgrade_url: '/#pricing',
+    plan_target: 'REPORT',
+    urgency:     'CRITICAL',
+    icon:        '⚡',
+    fire_after:  { metric: 'exit_intent_detected', threshold: 1 },
+    show_countdown_minutes: 10,
+  },
+
+  FIRST_CRITICAL_SCAN: {
+    id:          'FIRST_CRITICAL_SCAN',
+    title:       '🚨 Critical Vulnerabilities Found — Act Now',
+    description: 'Your scan found CRITICAL-severity vulnerabilities. Upgrade to unlock full remediation playbook + auto-fix recommendations.',
+    cta:         'Unlock Full Report — ₹199',
+    upgrade_url: '/#pricing',
+    plan_target: 'DOMAIN_REPORT',
+    urgency:     'CRITICAL',
+    icon:        '🚨',
+    fire_after:  { metric: 'first_critical_finding', threshold: 1 },
+    show_countdown_minutes: 30,
+    highlight_color: '#ef4444',
+  },
+
+  REFERRAL_HOOK: {
+    id:          'REFERRAL_HOOK',
+    title:       '💰 Earn ₹250 Per Referral',
+    description: 'Share your referral link and earn 10% recurring commission on every upgrade your contacts make.',
+    cta:         'Join Affiliate Program',
+    upgrade_url: '/affiliate.html',
+    plan_target: null,
+    urgency:     'LOW',
+    icon:        '💰',
+    fire_after:  { metric: 'paid_scans', threshold: 1 },
+  },
 };
 
 // ── Paywall configurations ────────────────────────────────────────────────────
@@ -371,5 +428,124 @@ export async function handleRetarget(request, env, authCtx = {}) {
     campaign,
     message: `Re-engagement campaign ${campaign_id} queued for ${queued} users. Email delivery via configured provider.`,
     estimated_send_time: new Date(Date.now() + 300000).toISOString(),
+  });
+}
+
+// ── GET /api/conversion/bundle ─────────────────────────────────────────────────
+// Returns the current active bundle offer with time-limited countdown.
+// Bundle offer rotates every 72 hours, seeded by date so it's consistent
+// within the same day (no flicker on refresh).
+export async function handleGetBundleOffer(request, env, authCtx = {}) {
+  const now        = Date.now();
+  const sessionKey = `conv:bundle:${authCtx.userId || 'anon'}`;
+
+  let firstSeen = now;
+  if (env?.SECURITY_HUB_KV && authCtx.userId) {
+    try {
+      const stored = await env.SECURITY_HUB_KV.get(sessionKey);
+      if (stored) {
+        firstSeen = parseInt(stored, 10);
+      } else {
+        env.SECURITY_HUB_KV.put(sessionKey, String(now), { expirationTtl: 86400 * 7 }).catch(() => {});
+      }
+    } catch { /* ignore */ }
+  }
+
+  const expiresAt  = firstSeen + (72 * 3600 * 1000); // 72h from first view
+  const msLeft     = Math.max(0, expiresAt - now);
+  const hoursLeft  = Math.floor(msLeft / 3600000);
+  const minsLeft   = Math.floor((msLeft % 3600000) / 60000);
+  const isExpired  = msLeft === 0;
+
+  const BUNDLE_PRODUCTS = [
+    { id: 'ULTIMATE_BUNDLE_2026', name: 'Ultimate Bundle 2026 (4 Courses)',   price: 1999, original_price: 4895, savings: 2896 },
+    { id: 'CYBER_MEGA_BUNDLE_BOTH', name: 'Cyber Mega Bundle (Part 1 + Part 2)', price: 1299, original_price: 1498, savings: 199 },
+  ];
+
+  return ok(request, {
+    active:         !isExpired,
+    offer:          TRIGGERS.BUNDLE_OFFER,
+    products:       BUNDLE_PRODUCTS,
+    countdown: {
+      expires_at:   new Date(expiresAt).toISOString(),
+      hours_left:   hoursLeft,
+      minutes_left: minsLeft,
+      ms_left:      msLeft,
+      label:        isExpired ? 'Offer expired' : `Expires in ${hoursLeft}h ${minsLeft}m`,
+    },
+    social_proof: {
+      units_sold_today: 12 + Math.floor(now / 3600000) % 8,  // deterministic 12-20
+      viewers_now:      3  + Math.floor(now / 60000)  % 5,   // deterministic 3-7
+    },
+    cta_primary:   `CDB_PAY.open('ULTIMATE_BUNDLE_2026',1999,'Ultimate Bundle 2026')`,
+    cta_secondary: `CDB_PAY.open('CYBER_MEGA_BUNDLE_BOTH',1299,'Cyber Mega Bundle')`,
+  });
+}
+
+// ── GET /api/conversion/urgency ────────────────────────────────────────────────
+// Returns contextual urgency state: which triggers are active, countdown timers,
+// and personalized upgrade recommendation. Frontend uses this to show/hide CTAs.
+export async function handleGetUrgency(request, env, authCtx = {}) {
+  const url  = new URL(request.url);
+  const ctx  = url.searchParams.get('context') || 'dashboard';
+  const tier = (authCtx.tier || 'FREE').toUpperCase();
+
+  const now    = Date.now();
+  const dayMs  = 86400000;
+  const dayKey = new Date().toISOString().slice(0, 10);
+
+  // ── Compute active urgency signals ────────────────────────────────────────
+  const signals = [];
+
+  // Signal 1: Limited-time pricing (changes weekly — Monday midnight reset)
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekExpiresMs = weekStart.getTime() + 7 * dayMs;
+  const weekHrsLeft   = Math.floor((weekExpiresMs - now) / 3600000);
+  if (tier === 'FREE') {
+    signals.push({
+      type:    'limited_pricing',
+      label:   `This week's price: ₹499/mo (regular ₹999/mo)`,
+      hours_left: weekHrsLeft,
+      urgency: weekHrsLeft < 24 ? 'CRITICAL' : weekHrsLeft < 72 ? 'HIGH' : 'MEDIUM',
+    });
+  }
+
+  // Signal 2: Scan count urgency (only if we have usage data)
+  if (tier === 'FREE') {
+    signals.push({
+      type:    'scan_limit',
+      label:   'Free plan: 3 scans/day. Upgrade for unlimited.',
+      urgency: 'MEDIUM',
+    });
+  }
+
+  // Signal 3: Feature urgency based on context
+  const CONTEXT_URGENCY = {
+    'siem':       { label: 'SIEM integration requires PRO. Upgrade to connect Splunk/Elastic.', urgency: 'HIGH' },
+    'redteam':    { label: 'Red Team scans use AI attack simulation. PRO unlocks full attack chains.', urgency: 'HIGH' },
+    'auto-soc':   { label: 'Autonomous SOC Mode is paused on FREE plan. PRO enables 24/7 automated detection.', urgency: 'CRITICAL' },
+    'executive':  { label: 'CISO reports require PRO+. One click to generate board-ready PDF.', urgency: 'HIGH' },
+    'api':        { label: 'API keys require Starter plan or higher.', urgency: 'MEDIUM' },
+    'dashboard':  { label: 'Unlock full threat intelligence dashboard.', urgency: 'LOW' },
+  };
+  const ctxUrgency = CONTEXT_URGENCY[ctx] || CONTEXT_URGENCY.dashboard;
+  if (tier === 'FREE' || tier === 'STARTER') {
+    signals.push({ type: 'feature_gate', ...ctxUrgency });
+  }
+
+  // ── Recommended upgrade + pricing ─────────────────────────────────────────
+  const PLAN_NEXT = { FREE: { plan: 'STARTER', price_inr: 499, usd: 7 }, STARTER: { plan: 'PRO', price_inr: 1499, usd: 19 }, PRO: { plan: 'ENTERPRISE', price_inr: 4999, usd: 65 }, ENTERPRISE: null };
+  const next = PLAN_NEXT[tier] || null;
+
+  return ok(request, {
+    current_tier:    tier,
+    next_plan:       next,
+    signals:         signals.sort((a, b) => ({ CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }[b.urgency] - ({ CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }[a.urgency] || 0))),
+    show_upgrade_cta: tier !== 'ENTERPRISE',
+    bundle_available: true,
+    bundle_url:       '/api/conversion/bundle',
+    day_key:          dayKey,
   });
 }
