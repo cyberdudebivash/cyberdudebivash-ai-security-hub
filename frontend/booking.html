@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Book a free 45-minute AI security strategy session with CYBERDUDEBIVASH. Get live threat analysis and custom ROI insights.">
+    <meta name="robots" content="index, follow">
+    <title>Book a Demo — CYBERDUDEBIVASH AI Security Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --accent: #00ffcc;
+            --accent-dark: #00cc99;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b5c1;
+            --border-color: #1f2937;
+            --error: #ff4444;
+            --success: #00ff88;
+            --warning: #ffaa00;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* NAVIGATION */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10, 15, 28, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+        }
+
+        nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .nav-logo {
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .nav-logo {
+                font-size: 1rem;
+            }
+        }
+
+        /* HERO SECTION */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent) 0%, #00ffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .trust-row {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .trust-item {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .trust-item::before {
+            content: '✓';
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                padding: 3rem 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .trust-row {
+                gap: 1rem;
+                flex-direction: column;
+            }
+        }
+
+        /* MAIN BOOKING SECTION */
+        .booking-container {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        @media (max-width: 1024px) {
+            .booking-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+
+        /* LEFT COLUMN */
+        .booking-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .info-card {
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        .info-card h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 0.8rem 0;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+        }
+
+        .info-list li::before {
+            content: '→';
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .testimonial {
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.1), rgba(0, 255, 204, 0.05));
+            border-left: 3px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .testimonial p {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        .testimonial-author {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .urgency-badge {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .urgency-badge .emoji {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .urgency-text {
+            color: var(--warning);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .countdown {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* SLOT AVAILABILITY */
+        .slot-grid {
+            margin-top: 2rem;
+        }
+
+        .slot-grid h4 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.8rem;
+        }
+
+        .day-slot {
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.8rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .day-slot:hover:not(.booked) {
+            border-color: var(--accent);
+            background: rgba(0, 255, 204, 0.05);
+        }
+
+        .day-slot.booked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .day-date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .time-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        .time-slot {
+            padding: 0.3rem;
+            border-radius: 4px;
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+        }
+
+        .time-slot.booked {
+            background: rgba(255, 68, 68, 0.1);
+            color: var(--error);
+            text-decoration: line-through;
+        }
+
+        @media (max-width: 768px) {
+            .days-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* RIGHT COLUMN — FORM */
+        .booking-form-wrapper {
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .booking-form-wrapper h2 {
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        label .required {
+            color: var(--error);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(10, 15, 28, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.3);
+            background: rgba(10, 15, 28, 0.8);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .date-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .date-btn {
+            padding: 0.8rem;
+            background: rgba(10, 15, 28, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .date-btn:hover {
+            border-color: var(--accent);
+            background: rgba(0, 255, 204, 0.05);
+        }
+
+        .date-btn.selected {
+            background: rgba(0, 255, 204, 0.2);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-primary);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 204, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .form-error {
+            color: var(--error);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--success);
+            margin-bottom: 1rem;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .booking-form-wrapper {
+                position: relative;
+                top: auto;
+            }
+
+            .date-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* TIMELINE SECTION */
+        .timeline-section {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .timeline-section h3 {
+            text-align: center;
+            color: var(--accent);
+            margin-bottom: 3rem;
+            font-size: 1.5rem;
+        }
+
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .timeline-step {
+            text-align: center;
+        }
+
+        .timeline-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--bg-primary);
+        }
+
+        .timeline-step p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .timeline {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        /* ALTERNATIVE CTAs */
+        .alternative-ctas {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .alternative-ctas h3 {
+            text-align: center;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            font-size: 1.3rem;
+        }
+
+        .ctas-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .cta-card {
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .cta-card:hover {
+            border-color: var(--accent);
+            background: rgba(0, 255, 204, 0.05);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        .cta-emoji {
+            font-size: 2rem;
+        }
+
+        .cta-text {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .ctas-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .cta-card {
+                padding: 1rem;
+            }
+
+            .cta-text {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* FOOTER */
+        footer {
+            background: rgba(17, 24, 39, 0.7);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 4rem;
+        }
+
+        footer p {
+            font-size: 0.9rem;
+        }
+
+        /* ANIMATIONS */
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(0, 255, 204, 0.5);
+            }
+        }
+
+        .info-card {
+            animation: glow 3s ease-in-out infinite;
+            animation-duration: 4s;
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav>
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto;">
+            <a href="/" class="nav-logo">CYBERDUDEBIVASH</a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tools.html">Tools</a></li>
+                <li><a href="/intel.html">Intel</a></li>
+                <li><a href="/services.html">Services</a></li>
+                <li><a href="/booking.html" class="active">Booking</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <h1>Book Your Free Security Strategy Session</h1>
+        <p>45-minute personalized consultation with our AI security team. Get a live threat landscape for your sector + custom ROI analysis.</p>
+        <div class="trust-row">
+            <div class="trust-item">Response within 2 hours</div>
+            <div class="trust-item">No sales pressure</div>
+            <div class="trust-item">Custom threat briefing</div>
+            <div class="trust-item">Free of charge</div>
+        </div>
+    </section>
+
+    <!-- BOOKING LAYOUT -->
+    <div class="booking-container">
+        <!-- LEFT COLUMN -->
+        <div class="booking-info">
+            <div class="info-card">
+                <h3>What You'll Get</h3>
+                <ul class="info-list">
+                    <li>45-min video/phone call</li>
+                    <li>Live threat scan for your domain (we do it live)</li>
+                    <li>Sector-specific threat landscape</li>
+                    <li>Compliance gap assessment preview</li>
+                    <li>Custom ROI analysis</li>
+                    <li>Implementation roadmap</li>
+                    <li>Personalized pricing</li>
+                </ul>
+                <div class="testimonial">
+                    <p>"The strategy session revealed attack paths we had no idea existed. Worth every minute."</p>
+                    <div class="testimonial-author">— CTO, SaaS Company</div>
+                </div>
+            </div>
+
+            <div class="urgency-badge">
+                <div class="emoji">⚡</div>
+                <div class="urgency-text">Only 3 consultation slots available this week</div>
+                <div class="countdown" id="countdown">Next slot: Friday 10:00 AM IST</div>
+            </div>
+
+            <div class="slot-grid">
+                <h4>Available Slots (Next 5 Business Days)</h4>
+                <div class="days-grid" id="slotsGrid"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN — BOOKING FORM -->
+        <div class="booking-form-wrapper">
+            <h2>Schedule Your Session</h2>
+            <div class="success-message" id="successMessage">
+                ✓ Your session has been booked! We'll confirm via WhatsApp/email within 2 hours.
+            </div>
+            <form id="bookingForm" onsubmit="handleFormSubmit(event)">
+                <div class="form-group">
+                    <label for="fullName">Full Name <span class="required">*</span></label>
+                    <input type="text" id="fullName" name="fullName" required>
+                    <div class="form-error" id="fullNameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="workEmail">Work Email <span class="required">*</span></label>
+                    <input type="email" id="workEmail" name="workEmail" required>
+                    <div class="form-error" id="workEmailError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone / WhatsApp <span class="required">*</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="+91..." required>
+                    <div class="form-error" id="phoneError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="companyName">Company Name <span class="required">*</span></label>
+                    <input type="text" id="companyName" name="companyName" required>
+                    <div class="form-error" id="companyNameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="jobTitle">Job Title</label>
+                    <input type="text" id="jobTitle" name="jobTitle" placeholder="CISO / CTO / Security Manager">
+                </div>
+
+                <div class="form-group">
+                    <label for="industry">Industry <span class="required">*</span></label>
+                    <select id="industry" name="industry" required>
+                        <option value="">Select an industry</option>
+                        <option value="Finance/Banking">Finance/Banking</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Government">Government</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <div class="form-error" id="industryError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="companySize">Company Size <span class="required">*</span></label>
+                    <select id="companySize" name="companySize" required>
+                        <option value="">Select company size</option>
+                        <option value="1-50">1-50 employees</option>
+                        <option value="51-200">51-200 employees</option>
+                        <option value="201-1000">201-1000 employees</option>
+                        <option value="1001-5000">1001-5000 employees</option>
+                        <option value="5000+">5000+ employees</option>
+                    </select>
+                    <div class="form-error" id="companySizeError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="budget">Annual Security Budget <span class="required">*</span></label>
+                    <select id="budget" name="budget" required>
+                        <option value="">Select budget range</option>
+                        <option value="Under ₹5L">Under ₹5L</option>
+                        <option value="₹5L-₹25L">₹5L-₹25L</option>
+                        <option value="₹25L-₹1CR">₹25L-₹1CR</option>
+                        <option value="₹1CR+">₹1CR+</option>
+                    </select>
+                    <div class="form-error" id="budgetError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="urgency">Urgency <span class="required">*</span></label>
+                    <select id="urgency" name="urgency" required>
+                        <option value="">Select urgency level</option>
+                        <option value="Critical - Active Incident">Critical - Active Incident</option>
+                        <option value="High - Deploy in 30 days">High - Deploy in 30 days</option>
+                        <option value="Medium - Next Quarter">Medium - Next Quarter</option>
+                        <option value="Low - Evaluating">Low - Evaluating</option>
+                    </select>
+                    <div class="form-error" id="urgencyError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Preferred Date <span class="required">*</span></label>
+                    <div class="date-buttons">
+                        <button type="button" class="date-btn" onclick="selectDate(0, 'Tomorrow')">Tomorrow</button>
+                        <button type="button" class="date-btn" onclick="selectDate(1, 'Day after')">Day after</button>
+                        <button type="button" class="date-btn" onclick="selectDate(7, 'Next week')">Next week</button>
+                    </div>
+                    <input type="hidden" id="preferredDate" name="preferredDate" required>
+                    <div class="form-error" id="preferredDateError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="preferredTime">Preferred Time <span class="required">*</span></label>
+                    <select id="preferredTime" name="preferredTime" required>
+                        <option value="">Select time slot</option>
+                        <option value="9:00 AM IST">9:00 AM IST</option>
+                        <option value="11:00 AM IST">11:00 AM IST</option>
+                        <option value="2:00 PM IST">2:00 PM IST</option>
+                        <option value="4:00 PM IST">4:00 PM IST</option>
+                        <option value="6:00 PM IST">6:00 PM IST</option>
+                    </select>
+                    <div class="form-error" id="preferredTimeError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="challenge">Security Challenge <span class="required">*</span></label>
+                    <textarea id="challenge" name="challenge" placeholder="Describe your biggest security challenge or what you want to achieve" required></textarea>
+                    <div class="form-error" id="challengeError"></div>
+                </div>
+
+                <button type="submit" class="submit-btn">📅 Confirm My Strategy Session</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TIMELINE SECTION -->
+    <section class="timeline-section">
+        <h3>What Happens After Booking</h3>
+        <div class="timeline">
+            <div class="timeline-step">
+                <div class="timeline-number">1</div>
+                <p>We confirm within 2 hours via email + WhatsApp</p>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-number">2</div>
+                <p>We run a live scan of your domain before the call</p>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-number">3</div>
+                <p>45-minute personalized security strategy session</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ALTERNATIVE CTAs -->
+    <section class="alternative-ctas">
+        <h3>Can't do a call? No problem.</h3>
+        <div class="ctas-grid">
+            <a href="/contact.html" class="cta-card">
+                <div class="cta-emoji">📧</div>
+                <div class="cta-text">Send us your challenge</div>
+            </a>
+            <a href="https://cyberdudebivash.in/#scanner" class="cta-card" target="_blank">
+                <div class="cta-emoji">🔍</div>
+                <div class="cta-text">Run a free self-scan</div>
+            </a>
+            <a href="/services.html" class="cta-card">
+                <div class="cta-emoji">📄</div>
+                <div class="cta-text">Buy a security report</div>
+            </a>
+            <a href="https://wa.me/918179881447" class="cta-card" target="_blank">
+                <div class="cta-emoji">📱</div>
+                <div class="cta-text">WhatsApp us directly</div>
+            </a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>&copy; 2024 CYBERDUDEBIVASH AI Security Hub. All rights reserved.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem;">Your information is safe with us. No spam, no sharing.</p>
+    </footer>
+
+    <script src="/assets/global.js"></script>
+    <script>
+        // SLOT AVAILABILITY LOGIC
+        function initializeSlots() {
+            const slotsGrid = document.getElementById('slotsGrid');
+            const today = new Date();
+            const timeSlots = ['9:00 AM', '2:00 PM'];
+
+            for (let i = 1; i <= 5; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() + i);
+
+                // Skip weekends
+                if (date.getDay() === 0 || date.getDay() === 6) {
+                    i++;
+                    continue;
+                }
+
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const daySlot = document.createElement('div');
+                daySlot.className = 'day-slot';
+
+                let slotsHTML = `<div class="day-date">${dayName}, ${dateStr}</div><div class="time-slots">`;
+
+                timeSlots.forEach((time, index) => {
+                    const isBooked = Math.random() > 0.6;
+                    slotsHTML += `<div class="time-slot ${isBooked ? 'booked' : ''}">${time}</div>`;
+                });
+
+                slotsHTML += '</div>';
+                daySlot.innerHTML = slotsHTML;
+
+                daySlot.onclick = () => selectSlot(daySlot, date, dateStr);
+                slotsGrid.appendChild(daySlot);
+            }
+        }
+
+        function selectSlot(element, date, dateStr) {
+            // Remove previous selection
+            document.querySelectorAll('.day-slot').forEach(el => {
+                el.style.background = '';
+                el.style.borderColor = '';
+            });
+
+            // Highlight selected slot
+            element.style.background = 'rgba(0, 255, 204, 0.15)';
+            element.style.borderColor = 'var(--accent)';
+
+            // Pre-fill form
+            document.getElementById('preferredDate').value = dateStr;
+        }
+
+        // DATE BUTTON LOGIC
+        function selectDate(days, label) {
+            const date = new Date();
+            date.setDate(date.getDate() + days);
+
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            document.getElementById('preferredDate').value = dateStr;
+
+            // Highlight selected button
+            document.querySelectorAll('.date-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        // COUNTDOWN TIMER
+        function updateCountdown() {
+            const now = new Date();
+            const friday = new Date();
+            const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
+            friday.setDate(friday.getDate() + daysUntilFriday);
+            friday.setHours(10, 0, 0, 0);
+
+            const diff = friday - now;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            document.getElementById('countdown').textContent = `Next slot: Friday 10:00 AM IST (${hours}h ${minutes}m away)`;
+        }
+
+        // FORM SUBMISSION
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const formData = {
+                fullName: document.getElementById('fullName').value,
+                workEmail: document.getElementById('workEmail').value,
+                phone: document.getElementById('phone').value,
+                companyName: document.getElementById('companyName').value,
+                jobTitle: document.getElementById('jobTitle').value,
+                industry: document.getElementById('industry').value,
+                companySize: document.getElementById('companySize').value,
+                budget: document.getElementById('budget').value,
+                urgency: document.getElementById('urgency').value,
+                preferredDate: document.getElementById('preferredDate').value,
+                preferredTime: document.getElementById('preferredTime').value,
+                challenge: document.getElementById('challenge').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Validate required date selection
+            if (!formData.preferredDate) {
+                document.getElementById('preferredDateError').textContent = 'Please select a preferred date';
+                return;
+            }
+
+            // Store to localStorage as backup
+            const existingLeads = JSON.parse(localStorage.getItem('cdb_booking_leads') || '[]');
+            existingLeads.push(formData);
+            localStorage.setItem('cdb_booking_leads', JSON.stringify(existingLeads));
+
+            // Try to send to API endpoint
+            try {
+                const response = await fetch('https://cyberdudebivash-security-hub.workers.dev/api/leads/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            } catch (error) {
+                console.log('API submission failed, data stored locally', error);
+            }
+
+            // Show success message (non-blocking)
+            const successMsg = document.getElementById('successMessage');
+            successMsg.classList.add('show');
+            document.getElementById('bookingForm').reset();
+
+            // Clear date button selection
+            document.querySelectorAll('.date-btn').forEach(btn => btn.classList.remove('selected'));
+
+            // Hide success message after 5 seconds
+            setTimeout(() => {
+                successMsg.classList.remove('show');
+            }, 5000);
+
+            // If CDB_PAY available, optionally trigger payment flow for premium booking
+            if (window.CDB_PAY && window.CDB_PAY.open) {
+                // Optional: Premium booking flow can be triggered here
+                // window.CDB_PAY.open({ type: 'booking', price: 0, currency: 'INR' });
+            }
+        }
+
+        // CLEAR ERROR ON INPUT
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.addEventListener('input', function() {
+                const errorEl = document.getElementById(this.id + 'Error');
+                if (errorEl) {
+                    errorEl.textContent = '';
+                }
+            });
+        });
+
+        // INITIALIZE ON PAGE LOAD
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeSlots();
+            updateCountdown();
+            setInterval(updateCountdown, 60000); // Update countdown every minute
+        });
+    </script>
+</body>
+</html>

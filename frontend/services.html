@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Security Services — CYBERDUDEBIVASH AI Security Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --accent: #00ffcc;
+            --accent-dark: #00cc99;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b9c6;
+            --border-color: rgba(0, 255, 204, 0.1);
+            --border-hover: rgba(0, 255, 204, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* NAVIGATION */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10, 15, 28, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+            .nav-container {
+                padding: 0 1rem;
+            }
+        }
+
+        /* MAIN CONTAINER */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* HERO SECTION */
+        .hero {
+            padding: 6rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05) 0%, rgba(0, 255, 204, 0.02) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #00e6b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .hero-content p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.8rem;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.5);
+        }
+
+        .trust-badges {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            background: rgba(0, 255, 204, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .badge:hover {
+            border-color: var(--border-hover);
+            background: rgba(0, 255, 204, 0.12);
+        }
+
+        /* SERVICES GRID */
+        .services-section {
+            padding: 4rem 2rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .service-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 255, 204, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .service-card:hover::before {
+            top: -25%;
+            right: -25%;
+        }
+
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .service-category {
+            display: inline-block;
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .service-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+        }
+
+        .service-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .service-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-features li {
+            color: var(--text-secondary);
+            padding: 0.4rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.9rem;
+        }
+
+        .service-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .service-price {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .service-price-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .service-cta {
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge-best-value {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #1a1a1a;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+
+        /* COMPARISON TABLE */
+        .comparison-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.03) 0%, transparent 100%);
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            overflow-x: auto;
+        }
+
+        .comparison-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1.2rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .comparison-table th {
+            background: var(--bg-secondary);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .comparison-table td:first-child,
+        .comparison-table th:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .comparison-check {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .comparison-cross {
+            color: #666;
+        }
+
+        .comparison-col-header {
+            position: relative;
+        }
+
+        .comparison-col-header .btn {
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        /* ROI CALCULATOR */
+        .roi-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05) 0%, rgba(0, 255, 204, 0.02) 100%);
+        }
+
+        .roi-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        .roi-form {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+        }
+
+        .roi-form h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .roi-results {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .roi-result-item {
+            margin-bottom: 2rem;
+        }
+
+        .roi-result-item h4 {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .roi-result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .roi-result-subtext {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+        }
+
+        @media (max-width: 768px) {
+            .roi-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* TESTIMONIALS */
+        .testimonials-section {
+            padding: 4rem 2rem;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .testimonial-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.15);
+        }
+
+        .testimonial-text {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .testimonial-author {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .testimonial-role {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ENTERPRISE CTA */
+        .enterprise-cta-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05) 0%, rgba(0, 255, 204, 0.02) 100%);
+        }
+
+        .enterprise-cta-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 3rem;
+            border-radius: 12px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .enterprise-cta-card h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .enterprise-cta-card > p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .enterprise-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .enterprise-form input,
+        .enterprise-form select,
+        .enterprise-form textarea {
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .enterprise-form input:focus,
+        .enterprise-form select:focus,
+        .enterprise-form textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .enterprise-form textarea {
+            grid-column: 1 / -1;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .enterprise-form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .enterprise-form-submit {
+            flex: 1;
+        }
+
+        .enterprise-booking-link {
+            flex: 1;
+        }
+
+        /* FOOTER */
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 4rem;
+        }
+
+        /* UTILITY CLASSES */
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-2 {
+            margin-bottom: 2rem;
+        }
+
+        .position-relative {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .hero {
+                padding: 4rem 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-content h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero-content p {
+                font-size: 1rem;
+            }
+
+            .services-section,
+            .comparison-section,
+            .roi-section,
+            .testimonials-section,
+            .enterprise-cta-section {
+                padding: 2.5rem 1rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .enterprise-cta-card {
+                padding: 1.5rem;
+            }
+
+            .enterprise-form {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 0.8rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">CYBERDUDEBIVASH</a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tools.html">Tools</a></li>
+                <li><a href="/intel.html">Intel</a></li>
+                <li><a href="/services.html" class="active">Services</a></li>
+                <li><a href="/booking.html">Booking</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Protect Your Business with Enterprise-Grade AI Security</h1>
+                <p>From startup to enterprise — AI-powered assessments, threat intelligence reports, and dedicated security retainers</p>
+
+                <div class="hero-ctas">
+                    <a href="/booking.html" class="btn btn-primary">📅 Book Free Consultation</a>
+                    <a href="https://cyberdudebivash.in/#scanner" class="btn">🔍 Try Free Scan</a>
+                </div>
+
+                <div class="trust-badges">
+                    <div class="badge">India's #1 AI CyberSec Platform</div>
+                    <div class="badge">OWASP Aligned</div>
+                    <div class="badge">DPDP Act 2023</div>
+                    <div class="badge">MITRE ATT&CK</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES GRID -->
+    <section class="services-section">
+        <div class="container">
+            <h2 class="section-title">Our Enterprise Security Services</h2>
+
+            <div class="services-grid">
+                <!-- Service 1: Domain Security Assessment -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🔍</div>
+                    <span class="service-category">Assessment</span>
+                    <h3 class="service-name">Domain Security Assessment</h3>
+                    <p class="service-description">Comprehensive security analysis of your domain infrastructure. Identifies vulnerabilities in TLS, DNS, headers, and open ports with 50+ automated checks.</p>
+                    <ul class="service-features">
+                        <li>Full TLS/DNSSEC analysis</li>
+                        <li>Header security audit</li>
+                        <li>Port scan & enumeration</li>
+                        <li>50+ security checks</li>
+                        <li>PDF report with fixes</li>
+                    </ul>
+                    <div class="service-price">₹9,999 <span class="service-price-label">one-time</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('SECURITY_ASSESSMENT', 9999, 'Security Assessment — ₹9,999')">Get Assessment</button>
+                </div>
+
+                <!-- Service 2: AI Threat Intelligence Report -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🧠</div>
+                    <span class="service-category">Intelligence</span>
+                    <h3 class="service-name">AI Threat Intelligence Report</h3>
+                    <p class="service-description">30-day AI-powered threat monitoring with CVE analysis, IOC extraction, and APT attribution. Includes actionable STIX format reports and remediation roadmap.</p>
+                    <ul class="service-features">
+                        <li>30-day CVE monitoring</li>
+                        <li>IOC extraction & analysis</li>
+                        <li>APT attribution mapping</li>
+                        <li>STIX format report</li>
+                        <li>Remediation plan</li>
+                    </ul>
+                    <div class="service-price">₹14,999 <span class="service-price-label">one-time</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('THREAT_INTEL_REPORT', 14999, 'Threat Intel Report — ₹14,999')">Get Intel Report</button>
+                </div>
+
+                <!-- Service 3: Red Team Simulation -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🎯</div>
+                    <span class="service-category">Penetration Testing</span>
+                    <h3 class="service-name">Red Team Simulation</h3>
+                    <p class="service-description">Full-scope adversarial simulation covering 8 MITRE ATT&CK tactics. Includes exploit chains, attack path mapping, and executive summary for leadership.</p>
+                    <ul class="service-features">
+                        <li>8 MITRE ATT&CK scenarios</li>
+                        <li>Exploit simulation & chains</li>
+                        <li>Attack path mapping</li>
+                        <li>Fix scripts & remediation</li>
+                        <li>Executive summary</li>
+                    </ul>
+                    <div class="service-price">₹24,999 <span class="service-price-label">one-time</span></div>
+                    <a href="/booking.html" class="btn btn-primary service-cta">Book Red Team</a>
+                </div>
+
+                <!-- Service 4: Compliance Gap Analysis -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">📋</div>
+                    <span class="service-category">Compliance</span>
+                    <h3 class="service-name">Compliance Gap Analysis</h3>
+                    <p class="service-description">Full compliance audit against ISO 27001, GDPR, PCI-DSS, and India's DPDP Act. Includes gap report, remediation roadmap, and audit-ready documentation.</p>
+                    <ul class="service-features">
+                        <li>ISO 27001 / GDPR audit</li>
+                        <li>PCI-DSS / DPDP Act checks</li>
+                        <li>Comprehensive gap report</li>
+                        <li>Remediation roadmap</li>
+                        <li>3-month support included</li>
+                    </ul>
+                    <div class="service-price">₹19,999 <span class="service-price-label">one-time</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('COMPLIANCE_REPORT', 19999, 'Compliance Gap Analysis — ₹19,999')">Get Compliance Report</button>
+                </div>
+
+                <!-- Service 5: Annual Security Retainer -->
+                <div class="service-card fade-in-up">
+                    <div class="badge-best-value">BEST VALUE</div>
+                    <div class="service-icon">🏢</div>
+                    <span class="service-category">Retainer</span>
+                    <h3 class="service-name">Annual Security Retainer</h3>
+                    <p class="service-description">Comprehensive year-round security program with unlimited scans, monthly intelligence reports, 24/7 SOC alerts, and dedicated CISO advisory for your organization.</p>
+                    <ul class="service-features">
+                        <li>Unlimited monthly scans</li>
+                        <li>Monthly threat reports</li>
+                        <li>24/7 SOC alerts</li>
+                        <li>Dedicated CISO advisory</li>
+                        <li>Priority support SLA</li>
+                    </ul>
+                    <div class="service-price">₹99,999 <span class="service-price-label">/year</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('ANNUAL_RETAINER', 99999, 'Annual Retainer — ₹99,999/year')">Start Retainer</button>
+                </div>
+
+                <!-- Service 6: MSSP White Label Platform -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🏷️</div>
+                    <span class="service-category">Platform</span>
+                    <h3 class="service-name">MSSP White Label Platform</h3>
+                    <p class="service-description">Enterprise-grade security platform for managed service providers. White-label the entire platform, manage unlimited client accounts, and share revenue with CYBERDUDEBIVASH.</p>
+                    <ul class="service-features">
+                        <li>Full platform white-label</li>
+                        <li>Unlimited client accounts</li>
+                        <li>Custom branding & domain</li>
+                        <li>Full API access</li>
+                        <li>Revenue share model</li>
+                    </ul>
+                    <div class="service-price">₹49,999 <span class="service-price-label">/month</span></div>
+                    <a href="/booking.html" class="btn btn-primary service-cta">Apply for MSSP</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPARISON TABLE -->
+    <section class="comparison-section">
+        <div class="container">
+            <h2 class="section-title">Plans Comparison</h2>
+
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th class="comparison-col-header">
+                                Starter<br>₹499/mo
+                                <button class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openPayment('STARTER_PLAN', 499, 'Starter Plan — ₹499/month')">Get Started</button>
+                            </th>
+                            <th class="comparison-col-header">
+                                Pro<br>₹1,499/mo
+                                <button class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openPayment('PRO_PLAN', 1499, 'Pro Plan — ₹1,499/month')">Get Started</button>
+                            </th>
+                            <th class="comparison-col-header">
+                                Enterprise<br>₹4,999/mo
+                                <button class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openPayment('ENTERPRISE_PLAN', 4999, 'Enterprise Plan — ₹4,999/month')">Get Started</button>
+                            </th>
+                            <th class="comparison-col-header">
+                                MSSP<br>₹9,999/mo
+                                <a href="/booking.html" class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;">Contact Sales</a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Daily Scans</td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>AI Brain Analysis</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Red Team Scenarios</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Compliance Checks</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>MYTHOS AI Chat</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>API Keys</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td>3 Keys</td>
+                            <td>10 Keys</td>
+                            <td>Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>PDF Reports</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Priority Support</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Custom Rules</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>White Label</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ROI CALCULATOR -->
+    <section class="roi-section">
+        <div class="container">
+            <h2 class="section-title">Calculate Your ROI</h2>
+
+            <div class="roi-container">
+                <div class="roi-form">
+                    <h3>Security Investment Calculator</h3>
+
+                    <div class="form-group">
+                        <label for="company-size">Company Size</label>
+                        <select id="company-size" onchange="calculateROI()">
+                            <option value="50">1-50 employees</option>
+                            <option value="200">51-200 employees</option>
+                            <option value="1000">201-1000 employees</option>
+                            <option value="5000">1000+ employees</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="industry">Industry</label>
+                        <select id="industry" onchange="calculateROI()">
+                            <option value="finance">Finance / Banking</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="tech">Technology</option>
+                            <option value="retail">Retail / E-Commerce</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="annual-revenue">Annual Revenue</label>
+                        <input type="number" id="annual-revenue" placeholder="₹" value="50000000" onchange="calculateROI()" oninput="calculateROI()">
+                    </div>
+                </div>
+
+                <div class="roi-results">
+                    <div class="roi-result-item">
+                        <h4>Estimated Breach Cost (Annual)</h4>
+                        <div class="roi-result-value" id="breach-cost">₹0</div>
+                        <div class="roi-result-subtext">Without active security measures</div>
+                    </div>
+
+                    <div class="roi-result-item">
+                        <h4>Risk Reduction with Platform</h4>
+                        <div class="roi-result-value" id="risk-reduction">0%</div>
+                        <div class="roi-result-subtext">Incident probability reduction</div>
+                    </div>
+
+                    <div class="roi-result-item">
+                        <h4>Net ROI (First Year)</h4>
+                        <div class="roi-result-value" id="roi-value">₹0</div>
+                        <div class="roi-result-subtext">Cost savings vs. breach cost</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="testimonials-section">
+        <div class="container">
+            <h2 class="section-title">What Our Clients Say</h2>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card fade-in-up">
+                    <div class="testimonial-text">"CYBERDUDEBIVASH identified 3 critical vulnerabilities in our infrastructure that our previous audit missed. ROI in week 1."</div>
+                    <div class="testimonial-author">CISO</div>
+                    <div class="testimonial-role">FinTech Company, Bangalore</div>
+                </div>
+
+                <div class="testimonial-card fade-in-up">
+                    <div class="testimonial-text">"The MYTHOS AI threat reports are board-ready. Saved us 40+ hours/month of manual analysis."</div>
+                    <div class="testimonial-author">VP Security</div>
+                    <div class="testimonial-role">Healthcare Startup</div>
+                </div>
+
+                <div class="testimonial-card fade-in-up">
+                    <div class="testimonial-text">"Best threat intelligence platform for Indian compliance requirements. DPDP Act coverage is exceptional."</div>
+                    <div class="testimonial-author">Security Architect</div>
+                    <div class="testimonial-role">E-Commerce, India</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ENTERPRISE CTA -->
+    <section class="enterprise-cta-section">
+        <div class="container">
+            <div class="enterprise-cta-card">
+                <h2>Need a Custom Enterprise Solution?</h2>
+                <p>Our team handles security for organizations from 10 to 10,000+ employees. Let's discuss your unique challenges.</p>
+
+                <form id="enterprise-form" onsubmit="submitEnterpriseForm(event)">
+                    <div class="enterprise-form">
+                        <input type="text" id="enterprise-name" placeholder="Your Name" required>
+                        <input type="email" id="enterprise-email" placeholder="Work Email" required>
+                        <input type="text" id="enterprise-company" placeholder="Company Name" required>
+                        <select id="enterprise-size" required>
+                            <option value="">Organization Size</option>
+                            <option value="50">1-50 employees</option>
+                            <option value="200">51-200 employees</option>
+                            <option value="1000">201-1000 employees</option>
+                            <option value="5000">1000+ employees</option>
+                        </select>
+                        <textarea id="enterprise-challenge" placeholder="What's your biggest security challenge?" required></textarea>
+                    </div>
+
+                    <div class="enterprise-form-actions">
+                        <button type="submit" class="btn btn-primary enterprise-form-submit">Submit & Get Proposal</button>
+                        <a href="/booking.html" class="btn enterprise-booking-link" style="text-align: center; display: flex; align-items: center; justify-content: center;">📅 Book Strategy Call</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 CYBERDUDEBIVASH AI Security Hub. All rights reserved. | <a href="#" style="color: var(--accent); text-decoration: none;">Privacy Policy</a> | <a href="#" style="color: var(--accent); text-decoration: none;">Terms of Service</a></p>
+        </div>
+    </footer>
+
+    <script src="/assets/global.js"></script>
+    <script>
+        // Payment function wrapper
+        function openPayment(productId, priceInr, label) {
+            if (window.CDB_PAY && window.CDB_PAY.open) {
+                window.CDB_PAY.open(productId, priceInr, label);
+            } else {
+                alert('Payment system not initialized. Please try again.');
+            }
+        }
+
+        // ROI Calculator Logic
+        function calculateROI() {
+            const companySize = parseInt(document.getElementById('company-size').value);
+            const industry = document.getElementById('industry').value;
+            const annualRevenue = parseInt(document.getElementById('annual-revenue').value) || 0;
+
+            // Industry multipliers for breach cost
+            const industryMultiplier = {
+                finance: 0.08,
+                healthcare: 0.12,
+                tech: 0.06,
+                retail: 0.05,
+                other: 0.05
+            };
+
+            const multiplier = industryMultiplier[industry] || 0.05;
+            const breachCost = annualRevenue * multiplier;
+
+            // Risk reduction based on company size (larger = more risk reduction from platform)
+            const riskReduction = Math.min(70 + (companySize / 5000 * 20), 85);
+
+            // Annual platform cost estimate
+            const platformCostEstimate = companySize <= 50 ? 99999 :
+                                       companySize <= 200 ? 149999 :
+                                       companySize <= 1000 ? 299999 : 499999;
+
+            const savedFromBreach = breachCost * (riskReduction / 100);
+            const netROI = savedFromBreach - platformCostEstimate;
+
+            // Update UI
+            document.getElementById('breach-cost').textContent = '₹' + formatNumber(Math.round(breachCost));
+            document.getElementById('risk-reduction').textContent = Math.round(riskReduction) + '%';
+            document.getElementById('roi-value').textContent = '₹' + formatNumber(Math.round(netROI));
+        }
+
+        function formatNumber(num) {
+            return num.toLocaleString('en-IN');
+        }
+
+        // Enterprise form submission
+        function submitEnterpriseForm(event) {
+            event.preventDefault();
+
+            const formData = {
+                name: document.getElementById('enterprise-name').value,
+                email: document.getElementById('enterprise-email').value,
+                company: document.getElementById('enterprise-company').value,
+                size: document.getElementById('enterprise-size').value,
+                challenge: document.getElementById('enterprise-challenge').value
+            };
+
+            // Send to backend
+            fetch('/api/leads/capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Thank you! We\'ll be in touch within 24 hours.');
+                    document.getElementById('enterprise-form').reset();
+                } else {
+                    alert('Error submitting form. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error submitting form. Please try again.');
+            });
+        }
+
+        // Initialize ROI calculator on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateROI();
+
+            // Add fade-in animation to cards on scroll
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in-up');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.service-card, .testimonial-card').forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

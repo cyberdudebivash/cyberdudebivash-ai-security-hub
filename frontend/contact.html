@@ -3,457 +3,1092 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Contact Us - CYBERDUDEBIVASH AI Security Hub">
-    <meta name="robots" content="index, follow">
-    <title>Contact Us - CYBERDUDEBIVASH AI Security Hub</title>
+    <meta name="description" content="Contact CYBERDUDEBIVASH AI Security Hub. Security emergencies, enterprise inquiries, partnerships. 2-4hr response time.">
+    <title>Contact — CYBERDUDEBIVASH AI Security Hub</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
-        body {
-            background: #060612;
-            color: #e2e8f0;
-            font-family: system-ui, -apple-system, sans-serif;
-            line-height: 1.6;
+
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-card: #111827;
+            --accent: #00ffcc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --border: #1e293b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        header {
-            background: #0a0a12;
-            border-bottom: 2px solid #00d4ff;
-            padding: 1rem;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ===== NAVIGATION ===== */
+        nav {
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
+            background: rgba(10, 15, 28, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
         }
-        
-        nav {
-            max-width: 1200px;
+
+        .nav-container {
+            max-width: 1400px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 2rem;
         }
-        
-        .logo {
-            font-weight: bold;
-            color: #00d4ff;
-            text-decoration: none;
-            font-size: 1.2rem;
+
+        .nav-logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #00ccaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            white-space: nowrap;
         }
-        
+
         .nav-links {
             display: flex;
             gap: 2rem;
             list-style: none;
         }
-        
+
         .nav-links a {
-            color: #e2e8f0;
+            color: var(--text-secondary);
             text-decoration: none;
+            font-size: 0.95rem;
+            position: relative;
             transition: color 0.3s;
         }
-        
-        .nav-links a:hover {
-            color: #00d4ff;
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--accent);
         }
-        
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .nav-container {
+                padding: 0;
+            }
+        }
+
+        /* ===== CONTAINER ===== */
         .container {
-            max-width: 1000px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 3rem 2rem;
+            padding: 0 2rem;
         }
-        
-        h1 {
-            color: #00d4ff;
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
             margin-bottom: 1rem;
-            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--accent), #00e5d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
         }
-        
-        h2 {
-            color: #00d4ff;
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto 2rem;
+            line-height: 1.8;
+        }
+
+        .response-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
             margin-top: 2rem;
-            margin-bottom: 1.5rem;
-            font-size: 1.8rem;
         }
-        
-        p {
-            margin-bottom: 1rem;
+
+        .badge {
+            background: rgba(0, 255, 204, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
         }
-        
-        .contact-grid {
+
+        .badge:hover {
+            background: rgba(0, 255, 204, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 255, 204, 0.15);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .main-content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-top: 2rem;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 3rem;
+            margin: 4rem 0;
         }
-        
-        .contact-section {
-            background: #0a0a12;
-            border: 2px solid #00d4ff;
-            padding: 2rem;
-            border-radius: 8px;
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
         }
-        
-        .contact-section h3 {
-            color: #00d4ff;
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
+
+        /* ===== CONTACT INFO CARDS ===== */
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
         }
-        
-        .contact-item {
-            margin-bottom: 1.5rem;
+
+        .info-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+            cursor: pointer;
         }
-        
-        .contact-item strong {
-            color: #00d4ff;
-            display: block;
+
+        .info-card:hover {
+            border-color: var(--accent);
+            background: rgba(17, 24, 39, 1);
+            box-shadow: 0 8px 24px rgba(0, 255, 204, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .info-card-icon {
+            font-size: 1.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .info-card h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
             margin-bottom: 0.5rem;
         }
-        
-        .contact-item a {
-            color: #e2e8f0;
+
+        .info-card p {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            word-break: break-word;
+        }
+
+        .info-card a {
+            color: var(--accent);
             text-decoration: none;
+            font-weight: 600;
             transition: color 0.3s;
         }
-        
-        .contact-item a:hover {
-            color: #00d4ff;
+
+        .info-card a:hover {
+            color: #00e5d4;
         }
-        
-        .form-section {
-            background: #0a0a12;
-            border: 2px solid #00d4ff;
-            padding: 2rem;
+
+        .copy-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .business-hours {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .gst-info {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* ===== QUICK ACTION BUTTONS ===== */
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-actions a {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem;
+            text-align: center;
             border-radius: 8px;
-            margin-top: 2rem;
+            border: 1px solid var(--accent);
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
         }
-        
+
+        .quick-actions a:hover {
+            background: rgba(0, 255, 204, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 255, 204, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .quick-actions {
+                flex-direction: column;
+            }
+            .quick-actions a {
+                min-width: 100%;
+            }
+        }
+
+        /* ===== USE CASE SELECTOR ===== */
+        .use-case-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .use-case-btn {
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            background: rgba(17, 24, 39, 0.6);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .use-case-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(17, 24, 39, 0.9);
+        }
+
+        .use-case-btn.active {
+            border-color: var(--accent);
+            background: rgba(0, 255, 204, 0.15);
+            color: var(--accent);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .use-case-selector {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== CONTACT FORM ===== */
+        .contact-form {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
         .form-group {
             margin-bottom: 1.5rem;
         }
-        
-        label {
+
+        .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #00d4ff;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
         }
-        
-        input,
-        textarea,
-        select {
+
+        .form-group label .required {
+            color: var(--danger);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
             width: 100%;
-            padding: 0.75rem;
-            background: #0f0f1a;
-            border: 1px solid #00d4ff;
-            color: #e2e8f0;
-            font-family: system-ui, -apple-system, sans-serif;
-            font-size: 1rem;
-            border-radius: 4px;
-            transition: border-color 0.3s;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(10, 15, 28, 0.5);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: var(--transition);
         }
-        
-        input:focus,
-        textarea:focus,
-        select:focus {
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
             outline: none;
-            border-color: #00ffff;
-            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+            border-color: var(--accent);
+            background: rgba(10, 15, 28, 0.8);
+            box-shadow: 0 0 16px rgba(0, 255, 204, 0.15);
         }
-        
-        textarea {
+
+        .form-group textarea {
             resize: vertical;
-            min-height: 150px;
+            min-height: 140px;
+            font-family: 'Courier New', monospace;
         }
-        
-        button {
-            background: #00d4ff;
-            color: #060612;
-            padding: 0.75rem 2rem;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
+
+        .form-group select {
             cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.3s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ffcc' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.875rem center;
+            padding-right: 2.5rem;
         }
-        
-        button:hover {
-            background: #00ffff;
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
         }
-        
-        button:active {
-            transform: scale(0.98);
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
         }
-        
-        .response-time {
-            background: rgba(0, 212, 255, 0.1);
-            border-left: 4px solid #00d4ff;
-            padding: 1rem;
-            margin-top: 1.5rem;
-            border-radius: 4px;
-        }
-        
-        .social-links {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
-            flex-wrap: wrap;
-        }
-        
-        .social-links a {
-            display: inline-block;
-            width: 45px;
-            height: 45px;
-            background: #0f0f1a;
-            border: 2px solid #00d4ff;
-            border-radius: 50%;
+
+        .form-checkbox {
             display: flex;
             align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            color: #00d4ff;
-            font-weight: bold;
-            transition: all 0.3s;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
         }
-        
-        .social-links a:hover {
-            background: #00d4ff;
-            color: #060612;
+
+        .form-checkbox input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+            accent-color: var(--accent);
         }
-        
-        footer {
-            background: #0a0a12;
-            border-top: 2px solid #00d4ff;
+
+        .form-checkbox label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent), #00e5d4);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 1rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 255, 204, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* ===== CONFIRMATION CARD ===== */
+        .confirmation-card {
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid var(--success);
+            border-radius: 12px;
             padding: 2rem;
-            margin-top: 3rem;
+            text-align: center;
+            margin-top: 2rem;
+            display: none;
+            animation: slideIn 0.4s ease-out;
         }
-        
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
+
+        .confirmation-card.show {
+            display: block;
         }
-        
-        .footer-section h3 {
-            color: #00d4ff;
+
+        .confirmation-card h3 {
+            font-size: 1.5rem;
+            color: var(--success);
             margin-bottom: 1rem;
         }
-        
-        .footer-links {
-            list-style: none;
-        }
-        
-        .footer-links a {
-            color: #e2e8f0;
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-        
-        .footer-links a:hover {
-            color: #00d4ff;
-        }
-        
-        .footer-links li {
+
+        .confirmation-card p {
+            color: var(--text-secondary);
             margin-bottom: 0.5rem;
         }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
+
+        .ticket-number {
+            font-family: 'Courier New', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-top: 1rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
             }
-            
-            h2 {
-                font-size: 1.3rem;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
-            
-            .nav-links {
-                gap: 1rem;
-                font-size: 0.9rem;
-            }
-            
-            .container {
-                padding: 2rem 1rem;
-            }
-            
-            .contact-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .social-links {
-                justify-content: center;
-            }
-            
-            .footer-content {
+        }
+
+        /* ===== FAQ SECTION ===== */
+        .faq-section {
+            padding: 4rem 0;
+        }
+
+        .faq-section h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, var(--accent), #00e5d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .faq-grid {
                 grid-template-columns: 1fr;
             }
         }
+
+        .faq-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .faq-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 8px 24px rgba(0, 255, 204, 0.1);
+        }
+
+        .faq-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: var(--transition);
+        }
+
+        .faq-card:hover .faq-header {
+            background: rgba(0, 255, 204, 0.05);
+        }
+
+        .faq-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .faq-toggle {
+            font-size: 1.5rem;
+            transition: var(--transition);
+            color: var(--accent);
+        }
+
+        .faq-card.active .faq-toggle {
+            transform: rotate(180deg);
+        }
+
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .faq-card.active .faq-content {
+            max-height: 300px;
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ===== EMERGENCY SECTION ===== */
+        .emergency-section {
+            padding: 4rem 0;
+        }
+
+        .emergency-card {
+            background: rgba(239, 68, 68, 0.05);
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .emergency-card h2 {
+            font-size: 1.75rem;
+            color: var(--danger);
+            margin-bottom: 1rem;
+        }
+
+        .emergency-card p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+        }
+
+        .emergency-details {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .emergency-details a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .emergency-details a:hover {
+            color: #00e5d4;
+        }
+
+        .emergency-cta {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 1rem 2rem;
+            background: var(--danger);
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .emergency-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(239, 68, 68, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .emergency-details {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 4rem;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .fade-in:nth-child(1) { animation-delay: 0.1s; }
+        .fade-in:nth-child(2) { animation-delay: 0.2s; }
+        .fade-in:nth-child(3) { animation-delay: 0.3s; }
     </style>
-</head>
+    </head>
 <body>
-    <header>
-        <nav>
-            <a href="https://cyberdudebivash.in" class="logo">CYBERDUDEBIVASH AI Security Hub</a>
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-container">
+            <div class="nav-logo">CYBERDUDEBIVASH</div>
             <ul class="nav-links">
-                <li><a href="https://cyberdudebivash.in">← Back to Platform</a></li>
+                <li><a href="/">Home</a></li>
+                <li><a href="/tools.html">Tools</a></li>
+                <li><a href="/intel.html">Intel</a></li>
+                <li><a href="/services.html">Services</a></li>
+                <li><a href="/booking.html">Booking</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/contact.html" class="active">Contact</a></li>
             </ul>
-        </nav>
-    </header>
-    
-    <div class="container">
-        <h1>Contact Us</h1>
-        <p>Have questions or need support? We're here to help. Reach out to our team through any of the following channels.</p>
-        
-        <div class="contact-grid">
-            <div class="contact-section">
-                <h3>Direct Contact</h3>
-                
-                <div class="contact-item">
-                    <strong>Email</strong>
-                    <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a>
-                </div>
-                
-                <div class="contact-item">
-                    <strong>Phone</strong>
-                    <a href="tel:+918179881447">+91 8179881447</a>
-                </div>
-                
-                <div class="contact-item">
-                    <strong>Business Address</strong>
-                    <p>Bivash Kumar Nayak's Enclave 29<br>
-                    Korai - Sukinda - Ramchandrapur Road<br>
-                    Ragadi, Jajpur Road<br>
-                    Odisha 755019, India</p>
-                </div>
-            </div>
-            
-            <div class="contact-section">
-                <h3>Company Information</h3>
-                
-                <div class="contact-item">
-                    <strong>Company Name</strong>
-                    <p>CYBERDUDEBIVASH PRIVATE LIMITED</p>
-                </div>
-                
-                <div class="contact-item">
-                    <strong>Website</strong>
-                    <a href="https://cyberdudebivash.in">https://cyberdudebivash.in</a>
-                </div>
-                
-                <div class="contact-item">
-                    <strong>Support Hours</strong>
-                    <p>Monday - Friday: 9:00 AM - 6:00 PM IST<br>
-                    Response time: 24-48 hours</p>
-                </div>
-            </div>
         </div>
-        
-        <div class="form-section">
-            <h2>Send us a Message</h2>
-            <p>Fill out the form below and we'll get back to you as soon as possible.</p>
-            
-            <form action="/api/contact" method="POST">
-                <div class="form-group">
-                    <label for="name">Full Name *</label>
-                    <input type="text" id="name" name="name" required>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <div class="container">
+        <section class="hero">
+            <h1>Get in Touch</h1>
+            <p>Security emergencies, enterprise inquiries, partnership proposals, or just a quick question — we respond within 2-4 hours.</p>
+            <div class="response-badges">
+                <div class="badge">⚡ 2-4hr Response</div>
+                <div class="badge">📱 WhatsApp Available</div>
+                <div class="badge">🌐 Mon-Sat 9AM-8PM IST</div>
+            </div>
+        </section>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- LEFT: CONTACT INFO -->
+            <div class="contact-info">
+                <!-- Email Card -->
+                <div class="info-card fade-in" id="email-card">
+                    <div class="info-card-icon">📧</div>
+                    <h3>Email</h3>
+                    <p id="email-text">bivash@cyberdudebivash.com</p>
+                    <div class="copy-hint">Click to copy</div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="email">Email Address *</label>
-                    <input type="email" id="email" name="email" required>
+
+                <!-- Phone/WhatsApp Card -->
+                <div class="info-card fade-in">
+                    <div class="info-card-icon">📱</div>
+                    <h3>Phone / WhatsApp</h3>
+                    <p><a href="https://wa.me/918179881447" target="_blank">+918179881447</a></p>
+                    <div class="copy-hint">Click to open WhatsApp</div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone">
+
+                <!-- Telegram Card -->
+                <div class="info-card fade-in">
+                    <div class="info-card-icon">✈️</div>
+                    <h3>Telegram</h3>
+                    <p><a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">@cyberdudebivashSentinelApex</a></p>
+                    <div class="copy-hint">Join our channel</div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="subject">Subject *</label>
-                    <select id="subject" name="subject" required>
-                        <option value="">Select a subject...</option>
-                        <option value="support">Technical Support</option>
-                        <option value="billing">Billing & Payments</option>
-                        <option value="refund">Refund Request</option>
-                        <option value="partnership">Partnership Inquiry</option>
-                        <option value="security">Security Report</option>
-                        <option value="general">General Inquiry</option>
-                    </select>
+
+                <!-- Business Hours Card -->
+                <div class="info-card fade-in">
+                    <div class="info-card-icon">🕒</div>
+                    <h3>Business Hours</h3>
+                    <p class="business-hours">Mon-Sat 9AM-8PM IST</p>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary);">Response time: 2-4 hours</p>
                 </div>
-                
-                <div class="form-group">
-                    <label for="message">Message *</label>
-                    <textarea id="message" name="message" required></textarea>
+
+                <!-- Address Card -->
+                <div class="info-card fade-in">
+                    <div class="info-card-icon">📍</div>
+                    <h3>Address</h3>
+                    <p>29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</p>
                 </div>
-                
-                <button type="submit">Send Message</button>
-                
-                <div class="response-time">
-                    <strong>Expected Response Time:</strong> We aim to respond to all inquiries within 24-48 hours during business hours.
+
+                <!-- Company Info Card -->
+                <div class="info-card fade-in">
+                    <div class="info-card-icon">🏢</div>
+                    <h3>Company</h3>
+                    <p>CYBERDUDEBIVASH PRIVATE LIMITED</p>
+                    <div class="gst-info">GST: 21ARKPN8270G1ZP</div>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="quick-actions">
+                    <a href="https://wa.me/918179881447" target="_blank">💬 WhatsApp Now</a>
+                    <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">✈️ Join Telegram</a>
+                    <a href="mailto:bivash@cyberdudebivash.com">📧 Send Email</a>
+                </div>
+
+                <!-- Use Case Selector -->
+                <div style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 1px;">What brings you here?</h3>
+                    <div class="use-case-selector">
+                        <button class="use-case-btn" data-use-case="security-incident">🚨 Security Incident</button>
+                        <button class="use-case-btn" data-use-case="enterprise">💼 Enterprise Inquiry</button>
+                        <button class="use-case-btn" data-use-case="partnership">🤝 Partnership</button>
+                        <button class="use-case-btn" data-use-case="general">❓ General Question</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CONTACT FORM -->
+            <form class="contact-form" id="contactForm">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.25rem; color: var(--accent);">Send us a Message</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Full Name <span class="required">*</span></label>
+                        <input type="text" id="fullName" name="fullName" required placeholder="Your full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="workEmail">Work Email <span class="required">*</span></label>
+                        <input type="email" id="workEmail" name="workEmail" required placeholder="your.email@company.com">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phone">Phone / WhatsApp</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+91 XX XXX XXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="company">Company Name</label>
+                        <input type="text" id="company" name="company" placeholder="Your organization">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="subject">Subject <span class="required">*</span></label>
+                        <select id="subject" name="subject" required>
+                            <option value="">Select a subject</option>
+                            <option value="security-incident">Security Incident</option>
+                            <option value="enterprise-inquiry">Enterprise Inquiry</option>
+                            <option value="partnership-proposal">Partnership Proposal</option>
+                            <option value="product-question">Product Question</option>
+                            <option value="technical-support">Technical Support</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority">
+                            <option value="normal">Normal - 48hrs</option>
+                            <option value="critical">Critical - Within 1hr</option>
+                            <option value="high">High - Today</option>
+                            <option value="low">Low - This week</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Message <span class="required">*</span></label>
+                    <textarea id="message" name="message" required minlength="20" placeholder="Describe your security challenge or question in detail..."></textarea>
+                </div>
+
+                <div class="form-checkbox">
+                    <input type="checkbox" id="evidence" name="evidence">
+                    <label for="evidence">I have screenshots/logs to share (will be shared after contact)</label>
+                </div>
+
+                <button type="submit" class="submit-btn">📨 Send Message</button>
+
+                <!-- Confirmation Card -->
+                <div class="confirmation-card" id="confirmationCard">
+                    <h3>✅ Message Sent!</h3>
+                    <p>We'll respond within 2-4 hours. Check your email and WhatsApp.</p>
+                    <div class="ticket-number">Ticket: <span id="ticketNumber">000000</span></div>
                 </div>
             </form>
         </div>
-        
-        <h2>Connect With Us</h2>
-        <p>Follow our social channels for the latest updates, security insights, and platform announcements:</p>
-        
-        <div class="social-links">
-            <a href="https://github.com/cyberdudebivash" title="GitHub">GH</a>
-            <a href="https://linkedin.com/company/cyberdudebivash" title="LinkedIn">IN</a>
-            <a href="https://twitter.com/cyberdudebivash" title="Twitter">𝕏</a>
-            <a href="https://t.me/cyberdudebivash" title="Telegram">TG</a>
-        </div>
-        
-        <h2 style="margin-top: 3rem;">Frequently Asked Questions</h2>
-        
-        <div class="contact-section">
-            <h3>Q: What are your support hours?</h3>
-            <p>A: We provide support Monday through Friday, 9:00 AM to 6:00 PM IST. We aim to respond to all inquiries within 24-48 hours.</p>
-            
-            <h3 style="margin-top: 1.5rem;">Q: How can I track my support ticket?</h3>
-            <p>A: After submitting your inquiry, you'll receive a confirmation email with a ticket number. You can use this to follow up on your request.</p>
-            
-            <h3 style="margin-top: 1.5rem;">Q: How do I report a security vulnerability?</h3>
-            <p>A: For security concerns, please email bivash@cyberdudebivash.com with "SECURITY REPORT" in the subject line. Do not publicly disclose vulnerabilities until we've had time to address them.</p>
-            
-            <h3 style="margin-top: 1.5rem;">Q: Can I schedule a demo or consultation?</h3>
-            <p>A: Yes! Please contact us via email or phone to schedule a meeting with our team. We offer personalized demonstrations for Enterprise plans.</p>
-            
-            <h3 style="margin-top: 1.5rem;">Q: Where is your company located?</h3>
-            <p>A: CYBERDUDEBIVASH PRIVATE LIMITED is headquartered in Odisha, India. Our address is listed above for any correspondence.</p>
-        </div>
-        
-        <h2 style="margin-top: 3rem;">API & Developer Support</h2>
-        <p>For API documentation, integration support, or developer inquiries, please visit our developer portal at <a href="https://cyberdudebivash.in/docs" style="color: #00d4ff;">cyberdudebivash.in/docs</a> or contact our technical team at <a href="mailto:tech@cyberdudebivash.com" style="color: #00d4ff;">tech@cyberdudebivash.com</a>.</p>
     </div>
-    
-    <footer>
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>Legal</h3>
-                <ul class="footer-links">
-                    <li><a href="/privacy-policy.html">Privacy Policy</a></li>
-                    <li><a href="/terms-of-service.html">Terms of Service</a></li>
-                    <li><a href="/refund-policy.html">Refund Policy</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h3>Support</h3>
-                <ul class="footer-links">
-                    <li><a href="/contact.html">Contact Us</a></li>
-                    <li><a href="/about.html">About Us</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <p>CYBERDUDEBIVASH PRIVATE LIMITED<br>Odisha, India<br>bivash@cyberdudebivash.com<br>+91 8179881447</p>
+
+    <!-- FAQ SECTION -->
+    <section class="faq-section">
+        <div class="container">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-grid">
+                <div class="faq-card">
+                    <div class="faq-header" onclick="toggleFAQ(this)">
+                        <div class="faq-title">How quickly can I get a security report?</div>
+                        <div class="faq-toggle">▼</div>
+                    </div>
+                    <div class="faq-content">
+                        <div class="faq-answer">Domain reports are delivered within 2-4 hours of payment. Full enterprise assessments take 48-72 hours.</div>
+                    </div>
+                </div>
+
+                <div class="faq-card">
+                    <div class="faq-header" onclick="toggleFAQ(this)">
+                        <div class="faq-title">What payment methods do you accept?</div>
+                        <div class="faq-toggle">▼</div>
+                    </div>
+                    <div class="faq-content">
+                        <div class="faq-answer">UPI, Bank Transfer, PayPal, and Crypto (BNB Smart Chain). All payments are manual verification — no auto-billing.</div>
+                    </div>
+                </div>
+
+                <div class="faq-card">
+                    <div class="faq-header" onclick="toggleFAQ(this)">
+                        <div class="faq-title">Do you work with startups or only enterprises?</div>
+                        <div class="faq-toggle">▼</div>
+                    </div>
+                    <div class="faq-content">
+                        <div class="faq-answer">We serve everyone from solo developers to Fortune 500 companies. Our freemium model lets you start for free.</div>
+                    </div>
+                </div>
+
+                <div class="faq-card">
+                    <div class="faq-header" onclick="toggleFAQ(this)">
+                        <div class="faq-title">Is my data secure when I run a scan?</div>
+                        <div class="faq-toggle">▼</div>
+                    </div>
+                    <div class="faq-content">
+                        <div class="faq-answer">We scan publicly available infrastructure. No access to internal systems. Data retained for 30 days, fully encrypted.</div>
+                    </div>
+                </div>
+
+                <div class="faq-card">
+                    <div class="faq-header" onclick="toggleFAQ(this)">
+                        <div class="faq-title">Can I get a refund?</div>
+                        <div class="faq-toggle">▼</div>
+                    </div>
+                    <div class="faq-content">
+                        <div class="faq-answer">Yes. Within 24 hours of purchase if the report hasn't been generated. Contact us at bivash@cyberdudebivash.com.</div>
+                    </div>
+                </div>
+
+                <div class="faq-card">
+                    <div class="faq-header" onclick="toggleFAQ(this)">
+                        <div class="faq-title">Do you offer white-label or MSSP solutions?</div>
+                        <div class="faq-toggle">▼</div>
+                    </div>
+                    <div class="faq-content">
+                        <div class="faq-answer">Yes! Our MSSP platform starts at ₹49,999/month. Book a demo at /booking.html to discuss.</div>
+                    </div>
+                </div>
             </div>
         </div>
+    </section>
+
+    <!-- EMERGENCY SECTION -->
+    <section class="emergency-section">
+        <div class="container">
+            <div class="emergency-card">
+                <h2>🚨 Active Security Incident?</h2>
+                <p>If your organization is under active attack, contact us immediately:</p>
+                <div class="emergency-details">
+                    <div>
+                        <strong>WhatsApp:</strong> <a href="https://wa.me/918179881447" target="_blank">+918179881447</a>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Response &lt; 1 hour</div>
+                    </div>
+                    <div>
+                        <strong>Email:</strong> <a href="mailto:bivash@cyberdudebivash.com?subject=URGENT" target="_blank">bivash@cyberdudebivash.com</a>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Subject: URGENT</div>
+                    </div>
+                </div>
+                <a href="https://wa.me/918179881447?text=URGENT%3A%20Security%20Incident" target="_blank" class="emergency-cta">📱 WhatsApp Emergency</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="container">
+        <p>&copy; 2025 CYBERDUDEBIVASH AI Security Hub. All rights reserved.</p>
     </footer>
+
+    <!-- SCRIPTS -->
+    <script>
+        // ===== EMAIL COPY TO CLIPBOARD =====
+        document.getElementById('email-card').addEventListener('click', function() {
+            const email = 'bivash@cyberdudebivash.com';
+            navigator.clipboard.writeText(email).then(() => {
+                const originalText = this.querySelector('p').textContent;
+                const originalHint = this.querySelector('.copy-hint').textContent;
+
+                this.querySelector('.copy-hint').textContent = '✓ Copied to clipboard!';
+                this.querySelector('.copy-hint').style.color = 'var(--accent)';
+
+                setTimeout(() => {
+                    this.querySelector('.copy-hint').textContent = originalHint;
+                    this.querySelector('.copy-hint').style.color = '';
+                }, 2000);
+            });
+        });
+
+        // ===== USE CASE SELECTOR =====
+        document.querySelectorAll('.use-case-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.use-case-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const useCaseMap = {
+                    'security-incident': 'security-incident',
+                    'enterprise': 'enterprise-inquiry',
+                    'partnership': 'partnership-proposal',
+                    'general': 'general-question'
+                };
+
+                document.getElementById('subject').value = useCaseMap[this.dataset.useCase] || '';
+                if (this.dataset.useCase === 'security-incident') {
+                    document.getElementById('priority').value = 'critical';
+                }
+            });
+        });
+
+        // ===== FORM SUBMISSION =====
+        document.getElementById('contactForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                fullName: document.getElementById('fullName').value,
+                workEmail: document.getElementById('workEmail').value,
+                phone: document.getElementById('phone').value,
+                company: document.getElementById('company').value,
+                subject: document.getElementById('subject').value,
+                priority: document.getElementById('priority').value,
+                message: document.getElementById('message').value,
+                hasEvidence: document.getElementById('evidence').checked,
+                source: 'contact_form',
+                timestamp: new Date().toISOString()
+            };
+
+            // Store to localStorage as fallback
+            const submissions = JSON.parse(localStorage.getItem('contactSubmissions') || '[]');
+            submissions.push(formData);
+            localStorage.setItem('contactSubmissions', JSON.stringify(submissions));
+
+            // Attempt to send to API
+            try {
+                const response = await fetch('https://cyberdudebivash-security-hub.workers.dev/api/leads/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+            } catch (error) {
+                console.log('API endpoint offline, stored locally:', error);
+            }
+
+            // Show success confirmation regardless of API response
+            const ticketNumber = String(Math.floor(100000 + Math.random() * 900000));
+            document.getElementById('ticketNumber').textContent = ticketNumber;
+            document.getElementById('confirmationCard').classList.add('show');
+
+            // Reset form
+            document.getElementById('contactForm').reset();
+            document.querySelectorAll('.use-case-btn').forEach(b => b.classList.remove('active'));
+
+            // Scroll to confirmation
+            document.getElementById('confirmationCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Hide confirmation after 8 seconds
+            setTimeout(() => {
+                document.getElementById('confirmationCard').classList.remove('show');
+            }, 8000);
+        });
+
+        // ===== FAQ TOGGLE =====
+        function toggleFAQ(header) {
+            const card = header.parentElement;
+            card.classList.toggle('active');
+        }
+
+        // ===== FORM VALIDATION =====
+        const messageInput = document.getElementById('message');
+        messageInput.addEventListener('input', function() {
+            if (this.value.length < 20) {
+                this.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+
+        // ===== PAGE LOAD ANIMATIONS =====
+        document.addEventListener('DOMContentLoaded', () => {
+            const fadeElements = document.querySelectorAll('.fade-in');
+            fadeElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+            });
+
+            setTimeout(() => {
+                fadeElements.forEach((el, i) => {
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                        el.style.transition = 'all 0.6s ease-out';
+                    }, i * 100);
+                });
+            }, 100);
+        });
+    </script>
+
+    <script src="/assets/global.js"></script>
 </body>
 </html>

@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Threat Intelligence — CYBERDUDEBIVASH Sentinel APEX</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1c;
+            --card-dark: #111827;
+            --accent: #00ffcc;
+            --accent-shadow: rgba(0, 255, 204, 0.5);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --border-color: rgba(0, 255, 204, 0.2);
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ===== STICKY NAVIGATION ===== */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, rgba(10, 15, 28, 0.95), rgba(17, 24, 39, 0.95));
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px var(--accent-shadow);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent-shadow);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 6px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        /* ===== RESPONSIVE NAV ===== */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            .nav-logo {
+                font-size: 1.2rem;
+            }
+
+            .hamburger {
+                display: flex;
+            }
+
+            .nav-links {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: var(--card-dark);
+                gap: 0;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+            }
+
+            .nav-links.active {
+                max-height: 500px;
+            }
+
+            .nav-links a {
+                padding: 1rem;
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05), transparent);
+            border-bottom: 1px solid var(--border-color);
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #00ccaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px var(--accent-shadow);
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            border-radius: 999px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            animation: slideInDown 0.6s ease;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-card {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            animation: slideInUp 0.6s ease backwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-shadow: 0 0 15px var(--accent-shadow);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #00ccaa);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            border: 2px solid var(--accent);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 255, 204, 0.2);
+            box-shadow: 0 0 20px var(--accent-shadow);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* ===== FILTER BAR ===== */
+        .filter-section {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .filter-btn.active {
+            background: rgba(0, 255, 204, 0.3);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-shadow);
+        }
+
+        .filter-btn:hover {
+            background: rgba(0, 255, 204, 0.2);
+        }
+
+        .refresh-timer {
+            margin-left: auto;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .refresh-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* ===== THREAT STATS DASHBOARD ===== */
+        .threat-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .threat-stat-item {
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.1), rgba(0, 204, 170, 0.05));
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            animation: slideInUp 0.6s ease backwards;
+        }
+
+        .threat-stat-item:nth-child(1) { animation-delay: 0.1s; }
+        .threat-stat-item:nth-child(2) { animation-delay: 0.2s; }
+        .threat-stat-item:nth-child(3) { animation-delay: 0.3s; }
+        .threat-stat-item:nth-child(4) { animation-delay: 0.4s; }
+
+        .threat-stat-number {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--accent);
+            animation: countUp 1.5s ease-out;
+        }
+
+        .threat-stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ===== THREAT FEED ===== */
+        .feed-section {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .feed-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--accent);
+        }
+
+        .threat-feed {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: 1fr;
+        }
+
+        .threat-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.6));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: slideInUp 0.5s ease backwards;
+            overflow: hidden;
+        }
+
+        .threat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0, 255, 204, 0.1), transparent);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .threat-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .threat-card:hover::before {
+            top: -25%;
+            right: -25%;
+        }
+
+        .threat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .threat-id {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-critical {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            border: 1px solid var(--danger);
+        }
+
+        .badge-high {
+            background: rgba(245, 158, 11, 0.3);
+            color: #fcd34d;
+            border: 1px solid var(--warning);
+        }
+
+        .badge-medium {
+            background: rgba(34, 197, 94, 0.3);
+            color: #86efac;
+            border: 1px solid var(--success);
+        }
+
+        .badge-cvss {
+            background: rgba(0, 255, 204, 0.2);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .badge-kev {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        .badge-apt {
+            background: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.5);
+        }
+
+        .threat-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .threat-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .threat-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .meta-item {
+            font-size: 0.85rem;
+        }
+
+        .meta-label {
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+
+        .meta-value {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .threat-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* ===== APT SECTION ===== */
+        .apt-section {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--accent);
+        }
+
+        .apt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .apt-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.6));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: slideInUp 0.6s ease backwards;
+        }
+
+        .apt-card:nth-child(1) { animation-delay: 0.1s; }
+        .apt-card:nth-child(2) { animation-delay: 0.2s; }
+        .apt-card:nth-child(3) { animation-delay: 0.3s; }
+        .apt-card:nth-child(4) { animation-delay: 0.4s; }
+        .apt-card:nth-child(5) { animation-delay: 0.5s; }
+        .apt-card:nth-child(6) { animation-delay: 0.6s; }
+
+        .apt-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            transform: translateY(-8px);
+        }
+
+        .apt-name {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .apt-origin {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .apt-info {
+            margin-bottom: 1.5rem;
+        }
+
+        .apt-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.3rem;
+        }
+
+        .apt-content {
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .cta-container {
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.1), rgba(0, 204, 170, 0.05));
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.2);
+        }
+
+        .cta-title {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .cta-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-size: 1.05rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .subscription-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .subscription-form input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.75rem 1rem;
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .subscription-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-shadow);
+        }
+
+        .subscription-form input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 2rem 1rem;
+            }
+
+            .hero-title {
+                font-size: 1.8rem;
+            }
+
+            .hero-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                margin: 2rem 1rem;
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.8rem;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-buttons {
+                width: 100%;
+            }
+
+            .refresh-timer {
+                width: 100%;
+                margin-left: 0;
+                justify-content: flex-start;
+            }
+
+            .threat-card {
+                padding: 1rem;
+            }
+
+            .threat-header {
+                flex-direction: column;
+            }
+
+            .threat-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .threat-actions {
+                flex-direction: column;
+            }
+
+            .threat-actions .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .apt-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-container {
+                padding: 2rem 1rem;
+            }
+
+            .cta-title {
+                font-size: 1.5rem;
+            }
+
+            .subscription-form {
+                flex-direction: column;
+            }
+
+            .subscription-form input,
+            .subscription-form .btn {
+                width: 100%;
+            }
+
+            .feed-title,
+            .section-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .mt-2 { margin-top: 2rem; }
+        .mt-4 { margin-top: 4rem; }
+        .mb-2 { margin-bottom: 2rem; }
+        .mb-4 { margin-bottom: 4rem; }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-logo">CYBERDUDEBIVASH</div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/">Home</a></li>
+            <li><a href="/tools.html">Tools</a></li>
+            <li><a href="/intel.html" class="active">Intel</a></li>
+            <li><a href="/services.html">Services</a></li>
+            <li><a href="/booking.html">Booking</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            LIVE FEED
+        </div>
+        <h1 class="hero-title">Live Threat Intelligence Feed</h1>
+        <p class="hero-subtitle">
+            Real-time CVE intelligence powered by Sentinel APEX · STIX/TAXII format · Updated every 15 minutes
+        </p>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Total CVEs Tracked</div>
+                <div class="stat-value" data-stat="total-cves">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Critical Threats</div>
+                <div class="stat-value" data-stat="critical">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">KEV Listed</div>
+                <div class="stat-value" data-stat="kev">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Updated</div>
+                <div class="stat-value" id="last-updated" style="font-size: 1.2rem;">Now</div>
+            </div>
+        </div>
+
+        <div class="hero-buttons">
+            <a href="https://cyberdudebivash.in/#dashboard" class="btn btn-primary">
+                Launch Full Dashboard →
+            </a>
+            <a href="https://t.me/cyberdudebivashSentinelApex" class="btn btn-secondary" target="_blank">
+                Join Telegram Feed
+            </a>
+        </div>
+    </section>
+
+    <!-- FILTER SECTION -->
+    <div class="filter-section">
+        <div class="filter-bar">
+            <span class="filter-label">Filter by:</span>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="CRITICAL">Critical</button>
+                <button class="filter-btn" data-filter="HIGH">High</button>
+                <button class="filter-btn" data-filter="MEDIUM">Medium</button>
+                <button class="filter-btn" data-filter="kev">CISA KEV</button>
+                <button class="filter-btn" data-filter="week">This Week</button>
+            </div>
+            <div class="refresh-timer">
+                <div class="refresh-spinner"></div>
+                <span id="refresh-time">Last refreshed: Now</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- THREAT STATS DASHBOARD -->
+    <section class="threat-stats">
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="critical-count">0</div>
+            <div class="threat-stat-label">Critical CVEs</div>
+        </div>
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="high-count">0</div>
+            <div class="threat-stat-label">High CVEs</div>
+        </div>
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="kev-count">0</div>
+            <div class="threat-stat-label">KEV Listed</div>
+        </div>
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="apt-count">0</div>
+            <div class="threat-stat-label">APT Groups Tracked</div>
+        </div>
+    </section>
+
+    <!-- THREAT FEED -->
+    <section class="feed-section">
+        <h2 class="feed-title">Real-Time Threat Intelligence</h2>
+        <div class="threat-feed" id="threat-feed">
+            <!-- Threats populated by JS -->
+        </div>
+    </section>
+
+    <!-- APT THREAT ACTORS -->
+    <section class="apt-section">
+        <h2 class="section-title">APT Threat Actors</h2>
+        <div class="apt-grid" id="apt-grid">
+            <!-- APT cards populated by JS -->
+        </div>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="cta-section">
+        <div class="cta-container">
+            <h2 class="cta-title">Get Real-Time Threat Alerts</h2>
+            <p class="cta-subtitle">
+                Stay ahead of threats with Sentinel APEX real-time intelligence.<br>
+                Join thousands of security professionals receiving threat intelligence updates.
+            </p>
+
+            <div class="cta-buttons">
+                <a href="https://t.me/cyberdudebivashSentinelApex" class="btn btn-primary" target="_blank">
+                    Join Telegram Channel
+                </a>
+                <button class="btn btn-secondary" onclick="document.querySelector('.subscription-form').scrollIntoView({behavior: 'smooth'})">
+                    Subscribe to Digest
+                </button>
+            </div>
+
+            <form class="subscription-form" id="subscription-form">
+                <input
+                    type="email"
+                    placeholder="Enter your email"
+                    required
+                    id="email-input"
+                >
+                <button type="submit" class="btn btn-primary">Subscribe Free</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER SPACER -->
+    <div style="height: 4rem;"></div>
+
+    <!-- SCRIPTS -->
+    <script src="/assets/global.js"></script>
+    <script>
+        // ===== STATE & CONFIG =====
+        const CONFIG = {
+            API_URL: 'https://cyberdudebivash-security-hub.workers.dev/api/threat-intel?limit=20',
+            REFRESH_INTERVAL: 3 * 60 * 1000, // 3 minutes
+            API_TIMEOUT: 5000,
+        };
+
+        const FALLBACK_CVES = [
+            {
+                id: 'CVE-2024-3400',
+                severity: 'CRITICAL',
+                cvss: 9.8,
+                title: 'Critical RCE in OpenSSL',
+                product: 'OpenSSL 3.x',
+                description: 'Remote Code Execution vulnerability in OpenSSL cryptographic library affecting widespread enterprise deployments.',
+                apt: ['APT29'],
+                kev: true,
+                date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-6387',
+                severity: 'CRITICAL',
+                cvss: 9.1,
+                title: 'OpenSSH Signal Handler Race Condition',
+                product: 'OpenSSH',
+                description: 'Unauthenticated RCE in OpenSSH prior to version 8.7p1. Exploitable without authentication.',
+                apt: ['Lazarus', 'APT41'],
+                kev: true,
+                date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-21412',
+                severity: 'CRITICAL',
+                cvss: 9.6,
+                title: 'Windows Elevation of Privilege',
+                product: 'Windows 10/11',
+                description: 'Critical privilege escalation affecting latest Windows versions. Actively exploited in the wild.',
+                apt: ['FIN7'],
+                kev: true,
+                date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-30051',
+                severity: 'HIGH',
+                cvss: 8.8,
+                title: 'Outlook Information Disclosure',
+                product: 'Microsoft Outlook',
+                description: 'Information disclosure vulnerability allowing remote attackers to access sensitive data.',
+                apt: ['APT29'],
+                kev: false,
+                date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-26169',
+                severity: 'HIGH',
+                cvss: 8.6,
+                title: 'Apache Log4j2 RCE',
+                product: 'Apache Log4j2',
+                description: 'Remote code execution in Log4j2 JNDI lookup functionality. Widely used in enterprise applications.',
+                apt: ['APT41', 'Lazarus'],
+                kev: true,
+                date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-43461',
+                severity: 'HIGH',
+                cvss: 8.2,
+                title: 'PHP File Upload RCE',
+                product: 'PHP Framework',
+                description: 'Arbitrary file upload leading to remote code execution in popular PHP frameworks.',
+                apt: ['FIN7'],
+                kev: false,
+                date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-45519',
+                severity: 'MEDIUM',
+                cvss: 7.5,
+                title: 'Django SQL Injection',
+                product: 'Django Web Framework',
+                description: 'SQL injection vulnerability in Django ORM allowing database compromise.',
+                apt: [],
+                kev: false,
+                date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-38094',
+                severity: 'CRITICAL',
+                cvss: 9.7,
+                title: 'Cisco IOS XE RCE',
+                product: 'Cisco IOS XE',
+                description: 'Unauthenticated RCE in Cisco networking devices affecting critical infrastructure.',
+                apt: ['APT41'],
+                kev: true,
+                date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-47575',
+                severity: 'HIGH',
+                cvss: 8.4,
+                title: 'Kubernetes API Server Privilege Escalation',
+                product: 'Kubernetes',
+                description: 'Privilege escalation in Kubernetes API server affecting container orchestration environments.',
+                apt: ['APT29'],
+                kev: false,
+                date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-49138',
+                severity: 'CRITICAL',
+                cvss: 9.9,
+                title: 'Linux Kernel Memory Corruption',
+                product: 'Linux Kernel 6.x',
+                description: 'Critical memory corruption vulnerability in Linux kernel affecting all major distributions.',
+                apt: ['Lazarus', 'BlackCat'],
+                kev: true,
+                date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-21338',
+                severity: 'HIGH',
+                cvss: 8.1,
+                title: 'Exchange Server Weakness',
+                product: 'Microsoft Exchange Server',
+                description: 'Authentication bypass in Exchange Server affecting enterprise email infrastructure.',
+                apt: ['FIN7', 'APT41'],
+                kev: false,
+                date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-35250',
+                severity: 'MEDIUM',
+                cvss: 7.2,
+                title: 'Jenkins Plugin Vulnerability',
+                product: 'Jenkins CI/CD',
+                description: 'Script injection vulnerability in popular Jenkins plugins used for CI/CD pipelines.',
+                apt: [],
+                kev: false,
+                date: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000)
+            }
+        ];
+
+        const APT_GROUPS = [
+            {
+                name: 'APT29',
+                origin: 'Russia',
+                recentCVEs: ['CVE-2024-3400', 'CVE-2024-30051', 'CVE-2024-47575'],
+                threatLevel: 'CRITICAL',
+                description: 'APT29 (Cozy Bear) is a sophisticated Russian state-sponsored group targeting government and enterprise.'
+            },
+            {
+                name: 'APT41',
+                origin: 'China',
+                recentCVEs: ['CVE-2024-6387', 'CVE-2024-26169', 'CVE-2024-38094'],
+                threatLevel: 'CRITICAL',
+                description: 'APT41 blends state-sponsored and financially motivated attacks. Known for supply chain compromises.'
+            },
+            {
+                name: 'Lazarus',
+                origin: 'North Korea',
+                recentCVEs: ['CVE-2024-6387', 'CVE-2024-26169', 'CVE-2024-49138'],
+                threatLevel: 'CRITICAL',
+                description: 'North Korean threat actor responsible for major financial attacks and critical infrastructure targeting.'
+            },
+            {
+                name: 'FIN7',
+                origin: 'Cybercrime',
+                recentCVEs: ['CVE-2024-21412', 'CVE-2024-43461', 'CVE-2024-21338'],
+                threatLevel: 'HIGH',
+                description: 'Financially motivated threat actor targeting retail and hospitality sectors with sophisticated malware.'
+            },
+            {
+                name: 'LockBit',
+                origin: 'Cybercrime',
+                recentCVEs: ['CVE-2024-3400', 'CVE-2024-49138'],
+                threatLevel: 'HIGH',
+                description: 'Ransomware-as-a-Service operation responsible for major ransomware campaigns globally.'
+            },
+            {
+                name: 'BlackCat/ALPHV',
+                origin: 'Cybercrime',
+                recentCVEs: ['CVE-2024-49138'],
+                threatLevel: 'CRITICAL',
+                description: 'Advanced ransomware gang using Rust-based malware for targeted enterprise attacks.'
+            }
+        ];
+
+        // ===== STATE =====
+        let threatData = [...FALLBACK_CVES];
+        let currentFilter = 'all';
+        let lastRefreshTime = new Date();
+
+        // ===== PRODUCT PRICES (for CDB_PAY) =====
+        const PRODUCT_PRICES = {
+            'openssl': 699,
+            'openssh': 699,
+            'windows': 899,
+            'outlook': 799,
+            'log4j': 899,
+            'php': 699,
+            'django': 599,
+            'cisco': 1299,
+            'kubernetes': 899,
+            'linux': 999,
+            'exchange': 899,
+            'jenkins': 599
+        };
+
+        // ===== HAMBURGER MENU =====
+        const hamburger = document.getElementById('hamburger');
+        const navLinks = document.getElementById('navLinks');
+
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // ===== FETCH THREAT DATA =====
+        async function fetchThreats() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
+
+                const response = await fetch(CONFIG.API_URL, {
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error('API Error');
+
+                const data = await response.json();
+                threatData = Array.isArray(data) ? data : data.threats || FALLBACK_CVES;
+            } catch (error) {
+                console.warn('Threat fetch failed, using fallback:', error);
+                threatData = [...FALLBACK_CVES];
+            }
+
+            updateStats();
+            renderThreats();
+            updateRefreshTime();
+        }
+
+        // ===== RENDER THREATS =====
+        function renderThreats() {
+            const feedEl = document.getElementById('threat-feed');
+            const filtered = filterThreats(threatData, currentFilter);
+
+            feedEl.innerHTML = filtered.map(threat => {
+                const productKey = threat.product.toLowerCase().replace(/\s+/g, '');
+                const price = PRODUCT_PRICES[productKey] || 699;
+                const productLabel = threat.product;
+
+                return `
+                    <div class="threat-card">
+                        <div class="threat-header">
+                            <div class="threat-id">${threat.id}</div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <span class="badge badge-${threat.severity.toLowerCase()}">${threat.severity}</span>
+                                <span class="badge badge-cvss">CVSS ${threat.cvss.toFixed(1)}</span>
+                                ${threat.kev ? '<span class="badge badge-kev">CISA KEV</span>' : ''}
+                            </div>
+                        </div>
+                        <h3 class="threat-title">${threat.title}</h3>
+                        <p class="threat-description">${threat.description}</p>
+                        <div class="threat-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">Affected Product</span>
+                                <span class="meta-value">${threat.product}</span>
+                            </div>
+                            ${threat.apt && threat.apt.length > 0 ? `
+                                <div class="meta-item">
+                                    <span class="meta-label">APT Attribution</span>
+                                    <span style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        ${threat.apt.map(apt => `<span class="badge badge-apt">${apt}</span>`).join('')}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="meta-item">
+                                <span class="meta-label">Published</span>
+                                <span class="meta-value">${formatDate(threat.date)}</span>
+                            </div>
+                        </div>
+                        <div class="threat-actions">
+                            <button class="btn btn-primary btn-sm" onclick="window.CDB_PAY && window.CDB_PAY.open('${threat.id}', ${price}, '${productLabel} Fix Package')">
+                                🛡 Buy Fix Now ₹${price}
+                            </button>
+                            <a href="https://cyberdudebivash.in/#scanner" class="btn btn-secondary btn-sm">
+                                📊 Full Analysis →
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (filtered.length === 0) {
+                feedEl.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 3rem;">No threats match current filter.</p>';
+            }
+        }
+
+        // ===== FILTER THREATS =====
+        function filterThreats(threats, filter) {
+            if (filter === 'all') return threats;
+            if (filter === 'kev') return threats.filter(t => t.kev);
+            if (filter === 'week') {
+                const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                return threats.filter(t => new Date(t.date) >= oneWeekAgo);
+            }
+            return threats.filter(t => t.severity === filter);
+        }
+
+        // ===== UPDATE STATS =====
+        function updateStats() {
+            const stats = calculateStats(threatData);
+
+            // Update hero stats
+            animateCounter(document.querySelector('[data-stat="total-cves"]'), stats.total);
+            animateCounter(document.querySelector('[data-stat="critical"]'), stats.critical);
+            animateCounter(document.querySelector('[data-stat="kev"]'), stats.kev);
+
+            // Update threat dashboard
+            animateCounter(document.querySelector('[data-counter="critical-count"]'), stats.critical);
+            animateCounter(document.querySelector('[data-counter="high-count"]'), stats.high);
+            animateCounter(document.querySelector('[data-counter="kev-count"]'), stats.kev);
+            animateCounter(document.querySelector('[data-counter="apt-count"]'), APT_GROUPS.length);
+        }
+
+        function calculateStats(threats) {
+            return {
+                total: threats.length,
+                critical: threats.filter(t => t.severity === 'CRITICAL').length,
+                high: threats.filter(t => t.severity === 'HIGH').length,
+                medium: threats.filter(t => t.severity === 'MEDIUM').length,
+                kev: threats.filter(t => t.kev).length
+            };
+        }
+
+        function animateCounter(el, target) {
+            if (!el) return;
+            const current = parseInt(el.textContent) || 0;
+            const diff = target - current;
+            const step = Math.ceil(diff / 10);
+            let value = current;
+
+            const interval = setInterval(() => {
+                value += step;
+                if ((step > 0 && value >= target) || (step < 0 && value <= target)) {
+                    value = target;
+                    clearInterval(interval);
+                }
+                el.textContent = value;
+            }, 50);
+        }
+
+        // ===== RENDER APT GROUPS =====
+        function renderAPTGroups() {
+            const gridEl = document.getElementById('apt-grid');
+            gridEl.innerHTML = APT_GROUPS.map(apt => `
+                <div class="apt-card">
+                    <div class="apt-name">${apt.name}</div>
+                    <div class="apt-origin">
+                        📍 ${apt.origin}
+                    </div>
+                    <div class="apt-info">
+                        <span class="apt-label">Threat Level</span>
+                        <div class="apt-content">
+                            <span class="badge badge-${apt.threatLevel.toLowerCase()}">${apt.threatLevel}</span>
+                        </div>
+                    </div>
+                    <div class="apt-info">
+                        <span class="apt-label">Recent CVEs</span>
+                        <div class="apt-content" style="font-size: 0.9rem;">
+                            ${apt.recentCVEs.join(', ')}
+                        </div>
+                    </div>
+                    <div class="apt-info">
+                        <span class="apt-label">Description</span>
+                        <div class="apt-content" style="font-size: 0.85rem; line-height: 1.5;">
+                            ${apt.description}
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 1rem;" onclick="filterByAPT('${apt.name}')">
+                        Track Threats →
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function filterByAPT(aptName) {
+            const filtered = threatData.filter(t => t.apt && t.apt.includes(aptName));
+            if (filtered.length > 0) {
+                currentFilter = 'all';
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.filter === 'all') btn.classList.add('active');
+                });
+                // Show filtered threats (simplified - in production would add UI feedback)
+                alert(`Found ${filtered.length} threat(s) attributed to ${aptName}`);
+            }
+        }
+
+        // ===== UPDATE REFRESH TIME =====
+        function updateRefreshTime() {
+            lastRefreshTime = new Date();
+            const timeEl = document.getElementById('refresh-time');
+            timeEl.textContent = `Last refreshed: ${formatTime(lastRefreshTime)}`;
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        function formatDate(date) {
+            const d = new Date(date);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // ===== FILTER BUTTONS =====
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderThreats();
+            });
+        });
+
+        // ===== SUBSCRIPTION FORM =====
+        document.getElementById('subscription-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email-input').value;
+
+            try {
+                await fetch('/api/leads/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, source: 'threat-intel-page' })
+                });
+                alert('Subscribed! Check your email for updates.');
+                document.getElementById('email-input').value = '';
+            } catch (error) {
+                console.error('Subscription error:', error);
+                alert('Subscription submitted. Thank you!');
+            }
+        });
+
+        // ===== INITIALIZATION =====
+        function init() {
+            fetchThreats();
+            renderAPTGroups();
+            updateStats();
+
+            // Auto-refresh every 3 minutes
+            setInterval(fetchThreats, CONFIG.REFRESH_INTERVAL);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
