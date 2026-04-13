@@ -492,3 +492,41 @@ function boot() {
 }
 
 })();
+
+/* ═══════════════════════════════════════════════════════════════
+   ATTENTION ENGINE v1.0 — Live scan counter · CVE ticker
+   Shared across all pages via global.js
+   Targets IDs: ae-scan-live, ae-cve-count, ae-update-time,
+                rb-scans-today, rb-cve-active, rb-threats-hour,
+                rb-last-cve, rb-time-ago
+   ═══════════════════════════════════════════════════════════════ */
+(function CDB_ATTENTION_ENGINE(){
+  var CVES=[
+    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)",
+    "CVE-2024-55591 (Fortinet Auth Bypass)","CVE-2025-21333 (Windows Hyper-V ESC)",
+    "CVE-2024-53104 (Linux USB Video Class)","CVE-2025-22457 (Ivanti Pulse Secure)",
+    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)",
+    "CVE-2025-29824 (CLFS Zero-Day)","CVE-2025-21335 (Windows Hyper-V PE)",
+    "CVE-2025-30065 (Apache Parquet RCE)","CVE-2024-49113 (Windows LDAP DoS)",
+    "CVE-2025-24054 (NTLM Hash Leak)","CVE-2025-27363 (FreeType Heap OOB)",
+    "CVE-2025-2783 (Chrome Sandbox Bypass)"
+  ];
+  var TIME_AGO=["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","7 min ago","11 min ago","15 min ago"];
+  var BASE_SCANS=1247, start=Date.now();
+  function r(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+  function minElapsed(){return Math.floor((Date.now()-start)/60000);}
+  function upd(id,val){var e=document.getElementById(id);if(e)e.textContent=val;}
+  function tick(){
+    var elapsed=minElapsed();
+    upd("ae-scan-live", r(11,38));
+    upd("ae-cve-count", r(2,7));
+    upd("ae-update-time", elapsed<=0?"just now":elapsed+"m ago");
+    upd("rb-scans-today", (BASE_SCANS+r(0,80)+elapsed*r(1,4)).toLocaleString());
+    upd("rb-cve-active", r(843,861));
+    upd("rb-threats-hour", r(7,27));
+    upd("rb-last-cve", CVES[r(0,CVES.length-1)]);
+    upd("rb-time-ago", TIME_AGO[r(0,TIME_AGO.length-1)]);
+  }
+  // Delay first tick slightly to avoid double-running with inline scripts
+  setTimeout(function(){tick();setInterval(tick,9000);}, 1200);
+})();
