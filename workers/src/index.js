@@ -227,6 +227,25 @@ import {
   handleGetPaymentConfig,
 } from './handlers/manualPayments.js';
 
+// ─── Threat Intelligence Graph ───────────────────────────────────────────────
+import {
+  handleGetThreatGraph, handleGetGraphNodes,
+  handleGetGraphPaths, handleGraphQuery, handleGraphSummary,
+} from './handlers/threatGraph.js';
+
+// ─── CISO Command Center ──────────────────────────────────────────────────────
+import {
+  handleGetCISOMetrics, handleGetCISOPosture,
+  handleGetIncidents, handleCreateIncident, handleUpdateIncident,
+  handleGetComplianceStatus, handleGetRiskRegister, handleGetCISOReport,
+} from './handlers/cisoMetrics.js';
+
+// ─── Monetization Engine v2 ───────────────────────────────────────────────────
+import {
+  handleGetUsage, handleUpgrade, handleGetBillingPlans,
+  handleStartTrial, handleGetLimits, handleGetInvoices, handleDowngrade,
+} from './handlers/monetizationV2.js';
+
 // ─── Affiliate & Partner System ───────────────────────────────────────────────
 import {
   handleJoin, handleGetStatus as handleAffStatus,
@@ -1654,6 +1673,108 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/billing/create-link — generate Razorpay payment link payload
     if (path === '/api/billing/create-link' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleCreatePaymentLink(request, env), request));
+    }
+
+    // ─── MONETIZATION ENGINE v2 ─────────────────────────────────────────────
+    // GET /api/billing/usage — detailed usage + quota status
+    if (path === '/api/billing/usage' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetUsage(request, env, authCtx), request));
+    }
+    // POST /api/billing/upgrade — initiate plan upgrade
+    if (path === '/api/billing/upgrade' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleUpgrade(request, env, authCtx), request));
+    }
+    // GET /api/billing/plans — enriched plan comparison
+    if (path === '/api/billing/plans' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetBillingPlans(request, env, authCtx), request));
+    }
+    // POST /api/billing/trial/start — activate 14-day PRO trial
+    if (path === '/api/billing/trial/start' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleStartTrial(request, env, authCtx), request));
+    }
+    // GET /api/billing/limits — quota enforcement state
+    if (path === '/api/billing/limits' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetLimits(request, env, authCtx), request));
+    }
+    // GET /api/billing/invoices — invoice history
+    if (path === '/api/billing/invoices' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetInvoices(request, env, authCtx), request));
+    }
+    // POST /api/billing/downgrade — schedule plan downgrade
+    if (path === '/api/billing/downgrade' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDowngrade(request, env, authCtx), request));
+    }
+
+    // ─── THREAT INTELLIGENCE GRAPH ──────────────────────────────────────────
+    // GET /api/threat-graph — full D3-ready graph
+    if (path === '/api/threat-graph' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetThreatGraph(request, env, authCtx), request));
+    }
+    // GET /api/threat-graph/nodes — node list with filter
+    if (path === '/api/threat-graph/nodes' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetGraphNodes(request, env), request));
+    }
+    // GET /api/threat-graph/paths — shortest attack path
+    if (path === '/api/threat-graph/paths' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetGraphPaths(request, env), request));
+    }
+    // POST /api/threat-graph/query — subgraph query
+    if (path === '/api/threat-graph/query' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleGraphQuery(request, env), request));
+    }
+    // GET /api/threat-graph/summary — aggregate stats
+    if (path === '/api/threat-graph/summary' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGraphSummary(request, env), request));
+    }
+
+    // ─── CISO COMMAND CENTER ────────────────────────────────────────────────
+    // GET /api/ciso/metrics — full CISO dashboard payload
+    if (path === '/api/ciso/metrics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetCISOMetrics(request, env, authCtx), request));
+    }
+    // GET /api/ciso/posture — security posture scorecard
+    if (path === '/api/ciso/posture' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetCISOPosture(request, env, authCtx), request));
+    }
+    // GET /api/ciso/incidents — incident list
+    if (path === '/api/ciso/incidents' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetIncidents(request, env, authCtx), request));
+    }
+    // POST /api/ciso/incidents — create incident
+    if (path === '/api/ciso/incidents' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleCreateIncident(request, env, authCtx), request));
+    }
+    // PUT /api/ciso/incidents/:id — update incident
+    if (path.startsWith('/api/ciso/incidents/') && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleUpdateIncident(request, env, authCtx), request));
+    }
+    // GET /api/ciso/compliance-status
+    if (path === '/api/ciso/compliance-status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetComplianceStatus(request, env, authCtx), request));
+    }
+    // GET /api/ciso/risk-register
+    if (path === '/api/ciso/risk-register' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetRiskRegister(request, env, authCtx), request));
+    }
+    // GET /api/ciso/report
+    if (path === '/api/ciso/report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleGetCISOReport(request, env, authCtx), request));
     }
 
     // ── Phase 7: Global Expansion ───────────────────────────────────────────
