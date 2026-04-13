@@ -404,3 +404,149 @@ function generateLearningPath(module, risk_score) {
   };
   return paths[module] || paths['domain'];
 }
+
+// ─── Bundle Catalog ────────────────────────────────────────────────────────────
+const BUNDLE_CATALOG = [
+  {
+    id: 'SECURITY_STARTER_BUNDLE',
+    name: 'Security Starter Bundle',
+    description: 'Domain scan + SOC Playbook 2026 + Compliance Mega Course',
+    products: ['DOMAIN_REPORT','SOC_PLAYBOOK_2026','CYBER_MEGA_PART1'],
+    original_price: 1897,
+    bundle_price:   799,
+    discount_pct:   58,
+    validity_days:  365,
+    best_for:       ['domain','compliance','identity'],
+  },
+  {
+    id: 'PRO_SECURITY_BUNDLE',
+    name: 'Pro Security Bundle',
+    description: 'All modules + AI Security Training + Red Team Course + Pro Plan (1 month)',
+    products: ['AI_SECURITY_BUNDLE_2026','CYBER_MEGA_PART2','SOC_PLAYBOOK_2026'],
+    original_price: 3397,
+    bundle_price:   1499,
+    discount_pct:   56,
+    validity_days:  365,
+    best_for:       ['ai','redteam','appsec'],
+  },
+  {
+    id: 'ENTERPRISE_INTELLIGENCE_BUNDLE',
+    name: 'Enterprise Intelligence Bundle',
+    description: 'OSINT Bundle + Threat Intel Report + AI Security + Full Platform (3 months)',
+    products: ['OSINT_STARTER_BUNDLE','THREAT_INTEL_REPORT','AI_SECURITY_BUNDLE_2026'],
+    original_price: 6897,
+    bundle_price:   2999,
+    discount_pct:   57,
+    validity_days:  90,
+    best_for:       ['darkscan','ai','cloudsec'],
+    enterprise_only: false,
+  },
+];
+
+// ─── POST /mcp/bundle — Time-limited bundle offer engine ──────────────────────
+export async function handleMCPBundle(request, env, authCtx = {}) {
+  let body = {};
+  try { body = await request.json(); } catch { /* optional body */ }
+
+  const { module = 'domain', risk_score = 50, tier = 'FREE' } = body;
+
+  // Pick best matching bundle for this scan context
+  const ranked = BUNDLE_CATALOG
+    .filter(b => !b.enterprise_only || (tier === 'ENTERPRISE'))
+    .map(b => ({
+      ...b,
+      relevance: b.best_for.includes(module) ? 2 : 1,
+    }))
+    .sort((a, b) => b.relevance - a.relevance);
+
+  const best = ranked[0];
+  if (!best) return jsonErr('No bundle available', 404);
+
+  // Social proof (deterministic by hour)
+  const hour     = new Date().getHours();
+  const unitsSold = 847 + (hour * 3);
+  const viewing   = 12 + (hour % 7);
+
+  // Countdown: offer expires in 24h from first view
+  const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+  return jsonOk({
+    bundle:         best,
+    countdown_iso:  expiresAt,
+    urgency:        risk_score >= 70 ? 'CRITICAL' : 'HIGH',
+    social_proof: {
+      units_sold_today: unitsSold,
+      viewing_now:      viewing,
+      label:            `${viewing} people viewing this offer right now`,
+    },
+    cta_text:  `Get ${best.name} — ₹${best.bundle_price} (Save ${best.discount_pct}%)`,
+    cta_action:`CDB_PAY.open('${best.id}',${best.bundle_price},'${best.name}')`,
+    all_bundles: ranked.slice(0, 3),
+  });
+}
+
+// ─── POST /mcp/decision — Master Control: full AI recommendation engine ────────
+// THE BRAIN: replaces ALL static frontend logic. Frontend MUST call this first.
+export async function handleMCPDecision(request, env, authCtx = {}) {
+  let body = {};
+  try { body = await request.json(); } catch { return jsonErr('Invalid JSON', 400); }
+
+  const {
+    module      = 'domain',
+    target      = '',
+    risk_score  = 0,
+    tier        = 'FREE',
+    findings    = [],
+    locked_count = 0,
+  } = body;
+
+  // 1. Try external MCP server first (shadow mode)
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MCP_TIMEOUT_MS);
+    const mcpRes = await fetch(`${MCP_BASE_URL}/decision`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ module, target, risk_score, tier, findings }),
+      signal:  controller.signal,
+    });
+    clearTimeout(timer);
+    if (mcpRes.ok) {
+      const mcpData = await mcpRes.json();
+      return jsonOk({ ...mcpData, source: 'mcp_server' });
+    }
+  } catch { /* fallback */ }
+
+  // 2. Local decision engine fallback
+  const recommended_tools    = TOOL_RECOMMENDATIONS[module] || TOOL_RECOMMENDATIONS['domain'];
+  const recommended_training = TRAINING_INDEX[module]       || TRAINING_INDEX['domain'];
+  const upsell               = evaluateUpsell({ module, risk_score, locked_count, tier });
+  const remediation_steps    = generateRemediationSteps(module, risk_score, findings);
+  const learning_path        = generateLearningPath(module, risk_score);
+
+  // Determine offer type
+  let offer_type = 'none';
+  let cta        = null;
+  if (risk_score >= 70 && tier === 'FREE')        { offer_type = 'upgrade'; cta = 'Upgrade to Pro — Unlock full remediation roadmap'; }
+  else if (risk_score >= 50 && tier === 'FREE')   { offer_type = 'report';  cta = 'Get your full paid report — ₹199'; }
+  else if (recommended_training.length)           { offer_type = 'training'; cta = `Learn to fix this: ${recommended_training[0].name}`; }
+
+  // Enterprise trigger
+  const enterprise_trigger = risk_score >= 85 || findings.filter(f => f.severity === 'CRITICAL').length >= 3;
+
+  return jsonOk({
+    source:               'local_engine',
+    risk_level:           risk_score >= 75 ? 'HIGH' : risk_score >= 50 ? 'MEDIUM' : 'LOW',
+    recommended_tools:    recommended_tools.slice(0, 3),
+    recommended_training: recommended_training.slice(0, 2),
+    offer_type,
+    cta,
+    upsell:               upsell.show ? upsell : null,
+    remediation_steps:    remediation_steps.slice(0, 4),
+    learning_path,
+    enterprise_trigger,
+    enterprise_cta:       enterprise_trigger ? 'Book Enterprise Demo — Free security assessment' : null,
+    module, risk_score, tier,
+    generated_at:         new Date().toISOString(),
+  });
+}

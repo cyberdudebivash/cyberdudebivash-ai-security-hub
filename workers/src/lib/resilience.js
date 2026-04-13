@@ -207,3 +207,65 @@ export async function d1QueryWithRetry(db, query, params = []) {
     3, 150, `d1:${query.slice(0, 40)}`
   );
 }
+
+// ─── GOD MODE v16: Performance Utilities ─────────────────────────────────────
+
+/**
+ * runParallel — run multiple async operations concurrently, return all results
+ * Uses Promise.allSettled so one failure never blocks others.
+ * @param {Record<string, Promise>} tasks  — named promise map
+ * @returns {Promise<Record<string, any>>}
+ */
+export async function runParallel(tasks) {
+  const keys    = Object.keys(tasks);
+  const results = await Promise.allSettled(keys.map(k => tasks[k]));
+  const out = {};
+  keys.forEach((k, i) => {
+    out[k] = results[i].status === 'fulfilled' ? results[i].value : null;
+  });
+  return out;
+}
+
+/**
+ * d1BatchSafe — execute a D1 batch; returns results array or empty array on failure.
+ * Never throws; safe for fire-and-forget analytics/logging writes.
+ */
+export async function d1BatchSafe(db, statements) {
+  if (!db || !statements?.length) return [];
+  try {
+    const results = await db.batch(statements);
+    return results;
+  } catch (err) {
+    console.warn('[d1BatchSafe] batch failed:', err?.message?.slice(0, 80));
+    return [];
+  }
+}
+
+/**
+ * addPerfHeaders — inject X-Response-Time and X-Worker-Version into a Response.
+ * Call this just before returning from the fetch handler.
+ */
+export function addPerfHeaders(response, startMs, version = '16.0') {
+  const elapsed = Date.now() - startMs;
+  const headers = new Headers(response.headers);
+  headers.set('X-Response-Time', `${elapsed}ms`);
+  headers.set('X-Worker-Version', version);
+  headers.set('X-Powered-By', 'CYBERDUDEBIVASH-AI-HUB');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+/**
+ * safeD1First — D1 .first() with null fallback; never throws.
+ */
+export async function safeD1First(stmt) {
+  try { return await stmt.first(); }
+  catch { return null; }
+}
+
+/**
+ * safeD1All — D1 .all() with empty results fallback; never throws.
+ */
+export async function safeD1All(stmt) {
+  try { return await stmt.all(); }
+  catch { return { results: [], success: false }; }
+}

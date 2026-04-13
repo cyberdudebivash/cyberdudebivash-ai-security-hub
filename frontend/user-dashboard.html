@@ -602,6 +602,131 @@
       .stat-grid { grid-template-columns: 1fr 1fr; }
       .ciso-kpi-grid { grid-template-columns: 1fr 1fr; }
     }
+
+    /* ── GOD MODE v16: Instant Access Modal ── */
+    .access-modal { width: 520px; max-width: 96vw; }
+    .access-modal-header {
+      text-align: center;
+      padding: 20px 0 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .access-modal-header .success-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .access-modal-header h2 { font-size: 1.4rem; color: var(--accent3); margin-bottom: 4px; }
+    .access-modal-header p  { font-size: .85rem; color: var(--muted); }
+    .access-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+    .access-item-info { flex: 1; }
+    .access-item-info strong { display: block; font-size: .9rem; margin-bottom: 2px; }
+    .access-item-info span  { font-size: .78rem; color: var(--muted); }
+    .access-check { color: var(--accent3); font-size: 1.2rem; margin-right: 10px; flex-shrink: 0; }
+    .access-meta {
+      display: flex;
+      gap: 16px;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .access-fallback {
+      background: rgba(245,158,11,.07);
+      border: 1px solid rgba(245,158,11,.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .8rem;
+      color: var(--warn);
+      margin-top: 12px;
+    }
+
+    /* ── GOD MODE v16: Notification System ── */
+    .notif-bell {
+      position: relative;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.2rem;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background .15s;
+    }
+    .notif-bell:hover { background: rgba(255,255,255,.06); }
+    .notif-badge {
+      position: absolute;
+      top: 0; right: 2px;
+      width: 8px; height: 8px;
+      background: var(--danger);
+      border-radius: 50%;
+      display: none;
+    }
+    .notif-badge.visible { display: block; }
+    .notif-panel {
+      position: fixed;
+      top: 60px; right: 16px;
+      width: 360px;
+      max-height: 480px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      z-index: 300;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .notif-panel.open { display: flex; }
+    .notif-panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: .9rem;
+    }
+    .notif-list { overflow-y: auto; flex: 1; }
+    .notif-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(30,58,95,.5);
+      display: flex;
+      gap: 10px;
+      font-size: .82rem;
+    }
+    .notif-item:hover { background: rgba(255,255,255,.03); }
+    .notif-item .ni-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .notif-item .ni-body strong { display: block; margin-bottom: 2px; }
+    .notif-item .ni-body span  { color: var(--muted); font-size: .76rem; }
+    .notif-empty { padding: 24px; text-align: center; color: var(--muted); font-size: .85rem; }
+
+    /* ── GOD MODE v16: Personalization Bar ── */
+    .personalize-bar {
+      background: linear-gradient(135deg, rgba(124,58,237,.15), rgba(0,212,255,.08));
+      border: 1px solid rgba(124,58,237,.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .personalize-bar .pb-text strong { display: block; font-size: .9rem; color: var(--accent2); margin-bottom: 3px; }
+    .personalize-bar .pb-text span   { font-size: .82rem; color: var(--muted); }
+
   </style>
 </head>
 <body>
@@ -642,9 +767,24 @@
   <div class="topnav-brand">⚔️ CYBERDUDEBIVASH <span>/ Account</span></div>
   <div class="topnav-actions">
     <button class="btn-ghost" onclick="window.open('/', '_blank')">← Back to Hub</button>
+    <!-- GOD MODE v16: Notification Bell -->
+    <button class="notif-bell" id="notif-bell-btn" onclick="toggleNotifPanel()" title="Notifications" aria-label="Notifications">
+      🔔 <span class="notif-badge" id="notif-badge"></span>
+    </button>
     <div class="avatar" id="nav-avatar" title="Account">?</div>
   </div>
 </nav>
+
+<!-- GOD MODE v16: Notification Panel -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-panel-header">
+    <span>Notifications</span>
+    <button class="btn-ghost" style="font-size:.75rem;padding:4px 8px" onclick="clearAllNotifs()">Clear all</button>
+  </div>
+  <div class="notif-list" id="notif-list">
+    <div class="notif-empty">No notifications yet</div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════
   SHELL
@@ -716,6 +856,15 @@
     <div id="page-overview" class="page active">
       <div class="page-title">Welcome back, <span id="user-name">—</span></div>
       <div class="page-subtitle" id="user-email-sub">Loading your account…</div>
+
+      <!-- GOD MODE v16: Personalization Banner (hidden until MCP responds) -->
+      <div class="personalize-bar" id="personalize-bar" style="display:none">
+        <div class="pb-text">
+          <strong id="pb-headline">⚡ Based on your last scan</strong>
+          <span id="pb-body">Loading recommendations…</span>
+        </div>
+        <button class="btn btn-primary" id="pb-cta" style="white-space:nowrap;font-size:.82rem" onclick="">View Now</button>
+      </div>
 
       <div class="stat-grid">
         <div class="stat-card">
@@ -2299,13 +2448,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
           description: 'Pro Plan — Monthly Subscription',
           theme:       { color: '#00d4ff' },
           handler: async resp => {
-            await apiFetch('/api/billing/verify-payment', {
-              method: 'POST',
-              body: JSON.stringify(resp)
-            });
-            showToast('Payment successful! Pro plan activated.');
-            await loadDashboard();
-            syncPlanCards();
+            await handlePaymentSuccess(resp, { type: 'subscription', plan: 'PRO', product_name: 'Pro Plan' });
           }
         };
         new window.Razorpay(options).open();
@@ -3137,8 +3280,359 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     if (active?.id === 'page-reports') loadUserReports();
   })();
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v16 — PHASE 1: INSTANT ACCESS MODAL ENGINE
+  // Shows immediately after any successful payment with 1-click download/access
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * showAccessModal(data)
+   * data = {
+   *   type: 'report'|'training'|'subscription'|'bundle',
+   *   product_name: string,
+   *   download_url: string|null,
+   *   training_url: string|null,
+   *   expires_at: string|null,
+   *   risk_score: number|null,
+   *   risk_level: string|null,
+   *   plan: string|null,
+   *   mcp_training: array|null,   // from /mcp/decision
+   * }
+   */
+  function showAccessModal(data = {}) {
+    const overlay = document.getElementById('access-modal-overlay');
+    if (!overlay) return;
+
+    const isReport   = data.type === 'report' || data.download_url;
+    const isTraining = data.type === 'training' || data.type === 'bundle';
+    const isSub      = data.type === 'subscription';
+
+    // Headline
+    document.getElementById('am-headline').textContent = isSub
+      ? `${data.plan || 'Pro'} Plan Activated 🎉`
+      : 'Access Unlocked Instantly 🎉';
+
+    document.getElementById('am-subline').textContent = isSub
+      ? 'Your upgrade is live. All features unlocked immediately.'
+      : `Your ${data.product_name || 'purchase'} is ready.`;
+
+    // Items container
+    const items = document.getElementById('am-items');
+    items.innerHTML = '';
+
+    if (isReport && data.download_url) {
+      items.innerHTML += `
+        <div class="access-item">
+          <span class="access-check">✅</span>
+          <div class="access-item-info">
+            <strong>📄 Your Report Is Ready</strong>
+            <span>Full security analysis — ${data.risk_level || 'assessment complete'}</span>
+          </div>
+          <a href="${data.download_url}" target="_blank" class="btn btn-primary" style="font-size:.82rem;padding:8px 16px;white-space:nowrap">
+            📥 Download Now
+          </a>
+        </div>`;
+    }
+
+    if (isTraining || data.training_url) {
+      const tUrl = data.training_url || '/academy.html';
+      items.innerHTML += `
+        <div class="access-item">
+          <span class="access-check">✅</span>
+          <div class="access-item-info">
+            <strong>🎓 Your Training Is Available</strong>
+            <span>${data.product_name || 'Security Training'} — instant access</span>
+          </div>
+          <a href="${tUrl}" target="_blank" class="btn" style="border:1px solid var(--accent2);color:var(--accent2);font-size:.82rem;padding:8px 16px;white-space:nowrap">
+            🎓 Access Training
+          </a>
+        </div>`;
+    }
+
+    if (isSub) {
+      const features = {
+        STARTER: ['50 Scans/Month','Full Findings Unlock','Email Support'],
+        PRO:     ['Unlimited Scans','All Modules','API Access','Full Reports','Priority Support'],
+        ENTERPRISE: ['Everything in Pro','MSSP Panel','Custom Branding','SLA Support','Threat Graph'],
+      };
+      const tier  = (data.plan || 'PRO').toUpperCase();
+      const feats = features[tier] || features.PRO;
+      items.innerHTML += `
+        <div class="access-item" style="flex-wrap:wrap;gap:8px">
+          <span class="access-check">✅</span>
+          <div class="access-item-info">
+            <strong>⚡ ${tier} Plan Features Unlocked</strong>
+            <span>${feats.join(' · ')}</span>
+          </div>
+        </div>`;
+    }
+
+    // MCP Training Recommendation
+    if (data.mcp_training?.length) {
+      const t = data.mcp_training[0];
+      items.innerHTML += `
+        <div class="access-item" style="background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.3)">
+          <span class="access-check" style="color:var(--accent2)">🧠</span>
+          <div class="access-item-info">
+            <strong>Recommended: ${t.name || t.id}</strong>
+            <span>${t.relevance_reason || 'Based on your scan findings'}</span>
+          </div>
+          <a href="/academy.html" target="_blank" class="btn" style="border:1px solid var(--accent2);color:var(--accent2);font-size:.82rem;padding:8px 16px;white-space:nowrap">
+            View →
+          </a>
+        </div>`;
+    }
+
+    // Meta info
+    const meta = document.getElementById('am-meta');
+    const metaParts = [];
+    if (data.expires_at) metaParts.push(`⏱ Expires: ${new Date(data.expires_at).toLocaleDateString()}`);
+    if (data.risk_score != null) metaParts.push(`🎯 Risk Score: ${data.risk_score}/100`);
+    metaParts.push('📧 Confirmation sent to your email');
+    meta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join('');
+
+    overlay.classList.add('open');
+
+    // Push access notification
+    pushNotification({
+      icon: '🎉',
+      title: 'Access Unlocked',
+      body: data.product_name || 'Your purchase is ready',
+    });
+
+    // Auto-refresh reports tab
+    setTimeout(() => loadUserReports && loadUserReports(), 1200);
+  }
+
+  function closeAccessModal() {
+    document.getElementById('access-modal-overlay')?.classList.remove('open');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v16 — PHASE 6: NOTIFICATION ENGINE
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const _notifications = [];
+  let _notifPollTimer  = null;
+
+  function pushNotification({ icon = '🔔', title, body, href = null }) {
+    _notifications.unshift({ icon, title, body, href, ts: Date.now() });
+    renderNotifList();
+    document.getElementById('notif-badge')?.classList.add('visible');
+  }
+
+  function renderNotifList() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    if (!_notifications.length) {
+      list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+      return;
+    }
+    list.innerHTML = _notifications.slice(0, 20).map(n => `
+      <div class="notif-item" ${n.href ? `onclick="window.open('${n.href}','_blank')" style="cursor:pointer"` : ''}>
+        <span class="ni-icon">${n.icon}</span>
+        <div class="ni-body">
+          <strong>${n.title}</strong>
+          <span>${n.body}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function toggleNotifPanel() {
+    const panel = document.getElementById('notif-panel');
+    panel?.classList.toggle('open');
+    if (panel?.classList.contains('open')) {
+      document.getElementById('notif-badge')?.classList.remove('visible');
+    }
+  }
+
+  function clearAllNotifs() {
+    _notifications.length = 0;
+    renderNotifList();
+    document.getElementById('notif-badge')?.classList.remove('visible');
+  }
+
+  // Poll /api/seed/threats every 5 min, push new threat notifications
+  function startNotifPoller() {
+    async function poll() {
+      try {
+        const r = await fetch('/api/seed/threats');
+        if (!r.ok) return;
+        const d = await r.json();
+        const threats = d?.data?.threats || d?.threats || [];
+        const critical = threats.filter(t => t.severity === 'CRITICAL');
+        if (critical.length) {
+          const latest = critical[0];
+          pushNotification({
+            icon:  '🚨',
+            title: `New CRITICAL Threat: ${latest.type || 'APT Activity'}`,
+            body:  latest.target_sector ? `Sector: ${latest.target_sector}` : 'New threat detected in feed',
+            href:  '/intel.html',
+          });
+        }
+      } catch { /* ignore */ }
+    }
+    poll(); // immediate poll
+    _notifPollTimer = setInterval(poll, 5 * 60 * 1000);
+  }
+
+  // Close notif panel on outside click
+  document.addEventListener('click', e => {
+    const panel = document.getElementById('notif-panel');
+    const bell  = document.getElementById('notif-bell-btn');
+    if (panel?.classList.contains('open') && !panel.contains(e.target) && !bell.contains(e.target)) {
+      panel.classList.remove('open');
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v16 — PHASE 4: PERSONALIZATION ENGINE
+  // Calls /mcp/decision after login; shows banner with relevant action
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  async function loadPersonalization() {
+    const bar = document.getElementById('personalize-bar');
+    if (!bar) return;
+
+    // Get last scan from localStorage (populated by scan history loader)
+    const lastScan = JSON.parse(localStorage.getItem('cdb_last_scan') || 'null');
+    if (!lastScan) return;
+
+    try {
+      const res = await apiFetch('/mcp/decision', {
+        method: 'POST',
+        body: JSON.stringify({
+          module:      lastScan.module || 'domain',
+          target:      lastScan.target || '',
+          risk_score:  lastScan.risk_score || 50,
+          tier:        localStorage.getItem('cdb_tier') || 'FREE',
+          findings:    lastScan.findings || [],
+        }),
+      });
+      if (!res.ok) return;
+      const d = await res.json();
+      const rec = d?.data || d;
+
+      if (!rec) return;
+
+      const headline = document.getElementById('pb-headline');
+      const body     = document.getElementById('pb-body');
+      const cta      = document.getElementById('pb-cta');
+
+      if (rec.recommended_training?.length) {
+        const t = rec.recommended_training[0];
+        headline.textContent = `🧠 Based on your last scan of ${lastScan.target || 'your target'}`;
+        body.textContent     = `We recommend: ${t.name || t.id} — ${t.relevance_reason || 'for your security posture'}`;
+        cta.textContent      = 'View Training';
+        cta.onclick          = () => window.open('/academy.html', '_blank');
+        bar.style.display    = 'flex';
+      } else if (rec.offer_type === 'upgrade' && rec.recommended_tools?.length) {
+        headline.textContent = `⚡ Unlock full analysis for ${lastScan.target || 'your domain'}`;
+        body.textContent     = rec.cta || 'Upgrade to unlock all findings and remediation steps';
+        cta.textContent      = 'Upgrade Plan';
+        cta.onclick          = () => showPage('billing', null);
+        bar.style.display    = 'flex';
+      }
+    } catch { /* fail silently */ }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // GOD MODE v16 — PHASE 1: PAYMENT HANDLER UPGRADE
+  // Enhanced Razorpay handlers that call showAccessModal() after success
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // Unified post-payment success handler — works for reports + subscriptions
+  async function handlePaymentSuccess(paymentResp, context = {}) {
+    const { type = 'report', product_name, module, target, plan } = context;
+
+    try {
+      let verifyEndpoint = '/api/payments/verify';
+      let verifyBody     = { ...paymentResp, module, target };
+
+      if (type === 'subscription') {
+        verifyEndpoint = '/api/billing/verify-payment';
+        verifyBody     = paymentResp;
+      }
+
+      const res = await apiFetch(verifyEndpoint, {
+        method: 'POST',
+        body:   JSON.stringify(verifyBody),
+      });
+      const d = await res.json();
+
+      if (!res.ok) {
+        showToast(d.error || 'Payment verification failed. Contact support.', 'err');
+        return;
+      }
+
+      // Get MCP training recommendation
+      let mcpTraining = null;
+      try {
+        const mcpRes = await fetch('/mcp/decision', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ module: module || 'domain', risk_score: d.risk_score || 50, tier: 'PRO' }),
+        });
+        if (mcpRes.ok) {
+          const mcpData = await mcpRes.json();
+          mcpTraining = mcpData?.data?.recommended_training || mcpData?.recommended_training || null;
+        }
+      } catch { /* ignore */ }
+
+      showAccessModal({
+        type:         type,
+        product_name: product_name || d.message || 'Security Report',
+        download_url: d.download_url || null,
+        training_url: type === 'training' ? '/academy.html' : null,
+        expires_at:   d.expires_at || null,
+        risk_score:   d.risk_score || null,
+        risk_level:   d.risk_level || null,
+        plan:         plan || d.plan || null,
+        mcp_training: mcpTraining,
+      });
+
+      // Refresh dashboard state
+      if (type === 'subscription') {
+        await loadDashboard();
+        syncPlanCards && syncPlanCards();
+      }
+    } catch (err) {
+      showToast(err.message || 'Something went wrong. Check My Reports tab.', 'err');
+    }
+  }
+
   // ── Bootstrap ────────────────────────────────────────────────────────────────
   initDashboard();
+  // GOD MODE v16 boot: start notification poller
+  setTimeout(() => {
+    startNotifPoller();
+    loadPersonalization();
+  }, 2000);
 </script>
+
+<!-- GOD MODE v16: Instant Access Modal -->
+<div class="modal-overlay" id="access-modal-overlay">
+  <div class="modal access-modal">
+    <div class="access-modal-header">
+      <span class="success-icon">🎉</span>
+      <h2 id="am-headline">Access Unlocked Instantly</h2>
+      <p id="am-subline">Your purchase is ready — no waiting, no emails needed.</p>
+    </div>
+
+    <div id="am-items"></div>
+
+    <div class="access-meta" id="am-meta"></div>
+
+    <div class="access-fallback">
+      📧 Also getting a confirmation email + WhatsApp message shortly.
+      Having issues? <a href="mailto:support@cyberdudebivash.com" style="color:var(--warn)">Contact support</a>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn" onclick="closeAccessModal()">Close</button>
+      <button class="btn btn-primary" onclick="showPage('reports',null);closeAccessModal()">View My Reports →</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
