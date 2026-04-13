@@ -52,17 +52,36 @@ function defaultConfig() {
 }
 
 // ── Load / save config ─────────────────────────────────────────────────────────
+// KV OPTIMIZATION: Defense config is read on every /api/defense/* GET.
+// Now served from Cloudflare CDN edge cache (5min TTL). KV only hit on cold miss.
+const _DEF_CFG_CACHE_URL = 'https://cdb-edge-cache/autodefense:config:v1';
+const _DEF_CFG_CACHE_TTL = 300; // 5 minutes
+
 async function loadConfig(env) {
   if (!env?.SECURITY_HUB_KV) return defaultConfig();
+  // L0: Cloudflare CDN edge cache (FREE, 0 KV quota)
+  try {
+    const hit = await caches.default.match(new Request(_DEF_CFG_CACHE_URL));
+    if (hit) { const d = await hit.json().catch(() => null); if (d) return { ...defaultConfig(), ...d }; }
+  } catch {}
+  // L2: KV fallback (only on cold miss)
   try {
     const raw = await env.SECURITY_HUB_KV.get(KV_CONFIG_KEY, { type: 'json' });
-    return raw ? { ...defaultConfig(), ...raw } : defaultConfig();
+    const cfg = raw ? { ...defaultConfig(), ...raw } : defaultConfig();
+    try {
+      caches.default.put(new Request(_DEF_CFG_CACHE_URL), new Response(JSON.stringify(cfg), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${_DEF_CFG_CACHE_TTL}, s-maxage=${_DEF_CFG_CACHE_TTL}` },
+      })).catch(() => {});
+    } catch {}
+    return cfg;
   } catch { return defaultConfig(); }
 }
 
 async function saveConfig(env, config) {
   if (!env?.SECURITY_HUB_KV) return;
   await env.SECURITY_HUB_KV.put(KV_CONFIG_KEY, JSON.stringify(config), { expirationTtl: 86400 * 365 });
+  // Invalidate edge cache on every config write so next read gets fresh data
+  try { caches.default.delete(new Request(_DEF_CFG_CACHE_URL)).catch(() => {}); } catch {}
 }
 
 // ── Execution log helpers ──────────────────────────────────────────────────────

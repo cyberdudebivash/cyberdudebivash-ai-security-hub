@@ -47,3 +47,23 @@ coverage/
 .coverage
 htmlcov/
 report_output.json
+
+# ── Deployment scripts & emergency fix logs (never commit) ────────────────────
+*.bat
+*.ps1
+fix_deploy*.txt
+*_result.txt
+
+# ── Staged commit message drafts (already committed — leftover artifacts) ─────
+commit_p*.txt
+
+# ── Audit & generated output files ───────────────────────────────────────────
+CYBERDUDEBIVASH_KV_AUDIT_REPORT.docx
+tools_output/
+generated_app/
+workspace/
+
+# ── Temporary files ───────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig

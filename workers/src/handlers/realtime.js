@@ -152,26 +152,56 @@ async function streamThreatEvents(writer, enc, env, authCtx, caps) {
 }
 
 // ─── GET /api/realtime/posture ────────────────────────────────────────────────
+// KV OPTIMIZATION: posture is polled by frontend — edge cached 30s (FREE)
 export async function handleRealtimePosture(request, env, authCtx = {}) {
+  const CACHE_URL = 'https://cdb-edge-cache/realtime:posture:v1';
+  const CACHE_TTL = 30; // 30 seconds — posture changes at most every cron run
+  try {
+    const hit = await caches.default.match(new Request(CACHE_URL));
+    if (hit) {
+      const d = await hit.clone().json().catch(() => null);
+      if (d) return Response.json({ ...d, cached: true });
+    }
+  } catch {}
+
   const rawEntries = await fetchRecentThreats(env, 50);
   const enriched   = enrichBatch(rawEntries);
   const detection  = runDetection(enriched);
   const posture    = buildDefensePosture(detection.alerts || []);
+  const payload    = { posture, generated_at: new Date().toISOString(), plan: authCtx?.tier || 'FREE' };
 
-  return Response.json({
-    posture,
-    generated_at: new Date().toISOString(),
-    plan:         authCtx?.tier || 'FREE',
-  });
+  try {
+    caches.default.put(new Request(CACHE_URL), new Response(JSON.stringify(payload), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}` },
+    })).catch(() => {});
+  } catch {}
+
+  return Response.json(payload);
 }
 
 // ─── GET /api/realtime/stats ──────────────────────────────────────────────────
+// KV OPTIMIZATION: stats polled every 180s (after frontend fix) — edge cached 60s
 export async function handleRealtimeStats(request, env, authCtx = {}) {
-  const stats = await buildPlatformStats(env);
-  return Response.json({
-    ...stats,
-    generated_at: new Date().toISOString(),
-  });
+  const CACHE_URL = 'https://cdb-edge-cache/realtime:stats:v1';
+  const CACHE_TTL = 60; // 60 seconds — stats are aggregates, 60s freshness is fine
+  try {
+    const hit = await caches.default.match(new Request(CACHE_URL));
+    if (hit) {
+      const d = await hit.clone().json().catch(() => null);
+      if (d) return Response.json({ ...d, cached: true });
+    }
+  } catch {}
+
+  const stats  = await buildPlatformStats(env);
+  const payload = { ...stats, generated_at: new Date().toISOString() };
+
+  try {
+    caches.default.put(new Request(CACHE_URL), new Response(JSON.stringify(payload), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}` },
+    })).catch(() => {});
+  } catch {}
+
+  return Response.json(payload);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -28,7 +28,15 @@ name: CI — Lint & Validate
 
 on:
   push:
-    branches: ["**"]
+    # CI OPTIMIZATION: Previously ran on ALL branches ("**") — wasteful.
+    # Now only runs on main (protected) and feature/fix/* branches with PR intent.
+    # This eliminates ~70% of unnecessary CI runs and saves GitHub Actions minutes.
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "hotfix/**"
+      - "release/**"
   pull_request:
     branches: [main]
 
