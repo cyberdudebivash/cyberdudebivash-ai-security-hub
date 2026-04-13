@@ -226,7 +226,8 @@ INSERT OR IGNORE INTO schema_versions (version, description) VALUES
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ─── THREAT INTELLIGENCE ─────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS threat_intel (
+DROP TABLE IF EXISTS threat_intel;
+CREATE TABLE threat_intel (
   id              TEXT    PRIMARY KEY,
   cve_id          TEXT    UNIQUE,
   title           TEXT    NOT NULL,
@@ -259,7 +260,8 @@ CREATE INDEX IF NOT EXISTS idx_ti_published ON threat_intel(published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ti_ingested  ON threat_intel(ingested_at DESC);
 
 -- ─── AUTONOMOUS DEFENSE ACTIONS ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS defense_actions (
+DROP TABLE IF EXISTS defense_actions;
+CREATE TABLE defense_actions (
   id             TEXT    PRIMARY KEY,
   threat_id      TEXT    REFERENCES threat_intel(id) ON DELETE SET NULL,
   action_type    TEXT    NOT NULL,
@@ -281,7 +283,8 @@ CREATE INDEX IF NOT EXISTS idx_da_type    ON defense_actions(action_type);
 CREATE INDEX IF NOT EXISTS idx_da_created ON defense_actions(created_at DESC);
 
 -- ─── PROPOSALS ───────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS proposals (
+DROP TABLE IF EXISTS proposals;
+CREATE TABLE proposals (
   id               TEXT    PRIMARY KEY,
   lead_id          TEXT    REFERENCES crm_leads(id) ON DELETE SET NULL,
   title            TEXT    NOT NULL,
@@ -304,7 +307,8 @@ CREATE INDEX IF NOT EXISTS idx_proposals_status  ON proposals(status);
 CREATE INDEX IF NOT EXISTS idx_proposals_created ON proposals(created_at DESC);
 
 -- ─── ORGANIZATION EVENTS ─────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS org_events (
+DROP TABLE IF EXISTS org_events;
+CREATE TABLE org_events (
   id          TEXT    PRIMARY KEY,
   org_id      TEXT    NOT NULL,
   event_type  TEXT    NOT NULL,
@@ -321,7 +325,8 @@ CREATE INDEX IF NOT EXISTS idx_org_events_type    ON org_events(event_type);
 CREATE INDEX IF NOT EXISTS idx_org_events_created ON org_events(created_at DESC);
 
 -- ─── API USAGE METERING ───────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS api_usage_log (
+DROP TABLE IF EXISTS api_usage_log;
+CREATE TABLE api_usage_log (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     TEXT,
   api_key_id  TEXT,
@@ -339,7 +344,8 @@ CREATE INDEX IF NOT EXISTS idx_usage_ep      ON api_usage_log(endpoint);
 CREATE INDEX IF NOT EXISTS idx_usage_created ON api_usage_log(created_at DESC);
 
 -- ─── REVENUE SNAPSHOTS ────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS revenue_snapshots (
+DROP TABLE IF EXISTS revenue_snapshots;
+CREATE TABLE revenue_snapshots (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   snapshot_at TEXT    NOT NULL DEFAULT (datetime('now')),
   mrr_inr     REAL    NOT NULL DEFAULT 0,
