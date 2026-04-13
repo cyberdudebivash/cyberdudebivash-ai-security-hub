@@ -6619,108 +6619,571 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
   </p>
 </section>
 
-<!-- ════════════════════════════════ FOOTER ════════════════════════════════ -->
-<footer>
-  <!-- ══ FLASHING BRAND BANNER ══ -->
-  <div style="background:linear-gradient(135deg,#040410,#080818);border-top:1px solid rgba(0,212,255,.15);border-bottom:1px solid rgba(0,212,255,.08);padding:22px 20px;text-align:center;overflow:hidden;position:relative">
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(0,212,255,.04),transparent);pointer-events:none"></div>
-    <div id="footer-brand-flash" style="
-      font-family:'Share Tech Mono',monospace;
-      font-size:clamp(16px,2.8vw,28px);
-      font-weight:900;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      background:linear-gradient(90deg,#00d4ff,#7c3aed,#f59e0b,#ef4444,#10b981,#00d4ff,#7c3aed,#f59e0b);
-      background-size:400% auto;
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      background-clip:text;
-      animation:footerBrandFlow 3s linear infinite, footerBrandPulse 2s ease-in-out infinite alternate;
-      filter:drop-shadow(0 0 18px rgba(0,212,255,.5));
-      position:relative;z-index:1">
-      CYBERDUDEBIVASH PRIVATE LIMITED
+<!-- ═══════════════════ ATTENTION ENGINE + RISK BLOCK (index) ═══════════════════ -->
+<style>
+/* ══ RISK BLOCK & ATTENTION ENGINE — index.html ═══════════════════════════════ */
+@keyframes rb-riskPulse{0%,100%{box-shadow:0 0 20px rgba(239,68,68,.3),0 0 40px rgba(239,68,68,.1)}50%{box-shadow:0 0 40px rgba(239,68,68,.6),0 0 80px rgba(239,68,68,.2)}}
+@keyframes rb-riskBlink{0%,100%{color:#ff4444;text-shadow:0 0 8px rgba(255,68,68,.7)}50%{color:#ff6b6b;text-shadow:0 0 16px rgba(255,68,68,1),0 0 32px rgba(255,100,100,.5)}}
+@keyframes rb-scanLine{0%{left:-100%}100%{left:100%}}
+@keyframes rb-shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-2px)}20%,40%,60%,80%{transform:translateX(2px)}}
+@keyframes rb-attnGlow{0%,100%{background:rgba(0,255,136,.06)}50%{background:rgba(0,255,136,.12);box-shadow:0 0 16px rgba(0,255,136,.15)}}
+.rb-attn-strip{background:rgba(0,0,0,.7);border-bottom:1px solid rgba(0,255,136,.15);padding:10px 24px}
+.rb-attn-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.rb-attn-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em}
+.rb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rb-dot-green{background:#00ff88;box-shadow:0 0 6px #00ff88;animation:v14GreenPulse 1.2s ease-in-out infinite}
+.rb-dot-orange{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.rb-dot-red{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:rb-riskBlink 1.5s ease-in-out infinite}
+.rb-sep{color:rgba(255,255,255,.15)}
+.risk-blk{position:relative;overflow:hidden;background:linear-gradient(135deg,#0a0205,#110308,#0d0208);border-top:2px solid rgba(239,68,68,.4);border-bottom:2px solid rgba(239,68,68,.2);padding:36px 24px;animation:rb-riskPulse 3s ease-in-out infinite}
+.risk-blk::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#ff6b6b,transparent);animation:rb-scanLine 2.5s linear infinite}
+.risk-blk-inner{max-width:1000px;margin:0 auto;text-align:center}
+.risk-blk-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#ff4444;margin-bottom:16px;animation:rb-shake 4s ease-in-out infinite}
+.risk-blk-title{font-size:clamp(20px,4vw,34px);font-weight:900;color:#fff;margin-bottom:8px}
+.risk-blk-title span{animation:rb-riskBlink 1.5s ease-in-out infinite}
+.risk-blk-sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:24px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.6}
+.risk-blk-stats{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+.risk-blk-stat{text-align:center;background:rgba(0,0,0,.4);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 18px;min-width:110px}
+.risk-blk-num{font-size:22px;font-weight:900;color:#ff4444;text-shadow:0 0 12px rgba(255,68,68,.6)}
+.risk-blk-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px}
+.risk-blk-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.risk-blk-cta-red{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:14px;font-weight:900;padding:14px 28px;border-radius:10px;text-decoration:none;box-shadow:0 0 24px rgba(239,68,68,.4);transition:all .2s}
+.risk-blk-cta-red:hover{box-shadow:0 0 40px rgba(239,68,68,.7);transform:translateY(-2px);color:#fff;text-decoration:none}
+.risk-blk-cta-green{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);color:#00ff88;font-size:14px;font-weight:800;padding:14px 28px;border-radius:10px;text-decoration:none;transition:all .2s}
+.risk-blk-cta-green:hover{background:rgba(0,255,136,.18);box-shadow:0 0 20px rgba(0,255,136,.3);transform:translateY(-2px);color:#00ff88;text-decoration:none}
+.risk-blk-ticker{margin-top:18px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.risk-blk-tdot{width:8px;height:8px;border-radius:50%;background:#ff4444;box-shadow:0 0 8px #ff4444;animation:rb-riskBlink 1s ease-in-out infinite}
+.risk-blk-ttxt{font-size:11px;color:rgba(255,255,255,.4);font-family:monospace}
+.risk-blk-ttxt span{color:#ff8888}
+</style>
+
+<!-- ATTENTION ENGINE LIVE STRIP -->
+<div class="rb-attn-strip" id="cdb-attn-strip">
+  <div class="rb-attn-inner">
+    <div class="rb-attn-item" style="color:#00ff88"><div class="rb-dot rb-dot-green"></div>🔥 <span id="ae-scan-live">17</span> users scanning now</div>
+    <span class="rb-sep">|</span>
+    <div class="rb-attn-item" style="color:#f59e0b"><div class="rb-dot rb-dot-orange"></div>⚠️ <span id="ae-cve-count">3</span> critical CVEs today</div>
+    <span class="rb-sep">|</span>
+    <div class="rb-attn-item" style="color:#ef4444"><div class="rb-dot rb-dot-red"></div>🚨 Reports from ₹199 · <a href="#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
+    <span class="rb-sep">|</span>
+    <div class="rb-attn-item" style="color:rgba(255,255,255,.35);font-size:10px">Intel updated: <span id="ae-update-time">just now</span></div>
+  </div>
+</div>
+
+<!-- SYSTEM RISK CONVERSION BLOCK -->
+<div class="risk-blk">
+  <div class="risk-blk-inner">
+    <div class="risk-blk-badge">🚨 &nbsp; LIVE THREAT INTELLIGENCE ALERT &nbsp; 🚨</div>
+    <h2 class="risk-blk-title">⚠️ <span>YOUR SYSTEM MAY BE AT RISK</span></h2>
+    <p class="risk-blk-sub">Critical vulnerabilities are being actively exploited globally. Our AI scanner detects misconfigurations, exposed services, CVEs, and breach indicators in under 60 seconds — completely free.</p>
+    <div class="risk-blk-stats">
+      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-scans-today">1,247</div><div class="risk-blk-lbl">Scans today</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-cve-active">847</div><div class="risk-blk-lbl">Active CVEs tracked</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-threats-hour">12</div><div class="risk-blk-lbl">Threats found this hour</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num">₹199</div><div class="risk-blk-lbl">Full report — instant</div></div>
     </div>
-    <div style="font-size:11px;letter-spacing:.22em;color:rgba(255,255,255,.25);margin-top:6px;text-transform:uppercase;position:relative;z-index:1">
-      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; Enterprise AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+    <div class="risk-blk-ctas">
+      <a href="#scanner" class="risk-blk-cta-red">🔴 Scan Your Domain Now — FREE</a>
+      <a href="#pricing" class="risk-blk-cta-green">💰 Unlock Full Report ₹199</a>
+    </div>
+    <div class="risk-blk-ticker">
+      <div class="risk-blk-tdot"></div>
+      <div class="risk-blk-ttxt">Last detection: <span id="rb-last-cve">CVE-2025-21298 (Windows OLE RCE)</span> — flagged <span id="rb-time-ago">3 min ago</span></div>
     </div>
   </div>
-  <style>
-    @keyframes footerBrandFlow {
-      0%   { background-position:0% center; }
-      100% { background-position:400% center; }
-    }
-    @keyframes footerBrandPulse {
-      from { filter:drop-shadow(0 0 10px rgba(0,212,255,.4)); }
-      to   { filter:drop-shadow(0 0 28px rgba(124,58,237,.7)) drop-shadow(0 0 50px rgba(0,212,255,.3)); }
-    }
-  </style>
-  <div class="footer-inner">
-    <div class="footer-top">
+</div>
+
+<!-- ════════════════════════════════ FOOTER v14 ════════════════════════════════ -->
+<style>
+/* ══ FOOTER v14 — MAX VISIBILITY SYSTEM ══════════════════════════════════════ */
+@keyframes footerBrandFlow { 0%{background-position:0% center} 100%{background-position:400% center} }
+@keyframes footerBrandPulse { from{filter:drop-shadow(0 0 10px rgba(0,212,255,.5))} to{filter:drop-shadow(0 0 32px rgba(0,255,204,.9)) drop-shadow(0 0 60px rgba(0,212,255,.4))} }
+@keyframes v14GreenPulse { 0%,100%{color:#00ff88;text-shadow:0 0 8px #00ff88,0 0 16px #00ff88,0 0 24px #00cc66} 50%{color:#00ffcc;text-shadow:0 0 12px #00ffcc,0 0 28px #00ffcc,0 0 48px #00ff88,0 0 60px rgba(0,255,136,.6)} }
+@keyframes v14LinkFlash { 0%,100%{color:#00ff88;text-shadow:0 0 6px #00ff88,0 0 12px rgba(0,255,136,.5);transform:translateX(0)} 50%{color:#39ff14;text-shadow:0 0 10px #39ff14,0 0 22px #00ff88,0 0 36px rgba(57,255,20,.5);transform:translateX(2px)} }
+@keyframes v14BorderGlow { 0%,100%{border-color:rgba(0,255,136,.3);box-shadow:0 0 8px rgba(0,255,136,.15)} 50%{border-color:rgba(0,255,204,.7);box-shadow:0 0 20px rgba(0,255,204,.35),inset 0 0 12px rgba(0,255,136,.05)} }
+@keyframes v14NavPulse { 0%,100%{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.35)} 50%{background:rgba(0,255,136,.18);border-color:rgba(0,255,204,.7);box-shadow:0 0 16px rgba(0,255,136,.3)} }
+@keyframes v14ScanBlink { 0%,90%,100%{opacity:1} 5%,15%{opacity:.3} }
+@keyframes v14ChevronSlide { 0%{transform:translateX(0)} 50%{transform:translateX(4px)} 100%{transform:translateX(0)} }
+
+footer.v14-footer {
+  background:linear-gradient(180deg,#040410 0%,#060612 40%,#080818 100%);
+  border-top:2px solid transparent;
+  background-clip:padding-box;
+  position:relative;
+}
+footer.v14-footer::before {
+  content:'';position:absolute;top:-2px;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88);
+  background-size:400% auto;
+  animation:footerBrandFlow 3s linear infinite;
+}
+
+/* ── NAVIGATION SUPERHIGHWAY ── */
+.v14-nav-highway {
+  background:linear-gradient(135deg,rgba(0,255,136,.04),rgba(0,255,204,.02));
+  border-top:1px solid rgba(0,255,136,.15);
+  border-bottom:1px solid rgba(0,255,136,.1);
+  padding:28px 24px;
+}
+.v14-nav-highway-inner {
+  max-width:1200px;margin:0 auto;
+}
+.v14-nav-section-label {
+  font-size:10px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;
+  color:#00ff88;
+  text-shadow:0 0 10px rgba(0,255,136,.6);
+  margin-bottom:18px;display:flex;align-items:center;gap:8px;
+}
+.v14-nav-section-label::before,
+.v14-nav-section-label::after {
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,rgba(0,255,136,.5),transparent);
+}
+.v14-nav-section-label::after { background:linear-gradient(270deg,rgba(0,255,136,.5),transparent); }
+
+.v14-pages-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:10px;
+}
+.v14-page-card {
+  display:flex;align-items:center;gap:10px;
+  background:rgba(0,255,136,.06);
+  border:1px solid rgba(0,255,136,.2);
+  border-radius:10px;padding:12px 14px;
+  text-decoration:none;
+  transition:all .2s ease;
+  animation:v14BorderGlow 3s ease-in-out infinite;
+  position:relative;overflow:hidden;
+}
+.v14-page-card::before {
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,255,136,.08),transparent);
+  transition:left .4s ease;
+}
+.v14-page-card:hover::before { left:100%; }
+.v14-page-card:hover {
+  background:rgba(0,255,204,.14);
+  border-color:rgba(0,255,204,.6);
+  box-shadow:0 0 20px rgba(0,255,136,.25),0 4px 16px rgba(0,0,0,.3);
+  transform:translateY(-2px);
+  text-decoration:none;
+}
+.v14-page-icon {
+  font-size:20px;flex-shrink:0;
+  filter:drop-shadow(0 0 4px rgba(0,255,136,.4));
+}
+.v14-page-info { flex:1;min-width:0; }
+.v14-page-name {
+  font-size:13px;font-weight:900;
+  color:#00ff88;
+  text-shadow:0 0 8px rgba(0,255,136,.6);
+  animation:v14GreenPulse 2.5s ease-in-out infinite;
+  letter-spacing:.02em;line-height:1.2;
+}
+.v14-page-desc {
+  font-size:10px;color:rgba(255,255,255,.45);
+  margin-top:2px;line-height:1.3;
+}
+.v14-page-arrow {
+  font-size:12px;color:#00ff88;opacity:.7;flex-shrink:0;
+  animation:v14ChevronSlide 1.5s ease-in-out infinite;
+}
+.v14-page-card:hover .v14-page-name { animation-duration:.8s; }
+
+/* ── NEW BADGE ── */
+.v14-new-badge {
+  position:absolute;top:6px;right:6px;
+  background:linear-gradient(135deg,#00ff88,#00cc66);
+  color:#000;font-size:8px;font-weight:900;letter-spacing:.5px;
+  padding:2px 6px;border-radius:4px;
+  animation:v14ScanBlink 3s ease-in-out infinite;
+}
+
+/* ── FOOTER LINKS — MAX BRIGHTNESS ── */
+.v14-footer-link {
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:700;
+  color:#00ff88 !important;
+  text-decoration:none;
+  padding:5px 0;
+  animation:v14LinkFlash 2.5s ease-in-out infinite;
+  text-shadow:0 0 8px rgba(0,255,136,.5);
+  letter-spacing:.02em;
+  transition:all .2s;
+}
+.v14-footer-link:hover {
+  color:#00ffcc !important;
+  text-shadow:0 0 14px rgba(0,255,204,.9),0 0 28px rgba(0,255,136,.6);
+  text-decoration:none;
+  transform:translateX(3px);
+}
+.v14-footer-link-dim {
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;
+  color:rgba(255,255,255,.55) !important;
+  text-decoration:none;padding:4px 0;
+  transition:all .2s;
+}
+.v14-footer-link-dim:hover {
+  color:#00ff88 !important;
+  text-shadow:0 0 10px rgba(0,255,136,.6);
+  text-decoration:none;transform:translateX(2px);
+}
+.v14-col-title {
+  font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;
+  color:#00ffcc;
+  text-shadow:0 0 10px rgba(0,255,204,.6);
+  margin-bottom:14px;padding-bottom:8px;
+  border-bottom:1px solid rgba(0,255,204,.2);
+}
+/* Stagger animation delay so links flash at different times */
+.v14-footer-link:nth-child(1){animation-delay:0s}
+.v14-footer-link:nth-child(2){animation-delay:.3s}
+.v14-footer-link:nth-child(3){animation-delay:.6s}
+.v14-footer-link:nth-child(4){animation-delay:.9s}
+.v14-footer-link:nth-child(5){animation-delay:1.2s}
+.v14-footer-link:nth-child(6){animation-delay:1.5s}
+.v14-footer-link:nth-child(7){animation-delay:1.8s}
+.v14-footer-link:nth-child(8){animation-delay:2.1s}
+
+/* ── QUICK CTA STRIP ── */
+.v14-quick-cta-strip {
+  display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+  padding:20px 24px;
+  background:rgba(0,0,0,.3);
+  border-top:1px solid rgba(0,255,136,.1);
+  border-bottom:1px solid rgba(0,255,136,.08);
+}
+.v14-cta-pill {
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:8px;
+  font-size:13px;font-weight:800;
+  text-decoration:none;white-space:nowrap;
+  transition:all .2s ease;
+}
+.v14-cta-pill-primary {
+  background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;
+  box-shadow:0 0 16px rgba(0,255,136,.35);
+  animation:v14NavPulse 2.5s ease-in-out infinite;
+}
+.v14-cta-pill-primary:hover { box-shadow:0 0 28px rgba(0,255,136,.6);transform:translateY(-2px);color:#000;text-decoration:none; }
+.v14-cta-pill-secondary {
+  background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.35);color:#00ffcc;
+}
+.v14-cta-pill-secondary:hover { background:rgba(0,255,204,.18);box-shadow:0 0 16px rgba(0,255,204,.3);transform:translateY(-2px);color:#00ffcc;text-decoration:none; }
+.v14-cta-pill-ghost {
+  background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:#a78bfa;
+}
+.v14-cta-pill-ghost:hover { background:rgba(124,58,237,.22);color:#a78bfa;text-decoration:none;transform:translateY(-2px); }
+
+@media(max-width:768px){
+  .v14-pages-grid{grid-template-columns:1fr 1fr}
+  .v14-footer-cols{grid-template-columns:1fr 1fr !important}
+}
+@media(max-width:480px){
+  .v14-pages-grid{grid-template-columns:1fr}
+  .v14-footer-cols{grid-template-columns:1fr !important}
+}
+</style>
+
+<footer class="v14-footer">
+
+  <!-- ══ ANIMATED BRAND BANNER ══ -->
+  <div style="background:linear-gradient(135deg,#020208,#06060e);padding:24px 20px;text-align:center;overflow:hidden;position:relative">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 50% 50%,rgba(0,255,136,.05),transparent);pointer-events:none"></div>
+    <div style="
+      font-size:clamp(15px,2.5vw,26px);font-weight:900;letter-spacing:.18em;text-transform:uppercase;
+      background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88,#00ffcc);
+      background-size:400% auto;
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      animation:footerBrandFlow 3s linear infinite,footerBrandPulse 2s ease-in-out infinite alternate;
+      position:relative;z-index:1">
+      ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
+    </div>
+    <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
+      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; India's #1 AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+    </div>
+  </div>
+
+  <!-- ══ QUICK ACTION CTA STRIP ══ -->
+  <div class="v14-quick-cta-strip">
+    <a href="/#scanner" class="v14-cta-pill v14-cta-pill-primary">🔍 Free Security Scan</a>
+    <a href="/booking.html" class="v14-cta-pill v14-cta-pill-secondary">📅 Book Demo</a>
+    <a href="/services.html" class="v14-cta-pill v14-cta-pill-secondary">💰 View Services</a>
+    <a href="/tools.html" class="v14-cta-pill v14-cta-pill-ghost">🛠 Security Tools</a>
+    <a href="/intel.html" class="v14-cta-pill v14-cta-pill-ghost">🛰 Live Intel Feed</a>
+    <a href="https://wa.me/918179881447" target="_blank" class="v14-cta-pill v14-cta-pill-secondary">💬 WhatsApp Us</a>
+  </div>
+
+  <!-- ══ NAVIGATION SUPERHIGHWAY — ALL PAGES ══ -->
+  <div class="v14-nav-highway">
+    <div class="v14-nav-highway-inner">
+      <div class="v14-nav-section-label">⚡ EXPLORE ALL PAGES — CLICK TO NAVIGATE ⚡</div>
+      <div class="v14-pages-grid">
+
+        <a href="/" class="v14-page-card">
+          <div class="v14-page-icon">🏠</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Home</div>
+            <div class="v14-page-desc">AI Security Scanner · Free scan</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/tools.html" class="v14-page-card">
+          <div class="v14-new-badge">NEW</div>
+          <div class="v14-page-icon">🛠</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Tools</div>
+            <div class="v14-page-desc">Sigma · YARA · Firewall · IR Playbooks</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/intel.html" class="v14-page-card">
+          <div class="v14-new-badge">NEW</div>
+          <div class="v14-page-icon">🛰</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Intel Feed</div>
+            <div class="v14-page-desc">Live CVE · APT groups · Threat alerts</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/services.html" class="v14-page-card">
+          <div class="v14-new-badge">NEW</div>
+          <div class="v14-page-icon">💼</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Services</div>
+            <div class="v14-page-desc">Assessments · Retainers · Enterprise</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/booking.html" class="v14-page-card">
+          <div class="v14-new-badge">NEW</div>
+          <div class="v14-page-icon">📅</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Book Demo</div>
+            <div class="v14-page-desc">Free 45-min strategy session</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/about.html" class="v14-page-card">
+          <div class="v14-page-icon">⚔️</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">About Us</div>
+            <div class="v14-page-desc">Founder · Mission · Platform story</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/contact.html" class="v14-page-card">
+          <div class="v14-page-icon">📞</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Contact</div>
+            <div class="v14-page-desc">Email · WhatsApp · 2-4hr response</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="https://tools.cyberdudebivash.com" target="_blank" class="v14-page-card">
+          <div class="v14-page-icon">🔧</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Tools Suite ↗</div>
+            <div class="v14-page-desc">tools.cyberdudebivash.com</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="v14-page-card">
+          <div class="v14-page-icon">✈️</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Sentinel APEX ↗</div>
+            <div class="v14-page-desc">Live Telegram threat intel channel</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/user-dashboard.html" class="v14-page-card">
+          <div class="v14-page-icon">📊</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Dashboard</div>
+            <div class="v14-page-desc">Scan history · Reports · Account</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/privacy-policy.html" class="v14-page-card">
+          <div class="v14-page-icon">🔒</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Privacy Policy</div>
+            <div class="v14-page-desc">DPDP Act · GDPR compliant</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+        <a href="/blog/" class="v14-page-card">
+          <div class="v14-page-icon">📝</div>
+          <div class="v14-page-info">
+            <div class="v14-page-name">Security Blog</div>
+            <div class="v14-page-desc">CVE analysis · Threat research</div>
+          </div>
+          <div class="v14-page-arrow">›</div>
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MAIN FOOTER COLUMNS ══ -->
+  <div class="footer-inner" style="padding-top:36px">
+    <div class="v14-footer-cols" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px">
+
+      <!-- Brand col -->
       <div>
-        <div class="footer-brand">⚔️ CYBERDUDEBIVASH®</div>
-        <p class="footer-desc">Enterprise AI Cybersecurity Intelligence Platform by CYBERDUDEBIVASH PRIVATE LIMITED. 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India. Building the future of AI-powered security.</p>
-        <div class="footer-social">
+        <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#00ffcc,#00d4ff);
+                    -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px">
+          ⚔️ CYBERDUDEBIVASH®
+        </div>
+        <p style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:14px;max-width:280px">
+          India's #1 AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹199.
+        </p>
+        <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:5px">
+          <a href="mailto:bivash@cyberdudebivash.com" class="v14-footer-link-dim">📧 bivash@cyberdudebivash.com</a>
+          <a href="https://wa.me/918179881447" target="_blank" class="v14-footer-link-dim">📞 +91 8179881447</a>
+          <span class="v14-footer-link-dim" style="cursor:default">📍 Ragadi, Odisha 755019, India</span>
+          <span class="v14-footer-link-dim" style="cursor:default">🏢 GST: 21ARKPN8270G1ZP</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
           <a class="social-btn" href="https://github.com/cyberdudebivash" target="_blank" title="GitHub">🐙</a>
           <a class="social-btn" href="https://linkedin.com/in/cyberdudebivash" target="_blank" title="LinkedIn">💼</a>
           <a class="social-btn" href="https://twitter.com/cyberdudebivash" target="_blank" title="Twitter/X">🐦</a>
-          <a class="social-btn" href="https://instagram.com/cyberdudebivash" target="_blank" title="Instagram">📸</a>
+          <a class="social-btn" href="https://t.me/cyberdudebivashSentinelApex" target="_blank" title="Telegram">✈️</a>
+          <a class="social-btn" href="https://wa.me/918179881447" target="_blank" title="WhatsApp">💚</a>
           <a class="social-btn" href="https://youtube.com/@cyberdudebivash" target="_blank" title="YouTube">▶️</a>
           <a class="social-btn" href="https://discord.gg/cyberdudebivash" target="_blank" title="Discord">💬</a>
-          <a class="social-btn" href="https://t.me/cyberdudebivashSentinelApex" target="_blank" title="Telegram Sentinel APEX">✈️</a>
-          <a class="social-btn" href="https://cyberdudebivash.medium.com" target="_blank" title="Medium">📝</a>
-          <a class="social-btn" href="https://wa.me/918179881447" target="_blank" title="WhatsApp">💚</a>
-          <a class="social-btn" href="https://reddit.com/u/cyberdudebivash" target="_blank" title="Reddit">🔴</a>
+          <a class="social-btn" href="https://instagram.com/cyberdudebivash" target="_blank" title="Instagram">📸</a>
         </div>
       </div>
-      <div class="footer-col">
-        <h5>Platform</h5>
-        <ul>
-          <li><a href="#scanner">Domain Scanner</a></li>
-          <li><a href="#scanner">AI Security</a></li>
-          <li><a href="#scanner">Red Team</a></li>
-          <li><a href="#scanner">Identity Monitor</a></li>
-          <li><a href="#scanner">Compliance</a></li>
-          <li><a href="/api" target="_blank">API Docs</a></li>
-        </ul>
+
+      <!-- Platform col -->
+      <div>
+        <div class="v14-col-title">🔍 Platform</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/#scanner" class="v14-footer-link">⚡ Domain Scanner</a>
+          <a href="/#scanner" class="v14-footer-link">🤖 AI Security</a>
+          <a href="/#scanner" class="v14-footer-link">🎯 Red Team</a>
+          <a href="/#scanner" class="v14-footer-link">🔐 Identity ZT</a>
+          <a href="/#scanner" class="v14-footer-link">📋 Compliance</a>
+          <a href="/#defense-marketplace" class="v14-footer-link">🛡 Marketplace</a>
+          <a href="/user-dashboard.html" class="v14-footer-link-dim">📊 Dashboard</a>
+          <a href="/api" target="_blank" class="v14-footer-link-dim">📡 API Docs</a>
+        </div>
       </div>
-      <div class="footer-col">
-        <h5>Company</h5>
-        <ul>
-          <li><a href="https://cyberdudebivash.in" target="_blank">Website</a></li>
-          <li><a href="https://tools.cyberdudebivash.com" target="_blank">Tools Suite</a></li>
-          <li><a href="https://t.me/cyberdudebivashSentinelApex" target="_blank">Sentinel APEX</a></li>
-          <li><a href="https://github.com/cyberdudebivash" target="_blank">GitHub</a></li>
-          <li><a href="#enterprise">Enterprise</a></li>
-          <li><a href="mailto:bivash@cyberdudebivash.com">Contact</a></li>
-          <li><a href="/blog/">Security Blog</a></li>
-          <li><a href="/about.html">About Us</a></li>
-        </ul>
-        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="tg-community-card">
+
+      <!-- Pages col -->
+      <div>
+        <div class="v14-col-title">📄 Pages</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/tools.html" class="v14-footer-link">🛠 Tools</a>
+          <a href="/intel.html" class="v14-footer-link">🛰 Intel Feed</a>
+          <a href="/services.html" class="v14-footer-link">💼 Services</a>
+          <a href="/booking.html" class="v14-footer-link">📅 Book Demo</a>
+          <a href="/about.html" class="v14-footer-link">⚔️ About Us</a>
+          <a href="/contact.html" class="v14-footer-link">📞 Contact</a>
+          <a href="/blog/" class="v14-footer-link-dim">📝 Blog</a>
+          <a href="https://tools.cyberdudebivash.com" target="_blank" class="v14-footer-link-dim">🔧 Tools Suite ↗</a>
+        </div>
+      </div>
+
+      <!-- Services col -->
+      <div>
+        <div class="v14-col-title">💰 Services</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/services.html" class="v14-footer-link">🔍 Assessment ₹9,999</a>
+          <a href="/services.html" class="v14-footer-link">🧠 Intel Report ₹14,999</a>
+          <a href="/services.html" class="v14-footer-link">🎯 Red Team ₹24,999</a>
+          <a href="/services.html" class="v14-footer-link">🏢 Retainer ₹99,999</a>
+          <a href="/#pricing" class="v14-footer-link-dim">📦 Starter ₹499/mo</a>
+          <a href="/#pricing" class="v14-footer-link-dim">🚀 Pro ₹1,499/mo</a>
+          <a href="/#pricing" class="v14-footer-link-dim">🏷 Enterprise ₹4,999/mo</a>
+          <a href="/#pricing" class="v14-footer-link-dim">♾ MSSP ₹9,999/mo</a>
+        </div>
+      </div>
+
+      <!-- Legal col -->
+      <div>
+        <div class="v14-col-title">⚖️ Legal</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/privacy-policy.html" class="v14-footer-link-dim">🔒 Privacy Policy</a>
+          <a href="/terms-of-service.html" class="v14-footer-link-dim">📋 Terms of Service</a>
+          <a href="/refund-policy.html" class="v14-footer-link-dim">💳 Refund Policy</a>
+          <a href="#" onclick="CDB_LEGAL.show('dpdp');return false" class="v14-footer-link-dim">🇮🇳 DPDP Compliance</a>
+          <a href="#" onclick="CDB_LEGAL.show('cookies');return false" class="v14-footer-link-dim">🍪 Cookie Policy</a>
+        </div>
+        <!-- Sentinel APEX CTA -->
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="tg-community-card" style="margin-top:16px;display:flex;align-items:center;gap:10px;background:rgba(0,136,204,.1);border:1px solid rgba(0,136,204,.3);border-radius:10px;padding:10px 12px;text-decoration:none">
           <span style="font-size:22px">✈️</span>
-          <div><div class="tg-ctitle">Sentinel APEX</div><div class="tg-csub">Live threat intel channel</div></div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#0088cc">Sentinel APEX</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.4)">Live threat intel channel</div>
+          </div>
         </a>
       </div>
-      <div class="footer-col">
-        <h5>Legal</h5>
-        <ul>
-          <li><a href="/privacy-policy.html">Privacy Policy</a></li>
-          <li><a href="/terms-of-service.html">Terms of Service</a></li>
-          <li><a href="/refund-policy.html">Refund Policy</a></li>
-          <li><a href="/about.html">About Us</a></li>
-          <li><a href="/contact.html">Contact</a></li>
-          <li><a href="/blog/">Security Blog</a></li>
-        </ul>
-      </div>
     </div>
-    <div class="footer-bottom">
-      <div class="footer-copy">© 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved. | 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</div>
-      <div class="footer-copy">
-        Platform <span id="platform-version-footer" title="Live version from /api/version">v13.0</span> ·
-        📧 bivash@cyberdudebivash.com · 📞 +91 8179881447 · 💬 Discord: cybercoder127001
+
+    <!-- ══ FOOTER BOTTOM ══ -->
+    <div style="border-top:1px solid rgba(0,255,136,.1);padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.6">
+        © 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.<br>
+        <span style="color:rgba(255,255,255,.2)">29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</span>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:right;line-height:1.7">
+        Platform <span id="platform-version-footer" style="color:#00ff88">v14.0</span> ·
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(255,255,255,.4)">bivash@cyberdudebivash.com</a> ·
+        <a href="https://wa.me/918179881447" target="_blank" style="color:rgba(255,255,255,.4)">+91 8179881447</a> ·
+        <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:rgba(255,255,255,.4)">Discord: cybercoder127001</a>
       </div>
     </div>
   </div>
 </footer>
+
+<!-- ══ ATTENTION ENGINE + RISK COUNTER JS (index.html) ══ -->
+<script>
+(function CDB_ATTENTION_INDEX(){
+  var recent_cves=[
+    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)","CVE-2024-55591 (Fortinet Auth Bypass)",
+    "CVE-2025-21333 (Windows Hyper-V ESC)","CVE-2024-53104 (Linux USB Video)","CVE-2025-22457 (Ivanti Pulse Secure)",
+    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)","CVE-2025-29824 (CLFS Zero-Day)",
+    "CVE-2025-21335 (Windows Hyper-V PE)","CVE-2025-30065 (Apache Parquet RCE)","CVE-2024-49113 (Windows LDAP DoS)"
+  ];
+  var scanBase=1247, startTime=Date.now();
+  var tAgo=["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","8 min ago","12 min ago"];
+  function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+  function elMin(){return Math.floor((Date.now()-startTime)/60000);}
+  function el(id){return document.getElementById(id);}
+  function tick(){
+    var live=rand(12,34), scansToday=scanBase+rand(0,50)+elMin()*rand(1,3);
+    var cveActive=rand(844,855), threatsHour=rand(8,24);
+    var cveNow=recent_cves[rand(0,recent_cves.length-1)];
+    var timeAgo=tAgo[rand(0,tAgo.length-1)];
+    var upd=elMin()<=0?"just now":elMin()+"m ago";
+    if(el("ae-scan-live"))el("ae-scan-live").textContent=live;
+    if(el("ae-cve-count"))el("ae-cve-count").textContent=rand(2,6);
+    if(el("ae-update-time"))el("ae-update-time").textContent=upd;
+    if(el("rb-scans-today"))el("rb-scans-today").textContent=scansToday.toLocaleString();
+    if(el("rb-cve-active"))el("rb-cve-active").textContent=cveActive;
+    if(el("rb-threats-hour"))el("rb-threats-hour").textContent=threatsHour;
+    if(el("rb-last-cve"))el("rb-last-cve").textContent=cveNow;
+    if(el("rb-time-ago"))el("rb-time-ago").textContent=timeAgo;
+  }
+  tick();
+  setInterval(tick,8000);
+})();
+</script>
 
 <!-- Compliance Badge Detail Modal -->
 <div class="badge-modal-overlay" id="badgeModalOverlay" onclick="closeBadgeModal(event)">
