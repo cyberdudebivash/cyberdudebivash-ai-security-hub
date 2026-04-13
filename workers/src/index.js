@@ -158,6 +158,11 @@ import {
 } from './handlers/mythosHandler.js';
 import { runMythosCron } from './services/mythosOrchestrator.js';
 
+// ─── FINANCIAL SYSTEM: Pricing + Payment Config (v14 — IMMUTABLE) ───────────
+import {
+  handlePricing, handlePaymentConfig, handlePaymentMutationGuard,
+} from './handlers/pricingHandler.js';
+
 // ─── PHASE 2: Autonomous SOC Mode ────────────────────────────────────────────
 import {
   handleGetMode, handleSetMode, handleGetPipeline, handleRunPipeline,
@@ -753,6 +758,22 @@ export default {
       }, {
         headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=60' },
       }), request));
+    }
+
+    // ── /api/pricing — canonical pricing (immutable, from pricingConfig) ────
+    if (path === '/api/pricing' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handlePricing(request, env), request));
+    }
+    // ── /api/payment-config — canonical payment details (immutable) ──────────
+    if (path === '/api/payment-config' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handlePaymentConfig(request, env), request));
+    }
+    // ── Guard: reject ANY attempt to mutate payment config via API ────────────
+    if (path.startsWith('/api/payment-config') && method !== 'GET') {
+      return withSecurityHeaders(withCors(await handlePaymentMutationGuard(request, env), request));
+    }
+    if (path.startsWith('/api/pricing') && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
+      return withSecurityHeaders(withCors(await handlePaymentMutationGuard(request, env), request));
     }
 
     if (path === '/api/intelligence/summary' && method === 'GET') {

@@ -12881,12 +12881,8 @@ if(document.readyState==='loading'){
               <button id="cb-u1" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('iambivash.bn-5@okaxis','cb-u1')">Copy</button>
             </div>
             <div class="cdb-pay-field">
-              <div><div class="cdb-pay-field-label">ICICI</div><div class="cdb-pay-field-val">iambivash.bn-5@okicici</div></div>
-              <button id="cb-u2" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('iambivash.bn-5@okicici','cb-u2')">Copy</button>
-            </div>
-            <div class="cdb-pay-field">
               <div><div class="cdb-pay-field-label">Axis Bank</div><div class="cdb-pay-field-val">6302177246@axisbank</div></div>
-              <button id="cb-u3" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('6302177246@axisbank','cb-u3')">Copy</button>
+              <button id="cb-u2" class="cdb-copy-btn" onclick="CDB_PAYMENT.copyText('6302177246@axisbank','cb-u2')">Copy</button>
             </div>
             <a id="cdb-upi-deep-link" href="upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR" onclick="(function(a){var am=CDB_PAYMENT&&CDB_PAYMENT._current&&CDB_PAYMENT._current.amount?CDB_PAYMENT._current.amount.replace(/[^0-9.]/g,''):'';var base='upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR';a.href=am?base+'&am='+encodeURIComponent(am):base;})(this)" style="display:block;text-align:center;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-top:8px">
               📱 Open UPI App Directly →
@@ -12894,13 +12890,14 @@ if(document.readyState==='loading'){
           </div>
           <div style="text-align:center;flex-shrink:0;min-width:140px">
             <div class="cdb-pay-section-title" style="text-align:center">Scan QR Code</div>
-            <img src="/upi-qr.png" alt="UPI QR Code — Bivash Kumar Nayak" class="cdb-qr-img"
+            <img src="/assets/payment/upi-qr.png" alt="UPI QR Code — Bivash Kumar Nayak" class="cdb-qr-img"
               onclick="this.classList.toggle('zoomed')"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+              onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='block';}">
             <div style="display:none;font-size:11px;color:rgba(255,255,255,.3);padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">
-              UPI QR not loaded.<br>Use UPI ID above.
+              UPI: iambivash.bn-5@okaxis
             </div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px">Scan with PhonePe · GPay · Paytm</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px">Bivash Kumar Nayak</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.2);margin-top:2px">PhonePe · GPay · Paytm</div>
           </div>
         </div>
       </div>
@@ -18199,12 +18196,12 @@ p4SetupObserver();
       <div id="mpm-upi-ids">
         <div class="mpm-upi-id-row">
           <span class="mpm-upi-label">Primary UPI</span>
-          <span class="mpm-upi-val" id="mpm-upi-primary">cyberdudebivash@upi</span>
+          <span class="mpm-upi-val" id="mpm-upi-primary">iambivash.bn-5@okaxis</span>
           <button class="mpm-copy-btn" onclick="mpmCopy('mpm-upi-primary',this)">📋 Copy</button>
         </div>
         <div class="mpm-upi-id-row">
-          <span class="mpm-upi-label">PhonePe / GPay</span>
-          <span class="mpm-upi-val" id="mpm-upi-secondary">bivash@ibl</span>
+          <span class="mpm-upi-label">Axis Bank</span>
+          <span class="mpm-upi-val" id="mpm-upi-secondary">6302177246@axisbank</span>
           <button class="mpm-copy-btn" onclick="mpmCopy('mpm-upi-secondary',this)">📋 Copy</button>
         </div>
       </div>
@@ -18216,7 +18213,8 @@ p4SetupObserver();
 
       <!-- QR Code -->
       <div class="mpm-qr-wrap">
-        <img id="mpm-qr-img" class="mpm-qr-img" src="" alt="UPI QR Code" loading="lazy">
+        <img id="mpm-qr-img" class="mpm-qr-img" src="/assets/payment/upi-qr.png" alt="UPI QR Code — Bivash Kumar Nayak" loading="lazy"
+          onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=null;">
         <div class="mpm-qr-hint">Scan with any UPI app (PhonePe · GPay · Paytm · BHIM)</div>
       </div>
     </div>
@@ -18227,11 +18225,11 @@ p4SetupObserver();
         Transfer exact amount via NEFT / RTGS / IMPS. Use your email as payment reference.
       </div>
       <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px">
-        <div class="mpm-info-row"><span class="mpm-info-lbl">Account Name</span><span class="mpm-info-val">CyberDudeBivash Pvt. Ltd.</span><button class="mpm-copy-btn" onclick="mpmCopyText('CyberDudeBivash Pvt. Ltd.',this)">Copy</button></div>
-        <div class="mpm-info-row"><span class="mpm-info-lbl">Account Number</span><span class="mpm-info-val" id="mpm-bank-acc">XXXX XXXX XXXX 4321</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-acc',this)">Copy</button></div>
-        <div class="mpm-info-row"><span class="mpm-info-lbl">IFSC Code</span><span class="mpm-info-val" id="mpm-bank-ifsc">SBIN0001234</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-ifsc',this)">Copy</button></div>
-        <div class="mpm-info-row"><span class="mpm-info-lbl">Bank</span><span class="mpm-info-val">State Bank of India</span></div>
-        <div class="mpm-info-row"><span class="mpm-info-lbl">Account Type</span><span class="mpm-info-val">Current Account</span></div>
+        <div class="mpm-info-row"><span class="mpm-info-lbl">Account Name</span><span class="mpm-info-val">BIVASHA KUMAR NAYAK</span><button class="mpm-copy-btn" onclick="mpmCopyText('BIVASHA KUMAR NAYAK',this)">Copy</button></div>
+        <div class="mpm-info-row"><span class="mpm-info-lbl">Account Number</span><span class="mpm-info-val" id="mpm-bank-acc">915010024617260</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-acc',this)">Copy</button></div>
+        <div class="mpm-info-row"><span class="mpm-info-lbl">IFSC Code</span><span class="mpm-info-val" id="mpm-bank-ifsc">UTIB0000052</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-ifsc',this)">Copy</button></div>
+        <div class="mpm-info-row"><span class="mpm-info-lbl">Bank</span><span class="mpm-info-val">Axis Bank</span></div>
+        <div class="mpm-info-row"><span class="mpm-info-lbl">Account Type</span><span class="mpm-info-val">Savings Account</span></div>
         <div class="mpm-info-row"><span class="mpm-info-lbl">Amount</span><span class="mpm-info-val" id="mpm-bank-amount" style="color:#10b981;font-weight:800">₹—</span><button class="mpm-copy-btn" id="mpm-bank-amount-copy" onclick="mpmCopyAmountInr(this)">Copy</button></div>
         <div class="mpm-info-row"><span class="mpm-info-lbl">Reference</span><span class="mpm-info-val">Your Email Address</span></div>
       </div>
@@ -18257,7 +18255,7 @@ p4SetupObserver();
           <span class="mpm-info-val">Use "Goods &amp; Services"</span>
         </div>
       </div>
-      <a id="mpm-paypal-btn" href="https://paypal.me/cyberdudebivash" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;background:rgba(0,112,243,.15);border:1px solid rgba(0,112,243,.3);border-radius:10px;padding:12px;color:#60a5fa;font-size:14px;font-weight:700;text-decoration:none;transition:background .2s">
+      <a id="mpm-paypal-btn" href="https://www.paypal.com/paypalme/iambivash" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;background:rgba(0,112,243,.15);border:1px solid rgba(0,112,243,.3);border-radius:10px;padding:12px;color:#60a5fa;font-size:14px;font-weight:700;text-decoration:none;transition:background .2s">
         💳 Open PayPal.me →
       </a>
     </div>
@@ -18269,16 +18267,16 @@ p4SetupObserver();
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px">
-          <div style="font-size:11px;color:#f59e0b;font-weight:700;margin-bottom:8px">USDT (TRC-20) — TRON Network</div>
+          <div style="font-size:11px;color:#f59e0b;font-weight:700;margin-bottom:8px">BNB Smart Chain (BSC) — BNB / USDT (BEP-20)</div>
           <div style="display:flex;align-items:center;gap:8px">
-            <code id="mpm-usdt-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">TYour_USDT_TRC20_Address_Here</code>
+            <code id="mpm-usdt-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</code>
             <button class="mpm-copy-btn" onclick="mpmCopy('mpm-usdt-addr',this)">Copy</button>
           </div>
         </div>
         <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px">
-          <div style="font-size:11px;color:#f97316;font-weight:700;margin-bottom:8px">BTC — Bitcoin Network</div>
+          <div style="font-size:11px;color:#f97316;font-weight:700;margin-bottom:8px">BNB Smart Chain Address (same for all BEP-20)</div>
           <div style="display:flex;align-items:center;gap:8px">
-            <code id="mpm-btc-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">bc1q_Your_BTC_Address_Here</code>
+            <code id="mpm-btc-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</code>
             <button class="mpm-copy-btn" onclick="mpmCopy('mpm-btc-addr',this)">Copy</button>
           </div>
         </div>
@@ -18342,8 +18340,8 @@ var MPM = {
   seconds:    600, // 10 minutes
 };
 
-var UPI_PRIMARY   = 'cyberdudebivash@upi';
-var UPI_SECONDARY = 'bivash@ibl';
+var UPI_PRIMARY   = 'iambivash.bn-5@okaxis';
+var UPI_SECONDARY = '6302177246@axisbank';
 
 /* ── Public API (global) ─────────────────────────────────────────────────── */
 window.openManualPayment = function(productId, priceInr, productLabel, priceUsd) {
@@ -18360,15 +18358,18 @@ window.openManualPayment = function(productId, priceInr, productLabel, priceUsd)
   if (amtEl)   amtEl.textContent   = '₹' + MPM.price_inr.toLocaleString('en-IN');
 
   // UPI deep link + QR
-  var upiStr = 'upi://pay?pa=' + UPI_PRIMARY + '&pn=CyberDudeBivash&am=' + MPM.price_inr + '&cu=INR&tn=' + encodeURIComponent(MPM.label);
+  var upiStr = 'upi://pay?pa=' + UPI_PRIMARY + '&pn=CYBERDUDEBIVASH&am=' + MPM.price_inr + '&cu=INR&tn=' + encodeURIComponent(MPM.label);
   var dlEl = document.getElementById('mpm-upi-deeplink');
   var amtBtnEl = document.getElementById('mpm-upi-amount-btn');
   if (dlEl)    dlEl.href = upiStr;
   if (amtBtnEl) amtBtnEl.textContent = MPM.price_inr.toLocaleString('en-IN');
 
-  // QR code via api.qrserver.com
+  // QR code — ALWAYS use static official QR, NEVER generate dynamically
   var qrEl = document.getElementById('mpm-qr-img');
-  if (qrEl) qrEl.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(upiStr) + '&color=6366f1&bgcolor=ffffff';
+  if (qrEl) {
+    qrEl.src = '/assets/payment/upi-qr.png';
+    qrEl.onerror = function() { this.src = '/public/assets/payment/upi-qr.png'; this.onerror = null; };
+  }
 
   // Bank amount
   var bankAmtEl = document.getElementById('mpm-bank-amount');
@@ -18582,12 +18583,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* ── Intercept existing startSubscription / openEnterpriseBooking calls ──── */
 window.startSubscription = function(plan) {
+  // PRICING — SOURCE OF TRUTH (matches pricingConfig.js)
   var plans = {
-    FREE:       { id: 'FREE',       inr: 0,    label: 'Free Plan'       },
-    STARTER:    { id: 'STARTER',    inr: 499,  label: 'Starter Plan — ₹499/month'   },
-    PRO:        { id: 'PRO',        inr: 1499, label: 'Pro Plan — ₹1,499/month'     },
-    ENTERPRISE: { id: 'ENTERPRISE', inr: 4999, label: 'Enterprise Plan — ₹4,999/month' },
-    MSSP:       { id: 'MSSP',       inr: 9999, label: 'MSSP Command — ₹9,999/month' },
+    FREE:       { id: 'FREE',       inr: 0,    label: 'Free Plan — Freemium'               },
+    STARTER:    { id: 'STARTER',    inr: 499,  label: 'Starter Plan — ₹499/month'          },
+    PRO:        { id: 'PRO',        inr: 1499, label: 'Pro Plan — ₹1,499/month'            },
+    ENTERPRISE: { id: 'ENTERPRISE', inr: 4999, label: 'Enterprise Plan — ₹4,999/month'     },
+    MSSP:       { id: 'MSSP',       inr: 9999, label: 'MSSP Command — ₹9,999/month'        },
   };
   var p = plans[plan] || plans['PRO'];
   if (p.inr === 0) { window.location.hash = '#scanner'; return; }
@@ -18595,13 +18597,17 @@ window.startSubscription = function(plan) {
 };
 
 window.openEnterpriseBooking = function(pkg) {
+  // ENTERPRISE PACKAGE PRICING — SOURCE OF TRUTH (matches pricingConfig.js)
   var pkgs = {
-    starter_enterprise:   { id: 'STARTER_PLUS_ANNUAL', inr: 49900,  label: 'Starter Plus — ₹49,900/year (Annual)' },
-    threat_intel_report:  { id: 'THREAT_INTEL_REPORT',  inr: 14999,  label: 'Threat Intelligence Report — ₹14,999' },
-    mssp_command:         { id: 'MSSP_COMMAND',          inr: 1499900, label: 'MSSP Command Suite — ₹14,99,900/year' },
-    enterprise_shield:    { id: 'ENTERPRISE_SHIELD',     inr: 499900, label: 'Enterprise Shield — ₹4,99,900/year' },
+    starter_enterprise:   { id: 'STARTER_PLUS_ANNUAL',  inr: 49900,   label: 'Starter Plus — ₹49,900/year (Annual)'           },
+    security_assessment:  { id: 'SECURITY_ASSESSMENT',  inr: 9999,    label: 'Security Assessment — ₹9,999'                   },
+    threat_intel_report:  { id: 'THREAT_INTEL_REPORT',  inr: 14999,   label: 'Threat Intelligence Report — ₹14,999'           },
+    mssp_white_label:     { id: 'MSSP_WHITE_LABEL',     inr: 49999,   label: 'MSSP White Label — ₹49,999/month'               },
+    annual_retainer:      { id: 'ANNUAL_RETAINER',      inr: 99999,   label: 'Annual Retainer — ₹99,999/year'                 },
+    mssp_command:         { id: 'MSSP_COMMAND',         inr: 1499900, label: 'MSSP Command Suite — ₹14,99,900/year'           },
+    enterprise_shield:    { id: 'ENTERPRISE_SHIELD',    inr: 499900,  label: 'Enterprise Shield — ₹4,99,900/year'             },
   };
-  var p = pkgs[pkg] || pkgs['starter_enterprise'];
+  var p = pkgs[pkg] || pkgs['annual_retainer'];
   window.openManualPayment(p.id, p.inr, p.label);
 };
 
