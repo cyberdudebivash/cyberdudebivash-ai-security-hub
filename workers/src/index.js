@@ -279,6 +279,7 @@ import {
 import {
   handleMCPRecommend, handleMCPUpsell,
   handleMCPTrainingMap, handleMCPHealth,
+  handleMCPBundle, handleMCPDecision,
 } from './services/mcpEngine.js';
 
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
@@ -288,6 +289,19 @@ import {
   handleGetSIEMStream, handleGetAPTProfiles,
   handleGetSeedAll,
 } from './services/seedEngine.js';
+
+// ─── GOD MODE v16: SEO + Traffic Engine ──────────────────────────────────────
+import {
+  handleSEOMeta, handleCVEPage,
+  handleLeadMagnet, handleRetargetVisit, handleRetargetOffer,
+} from './handlers/seoEngine.js';
+
+// ─── GOD MODE v16: Enterprise Hardening ──────────────────────────────────────
+import {
+  handleAutoQualify,
+  handleOrgDashboard as handleEnterpriseDashboard,
+  handleAutoProposal, handleEnterpriseHealth,
+} from './handlers/enterpriseHardening.js';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
@@ -2998,6 +3012,19 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMCPHealth(request, env), request));
     }
 
+    // POST /mcp/bundle — time-limited bundle offers with social proof + countdown
+    if (path === '/mcp/bundle' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPBundle(request, env, authCtx), request));
+    }
+
+    // POST /mcp/decision — MASTER CONTROL: full AI recommendation (tools + training + upsell + enterprise)
+    // Frontend calls this FIRST after every scan. Replaces all static upsell/recommendation logic.
+    if (path === '/mcp/decision' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPDecision(request, env, authCtx), request));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // GOD MODE v15 — DATA SEEDING ENGINE  (/api/seed/*)
     // All endpoints are public — deterministic PRNG, no KV abuse
@@ -3038,6 +3065,64 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/seed/all' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleGetSeedAll(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v16 — SEO + TRAFFIC ENGINE  (/api/seo/*, /api/leads/magnet,
+    //                                       /api/retarget/*, /api/seo/cve/*)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/seo/meta?path=/ — auto meta tags + OG + JSON-LD for any page
+    if (path === '/api/seo/meta' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleSEOMeta(request, env), request));
+    }
+
+    // GET /api/seo/cve/:id — SEO-optimised CVE landing page data
+    if (path.startsWith('/api/seo/cve/') && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleCVEPage(request, env), request));
+    }
+
+    // POST /api/leads/magnet — free mini-report lead capture (email → CRM + KV)
+    if (path === '/api/leads/magnet' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleLeadMagnet(request, env), request));
+    }
+
+    // POST /api/retarget/visit — record visitor for retargeting (KV, 30-day TTL)
+    if (path === '/api/retarget/visit' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleRetargetVisit(request, env), request));
+    }
+
+    // GET /api/retarget/offer?vid= — get personalized return-visitor offer
+    if (path === '/api/retarget/offer' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleRetargetOffer(request, env), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v16 — ENTERPRISE HARDENING  (/api/enterprise/*)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/enterprise/auto-qualify — batch auto-qualify high-ICP leads (icp>=60)
+    if (path === '/api/enterprise/auto-qualify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleAutoQualify(request, env, authCtx), request));
+    }
+
+    // GET /api/enterprise/org-dashboard — full org pipeline + deal value + forecast
+    if (path === '/api/enterprise/org-dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleEnterpriseDashboard(request, env, authCtx), request));
+    }
+
+    // POST /api/enterprise/auto-proposal — auto-generate proposals for DEMO_DONE leads
+    if (path === '/api/enterprise/auto-proposal' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleAutoProposal(request, env, authCtx), request));
+    }
+
+    // GET /api/enterprise/health — CRM system health check
+    if (path === '/api/enterprise/health' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleEnterpriseHealth(request, env, authCtx), request));
     }
 
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────
