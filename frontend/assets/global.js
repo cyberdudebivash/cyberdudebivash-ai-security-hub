@@ -257,18 +257,66 @@ window.CDB_PAY = {
           notes: `Global pay: ${this._current.label}` }),
       });
     } catch {}
+    // Dispatch payment submitted event for academy delivery modal
+    document.dispatchEvent(new CustomEvent('cdb:paymentSubmitted', { detail: { ...this._current, txnId: txn, email } }));
+
+    // Determine if this was an academy purchase or a scan purchase
+    const isAcademyPurchase = this._current.product && (
+      this._current.product.includes('BUNDLE') ||
+      this._current.product.includes('PLAYBOOK') ||
+      this._current.product.includes('TRAINING') ||
+      this._current.product.includes('COURSE') ||
+      this._current.product.includes('OSINT') ||
+      this._current.product.includes('PYTHON') ||
+      this._current.product.includes('JAVA') ||
+      this._current.product.includes('CYBER_MEGA') ||
+      this._current.product.includes('ACADEMY') ||
+      this._current.product.includes('AI_SECURITY')
+    );
+
     const body = document.getElementById('cgpm-body');
     if (body) body.innerHTML = `
-      <div style="text-align:center;padding:32px 16px">
-        <div style="font-size:56px;margin-bottom:16px">✅</div>
-        <div style="font-size:20px;font-weight:900;color:#00ffcc;margin-bottom:8px">Payment Submitted!</div>
-        <div style="font-size:13px;color:rgba(255,255,255,.55);margin-bottom:16px;line-height:1.6">
-          Txn ID: <code style="color:#00ffcc">${txn}</code><br>
-          Access will be activated within <strong style="color:#fff">2–4 hours</strong>.<br>
-          Confirmation will be sent to <strong style="color:#00ffcc">${email}</strong>
+      <div style="padding:20px 16px">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:48px;margin-bottom:12px">✅</div>
+          <div style="font-size:20px;font-weight:900;color:#00ffcc;margin-bottom:6px">Payment Submitted!</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.55);line-height:1.6">
+            Txn ID: <code style="color:#00ffcc">${txn}</code><br>
+            Access activated within <strong style="color:#fff">2–4 hours</strong>.<br>
+            Confirmation to <strong style="color:#00ffcc">${email}</strong>
+          </div>
         </div>
-        <button onclick="CDB_PAY.close()" style="background:rgba(0,255,204,.15);border:1px solid rgba(0,255,204,.4);
-          color:#00ffcc;padding:12px 28px;border-radius:10px;font-weight:800;cursor:pointer;font-size:14px">Done ✓</button>
+        ${isAcademyPurchase ? `
+        <!-- ACADEMY DELIVERY INSTRUCTIONS -->
+        <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:10px;padding:16px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:#00ffcc;margin-bottom:10px">📥 GET YOUR TRAINING MATERIALS</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.9">
+            <div>1️⃣ Screenshot your payment confirmation</div>
+            <div>2️⃣ Email: <strong style="color:#00ffcc">bivash@cyberdudebivash.com</strong></div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;Subject: <strong style="color:#fff">Training — ${this._current.label||'Course'}</strong></div>
+            <div>3️⃣ OR WhatsApp: <a href="https://wa.me/918179881447" target="_blank" style="color:#00ffcc">+91 8179881447</a></div>
+            <div>4️⃣ Receive download link in <strong style="color:#00ff88">2–4 hours</strong></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <a href="mailto:bivash@cyberdudebivash.com?subject=Training — ${encodeURIComponent(this._current.label||'Course')}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:12px;font-weight:900;padding:10px;border-radius:8px;text-decoration:none;min-width:100px">📧 Email Us</a>
+            <a href="https://wa.me/918179881447?text=${encodeURIComponent('Hi! Purchased: '+(this._current.label||'Training')+'. Sending payment screenshot.')}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25d366;font-size:12px;font-weight:900;padding:10px;border-radius:8px;text-decoration:none;min-width:100px">💬 WhatsApp</a>
+          </div>
+        </div>` : `
+        <!-- POST-SCAN PURCHASE: TRAINING UPSELL -->
+        <div style="background:linear-gradient(135deg,rgba(0,0,0,.6),rgba(10,5,20,.8));border:1px solid rgba(124,58,237,.25);border-radius:10px;padding:16px;margin-bottom:16px">
+          <div style="font-size:10px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;margin-bottom:10px">🎓 LEVEL UP YOUR SKILLS</div>
+          <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:6px">Learn How to Defend Against These Attacks</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;line-height:1.5">The SOC Analyst Survival Playbook 2026 teaches you to detect, respond to, and prevent exactly the threats found in your scan.</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div>
+              <span style="font-size:20px;font-weight:900;color:#00ff88">₹999</span>
+              <span style="font-size:12px;color:rgba(255,255,255,.3);text-decoration:line-through;margin-left:6px">₹1,499</span>
+            </div>
+            <button onclick="CDB_PAY.open('SOC_PLAYBOOK_2026',999,'📘 SOC Analyst Survival Playbook 2026')" style="background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:900;cursor:pointer;transition:all .2s;flex:1">🔓 Get Training — ₹999</button>
+            <a href="/academy.html" style="font-size:11px;color:#a78bfa;text-decoration:none;white-space:nowrap">View All →</a>
+          </div>
+        </div>`}
+        <button onclick="CDB_PAY.close()" style="width:100%;background:rgba(0,255,204,.1);border:1px solid rgba(0,255,204,.3);color:#00ffcc;padding:11px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px">Done ✓</button>
       </div>`;
   },
 };
