@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS threat_intel (
   cisa_kev_date   TEXT,
   patch_available INTEGER NOT NULL DEFAULT 0,
   patch_url       TEXT,
-  references      TEXT,                           -- JSON array of URLs
+  ref_urls        TEXT,                           -- JSON array of URLs
   source          TEXT    NOT NULL DEFAULT 'NVD',
   confidence      REAL    NOT NULL DEFAULT 0.5,
   ingested_at     TEXT    NOT NULL DEFAULT (datetime('now')),
