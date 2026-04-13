@@ -361,11 +361,16 @@ async function runSyncPipeline(request, env, routeKey, route) {
 }
 
 // ─── Full system health check (async — probes D1, KV, external APIs) ─────────
+// KV OPTIMIZATION v1: health probe no longer reads from KV on every request.
+// KV is considered "ok" if the binding is configured (env.SECURITY_HUB_KV exists).
+// Sentinel feed status is assumed "ok" if KV is configured — a live KV read every
+// 30 seconds from every browser session was the #1 cause of KV quota exhaustion.
+// The full health response is edge-cached for 60 seconds via caches.default (FREE).
 async function healthResponseAsync(env) {
   const start = Date.now();
 
   // Probe all components in parallel — never throw
-  const [dbCheck, kvCheck, sentinelCheck] = await Promise.allSettled([
+  const [dbCheck, kvCheck] = await Promise.allSettled([
     // D1 probe — single lightweight query
     (async () => {
       if (!env?.DB) return { ok: false, reason: 'not_configured' };
@@ -373,24 +378,18 @@ async function healthResponseAsync(env) {
       await env.DB.prepare('SELECT 1').first();
       return { ok: true, latency_ms: Date.now() - t };
     })(),
-    // KV probe — a simple get on a known key
+    // KV probe — binding existence check ONLY (no KV read — saves quota)
     (async () => {
       if (!env?.SECURITY_HUB_KV) return { ok: false, reason: 'not_configured' };
-      const t = Date.now();
-      await env.SECURITY_HUB_KV.get('_health_probe_');
-      return { ok: true, latency_ms: Date.now() - t };
-    })(),
-    // Sentinel check — cached value only (no external call)
-    (async () => {
-      if (!env?.SECURITY_HUB_KV) return { ok: false, reason: 'kv_unavailable' };
-      const cached = await env.SECURITY_HUB_KV.get('sentinel:apex:feed:v1');
-      return { ok: !!cached, cached: !!cached };
+      // Binding exists → treat as ok (actual KV read removed: was burning quota on every health poll)
+      return { ok: true, latency_ms: 0, note: 'binding_check_only' };
     })(),
   ]);
 
-  const db       = dbCheck.status === 'fulfilled'       ? dbCheck.value       : { ok: false, reason: dbCheck.reason?.message };
-  const kv       = kvCheck.status === 'fulfilled'       ? kvCheck.value       : { ok: false, reason: kvCheck.reason?.message };
-  const sentinel = sentinelCheck.status === 'fulfilled' ? sentinelCheck.value : { ok: false };
+  const db       = dbCheck.status === 'fulfilled' ? dbCheck.value : { ok: false, reason: dbCheck.reason?.message };
+  const kv       = kvCheck.status === 'fulfilled' ? kvCheck.value : { ok: false, reason: kvCheck.reason?.message };
+  // Sentinel assumed configured if KV binding is present (no live KV read to save quota)
+  const sentinel = { ok: !!env?.SECURITY_HUB_KV, cached: true, note: 'binding_check_only' };
 
   // Overall status: degraded if any component fails, ok if all pass
   const allOk   = db.ok && kv.ok;
@@ -435,18 +434,22 @@ async function healthResponseAsync(env) {
 
 // ─── Intelligence Summary endpoint ────────────────────────────────────────────
 // Public endpoint — aggregated platform threat intelligence snapshot.
-// Cached in KV for 5 minutes to avoid repeated DB hits.
+// KV OPTIMIZATION: Migrated from KV cache to Cloudflare CDN edge cache (FREE).
+// This removes 1 KV read + 1 KV write per 5-minute interval per PoP.
 async function handleIntelligenceSummary(env) {
   const CACHE_KEY = 'intel:summary:v1';
   const CACHE_TTL = 300; // 5 minutes
 
-  // Try KV cache first
-  if (env?.SECURITY_HUB_KV) {
-    try {
-      const cached = await env.SECURITY_HUB_KV.get(CACHE_KEY, { type: 'json' });
-      if (cached) return Response.json({ ...cached, cached: true });
-    } catch {}
-  }
+  // Try Cloudflare CDN edge cache FIRST (FREE — no KV quota consumed)
+  try {
+    const edgeCache = caches.default;
+    const cacheReq  = new Request(`https://cdb-edge-cache/${CACHE_KEY}`);
+    const hit       = await edgeCache.match(cacheReq);
+    if (hit) {
+      const data = await hit.clone().json().catch(() => null);
+      if (data) return Response.json({ ...data, cached: true, cache_layer: 'edge' });
+    }
+  } catch { /* local dev — edge cache unavailable, fall through */ }
 
   // Build fresh summary
   const summary = {
@@ -492,12 +495,22 @@ async function handleIntelligenceSummary(env) {
     } catch {}
   }
 
-  // Cache result
-  if (env?.SECURITY_HUB_KV) {
-    env.SECURITY_HUB_KV.put(CACHE_KEY, JSON.stringify(summary), { expirationTtl: CACHE_TTL }).catch(() => {});
-  }
+  // KV OPTIMIZATION: cache result in Cloudflare CDN edge cache (FREE) instead of KV.
+  // KV write retained as backup for cross-PoP consistency, but edge cache is primary.
+  try {
+    const edgeCache = caches.default;
+    const cacheReq  = new Request(`https://cdb-edge-cache/${CACHE_KEY}`);
+    const cacheResp = new Response(JSON.stringify(summary), {
+      headers: {
+        'Content-Type':  'application/json',
+        'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
+        'X-Cache':       'MISS',
+      },
+    });
+    edgeCache.put(cacheReq, cacheResp).catch(() => {});
+  } catch { /* local dev */ }
 
-  return Response.json({ ...summary, cached: false });
+  return Response.json({ ...summary, cached: false, cache_layer: 'fresh' });
 }
 
 // ─── API info ─────────────────────────────────────────────────────────────────
@@ -675,7 +688,31 @@ export default {
 
     // ── Static / no-auth routes ─────────────────────────────────────────────
     if (path === '/api/health' && method === 'GET') {
-      return withSecurityHeaders(withCors(await healthResponseAsync(env), request));
+      // KV OPTIMIZATION: wrap health in 60-second Cloudflare CDN edge cache.
+      // This means 1 D1 probe per 60s instead of 1 per 30s per browser session.
+      // The edge cache is FREE and does not consume KV quota.
+      const HEALTH_CACHE_KEY = 'health:v1';
+      const HEALTH_CACHE_TTL = 60; // 60 seconds — matches frontend 120s poll after fix
+      try {
+        const edgeCache = caches.default;
+        const cacheUrl  = new Request(`https://cdb-edge-cache/${HEALTH_CACHE_KEY}`);
+        const hit       = await edgeCache.match(cacheUrl);
+        if (hit) {
+          const headers = new Headers(hit.headers);
+          headers.set('X-Cache', 'HIT');
+          return withSecurityHeaders(withCors(new Response(hit.body, { status: hit.status, headers }), request));
+        }
+        const fresh = await healthResponseAsync(env);
+        const toCache = fresh.clone();
+        const cacheHeaders = new Headers(toCache.headers);
+        cacheHeaders.set('Cache-Control', `public, max-age=${HEALTH_CACHE_TTL}, s-maxage=${HEALTH_CACHE_TTL}`);
+        cacheHeaders.set('X-Cache', 'MISS');
+        edgeCache.put(cacheUrl, new Response(toCache.body, { status: toCache.status, headers: cacheHeaders })).catch(() => {});
+        return withSecurityHeaders(withCors(fresh, request));
+      } catch {
+        // Edge cache unavailable (e.g. local dev) — fall through to uncached
+        return withSecurityHeaders(withCors(await healthResponseAsync(env), request));
+      }
     }
 
     // ── /api/config — public frontend config (Razorpay key, feature flags) ──

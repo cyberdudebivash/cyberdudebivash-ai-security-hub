@@ -51,23 +51,57 @@ function defaultSchedule() {
   };
 }
 
-// ── Helper: load state from KV ────────────────────────────────────────────────
+// ── Helper: load state from KV (with edge cache L0 layer) ───────────────────
+// KV OPTIMIZATION: /api/auto-soc/mode was polled every 8s by the frontend.
+// With 3 KV reads per poll, this was the #1 KV quota burner.
+// Fix: cache the composite state in Cloudflare CDN edge cache for 30 seconds.
+// 3 KV reads per 8s → 1 KV read per 30s = 94% KV read reduction on this route.
+const ASOC_STATE_CACHE_KEY = 'https://cdb-edge-cache/asoc:state:v1';
+const ASOC_STATE_CACHE_TTL = 30; // 30 seconds — safe for UI freshness
+
 async function loadState(env) {
   if (!env?.SECURITY_HUB_KV) return { mode: false, pipeline: defaultPipelineState(), schedule: defaultSchedule() };
+
+  // L0: Try Cloudflare CDN edge cache first
+  try {
+    const edgeCacheHit = await caches.default.match(new Request(ASOC_STATE_CACHE_KEY));
+    if (edgeCacheHit) {
+      const data = await edgeCacheHit.json().catch(() => null);
+      if (data) return data;
+    }
+  } catch { /* local dev — no edge cache */ }
+
+  // L2: Fetch from KV (only if edge cache miss)
   try {
     const [modeRaw, pipeRaw, schedRaw] = await Promise.all([
       env.SECURITY_HUB_KV.get(KV_MODE_KEY),
       env.SECURITY_HUB_KV.get(KV_PIPELINE_KEY, { type: 'json' }),
       env.SECURITY_HUB_KV.get(KV_SCHEDULE_KEY, { type: 'json' }),
     ]);
-    return {
+    const state = {
       mode:     modeRaw === 'true',
       pipeline: pipeRaw  || defaultPipelineState(),
       schedule: schedRaw || defaultSchedule(),
     };
+    // Populate edge cache for next 30s of polls (fire-and-forget, non-blocking)
+    try {
+      const cacheResp = new Response(JSON.stringify(state), {
+        headers: {
+          'Content-Type':  'application/json',
+          'Cache-Control': `public, max-age=${ASOC_STATE_CACHE_TTL}, s-maxage=${ASOC_STATE_CACHE_TTL}`,
+        },
+      });
+      caches.default.put(new Request(ASOC_STATE_CACHE_KEY), cacheResp).catch(() => {});
+    } catch { /* local dev */ }
+    return state;
   } catch {
     return { mode: false, pipeline: defaultPipelineState(), schedule: defaultSchedule() };
   }
+}
+
+// Invalidate the ASOC state edge cache (call after any write operation)
+function invalidateASocStateCache() {
+  try { caches.default.delete(new Request(ASOC_STATE_CACHE_KEY)).catch(() => {}); } catch {}
 }
 
 // ── Helper: load activity log from KV ────────────────────────────────────────
@@ -255,6 +289,8 @@ export async function handleSetMode(request, env, authCtx = {}) {
   if (env?.SECURITY_HUB_KV) {
     await env.SECURITY_HUB_KV.put(KV_MODE_KEY, enabled ? 'true' : 'false', { expirationTtl: 86400 * 30 });
   }
+  // Invalidate edge cache on every state write so next poll gets fresh data
+  invalidateASocStateCache();
 
   await appendLog(env, {
     stage: 'system',
