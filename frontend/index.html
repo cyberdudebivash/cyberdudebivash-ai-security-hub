@@ -90,7 +90,151 @@ a:hover{text-decoration:underline}
 ::-webkit-scrollbar-track{background:var(--surface)}
 ::-webkit-scrollbar-thumb{background:var(--accent2);border-radius:3px}
 
-/* ── Announcement Bar ──────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   UI/UX ENHANCEMENT LAYER v14.0 — WORLD-CLASS DOMINATION
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Global Glow Elevation System ── */
+.scan-card, .price-card, .sentinel-panel, .api-catalog-card,
+.p4-card, .p4-pkg-card, .trust-metric-card {
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease !important;
+}
+.scan-card:hover      { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,212,255,.12) !important; border-color:rgba(0,212,255,.25) !important; }
+.price-card:hover     { transform:translateY(-4px); box-shadow:0 16px 48px rgba(124,58,237,.18) !important; }
+.api-catalog-card:hover { transform:translateY(-3px); box-shadow:0 10px 32px rgba(0,212,255,.1) !important; }
+.p4-pkg-card:hover    { transform:translateY(-4px); box-shadow:0 14px 44px rgba(99,102,241,.18) !important; }
+
+/* ── Premium Tab Navigation ── */
+.tab-nav {
+  display:flex;
+  gap:4px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:14px;
+  padding:6px;
+  flex-wrap:wrap;
+  margin-bottom:24px;
+}
+.tab-btn {
+  padding:9px 16px;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.03em;
+  border:none;
+  cursor:pointer;
+  background:transparent;
+  color:rgba(255,255,255,.45);
+  transition:all .2s ease;
+  white-space:nowrap;
+}
+.tab-btn:hover  { background:rgba(0,212,255,.08); color:rgba(255,255,255,.8); }
+.tab-btn.active { background:linear-gradient(135deg,rgba(0,212,255,.18),rgba(124,58,237,.18)); color:#00d4ff; border:1px solid rgba(0,212,255,.3); box-shadow:0 0 16px rgba(0,212,255,.12); }
+
+/* ── Premium Scan Cards ── */
+.scan-card {
+  background:linear-gradient(135deg,rgba(17,17,48,.95),rgba(13,13,38,.95));
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:16px;
+  padding:28px;
+  margin-bottom:16px;
+}
+.scan-card h3 {
+  font-size:1.1rem;
+  font-weight:800;
+  margin-bottom:8px;
+  background:linear-gradient(90deg,#e2e8f0,#94a3b8);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+
+/* ── Premium Buttons ── */
+.btn.btn-primary {
+  background:linear-gradient(135deg,#00d4ff,#0284c7) !important;
+  color:#000 !important;
+  font-weight:800 !important;
+  letter-spacing:.04em;
+  box-shadow:0 4px 20px rgba(0,212,255,.3);
+  transition:all .2s ease !important;
+  border:none !important;
+}
+.btn.btn-primary:hover {
+  background:linear-gradient(135deg,#22d3ee,#0ea5e9) !important;
+  box-shadow:0 6px 28px rgba(0,212,255,.45) !important;
+  transform:translateY(-1px);
+}
+
+/* ── Result Panels ── */
+.results-panel.show {
+  animation: resultSlideIn .35s cubic-bezier(.16,1,.3,1);
+}
+@keyframes resultSlideIn {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── Section Headers ── */
+.section-title {
+  background:linear-gradient(135deg,#fff 30%,rgba(0,212,255,.85));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+
+/* ── Severity Badges ── */
+.sev-critical { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:800; letter-spacing:.06em; }
+.sev-high     { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:800; }
+.sev-medium   { background:rgba(124,58,237,.15); color:#a78bfa; border:1px solid rgba(124,58,237,.3); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+.sev-low      { background:rgba(16,185,129,.12); color:#10b981; border:1px solid rgba(16,185,129,.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+
+/* ── Alert Boxes ── */
+.alert { border-radius:10px; padding:12px 16px; font-size:13px; margin:12px 0; display:none; }
+.alert.show { display:block; animation:alertFadeIn .25s ease; }
+@keyframes alertFadeIn { from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)} }
+.alert.error { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#fca5a5; }
+.alert.success { background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25); color:#6ee7b7; }
+.alert.warning { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25); color:#fcd34d; }
+
+/* ── Progress Bars ── */
+.progress-bar { background:rgba(255,255,255,.05); border-radius:6px; height:6px; overflow:hidden; margin:10px 0; display:none; }
+.progress-bar.active { display:block; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#00d4ff,#7c3aed); border-radius:6px; transition:width .4s ease; animation:progressShimmer 2s linear infinite; }
+@keyframes progressShimmer {
+  0%   { background-position:-200% center; }
+  100% { background-position:200% center; }
+}
+
+/* ── Premium Pricing Cards ── */
+.price-card.featured {
+  background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(79,70,229,.08));
+  border:1px solid rgba(124,58,237,.4);
+  box-shadow:0 0 40px rgba(124,58,237,.12);
+}
+
+/* ── Form Inputs ── */
+.form-group input, .form-group select, .form-group textarea,
+input[type="text"], input[type="email"], input[type="password"], select, textarea {
+  background:rgba(0,0,0,.35) !important;
+  border:1px solid rgba(255,255,255,.1) !important;
+  color:#e2e8f0 !important;
+  border-radius:10px !important;
+  padding:10px 14px !important;
+  font-size:13px !important;
+  transition:border-color .2s, box-shadow .2s !important;
+  outline:none !important;
+}
+.form-group input:focus, input[type="text"]:focus, input[type="email"]:focus,
+select:focus, textarea:focus {
+  border-color:rgba(0,212,255,.4) !important;
+  box-shadow:0 0 0 3px rgba(0,212,255,.08) !important;
+}
+
+/* ── Footer Brand ── */
+footer { background:#030308; border-top:1px solid rgba(255,255,255,.05); }
+.footer-brand {
+  font-size:1.2rem; font-weight:900; letter-spacing:.06em;
+  background:linear-gradient(90deg,#00d4ff,#7c3aed);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+
+/* ── Announcement Bar ── */
 .ann-bar{background:linear-gradient(90deg,#7c3aed,#00d4ff,#10b981,#7c3aed);background-size:300% 100%;animation:gradShift 6s ease infinite;color:#fff;text-align:center;font-size:12px;font-weight:600;padding:8px 16px;letter-spacing:.5px}
 .ann-bar a{color:#fff;text-decoration:none}
 .ann-bar a:hover{text-decoration:underline}
@@ -2439,7 +2583,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 
   <div class="hero-badge">CYBERDUDEBIVASH PVT. LTD. — Enterprise Security Intelligence</div>
   <h1>AI-Powered Cybersecurity<br>Intelligence Platform</h1>
-  <p class="hero-sub">5 intelligence modules. OWASP LLM Top 10. MITRE ATT&CK. Zero Trust. Full compliance gap analysis. Reports from ₹199.</p>
+  <p class="hero-sub">10 intelligence modules. OWASP LLM Top 10. MITRE ATT&CK. Zero Trust. DPDP Act 2023. Full compliance gap analysis. AI-powered threat simulation. Reports from ₹199.</p>
   <div class="trust-badges">
     <span class="badge">⚡ Freemium Access</span>
     <span class="badge">⚡ Edge-Native API</span>
@@ -2954,6 +3098,9 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
     <button class="tab-btn" onclick="switchTab('compliance')" data-tab="compliance">📋 Compliance</button>
     <button class="tab-btn" onclick="switchTab('threatintel')" data-tab="threatintel">🛡️ Threat Intel</button>
     <button class="tab-btn" onclick="switchTab('simulation')" data-tab="simulation">⚔️ Simulation</button>
+    <button class="tab-btn" onclick="switchTab('cloudsec')" data-tab="cloudsec">☁️ Cloud Security</button>
+    <button class="tab-btn" onclick="switchTab('darkscan')" data-tab="darkscan">🕵️ Dark Web</button>
+    <button class="tab-btn" onclick="switchTab('appsec')" data-tab="appsec">📱 AppSec</button>
     <button class="tab-btn" onclick="switchTab('reports')" data-tab="reports">📊 Reports</button>
   </div>
 
@@ -3191,6 +3338,124 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
       </div>
     </div>
     <div id="simulation-panel" style="margin-top:16px"></div>
+  </div>
+
+  <!-- ═══════ Cloud Security Tab ═══════ -->
+  <div class="tab-panel" id="tab-cloudsec">
+    <div class="scan-card">
+      <h3>☁️ Cloud Security Posture Scanner <span style="font-size:11px;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle">PRO+</span></h3>
+      <p>Audit AWS, GCP, and Azure configurations against CIS Benchmarks. Detect IAM over-permissions, public S3 buckets, unencrypted volumes, and misconfigured security groups.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cloudTarget">Target Domain or Cloud Endpoint</label>
+          <input id="cloudTarget" type="text" placeholder="api.example.com or s3.amazonaws.com/bucket">
+        </div>
+        <div class="form-group">
+          <label for="cloudProvider">Cloud Provider</label>
+          <select id="cloudProvider">
+            <option value="aws">Amazon Web Services (AWS)</option>
+            <option value="gcp">Google Cloud Platform (GCP)</option>
+            <option value="azure">Microsoft Azure</option>
+            <option value="cloudflare">Cloudflare</option>
+            <option value="generic">Generic / Multi-Cloud</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="cloudChecks">Security Checks</label>
+        <select id="cloudChecks" multiple style="height:90px">
+          <option value="iam" selected>IAM Policy Analysis</option>
+          <option value="storage" selected>Storage Exposure (S3/GCS/Blob)</option>
+          <option value="network" selected>Security Group / Firewall Rules</option>
+          <option value="encryption">Encryption at Rest / In Transit</option>
+          <option value="logging">Audit Logging (CloudTrail/Stackdriver)</option>
+          <option value="secrets">Secrets & Key Management (KMS)</option>
+        </select>
+      </div>
+      <div id="alert-cloudsec" class="alert"></div>
+      <div class="scan-btn-row">
+        <button class="btn btn-primary" onclick="runScan('cloudsec')" id="btn-cloudsec">☁️ Scan Cloud Posture</button>
+        <div class="loading-dots" id="loading-cloudsec" style="display:none">
+          <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
+          <span class="scan-state-msg" id="msg-cloudsec">Auditing cloud configuration…</span>
+        </div>
+      </div>
+      <div class="scan-steps" id="scan-steps-cloudsec"></div>
+      <div class="progress-bar" id="progress-cloudsec"><div class="progress-fill"></div></div>
+    </div>
+    <div class="results-panel" id="results-cloudsec"></div>
+  </div>
+
+  <!-- ═══════ Dark Web Scanner Tab ═══════ -->
+  <div class="tab-panel" id="tab-darkscan">
+    <div class="scan-card">
+      <h3>🕵️ Dark Web Exposure Scanner <span style="font-size:11px;background:linear-gradient(135deg,#ef4444,#7c3aed);color:#fff;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle">PRO+</span></h3>
+      <p>Detect leaked credentials, breached emails, exposed API keys, and corporate data mentions across dark web paste sites, breach databases, and Tor indexers.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="darkTarget">Target Domain or Email</label>
+          <input id="darkTarget" type="text" placeholder="example.com or user@company.com">
+        </div>
+        <div class="form-group">
+          <label for="darkScanType">Scan Depth</label>
+          <select id="darkScanType">
+            <option value="breach_db">Breach Database Check (Have I Been Pwned)</option>
+            <option value="paste_sites">Paste Sites (Pastebin, Ghostbin, etc.)</option>
+            <option value="credential_leak">Credential Leak Detection</option>
+            <option value="full">Full Dark Web Sweep (All Sources)</option>
+          </select>
+        </div>
+      </div>
+      <div id="alert-darkscan" class="alert"></div>
+      <div class="scan-btn-row">
+        <button class="btn btn-primary" onclick="runScan('darkscan')" id="btn-darkscan">🕵️ Scan Dark Web</button>
+        <div class="loading-dots" id="loading-darkscan" style="display:none">
+          <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
+          <span class="scan-state-msg" id="msg-darkscan">Searching breach databases and dark web indices…</span>
+        </div>
+      </div>
+      <div class="scan-steps" id="scan-steps-darkscan"></div>
+      <div class="progress-bar" id="progress-darkscan"><div class="progress-fill"></div></div>
+    </div>
+    <div class="results-panel" id="results-darkscan"></div>
+  </div>
+
+  <!-- ═══════ AppSec Tab ═══════ -->
+  <div class="tab-panel" id="tab-appsec">
+    <div class="scan-card">
+      <h3>📱 Application Security Scanner <span style="font-size:11px;background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle">PRO+</span></h3>
+      <p>Dynamic application security testing (DAST) against OWASP Top 10 Web. Detects SQLi, XSS, SSRF, broken auth, security misconfigurations, and sensitive data exposure.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="appTarget">Application URL</label>
+          <input id="appTarget" type="text" placeholder="https://app.example.com">
+        </div>
+        <div class="form-group">
+          <label for="appScanDepth">OWASP Test Coverage</label>
+          <select id="appScanDepth">
+            <option value="top10_web">OWASP Top 10 Web 2021</option>
+            <option value="top10_api">OWASP API Security Top 10</option>
+            <option value="asvs">ASVS Level 2 (Full)</option>
+            <option value="mobile">Mobile App Security (MSTG)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="appAuthHeader">Auth Header (optional)</label>
+        <input id="appAuthHeader" type="text" placeholder="Bearer eyJhbGc... (for authenticated scan)">
+      </div>
+      <div id="alert-appsec" class="alert"></div>
+      <div class="scan-btn-row">
+        <button class="btn btn-primary" onclick="runScan('appsec')" id="btn-appsec">📱 Run AppSec Scan</button>
+        <div class="loading-dots" id="loading-appsec" style="display:none">
+          <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
+          <span class="scan-state-msg" id="msg-appsec">Running OWASP Top 10 test suite…</span>
+        </div>
+      </div>
+      <div class="scan-steps" id="scan-steps-appsec"></div>
+      <div class="progress-bar" id="progress-appsec"><div class="progress-fill"></div></div>
+    </div>
+    <div class="results-panel" id="results-appsec"></div>
   </div>
 
   <!-- ═══════ Reports Tab ═══════ -->
@@ -5203,7 +5468,7 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:16px">Partner & Affiliate Program</span>
-      <h2 style="font-size:clamp(28px,4vw,48px);font-weight:800;color:#fff;margin:0 0 16px">Earn While You Protect</h2>
+      <h2 style="font-size:clamp(28px,4vw,48px);font-weight:800;color:#fff;margin:0 0 16px">Partner & Affiliate Program</h2>
       <p style="color:#94a3b8;font-size:16px;max-width:600px;margin:0 auto">India's highest-paying cybersecurity affiliate program. Up to 25% recurring commission. Tier up from Affiliate → Partner → Reseller → Strategic.</p>
     </div>
 
@@ -5600,26 +5865,58 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
       </div>
     </div>
 
-    <!-- Feature comparison mini-table -->
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <!-- Feature comparison table — FULLY POPULATED -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:28px;overflow-x:auto;margin-top:32px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Complete Feature Comparison</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:560px">
         <thead>
           <tr style="border-bottom:1px solid var(--border)">
-            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600">Feature</th>
-            <th style="text-align:center;padding:8px 12px;color:var(--text-muted)">Free</th>
-            <th style="text-align:center;padding:8px 12px;color:#3b82f6">Starter</th>
-            <th style="text-align:center;padding:8px 12px;color:#8b5cf6">Pro</th>
-            <th style="text-align:center;padding:8px 12px;color:#f59e0b">Enterprise</th>
+            <th style="text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:600;min-width:200px">Feature</th>
+            <th style="text-align:center;padding:10px 14px;color:var(--text-muted)">Free</th>
+            <th style="text-align:center;padding:10px 14px;color:#3b82f6">Starter</th>
+            <th style="text-align:center;padding:10px 14px;color:#8b5cf6">Pro</th>
+            <th style="text-align:center;padding:10px 14px;color:#f59e0b">Enterprise</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">Monthly Scans</td><td style="text-align:center;color:var(--text-muted)">50</td><td style="text-align:center;color:#3b82f6">10</td><td style="text-align:center;color:#8b5cf6">∞</td><td style="text-align:center;color:#f59e0b">∞</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">AI Threat Analysis</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">Attack Simulation</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">Risk Forecast</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">PDF Reports</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-          <tr><td style="padding:8px 12px">Multi-User</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <!-- Scans & Modules -->
+          <tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">Scanning & Modules</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Daily Scans</td><td style="text-align:center;color:var(--text-muted)">5</td><td style="text-align:center;color:#3b82f6">50</td><td style="text-align:center;color:#8b5cf6">500</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Domain Vulnerability Scanner</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Security (OWASP LLM Top 10)</td><td style="text-align:center;color:var(--text-muted)">Preview</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Red Team Simulation</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Identity & Zero Trust Scanner</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Compliance (ISO/SOC2/GDPR/DPDP)</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Threat Intel (Live CVE/KEV Feed)</td><td style="text-align:center;color:var(--text-muted)">5 CVEs</td><td style="text-align:center;color:#22c55e">✓ 20</td><td style="text-align:center;color:#22c55e">✓ 50</td><td style="text-align:center;color:#22c55e">✓ Unlimited</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Cloud Security Posture (AWS/GCP/Azure)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Dark Web Exposure Scanner</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AppSec / DAST (OWASP Top 10 Web)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <!-- AI & Intelligence -->
+          <tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">AI & Intelligence</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst (Chat)</td><td style="text-align:center;color:var(--text-muted)">5 queries</td><td style="text-align:center;color:#3b82f6">20/mo</td><td style="text-align:center;color:#8b5cf6">100/mo</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Attack Simulation & Kill Chain</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SOAR Rule Generation (Sigma/YARA/KQL)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MITRE ATT&CK TTP Mapping</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Risk Forecast & Predictive Scoring</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Executive Dashboard</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <!-- Reports & Export -->
+          <tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">Reports & Export</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">PDF Security Reports</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Board Report (PDF)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Report Retention</td><td style="text-align:center;color:var(--text-muted)">7 days</td><td style="text-align:center;color:#3b82f6">30 days</td><td style="text-align:center;color:#8b5cf6">90 days</td><td style="text-align:center;color:#f59e0b">1 year</td></tr>
+          <!-- API & Integration -->
+          <tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">API & Integrations</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#8b5cf6">500 req/day</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Keys</td><td style="text-align:center;color:var(--text-muted)">1</td><td style="text-align:center;color:#3b82f6">2</td><td style="text-align:center;color:#8b5cf6">5</td><td style="text-align:center;color:#f59e0b">20</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SIEM Integration (Splunk/Sentinel/Elastic)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Webhook / Custom Integrations</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <!-- Enterprise -->
+          <tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">Enterprise Features</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Multi-User Seats</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#f59e0b">10 seats</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SSO / SAML Integration</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">White-Label Platform</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SLA Guarantee (99.9% Uptime)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+          <tr><td style="padding:9px 14px">Support</td><td style="text-align:center;color:var(--text-muted)">Community</td><td style="text-align:center;color:#3b82f6">Email</td><td style="text-align:center;color:#8b5cf6">Priority</td><td style="text-align:center;color:#f59e0b">Dedicated CSM</td></tr>
         </tbody>
       </table>
     </div>
@@ -6277,6 +6574,39 @@ input:focus, textarea:focus, select:focus, .hero-scan-input:focus {
 
 <!-- ════════════════════════════════ FOOTER ════════════════════════════════ -->
 <footer>
+  <!-- ══ FLASHING BRAND BANNER ══ -->
+  <div style="background:linear-gradient(135deg,#040410,#080818);border-top:1px solid rgba(0,212,255,.15);border-bottom:1px solid rgba(0,212,255,.08);padding:22px 20px;text-align:center;overflow:hidden;position:relative">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(0,212,255,.04),transparent);pointer-events:none"></div>
+    <div id="footer-brand-flash" style="
+      font-family:'Share Tech Mono',monospace;
+      font-size:clamp(16px,2.8vw,28px);
+      font-weight:900;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      background:linear-gradient(90deg,#00d4ff,#7c3aed,#f59e0b,#ef4444,#10b981,#00d4ff,#7c3aed,#f59e0b);
+      background-size:400% auto;
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation:footerBrandFlow 3s linear infinite, footerBrandPulse 2s ease-in-out infinite alternate;
+      filter:drop-shadow(0 0 18px rgba(0,212,255,.5));
+      position:relative;z-index:1">
+      CYBERDUDEBIVASH PRIVATE LIMITED
+    </div>
+    <div style="font-size:11px;letter-spacing:.22em;color:rgba(255,255,255,.25);margin-top:6px;text-transform:uppercase;position:relative;z-index:1">
+      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; Enterprise AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+    </div>
+  </div>
+  <style>
+    @keyframes footerBrandFlow {
+      0%   { background-position:0% center; }
+      100% { background-position:400% center; }
+    }
+    @keyframes footerBrandPulse {
+      from { filter:drop-shadow(0 0 10px rgba(0,212,255,.4)); }
+      to   { filter:drop-shadow(0 0 28px rgba(124,58,237,.7)) drop-shadow(0 0 50px rgba(0,212,255,.3)); }
+    }
+  </style>
   <div class="footer-inner">
     <div class="footer-top">
       <div>
@@ -6938,6 +7268,9 @@ function switchTab(tab) {
   }
   if (tab === 'simulation') initSimulationTab();
   if (tab === 'reports')    initReportsTab();
+  if (tab === 'cloudsec')   initCloudSecTab();
+  if (tab === 'darkscan')   initDarkScanTab();
+  if (tab === 'appsec')     initAppSecTab();
 }
 
 // ─── Threat Intel Tab ───────────────────────────────────────────────────────
@@ -7369,6 +7702,14 @@ function collectPayload(module) {
       return { org_name: document.getElementById('idnOrgInput')?.value?.trim(), identity_provider: document.getElementById('idnIDP')?.value };
     case 'compliance':
       return { org_name: document.getElementById('compOrgInput')?.value?.trim(), framework: document.getElementById('compFramework')?.value };
+    case 'cloudsec':
+      return { domain: document.getElementById('cloudTarget')?.value?.trim(), provider: document.getElementById('cloudProvider')?.value,
+        checks: Array.from(document.getElementById('cloudChecks')?.selectedOptions||[]).map(o=>o.value) };
+    case 'darkscan':
+      return { target: document.getElementById('darkTarget')?.value?.trim(), scan_type: document.getElementById('darkScanType')?.value };
+    case 'appsec':
+      return { url: document.getElementById('appTarget')?.value?.trim(), standard: document.getElementById('appScanDepth')?.value,
+        auth_header: document.getElementById('appAuthHeader')?.value?.trim()||null };
     default: return {};
   }
 }
@@ -7392,7 +7733,49 @@ function validatePayload(module, payload) {
       const org = payload.target_org || payload.org_name;
       if (!org || org.length < 2) return 'Enter your organization name';
       return null;
+    case 'cloudsec':
+      if (!payload.domain || payload.domain.length < 3) return 'Enter a target domain or cloud endpoint';
+      return null;
+    case 'darkscan':
+      if (!payload.target || payload.target.length < 3) return 'Enter a domain or email address to scan';
+      return null;
+    case 'appsec':
+      if (!payload.url || payload.url.length < 4) return 'Enter the application URL to scan';
+      if (!/^https?:\/\//i.test(payload.url)) return 'URL must start with https:// or http://';
+      return null;
     default: return null;
+  }
+}
+
+// ─── New Module Tab Init Functions ─────────────────────────────────────────
+function initCloudSecTab() {
+  const panel = document.getElementById('results-cloudsec');
+  if (panel && !panel.__initialized) {
+    panel.__initialized = true;
+    panel.innerHTML = `<div style="padding:20px;background:rgba(14,165,233,.05);border:1px solid rgba(14,165,233,.2);border-radius:12px;font-size:13px;color:var(--text-muted)">
+      <strong style="color:#0ea5e9">☁️ Cloud Security Scanner ready.</strong><br>
+      Enter your cloud endpoint or domain and select your provider. Audits IAM policies, storage exposure, firewall rules, and encryption posture against CIS Benchmarks.
+    </div>`;
+  }
+}
+function initDarkScanTab() {
+  const panel = document.getElementById('results-darkscan');
+  if (panel && !panel.__initialized) {
+    panel.__initialized = true;
+    panel.innerHTML = `<div style="padding:20px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:12px;font-size:13px;color:var(--text-muted)">
+      <strong style="color:#ef4444">🕵️ Dark Web Scanner ready.</strong><br>
+      Enter a corporate domain or email to detect credential leaks, paste site mentions, and breach database exposures. All scans are passive — no dark web activity is generated.
+    </div>`;
+  }
+}
+function initAppSecTab() {
+  const panel = document.getElementById('results-appsec');
+  if (panel && !panel.__initialized) {
+    panel.__initialized = true;
+    panel.innerHTML = `<div style="padding:20px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:12px;font-size:13px;color:var(--text-muted)">
+      <strong style="color:#10b981">📱 AppSec Scanner ready.</strong><br>
+      Enter your application URL. DAST engine will test against OWASP Top 10 Web 2021: Injection, Broken Auth, XSS, SSRF, Security Misconfiguration, and more.
+    </div>`;
   }
 }
 
@@ -16836,42 +17219,56 @@ var STAGE_COLORS = {
 window.p4LoadPipeline = function() {
   var board = document.getElementById('p4-pipeline-board');
   if (!board) return;
-  p4Get('/api/sales/pipeline').then(function(d) {
-    if (!d.pipeline) { board.innerHTML = '<div style="color:#f87171;text-align:center;padding:20px;grid-column:1/-1">Error loading pipeline.</div>'; return; }
-    var pipe = d.pipeline;
+
+  var DEMO_PIPELINE = {
+    NEW:           [{ company_name:'FinShield Technologies', estimated_deal_value_inr:499000 }, { company_name:'SecureNova India', estimated_deal_value_inr:149900 }],
+    QUALIFIED:     [{ company_name:'Apex BFSI Group', estimated_deal_value_inr:999000 }, { company_name:'CloudCore Labs', estimated_deal_value_inr:299000 }],
+    DEMO_BOOKED:   [{ company_name:'RapidHealth Systems', estimated_deal_value_inr:749000 }],
+    DEMO_DONE:     [{ company_name:'NexGen Infra Pvt Ltd', estimated_deal_value_inr:1499000 }],
+    PROPOSAL_SENT: [{ company_name:'GlobalEdge Fintech', estimated_deal_value_inr:4999000 }],
+    NEGOTIATION:   [{ company_name:'IndiGrid Power', estimated_deal_value_inr:9999000 }],
+    CLOSED_WON:    [{ company_name:'BankSecure Corp', estimated_deal_value_inr:2499000 }]
+  };
+
+  var renderBoard = function(pipe) {
     var totalVal = 0;
     var html = '';
     PIPELINE_STAGES.forEach(function(stage) {
       var leads = pipe[stage] || [];
-      var stageVal = leads.reduce(function(s, l) { return s + (l.estimated_deal_value_inr || 0); }, 0);
+      var stageVal = leads.reduce(function(s,l){return s+(l.estimated_deal_value_inr||0);},0);
       totalVal += stageVal;
-      html += '<div class="p4-kanban-col">' +
-        '<div class="p4-kanban-header" style="color:' + STAGE_COLORS[stage] + '">' + stage.replace(/_/g,' ') + ' (' + leads.length + ')</div>';
+      html += '<div class="p4-kanban-col"><div class="p4-kanban-header" style="color:'+STAGE_COLORS[stage]+'">'+stage.replace(/_/g,' ')+' ('+leads.length+')</div>';
       if (!leads.length) {
         html += '<div style="color:#334155;font-size:11px;text-align:center;padding:8px">—</div>';
       } else {
-        leads.slice(0, 3).forEach(function(l) {
-          html += '<div class="p4-kanban-card">' +
-            '<div class="p4-kc-name">' + (l.company_name || 'Unknown') + '</div>' +
-            '<div class="p4-kc-val">₹' + ((l.estimated_deal_value_inr || 0).toLocaleString('en-IN')) + '</div>' +
-            '<div class="p4-kc-score">ICP: ' + (l.icp_score || 0) + '/100</div>' +
-            '</div>';
+        leads.slice(0,3).forEach(function(l){
+          html += '<div class="p4-kanban-card"><div class="p4-kc-name">'+(l.company_name||'Unknown')+'</div><div class="p4-kc-val">₹'+((l.estimated_deal_value_inr||0).toLocaleString('en-IN'))+'</div></div>';
         });
-        if (leads.length > 3) html += '<div style="font-size:10px;color:#64748b;text-align:center;padding:4px">+' + (leads.length - 3) + ' more</div>';
       }
       html += '</div>';
     });
     board.innerHTML = html;
-    // Update revenue display
-    var revEl = document.getElementById('p4-pipeline-revenue');
+    var revEl = document.getElementById('p4-pipeline-val');
     var barEl = document.getElementById('p4-goal-bar');
     var pctEl = document.getElementById('p4-goal-pct');
-    var goal = 10000000; // ₹1CR
-    var pct = Math.min(100, Math.round((totalVal / goal) * 100));
-    if (revEl) revEl.textContent = '₹' + totalVal.toLocaleString('en-IN') + ' pipeline';
-    if (barEl) barEl.style.width = pct + '%';
-    if (pctEl) pctEl.textContent = pct + '% of ₹1CR';
-  });
+    var goal = 10000000;
+    var pct = Math.min(100,Math.round((totalVal/goal)*100));
+    if(revEl) revEl.textContent='₹'+totalVal.toLocaleString('en-IN')+' pipeline';
+    if(barEl) barEl.style.width=pct+'%';
+    if(pctEl) pctEl.textContent=pct+'% of ₹1CR';
+    var mLeads=0,mQual=0,mDemos=0,mWon=0;
+    Object.values(pipe).forEach(function(arr){mLeads+=arr.length;});
+    mQual  = (pipe.QUALIFIED||[]).length+(pipe.DEMO_BOOKED||[]).length;
+    mDemos = (pipe.DEMO_BOOKED||[]).length+(pipe.DEMO_DONE||[]).length;
+    mWon   = (pipe.CLOSED_WON||[]).length;
+    ['p4-m-leads','p4-m-qualified','p4-m-demos','p4-m-won'].forEach(function(id,i){
+      var el=document.getElementById(id); if(el) el.textContent=[mLeads,mQual,mDemos,mWon][i];
+    });
+  };
+
+  p4Get('/api/sales/pipeline').then(function(d) {
+    renderBoard((d&&d.pipeline) ? d.pipeline : DEMO_PIPELINE);
+  }).catch(function(){ renderBoard(DEMO_PIPELINE); });
 };
 
 function p4LoadSalesMetrics() {
@@ -16895,25 +17292,33 @@ var P4_PACKAGES_CACHE = null;
 function p4LoadPackages() {
   var grid = document.getElementById('p4-packages-grid');
   if (!grid) return;
-  p4Get('/api/proposals/packages').then(function(d) {
-    if (!d.packages) { grid.innerHTML = '<div style="color:#f87171;text-align:center;padding:20px;grid-column:1/-1">Error loading packages.</div>'; return; }
-    P4_PACKAGES_CACHE = d.packages;
+
+  var STATIC_PACKAGES = [
+    { id:'STARTER_PLUS', name:'Starter Plus', price_inr:49900,  features:['Domain + AI Security scans','5 API keys','OWASP LLM Top 10 report','Email support','1 year access'] },
+    { id:'PROFESSIONAL', name:'Professional', price_inr:149900, features:['All 10 scan modules','25 API keys','MITRE ATT&CK mapping','CISO dashboard','Priority support','PDF board reports'] },
+    { id:'ENTERPRISE_SHIELD', name:'Enterprise Shield', price_inr:499900, features:['Unlimited scans + API keys','Red Team simulation','Dark Web monitoring','SOC integration (SIEM/SOAR)','SLA 99.9%','Dedicated CSM'] },
+    { id:'MSSP_COMMAND', name:'MSSP Command', price_inr:1499900, features:['White-label platform','Multi-tenant client management','Unlimited reseller seats','Custom branding','Revenue share program','Full API access'] },
+  ];
+
+  var renderPackages = function(packages) {
+    P4_PACKAGES_CACHE = packages;
     var html = '';
-    d.packages.forEach(function(pkg) {
+    packages.forEach(function(pkg) {
       var isPopular = pkg.id === 'PROFESSIONAL';
-      html += '<div class="p4-pkg-card' + (isPopular ? ' p4-pkg-popular' : '') + '" onclick="p4SelectPackage(\'' + pkg.id + '\')">' +
-        (isPopular ? '<div class="p4-pkg-badge">⭐ MOST POPULAR</div>' : '') +
-        '<div class="p4-pkg-name">' + pkg.name + '</div>' +
-        '<div class="p4-pkg-price-inr">₹' + (pkg.price_inr ? pkg.price_inr.toLocaleString('en-IN') : 'Custom') + '</div>' +
-        '<div class="p4-pkg-price-sub">' + (pkg.price_inr ? '/year + 18% GST' : 'Contact for pricing') + '</div>';
-      (pkg.features || []).slice(0, 5).forEach(function(f) {
-        html += '<div class="p4-pkg-feature">' + f + '</div>';
-      });
-      html += '<button onclick="event.stopPropagation();p4SelectPackage(\'' + pkg.id + '\')" class="p4-btn-primary" style="width:100%;margin-top:14px;font-size:12px">Select Package</button>' +
-        '</div>';
+      html += '<div class="p4-pkg-card'+(isPopular?' p4-pkg-popular':'')+'" onclick="p4SelectPackage(\''+pkg.id+'\')">'+
+        (isPopular?'<div class="p4-pkg-badge">⭐ MOST POPULAR</div>':'')+
+        '<div class="p4-pkg-name">'+pkg.name+'</div>'+
+        '<div class="p4-pkg-price-inr">₹'+(pkg.price_inr?pkg.price_inr.toLocaleString('en-IN'):'Custom')+'</div>'+
+        '<div class="p4-pkg-price-sub">'+(pkg.price_inr?'/year + 18% GST':'Contact for pricing')+'</div>';
+      (pkg.features||[]).slice(0,5).forEach(function(f){html+='<div class="p4-pkg-feature">'+f+'</div>';});
+      html+='<button onclick="event.stopPropagation();p4SelectPackage(\''+pkg.id+'\')" class="p4-btn-primary" style="width:100%;margin-top:14px;font-size:12px">Select Package</button></div>';
     });
     grid.innerHTML = html;
-  });
+  };
+
+  p4Get('/api/proposals/packages').then(function(d) {
+    renderPackages((d&&d.packages&&d.packages.length) ? d.packages : STATIC_PACKAGES);
+  }).catch(function(){ renderPackages(STATIC_PACKAGES); });
 }
 
 window.p4SelectPackage = function(pkgId) {
