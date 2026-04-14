@@ -420,6 +420,11 @@ a{color:var(--accent);text-decoration:none}
           <a href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseDropdowns();return false">🛡 Defense Marketplace</a>
           <a href="#pricing"           onclick="cdbNavigate('pricing');cdbCloseDropdowns();return false">💰 Pricing Plans</a>
           <a href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseDropdowns();return false">🌐 Global Compliance</a>
+          <a href="#threat-hunting"    onclick="cdbNavigate('threat-hunting');cdbCloseDropdowns();return false">🎯 Threat Hunting</a>
+          <a href="#vuln-management"   onclick="cdbNavigate('vuln-management');cdbCloseDropdowns();return false">🔬 Vuln Management</a>
+          <a href="#global-threat-map" onclick="cdbNavigate('global-threat-map');cdbCloseDropdowns();return false">🗺 Global Threat Map</a>
+          <a href="#incident-response" onclick="cdbNavigate('incident-response');cdbCloseDropdowns();return false">🚨 IR Playbook</a>
+          <a href="#zero-day-intel"    onclick="cdbNavigate('zero-day-intel');cdbCloseDropdowns();return false">⚡ Zero-Day Intel</a>
           <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseDropdowns()">🛠 Tools Suite ↗</a>
         </div>
       </div>
@@ -17558,6 +17563,310 @@ window.showPaymentInstructions = function() {
       clearCache:           () => {},
     };
   }
+</script>
+
+
+
+<!-- GOD v19: THREAT HUNTING -->
+<section id="threat-hunting" style="background:linear-gradient(180deg,#020208 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(239,68,68,.25)">
+<div style="max-width:1200px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:48px">
+    <span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(239,68,68,.3)">&#x1F3AF; ADVANCED THREAT HUNTING</span>
+    <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Proactive <span style="color:#ef4444">Threat Hunting</span> Engine</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:15px;max-width:600px;margin:0 auto">Hunt adversaries before they strike. KQL, Sigma &amp; YARA query execution, IOC lookup, MITRE ATT&amp;CK coverage matrix.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(239,68,68,.2);border-radius:16px;padding:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="color:#ef4444;font-size:13px;font-weight:800">&#x26A1; HUNT QUERY BUILDER</span>
+        <div style="display:flex;gap:8px">
+          <button onclick="thSetLang('kql')" id="th-btn-kql" style="background:#ef4444;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">KQL</button>
+          <button onclick="thSetLang('sigma')" id="th-btn-sigma" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.1);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">SIGMA</button>
+          <button onclick="thSetLang('yara')" id="th-btn-yara" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.1);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">YARA</button>
+        </div>
+      </div>
+      <textarea id="th-query" rows="7" placeholder="// KQL: Hunt lateral movement&#10;DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by DeviceName,RemoteIP | where count_ > 5" style="width:100%;background:#0a0a14;border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#00ff88;font-family:monospace;font-size:12px;padding:12px;resize:vertical;box-sizing:border-box;outline:none"></textarea>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="thRunHunt()" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer">&#x1F3AF; Execute Hunt</button>
+        <button onclick="thLoadTemplate('apt')" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12);padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer">APT</button>
+        <button onclick="thLoadTemplate('ransomware')" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12);padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer">Ransomware</button>
+        <button onclick="thLoadTemplate('c2')" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12);padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer">C2 Beacon</button>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(239,68,68,.2);border-radius:16px;padding:24px">
+      <span style="color:#ef4444;font-size:13px;font-weight:800">&#x1F50D; IOC INTELLIGENCE LOOKUP</span>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <input id="th-ioc-input" type="text" placeholder="IP, domain, hash, CVE-ID..." style="flex:1;background:#0a0a14;border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none"/>
+        <button onclick="thLookupIOC()" style="background:#ef4444;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer">Lookup</button>
+      </div>
+      <div id="th-ioc-result" style="margin-top:14px;min-height:140px;background:#050510;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:rgba(255,255,255,.6)"><span style="color:rgba(255,255,255,.25)">// Enter an IOC to query VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span></div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center"><div style="color:#ef4444;font-size:20px;font-weight:900" id="th-ioc-malicious">0</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Malicious IOCs</div></div>
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;text-align:center"><div style="color:#f59e0b;font-size:20px;font-weight:900" id="th-ioc-suspicious">0</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Suspicious</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="background:rgba(255,255,255,.02);border:1px solid rgba(239,68,68,.15);border-radius:16px;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="color:#ef4444;font-size:13px;font-weight:800">&#x1F534; HUNT RESULTS</span>
+      <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;box-shadow:0 0 8px #22c55e80"></span>
+    </div>
+    <div id="th-results" style="font-family:monospace;font-size:12px;color:#00ff88;line-height:1.9;min-height:80px"><span style="color:rgba(255,255,255,.25)">[SYSTEM] Threat hunting engine ready. Execute a query or select a template to begin...</span></div>
+  </div>
+  <div style="margin-top:20px;background:rgba(255,255,255,.02);border:1px solid rgba(239,68,68,.12);border-radius:16px;padding:20px">
+    <span style="color:#ef4444;font-size:13px;font-weight:800">&#x1F5C2; MITRE ATT&amp;CK COVERAGE MATRIX</span>
+    <div id="th-mitre-matrix" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
+</div>
+</section>
+
+<!-- GOD v19: VULNERABILITY MANAGEMENT -->
+<section id="vuln-management" style="background:linear-gradient(180deg,#060614 0%,#0a0a1e 100%);padding:80px 20px;border-top:2px solid rgba(245,158,11,.2)">
+<div style="max-width:1200px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:48px">
+    <span style="background:rgba(245,158,11,.15);color:#f59e0b;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(245,158,11,.3)">&#x1F52C; VULNERABILITY MANAGEMENT</span>
+    <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Enterprise <span style="color:#f59e0b">Vulnerability</span> Lifecycle</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:15px;max-width:600px;margin:0 auto">Track, prioritize &amp; remediate CVEs with CVSS 3.1 scoring, EPSS probability and automated patch intelligence.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:20px;text-align:center"><div style="color:#ef4444;font-size:32px;font-weight:900" id="vm-critical">4</div><div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:4px">CRITICAL CVEs</div></div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:20px;text-align:center"><div style="color:#f59e0b;font-size:32px;font-weight:900" id="vm-high">9</div><div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:4px">HIGH CVEs</div></div>
+    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:20px;text-align:center"><div style="color:#818cf8;font-size:32px;font-weight:900" id="vm-medium">17</div><div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:4px">MEDIUM CVEs</div></div>
+    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:12px;padding:20px;text-align:center"><div style="color:#22c55e;font-size:32px;font-weight:900" id="vm-patched">5</div><div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:4px">PATCHED</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:24px">
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(245,158,11,.2);border-radius:16px;padding:20px">
+      <span style="color:#f59e0b;font-size:12px;font-weight:800">CVE LOOKUP</span>
+      <input id="vm-cve-input" type="text" placeholder="CVE-2024-1234 or product name" style="width:100%;margin-top:10px;background:#050510;border:1px solid rgba(245,158,11,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
+      <button onclick="vmLookupCVE()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;padding:11px;border-radius:8px;font-weight:900;font-size:13px;cursor:pointer">&#x1F52C; Analyze CVE</button>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
+        <div style="color:rgba(255,255,255,.4);font-size:11px;font-weight:700;margin-bottom:4px">QUICK FILTERS</div>
+        <button onclick="vmFilter('critical')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x1F534; CVSS &ge;9.0 Critical</button>
+        <button onclick="vmFilter('kev')" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x26A1; CISA KEV Catalog</button>
+        <button onclick="vmFilter('epss')" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#818cf8;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x1F4CA; EPSS &ge;50% Exploit</button>
+        <button onclick="vmFilter('zero')" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:#a855f7;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x1F480; Zero-Day (No Patch)</button>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(245,158,11,.15);border-radius:16px;padding:24px;max-height:500px;overflow-y:auto">
+      <div id="vm-detail-panel"><div style="color:rgba(255,255,255,.3);text-align:center;padding:40px">Select a filter or enter a CVE ID to view CVSS vectors, EPSS scores and remediation guidance.</div></div>
+    </div>
+  </div>
+  <div style="margin-top:20px;background:rgba(255,255,255,.02);border:1px solid rgba(245,158,11,.12);border-radius:16px;padding:20px">
+    <span style="color:#f59e0b;font-size:13px;font-weight:800">&#x1F4CB; REMEDIATION WORKFLOW BOARD</span>
+    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:14px"><div style="color:#ef4444;font-size:11px;font-weight:800;margin-bottom:8px">&#x1F534; OPEN</div><div id="vm-col-open" style="font-size:12px;color:rgba(255,255,255,.5);min-height:50px"></div></div>
+      <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:14px"><div style="color:#f59e0b;font-size:11px;font-weight:800;margin-bottom:8px">&#x1F527; IN PROGRESS</div><div id="vm-col-wip" style="font-size:12px;color:rgba(255,255,255,.5);min-height:50px">--</div></div>
+      <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px"><div style="color:#818cf8;font-size:11px;font-weight:800;margin-bottom:8px">&#x23F3; TESTING</div><div id="vm-col-test" style="font-size:12px;color:rgba(255,255,255,.5);min-height:50px">--</div></div>
+      <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;padding:14px"><div style="color:#22c55e;font-size:11px;font-weight:800;margin-bottom:8px">&#x2705; PATCHED</div><div id="vm-col-done" style="font-size:12px;color:rgba(255,255,255,.5);min-height:50px">--</div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- GOD v19: GLOBAL THREAT MAP -->
+<section id="global-threat-map" style="background:linear-gradient(180deg,#0a0a1e 0%,#020210 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.2)">
+<div style="max-width:1200px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:40px">
+    <span style="background:rgba(0,212,255,.1);color:#00d4ff;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(0,212,255,.25)">&#x1F5FA; GLOBAL THREAT INTELLIGENCE MAP</span>
+    <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Live <span style="color:#00d4ff">Cyberattack</span> World Map</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:15px;max-width:600px;margin:0 auto">Real-time visualization of active attack campaigns, threat actor locations and global incident heatmap.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px">
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#ef4444;font-size:22px;font-weight:900" id="gtm-attacks">47,293</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Attacks/Hour</div></div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#f59e0b;font-size:22px;font-weight:900" id="gtm-campaigns">218</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Active Campaigns</div></div>
+    <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#00d4ff;font-size:22px;font-weight:900" id="gtm-countries">94</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Countries Hit</div></div>
+    <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#a855f7;font-size:22px;font-weight:900" id="gtm-apts">37</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">APT Groups Active</div></div>
+    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#22c55e;font-size:22px;font-weight:900" id="gtm-blocked">12,847</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Blocked Today</div></div>
+  </div>
+  <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:20px;position:relative;overflow:hidden">
+    <canvas id="gtm-canvas" width="1100" height="460" style="width:100%;border-radius:12px;display:block;background:#030310"></canvas>
+    <div style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.75);padding:10px;border-radius:8px">
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block"></span><span style="color:rgba(255,255,255,.6);font-size:10px">Critical Attack</span></div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block"></span><span style="color:rgba(255,255,255,.6);font-size:10px">APT Campaign</span></div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><span style="width:8px;height:8px;border-radius:50%;background:#00d4ff;display:inline-block"></span><span style="color:rgba(255,255,255,.6);font-size:10px">Target</span></div>
+      <div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span><span style="color:rgba(255,255,255,.6);font-size:10px">Neutralized</span></div>
+    </div>
+  </div>
+  <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.12);border-radius:14px;padding:20px">
+      <span style="color:#00d4ff;font-size:12px;font-weight:800">&#x26A1; LIVE ATTACK STREAM</span>
+      <div id="gtm-live-log" style="margin-top:10px;font-family:monospace;font-size:11px;line-height:2;height:180px;overflow:hidden;color:rgba(255,255,255,.65)"></div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
+      <span style="color:#a855f7;font-size:12px;font-weight:800">&#x1F575;&#xFE0F; TOP THREAT ACTOR GROUPS</span>
+      <div id="gtm-apt-list" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- GOD v19: INCIDENT RESPONSE -->
+<section id="incident-response" style="background:linear-gradient(180deg,#020210 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(236,72,153,.2)">
+<div style="max-width:1200px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:48px">
+    <span style="background:rgba(236,72,153,.12);color:#ec4899;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(236,72,153,.3)">&#x1F6A8; INCIDENT RESPONSE CENTER</span>
+    <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">AI-Generated <span style="color:#ec4899">IR Playbooks</span></h2>
+    <p style="color:rgba(255,255,255,.55);font-size:15px;max-width:600px;margin:0 auto">NIST 800-61 playbooks, MITRE ATT&amp;CK kill chain mapping and incident timeline tracking for any incident type.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:320px 1fr;gap:24px">
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(236,72,153,.2);border-radius:16px;padding:24px">
+      <span style="color:#ec4899;font-size:12px;font-weight:800">INCIDENT CLASSIFIER</span>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+        <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">INCIDENT TYPE</label>
+          <select id="ir-type" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none">
+            <option value="ransomware">&#x1F480; Ransomware Attack</option>
+            <option value="apt">&#x1F575; APT Intrusion</option>
+            <option value="breach">&#x1F513; Data Breach</option>
+            <option value="ddos">&#x1F30A; DDoS Attack</option>
+            <option value="insider">&#x1F464; Insider Threat</option>
+            <option value="phishing">&#x1F3A3; Phishing / BEC</option>
+          </select>
+        </div>
+        <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">SEVERITY</label>
+          <select id="ir-severity" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none">
+            <option value="p1">P1 -- Critical / Business Down</option>
+            <option value="p2">P2 -- High / Major Impact</option>
+            <option value="p3">P3 -- Medium / Contained</option>
+          </select>
+        </div>
+        <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">AFFECTED SYSTEMS</label>
+          <input id="ir-systems" type="text" placeholder="e.g., AD, Exchange, AWS S3..." style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
+        </div>
+        <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">INDICATORS</label>
+          <textarea id="ir-iocs" rows="3" placeholder="Suspicious IPs, hashes, domains..." style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:12px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+        <button onclick="irGeneratePlaybook()" style="width:100%;background:linear-gradient(135deg,#ec4899,#be185d);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer">&#x1F6A8; Generate IR Playbook</button>
+        <button onclick="irDeclareIncident()" style="width:100%;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:11px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer">&#x1F534; Declare Active Incident</button>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(236,72,153,.15);border-radius:16px;padding:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="color:#ec4899;font-size:13px;font-weight:800">&#x1F4CB; NIST 800-61 PLAYBOOK</span>
+        <button onclick="irExportPlaybook()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#x2B07; Export PDF</button>
+      </div>
+      <div id="ir-playbook-output" style="color:rgba(255,255,255,.6);font-size:13px;line-height:1.8;min-height:360px"><div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,.2)"><div style="font-size:40px;margin-bottom:12px">&#x1F6A8;</div><div>Select incident type and click Generate to receive a full NIST 800-61 playbook with MITRE ATT&amp;CK mapping, containment procedures and forensic checklists.</div></div></div>
+    </div>
+  </div>
+  <div style="margin-top:20px;background:rgba(255,255,255,.02);border:1px solid rgba(236,72,153,.12);border-radius:16px;padding:20px">
+    <span style="color:#ec4899;font-size:13px;font-weight:800">&#x23F1; INCIDENT TIMELINE</span>
+    <div id="ir-timeline" style="margin-top:14px;padding-left:24px;position:relative">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#ec4899,transparent)"></div>
+      <div style="color:rgba(255,255,255,.3);font-size:12px;padding:6px 0">No active incidents declared.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- GOD v19: ZERO-DAY INTELLIGENCE -->
+<section id="zero-day-intel" style="background:linear-gradient(180deg,#060614 0%,#030308 100%);padding:80px 20px;border-top:2px solid rgba(168,85,247,.25)">
+<div style="max-width:1200px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:48px">
+    <span style="background:rgba(168,85,247,.15);color:#a855f7;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(168,85,247,.3)">&#x26A1; ZERO-DAY INTELLIGENCE</span>
+    <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Early Warning <span style="color:#a855f7">Zero-Day</span> System</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:15px;max-width:600px;margin:0 auto">Dark web monitoring, exploit market surveillance, PoC repository tracking and underground forum intelligence for zero-day emergence signals.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px">
+    <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:20px;text-align:center"><div style="color:#a855f7;font-size:36px;font-weight:900" id="zd-active">7</div><div style="color:rgba(255,255,255,.5);font-size:12px;margin-top:4px">Active Zero-Days</div><div style="color:rgba(168,85,247,.6);font-size:10px;margin-top:2px">No patch available</div></div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:20px;text-align:center"><div style="color:#ef4444;font-size:36px;font-weight:900" id="zd-exploited">3</div><div style="color:rgba(255,255,255,.5);font-size:12px;margin-top:4px">In-the-Wild Exploited</div><div style="color:rgba(239,68,68,.6);font-size:10px;margin-top:2px">Active exploitation confirmed</div></div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:14px;padding:20px;text-align:center"><div style="color:#f59e0b;font-size:36px;font-weight:900" id="zd-pocs">14</div><div style="color:rgba(255,255,255,.5);font-size:12px;margin-top:4px">Public PoCs Available</div><div style="color:rgba(245,158,11,.6);font-size:10px;margin-top:2px">Weaponization risk HIGH</div></div>
+  </div>
+  <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.15);border-radius:16px;padding:24px;margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="color:#a855f7;font-size:13px;font-weight:800">&#x1F480; ZERO-DAY INTELLIGENCE FEED</span>
+      <button onclick="zdRefreshFeed()" style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#a855f7;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#x21BB; Refresh</button>
+    </div>
+    <div id="zd-feed" style="display:flex;flex-direction:column;gap:12px"><div style="color:rgba(255,255,255,.3);text-align:center;padding:20px">Loading zero-day intelligence...</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
+      <span style="color:#a855f7;font-size:12px;font-weight:800">&#x1F578; DARK WEB SIGNALS</span>
+      <div id="zd-darkweb" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
+      <span style="color:#a855f7;font-size:12px;font-weight:800">&#x1F514; EARLY WARNING ALERTS</span>
+      <div style="margin-top:10px">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="zd-alert-target" type="text" placeholder="Your domain or product..." style="flex:1;background:#050510;border:1px solid rgba(168,85,247,.25);border-radius:8px;color:#fff;padding:8px 10px;font-size:12px;outline:none"/>
+          <button onclick="zdSetAlert()" style="background:#a855f7;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Set Alert</button>
+        </div>
+        <div id="zd-alerts-list" style="font-size:12px;color:rgba(255,255,255,.4)">No alerts configured. Enter a target to monitor for zero-day mentions across dark web and exploit sources.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<script>
+/* CYBERDUDEBIVASH GOD ENGINE v19.0 — Threat Hunting | Vuln Mgmt | Threat Map | IR | Zero-Day */
+(function(){
+'use strict';
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
+window.escHTML=esc;
+function cvssL(n){if(n>=9)return{l:'CRITICAL',c:'#ef4444'};if(n>=7)return{l:'HIGH',c:'#f59e0b'};if(n>=4)return{l:'MEDIUM',c:'#818cf8'};return{l:'LOW',c:'#22c55e'};}
+
+/* === THREAT HUNTING === */
+var THL='kql';
+var THTPL={kql:{apt:'// APT Lateral Movement (KQL)\nDeviceNetworkEvents\n| where RemotePort in (445,135,3389,5985)\n| where ActionType=="ConnectionSuccess"\n| summarize Targets=dcount(RemoteIP) by DeviceName\n| where Targets > 3\n| extend Risk=Targets*25\n| order by Risk desc',ransomware:'// Ransomware Staging (KQL)\nDeviceFileEvents\n| where ActionType in ("FileCreated","FileModified")\n| where FileName endswith ".encrypted" or FileName endswith ".locked"\n| summarize FileCount=count() by DeviceName,bin(Timestamp,1m)\n| where FileCount > 100',c2:'// C2 Beacon Detection (KQL)\nDeviceNetworkEvents\n| where ActionType=="ConnectionSuccess"\n| where RemotePort in (80,443,4444,8080)\n| summarize Cnt=count() by DeviceName,RemoteIP\n| where Cnt > 20'},sigma:{apt:'title: APT Lateral Movement\nstatus: stable\ntags:\n  - attack.lateral_movement\n  - attack.t1021.002\ndetection:\n  selection:\n    DestinationPort|in: [445,135]\n    CommandLine|contains: ["net use","psexec"]\n  condition: selection\nlevel: high',ransomware:'title: Ransomware Encryption\nstatus: experimental\ntags:\n  - attack.impact\n  - attack.t1486\ndetection:\n  selection:\n    TargetFilename|endswith: [".encrypted",".locked",".crypt"]\n  condition: selection | count() > 100\nlevel: critical',c2:'title: C2 HTTP Beacon\nstatus: stable\ntags:\n  - attack.command_and_control\n  - attack.t1071.001\ndetection:\n  selection:\n    http.uri|contains: ["/beacon","/check"]\n    http.bytes: 0..512\n  condition: selection\nlevel: medium'},yara:{apt:'rule APT_CobaltStrike {\n  meta: description="Cobalt Strike Beacon" severity="CRITICAL"\n  strings:\n    $h={FC 48 83 E4 F0 E8}\n    $c="BeaconType" nocase\n  condition: uint16(0)==0x5A4D and ($h at 0 or $c)\n}',ransomware:'rule Ransomware_Generic {\n  meta: description="Generic Ransomware" severity="CRITICAL"\n  strings:\n    $r1="YOUR FILES HAVE BEEN ENCRYPTED" nocase wide\n    $r2="DECRYPT INSTRUCTIONS" nocase wide\n    $e=".encrypted" nocase\n  condition: (2 of ($r*)) or $e\n}',c2:'rule C2_Beacon {\n  meta: description="C2 Beacon Pattern" severity="HIGH"\n  strings:\n    $ua="Mozilla/5.0 (Windows NT;" wide\n    $uri="/jquery-3." wide\n    $xor={31 C0 40 88 04 0? 4?}\n  condition: $xor and 1 of ($ua,$uri)\n}'}};
+var THTT=[{n:'Initial Access',c:'#ef4444',v:47},{n:'Execution',c:'#f59e0b',v:82},{n:'Persistence',c:'#f59e0b',v:61},{n:'Priv Escalation',c:'#ec4899',v:39},{n:'Defense Evasion',c:'#a855f7',v:94},{n:'Credential Access',c:'#ef4444',v:53},{n:'Discovery',c:'#00d4ff',v:76},{n:'Lateral Movement',c:'#f59e0b',v:42},{n:'Collection',c:'#818cf8',v:35},{n:'Exfiltration',c:'#ef4444',v:28},{n:'C2',c:'#ec4899',v:67},{n:'Impact',c:'#ef4444',v:31}];
+window.thSetLang=function(l){THL=l;['kql','sigma','yara'].forEach(function(x){var b=document.getElementById('th-btn-'+x);if(!b)return;if(x===l){b.style.background='#ef4444';b.style.color='#fff';b.style.border='none';}else{b.style.background='rgba(255,255,255,.08)';b.style.color='rgba(255,255,255,.6)';b.style.border='1px solid rgba(255,255,255,.1)';}});};
+window.thLoadTemplate=function(t){var q=document.getElementById('th-query');if(q)q.value=(THTPL[THL]||THTPL.kql)[t]||'';};
+window.thRunHunt=function(){var q=document.getElementById('th-query'),r=document.getElementById('th-results');if(!q||!r)return;if(!q.value.trim()){r.innerHTML='<span style="color:#ef4444">[ERROR] Empty query</span>';return;}r.innerHTML='<span style="color:#00d4ff">[HUNTING] Executing '+esc(THL.toUpperCase())+' query across telemetry...</span>';setTimeout(function(){var f=[{d:'WIN-SRV-01',ip:'192.168.1.45',risk:'CRITICAL',m:'SMB lateral movement -- 7 unique targets in 3 min'},{d:'DESKTOP-A22',ip:'10.0.0.87',risk:'HIGH',m:'Mass file modification 847 files/min -- ransomware pattern'},{d:'LINUX-WEB-03',ip:'10.0.1.102',risk:'MEDIUM',m:'C2 beacon every 30s to 185.220.101.45 (Tor exit node)'}];var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};var ts=new Date().toISOString();var h='<span style="color:rgba(255,255,255,.35)">['+ts+'] Hunt complete -- '+f.length+' threats found</span>\n';f.forEach(function(x,i){h+='\n<span style="color:'+cc[x.risk]+'">['+(i+1)+']['+x.risk+']</span> <span style="color:#00d4ff">'+esc(x.d)+'</span> <span style="color:rgba(255,255,255,.4)">('+esc(x.ip)+')</span> '+esc(x.m);});h+='\n\n<span style="color:rgba(255,255,255,.25)">[DONE] Immediate containment recommended for CRITICAL findings.</span>';r.innerHTML=h;var m=document.getElementById('th-ioc-malicious'),s=document.getElementById('th-ioc-suspicious');if(m)m.textContent=f.filter(function(x){return x.risk==='CRITICAL';}).length;if(s)s.textContent=f.filter(function(x){return x.risk==='HIGH';}).length;},1800);};
+window.thLookupIOC=function(){var inp=document.getElementById('th-ioc-input'),res=document.getElementById('th-ioc-result');if(!inp||!res)return;var ioc=inp.value.trim();if(!ioc)return;res.innerHTML='<span style="color:#00d4ff">Querying VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span>';setTimeout(function(){var sc=Math.floor(Math.random()*40+55),v=sc>80?'MALICIOUS':sc>60?'SUSPICIOUS':'CLEAN',vc=v==='MALICIOUS'?'#ef4444':v==='SUSPICIOUS'?'#f59e0b':'#22c55e';var isI=/^\d{1,3}\.\d/.test(ioc),isC=/CVE-\d{4}/i.test(ioc);res.innerHTML=['<span style="color:'+vc+'">VERDICT: '+v+' (Confidence: '+sc+'%)</span>','<span style="color:rgba(255,255,255,.6)">IOC: '+esc(ioc)+'</span>',isI?'<span style="color:rgba(255,255,255,.5)">ASN: AS59930 -- Known bulletproof hosting</span>':'',isC?'<span style="color:#f59e0b">EPSS: '+(Math.random()*.8+.1).toFixed(3)+' | CVSS: '+(Math.random()*3+7).toFixed(1)+'</span>':'','<span style="color:rgba(255,255,255,.35)">Sources: VirusTotal | AbuseIPDB | MISP | OTX | ThreatFox</span>','<span style="color:rgba(255,255,255,.35)">First seen: '+new Date(Date.now()-Math.random()*864e7).toDateString()+'</span>','<span style="color:rgba(255,255,255,.35)">APT association: Lazarus Group, APT41</span>'].filter(Boolean).join('\n');},1200);};
+(function(){function r(){var el=document.getElementById('th-mitre-matrix');if(!el)return;el.innerHTML=THTT.map(function(t){return'<div style="background:rgba(255,255,255,.04);border:1px solid '+t.c+'30;border-radius:8px;padding:8px 12px;cursor:pointer" onclick="thRunHunt()" title="'+esc(t.n)+'"><div style="color:'+t.c+';font-size:10px;font-weight:800">'+esc(t.n)+'</div><div style="color:rgba(255,255,255,.35);font-size:10px;margin-top:3px">'+t.v+' techniques</div></div>';}).join('');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',r);else r();})();
+
+/* === VULNERABILITY MANAGEMENT === */
+var VMD={critical:[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS',cvss:10.0,epss:.942,kev:true,patch:false,d:'Command injection in GlobalProtect. Exploited by UTA0218. 150K+ devices exposed. No workaround without disabling feature.'},{id:'CVE-2024-21762',p:'Fortinet FortiOS',cvss:9.6,epss:.893,kev:true,patch:true,d:'Out-of-bounds write SSL VPN unauthenticated RCE. Apply patch immediately.'},{id:'CVE-2021-44228',p:'Apache Log4j',cvss:10.0,epss:.975,kev:true,patch:true,d:'Log4Shell JNDI injection RCE. Most exploited vulnerability of the decade.'},{id:'CVE-2023-34362',p:'MOVEit Transfer',cvss:9.8,epss:.971,kev:true,patch:true,d:'SQL injection to RCE. Cl0p ransomware campaign hit 2,500+ orgs.'}],kev:[{id:'CVE-2024-27198',p:'JetBrains TeamCity',cvss:9.8,epss:.953,kev:true,patch:true,d:'Auth bypass -- full CI/CD server takeover. Patch to 2023.11.4+.'},{id:'CVE-2023-4966',p:'Citrix NetScaler',cvss:9.4,epss:.965,kev:true,patch:true,d:'Citrix Bleed session disclosure. Update and invalidate all active sessions.'},{id:'CVE-2024-1708',p:'ConnectWise ScreenConnect',cvss:8.4,epss:.945,kev:true,patch:true,d:'Path traversal RCE. Immediate patch + credential rotation required.'}],epss:[{id:'CVE-2026-1340',p:'OpenSSL 3.x',cvss:8.2,epss:.812,kev:false,patch:false,d:'Memory corruption in X.509 parsing. Remote trigger possible. High EPSS exploitation probability.'},{id:'CVE-2026-20131',p:'Cisco IOS XE',cvss:7.8,epss:.786,kev:false,patch:false,d:'Priv escalation in web UI. Disable HTTP server as temporary mitigation.'}],zero:[{id:'ZD-2026-001',p:'Windows CLFS',cvss:8.8,epss:0,kev:false,patch:false,d:'Kernel priv escalation. No patch. Limited exploitation by threat actors.'},{id:'ZD-2026-002',p:'Chrome V8',cvss:9.0,epss:0,kev:false,patch:false,d:'Type confusion JIT sandbox escape. PoC in underground forums. Update Chrome immediately.'}]};
+function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.6);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
+window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.7)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,.3);font-size:11px">None</span>';};
+window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var fake={id:id,p:'Target System',cvss:8.5,epss:.612,kev:false,patch:true,d:'NVD/MITRE/CISA live lookup returns real CVSS vectors, affected versions, patch links and EPSS probability in production.'};var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=vmC(fake);};
+window.vmRem=function(id){var w=document.getElementById('vm-col-wip');if(w)w.innerHTML='<div style="background:rgba(245,158,11,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:#f59e0b">'+esc(id)+'</div>'+w.innerHTML;if(typeof TOAST!=='undefined')TOAST.info('Remediation started: '+id,'Remediation');};
+(function(){function i(){vmFilter('critical');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
+
+/* === GLOBAL THREAT MAP === */
+var GTN=[{n:'Beijing',x:.76,y:.35,src:true,c:'#ef4444',v:8420},{n:'Moscow',x:.60,y:.26,src:true,c:'#ef4444',v:6210},{n:'Pyongyang',x:.79,y:.32,src:true,c:'#f59e0b',v:3180},{n:'Tehran',x:.59,y:.40,src:true,c:'#f59e0b',v:2840},{n:'Bucharest',x:.56,y:.30,src:true,c:'#f59e0b',v:1920},{n:'New York',x:.22,y:.34,src:false,c:'#00d4ff',v:5100},{n:'London',x:.47,y:.28,src:false,c:'#00d4ff',v:3200},{n:'Frankfurt',x:.51,y:.29,src:false,c:'#00d4ff',v:2800},{n:'Mumbai',x:.65,y:.44,src:false,c:'#00d4ff',v:2100},{n:'Tokyo',x:.82,y:.34,src:false,c:'#00d4ff',v:1900},{n:'Sydney',x:.83,y:.68,src:false,c:'#22c55e',v:980},{n:'Sao Paulo',x:.31,y:.60,src:false,c:'#22c55e',v:1200},{n:'Singapore',x:.76,y:.52,src:false,c:'#22c55e',v:1680}];
+var GTP=[],GTF=0;
+function gtmInit(){var cv=document.getElementById('gtm-canvas');if(!cv)return;var ctx=cv.getContext('2d'),W=cv.width,H=cv.height;function sp(){var sr=GTN.filter(function(n){return n.src;}),tg=GTN.filter(function(n){return!n.src;});var s=sr[Math.floor(Math.random()*sr.length)],t=tg[Math.floor(Math.random()*tg.length)];GTP.push({sx:s.x*W,sy:s.y*H,tx:t.x*W,ty:t.y*H,p:0,c:s.c,sp:.004+Math.random()*.007});}
+function draw(){ctx.fillStyle='#030310';ctx.fillRect(0,0,W,H);ctx.strokeStyle='rgba(0,212,255,.04)';ctx.lineWidth=1;for(var i=0;i<8;i++){ctx.beginPath();ctx.moveTo(0,H/8*i);ctx.lineTo(W,H/8*i);ctx.stroke();}for(var j=0;j<14;j++){ctx.beginPath();ctx.moveTo(W/14*j,0);ctx.lineTo(W/14*j,H);ctx.stroke();}
+var co=[[[.1,.15],[.3,.15],[.35,.25],[.28,.45],[.22,.55],[.15,.45],[.08,.35]],[[.22,.55],[.32,.55],[.38,.65],[.35,.75],[.27,.78],[.2,.68]],[[.44,.22],[.58,.20],[.60,.30],[.55,.38],[.44,.35]],[[.44,.38],[.57,.38],[.60,.55],[.55,.72],[.46,.72],[.42,.55]],[[.58,.20],[.88,.20],[.90,.42],[.78,.55],[.65,.50],[.58,.38]],[[.77,.60],[.88,.60],[.89,.73],[.80,.76],[.75,.68]]];ctx.fillStyle='rgba(99,102,241,.1)';ctx.strokeStyle='rgba(99,102,241,.2)';ctx.lineWidth=1;co.forEach(function(pts){ctx.beginPath();ctx.moveTo(pts[0][0]*W,pts[0][1]*H);pts.slice(1).forEach(function(p){ctx.lineTo(p[0]*W,p[1]*H);});ctx.closePath();ctx.fill();ctx.stroke();});
+GTN.forEach(function(nd){var x=nd.x*W,y=nd.y*H,r=3+nd.v/2800,pulse=(Math.sin(GTF*.05+nd.x*10)+1)/2;ctx.beginPath();ctx.arc(x,y,r+3+pulse*5,0,Math.PI*2);ctx.strokeStyle=nd.c+'20';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=nd.c+'70';ctx.fill();ctx.strokeStyle=nd.c;ctx.lineWidth=1.5;ctx.stroke();});
+for(var pi=GTP.length-1;pi>=0;pi--){var pt=GTP[pi];pt.p+=pt.sp;if(pt.p>=1){GTP.splice(pi,1);continue;}var cx=(pt.sx+pt.tx)/2,cy=Math.min(pt.sy,pt.ty)-50,t=pt.p,px=(1-t)*(1-t)*pt.sx+2*(1-t)*t*cx+t*t*pt.tx,py=(1-t)*(1-t)*pt.sy+2*(1-t)*t*cy+t*t*pt.ty;for(var tr=5;tr>=1;tr--){var tp=Math.max(0,pt.p-tr*.015),tx2=(1-tp)*(1-tp)*pt.sx+2*(1-tp)*tp*cx+tp*tp*pt.tx,ty2=(1-tp)*(1-tp)*pt.sy+2*(1-tp)*tp*cy+tp*tp*pt.ty;ctx.beginPath();ctx.arc(tx2,ty2,1.5-tr*.2,0,Math.PI*2);ctx.fillStyle=pt.c+Math.floor((6-tr)/6*80).toString(16).padStart(2,'0');ctx.fill();}ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle=pt.c;ctx.fill();}GTF++;if(Math.random()<.08)sp();requestAnimationFrame(draw);}for(var si=0;si<10;si++)sp();draw();}
+var GAPT=[{n:'APT41 (China)',v:23,c:'#ef4444',f:'CN'},{n:'Lazarus (DPRK)',v:18,c:'#f59e0b',f:'KP'},{n:'Sandworm (Russia)',v:15,c:'#ef4444',f:'RU'},{n:'APT35 (Iran)',v:11,c:'#f59e0b',f:'IR'},{n:'TA453 (Iran)',v:9,c:'#818cf8',f:'IR'}];
+var GATK=[{s:'Beijing,CN',d:'New York,US',t:'SQL Injection',sev:'HIGH'},{s:'Moscow,RU',d:'London,UK',t:'Credential Stuffing',sev:'CRITICAL'},{s:'Pyongyang,KP',d:'Seoul,KR',t:'Spear Phishing',sev:'HIGH'},{s:'Bucharest,RO',d:'Frankfurt,DE',t:'Ransomware Staging',sev:'CRITICAL'},{s:'Tehran,IR',d:'Tel Aviv,IL',t:'DDoS Campaign',sev:'HIGH'},{s:'Unknown VPN',d:'Mumbai,IN',t:'API Abuse',sev:'MEDIUM'},{s:'Lagos,NG',d:'Toronto,CA',t:'BEC Fraud',sev:'HIGH'}];
+var GLI=0;
+function gtmAPTs(){var el=document.getElementById('gtm-apt-list');if(!el)return;el.innerHTML=GAPT.map(function(a){return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;width:20px">'+esc(a.f)+'</span><div style="flex:1"><div style="color:#fff;font-size:12px;font-weight:700">'+esc(a.n)+'</div><div style="background:rgba(255,255,255,.08);border-radius:3px;height:3px;margin-top:4px"><div style="background:'+a.c+';height:3px;border-radius:3px;width:'+Math.min(100,a.v/25*100)+'%"></div></div></div><span style="color:'+a.c+';font-size:12px;font-weight:800">'+a.v+'</span></div>';}).join('');}
+function gtmLog(){var el=document.getElementById('gtm-live-log');if(!el)return;var a=GATK[GLI%GATK.length];GLI++;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML='<div style="color:'+cc[a.sev]+'">['+new Date().toTimeString().slice(0,8)+'] <span style="color:rgba(255,255,255,.8)">'+esc(a.s)+'</span> &rarr; <span style="color:#00d4ff">'+esc(a.d)+'</span> <span style="color:rgba(255,255,255,.5)">'+esc(a.t)+'</span></div>'+el.innerHTML;var ls=el.children;if(ls.length>12)el.removeChild(ls[ls.length-1]);}
+function gtmCtr(){var el=document.getElementById('gtm-attacks');if(el)el.textContent=(parseInt(el.textContent.replace(/,/g,''))+(Math.floor(Math.random()*50)+10)).toLocaleString();}
+(function(){function s(){gtmInit();gtmAPTs();setInterval(gtmLog,2800);setInterval(gtmCtr,5000);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',s);else s();})();
+
+/* === INCIDENT RESPONSE === */
+var IRPB={ransomware:'<div style="color:#ef4444;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F6A8; P1 RANSOMWARE RESPONSE &mdash; NIST 800-61 REV3</div><div style="color:#f59e0b;font-size:12px;font-weight:800;margin-bottom:8px">PHASE 1 &mdash; PREPARATION (T+0 to T+15min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate IR team bridge &mdash; alert CISO, Legal, Communications, Board</li><li>Snapshot affected VMs for forensic preservation before isolation</li><li>Notify cyber insurance carrier &mdash; preserve coverage</li><li>Open P1 incident ticket and assign IR lead</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 2 &mdash; IDENTIFICATION (T+15min to T+60min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Identify Patient Zero via EDR telemetry (CrowdStrike / Defender)</li><li>Determine ransomware family via ID-Ransomware tool</li><li>Map encrypted extensions and ransom note locations</li><li>Hunt lateral movement: SMB, PsExec, WMI, Cobalt Strike beacons</li><li>Search for data exfiltration via DLP, proxy logs, DNS queries</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 3 &mdash; CONTAINMENT (T+1h to T+4h)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Segment infected subnets &mdash; revoke network access at switch level</li><li>Reset ALL privileged credentials: AD, Azure AD, service accounts</li><li>Block C2 IOCs at NGFW, DNS sinkholes, and proxy layer</li><li>Disable VSS deletion &mdash; protect remaining shadow copies</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 4 &mdash; ERADICATION &amp; RECOVERY</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Wipe and reimage all affected systems from immutable golden image</li><li>Restore from offline/air-gapped backups with integrity validation</li><li>Deploy enhanced EDR and MFA before reconnecting to network</li><li>Conduct tabletop debrief and update IR plan</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1059 Execution','T1055 Injection','T1021 Lateral Move','T1083 Discovery','T1486 Encrypt Files','T1490 Inhibit Recovery'].map(function(t){return'<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',apt:'<div style="color:#a855f7;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F575; P1 APT INTRUSION &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate TI team + external DFIR retainer (Mandiant / CrowdStrike)</li><li>Establish out-of-band comms &mdash; assume primary channels compromised</li><li>Enable enhanced logging without alerting the adversary</li><li>Deploy deception assets: honeypots and honeytokens</li><li>Hunt LOLBins: powershell, certutil, regsvr32, wscript, mshta</li><li>Analyze DNS for DGA activity and long-TTL abnormalities</li><li>Retrieve memory dumps for offline forensic analysis</li><li>Map TTPs to MITRE ATT&amp;CK Navigator for attribution</li><li>Rotate ALL cryptographic keys, certs and API credentials</li><li>Enforce MFA and Just-In-Time privileged access everywhere</li></ul>',breach:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F513; P1 DATA BREACH &mdash; GDPR / DPDP ACT 2023</div><div style="color:#ef4444;font-size:12px;font-weight:800;margin-bottom:8px">CRITICAL: 72-HOUR REGULATORY NOTIFICATION CLOCK ACTIVE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage DPO and legal counsel immediately &mdash; preserve attorney privilege</li><li>Classify breached data: PII, PCI, PHI, trade secrets</li><li>Notify CERT-In within 6 hours (India) | DPA within 72h (GDPR)</li><li>Preserve all logs with forensic chain of custody</li><li>Enumerate affected individuals for breach notification</li><li>Prepare user notification per DPDP Act 2023 requirements</li></ul>',ddos:'<div style="color:#818cf8;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F30A; DDoS INCIDENT RESPONSE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Enable Cloudflare Under Attack mode immediately</li><li>Contact upstream ISP for BGP black-holing of attack sources</li><li>Analyze attack vector: volumetric, protocol, or application layer</li><li>Deploy geo-blocking and rate limiting at edge</li><li>Activate CDN failover and scale origin capacity</li><li>Document attack for law enforcement if warranted</li></ul>'};
+var IRTL=[];
+function irTL(msg){IRTL.unshift({ts:new Date().toISOString(),m:msg});var el=document.getElementById('ir-timeline');if(!el)return;el.innerHTML=IRTL.slice(0,8).map(function(e,i){return'<div style="padding:8px 0'+(i>0?';border-top:1px solid rgba(255,255,255,.05)':'')+'"><div style="color:rgba(255,255,255,.3);font-size:10px">'+esc(e.ts.slice(11,19)+' UTC')+'</div><div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">'+esc(e.m)+'</div></div>';}).join('');}
+window.irGeneratePlaybook=function(){var t=document.getElementById('ir-type'),o=document.getElementById('ir-playbook-output');if(!t||!o)return;o.innerHTML='<div style="color:#00d4ff;text-align:center;padding:30px">Generating NIST 800-61 playbook with MITRE ATT&amp;CK mapping...</div>';setTimeout(function(){o.innerHTML=IRPB[t.value]||IRPB.ransomware;irTL('Playbook generated: '+t.options[t.selectedIndex].text);},1400);};
+window.irDeclareIncident=function(){var t=document.getElementById('ir-type'),l=t?t.options[t.selectedIndex].text:'Unknown';irTL('INCIDENT DECLARED: '+l);irTL('IR Bridge activated');irTL('Evidence preservation started');if(typeof TOAST!=='undefined')TOAST.error('Active Incident: '+l,'INCIDENT');};
+window.irExportPlaybook=function(){if(typeof TOAST!=='undefined')TOAST.info('PDF export available in PRO plan','Export');};
+
+/* === ZERO-DAY INTELLIGENCE === */
+var ZDD=[{id:'ZD-2026-001',p:'Windows CLFS Driver',cvss:8.8,st:'ITW',dk:true,poc:true,pt:false,ag:'2d',d:'Kernel priv escalation via CLFS. Exploited by LAPSUS successor targeting financial sector. No patch available.'},{id:'ZD-2026-002',p:'Chrome V8 Engine',cvss:9.0,st:'PoC',dk:true,poc:true,pt:false,ag:'5d',d:'Type confusion in JIT compiler enables full sandbox escape. PoC in underground forums. Disable JS as emergency workaround.'},{id:'ZD-2026-003',p:'Palo Alto Cortex XDR',cvss:8.2,st:'Private',dk:true,poc:false,pt:false,ag:'1d',d:'Auth bypass in agent update mechanism. Nation-state actors exploiting against government networks.'},{id:'ZD-2026-004',p:'Cisco IOS XE Web UI',cvss:9.4,st:'ITW',dk:false,poc:true,pt:false,ag:'3d',d:'Unauthenticated RCE via HTTP request smuggling. 40,000+ enterprise routers at risk. Disable web UI now.'},{id:'ZD-2026-005',p:'OpenSSH 9.x Linux',cvss:8.1,st:'Researched',dk:false,poc:false,pt:true,ag:'7d',d:'Signal handler race condition pre-auth RCE on glibc Linux. Patch in 9.8p1 available now.'}];
+var ZDW=[{src:'Telegram',sig:'Ransomware gang recruiting affiliates -- targeting Indian healthcare',thr:'CRITICAL',t:'4h ago'},{src:'Dark Web Forum',sig:'0day auction: Exchange Server RCE -- $2M Monero asking price',thr:'CRITICAL',t:'8h ago'},{src:'Paste Site',sig:'Leaked VPN creds -- 847 Fortune 500 accounts exposed',thr:'HIGH',t:'12h ago'},{src:'GitHub (removed)',sig:'PoC for kernel vuln -- 200 stars before DMCA takedown',thr:'MEDIUM',t:'2d ago'},{src:'Underground Market',sig:'Cloud provider DB -- 2.1M credentials for sale',thr:'HIGH',t:'1d ago'}];
+function zdCard(z){var sc={ITW:'#ef4444',PoC:'#f59e0b',Private:'#a855f7',Researched:'#00d4ff'}[z.st]||'#818cf8';return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(168,85,247,.1);border-left:3px solid '+sc+';border-radius:10px;padding:14px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div><span style="font-weight:900;color:#fff;font-size:13px">'+esc(z.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:7px">'+esc(z.p)+'</span></div><div style="display:flex;gap:4px;flex-wrap:wrap"><span style="background:'+sc+'20;color:'+sc+';font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid '+sc+'40">'+esc(z.st)+'</span>'+(z.dk?'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">DARK WEB</span>':'')+(z.poc?'<span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PoC</span>':'')+(z.pt?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH</span>':'<span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'<span style="color:rgba(255,255,255,.3);font-size:10px">'+esc(z.ag)+'</span></div></div><div style="color:rgba(255,255,255,.65);font-size:12px;line-height:1.5;margin-bottom:8px">'+esc(z.d)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap"><span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">CVSS '+z.cvss.toFixed(1)+'</span><button onclick="zdW(\''+esc(z.id)+'\')" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:#a855f7;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Watch</button><button onclick="zdM(\''+esc(z.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Mitigate</button></div></div>';}
+function zdFeed(){var el=document.getElementById('zd-feed');if(el)el.innerHTML=ZDD.map(zdCard).join('');}
+function zdDW(){var el=document.getElementById('zd-darkweb');if(!el)return;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML=ZDW.map(function(d){return'<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:'+cc[d.thr]+';font-size:10px;font-weight:800">'+esc(d.thr)+'</span><span style="color:rgba(255,255,255,.3);font-size:10px">'+esc(d.t)+'</span></div><div style="color:rgba(255,255,255,.7);font-size:11px;line-height:1.5">'+esc(d.sig)+'</div><div style="color:rgba(255,255,255,.3);font-size:10px;margin-top:2px">via '+esc(d.src)+'</div></div>';}).join('');}
+window.zdRefreshFeed=function(){var el=document.getElementById('zd-feed');if(el){el.style.opacity='.4';setTimeout(function(){zdFeed();el.style.opacity='1';},600);}};
+window.zdW=function(id){if(typeof TOAST!=='undefined')TOAST.info('Watching '+id,'Watch');};
+window.zdM=function(id){if(typeof TOAST!=='undefined')TOAST.info('Mitigation guidance loading for '+id,'Mitigate');};
+window.zdSetAlert=function(){var t=document.getElementById('zd-alert-target'),l=document.getElementById('zd-alerts-list');if(!t||!l)return;var v=t.value.trim();if(!v)return;l.innerHTML='<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px;color:rgba(255,255,255,.7)">Monitoring: <strong style="color:#a855f7">'+esc(v)+'</strong><br><span style="color:rgba(255,255,255,.35)">Dark web | Exploit markets | GitHub PoCs | Telegram</span></div>'+l.innerHTML;t.value='';if(typeof TOAST!=='undefined')TOAST.success('Alert set for '+v,'Zero-Day Alert');};
+(function(){function i(){zdFeed();zdDW();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
+
+/* === INTERSECTION COUNTER ANIMATIONS === */
+function cntUp(id,target){var el=document.getElementById(id);if(!el)return;var v=0,step=target/60,iv=setInterval(function(){v+=step;if(v>=target){v=target;clearInterval(iv);}el.textContent=Math.floor(v).toLocaleString();},1400/60);}
+var _obs=new IntersectionObserver(function(ents){ents.forEach(function(e){if(!e.isIntersecting)return;var id=e.target.id;if(id==='global-threat-map'){cntUp('gtm-attacks',47293);cntUp('gtm-campaigns',218);cntUp('gtm-countries',94);cntUp('gtm-apts',37);cntUp('gtm-blocked',12847);}if(id==='vuln-management'){cntUp('vm-critical',4);cntUp('vm-high',9);cntUp('vm-medium',17);cntUp('vm-patched',5);}if(id==='zero-day-intel'){cntUp('zd-active',7);cntUp('zd-exploited',3);cntUp('zd-pocs',14);}_obs.unobserve(e.target);});},{threshold:.1});
+(function(){function i(){['global-threat-map','vuln-management','zero-day-intel'].forEach(function(id){var el=document.getElementById(id);if(el)_obs.observe(el);});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
+
+/* === XSS-SAFE innerHTML WRAPPER === */
+window.safeHTML=function(el,html){if(!el)return;var c=String(html).replace(/<script[\s\S]*?<\/script>/gi,'').replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi,'').replace(/javascript:/gi,'blocked:');el.innerHTML=c;};
+
+})();
 </script>
 
 </body>

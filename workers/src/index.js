@@ -1,5 +1,5 @@
 ﻿/**
- * CYBERDUDEBIVASH AI Security Hub — Main Router v8.1
+ * CYBERDUDEBIVASH AI Security Hub — Main Router v19.0
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
  * Continuous Monitoring, Multi-Tenant Orgs, Content Engine, Public API Platform
  *
@@ -297,6 +297,22 @@ import {
   trackRevenueEvent,
   getOfferPerformance,
 } from './services/mcpRevenueEngine.js';
+
+// ─── GOD MODE v19: Threat Hunting + Audit Log + Vuln Management ──────────────
+import {
+  handleRunHunt, handleHuntTemplates, handleIOCLookup,
+  handleHuntSessions, handleMITREMatrix,
+} from './handlers/threatHunting.js';
+import {
+  handleGetAuditLog, handleWriteAuditEvent,
+  handleAuditExport, handleAuditSummary,
+  writeAuditEvent,
+} from './handlers/auditLog.js';
+import {
+  handleListVulns, handleCreateVuln, handleGetVuln,
+  handleRemediateVuln, handleVulnStats,
+  handleCVELookup, handleKEVFeed,
+} from './handlers/vulnManagement.js';
 
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
 import {
@@ -3294,6 +3310,121 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           ok: false, error: 'Funnel fetch failed', detail: err?.message
         }), { status: 500, headers: { 'Content-Type': 'application/json' } }), request));
       }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v19 — THREAT HUNTING ENGINE  (/api/hunt/*)
+    // KQL / Sigma / YARA query execution, IOC lookup, MITRE ATT&CK coverage
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/hunt — execute a threat hunt query
+    if (path === '/api/hunt' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: request.headers.get('CF-Connecting-IP') || 'ip:unknown' }));
+      return withSecurityHeaders(withCors(await handleRunHunt(request, env, authCtx), request));
+    }
+
+    // GET /api/hunt/templates — list built-in hunt query templates
+    if (path === '/api/hunt/templates' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleHuntTemplates(request, env, authCtx), request));
+    }
+
+    // POST /api/hunt/ioc — IOC enrichment lookup
+    if (path === '/api/hunt/ioc' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: request.headers.get('CF-Connecting-IP') || 'ip:unknown' }));
+      return withSecurityHeaders(withCors(await handleIOCLookup(request, env, authCtx), request));
+    }
+
+    // GET /api/hunt/sessions — list recent hunt sessions (auth required)
+    if (path === '/api/hunt/sessions' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleHuntSessions(request, env, authCtx), request));
+    }
+
+    // GET /api/hunt/mitre — MITRE ATT&CK technique coverage matrix
+    if (path === '/api/hunt/mitre' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleMITREMatrix(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v19 — AUDIT LOG  (/api/audit-log/*)
+    // Tamper-evident audit trail — 90-day retention, ENTERPRISE export
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/audit-log — query audit log
+    if (path === '/api/audit-log' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGetAuditLog(request, env, authCtx), request));
+    }
+
+    // POST /api/audit-log — write custom audit event (ENTERPRISE)
+    if (path === '/api/audit-log' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleWriteAuditEvent(request, env, authCtx), request));
+    }
+
+    // GET /api/audit-log/export — CSV or JSON export (ENTERPRISE)
+    if (path === '/api/audit-log/export' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleAuditExport(request, env, authCtx), request));
+    }
+
+    // GET /api/audit-log/summary — daily category stats
+    if (path === '/api/audit-log/summary' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleAuditSummary(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v19 — VULNERABILITY MANAGEMENT  (/api/vulns/*)
+    // Full vuln lifecycle: ingest → triage → remediate → verify → close
+    // Real NVD/CISA KEV integration, CVSS 3.1 + EPSS scoring
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/vulns/stats — dashboard stats
+    if (path === '/api/vulns/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleVulnStats(request, env, authCtx), request));
+    }
+
+    // GET /api/vulns/kev — CISA KEV catalog (live or seed)
+    if (path === '/api/vulns/kev' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleKEVFeed(request, env, authCtx), request));
+    }
+
+    // GET /api/vulns/cve/:cveId — live NVD CVE lookup
+    if (path.startsWith('/api/vulns/cve/') && method === 'GET') {
+      const cveId = path.slice('/api/vulns/cve/'.length);
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleCVELookup(request, env, authCtx, cveId), request));
+    }
+
+    // GET /api/vulns — list vulnerabilities
+    if (path === '/api/vulns' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleListVulns(request, env, authCtx), request));
+    }
+
+    // POST /api/vulns — create / ingest a vulnerability
+    if (path === '/api/vulns' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleCreateVuln(request, env, authCtx), request));
+    }
+
+    // POST /api/vulns/:id/remediate — advance remediation stage
+    if (path.match(/^\/api\/vulns\/[^/]+\/remediate$/) && method === 'POST') {
+      const vulnId  = path.split('/')[3];
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleRemediateVuln(request, env, authCtx, vulnId), request));
+    }
+
+    // GET /api/vulns/:id — single vuln detail
+    if (path.match(/^\/api\/vulns\/[^/]+$/) && method === 'GET') {
+      const vulnId  = path.split('/')[3];
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleGetVuln(request, env, authCtx, vulnId), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

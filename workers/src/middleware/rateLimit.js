@@ -97,6 +97,77 @@ export async function checkRateLimitV2(env, authCtx, endpoint) {
   return { allowed: true, tier, remaining: Math.max(0, remaining), reset: 'tomorrow UTC midnight' };
 }
 
+// ─── Cost-Based Rate Limiting ────────────────────────────────────────────────
+// Expensive operations (AI scans, full redteam, etc.) cost more quota units.
+// This prevents tier abuse where a user exhausts quota via heavy endpoints.
+export const ENDPOINT_COST = {
+  'scan/domain':          1,
+  'scan/ai':              3,
+  'scan/redteam':         5,
+  'scan/identity':        2,
+  'scan/compliance':      2,
+  'ai/analyze':           4,
+  'ai/simulate':          5,
+  'ai/forecast':          4,
+  'ai/chat':              2,
+  'ai/rules':             3,
+  'hunt':                 3,
+  'hunt/ioc':             2,
+  'vulns/remediate':      1,
+  'anomaly':              2,
+  'predictive':           3,
+  'attack-graph':         3,
+  'threat-intel':         1,
+  'audit-log':            1,
+  'default':              1,
+};
+
+export async function checkRateLimitCost(env, authCtx, endpoint) {
+  const cost = ENDPOINT_COST[endpoint] ?? ENDPOINT_COST['default'];
+  if (cost <= 1) return checkRateLimitV2(env, authCtx, endpoint);
+
+  const tier        = authCtx.tier || 'FREE';
+  const limits      = TIERS[tier] || TIERS.FREE;
+  const dailyLimit  = limits.daily_limit;
+
+  // Enterprise: unlimited — skip all checks
+  if (dailyLimit === -1) {
+    await trackStats(env, endpoint);
+    return { allowed: true, tier, remaining: 9999, reset: 'never', cost };
+  }
+
+  if (!env?.SECURITY_HUB_KV) {
+    return { allowed: true, tier, remaining: dailyLimit, reset: 'unknown', cost };
+  }
+
+  const identity = authCtx.identity;
+
+  // Abuse check
+  const abuseFlag = await env.SECURITY_HUB_KV.get(`abuse:${identity}`).catch(() => null);
+  if (abuseFlag === 'banned') {
+    return { allowed: false, reason: 'banned', tier, remaining: 0, reset: 'contact_support', cost };
+  }
+
+  // Check cost-weighted global daily usage
+  const costKey = `rl:cost:${identity}:${new Date().toISOString().slice(0,10)}`;
+  const usedCost = parseInt(await env.SECURITY_HUB_KV.get(costKey).catch(() => '0') || '0', 10);
+  const costBudget = dailyLimit * 2; // FREE has 5 req/day → 10 cost units total
+
+  if (usedCost + cost > costBudget) {
+    return {
+      allowed: false, reason: 'cost_budget_exceeded', tier,
+      remaining: Math.max(0, costBudget - usedCost),
+      reset: 'tomorrow UTC midnight', retry_after: 86400, cost,
+    };
+  }
+
+  // Passed — consume cost units (fire-and-forget)
+  env.SECURITY_HUB_KV.put(costKey, String(usedCost + cost), { expirationTtl: 86400 }).catch(() => {});
+  trackStats(env, endpoint).catch(() => {});
+
+  return { allowed: true, tier, remaining: Math.max(0, costBudget - usedCost - cost), reset: 'tomorrow UTC midnight', cost };
+}
+
 // ─── Stats Tracking (fire-and-forget) ────────────────────────────────────────
 async function trackStats(env, endpoint) {
   if (!env?.SECURITY_HUB_KV) return;

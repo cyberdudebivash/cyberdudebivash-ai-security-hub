@@ -776,7 +776,7 @@ jobs:
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️ ";; failure) echo "❌";; *) echo "⚠️ ";; esac; }
 
           echo "╔══════════════════════════════════════════════════════════════════╗"
-          echo "║    CYBERDUDEBIVASH AI Security Hub v9.0 — DEPLOYMENT REPORT     ║"
+          echo "║    CYBERDUDEBIVASH AI Security Hub v19.0 -- DEPLOYMENT REPORT   ║"
           echo "╠══════════════════════════════════════════════════════════════════╣"
           echo "║  $(icon "$W") Workers API    : ${{ env.PRIMARY_URL }}${{ env.HEALTH_PATH }}"
           echo "║  $(icon "$W") Workers.dev    : ${{ env.WORKERS_URL }}"
