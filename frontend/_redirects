@@ -1,0 +1,49 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Cloudflare Pages Redirect Rules v1.0
+#
+# CRITICAL: Static assets MUST be listed BEFORE the SPA wildcard catch-all.
+# Cloudflare Pages processes rules top-to-bottom, first match wins.
+# These rules ensure og-image.png, assets/*, and other statics are NEVER
+# intercepted by the SPA HTML fallback.
+#
+# Rule format: [source] [destination] [status_code]
+# 200 = serve as-is (proxy), 301/302 = redirect
+# =============================================================================
+
+# ── Static assets — serve directly, NEVER intercept ─────────────────────────
+# Images at root
+/og-image.png          /og-image.png           200
+/favicon.ico           /favicon.ico            200
+/manifest.json         /manifest.json          200
+/robots.txt            /robots.txt             200
+/sitemap.xml           /sitemap.xml            200
+/ads.txt               /ads.txt                200
+/sw.js                 /sw.js                  200
+/version.json          /version.json           200
+
+# Asset directories — never override with SPA HTML
+/assets/*              /assets/:splat          200
+/public/*              /public/:splat          200
+/data/*                /data/:splat            200
+
+# ── Page routes — serve their own HTML ───────────────────────────────────────
+/about                 /about.html             200
+/services              /services.html          200
+/tools                 /tools.html             200
+/blog                  /blog/index.html        200
+/blog/*                /blog/:splat            200
+/intel                 /intel.html             200
+/booking               /booking.html           200
+/contact               /contact.html           200
+/academy               /academy.html           200
+/soc-dashboard         /soc-dashboard.html     200
+/privacy-policy        /privacy-policy.html    200
+/terms-of-service      /terms-of-service.html  200
+/refund-policy         /refund-policy.html     200
+/user-dashboard        /user-dashboard.html    200
+/admin-payments        /admin-payments.html    200
+
+# ── SPA catch-all — MUST be LAST ─────────────────────────────────────────────
+# Only fires when no static file or page route matched above.
+# This is what causes og-image.png to return HTML — fixed by ordering above.
+/*                     /index.html             200
