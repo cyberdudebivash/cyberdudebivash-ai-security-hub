@@ -724,7 +724,28 @@ export default {
     if (env.SECURITY_HUB_KV && !env.KV) env.KV = env.SECURITY_HUB_KV;
     if (env.SECURITY_HUB_KV && !env.CDB_KV) env.CDB_KV = env.SECURITY_HUB_KV; // alias for manualPayments.js
 
+    // ── P0 FIX: Binding validation — fail fast before any handler runs ──────
+    // Prevents cryptic "Cannot read properties of undefined (reading 'prepare')"
+    // runtime crashes when D1/KV bindings are misconfigured or missing.
+    // Health, version and status routes are exempt so monitoring always works.
     const url    = new URL(request.url);
+    const _earlyPath = url.pathname.replace(/\/+$/, '') || '/';
+    const _bindingExempt = ['/api/health', '/api/version', '/api/status', '/api/v13/status'];
+    if (!env.DB || !env.KV) {
+      if (!_bindingExempt.includes(_earlyPath)) {
+        const _missing = [];
+        if (!env.DB) _missing.push('D1 database (SECURITY_HUB_DB)');
+        if (!env.KV) _missing.push('KV namespace (SECURITY_HUB_KV)');
+        console.error('[CDB] CRITICAL: Missing bindings —', _missing.join(', '));
+        const _errResp = Response.json({
+          success: false,
+          error:   'Platform bindings not configured. Contact support.',
+          missing: _missing,
+          code:    'ERR_BINDING_MISSING',
+        }, { status: 503 });
+        return withSecurityHeaders(withCors(_errResp, request));
+      }
+    }
     const path   = url.pathname.replace(/\/+$/, '') || '/';
     const method = request.method.toUpperCase();
 
