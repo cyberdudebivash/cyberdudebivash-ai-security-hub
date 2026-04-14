@@ -550,3 +550,470 @@ export async function handleMCPDecision(request, env, authCtx = {}) {
     generated_at:         new Date().toISOString(),
   });
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOD MODE v16 — POST /mcp/control — UNIFIED MCP CONTROL ENGINE
+// Merges: /mcp/decision + /mcp/bundle + user memory (D1) + KV caching
+// Returns full ai_blocks + ui_blocks — THE OPERATING SYSTEM of the platform
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MCP_CONTROL_CACHE_TTL = 180; // 3 min KV cache per unique context
+const MCP_CONTROL_VERSION   = '16.0';
+
+/**
+ * Load user memory context from D1
+ * Returns: { last_scan, purchases, scan_count, top_module, behavior_tags }
+ * SAFE: all DB errors return empty context — never blocks the response
+ */
+async function loadUserMemory(env, userId, userEmail) {
+  const empty = { last_scan: null, purchases: [], scan_count: 0, top_module: null, behavior_tags: [], is_returning: false };
+  if (!env?.DB || (!userId && !userEmail)) return empty;
+
+  try {
+    // Run queries in parallel for speed
+    const [scanRow, purchaseRows] = await Promise.allSettled([
+      // Last scan + scan count
+      env.DB.prepare(`
+        SELECT module, target, risk_score, created_at
+        FROM scan_history
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+      `).bind(userId || '').first().catch(() => null),
+
+      // Past purchases from delivery_tokens
+      env.DB.prepare(`
+        SELECT product_id, amount_inr, activated_at, status
+        FROM delivery_tokens
+        WHERE (user_id = ? OR payer_email = ?)
+          AND status IN ('active','used')
+        ORDER BY activated_at DESC
+        LIMIT 10
+      `).bind(userId || '', userEmail || '').all().catch(() => ({ results: [] })),
+    ]);
+
+    const lastScan    = scanRow.status === 'fulfilled' ? scanRow.value : null;
+    const purchases   = purchaseRows.status === 'fulfilled'
+      ? (purchaseRows.value?.results || []) : [];
+
+    // Top module from scan_history (aggregate)
+    let topModule = null;
+    try {
+      const topRow = await env.DB.prepare(`
+        SELECT module, COUNT(*) as cnt
+        FROM scan_history
+        WHERE user_id = ?
+        GROUP BY module
+        ORDER BY cnt DESC
+        LIMIT 1
+      `).bind(userId || '').first();
+      topModule = topRow?.module || null;
+    } catch { /* ignore */ }
+
+    // Scan count
+    let scanCount = 0;
+    try {
+      const cntRow = await env.DB.prepare(`SELECT COUNT(*) as c FROM scan_history WHERE user_id = ?`)
+        .bind(userId || '').first();
+      scanCount = parseInt(cntRow?.c || 0, 10);
+    } catch { /* ignore */ }
+
+    // Behavior tags
+    const behaviorTags = [];
+    if (scanCount >= 10)          behaviorTags.push('power_user');
+    if (scanCount >= 3)           behaviorTags.push('returning');
+    if (purchases.length >= 2)    behaviorTags.push('multi_buyer');
+    if (purchases.length >= 1)    behaviorTags.push('paid_user');
+    if (lastScan?.risk_score >= 70) behaviorTags.push('high_risk_history');
+
+    return {
+      last_scan:    lastScan ? {
+        module:     lastScan.module,
+        target:     lastScan.target,
+        risk_score: lastScan.risk_score,
+        date:       lastScan.created_at,
+      } : null,
+      purchases:    purchases.map(p => ({ product: p.product_id, amount: p.amount_inr, date: p.activated_at })),
+      scan_count:   scanCount,
+      top_module:   topModule,
+      behavior_tags: behaviorTags,
+      is_returning: scanCount >= 2,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Determine UI blocks based on context + user memory
+ * Returns array of block ids to render — frontend maps these to components
+ */
+function resolveUIBlocks(ctx) {
+  const blocks = [];
+  const { risk_level, tier, user_memory, enterprise_flag, module, bundle_offer, upsell } = ctx;
+
+  // Always show scan summary
+  blocks.push('scan_summary');
+
+  // Risk-driven blocks
+  if (risk_level === 'CRITICAL' || risk_level === 'HIGH') {
+    blocks.push('risk_alert_banner');
+    blocks.push('remediation_steps');
+  }
+
+  // Training recommendation — always useful
+  blocks.push('training_banner');
+
+  // Bundle offer if relevant
+  if (bundle_offer) blocks.push('bundle_offer');
+
+  // Upsell — only for FREE tier
+  if (upsell?.show && tier === 'FREE') blocks.push('upsell_cta');
+
+  // Enterprise block — high risk or critical findings
+  if (enterprise_flag) blocks.push('enterprise_cta');
+
+  // Return-user offer: different messaging
+  if (user_memory?.is_returning) blocks.push('return_user_offer');
+
+  // Multi-buyer: loyalty block
+  if (user_memory?.behavior_tags?.includes('multi_buyer')) blocks.push('loyalty_reward');
+
+  // Power user: advanced tools panel
+  if (user_memory?.behavior_tags?.includes('power_user')) blocks.push('advanced_tools_panel');
+
+  return [...new Set(blocks)]; // deduplicate
+}
+
+/**
+ * Personalization bar message driven by user memory
+ */
+function buildPersonalizationBar(user_memory, module, risk_level) {
+  if (!user_memory) return null;
+
+  if (user_memory.behavior_tags?.includes('multi_buyer')) {
+    return { icon: '🏆', title: 'Welcome back, valued member!', subtitle: `Your loyalty unlocks priority support. Today's scan: ${module.toUpperCase()} module.` };
+  }
+  if (user_memory.is_returning && user_memory.last_scan) {
+    const lastRisk = user_memory.last_scan.risk_score >= 70 ? 'HIGH risk' : 'MEDIUM risk';
+    return { icon: '🔄', title: 'Welcome back!', subtitle: `Your last scan (${user_memory.last_scan.target}) had ${lastRisk}. Let's track your improvement.` };
+  }
+  if (risk_level === 'CRITICAL' || risk_level === 'HIGH') {
+    return { icon: '🚨', title: 'Critical risks detected!', subtitle: 'Your security posture needs immediate attention. See remediation below.' };
+  }
+  return { icon: '🛡️', title: 'Security scan complete', subtitle: `${module.toUpperCase()} module analysis ready. Review findings below.` };
+}
+
+/**
+ * Return-user specific offer (different from standard upsell)
+ */
+function buildReturnUserOffer(user_memory, module, tier) {
+  if (!user_memory?.is_returning || tier !== 'FREE') return null;
+
+  const scan_count = user_memory.scan_count || 0;
+  if (scan_count >= 5) {
+    return {
+      show: true,
+      type: 'loyalty_upgrade',
+      headline: `You've run ${scan_count} scans — you're serious about security!`,
+      offer_text: 'Upgrade to Pro and get unlimited scans + full history dashboard.',
+      cta_text: 'Upgrade to Pro — ₹1,499/mo',
+      cta_action: "CDB_PAY.open('PRO',1499,'Pro Plan')",
+      urgency: 'medium',
+      discount_label: 'Special rate for returning users',
+    };
+  }
+  if (scan_count >= 2) {
+    return {
+      show: true,
+      type: 'starter_nudge',
+      headline: 'Back for more security intel?',
+      offer_text: 'Starter Plan gives you 50 scans/month + full PDF reports.',
+      cta_text: 'Get Starter Plan — ₹499/mo',
+      cta_action: "CDB_PAY.open('STARTER',499,'Starter Plan')",
+      urgency: 'low',
+    };
+  }
+  return null;
+}
+
+/**
+ * POST /mcp/control — THE UNIFIED CONTROL ENGINE
+ *
+ * Input:
+ *   { module, target, risk_score, tier, findings, locked_count,
+ *     scan_id, page_context, user_email }
+ *
+ * Output:
+ *   {
+ *     risk_level, primary_action, recommended_tools, recommended_training,
+ *     bundle_offer, cta, urgency, enterprise_flag, ui_blocks,
+ *     upsell, remediation_steps, personalization_bar, return_user_offer,
+ *     user_context, source, version, generated_at
+ *   }
+ *
+ * FAILSAFE: ANY error falls back to /mcp/decision logic — NEVER crashes
+ */
+export async function handleMCPControl(request, env, authCtx = {}) {
+  const startMs = Date.now();
+
+  // ── Parse + sanitize input ─────────────────────────────────────────────────
+  let body = {};
+  try { body = await request.json(); } catch { /* empty body ok */ }
+
+  const module       = VALID_MODULES.includes(body.module) ? body.module : 'domain';
+  const risk_score   = clampScore(body.risk_score, 0, 100);
+  const tier         = VALID_TIERS.includes((body.tier || '').toUpperCase())
+    ? body.tier.toUpperCase() : 'FREE';
+  const target       = sanitizeStr(body.target || '', 120);
+  const findings     = Array.isArray(body.findings)
+    ? body.findings.slice(0, 20).map(sanitizeFinding).filter(Boolean) : [];
+  const locked_count = Math.max(0, parseInt(body.locked_count || 0, 10) || 0);
+  const page_context = sanitizeStr(body.page_context || 'scan_result', 60);
+  const user_email   = sanitizeStr(body.user_email || authCtx?.email || '', 120);
+  const user_id      = authCtx?.userId || authCtx?.user_id || null;
+
+  // ── KV Cache: check for cached decision (same context fingerprint) ─────────
+  const cacheKey = `mcp:ctrl:${module}:${Math.round(risk_score/10)*10}:${tier}:${locked_count > 0 ? 'locked' : 'open'}`;
+  if (env?.SECURITY_HUB_KV && !user_id) {
+    // Only cache for anonymous — logged-in users get personalized decisions
+    try {
+      const cached = await env.SECURITY_HUB_KV.get(cacheKey, 'json');
+      if (cached) {
+        return new Response(JSON.stringify({
+          success: true,
+          data: { ...cached, cache_hit: true, latency_ms: Date.now() - startMs },
+          error: null,
+          ts: new Date().toISOString(),
+        }), { headers: { 'Content-Type': 'application/json', 'X-MCP-Cache': 'HIT' } });
+      }
+    } catch { /* cache miss — continue */ }
+  }
+
+  // ── Rate limiting via KV ───────────────────────────────────────────────────
+  const ip = authCtx?.ip || 'anon';
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const rlKey = `mcp:ctrl:rl:${ip}`;
+      const count = parseInt(await env.SECURITY_HUB_KV.get(rlKey).catch(() => '0') || '0', 10);
+      if (count >= 60) {
+        return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded', data: null }), {
+          status: 429, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      env.SECURITY_HUB_KV.put(rlKey, String(count + 1), { expirationTtl: 60 }).catch(() => {});
+    } catch { /* ignore rate limit errors */ }
+  }
+
+  try {
+    // ── Phase 1: Try external MCP server (shadow mode) ─────────────────────
+    const mcpPayload = { module, target, risk_score, tier, findings: findings.slice(0,10), locked_count, page_context };
+    let externalResult = null;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), MCP_TIMEOUT_MS);
+      const mcpRes = await fetch(`${MCP_BASE_URL}/control`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env?.MCP_API_KEY || ''}`,
+          'X-Platform': 'CYBERDUDEBIVASH-AI-HUB',
+          'X-Version': MCP_CONTROL_VERSION,
+        },
+        body: JSON.stringify(mcpPayload),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (mcpRes.ok) {
+        const mcpData = await mcpRes.json();
+        externalResult = mcpData?.data || mcpData || null;
+      }
+    } catch { /* external MCP offline — fallback */ }
+
+    // ── Phase 4: Load user memory from D1 ─────────────────────────────────
+    const user_memory = await loadUserMemory(env, user_id, user_email);
+
+    // ── Phase 1 (local fallback): Build full decision ──────────────────────
+    const recommended_tools    = externalResult?.recommended_tools
+      || TOOL_RECOMMENDATIONS[module] || TOOL_RECOMMENDATIONS['domain'];
+    const recommended_training = externalResult?.recommended_training
+      || TRAINING_INDEX[module] || TRAINING_INDEX['domain'];
+    const remediation_steps    = externalResult?.remediation_steps
+      || generateRemediationSteps(module, risk_score, findings);
+    const learning_path        = externalResult?.learning_path
+      || generateLearningPath(module, risk_score);
+
+    // Risk level
+    const risk_level = risk_score >= 80 ? 'CRITICAL'
+      : risk_score >= 60 ? 'HIGH'
+      : risk_score >= 40 ? 'MEDIUM' : 'LOW';
+
+    // Enterprise flag: high risk OR 3+ critical findings
+    const critical_count   = findings.filter(f => f.severity === 'CRITICAL').length;
+    const enterprise_flag  = risk_score >= 85 || critical_count >= 3;
+
+    // Upsell decision
+    const upsell = evaluateUpsell({ module, risk_score, locked_count, tier });
+
+    // Bundle decision
+    const bundleCtx = { module, risk_score, tier };
+    const bundle_offer = (() => {
+      const ranked = BUNDLE_CATALOG
+        .filter(b => !b.enterprise_only || tier === 'ENTERPRISE')
+        .map(b => ({ ...b, relevance: b.best_for.includes(module) ? 2 : 1 }))
+        .sort((a, z) => z.relevance - a.relevance);
+      const best = ranked[0];
+      if (!best || risk_score < 30) return null;  // only show if some risk exists
+      const hour = new Date().getHours();
+      return {
+        ...best,
+        countdown_iso:  new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+        urgency:        risk_score >= 70 ? 'CRITICAL' : 'HIGH',
+        social_proof: {
+          units_sold_today: 847 + (hour * 3),
+          viewing_now:      12 + (hour % 7),
+          label:            `${12 + (hour % 7)} people viewing this offer right now`,
+        },
+        cta_text:   `Get ${best.name} — ₹${best.bundle_price} (Save ${best.discount_pct}%)`,
+        cta_action: `CDB_PAY.open('${best.id}',${best.bundle_price},'${best.name}')`,
+      };
+    })();
+
+    // Primary action: most important thing user should do
+    let primary_action = 'review_findings';
+    let cta            = null;
+    let urgency        = 'low';
+
+    if (risk_level === 'CRITICAL') {
+      primary_action = 'immediate_remediation';
+      cta = enterprise_flag
+        ? 'Book Emergency Security Assessment — Free consultation'
+        : `Fix critical vulnerabilities NOW — Upgrade to Pro for full roadmap`;
+      urgency = 'critical';
+    } else if (risk_level === 'HIGH') {
+      primary_action = 'upgrade_and_remediate';
+      cta = upsell?.show ? upsell.cta_text : `Get full remediation roadmap — ₹199`;
+      urgency = 'high';
+    } else if (risk_level === 'MEDIUM') {
+      primary_action = 'learn_and_improve';
+      cta = recommended_training[0] ? `Learn to fix this: ${recommended_training[0].name}` : 'Explore security training';
+      urgency = 'medium';
+    } else {
+      primary_action = 'maintain_posture';
+      cta = 'Keep monitoring — set up continuous scan alerts';
+      urgency = 'low';
+    }
+
+    // Adjust CTA for return users with purchases
+    if (user_memory.behavior_tags?.includes('paid_user') && tier === 'FREE') {
+      cta = `Welcome back! Reactivate your plan for continued protection`;
+    }
+
+    // ── Phase 4: Return-user specific offer ───────────────────────────────
+    const return_user_offer = buildReturnUserOffer(user_memory, module, tier);
+
+    // ── Phase 5: Personalization bar ──────────────────────────────────────
+    const personalization_bar = buildPersonalizationBar(user_memory, module, risk_level);
+
+    // ── Phase 5: UI Blocks ────────────────────────────────────────────────
+    const ui_blocks = resolveUIBlocks({
+      risk_level, tier, user_memory, enterprise_flag, module, bundle_offer, upsell,
+    });
+
+    // ── Build final response ───────────────────────────────────────────────
+    const result = {
+      // Core decision
+      risk_level,
+      primary_action,
+      recommended_tools:    recommended_tools.slice(0, 3),
+      recommended_training: recommended_training.slice(0, 2),
+      bundle_offer,
+      cta,
+      urgency,
+      enterprise_flag,
+      enterprise_cta: enterprise_flag ? 'Book Enterprise Demo — Free security assessment' : null,
+
+      // UI system
+      ui_blocks,
+      personalization_bar,
+
+      // User state
+      return_user_offer,
+      upsell: upsell.show ? upsell : null,
+      remediation_steps: remediation_steps.slice(0, 5),
+      learning_path,
+
+      // Context echo (for frontend to store)
+      user_context: {
+        last_scan:     user_memory.last_scan,
+        purchases:     user_memory.purchases.slice(0, 5),
+        scan_count:    user_memory.scan_count,
+        top_module:    user_memory.top_module,
+        behavior_tags: user_memory.behavior_tags,
+        is_returning:  user_memory.is_returning,
+      },
+
+      // Meta
+      module, risk_score, tier, target,
+      source:       externalResult ? 'mcp_server' : 'local_engine',
+      version:      MCP_CONTROL_VERSION,
+      latency_ms:   Date.now() - startMs,
+      cache_hit:    false,
+      generated_at: new Date().toISOString(),
+    };
+
+    // ── Phase 8: KV Cache for anonymous requests ───────────────────────────
+    if (env?.SECURITY_HUB_KV && !user_id) {
+      env.SECURITY_HUB_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: MCP_CONTROL_CACHE_TTL }).catch(() => {});
+    }
+
+    return new Response(JSON.stringify({ success: true, data: result, error: null, ts: new Date().toISOString() }), {
+      headers: { 'Content-Type': 'application/json', 'X-MCP-Cache': 'MISS', 'X-MCP-Version': MCP_CONTROL_VERSION },
+    });
+
+  } catch (err) {
+    // ── Phase 7: FAILSAFE — fallback to /mcp/decision ─────────────────────
+    console.error('[MCP Control] Failsafe activated:', err.message);
+    try {
+      // Re-create a minimal safe request and delegate to existing /mcp/decision
+      const fallbackBody = JSON.stringify({ module, target, risk_score, tier, findings, locked_count });
+      const fallbackReq  = new Request(request.url, { method: 'POST', body: fallbackBody, headers: { 'Content-Type': 'application/json' } });
+      const fallback     = await handleMCPDecision(fallbackReq, env, authCtx);
+      // Wrap fallback result in control format
+      const fb = await fallback.json();
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          ...(fb?.data || fb),
+          ui_blocks:          ['scan_summary', 'training_banner', 'upsell_cta'],
+          personalization_bar: null,
+          return_user_offer:  null,
+          user_context:       { last_scan: null, purchases: [], scan_count: 0, behavior_tags: [], is_returning: false },
+          source:             'failsafe_fallback',
+          version:            MCP_CONTROL_VERSION,
+          latency_ms:         Date.now() - startMs,
+        },
+        error: null,
+        ts: new Date().toISOString(),
+      }), { headers: { 'Content-Type': 'application/json', 'X-MCP-Failsafe': '1' } });
+    } catch (fallbackErr) {
+      // Absolute last resort — static minimal response that NEVER crashes UI
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          risk_level: 'MEDIUM', primary_action: 'review_findings',
+          recommended_tools: [], recommended_training: [],
+          bundle_offer: null, cta: 'View your scan results below',
+          urgency: 'medium', enterprise_flag: false, enterprise_cta: null,
+          ui_blocks: ['scan_summary'],
+          personalization_bar: null, return_user_offer: null, upsell: null,
+          remediation_steps: [], learning_path: [],
+          user_context: { last_scan: null, purchases: [], scan_count: 0, behavior_tags: [], is_returning: false },
+          source: 'emergency_fallback', version: MCP_CONTROL_VERSION,
+          latency_ms: Date.now() - startMs,
+        },
+        error: null, ts: new Date().toISOString(),
+      }), { headers: { 'Content-Type': 'application/json', 'X-MCP-Emergency': '1' } });
+    }
+  }
+}

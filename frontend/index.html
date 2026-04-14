@@ -8676,6 +8676,11 @@ function renderResults(module, data) {
   const locked   = data.locked_findings || [];
   const mon      = data.monetization || {};
 
+  // GOD MODE v16: Track scan context for MCP Control integration
+  window._lastScanFindings = [...findings, ...locked].slice(0, 20);
+  window._lastLockedCount  = locked.length || 0;
+  window._currentUserTier  = localStorage.getItem('cdb_tier') || 'FREE';
+
   // Risk header
   let html = `<div class="risk-header">
     <div class="risk-circle risk-${level}">
@@ -9255,6 +9260,43 @@ function unlockResultsUI(module, target, verifyData) {
 
   // 11. Track scan completion + trigger upsell nudge
   CDB_TRACK.scanComplete(module, risk_score || 0);
+
+  // ── GOD MODE v16: MCP Control Integration (Phase 2) ─────────────────────
+  // Safe wrapper: MCP enhances UI — fallback preserves existing behavior.
+  // DO NOT remove existing upsell/training logic above — MCP complements it.
+  try {
+    if (typeof window.MCPControl !== 'undefined') {
+      // Build context from current scan
+      const _mcpCtx = {
+        module:       module,
+        risk_score:   risk_score || 0,
+        tier:         window._currentUserTier || 'FREE',
+        target:       target || '',
+        findings:     window._lastScanFindings || [],
+        locked_count: window._lastLockedCount  || 0,
+        user_email:   window._currentUserEmail || '',
+        page_context: 'scan_result',
+      };
+      // Clear in-memory cache for fresh decision on new scan
+      window.MCPControl.clearCache();
+      // Mount point: inject after the scan result panel
+      const _mcpMount = document.getElementById(`results-${module}`) || null;
+      window.MCPControl.integrate(_mcpCtx, {
+        container: _mcpMount,
+        onDecision: function(decision) {
+          // Store decision for other components
+          window._lastMCPDecision = decision;
+          // Update personalization bar if logged in
+          if (window._currentUserTier && window._currentUserTier !== 'FREE') {
+            window.MCPControl.showPersonalizationBar(decision);
+          }
+        },
+      });
+    }
+  } catch (_mcpErr) {
+    console.warn('[GOD MODE v16] MCP Control integration error (non-fatal):', _mcpErr);
+    // Existing UI continues unaffected
+  }
 }
 
 // ─── Inject PDF/HTML Download Button ─────────────────────────────────────────
@@ -19335,6 +19377,34 @@ window.showPaymentInstructions = function() {
      Payment Verification · Revenue Tracking · Full Integration
      ═══════════════════════════════════════════════════════════════════ -->
 <script src="/assets/revenue-engine-v14.js" defer></script>
+
+<!-- GOD MODE v16: MCP Control Client — THE OPERATING SYSTEM -->
+<!-- Safe: module type with window.MCPControl global fallback -->
+<script type="module">
+  import { MCPControl } from '/src/mcpControl.js';
+  // Expose globally for inline scan result hooks
+  window.MCPControl = MCPControl;
+</script>
+<!-- Inline fallback: if module import fails (older browsers), MCPControl is a no-op -->
+<script>
+  // Track scan context for MCP Control integration
+  window._lastScanFindings  = window._lastScanFindings  || [];
+  window._lastLockedCount   = window._lastLockedCount   || 0;
+  window._currentUserTier   = localStorage.getItem('cdb_tier')  || 'FREE';
+  window._currentUserEmail  = localStorage.getItem('cdb_email') || '';
+  window._lastMCPDecision   = null;
+
+  // Ensure MCPControl is available as no-op if module failed to load
+  if (typeof window.MCPControl === 'undefined') {
+    window.MCPControl = {
+      decide:               async () => ({ ui_blocks: [], source: 'noop' }),
+      renderUIBlocks:       () => {},
+      showPersonalizationBar: () => {},
+      integrate:            async () => {},
+      clearCache:           () => {},
+    };
+  }
+</script>
 
 </body>
 </html>

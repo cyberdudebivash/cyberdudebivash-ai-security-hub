@@ -275,11 +275,12 @@ import {
   handleUserReports,
 } from './handlers/delivery.js';
 
-// ─── GOD MODE v15: MCP Shadow Engine ─────────────────────────────────────────
+// ─── GOD MODE v16: MCP Control Engine (unified) ───────────────────────────────
 import {
   handleMCPRecommend, handleMCPUpsell,
   handleMCPTrainingMap, handleMCPHealth,
   handleMCPBundle, handleMCPDecision,
+  handleMCPControl,
 } from './services/mcpEngine.js';
 
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
@@ -3023,6 +3024,40 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/mcp/decision' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPDecision(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v16 — MCP CONTROL ENGINE  (/mcp/control)
+    // THE OPERATING SYSTEM: merges decision + bundle + user memory + ui_blocks
+    // KV cached, D1 user context, triple failsafe. Frontend MUST call this first.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /mcp/control — Unified MCP Control Engine v16
+    if (path === '/mcp/control' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, ip: request.headers.get('CF-Connecting-IP') || 'anon' }));
+      return withSecurityHeaders(withCors(await handleMCPControl(request, env, authCtx), request));
+    }
+
+    // GET /mcp/control/status — health + capabilities manifest
+    if (path === '/mcp/control/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(Response.json({
+        success: true,
+        data: {
+          version: '16.0',
+          status: 'operational',
+          capabilities: ['decision','bundle','user_memory','ui_blocks','personalization','kv_cache','failsafe'],
+          endpoints: {
+            control:   'POST /mcp/control',
+            decision:  'POST /mcp/decision',
+            bundle:    'POST /mcp/bundle',
+            recommend: 'POST /mcp/recommend',
+            upsell:    'POST /mcp/upsell',
+            health:    'GET /mcp/health',
+          },
+          cache_ttl_s: 180,
+          failsafe_layers: 3,
+        },
+      }), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

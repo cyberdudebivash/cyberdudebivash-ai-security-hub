@@ -3498,42 +3498,94 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const lastScan = JSON.parse(localStorage.getItem('cdb_last_scan') || 'null');
     if (!lastScan) return;
 
+    // ── GOD MODE v16: Use /mcp/control (unified) with /mcp/decision fallback ──
+    let rec = null;
+
+    // Layer 1: try /mcp/control (has user memory + ui_blocks + personalization)
     try {
-      const res = await apiFetch('/mcp/decision', {
-        method: 'POST',
+      const ctrl = await fetch('/mcp/control', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          module:      lastScan.module || 'domain',
-          target:      lastScan.target || '',
-          risk_score:  lastScan.risk_score || 50,
-          tier:        localStorage.getItem('cdb_tier') || 'FREE',
-          findings:    lastScan.findings || [],
+          module:       lastScan.module     || 'domain',
+          target:       lastScan.target     || '',
+          risk_score:   lastScan.risk_score || 50,
+          tier:         localStorage.getItem('cdb_tier') || 'FREE',
+          findings:     lastScan.findings   || [],
+          user_email:   localStorage.getItem('cdb_email') || '',
+          page_context: 'dashboard',
         }),
       });
-      if (!res.ok) return;
-      const d = await res.json();
-      const rec = d?.data || d;
-
-      if (!rec) return;
-
-      const headline = document.getElementById('pb-headline');
-      const body     = document.getElementById('pb-body');
-      const cta      = document.getElementById('pb-cta');
-
-      if (rec.recommended_training?.length) {
-        const t = rec.recommended_training[0];
-        headline.textContent = `🧠 Based on your last scan of ${lastScan.target || 'your target'}`;
-        body.textContent     = `We recommend: ${t.name || t.id} — ${t.relevance_reason || 'for your security posture'}`;
-        cta.textContent      = 'View Training';
-        cta.onclick          = () => window.open('/academy.html', '_blank');
-        bar.style.display    = 'flex';
-      } else if (rec.offer_type === 'upgrade' && rec.recommended_tools?.length) {
-        headline.textContent = `⚡ Unlock full analysis for ${lastScan.target || 'your domain'}`;
-        body.textContent     = rec.cta || 'Upgrade to unlock all findings and remediation steps';
-        cta.textContent      = 'Upgrade Plan';
-        cta.onclick          = () => showPage('billing', null);
-        bar.style.display    = 'flex';
+      if (ctrl.ok) {
+        const cj = await ctrl.json();
+        rec = cj?.data || cj;
       }
-    } catch { /* fail silently */ }
+    } catch { /* fallback to /mcp/decision */ }
+
+    // Layer 2: fallback to /mcp/decision (existing v15 endpoint)
+    if (!rec) {
+      try {
+        const res = await apiFetch('/mcp/decision', {
+          method: 'POST',
+          body: JSON.stringify({
+            module:      lastScan.module || 'domain',
+            target:      lastScan.target || '',
+            risk_score:  lastScan.risk_score || 50,
+            tier:        localStorage.getItem('cdb_tier') || 'FREE',
+            findings:    lastScan.findings || [],
+          }),
+        });
+        if (res.ok) {
+          const d = await res.json();
+          rec = d?.data || d;
+        }
+      } catch { /* fail silently */ }
+    }
+
+    if (!rec) return;
+
+    // Store for other components
+    window._lastMCPDecision = rec;
+
+    const headline = document.getElementById('pb-headline');
+    const body     = document.getElementById('pb-body');
+    const cta      = document.getElementById('pb-cta');
+
+    // Use MCP personalization_bar if available (v16)
+    if (rec.personalization_bar) {
+      const pb = rec.personalization_bar;
+      if (headline) headline.textContent = `${pb.icon || '🛡️'} ${pb.title || ''}`;
+      if (body)     body.textContent     = pb.subtitle || '';
+      // Set CTA based on primary_action
+      if (cta) {
+        if (rec.primary_action === 'upgrade_and_remediate' || rec.primary_action === 'immediate_remediation') {
+          cta.textContent = 'Upgrade Plan';
+          cta.onclick     = () => showPage('billing', null);
+        } else if (rec.recommended_training?.length) {
+          cta.textContent = 'View Training';
+          cta.onclick     = () => window.open('/academy.html', '_blank');
+        } else {
+          cta.textContent = 'View Report';
+          cta.onclick     = () => showPage('reports', null);
+        }
+      }
+      bar.style.display = 'flex';
+      return;
+    }
+
+    // Fallback: original display logic (backward compat)
+    if (rec.recommended_training?.length) {
+      const t = rec.recommended_training[0];
+      if (headline) headline.textContent = `🧠 Based on your last scan of ${lastScan.target || 'your target'}`;
+      if (body)     body.textContent     = `We recommend: ${t.name || t.id} — ${t.relevance_reason || 'for your security posture'}`;
+      if (cta) { cta.textContent = 'View Training'; cta.onclick = () => window.open('/academy.html', '_blank'); }
+      bar.style.display = 'flex';
+    } else if ((rec.offer_type === 'upgrade' || rec.primary_action === 'upgrade_and_remediate') && rec.recommended_tools?.length) {
+      if (headline) headline.textContent = `⚡ Unlock full analysis for ${lastScan.target || 'your domain'}`;
+      if (body)     body.textContent     = rec.cta || 'Upgrade to unlock all findings and remediation steps';
+      if (cta) { cta.textContent = 'Upgrade Plan'; cta.onclick = () => showPage('billing', null); }
+      bar.style.display = 'flex';
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -3565,19 +3617,42 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         return;
       }
 
-      // Get MCP training recommendation
+      // Get MCP training recommendation — GOD MODE v16: use /mcp/control first
       let mcpTraining = null;
       try {
-        const mcpRes = await fetch('/mcp/decision', {
+        // Try /mcp/control (has bundle + user memory + full context)
+        const mcpRes = await fetch('/mcp/control', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ module: module || 'domain', risk_score: d.risk_score || 50, tier: 'PRO' }),
+          body:    JSON.stringify({
+            module:       module || 'domain',
+            risk_score:   d.risk_score || 50,
+            tier:         'PRO',
+            page_context: 'post_payment',
+            user_email:   localStorage.getItem('cdb_email') || '',
+          }),
         });
         if (mcpRes.ok) {
           const mcpData = await mcpRes.json();
-          mcpTraining = mcpData?.data?.recommended_training || mcpData?.recommended_training || null;
+          const mcpRec  = mcpData?.data || mcpData;
+          mcpTraining   = mcpRec?.recommended_training || null;
+          // Store for other UI components
+          window._lastMCPDecision = mcpRec;
         }
-      } catch { /* ignore */ }
+      } catch {
+        // Fallback to /mcp/decision
+        try {
+          const fallbackRes = await fetch('/mcp/decision', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ module: module || 'domain', risk_score: d.risk_score || 50, tier: 'PRO' }),
+          });
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            mcpTraining = fallbackData?.data?.recommended_training || fallbackData?.recommended_training || null;
+          }
+        } catch { /* ignore */ }
+      }
 
       showAccessModal({
         type:         type,
