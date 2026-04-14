@@ -38,15 +38,32 @@ const SCAN_HANDLERS = {
   compliance: handleCompliance,
 };
 
-// Auth context used for full (paid) scans — bypasses all monetization gates
-const PAID_AUTH_CTX = {
-  authenticated: true,
-  method:        'payment_verified',
-  identity:      'paid_report',
-  user_id:       null,
-  tier:          'ENTERPRISE',
-  limits:        { daily_limit: -1, burst_per_min: 60 },
-};
+// ─── Dynamic paid-scan auth context (scoped to a verified payment order) ─────
+// SECURITY: Never use a static hardcoded ENTERPRISE context.
+// This function creates a single-use, order-scoped context only after
+// Razorpay HMAC signature validation has passed. The context is not
+// exported and cannot be constructed from outside this module.
+function buildPaidAuthCtx(orderId, userId, email) {
+  if (!orderId || typeof orderId !== 'string' || orderId.length < 4) {
+    throw new Error('[Payments] buildPaidAuthCtx: invalid orderId — refusing to issue context');
+  }
+  return {
+    authenticated:       true,
+    method:              'payment_verified',
+    identity:            `paid:${orderId.slice(0, 12)}`,
+    user_id:             userId || null,
+    email:               email  || null,
+    tier:                'ENTERPRISE',
+    limits:              { daily_limit: -1, burst_per_min: 60 },
+    isTemporary:         true,
+    issuedFor:           orderId,
+    payment_verified_at: Date.now(),
+    // Explicit deny-list: these elevated privileges must never bleed into
+    // persistent storage or session tokens
+    noSession:           true,
+    noPersist:           true,
+  };
+}
 
 // Report access TTL: 30 days
 const ACCESS_TTL_DAYS = 30;
@@ -230,11 +247,13 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload),
     });
-    const scanResp = await SCAN_HANDLERS[module](synReq, env, {
-      ...PAID_AUTH_CTX,
-      user_id: authCtx.user_id || null,
-      email:   email || authCtx.email || null,
-    });
+    // Build single-use, order-scoped ENTERPRISE context for this paid scan
+    const paidCtx = buildPaidAuthCtx(
+      razorpay_order_id,
+      authCtx.user_id || null,
+      email || authCtx.email || null,
+    );
+    const scanResp = await SCAN_HANDLERS[module](synReq, env, paidCtx);
     scanResult = await scanResp.json();
 
     // Merge locked findings into main findings for the full report
