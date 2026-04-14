@@ -1,0 +1,68 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Cloudflare Pages Redirect Rules v2.0
+#
+# ROOT CAUSE FIX (ERR_TOO_MANY_REDIRECTS):
+#   Page-specific "200 rewrite" rules (e.g. /privacy-policy → /privacy-policy.html)
+#   were conflicting with Cloudflare Pages' Automatic Clean URL feature:
+#     1. /privacy-policy → _redirects 200 rewrite → internal fetch /privacy-policy.html
+#     2. Cloudflare Pages auto-clean-URL strips .html → 301 redirect to /privacy-policy
+#     3. Browser follows 301 → back to step 1 → infinite loop
+#
+# FIX: Remove ALL page-specific rewrite rules AND the SPA catch-all.
+#   Cloudflare Pages routing order:
+#     ① Exact static file match
+#     ② _redirects rules  ← we only place static asset guards here
+#     ③ Clean URL lookup: /privacy-policy → privacy-policy.html (native, no redirect)
+#     ④ 404
+#   Step ③ handles ALL clean-URL page requests correctly with zero redirect hops.
+#
+# All links on this platform already use .html extensions.
+# Direct .html access (e.g. /privacy-policy.html) triggers Cloudflare's own
+# one-time 301 to /privacy-policy — correct, no loop.
+#
+# Rule format: [source] [destination] [status_code]
+# 200 = serve as-is (proxy rewrite, URL unchanged in browser)
+# =============================================================================
+
+# ── Static assets ── serve directly, NEVER pass through clean-URL lookup ──────
+# These must stay here to prevent Cloudflare treating them as page routes.
+
+/og-image.png          /og-image.png           200
+/og-image.jpg          /og-image.jpg           200
+/favicon.ico           /favicon.ico            200
+/favicon.png           /favicon.png            200
+/manifest.json         /manifest.json          200
+/robots.txt            /robots.txt             200
+/sitemap.xml           /sitemap.xml            200
+/sitemap-*.xml         /sitemap-:splat.xml     200
+/ads.txt               /ads.txt                200
+/sw.js                 /sw.js                  200
+/version.json          /version.json           200
+/security.txt          /security.txt           200
+
+# Asset directories — never intercept with routing logic
+/assets/*              /assets/:splat          200
+/public/*              /public/:splat          200
+/data/*                /data/:splat            200
+/images/*              /images/:splat          200
+/fonts/*               /fonts/:splat           200
+
+# ── NO page-specific rules ── Cloudflare Pages clean-URL (step ③) handles:
+#   /about              → about.html
+#   /services           → services.html
+#   /tools              → tools.html
+#   /intel              → intel.html
+#   /booking            → booking.html
+#   /contact            → contact.html
+#   /academy            → academy.html
+#   /soc-dashboard      → soc-dashboard.html
+#   /privacy-policy     → privacy-policy.html      ← was causing ERR_TOO_MANY_REDIRECTS
+#   /terms-of-service   → terms-of-service.html
+#   /refund-policy      → refund-policy.html
+#   /user-dashboard     → user-dashboard.html      ← was causing ERR_TOO_MANY_REDIRECTS
+#   /admin-payments     → admin-payments.html
+#
+# ── NO SPA catch-all (/* /index.html 200) ──
+#   Removing this allows step ③ to fire for all page clean-URLs.
+#   Truly unknown routes return Cloudflare's standard 404 — acceptable for
+#   a multi-page static site. All internal navigation uses .html hrefs.

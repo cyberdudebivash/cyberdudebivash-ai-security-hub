@@ -1,0 +1,61 @@
+name: Generate Security Report (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_domain:
+        description: "Domain to scan (e.g. example.com)"
+        required: true
+        default: "example.com"
+      report_type:
+        description: "Report type"
+        required: true
+        default: "domain"
+        type: choice
+        options: [domain, ai, redteam, identity, compliance]
+
+jobs:
+  generate-report:
+    name: Generate ${{ github.event.inputs.report_type }} Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Run scan via AI Core adapter
+        run: |
+          cd ai-core
+          python -c "
+          import sys, json
+          sys.path.insert(0,'.')
+          from scanner.adapter import ScannerAdapter
+          a = ScannerAdapter()
+          rtype  = '${{ github.event.inputs.report_type }}'
+          target = '${{ github.event.inputs.target_domain }}'
+          if rtype == 'domain':
+              result = a.scan_domain(target)
+          elif rtype == 'ai':
+              result = a.scan_ai(target, 'other')
+          elif rtype == 'redteam':
+              result = a.scan_redteam(target, 'external')
+          elif rtype == 'identity':
+              result = a.scan_identity(target, 'other')
+          elif rtype == 'compliance':
+              result = a.generate_compliance(target, 'iso27001')
+          else:
+              result = a.scan_domain(target)
+          print(json.dumps(result, indent=2, default=str))
+          with open('report_output.json','w') as f:
+              json.dump(result, f, indent=2, default=str)
+          print(f'Risk Score: {result.get(\"risk_score\",\"N/A\")}/100')
+          print(f'Risk Level: {result.get(\"risk_level\",\"N/A\")}')
+          print(f'Findings:   {len(result.get(\"findings\",[]))} (free preview)')
+          "
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report-${{ github.event.inputs.report_type }}-${{ github.run_id }}
+          path: ai-core/report_output.json
+          retention-days: 30

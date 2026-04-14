@@ -1,0 +1,33 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Sentinel APEX — Schema Migration v2  (PRODUCTION-SAFE REWRITE)
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- ROOT CAUSE OF PRIOR FAILURE:
+--   Bare ALTER TABLE statements have NO idempotency in SQLite/D1.
+--   D1 runs each --file as a single atomic transaction.
+--   If epss_score already exists (added in a prior run), the ALTER fires
+--   "duplicate column name: epss_score: SQLITE_ERROR" and the ENTIRE file
+--   rolls back → exit code 1.
+--
+--   SQLite / D1 does NOT support:
+--     ALTER TABLE t ADD COLUMN c IF NOT EXISTS  ← SYNTAX ERROR
+--
+-- FIX:
+--   All ALTER TABLE statements removed from this file.
+--   They are now handled exclusively in the automation.yml drift-patch step
+--   which runs each ALTER as an INDIVIDUAL wrangler API call with || true
+--   suppression — making them permanently idempotent.
+--
+--   This file now contains ONLY:
+--     - CREATE INDEX IF NOT EXISTS  (always safe to re-run)
+--
+--   The columns (epss_score, epss_percentile, actively_exploited,
+--   exploit_available, ioc_list) are already present in the
+--   CREATE TABLE IF NOT EXISTS block in schema_threat_intel.sql for
+--   fresh installs, and are guaranteed by the drift patch for existing DBs.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Indexes already defined in schema_threat_intel.sql (CREATE INDEX IF NOT EXISTS).
+-- Removed from this file to keep schema ownership unambiguous.
+-- idx_threat_intel_epss and idx_threat_intel_active are owned by schema_threat_intel.sql.

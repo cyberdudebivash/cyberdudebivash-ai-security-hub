@@ -1,0 +1,138 @@
+﻿name               = "cyberdudebivash-security-hub"
+main               = "src/index.js"
+compatibility_date = "2024-01-01"
+account_id         = "055c68d5d664747ff6c9e1093cd9673f"
+
+[vars]
+ENVIRONMENT = "production"
+APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
+VERSION     = "21.0.0"
+PLATFORM_VERSION = "21.0.0"
+COMMIT          = "INJECT_AT_BUILD"
+WEBSITE     = "https://cyberdudebivash.in"
+TOOLS_URL   = "https://tools.cyberdudebivash.com"
+TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
+CONTACT     = "bivash@cyberdudebivash.com"
+
+# ── KV Namespace ──────────────────────────────────────────────────────────────
+# Already live: npx wrangler kv:namespace create SECURITY_HUB_KV
+[[kv_namespaces]]
+binding = "SECURITY_HUB_KV"
+id      = "95faae90943f43afa26d552b8385d339"
+
+# ── D1 Database ───────────────────────────────────────────────────────────────
+# Setup:  npx wrangler d1 create cyberdudebivash-security-hub
+#         npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema.sql
+# Replace database_id below with output of the create command
+
+[[d1_databases]]
+binding = "SECURITY_HUB_DB"
+database_name = "cyberdudebivash-security-hub"
+database_id = "239a35c8-393f-488e-a7e0-30c7fde958fa"
+
+# ── R2 Bucket (scan result storage) ──────────────────────────────────────────
+# Setup:  npx wrangler r2 bucket create cyberdudebivash-scan-results
+[[r2_buckets]]
+binding     = "SCAN_RESULTS"
+bucket_name = "cyberdudebivash-scan-results"
+
+# ── Cloudflare Queues ─────────────────────────────────────────────────────────
+# Setup:  npx wrangler queues create scan-jobs
+#         npx wrangler queues create scan-jobs-dlq
+[[queues.producers]]
+queue   = "scan-jobs"
+binding = "SCAN_QUEUE"
+
+[[queues.consumers]]
+queue              = "scan-jobs"
+max_batch_size     = 10        # process up to 10 jobs per batch
+max_batch_timeout  = 30        # wait up to 30s to fill batch
+max_retries        = 3
+dead_letter_queue  = "scan-jobs-dlq"
+
+# ── Secrets (set via: npx wrangler secret put SECRET_NAME) ───────────────────
+# Required secrets:
+#   JWT_SECRET                — 64+ char random string (openssl rand -hex 32)
+#   RAZORPAY_KEY_ID           — Razorpay API key ID (rzp_live_... or rzp_test_...)
+#   RAZORPAY_KEY_SECRET       — Razorpay API key secret (paired with KEY_ID)
+#   RAZORPAY_WEBHOOK_SECRET   — from Razorpay dashboard webhook settings
+#   TELEGRAM_BOT_TOKEN        — from @BotFather
+#   ADMIN_TELEGRAM_CHAT_ID    — your admin Telegram chat ID
+#   SENTINEL_CHANNEL_ID       — Sentinel APEX channel ID (for CVE broadcasts)
+#
+# V8.0 new secrets:
+#   LINKEDIN_ACCESS_TOKEN     — Optional: LinkedIn API v2 access token (for auto-posting)
+#   WORKERS_AI_ACCOUNT_ID     — Optional: Cloudflare account ID for Workers AI binding
+#
+# V8.1 new secrets:
+#   RESEND_API_KEY            — Primary email provider (resend.com free tier: 3,000/mo)
+#                               Get key: https://resend.com → API Keys → Create
+#                               Verify domain cyberdudebivash.in in Resend dashboard first
+#                               Run: npx wrangler secret put RESEND_API_KEY
+#   GUMROAD_SELLER_ID         — Your Gumroad seller ID (from gumroad.com/settings/advanced)
+#                               Run: npx wrangler secret put GUMROAD_SELLER_ID
+#
+# V10.0 new secrets (Phase 4 — Content Automation):
+#   TELEGRAM_BOT_TOKEN        — Bot token from @BotFather for auto-posting CVE alerts
+#                               Run: npx wrangler secret put TELEGRAM_BOT_TOKEN
+#   TELEGRAM_CHANNEL_ID       — Your Telegram channel ID (e.g. @cyberdudebivash or -100xxxxxxxx)
+#                               Run: npx wrangler secret put TELEGRAM_CHANNEL_ID
+#   LINKEDIN_ACCESS_TOKEN     — LinkedIn API v2 OAuth token for auto-posting
+#                               Get from: https://developer.linkedin.com → OAuth 2.0
+#                               Run: npx wrangler secret put LINKEDIN_ACCESS_TOKEN
+#   LINKEDIN_ORG_ID           — LinkedIn organization ID (for company page posting)
+#                               Run: npx wrangler secret put LINKEDIN_ORG_ID
+#
+# V10.0 new env vars (non-secret, plain text):
+#   Already set: TELEGRAM = "https://t.me/cyberdudebivashSentinelApex" (channel link)
+#
+# V7.0 monetization setup (Razorpay):
+#   1. Create an account at https://razorpay.com
+#   2. Generate API keys in Settings → API Keys
+#   3. npx wrangler secret put RAZORPAY_KEY_ID
+#   4. npx wrangler secret put RAZORPAY_KEY_SECRET
+#   5. Set up webhook in Razorpay dashboard → Webhooks (payment.captured, payment.failed)
+#   6. npx wrangler secret put RAZORPAY_WEBHOOK_SECRET
+#
+# One-liner to generate JWT_SECRET:
+#   openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
+
+# ── Workers AI (optional — enhances AI Cyber Brain narratives) ────────────────
+# Enabled in v8.1 — requires Workers AI addon in Cloudflare dashboard
+# If you do NOT have the addon, comment these 2 lines out again.
+[ai]
+binding = "AI"
+
+# ── Cron Triggers ─────────────────────────────────────────────────────────────
+# v13.0 cron schedule — EXACTLY 5 entries (Cloudflare Free plan hard limit: 5)
+#
+# Engine execution per trigger (all v12 engines run on every scheduled event):
+#   runAnomalyBatch()  — unconditional on every cron invocation → hourly via slot 1
+#   consumeEvents()    — unconditional on every cron invocation → hourly via slot 1
+#   runPredictiveBatch()— cron==='0 * * * *' condition → hourly via slot 1
+#   runPatchingBatch() — unconditional on every cron invocation
+#   runMythosCron()    — cron==='0 */12 * * *' || cron==='0 6 * * *' → slots 3+4
+#
+#   Slot 1: Hourly    — v12 Anomaly + Predictive + Agent Bus + Monitoring + Purge
+#   Slot 2: 4×/day   — Sentinel APEX CVE feed refresh
+#   Slot 3: Every 12h — v10 Defense product generation + MYTHOS generation
+#   Slot 4: 6 AM      — v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
+#   Slot 5: 11 PM     — v10 Daily revenue snapshot
+[triggers]
+crons = [
+  "0 * * * *",         # Slot 1 — Hourly:    v12 Anomaly + Predictive + Agent Bus + Monitoring
+  "0 0,6,12,18 * * *", # Slot 2 — 4x/day:   Sentinel APEX CVE feed refresh
+  "0 */12 * * *",      # Slot 3 — Every 12h: v10 Defense products + MYTHOS generation
+  "0 6 * * *",         # Slot 4 — 6 AM:      v10 Content pipeline + MYTHOS daily run
+  "0 23 * * *"         # Slot 5 — 11 PM:     v10 Daily revenue snapshot
+]
+
+# ── Custom domain routes ──────────────────────────────────────────────────────
+# Uncomment after configuring DNS:
+# [[routes]]
+# pattern   = "api.cyberdudebivash.in/*"
+# zone_name = "cyberdudebivash.in"
+
+# [[routes]]
+# pattern   = "api.tools.cyberdudebivash.com/*"
+# zone_name = "cyberdudebiv

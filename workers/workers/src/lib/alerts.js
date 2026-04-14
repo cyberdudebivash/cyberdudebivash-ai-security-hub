@@ -1,0 +1,424 @@
+/**
+ * CYBERDUDEBIVASH AI Security Hub — Alert Engine v8.0
+ * Real-time security alerts via Telegram Bot + Email
+ * Async, retry-safe with circuit breaker, user-configurable per-account settings
+ *
+ * Channels: Telegram Bot API | Cloudflare Email Workers (SMTP relay)
+ * Triggers: high_risk_scan | blacklist_detected | critical_cve
+ */
+
+import { resilientFetch } from './resilience.js';
+
+const CONTACT_EMAIL     = 'bivash@cyberdudebivash.com';
+const PLATFORM_URL      = 'https://tools.cyberdudebivash.com';
+const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
+const ALERT_TIMEOUT     = 8000; // 8s per alert delivery
+
+// ─── Safe fetch for external alert APIs (resilience-backed) ──────────────────
+async function safeFetch(env, url, options = {}) {
+  try {
+    const res = await resilientFetch('telegram', env, url, options, ALERT_TIMEOUT);
+    return { ok: res.ok, status: res.status };
+  } catch (err) {
+    return { ok: false, status: 0, error: err.message || 'timeout_or_network' };
+  }
+}
+
+// ─── Format risk emoji ────────────────────────────────────────────────────────
+function riskEmoji(level) {
+  return { CRITICAL:'🚨', HIGH:'🔴', MEDIUM:'🟡', LOW:'🟢' }[level] ?? '⚪';
+}
+
+// ─── Build Telegram message ───────────────────────────────────────────────────
+function buildTelegramMessage(scanResult, triggerType, extra = {}) {
+  const emoji  = riskEmoji(scanResult.risk_level);
+  const target = scanResult.target ?? 'unknown';
+  const module = (scanResult.module ?? 'scan').replace('_scanner','');
+  const score  = scanResult.risk_score ?? 0;
+  const level  = scanResult.risk_level ?? 'UNKNOWN';
+  const grade  = scanResult.grade ?? 'N/A';
+  const ts     = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+
+  let header = '';
+  let body   = '';
+
+  switch (triggerType) {
+    case 'high_risk_scan':
+      header = `${emoji} *HIGH RISK SCAN ALERT*`;
+      body   = `*Target:* \`${target}\`\n*Module:* ${module}\n*Risk Score:* ${score}/100 (${level})\n*Grade:* ${grade}`;
+      break;
+    case 'blacklist_detected':
+      header = `🚫 *BLACKLIST DETECTION ALERT*`;
+      body   = `*Target:* \`${target}\`\n*Listed on:* ${extra.feeds_count ?? '?'} threat feeds\n*Risk Score:* ${score}/100`;
+      break;
+    case 'critical_cve':
+      header = `⚡ *CRITICAL CVE MATCH*`;
+      body   = `*CVE:* \`${extra.cve_id ?? 'unknown'}\`\n*CVSS:* ${extra.cvss ?? 'N/A'}\n*Affected:* ${extra.affected ?? 'unknown'}`;
+      break;
+    default:
+      header = `🔔 *SECURITY ALERT*`;
+      body   = `*Target:* \`${target}\`\n*Risk:* ${level}`;
+  }
+
+  // Top critical findings (max 3)
+  const critFindings = (scanResult.findings ?? [])
+    .filter(f => ['CRITICAL','HIGH'].includes(f.severity))
+    .slice(0, 3)
+    .map(f => `• *${f.id}* ${f.severity} — ${f.title}`)
+    .join('\n');
+
+  const findingsBlock = critFindings ? `\n\n*Top Findings:*\n${critFindings}` : '';
+  const footer = `\n\n🕐 ${ts} IST\n[View Full Report](${PLATFORM_URL}) | [Sentinel APEX](https://t.me/cyberdudebivashSentinelApex)`;
+
+  return `${header}\n\n${body}${findingsBlock}${footer}`;
+}
+
+// ─── Send Telegram message ────────────────────────────────────────────────────
+async function sendTelegramAlert(env, botToken, chatId, text) {
+  const url  = `${TELEGRAM_API_BASE}${botToken}/sendMessage`;
+  const body = JSON.stringify({
+    chat_id:    chatId,
+    text,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+  });
+
+  // resilientFetch handles retry + circuit breaker internally
+  const res = await safeFetch(env, url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  if (res.ok) return { success: true, channel: 'telegram' };
+  return { success: false, channel: 'telegram', status: res.status, error: res.error };
+}
+
+// ─── Send Email via Cloudflare Email Workers ──────────────────────────────────
+// Requires Email Workers binding — falls back gracefully if not configured
+async function sendEmailAlert(env, toEmail, subject, body) {
+  if (!env?.EMAIL_SENDER) return { success: false, channel: 'email', error: 'email_worker_not_configured' };
+  try {
+    const message = {
+      from: { email: 'alerts@cyberdudebivash.com', name: 'CYBERDUDEBIVASH Security Hub' },
+      to:   [{ email: toEmail }],
+      subject,
+      content: [{ type: 'text/plain', value: body }],
+    };
+    await env.EMAIL_SENDER.send(message);
+    return { success: true, channel: 'email' };
+  } catch (e) {
+    return { success: false, channel: 'email', error: e?.message };
+  }
+}
+
+// ─── Build plain-text email body ──────────────────────────────────────────────
+function buildEmailBody(scanResult, triggerType, extra = {}) {
+  const target = scanResult.target ?? 'unknown';
+  const score  = scanResult.risk_score ?? 0;
+  const level  = scanResult.risk_level ?? 'UNKNOWN';
+  const grade  = scanResult.grade ?? 'N/A';
+  const ts     = new Date().toISOString();
+
+  const findings = (scanResult.findings ?? [])
+    .filter(f => ['CRITICAL','HIGH'].includes(f.severity))
+    .slice(0, 5)
+    .map(f => `  [${f.severity}] ${f.id} — ${f.title}\n  ${(f.description||'').slice(0,100)}`)
+    .join('\n\n');
+
+  return `
+CYBERDUDEBIVASH AI Security Hub — Security Alert
+================================================
+
+Alert Type: ${triggerType.replace(/_/g,' ').toUpperCase()}
+Target:     ${target}
+Risk Score: ${score}/100 (${level})
+Grade:      ${grade}
+Timestamp:  ${ts}
+
+${findings ? `TOP FINDINGS:\n${findings}\n` : ''}
+---
+View full report: ${PLATFORM_URL}
+Contact support:  ${CONTACT_EMAIL}
+Sentinel APEX:    https://t.me/cyberdudebivashSentinelApex
+
+This alert was triggered by your configured security monitoring rules.
+To manage alerts, visit: ${PLATFORM_URL}/settings/alerts
+`.trim();
+}
+
+// ─── Fetch user alert config from D1 ─────────────────────────────────────────
+async function getUserAlertConfig(env, userId) {
+  if (!userId || !env?.DB) return null;
+  try {
+    return await env.DB.prepare(
+      `SELECT ac.*, u.email FROM alert_configs ac
+       JOIN users u ON ac.user_id = u.id
+       WHERE ac.user_id = ? AND (ac.telegram_enabled = 1 OR ac.email_enabled = 1)`
+    ).bind(userId).first();
+  } catch { return null; }
+}
+
+// ─── Log alert delivery to D1 ────────────────────────────────────────────────
+async function logAlert(env, userId, channel, triggerType, target, status, preview) {
+  if (!env?.DB || !userId) return;
+  try {
+    await env.DB.prepare(
+      `INSERT INTO alert_log (user_id, channel, trigger_type, target, message_preview, status)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(userId, channel, triggerType, target || null, (preview||'').slice(0, 200), status).run();
+  } catch {}
+}
+
+// ─── Determine trigger type from scan result ──────────────────────────────────
+function determineTrigger(scanResult, config) {
+  const triggers = [];
+  const threshold = config.min_risk_score ?? 70;
+
+  if ((scanResult.risk_score ?? 0) >= threshold || scanResult.risk_level === 'CRITICAL') {
+    triggers.push('high_risk_scan');
+  }
+  if (config.alert_on_blacklist && scanResult.blacklisted === true) {
+    triggers.push('blacklist_detected');
+  }
+  return triggers;
+}
+
+// ─── Master alert trigger ─────────────────────────────────────────────────────
+export async function triggerAlerts(env, scanResult, authCtx = {}) {
+  const userId = authCtx.user_id;
+  if (!userId) return; // No authenticated user — no alerts
+
+  const config = await getUserAlertConfig(env, userId);
+  if (!config) return; // No alert config or no channels enabled
+
+  const triggers = determineTrigger(scanResult, config);
+  if (triggers.length === 0) return; // No threshold crossed
+
+  const deliveries = [];
+
+  for (const triggerType of triggers) {
+    // Telegram
+    if (config.telegram_enabled && config.telegram_chat_id && env?.TELEGRAM_BOT_TOKEN) {
+      const msg    = buildTelegramMessage(scanResult, triggerType);
+      const result = await sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, config.telegram_chat_id, msg);
+      deliveries.push(result);
+      await logAlert(env, userId, 'telegram', triggerType, scanResult.target, result.success ? 'sent' : 'failed', msg.slice(0, 100));
+    }
+
+    // Email
+    if (config.email_enabled && config.alert_email) {
+      const subject  = `[SECURITY ALERT] ${triggerType.replace(/_/g,' ')} — ${scanResult.target ?? 'unknown'}`;
+      const body     = buildEmailBody(scanResult, triggerType);
+      const result   = await sendEmailAlert(env, config.alert_email, subject, body);
+      deliveries.push(result);
+      await logAlert(env, userId, 'email', triggerType, scanResult.target, result.success ? 'sent' : 'failed', subject);
+    }
+  }
+
+  return deliveries;
+}
+
+// ─── Platform-level admin alert (uses Worker-level bot token + chat) ──────────
+export async function sendAdminAlert(env, message) {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.ADMIN_TELEGRAM_CHAT_ID) return;
+  return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.ADMIN_TELEGRAM_CHAT_ID, message);
+}
+
+// ─── CVE alert broadcast (Sentinel APEX integration) ─────────────────────────
+export async function broadcastCVEAlert(env, cve) {
+  // Broadcast to Sentinel APEX Telegram channel (if configured)
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return;
+
+  const cvss  = cve.score ?? 'N/A';
+  const emoji = parseFloat(cvss) >= 9.0 ? '🚨' : '🔴';
+  const msg   = [
+    `${emoji} *SENTINEL APEX — CVE ALERT*`,
+    ``,
+    `*${cve.id}* | CVSS: ${cvss}`,
+    `*Severity:* ${cve.severity}`,
+    ``,
+    (cve.description ?? '').slice(0, 300),
+    ``,
+    `*Tags:* ${(cve.tags ?? []).join(', ') || 'N/A'}`,
+    ``,
+    `[NVD Detail](${cve.nvd_url ?? 'https://nvd.nist.gov/'})`,
+    `[Join Sentinel APEX](https://t.me/cyberdudebivashSentinelApex)`,
+  ].join('\n');
+
+  return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
+}
+
+// ─── Sentinel APEX v2 — Threat Intel Alert (Phase 6) ─────────────────────────
+// Triggers on: CVSS ≥ 9.0 | CISA KEV confirmed | EPSS ≥ 0.8 | exploit_available
+// Sends to SENTINEL_CHANNEL_ID (Telegram channel for subscribers)
+export async function broadcastThreatAlert(env, entry, trigger = 'critical_cve') {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return { skipped: true };
+
+  const cvss        = entry.cvss ?? 'N/A';
+  const epss        = entry.epss_score != null ? (parseFloat(entry.epss_score) * 100).toFixed(1) + '%' : 'N/A';
+  const exploited   = entry.actively_exploited || entry.exploit_status === 'confirmed';
+  const epssScore   = parseFloat(entry.epss_score || 0);
+
+  // Severity emoji
+  let emoji = '🔴';
+  if (parseFloat(cvss) >= 9.0) emoji = '🚨';
+  if (exploited && parseFloat(cvss) >= 9.0) emoji = '☢️';
+
+  // Trigger label
+  const triggerLabels = {
+    critical_cve:      '🚨 CRITICAL CVE DETECTED',
+    kev_match:         '⚠️ CISA KEV — EXPLOITED IN THE WILD',
+    exploit_available: '💣 EXPLOIT PUBLICLY AVAILABLE',
+    epss_spike:        '📈 HIGH EPSS SCORE — IMMINENT EXPLOITATION',
+    ransomware_link:   '🔒 RANSOMWARE CAMPAIGN LINK',
+    hunting_alert:     '🎯 THREAT HUNTING ALERT',
+  };
+  const triggerLabel = triggerLabels[trigger] || '🔔 SENTINEL APEX ALERT';
+
+  // Build tags string
+  let tags = [];
+  try { tags = typeof entry.tags === 'string' ? JSON.parse(entry.tags) : (entry.tags || []); } catch {}
+
+  // Build exploit status badge
+  const exploitBadge = exploited
+    ? '🚨 *EXPLOITED IN THE WILD*'
+    : entry.exploit_available
+      ? '💣 Exploit Available'
+      : entry.exploit_status === 'poc_available'
+        ? '⚡ PoC Available'
+        : '✅ No public exploit';
+
+  const msg = [
+    `${emoji} *SENTINEL APEX v2 — ${triggerLabel}*`,
+    ``,
+    `*${entry.id ?? 'Unknown'}*`,
+    `*CVSS:* \`${cvss}\` | *EPSS:* \`${epss}\``,
+    `*Severity:* ${entry.severity ?? 'UNKNOWN'}`,
+    exploitBadge,
+    ``,
+    (entry.title ?? '').slice(0, 150),
+    ``,
+    (entry.description ?? '').slice(0, 280) + (((entry.description || '').length > 280) ? '…' : ''),
+    ``,
+    tags.length ? `*Tags:* ${tags.slice(0, 5).join(' · ')}` : '',
+    entry.known_ransomware ? `🔒 *Ransomware Campaign Link Confirmed*` : '',
+    ``,
+    `*Source:* ${entry.source ?? 'Unknown'} | *Published:* ${entry.published_at ?? 'N/A'}`,
+    ``,
+    `[🔗 NVD](https://nvd.nist.gov/vuln/detail/${entry.id}) | [🛡️ Dashboard](https://tools.cyberdudebivash.com) | [📡 Channel](https://t.me/cyberdudebivashSentinelApex)`,
+  ].filter(line => line !== '').join('\n');
+
+  const result = await sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
+  return { ...result, trigger, cve_id: entry.id };
+}
+
+// ─── Batch alert trigger for ingestion results ────────────────────────────────
+// Called from runIngestion() after EPSS + enrichment pass
+// Only sends for newly ingested entries (not seen before)
+export async function triggerIntelAlerts(env, entries = []) {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return [];
+
+  const results  = [];
+  const DELAY_MS = 500; // rate limit: 1 alert per 500ms to avoid Telegram flood
+
+  for (const entry of entries) {
+    const cvss        = parseFloat(entry.cvss || 0);
+    const epssScore   = parseFloat(entry.epss_score || 0);
+    const exploited   = entry.actively_exploited || entry.exploit_status === 'confirmed';
+    const isKEV       = exploited && entry.source === 'cisa_kev';
+    const isExploit   = entry.exploit_available;
+    const isHighEPSS  = epssScore >= 0.8;
+    const isCritical  = cvss >= 9.0 || entry.severity === 'CRITICAL';
+
+    // Determine trigger type
+    let trigger = null;
+    if (isKEV)              trigger = 'kev_match';
+    else if (isCritical && exploited) trigger = 'critical_cve';
+    else if (isHighEPSS)    trigger = 'epss_spike';
+    else if (isExploit && cvss >= 8.0) trigger = 'exploit_available';
+    else if (entry.known_ransomware)   trigger = 'ransomware_link';
+
+    if (!trigger) continue;
+
+    // Check if already alerted for this CVE (KV dedup)
+    if (env?.SECURITY_HUB_KV) {
+      const alertKey = `sentinel:alerted:${entry.id}`;
+      const alreadyAlerted = await env.SECURITY_HUB_KV.get(alertKey).catch(() => null);
+      if (alreadyAlerted) continue;
+      // Mark as alerted (TTL 7 days)
+      env.SECURITY_HUB_KV.put(alertKey, '1', { expirationTtl: 604800 }).catch(() => {});
+    }
+
+    const result = await broadcastThreatAlert(env, entry, trigger);
+    results.push(result);
+
+    // Rate limit to avoid Telegram flood protection
+    if (results.length < entries.length) {
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
+
+    // Max 5 alerts per ingestion run to avoid spam
+    if (results.length >= 5) break;
+  }
+
+  return results;
+}
+
+// ─── Hunting alert broadcast ──────────────────────────────────────────────────
+export async function broadcastHuntingAlert(env, huntAlert) {
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.SENTINEL_CHANNEL_ID) return;
+
+  const sevEmoji = { critical: '☢️', high: '🔴', medium: '🟡', low: '🟢' }[huntAlert.severity] || '⚪';
+
+  const msg = [
+    `${sevEmoji} *SENTINEL APEX — THREAT HUNTING ALERT*`,
+    ``,
+    `*Type:* ${huntAlert.type.replace(/_/g, ' ').toUpperCase()}`,
+    `*Severity:* ${huntAlert.severity.toUpperCase()}`,
+    ``,
+    huntAlert.message,
+    ``,
+    huntAlert.evidence?.cve_ids?.length
+      ? `*CVEs:* ${huntAlert.evidence.cve_ids.slice(0, 4).join(', ')}`
+      : '',
+    huntAlert.evidence?.vendor ? `*Vendor:* ${huntAlert.evidence.vendor}` : '',
+    ``,
+    `[🛡️ Sentinel APEX Dashboard](https://tools.cyberdudebivash.com) | [📡 Channel](https://t.me/cyberdudebivashSentinelApex)`,
+  ].filter(l => l !== '').join('\n');
+
+  return sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, env.SENTINEL_CHANNEL_ID, msg);
+}
+
+// ─── Test alert (for user to verify their config) ────────────────────────────
+export async function sendTestAlert(env, userId) {
+  const config = await getUserAlertConfig(env, userId);
+  if (!config) return { success: false, error: 'No alert configuration found' };
+
+  const testMsg = {
+    target: 'test.cyberdudebivash.com',
+    module: 'domain_scanner',
+    risk_score: 75,
+    risk_level: 'HIGH',
+    grade: 'D',
+    blacklisted: false,
+    findings: [{
+      id: 'TEST-001', title: 'Test Alert', severity: 'HIGH',
+      description: 'This is a test alert from CYBERDUDEBIVASH AI Security Hub.',
+    }],
+  };
+
+  const results = [];
+
+  if (config.telegram_enabled && config.telegram_chat_id && env?.TELEGRAM_BOT_TOKEN) {
+    const msg = buildTelegramMessage(testMsg, 'high_risk_scan') + '\n\n✅ *Test alert — your Telegram is configured correctly!*';
+    const r   = await sendTelegramAlert(env, env.TELEGRAM_BOT_TOKEN, config.telegram_chat_id, msg);
+    results.push({ channel: 'telegram', ...r });
+  }
+
+  if (config.email_enabled && config.alert_email) {
+    const r = await sendEmailAlert(env, config.alert_email, '[TEST] Security Hub Alert', buildEmailBody(testMsg, 'high_risk_scan'));
+    results.push({ channel: 'email', ...r });
+  }
+
+  return { success: results.every(r => r.success), deliveries: results };
+}

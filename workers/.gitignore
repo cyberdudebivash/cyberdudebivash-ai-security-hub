@@ -67,4 +67,3 @@ workspace/
 *.tmp
 *.bak
 *.orig
-.wrangler/state/ 

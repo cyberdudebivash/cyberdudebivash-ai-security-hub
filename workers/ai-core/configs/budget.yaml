@@ -1,0 +1,9 @@
+# CYBERDUDEBIVASH AI — COST GUARD CONFIGURATION
+daily_limit_usd: 50.0
+per_request_limit_usd: 2.0
+alert_threshold_percent: 80
+providers:
+  openai:
+    cost_per_1k_input_tokens: 0.00015
+    cost_per_1k_output_tokens: 0.0006
+    model: gpt-4o-mini

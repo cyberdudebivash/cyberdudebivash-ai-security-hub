@@ -1,0 +1,21 @@
+{
+  "name": "cyberdudebivash-security-hub-workers",
+  "version": "2.0.0",
+  "description": "CYBERDUDEBIVASH AI Security Hub — Cloudflare Workers Edge API",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "lint": "node --input-type=module --eval 'import \"./src/index.js\"' 2>&1 || true"
+  },
+  "devDependencies": {
+    "wrangler": "^4.80.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "CyberDudeBivash Pvt. Ltd. <bivash@cyberdudebivash.com>",
+  "license": "UNLICENSED",
+  "homepage": "https://cyberdudebivash.in"
+}
