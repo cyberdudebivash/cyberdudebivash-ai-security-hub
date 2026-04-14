@@ -300,6 +300,45 @@ a{color:var(--accent);text-decoration:none}
 <noscript><link rel="stylesheet" href="/assets/main.v10.css"></noscript>
 </head>
 <body>
+<!-- ═══════════════════════════════════════════════════════════
+     PRELOADER — hides raw HTML until JS initializes (prevents
+     flash of unstyled SOC status bar / nav drawer / v9.0 text)
+     ══════════════════════════════════════════════════════════ -->
+<div id="cdb-preloader" style="position:fixed;inset:0;z-index:2147483647;background:#0a0a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease,visibility .5s ease">
+  <div style="position:relative;margin-bottom:24px">
+    <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(0,212,255,.15);border-top-color:#00d4ff;animation:cdb-spin .8s linear infinite"></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px">⚔️</div>
+  </div>
+  <div style="font-size:16px;font-weight:900;color:#e2e8f0;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">CYBERDUDEBIVASH AI</div>
+  <div style="font-size:11px;color:#00d4ff;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px">Security Hub v18.0</div>
+  <div style="font-size:10px;color:#64748b;letter-spacing:.1em">Initializing threat intelligence...</div>
+  <div style="margin-top:20px;width:180px;height:2px;background:rgba(255,255,255,.06);border-radius:1px;overflow:hidden">
+    <div style="height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);animation:cdb-progress 1.2s ease-in-out infinite"></div>
+  </div>
+</div>
+<style>
+@keyframes cdb-spin{to{transform:rotate(360deg)}}
+@keyframes cdb-progress{0%{width:0%;margin-left:0}50%{width:100%;margin-left:0}100%{width:0%;margin-left:100%}}
+#cdb-preloader.cdb-preloader-hidden{opacity:0;visibility:hidden;pointer-events:none}
+</style>
+<script>
+// Remove preloader after DOM is interactive — max 1.5s
+(function(){
+  function _removePreloader(){
+    var p=document.getElementById('cdb-preloader');
+    if(p){p.classList.add('cdb-preloader-hidden');setTimeout(function(){if(p.parentNode)p.parentNode.removeChild(p);},520);}
+  }
+  // Fire on DOMContentLoaded or 1500ms, whichever is first
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(_removePreloader,300);});
+  } else {
+    setTimeout(_removePreloader,100);
+  }
+  // Hard cap — never show more than 1.5s
+  setTimeout(_removePreloader,1500);
+})();
+</script>
+
 
 <!-- Global Error Banner (hidden by default, shown by error boundary) -->
 <div id="global-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(239,68,68,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;text-align:center;backdrop-filter:blur(4px);cursor:pointer" onclick="this.style.display='none'"></div>
@@ -322,7 +361,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="soc-statusbar" id="socStatusBar">
   <div class="soc-indicator" title="API health">
     <span class="soc-dot yellow" id="soc-api-dot"></span>
-    <span id="soc-api-label">API checking…</span>
+    <span id="soc-api-label" style="color:#f59e0b;font-weight:700">API checking…</span>
   </div>
   <span class="soc-sep">|</span>
   <div class="soc-indicator" title="Database">
@@ -342,7 +381,7 @@ a{color:var(--accent);text-decoration:none}
   <span class="soc-sep">|</span>
   <div class="soc-indicator" title="Live version from /api/version">
     <span style="color:var(--accent);font-weight:800">⬡</span>
-    <span id="soc-version">v9.0</span>
+    <span id="soc-version">v18.0</span>
   </div>
   <span class="soc-sep" style="margin-left:auto">|</span>
   <div class="soc-indicator" id="soc-threat-level" title="Global threat level">
@@ -362,9 +401,9 @@ a{color:var(--accent);text-decoration:none}
   <div class="nav-inner">
 
     <!-- Logo — always navigates home -->
-    <a class="nav-brand" href="#home" onclick="cdbNavigate('hero');return false" aria-label="CYBERDUDEBIVASH AI — Home">
-      <span>⚔️</span>
-      <span>CYBERDUDEBIVASH AI</span>
+    <a class="nav-brand" href="#home" onclick="cdbNavigate('hero');return false" aria-label="CYBERDUDEBIVASH AI — Home" style="font-weight:900;letter-spacing:.02em;text-shadow:0 0 16px rgba(0,212,255,.5);filter:drop-shadow(0 0 8px rgba(0,212,255,.3))">
+      <span style="filter:drop-shadow(0 0 4px rgba(0,212,255,.6))">⚔️</span>
+      <span style="background:linear-gradient(90deg,#00d4ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CYBERDUDEBIVASH AI</span>
     </a>
 
     <!-- Desktop links -->
@@ -596,7 +635,7 @@ a{color:var(--accent);text-decoration:none}
         AI SECURITY HUB
       </span>
     </div>
-    <div style="font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.25);margin-top:4px;text-transform:uppercase">
+    <div style="font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.75);margin-top:6px;text-transform:uppercase;font-weight:700;text-shadow:0 0 20px rgba(0,212,255,.3)">
       Enterprise · AI-Powered · India's #1 Cybersecurity Intelligence Platform
     </div>
   </div>
@@ -613,7 +652,7 @@ a{color:var(--accent);text-decoration:none}
     LIVE THREAT MONITORING · 1,200+ ENTERPRISES SECURED · INDIA'S #1 AI CYBERSECURITY PLATFORM
   </div>
 
-  <h1 style="font-size:clamp(28px,5vw,54px);font-weight:900;line-height:1.08;margin-bottom:16px;letter-spacing:-.5px">
+  <h1 style="font-size:clamp(28px,5vw,54px);font-weight:900;line-height:1.08;margin-bottom:16px;letter-spacing:-.5px;text-shadow:0 2px 40px rgba(0,212,255,.15),0 0 80px rgba(124,58,237,.1)">
     Scan Your Domain.<br>
     Find Every Vulnerability.<br>
     <span style="background:linear-gradient(135deg,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
@@ -634,7 +673,9 @@ a{color:var(--accent);text-decoration:none}
       <button class="btn btn-primary hero-scan-btn"
         onclick="heroQuickScan()"
         style="background:linear-gradient(135deg,#ef4444,#dc2626)!important;
-               color:#fff!important;font-size:14px;padding:12px 24px;white-space:nowrap">
+               color:#fff!important;font-size:14px;padding:12px 24px;white-space:nowrap;
+               box-shadow:0 4px 24px rgba(239,68,68,.5),0 0 40px rgba(239,68,68,.2);
+               font-weight:800;letter-spacing:.03em">
         ⚡ Scan Free →
       </button>
     </div>
@@ -4723,15 +4764,33 @@ a{color:var(--accent);text-decoration:none}
      ═══════════════════════════════════════════════════════════════ -->
 <section id="monetization-zone" style="background:#0a0a1a;padding:32px 20px;max-width:1200px;margin:0 auto">
 
-  <!-- ── AdSense Display Ad: Leaderboard (728×90 / responsive) ── -->
-  <div style="text-align:center;margin-bottom:24px" class="adsense-unit" id="ad-leaderboard">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-8343951291888650"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  <!-- ── Sponsored Programs Header Banner ── -->
+  <div style="margin-bottom:28px;border-radius:14px;overflow:hidden;border:1px solid rgba(0,212,255,.18);background:linear-gradient(135deg,#050520 0%,#0a0a2e 50%,#05051a 100%);padding:28px 32px;position:relative" id="sponsored-header-banner">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(0,212,255,.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(124,58,237,.06) 0%,transparent 60%);pointer-events:none"></div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:800;letter-spacing:.12em;color:#00d4ff;text-transform:uppercase">● LIVE SPONSORED</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:800;letter-spacing:.1em;color:#10b981;text-transform:uppercase">✓ VERIFIED PARTNERS</span>
+        </div>
+        <div style="font-size:clamp(18px,2.5vw,26px);font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px">Cybersecurity Training & Tools</div>
+        <div style="font-size:13px;color:#94a3b8;max-width:480px">Curated by CYBERDUDEBIVASH security experts. Trusted by 1,200+ enterprises. Every partner is security-vetted.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <div style="text-align:center;padding:12px 20px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px">
+          <div style="font-size:22px;font-weight:900;color:#00d4ff;line-height:1">4</div>
+          <div style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:.08em;margin-top:2px">PARTNERS</div>
+        </div>
+        <div style="text-align:center;padding:12px 20px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:10px">
+          <div style="font-size:22px;font-weight:900;color:#a78bfa;line-height:1">3M+</div>
+          <div style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:.08em;margin-top:2px">USERS</div>
+        </div>
+        <div style="text-align:center;padding:12px 20px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:10px">
+          <div style="font-size:22px;font-weight:900;color:#10b981;line-height:1">FREE</div>
+          <div style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:.08em;margin-top:2px">TO START</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── Affiliate Partner Banners ── -->
@@ -4786,15 +4845,16 @@ a{color:var(--accent);text-decoration:none}
     </a>
   </div>
 
-  <!-- ── AdSense In-Feed / Native Ad ── -->
-  <div style="text-align:center;margin-bottom:16px" class="adsense-unit" id="ad-infeed">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-format="fluid"
-         data-ad-layout="in-article"
-         data-ad-client="ca-pub-8343951291888650"
-         data-ad-slot="9876543210"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  <!-- ── Partner Commission Callout ── -->
+  <div style="margin-bottom:16px;border-radius:10px;background:linear-gradient(90deg,rgba(124,58,237,.08),rgba(0,212,255,.08));border:1px solid rgba(124,58,237,.2);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px" id="partner-commission-strip">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:20px">💰</span>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em">PARTNER WITH CYBERDUDEBIVASH</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Earn up to 25% recurring commission · Tier up from Affiliate → Partner → Reseller → Strategic</div>
+      </div>
+    </div>
+    <a href="#affiliate-hub" onclick="cdbNavigate('affiliate-hub');return false" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;font-weight:800;padding:8px 18px;border-radius:8px;text-decoration:none;letter-spacing:.04em;white-space:nowrap">⚡ Join Affiliate Program →</a>
   </div>
 
   <p style="text-align:center;font-size:.7rem;color:#374151">
@@ -5331,16 +5391,34 @@ footer.v14-footer::before {
     </div>
 
     <!-- ══ FOOTER BOTTOM ══ -->
-    <div style="border-top:1px solid rgba(0,255,136,.1);padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.6">
-        © 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.<br>
-        <span style="color:rgba(255,255,255,.2)">29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</span>
+    <!-- ══ FOOTER BOTTOM — copyright + contact ══ -->
+    <div style="border-top:1px solid rgba(0,255,136,.15);padding-top:24px">
+      <!-- Brand row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px">
+        <div>
+          <div style="font-size:15px;font-weight:900;color:#e2e8f0;letter-spacing:.04em;margin-bottom:4px">⚔️ CYBERDUDEBIVASH AI SECURITY HUB</div>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:3px">India's #1 AI-Powered Cybersecurity Intelligence Platform</div>
+          <div style="font-size:11px;color:#64748b">📍 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#64748b;line-height:2">
+            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v18.0</span><br>
+            <a href="mailto:bivash@cyberdudebivash.com" style="color:#94a3b8">bivash@cyberdudebivash.com</a><br>
+            <a href="https://wa.me/918179881447" target="_blank" style="color:#94a3b8">+91 8179881447</a> ·
+            <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:#94a3b8">Discord: cybercoder127001</a>
+          </div>
+        </div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:right;line-height:1.7">
-        Platform <span id="platform-version-footer" style="color:#00ff88">v18.0</span> ·
-        <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(255,255,255,.4)">bivash@cyberdudebivash.com</a> ·
-        <a href="https://wa.me/918179881447" target="_blank" style="color:rgba(255,255,255,.4)">+91 8179881447</a> ·
-        <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:rgba(255,255,255,.4)">Discord: cybercoder127001</a>
+      <!-- Copyright strip -->
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:11px;color:#94a3b8;font-weight:600">
+          © 2026 <span style="color:#e2e8f0;font-weight:800">CYBERDUDEBIVASH PRIVATE LIMITED</span>. All rights reserved.
+          &nbsp;·&nbsp; GST: 21ARKPN8270G1ZP &nbsp;·&nbsp; CIN: U72900OR2024PTC041xxx
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:10px;color:#64748b;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:6px;padding:3px 10px;font-weight:700;letter-spacing:.06em">🛡 DPDP ACT 2023 COMPLIANT</span>
+          <span style="font-size:10px;color:#64748b;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:3px 10px;font-weight:700;letter-spacing:.06em">🔒 ISO 27001 ALIGNED</span>
+        </div>
       </div>
     </div>
   </div>
@@ -5405,7 +5483,7 @@ const CONFIG = {
   TELEGRAM_URL:    'https://t.me/cyberdudebivashSentinelApex',
   CONTACT_EMAIL:   'bivash@cyberdudebivash.com',
   PLATFORM_NAME:   'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:         '8.1.0',     // default; immediately overridden by initVersion() from version.json
+  VERSION:         '18.0.0',    // default; immediately overridden by initVersion() from version.json
   RAZORPAY_KEY_ID: '',          // DEPRECATED — removed; manual payment system active
   ADSENSE_CLIENT:  'ca-pub-8343951291888650',
   // ── DEPRECATED: Lemon Squeezy config (replaced by CDB_PAYMENT manual system) ──
