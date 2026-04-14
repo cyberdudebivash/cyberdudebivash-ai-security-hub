@@ -241,3 +241,100 @@ CREATE INDEX IF NOT EXISTS idx_analytics_date      ON analytics_events(created_a
 -- Real users created via signup API. This is a structural placeholder only.
 -- INSERT INTO users (id, email, password_hash, password_salt, tier, full_name)
 -- VALUES ('admin_seed_001', 'admin@cyberdudebivash.com', '', '', 'ENTERPRISE', 'Platform Admin');
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- ADAPTIVE CYBER BRAIN — v21.0 Schema
+-- Run: npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema.sql
+-- These tables are additive — CREATE IF NOT EXISTS ensures zero regression.
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ─── brain_feedback ───────────────────────────────────────────────────────────
+-- Stores every user action on a scan finding.
+-- Drives per-user weight evolution in the Feedback Learning Engine.
+CREATE TABLE IF NOT EXISTS brain_feedback (
+  id               TEXT    PRIMARY KEY,
+  user_id          TEXT    NOT NULL,
+  target           TEXT,
+  finding_id       TEXT,
+  finding_type     TEXT    NOT NULL,
+  severity         TEXT    NOT NULL DEFAULT 'MEDIUM'
+                           CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
+  action           TEXT    NOT NULL
+                           CHECK (action IN ('ignored','fixed','escalated','false_positive')),
+  risk_score_at_time INTEGER NOT NULL DEFAULT 0,
+  created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_feedback_user       ON brain_feedback(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_brain_feedback_type       ON brain_feedback(finding_type, action);
+CREATE INDEX IF NOT EXISTS idx_brain_feedback_action     ON brain_feedback(action, created_at);
+
+-- ─── brain_weights ────────────────────────────────────────────────────────────
+-- Persists learned risk weight per user per weight_key.
+-- KV is the hot path; this is the durable audit record.
+CREATE TABLE IF NOT EXISTS brain_weights (
+  id               TEXT    PRIMARY KEY,
+  user_id          TEXT    NOT NULL,
+  weight_key       TEXT    NOT NULL,
+  weight_value     REAL    NOT NULL DEFAULT 10.0,
+  feedback_count   INTEGER NOT NULL DEFAULT 0,
+  created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, weight_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_weights_user        ON brain_weights(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_weights_key         ON brain_weights(weight_key, weight_value);
+
+-- ─── brain_global_signals ─────────────────────────────────────────────────────
+-- Anonymised cross-tenant signals used to build the global intelligence heatmap.
+-- No PII stored — only aggregated threat patterns.
+CREATE TABLE IF NOT EXISTS brain_global_signals (
+  id               TEXT    PRIMARY KEY,
+  signal_type      TEXT    NOT NULL,   -- 'false_positive_pattern' | 'emerging_threat' | 'attack_pattern'
+  finding_type     TEXT,
+  severity         TEXT,
+  source_tier      TEXT    DEFAULT 'UNKNOWN',
+  sector           TEXT    DEFAULT 'general',
+  metadata         TEXT,               -- JSON: additional context (no PII)
+  created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_signals_type        ON brain_global_signals(signal_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_brain_signals_finding     ON brain_global_signals(finding_type, signal_type);
+CREATE INDEX IF NOT EXISTS idx_brain_signals_sector      ON brain_global_signals(sector, created_at);
+
+-- ─── brain_predictions ────────────────────────────────────────────────────────
+-- Persists attack path prediction summaries for audit + trend analysis.
+-- Full prediction payloads cached in KV; only summary stored here.
+CREATE TABLE IF NOT EXISTS brain_predictions (
+  id                   TEXT    PRIMARY KEY,
+  user_id              TEXT,
+  target               TEXT,
+  sector               TEXT    DEFAULT 'technology',
+  breach_probability   REAL    NOT NULL DEFAULT 0,
+  chain_count          INTEGER NOT NULL DEFAULT 0,
+  ttb_hours            INTEGER,          -- predicted time-to-breach in hours
+  top_chain_type       TEXT,
+  adaptive_score       INTEGER,
+  generated_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_predictions_user    ON brain_predictions(user_id, generated_at);
+CREATE INDEX IF NOT EXISTS idx_brain_predictions_sector  ON brain_predictions(sector, breach_probability);
+CREATE INDEX IF NOT EXISTS idx_brain_predictions_date    ON brain_predictions(generated_at);
+
+-- ─── brain_model_snapshots ────────────────────────────────────────────────────
+-- Point-in-time weight snapshots for model drift analysis (ENTERPRISE).
+-- Written daily by cron. Enables weight version history + rollback.
+CREATE TABLE IF NOT EXISTS brain_model_snapshots (
+  id               TEXT    PRIMARY KEY,
+  user_id          TEXT    NOT NULL,
+  snapshot_date    TEXT    NOT NULL,   -- YYYY-MM-DD
+  weights_json     TEXT    NOT NULL,   -- full weights object as JSON
+  feedback_count   INTEGER NOT NULL DEFAULT 0,
+  created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, snapshot_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_snapshots_user      ON brain_model_snapshots(user_id, snapshot_date);
