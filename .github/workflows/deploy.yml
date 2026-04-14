@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # CYBERDUDEBIVASH AI Security Hub — Deploy to Cloudflare v9.2
 # Enterprise-Grade CI/CD: Zero-False-Failure Validation Engine
 # =============================================================================
@@ -56,7 +56,7 @@ concurrency:
 env:
   NODE_VERSION: "20"
   WRANGLER_VERSION: "4"
-  PLATFORM_VERSION: "13.0.0"
+  PLATFORM_VERSION: "18.0.0"
   # ── Endpoint hierarchy (smoke test tries these in order) ─────────────────
   PRIMARY_URL:   "https://cyberdudebivash.in"
   WORKERS_URL:   "https://cyberdudebivash-security-hub.workers.dev"
@@ -276,16 +276,21 @@ jobs:
           BACKOFF=(15 30 60)
           for attempt in 1 2 3; do
             echo "▶ Deploy attempt ${attempt}/3..."
+            # ASCII-only commit msg -- Cloudflare Pages API code 8000111
+            # Rejects non-ASCII chars (em-dashes, arrows, unicode)
+            SAFE_MSG="Deploy v${{ env.PLATFORM_VERSION }} | ${GITHUB_SHA:0:8} | ${{ github.ref_name }}"
             if wrangler pages deploy frontend \
                 --project-name cyberdudebivash-security-hub \
-                --branch main \
-                --commit-hash "${{ github.sha }}"; then
+                --branch "${{ github.ref_name }}" \
+                --commit-hash "${{ github.sha }}" \
+                --commit-message "${SAFE_MSG}" \
+                --commit-dirty=true; then
               echo "✅ Frontend deployed on attempt ${attempt}"
               break
             fi
             [ "$attempt" -eq 3 ] && { echo "❌ Frontend deploy failed after 3 attempts"; exit 1; }
             WAIT="${BACKOFF[$((attempt-1))]}"
-            echo "⚠️  Attempt ${attempt} failed — backing off ${WAIT}s..."
+            echo "⚠️  Attempt ${attempt} failed -- backing off ${WAIT}s..."
             sleep "$WAIT"
           done
 
