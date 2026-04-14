@@ -552,20 +552,25 @@ export async function handleMCPDecision(request, env, authCtx = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GOD MODE v17 — POST /mcp/control — UNIFIED MCP CONTROL ENGINE + SELF-LEARNING
-// Merges: /mcp/decision + /mcp/bundle + user memory (D1) + KV caching
-//         + Learning pipeline: adaptive ranking + A/B + personalization + pricing
-// Returns full ai_blocks + ui_blocks — THE OPERATING SYSTEM of the platform
+// GOD MODE v18 — POST /mcp/control — UNIFIED MCP CONTROL ENGINE
+//   + SELF-LEARNING (v17) + REVENUE AUTOPILOT (v18)
+// THE OPERATING SYSTEM: Learns, adapts, converts, scales autonomously.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Phase 8: Import learning pipeline (lazy — fails gracefully if missing)
+// v17: Learning pipeline
 import {
   runLearningPipeline,
   loadUserProfile,
 } from './mcpLearningEngine.js';
 
-const MCP_CONTROL_CACHE_TTL = 180; // 3 min KV cache per unique context
-const MCP_CONTROL_VERSION   = '17.0'; // bumped: self-learning active
+// v18: Revenue Autopilot
+import {
+  runRevenueAutopilot,
+  classifyUserType,
+} from './mcpRevenueEngine.js';
+
+const MCP_CONTROL_CACHE_TTL = 180; // 3 min KV cache (anon only)
+const MCP_CONTROL_VERSION   = '18.0'; // Revenue Autopilot active
 
 /**
  * Load user memory context from D1
@@ -920,6 +925,37 @@ export async function handleMCPControl(request, env, authCtx = {}) {
       console.warn('[MCPv17] Learning pipeline failsafe:', learningErr?.message);
     }
 
+    // ── Phase 9: REVENUE AUTOPILOT LOOP ───────────────────────────────────
+    // Runs all revenue phases (1-8) in parallel with learning pipeline.
+    // FAILSAFE: any error returns safe defaults — never breaks MCP response.
+    let revenue_out = null;
+    try {
+      revenue_out = await runRevenueAutopilot(env, {
+        module, risk_score, risk_level, tier, locked_count,
+        user_id, user_memory, user_profile,
+        static_bundle: bundle_offer,
+        upsell:        upsell.show ? upsell : null,
+        context:       page_context,
+        primary_item_score: recommended_training[0]
+          ? { mcp_score: 50 } // will be enriched by learning pipeline
+          : null,
+      });
+    } catch (revErr) {
+      console.warn('[MCPv18] Revenue autopilot failsafe:', revErr?.message);
+    }
+
+    // Apply revenue autopilot outputs (only if applied successfully)
+    const rev_signal     = revenue_out?.revenue_signal     || null;
+    const rev_best_offer = revenue_out?.best_offer         || null;
+    const rev_urgency    = revenue_out?.urgency_signal     || null;
+    const loss_prevention       = revenue_out?.loss_prevention       || null;
+    const return_user_revenue   = revenue_out?.return_user_revenue   || null;
+
+    // Override bundle_offer with revenue-optimized selection
+    if (rev_best_offer?.bundle_offer) {
+      bundle_offer = rev_best_offer.bundle_offer;
+    }
+
     // Primary action: most important thing user should do
     let primary_action = 'review_findings';
     let cta            = null;
@@ -945,40 +981,60 @@ export async function handleMCPControl(request, env, authCtx = {}) {
       urgency = 'low';
     }
 
-    // Phase 6: Adjust CTA using learning signals (pricing signal overrides if active)
-    if (learning_meta.pricing_signal?.urgency_label) {
+    // v18: Revenue autopilot CTA overrides static CTA (data-driven, best-converting)
+    if (revenue_out?.optimized_cta) {
+      cta = revenue_out.optimized_cta;
+    } else if (learning_meta.pricing_signal?.urgency_label) {
       cta = learning_meta.pricing_signal.urgency_label;
     } else if (user_memory.behavior_tags?.includes('paid_user') && tier === 'FREE') {
       cta = `Welcome back! Reactivate your plan for continued protection`;
     }
 
-    // Phase 6: Apply pricing signal to primary training display
-    let training_pricing_note = null;
-    if (learning_meta.pricing_signal?.show_discount && recommended_training[0]) {
-      const ps = learning_meta.pricing_signal;
-      training_pricing_note = {
-        show:           true,
-        original_price: ps.original_price,
-        display_price:  ps.display_price,
-        discount_pct:   ps.discount_pct,
-        label:          ps.discount_label,
-      };
-    } else if (learning_meta.pricing_signal?.loyalty) {
-      training_pricing_note = { show: false, loyalty: true, label: learning_meta.pricing_signal.urgency_label };
+    // Urgency: use revenue autopilot urgency signal if available
+    if (rev_signal?.urgency_level) {
+      urgency = rev_signal.urgency_level;
     }
 
-    // ── Phase 4: Return-user specific offer ───────────────────────────────
-    const return_user_offer = buildReturnUserOffer(user_memory, module, tier);
+    // Pricing note (v17 learning + v18 revenue signal combined)
+    let training_pricing_note = null;
+    if (rev_signal?.show_discount && recommended_training[0]) {
+      const dp = Math.round((recommended_training[0].price || 999) * (1 - rev_signal.discount_percent / 100));
+      training_pricing_note = {
+        show:           true,
+        original_price: recommended_training[0].price || 999,
+        display_price:  dp,
+        discount_pct:   rev_signal.discount_percent,
+        label:          `${rev_signal.discount_percent}% off — ${rev_signal.user_type === 'long_term_researcher' ? 'loyal user discount' : 'limited offer'}`,
+      };
+    } else if (learning_meta.pricing_signal?.show_discount && recommended_training[0]) {
+      const ps = learning_meta.pricing_signal;
+      training_pricing_note = {
+        show: true, original_price: ps.original_price,
+        display_price: ps.display_price, discount_pct: ps.discount_pct, label: ps.discount_label,
+      };
+    } else if (rev_signal?.show_loyalty_badge) {
+      training_pricing_note = { show: false, loyalty: true, label: '🏆 Member pricing' };
+    }
 
-    // ── Phase 5: Personalization bar ──────────────────────────────────────
+    // ── Resolve return user offer (v18 revenue strategy wins over v16 static) ─
+    const return_user_offer = return_user_revenue || buildReturnUserOffer(user_memory, module, tier);
+
+    // ── Personalization bar ────────────────────────────────────────────────
     const personalization_bar = buildPersonalizationBar(user_memory, module, risk_level);
 
-    // ── Phase 5: UI Blocks ────────────────────────────────────────────────
-    const ui_blocks = resolveUIBlocks({
+    // ── UI Blocks (extended with revenue blocks) ───────────────────────────
+    const base_ui_blocks = resolveUIBlocks({
       risk_level, tier, user_memory, enterprise_flag, module, bundle_offer, upsell,
     });
+    // Inject revenue-driven blocks
+    const ui_blocks = [...new Set([
+      ...base_ui_blocks,
+      rev_signal?.show_social_proof && rev_urgency ? 'urgency_signal' : null,
+      loss_prevention?.enabled ? 'loss_prevention_trigger' : null,
+      return_user_revenue?.show ? 'return_user_revenue' : null,
+    ].filter(Boolean))];
 
-    // ── Build final response ───────────────────────────────────────────────
+    // ── Build final v18 response ───────────────────────────────────────────
     const result = {
       // Core decision
       risk_level,
@@ -995,16 +1051,36 @@ export async function handleMCPControl(request, env, authCtx = {}) {
       ui_blocks,
       personalization_bar,
 
-      // User state
+      // v16: User state
       return_user_offer,
       upsell: upsell.show ? upsell : null,
       remediation_steps: remediation_steps.slice(0, 5),
       learning_path,
 
-      // Phase 6: Pricing signal (visual only)
+      // v17: Pricing signal
       training_pricing_note,
 
-      // Phase 8: Learning metadata (for frontend telemetry)
+      // v18: Revenue Autopilot outputs
+      revenue: revenue_out?.autopilot_applied ? {
+        signal: {
+          user_type:            rev_signal?.user_type,
+          intent_score:         rev_signal?.revenue_intent_score,
+          cta_variant:          rev_signal?.cta_variant,
+          bundle_push:          rev_signal?.bundle_push,
+          show_discount:        rev_signal?.show_discount,
+          discount_percent:     rev_signal?.discount_percent,
+          urgency_level:        rev_signal?.urgency_level,
+          loss_prevention_eligible: rev_signal?.loss_prevention_eligible,
+          welcome_back_eligible:    rev_signal?.welcome_back_eligible,
+        },
+        urgency_signal:       rev_urgency,
+        loss_prevention:      loss_prevention,
+        return_user_revenue:  return_user_revenue,
+        offer_meta:           revenue_out?.offer_tracking_meta,
+        autopilot_applied:    true,
+      } : { autopilot_applied: false },
+
+      // v17: Learning metadata
       learning: {
         applied:        learning_meta.applied,
         ab_variants:    learning_meta.ab_variants,
@@ -1012,7 +1088,7 @@ export async function handleMCPControl(request, env, authCtx = {}) {
         has_pricing:    !!learning_meta.pricing_signal,
       },
 
-      // Context echo (for frontend to store)
+      // Context echo
       user_context: {
         last_scan:     user_memory.last_scan,
         purchases:     user_memory.purchases.slice(0, 5),

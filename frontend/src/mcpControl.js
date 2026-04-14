@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * CYBERDUDEBIVASH AI Security Hub — MCP Control Client v17.0
+ * CYBERDUDEBIVASH AI Security Hub — MCP Control Client v18.0
  *
  * THE OPERATING SYSTEM layer for the frontend.
  * Wraps POST /mcp/control with:
@@ -13,6 +13,10 @@
  *   ✅ v17: Buffered batch submission (max 20 events, 5s debounce)
  *   ✅ v17: A/B variant tracking in all rendered blocks
  *   ✅ v17: Pricing signal renderer (visual discounts on training cards)
+ *   ✅ v18: Revenue Autopilot — Loss Prevention Engine (exit intent + inactivity)
+ *   ✅ v18: Revenue Autopilot — Urgency Signal Renderer (real-signal based)
+ *   ✅ v18: Revenue Autopilot — Return User Revenue Renderer (4 variants)
+ *   ✅ v18: Revenue Event Tracker (fire-and-forget, keepalive, visual only)
  *
  * Usage:
  *   import { MCPControl } from './mcpControl.js';
@@ -736,16 +740,484 @@ async function integrateWithTracking(ctx = {}, opts = {}) {
     renderUIBlocksWithTracking(decision, opts.container || null);
     showPersonalizationBar(decision);
 
-    // Apply pricing signal if present (Phase 6)
+    // Phase 6 — pricing signal (visual only, never modifies payment)
     if (decision.training_pricing_note?.show) {
       applyPricingSignal(decision.training_pricing_note);
     }
 
+    // ── v18 Revenue Autopilot ─────────────────────────────────────────────────
+    if (decision.revenue?.autopilot_applied) {
+      try {
+        // Phase 8 — Urgency signal (standalone render if block not in ui_blocks)
+        const urgency = decision.revenue?.urgency_signal;
+        if (urgency?.active && !decision.ui_blocks?.includes('urgency_signal')) {
+          renderUrgencySignal(urgency, opts.container || null);
+        }
+
+        // Phase 9 — Return user revenue (standalone render if block not in ui_blocks)
+        const returnUser = decision.revenue?.return_user_revenue;
+        if (returnUser?.show && !decision.ui_blocks?.includes('return_user_revenue')) {
+          renderReturnUserRevenue(returnUser, opts.container || null, decision);
+        }
+
+        // Phase 7 — Loss prevention (standalone init if block not in ui_blocks)
+        const lp = decision.revenue?.loss_prevention;
+        if (lp?.eligible && !decision.ui_blocks?.includes('loss_prevention_trigger')) {
+          _LossPrevention.init(lp, decision);
+        }
+
+        // Track offer impression for best_offer
+        const offerMeta = decision.revenue?.offer_meta;
+        if (offerMeta?.offer_id) {
+          trackRevenueEvent({
+            event_type:    'impression',
+            offer_type:    offerMeta.selected_type || 'single',
+            offer_id:      offerMeta.offer_id,
+            offer_name:    offerMeta.offer_name || '',
+            display_price: offerMeta.display_price || 0,
+            discount_pct:  offerMeta.discount_pct  || 0,
+            cta_variant:   decision.revenue?.signal?.cta_variant || 'standard',
+            urgency_level: decision.revenue?.signal?.urgency_level || 'low',
+            user_type:     decision.revenue?.signal?.user_type || 'new',
+            module:        decision.module || '',
+            risk_level:    decision.risk_level || '',
+            context:       decision.page_context || 'scan_result',
+          });
+        }
+      } catch (revErr) {
+        // Revenue autopilot frontend error — never crash main flow
+        console.warn('[MCPv18] Revenue frontend render error:', revErr?.message);
+      }
+    }
+    // ── End v18 ───────────────────────────────────────────────────────────────
+
     return decision;
   } catch (e) {
-    console.warn('[MCPControl v17] integrate() error — falling back silently:', e);
+    console.warn('[MCPControl v18] integrate() error — falling back silently:', e);
     return _staticFallback(ctx);
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GOD MODE v18 — REVENUE AUTOPILOT FRONTEND LAYER
+//
+// Phase 7 — Loss Prevention Engine (exit intent + inactivity + scroll)
+// Phase 8 — Urgency Signal Renderer
+// Phase 9 — Return User Revenue Renderer
+// Phase 10 — Revenue Event Tracker (client → /api/mcp/revenue/event)
+//
+// STRICT RULES:
+//   • DO NOT modify actual prices — all display_price is visual ONLY
+//   • DO NOT block payment flow — all tracking is fire-and-forget
+//   • All DOM writes are isolated try/catch — never crash page
+// ═════════════════════════════════════════════════════════════════════════════
+
+const MCP_REVENUE_EVENT_ENDPOINT = '/api/mcp/revenue/event';
+
+/**
+ * Phase 10 — Revenue event tracker
+ * Fire-and-forget POST to revenue tracking API.
+ * NEVER awaited in critical paths. NEVER throws.
+ */
+function trackRevenueEvent(payload = {}) {
+  try {
+    if (!payload.event_type || !payload.offer_type || !payload.offer_id) return;
+    // revenue_inr is always 0 from client — server verifies from delivery_tokens
+    const body = { ...payload, revenue_inr: 0, session_id: _getSessionId() };
+    fetch(MCP_REVENUE_EVENT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true,  // survives page unload
+    }).catch(() => {}); // never throw
+  } catch { /* completely silent */ }
+}
+
+// ── Phase 7: Loss Prevention Engine ──────────────────────────────────────────
+/**
+ * Manages exit intent, inactivity timer, and scroll abandon detection.
+ * Renders a loss prevention modal/banner when triggers fire.
+ * Config comes from decision.revenue.loss_prevention (built by backend).
+ */
+const _LossPrevention = (() => {
+  let _active         = false;
+  let _shown          = false;
+  let _inactivityTimer = null;
+  let _config         = null;   // { offer_id, discount_pct, trigger_after_ms, exit_intent, offer_name, display_price }
+  let _offer_type     = 'loss_prevention';
+  let _user_type      = 'new';
+  let _module         = '';
+  let _risk_level     = '';
+
+  function _show(trigger_type) {
+    if (_shown || !_config) return;
+    _shown = true;
+
+    try {
+      // Track loss_prevent_shown
+      trackRevenueEvent({
+        event_type: 'loss_prevent_shown',
+        offer_type: _offer_type,
+        offer_id:   _config.offer_id || 'lp_offer',
+        offer_name: _config.offer_name || '',
+        display_price: _config.display_price || 0,
+        discount_pct:  _config.discount_pct || 0,
+        user_type:     _user_type,
+        module:        _module,
+        risk_level:    _risk_level,
+        context:       'loss_prevention',
+      });
+
+      // Remove existing panel if present
+      const existing = document.getElementById('mcp-loss-prevention-panel');
+      if (existing) existing.remove();
+
+      const discountBadge = _config.discount_pct > 0
+        ? `<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;margin-left:8px">SAVE ${_config.discount_pct}% TODAY ONLY</span>`
+        : '';
+
+      const panel = document.createElement('div');
+      panel.id = 'mcp-loss-prevention-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-modal', 'true');
+      panel.style.cssText = `
+        position:fixed;bottom:0;left:0;right:0;z-index:99999;
+        background:linear-gradient(135deg,rgba(15,23,42,.97),rgba(30,41,59,.98));
+        border-top:2px solid rgba(239,68,68,.5);
+        padding:20px 28px;
+        display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+        box-shadow:0 -8px 40px rgba(0,0,0,.6);
+        animation:mcp-lp-slide-up 0.35s ease-out;
+      `;
+
+      // Add slide-up animation
+      if (!document.getElementById('mcp-lp-style')) {
+        const style = document.createElement('style');
+        style.id = 'mcp-lp-style';
+        style.textContent = `
+          @keyframes mcp-lp-slide-up {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      const displayPrice = _config.display_price
+        ? `<span style="color:#94a3b8;font-size:12px;text-decoration:line-through;margin-right:5px">₹${Math.round(_config.display_price * (1 + _config.discount_pct/100))}</span><span style="color:#10b981;font-size:16px;font-weight:800">₹${_config.display_price}</span>`
+        : '';
+
+      panel.innerHTML = `
+        <span style="font-size:32px">🚨</span>
+        <div style="flex:1;min-width:200px">
+          <div style="color:#ef4444;font-size:11px;font-weight:800;letter-spacing:.08em;margin-bottom:4px">
+            WAIT — DON'T LEAVE YET ${discountBadge}
+          </div>
+          <div style="color:#f1f5f9;font-size:15px;font-weight:700;margin-bottom:2px">
+            ${_config.offer_name || 'Your security gap is still open'}
+          </div>
+          <div style="color:#94a3b8;font-size:12px">
+            ${trigger_type === 'exit_intent' ? 'Before you go — grab this offer at our best price today.' : 'You\'ve been researching this for a while. Lock in the deal now.'}
+            ${displayPrice}
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button id="mcp-lp-accept-btn" style="
+            background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff;border:none;
+            border-radius:8px;padding:12px 24px;font-size:14px;font-weight:800;cursor:pointer;
+            white-space:nowrap;min-width:140px;
+          ">Claim Offer →</button>
+          <button id="mcp-lp-dismiss-btn" style="
+            background:transparent;color:#64748b;border:1px solid rgba(100,116,139,.3);
+            border-radius:7px;padding:10px 16px;font-size:12px;cursor:pointer;white-space:nowrap;
+          ">No thanks</button>
+        </div>
+      `;
+
+      document.body.appendChild(panel);
+
+      // Dismiss handler
+      const dismissBtn = document.getElementById('mcp-lp-dismiss-btn');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          panel.style.animation = 'none';
+          panel.style.transform = 'translateY(100%)';
+          panel.style.transition = 'transform .25s ease-in';
+          setTimeout(() => panel.remove(), 300);
+          trackRevenueEvent({
+            event_type: 'abandon',
+            offer_type: _offer_type,
+            offer_id:   _config.offer_id || 'lp_offer',
+            user_type:  _user_type, module: _module,
+            context:    'loss_prevention',
+          });
+        }, { once: true });
+      }
+
+      // Accept handler — track conversion, then redirect to offer
+      const acceptBtn = document.getElementById('mcp-lp-accept-btn');
+      if (acceptBtn) {
+        acceptBtn.addEventListener('click', () => {
+          trackRevenueEvent({
+            event_type: 'loss_prevent_converted',
+            offer_type: _offer_type,
+            offer_id:   _config.offer_id || 'lp_offer',
+            offer_name: _config.offer_name || '',
+            display_price: _config.display_price || 0,
+            discount_pct:  _config.discount_pct || 0,
+            user_type:     _user_type, module: _module,
+            context:       'loss_prevention',
+          });
+          // Navigate to offer — use config redirect or checkout
+          const dest = _config.redirect_url || '/products.html';
+          window.location.href = dest;
+        }, { once: true });
+      }
+    } catch (e) { console.warn('[MCPv18] Loss prevention render error:', e); }
+  }
+
+  function _onExitIntent(e) {
+    // mouseleave toward top of screen = exit intent
+    if (!_active || _shown || e.clientY > 20) return;
+    _clearInactivity();
+    _show('exit_intent');
+  }
+
+  function _clearInactivity() {
+    if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
+  }
+
+  function _startInactivity(ms) {
+    _clearInactivity();
+    _inactivityTimer = setTimeout(() => {
+      if (!_shown) _show('inactivity');
+    }, ms);
+  }
+
+  function _resetInactivity(ms) {
+    _clearInactivity();
+    _startInactivity(ms);
+  }
+
+  /** Initialize Loss Prevention for the current session. */
+  function init(config, decision) {
+    if (!config || _active) return;
+    try {
+      _config     = config;
+      _offer_type = decision?.revenue?.offer_meta?.selected_type || 'loss_prevention';
+      _user_type  = decision?.revenue?.signal?.user_type || 'new';
+      _module     = decision?.module || '';
+      _risk_level = decision?.risk_level || '';
+      _active     = true;
+      _shown      = false;
+
+      const triggerMs = config.trigger_after_ms || 45000;
+
+      // Exit intent: mouse leaves top of viewport
+      if (config.exit_intent !== false) {
+        document.addEventListener('mouseleave', _onExitIntent, { passive: true });
+      }
+
+      // Inactivity timer
+      _startInactivity(triggerMs);
+
+      // Reset inactivity on user activity
+      const resetEvents = ['mousemove','keydown','scroll','click','touchstart'];
+      const _resetHandler = () => _resetInactivity(triggerMs);
+      resetEvents.forEach(evt => document.addEventListener(evt, _resetHandler, { passive: true }));
+
+      // Track impression (fire-and-forget)
+      trackRevenueEvent({
+        event_type: 'impression',
+        offer_type: 'loss_prevention',
+        offer_id:   _config.offer_id || 'lp_offer',
+        offer_name: _config.offer_name || '',
+        display_price: _config.display_price || 0,
+        discount_pct:  _config.discount_pct || 0,
+        user_type:     _user_type, module: _module, risk_level: _risk_level,
+        context:       'loss_prevention',
+      });
+    } catch (e) { console.warn('[MCPv18] LossPrevention init error:', e); }
+  }
+
+  function destroy() {
+    _active = false;
+    _clearInactivity();
+    document.removeEventListener('mouseleave', _onExitIntent);
+    const panel = document.getElementById('mcp-loss-prevention-panel');
+    if (panel) panel.remove();
+  }
+
+  return { init, destroy };
+})();
+
+// ── Phase 8: Urgency Signal Renderer ─────────────────────────────────────────
+/**
+ * Renders a real-signal urgency bar above the main CTA.
+ * Uses deterministic stats (teamsFixed, viewingNow) from backend.
+ * NEVER fabricates numbers — all from revenue signal.
+ */
+function renderUrgencySignal(signal, container = null) {
+  try {
+    if (!signal?.active) return;
+
+    const existing = document.getElementById('mcp-urgency-signal');
+    if (existing) existing.remove();
+
+    const bar = document.createElement('div');
+    bar.id = 'mcp-urgency-signal';
+    bar.style.cssText = `
+      background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(245,158,11,.06));
+      border:1px solid rgba(239,68,68,.22);border-radius:8px;
+      padding:9px 14px;margin:10px 0;
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    `;
+
+    const levelIcon   = signal.level === 'critical' ? '🔴' : signal.level === 'high' ? '🟠' : '🟡';
+    const teamsFixed  = signal.teams_fixed  || 0;
+    const viewingNow  = signal.viewing_now  || 0;
+    const timeLabel   = signal.time_label   || '';
+    const expiresIn   = signal.expires_in_label || '';
+
+    bar.innerHTML = `
+      <span style="font-size:16px">${levelIcon}</span>
+      <div style="flex:1;min-width:180px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${teamsFixed > 0  ? `<span style="color:#94a3b8;font-size:11px">✅ <strong style="color:#e2e8f0">${teamsFixed}</strong> teams secured this week</span>` : ''}
+          ${viewingNow > 0  ? `<span style="color:#94a3b8;font-size:11px">👁 <strong style="color:#f59e0b">${viewingNow}</strong> viewing now</span>` : ''}
+          ${timeLabel       ? `<span style="color:#94a3b8;font-size:11px">🕐 ${timeLabel}</span>` : ''}
+        </div>
+        ${expiresIn ? `<div style="color:#ef4444;font-size:10px;margin-top:3px;font-weight:700">⏰ ${expiresIn}</div>` : ''}
+      </div>
+    `;
+
+    const target = container
+      || document.getElementById('mcp-blocks-root')
+      || document.querySelector('.scan-results-area');
+    if (target) target.prepend(bar); // urgency goes ABOVE other blocks
+  } catch (e) { console.warn('[MCPv18] Urgency signal render error:', e); }
+}
+
+// ── Phase 9: Return User Revenue Renderer ─────────────────────────────────────
+/**
+ * Renders a personalized return-user offer block.
+ * 4 variants: vip_welcome, buyer_return, researcher_nudge, returning_offer.
+ * Uses decision.revenue.return_user_revenue from backend.
+ */
+function renderReturnUserRevenue(returnData, container = null, decision = null) {
+  try {
+    if (!returnData?.show) return;
+
+    const existing = document.getElementById('mcp-return-revenue');
+    if (existing) existing.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'mcp-return-revenue';
+
+    // Color scheme by variant type
+    const colors = {
+      vip_welcome:       { bg: 'rgba(99,102,241,.1)',   border: 'rgba(99,102,241,.3)',  accent: '#818cf8', icon: '👑' },
+      buyer_return:      { bg: 'rgba(16,185,129,.1)',   border: 'rgba(16,185,129,.3)', accent: '#10b981', icon: '🏆' },
+      researcher_nudge:  { bg: 'rgba(245,158,11,.08)',  border: 'rgba(245,158,11,.25)', accent: '#f59e0b', icon: '🔬' },
+      returning_offer:   { bg: 'rgba(0,212,255,.07)',   border: 'rgba(0,212,255,.2)',  accent: '#00d4ff', icon: '🔄' },
+    };
+    const c = colors[returnData.type] || colors.returning_offer;
+
+    panel.style.cssText = `
+      background:linear-gradient(135deg,${c.bg},rgba(15,23,42,.02));
+      border:1px solid ${c.border};border-radius:12px;
+      padding:16px 20px;margin:14px 0;
+      display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    `;
+
+    const discountStr = returnData.discount_pct > 0
+      ? `<span style="background:${c.accent};color:#000;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:8px">-${returnData.discount_pct}%</span>`
+      : '';
+
+    panel.innerHTML = `
+      <span style="font-size:26px">${c.icon}</span>
+      <div style="flex:1;min-width:180px">
+        <div style="color:${c.accent};font-size:12px;font-weight:800;letter-spacing:.06em">
+          ${returnData.headline || 'Welcome back!'}${discountStr}
+        </div>
+        <div style="color:#f1f5f9;font-size:14px;font-weight:600;margin:4px 0">
+          ${returnData.offer_text || ''}
+        </div>
+        ${returnData.sub_text ? `<div style="color:#94a3b8;font-size:11px">${returnData.sub_text}</div>` : ''}
+      </div>
+      <button id="mcp-return-rev-cta" style="
+        background:${c.accent};color:${returnData.type === 'researcher_nudge' ? '#000' : '#fff'};
+        border:none;border-radius:8px;padding:10px 20px;
+        font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;
+      ">${returnData.cta_text || 'View Offer'}</button>
+    `;
+
+    const target = container
+      || document.getElementById('mcp-blocks-root')
+      || document.querySelector('.scan-results-area');
+    if (target) target.appendChild(panel);
+
+    // Track impression
+    const offerId = returnData.offer_id || 'return_user_offer';
+    trackRevenueEvent({
+      event_type:    'welcome_back_shown',
+      offer_type:    'welcome_back',
+      offer_id:      offerId,
+      offer_name:    returnData.headline || '',
+      display_price: returnData.display_price || 0,
+      discount_pct:  returnData.discount_pct || 0,
+      user_type:     returnData.type || 'returning',
+      module:        decision?.module || '',
+      context:       'return_user',
+    });
+
+    // CTA click → track + navigate
+    const ctaBtn = document.getElementById('mcp-return-rev-cta');
+    if (ctaBtn) {
+      ctaBtn.addEventListener('click', () => {
+        trackRevenueEvent({
+          event_type:    'welcome_back_converted',
+          offer_type:    'welcome_back',
+          offer_id:      offerId,
+          offer_name:    returnData.headline || '',
+          display_price: returnData.display_price || 0,
+          discount_pct:  returnData.discount_pct || 0,
+          user_type:     returnData.type || 'returning',
+          module:        decision?.module || '',
+          context:       'return_user',
+        });
+        const dest = returnData.redirect_url || '/products.html';
+        window.location.href = dest;
+      }, { once: true });
+    }
+
+  } catch (e) { console.warn('[MCPv18] Return user revenue render error:', e); }
+}
+
+// ── Phase 8+9: Register new UI block renderers ─────────────────────────────────
+// These extend BLOCK_RENDERERS after declaration (v18 blocks are revenue-specific)
+// Called from renderUIBlocks() like any other block.
+function _registerV18Blocks() {
+  // urgency_signal: renders the urgency bar (Phase 8)
+  BLOCK_RENDERERS['urgency_signal'] = (decision, container) => {
+    const signal = decision?.revenue?.urgency_signal;
+    if (signal) renderUrgencySignal(signal, container);
+  };
+
+  // loss_prevention_trigger: marks loss prevention as active (Phase 7)
+  // Actual UI renders on trigger (exit/inactivity) not on block render
+  BLOCK_RENDERERS['loss_prevention_trigger'] = (decision, _container) => {
+    const lp = decision?.revenue?.loss_prevention;
+    if (lp?.eligible) {
+      _LossPrevention.init(lp, decision);
+    }
+  };
+
+  // return_user_revenue: renders personalized return-user offer (Phase 9)
+  BLOCK_RENDERERS['return_user_revenue'] = (decision, container) => {
+    const rur = decision?.revenue?.return_user_revenue;
+    if (rur) renderReturnUserRevenue(rur, container, decision);
+  };
 }
 
 // ── Phase 6: Pricing signal renderer ──────────────────────────────────────────
@@ -800,19 +1272,30 @@ function trackPurchase(item_id, item_name, amount_inr, rec_type = 'training') {
   _flushFeedback();
 }
 
+// ── v18: Register revenue block renderers into BLOCK_RENDERERS ────────────────
+// Must be called after BLOCK_RENDERERS is defined (hoisted above this point)
+_registerV18Blocks();
+
 // ── Export as module + window global ──────────────────────────────────────────
 const MCPControl = {
+  // Core
   decide,
   renderUIBlocks,
   renderUIBlocksWithTracking,
   showPersonalizationBar,
-  integrate:        integrateWithTracking,  // v17: enhanced with tracking
+  integrate:            integrateWithTracking,  // v18: full autopilot
   clearCache,
+  // v17: self-learning feedback
   trackFeedback,
   trackIgnore,
   trackPurchase,
   applyPricingSignal,
-  flushFeedback:    _flushFeedback,
+  flushFeedback:        _flushFeedback,
+  // v18: revenue autopilot
+  trackRevenueEvent,
+  renderUrgencySignal,
+  renderReturnUserRevenue,
+  lossPrevention:       _LossPrevention,        // { init, destroy }
 };
 export { MCPControl };
 
@@ -824,5 +1307,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => _flushFeedback(), { passive: true });
   window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _flushFeedback();
+  }, { passive: true });
+
+  // v18: cleanup loss prevention on page unload
+  window.addEventListener('pagehide', () => {
+    _LossPrevention.destroy();
   }, { passive: true });
 }
