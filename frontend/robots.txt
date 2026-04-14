@@ -1,10 +1,71 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — robots.txt v10.0
+# Platform: Cloudflare Pages + Workers
+# Crawl rules: Allow all public pages, protect API and admin routes
+# =============================================================================
+
+# ── All robots ───────────────────────────────────────────────────────────────
 User-agent: *
 Allow: /
+Allow: /blog/
+Allow: /tools
+Allow: /intel
+Allow: /services
+Allow: /academy
+Allow: /about
+Allow: /booking
+Allow: /contact
+Allow: /sitemap.xml
+Allow: /og-image.png
+Allow: /assets/
+
+# Block API, admin, and private routes
 Disallow: /api/
+Disallow: /admin-payments
+Disallow: /user-dashboard
 Disallow: /.env
 Disallow: /.git/
+Disallow: /workers/
+Disallow: /src/
 
+# ── Google-specific rules ─────────────────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+Allow: /og-image.png
+Disallow: /api/
+Crawl-delay: 2
+
+# ── Googlebot Images (important for og:image indexing) ────────────────────────
+User-agent: Googlebot-Image
+Allow: /og-image.png
+Allow: /assets/
+Allow: /public/assets/
+
+# ── Bing ──────────────────────────────────────────────────────────────────────
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Crawl-delay: 5
+
+# ── LinkedIn crawler (fetches OG image for link previews) ─────────────────────
+User-agent: LinkedInBot
+Allow: /
+Allow: /og-image.png
+
+# ── WhatsApp link preview bot ────────────────────────────────────────────────
+User-agent: WhatsApp
+Allow: /
+Allow: /og-image.png
+
+# ── Twitter/X card bot ───────────────────────────────────────────────────────
+User-agent: Twitterbot
+Allow: /
+Allow: /og-image.png
+
+# ── Facebook crawler ─────────────────────────────────────────────────────────
+User-agent: facebookexternalhit
+Allow: /
+Allow: /og-image.png
+
+# ── Sitemaps ──────────────────────────────────────────────────────────────────
 Sitemap: https://cyberdudebivash.in/sitemap.xml
-
-# Crawl-delay for respectful bots
-Crawl-delay: 10

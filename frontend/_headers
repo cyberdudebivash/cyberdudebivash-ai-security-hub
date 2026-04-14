@@ -58,20 +58,42 @@
 /robots.txt
   Cache-Control: public, max-age=86400
 
+# ── OG image — explicit Content-Type essential for social crawlers ────────────
+# LinkedIn/WhatsApp/Twitter bots fetch this directly and MUST get image/png.
+# The _redirects file ensures this path is served before SPA catch-all fires.
+/og-image.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+  X-Content-Type-Options: nosniff
+
+/assets/ai-security-hub-banner.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+  X-Content-Type-Options: nosniff
+
 # ── Static assets (images, fonts, icons) — moderate cache ────────────────────
 /*.png
+  Content-Type: image/png
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+  X-Content-Type-Options: nosniff
 /*.jpg
+  Content-Type: image/jpeg
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 /*.jpeg
+  Content-Type: image/jpeg
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 /*.webp
+  Content-Type: image/webp
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 /*.svg
+  Content-Type: image/svg+xml
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 /*.ico
+  Content-Type: image/x-icon
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 /*.woff2
+  Content-Type: font/woff2
   Cache-Control: public, max-age=31536000, immutable
 /*.woff
+  Content-Type: font/woff
   Cache-Control: public, max-age=31536000, immutable
