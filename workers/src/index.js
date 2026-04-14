@@ -410,6 +410,13 @@ import {
   handleAutoProposal, handleEnterpriseHealth,
 } from './handlers/enterpriseHardening.js';
 
+// ─── v21.0: Visitor Intelligence Engine ─────────────────────────────────────
+import {
+  handleVisitorTrack,
+  handleVisitorLive,
+  handleVisitorStats,
+} from './handlers/visitorTracking.js';
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
@@ -3577,6 +3584,26 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/retarget/offer?vid= — get personalized return-visitor offer
     if (path === '/api/retarget/offer' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleRetargetOffer(request, env), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // v21.0 — VISITOR INTELLIGENCE ENGINE  (/api/visitor/*)
+    // Live visitor tracking, geo intel, online user dashboard widget
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/visitor/track — fire-and-forget visitor session tracking
+    if (path === '/api/visitor/track' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleVisitorTrack(request, env), request));
+    }
+
+    // GET /api/visitor/live — live online users + recent visitor list (10s cache)
+    if (path === '/api/visitor/live' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleVisitorLive(request, env), request));
+    }
+
+    // GET /api/visitor/stats — aggregate country + total visitor stats (admin)
+    if (path === '/api/visitor/stats' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleVisitorStats(request, env), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
