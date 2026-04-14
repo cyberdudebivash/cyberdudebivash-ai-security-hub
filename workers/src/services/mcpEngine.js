@@ -552,13 +552,20 @@ export async function handleMCPDecision(request, env, authCtx = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GOD MODE v16 — POST /mcp/control — UNIFIED MCP CONTROL ENGINE
+// GOD MODE v17 — POST /mcp/control — UNIFIED MCP CONTROL ENGINE + SELF-LEARNING
 // Merges: /mcp/decision + /mcp/bundle + user memory (D1) + KV caching
+//         + Learning pipeline: adaptive ranking + A/B + personalization + pricing
 // Returns full ai_blocks + ui_blocks — THE OPERATING SYSTEM of the platform
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Phase 8: Import learning pipeline (lazy — fails gracefully if missing)
+import {
+  runLearningPipeline,
+  loadUserProfile,
+} from './mcpLearningEngine.js';
+
 const MCP_CONTROL_CACHE_TTL = 180; // 3 min KV cache per unique context
-const MCP_CONTROL_VERSION   = '16.0';
+const MCP_CONTROL_VERSION   = '17.0'; // bumped: self-learning active
 
 /**
  * Load user memory context from D1
@@ -830,17 +837,20 @@ export async function handleMCPControl(request, env, authCtx = {}) {
       }
     } catch { /* external MCP offline — fallback */ }
 
-    // ── Phase 4: Load user memory from D1 ─────────────────────────────────
-    const user_memory = await loadUserMemory(env, user_id, user_email);
+    // ── Phase 4: Load user memory from D1 + user profile from KV ──────────
+    const [user_memory, user_profile] = await Promise.all([
+      loadUserMemory(env, user_id, user_email),
+      loadUserProfile(env, user_id).catch(() => null),
+    ]);
 
-    // ── Phase 1 (local fallback): Build full decision ──────────────────────
-    const recommended_tools    = externalResult?.recommended_tools
+    // ── Phase 1 (local fallback): Build base decision ──────────────────────
+    let recommended_tools    = externalResult?.recommended_tools
       || TOOL_RECOMMENDATIONS[module] || TOOL_RECOMMENDATIONS['domain'];
-    const recommended_training = externalResult?.recommended_training
+    let recommended_training = externalResult?.recommended_training
       || TRAINING_INDEX[module] || TRAINING_INDEX['domain'];
-    const remediation_steps    = externalResult?.remediation_steps
+    const remediation_steps  = externalResult?.remediation_steps
       || generateRemediationSteps(module, risk_score, findings);
-    const learning_path        = externalResult?.learning_path
+    const learning_path      = externalResult?.learning_path
       || generateLearningPath(module, risk_score);
 
     // Risk level
@@ -853,17 +863,16 @@ export async function handleMCPControl(request, env, authCtx = {}) {
     const enterprise_flag  = risk_score >= 85 || critical_count >= 3;
 
     // Upsell decision
-    const upsell = evaluateUpsell({ module, risk_score, locked_count, tier });
+    let upsell = evaluateUpsell({ module, risk_score, locked_count, tier });
 
-    // Bundle decision
-    const bundleCtx = { module, risk_score, tier };
-    const bundle_offer = (() => {
+    // Bundle decision (base — learning pipeline may re-rank)
+    let bundle_offer = (() => {
       const ranked = BUNDLE_CATALOG
         .filter(b => !b.enterprise_only || tier === 'ENTERPRISE')
         .map(b => ({ ...b, relevance: b.best_for.includes(module) ? 2 : 1 }))
         .sort((a, z) => z.relevance - a.relevance);
       const best = ranked[0];
-      if (!best || risk_score < 30) return null;  // only show if some risk exists
+      if (!best || risk_score < 30) return null;
       const hour = new Date().getHours();
       return {
         ...best,
@@ -878,6 +887,38 @@ export async function handleMCPControl(request, env, authCtx = {}) {
         cta_action: `CDB_PAY.open('${best.id}',${best.bundle_price},'${best.name}')`,
       };
     })();
+
+    // ── Phase 8: LEARNING LOOP — adaptive ranking + A/B + personalization ──
+    // Runs in parallel with no blocking. Failsafe: original data preserved on error.
+    let learning_meta = { applied: false, ab_variants: {}, pricing_signal: null, best_context: null };
+    try {
+      const learned = await runLearningPipeline(env, {
+        module, risk_level, tier, user_id,
+        user_profile,
+        tools:        recommended_tools,
+        training:     recommended_training,
+        bundle_offer: bundle_offer,
+        upsell:       upsell.show ? upsell : null,
+      });
+
+      // Apply learned output (only if pipeline succeeded)
+      if (learned.learning_applied) {
+        recommended_tools    = learned.tools    || recommended_tools;
+        recommended_training = learned.training || recommended_training;
+        bundle_offer         = learned.bundle_offer !== undefined ? learned.bundle_offer : bundle_offer;
+        if (learned.upsell) upsell = { ...upsell, ...learned.upsell };
+
+        learning_meta = {
+          applied:        true,
+          ab_variants:    learned.ab_variants   || {},
+          pricing_signal: learned.pricing_signal || null,
+          best_context:   learned.best_context  || null,
+        };
+      }
+    } catch (learningErr) {
+      // Phase 9 FAILSAFE: learning error never breaks MCP
+      console.warn('[MCPv17] Learning pipeline failsafe:', learningErr?.message);
+    }
 
     // Primary action: most important thing user should do
     let primary_action = 'review_findings';
@@ -904,9 +945,26 @@ export async function handleMCPControl(request, env, authCtx = {}) {
       urgency = 'low';
     }
 
-    // Adjust CTA for return users with purchases
-    if (user_memory.behavior_tags?.includes('paid_user') && tier === 'FREE') {
+    // Phase 6: Adjust CTA using learning signals (pricing signal overrides if active)
+    if (learning_meta.pricing_signal?.urgency_label) {
+      cta = learning_meta.pricing_signal.urgency_label;
+    } else if (user_memory.behavior_tags?.includes('paid_user') && tier === 'FREE') {
       cta = `Welcome back! Reactivate your plan for continued protection`;
+    }
+
+    // Phase 6: Apply pricing signal to primary training display
+    let training_pricing_note = null;
+    if (learning_meta.pricing_signal?.show_discount && recommended_training[0]) {
+      const ps = learning_meta.pricing_signal;
+      training_pricing_note = {
+        show:           true,
+        original_price: ps.original_price,
+        display_price:  ps.display_price,
+        discount_pct:   ps.discount_pct,
+        label:          ps.discount_label,
+      };
+    } else if (learning_meta.pricing_signal?.loyalty) {
+      training_pricing_note = { show: false, loyalty: true, label: learning_meta.pricing_signal.urgency_label };
     }
 
     // ── Phase 4: Return-user specific offer ───────────────────────────────
@@ -942,6 +1000,17 @@ export async function handleMCPControl(request, env, authCtx = {}) {
       upsell: upsell.show ? upsell : null,
       remediation_steps: remediation_steps.slice(0, 5),
       learning_path,
+
+      // Phase 6: Pricing signal (visual only)
+      training_pricing_note,
+
+      // Phase 8: Learning metadata (for frontend telemetry)
+      learning: {
+        applied:        learning_meta.applied,
+        ab_variants:    learning_meta.ab_variants,
+        best_context:   learning_meta.best_context,
+        has_pricing:    !!learning_meta.pricing_signal,
+      },
 
       // Context echo (for frontend to store)
       user_context: {

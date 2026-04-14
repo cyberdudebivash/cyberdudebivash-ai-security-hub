@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * CYBERDUDEBIVASH AI Security Hub — MCP Control Client v16.0
+ * CYBERDUDEBIVASH AI Security Hub — MCP Control Client v17.0
  *
  * THE OPERATING SYSTEM layer for the frontend.
  * Wraps POST /mcp/control with:
@@ -9,6 +9,10 @@
  *   ✅ Personalization bar integration (Phase 6)
  *   ✅ KV-aware deduplication (Phase 8)
  *   ✅ Zero regression — all existing UI continues to work if MCP fails
+ *   ✅ v17: Self-learning feedback tracking (auto-tracks all recommendation interactions)
+ *   ✅ v17: Buffered batch submission (max 20 events, 5s debounce)
+ *   ✅ v17: A/B variant tracking in all rendered blocks
+ *   ✅ v17: Pricing signal renderer (visual discounts on training cards)
  *
  * Usage:
  *   import { MCPControl } from './mcpControl.js';
@@ -556,11 +560,269 @@ function clearCache() {
   _cache.clear();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// v17: SELF-LEARNING FEEDBACK TRACKER
+// Auto-tracks all interactions with MCP recommendations.
+// Uses buffered batch submission to minimize API calls.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const FEEDBACK_ENDPOINT       = '/api/mcp/feedback/batch';
+const FEEDBACK_BUFFER_MAX     = 20;   // max events per batch
+const FEEDBACK_DEBOUNCE_MS    = 4000; // wait 4s before sending batch
+const _feedbackBuffer         = [];   // pending events
+let   _feedbackTimer          = null; // debounce timer
+let   _currentDecision        = null; // last MCP decision (for context)
+let   _sessionId              = null; // stable per-page session
+
+// Generate stable session id for this page load
+function _getSessionId() {
+  if (_sessionId) return _sessionId;
+  _sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  return _sessionId;
+}
+
+/**
+ * Flush feedback buffer to /api/mcp/feedback/batch.
+ * Fire-and-forget — never throws or blocks UI.
+ */
+function _flushFeedback() {
+  if (!_feedbackBuffer.length) return;
+  const events = _feedbackBuffer.splice(0, FEEDBACK_BUFFER_MAX);
+
+  fetch(FEEDBACK_ENDPOINT, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ events }),
+  }).catch(() => {}); // completely silent — never affects UX
+}
+
+/**
+ * Queue a feedback event. Debounced batch send.
+ * NEVER throws. Completely invisible to user.
+ *
+ * @param {object} event - { action, recommendation_type, item_id, item_name, ... }
+ */
+function trackFeedback(event) {
+  try {
+    if (!event?.action || !event?.item_id) return;
+
+    const d = _currentDecision;
+    _feedbackBuffer.push({
+      action:              event.action,
+      recommendation_type: event.recommendation_type || 'tool',
+      item_id:             String(event.item_id).slice(0, 80),
+      item_name:           String(event.item_name || '').slice(0, 120),
+      context:             event.context || d?.page_context || 'scan_result',
+      module:              event.module  || d?.module       || '',
+      risk_level:          event.risk_level || d?.risk_level || '',
+      tier:                event.tier    || d?.tier         || 'FREE',
+      ab_variant:          event.ab_variant || (d?.learning?.ab_variants ? Object.values(d.learning.ab_variants)[0] : null),
+      experiment_id:       event.experiment_id || null,
+      session_id:          _getSessionId(),
+    });
+
+    // Debounce: clear existing timer and reset
+    if (_feedbackTimer) clearTimeout(_feedbackTimer);
+
+    // Flush immediately on purchase (don't buffer purchases)
+    if (event.action === 'purchase') {
+      _flushFeedback();
+    } else {
+      _feedbackTimer = setTimeout(_flushFeedback, FEEDBACK_DEBOUNCE_MS);
+      // Also flush if buffer is full
+      if (_feedbackBuffer.length >= FEEDBACK_BUFFER_MAX) {
+        clearTimeout(_feedbackTimer);
+        _flushFeedback();
+      }
+    }
+  } catch { /* completely silent */ }
+}
+
+/**
+ * Track an "ignore" event for all visible recommendations.
+ * Called when user dismisses a scan result without clicking any CTA.
+ * Gives MCP signal that these items weren't compelling enough.
+ */
+function trackIgnore(decision) {
+  try {
+    if (!decision) return;
+
+    if (decision.bundle_offer) {
+      trackFeedback({ action: 'ignore', recommendation_type: 'bundle',
+        item_id: decision.bundle_offer.id, item_name: decision.bundle_offer.name });
+    }
+    if (decision.upsell?.product) {
+      trackFeedback({ action: 'ignore', recommendation_type: 'upsell',
+        item_id: decision.upsell.product, item_name: decision.upsell.label });
+    }
+    if (decision.recommended_training?.[0]) {
+      const t = decision.recommended_training[0];
+      trackFeedback({ action: 'ignore', recommendation_type: 'training',
+        item_id: t.id, item_name: t.name });
+    }
+  } catch { /* silent */ }
+}
+
+// ── Auto-track: Attach tracking to all rendered block buttons ─────────────────
+/**
+ * Intercepts all clicks on CDB_PAY and MCP block buttons.
+ * Patches them with feedback tracking before the original onclick fires.
+ */
+function _attachFeedbackListeners(rootEl, decision) {
+  if (!rootEl || !decision) return;
+
+  try {
+    // Attach to all buttons within MCP-rendered blocks
+    const buttons = rootEl.querySelectorAll('button[onclick], a[href]');
+    buttons.forEach(btn => {
+      const originalOnclick = btn.onclick;
+      const href = btn.getAttribute('href');
+
+      btn.addEventListener('click', (e) => {
+        try {
+          // Determine what was clicked from parent block context
+          const block = btn.closest('[id^="mcp-"]');
+          const blockId = block?.id || '';
+
+          let rec_type = 'tool';
+          let item_id  = '';
+          let item_name = '';
+
+          if (blockId.includes('bundle'))   { rec_type = 'bundle';   item_id = decision.bundle_offer?.id || ''; item_name = decision.bundle_offer?.name || ''; }
+          else if (blockId.includes('upsell')) { rec_type = 'upsell'; item_id = decision.upsell?.product || ''; item_name = decision.upsell?.label || ''; }
+          else if (blockId.includes('training')) { rec_type = 'training'; item_id = decision.recommended_training?.[0]?.id || ''; item_name = decision.recommended_training?.[0]?.name || ''; }
+          else if (blockId.includes('enterprise')) { rec_type = 'enterprise'; item_id = 'enterprise_demo'; item_name = 'Enterprise Demo'; }
+          else if (blockId.includes('tools')) { rec_type = 'tool'; item_id = 'tool_click'; item_name = btn.textContent?.trim()?.slice(0,40) || ''; }
+
+          if (item_id) {
+            trackFeedback({ action: 'click', recommendation_type: rec_type, item_id, item_name,
+              context: decision.page_context || 'scan_result' });
+          }
+        } catch { /* silent */ }
+      }, { passive: true });
+    });
+
+    // Auto-track ignore after 60s if no interaction (user saw it but didn't click)
+    setTimeout(() => {
+      const hasMCPBlocks = rootEl.querySelector('[id^="mcp-"]');
+      if (hasMCPBlocks) trackIgnore(decision);
+    }, 60000);
+
+  } catch { /* silent */ }
+}
+
+// ── Enhanced renderUIBlocks with tracking ─────────────────────────────────────
+function renderUIBlocksWithTracking(decision, container = null) {
+  _currentDecision = decision; // store for context in feedback events
+  renderUIBlocks(decision, container);
+
+  // Attach feedback listeners after a tick (blocks need to be in DOM first)
+  const root = container || document.getElementById('mcp-blocks-root');
+  if (root) {
+    setTimeout(() => _attachFeedbackListeners(root, decision), 100);
+  }
+}
+
+// ── Enhanced integrate with tracking ──────────────────────────────────────────
+async function integrateWithTracking(ctx = {}, opts = {}) {
+  try {
+    const decision = await decide(ctx);
+    _currentDecision = decision;
+
+    if (typeof opts.onDecision === 'function') {
+      try { opts.onDecision(decision); } catch {}
+    }
+
+    renderUIBlocksWithTracking(decision, opts.container || null);
+    showPersonalizationBar(decision);
+
+    // Apply pricing signal if present (Phase 6)
+    if (decision.training_pricing_note?.show) {
+      applyPricingSignal(decision.training_pricing_note);
+    }
+
+    return decision;
+  } catch (e) {
+    console.warn('[MCPControl v17] integrate() error — falling back silently:', e);
+    return _staticFallback(ctx);
+  }
+}
+
+// ── Phase 6: Pricing signal renderer ──────────────────────────────────────────
+/**
+ * Applies a visual pricing note to the training banner.
+ * ONLY modifies display text — never changes actual payment amounts.
+ */
+function applyPricingSignal(signal) {
+  try {
+    if (!signal?.show) return;
+    const trainingBanner = document.getElementById('mcp-training-banner');
+    if (!trainingBanner) return;
+
+    const existing = trainingBanner.querySelector('.mcp-pricing-signal');
+    if (existing) existing.remove();
+
+    const ps = document.createElement('div');
+    ps.className = 'mcp-pricing-signal';
+    ps.style.cssText = `
+      display:inline-flex;align-items:center;gap:8px;margin-top:6px;
+    `;
+    ps.innerHTML = `
+      <span style="color:#94a3b8;font-size:12px;text-decoration:line-through">₹${signal.original_price}</span>
+      <span style="color:#10b981;font-size:14px;font-weight:800">₹${signal.display_price}</span>
+      <span style="background:#10b981;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px">${signal.label}</span>
+    `;
+
+    // Inject after the course name line
+    const courseNameEl = trainingBanner.querySelector('div[style*="font-weight:600"]');
+    if (courseNameEl) courseNameEl.after(ps);
+    else trainingBanner.appendChild(ps);
+  } catch { /* silent */ }
+}
+
+// ── Global purchase event hook (called by CDB_PAY after confirmed purchase) ───
+/**
+ * Call this AFTER a successful payment to record conversion signal.
+ * This is the most valuable learning signal — don't miss it.
+ *
+ * Usage in payment handler:
+ *   window.MCPControl.trackPurchase('SOC_PLAYBOOK_2026', 'SOC Analyst Survival Playbook 2026', 999, 'training');
+ */
+function trackPurchase(item_id, item_name, amount_inr, rec_type = 'training') {
+  trackFeedback({
+    action:              'purchase',
+    recommendation_type: rec_type,
+    item_id,
+    item_name,
+    revenue_inr:         0, // server-side verified — never trust client revenue
+  });
+  // Flush immediately on purchase
+  _flushFeedback();
+}
+
 // ── Export as module + window global ──────────────────────────────────────────
-const MCPControl = { decide, renderUIBlocks, showPersonalizationBar, integrate, clearCache };
+const MCPControl = {
+  decide,
+  renderUIBlocks,
+  renderUIBlocksWithTracking,
+  showPersonalizationBar,
+  integrate:        integrateWithTracking,  // v17: enhanced with tracking
+  clearCache,
+  trackFeedback,
+  trackIgnore,
+  trackPurchase,
+  applyPricingSignal,
+  flushFeedback:    _flushFeedback,
+};
 export { MCPControl };
 
 // Expose globally for inline HTML usage
 if (typeof window !== 'undefined') {
   window.MCPControl = MCPControl;
+
+  // Auto-flush feedback buffer on page unload (catch anything buffered)
+  window.addEventListener('beforeunload', () => _flushFeedback(), { passive: true });
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') _flushFeedback();
+  }, { passive: true });
 }
