@@ -379,6 +379,16 @@ import {
   SUBSCRIPTION_PLANS,
 } from './core/revenueGate.js';
 
+// ─── GOD MODE v21: Adaptive Cyber Brain — Self-Learning Intelligence Engine ───
+import {
+  handleLearnFeedback,
+  handleGlobalIntel,
+  handleAdaptiveRisk,
+  handleAttackPredictions,
+  enrichScanAdaptive,
+  runAdaptiveBrainCron,
+} from './core/adaptiveCyberBrain.js';
+
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
 import {
   handleGetSeededThreats, handleGetSeededCVEs,
@@ -3633,6 +3643,34 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleRemediationPlan(request, env, authCtx), request));
     }
 
+    // ── GOD MODE v21: Adaptive Cyber Brain ────────────────────────────────────
+
+    // POST /api/cyber-brain/learn — submit feedback to evolve risk model (STARTER+)
+    if (path === '/api/cyber-brain/learn' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleLearnFeedback(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/global-intel — cross-tenant threat heatmap (PRO+)
+    if (path === '/api/cyber-brain/global-intel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleGlobalIntel(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/adaptive-risk — personalised adaptive risk score (STARTER+)
+    if (path === '/api/cyber-brain/adaptive-risk' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleAdaptiveRisk(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/predictions — attack path predictions (PRO+)
+    if (path === '/api/cyber-brain/predictions' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleAttackPredictions(request, env, authCtx), request));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // GOD MODE v20 — GLOBAL THREAT FEED  (/api/global-threat-feed/*)
     // ThreatFusion Engine: normalized IOCs from NVD, CISA KEV, ThreatFox,
@@ -3820,6 +3858,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       purgeExpiredThreatIntel(env)
         .then(n => { if (n > 0) console.log(`[CRON] Purged ${n} expired threat intel entries`); })
         .catch(e => console.error('[CRON] Purge error:', e?.message))
+    );
+
+    // ── HOURLY: v21.0 Adaptive Cyber Brain — refresh global signals + FP patterns ──
+    ctx.waitUntil(
+      runAdaptiveBrainCron(env)
+        .then(r => console.log('[CRON] AdaptiveBrain:', JSON.stringify(r)))
+        .catch(e => console.error('[CRON] AdaptiveBrain error:', e?.message))
     );
 
     // ── Sentinel APEX v3: Global Federation + SOC Automation Pipeline ────────

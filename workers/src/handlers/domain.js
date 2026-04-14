@@ -11,6 +11,8 @@ import { validateDomain, parseBody } from '../middleware/validation.js';
 import { inspectForAttacks, sanitizeString } from '../middleware/security.js';
 import { resolveDomain, inferTLSGrade }      from '../lib/dns.js';
 import { fullBlacklistCheck }                from '../lib/dnsbl.js';
+// v21.0 — Adaptive CyberBrain enrichment (non-blocking, PRO+ tier)
+import { enrichScanAdaptive } from '../core/adaptiveCyberBrain.js';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
@@ -307,8 +309,22 @@ export async function handleDomainScan(request, env, authCtx = {}) {
     };
   }
 
+  // ── v21.0: Adaptive CyberBrain enrichment (fire-and-forget on FREE, inline on PRO+) ──
+  const tier   = authCtx?.tier || 'FREE';
+  const userId = authCtx?.userId || null;
+  const sector = authCtx?.sector || 'technology';
+  if (tier === 'FREE' || tier === 'STARTER') {
+    // Non-blocking for free tiers — do not delay response
+    enrichScanAdaptive(env, scanResult, { module: 'domain', target: domain, tier, userId, sector })
+      .catch(() => {});
+  } else {
+    // PRO+ — inline adaptive enrichment (adds adaptive_brain field)
+    scanResult = await enrichScanAdaptive(env, scanResult, { module: 'domain', target: domain, tier, userId, sector })
+      .catch(() => scanResult);
+  }
+
   return Response.json(addMonetizationFlags(scanResult, 'domain', authCtx, scanId), {
     status: 200,
-    headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource },
+    headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v21.0' },
   });
 }

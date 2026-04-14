@@ -16,6 +16,8 @@
 
 import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js';
 import { checkRateLimitCost, rateLimitResponse }  from '../middleware/rateLimit.js';
+// v21.0 — Adaptive CyberBrain: vuln prioritization
+import { prioritizeVulns } from '../core/cyberBrain.js';
 
 // ─── Remediation stage lifecycle ─────────────────────────────────────────────
 const STAGES = ['open', 'in_progress', 'testing', 'patched', 'accepted_risk', 'false_positive'];
@@ -233,6 +235,12 @@ export async function handleListVulns(request, env, authCtx) {
     return order === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
   });
 
+  // v21.0 — Apply adaptive prioritization for STARTER+ tiers
+  const tier = authCtx?.tier || 'FREE';
+  if (['STARTER', 'PRO', 'ENTERPRISE'].includes(tier)) {
+    vulns = prioritizeVulns(vulns, tier);
+  }
+
   const total     = vulns.length;
   const paginated = vulns.slice(offset, offset + limit);
 
@@ -245,9 +253,10 @@ export async function handleListVulns(request, env, authCtx) {
 
   return Response.json({
     total, limit, offset,
+    adaptive_prioritized: ['STARTER', 'PRO', 'ENTERPRISE'].includes(tier),
     summary: { by_severity: bySeverity, by_stage: byStage, kev_count: vulns.filter(v => v.in_kev).length },
     vulns: paginated,
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    platform: 'CYBERDUDEBIVASH AI Security Hub v21.0',
   });
 }
 

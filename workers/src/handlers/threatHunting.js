@@ -13,6 +13,8 @@
 
 import { checkRateLimitCost, rateLimitResponse } from '../middleware/rateLimit.js';
 import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js';
+// v21.0 — Adaptive hunt query recommendations
+import { recommendHuntQueries } from '../core/cyberBrain.js';
 
 // ─── Built-in hunt templates ──────────────────────────────────────────────────
 const HUNT_TEMPLATES = {
@@ -382,7 +384,11 @@ export async function handleRunHunt(request, env, authCtx) {
     ] : [
       'No matches found — consider broadening query scope or time window',
     ],
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    // v21.0 — Adaptive next hunt recommendations (sector + risk aware)
+    adaptive_hunt_suggestions: (['PRO', 'ENTERPRISE'].includes(authCtx?.tier))
+      ? recommendHuntQueries(authCtx?.sector || 'technology', matchCount > 5 ? 75 : 45)
+      : undefined,
+    platform: 'CYBERDUDEBIVASH AI Security Hub v21.0',
   });
 }
 
