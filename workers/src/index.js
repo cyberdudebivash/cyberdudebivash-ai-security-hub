@@ -292,6 +292,12 @@ import {
   handleMCPABResults,
 } from './handlers/mcpFeedback.js';
 
+// ─── GOD MODE v18: Revenue Autopilot — Direct API ────────────────────────────
+import {
+  trackRevenueEvent,
+  getOfferPerformance,
+} from './services/mcpRevenueEngine.js';
+
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
 import {
   handleGetSeededThreats, handleGetSeededCVEs,
@@ -3107,6 +3113,166 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/mcp/ab/results' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPABResults(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v18 — REVENUE AUTOPILOT DIRECT API  (/api/mcp/revenue/*)
+    // trackRevenueEvent: fire-and-forget funnel tracking from frontend
+    // getOfferPerformance: admin KPI — RPI, conversion, best context
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/mcp/revenue/event — client-side revenue funnel event (public)
+    // Body: { event_type, offer_type, offer_id, session_id?, user_id?, ... }
+    if (path === '/api/mcp/revenue/event' && method === 'POST') {
+      try {
+        const body = await request.json().catch(() => ({}));
+        const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, userId: null }));
+        const ip = request.headers.get('CF-Connecting-IP') || 'anon';
+
+        // Validate required fields
+        const validEventTypes = ['impression','click','purchase','abandon',
+          'loss_prevent_shown','loss_prevent_converted',
+          'welcome_back_shown','welcome_back_converted'];
+        const validOfferTypes = ['single','bundle','dynamic_bundle','enterprise',
+          'upsell','loss_prevention','welcome_back','cta_only'];
+
+        if (!validEventTypes.includes(body.event_type) || !validOfferTypes.includes(body.offer_type) || !body.offer_id) {
+          return withSecurityHeaders(withCors(new Response(JSON.stringify({
+            ok: false, error: 'Invalid event_type, offer_type, or missing offer_id'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } }), request));
+        }
+
+        // revenue_inr is always 0 from client — server verifies purchases from delivery_tokens
+        let verified_revenue = 0;
+        if (body.event_type === 'purchase' && authCtx.authenticated && authCtx.userId) {
+          try {
+            const tokenRow = await env.DB.prepare(
+              `SELECT SUM(amount_inr) as total FROM delivery_tokens WHERE user_id=? AND item_id=? AND status='delivered' ORDER BY created_at DESC LIMIT 1`
+            ).bind(authCtx.userId, body.offer_id).first();
+            verified_revenue = tokenRow?.total ?? 0;
+          } catch (_) { /* ignore */ }
+        }
+
+        // Build event payload and track (fire-and-forget from client perspective)
+        const eventPayload = {
+          session_id: body.session_id ?? null,
+          user_id: authCtx.userId ?? body.user_id ?? null,
+          ip_hash: ip.split('.').slice(0,2).join('.') + '.x.x',
+          event_type: body.event_type,
+          offer_type: body.offer_type,
+          offer_id: body.offer_id,
+          offer_name: body.offer_name ?? null,
+          display_price: Number(body.display_price ?? 0),
+          actual_price: verified_revenue > 0 ? verified_revenue : Number(body.actual_price ?? 0),
+          discount_pct: Number(body.discount_pct ?? 0),
+          cta_variant: body.cta_variant ?? 'standard',
+          urgency_level: body.urgency_level ?? 'low',
+          module: body.module ?? null,
+          risk_level: body.risk_level ?? null,
+          user_type: body.user_type ?? 'new',
+          context: body.context ?? 'scan_result',
+          revenue_inr: verified_revenue,
+        };
+
+        // Non-blocking track — never fail client on DB error
+        trackRevenueEvent(env, eventPayload).catch(() => {});
+
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: true, tracked: true, event_type: body.event_type,
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }), request));
+      } catch (err) {
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: false, error: 'Revenue event tracking failed'
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } }), request));
+      }
+    }
+
+    // GET /api/mcp/revenue/performance — offer KPI leaderboard (admin)
+    // Returns: top offers by RPI, conversion, revenue_score
+    if (path === '/api/mcp/revenue/performance' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated || authCtx.role !== 'admin') {
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: false, error: 'Admin auth required'
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
+      }
+      try {
+        const url = new URL(request.url);
+        const offerId = url.searchParams.get('offer_id') ?? null;
+        const perf = await getOfferPerformance(env, offerId);
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: true, data: perf, generated_at: new Date().toISOString(),
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }), request));
+      } catch (err) {
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: false, error: 'Performance fetch failed', detail: err?.message
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } }), request));
+      }
+    }
+
+    // GET /api/mcp/revenue/funnel — revenue funnel analytics (admin)
+    // Returns impression→click→purchase conversion funnel from D1
+    if (path === '/api/mcp/revenue/funnel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated || authCtx.role !== 'admin') {
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: false, error: 'Admin auth required'
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
+      }
+      try {
+        const url = new URL(request.url);
+        const days = Math.min(parseInt(url.searchParams.get('days') ?? '7'), 30);
+        const since = new Date(Date.now() - days * 86400000).toISOString();
+
+        const [funnelRows, topOffers, lossStats] = await Promise.all([
+          env.DB.prepare(`
+            SELECT event_type, COUNT(*) as count, SUM(revenue_inr) as revenue
+            FROM mcp_revenue_events WHERE created_at >= ?
+            GROUP BY event_type ORDER BY count DESC
+          `).bind(since).all(),
+          env.DB.prepare(`
+            SELECT offer_id, offer_name, offer_type,
+              SUM(CASE WHEN event_type='impression' THEN 1 ELSE 0 END) as impressions,
+              SUM(CASE WHEN event_type='click' THEN 1 ELSE 0 END) as clicks,
+              SUM(CASE WHEN event_type='purchase' THEN 1 ELSE 0 END) as purchases,
+              SUM(revenue_inr) as revenue_inr
+            FROM mcp_revenue_events WHERE created_at >= ?
+            GROUP BY offer_id ORDER BY revenue_inr DESC LIMIT 10
+          `).bind(since).all(),
+          env.DB.prepare(`
+            SELECT trigger_type,
+              COUNT(*) as triggered,
+              SUM(converted) as converted,
+              SUM(revenue_inr) as revenue_inr
+            FROM mcp_loss_prevention WHERE created_at >= ?
+            GROUP BY trigger_type
+          `).bind(since).all(),
+        ]);
+
+        const funnel = Object.fromEntries((funnelRows.results ?? []).map(r => [r.event_type, { count: r.count, revenue: r.revenue }]));
+        const impressions = funnel.impression?.count ?? 1;
+        const clicks      = funnel.click?.count ?? 0;
+        const purchases   = funnel.purchase?.count ?? 0;
+
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: true,
+          period_days: days,
+          funnel: {
+            impressions, clicks, purchases,
+            click_rate:    impressions > 0 ? Math.round((clicks / impressions) * 10000) / 100 : 0,
+            purchase_rate: clicks > 0 ? Math.round((purchases / clicks) * 10000) / 100 : 0,
+            end_to_end:    impressions > 0 ? Math.round((purchases / impressions) * 10000) / 100 : 0,
+            total_revenue: funnel.purchase?.revenue ?? 0,
+          },
+          top_offers: topOffers.results ?? [],
+          loss_prevention: lossStats.results ?? [],
+          generated_at: new Date().toISOString(),
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }), request));
+      } catch (err) {
+        return withSecurityHeaders(withCors(new Response(JSON.stringify({
+          ok: false, error: 'Funnel fetch failed', detail: err?.message
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } }), request));
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
