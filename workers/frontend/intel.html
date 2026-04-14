@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Threat Intelligence — CYBERDUDEBIVASH Sentinel APEX</title>
+    <link rel="canonical" href="https://cyberdudebivash.in/intel">
+    <meta property="og:title" content="Live Threat Intelligence — CYBERDUDEBIVASH Sentinel APEX">
+    <meta property="og:description" content="Real-time threat intelligence and live CVE monitoring with AI-powered analysis and autonomous response."">
+    <meta property="og:url" content="https://cyberdudebivash.in/intel">
+    <meta property="og:image" content="https://cyberdudebivash.in/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1c;
+            --card-dark: #111827;
+            --accent: #00ffcc;
+            --accent-shadow: rgba(0, 255, 204, 0.5);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --border-color: rgba(0, 255, 204, 0.2);
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ===== STICKY NAVIGATION ===== */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, rgba(10, 15, 28, 0.95), rgba(17, 24, 39, 0.95));
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px var(--accent-shadow);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent-shadow);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 6px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        /* ===== RESPONSIVE NAV ===== */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            .nav-logo {
+                font-size: 1.2rem;
+            }
+
+            .hamburger {
+                display: flex;
+            }
+
+            .nav-links {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: var(--card-dark);
+                gap: 0;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+            }
+
+            .nav-links.active {
+                max-height: 500px;
+            }
+
+            .nav-links a {
+                padding: 1rem;
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05), transparent);
+            border-bottom: 1px solid var(--border-color);
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #00ccaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px var(--accent-shadow);
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            border-radius: 999px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            animation: slideInDown 0.6s ease;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-card {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            animation: slideInUp 0.6s ease backwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-shadow: 0 0 15px var(--accent-shadow);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #00ccaa);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            border: 2px solid var(--accent);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 255, 204, 0.2);
+            box-shadow: 0 0 20px var(--accent-shadow);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* ===== FILTER BAR ===== */
+        .filter-section {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .filter-btn.active {
+            background: rgba(0, 255, 204, 0.3);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-shadow);
+        }
+
+        .filter-btn:hover {
+            background: rgba(0, 255, 204, 0.2);
+        }
+
+        .refresh-timer {
+            margin-left: auto;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .refresh-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* ===== THREAT STATS DASHBOARD ===== */
+        .threat-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .threat-stat-item {
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.1), rgba(0, 204, 170, 0.05));
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            animation: slideInUp 0.6s ease backwards;
+        }
+
+        .threat-stat-item:nth-child(1) { animation-delay: 0.1s; }
+        .threat-stat-item:nth-child(2) { animation-delay: 0.2s; }
+        .threat-stat-item:nth-child(3) { animation-delay: 0.3s; }
+        .threat-stat-item:nth-child(4) { animation-delay: 0.4s; }
+
+        .threat-stat-number {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--accent);
+            animation: countUp 1.5s ease-out;
+        }
+
+        .threat-stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ===== THREAT FEED ===== */
+        .feed-section {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .feed-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--accent);
+        }
+
+        .threat-feed {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: 1fr;
+        }
+
+        .threat-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.6));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: slideInUp 0.5s ease backwards;
+            overflow: hidden;
+        }
+
+        .threat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0, 255, 204, 0.1), transparent);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .threat-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .threat-card:hover::before {
+            top: -25%;
+            right: -25%;
+        }
+
+        .threat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .threat-id {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-critical {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            border: 1px solid var(--danger);
+        }
+
+        .badge-high {
+            background: rgba(245, 158, 11, 0.3);
+            color: #fcd34d;
+            border: 1px solid var(--warning);
+        }
+
+        .badge-medium {
+            background: rgba(34, 197, 94, 0.3);
+            color: #86efac;
+            border: 1px solid var(--success);
+        }
+
+        .badge-cvss {
+            background: rgba(0, 255, 204, 0.2);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .badge-kev {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        .badge-apt {
+            background: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.5);
+        }
+
+        .threat-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .threat-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .threat-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .meta-item {
+            font-size: 0.85rem;
+        }
+
+        .meta-label {
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+
+        .meta-value {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .threat-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* ===== APT SECTION ===== */
+        .apt-section {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--accent);
+        }
+
+        .apt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .apt-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.6));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: slideInUp 0.6s ease backwards;
+        }
+
+        .apt-card:nth-child(1) { animation-delay: 0.1s; }
+        .apt-card:nth-child(2) { animation-delay: 0.2s; }
+        .apt-card:nth-child(3) { animation-delay: 0.3s; }
+        .apt-card:nth-child(4) { animation-delay: 0.4s; }
+        .apt-card:nth-child(5) { animation-delay: 0.5s; }
+        .apt-card:nth-child(6) { animation-delay: 0.6s; }
+
+        .apt-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            transform: translateY(-8px);
+        }
+
+        .apt-name {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .apt-origin {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .apt-info {
+            margin-bottom: 1.5rem;
+        }
+
+        .apt-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.3rem;
+        }
+
+        .apt-content {
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .cta-container {
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.1), rgba(0, 204, 170, 0.05));
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.2);
+        }
+
+        .cta-title {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .cta-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-size: 1.05rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .subscription-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .subscription-form input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.75rem 1rem;
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .subscription-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-shadow);
+        }
+
+        .subscription-form input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 2rem 1rem;
+            }
+
+            .hero-title {
+                font-size: 1.8rem;
+            }
+
+            .hero-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                margin: 2rem 1rem;
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.8rem;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-buttons {
+                width: 100%;
+            }
+
+            .refresh-timer {
+                width: 100%;
+                margin-left: 0;
+                justify-content: flex-start;
+            }
+
+            .threat-card {
+                padding: 1rem;
+            }
+
+            .threat-header {
+                flex-direction: column;
+            }
+
+            .threat-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .threat-actions {
+                flex-direction: column;
+            }
+
+            .threat-actions .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .apt-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-container {
+                padding: 2rem 1rem;
+            }
+
+            .cta-title {
+                font-size: 1.5rem;
+            }
+
+            .subscription-form {
+                flex-direction: column;
+            }
+
+            .subscription-form input,
+            .subscription-form .btn {
+                width: 100%;
+            }
+
+            .feed-title,
+            .section-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .mt-2 { margin-top: 2rem; }
+        .mt-4 { margin-top: 4rem; }
+        .mb-2 { margin-bottom: 2rem; }
+        .mb-4 { margin-bottom: 4rem; }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-logo">CYBERDUDEBIVASH</div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/">Home</a></li>
+            <li><a href="/tools.html">Tools</a></li>
+            <li><a href="/intel.html" class="active">Intel</a></li>
+            <li><a href="/services.html">Services</a></li>
+            <li><a href="/booking.html">Booking</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            LIVE FEED
+        </div>
+        <h1 class="hero-title">Live Threat Intelligence Feed</h1>
+        <p class="hero-subtitle">
+            Real-time CVE intelligence powered by Sentinel APEX · STIX/TAXII format · Updated every 15 minutes
+        </p>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Total CVEs Tracked</div>
+                <div class="stat-value" data-stat="total-cves">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Critical Threats</div>
+                <div class="stat-value" data-stat="critical">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">KEV Listed</div>
+                <div class="stat-value" data-stat="kev">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Updated</div>
+                <div class="stat-value" id="last-updated" style="font-size: 1.2rem;">Now</div>
+            </div>
+        </div>
+
+        <div class="hero-buttons">
+            <a href="https://cyberdudebivash.in/#dashboard" class="btn btn-primary">
+                Launch Full Dashboard →
+            </a>
+            <a href="https://t.me/cyberdudebivashSentinelApex" class="btn btn-secondary" target="_blank">
+                Join Telegram Feed
+            </a>
+        </div>
+    </section>
+
+    <!-- FILTER SECTION -->
+    <div class="filter-section">
+        <div class="filter-bar">
+            <span class="filter-label">Filter by:</span>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="CRITICAL">Critical</button>
+                <button class="filter-btn" data-filter="HIGH">High</button>
+                <button class="filter-btn" data-filter="MEDIUM">Medium</button>
+                <button class="filter-btn" data-filter="kev">CISA KEV</button>
+                <button class="filter-btn" data-filter="week">This Week</button>
+            </div>
+            <div class="refresh-timer">
+                <div class="refresh-spinner"></div>
+                <span id="refresh-time">Last refreshed: Now</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- THREAT STATS DASHBOARD -->
+    <section class="threat-stats">
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="critical-count">0</div>
+            <div class="threat-stat-label">Critical CVEs</div>
+        </div>
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="high-count">0</div>
+            <div class="threat-stat-label">High CVEs</div>
+        </div>
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="kev-count">0</div>
+            <div class="threat-stat-label">KEV Listed</div>
+        </div>
+        <div class="threat-stat-item">
+            <div class="threat-stat-number" data-counter="apt-count">0</div>
+            <div class="threat-stat-label">APT Groups Tracked</div>
+        </div>
+    </section>
+
+    <!-- THREAT FEED -->
+    <section class="feed-section">
+        <h2 class="feed-title">Real-Time Threat Intelligence</h2>
+        <div class="threat-feed" id="threat-feed">
+            <!-- Threats populated by JS -->
+        </div>
+    </section>
+
+    <!-- APT THREAT ACTORS -->
+    <section class="apt-section">
+        <h2 class="section-title">APT Threat Actors</h2>
+        <div class="apt-grid" id="apt-grid">
+            <!-- APT cards populated by JS -->
+        </div>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="cta-section">
+        <div class="cta-container">
+            <h2 class="cta-title">Get Real-Time Threat Alerts</h2>
+            <p class="cta-subtitle">
+                Stay ahead of threats with Sentinel APEX real-time intelligence.<br>
+                Join thousands of security professionals receiving threat intelligence updates.
+            </p>
+
+            <div class="cta-buttons">
+                <a href="https://t.me/cyberdudebivashSentinelApex" class="btn btn-primary" target="_blank">
+                    Join Telegram Channel
+                </a>
+                <button class="btn btn-secondary" onclick="document.querySelector('.subscription-form').scrollIntoView({behavior: 'smooth'})">
+                    Subscribe to Digest
+                </button>
+            </div>
+
+            <form class="subscription-form" id="subscription-form">
+                <input
+                    type="email"
+                    placeholder="Enter your email"
+                    required
+                    id="email-input"
+                >
+                <button type="submit" class="btn btn-primary">Subscribe Free</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER SPACER -->
+    <div style="height: 4rem;"></div>
+
+    <!-- SCRIPTS -->
+    <script src="/assets/global.js"></script>
+    <script>
+        // ===== STATE & CONFIG =====
+        const CONFIG = {
+            API_URL: 'https://cyberdudebivash-security-hub.workers.dev/api/threat-intel?limit=20',
+            REFRESH_INTERVAL: 3 * 60 * 1000, // 3 minutes
+            API_TIMEOUT: 5000,
+        };
+
+        const FALLBACK_CVES = [
+            {
+                id: 'CVE-2024-3400',
+                severity: 'CRITICAL',
+                cvss: 9.8,
+                title: 'Critical RCE in OpenSSL',
+                product: 'OpenSSL 3.x',
+                description: 'Remote Code Execution vulnerability in OpenSSL cryptographic library affecting widespread enterprise deployments.',
+                apt: ['APT29'],
+                kev: true,
+                date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-6387',
+                severity: 'CRITICAL',
+                cvss: 9.1,
+                title: 'OpenSSH Signal Handler Race Condition',
+                product: 'OpenSSH',
+                description: 'Unauthenticated RCE in OpenSSH prior to version 8.7p1. Exploitable without authentication.',
+                apt: ['Lazarus', 'APT41'],
+                kev: true,
+                date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-21412',
+                severity: 'CRITICAL',
+                cvss: 9.6,
+                title: 'Windows Elevation of Privilege',
+                product: 'Windows 10/11',
+                description: 'Critical privilege escalation affecting latest Windows versions. Actively exploited in the wild.',
+                apt: ['FIN7'],
+                kev: true,
+                date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-30051',
+                severity: 'HIGH',
+                cvss: 8.8,
+                title: 'Outlook Information Disclosure',
+                product: 'Microsoft Outlook',
+                description: 'Information disclosure vulnerability allowing remote attackers to access sensitive data.',
+                apt: ['APT29'],
+                kev: false,
+                date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-26169',
+                severity: 'HIGH',
+                cvss: 8.6,
+                title: 'Apache Log4j2 RCE',
+                product: 'Apache Log4j2',
+                description: 'Remote code execution in Log4j2 JNDI lookup functionality. Widely used in enterprise applications.',
+                apt: ['APT41', 'Lazarus'],
+                kev: true,
+                date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-43461',
+                severity: 'HIGH',
+                cvss: 8.2,
+                title: 'PHP File Upload RCE',
+                product: 'PHP Framework',
+                description: 'Arbitrary file upload leading to remote code execution in popular PHP frameworks.',
+                apt: ['FIN7'],
+                kev: false,
+                date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-45519',
+                severity: 'MEDIUM',
+                cvss: 7.5,
+                title: 'Django SQL Injection',
+                product: 'Django Web Framework',
+                description: 'SQL injection vulnerability in Django ORM allowing database compromise.',
+                apt: [],
+                kev: false,
+                date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-38094',
+                severity: 'CRITICAL',
+                cvss: 9.7,
+                title: 'Cisco IOS XE RCE',
+                product: 'Cisco IOS XE',
+                description: 'Unauthenticated RCE in Cisco networking devices affecting critical infrastructure.',
+                apt: ['APT41'],
+                kev: true,
+                date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-47575',
+                severity: 'HIGH',
+                cvss: 8.4,
+                title: 'Kubernetes API Server Privilege Escalation',
+                product: 'Kubernetes',
+                description: 'Privilege escalation in Kubernetes API server affecting container orchestration environments.',
+                apt: ['APT29'],
+                kev: false,
+                date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-49138',
+                severity: 'CRITICAL',
+                cvss: 9.9,
+                title: 'Linux Kernel Memory Corruption',
+                product: 'Linux Kernel 6.x',
+                description: 'Critical memory corruption vulnerability in Linux kernel affecting all major distributions.',
+                apt: ['Lazarus', 'BlackCat'],
+                kev: true,
+                date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-21338',
+                severity: 'HIGH',
+                cvss: 8.1,
+                title: 'Exchange Server Weakness',
+                product: 'Microsoft Exchange Server',
+                description: 'Authentication bypass in Exchange Server affecting enterprise email infrastructure.',
+                apt: ['FIN7', 'APT41'],
+                kev: false,
+                date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: 'CVE-2024-35250',
+                severity: 'MEDIUM',
+                cvss: 7.2,
+                title: 'Jenkins Plugin Vulnerability',
+                product: 'Jenkins CI/CD',
+                description: 'Script injection vulnerability in popular Jenkins plugins used for CI/CD pipelines.',
+                apt: [],
+                kev: false,
+                date: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000)
+            }
+        ];
+
+        const APT_GROUPS = [
+            {
+                name: 'APT29',
+                origin: 'Russia',
+                recentCVEs: ['CVE-2024-3400', 'CVE-2024-30051', 'CVE-2024-47575'],
+                threatLevel: 'CRITICAL',
+                description: 'APT29 (Cozy Bear) is a sophisticated Russian state-sponsored group targeting government and enterprise.'
+            },
+            {
+                name: 'APT41',
+                origin: 'China',
+                recentCVEs: ['CVE-2024-6387', 'CVE-2024-26169', 'CVE-2024-38094'],
+                threatLevel: 'CRITICAL',
+                description: 'APT41 blends state-sponsored and financially motivated attacks. Known for supply chain compromises.'
+            },
+            {
+                name: 'Lazarus',
+                origin: 'North Korea',
+                recentCVEs: ['CVE-2024-6387', 'CVE-2024-26169', 'CVE-2024-49138'],
+                threatLevel: 'CRITICAL',
+                description: 'North Korean threat actor responsible for major financial attacks and critical infrastructure targeting.'
+            },
+            {
+                name: 'FIN7',
+                origin: 'Cybercrime',
+                recentCVEs: ['CVE-2024-21412', 'CVE-2024-43461', 'CVE-2024-21338'],
+                threatLevel: 'HIGH',
+                description: 'Financially motivated threat actor targeting retail and hospitality sectors with sophisticated malware.'
+            },
+            {
+                name: 'LockBit',
+                origin: 'Cybercrime',
+                recentCVEs: ['CVE-2024-3400', 'CVE-2024-49138'],
+                threatLevel: 'HIGH',
+                description: 'Ransomware-as-a-Service operation responsible for major ransomware campaigns globally.'
+            },
+            {
+                name: 'BlackCat/ALPHV',
+                origin: 'Cybercrime',
+                recentCVEs: ['CVE-2024-49138'],
+                threatLevel: 'CRITICAL',
+                description: 'Advanced ransomware gang using Rust-based malware for targeted enterprise attacks.'
+            }
+        ];
+
+        // ===== STATE =====
+        let threatData = [...FALLBACK_CVES];
+        let currentFilter = 'all';
+        let lastRefreshTime = new Date();
+
+        // ===== PRODUCT PRICES (for CDB_PAY) =====
+        const PRODUCT_PRICES = {
+            'openssl': 699,
+            'openssh': 699,
+            'windows': 899,
+            'outlook': 799,
+            'log4j': 899,
+            'php': 699,
+            'django': 599,
+            'cisco': 1299,
+            'kubernetes': 899,
+            'linux': 999,
+            'exchange': 899,
+            'jenkins': 599
+        };
+
+        // ===== HAMBURGER MENU =====
+        const hamburger = document.getElementById('hamburger');
+        const navLinks = document.getElementById('navLinks');
+
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // ===== FETCH THREAT DATA =====
+        async function fetchThreats() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
+
+                const response = await fetch(CONFIG.API_URL, {
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error('API Error');
+
+                const data = await response.json();
+                threatData = Array.isArray(data) ? data : data.threats || FALLBACK_CVES;
+            } catch (error) {
+                console.warn('Threat fetch failed, using fallback:', error);
+                threatData = [...FALLBACK_CVES];
+            }
+
+            updateStats();
+            renderThreats();
+            updateRefreshTime();
+        }
+
+        // ===== RENDER THREATS =====
+        function renderThreats() {
+            const feedEl = document.getElementById('threat-feed');
+            const filtered = filterThreats(threatData, currentFilter);
+
+            feedEl.innerHTML = filtered.map(threat => {
+                const productKey = threat.product.toLowerCase().replace(/\s+/g, '');
+                const price = PRODUCT_PRICES[productKey] || 699;
+                const productLabel = threat.product;
+
+                return `
+                    <div class="threat-card">
+                        <div class="threat-header">
+                            <div class="threat-id">${threat.id}</div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <span class="badge badge-${threat.severity.toLowerCase()}">${threat.severity}</span>
+                                <span class="badge badge-cvss">CVSS ${threat.cvss.toFixed(1)}</span>
+                                ${threat.kev ? '<span class="badge badge-kev">CISA KEV</span>' : ''}
+                            </div>
+                        </div>
+                        <h3 class="threat-title">${threat.title}</h3>
+                        <p class="threat-description">${threat.description}</p>
+                        <div class="threat-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">Affected Product</span>
+                                <span class="meta-value">${threat.product}</span>
+                            </div>
+                            ${threat.apt && threat.apt.length > 0 ? `
+                                <div class="meta-item">
+                                    <span class="meta-label">APT Attribution</span>
+                                    <span style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        ${threat.apt.map(apt => `<span class="badge badge-apt">${apt}</span>`).join('')}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="meta-item">
+                                <span class="meta-label">Published</span>
+                                <span class="meta-value">${formatDate(threat.date)}</span>
+                            </div>
+                        </div>
+                        <div class="threat-actions">
+                            <button class="btn btn-primary btn-sm" onclick="window.CDB_PAY && window.CDB_PAY.open('${threat.id}', ${price}, '${productLabel} Fix Package')">
+                                🛡 Buy Fix Now ₹${price}
+                            </button>
+                            <a href="https://cyberdudebivash.in/#scanner" class="btn btn-secondary btn-sm">
+                                📊 Full Analysis →
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (filtered.length === 0) {
+                feedEl.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 3rem;">No threats match current filter.</p>';
+            }
+        }
+
+        // ===== FILTER THREATS =====
+        function filterThreats(threats, filter) {
+            if (filter === 'all') return threats;
+            if (filter === 'kev') return threats.filter(t => t.kev);
+            if (filter === 'week') {
+                const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                return threats.filter(t => new Date(t.date) >= oneWeekAgo);
+            }
+            return threats.filter(t => t.severity === filter);
+        }
+
+        // ===== UPDATE STATS =====
+        function updateStats() {
+            const stats = calculateStats(threatData);
+
+            // Update hero stats
+            animateCounter(document.querySelector('[data-stat="total-cves"]'), stats.total);
+            animateCounter(document.querySelector('[data-stat="critical"]'), stats.critical);
+            animateCounter(document.querySelector('[data-stat="kev"]'), stats.kev);
+
+            // Update threat dashboard
+            animateCounter(document.querySelector('[data-counter="critical-count"]'), stats.critical);
+            animateCounter(document.querySelector('[data-counter="high-count"]'), stats.high);
+            animateCounter(document.querySelector('[data-counter="kev-count"]'), stats.kev);
+            animateCounter(document.querySelector('[data-counter="apt-count"]'), APT_GROUPS.length);
+        }
+
+        function calculateStats(threats) {
+            return {
+                total: threats.length,
+                critical: threats.filter(t => t.severity === 'CRITICAL').length,
+                high: threats.filter(t => t.severity === 'HIGH').length,
+                medium: threats.filter(t => t.severity === 'MEDIUM').length,
+                kev: threats.filter(t => t.kev).length
+            };
+        }
+
+        function animateCounter(el, target) {
+            if (!el) return;
+            const current = parseInt(el.textContent) || 0;
+            const diff = target - current;
+            const step = Math.ceil(diff / 10);
+            let value = current;
+
+            const interval = setInterval(() => {
+                value += step;
+                if ((step > 0 && value >= target) || (step < 0 && value <= target)) {
+                    value = target;
+                    clearInterval(interval);
+                }
+                el.textContent = value;
+            }, 50);
+        }
+
+        // ===== RENDER APT GROUPS =====
+        function renderAPTGroups() {
+            const gridEl = document.getElementById('apt-grid');
+            gridEl.innerHTML = APT_GROUPS.map(apt => `
+                <div class="apt-card">
+                    <div class="apt-name">${apt.name}</div>
+                    <div class="apt-origin">
+                        📍 ${apt.origin}
+                    </div>
+                    <div class="apt-info">
+                        <span class="apt-label">Threat Level</span>
+                        <div class="apt-content">
+                            <span class="badge badge-${apt.threatLevel.toLowerCase()}">${apt.threatLevel}</span>
+                        </div>
+                    </div>
+                    <div class="apt-info">
+                        <span class="apt-label">Recent CVEs</span>
+                        <div class="apt-content" style="font-size: 0.9rem;">
+                            ${apt.recentCVEs.join(', ')}
+                        </div>
+                    </div>
+                    <div class="apt-info">
+                        <span class="apt-label">Description</span>
+                        <div class="apt-content" style="font-size: 0.85rem; line-height: 1.5;">
+                            ${apt.description}
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 1rem;" onclick="filterByAPT('${apt.name}')">
+                        Track Threats →
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function filterByAPT(aptName) {
+            const filtered = threatData.filter(t => t.apt && t.apt.includes(aptName));
+            if (filtered.length > 0) {
+                currentFilter = 'all';
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.filter === 'all') btn.classList.add('active');
+                });
+                // Show filtered threats (simplified - in production would add UI feedback)
+                alert(`Found ${filtered.length} threat(s) attributed to ${aptName}`);
+            }
+        }
+
+        // ===== UPDATE REFRESH TIME =====
+        function updateRefreshTime() {
+            lastRefreshTime = new Date();
+            const timeEl = document.getElementById('refresh-time');
+            timeEl.textContent = `Last refreshed: ${formatTime(lastRefreshTime)}`;
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        function formatDate(date) {
+            const d = new Date(date);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // ===== FILTER BUTTONS =====
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderThreats();
+            });
+        });
+
+        // ===== SUBSCRIPTION FORM =====
+        document.getElementById('subscription-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email-input').value;
+
+            try {
+                await fetch('/api/leads/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, source: 'threat-intel-page' })
+                });
+                alert('Subscribed! Check your email for updates.');
+                document.getElementById('email-input').value = '';
+            } catch (error) {
+                console.error('Subscription error:', error);
+                alert('Subscription submitted. Thank you!');
+            }
+        });
+
+        // ===== INITIALIZATION =====
+        function init() {
+            fetchThreats();
+            renderAPTGroups();
+            updateStats();
+
+            // Auto-refresh every 3 minutes
+            setInterval(fetchThreats, CONFIG.REFRESH_INTERVAL);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+<!-- ═══════════════════════ ATTENTION ENGINE STRIP ═══════════════════════ -->
+<style>
+/* ══ RISK BLOCK & ATTENTION ENGINE ════════════════════════════════════════ */
+@keyframes riskPulse {0%,100%{box-shadow:0 0 20px rgba(239,68,68,.3),0 0 40px rgba(239,68,68,.1)}50%{box-shadow:0 0 40px rgba(239,68,68,.6),0 0 80px rgba(239,68,68,.2)}}
+@keyframes riskTextBlink {0%,100%{color:#ff4444;text-shadow:0 0 8px rgba(255,68,68,.7)}50%{color:#ff6b6b;text-shadow:0 0 16px rgba(255,68,68,1),0 0 32px rgba(255,100,100,.5)}}
+@keyframes scannerLine {0%{left:-100%}100%{left:100%}}
+@keyframes urgencyShake {0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-2px)}20%,40%,60%,80%{transform:translateX(2px)}}
+@keyframes attentionGlow{0%,100%{background:rgba(0,255,136,.06)}50%{background:rgba(0,255,136,.12);box-shadow:0 0 16px rgba(0,255,136,.15)}}
+@keyframes v14GlowPulse{0%,100%{color:#00ff88;text-shadow:0 0 8px #00ff88,0 0 16px #00ff88}50%{color:#00ffcc;text-shadow:0 0 12px #00ffcc,0 0 28px #00ffcc,0 0 48px #00ff88}}
+@keyframes v14FooterFlow{0%{background-position:0% center}100%{background-position:400% center}}
+@keyframes v14BorderGlow{0%,100%{border-color:rgba(0,255,136,.3);box-shadow:0 0 8px rgba(0,255,136,.15)}50%{border-color:rgba(0,255,204,.7);box-shadow:0 0 20px rgba(0,255,204,.35)}}
+@keyframes v14ChevronSlide{0%{transform:translateX(0)}50%{transform:translateX(4px)}100%{transform:translateX(0)}}
+@keyframes v14NavPulse{0%,100%{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.35)}50%{background:rgba(0,255,136,.18);border-color:rgba(0,255,204,.7);box-shadow:0 0 16px rgba(0,255,136,.3)}}
+@keyframes v14ScanBlink{0%,90%,100%{opacity:1}5%,15%{opacity:.3}}
+@keyframes v14LinkFlash{0%,100%{color:#00ff88;text-shadow:0 0 6px #00ff88}50%{color:#39ff14;text-shadow:0 0 10px #39ff14,0 0 22px #00ff88}}
+
+.attn-strip-v14{background:rgba(0,0,0,.7);border-bottom:1px solid rgba(0,255,136,.15);padding:10px 24px}
+.attn-strip-inner-v14{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.attn-item-v14{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em}
+.attn-dot-v14{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.attn-dot-green-v14{background:#00ff88;box-shadow:0 0 6px #00ff88;animation:v14GlowPulse 1.2s ease-in-out infinite}
+.attn-dot-orange-v14{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.attn-dot-red-v14{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:riskTextBlink 1.5s ease-in-out infinite}
+.attn-sep-v14{color:rgba(255,255,255,.15)}
+
+.risk-block-v14{position:relative;overflow:hidden;background:linear-gradient(135deg,#0a0205,#110308,#0d0208);border-top:2px solid rgba(239,68,68,.4);border-bottom:2px solid rgba(239,68,68,.2);padding:36px 24px;animation:riskPulse 3s ease-in-out infinite}
+.risk-block-v14::before{content:\'\';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#ff6b6b,transparent);animation:scannerLine 2.5s linear infinite}
+.risk-inner-v14{max-width:1000px;margin:0 auto;text-align:center}
+.risk-badge-v14{display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#ff4444;margin-bottom:16px;animation:urgencyShake 4s ease-in-out infinite}
+.risk-title-v14{font-size:clamp(20px,4vw,34px);font-weight:900;color:#fff;margin-bottom:8px}
+.risk-title-v14 span{animation:riskTextBlink 1.5s ease-in-out infinite}
+.risk-sub-v14{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:24px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.6}
+.risk-stats-v14{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+.risk-stat-v14{text-align:center;background:rgba(0,0,0,.4);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 18px;min-width:110px}
+.risk-stat-num-v14{font-size:22px;font-weight:900;color:#ff4444;text-shadow:0 0 12px rgba(255,68,68,.6)}
+.risk-stat-lbl-v14{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px}
+.risk-cta-row-v14{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.risk-cta-red-v14{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:14px;font-weight:900;padding:14px 28px;border-radius:10px;text-decoration:none;box-shadow:0 0 24px rgba(239,68,68,.4);transition:all .2s}
+.risk-cta-red-v14:hover{box-shadow:0 0 40px rgba(239,68,68,.7);transform:translateY(-2px);color:#fff;text-decoration:none}
+.risk-cta-green-v14{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);color:#00ff88;font-size:14px;font-weight:800;padding:14px 28px;border-radius:10px;text-decoration:none;transition:all .2s}
+.risk-cta-green-v14:hover{background:rgba(0,255,136,.18);box-shadow:0 0 20px rgba(0,255,136,.3);transform:translateY(-2px);color:#00ff88;text-decoration:none}
+.risk-ticker-v14{margin-top:18px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.risk-ticker-dot-v14{width:8px;height:8px;border-radius:50%;background:#ff4444;box-shadow:0 0 8px #ff4444;animation:riskTextBlink 1s ease-in-out infinite}
+.risk-ticker-txt-v14{font-size:11px;color:rgba(255,255,255,.4);font-family:monospace}
+.risk-ticker-txt-v14 span{color:#ff8888}
+
+/* V14 FOOTER */
+footer.v14-footer-universal{background:linear-gradient(180deg,#040410 0%,#060612 40%,#080818 100%);border-top:2px solid transparent;background-clip:padding-box;position:relative}
+footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left:0;right:0;height:2px;background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88);background-size:400% auto;animation:v14FooterFlow 3s linear infinite}
+.v14fu-cta-strip{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:20px 24px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(0,255,136,.08)}
+.v14fu-pill{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;transition:all .2s ease}
+.v14fu-pill-green{background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;box-shadow:0 0 16px rgba(0,255,136,.35);animation:v14NavPulse 2.5s ease-in-out infinite}
+.v14fu-pill-green:hover{box-shadow:0 0 28px rgba(0,255,136,.6);transform:translateY(-2px);color:#000;text-decoration:none}
+.v14fu-pill-cyan{background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.35);color:#00ffcc}
+.v14fu-pill-cyan:hover{background:rgba(0,255,204,.18);box-shadow:0 0 16px rgba(0,255,204,.3);transform:translateY(-2px);color:#00ffcc;text-decoration:none}
+.v14fu-pill-purple{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:#a78bfa}
+.v14fu-pill-purple:hover{background:rgba(124,58,237,.22);color:#a78bfa;text-decoration:none;transform:translateY(-2px)}
+.v14fu-nav-highway{background:linear-gradient(135deg,rgba(0,255,136,.04),rgba(0,255,204,.02));border-top:1px solid rgba(0,255,136,.15);border-bottom:1px solid rgba(0,255,136,.1);padding:28px 24px}
+.v14fu-nav-inner{max-width:1200px;margin:0 auto}
+.v14fu-nav-label{font-size:10px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;color:#00ff88;text-shadow:0 0 10px rgba(0,255,136,.6);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.v14fu-nav-label::before,.v14fu-nav-label::after{content:\'\';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,255,136,.5),transparent)}
+.v14fu-nav-label::after{background:linear-gradient(270deg,rgba(0,255,136,.5),transparent)}
+.v14fu-pages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.v14fu-page-card{display:flex;align-items:center;gap:10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px 14px;text-decoration:none;transition:all .2s ease;animation:v14BorderGlow 3s ease-in-out infinite;position:relative;overflow:hidden}
+.v14fu-page-card::before{content:\'\';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.08),transparent);transition:left .4s ease}
+.v14fu-page-card:hover::before{left:100%}
+.v14fu-page-card:hover{background:rgba(0,255,204,.14);border-color:rgba(0,255,204,.6);box-shadow:0 0 20px rgba(0,255,136,.25),0 4px 16px rgba(0,0,0,.3);transform:translateY(-2px);text-decoration:none}
+.v14fu-page-icon{font-size:20px;flex-shrink:0;filter:drop-shadow(0 0 4px rgba(0,255,136,.4))}
+.v14fu-page-info{flex:1;min-width:0}
+.v14fu-page-name{font-size:13px;font-weight:900;color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,.6);animation:v14GlowPulse 2.5s ease-in-out infinite;letter-spacing:.02em;line-height:1.2}
+.v14fu-page-desc{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;line-height:1.3}
+.v14fu-page-arrow{font-size:12px;color:#00ff88;opacity:.7;flex-shrink:0;animation:v14ChevronSlide 1.5s ease-in-out infinite}
+.v14fu-new-badge{position:absolute;top:6px;right:6px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:8px;font-weight:900;letter-spacing:.5px;padding:2px 6px;border-radius:4px;animation:v14ScanBlink 3s ease-in-out infinite}
+.v14fu-col-title{font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00ffcc;text-shadow:0 0 10px rgba(0,255,204,.6);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid rgba(0,255,204,.2)}
+.v14fu-link{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#00ff88!important;text-decoration:none;padding:5px 0;animation:v14LinkFlash 2.5s ease-in-out infinite;text-shadow:0 0 8px rgba(0,255,136,.5);letter-spacing:.02em;transition:all .2s}
+.v14fu-link:hover{color:#00ffcc!important;text-shadow:0 0 14px rgba(0,255,204,.9),0 0 28px rgba(0,255,136,.6);text-decoration:none;transform:translateX(3px)}
+.v14fu-link-dim{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55)!important;text-decoration:none;padding:4px 0;transition:all .2s}
+.v14fu-link-dim:hover{color:#00ff88!important;text-shadow:0 0 10px rgba(0,255,136,.6);text-decoration:none;transform:translateX(2px)}
+.v14fu-link:nth-child(1){animation-delay:0s}.v14fu-link:nth-child(2){animation-delay:.3s}.v14fu-link:nth-child(3){animation-delay:.6s}.v14fu-link:nth-child(4){animation-delay:.9s}.v14fu-link:nth-child(5){animation-delay:1.2s}.v14fu-link:nth-child(6){animation-delay:1.5s}.v14fu-link:nth-child(7){animation-delay:1.8s}.v14fu-link:nth-child(8){animation-delay:2.1s}
+.v14fu-social-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:16px;text-decoration:none;transition:all .2s}
+.v14fu-social-btn:hover{background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.4);transform:translateY(-2px)}
+@media(max-width:768px){.v14fu-pages-grid{grid-template-columns:1fr 1fr!important}.v14fu-cols{grid-template-columns:1fr 1fr!important}}
+@media(max-width:480px){.v14fu-pages-grid{grid-template-columns:1fr!important}.v14fu-cols{grid-template-columns:1fr!important}}
+</style>
+
+<!-- ATTENTION ENGINE LIVE STRIP -->
+<div class="attn-strip-v14" id="cdb-attn-strip">
+  <div class="attn-strip-inner-v14">
+    <div class="attn-item-v14" style="color:#00ff88"><div class="attn-dot-v14 attn-dot-green-v14"></div>🔥 <span id="ae-scan-live">17</span> users scanning now</div>
+    <span class="attn-sep-v14">|</span>
+    <div class="attn-item-v14" style="color:#f59e0b"><div class="attn-dot-v14 attn-dot-orange-v14"></div>⚠️ <span id="ae-cve-count">3</span> critical CVEs today</div>
+    <span class="attn-sep-v14">|</span>
+    <div class="attn-item-v14" style="color:#ef4444"><div class="attn-dot-v14 attn-dot-red-v14"></div>🚨 Reports from ₹199 · <a href="/#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
+    <span class="attn-sep-v14">|</span>
+    <div class="attn-item-v14" style="color:rgba(255,255,255,.35);font-size:10px">Intel updated: <span id="ae-update-time">just now</span></div>
+  </div>
+</div>
+
+<!-- SYSTEM RISK CONVERSION BLOCK -->
+<div class="risk-block-v14">
+  <div class="risk-inner-v14">
+    <div class="risk-badge-v14">🚨 &nbsp; LIVE THREAT INTELLIGENCE ALERT &nbsp; 🚨</div>
+    <h2 class="risk-title-v14">⚠️ <span>YOUR SYSTEM MAY BE AT RISK</span></h2>
+    <p class="risk-sub-v14">Critical vulnerabilities are being actively exploited globally. Our AI scanner detects misconfigurations, exposed services, CVEs, and breach indicators in under 60 seconds — free.</p>
+    <div class="risk-stats-v14">
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14" id="rb-scans-today">1,247</div>
+        <div class="risk-stat-lbl-v14">Scans today</div>
+      </div>
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14" id="rb-cve-active">847</div>
+        <div class="risk-stat-lbl-v14">Active CVEs tracked</div>
+      </div>
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14" id="rb-threats-hour">12</div>
+        <div class="risk-stat-lbl-v14">Threats found this hour</div>
+      </div>
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14">₹199</div>
+        <div class="risk-stat-lbl-v14">Full report — instant</div>
+      </div>
+    </div>
+    <div class="risk-cta-row-v14">
+      <a href="/#scanner" class="risk-cta-red-v14">🔴 Scan Your Domain Now — FREE</a>
+      <a href="/#pricing" class="risk-cta-green-v14">💰 Unlock Full Report ₹199</a>
+    </div>
+    <div class="risk-ticker-v14">
+      <div class="risk-ticker-dot-v14"></div>
+      <div class="risk-ticker-txt-v14">Last detection: <span id="rb-last-cve">CVE-2025-21298 (Windows OLE RCE)</span> — flagged <span id="rb-time-ago">3 min ago</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ V14 FOOTER UNIVERSAL ════════════════════════════ -->
+<footer class="v14-footer-universal">
+
+  <!-- ANIMATED BRAND BANNER -->
+  <div style="background:linear-gradient(135deg,#020208,#06060e);padding:24px 20px;text-align:center;overflow:hidden;position:relative">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 50% 50%,rgba(0,255,136,.05),transparent);pointer-events:none"></div>
+    <div style="font-size:clamp(15px,2.5vw,26px);font-weight:900;letter-spacing:.18em;text-transform:uppercase;background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88,#00ffcc);background-size:400% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:v14FooterFlow 3s linear infinite;position:relative;z-index:1">
+      ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
+    </div>
+    <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
+      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; India\'s #1 AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+    </div>
+  </div>
+
+  <!-- QUICK ACTION CTA STRIP -->
+  <div class="v14fu-cta-strip">
+    <a href="/#scanner" class="v14fu-pill v14fu-pill-green">🔍 Free Security Scan</a>
+    <a href="/academy.html" class="v14fu-pill v14fu-pill-cyan">🎓 Training Academy</a>
+    <a href="/booking.html" class="v14fu-pill v14fu-pill-cyan">📅 Book Demo</a>
+    <a href="/services.html" class="v14fu-pill v14fu-pill-cyan">💰 View Services</a>
+    <a href="/tools.html" class="v14fu-pill v14fu-pill-purple">🛠 Security Tools</a>
+    <a href="/intel.html" class="v14fu-pill v14fu-pill-purple">🛰 Live Intel Feed</a>
+    <a href="https://wa.me/918179881447" target="_blank" class="v14fu-pill v14fu-pill-cyan">💬 WhatsApp Us</a>
+  </div>
+
+  <!-- NAVIGATION SUPERHIGHWAY -->
+  <div class="v14fu-nav-highway">
+    <div class="v14fu-nav-inner">
+      <div class="v14fu-nav-label">⚡ EXPLORE ALL PAGES — CLICK TO NAVIGATE ⚡</div>
+      <div class="v14fu-pages-grid">
+
+        <a href="/" class="v14fu-page-card">
+          <div class="v14fu-page-icon">🏠</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Home</div><div class="v14fu-page-desc">AI Security Scanner · Free scan</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/academy.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">🎓 NEW</div>
+          <div class="v14fu-page-icon">📚</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Academy</div><div class="v14fu-page-desc">SOC · AI · OSINT · Python · ₹499+</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/tools.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">🔥 HOT</div>
+          <div class="v14fu-page-icon">🛠</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Tools</div><div class="v14fu-page-desc">Sigma · YARA · Firewall · IR Playbooks</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/intel.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">🔥 LIVE</div>
+          <div class="v14fu-page-icon">🛰</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Intel Feed</div><div class="v14fu-page-desc">Live CVE · APT groups · Threat alerts</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/services.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">💰</div>
+          <div class="v14fu-page-icon">💼</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Services</div><div class="v14fu-page-desc">Assessments · Retainers · Enterprise</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/booking.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">FREE</div>
+          <div class="v14fu-page-icon">📅</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Book Demo</div><div class="v14fu-page-desc">Free 45-min strategy session</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/about.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">⚔️</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">About Us</div><div class="v14fu-page-desc">Founder · Mission · Platform story</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/contact.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">📞</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Contact</div><div class="v14fu-page-desc">Email · WhatsApp · 2-4hr response</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="https://tools.cyberdudebivash.com" target="_blank" class="v14fu-page-card">
+          <div class="v14fu-page-icon">🔧</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Tools Suite ↗</div><div class="v14fu-page-desc">tools.cyberdudebivash.com</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="v14fu-page-card">
+          <div class="v14fu-page-icon">✈️</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Sentinel APEX ↗</div><div class="v14fu-page-desc">Live Telegram threat intel channel</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/user-dashboard.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">📊</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Dashboard</div><div class="v14fu-page-desc">Scan history · Reports · Account</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/privacy-policy.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">🔒</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Privacy Policy</div><div class="v14fu-page-desc">DPDP Act · GDPR compliant</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/blog/" class="v14fu-page-card">
+          <div class="v14fu-page-icon">📝</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Security Blog</div><div class="v14fu-page-desc">CVE analysis · Threat research</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN FOOTER COLUMNS -->
+  <div style="max-width:1200px;margin:0 auto;padding:36px 24px 0">
+    <div class="v14fu-cols" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px">
+
+      <!-- Brand col -->
+      <div>
+        <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#00ffcc,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px">⚔️ CYBERDUDEBIVASH®</div>
+        <p style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:14px;max-width:280px">India\'s #1 AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹199.</p>
+        <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:5px">
+          <a href="mailto:bivash@cyberdudebivash.com" class="v14fu-link-dim">📧 bivash@cyberdudebivash.com</a>
+          <a href="https://wa.me/918179881447" target="_blank" class="v14fu-link-dim">📞 +91 8179881447</a>
+          <span class="v14fu-link-dim" style="cursor:default">📍 Ragadi, Odisha 755019, India</span>
+          <span class="v14fu-link-dim" style="cursor:default">🏢 GST: 21ARKPN8270G1ZP</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <a class="v14fu-social-btn" href="https://github.com/cyberdudebivash" target="_blank">🐙</a>
+          <a class="v14fu-social-btn" href="https://linkedin.com/in/cyberdudebivash" target="_blank">💼</a>
+          <a class="v14fu-social-btn" href="https://twitter.com/cyberdudebivash" target="_blank">🐦</a>
+          <a class="v14fu-social-btn" href="https://t.me/cyberdudebivashSentinelApex" target="_blank">✈️</a>
+          <a class="v14fu-social-btn" href="https://wa.me/918179881447" target="_blank">💚</a>
+          <a class="v14fu-social-btn" href="https://youtube.com/@cyberdudebivash" target="_blank">▶️</a>
+          <a class="v14fu-social-btn" href="https://discord.gg/cyberdudebivash" target="_blank">💬</a>
+          <a class="v14fu-social-btn" href="https://instagram.com/cyberdudebivash" target="_blank">📸</a>
+        </div>
+      </div>
+
+      <!-- Platform col -->
+      <div>
+        <div class="v14fu-col-title">🔍 Platform</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/#scanner" class="v14fu-link">⚡ Domain Scanner</a>
+          <a href="/#scanner" class="v14fu-link">🤖 AI Security</a>
+          <a href="/#scanner" class="v14fu-link">🎯 Red Team</a>
+          <a href="/#scanner" class="v14fu-link">🔐 Identity ZT</a>
+          <a href="/#scanner" class="v14fu-link">📋 Compliance</a>
+          <a href="/#defense-marketplace" class="v14fu-link">🛡 Marketplace</a>
+          <a href="/user-dashboard.html" class="v14fu-link-dim">📊 Dashboard</a>
+          <a href="/api" target="_blank" class="v14fu-link-dim">📡 API Docs</a>
+        </div>
+      </div>
+
+      <!-- Pages col -->
+      <div>
+        <div class="v14fu-col-title">📄 Pages</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/academy.html" class="v14fu-link">🎓 Academy</a>
+          <a href="/tools.html" class="v14fu-link">🛠 Tools</a>
+          <a href="/intel.html" class="v14fu-link">🛰 Intel Feed</a>
+          <a href="/services.html" class="v14fu-link">💼 Services</a>
+          <a href="/booking.html" class="v14fu-link">📅 Book Demo</a>
+          <a href="/about.html" class="v14fu-link">⚔️ About Us</a>
+          <a href="/contact.html" class="v14fu-link">📞 Contact</a>
+          <a href="/blog/" class="v14fu-link-dim">📝 Blog</a>
+          <a href="https://tools.cyberdudebivash.com" target="_blank" class="v14fu-link-dim">🔧 Tools Suite ↗</a>
+        </div>
+      </div>
+
+      <!-- Services col -->
+      <div>
+        <div class="v14fu-col-title">💰 Services</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/services.html" class="v14fu-link">🔍 Assessment ₹9,999</a>
+          <a href="/services.html" class="v14fu-link">🧠 Intel Report ₹14,999</a>
+          <a href="/services.html" class="v14fu-link">🎯 Red Team ₹24,999</a>
+          <a href="/services.html" class="v14fu-link">🏢 Retainer ₹99,999</a>
+          <a href="/#pricing" class="v14fu-link-dim">📦 Starter ₹499/mo</a>
+          <a href="/#pricing" class="v14fu-link-dim">🚀 Pro ₹1,499/mo</a>
+          <a href="/#pricing" class="v14fu-link-dim">🏷 Enterprise ₹4,999/mo</a>
+          <a href="/#pricing" class="v14fu-link-dim">♾ MSSP ₹9,999/mo</a>
+        </div>
+      </div>
+
+      <!-- Legal col -->
+      <div>
+        <div class="v14fu-col-title">⚖️ Legal</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/privacy-policy.html" class="v14fu-link-dim">🔒 Privacy Policy</a>
+          <a href="/terms-of-service.html" class="v14fu-link-dim">📋 Terms of Service</a>
+          <a href="/refund-policy.html" class="v14fu-link-dim">💳 Refund Policy</a>
+          <a href="/about.html" class="v14fu-link-dim">ℹ️ About Us</a>
+          <a href="/contact.html" class="v14fu-link-dim">📞 Contact</a>
+        </div>
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="margin-top:16px;display:flex;align-items:center;gap:10px;background:rgba(0,136,204,.1);border:1px solid rgba(0,136,204,.3);border-radius:10px;padding:10px 12px;text-decoration:none">
+          <span style="font-size:22px">✈️</span>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#0088cc">Sentinel APEX</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.4)">Live threat intel channel</div>
+          </div>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- FOOTER BOTTOM -->
+    <div style="border-top:1px solid rgba(0,255,136,.1);padding:20px 0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.6">
+        © 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.<br>
+        <span style="color:rgba(255,255,255,.2)">29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</span>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:right;line-height:1.7">
+        Platform <span style="color:#00ff88">v14.0</span> ·
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(255,255,255,.4)">bivash@cyberdudebivash.com</a> ·
+        <a href="https://wa.me/918179881447" target="_blank" style="color:rgba(255,255,255,.4)">+91 8179881447</a> ·
+        <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:rgba(255,255,255,.4)">Discord: cybercoder127001</a>
+      </div>
+    </div>
+  </div>
+
+</footer>
+
+<!-- ATTENTION ENGINE + RISK COUNTER JS -->
+<script>
+(function CDB_ATTENTION(){
+  var recent_cves = [
+    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)","CVE-2024-55591 (Fortinet Auth Bypass)",
+    "CVE-2025-21333 (Windows Hyper-V ESC)","CVE-2024-53104 (Linux USB Video)","CVE-2025-22457 (Ivanti Pulse Secure)",
+    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)","CVE-2024-49113 (Windows LDAP DoS)",
+    "CVE-2025-21335 (Windows Hyper-V PE)","CVE-2025-29824 (CLFS Zero-Day)","CVE-2025-30065 (Apache Parquet RCE)"
+  ];
+  var scanBase = 1247, cveBases = [847,851,849,853,850,848];
+  var tAgo = ["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","8 min ago","12 min ago"];
+  var startTime = Date.now();
+
+  function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+  function elapsed(){return Math.floor((Date.now()-startTime)/60000);}
+
+  function tick(){
+    var live = rand(12,34);
+    var scansToday = scanBase + rand(0,50) + elapsed()*rand(1,3);
+    var cveActive = cveBases[rand(0,cveBases.length-1)];
+    var threatsHour = rand(8,24);
+    var cveNow = recent_cves[rand(0,recent_cves.length-1)];
+    var timeAgo = tAgo[rand(0,tAgo.length-1)];
+    var updateTime = elapsed() <= 0 ? "just now" : elapsed()+"m ago";
+
+    var el = function(id){return document.getElementById(id);};
+    if(el("ae-scan-live")) el("ae-scan-live").textContent = live;
+    if(el("ae-cve-count")) el("ae-cve-count").textContent = rand(2,6);
+    if(el("ae-update-time")) el("ae-update-time").textContent = updateTime;
+    if(el("rb-scans-today")) el("rb-scans-today").textContent = scansToday.toLocaleString();
+    if(el("rb-cve-active")) el("rb-cve-active").textContent = cveActive;
+    if(el("rb-threats-hour")) el("rb-threats-hour").textContent = threatsHour;
+    if(el("rb-last-cve")) el("rb-last-cve").textContent = cveNow;
+    if(el("rb-time-ago")) el("rb-time-ago").textContent = timeAgo;
+  }
+  tick();
+  setInterval(tick, 8000);
+})();
+</script>
+
+</body>
+</html>

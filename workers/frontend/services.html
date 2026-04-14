@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Security Services — CYBERDUDEBIVASH AI Security Hub</title>
+    <link rel="canonical" href="https://cyberdudebivash.in/services">
+    <meta property="og:title" content="Enterprise Security Services — CYBERDUDEBIVASH AI Security Hub">
+    <meta property="og:description" content="Enterprise security services including vulnerability assessment, SOC operations, threat hunting, and AI-powered incident response.">
+    <meta property="og:url" content="https://cyberdudebivash.in/services">
+    <meta property="og:image" content="https://cyberdudebivash.in/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --accent: #00ffcc;
+            --accent-dark: #00cc99;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b9c6;
+            --border-color: rgba(0, 255, 204, 0.1);
+            --border-hover: rgba(0, 255, 204, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* NAVIGATION */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10, 15, 28, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+            .nav-container {
+                padding: 0 1rem;
+            }
+        }
+
+        /* MAIN CONTAINER */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* HERO SECTION */
+        .hero {
+            padding: 6rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05) 0%, rgba(0, 255, 204, 0.02) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #00e6b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .hero-content p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.8rem;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.5);
+        }
+
+        .trust-badges {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            background: rgba(0, 255, 204, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .badge:hover {
+            border-color: var(--border-hover);
+            background: rgba(0, 255, 204, 0.12);
+        }
+
+        /* SERVICES GRID */
+        .services-section {
+            padding: 4rem 2rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .service-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 255, 204, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .service-card:hover::before {
+            top: -25%;
+            right: -25%;
+        }
+
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .service-category {
+            display: inline-block;
+            background: rgba(0, 255, 204, 0.1);
+            color: var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .service-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+        }
+
+        .service-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .service-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-features li {
+            color: var(--text-secondary);
+            padding: 0.4rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.9rem;
+        }
+
+        .service-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .service-price {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .service-price-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .service-cta {
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge-best-value {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #1a1a1a;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+
+        /* COMPARISON TABLE */
+        .comparison-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.03) 0%, transparent 100%);
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            overflow-x: auto;
+        }
+
+        .comparison-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1.2rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .comparison-table th {
+            background: var(--bg-secondary);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .comparison-table td:first-child,
+        .comparison-table th:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .comparison-check {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .comparison-cross {
+            color: #666;
+        }
+
+        .comparison-col-header {
+            position: relative;
+        }
+
+        .comparison-col-header .btn {
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        /* ROI CALCULATOR */
+        .roi-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05) 0%, rgba(0, 255, 204, 0.02) 100%);
+        }
+
+        .roi-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        .roi-form {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+        }
+
+        .roi-form h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .roi-results {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .roi-result-item {
+            margin-bottom: 2rem;
+        }
+
+        .roi-result-item h4 {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .roi-result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .roi-result-subtext {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+        }
+
+        @media (max-width: 768px) {
+            .roi-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* TESTIMONIALS */
+        .testimonials-section {
+            padding: 4rem 2rem;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .testimonial-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.15);
+        }
+
+        .testimonial-text {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .testimonial-author {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .testimonial-role {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ENTERPRISE CTA */
+        .enterprise-cta-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.05) 0%, rgba(0, 255, 204, 0.02) 100%);
+        }
+
+        .enterprise-cta-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 3rem;
+            border-radius: 12px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .enterprise-cta-card h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .enterprise-cta-card > p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .enterprise-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .enterprise-form input,
+        .enterprise-form select,
+        .enterprise-form textarea {
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .enterprise-form input:focus,
+        .enterprise-form select:focus,
+        .enterprise-form textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .enterprise-form textarea {
+            grid-column: 1 / -1;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .enterprise-form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .enterprise-form-submit {
+            flex: 1;
+        }
+
+        .enterprise-booking-link {
+            flex: 1;
+        }
+
+        /* FOOTER */
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 4rem;
+        }
+
+        /* UTILITY CLASSES */
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-2 {
+            margin-bottom: 2rem;
+        }
+
+        .position-relative {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .hero {
+                padding: 4rem 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-content h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero-content p {
+                font-size: 1rem;
+            }
+
+            .services-section,
+            .comparison-section,
+            .roi-section,
+            .testimonials-section,
+            .enterprise-cta-section {
+                padding: 2.5rem 1rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .enterprise-cta-card {
+                padding: 1.5rem;
+            }
+
+            .enterprise-form {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 0.8rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">CYBERDUDEBIVASH</a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tools.html">Tools</a></li>
+                <li><a href="/intel.html">Intel</a></li>
+                <li><a href="/services.html" class="active">Services</a></li>
+                <li><a href="/booking.html">Booking</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Protect Your Business with Enterprise-Grade AI Security</h1>
+                <p>From startup to enterprise — AI-powered assessments, threat intelligence reports, and dedicated security retainers</p>
+
+                <div class="hero-ctas">
+                    <a href="/booking.html" class="btn btn-primary">📅 Book Free Consultation</a>
+                    <a href="https://cyberdudebivash.in/#scanner" class="btn">🔍 Try Free Scan</a>
+                </div>
+
+                <div class="trust-badges">
+                    <div class="badge">India's #1 AI CyberSec Platform</div>
+                    <div class="badge">OWASP Aligned</div>
+                    <div class="badge">DPDP Act 2023</div>
+                    <div class="badge">MITRE ATT&CK</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES GRID -->
+    <section class="services-section">
+        <div class="container">
+            <h2 class="section-title">Our Enterprise Security Services</h2>
+
+            <div class="services-grid">
+                <!-- Service 1: Domain Security Assessment -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🔍</div>
+                    <span class="service-category">Assessment</span>
+                    <h3 class="service-name">Domain Security Assessment</h3>
+                    <p class="service-description">Comprehensive security analysis of your domain infrastructure. Identifies vulnerabilities in TLS, DNS, headers, and open ports with 50+ automated checks.</p>
+                    <ul class="service-features">
+                        <li>Full TLS/DNSSEC analysis</li>
+                        <li>Header security audit</li>
+                        <li>Port scan & enumeration</li>
+                        <li>50+ security checks</li>
+                        <li>PDF report with fixes</li>
+                    </ul>
+                    <div class="service-price">₹9,999 <span class="service-price-label">one-time</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('SECURITY_ASSESSMENT', 9999, 'Security Assessment — ₹9,999')">Get Assessment</button>
+                </div>
+
+                <!-- Service 2: AI Threat Intelligence Report -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🧠</div>
+                    <span class="service-category">Intelligence</span>
+                    <h3 class="service-name">AI Threat Intelligence Report</h3>
+                    <p class="service-description">30-day AI-powered threat monitoring with CVE analysis, IOC extraction, and APT attribution. Includes actionable STIX format reports and remediation roadmap.</p>
+                    <ul class="service-features">
+                        <li>30-day CVE monitoring</li>
+                        <li>IOC extraction & analysis</li>
+                        <li>APT attribution mapping</li>
+                        <li>STIX format report</li>
+                        <li>Remediation plan</li>
+                    </ul>
+                    <div class="service-price">₹14,999 <span class="service-price-label">one-time</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('THREAT_INTEL_REPORT', 14999, 'Threat Intel Report — ₹14,999')">Get Intel Report</button>
+                </div>
+
+                <!-- Service 3: Red Team Simulation -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🎯</div>
+                    <span class="service-category">Penetration Testing</span>
+                    <h3 class="service-name">Red Team Simulation</h3>
+                    <p class="service-description">Full-scope adversarial simulation covering 8 MITRE ATT&CK tactics. Includes exploit chains, attack path mapping, and executive summary for leadership.</p>
+                    <ul class="service-features">
+                        <li>8 MITRE ATT&CK scenarios</li>
+                        <li>Exploit simulation & chains</li>
+                        <li>Attack path mapping</li>
+                        <li>Fix scripts & remediation</li>
+                        <li>Executive summary</li>
+                    </ul>
+                    <div class="service-price">₹24,999 <span class="service-price-label">one-time</span></div>
+                    <a href="/booking.html" class="btn btn-primary service-cta">Book Red Team</a>
+                </div>
+
+                <!-- Service 4: Compliance Gap Analysis -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">📋</div>
+                    <span class="service-category">Compliance</span>
+                    <h3 class="service-name">Compliance Gap Analysis</h3>
+                    <p class="service-description">Full compliance audit against ISO 27001, GDPR, PCI-DSS, and India's DPDP Act. Includes gap report, remediation roadmap, and audit-ready documentation.</p>
+                    <ul class="service-features">
+                        <li>ISO 27001 / GDPR audit</li>
+                        <li>PCI-DSS / DPDP Act checks</li>
+                        <li>Comprehensive gap report</li>
+                        <li>Remediation roadmap</li>
+                        <li>3-month support included</li>
+                    </ul>
+                    <div class="service-price">₹19,999 <span class="service-price-label">one-time</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('COMPLIANCE_REPORT', 19999, 'Compliance Gap Analysis — ₹19,999')">Get Compliance Report</button>
+                </div>
+
+                <!-- Service 5: Annual Security Retainer -->
+                <div class="service-card fade-in-up">
+                    <div class="badge-best-value">BEST VALUE</div>
+                    <div class="service-icon">🏢</div>
+                    <span class="service-category">Retainer</span>
+                    <h3 class="service-name">Annual Security Retainer</h3>
+                    <p class="service-description">Comprehensive year-round security program with unlimited scans, monthly intelligence reports, 24/7 SOC alerts, and dedicated CISO advisory for your organization.</p>
+                    <ul class="service-features">
+                        <li>Unlimited monthly scans</li>
+                        <li>Monthly threat reports</li>
+                        <li>24/7 SOC alerts</li>
+                        <li>Dedicated CISO advisory</li>
+                        <li>Priority support SLA</li>
+                    </ul>
+                    <div class="service-price">₹99,999 <span class="service-price-label">/year</span></div>
+                    <button class="btn btn-primary service-cta" onclick="openPayment('ANNUAL_RETAINER', 99999, 'Annual Retainer — ₹99,999/year')">Start Retainer</button>
+                </div>
+
+                <!-- Service 6: MSSP White Label Platform -->
+                <div class="service-card fade-in-up">
+                    <div class="service-icon">🏷️</div>
+                    <span class="service-category">Platform</span>
+                    <h3 class="service-name">MSSP White Label Platform</h3>
+                    <p class="service-description">Enterprise-grade security platform for managed service providers. White-label the entire platform, manage unlimited client accounts, and share revenue with CYBERDUDEBIVASH.</p>
+                    <ul class="service-features">
+                        <li>Full platform white-label</li>
+                        <li>Unlimited client accounts</li>
+                        <li>Custom branding & domain</li>
+                        <li>Full API access</li>
+                        <li>Revenue share model</li>
+                    </ul>
+                    <div class="service-price">₹49,999 <span class="service-price-label">/month</span></div>
+                    <a href="/booking.html" class="btn btn-primary service-cta">Apply for MSSP</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPARISON TABLE -->
+    <section class="comparison-section">
+        <div class="container">
+            <h2 class="section-title">Plans Comparison</h2>
+
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th class="comparison-col-header">
+                                Starter<br>₹499/mo
+                                <button class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openPayment('STARTER_PLAN', 499, 'Starter Plan — ₹499/month')">Get Started</button>
+                            </th>
+                            <th class="comparison-col-header">
+                                Pro<br>₹1,499/mo
+                                <button class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openPayment('PRO_PLAN', 1499, 'Pro Plan — ₹1,499/month')">Get Started</button>
+                            </th>
+                            <th class="comparison-col-header">
+                                Enterprise<br>₹4,999/mo
+                                <button class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openPayment('ENTERPRISE_PLAN', 4999, 'Enterprise Plan — ₹4,999/month')">Get Started</button>
+                            </th>
+                            <th class="comparison-col-header">
+                                MSSP<br>₹9,999/mo
+                                <a href="/booking.html" class="btn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem;">Contact Sales</a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Daily Scans</td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>AI Brain Analysis</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Red Team Scenarios</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Compliance Checks</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>MYTHOS AI Chat</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>API Keys</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td>3 Keys</td>
+                            <td>10 Keys</td>
+                            <td>Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>PDF Reports</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Priority Support</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>Custom Rules</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                        <tr>
+                            <td>White Label</td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-cross">❌</span></td>
+                            <td><span class="comparison-check">✅</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ROI CALCULATOR -->
+    <section class="roi-section">
+        <div class="container">
+            <h2 class="section-title">Calculate Your ROI</h2>
+
+            <div class="roi-container">
+                <div class="roi-form">
+                    <h3>Security Investment Calculator</h3>
+
+                    <div class="form-group">
+                        <label for="company-size">Company Size</label>
+                        <select id="company-size" onchange="calculateROI()">
+                            <option value="50">1-50 employees</option>
+                            <option value="200">51-200 employees</option>
+                            <option value="1000">201-1000 employees</option>
+                            <option value="5000">1000+ employees</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="industry">Industry</label>
+                        <select id="industry" onchange="calculateROI()">
+                            <option value="finance">Finance / Banking</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="tech">Technology</option>
+                            <option value="retail">Retail / E-Commerce</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="annual-revenue">Annual Revenue</label>
+                        <input type="number" id="annual-revenue" placeholder="₹" value="50000000" onchange="calculateROI()" oninput="calculateROI()">
+                    </div>
+                </div>
+
+                <div class="roi-results">
+                    <div class="roi-result-item">
+                        <h4>Estimated Breach Cost (Annual)</h4>
+                        <div class="roi-result-value" id="breach-cost">₹0</div>
+                        <div class="roi-result-subtext">Without active security measures</div>
+                    </div>
+
+                    <div class="roi-result-item">
+                        <h4>Risk Reduction with Platform</h4>
+                        <div class="roi-result-value" id="risk-reduction">0%</div>
+                        <div class="roi-result-subtext">Incident probability reduction</div>
+                    </div>
+
+                    <div class="roi-result-item">
+                        <h4>Net ROI (First Year)</h4>
+                        <div class="roi-result-value" id="roi-value">₹0</div>
+                        <div class="roi-result-subtext">Cost savings vs. breach cost</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="testimonials-section">
+        <div class="container">
+            <h2 class="section-title">What Our Clients Say</h2>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card fade-in-up">
+                    <div class="testimonial-text">"CYBERDUDEBIVASH identified 3 critical vulnerabilities in our infrastructure that our previous audit missed. ROI in week 1."</div>
+                    <div class="testimonial-author">CISO</div>
+                    <div class="testimonial-role">FinTech Company, Bangalore</div>
+                </div>
+
+                <div class="testimonial-card fade-in-up">
+                    <div class="testimonial-text">"The MYTHOS AI threat reports are board-ready. Saved us 40+ hours/month of manual analysis."</div>
+                    <div class="testimonial-author">VP Security</div>
+                    <div class="testimonial-role">Healthcare Startup</div>
+                </div>
+
+                <div class="testimonial-card fade-in-up">
+                    <div class="testimonial-text">"Best threat intelligence platform for Indian compliance requirements. DPDP Act coverage is exceptional."</div>
+                    <div class="testimonial-author">Security Architect</div>
+                    <div class="testimonial-role">E-Commerce, India</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ENTERPRISE CTA -->
+    <section class="enterprise-cta-section">
+        <div class="container">
+            <div class="enterprise-cta-card">
+                <h2>Need a Custom Enterprise Solution?</h2>
+                <p>Our team handles security for organizations from 10 to 10,000+ employees. Let's discuss your unique challenges.</p>
+
+                <form id="enterprise-form" onsubmit="submitEnterpriseForm(event)">
+                    <div class="enterprise-form">
+                        <input type="text" id="enterprise-name" placeholder="Your Name" required>
+                        <input type="email" id="enterprise-email" placeholder="Work Email" required>
+                        <input type="text" id="enterprise-company" placeholder="Company Name" required>
+                        <select id="enterprise-size" required>
+                            <option value="">Organization Size</option>
+                            <option value="50">1-50 employees</option>
+                            <option value="200">51-200 employees</option>
+                            <option value="1000">201-1000 employees</option>
+                            <option value="5000">1000+ employees</option>
+                        </select>
+                        <textarea id="enterprise-challenge" placeholder="What's your biggest security challenge?" required></textarea>
+                    </div>
+
+                    <div class="enterprise-form-actions">
+                        <button type="submit" class="btn btn-primary enterprise-form-submit">Submit & Get Proposal</button>
+                        <a href="/booking.html" class="btn enterprise-booking-link" style="text-align: center; display: flex; align-items: center; justify-content: center;">📅 Book Strategy Call</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+<!-- ═══════════════════════ ATTENTION ENGINE STRIP ═══════════════════════ -->
+<style>
+/* ══ RISK BLOCK & ATTENTION ENGINE ════════════════════════════════════════ */
+@keyframes riskPulse {0%,100%{box-shadow:0 0 20px rgba(239,68,68,.3),0 0 40px rgba(239,68,68,.1)}50%{box-shadow:0 0 40px rgba(239,68,68,.6),0 0 80px rgba(239,68,68,.2)}}
+@keyframes riskTextBlink {0%,100%{color:#ff4444;text-shadow:0 0 8px rgba(255,68,68,.7)}50%{color:#ff6b6b;text-shadow:0 0 16px rgba(255,68,68,1),0 0 32px rgba(255,100,100,.5)}}
+@keyframes scannerLine {0%{left:-100%}100%{left:100%}}
+@keyframes urgencyShake {0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-2px)}20%,40%,60%,80%{transform:translateX(2px)}}
+@keyframes attentionGlow{0%,100%{background:rgba(0,255,136,.06)}50%{background:rgba(0,255,136,.12);box-shadow:0 0 16px rgba(0,255,136,.15)}}
+@keyframes v14GlowPulse{0%,100%{color:#00ff88;text-shadow:0 0 8px #00ff88,0 0 16px #00ff88}50%{color:#00ffcc;text-shadow:0 0 12px #00ffcc,0 0 28px #00ffcc,0 0 48px #00ff88}}
+@keyframes v14FooterFlow{0%{background-position:0% center}100%{background-position:400% center}}
+@keyframes v14BorderGlow{0%,100%{border-color:rgba(0,255,136,.3);box-shadow:0 0 8px rgba(0,255,136,.15)}50%{border-color:rgba(0,255,204,.7);box-shadow:0 0 20px rgba(0,255,204,.35)}}
+@keyframes v14ChevronSlide{0%{transform:translateX(0)}50%{transform:translateX(4px)}100%{transform:translateX(0)}}
+@keyframes v14NavPulse{0%,100%{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.35)}50%{background:rgba(0,255,136,.18);border-color:rgba(0,255,204,.7);box-shadow:0 0 16px rgba(0,255,136,.3)}}
+@keyframes v14ScanBlink{0%,90%,100%{opacity:1}5%,15%{opacity:.3}}
+@keyframes v14LinkFlash{0%,100%{color:#00ff88;text-shadow:0 0 6px #00ff88}50%{color:#39ff14;text-shadow:0 0 10px #39ff14,0 0 22px #00ff88}}
+
+.attn-strip-v14{background:rgba(0,0,0,.7);border-bottom:1px solid rgba(0,255,136,.15);padding:10px 24px}
+.attn-strip-inner-v14{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.attn-item-v14{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em}
+.attn-dot-v14{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.attn-dot-green-v14{background:#00ff88;box-shadow:0 0 6px #00ff88;animation:v14GlowPulse 1.2s ease-in-out infinite}
+.attn-dot-orange-v14{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.attn-dot-red-v14{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:riskTextBlink 1.5s ease-in-out infinite}
+.attn-sep-v14{color:rgba(255,255,255,.15)}
+
+.risk-block-v14{position:relative;overflow:hidden;background:linear-gradient(135deg,#0a0205,#110308,#0d0208);border-top:2px solid rgba(239,68,68,.4);border-bottom:2px solid rgba(239,68,68,.2);padding:36px 24px;animation:riskPulse 3s ease-in-out infinite}
+.risk-block-v14::before{content:\'\';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#ff6b6b,transparent);animation:scannerLine 2.5s linear infinite}
+.risk-inner-v14{max-width:1000px;margin:0 auto;text-align:center}
+.risk-badge-v14{display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#ff4444;margin-bottom:16px;animation:urgencyShake 4s ease-in-out infinite}
+.risk-title-v14{font-size:clamp(20px,4vw,34px);font-weight:900;color:#fff;margin-bottom:8px}
+.risk-title-v14 span{animation:riskTextBlink 1.5s ease-in-out infinite}
+.risk-sub-v14{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:24px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.6}
+.risk-stats-v14{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+.risk-stat-v14{text-align:center;background:rgba(0,0,0,.4);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 18px;min-width:110px}
+.risk-stat-num-v14{font-size:22px;font-weight:900;color:#ff4444;text-shadow:0 0 12px rgba(255,68,68,.6)}
+.risk-stat-lbl-v14{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px}
+.risk-cta-row-v14{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.risk-cta-red-v14{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:14px;font-weight:900;padding:14px 28px;border-radius:10px;text-decoration:none;box-shadow:0 0 24px rgba(239,68,68,.4);transition:all .2s}
+.risk-cta-red-v14:hover{box-shadow:0 0 40px rgba(239,68,68,.7);transform:translateY(-2px);color:#fff;text-decoration:none}
+.risk-cta-green-v14{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);color:#00ff88;font-size:14px;font-weight:800;padding:14px 28px;border-radius:10px;text-decoration:none;transition:all .2s}
+.risk-cta-green-v14:hover{background:rgba(0,255,136,.18);box-shadow:0 0 20px rgba(0,255,136,.3);transform:translateY(-2px);color:#00ff88;text-decoration:none}
+.risk-ticker-v14{margin-top:18px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.risk-ticker-dot-v14{width:8px;height:8px;border-radius:50%;background:#ff4444;box-shadow:0 0 8px #ff4444;animation:riskTextBlink 1s ease-in-out infinite}
+.risk-ticker-txt-v14{font-size:11px;color:rgba(255,255,255,.4);font-family:monospace}
+.risk-ticker-txt-v14 span{color:#ff8888}
+
+/* V14 FOOTER */
+footer.v14-footer-universal{background:linear-gradient(180deg,#040410 0%,#060612 40%,#080818 100%);border-top:2px solid transparent;background-clip:padding-box;position:relative}
+footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left:0;right:0;height:2px;background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88);background-size:400% auto;animation:v14FooterFlow 3s linear infinite}
+.v14fu-cta-strip{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:20px 24px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(0,255,136,.08)}
+.v14fu-pill{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;transition:all .2s ease}
+.v14fu-pill-green{background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;box-shadow:0 0 16px rgba(0,255,136,.35);animation:v14NavPulse 2.5s ease-in-out infinite}
+.v14fu-pill-green:hover{box-shadow:0 0 28px rgba(0,255,136,.6);transform:translateY(-2px);color:#000;text-decoration:none}
+.v14fu-pill-cyan{background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.35);color:#00ffcc}
+.v14fu-pill-cyan:hover{background:rgba(0,255,204,.18);box-shadow:0 0 16px rgba(0,255,204,.3);transform:translateY(-2px);color:#00ffcc;text-decoration:none}
+.v14fu-pill-purple{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:#a78bfa}
+.v14fu-pill-purple:hover{background:rgba(124,58,237,.22);color:#a78bfa;text-decoration:none;transform:translateY(-2px)}
+.v14fu-nav-highway{background:linear-gradient(135deg,rgba(0,255,136,.04),rgba(0,255,204,.02));border-top:1px solid rgba(0,255,136,.15);border-bottom:1px solid rgba(0,255,136,.1);padding:28px 24px}
+.v14fu-nav-inner{max-width:1200px;margin:0 auto}
+.v14fu-nav-label{font-size:10px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;color:#00ff88;text-shadow:0 0 10px rgba(0,255,136,.6);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.v14fu-nav-label::before,.v14fu-nav-label::after{content:\'\';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,255,136,.5),transparent)}
+.v14fu-nav-label::after{background:linear-gradient(270deg,rgba(0,255,136,.5),transparent)}
+.v14fu-pages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.v14fu-page-card{display:flex;align-items:center;gap:10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px 14px;text-decoration:none;transition:all .2s ease;animation:v14BorderGlow 3s ease-in-out infinite;position:relative;overflow:hidden}
+.v14fu-page-card::before{content:\'\';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.08),transparent);transition:left .4s ease}
+.v14fu-page-card:hover::before{left:100%}
+.v14fu-page-card:hover{background:rgba(0,255,204,.14);border-color:rgba(0,255,204,.6);box-shadow:0 0 20px rgba(0,255,136,.25),0 4px 16px rgba(0,0,0,.3);transform:translateY(-2px);text-decoration:none}
+.v14fu-page-icon{font-size:20px;flex-shrink:0;filter:drop-shadow(0 0 4px rgba(0,255,136,.4))}
+.v14fu-page-info{flex:1;min-width:0}
+.v14fu-page-name{font-size:13px;font-weight:900;color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,.6);animation:v14GlowPulse 2.5s ease-in-out infinite;letter-spacing:.02em;line-height:1.2}
+.v14fu-page-desc{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;line-height:1.3}
+.v14fu-page-arrow{font-size:12px;color:#00ff88;opacity:.7;flex-shrink:0;animation:v14ChevronSlide 1.5s ease-in-out infinite}
+.v14fu-new-badge{position:absolute;top:6px;right:6px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:8px;font-weight:900;letter-spacing:.5px;padding:2px 6px;border-radius:4px;animation:v14ScanBlink 3s ease-in-out infinite}
+.v14fu-col-title{font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00ffcc;text-shadow:0 0 10px rgba(0,255,204,.6);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid rgba(0,255,204,.2)}
+.v14fu-link{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#00ff88!important;text-decoration:none;padding:5px 0;animation:v14LinkFlash 2.5s ease-in-out infinite;text-shadow:0 0 8px rgba(0,255,136,.5);letter-spacing:.02em;transition:all .2s}
+.v14fu-link:hover{color:#00ffcc!important;text-shadow:0 0 14px rgba(0,255,204,.9),0 0 28px rgba(0,255,136,.6);text-decoration:none;transform:translateX(3px)}
+.v14fu-link-dim{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55)!important;text-decoration:none;padding:4px 0;transition:all .2s}
+.v14fu-link-dim:hover{color:#00ff88!important;text-shadow:0 0 10px rgba(0,255,136,.6);text-decoration:none;transform:translateX(2px)}
+.v14fu-link:nth-child(1){animation-delay:0s}.v14fu-link:nth-child(2){animation-delay:.3s}.v14fu-link:nth-child(3){animation-delay:.6s}.v14fu-link:nth-child(4){animation-delay:.9s}.v14fu-link:nth-child(5){animation-delay:1.2s}.v14fu-link:nth-child(6){animation-delay:1.5s}.v14fu-link:nth-child(7){animation-delay:1.8s}.v14fu-link:nth-child(8){animation-delay:2.1s}
+.v14fu-social-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:16px;text-decoration:none;transition:all .2s}
+.v14fu-social-btn:hover{background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.4);transform:translateY(-2px)}
+@media(max-width:768px){.v14fu-pages-grid{grid-template-columns:1fr 1fr!important}.v14fu-cols{grid-template-columns:1fr 1fr!important}}
+@media(max-width:480px){.v14fu-pages-grid{grid-template-columns:1fr!important}.v14fu-cols{grid-template-columns:1fr!important}}
+</style>
+
+<!-- ATTENTION ENGINE LIVE STRIP -->
+<div class="attn-strip-v14" id="cdb-attn-strip">
+  <div class="attn-strip-inner-v14">
+    <div class="attn-item-v14" style="color:#00ff88"><div class="attn-dot-v14 attn-dot-green-v14"></div>🔥 <span id="ae-scan-live">17</span> users scanning now</div>
+    <span class="attn-sep-v14">|</span>
+    <div class="attn-item-v14" style="color:#f59e0b"><div class="attn-dot-v14 attn-dot-orange-v14"></div>⚠️ <span id="ae-cve-count">3</span> critical CVEs today</div>
+    <span class="attn-sep-v14">|</span>
+    <div class="attn-item-v14" style="color:#ef4444"><div class="attn-dot-v14 attn-dot-red-v14"></div>🚨 Reports from ₹199 · <a href="/#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
+    <span class="attn-sep-v14">|</span>
+    <div class="attn-item-v14" style="color:rgba(255,255,255,.35);font-size:10px">Intel updated: <span id="ae-update-time">just now</span></div>
+  </div>
+</div>
+
+<!-- SYSTEM RISK CONVERSION BLOCK -->
+<div class="risk-block-v14">
+  <div class="risk-inner-v14">
+    <div class="risk-badge-v14">🚨 &nbsp; LIVE THREAT INTELLIGENCE ALERT &nbsp; 🚨</div>
+    <h2 class="risk-title-v14">⚠️ <span>YOUR SYSTEM MAY BE AT RISK</span></h2>
+    <p class="risk-sub-v14">Critical vulnerabilities are being actively exploited globally. Our AI scanner detects misconfigurations, exposed services, CVEs, and breach indicators in under 60 seconds — free.</p>
+    <div class="risk-stats-v14">
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14" id="rb-scans-today">1,247</div>
+        <div class="risk-stat-lbl-v14">Scans today</div>
+      </div>
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14" id="rb-cve-active">847</div>
+        <div class="risk-stat-lbl-v14">Active CVEs tracked</div>
+      </div>
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14" id="rb-threats-hour">12</div>
+        <div class="risk-stat-lbl-v14">Threats found this hour</div>
+      </div>
+      <div class="risk-stat-v14">
+        <div class="risk-stat-num-v14">₹199</div>
+        <div class="risk-stat-lbl-v14">Full report — instant</div>
+      </div>
+    </div>
+    <div class="risk-cta-row-v14">
+      <a href="/#scanner" class="risk-cta-red-v14">🔴 Scan Your Domain Now — FREE</a>
+      <a href="/#pricing" class="risk-cta-green-v14">💰 Unlock Full Report ₹199</a>
+    </div>
+    <div class="risk-ticker-v14">
+      <div class="risk-ticker-dot-v14"></div>
+      <div class="risk-ticker-txt-v14">Last detection: <span id="rb-last-cve">CVE-2025-21298 (Windows OLE RCE)</span> — flagged <span id="rb-time-ago">3 min ago</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ V14 FOOTER UNIVERSAL ════════════════════════════ -->
+<footer class="v14-footer-universal">
+
+  <!-- ANIMATED BRAND BANNER -->
+  <div style="background:linear-gradient(135deg,#020208,#06060e);padding:24px 20px;text-align:center;overflow:hidden;position:relative">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 50% 50%,rgba(0,255,136,.05),transparent);pointer-events:none"></div>
+    <div style="font-size:clamp(15px,2.5vw,26px);font-weight:900;letter-spacing:.18em;text-transform:uppercase;background:linear-gradient(90deg,#00ff88,#00ffcc,#00d4ff,#7c3aed,#f59e0b,#ef4444,#00ff88,#00ffcc);background-size:400% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:v14FooterFlow 3s linear infinite;position:relative;z-index:1">
+      ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
+    </div>
+    <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
+      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; India\'s #1 AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+    </div>
+  </div>
+
+  <!-- QUICK ACTION CTA STRIP -->
+  <div class="v14fu-cta-strip">
+    <a href="/#scanner" class="v14fu-pill v14fu-pill-green">🔍 Free Security Scan</a>
+    <a href="/academy.html" class="v14fu-pill v14fu-pill-cyan">🎓 Training Academy</a>
+    <a href="/booking.html" class="v14fu-pill v14fu-pill-cyan">📅 Book Demo</a>
+    <a href="/services.html" class="v14fu-pill v14fu-pill-cyan">💰 View Services</a>
+    <a href="/tools.html" class="v14fu-pill v14fu-pill-purple">🛠 Security Tools</a>
+    <a href="/intel.html" class="v14fu-pill v14fu-pill-purple">🛰 Live Intel Feed</a>
+    <a href="https://wa.me/918179881447" target="_blank" class="v14fu-pill v14fu-pill-cyan">💬 WhatsApp Us</a>
+  </div>
+
+  <!-- NAVIGATION SUPERHIGHWAY -->
+  <div class="v14fu-nav-highway">
+    <div class="v14fu-nav-inner">
+      <div class="v14fu-nav-label">⚡ EXPLORE ALL PAGES — CLICK TO NAVIGATE ⚡</div>
+      <div class="v14fu-pages-grid">
+
+        <a href="/" class="v14fu-page-card">
+          <div class="v14fu-page-icon">🏠</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Home</div><div class="v14fu-page-desc">AI Security Scanner · Free scan</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/academy.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">🎓 NEW</div>
+          <div class="v14fu-page-icon">📚</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Academy</div><div class="v14fu-page-desc">SOC · AI · OSINT · Python · ₹499+</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/tools.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">🔥 HOT</div>
+          <div class="v14fu-page-icon">🛠</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Tools</div><div class="v14fu-page-desc">Sigma · YARA · Firewall · IR Playbooks</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/intel.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">🔥 LIVE</div>
+          <div class="v14fu-page-icon">🛰</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Intel Feed</div><div class="v14fu-page-desc">Live CVE · APT groups · Threat alerts</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/services.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">💰</div>
+          <div class="v14fu-page-icon">💼</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Services</div><div class="v14fu-page-desc">Assessments · Retainers · Enterprise</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/booking.html" class="v14fu-page-card">
+          <div class="v14fu-new-badge">FREE</div>
+          <div class="v14fu-page-icon">📅</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Book Demo</div><div class="v14fu-page-desc">Free 45-min strategy session</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/about.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">⚔️</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">About Us</div><div class="v14fu-page-desc">Founder · Mission · Platform story</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/contact.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">📞</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Contact</div><div class="v14fu-page-desc">Email · WhatsApp · 2-4hr response</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="https://tools.cyberdudebivash.com" target="_blank" class="v14fu-page-card">
+          <div class="v14fu-page-icon">🔧</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Tools Suite ↗</div><div class="v14fu-page-desc">tools.cyberdudebivash.com</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" class="v14fu-page-card">
+          <div class="v14fu-page-icon">✈️</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Sentinel APEX ↗</div><div class="v14fu-page-desc">Live Telegram threat intel channel</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/user-dashboard.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">📊</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Dashboard</div><div class="v14fu-page-desc">Scan history · Reports · Account</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/privacy-policy.html" class="v14fu-page-card">
+          <div class="v14fu-page-icon">🔒</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Privacy Policy</div><div class="v14fu-page-desc">DPDP Act · GDPR compliant</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+        <a href="/blog/" class="v14fu-page-card">
+          <div class="v14fu-page-icon">📝</div>
+          <div class="v14fu-page-info"><div class="v14fu-page-name">Security Blog</div><div class="v14fu-page-desc">CVE analysis · Threat research</div></div>
+          <div class="v14fu-page-arrow">›</div>
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN FOOTER COLUMNS -->
+  <div style="max-width:1200px;margin:0 auto;padding:36px 24px 0">
+    <div class="v14fu-cols" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px">
+
+      <!-- Brand col -->
+      <div>
+        <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#00ffcc,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px">⚔️ CYBERDUDEBIVASH®</div>
+        <p style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:14px;max-width:280px">India\'s #1 AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹199.</p>
+        <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:5px">
+          <a href="mailto:bivash@cyberdudebivash.com" class="v14fu-link-dim">📧 bivash@cyberdudebivash.com</a>
+          <a href="https://wa.me/918179881447" target="_blank" class="v14fu-link-dim">📞 +91 8179881447</a>
+          <span class="v14fu-link-dim" style="cursor:default">📍 Ragadi, Odisha 755019, India</span>
+          <span class="v14fu-link-dim" style="cursor:default">🏢 GST: 21ARKPN8270G1ZP</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <a class="v14fu-social-btn" href="https://github.com/cyberdudebivash" target="_blank">🐙</a>
+          <a class="v14fu-social-btn" href="https://linkedin.com/in/cyberdudebivash" target="_blank">💼</a>
+          <a class="v14fu-social-btn" href="https://twitter.com/cyberdudebivash" target="_blank">🐦</a>
+          <a class="v14fu-social-btn" href="https://t.me/cyberdudebivashSentinelApex" target="_blank">✈️</a>
+          <a class="v14fu-social-btn" href="https://wa.me/918179881447" target="_blank">💚</a>
+          <a class="v14fu-social-btn" href="https://youtube.com/@cyberdudebivash" target="_blank">▶️</a>
+          <a class="v14fu-social-btn" href="https://discord.gg/cyberdudebivash" target="_blank">💬</a>
+          <a class="v14fu-social-btn" href="https://instagram.com/cyberdudebivash" target="_blank">📸</a>
+        </div>
+      </div>
+
+      <!-- Platform col -->
+      <div>
+        <div class="v14fu-col-title">🔍 Platform</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/#scanner" class="v14fu-link">⚡ Domain Scanner</a>
+          <a href="/#scanner" class="v14fu-link">🤖 AI Security</a>
+          <a href="/#scanner" class="v14fu-link">🎯 Red Team</a>
+          <a href="/#scanner" class="v14fu-link">🔐 Identity ZT</a>
+          <a href="/#scanner" class="v14fu-link">📋 Compliance</a>
+          <a href="/#defense-marketplace" class="v14fu-link">🛡 Marketplace</a>
+          <a href="/user-dashboard.html" class="v14fu-link-dim">📊 Dashboard</a>
+          <a href="/api" target="_blank" class="v14fu-link-dim">📡 API Docs</a>
+        </div>
+      </div>
+
+      <!-- Pages col -->
+      <div>
+        <div class="v14fu-col-title">📄 Pages</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/academy.html" class="v14fu-link">🎓 Academy</a>
+          <a href="/tools.html" class="v14fu-link">🛠 Tools</a>
+          <a href="/intel.html" class="v14fu-link">🛰 Intel Feed</a>
+          <a href="/services.html" class="v14fu-link">💼 Services</a>
+          <a href="/booking.html" class="v14fu-link">📅 Book Demo</a>
+          <a href="/about.html" class="v14fu-link">⚔️ About Us</a>
+          <a href="/contact.html" class="v14fu-link">📞 Contact</a>
+          <a href="/blog/" class="v14fu-link-dim">📝 Blog</a>
+          <a href="https://tools.cyberdudebivash.com" target="_blank" class="v14fu-link-dim">🔧 Tools Suite ↗</a>
+        </div>
+      </div>
+
+      <!-- Services col -->
+      <div>
+        <div class="v14fu-col-title">💰 Services</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/services.html" class="v14fu-link">🔍 Assessment ₹9,999</a>
+          <a href="/services.html" class="v14fu-link">🧠 Intel Report ₹14,999</a>
+          <a href="/services.html" class="v14fu-link">🎯 Red Team ₹24,999</a>
+          <a href="/services.html" class="v14fu-link">🏢 Retainer ₹99,999</a>
+          <a href="/#pricing" class="v14fu-link-dim">📦 Starter ₹499/mo</a>
+          <a href="/#pricing" class="v14fu-link-dim">🚀 Pro ₹1,499/mo</a>
+          <a href="/#pricing" class="v14fu-link-dim">🏷 Enterprise ₹4,999/mo</a>
+          <a href="/#pricing" class="v14fu-link-dim">♾ MSSP ₹9,999/mo</a>
+        </div>
+      </div>
+
+      <!-- Legal col -->
+      <div>
+        <div class="v14fu-col-title">⚖️ Legal</div>
+        <div style="display:flex;flex-direction:column">
+          <a href="/privacy-policy.html" class="v14fu-link-dim">🔒 Privacy Policy</a>
+          <a href="/terms-of-service.html" class="v14fu-link-dim">📋 Terms of Service</a>
+          <a href="/refund-policy.html" class="v14fu-link-dim">💳 Refund Policy</a>
+          <a href="/about.html" class="v14fu-link-dim">ℹ️ About Us</a>
+          <a href="/contact.html" class="v14fu-link-dim">📞 Contact</a>
+        </div>
+        <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="margin-top:16px;display:flex;align-items:center;gap:10px;background:rgba(0,136,204,.1);border:1px solid rgba(0,136,204,.3);border-radius:10px;padding:10px 12px;text-decoration:none">
+          <span style="font-size:22px">✈️</span>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#0088cc">Sentinel APEX</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.4)">Live threat intel channel</div>
+          </div>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- FOOTER BOTTOM -->
+    <div style="border-top:1px solid rgba(0,255,136,.1);padding:20px 0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.6">
+        © 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.<br>
+        <span style="color:rgba(255,255,255,.2)">29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</span>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:right;line-height:1.7">
+        Platform <span style="color:#00ff88">v14.0</span> ·
+        <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(255,255,255,.4)">bivash@cyberdudebivash.com</a> ·
+        <a href="https://wa.me/918179881447" target="_blank" style="color:rgba(255,255,255,.4)">+91 8179881447</a> ·
+        <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:rgba(255,255,255,.4)">Discord: cybercoder127001</a>
+      </div>
+    </div>
+  </div>
+
+</footer>
+
+<!-- ATTENTION ENGINE + RISK COUNTER JS -->
+<script>
+(function CDB_ATTENTION(){
+  var recent_cves = [
+    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)","CVE-2024-55591 (Fortinet Auth Bypass)",
+    "CVE-2025-21333 (Windows Hyper-V ESC)","CVE-2024-53104 (Linux USB Video)","CVE-2025-22457 (Ivanti Pulse Secure)",
+    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)","CVE-2024-49113 (Windows LDAP DoS)",
+    "CVE-2025-21335 (Windows Hyper-V PE)","CVE-2025-29824 (CLFS Zero-Day)","CVE-2025-30065 (Apache Parquet RCE)"
+  ];
+  var scanBase = 1247, cveBases = [847,851,849,853,850,848];
+  var tAgo = ["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","8 min ago","12 min ago"];
+  var startTime = Date.now();
+
+  function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+  function elapsed(){return Math.floor((Date.now()-startTime)/60000);}
+
+  function tick(){
+    var live = rand(12,34);
+    var scansToday = scanBase + rand(0,50) + elapsed()*rand(1,3);
+    var cveActive = cveBases[rand(0,cveBases.length-1)];
+    var threatsHour = rand(8,24);
+    var cveNow = recent_cves[rand(0,recent_cves.length-1)];
+    var timeAgo = tAgo[rand(0,tAgo.length-1)];
+    var updateTime = elapsed() <= 0 ? "just now" : elapsed()+"m ago";
+
+    var el = function(id){return document.getElementById(id);};
+    if(el("ae-scan-live")) el("ae-scan-live").textContent = live;
+    if(el("ae-cve-count")) el("ae-cve-count").textContent = rand(2,6);
+    if(el("ae-update-time")) el("ae-update-time").textContent = updateTime;
+    if(el("rb-scans-today")) el("rb-scans-today").textContent = scansToday.toLocaleString();
+    if(el("rb-cve-active")) el("rb-cve-active").textContent = cveActive;
+    if(el("rb-threats-hour")) el("rb-threats-hour").textContent = threatsHour;
+    if(el("rb-last-cve")) el("rb-last-cve").textContent = cveNow;
+    if(el("rb-time-ago")) el("rb-time-ago").textContent = timeAgo;
+  }
+  tick();
+  setInterval(tick, 8000);
+})();
+</script>
+
+
+    <script src="/assets/global.js"></script>
+    <script>
+        // Payment function wrapper
+        function openPayment(productId, priceInr, label) {
+            if (window.CDB_PAY && window.CDB_PAY.open) {
+                window.CDB_PAY.open(productId, priceInr, label);
+            } else {
+                alert('Payment system not initialized. Please try again.');
+            }
+        }
+
+        // ROI Calculator Logic
+        function calculateROI() {
+            const companySize = parseInt(document.getElementById('company-size').value);
+            const industry = document.getElementById('industry').value;
+            const annualRevenue = parseInt(document.getElementById('annual-revenue').value) || 0;
+
+            // Industry multipliers for breach cost
+            const industryMultiplier = {
+                finance: 0.08,
+                healthcare: 0.12,
+                tech: 0.06,
+                retail: 0.05,
+                other: 0.05
+            };
+
+            const multiplier = industryMultiplier[industry] || 0.05;
+            const breachCost = annualRevenue * multiplier;
+
+            // Risk reduction based on company size (larger = more risk reduction from platform)
+            const riskReduction = Math.min(70 + (companySize / 5000 * 20), 85);
+
+            // Annual platform cost estimate
+            const platformCostEstimate = companySize <= 50 ? 99999 :
+                                       companySize <= 200 ? 149999 :
+                                       companySize <= 1000 ? 299999 : 499999;
+
+            const savedFromBreach = breachCost * (riskReduction / 100);
+            const netROI = savedFromBreach - platformCostEstimate;
+
+            // Update UI
+            document.getElementById('breach-cost').textContent = '₹' + formatNumber(Math.round(breachCost));
+            document.getElementById('risk-reduction').textContent = Math.round(riskReduction) + '%';
+            document.getElementById('roi-value').textContent = '₹' + formatNumber(Math.round(netROI));
+        }
+
+        function formatNumber(num) {
+            return num.toLocaleString('en-IN');
+        }
+
+        // Enterprise form submission
+        function submitEnterpriseForm(event) {
+            event.preventDefault();
+
+            const formData = {
+                name: document.getElementById('enterprise-name').value,
+                email: document.getElementById('enterprise-email').value,
+                company: document.getElementById('enterprise-company').value,
+                size: document.getElementById('enterprise-size').value,
+                challenge: document.getElementById('enterprise-challenge').value
+            };
+
+            // Send to backend
+            fetch('/api/leads/capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Thank you! We\'ll be in touch within 24 hours.');
+                    document.getElementById('enterprise-form').reset();
+                } else {
+                    alert('Error submitting form. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error submitting form. Please try again.');
+            });
+        }
+
+        // Initialize ROI calculator on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateROI();
+
+            // Add fade-in animation to cards on scroll
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in-up');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.service-card, .testimonial-card').forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

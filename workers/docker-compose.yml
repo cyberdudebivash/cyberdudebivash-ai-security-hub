@@ -1,0 +1,180 @@
+# ============================================================
+# CYBERDUDEBIVASH AI SYSTEM — PRODUCTION DOCKER COMPOSE
+# Hardened: startup order, health checks, DB init guard,
+#           explicit volume pre-creation, scheduler path fix
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: cdb_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 300
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - cdb_net
+
+  # ── DB Init (one-shot) ────────────────────────────────────────
+  db-init:
+    build: .
+    container_name: cdb_db_init
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////data/cdb_ai.db
+      - APP_ENV=production
+    volumes:
+      - db_data:/data
+      - memory_data:/app/memory
+      - logs_data:/app/logs
+    command: python -c "from core.database.db_engine import init_db; init_db(); print('DB ready')"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - cdb_net
+
+  # ── FastAPI API ───────────────────────────────────────────────
+  api:
+    build: .
+    container_name: cdb_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////data/cdb_ai.db
+      - MEMORY_DIR=/app/memory
+      - APP_ENV=production
+    volumes:
+      - db_data:/data
+      - logs_data:/app/logs
+      - workspace_data:/app/workspace
+      - memory_data:/app/memory
+    depends_on:
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    command: >
+      uvicorn generated_app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 1
+      --log-level warning
+      --access-log
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - cdb_net
+
+  # ── Celery Worker ─────────────────────────────────────────────
+  worker:
+    build: .
+    container_name: cdb_worker
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////data/cdb_ai.db
+      - MEMORY_DIR=/app/memory
+      - APP_ENV=production
+    volumes:
+      - db_data:/data
+      - logs_data:/app/logs
+      - workspace_data:/app/workspace
+      - memory_data:/app/memory
+    depends_on:
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    command: >
+      python -m celery
+      -A generated_app.core.celery_app:celery_app
+      worker
+      --loglevel=info
+      --queues=ai_tasks,cyber_tasks,default
+      --concurrency=4
+      --max-tasks-per-child=100
+      --without-gossip
+      --without-mingle
+    healthcheck:
+      test: ["CMD", "python", "-m", "celery", "-A",
+             "generated_app.core.celery_app:celery_app", "inspect", "ping",
+             "--timeout=5"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - cdb_net
+
+  # ── Celery Beat Scheduler ─────────────────────────────────────
+  scheduler:
+    build: .
+    container_name: cdb_scheduler
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////data/cdb_ai.db
+      - MEMORY_DIR=/app/memory
+      - APP_ENV=production
+    volumes:
+      - db_data:/data
+      - logs_data:/app/logs
+      - memory_data:/app/memory
+    depends_on:
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    command: >
+      python -m celery
+      -A generated_app.core.celery_app:celery_app
+      beat
+      --loglevel=info
+      --schedule=/app/memory/celerybeat-schedule
+    restart: unless-stopped
+    networks:
+      - cdb_net
+
+networks:
+  cdb_net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  db_data:
+  logs_data:
+  workspace_data:
+  memory_data:
