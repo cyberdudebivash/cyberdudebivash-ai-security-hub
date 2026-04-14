@@ -1,9 +1,30 @@
 ﻿/**
- * CYBERDUDEBIVASH AI Security Hub — Main Router v19.0
+ * CYBERDUDEBIVASH AI Security Hub — Main Router v20.0
+ * Global Cyber Intelligence Dominance System
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
  * Continuous Monitoring, Multi-Tenant Orgs, Content Engine, Public API Platform
  *
  * Auth priority: JWT Bearer → API Key (cdb_*) → IP fallback (FREE)
+ *
+ * New in v20.0:
+ *   CyberBrain Engine: POST /api/cyber-brain/analyze    → full AI risk analysis
+ *                      GET  /api/cyber-brain/risk-score → cached risk score
+ *                      GET  /api/cyber-brain/attack-paths → predicted attack chains
+ *                      GET  /api/cyber-brain/threat-actors → correlated APT groups
+ *                      GET  /api/cyber-brain/remediation   → AI remediation plan
+ *   Global ThreatFeed: GET  /api/global-threat-feed        → normalized IOC feed
+ *                      GET  /api/global-threat-feed/stream → SSE real-time IOC stream
+ *                      GET  /api/global-threat-feed/stats  → feed statistics
+ *                      POST /api/global-threat-feed/ingest → manual IOC submission
+ *   Zero Trust:        GET  /api/zero-trust/score       → device trust score
+ *                      GET  /api/zero-trust/anomalies   → session anomalies
+ *                      POST /api/zero-trust/verify      → risk-based auth verify
+ *   Revenue Engine:    GET  /api/revenue/plans          → subscription tiers
+ *                      POST /api/revenue/subscribe      → create subscription
+ *                      GET  /api/revenue/gate/:feature  → feature gate check
+ *   Authority Engine:  POST /api/authority/cve-report   → auto-generate CVE report
+ *                      POST /api/authority/blog-post    → auto-generate blog post
+ *                      GET  /api/authority/bulletin     → latest threat bulletin
  *
  * New in v8.0:
  *   AI Brain:          GET  /api/insights/:jobId  → AI narrative from scan
@@ -195,10 +216,11 @@ import {
   handleGetFeed as handleGetTCFeed, handleGetStats as handleGetTCStats,
 } from './handlers/threatConfidence.js';
 
-// ─── PHASE 3: Executive Report Engine ────────────────────────────────────────
+// ─── PHASE 3 / v20: Executive Report Engine ──────────────────────────────────
 import {
   handleGetDashboard, handleGetMRR, handleSetMRRConfig,
   handleGenerateReport, handleListReports, handleGetReport,
+  handleCEOView,
 } from './handlers/executiveReport.js';
 
 // ─── PHASE 3: MSSP Multi-Tenant Panel ────────────────────────────────────────
@@ -313,6 +335,49 @@ import {
   handleRemediateVuln, handleVulnStats,
   handleCVELookup, handleKEVFeed,
 } from './handlers/vulnManagement.js';
+
+// ─── GOD MODE v20: CyberBrain Engine — Central AI Intelligence Core ──────────
+import {
+  handleCyberBrainAnalyze,
+  handleRiskScore,
+  handleAttackPaths,
+  handleThreatActors,
+  handleRemediationPlan,
+  runCyberBrainAnalysis,
+} from './services/cyberBrainEngine.js';
+
+// ─── GOD MODE v20: ThreatFusion Engine — Global Threat Intelligence ──────────
+import {
+  handleGlobalThreatFeed,
+  handleThreatFeedStream,
+  handleThreatFeedStats,
+  handleThreatFeedIngest,
+  aggregateThreatFeed,
+} from './services/threatFusionEngine.js';
+
+// ─── GOD MODE v20: Zero Trust Security Engine ────────────────────────────────
+import {
+  handleTrustScore,
+  handleZeroTrustAnomalies,
+  handleZeroTrustVerify,
+} from './services/zeroTrustEngine.js';
+
+// ─── GOD MODE v20: Authority Engine — CVE Reports + Blog Auto-Generation ─────
+import {
+  handleCVEReport,
+  handleBlogPost,
+  handleThreatBulletin,
+  handleAuthorityStats,
+} from './core/authorityEngine.js';
+
+// ─── GOD MODE v20: Revenue Gate — Subscription Plans + Feature Gating ────────
+import {
+  handleGetPlansV20,
+  handleSubscribeV20,
+  handleFeatureGate,
+  handleBillingStatus,
+  SUBSCRIPTION_PLANS,
+} from './core/revenueGate.js';
 
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
 import {
@@ -2523,7 +2588,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleGetTCStats(request, env, authCtx), request));
     }
 
-    // ── PHASE 3: Executive Report Engine ─────────────────────────────────────
+    // ── PHASE 3 / v20: Executive Report Engine ───────────────────────────────
+    // GET /api/executive/ceo-view — v20 CEO Command View (revenue + threats + attacks + usage)
+    if (path === '/api/executive/ceo-view' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleCEOView(request, env, authCtx), request));
+    }
     if (path === '/api/executive/dashboard' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleGetDashboard(request, env, authCtx), request));
@@ -3525,6 +3595,159 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/enterprise/health' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleEnterpriseHealth(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v20 — CYBERBRAIN ENGINE  (/api/cyber-brain/*)
+    // Central AI Intelligence Core: risk scoring, attack path prediction,
+    // threat actor correlation, automated remediation planning
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/cyber-brain/analyze — full AI risk analysis on findings/vulns
+    if (path === '/api/cyber-brain/analyze' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleCyberBrainAnalyze(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/risk-score — retrieve cached risk score for target
+    if (path === '/api/cyber-brain/risk-score' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleRiskScore(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/attack-paths — predict attack chains from risk signals
+    if (path === '/api/cyber-brain/attack-paths' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleAttackPaths(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/threat-actors — correlated APT/threat actor groups
+    if (path === '/api/cyber-brain/threat-actors' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleThreatActors(request, env, authCtx), request));
+    }
+
+    // GET /api/cyber-brain/remediation — AI-generated remediation action plan
+    if (path === '/api/cyber-brain/remediation' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleRemediationPlan(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v20 — GLOBAL THREAT FEED  (/api/global-threat-feed/*)
+    // ThreatFusion Engine: normalized IOCs from NVD, CISA KEV, ThreatFox,
+    // Shodan, URLhaus, GreyNoise, OpenPhish, Ransomware.live — SSE streaming
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/global-threat-feed/stream — SSE real-time IOC stream
+    if (path === '/api/global-threat-feed/stream' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleThreatFeedStream(request, env, authCtx), request));
+    }
+
+    // GET /api/global-threat-feed/stats — feed statistics (count, sources, top types)
+    if (path === '/api/global-threat-feed/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleThreatFeedStats(request, env, authCtx), request));
+    }
+
+    // POST /api/global-threat-feed/ingest — manual IOC submission
+    if (path === '/api/global-threat-feed/ingest' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleThreatFeedIngest(request, env, authCtx), request));
+    }
+
+    // GET /api/global-threat-feed — paginated normalized IOC feed (must come AFTER /stats and /ingest)
+    if (path === '/api/global-threat-feed' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleGlobalThreatFeed(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v20 — ZERO TRUST SECURITY LAYER  (/api/zero-trust/*)
+    // Device fingerprinting, risk-based auth, session anomaly detection,
+    // behavioral scoring — Zero Trust enforcement at the API edge
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/zero-trust/score — device + session trust score
+    if (path === '/api/zero-trust/score' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleTrustScore(request, env, authCtx), request));
+    }
+
+    // GET /api/zero-trust/anomalies — detected session anomalies for user
+    if (path === '/api/zero-trust/anomalies' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleZeroTrustAnomalies(request, env, authCtx), request));
+    }
+
+    // POST /api/zero-trust/verify — risk-based authentication verification
+    if (path === '/api/zero-trust/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleZeroTrustVerify(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v20 — REVENUE ENGINE 2.0  (/api/revenue/*)
+    // Subscription plans (₹199/₹999/₹9999), usage-based billing,
+    // feature gating middleware, upsell engine
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/revenue/plans — subscription plan catalog
+    if (path === '/api/revenue/plans' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleGetPlansV20(request, env, authCtx), request));
+    }
+
+    // POST /api/revenue/subscribe — create or upgrade subscription
+    if (path === '/api/revenue/subscribe' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleSubscribeV20(request, env, authCtx), request));
+    }
+
+    // GET /api/revenue/gate/:feature — check if user has access to a feature
+    if (path.startsWith('/api/revenue/gate/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleFeatureGate(request, env, authCtx), request));
+    }
+
+    // GET /api/revenue/billing — current billing status + usage
+    if (path === '/api/revenue/billing' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleBillingStatus(request, env, authCtx), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v20 — GLOBAL AUTHORITY ENGINE  (/api/authority/*)
+    // Auto-generate CVE reports, threat bulletins, blog posts for SEO authority
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/authority/cve-report — generate full CVE report (PDF-ready)
+    if (path === '/api/authority/cve-report' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleCVEReport(request, env, authCtx), request));
+    }
+
+    // POST /api/authority/blog-post — auto-generate SEO blog post from CVE/topic
+    if (path === '/api/authority/blog-post' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleBlogPost(request, env, authCtx), request));
+    }
+
+    // GET /api/authority/bulletin — latest threat intelligence bulletin
+    if (path === '/api/authority/bulletin' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleThreatBulletin(request, env, authCtx), request));
+    }
+
+    // GET /api/authority/stats — authority engine content statistics
+    if (path === '/api/authority/stats' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleAuthorityStats(request, env), request));
     }
 
     // ── Sync scan routes (v4 backward compat — full pipeline) ────────────────
