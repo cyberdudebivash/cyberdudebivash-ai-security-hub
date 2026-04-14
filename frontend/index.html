@@ -9097,6 +9097,18 @@ const CDB_PAYMENT = {
           if (typeof this._current.onSuccess === 'function') {
             this._current.onSuccess({ txnId, email, method });
           }
+
+          // GOD MODE v17: Track purchase conversion signal for MCP self-learning
+          try {
+            if (typeof window.MCPControl?.trackPurchase === 'function') {
+              const _prod    = this._current?.product || this._current?.productLabel || 'unknown';
+              const _label   = this._current?.productLabel || _prod;
+              const _amount  = parseInt(String(this._current?.amount || '0').replace(/[^\d]/g,''), 10) || 0;
+              const _recType = _prod.includes('BUNDLE') ? 'bundle' : _prod.includes('PLAN') || _prod.includes('PRO') || _prod.includes('STARTER') ? 'upsell' : 'training';
+              window.MCPControl.trackPurchase(_prod, _label, _amount, _recType);
+            }
+          } catch { /* never block payment flow */ }
+
           return;
         }
 

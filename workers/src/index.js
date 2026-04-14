@@ -283,6 +283,15 @@ import {
   handleMCPControl,
 } from './services/mcpEngine.js';
 
+// ─── GOD MODE v17: MCP Self-Learning — Feedback API ──────────────────────────
+import {
+  handleMCPFeedback,
+  handleMCPFeedbackBatch,
+  handleMCPFeedbackStats,
+  handleMCPItemScores,
+  handleMCPABResults,
+} from './handlers/mcpFeedback.js';
+
 // ─── GOD MODE v15: Data Seeding Engine ───────────────────────────────────────
 import {
   handleGetSeededThreats, handleGetSeededCVEs,
@@ -3058,6 +3067,46 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           failsafe_layers: 3,
         },
       }), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOD MODE v17 — MCP SELF-LEARNING FEEDBACK API  (/api/mcp/*)
+    // Tracks clicks, purchases, ignores → feeds scoring + A/B engine
+    // Rate limited (100/min/IP). Revenue verified server-side from D1.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // POST /api/mcp/feedback — single interaction event
+    if (path === '/api/mcp/feedback' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({
+        authenticated: false, ip: request.headers.get('CF-Connecting-IP') || 'anon',
+      }));
+      return withSecurityHeaders(withCors(await handleMCPFeedback(request, env, authCtx), request));
+    }
+
+    // POST /api/mcp/feedback/batch — batch interaction events (up to 20)
+    if (path === '/api/mcp/feedback/batch' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({
+        authenticated: false, ip: request.headers.get('CF-Connecting-IP') || 'anon',
+      }));
+      return withSecurityHeaders(withCors(await handleMCPFeedbackBatch(request, env, authCtx), request));
+    }
+
+    // GET /api/mcp/feedback/stats — item performance stats (admin)
+    if (path === '/api/mcp/feedback/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPFeedbackStats(request, env, authCtx), request));
+    }
+
+    // GET /api/mcp/feedback/scores — item MCP scores leaderboard (admin)
+    if (path === '/api/mcp/feedback/scores' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPItemScores(request, env, authCtx), request));
+    }
+
+    // GET /api/mcp/ab/results — A/B experiment results (admin)
+    if (path === '/api/mcp/ab/results' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleMCPABResults(request, env, authCtx), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
