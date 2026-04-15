@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>Live Intelligence Dashboard | CYBERDUDEBIVASH AI Security Hub v21.0</title>
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://cyberdudebivash.in/gadgets.html">
+
+<!-- ── Preconnect ── -->
+<link rel="preconnect" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev">
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   CYBERDUDEBIVASH AI Security Hub — GADGETS DASHBOARD v21.0
+   Production-Grade Glass UI · Real-time · Enterprise SaaS
+   ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #020208;
+  --bg2:       #050510;
+  --bg3:       #0a0a1a;
+  --glass:     rgba(255,255,255,.04);
+  --glass-b:   rgba(255,255,255,.08);
+  --border:    rgba(255,255,255,.08);
+  --cyan:      #00d4ff;
+  --green:     #22c55e;
+  --red:       #ef4444;
+  --amber:     #f59e0b;
+  --purple:    #a855f7;
+  --pink:      #ec4899;
+  --text:      #e2e8f0;
+  --text-dim:  rgba(255,255,255,.45);
+  --text-mute: rgba(255,255,255,.25);
+  --font-mono: 'Courier New', Courier, monospace;
+  --radius:    16px;
+  --shadow:    0 8px 32px rgba(0,0,0,.5);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND GRID ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── NAV ── */
+.gd-nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(2,2,8,.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0,212,255,.12);
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 52px;
+}
+.gd-nav-brand {
+  font-size: 13px; font-weight: 900; letter-spacing: .08em;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gd-nav-right { display: flex; align-items: center; gap: 16px; }
+.gd-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 800;
+  letter-spacing: .06em;
+}
+.gd-badge-live {
+  background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.35);
+  color: var(--green);
+}
+.gd-badge-live::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 8px var(--green);
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+.gd-badge-ver {
+  background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.25);
+  color: var(--cyan);
+}
+.gd-nav-home {
+  color: var(--text-dim); font-size: 12px; text-decoration: none;
+  transition: color .2s;
+}
+.gd-nav-home:hover { color: var(--cyan); }
+
+/* ── MAIN GRID ── */
+.gd-wrapper {
+  position: relative; z-index: 1;
+  max-width: 1440px; margin: 0 auto; padding: 24px 20px 48px;
+}
+
+.gd-header {
+  text-align: center; margin-bottom: 32px;
+}
+.gd-header h1 {
+  font-size: clamp(22px, 3vw, 36px); font-weight: 900;
+  background: linear-gradient(135deg, #fff 30%, var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 6px;
+}
+.gd-header p { color: var(--text-dim); font-size: 13px; }
+
+/* ── GRID LAYOUT ── */
+.gd-grid-top    { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
+.gd-grid-middle { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+.gd-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+@media (max-width: 1100px) { .gd-grid-middle { grid-template-columns: 1fr; } }
+@media (max-width: 768px)  {
+  .gd-grid-middle, .gd-grid-bottom { grid-template-columns: 1fr; }
+}
+
+/* ── CARD BASE ── */
+.gd-card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
+  transition: border-color .25s ease, box-shadow .25s ease;
+  position: relative; overflow: hidden;
+}
+.gd-card:hover {
+  border-color: rgba(0,212,255,.2);
+  box-shadow: var(--shadow), 0 0 40px rgba(0,212,255,.04);
+}
+.gd-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,.2), transparent);
+}
+
+/* ── CARD HEADER ── */
+.gd-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+}
+.gd-card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.gd-card-title .icon { font-size: 14px; }
+.gd-card-meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+/* ── STATUS INDICATORS ── */
+.gd-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block;
+}
+.gd-dot-live  { background: var(--green); box-shadow: 0 0 8px var(--green); animation: livePulse 1.4s infinite; }
+.gd-dot-warn  { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.gd-dot-crit  { background: var(--red);   box-shadow: 0 0 8px var(--red);   animation: critPulse 1s infinite; }
+.gd-dot-off   { background: rgba(255,255,255,.2); }
+
+/* ── LOADING STATES ── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.sk {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,.04) 25%, rgba(255,255,255,.09) 50%, rgba(255,255,255,.04) 75%);
+  background-size: 200% auto;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 4px; color: transparent !important;
+  user-select: none;
+}
+
+.gd-loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px 0; gap: 10px;
+  color: var(--text-dim); font-size: 13px;
+}
+.gd-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(0,212,255,.2); border-top-color: var(--cyan);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+
+.gd-error-state {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 0; gap: 10px; color: var(--text-dim); font-size: 12px;
+}
+.gd-retry-btn {
+  background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.25);
+  color: var(--cyan); padding: 6px 18px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background .2s;
+}
+.gd-retry-btn:hover { background: rgba(0,212,255,.18); }
+
+/* ── SEVERITY PILLS ── */
+.sev {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 800; letter-spacing: .06em;
+}
+.sev-critical { background: rgba(239,68,68,.15);  color: var(--red);    border: 1px solid rgba(239,68,68,.3);  }
+.sev-high     { background: rgba(245,158,11,.15); color: var(--amber);  border: 1px solid rgba(245,158,11,.3); }
+.sev-medium   { background: rgba(99,102,241,.15); color: #818cf8;       border: 1px solid rgba(99,102,241,.3); }
+.sev-low      { background: rgba(34,197,94,.12);  color: var(--green);  border: 1px solid rgba(34,197,94,.3);  }
+.sev-info     { background: rgba(0,212,255,.1);   color: var(--cyan);   border: 1px solid rgba(0,212,255,.25); }
+
+/* ── ANIMATIONS ── */
+@keyframes livePulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%     { opacity:.5; transform:scale(1.3); }
+}
+@keyframes critPulse {
+  0%,100% { opacity:1; }
+  50%     { opacity:.4; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes countUp {
+  from { opacity:0; transform:scale(.8); }
+  to   { opacity:1; transform:scale(1); }
+}
+.animate-in { animation: fadeUp .5s ease forwards; }
+
+/* ── TIMESTAMPS ── */
+.ts { font-family: var(--font-mono); font-size: 10px; color: var(--text-mute); }
+
+/* ── DIVIDER ── */
+.gd-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+/* ══════════════════════════════════════════════════════════════
+   GADGET 1 — LIVE GLOBAL THREAT RADAR
+   ══════════════════════════════════════════════════════════════ */
+#g1-card { border-color: rgba(239,68,68,.2); }
+#g1-card::before { background: linear-gradient(90deg,transparent,rgba(239,68,68,.25),transparent); }
+#g1-card:hover { border-color: rgba(239,68,68,.35); }
+
+.g1-summary {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 16px;
+}
+.g1-stat {
+  background: rgba(255,255,255,.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; text-align: center;
+}
+.g1-stat-val {
+  font-size: 24px; font-weight: 900; line-height: 1;
+  animation: countUp .4s ease;
+}
+.g1-stat-lbl { font-size: 9px; color: var(--text-mute); margin-top: 4px; letter-spacing: .06em; text-transform: uppercase; }
+
+.g1-feed {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 340px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(0,212,255,.2) transparent;
+}
+.g1-entry {
+  display: grid; grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: 10px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+  animation: fadeUp .3s ease;
+  transition: background .15s;
+}
+.g1-entry:hover { background: rgba(255,255,255,.05); }
+.g1-entry-cve {
+  font-family: var(--font-mono); font-size: 11px;
+  font-weight: 700; color: var(--cyan); white-space: nowrap;
+}
+.g1-entry-desc {
+  font-size: 11px; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.g1-entry-score {
+  font-size: 11px; font-weight: 800; font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GADGET 2 — AI RISK SCORE + ATTACK PREDICTION
+   ══════════════════════════════════════════════════════════════ */
+#g2-card { border-color: rgba(168,85,247,.2); }
+#g2-card::before { background: linear-gradient(90deg,transparent,rgba(168,85,247,.25),transparent); }
+
+.g2-layout { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+@media (max-width: 680px) { .g2-layout { grid-template-columns: 1fr; } }
+
+/* Radial score ring */
+.g2-score-ring-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.g2-ring-svg { filter: drop-shadow(0 0 16px rgba(168,85,247,.3)); }
+.g2-score-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.g2-score-num {
+  font-size: 36px; font-weight: 900; line-height: 1;
+  animation: countUp .5s ease;
+}
+.g2-score-label { font-size: 10px; font-weight: 800; letter-spacing: .1em; margin-top: 3px; }
+.g2-ring-container { position: relative; width: 140px; height: 140px; }
+
+.g2-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.g2-meta-item {
+  background: rgba(255,255,255,.03); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px;
+}
+.g2-meta-key { font-size: 9px; color: var(--text-mute); text-transform: uppercase; letter-spacing: .06em; }
+.g2-meta-val { font-size: 13px; font-weight: 800; margin-top: 2px; }
+
+/* Attack chain */
+.g2-chain { display: flex; flex-direction: column; gap: 6px; }
+.g2-chain-title {
+  font-size: 10px; font-weight: 800; letter-spacing: .08em;
+  color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;
+}
+.g2-chain-step {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,255,255,.025); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; animation: fadeUp .3s ease;
+}
+.g2-step-num {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 900; background: rgba(168,85,247,.2);
+  border: 1px solid rgba(168,85,247,.3); color: var(--purple);
+}
+.g2-step-name { font-size: 11px; font-weight: 700; color: var(--text); }
+.g2-step-desc { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.g2-step-prob {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 12px; font-weight: 800; font-family: var(--font-mono);
+}
+
+/* Breach probability bar */
+.g2-breach-bar-wrap { margin-top: 12px; }
+.g2-breach-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; margin-bottom: 5px;
+}
+.g2-breach-track {
+  height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden;
+}
+.g2-breach-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+  transition: width 1.2s cubic-bezier(.4,0,.2,1);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GADGET 3 — AUTO DEFENSE ENGINE
+   ══════════════════════════════════════════════════════════════ */
+#g3-card { border-color: rgba(34,197,94,.2); }
+#g3-card::before { background: linear-gradient(90deg,transparent,rgba(34,197,94,.2),transparent); }
+
+.g3-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
+.g3-stat {
+  background: rgba(255,255,255,.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; text-align: center;
+}
+.g3-stat-val { font-size: 20px; font-weight: 900; color: var(--green); }
+.g3-stat-lbl { font-size: 9px; color: var(--text-mute); margin-top: 3px; letter-spacing: .05em; text-transform: uppercase; }
+
+.g3-actions { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.g3-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px; font-size: 11px; font-weight: 800;
+  cursor: pointer; border: 1px solid; transition: all .2s ease;
+  letter-spacing: .04em;
+}
+.g3-btn-sigma {
+  background: rgba(0,212,255,.1); border-color: rgba(0,212,255,.3); color: var(--cyan);
+}
+.g3-btn-sigma:hover { background: rgba(0,212,255,.18); }
+.g3-btn-yara {
+  background: rgba(168,85,247,.1); border-color: rgba(168,85,247,.3); color: var(--purple);
+}
+.g3-btn-yara:hover { background: rgba(168,85,247,.18); }
+.g3-btn-fix {
+  background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.3); color: var(--green);
+}
+.g3-btn-fix:hover { background: rgba(34,197,94,.18); }
+.g3-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.g3-output {
+  background: rgba(0,0,0,.35); border: 1px solid rgba(0,212,255,.15);
+  border-radius: 10px; padding: 12px; font-family: var(--font-mono);
+  font-size: 11px; color: var(--green); line-height: 1.8;
+  min-height: 80px; max-height: 220px; overflow-y: auto;
+}
+
+.g3-recs { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.g3-rec {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,255,255,.025); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; animation: fadeUp .3s ease;
+}
+.g3-rec-body { flex: 1; min-width: 0; }
+.g3-rec-title { font-size: 11px; font-weight: 700; color: var(--text); }
+.g3-rec-desc  { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.g3-exec-btn {
+  flex-shrink: 0; padding: 4px 12px; border-radius: 6px;
+  font-size: 10px; font-weight: 800; cursor: pointer;
+  background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3);
+  color: var(--green); transition: background .15s; white-space: nowrap;
+}
+.g3-exec-btn:hover { background: rgba(34,197,94,.22); }
+.g3-exec-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════════════
+   GADGET 4 — EXECUTIVE CYBER RISK DASHBOARD
+   ══════════════════════════════════════════════════════════════ */
+#g4-card { border-color: rgba(245,158,11,.2); }
+#g4-card::before { background: linear-gradient(90deg,transparent,rgba(245,158,11,.2),transparent); }
+
+.g4-kpis {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px;
+}
+@media (max-width: 540px) { .g4-kpis { grid-template-columns: repeat(2,1fr); } }
+
+.g4-kpi {
+  background: rgba(255,255,255,.03); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; position: relative; overflow: hidden;
+}
+.g4-kpi::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px;
+}
+.g4-kpi.kpi-scans::after  { background: var(--cyan); }
+.g4-kpi.kpi-threats::after{ background: var(--red); }
+.g4-kpi.kpi-crit::after   { background: var(--red); opacity:.6; }
+.g4-kpi.kpi-users::after  { background: var(--purple); }
+.g4-kpi.kpi-risk::after   { background: var(--amber); }
+.g4-kpi.kpi-exposure::after { background: var(--pink); }
+
+.g4-kpi-val {
+  font-size: 28px; font-weight: 900; line-height: 1;
+  animation: countUp .4s ease;
+}
+.g4-kpi-lbl { font-size: 10px; color: var(--text-dim); margin-top: 4px; letter-spacing: .05em; text-transform: uppercase; }
+.g4-kpi-sub { font-size: 10px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+.g4-trend-up   { color: var(--red); }
+.g4-trend-down { color: var(--green); }
+.g4-trend-flat { color: var(--text-mute); }
+
+.g4-table-wrap { overflow-x: auto; }
+.g4-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 11px;
+}
+.g4-table th {
+  padding: 6px 10px; text-align: left;
+  font-size: 9px; font-weight: 800; letter-spacing: .07em;
+  color: var(--text-mute); text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.g4-table td {
+  padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.04);
+  vertical-align: middle;
+}
+.g4-table tr:last-child td { border-bottom: none; }
+.g4-table tr:hover td { background: rgba(255,255,255,.025); }
+
+/* ══════════════════════════════════════════════════════════════
+   GADGET 5 — LIVE VISITOR INTELLIGENCE PANEL
+   ══════════════════════════════════════════════════════════════ */
+#g5-card { border-color: rgba(0,212,255,.2); }
+#g5-card::before { background: linear-gradient(90deg,transparent,rgba(0,212,255,.25),transparent); }
+
+.g5-hero {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 16px 0 20px; flex-wrap: wrap;
+}
+.g5-count-wrap { text-align: center; }
+.g5-count {
+  font-size: 52px; font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: countUp .5s ease;
+}
+.g5-count-label {
+  font-size: 10px; color: var(--text-dim); letter-spacing: .1em; text-transform: uppercase; margin-top: 3px;
+}
+
+.g5-map {
+  flex: 1; min-width: 0;
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+
+.g5-visitor-card {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px; padding: 5px 10px;
+  font-size: 11px; animation: fadeUp .3s ease;
+  transition: border-color .15s;
+}
+.g5-visitor-card:hover { border-color: rgba(0,212,255,.25); }
+.g5-visitor-flag { font-size: 14px; }
+.g5-visitor-info { display: flex; flex-direction: column; }
+.g5-visitor-loc  { font-size: 11px; font-weight: 700; color: var(--text); }
+.g5-visitor-ip   { font-size: 9px; color: var(--text-mute); font-family: var(--font-mono); }
+.g5-visitor-dev  { font-size: 11px; }
+
+.g5-countries { margin-top: 14px; }
+.g5-countries-title {
+  font-size: 10px; font-weight: 800; letter-spacing: .08em;
+  color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;
+}
+.g5-country-bar-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.g5-country-name { font-size: 11px; color: var(--text-dim); min-width: 70px; }
+.g5-country-bar-track { flex: 1; height: 4px; background: rgba(255,255,255,.08); border-radius: 2px; }
+.g5-country-bar-fill { height: 100%; border-radius: 2px; background: var(--cyan); transition: width .8s ease; }
+.g5-country-count { font-size: 10px; font-weight: 800; color: var(--cyan); min-width: 24px; text-align: right; }
+
+/* ── REFRESH INFO BAR ── */
+.gd-refresh-bar {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; color: var(--text-mute);
+}
+.gd-refresh-bar .gd-dot { width: 6px; height: 6px; }
+
+/* ── FOOTER ── */
+.gd-footer {
+  text-align: center; margin-top: 40px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-mute);
+}
+.gd-footer a { color: var(--cyan); text-decoration: none; }
+.gd-footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- ── NAVIGATION ── -->
+<nav class="gd-nav">
+  <div class="gd-nav-brand">⚔️ CYBERDUDEBIVASH — LIVE INTELLIGENCE DASHBOARD</div>
+  <div class="gd-nav-right">
+    <span class="gd-badge gd-badge-live">LIVE</span>
+    <span class="gd-badge gd-badge-ver">v21.0</span>
+    <a href="/" class="gd-nav-home">← Back to Platform</a>
+  </div>
+</nav>
+
+<!-- ── MAIN WRAPPER ── -->
+<div class="gd-wrapper">
+
+  <div class="gd-header animate-in">
+    <h1>🛡 Live Intelligence Command Center</h1>
+    <p>Real-time threat radar · AI risk analysis · Defense automation · Executive metrics · Visitor intelligence</p>
+  </div>
+
+  <!-- ══ TOP ROW: AI Risk Score ══ -->
+  <div class="gd-grid-top">
+    <div class="gd-card" id="g2-card">
+      <div class="gd-card-head">
+        <div class="gd-card-title" style="color:#a855f7">
+          <span class="icon">🧠</span> AI RISK SCORE + ATTACK PREDICTION ENGINE
+        </div>
+        <div class="gd-card-meta">
+          <span class="gd-dot gd-dot-live"></span>
+          <span class="ts" id="g2-updated">Loading...</span>
+          <div class="gd-refresh-bar">
+            <span class="gd-dot gd-dot-live"></span> auto-refresh 30s
+          </div>
+        </div>
+      </div>
+      <div id="g2-body">
+        <div class="gd-loading"><div class="gd-spinner"></div> Querying Adaptive Cyber Brain...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MIDDLE ROW: Threat Radar + Visitor Panel ══ -->
+  <div class="gd-grid-middle">
+
+    <!-- GADGET 1: THREAT RADAR -->
+    <div class="gd-card" id="g1-card">
+      <div class="gd-card-head">
+        <div class="gd-card-title" style="color:#ef4444">
+          <span class="icon">📡</span> LIVE GLOBAL THREAT RADAR
+        </div>
+        <div class="gd-card-meta">
+          <span class="gd-dot gd-dot-crit" id="g1-dot"></span>
+          <span class="ts" id="g1-alert-level">—</span>
+          <div class="gd-refresh-bar">
+            <span class="gd-dot gd-dot-live"></span> auto-refresh 15s
+          </div>
+        </div>
+      </div>
+      <div id="g1-body">
+        <div class="gd-loading"><div class="gd-spinner"></div> Syncing live threat feed...</div>
+      </div>
+    </div>
+
+    <!-- GADGET 5: VISITOR INTELLIGENCE -->
+    <div class="gd-card" id="g5-card">
+      <div class="gd-card-head">
+        <div class="gd-card-title" style="color:#00d4ff">
+          <span class="icon">🌍</span> LIVE VISITOR INTELLIGENCE
+        </div>
+        <div class="gd-card-meta">
+          <span class="gd-dot gd-dot-live"></span>
+          <span class="ts" id="g5-updated">Loading...</span>
+          <div class="gd-refresh-bar">
+            <span class="gd-dot gd-dot-live"></span> auto-refresh 10s
+          </div>
+        </div>
+      </div>
+      <div id="g5-body">
+        <div class="gd-loading"><div class="gd-spinner"></div> Fetching visitor data...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ BOTTOM ROW: Defense Engine + Executive Dashboard ══ -->
+  <div class="gd-grid-bottom">
+
+    <!-- GADGET 3: AUTO DEFENSE ENGINE -->
+    <div class="gd-card" id="g3-card">
+      <div class="gd-card-head">
+        <div class="gd-card-title" style="color:#22c55e">
+          <span class="icon">🛡</span> AUTO DEFENSE ENGINE
+        </div>
+        <div class="gd-card-meta">
+          <span class="gd-dot gd-dot-live" id="g3-dot"></span>
+          <span class="ts" id="g3-updated">Loading...</span>
+          <div class="gd-refresh-bar">
+            <span class="gd-dot gd-dot-live"></span> auto-refresh 20s
+          </div>
+        </div>
+      </div>
+      <div id="g3-body">
+        <div class="gd-loading"><div class="gd-spinner"></div> Loading defense posture...</div>
+      </div>
+    </div>
+
+    <!-- GADGET 4: EXECUTIVE DASHBOARD -->
+    <div class="gd-card" id="g4-card">
+      <div class="gd-card-head">
+        <div class="gd-card-title" style="color:#f59e0b">
+          <span class="icon">📊</span> EXECUTIVE CYBER RISK DASHBOARD
+        </div>
+        <div class="gd-card-meta">
+          <span class="gd-dot gd-dot-live"></span>
+          <span class="ts" id="g4-updated">Loading...</span>
+          <div class="gd-refresh-bar">
+            <span class="gd-dot gd-dot-live"></span> auto-refresh 60s
+          </div>
+        </div>
+      </div>
+      <div id="g4-body">
+        <div class="gd-loading"><div class="gd-spinner"></div> Fetching executive metrics...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="gd-footer">
+    All data sourced from live APIs · No simulated values ·
+    <a href="/">CYBERDUDEBIVASH AI Security Hub</a> v21.0.0 ·
+    <span id="gd-last-refresh">—</span>
+  </div>
+
+</div><!-- end .gd-wrapper -->
+
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CYBERDUDEBIVASH — GADGETS DASHBOARD ENGINE v21.0
+   Production-grade · Real API only · No fabricated data
+   ═══════════════════════════════════════════════════════════════ */
+(function CDB_GADGETS() {
+'use strict';
+
+/* ── CONFIG ──────────────────────────────────────────────────── */
+const API   = 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev';
+const TOUT  = 8000;  // 8s fetch timeout
+const RETRY = 2;     // max retries
+
+/* ── UTILITY ─────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = n => Number(n || 0).toLocaleString();
+const ts  = () => new Date().toLocaleTimeString('en-IN', { hour12: false });
+const ago = iso => {
+  if (!iso) return '—';
+  const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (d < 60)  return `${d}s ago`;
+  if (d < 3600) return `${Math.floor(d/60)}m ago`;
+  return `${Math.floor(d/3600)}h ago`;
+};
+
+/* ── FETCH WITH RETRY + TIMEOUT ─────────────────────────────── */
+async function fetchJSON(url, opts = {}, retries = RETRY) {
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), TOUT);
+  try {
+    const r = await fetch(url, { ...opts, signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(tid);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch(e) {
+    clearTimeout(tid);
+    if (retries > 0 && e.name !== 'AbortError') {
+      await new Promise(r => setTimeout(r, 900));
+      return fetchJSON(url, opts, retries - 1);
+    }
+    throw e;
+  }
+}
+
+/* ── SEVERITY HELPERS ────────────────────────────────────────── */
+function sevPill(sev) {
+  const s = String(sev || '').toUpperCase();
+  if (s === 'CRITICAL') return '<span class="sev sev-critical">CRITICAL</span>';
+  if (s === 'HIGH')     return '<span class="sev sev-high">HIGH</span>';
+  if (s === 'MEDIUM')   return '<span class="sev sev-medium">MEDIUM</span>';
+  if (s === 'LOW')      return '<span class="sev sev-low">LOW</span>';
+  return `<span class="sev sev-info">${esc(sev)}</span>`;
+}
+function sevColor(sev) {
+  const s = String(sev || '').toUpperCase();
+  if (s === 'CRITICAL') return '#ef4444';
+  if (s === 'HIGH')     return '#f59e0b';
+  if (s === 'MEDIUM')   return '#818cf8';
+  return '#22c55e';
+}
+function scoreColor(n) {
+  if (n >= 80) return '#ef4444';
+  if (n >= 60) return '#f59e0b';
+  if (n >= 40) return '#818cf8';
+  return '#22c55e';
+}
+
+/* ── ERROR STATE HTML ─────────────────────────────────────────── */
+function errHTML(gadget, msg, retryFn) {
+  return `<div class="gd-error-state">
+    <span>⚠️ ${esc(msg)}</span>
+    <button class="gd-retry-btn" onclick="(${retryFn.name||'window.'+gadget+'Retry'})()">↻ Retry</button>
+  </div>`;
+}
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  GADGET 1 — LIVE GLOBAL THREAT RADAR                        ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+async function loadG1() {
+  try {
+    // Fetch both sources in parallel
+    const [sentinel, globalFeed] = await Promise.allSettled([
+      fetchJSON(`${API}/api/threat-intel/live`),
+      fetchJSON(`${API}/api/global-threat-feed?limit=20`),
+    ]);
+
+    const s  = sentinel.status  === 'fulfilled' ? sentinel.value  : null;
+    const gf = globalFeed.status === 'fulfilled' ? globalFeed.value : null;
+
+    if (!s && !gf) throw new Error('Both threat feeds unavailable');
+
+    // Update alert level indicator
+    const alertLevel = s?.alert_level || 'UNKNOWN';
+    const alertEl    = $('g1-alert-level');
+    const dotEl      = $('g1-dot');
+    if (alertEl) alertEl.textContent = alertLevel;
+    if (dotEl) {
+      dotEl.className = 'gd-dot ' + (alertLevel === 'CRITICAL' ? 'gd-dot-crit' :
+                                     alertLevel === 'HIGH'     ? 'gd-dot-warn' : 'gd-dot-live');
+    }
+
+    // Build summary stats from sentinel feed
+    const summary   = s?.summary || {};
+    const critCVEs  = s?.critical_cves || [];
+    const highCVEs  = s?.high_cves     || [];
+    const exploited = s?.actively_exploited || [];
+
+    // Merge into unified entry list
+    const entries = [];
+    critCVEs.slice(0,5).forEach(c  => entries.push({ id: c.id || c.cve_id, sev: 'CRITICAL', desc: c.description || c.summary, score: c.cvssV3BaseScore || c.cvss_score || '—', published: c.published }));
+    highCVEs.slice(0,4).forEach(c  => entries.push({ id: c.id || c.cve_id, sev: 'HIGH',     desc: c.description || c.summary, score: c.cvssV3BaseScore || c.cvss_score || '—', published: c.published }));
+    exploited.slice(0,3).forEach(c => entries.push({ id: c.cveID || c.id, sev: 'CRITICAL',  desc: c.shortDescription || c.vulnerabilityName || c.description, score: '🔴 KEV', published: c.dateAdded || c.published }));
+
+    // Also add IOCs from global feed
+    if (gf?.feed) {
+      gf.feed.slice(0, 5).forEach(ioc => entries.push({
+        id:        ioc.indicator || ioc.id || 'IOC',
+        sev:       ioc.severity  || (ioc.confidence >= 80 ? 'HIGH' : 'MEDIUM'),
+        desc:      ioc.description || `${ioc.type || 'IOC'} from ${ioc.source || 'feed'}`,
+        score:     ioc.confidence != null ? `${ioc.confidence}% conf` : '—',
+        published: ioc.published_at || ioc.first_seen,
+      }));
+    }
+
+    const totalNew  = summary.total_new_cves || critCVEs.length + highCVEs.length;
+    const critCount = summary.critical_cves  || critCVEs.length;
+    const highCount = summary.high_cves      || highCVEs.length;
+    const kevCount  = summary.kev_additions  || exploited.length;
+    const iocCount  = gf?.total             || 0;
+
+    const html = `
+      <div class="g1-summary animate-in">
+        <div class="g1-stat">
+          <div class="g1-stat-val" style="color:#ef4444">${fmt(totalNew)}</div>
+          <div class="g1-stat-lbl">New CVEs</div>
+        </div>
+        <div class="g1-stat">
+          <div class="g1-stat-val" style="color:#ef4444">${fmt(critCount)}</div>
+          <div class="g1-stat-lbl">Critical</div>
+        </div>
+        <div class="g1-stat">
+          <div class="g1-stat-val" style="color:#f59e0b">${fmt(highCount)}</div>
+          <div class="g1-stat-lbl">High</div>
+        </div>
+        <div class="g1-stat">
+          <div class="g1-stat-val" style="color:#a855f7">${fmt(kevCount)}</div>
+          <div class="g1-stat-lbl">CISA KEV</div>
+        </div>
+        <div class="g1-stat">
+          <div class="g1-stat-val" style="color:#00d4ff">${fmt(iocCount)}</div>
+          <div class="g1-stat-lbl">IOCs</div>
+        </div>
+      </div>
+      ${entries.length === 0
+        ? `<div class="gd-loading" style="color:rgba(255,255,255,.35);padding:16px 0">
+             Live threat feed syncing — no entries yet
+           </div>`
+        : `<div class="g1-feed">
+           ${entries.slice(0, 12).map(e => `
+             <div class="g1-entry">
+               <span class="g1-entry-cve">${esc(String(e.id || '—').substring(0, 28))}</span>
+               <span class="g1-entry-desc" title="${esc(e.desc)}">${esc(String(e.desc || '—').substring(0, 70))}</span>
+               ${sevPill(e.sev)}
+               <span class="g1-entry-score" style="color:${sevColor(e.sev)}">${esc(String(e.score || '—'))}</span>
+             </div>
+           `).join('')}
+           </div>`
+      }
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <span class="ts">Updated ${ts()} · Source: Sentinel APEX v5.0 + ThreatFusion</span>
+      </div>
+    `;
+
+    $('g1-body').innerHTML = html;
+
+  } catch(e) {
+    console.warn('[G1 Threat Radar]', e.message);
+    $('g1-body').innerHTML = `<div class="gd-error-state">
+      <span>📡 Live threat feed syncing — retrying...</span>
+      <span class="ts">${esc(e.message)}</span>
+      <button class="gd-retry-btn" onclick="window._g1Retry()">↻ Retry Now</button>
+    </div>`;
+  }
+}
+window._g1Retry = loadG1;
+
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  GADGET 2 — AI RISK SCORE + ATTACK PREDICTION               ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+async function loadG2() {
+  try {
+    // Predictions endpoint does not require strict auth
+    const [predRes, riskRes] = await Promise.allSettled([
+      fetchJSON(`${API}/api/cyber-brain/predictions`),
+      fetchJSON(`${API}/api/cyber-brain/adaptive-risk`),
+    ]);
+
+    const pred = predRes.status === 'fulfilled' ? predRes.value : null;
+    const risk = riskRes.status === 'fulfilled' ? riskRes.value : null;
+
+    if (!pred && !risk) throw new Error('Adaptive Cyber Brain unreachable');
+
+    const score   = risk?.adaptive_score ?? risk?.adaptiveScore ?? pred?.adaptive_score ?? 0;
+    const level   = risk?.risk_level || (score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : score >= 40 ? 'ELEVATED' : 'LOW');
+    const conf    = risk?.confidence  ?? risk?.confidence_pct  ?? 0;
+    const baseScore = risk?.base_score  ?? risk?.baseScore      ?? 0;
+    const topSig  = risk?.top_signals  || [];
+    const chains  = pred?.chains       || pred?.attack_chains   || [];
+    const breachP = pred?.breach_probability ?? pred?.breachProbability ?? 0;
+    const ttbH    = pred?.predicted_ttb_hours ?? pred?.ttb_hours ?? null;
+    const topChain= pred?.top_chain    || null;
+
+    const col     = scoreColor(score);
+    const breachPct = Math.round(breachP * 100);
+
+    // Build radial SVG ring
+    const radius = 58; const circ = 2 * Math.PI * radius;
+    const fill   = circ * (1 - score / 100);
+
+    const g2Updated = $('g2-updated');
+    if (g2Updated) g2Updated.textContent = `Updated ${ts()}`;
+
+    const html = `
+      <div class="g2-layout animate-in">
+        <!-- Score ring -->
+        <div class="g2-score-ring-wrap">
+          <div class="g2-ring-container">
+            <svg class="g2-ring-svg" viewBox="0 0 140 140" width="140" height="140">
+              <circle cx="70" cy="70" r="${radius}" fill="none"
+                stroke="rgba(255,255,255,.06)" stroke-width="10"/>
+              <circle cx="70" cy="70" r="${radius}" fill="none"
+                stroke="${col}" stroke-width="10"
+                stroke-dasharray="${circ}"
+                stroke-dashoffset="${fill}"
+                stroke-linecap="round"
+                transform="rotate(-90 70 70)"
+                style="transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+                       filter:drop-shadow(0 0 8px ${col})"/>
+            </svg>
+            <div class="g2-score-center">
+              <span class="g2-score-num" style="color:${col}">${score}</span>
+              <span class="g2-score-label" style="color:${col}">${esc(level)}</span>
+            </div>
+          </div>
+
+          <div class="g2-meta-grid">
+            <div class="g2-meta-item">
+              <div class="g2-meta-key">Base Score</div>
+              <div class="g2-meta-val" style="color:#818cf8">${Math.round(baseScore)}</div>
+            </div>
+            <div class="g2-meta-item">
+              <div class="g2-meta-key">Confidence</div>
+              <div class="g2-meta-val" style="color:#00d4ff">${Math.round(conf)}%</div>
+            </div>
+            <div class="g2-meta-item">
+              <div class="g2-meta-key">Breach Prob</div>
+              <div class="g2-meta-val" style="color:${scoreColor(breachPct)}">${breachPct}%</div>
+            </div>
+            <div class="g2-meta-item">
+              <div class="g2-meta-key">TTB Est.</div>
+              <div class="g2-meta-val" style="color:#f59e0b">${ttbH != null ? ttbH + 'h' : '—'}</div>
+            </div>
+          </div>
+
+          ${topSig.length > 0 ? `
+          <div style="width:100%;margin-top:8px">
+            <div class="g2-chain-title">Top Risk Signals</div>
+            ${topSig.slice(0,3).map(s => `
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px">
+                <span style="color:${sevColor(s.severity||'HIGH')};font-weight:800;min-width:52px">${esc(s.type||s.name||'signal')}</span>
+                <div style="flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px">
+                  <div style="height:100%;border-radius:2px;background:${sevColor(s.severity||'HIGH')};width:${Math.min(100,Math.round((s.weight||s.score||50)))}%"></div>
+                </div>
+                <span style="color:var(--text-mute);min-width:28px;text-align:right">${Math.round(s.weight||s.score||0)}</span>
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+        </div>
+
+        <!-- Attack chain -->
+        <div>
+          <div class="g2-chain-title">Predicted Attack Chains</div>
+          ${chains.length === 0
+            ? `<div style="color:var(--text-mute);font-size:11px;padding:12px 0">
+                 ${risk?.tier === 'FREE' ? 'Upgrade to PRO to view full attack chain predictions' : 'Run a scan to generate attack predictions'}
+               </div>`
+            : chains.slice(0, 1).map(chain => `
+              <div style="margin-bottom:6px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  ${sevPill(chain.risk_level || chain.severity || 'HIGH')}
+                  <span style="font-size:11px;font-weight:700;color:var(--text)">${esc(chain.name || chain.chain_type || 'Attack Chain')}</span>
+                  <span style="font-size:10px;color:var(--text-mute);margin-left:auto">${chain.probability != null ? Math.round(chain.probability * 100) + '% prob' : ''}</span>
+                </div>
+                ${(chain.steps || chain.techniques || []).slice(0, 5).map((step, i) => `
+                  <div class="g2-chain-step">
+                    <div class="g2-step-num">${i+1}</div>
+                    <div style="flex:1">
+                      <div class="g2-step-name">${esc(step.technique || step.tactic || step.name || `Step ${i+1}`)}</div>
+                      <div class="g2-step-desc">${esc((step.description || step.action || '').substring(0, 80))}</div>
+                    </div>
+                    <span class="g2-step-prob" style="color:${sevColor(step.severity || 'MEDIUM')}">
+                      ${step.probability != null ? Math.round(step.probability * 100) + '%' : ''}
+                    </span>
+                  </div>
+                `).join('')}
+              </div>
+            `).join('')
+          }
+
+          ${topChain ? `
+          <div style="font-size:11px;color:var(--text-dim);margin-top:8px">
+            <span style="color:var(--text-mute)">Top predicted chain:</span>
+            <span style="color:#f59e0b;font-weight:700">${esc(topChain)}</span>
+          </div>
+          ` : ''}
+
+          <!-- Breach probability bar -->
+          <div class="g2-breach-bar-wrap" style="margin-top:14px">
+            <div class="g2-breach-label">
+              <span style="font-size:10px;color:var(--text-dim)">Breach Probability</span>
+              <span style="font-size:12px;font-weight:900;color:${scoreColor(breachPct)}">${breachPct}%</span>
+            </div>
+            <div class="g2-breach-track">
+              <div class="g2-breach-fill" style="width:${breachPct}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $('g2-body').innerHTML = html;
+
+  } catch(e) {
+    console.warn('[G2 AI Risk]', e.message);
+    $('g2-body').innerHTML = `<div class="gd-error-state">
+      <span>🧠 Adaptive Brain initializing — awaiting scan data</span>
+      <span class="ts">${esc(e.message)}</span>
+      <button class="gd-retry-btn" onclick="window._g2Retry()">↻ Retry</button>
+    </div>`;
+  }
+}
+window._g2Retry = loadG2;
+
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  GADGET 3 — AUTO DEFENSE ENGINE                             ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+async function loadG3() {
+  try {
+    const data = await fetchJSON(`${API}/api/defense/recommendations`);
+
+    const stats = data.stats || {};
+    const recs  = data.recommendations || [];
+    const posture = data.posture || {};
+
+    const g3Updated = $('g3-updated');
+    if (g3Updated) g3Updated.textContent = `Updated ${ts()}`;
+
+    const html = `
+      <div class="animate-in">
+        <div class="g3-stats">
+          <div class="g3-stat">
+            <div class="g3-stat-val">${fmt(stats.total_executions || posture.total_executions || 0)}</div>
+            <div class="g3-stat-lbl">Total Execs</div>
+          </div>
+          <div class="g3-stat">
+            <div class="g3-stat-val" style="color:#00d4ff">${fmt(stats.rules_deployed || posture.total_rules_deployed || 0)}</div>
+            <div class="g3-stat-lbl">Rules Deployed</div>
+          </div>
+          <div class="g3-stat">
+            <div class="g3-stat-val" style="color:#a855f7">${fmt(stats.threats_blocked || posture.threats_blocked || 0)}</div>
+            <div class="g3-stat-lbl">Threats Blocked</div>
+          </div>
+          <div class="g3-stat">
+            <div class="g3-stat-val" style="color:#f59e0b">${fmt(stats.pending_actions || recs.length)}</div>
+            <div class="g3-stat-lbl">Pending</div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="g3-actions">
+          <button class="g3-btn g3-btn-sigma" id="g3-sigma-btn" onclick="g3GenRule('sigma')">
+            ⚡ Generate Sigma
+          </button>
+          <button class="g3-btn g3-btn-yara" id="g3-yara-btn" onclick="g3GenRule('yara')">
+            🔮 Generate YARA
+          </button>
+          <button class="g3-btn g3-btn-fix" id="g3-fix-btn" onclick="g3ExecuteTop()">
+            🛡 Apply Top Fix
+          </button>
+        </div>
+
+        <!-- Output terminal -->
+        <div class="g3-output" id="g3-output">${
+          posture.last_execution
+          ? `[${posture.last_execution}] Last execution completed\n[SYSTEM] Defense engine active — ${fmt(posture.total_rules_deployed || 0)} rules deployed`
+          : '[SYSTEM] Defense engine ready — use buttons above to generate rules or apply fixes'
+        }</div>
+
+        <!-- Recommendations list -->
+        ${recs.length > 0 ? `
+        <div style="margin-top:14px">
+          <div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px">
+            Pending Recommendations (${recs.length})
+          </div>
+          <div class="g3-recs">
+            ${recs.slice(0, 5).map(r => `
+              <div class="g3-rec">
+                ${sevPill(r.severity || 'HIGH')}
+                <div class="g3-rec-body">
+                  <div class="g3-rec-title">${esc(r.title || r.action || 'Defense Action')}</div>
+                  <div class="g3-rec-desc">${esc((r.description || '').substring(0, 80))}</div>
+                </div>
+                <button class="g3-exec-btn" onclick="g3ExecRec('${esc(r.id || '')}', this)"
+                  ${!r.id ? 'disabled' : ''}>
+                  Execute
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : `<div style="font-size:11px;color:var(--text-mute);margin-top:14px;text-align:center">
+          Run a scan to generate defense recommendations
+        </div>`}
+      </div>
+    `;
+
+    $('g3-body').innerHTML = html;
+
+  } catch(e) {
+    console.warn('[G3 Defense]', e.message);
+    $('g3-body').innerHTML = `<div class="gd-error-state">
+      <span>🛡 Run a scan to generate defense actions</span>
+      <span class="ts">${esc(e.message)}</span>
+      <button class="gd-retry-btn" onclick="window._g3Retry()">↻ Retry</button>
+    </div>`;
+  }
+}
+window._g3Retry = loadG3;
+
+/* Defense action helpers */
+window.g3GenRule = async function(type) {
+  const btn   = $(`g3-${type}-btn`);
+  const out   = $('g3-output');
+  if (!out) return;
+  if (btn) btn.disabled = true;
+  out.textContent = `[${ts()}] Generating ${type.toUpperCase()} rule via AI engine...\n`;
+  try {
+    const d = await fetchJSON(`${API}/api/ai/generate-rules`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ rule_type: type, context: 'latest_threats', count: 1 }),
+    }, 1);
+    const rule = d?.rules?.[0] || d?.rule || d?.content || JSON.stringify(d, null, 2);
+    out.textContent = `[${ts()}] ${type.toUpperCase()} rule generated:\n\n${rule}`;
+  } catch(e) {
+    out.textContent = `[${ts()}] Error: ${e.message}\nCheck /api/ai/generate-rules endpoint`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.g3ExecuteTop = async function() {
+  const btn = $('g3-fix-btn');
+  const out = $('g3-output');
+  if (!out) return;
+  if (btn) btn.disabled = true;
+  out.textContent = `[${ts()}] Queuing top priority fix via Auto Defense Engine...\n`;
+  try {
+    const d = await fetchJSON(`${API}/api/defense-engine/execute`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ mode: 'auto', priority: 'critical' }),
+    }, 1);
+    out.textContent = `[${ts()}] Execution queued:\nID: ${d?.execution_id || d?.id || 'queued'}\nStatus: ${d?.status || 'pending'}\n${d?.message || ''}`;
+  } catch(e) {
+    out.textContent = `[${ts()}] ${e.message}`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.g3ExecRec = async function(id, btnEl) {
+  if (!id) return;
+  const out = $('g3-output');
+  if (btnEl) btnEl.disabled = true;
+  if (out) out.textContent = `[${ts()}] Executing action ${id}...\n`;
+  try {
+    const d = await fetchJSON(`${API}/api/defense-engine/execute`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action_id: id }),
+    }, 1);
+    if (out) out.textContent = `[${ts()}] Action ${id}:\nStatus: ${d?.status || 'queued'}\n${d?.message || ''}`;
+  } catch(e) {
+    if (out) out.textContent = `[${ts()}] Error: ${e.message}`;
+    if (btnEl) btnEl.disabled = false;
+  }
+};
+
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  GADGET 4 — EXECUTIVE CYBER RISK DASHBOARD                  ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+async function loadG4() {
+  try {
+    const [metrics, scanStats, threatStats] = await Promise.allSettled([
+      fetchJSON(`${API}/api/executive/metrics`),
+      fetchJSON(`${API}/api/scan/stats`),
+      fetchJSON(`${API}/api/threat-intel/stats`),
+    ]);
+
+    const m  = metrics.status    === 'fulfilled' ? metrics.value    : {};
+    const sc = scanStats.status  === 'fulfilled' ? scanStats.value  : {};
+    const ts2= threatStats.status === 'fulfilled' ? threatStats.value : {};
+
+    if (!m.success && !sc.success && !ts2) throw new Error('Executive metrics unavailable');
+
+    const totalScans    = m.total_scans    || sc.total_scans || 0;
+    const scansToday    = m.scans_today    || sc.today       || 0;
+    const totalUsers    = m.total_users    || 0;
+    const totalThreats  = m.total_threats  || ts2?.total_entries || 0;
+    const critThreats   = m.critical_threats || ts2?.critical_count || sc.critical_cves || 0;
+    const highThreats   = m.high_threats   || ts2?.high_count || 0;
+    const riskScore     = m.risk_score     || 0;
+    const exposurePct   = m.exposure_pct   || 0;
+    const cveCount      = sc.cve_count     || ts2?.total_entries || 0;
+    const avgRisk       = sc.avg_risk      || 0;
+
+    const riskCol = scoreColor(riskScore);
+    const expCol  = scoreColor(exposurePct);
+
+    const g4Updated = $('g4-updated');
+    if (g4Updated) g4Updated.textContent = `Updated ${ts()}`;
+
+    const html = `
+      <div class="animate-in">
+        <div class="g4-kpis">
+          <div class="g4-kpi kpi-scans">
+            <div class="g4-kpi-val" style="color:#00d4ff">${fmt(totalScans)}</div>
+            <div class="g4-kpi-lbl">Total Scans</div>
+            <div class="g4-kpi-sub"><span style="color:#22c55e">+${fmt(scansToday)}</span> today</div>
+          </div>
+          <div class="g4-kpi kpi-threats">
+            <div class="g4-kpi-val" style="color:#ef4444">${fmt(totalThreats)}</div>
+            <div class="g4-kpi-lbl">Threat Intel Entries</div>
+            <div class="g4-kpi-sub"><span class="g4-trend-up">↑</span> ${fmt(critThreats)} critical</div>
+          </div>
+          <div class="g4-kpi kpi-crit">
+            <div class="g4-kpi-val" style="color:#ef4444">${fmt(critThreats)}</div>
+            <div class="g4-kpi-lbl">Critical Issues</div>
+            <div class="g4-kpi-sub g4-trend-up">${fmt(highThreats)} high severity</div>
+          </div>
+          <div class="g4-kpi kpi-users">
+            <div class="g4-kpi-val" style="color:#a855f7">${fmt(totalUsers)}</div>
+            <div class="g4-kpi-lbl">Platform Users</div>
+            <div class="g4-kpi-sub g4-trend-flat">registered accounts</div>
+          </div>
+          <div class="g4-kpi kpi-risk">
+            <div class="g4-kpi-val" style="color:${riskCol}">${riskScore}</div>
+            <div class="g4-kpi-lbl">Risk Score</div>
+            <div class="g4-kpi-sub" style="color:var(--text-mute)">avg ${avgRisk}/100</div>
+          </div>
+          <div class="g4-kpi kpi-exposure">
+            <div class="g4-kpi-val" style="color:${expCol}">${exposurePct}%</div>
+            <div class="g4-kpi-lbl">Exposure Index</div>
+            <div class="g4-kpi-sub g4-trend-flat">${fmt(cveCount)} CVEs tracked</div>
+          </div>
+        </div>
+
+        <hr class="gd-divider">
+
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px">
+          Risk Breakdown
+        </div>
+        <table class="g4-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color:var(--text)">Total Scans Executed</td>
+              <td style="font-weight:800;color:#00d4ff">${fmt(totalScans)}</td>
+              <td>${sevPill('INFO')}</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text)">Critical CVEs in Feed</td>
+              <td style="font-weight:800;color:#ef4444">${fmt(critThreats)}</td>
+              <td>${sevPill('CRITICAL')}</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text)">High Severity Threats</td>
+              <td style="font-weight:800;color:#f59e0b">${fmt(highThreats)}</td>
+              <td>${sevPill('HIGH')}</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text)">Platform Risk Score</td>
+              <td style="font-weight:800;color:${riskCol}">${riskScore}/100</td>
+              <td>${sevPill(riskScore >= 80 ? 'CRITICAL' : riskScore >= 60 ? 'HIGH' : riskScore >= 40 ? 'MEDIUM' : 'LOW')}</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text)">CVEs Under Monitoring</td>
+              <td style="font-weight:800;color:#818cf8">${fmt(cveCount)}</td>
+              <td>${sevPill('MEDIUM')}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    $('g4-body').innerHTML = html;
+
+  } catch(e) {
+    console.warn('[G4 Executive]', e.message);
+    $('g4-body').innerHTML = `<div class="gd-error-state">
+      <span>📊 Executive metrics loading...</span>
+      <span class="ts">${esc(e.message)}</span>
+      <button class="gd-retry-btn" onclick="window._g4Retry()">↻ Retry</button>
+    </div>`;
+  }
+}
+window._g4Retry = loadG4;
+
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  GADGET 5 — LIVE VISITOR INTELLIGENCE PANEL                 ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+const DEVICE_ICONS  = { mobile:'📱', tablet:'⬛', desktop:'🖥' };
+
+async function loadG5() {
+  try {
+    const data = await fetchJSON(`${API}/api/visitor/live`);
+
+    const online   = data.online_users || data.onlineUsers || 0;
+    const visitors = data.visitors || [];
+
+    const g5Updated = $('g5-updated');
+    if (g5Updated) g5Updated.textContent = `Updated ${ts()}`;
+
+    // Build country frequency map from visitor list
+    const countryMap = {};
+    visitors.forEach(v => {
+      const cc = v.country_code || v.country || 'XX';
+      if (!countryMap[cc]) countryMap[cc] = { count: 0, flag: v.flag || '🌐', code: cc };
+      countryMap[cc].count++;
+    });
+    const countries = Object.values(countryMap).sort((a,b) => b.count - a.count).slice(0, 6);
+    const maxC      = countries[0]?.count || 1;
+
+    const html = `
+      <div class="animate-in">
+        <div class="g5-hero">
+          <div class="g5-count-wrap">
+            <div class="g5-count">${online}</div>
+            <div class="g5-count-label">Users Online Now</div>
+          </div>
+          <div class="g5-map">
+            ${visitors.length === 0
+              ? `<span style="font-size:11px;color:var(--text-mute)">Awaiting visitor data...</span>`
+              : visitors.slice(0, 8).map(v => `
+                  <div class="g5-visitor-card">
+                    <span class="g5-visitor-flag">${esc(v.flag || '🌐')}</span>
+                    <span class="g5-visitor-dev">${esc(DEVICE_ICONS[v.device] || '🖥')}</span>
+                    <div class="g5-visitor-info">
+                      <span class="g5-visitor-loc">${esc((v.city || v.country_code || '—').substring(0, 14))}</span>
+                      <span class="g5-visitor-ip">${esc(v.ip || '—')}</span>
+                    </div>
+                  </div>
+                `).join('')
+            }
+          </div>
+        </div>
+
+        ${countries.length > 0 ? `
+        <hr class="gd-divider">
+        <div class="g5-countries">
+          <div class="g5-countries-title">Top Countries</div>
+          ${countries.map(c => `
+            <div class="g5-country-bar-row">
+              <span class="g5-country-name">${esc(c.flag)} ${esc(c.code)}</span>
+              <div class="g5-country-bar-track">
+                <div class="g5-country-bar-fill" style="width:${Math.round((c.count/maxC)*100)}%"></div>
+              </div>
+              <span class="g5-country-count">${c.count}</span>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+
+        <div style="text-align:center;margin-top:12px;font-size:9px;color:var(--text-mute);letter-spacing:.04em">
+          🔒 IPs anonymized · Data anonymized for security insights ·
+          <span id="g5-total-tracked" style="color:var(--cyan)">${data.total_tracked || 0}</span> sessions tracked
+        </div>
+      </div>
+    `;
+
+    $('g5-body').innerHTML = html;
+
+  } catch(e) {
+    console.warn('[G5 Visitor]', e.message);
+    $('g5-body').innerHTML = `<div class="gd-error-state">
+      <span>🌍 Visitor feed initializing...</span>
+      <button class="gd-retry-btn" onclick="window._g5Retry()">↻ Retry</button>
+    </div>`;
+  }
+}
+window._g5Retry = loadG5;
+
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOTSTRAP + REFRESH INTERVALS
+   ═══════════════════════════════════════════════════════════════ */
+let G1_TIMER, G2_TIMER, G3_TIMER, G4_TIMER, G5_TIMER;
+
+function startRefresh() {
+  // Initial load — stagger to avoid burst
+  loadG2();
+  setTimeout(loadG1, 400);
+  setTimeout(loadG5, 800);
+  setTimeout(loadG3, 1200);
+  setTimeout(loadG4, 1600);
+
+  // Intervals
+  G1_TIMER = setInterval(loadG1,  15000); // 15s — threat feed
+  G2_TIMER = setInterval(loadG2,  30000); // 30s — AI risk
+  G3_TIMER = setInterval(loadG3,  20000); // 20s — defense
+  G4_TIMER = setInterval(loadG4,  60000); // 60s — executive
+  G5_TIMER = setInterval(loadG5,  10000); // 10s — visitors
+}
+
+// Global refresh timestamp
+setInterval(() => {
+  const el = $('gd-last-refresh');
+  if (el) el.textContent = `Last refresh: ${ts()}`;
+}, 5000);
+
+// Track this page view
+try {
+  fetch(`${API}/api/visitor/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device: 'desktop', page: '/gadgets.html' }),
+    keepalive: true,
+  }).catch(() => {});
+} catch(_) {}
+
+// Boot
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startRefresh);
+} else {
+  startRefresh();
+}
+
+})(); // end CDB_GADGETS
+</script>
+
+</body>
+</html>

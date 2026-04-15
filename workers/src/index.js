@@ -2371,6 +2371,101 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }
     }
 
+    // ── v21.0: GET /api/executive/metrics — aggregated executive KPI data ────────
+    // Wraps analytics/dashboard + threat-intel/stats for Gadget 4
+    if (path === '/api/executive/metrics' && method === 'GET') {
+      try {
+        const [scansRow, usersRow, threatRow, vulnRow] = await Promise.all([
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today, SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) as critical_scans FROM scan_history`).first().catch(() => null),
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN created_at > datetime('now','-7 day') THEN 1 ELSE 0 END) as new_this_week FROM users`).first().catch(() => null),
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN severity='HIGH' THEN 1 ELSE 0 END) as high, MAX(published_at) as latest_at FROM threat_intel`).first().catch(() => null),
+          env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' AND status!='patched' THEN 1 ELSE 0 END) as open_critical FROM brain_predictions`).first().catch(() => null),
+        ]);
+        const totalScans   = scansRow?.total        || 0;
+        const totalToday   = scansRow?.today        || 0;
+        const criticalScans= scansRow?.critical_scans || 0;
+        const totalUsers   = usersRow?.total        || 0;
+        const totalThreats = threatRow?.total       || 0;
+        const criticalThreats = threatRow?.critical || 0;
+        const highThreats  = threatRow?.high        || 0;
+        // Compute risk trend: ratio critical/total scans as 0–100
+        const riskScore    = totalScans > 0 ? Math.min(100, Math.round((criticalScans / totalScans) * 100 * 2.5 + criticalThreats * 0.5)) : 0;
+        const exposurePct  = totalThreats > 0 ? Math.round((criticalThreats / totalThreats) * 100) : 0;
+        return withSecurityHeaders(withCors(Response.json({
+          success:      true,
+          total_scans:  totalScans,
+          scans_today:  totalToday,
+          total_users:  totalUsers,
+          total_threats:     totalThreats,
+          critical_threats:  criticalThreats,
+          high_threats:      highThreats,
+          risk_score:        riskScore,
+          exposure_pct:      exposurePct,
+          new_users_week:    usersRow?.new_this_week || 0,
+          latest_threat_at:  threatRow?.latest_at   || null,
+          timestamp:         new Date().toISOString(),
+        }), request));
+      } catch(e) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // ── v21.0: GET /api/defense/recommendations — alias for defense posture + pending ─
+    if (path === '/api/defense/recommendations' && method === 'GET') {
+      try {
+        const [postureRes, pendingRes] = await Promise.all([
+          handleGetDefensePosture(request, env, {}),
+          handleGetPending(request, env, {}),
+        ]);
+        const posture = await postureRes.json().catch(() => ({}));
+        const pending = await pendingRes.json().catch(() => ({ pending: [] }));
+        return withSecurityHeaders(withCors(Response.json({
+          success: true,
+          posture: posture,
+          recommendations: (pending.pending || []).map(p => ({
+            id:          p.id,
+            type:        p.type        || 'rule',
+            title:       p.title       || p.action || 'Defense action',
+            severity:    p.severity    || 'HIGH',
+            status:      p.status      || 'pending',
+            description: p.description || p.rationale || '',
+            created_at:  p.created_at  || p.queued_at || new Date().toISOString(),
+          })),
+          stats: {
+            total_executions:    posture.total_executions     || 0,
+            rules_deployed:      posture.total_rules_deployed || 0,
+            threats_blocked:     posture.threats_blocked      || 0,
+            pending_actions:     pending.count                || 0,
+          },
+        }), request));
+      } catch(e) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // ── v21.0: GET /api/scan/stats — scan statistics summary ─────────────────────
+    if (path === '/api/scan/stats' && method === 'GET') {
+      try {
+        const [row, threatRow] = await Promise.all([
+          env.DB?.prepare(`SELECT COUNT(*) as total_scans, SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today, SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN risk_score >= 50 AND risk_score < 80 THEN 1 ELSE 0 END) as high, AVG(risk_score) as avg_risk FROM scan_history`).first().catch(() => null),
+          env.DB?.prepare(`SELECT COUNT(*) as cve_count, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical_cves FROM threat_intel`).first().catch(() => null),
+        ]);
+        return withSecurityHeaders(withCors(Response.json({
+          success:      true,
+          total_scans:  row?.total_scans || 0,
+          today:        row?.today       || 0,
+          critical:     row?.critical    || 0,
+          high:         row?.high        || 0,
+          avg_risk:     Math.round(row?.avg_risk || 0),
+          cve_count:    threatRow?.cve_count || 0,
+          critical_cves: threatRow?.critical_cves || 0,
+          timestamp:    new Date().toISOString(),
+        }), request));
+      } catch(e) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));
+      }
+    }
+
     // POST /api/admin/bootstrap  — seed threat intel + defense marketplace
     if (path === '/api/admin/bootstrap' && method === 'POST') {
       // Simple token auth — pass Authorization: Bearer bootstrap-cyberdude-2026
