@@ -535,6 +535,7 @@ a{color:var(--accent);text-decoration:none}
     <div class="nav-links" id="nav-links-desktop">
       <a href="#dashboard"  data-section="dashboard"  onclick="cdbNavigate('dashboard');return false">Dashboard</a>
       <a href="#scanner"    data-section="scanner"    onclick="cdbNavigate('scanner');return false">Scanner</a>
+      <a href="/gadgets.html" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(168,85,247,.12));border:1px solid rgba(0,212,255,.25);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:800;color:#00d4ff;letter-spacing:.04em;text-decoration:none;transition:all .2s" onmouseover="this.style.background='linear-gradient(135deg,rgba(0,212,255,.2),rgba(168,85,247,.2))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(0,212,255,.12),rgba(168,85,247,.12))'">⚡ Live Intel</a>
 
       <!-- Products dropdown -->
       <div class="nav-dropdown">
@@ -550,6 +551,7 @@ a{color:var(--accent);text-decoration:none}
           <a href="#global-threat-map" onclick="cdbNavigate('global-threat-map');cdbCloseDropdowns();return false">🗺 Global Threat Map</a>
           <a href="#incident-response" onclick="cdbNavigate('incident-response');cdbCloseDropdowns();return false">🚨 IR Playbook</a>
           <a href="#zero-day-intel"    onclick="cdbNavigate('zero-day-intel');cdbCloseDropdowns();return false">⚡ Zero-Day Intel</a>
+          <a href="/gadgets.html" target="_blank" rel="noopener" onclick="cdbCloseDropdowns()" style="color:#00d4ff;font-weight:800">⚡ Live Intel Dashboard ↗</a>
           <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseDropdowns()">🛠 Tools Suite ↗</a>
         </div>
       </div>
@@ -604,6 +606,7 @@ a{color:var(--accent);text-decoration:none}
     <a href="#enterprise"        data-section="enterprise"        onclick="cdbNavigate('enterprise');cdbCloseMobileNav();return false">🏢 Enterprise</a>
     <div class="nav-mob-sep"></div>
     <a href="#compliance-global" data-section="compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false">🌐 Global Compliance</a>
+    <a href="/gadgets.html" target="_blank" rel="noopener" onclick="cdbCloseMobileNav()" style="color:#00d4ff;font-weight:800">⚡ Live Intel Dashboard ↗</a>
     <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseMobileNav()">🛠 Tools Suite ↗</a>
   </div>
 </nav>
@@ -629,7 +632,7 @@ a{color:var(--accent);text-decoration:none}
   <span>🤖 MYTHOS v3 <span style="color:#a855f7">RUNNING</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
   <span>👥 <span id="sb-online" style="color:#f59e0b">...</span> online now</span>
-  <span style="margin-left:auto;color:rgba(255,255,255,.2)">cyberdudebivash.in · production · v21.0.0</span>
+  <a href="/gadgets.html" target="_blank" rel="noopener" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:6px;padding:2px 10px;font-size:10px;font-weight:800;color:#00d4ff;letter-spacing:.06em;text-decoration:none;white-space:nowrap;transition:background .2s" onmouseover="this.style.background='rgba(0,212,255,.16)'" onmouseout="this.style.background='rgba(0,212,255,.08)'">⚡ LIVE INTEL DASHBOARD ↗</a>
 </div>
 <script>
 (function CDB_STATUS_BAR(){
