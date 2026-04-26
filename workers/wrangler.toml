@@ -128,4 +128,26 @@ binding = "AI"
 #   runPatchingBatch() — unconditional on every cron invocation
 #   runMythosCron()    — cron==='0 */12 * * *' || cron==='0 6 * * *' → slots 3+4
 #
-#   Slot 1: Hourly    �
+#   Slot 1: Hourly    — v12 Anomaly + Predictive + Agent Bus + Monitoring + Purge
+#   Slot 2: 4×/day   — Sentinel APEX CVE feed refresh
+#   Slot 3: Every 12h — v10 Defense product generation + MYTHOS generation
+#   Slot 4: 6 AM      — v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
+#   Slot 5: 11 PM     — v10 Daily revenue snapshot
+[triggers]
+crons = [
+  "0 * * * *",         # Slot 1 — Hourly:    v12 Anomaly + Predictive + Agent Bus + Monitoring
+  "0 0,6,12,18 * * *", # Slot 2 — 4x/day:   Sentinel APEX CVE feed refresh
+  "0 */12 * * *",      # Slot 3 — Every 12h: v10 Defense products + MYTHOS generation
+  "0 6 * * *",         # Slot 4 — 6 AM:      v10 Content pipeline + MYTHOS daily run
+  "0 23 * * *"         # Slot 5 — 11 PM:     v10 Daily revenue snapshot
+]
+
+# ── Custom domain routes ──────────────────────────────────────────────────────
+# Uncomment after configuring DNS:
+# [[routes]]
+# pattern   = "api.cyberdudebivash.in/*"
+# zone_name = "cyberdudebivash.in"
+
+# [[routes]]
+# pattern   = "api.tools.cyberdudebivash.com/*"
+# zone_name = "cyberdudebiv

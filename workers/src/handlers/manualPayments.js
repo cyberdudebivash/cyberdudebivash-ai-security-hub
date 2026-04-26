@@ -245,4 +245,28 @@ export async function handleVerifyPayment(request, env) {
 
     return jsonOk({ payment_id, status: record.status, message: `Payment ${record.status}.` });
   } catch (e) {
-    return jsonErr('Failed to verify payment: ' + e.message, 500)
+    return jsonErr('Failed to verify payment: ' + e.message, 500);
+  }
+}
+
+// ── Get payment config (for frontend modal) ───────────────────────────────── */
+export async function handleGetPaymentConfig(request, env) {
+  try {
+    // Return config without sensitive details
+    return jsonOk({
+      config: {
+        company_name:    PAYMENT_CONFIG.company_name,
+        gst_number:      PAYMENT_CONFIG.gst_number,
+        support_email:   PAYMENT_CONFIG.support_email,
+        verification_sla: PAYMENT_CONFIG.verification_sla,
+        upi:    PAYMENT_CONFIG.upi,
+        bank:   PAYMENT_CONFIG.bank,
+        paypal: PAYMENT_CONFIG.paypal,
+        crypto: PAYMENT_CONFIG.crypto,
+      },
+      products: PRODUCT_CATALOG,
+    });
+  } catch (e) {
+    return jsonErr('Failed to get payment config: ' + e.message, 500);
+  }
+}
