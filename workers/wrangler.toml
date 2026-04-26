@@ -60,6 +60,21 @@ dead_letter_queue  = "scan-jobs-dlq"
 #   ADMIN_TELEGRAM_CHAT_ID    — your admin Telegram chat ID
 #   SENTINEL_CHANNEL_ID       — Sentinel APEX channel ID (for CVE broadcasts)
 #
+# V21.0 new secrets (Payment Automation — REQUIRED for revenue):
+#   STRIPE_SECRET_KEY         — Stripe API key (sk_live_... or sk_test_...)
+#                               Get: https://dashboard.stripe.com → Developers → API Keys
+#                               Run: npx wrangler secret put STRIPE_SECRET_KEY
+#   STRIPE_WEBHOOK_SECRET     — Stripe webhook signing secret (whsec_...)
+#                               Get: https://dashboard.stripe.com → Developers → Webhooks
+#                               Webhook URL: https://cyberdudebivash.in/api/webhooks/stripe
+#                               Events: checkout.session.completed, payment_intent.succeeded,
+#                                       customer.subscription.created, customer.subscription.deleted
+#                               Run: npx wrangler secret put STRIPE_WEBHOOK_SECRET
+#   WORKERS_API_KEY           — Internal CI/monitoring API key (for GitHub Actions health checks)
+#                               Generate: openssl rand -hex 32
+#                               Run: npx wrangler secret put WORKERS_API_KEY
+#                               Add to GitHub Secrets: Settings → Secrets → WORKERS_API_KEY
+#
 # V8.0 new secrets:
 #   LINKEDIN_ACCESS_TOKEN     — Optional: LinkedIn API v2 access token (for auto-posting)
 #   WORKERS_AI_ACCOUNT_ID     — Optional: Cloudflare account ID for Workers AI binding
@@ -113,26 +128,4 @@ binding = "AI"
 #   runPatchingBatch() — unconditional on every cron invocation
 #   runMythosCron()    — cron==='0 */12 * * *' || cron==='0 6 * * *' → slots 3+4
 #
-#   Slot 1: Hourly    — v12 Anomaly + Predictive + Agent Bus + Monitoring + Purge
-#   Slot 2: 4×/day   — Sentinel APEX CVE feed refresh
-#   Slot 3: Every 12h — v10 Defense product generation + MYTHOS generation
-#   Slot 4: 6 AM      — v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
-#   Slot 5: 11 PM     — v10 Daily revenue snapshot
-[triggers]
-crons = [
-  "0 * * * *",         # Slot 1 — Hourly:    v12 Anomaly + Predictive + Agent Bus + Monitoring
-  "0 0,6,12,18 * * *", # Slot 2 — 4x/day:   Sentinel APEX CVE feed refresh
-  "0 */12 * * *",      # Slot 3 — Every 12h: v10 Defense products + MYTHOS generation
-  "0 6 * * *",         # Slot 4 — 6 AM:      v10 Content pipeline + MYTHOS daily run
-  "0 23 * * *"         # Slot 5 — 11 PM:     v10 Daily revenue snapshot
-]
-
-# ── Custom domain routes ──────────────────────────────────────────────────────
-# Uncomment after configuring DNS:
-# [[routes]]
-# pattern   = "api.cyberdudebivash.in/*"
-# zone_name = "cyberdudebivash.in"
-
-# [[routes]]
-# pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebiv
+#   Slot 1: Hourly    �
