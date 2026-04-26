@@ -4249,4 +4249,217 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         console.log('[CRON] GTM Drip Emails:', JSON.stringify(dripResult));
 
         // 2. Run enterprise sales pipeline (detect + generate outreach)
-        const s
+
+        const salesResult = await runSalesPipeline(env);
+        console.log('[CRON] GTM Sales Pipeline:', JSON.stringify(salesResult));
+
+        // 3. Run content automation (CRITICAL CVEs → LinkedIn/Twitter/Telegram)
+        const criticalRows = await env.DB.prepare(
+          `SELECT * FROM threat_intel WHERE severity = 'CRITICAL' ORDER BY cvss DESC, published_at DESC LIMIT 5`
+        ).all().catch(() => ({ results: [] }));
+
+        if ((criticalRows.results || []).length > 0) {
+          const contentResult = await runContentPipeline(env, criticalRows.results);
+          console.log('[CRON] GTM Content:', JSON.stringify({
+            generated: contentResult.generated,
+            posted:    contentResult.telegram_posted,
+          }));
+        }
+
+        // 4. LinkedIn authority post automation (Mon/Tue/Thu/Fri only)
+        const linkedInResult = await runLinkedInAutomation(env, criticalRows.results || [], {});
+        if (!linkedInResult.skipped) {
+          console.log('[CRON] GTM LinkedIn:', JSON.stringify(linkedInResult));
+        }
+
+        console.log('[CRON] GTM Growth Engine pipeline complete');
+      } catch (e) {
+        console.error('[CRON] GTM pipeline error:', e?.message);
+      }
+    })());
+
+    // ── v8.2 Revenue Automation Pipeline ─────────────────────────────────────
+    ctx.waitUntil((async () => {
+      try {
+        const { runAutomationCron } = await import('./services/automationEngine.js');
+        const autoResult = await runAutomationCron(env, event.cron);
+        console.log('[CRON] Revenue Automation:', JSON.stringify({
+          jobs_run:    autoResult.jobs_run,
+          duration_ms: autoResult.duration_ms,
+          defense_products_generated: autoResult.results?.defense_products?.generated || 0,
+          upsell_emails_processed:    autoResult.results?.upsell_emails?.processed    || 0,
+          churn_flagged:              autoResult.results?.churn_prevention?.at_risk    || 0,
+        }));
+      } catch (e) {
+        console.error('[CRON] Revenue Automation error:', e?.message);
+      }
+    })());
+
+    // ── v10.0 Sentinel APEX Defense Product Generation (every 12h) ───────────
+    if (cron === '0 */12 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const { generateAndStoreAll, fetchLiveIntel } = await import('./services/sentinelDefenseEngine.js');
+          const intel = await fetchLiveIntel(env, { limit: 10, severity: 'HIGH' });
+          let generated = 0;
+          for (const item of intel.slice(0, 5)) {
+            const r = await generateAndStoreAll(env, item);
+            generated += r.stored || 0;
+          }
+          console.log(`[CRON] v10 Defense Products: ${generated} stored for ${intel.length} CVEs`);
+        } catch (e) {
+          console.error('[CRON] v10 Defense generation error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v10.0 Content Pipeline — CVE→Blog→LinkedIn→Telegram (every 24h) ─────
+    if (cron === '0 6 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const { runBulkContentPipeline } = await import('./services/contentPipeline.js');
+          const result = await runBulkContentPipeline(env, 3);
+          console.log('[CRON] v10 Content Pipeline:', JSON.stringify({
+            processed:  result.processed,
+            linkedin:   result.results?.filter(r => r.linkedin?.success).length || 0,
+            telegram:   result.results?.filter(r => r.telegram?.success).length || 0,
+          }));
+        } catch (e) {
+          console.error('[CRON] v10 Content Pipeline error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v10.0 Revenue Snapshot — daily KPI capture ────────────────────────────
+    if (cron === '0 23 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          // Capture daily revenue snapshot
+          const today = new Date().toISOString().slice(0, 10);
+          const [subRow, defRow, totalUsers] = await Promise.allSettled([
+            env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount) as rev FROM revenue_events WHERE event_type='subscription_payment' AND DATE(created_at)=?`).bind(today).first(),
+            env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
+            env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
+          ]);
+          await env.DB?.prepare(
+            `INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users)
+             VALUES (?,?,?,?,?,?)`
+          ).bind(
+            crypto.randomUUID(), today,
+            (subRow.value?.rev || 0) + (defRow.value?.rev || 0),
+            defRow.value?.cnt || 0,
+            defRow.value?.rev || 0,
+            totalUsers.value?.total || 0,
+          ).run();
+          console.log(`[CRON] v10 Revenue Snapshot: ${today} captured`);
+        } catch (e) {
+          console.error('[CRON] v10 Revenue Snapshot error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v12 P0 MISSION: Agentic AI Engine — Agent Event Queue Processing ───────
+    ctx.waitUntil((async () => {
+      try {
+        // Process pending events from agent bus (CVE detections, anomaly events)
+        const events = await consumeEvents(env, 20);
+        let processed = 0;
+        for (const event of events) {
+          try {
+            if (event.event_type === 'cve_detected') {
+              await processCVEEvent(env, event);
+            } else if (event.event_type === 'anomaly_detected') {
+              const decision = decideAnomalyResponse(event.payload || {});
+              for (const action of decision.actions) {
+                if (action.action_type === 'block_ip' && action.target) {
+                  await autoBlockIP(env, action.target, 'anomaly_cron', decision.risk_level, event.id);
+                }
+                if ((action.action_type === 'rotate_credentials' || action.action_type === 'disable_session') && action.target) {
+                  await autoRotateOnAnomaly(env, action.target, event.payload || {});
+                }
+              }
+            }
+            await ackEvent(env, event.id, true);
+            processed++;
+          } catch (evErr) {
+            await ackEvent(env, event.id, false, evErr.message);
+          }
+        }
+        if (processed > 0) console.log(`[CRON] v12 Agent Bus: processed ${processed} events`);
+      } catch (e) {
+        console.error('[CRON] v12 Agent Bus error:', e?.message);
+      }
+    })());
+
+    // ── v12 P0 MISSION: Behavioral Anomaly Detection — batch scan (every 15 min)
+    ctx.waitUntil((async () => {
+      try {
+        const result = await runAnomalyBatch(env);
+        if (result.anomalies_detected > 0) {
+          console.log(`[CRON] v12 Anomaly Engine: ${result.scanned} users scanned, ${result.anomalies_detected} anomalies (${result.high_risk} CRITICAL/HIGH)`);
+        }
+      } catch (e) {
+        console.error('[CRON] v12 Anomaly Engine error:', e?.message);
+      }
+    })());
+
+    // ── v12 P0 MISSION: Predictive Threat Intelligence — batch (every 1h) ──────
+    if (cron === '0 * * * *' || cron === '*/15 * * * *' || cron === '0 */2 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const result = await runPredictiveBatch(env);
+          if (result.predictions > 0) {
+            console.log(`[CRON] v12 Predictive Engine: ${result.analyzed} CVEs analyzed, ${result.critical_count} CRITICAL, ${result.high_count} HIGH`);
+          }
+        } catch (e) {
+          console.error('[CRON] v12 Predictive Engine error:', e?.message);
+        }
+      })());
+    }
+
+    // ── v12 P0 MISSION: Virtual WAF Patching — expire stale patches + batch ────
+    ctx.waitUntil((async () => {
+      try {
+        // Get recent HIGH+KEV CVEs for auto-patching
+        const recentCVEs = await env.DB?.prepare(`
+          SELECT cve_id, cvss_score as cvss, epss_score as epss, is_kev,
+                 description, cvss_vector
+          FROM threat_intel
+          WHERE (cvss_score >= 7.0 OR is_kev = 1)
+            AND published_date > datetime('now', '-3 days')
+          ORDER BY cvss_score DESC LIMIT 20
+        `).all().catch(() => ({ results: [] }));
+
+        const patchResult = await runPatchingBatch(env, recentCVEs?.results || []);
+        if (patchResult.patched > 0 || patchResult.expired > 0) {
+          console.log(`[CRON] v12 Patching Agent: ${patchResult.patched} patches applied, ${patchResult.expired} expired`);
+        }
+      } catch (e) {
+        console.error('[CRON] v12 Patching Agent error:', e?.message);
+      }
+    })());
+
+    // ── MYTHOS ORCHESTRATOR CORE — autonomous tool generation (every 12h) ──────
+    if (cron === '0 */12 * * *' || cron === '0 6 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const result = await runMythosCron(env);
+          console.log(`[CRON] MYTHOS: ${result.total_tools} tools generated, ${result.total_published} published, ${result.total_failed} failed`);
+        } catch (e) {
+          console.error('[CRON] MYTHOS Orchestrator error:', e?.message);
+        }
+      })());
+    }
+
+    // ── PHASE 2: Autonomous SOC Mode cron check ───────────────────────────────
+    ctx.waitUntil((async () => {
+      try {
+        await runAutoSocCron(env);
+        console.log('[CRON] AutoSOC: cron check complete');
+      } catch (e) {
+        console.error('[CRON] AutoSOC error:', e?.message);
+      }
+    })());
+
+  },
+};
