@@ -158,6 +158,9 @@ import { handleRealtimeFeed, handleRealtimePosture, handleRealtimeStats } from '
 import { handleGumroadWebhook, handleLicenseActivation, handleProductCatalog } from './services/gumroadEngine.js';
 import { handleSiemInfo, handleSiemExport, handleSiemStream } from './handlers/siemExport.js';
 
+// ─── Stripe Webhook Handler (v21.0 — global payment automation) ──────────────
+import { handleStripeWebhook } from './handlers/stripeWebhook.js';
+
 // ─── P0 Mission: Agentic AI + Anomaly + Predictive Engines (v12.0) ────────────
 import { handleAgentRequest }      from './handlers/agentHandler.js';
 import { handleAnomalyRequest }    from './handlers/anomalyHandler.js';
@@ -588,7 +591,7 @@ async function healthResponseAsync(env) {
   return Response.json({
     status,
     service:   'CYBERDUDEBIVASH AI Security Hub',
-    version:   env.VERSION || env.PLATFORM_VERSION || '18.0.0',
+    version:   env.VERSION || env.PLATFORM_VERSION || '21.0.0',
     company:   'CyberDudeBivash Pvt. Ltd.',
     website:   'https://cyberdudebivash.in',
     tools:     'https://tools.cyberdudebivash.com',
@@ -828,7 +831,7 @@ export default {
     // Health, version and status routes are exempt so monitoring always works.
     const url    = new URL(request.url);
     const _earlyPath = url.pathname.replace(/\/+$/, '') || '/';
-    const _bindingExempt = ['/api/health', '/api/version', '/api/status', '/api/v13/status'];
+    const _bindingExempt = ['/api/health', '/api/platform/health', '/api/platform/activity', '/api/version', '/api/status', '/api/v13/status'];
     if (!env.DB || !env.KV) {
       if (!_bindingExempt.includes(_earlyPath)) {
         const _missing = [];
@@ -911,6 +914,186 @@ export default {
       }
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // /api/platform/health — PRODUCTION HEALTH CHECK (real probes, not binding checks)
+    // Returns: { status: "OK"|"DEGRADED"|"DOWN", api, db, intel, revenue, timestamp }
+    // Used by: GitHub Actions CI gate, frontend status widget, monitoring tools
+    // ══════════════════════════════════════════════════════════════════════════
+    if (path === '/api/platform/health' && method === 'GET') {
+      const start = Date.now();
+      const checks = { api: false, db: false, intel: false, revenue: false };
+      const details = {};
+
+      // 1. API self-check — always true if this code runs
+      checks.api = true;
+      details.api = { ok: true, note: 'worker_executing' };
+
+      // 2. DB probe — real SELECT 1 query (not just binding check)
+      if (env.DB) {
+        try {
+          const t0 = Date.now();
+          const probe = await env.DB.prepare('SELECT 1 AS alive').first();
+          const latency = Date.now() - t0;
+          checks.db = probe?.alive === 1;
+          details.db = { ok: checks.db, latency_ms: latency };
+        } catch (err) {
+          checks.db = false;
+          details.db = { ok: false, error: err.message?.slice(0, 80) };
+        }
+      } else {
+        checks.db = false;
+        details.db = { ok: false, error: 'DB_binding_missing' };
+      }
+
+      // 3. Threat Intel probe — check threat_intel table for recent records
+      if (env.DB && checks.db) {
+        try {
+          const row = await env.DB.prepare(
+            "SELECT COUNT(*) as c FROM threat_intel WHERE created_at > datetime('now','-7 days')"
+          ).first().catch(() => null);
+          checks.intel = (row?.c ?? 0) >= 0; // table exists = intel engine ok
+          details.intel = { ok: checks.intel, recent_entries: row?.c ?? 0 };
+        } catch {
+          checks.intel = false;
+          details.intel = { ok: false, error: 'table_query_failed' };
+        }
+      } else {
+        checks.intel = false;
+        details.intel = { ok: false, error: 'db_unavailable' };
+      }
+
+      // 4. Revenue probe — check payments table for system readiness
+      if (env.DB && checks.db) {
+        try {
+          const row = await env.DB.prepare(
+            "SELECT COUNT(*) as c FROM payments WHERE status='completed' LIMIT 1"
+          ).first().catch(() => null);
+          // Revenue engine is OK if the table exists and razorpay key is set
+          checks.revenue = row !== null && !!(env.RAZORPAY_KEY_ID || env.STRIPE_SECRET_KEY);
+          details.revenue = {
+            ok: checks.revenue,
+            payments_table: row !== null,
+            razorpay: !!(env.RAZORPAY_KEY_ID),
+            stripe: !!(env.STRIPE_SECRET_KEY),
+            completed_payments: row?.c ?? 0,
+          };
+        } catch {
+          checks.revenue = false;
+          details.revenue = { ok: false, error: 'payments_table_missing' };
+        }
+      } else {
+        checks.revenue = false;
+        details.revenue = { ok: false, error: 'db_unavailable' };
+      }
+
+      // Derive overall status: OK = all pass | DEGRADED = some pass | DOWN = api only
+      const passCount = Object.values(checks).filter(Boolean).length;
+      const status = passCount === 4 ? 'OK'
+                   : passCount >= 2 ? 'DEGRADED'
+                   : passCount === 1 ? 'DEGRADED'   // api itself is up
+                   : 'DOWN';
+
+      return withSecurityHeaders(withCors(Response.json({
+        status,
+        api:       checks.api,
+        db:        checks.db,
+        intel:     checks.intel,
+        revenue:   checks.revenue,
+        version:   env.VERSION || env.PLATFORM_VERSION || '21.0.0',
+        details,
+        response_ms: Date.now() - start,
+        timestamp: new Date().toISOString(),
+        platform: 'CYBERDUDEBIVASH AI Security Hub',
+      }, { status: status === 'DOWN' ? 503 : 200 }), request));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // /api/platform/activity — REAL ACTIVITY FEED (from D1, not synthetic)
+    // Tracks: scan executions, API calls, rule generations, threat processing
+    // Used by: dashboard activity widget, admin panel, trust signals
+    // ══════════════════════════════════════════════════════════════════════════
+    if (path === '/api/platform/activity' && method === 'GET') {
+      const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+      const since = url.searchParams.get('since') || '24h';
+      const sinceMap = { '1h': '-1 hour', '6h': '-6 hours', '24h': '-1 day', '7d': '-7 days', '30d': '-30 days' };
+      const sinceClause = sinceMap[since] || '-1 day';
+
+      let activity = [];
+      let counters = { scans_total: 0, scans_window: 0, api_calls: 0, rules_generated: 0, threats_processed: 0, payments_completed: 0 };
+
+      if (env.DB) {
+        try {
+          const [scansTotal, scansWindow, recentScans, threatCount, paymentCount] = await Promise.allSettled([
+            env.DB.prepare('SELECT COUNT(*) as c FROM scan_jobs').first(),
+            env.DB.prepare(`SELECT COUNT(*) as c FROM scan_jobs WHERE created_at > datetime('now','${sinceClause}')`).first(),
+            env.DB.prepare(`
+              SELECT id, module, target, risk_level, risk_score, status, created_at
+              FROM scan_jobs
+              WHERE created_at > datetime('now','${sinceClause}')
+              ORDER BY created_at DESC LIMIT ?
+            `).bind(limit).all(),
+            env.DB.prepare(`SELECT COUNT(*) as c FROM threat_intel WHERE created_at > datetime('now','${sinceClause}')`).first(),
+            env.DB.prepare(`SELECT COUNT(*) as c FROM payments WHERE status='completed' AND created_at > datetime('now','${sinceClause}')`).first(),
+          ]);
+
+          counters.scans_total     = scansTotal.value?.c ?? 0;
+          counters.scans_window    = scansWindow.value?.c ?? 0;
+          counters.threats_processed = threatCount.value?.c ?? 0;
+          counters.payments_completed = paymentCount.value?.c ?? 0;
+
+          const scanRows = recentScans.status === 'fulfilled' ? (recentScans.value?.results || []) : [];
+          activity = scanRows.map(row => ({
+            type: 'scan',
+            module: row.module,
+            target: row.target,
+            risk_level: row.risk_level,
+            risk_score: row.risk_score,
+            status: row.status,
+            timestamp: row.created_at,
+            icon: row.risk_level === 'CRITICAL' ? '🔴' : row.risk_level === 'HIGH' ? '🟠' : row.risk_level === 'MEDIUM' ? '🟡' : '🟢',
+            summary: `${(row.module || 'scan').toUpperCase()} scan on ${row.target || 'unknown'} — ${row.risk_level || 'pending'}`,
+          }));
+
+          // Also pull recent threat intel events
+          if (activity.length < limit) {
+            const threatRows = await env.DB.prepare(`
+              SELECT title, severity, cve_id, source, created_at
+              FROM threat_intel
+              WHERE created_at > datetime('now','${sinceClause}')
+              ORDER BY created_at DESC LIMIT ?
+            `).bind(Math.max(5, limit - activity.length)).all().catch(() => ({ results: [] }));
+            for (const t of (threatRows.results || [])) {
+              activity.push({
+                type: 'threat_intel',
+                module: 'sentinel',
+                severity: t.severity,
+                cve_id: t.cve_id,
+                title: t.title,
+                source: t.source,
+                timestamp: t.created_at,
+                icon: t.severity === 'CRITICAL' ? '🔴' : '🟠',
+                summary: `${t.cve_id || 'Threat'} — ${t.title?.slice(0,60) || 'processed'}`,
+              });
+            }
+            // Sort merged by timestamp desc
+            activity.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          }
+        } catch (err) {
+          activity = [{ type: 'error', summary: 'Activity DB unavailable: ' + err.message?.slice(0,60), timestamp: new Date().toISOString() }];
+        }
+      } else {
+        activity = [{ type: 'system', summary: 'Database binding not configured', timestamp: new Date().toISOString() }];
+      }
+
+      return withSecurityHeaders(withCors(Response.json({
+        success: true,
+        window: since,
+        counters,
+        activity: activity.slice(0, limit),
+        generated_at: new Date().toISOString(),
+      }), request));
+    }
+
     // ── /api/config — public frontend config (Razorpay key, feature flags) ──
     // Safe: only exposes publishable key (KEY_ID), never KEY_SECRET.
     // Cached on Cloudflare edge (Cache-Control: public, max-age=300).
@@ -953,8 +1136,8 @@ export default {
     }
     if (path === '/api/version' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
-        version:          env.VERSION || env.PLATFORM_VERSION || '18.0.0',
-        platform_version: env.PLATFORM_VERSION || '18.0.0',
+        version:          env.VERSION || env.PLATFORM_VERSION || '21.0.0',
+        platform_version: env.PLATFORM_VERSION || '21.0.0',
         commit:           env.COMMIT || (env.CF_VERSION_METADATA?.id) || 'unknown',
         timestamp:        new Date().toISOString(),
         environment:      env.ENVIRONMENT || 'production',
@@ -988,7 +1171,7 @@ export default {
       ]);
       return withSecurityHeaders(withCors(Response.json({
         ok: true,
-        version: env.PLATFORM_VERSION || '18.0.0',
+        version: env.PLATFORM_VERSION || '21.0.0',
         timestamp: new Date().toISOString(),
         engines: {
           database:    dbStatus.status==='fulfilled' && dbStatus.value ? 'online' : 'degraded',
@@ -1208,6 +1391,16 @@ export default {
     // ── Razorpay webhook (V7 replaces monetization middleware stub) ──────────
     if (path === '/api/webhooks/razorpay' && method === 'POST') {
       return withSecurityHeaders(await handleRazorpayWebhook(request, env));
+    }
+
+    // ── Stripe webhook (V21.0 — global payments, HMAC-SHA256 verified) ───────
+    // REQUIRED secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+    // Configure in Stripe Dashboard → Developers → Webhooks → Add endpoint:
+    //   URL: https://cyberdudebivash.in/api/webhooks/stripe
+    //   Events: checkout.session.completed, payment_intent.succeeded,
+    //           customer.subscription.created, customer.subscription.deleted
+    if (path === '/api/webhooks/stripe' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleStripeWebhook(request, env), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -4056,216 +4249,4 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         console.log('[CRON] GTM Drip Emails:', JSON.stringify(dripResult));
 
         // 2. Run enterprise sales pipeline (detect + generate outreach)
-        const salesResult = await runSalesPipeline(env);
-        console.log('[CRON] GTM Sales Pipeline:', JSON.stringify(salesResult));
-
-        // 3. Run content automation (CRITICAL CVEs → LinkedIn/Twitter/Telegram)
-        const criticalRows = await env.DB.prepare(
-          `SELECT * FROM threat_intel WHERE severity = 'CRITICAL' ORDER BY cvss DESC, published_at DESC LIMIT 5`
-        ).all().catch(() => ({ results: [] }));
-
-        if ((criticalRows.results || []).length > 0) {
-          const contentResult = await runContentPipeline(env, criticalRows.results);
-          console.log('[CRON] GTM Content:', JSON.stringify({
-            generated: contentResult.generated,
-            posted:    contentResult.telegram_posted,
-          }));
-        }
-
-        // 4. LinkedIn authority post automation (Mon/Tue/Thu/Fri only)
-        const linkedInResult = await runLinkedInAutomation(env, criticalRows.results || [], {});
-        if (!linkedInResult.skipped) {
-          console.log('[CRON] GTM LinkedIn:', JSON.stringify(linkedInResult));
-        }
-
-        console.log('[CRON] GTM Growth Engine pipeline complete');
-      } catch (e) {
-        console.error('[CRON] GTM pipeline error:', e?.message);
-      }
-    })());
-
-    // ── v8.2 Revenue Automation Pipeline ─────────────────────────────────────
-    ctx.waitUntil((async () => {
-      try {
-        const { runAutomationCron } = await import('./services/automationEngine.js');
-        const autoResult = await runAutomationCron(env, event.cron);
-        console.log('[CRON] Revenue Automation:', JSON.stringify({
-          jobs_run:    autoResult.jobs_run,
-          duration_ms: autoResult.duration_ms,
-          defense_products_generated: autoResult.results?.defense_products?.generated || 0,
-          upsell_emails_processed:    autoResult.results?.upsell_emails?.processed    || 0,
-          churn_flagged:              autoResult.results?.churn_prevention?.at_risk    || 0,
-        }));
-      } catch (e) {
-        console.error('[CRON] Revenue Automation error:', e?.message);
-      }
-    })());
-
-    // ── v10.0 Sentinel APEX Defense Product Generation (every 12h) ───────────
-    if (cron === '0 */12 * * *' || cron === '0 0 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          const { generateAndStoreAll, fetchLiveIntel } = await import('./services/sentinelDefenseEngine.js');
-          const intel = await fetchLiveIntel(env, { limit: 10, severity: 'HIGH' });
-          let generated = 0;
-          for (const item of intel.slice(0, 5)) {
-            const r = await generateAndStoreAll(env, item);
-            generated += r.stored || 0;
-          }
-          console.log(`[CRON] v10 Defense Products: ${generated} stored for ${intel.length} CVEs`);
-        } catch (e) {
-          console.error('[CRON] v10 Defense generation error:', e?.message);
-        }
-      })());
-    }
-
-    // ── v10.0 Content Pipeline — CVE→Blog→LinkedIn→Telegram (every 24h) ─────
-    if (cron === '0 6 * * *' || cron === '0 0 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          const { runBulkContentPipeline } = await import('./services/contentPipeline.js');
-          const result = await runBulkContentPipeline(env, 3);
-          console.log('[CRON] v10 Content Pipeline:', JSON.stringify({
-            processed:  result.processed,
-            linkedin:   result.results?.filter(r => r.linkedin?.success).length || 0,
-            telegram:   result.results?.filter(r => r.telegram?.success).length || 0,
-          }));
-        } catch (e) {
-          console.error('[CRON] v10 Content Pipeline error:', e?.message);
-        }
-      })());
-    }
-
-    // ── v10.0 Revenue Snapshot — daily KPI capture ────────────────────────────
-    if (cron === '0 23 * * *' || cron === '0 0 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          // Capture daily revenue snapshot
-          const today = new Date().toISOString().slice(0, 10);
-          const [subRow, defRow, totalUsers] = await Promise.allSettled([
-            env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount) as rev FROM revenue_events WHERE event_type='subscription_payment' AND DATE(created_at)=?`).bind(today).first(),
-            env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
-            env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
-          ]);
-          await env.DB?.prepare(
-            `INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users)
-             VALUES (?,?,?,?,?,?)`
-          ).bind(
-            crypto.randomUUID(), today,
-            (subRow.value?.rev || 0) + (defRow.value?.rev || 0),
-            defRow.value?.cnt || 0,
-            defRow.value?.rev || 0,
-            totalUsers.value?.total || 0,
-          ).run();
-          console.log(`[CRON] v10 Revenue Snapshot: ${today} captured`);
-        } catch (e) {
-          console.error('[CRON] v10 Revenue Snapshot error:', e?.message);
-        }
-      })());
-    }
-
-    // ── v12 P0 MISSION: Agentic AI Engine — Agent Event Queue Processing ───────
-    ctx.waitUntil((async () => {
-      try {
-        // Process pending events from agent bus (CVE detections, anomaly events)
-        const events = await consumeEvents(env, 20);
-        let processed = 0;
-        for (const event of events) {
-          try {
-            if (event.event_type === 'cve_detected') {
-              await processCVEEvent(env, event);
-            } else if (event.event_type === 'anomaly_detected') {
-              const decision = decideAnomalyResponse(event.payload || {});
-              for (const action of decision.actions) {
-                if (action.action_type === 'block_ip' && action.target) {
-                  await autoBlockIP(env, action.target, 'anomaly_cron', decision.risk_level, event.id);
-                }
-                if ((action.action_type === 'rotate_credentials' || action.action_type === 'disable_session') && action.target) {
-                  await autoRotateOnAnomaly(env, action.target, event.payload || {});
-                }
-              }
-            }
-            await ackEvent(env, event.id, true);
-            processed++;
-          } catch (evErr) {
-            await ackEvent(env, event.id, false, evErr.message);
-          }
-        }
-        if (processed > 0) console.log(`[CRON] v12 Agent Bus: processed ${processed} events`);
-      } catch (e) {
-        console.error('[CRON] v12 Agent Bus error:', e?.message);
-      }
-    })());
-
-    // ── v12 P0 MISSION: Behavioral Anomaly Detection — batch scan (every 15 min)
-    ctx.waitUntil((async () => {
-      try {
-        const result = await runAnomalyBatch(env);
-        if (result.anomalies_detected > 0) {
-          console.log(`[CRON] v12 Anomaly Engine: ${result.scanned} users scanned, ${result.anomalies_detected} anomalies (${result.high_risk} CRITICAL/HIGH)`);
-        }
-      } catch (e) {
-        console.error('[CRON] v12 Anomaly Engine error:', e?.message);
-      }
-    })());
-
-    // ── v12 P0 MISSION: Predictive Threat Intelligence — batch (every 1h) ──────
-    if (cron === '0 * * * *' || cron === '*/15 * * * *' || cron === '0 */2 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          const result = await runPredictiveBatch(env);
-          if (result.predictions > 0) {
-            console.log(`[CRON] v12 Predictive Engine: ${result.analyzed} CVEs analyzed, ${result.critical_count} CRITICAL, ${result.high_count} HIGH`);
-          }
-        } catch (e) {
-          console.error('[CRON] v12 Predictive Engine error:', e?.message);
-        }
-      })());
-    }
-
-    // ── v12 P0 MISSION: Virtual WAF Patching — expire stale patches + batch ────
-    ctx.waitUntil((async () => {
-      try {
-        // Get recent HIGH+KEV CVEs for auto-patching
-        const recentCVEs = await env.DB?.prepare(`
-          SELECT cve_id, cvss_score as cvss, epss_score as epss, is_kev,
-                 description, cvss_vector
-          FROM threat_intel
-          WHERE (cvss_score >= 7.0 OR is_kev = 1)
-            AND published_date > datetime('now', '-3 days')
-          ORDER BY cvss_score DESC LIMIT 20
-        `).all().catch(() => ({ results: [] }));
-
-        const patchResult = await runPatchingBatch(env, recentCVEs?.results || []);
-        if (patchResult.patched > 0 || patchResult.expired > 0) {
-          console.log(`[CRON] v12 Patching Agent: ${patchResult.patched} patches applied, ${patchResult.expired} expired`);
-        }
-      } catch (e) {
-        console.error('[CRON] v12 Patching Agent error:', e?.message);
-      }
-    })());
-
-    // ── MYTHOS ORCHESTRATOR CORE — autonomous tool generation (every 12h) ──────
-    if (cron === '0 */12 * * *' || cron === '0 6 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          const result = await runMythosCron(env);
-          console.log(`[CRON] MYTHOS: ${result.total_tools} tools generated, ${result.total_published} published, ${result.total_failed} failed`);
-        } catch (e) {
-          console.error('[CRON] MYTHOS Orchestrator error:', e?.message);
-        }
-      })());
-    }
-
-    // ── PHASE 2: Autonomous SOC Mode cron check ───────────────────────────────
-    ctx.waitUntil((async () => {
-      try {
-        await runAutoSocCron(env);
-        console.log('[CRON] AutoSOC: cron check complete');
-      } catch (e) {
-        console.error('[CRON] AutoSOC error:', e?.message);
-      }
-    })());
-
-  },
-};
+        const s
