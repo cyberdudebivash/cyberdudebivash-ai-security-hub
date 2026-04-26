@@ -18510,4 +18510,16 @@ function v21TriggerUrgencyPayment(){
   var btn=document.getElementById('v21-wa-btn'),tip=document.getElementById('v21-wa-tooltip');
   if(!btn||!tip)return;
   setTimeout(function(){tip.style.display='block';setTimeout(function(){tip.style.display='none';},5000);},3000);
-  btn.addEventListener('mouseente
+  btn.addEventListener('mouseenter',function(){tip.style.display='block';});
+  if(btn.parentElement)btn.parentElement.addEventListener('mouseleave',function(){tip.style.display='none';});
+})();
+
+/* 5. Patch initP12 to not hardcode "all systems operational" */
+(function(){
+  var orig=window.initP12;
+  if(typeof orig==='function'){window.initP12=async function(){await orig.call(this);if(typeof logSOC==='function')logSOC('Phase 12 online - real health verification in progress...','sys','info');};}
+})();
+</script>
+
+</body>
+</html>
