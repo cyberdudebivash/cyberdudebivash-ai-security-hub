@@ -1602,7 +1602,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
     </div>
     <div class="risk-cta-row-v14">
       <a href="/#scanner" class="risk-cta-red-v14">🔴 Scan Your Domain Now — FREE</a>
-      <a href="/#pricing" class="risk-cta-green-v14">💰 Unlock Full Report ₹199</a>
+      <a href="#" class="risk-cta-green-v14" onclick="event.preventDefault();if(window.CDB_PAYMENT){CDB_PAYMENT.open({product:'domain-report',productLabel:'Domain Security Full Report',amountLabel:'₹199'});}else{window.location.href='/#pricing';}return false;">💰 Unlock Full Report ₹199</a>
     </div>
     <div class="risk-ticker-v14">
       <div class="risk-ticker-dot-v14"></div>
@@ -1879,5 +1879,34 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 })();
 </script>
 
+
+<script src="/assets/payment-modal.js"></script>
+
+<script>
+/* CDB_PAY -> CDB_PAYMENT bridge (payment-modal.js is the real engine) */
+(function() {
+  function mkBridge() {
+    window.CDB_PAY = {
+      open: function(productId, priceInr, label) {
+        if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+          CDB_PAYMENT.open({
+            product: productId,
+            productLabel: label || productId,
+            amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
+            amount: priceInr ? String(priceInr) : "",
+          });
+        } else { window.location.href = "/#pricing"; }
+      }
+    };
+    /* Also expose openPayment alias */
+    window.openPayment = window.openPayment || function(id, price, label) {
+      window.CDB_PAY.open(id, price, label);
+    };
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mkBridge);
+  } else { mkBridge(); }
+})();
+</script>
 </body>
 </html>

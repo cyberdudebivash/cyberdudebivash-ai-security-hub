@@ -18487,8 +18487,16 @@ function v21StartUrgencyTimer(){
 function v21CloseUrgencyModal(){var m=document.getElementById('v21-urgency-modal');if(m)m.style.display='none';clearInterval(_v21Timer);}
 function v21TriggerUrgencyPayment(){
   v21CloseUrgencyModal();
-  if(_v21Module&&typeof openPaymentModal==='function'){openPaymentModal(_v21Module,_v21Target);return;}
-  if(typeof showModal==='function'){showModal('paymentModal');return;}
+  // Route directly to CDB_PAYMENT (global manual payment system)
+  var prices={domain:'₹199',ai:'₹499',redteam:'₹999',identity:'₹799',compliance:'₹499'};
+  var label=(_v21Module?_v21Module.toUpperCase()+' Security Report':' Security Report')+(_v21Target?' — '+_v21Target:'');
+  var amt=prices[_v21Module]||'₹199';
+  if(typeof CDB_PAYMENT!=='undefined'&&typeof CDB_PAYMENT.open==='function'){
+    CDB_PAYMENT.open({product:'scan-'+(_v21Module||'report'),productLabel:label,amountLabel:amt,amount:amt});
+    return;
+  }
+  // Fallback: try startPayment then scroll to pricing
+  if(typeof startPayment==='function'){startPayment(_v21Module,_v21Target,0,amt);return;}
   window.location.hash='#pricing';
 }
 (function hookRender(){
@@ -18502,16 +18510,4 @@ function v21TriggerUrgencyPayment(){
   var btn=document.getElementById('v21-wa-btn'),tip=document.getElementById('v21-wa-tooltip');
   if(!btn||!tip)return;
   setTimeout(function(){tip.style.display='block';setTimeout(function(){tip.style.display='none';},5000);},3000);
-  btn.addEventListener('mouseenter',function(){tip.style.display='block';});
-  if(btn.parentElement)btn.parentElement.addEventListener('mouseleave',function(){tip.style.display='none';});
-})();
-
-/* 5. Patch initP12 to not hardcode "all systems operational" */
-(function(){
-  var orig=window.initP12;
-  if(typeof orig==='function'){window.initP12=async function(){await orig.call(this);if(typeof logSOC==='function')logSOC('Phase 12 online - real health verification in progress...','sys','info');};}
-})();
-</script>
-
-</body>
-</html>
+  btn.addEventListener('mouseente

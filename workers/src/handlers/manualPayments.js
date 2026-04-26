@@ -18,34 +18,54 @@ function jsonErr(message, status = 500) {
   });
 }
 
-// ── Payment method config (update these before go-live) ─────────────────────
+// ── Payment method config — LIVE production details ──────────────────────────
 export const PAYMENT_CONFIG = {
-  company_name:    'CyberDudeBivash Pvt. Ltd.',
-  gst_number:      'GSTIN: 23XXXXX1234X1Z5',   // Update with real GSTIN
-  support_email:   'iambivash.bn@gmail.com',
+  company_name:    'CYBERDUDEBIVASH AI Security Hub',
+  owner_name:      'Bivash Kumar Nayak',
+  support_email:   'bivash@cyberdudebivash.com',
+  billing_email:   'bivash@cyberdudebivash.com',
+  whatsapp:        '+918179881447',
   verification_sla: '2–4 hours',
 
+  // Primary UPI — works with PhonePe, GPay, Paytm, BHIM, any UPI app
   upi: [
-    { label: 'Primary UPI',   id: 'cyberdudebivash@upi',     type: 'upi' },
-    { label: 'PhonePe / GPay', id: 'bivash@ibl',              type: 'upi' },
+    { label: 'Axis (Primary)',  id: 'iambivash.bn-5@okaxis',  type: 'upi' },
+    { label: 'Axis Bank',       id: '6302177246@axisbank',    type: 'upi' },
   ],
+  upi_deep_link: 'upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR',
+  upi_qr_url:    '/assets/payment/upi-qr.png',
 
+  // Bank transfer — NEFT / IMPS / RTGS (24x7 via IMPS)
   bank: {
-    account_name:   'CyberDudeBivash Pvt. Ltd.',
-    account_number: 'XXXX XXXX XXXX 4321',   // Update before go-live
-    ifsc:           'SBIN0001234',
-    bank_name:      'State Bank of India',
-    account_type:   'Current Account',
+    account_name:   'Bivash Kumar Nayak',
+    account_number: '915010024617260',
+    ifsc:           'UTIB0000052',
+    bank_name:      'Axis Bank',
+    account_type:   'Savings Account',
+    swift:          'AXISINBB',   // for international wire
   },
 
+  // PayPal — for international customers
   paypal: {
-    email: 'iambivash.bn@gmail.com',
-    note:  'Use "Goods & Services" for international payments',
+    email:   'iambivash.bn@gmail.com',
+    paypalme: 'https://www.paypal.com/paypalme/iambivash',
+    note:    'Use "Friends & Family" to avoid fees. Add product name + email in the note.',
   },
 
+  // Crypto — BNB Smart Chain + Ethereum (same address, BEP20/ERC20)
   crypto: [
-    { coin: 'USDT (TRC-20)', address: 'TYour_USDT_TRC20_Address_Here', network: 'TRON' },
-    { coin: 'BTC',           address: 'bc1q_Your_BTC_Address_Here',    network: 'Bitcoin' },
+    {
+      coin:    'USDT / BNB / ETH (BEP20)',
+      address: '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796',
+      network: 'BNB Smart Chain (BEP20)',
+      note:    'Send ONLY on BNB Smart Chain or Ethereum. Wrong network = lost funds.',
+    },
+    {
+      coin:    'USDT / ETH (ERC20)',
+      address: '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796',
+      network: 'Ethereum Mainnet (ERC20)',
+      note:    'TX Hash is your Transaction ID after sending.',
+    },
   ],
 };
 
@@ -225,28 +245,4 @@ export async function handleVerifyPayment(request, env) {
 
     return jsonOk({ payment_id, status: record.status, message: `Payment ${record.status}.` });
   } catch (e) {
-    return jsonErr('Failed to verify payment: ' + e.message, 500);
-  }
-}
-
-// ── Get payment config (for frontend modal) ───────────────────────────────── */
-export async function handleGetPaymentConfig(request, env) {
-  try {
-    // Return config without sensitive details
-    return jsonOk({
-      config: {
-        company_name:    PAYMENT_CONFIG.company_name,
-        gst_number:      PAYMENT_CONFIG.gst_number,
-        support_email:   PAYMENT_CONFIG.support_email,
-        verification_sla: PAYMENT_CONFIG.verification_sla,
-        upi:    PAYMENT_CONFIG.upi,
-        bank:   PAYMENT_CONFIG.bank,
-        paypal: PAYMENT_CONFIG.paypal,
-        crypto: PAYMENT_CONFIG.crypto,
-      },
-      products: PRODUCT_CATALOG,
-    });
-  } catch (e) {
-    return jsonErr('Failed to get payment config: ' + e.message, 500);
-  }
-}
+    return jsonErr('Failed to verify payment: ' + e.message, 500)
