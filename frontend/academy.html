@@ -954,5 +954,34 @@ function showAcademyDelivery(label, amount) {
   overlay.addEventListener('click', function(e){if(e.target===overlay)overlay.remove();});
 }
 </script>
+
+<script src="/assets/payment-modal.js"></script>
+
+<script>
+/* CDB_PAY -> CDB_PAYMENT bridge (payment-modal.js is the real engine) */
+(function() {
+  function mkBridge() {
+    window.CDB_PAY = {
+      open: function(productId, priceInr, label) {
+        if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+          CDB_PAYMENT.open({
+            product: productId,
+            productLabel: label || productId,
+            amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
+            amount: priceInr ? String(priceInr) : "",
+          });
+        } else { window.location.href = "/#pricing"; }
+      }
+    };
+    /* Also expose openPayment alias */
+    window.openPayment = window.openPayment || function(id, price, label) {
+      window.CDB_PAY.open(id, price, label);
+    };
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mkBridge);
+  } else { mkBridge(); }
+})();
+</script>
 </body>
 </html>

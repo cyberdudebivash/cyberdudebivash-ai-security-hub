@@ -1580,5 +1580,21 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
             });
         });
     </script>
+
+<script src="/assets/payment-modal.js"></script>
+
+<script>
+/* CDB_PAYMENT global bridge for services.html */
+window.openPayment = function(productId, priceInr, label) {
+  if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+    CDB_PAYMENT.open({
+      product: productId,
+      productLabel: label || productId,
+      amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
+      amount: priceInr ? String(priceInr) : "",
+    });
+  } else { window.location.href = "/#pricing"; }
+};
+</script>
 </body>
 </html>
