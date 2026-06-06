@@ -1,23 +1,10 @@
 {
-  "version": "23.0.0",
-  "platform_version": "23.0.0",
-  "commit": "eea6f756486263d6ed4cc8d0b19c9accb7ddb9f1",
-  "commit_short": "eea6f75",
-  "build_time": "2026-06-06T20:30:51Z",
+  "version": "24.0.0",
+  "platform_version": "24.0.0",
+  "commit": "a772963a273fe648e4acbdb45fa592d4617240ef",
+  "commit_short": "a772963",
+  "build_time": "2026-06-06T21:21:41Z",
   "branch": "main",
   "platform": "CYBERDUDEBIVASH AI Security Hub",
-  "changelog": "v23.0.0: RevOS — Revenue Operating System (8 phases: MRR/ARR/CRM/API Economy/Defense Pipeline/MSSP/CS Copilot/CISO Reports)",
-  "engines": {
-    "sentinel_apex": "5.0",
-    "adaptive_cyber_brain": "23.0",
-    "mythos_orchestrator": "3.0",
-    "revos": "1.0",
-    "mrr_engine": "1.0",
-    "sales_engine": "1.0",
-    "api_economy": "1.0",
-    "defense_pipeline": "1.0",
-    "mssp_engine": "1.0",
-    "cs_copilot": "1.0",
-    "ciso_reports": "1.0"
-  }
+  "changelog": "v24.0.0: Revenue Dominance — Billing Engine, Sales OS, Proposal Factory, Scanner Revenue, Trust Center, CEO Command Center"
 }

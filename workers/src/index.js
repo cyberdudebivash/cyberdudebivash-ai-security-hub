@@ -168,6 +168,9 @@ import { handlePredictiveRequest } from './handlers/predictiveHandler.js';
 
 // ─── v23.0 RevOS — Revenue Operating System ───────────────────────────────────
 import { handleRevOS } from './handlers/revosHandler.js';
+
+// ─── v24.0 Revenue Dominance — 10-phase platform ─────────────────────────────
+import { handleV24 } from './handlers/v24Handler.js';
 import { writeMRRSnapshot } from './services/revos/mrrEngine.js';
 import { runCSAnalysis } from './services/revos/msspEngine.js';
 import { queueCVEsForGeneration, runProductPipeline } from './services/revos/apiEconomyEngine.js';
@@ -4135,6 +4138,15 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       ));
     }
 
+    // ── v24.0 Revenue Dominance (/api/v24/*) ─────────────────────────────────
+    if (path.startsWith('/api/v24/')) {
+      const v24AuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      return withSecurityHeaders(withCors(
+        await handleV24(request, env, v24AuthCtx, path, method),
+        request
+      ));
+    }
+
     // ── v22.0 PRODUCTION ROUTE FIXES ─────────────────────────────────────────
     // GET /api/defense-marketplace → alias → /api/defense/solutions (frontend uses old path)
     if (path === '/api/defense-marketplace' && method === 'GET') {
@@ -4379,6 +4391,16 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           .then(r => console.log('[CRON] RevOS MRR:', JSON.stringify(r)))
           .catch(e => console.error('[CRON] RevOS MRR error:', e?.message))
       );
+      // v24.0: Build renewal queue + run payment recovery
+      ctx.waitUntil((async () => {
+        try {
+          const { buildRenewalQueue, runPaymentRecovery } = await import('./services/v24/billingEngine.js');
+          await buildRenewalQueue(env.DB);
+          await runPaymentRecovery(env.DB, env);
+          console.log('[CRON] v24 Billing: renewal queue + recovery run complete');
+        } catch (e) { console.error('[CRON] v24 Billing error:', e?.message); }
+      })());
+
       // v23.0 RevOS: AI CS Analysis
       ctx.waitUntil(
         runCSAnalysis(env.DB)
