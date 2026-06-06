@@ -429,8 +429,17 @@ export async function handleCustomSolutionRequest(request, env, authCtx) {
 function enrichSolution(s) {
   const meta   = CATEGORY_META[s.category] || { label: s.category, icon: '🔧', badge: 'SOLUTION', difficulty: 'INTERMEDIATE' };
   const fomo   = SEVERITY_FOMO[s.severity]  || SEVERITY_FOMO.MEDIUM;
-  const apts   = s.apt_groups ? s.apt_groups.split(',').filter(Boolean) : [];
-  const mitres = s.mitre_techniques ? s.mitre_techniques.split(',').filter(Boolean) : [];
+  // FIX v22.0: apt_groups stored as JSON.stringify([...]) — parse correctly
+  function parseJsonOrCsv(val) {
+    if (!val) return [];
+    const trimmed = val.trim();
+    if (trimmed.startsWith('[')) {
+      try { return JSON.parse(trimmed).filter(Boolean); } catch {}
+    }
+    return trimmed.split(',').map(x => x.replace(/[\[\]"]/g, '').trim()).filter(Boolean);
+  }
+  const apts   = parseJsonOrCsv(s.apt_groups);
+  const mitres = parseJsonOrCsv(s.mitre_techniques);
 
   return {
     id:              s.id,
@@ -464,16 +473,22 @@ function enrichSolution(s) {
 }
 
 function buildSocialProof(s) {
-  const count = s.purchase_count || 0;
-  if (count === 0) return `${Math.floor(Math.random() * 12) + 3} security teams viewed this`;
-  if (count < 5)   return `${count} team${count > 1 ? 's' : ''} deployed this today`;
+  const count  = s.purchase_count || 0;
+  const views  = s.view_count     || 0;
+  // Deterministic seed from id to avoid hydration mismatches on re-render
+  if (count === 0) {
+    const seed = views > 0 ? views : (s.id?.charCodeAt(4) || 7) + 3;
+    const teamsCount = (seed % 13) + 3; // 3-15, stable per solution
+    return `${teamsCount} security teams viewed this`;
+  }
+  if (count < 5)  return `${count} team${count > 1 ? 's' : ''} deployed this today`;
   return `${count} enterprise teams using this`;
 }
 
 function buildTags(s) {
   const tags = [s.severity, s.cve_id];
-  if (s.apt_groups) tags.push(...s.apt_groups.split(',').slice(0, 2));
-  if (s.mitre_techniques) tags.push(s.mitre_techniques.split(',')[0]);
+  if (s.apt_groups) tags.push(...parseJsonOrCsv(s.apt_groups).slice(0, 2));
+  if (s.mitre_techniques) tags.push(parseJsonOrCsv(s.mitre_techniques)[0]);
   return tags.filter(Boolean).slice(0, 5);
 }
 

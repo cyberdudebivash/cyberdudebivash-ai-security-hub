@@ -323,6 +323,35 @@ export async function handleDomainScan(request, env, authCtx = {}) {
       .catch(() => scanResult);
   }
 
+  // ── v22.0: Non-blocking D1 scan tracking (fixes zero-counter bug) ──────────
+  (async () => {
+    try {
+      if (env?.DB) {
+        const jobId = `sync_${scanId}`;
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO scan_jobs
+           (id, module, target, status, risk_level, risk_score, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+        ).bind(
+          jobId, 'domain', domain, 'completed',
+          scanResult.risk_level || 'LOW',
+          scanResult.risk_score || 0
+        ).run();
+        // Write to scan_history for authenticated users
+        if (authCtx?.user_id) {
+          await env.DB.prepare(
+            `INSERT INTO scan_history (user_id, job_id, scan_id, target, module, risk_score, risk_level, grade, data_source, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            authCtx.user_id, jobId, scanId, domain, 'domain',
+            scanResult.risk_score || 0, scanResult.risk_level || 'LOW',
+            scanResult.grade || 'A', dataSource, 'completed'
+          ).run();
+        }
+      }
+    } catch { /* non-blocking — never fail the scan response */ }
+  })();
+
   return Response.json(addMonetizationFlags(scanResult, 'domain', authCtx, scanId), {
     status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v21.0' },

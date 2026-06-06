@@ -125,7 +125,9 @@ export async function handleMythosMetrics(request, env, authCtx) {
       env.SECURITY_HUB_KV?.get('mythos:metrics', 'json').catch(() => null),
       env.SECURITY_HUB_KV?.get('mythos:last_run', 'json').catch(() => null),
       env.DB?.prepare(`SELECT COUNT(*) as total, SUM(purchase_count) as sales, SUM(view_count) as views FROM defense_solutions WHERE is_active=1`).first().catch(() => null),
-      env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN solution_generated=1 THEN 1 ELSE 0 END) as processed FROM threat_intel`).first().catch(() => null),
+      env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN is_exploited=1 OR known_ransomware=1 THEN 1 ELSE 0 END) as processed FROM threat_intel`).first().catch(() =>
+        env.DB?.prepare(`SELECT COUNT(*) as total, 0 as processed FROM threat_intel`).first().catch(() => null)
+      ),
     ]);
     return json({
       success:    true,

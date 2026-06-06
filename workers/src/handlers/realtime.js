@@ -244,24 +244,41 @@ async function buildPlatformStats(env) {
 
   if (env?.DB) {
     try {
-      const [scans, threats, crits, highs] = await Promise.all([
-        env.DB.prepare(`SELECT COUNT(*) as n FROM scan_history WHERE scanned_at > datetime('now', '-1 day')`).first(),
+      // v22.0: Query both scan_jobs and scan_history for full coverage
+      const [scansJobs, scansHist, threats, crits, highs, lastScan] = await Promise.all([
+        env.DB.prepare(`SELECT COUNT(*) as n FROM scan_jobs WHERE created_at > datetime('now', '-1 day')`).first().catch(() => ({ n: 0 })),
+        env.DB.prepare(`SELECT COUNT(*) as n FROM scan_history WHERE scanned_at > datetime('now', '-1 day')`).first().catch(() => ({ n: 0 })),
         env.DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')`).first().catch(() => ({ n: 0 })),
         env.DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE severity = 'CRITICAL'`).first().catch(() => ({ n: 0 })),
         env.DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE severity = 'HIGH'`).first().catch(() => ({ n: 0 })),
+        env.DB.prepare(`SELECT created_at FROM scan_jobs ORDER BY created_at DESC LIMIT 1`).first().catch(() => null),
       ]);
-      stats.total_scans_today = scans?.n    || 0;
+      const totalScans = Math.max((scansJobs?.n || 0), (scansHist?.n || 0));
+      stats.total_scans_today = totalScans;
       stats.active_threats    = threats?.n  || 0;
       stats.critical_cves     = crits?.n    || 0;
       stats.high_cves         = highs?.n    || 0;
-      stats.scans_per_hour    = Math.round((scans?.n || 0) / 24);
+      stats.scans_per_hour    = Math.round(totalScans / 24);
+      if (lastScan?.created_at) {
+        stats.last_scan_ago_sec = Math.round((Date.now() - new Date(lastScan.created_at).getTime()) / 1000);
+      }
     } catch {}
   }
 
-  // Derive threat level
-  if (stats.critical_cves > 5)      stats.threat_level = 'CRITICAL';
+  // v22.0: Derive threat level from D1 counts OR KV sentinel data
+  if (stats.critical_cves === 0 && stats.active_threats === 0 && env?.SECURITY_HUB_KV) {
+    // Fallback: read from KV sentinel feed meta for more accurate level
+    try {
+      const kvMeta = await env.SECURITY_HUB_KV.get('sentinel:feed:meta', 'json');
+      if (kvMeta?.critical_count) stats.critical_cves = kvMeta.critical_count;
+      if (kvMeta?.high_count)     stats.high_cves     = kvMeta.high_count;
+      if (kvMeta?.total_cves)     stats.active_threats = kvMeta.total_cves;
+    } catch {}
+  }
+  if (stats.critical_cves > 5)       stats.threat_level = 'CRITICAL';
   else if (stats.critical_cves > 2)  stats.threat_level = 'HIGH';
-  else if (stats.high_cves > 10)     stats.threat_level = 'ELEVATED';
+  else if (stats.high_cves > 5)      stats.threat_level = 'ELEVATED';
+  else if (stats.active_threats > 0) stats.threat_level = 'MODERATE';
   else                               stats.threat_level = 'MODERATE';
 
   return stats;

@@ -23,6 +23,25 @@ export async function handleAIScan(request, env, authCtx = {}) {
 
   const scanId  = genScanId();
   const result  = aiScanEngine(nameVal.value, ucVal.value);
+  // v22.0: Non-blocking D1 scan tracking (fire-and-forget)
+  void (async () => {
+    try {
+      if (env?.DB) {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO scan_jobs
+           (id, module, target, status, risk_level, risk_score, created_at, updated_at)
+           VALUES (?, ?, ?, 'completed', ?, ?, datetime('now'), datetime('now'))`
+        ).bind(
+          'sync_' + Date.now().toString(36),
+          'ai',
+          nameVal?.value || body?.model_name || body?.identifier || 'unknown',
+          result?.risk_level || result?.overall_risk || 'LOW',
+          result?.risk_score  || result?.overall_score || 0
+        ).run();
+      }
+    } catch { /* non-blocking */ }
+  })();
+
   return Response.json(addMonetizationFlags(result, 'ai', authCtx, scanId), { status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'ai' } });
 }

@@ -475,11 +475,10 @@ export async function getPendingSolutionIntel(env, limit = 10) {
   try {
     const rows = await env.DB.prepare(`
       SELECT * FROM threat_intel
-      WHERE solution_generated = 0
-        AND severity IN ('CRITICAL', 'HIGH')
+      WHERE severity IN ('CRITICAL', 'HIGH')
       ORDER BY
         CASE severity WHEN 'CRITICAL' THEN 2 WHEN 'HIGH' THEN 1 ELSE 0 END DESC,
-        cvss DESC
+        COALESCE(cvss, cvss_score, 0) DESC
       LIMIT ?
     `).bind(limit).all();
 
@@ -499,8 +498,8 @@ export async function getPendingSolutionIntel(env, limit = 10) {
 export async function markSolutionGenerated(env, intelId, productId) {
   if (!env.DB) return;
   await env.DB.prepare(
-    `UPDATE threat_intel SET solution_generated = 1, product_id = ? WHERE id = ?`
-  ).bind(productId, intelId).run().catch(() => {});
+    `UPDATE threat_intel SET updated_at = datetime('now') WHERE id = ? OR cve_id = ?`
+  ).bind(intelId, intelId).run().catch(() => {});
 }
 
 // ─── Get all ingested intel (for dashboard) ───────────────────────────────────
@@ -523,7 +522,7 @@ export async function getIntelFeed(env, opts = {}) {
       bindings.push(severity);
     }
     if (with_solutions) {
-      sql += ` AND ti.solution_generated = 1`;
+      // solution_generated column not in v15 schema — skip filter
     }
 
     sql += ` ORDER BY CASE ti.severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 ELSE 1 END DESC, ti.cvss_score DESC LIMIT ?`;

@@ -1,21 +1,22 @@
 {
-  "version": "21.0.0",
-  "platform_version": "21.0.0",
-  "commit": "INJECT_AT_BUILD",
-  "commit_short": "INJECT_AT_BUILD",
-  "build_time": "INJECT_AT_BUILD",
+  "version": "22.0.0",
+  "platform_version": "22.0.0",
+  "commit": "3f07f488ae239af746789a4804a4f7d0c3cebc6f",
+  "commit_short": "3f07f48",
+  "build_time": "2026-06-06T19:17:25Z",
   "branch": "main",
   "platform": "CYBERDUDEBIVASH AI Security Hub",
+  "changelog": "v22.0.0: Production fix — scan tracking, apt_groups parse, route aliases, realtime stats, D1 intel sync",
   "engines": {
     "sentinel_apex": "5.0",
-    "adaptive_cyber_brain": "21.0",
+    "adaptive_cyber_brain": "22.0",
     "mythos_orchestrator": "3.0",
     "anomaly_detection": "3.0",
     "predictive_intel": "3.0",
     "agentic_ai": "3.0",
     "virtual_waf": "2.0",
     "revenue_autopilot": "2.0",
-    "mcp_control": "21.0",
+    "mcp_control": "22.0",
     "threat_fusion": "2.0",
     "zero_trust": "2.0",
     "authority_engine": "2.0",
@@ -29,6 +30,6 @@
     "virtual_patching", "mythos_tools", "global_scale", "mssp",
     "revenue_autopilot", "ab_testing", "mcp_control", "loss_prevention",
     "adaptive_cyber_brain", "threat_fusion", "zero_trust",
-    "visitor_intelligence", "attack_chain_prediction"
+    "visitor_intelligence", "attack_chain_prediction", "scan_tracking_d1"
   ]
 }

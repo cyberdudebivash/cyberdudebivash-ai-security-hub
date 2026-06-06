@@ -14,6 +14,25 @@ export async function handleRedteamScan(request, env, authCtx = {}) {
   const scopeVal  = validateEnum(body?.scope || 'external', 'scope', VALID_SCOPES, 'external');
   const scanId    = genScanId();
   const result    = redteamEngine(orgVal.value, scopeVal.value);
+  // v22.0: Non-blocking D1 scan tracking (fire-and-forget)
+  void (async () => {
+    try {
+      if (env?.DB) {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO scan_jobs
+           (id, module, target, status, risk_level, risk_score, created_at, updated_at)
+           VALUES (?, ?, ?, 'completed', ?, ?, datetime('now'), datetime('now'))`
+        ).bind(
+          'sync_' + Date.now().toString(36),
+          'redteam',
+          body?.org || body?.target || body?.domain || 'unknown',
+          result?.risk_level || result?.overall_risk || 'LOW',
+          result?.risk_score  || result?.overall_score || 0
+        ).run();
+      }
+    } catch { /* non-blocking */ }
+  })();
+
   return Response.json(addMonetizationFlags(result, 'redteam', authCtx, scanId), { status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'redteam' } });
 }

@@ -4120,6 +4120,32 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }
     }
 
+    // ── v22.0 PRODUCTION ROUTE FIXES ─────────────────────────────────────────
+    // GET /api/defense-marketplace → alias → /api/defense/solutions (frontend uses old path)
+    if (path === '/api/defense-marketplace' && method === 'GET') {
+      const { handleGetSolutions } = await import('./handlers/defenseMarketplace.js');
+      return withSecurityHeaders(withCors(await handleGetSolutions(request, env, {}), request));
+    }
+
+    // GET /api/gtm/funnel-dashboard → alias (frontend GTM module calls this)
+    if (path === '/api/gtm/funnel-dashboard' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleFunnelDashboard(request, env), request));
+    }
+
+    // GET /api/auth/plans → alias → /api/subscription/plans
+    if (path === '/api/auth/plans' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetPlans(request, env), request));
+    }
+
+    // GET /api/ai/analyze → GET method alias (POST is the canonical — return helpful 405)
+    if (path === '/api/ai/analyze' && method === 'GET') {
+      return withSecurityHeaders(withCors(Response.json({
+        error: 'Method Not Allowed',
+        hint: 'POST /api/ai/analyze with body: { target, module, findings }',
+        docs: 'GET /api',
+      }, { status: 405 }), request));
+    }
+
     // ── 404 ─────────────────────────────────────────────────────────────────
     return withSecurityHeaders(withCors(Response.json({
       error:    'Not Found',
