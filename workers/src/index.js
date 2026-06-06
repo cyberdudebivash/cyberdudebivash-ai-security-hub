@@ -165,6 +165,12 @@ import { handleStripeWebhook } from './handlers/stripeWebhook.js';
 import { handleAgentRequest }      from './handlers/agentHandler.js';
 import { handleAnomalyRequest }    from './handlers/anomalyHandler.js';
 import { handlePredictiveRequest } from './handlers/predictiveHandler.js';
+
+// ─── v23.0 RevOS — Revenue Operating System ───────────────────────────────────
+import { handleRevOS } from './handlers/revosHandler.js';
+import { writeMRRSnapshot } from './services/revos/mrrEngine.js';
+import { runCSAnalysis } from './services/revos/msspEngine.js';
+import { queueCVEsForGeneration, runProductPipeline } from './services/revos/apiEconomyEngine.js';
 import { runAnomalyBatch }         from './services/anomalyEngine.js';
 import { runPredictiveBatch }      from './services/predictiveEngine.js';
 import { runPatchingBatch, expireStalePatches } from './agents/patchingAgent.js';
@@ -4120,6 +4126,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }
     }
 
+    // ── v23.0 RevOS — Revenue Operating System (/api/revos/*) ─────────────────
+    if (path.startsWith('/api/revos/')) {
+      return withSecurityHeaders(withCors(
+        await handleRevOS(request, env, authCtx, path, method),
+        request
+      ));
+    }
+
     // ── v22.0 PRODUCTION ROUTE FIXES ─────────────────────────────────────────
     // GET /api/defense-marketplace → alias → /api/defense/solutions (frontend uses old path)
     if (path === '/api/defense-marketplace' && method === 'GET') {
@@ -4358,29 +4372,41 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
     // ── v10.0 Revenue Snapshot — daily KPI capture ────────────────────────────
     if (cron === '0 23 * * *' || cron === '0 0 * * *') {
+      // v23.0 RevOS: MRR Snapshot
+      ctx.waitUntil(
+        writeMRRSnapshot(env.DB)
+          .then(r => console.log('[CRON] RevOS MRR:', JSON.stringify(r)))
+          .catch(e => console.error('[CRON] RevOS MRR error:', e?.message))
+      );
+      // v23.0 RevOS: AI CS Analysis
+      ctx.waitUntil(
+        runCSAnalysis(env.DB)
+          .then(r => console.log('[CRON] RevOS CS:', JSON.stringify(r)))
+          .catch(e => console.error('[CRON] RevOS CS error:', e?.message))
+      );
+      // v23.0 RevOS: Auto-queue critical CVEs for product generation
       ctx.waitUntil((async () => {
         try {
-          // Capture daily revenue snapshot
+          const critCVEs = await env.DB?.prepare(`SELECT id, title, cvss, severity FROM threat_intel WHERE severity IN ('CRITICAL','HIGH') AND id NOT IN (SELECT cve_id FROM product_pipeline) ORDER BY COALESCE(cvss, cvss_score, 0) DESC LIMIT 5`).all().catch(() => ({ results: [] }));
+          if (critCVEs?.results?.length > 0) {
+            await queueCVEsForGeneration(env.DB, critCVEs.results);
+            for (const cve of critCVEs.results.slice(0, 2)) { await runProductPipeline(env.DB, cve.id).catch(() => {}); }
+            console.log('[CRON] RevOS Pipeline queued:', critCVEs.results.length);
+          }
+        } catch (e) { console.error('[CRON] RevOS Pipeline error:', e?.message); }
+      })());
+      // v10 legacy snapshot
+      ctx.waitUntil((async () => {
+        try {
           const today = new Date().toISOString().slice(0, 10);
           const [subRow, defRow, totalUsers] = await Promise.allSettled([
             env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount) as rev FROM revenue_events WHERE event_type='subscription_payment' AND DATE(created_at)=?`).bind(today).first(),
             env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
             env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
           ]);
-          await env.DB?.prepare(
-            `INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users)
-             VALUES (?,?,?,?,?,?)`
-          ).bind(
-            crypto.randomUUID(), today,
-            (subRow.value?.rev || 0) + (defRow.value?.rev || 0),
-            defRow.value?.cnt || 0,
-            defRow.value?.rev || 0,
-            totalUsers.value?.total || 0,
-          ).run();
-          console.log(`[CRON] v10 Revenue Snapshot: ${today} captured`);
-        } catch (e) {
-          console.error('[CRON] v10 Revenue Snapshot error:', e?.message);
-        }
+          await env.DB?.prepare(`INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(), today, (subRow.value?.rev || 0) + (defRow.value?.rev || 0), defRow.value?.cnt || 0, defRow.value?.rev || 0, totalUsers.value?.total || 0).run();
+          console.log(`[CRON] v10 Revenue Snapshot: ${today}`);
+        } catch (e) { console.error('[CRON] v10 Snapshot error:', e?.message); }
       })());
     }
 

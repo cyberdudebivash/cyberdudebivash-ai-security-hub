@@ -1,35 +1,23 @@
 {
-  "version": "22.0.0",
-  "platform_version": "22.0.0",
-  "commit": "3f07f488ae239af746789a4804a4f7d0c3cebc6f",
-  "commit_short": "3f07f48",
-  "build_time": "2026-06-06T19:17:25Z",
+  "version": "23.0.0",
+  "platform_version": "23.0.0",
+  "commit": "eea6f756486263d6ed4cc8d0b19c9accb7ddb9f1",
+  "commit_short": "eea6f75",
+  "build_time": "2026-06-06T20:30:51Z",
   "branch": "main",
   "platform": "CYBERDUDEBIVASH AI Security Hub",
-  "changelog": "v22.0.0: Production fix — scan tracking, apt_groups parse, route aliases, realtime stats, D1 intel sync",
+  "changelog": "v23.0.0: RevOS — Revenue Operating System (8 phases: MRR/ARR/CRM/API Economy/Defense Pipeline/MSSP/CS Copilot/CISO Reports)",
   "engines": {
     "sentinel_apex": "5.0",
-    "adaptive_cyber_brain": "22.0",
+    "adaptive_cyber_brain": "23.0",
     "mythos_orchestrator": "3.0",
-    "anomaly_detection": "3.0",
-    "predictive_intel": "3.0",
-    "agentic_ai": "3.0",
-    "virtual_waf": "2.0",
-    "revenue_autopilot": "2.0",
-    "mcp_control": "22.0",
-    "threat_fusion": "2.0",
-    "zero_trust": "2.0",
-    "authority_engine": "2.0",
-    "visitor_intelligence": "1.0"
-  },
-  "capabilities": [
-    "domain_scan", "ai_scan", "redteam", "identity", "compliance",
-    "soc_automation", "threat_intel", "attack_graph", "ai_brain",
-    "realtime_feed", "siem_export", "defense_marketplace",
-    "agentic_remediation", "behavioral_anomaly", "predictive_threats",
-    "virtual_patching", "mythos_tools", "global_scale", "mssp",
-    "revenue_autopilot", "ab_testing", "mcp_control", "loss_prevention",
-    "adaptive_cyber_brain", "threat_fusion", "zero_trust",
-    "visitor_intelligence", "attack_chain_prediction", "scan_tracking_d1"
-  ]
+    "revos": "1.0",
+    "mrr_engine": "1.0",
+    "sales_engine": "1.0",
+    "api_economy": "1.0",
+    "defense_pipeline": "1.0",
+    "mssp_engine": "1.0",
+    "cs_copilot": "1.0",
+    "ciso_reports": "1.0"
+  }
 }
