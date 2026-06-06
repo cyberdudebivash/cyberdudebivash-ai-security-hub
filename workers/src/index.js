@@ -4128,8 +4128,9 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
     // ── v23.0 RevOS — Revenue Operating System (/api/revos/*) ─────────────────
     if (path.startsWith('/api/revos/')) {
+      const revosAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
       return withSecurityHeaders(withCors(
-        await handleRevOS(request, env, authCtx, path, method),
+        await handleRevOS(request, env, revosAuthCtx, path, method),
         request
       ));
     }
