@@ -1,0 +1,46 @@
+-- CYBERDUDEBIVASH v23.0 RevOS — Indexes only (run second)
+
+CREATE INDEX IF NOT EXISTS idx_sub_user     ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sub_plan     ON subscriptions(plan);
+CREATE INDEX IF NOT EXISTS idx_sub_status   ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_sub_email    ON subscriptions(email);
+CREATE INDEX IF NOT EXISTS idx_sub_created  ON subscriptions(created_at );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mrr_date ON mrr_snapshots(snapshot_date);
+CREATE INDEX IF NOT EXISTS idx_churn_date ON churn_events(churned_at );
+CREATE INDEX IF NOT EXISTS idx_churn_plan ON churn_events(plan);
+CREATE INDEX IF NOT EXISTS idx_cac_channel ON cac_events(channel);
+CREATE INDEX IF NOT EXISTS idx_cac_date    ON cac_events(event_date );
+CREATE INDEX IF NOT EXISTS idx_deal_stage   ON deal_pipeline(stage);
+CREATE INDEX IF NOT EXISTS idx_deal_value   ON deal_pipeline(deal_value_inr );
+CREATE INDEX IF NOT EXISTS idx_deal_email   ON deal_pipeline(contact_email);
+CREATE INDEX IF NOT EXISTS idx_deal_updated ON deal_pipeline(updated_at );
+CREATE INDEX IF NOT EXISTS idx_icp_email ON icp_scores(email);
+CREATE INDEX IF NOT EXISTS idx_icp_score ON icp_scores(total_score );
+CREATE INDEX IF NOT EXISTS idx_prop_deal    ON proposals(deal_id);
+CREATE INDEX IF NOT EXISTS idx_prop_status  ON proposals(status);
+CREATE INDEX IF NOT EXISTS idx_prop_created ON proposals(created_at );
+CREATE INDEX IF NOT EXISTS idx_apib_key     ON api_billing(api_key_id);
+CREATE INDEX IF NOT EXISTS idx_apib_period  ON api_billing(billing_period);
+CREATE INDEX IF NOT EXISTS idx_apib_created ON api_billing(created_at );
+CREATE INDEX IF NOT EXISTS idx_apib_user    ON api_billing(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_apisum_key_period ON api_usage_summary(api_key_id, period);
+CREATE INDEX IF NOT EXISTS idx_pp_cve    ON product_pipeline(cve_id);
+CREATE INDEX IF NOT EXISTS idx_pp_status ON product_pipeline(status);
+CREATE INDEX IF NOT EXISTS idx_mssp_owner  ON mssp_clients(mssp_user_id);
+CREATE INDEX IF NOT EXISTS idx_mssp_status ON mssp_clients(status);
+CREATE INDEX IF NOT EXISTS idx_mssp_health ON mssp_clients(health_score );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_msspbill_period ON mssp_billing(client_id, period);
+CREATE INDEX IF NOT EXISTS idx_cs_user    ON cs_signals(user_id);
+CREATE INDEX IF NOT EXISTS idx_cs_type    ON cs_signals(signal_type);
+CREATE INDEX IF NOT EXISTS idx_cs_created ON cs_signals(created_at );
+CREATE INDEX IF NOT EXISTS idx_ciso_user   ON ciso_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_ciso_type   ON ciso_reports(report_type);
+CREATE INDEX IF NOT EXISTS idx_ciso_status ON ciso_reports(status);
+CREATE INDEX IF NOT EXISTS idx_audit_user    ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_action  ON audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rl_identifier ON rate_limit_log(identifier, window);
+
+-- ── Safe column additions (handles re-runs on partially migrated DB) ─────────
+ALTER TABLE proposals ADD COLUMN IF NOT EXISTS deal_id TEXT;
+ALTER TABLE icp_scores ADD COLUMN IF NOT EXISTS deal_id TEXT;

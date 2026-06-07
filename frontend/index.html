@@ -53,7 +53,51 @@
     </script>
     </head>
 <body>
-    </body>
+    <script>
+// ── v25: Initialize stats with live API data on first page load ─────────────
+(function initLiveStats() {
+  async function loadStats() {
+    try {
+      const [h, ti] = await Promise.all([
+        fetch('/api/health').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/threat-intel/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      const totalScans = h?.stats?.total_scans ?? h?.total_scans ?? null;
+      const totalCVE   = ti?.total_cves ?? ti?.total ?? null;
+      const critCnt    = ti?.critical_cves ?? ti?.stats?.critical ?? null;
+
+      const elSS = document.getElementById('stat-scans');
+      const elSC = document.getElementById('stat-cves');
+      const elST = document.getElementById('stat-threats');
+      if (elSS && totalScans !== null) elSS.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+      if (elSC && totalCVE   !== null) elSC.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+      if (elST && critCnt    !== null) elST.textContent = critCnt + ' critical';
+
+      // p4 counters
+      const _p4s = document.getElementById('p4-cnt-scans');
+      if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
+      const _gtb = document.getElementById('gtm-blocked');
+      if (_gtb && totalScans !== null) _gtb.textContent = Number(totalScans).toLocaleString('en-IN');
+
+      // Hero live scan count
+      const heroLive = document.getElementById('hero-live-scans');
+      if (heroLive && totalScans !== null) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+
+      // ann-revenue-count
+      const annRev = document.getElementById('ann-revenue-count');
+      // Only update if we have real data from defense stats
+    } catch(e) {
+      // Silently fail — placeholders stay as '—'
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadStats);
+  } else {
+    loadStats();
+  }
+})();
+</script>
+</body>
 </html>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -66,7 +110,7 @@
 <meta property="og:site_name" content="CYBERDUDEBIVASH AI Security Hub">
 <meta property="og:locale" content="en_IN">
 <meta property="og:title" content="CYBERDUDEBIVASH AI Security Hub | Real-Time Cybersecurity Intelligence">
-<meta property="og:description" content="AI-powered platform: domain scanning, AI threat detection (OWASP LLM Top 10), red team simulation, identity & compliance. Trusted by 1,200+ enterprises. Free preview available.">
+<meta property="og:description" content="AI-powered platform: domain scanning, AI threat detection (OWASP LLM Top 10), red team simulation, identity & compliance. Free preview available. Reports from ₹199.">
 <!-- og:image — MUST be absolute URL. File exists at /og-image.png (served directly by _redirects before SPA wildcard) -->
 <meta property="og:image" content="https://cyberdudebivash.in/og-image.png">
 <meta property="og:image:secure_url" content="https://cyberdudebivash.in/og-image.png">
@@ -502,12 +546,12 @@ a{color:var(--accent);text-decoration:none}
 <div class="ann-bar" style="overflow:hidden;padding:7px 0">
   <span class="ann-marquee">
     🔴 LIVE: Sentinel APEX monitoring <strong>CVEs in real-time</strong> &nbsp;|&nbsp;
-    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v21.0</span> — The World's #1 AI Cybersecurity Intelligence Engine &nbsp;|&nbsp;
+    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v25.0</span> — AI-Powered Cybersecurity Intelligence Platform &nbsp;|&nbsp;
     🛡️ Defense products auto-generated from every critical CVE &nbsp;|&nbsp;
     📡 <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="color:#fff;font-weight:800">Join Sentinel APEX on Telegram →</a> &nbsp;|&nbsp;
     🚀 Enterprise packages from ₹9,999 &nbsp;|&nbsp;
     🛠️ <a href="https://tools.cyberdudebivash.com" target="_blank" style="color:#fff">Production Tools Suite</a> &nbsp;|&nbsp;
-    💰 <strong id="ann-revenue-count">847+</strong> security products sold &nbsp;|&nbsp;
+    💰 <strong id="ann-revenue-count">—</strong> security products sold &nbsp;|&nbsp;
     🌐 Global threat intel: <strong id="ann-cve-count">loading...</strong> CVEs tracked &nbsp;|&nbsp;
   </span>
 </div>
@@ -536,7 +580,7 @@ a{color:var(--accent);text-decoration:none}
   <span class="soc-sep">|</span>
   <div class="soc-indicator" title="Live version from /api/version">
     <span style="color:var(--accent);font-weight:800">⬡</span>
-    <span id="soc-version">v21.0</span>
+    <span id="soc-version">v25.0</span>
   </div>
   <span class="soc-sep" style="margin-left:auto">|</span>
   <div class="soc-indicator" id="soc-threat-level" title="Global threat level">
@@ -650,7 +694,7 @@ a{color:var(--accent);text-decoration:none}
   backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
 ">
   <span style="color:#22c55e;font-weight:800">● LIVE</span>
-  <span>⚡ Platform <span style="color:#00ff88;font-weight:900" id="sb-version">v21.0</span></span>
+  <span>⚡ Platform <span style="color:#00ff88;font-weight:900" id="sb-version">v25.0</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
   <span>🧠 Adaptive Brain <span style="color:#00d4ff">ACTIVE</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
@@ -659,7 +703,7 @@ a{color:var(--accent);text-decoration:none}
   <span>🤖 MYTHOS v3 <span style="color:#a855f7">RUNNING</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
   <span>👥 <span id="sb-online" style="color:#f59e0b">...</span> online now</span>
-  <span style="margin-left:auto;color:rgba(255,255,255,.2)">cyberdudebivash.in · production · v21.0.0</span>
+  <span style="margin-left:auto;color:rgba(255,255,255,.2)">cyberdudebivash.in · production · v25.0.0</span>
 </div>
 <script>
 (function CDB_STATUS_BAR(){
@@ -827,7 +871,7 @@ a{color:var(--accent);text-decoration:none}
       </span>
     </div>
     <div style="font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.75);margin-top:6px;text-transform:uppercase;font-weight:700;text-shadow:0 0 20px rgba(0,212,255,.3)">
-      Enterprise · AI-Powered · India's #1 Cybersecurity Intelligence Platform
+      Enterprise · AI-Powered · Cybersecurity Intelligence Platform
     </div>
   </div>
   <style>
@@ -840,7 +884,7 @@ a{color:var(--accent);text-decoration:none}
   <!-- Enterprise trust bar — above H1 for authority signal -->
   <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:30px;padding:5px 16px;margin-bottom:20px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.08em">
     <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 6px #10b981;animation:pulse 2s infinite"></span>
-    LIVE THREAT MONITORING · 1,200+ ENTERPRISES SECURED · INDIA'S #1 AI CYBERSECURITY PLATFORM
+    LIVE THREAT MONITORING · AI-POWERED THREAT DETECTION · MITRE ATT&CK · OWASP LLM TOP 10
   </div>
 
   <h1 style="font-size:clamp(28px,5vw,54px);font-weight:900;line-height:1.08;margin-bottom:16px;letter-spacing:-.5px;text-shadow:0 2px 40px rgba(0,212,255,.15),0 0 80px rgba(124,58,237,.1)">
@@ -894,7 +938,7 @@ a{color:var(--accent);text-decoration:none}
     <span class="badge">🇮🇳 DPDP Act 2023</span>
     <span class="badge">📋 ISO 27001 · GDPR · PCI-DSS</span>
     <span class="badge" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#10b981">✅ Free Preview — No Card Required</span>
-    <span class="badge" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25);color:#f59e0b">⭐ 4.8/5 by 312 enterprises</span>
+    <span class="badge" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25);color:#22c55e">✅ Free Preview — No Card Required</span>
   </div>
 
   <!-- Secondary CTAs -->
@@ -957,16 +1001,16 @@ a{color:var(--accent);text-decoration:none}
 <div class="stats-row">
   <div class="stats-inner">
     <div class="stat-item">
-      <div class="stat-num" id="stat-scans">124K+</div>
+      <div class="stat-num" id="stat-scans" style="color:#00d4ff">—</div>
       <div class="stat-label">Scans Performed</div>
     </div>
     <div class="stat-item">
-      <div class="stat-num" style="color:#ef4444">98K+</div>
+      <div class="stat-num" style="color:#ef4444" id="stat-threats">—</div>
       <div class="stat-label">Threats Detected</div>
     </div>
     <div class="stat-item">
-      <div class="stat-num">1,200+</div>
-      <div class="stat-label">Enterprises Secured</div>
+      <div class="stat-num" id="stat-cves">—</div>
+      <div class="stat-label">CVEs Tracked Live</div>
     </div>
     <div class="stat-item">
       <div class="stat-num">5</div>
@@ -1161,27 +1205,27 @@ a{color:var(--accent);text-decoration:none}
         <div class="dash-panel-title">📋 Recent Scans</div>
         <div class="scan-log-item">
           <span style="font-size:16px">🌐</span>
-          <div style="flex:1;min-width:0"><div class="scan-log-target">example.com</div><div class="scan-log-meta">Domain · 2 min ago</div></div>
+          <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t1">Loading...</div><div class="scan-log-meta" id="rs-m1">Fetching live data</div></div>
           <span class="scan-log-badge" style="background:rgba(245,158,11,.2);color:#f59e0b">HIGH</span>
         </div>
         <div class="scan-log-item">
           <span style="font-size:16px">🤖</span>
-          <div style="flex:1;min-width:0"><div class="scan-log-target">GPT-4o Agent</div><div class="scan-log-meta">AI Security · 8 min ago</div></div>
+          <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t2">—</div><div class="scan-log-meta" id="rs-m2">—</div></div>
           <span class="scan-log-badge" style="background:rgba(239,68,68,.2);color:#ef4444">CRITICAL</span>
         </div>
         <div class="scan-log-item">
           <span style="font-size:16px">🎯</span>
-          <div style="flex:1;min-width:0"><div class="scan-log-target">Acme Corp</div><div class="scan-log-meta">Red Team · 15 min ago</div></div>
+          <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t3">—</div><div class="scan-log-meta" id="rs-m3">—</div></div>
           <span class="scan-log-badge" style="background:rgba(59,130,246,.2);color:#3b82f6">MEDIUM</span>
         </div>
         <div class="scan-log-item">
           <span style="font-size:16px">🔐</span>
-          <div style="flex:1;min-width:0"><div class="scan-log-target">TechStart Inc</div><div class="scan-log-meta">Identity · 32 min ago</div></div>
+          <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t4">—</div><div class="scan-log-meta" id="rs-m4">—</div></div>
           <span class="scan-log-badge" style="background:rgba(16,185,129,.2);color:#10b981">LOW</span>
         </div>
         <div class="scan-log-item">
           <span style="font-size:16px">📋</span>
-          <div style="flex:1;min-width:0"><div class="scan-log-target">ISO 27001 Audit</div><div class="scan-log-meta">Compliance · 1 hr ago</div></div>
+          <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t5">—</div><div class="scan-log-meta" id="rs-m5">—</div></div>
           <span class="scan-log-badge" style="background:rgba(245,158,11,.2);color:#f59e0b">HIGH</span>
         </div>
       </div>
@@ -1359,7 +1403,7 @@ a{color:var(--accent);text-decoration:none}
           <button class="soc-refresh-btn" onclick="socClearLog()" style="margin-left:auto">CLR</button>
         </div>
         <div class="soc-log-feed" id="socLogFeed">
-          <div class="soc-log-line soc-log-info"><span class="soc-log-ts" id="soc-log-init-ts">--:--:--</span><span class="soc-log-tag soc-tag-info">SYS</span><span>CYBERDUDEBIVASH SOC Platform v21.0 — Adaptive Cyber Brain ONLINE · Sentinel APEX v5.0 · MYTHOS v3.0</span></div>
+          <div class="soc-log-line soc-log-info"><span class="soc-log-ts" id="soc-log-init-ts">--:--:--</span><span class="soc-log-tag soc-tag-info">SYS</span><span>CYBERDUDEBIVASH SOC Platform v25.0 — Adaptive Cyber Brain ONLINE · Sentinel APEX v5.0 · MYTHOS v3.0</span></div>
           <div class="soc-log-line soc-log-ok"><span class="soc-log-ts">--:--:--</span><span class="soc-log-tag soc-tag-ok">OK</span><span>All engines online - Sentinel APEX, MYTHOS, AI CyberBrain active</span></div>
         </div>
       </div>
@@ -2299,7 +2343,7 @@ a{color:var(--accent);text-decoration:none}
             Unlock →
           </button>
         </div>
-        <div style="text-align:right;margin-top:6px"><a href="#" onclick="event.stopPropagation();window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
+        
       </div>
       ${s.is_featured ? '<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#ef4444);color:#000;font-size:9px;font-weight:900;padding:3px 12px;border-radius:999px;letter-spacing:.1em;white-space:nowrap">★ LIVE THREAT FIX</div>' : ''}
     </div>`;
@@ -3582,7 +3626,7 @@ a{color:var(--accent);text-decoration:none}
     <!-- Authority Strip -->
     <div id="p4-authority-strip" style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:48px">
       <div class="p4-authority-pill">
-        <span class="p4-auth-num" id="p4-scan-count">12,847+</span>
+        <span class="p4-auth-num" id="p4-scan-count">—</span>
         <span class="p4-auth-lbl">Security Scans</span>
       </div>
       <div class="p4-authority-pill">
@@ -3590,7 +3634,7 @@ a{color:var(--accent);text-decoration:none}
         <span class="p4-auth-lbl">Threats Neutralized</span>
       </div>
       <div class="p4-authority-pill">
-        <span class="p4-auth-num" id="p4-user-count">847+</span>
+        <span class="p4-auth-num" id="p4-user-count">—</span>
         <span class="p4-auth-lbl">Protected Organizations</span>
       </div>
       <div class="p4-authority-pill">
@@ -4108,15 +4152,15 @@ a{color:var(--accent);text-decoration:none}
         </div>
         <div style="display:flex;gap:32px;justify-content:center;flex-wrap:wrap" id="p4-live-counters">
           <div style="text-align:center">
-            <div style="font-size:32px;font-weight:800;color:#6366f1" id="p4-cnt-scans">12,847</div>
+            <div style="font-size:32px;font-weight:800;color:#6366f1" id="p4-cnt-scans">—</div>
             <div style="font-size:12px;color:#64748b">Scans Completed</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:32px;font-weight:800;color:#ef4444" id="p4-cnt-threats">3,291</div>
+            <div style="font-size:32px;font-weight:800;color:#ef4444" id="p4-cnt-threats">—</div>
             <div style="font-size:12px;color:#64748b">Threats Blocked</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:32px;font-weight:800;color:#10b981" id="p4-cnt-orgs">847</div>
+            <div style="font-size:32px;font-weight:800;color:#10b981" id="p4-cnt-orgs">—</div>
             <div style="font-size:12px;color:#64748b">Organizations Protected</div>
           </div>
           <div style="text-align:center">
@@ -4237,7 +4281,7 @@ a{color:var(--accent);text-decoration:none}
   <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:14px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px">
     <div style="display:flex;gap:32px;flex-wrap:wrap">
       <div style="text-align:center">
-        <div style="font-size:24px;font-weight:900;color:#00ff88;text-shadow:0 0 10px rgba(0,255,136,.3)">2,847+</div>
+        <div style="font-size:24px;font-weight:900;color:#00ff88" id="stat-students-trained">—</div>
         <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px">Students trained</div>
       </div>
       <div style="text-align:center">
@@ -4267,7 +4311,7 @@ a{color:var(--accent);text-decoration:none}
   <div class="section-inner">
     <div class="section-label">Enterprise Pricing</div>
     <h2 class="section-title">Enterprise-Grade Security at Every Scale</h2>
-    <p class="section-sub">Transparent pricing built for security teams of all sizes. Pay via UPI, Bank Transfer, PayPal, or Crypto. Access activated within 2–4 hours.</p>
+    <p class="section-sub">Transparent pricing built for security teams of all sizes. Instant access via Razorpay — UPI, Cards, NetBanking, Wallets. GST invoice included.</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:24px 0 8px">
       <span style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:100px;padding:6px 16px;font-size:12px;color:#10b981;font-weight:600">🔒 Secure Manual Payment</span>
       <span style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:100px;padding:6px 16px;font-size:12px;color:#818cf8;font-weight:600">📱 UPI · Bank · PayPal · Crypto</span>
@@ -4325,7 +4369,7 @@ a{color:var(--accent);text-decoration:none}
         </ul>
         <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#2563eb,#3b82f6)" onclick="startSubscription('STARTER')">⚡ Get Starter</button>
         <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
-        <div style="text-align:center;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
+        
       </div>
 
       <!-- PRO (featured) -->
@@ -4345,7 +4389,7 @@ a{color:var(--accent);text-decoration:none}
         </ul>
         <button class="btn btn-success" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#8b5cf6)" onclick="startSubscription('PRO')">🚀 Get Pro</button>
         <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
-        <div style="text-align:center;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
+        
       </div>
 
       <!-- ENTERPRISE -->
@@ -4365,7 +4409,7 @@ a{color:var(--accent);text-decoration:none}
         </ul>
         <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000" onclick="startSubscription('ENTERPRISE')">🏢 Get Enterprise</button>
         <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px">UPI · Bank Transfer · PayPal · Crypto</div>
-        <div style="text-align:center;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
+        
       </div>
     </div>
 
@@ -4563,7 +4607,7 @@ a{color:var(--accent);text-decoration:none}
             📨 Send Enterprise Inquiry
           </button>
           <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center">Response within 4 business hours · No commitment required</div>
-          <div style="text-align:center;margin-top:6px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:12px;color:#00d4ff;text-decoration:underline;opacity:.8">📋 View Payment Instructions</a></div>
+          <div style="text-align:center;margin-top:6px"><a href="#pricing" style="font-size:12px;color:#00d4ff;text-decoration:underline;opacity:.8">⚡ View Pricing & Plans</a></div>
         </div>
       </div>
 
@@ -4778,7 +4822,7 @@ a{color:var(--accent);text-decoration:none}
             Get Pack →
           </button>
         </div>
-        <div style="text-align:right;margin-top:8px"><a href="#" onclick="window.showPaymentInstructions();return false" style="font-size:11px;color:#00d4ff;text-decoration:underline;opacity:.7">📋 How to Pay?</a></div>
+        
       </div>`).join('');
   }
 
@@ -5007,7 +5051,7 @@ a{color:var(--accent);text-decoration:none}
           <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:800;letter-spacing:.1em;color:#10b981;text-transform:uppercase">✓ VERIFIED PARTNERS</span>
         </div>
         <div style="font-size:clamp(18px,2.5vw,26px);font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px">Cybersecurity Training & Tools</div>
-        <div style="font-size:13px;color:#94a3b8;max-width:480px">Curated by CYBERDUDEBIVASH security experts. Trusted by 1,200+ enterprises. Every partner is security-vetted.</div>
+        <div style="font-size:13px;color:#94a3b8;max-width:480px">Curated by CYBERDUDEBIVASH security experts. Every partner is security-vetted.</div>
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
         <div style="text-align:center;padding:12px 20px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px">
@@ -5472,7 +5516,7 @@ footer.v14-footer::before {
     <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#f59e0b;font-size:22px;font-weight:900" id="gtm-campaigns">218</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Active Campaigns</div></div>
     <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#00d4ff;font-size:22px;font-weight:900" id="gtm-countries">94</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Countries Hit</div></div>
     <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#a855f7;font-size:22px;font-weight:900" id="gtm-apts">37</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">APT Groups Active</div></div>
-    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#22c55e;font-size:22px;font-weight:900" id="gtm-blocked">12,847</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Blocked Today</div></div>
+    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#22c55e;font-size:22px;font-weight:900" id="gtm-blocked">—</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Blocked Today</div></div>
   </div>
   <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:20px;position:relative;overflow:hidden">
     <canvas id="gtm-canvas" width="1100" height="460" style="width:100%;border-radius:12px;display:block;background:#030310"></canvas>
@@ -5608,7 +5652,7 @@ footer.v14-footer::before {
       ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
     </div>
     <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
-      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; India's #1 AI Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; AI-Powered Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
     </div>
   </div>
 
@@ -5766,7 +5810,7 @@ footer.v14-footer::before {
           ⚔️ CYBERDUDEBIVASH®
         </div>
         <p style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:14px;max-width:280px">
-          India's #1 AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹199.
+          AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹199.
         </p>
         <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:5px">
           <a href="mailto:bivash@cyberdudebivash.com" class="v14-footer-link-dim">📧 bivash@cyberdudebivash.com</a>
@@ -5860,12 +5904,12 @@ footer.v14-footer::before {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px">
         <div>
           <div style="font-size:15px;font-weight:900;color:#e2e8f0;letter-spacing:.04em;margin-bottom:4px">⚔️ CYBERDUDEBIVASH AI SECURITY HUB</div>
-          <div style="font-size:12px;color:#94a3b8;margin-bottom:3px">India's #1 AI-Powered Cybersecurity Intelligence Platform</div>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:3px">AI-Powered Cybersecurity Intelligence Platform</div>
           <div style="font-size:11px;color:#64748b">📍 29, Korai - Sukinda - Ramchandrapur Rd, Ragadi, Odisha 755019, India</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:11px;color:#64748b;line-height:2">
-            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v21.0</span><br>
+            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v25.0</span><br>
             <a href="mailto:bivash@cyberdudebivash.com" style="color:#94a3b8">bivash@cyberdudebivash.com</a><br>
             <a href="https://wa.me/918179881447" target="_blank" style="color:#94a3b8">+91 8179881447</a> ·
             <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:#94a3b8">Discord: cybercoder127001</a>
@@ -8313,12 +8357,131 @@ function closeSubModal() {
 
 async function startSubscription(planKey) {
   const plan = PLAN_INFO[(planKey || '').toUpperCase()];
-  if (!plan) return;
-  CDB_PAYMENT.open({
-    product: 'subscription-' + planKey,
-    productLabel: plan.label + ' Plan (' + plan.price + '/month)',
-    amountLabel: plan.price + '/month',
-    amount: String(plan.price_inr || ''),
+  if (!plan) { console.error('[CDB] Unknown plan:', planKey); return; }
+
+  // Show loading state on all plan buttons
+  const btn = document.querySelector(`[onclick*="startSubscription('${planKey}')"], [onclick*='startSubscription("${planKey}")']`);
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Loading...'; btn.disabled = true; }
+
+  const email = localStorage.getItem('cdb_email') || '';
+
+  try {
+    // Step 1: Create Razorpay order via Worker
+    const res = await fetch('/api/payments/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        module: 'subscription',
+        target: planKey.toLowerCase(),
+        plan: planKey,
+        email,
+        amount_inr: plan.price_inr,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      // Graceful fallback to manual payment if gateway not configured yet
+      if (err?.fallback || res.status === 502) {
+        console.warn('[CDB] Razorpay not configured — falling back to manual payment');
+        CDB_PAYMENT.open({
+          product: 'subscription-' + planKey,
+          productLabel: plan.label + ' Plan (' + plan.price + '/month)',
+          amountLabel: plan.price + '/month',
+        });
+        return;
+      }
+      throw new Error(err?.error || 'Order creation failed');
+    }
+
+    const order = await res.json();
+
+    // Step 2: Open Razorpay checkout
+    const rzpOptions = {
+      key: order.key_id,
+      amount: order.amount,
+      currency: 'INR',
+      name: 'CYBERDUDEBIVASH AI Security Hub',
+      description: plan.label + ' Plan Subscription',
+      order_id: order.order_id,
+      prefill: { email, name: localStorage.getItem('cdb_name') || '' },
+      notes: { plan: planKey, platform: 'cyberdudebivash' },
+      theme: { color: '#00d4ff' },
+      handler: async function(response) {
+        try {
+          // Step 3: Verify payment with Worker
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              module: 'subscription',
+              target: planKey.toLowerCase(),
+              plan: planKey,
+              email,
+            }),
+          });
+          if (verifyRes.ok) {
+            const vData = await verifyRes.json();
+            // Store session token
+            if (vData.token) {
+              localStorage.setItem('cdb_token', vData.token);
+              localStorage.setItem('cdb_tier', planKey);
+            }
+            // Show success
+            if (typeof TOAST !== 'undefined') TOAST.success('Payment verified! ' + plan.label + ' plan activated.', 'Payment Success');
+            else alert('Payment successful! ' + plan.label + ' plan is now active.');
+            // Refresh subscription state
+            if (typeof SUBSCRIPTION !== 'undefined') SUBSCRIPTION.fetch();
+          } else {
+            throw new Error('Verification failed');
+          }
+        } catch(verifyErr) {
+          console.error('[CDB] Payment verify error:', verifyErr);
+          if (typeof TOAST !== 'undefined') TOAST.error('Payment received but activation pending. Contact bivash@cyberdudebivash.com with your payment ID: ' + response.razorpay_payment_id, 'Activation Pending');
+        }
+      },
+      modal: {
+        ondismiss: function() {
+          if (btn) { btn.textContent = origText; btn.disabled = false; }
+        }
+      }
+    };
+
+    // Load Razorpay SDK dynamically if not already loaded
+    await cdbLoadRazorpay();
+    const rzp = new window.RazorpayNative(rzpOptions);
+    rzp.open();
+
+  } catch(err) {
+    console.error('[CDB] Checkout error:', err);
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    // Graceful fallback
+    CDB_PAYMENT.open({
+      product: 'subscription-' + planKey,
+      productLabel: plan.label + ' Plan (' + plan.price + '/month)',
+      amountLabel: plan.price + '/month',
+    });
+  }
+}
+
+// Load Razorpay SDK (cached)
+let _rzpLoaded = false;
+async function cdbLoadRazorpay() {
+  if (_rzpLoaded && window.RazorpayNative) return;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = () => {
+      window.RazorpayNative = window.Razorpay; // save before our alias overwrites it
+      _rzpLoaded = true;
+      resolve();
+    };
+    s.onerror = () => reject(new Error('Razorpay SDK load failed'));
+    document.head.appendChild(s);
   });
 }
 
@@ -8747,14 +8910,14 @@ async function refreshDashboardMetrics() {
       const trend = document.getElementById('mc-scans-trend') || el_scans.closest('.metric-card')?.querySelector('.metric-trend');
       if (trend && scansToday !== null) trend.textContent = `↑ +${Number(scansToday).toLocaleString('en-IN')} today`;
     } else {
-      el_scans.textContent = '12,847+';
+      el_scans.textContent = '—';
       const trend = document.getElementById('mc-scans-trend');
       if (trend) trend.textContent = '↑ Growing daily';
     }
   }
   // Hero urgency counter
   const heroLive = document.getElementById('hero-live-scans');
-  if (heroLive) heroLive.textContent = scansToday ? Number(scansToday).toLocaleString('en-IN') : (totalScans ? Number(totalScans).toLocaleString('en-IN') + '+' : '10,000+');
+  if (heroLive) heroLive.textContent = scansToday ? Number(scansToday).toLocaleString('en-IN') : (totalScans ? Number(totalScans).toLocaleString('en-IN') + '+' : 'Live');
 
   // ── Threat level from threat-intel/stats ───────────────────────────────
   const critCnt  = ti?.critical_cves ?? ti?.stats?.critical ?? ti?.breakdown?.critical ?? null;
@@ -8781,14 +8944,14 @@ async function refreshDashboardMetrics() {
     animateCounterTo(el_cves, totalCVE);
     const trend = document.getElementById('mc-cves-trend');
     if (trend) trend.textContent = `↑ ${critCnt || 0} critical, ${kevCnt || 0} KEV exploited`;
-  } else if (el_cves) { el_cves.textContent = '2,400+'; }
+  } else if (el_cves) { el_cves.textContent = '—'; }
   if (kevCnt  !== null) { const e = document.getElementById('mc-kev-total');  if (e) e.textContent = kevCnt; }
   if (critCnt !== null) { const e = document.getElementById('mc-crit-total'); if (e) e.textContent = critCnt; }
 
   // Announcement bar CVE count
   const annCVE = document.getElementById('ann-cve-count');
   if (annCVE && totalCVE !== null) annCVE.textContent = Number(totalCVE).toLocaleString('en-IN');
-  else if (annCVE) annCVE.textContent = '2,400+';
+  else if (annCVE) annCVE.textContent = '—';
 
   // ── Threat urgency block ───────────────────────────────────────────────
   const urgBlock = document.getElementById('dashUrgencyBlock');
@@ -8832,6 +8995,61 @@ async function refreshDashboardMetrics() {
       if (kvDot) kvDot.className = 'soc-dot green';
     }
   }
+
+
+  // ── Recent scans panel (live from D1 scan history) ──────────────────────
+  try {
+    const rsRes = await fetch('/api/scan-history?limit=5&fields=target,module,risk_level,created_at');
+    if (rsRes.ok) {
+      const rsData = await rsRes.json();
+      const scans = rsData.scans || rsData.results || rsData.data || [];
+      const MODULE_ICONS = { domain:'🌐', ai:'🤖', redteam:'🎯', identity:'🔐', compliance:'📋', threat:'🛡' };
+      const RISK_COLORS = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#818cf8', LOW:'#22c55e' };
+      scans.slice(0, 5).forEach((scan, i) => {
+        const tEl = document.getElementById('rs-t' + (i+1));
+        const mEl = document.getElementById('rs-m' + (i+1));
+        if (tEl) tEl.textContent = scan.target || '—';
+        if (mEl) {
+          const mod = scan.module || 'domain';
+          const ts = scan.created_at ? new Date(scan.created_at).toRelative?.() || 'recently' : 'recently';
+          const icon = MODULE_ICONS[mod] || '🔍';
+          mEl.textContent = icon + ' ' + mod.charAt(0).toUpperCase() + mod.slice(1) + ' · ' + ts;
+          if (scan.risk_level && tEl) tEl.style.color = RISK_COLORS[scan.risk_level] || '';
+        }
+      });
+      // If fewer than 5 scans, fill with placeholder
+      for (let i = scans.length; i < 5; i++) {
+        const tEl = document.getElementById('rs-t' + (i+1));
+        const mEl = document.getElementById('rs-m' + (i+1));
+        if (tEl) tEl.textContent = '—';
+        if (mEl) mEl.textContent = 'No recent scans';
+      }
+    }
+  } catch(rsErr) {
+    // Silently fail — recent scans are a nice-to-have
+    for (let i = 1; i <= 5; i++) {
+      const tEl = document.getElementById('rs-t' + i);
+      if (tEl && tEl.textContent === 'Loading...') tEl.textContent = '—';
+    }
+  }
+
+  // ── Hero stats row hydration (FIX 6c) ────────────────────────────────────
+  const elStatScans   = document.getElementById('stat-scans');
+  const elStatCves    = document.getElementById('stat-cves');
+  if (elStatScans && totalScans !== null)
+    elStatScans.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+  if (elStatCves && totalCVE !== null)
+    elStatCves.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+  // p4 social proof counters
+  const _p4s = document.getElementById('p4-cnt-scans');
+  const _p4t = document.getElementById('p4-cnt-threats');
+  if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
+  if (_p4t && (critCnt !== null || highCnt !== null))
+    _p4t.textContent = Number((critCnt||0) + (highCnt||0)).toLocaleString('en-IN');
+  // p4-scan-count / p4-user-count badges (trust section)
+  const _p4sc = document.getElementById('p4-scan-count');
+  if (_p4sc && totalScans !== null)
+    _p4sc.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
 
   // Schedule next auto-refresh (every 3 minutes)
   clearTimeout(window._dashRefreshTimer);
@@ -12028,7 +12246,7 @@ function injectStatusBar(){
     '<div style="display:flex;align-items:center;gap:8px">'+
     '<span style="color:rgba(255,255,255,.3)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools ready</span></span>'+
     '<span style="color:rgba(255,255,255,.2)">|</span>'+
-    '<span style="color:rgba(255,255,255,.3)">v21.0.0</span>'+
+    '<span style="color:rgba(255,255,255,.3)">v25.0.0</span>'+
     '</div>';
   document.body.appendChild(bar);
   setInterval(function(){
@@ -18521,5 +18739,49 @@ function v21TriggerUrgencyPayment(){
 })();
 </script>
 
+<script>
+// ── v25: Initialize stats with live API data on first page load ─────────────
+(function initLiveStats() {
+  async function loadStats() {
+    try {
+      const [h, ti] = await Promise.all([
+        fetch('/api/health').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/threat-intel/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      const totalScans = h?.stats?.total_scans ?? h?.total_scans ?? null;
+      const totalCVE   = ti?.total_cves ?? ti?.total ?? null;
+      const critCnt    = ti?.critical_cves ?? ti?.stats?.critical ?? null;
+
+      const elSS = document.getElementById('stat-scans');
+      const elSC = document.getElementById('stat-cves');
+      const elST = document.getElementById('stat-threats');
+      if (elSS && totalScans !== null) elSS.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+      if (elSC && totalCVE   !== null) elSC.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+      if (elST && critCnt    !== null) elST.textContent = critCnt + ' critical';
+
+      // p4 counters
+      const _p4s = document.getElementById('p4-cnt-scans');
+      if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
+      const _gtb = document.getElementById('gtm-blocked');
+      if (_gtb && totalScans !== null) _gtb.textContent = Number(totalScans).toLocaleString('en-IN');
+
+      // Hero live scan count
+      const heroLive = document.getElementById('hero-live-scans');
+      if (heroLive && totalScans !== null) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+
+      // ann-revenue-count
+      const annRev = document.getElementById('ann-revenue-count');
+      // Only update if we have real data from defense stats
+    } catch(e) {
+      // Silently fail — placeholders stay as '—'
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadStats);
+  } else {
+    loadStats();
+  }
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,59 @@
+-- ============================================================
+-- CYBERDUDEBIVASH v24.0 — PHASE B: INDEXES ONLY
+-- Run AFTER Phase A succeeds
+-- All tables guaranteed to have correct columns before this runs
+-- ============================================================
+DROP INDEX IF EXISTS idx_billing_invoices_user;
+CREATE INDEX idx_billing_invoices_user ON billing_invoices(user_id);
+DROP INDEX IF EXISTS idx_billing_invoices_status;
+CREATE INDEX idx_billing_invoices_status ON billing_invoices(status);
+DROP INDEX IF EXISTS idx_billing_invoices_created;
+CREATE INDEX idx_billing_invoices_created ON billing_invoices(created_at);
+DROP INDEX IF EXISTS idx_license_user;
+CREATE INDEX idx_license_user ON billing_license_keys(user_id);
+DROP INDEX IF EXISTS idx_license_status;
+CREATE INDEX idx_license_status ON billing_license_keys(status);
+DROP INDEX IF EXISTS idx_recovery_next_retry;
+CREATE INDEX idx_recovery_next_retry ON billing_recovery_queue(next_retry_at);
+DROP INDEX IF EXISTS idx_recovery_status;
+CREATE INDEX idx_recovery_status ON billing_recovery_queue(status);
+DROP INDEX IF EXISTS idx_opp_stage;
+CREATE INDEX idx_opp_stage ON sales_opportunities(stage);
+DROP INDEX IF EXISTS idx_opp_score;
+CREATE INDEX idx_opp_score ON sales_opportunities(score);
+DROP INDEX IF EXISTS idx_opp_tier;
+CREATE INDEX idx_opp_tier ON sales_opportunities(tier);
+DROP INDEX IF EXISTS idx_proposals_status;
+CREATE INDEX idx_proposals_status ON proposals(status);
+DROP INDEX IF EXISTS idx_proposals_email;
+CREATE INDEX idx_proposals_email ON proposals(contact_email);
+DROP INDEX IF EXISTS idx_scanner_user;
+CREATE INDEX idx_scanner_user ON scanner_orders(user_id);
+DROP INDEX IF EXISTS idx_scanner_status;
+CREATE INDEX idx_scanner_status ON scanner_orders(status);
+DROP INDEX IF EXISTS idx_scanner_token;
+CREATE INDEX idx_scanner_token ON scanner_orders(token);
+DROP INDEX IF EXISTS idx_aff_tier;
+CREATE INDEX idx_aff_tier ON affiliate_members(tier);
+DROP INDEX IF EXISTS idx_ref_affiliate;
+CREATE INDEX idx_ref_affiliate ON affiliate_referrals(affiliate_id);
+DROP INDEX IF EXISTS idx_ref_code;
+CREATE INDEX idx_ref_code ON affiliate_referrals(ref_code);
+DROP INDEX IF EXISTS idx_mssp_status;
+CREATE INDEX idx_mssp_status ON mssp_partners(status);
+DROP INDEX IF EXISTS idx_mssp_api_key;
+CREATE INDEX idx_mssp_api_key ON mssp_partners(api_key);
+DROP INDEX IF EXISTS idx_mssp_clients_partner;
+CREATE INDEX idx_mssp_clients_partner ON mssp_clients(partner_id);
+DROP INDEX IF EXISTS idx_crm_leads_status;
+CREATE INDEX idx_crm_leads_status ON crm_leads(status);
+DROP INDEX IF EXISTS idx_crm_leads_email;
+CREATE INDEX idx_crm_leads_email ON crm_leads(email);
+DROP INDEX IF EXISTS idx_crm_leads_score;
+CREATE INDEX idx_crm_leads_score ON crm_leads(icp_score);
+DROP INDEX IF EXISTS idx_crm_activities_lead;
+CREATE INDEX idx_crm_activities_lead ON crm_activities(lead_id);
+DROP INDEX IF EXISTS idx_revos_mrr_date;
+CREATE INDEX idx_revos_mrr_date ON revos_mrr_snapshots(snapshot_date);
+DROP INDEX IF EXISTS idx_trust_incidents_status;
+CREATE INDEX idx_trust_incidents_status ON trust_incidents(status);

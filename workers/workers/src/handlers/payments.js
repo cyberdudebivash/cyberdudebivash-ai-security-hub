@@ -13,6 +13,7 @@
 
 import {
   MODULE_PRICES,
+  SUBSCRIPTION_PRICES,
   createRazorpayOrder,
   verifyPaymentSignature,
   verifyWebhookSignature,
@@ -83,6 +84,21 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       valid:   Object.keys(MODULE_PRICES),
       pricing: MODULE_PRICES,
     }, { status: 400 });
+  }
+
+  // Subscription: resolve plan-specific pricing
+  if (module === 'subscription') {
+    const planKey = (body.plan || target || 'STARTER').toUpperCase();
+    const subPlan = SUBSCRIPTION_PRICES?.[planKey] || { amount: 49900, label: '₹499', name: planKey + ' Plan' };
+    // Override price for this request
+    Object.assign(MODULE_PRICES['subscription'], subPlan);
+  }
+
+  // Defense: use price_inr from request body
+  if (module === 'defense' && body.price_inr) {
+    MODULE_PRICES['defense'].amount = Math.round(Number(body.price_inr) * 100);
+    MODULE_PRICES['defense'].label  = '₹' + Number(body.price_inr).toLocaleString('en-IN');
+    MODULE_PRICES['defense'].name   = body.solution_title || 'Defense Solution';
   }
   if (!target || typeof target !== 'string' || target.length < 2 || target.length > 253) {
     return Response.json({ error: 'target is required (domain name or org name)' }, { status: 400 });

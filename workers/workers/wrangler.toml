@@ -6,8 +6,8 @@ account_id         = "055c68d5d664747ff6c9e1093cd9673f"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "21.0.0"
-PLATFORM_VERSION = "21.0.0"
+VERSION     = "25.0.0"
+PLATFORM_VERSION = "25.0.0"
 COMMIT          = "INJECT_AT_BUILD"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
@@ -59,6 +59,21 @@ dead_letter_queue  = "scan-jobs-dlq"
 #   TELEGRAM_BOT_TOKEN        — from @BotFather
 #   ADMIN_TELEGRAM_CHAT_ID    — your admin Telegram chat ID
 #   SENTINEL_CHANNEL_ID       — Sentinel APEX channel ID (for CVE broadcasts)
+#
+# V21.0 new secrets (Payment Automation — REQUIRED for revenue):
+#   STRIPE_SECRET_KEY         — Stripe API key (sk_live_... or sk_test_...)
+#                               Get: https://dashboard.stripe.com → Developers → API Keys
+#                               Run: npx wrangler secret put STRIPE_SECRET_KEY
+#   STRIPE_WEBHOOK_SECRET     — Stripe webhook signing secret (whsec_...)
+#                               Get: https://dashboard.stripe.com → Developers → Webhooks
+#                               Webhook URL: https://cyberdudebivash.in/api/webhooks/stripe
+#                               Events: checkout.session.completed, payment_intent.succeeded,
+#                                       customer.subscription.created, customer.subscription.deleted
+#                               Run: npx wrangler secret put STRIPE_WEBHOOK_SECRET
+#   WORKERS_API_KEY           — Internal CI/monitoring API key (for GitHub Actions health checks)
+#                               Generate: openssl rand -hex 32
+#                               Run: npx wrangler secret put WORKERS_API_KEY
+#                               Add to GitHub Secrets: Settings → Secrets → WORKERS_API_KEY
 #
 # V8.0 new secrets:
 #   LINKEDIN_ACCESS_TOKEN     — Optional: LinkedIn API v2 access token (for auto-posting)

@@ -9,11 +9,23 @@ import { resilientFetch } from './resilience.js';
 
 // ─── Module pricing (amount in paise = INR × 100) ────────────────────────────
 export const MODULE_PRICES = {
-  domain:     { amount: 19900, label: '₹199', name: 'Domain Security Report'   },
-  ai:         { amount: 49900, label: '₹499', name: 'AI Security Report'        },
-  redteam:    { amount: 99900, label: '₹999', name: 'Red Team Report'           },
-  identity:   { amount: 79900, label: '₹799', name: 'Identity Security Report'  },
-  compliance: { amount: 49900, label: '₹499', name: 'Compliance Report'         },
+  domain:         { amount: 19900,   label: '₹199',    name: 'Domain Security Report'       },
+  ai:             { amount: 49900,   label: '₹499',    name: 'AI Security Report'            },
+  redteam:        { amount: 99900,   label: '₹999',    name: 'Red Team Report'               },
+  identity:       { amount: 79900,   label: '₹799',    name: 'Identity Security Report'      },
+  compliance:     { amount: 49900,   label: '₹499',    name: 'Compliance Report'             },
+  // Subscription plans (monthly billing)
+  subscription:   { amount: 49900,   label: '₹499',    name: 'Starter Plan (Monthly)'        },
+  // Defense marketplace
+  defense:        { amount: 0,       label: '',         name: 'Defense Solution'              },
+};
+
+// Subscription plan pricing (amount in paise)
+export const SUBSCRIPTION_PRICES = {
+  STARTER:    { amount: 49900,   label: '₹499',    period: 'monthly', name: 'Starter Plan'    },
+  PRO:        { amount: 149900,  label: '₹1,499',  period: 'monthly', name: 'Pro Plan'         },
+  ENTERPRISE: { amount: 499900,  label: '₹4,999',  period: 'monthly', name: 'Enterprise Plan'  },
+  MSSP:       { amount: 4999900, label: '₹49,999', period: 'monthly', name: 'MSSP Plan'        },
 };
 
 // ─── Create Razorpay Order ────────────────────────────────────────────────────
