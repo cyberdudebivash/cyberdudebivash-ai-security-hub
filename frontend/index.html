@@ -53,6 +53,94 @@
     </script>
     </head>
 <body>
+
+<script>
+// ── v26 Conversion Funnel Tracker ─────────────────────────────────────────
+const CDB_FUNNEL = {
+  _base: '/api/gtm/funnel-event',
+  
+  async track(event, meta = {}) {
+    try {
+      await fetch(this._base, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event,
+          email: localStorage.getItem('cdb_email') || null,
+          plan: localStorage.getItem('cdb_tier') || 'FREE',
+          session_id: CDB_FUNNEL._sid(),
+          page_url: location.pathname,
+          ts: Date.now(),
+          ...meta,
+        }),
+      });
+    } catch(e) { /* non-blocking */ }
+  },
+  
+  _sid() {
+    let sid = sessionStorage.getItem('cdb_sid');
+    if (!sid) {
+      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem('cdb_sid', sid);
+    }
+    return sid;
+  }
+};
+
+// Auto-track page land
+CDB_FUNNEL.track('page_land', { referrer: document.referrer || 'direct' });
+
+// Track scan start — hook into heroQuickScan button click
+document.addEventListener('DOMContentLoaded', function() {
+  // Hero scan button
+  const heroBtn = document.querySelector('.hero-scan-btn');
+  if (heroBtn) {
+    heroBtn.addEventListener('click', function() {
+      const domain = (document.getElementById('heroScanInput')?.value || '').trim();
+      if (domain) CDB_FUNNEL.track('scan_start', { module: 'domain', domain });
+    });
+  }
+  
+  // All scan buttons in scanner section
+  document.querySelectorAll('[onclick*="handleScan"], [onclick*="quickScan"], [onclick*="runScan"], [onclick*="Scan()"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      CDB_FUNNEL.track('scan_start', { module: 'unknown' });
+    });
+  });
+  
+  // Track pricing section view (scroll-based)
+  const pricingEl = document.getElementById('pricing');
+  if (pricingEl && typeof IntersectionObserver !== 'undefined') {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          CDB_FUNNEL.track('pricing_viewed');
+          obs.disconnect();
+        }
+      });
+    }, { threshold: 0.2 });
+    obs.observe(pricingEl);
+  }
+  
+  // Track enterprise form view
+  const entEl = document.getElementById('enterprise');
+  if (entEl && typeof IntersectionObserver !== 'undefined') {
+    const obs2 = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          CDB_FUNNEL.track('enterprise_section_viewed');
+          obs2.disconnect();
+        }
+      });
+    }, { threshold: 0.2 });
+    obs2.observe(entEl);
+  }
+});
+
+// Expose for other scripts to call
+window.CDB_FUNNEL = CDB_FUNNEL;
+</script>
+
     <script>
 // ── v25: Initialize stats with live API data on first page load ─────────────
 (function initLiveStats() {
@@ -97,6 +185,279 @@
   }
 })();
 </script>
+
+<!-- ═══ v26 EMAIL CAPTURE GATE — fires after free scan, before full results ═══ -->
+<div id="cdb-email-gate" style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(2,2,15,.92);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px" role="dialog" aria-modal="true" aria-label="Unlock your security results">
+  <div style="background:linear-gradient(145deg,#0d0d22,#13132e);border:1px solid rgba(0,212,255,.3);border-radius:20px;max-width:480px;width:100%;padding:36px 32px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.8),0 0 60px rgba(0,212,255,.08)">
+    <!-- Risk score preview -->
+    <div id="cdb-gate-risk-badge" style="display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:30px;padding:6px 16px;margin-bottom:20px;font-size:12px;font-weight:800;color:#ef4444;letter-spacing:.06em">
+      <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:pulse 1.5s infinite;display:inline-block"></span>
+      <span id="cdb-gate-risk-text">HIGH RISK DETECTED</span>
+    </div>
+    
+    <!-- Icon -->
+    <div style="font-size:44px;margin-bottom:12px">🔐</div>
+    
+    <!-- Headline -->
+    <h2 style="font-size:22px;font-weight:900;color:#fff;margin:0 0 8px;line-height:1.2">
+      Your scan found <span id="cdb-gate-finding-count" style="color:#ef4444">critical issues</span>
+    </h2>
+    <p style="font-size:14px;color:#94a3b8;margin:0 0 24px;line-height:1.6">
+      Enter your work email to see your full security preview — free.<br>
+      <span style="color:#64748b;font-size:12px">Full report with remediation: ₹199</span>
+    </p>
+    
+    <!-- Email input -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <input id="cdb-gate-email" type="email" placeholder="your@company.com" autocomplete="email"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:13px 16px;color:#fff;font-size:15px;outline:none;transition:border .2s"
+        onfocus="this.style.borderColor='rgba(0,212,255,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.15)'"
+        onkeydown="if(event.key==='Enter')cdbGateSubmit()">
+      <button onclick="cdbGateSubmit()" id="cdb-gate-submit-btn"
+        style="width:100%;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;color:#fff;padding:14px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:.02em;transition:opacity .2s"
+        onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+        🔓 Show My Security Findings →
+      </button>
+    </div>
+    
+    <!-- Privacy assurance -->
+    <p style="font-size:11px;color:#475569;margin:0 0 16px">
+      🔒 No spam. No credit card. Just your security report.
+    </p>
+    
+    <!-- Skip link -->
+    <a href="#" onclick="cdbGateSkip();return false" style="font-size:12px;color:#334155;text-decoration:underline">
+      Skip for now (limited preview only)
+    </a>
+  </div>
+</div>
+
+<script>
+// ── v26 Email Capture Gate Engine ──────────────────────────────────────────
+window.cdbShowEmailGate = function(opts) {
+  // opts: { domain, module, findingCount, riskLevel, riskScore }
+  const gate = document.getElementById('cdb-email-gate');
+  if (!gate) return;
+  
+  // Already have email? Skip gate
+  const existingEmail = localStorage.getItem('cdb_email');
+  if (existingEmail && existingEmail.includes('@')) {
+    if (opts?.onComplete) opts.onComplete(existingEmail);
+    return;
+  }
+  
+  // Populate preview data
+  const riskText = document.getElementById('cdb-gate-risk-text');
+  const findingCount = document.getElementById('cdb-gate-finding-count');
+  const riskBadge = document.getElementById('cdb-gate-risk-badge');
+  
+  const RISK_COLORS = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#818cf8', LOW:'#22c55e' };
+  const level = opts?.riskLevel || 'HIGH';
+  const color = RISK_COLORS[level] || '#f59e0b';
+  
+  if (riskText) riskText.textContent = (level + ' RISK DETECTED');
+  if (riskBadge) { riskBadge.style.background = `rgba(${level==='CRITICAL'?'239,68,68':level==='HIGH'?'245,158,11':level==='MEDIUM'?'129,140,248':'34,197,94'},.12)`; riskBadge.style.borderColor=color+'55'; riskBadge.style.color=color; }
+  
+  const cnt = opts?.findingCount;
+  if (findingCount) {
+    if (cnt && cnt > 0) {
+      findingCount.textContent = cnt + (cnt === 1 ? ' critical issue' : ' security issues');
+      findingCount.style.color = color;
+    } else {
+      findingCount.textContent = 'security issues';
+      findingCount.style.color = color;
+    }
+  }
+  
+  // Store context for post-capture
+  window._gateContext = opts;
+  
+  gate.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => { const em = document.getElementById('cdb-gate-email'); if(em) em.focus(); }, 100);
+};
+
+window.cdbGateSubmit = async function() {
+  const emailEl = document.getElementById('cdb-gate-email');
+  const btn = document.getElementById('cdb-gate-submit-btn');
+  const email = (emailEl?.value || '').trim().toLowerCase();
+  
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    emailEl.style.borderColor = 'rgba(239,68,68,.6)';
+    emailEl.placeholder = 'Please enter a valid email address';
+    return;
+  }
+  
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  
+  // Store email locally
+  localStorage.setItem('cdb_email', email);
+  
+  // Track capture event to Worker
+  try {
+    await fetch('/api/gtm/email-capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        source: 'scan_gate',
+        module: window._gateContext?.module || 'domain',
+        domain: window._gateContext?.domain || '',
+        risk_level: window._gateContext?.riskLevel || '',
+        finding_count: window._gateContext?.findingCount || 0,
+      }),
+    });
+  } catch(e) { /* non-blocking */ }
+  
+  // Close gate and continue
+  const gate = document.getElementById('cdb-email-gate');
+  if (gate) { gate.style.display = 'none'; }
+  document.body.style.overflow = '';
+  
+  if (window._gateContext?.onComplete) window._gateContext.onComplete(email);
+  
+  // Show inline upgrade prompt after 3s
+  setTimeout(() => cdbShowPostScanCTA(window._gateContext), 3000);
+};
+
+window.cdbGateSkip = function() {
+  const gate = document.getElementById('cdb-email-gate');
+  if (gate) gate.style.display = 'none';
+  document.body.style.overflow = '';
+  // Track skip
+  try { fetch('/api/gtm/funnel-event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event:'gate_skipped', module: window._gateContext?.module || 'domain' }) }); } catch(e){}
+};
+
+// ── Post-scan upgrade CTA ────────────────────────────────────────────────────
+window.cdbShowPostScanCTA = function(ctx) {
+  const existing = document.getElementById('cdb-post-scan-cta');
+  if (existing) return;
+  
+  const level = ctx?.riskLevel || 'HIGH';
+  const domain = ctx?.domain || 'your domain';
+  const PRICES = { domain:'₹199', ai:'₹499', redteam:'₹999', identity:'₹799', compliance:'₹499' };
+  const price = PRICES[ctx?.module] || '₹199';
+  
+  const banner = document.createElement('div');
+  banner.id = 'cdb-post-scan-cta';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9990;background:linear-gradient(135deg,#0d0d22,#13132e);border-top:1px solid rgba(0,212,255,.25);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 -8px 40px rgba(0,0,0,.5)';
+  banner.innerHTML = `
+    <div style="flex:1;min-width:200px">
+      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px">🔒 ${domain} — Full remediation roadmap available</div>
+      <div style="font-size:11px;color:#64748b">Unlock all findings + step-by-step fix guide</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-shrink:0">
+      <div style="font-size:18px;font-weight:900;color:#f59e0b">${price}</div>
+      <button onclick="cdbTriggerReportPurchase('${ctx?.module||'domain'}','${domain}');document.getElementById('cdb-post-scan-cta').remove()"
+        style="background:linear-gradient(135deg,#ef4444,#dc2626);border:none;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">
+        Unlock Full Report →
+      </button>
+      <button onclick="this.closest('#cdb-post-scan-cta').remove()" style="background:transparent;border:none;color:#475569;font-size:18px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+};
+
+// ── Report purchase trigger ─────────────────────────────────────────────────
+window.cdbTriggerReportPurchase = async function(module, target) {
+  try {
+    const email = localStorage.getItem('cdb_email') || '';
+    const res = await fetch('/api/payments/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module: module || 'domain', target, email }),
+    });
+    if (!res.ok) throw new Error('order_failed');
+    const order = await res.json();
+    await cdbLoadRazorpay();
+    const rzp = new window.RazorpayNative({
+      key: order.key_id,
+      amount: order.amount,
+      currency: 'INR',
+      name: 'CYBERDUDEBIVASH AI Security Hub',
+      description: 'Security Report — ' + target,
+      order_id: order.order_id,
+      prefill: { email },
+      theme: { color: '#ef4444' },
+      handler: async function(rp) {
+        const vRes = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ razorpay_order_id: rp.razorpay_order_id, razorpay_payment_id: rp.razorpay_payment_id, razorpay_signature: rp.razorpay_signature, module, target, email }),
+        });
+        if (vRes.ok) {
+          const vd = await vRes.json();
+          if (typeof unlockResultsUI !== 'undefined') unlockResultsUI(module, target, vd);
+          if (typeof TOAST !== 'undefined') TOAST.success('Report unlocked! Full findings now visible.', 'Purchase Complete');
+          if (vd.download_url) {
+            const dl = document.createElement('a');
+            dl.href = vd.download_url; dl.download = 'security-report.pdf';
+            dl.style.display = 'none'; document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
+          }
+        }
+      },
+    });
+    rzp.open();
+  } catch(err) {
+    // Fallback to manual payment
+    if (typeof CDB_PAYMENT !== 'undefined') CDB_PAYMENT.open({ product: module, productLabel: 'Security Report — ' + target, amountLabel: '₹199' });
+  }
+};
+</script>
+<!-- ═══ END v26 EMAIL CAPTURE GATE ═══ -->
+
+
+<script>
+// ── v26 Auth Gate Controller ────────────────────────────────────────────────
+// Controls which sections are visible based on auth state
+(function initAuthGate() {
+  const email = localStorage.getItem('cdb_email');
+  const token = localStorage.getItem('cdb_token');
+  const tier  = localStorage.getItem('cdb_tier') || 'FREE';
+  
+  const isAuthenticated = !!(token && email);
+  const hasEmail = !!(email && email.includes('@'));
+  
+  // If authenticated / has token: reveal gated sections
+  if (isAuthenticated) {
+    document.querySelectorAll('[data-auth-gate="true"]').forEach(el => {
+      el.style.display = '';
+    });
+    
+    // Show dashboard link in nav
+    const navLinks = document.getElementById('nav-links-desktop');
+    if (navLinks && !navLinks.querySelector('[data-auth-section="dashboard"]')) {
+      const dashLink = document.createElement('a');
+      dashLink.href = '#dashboard';
+      dashLink.setAttribute('data-auth-section', 'dashboard');
+      dashLink.setAttribute('onclick', "cdbNavigate('dashboard');return false");
+      dashLink.textContent = 'Dashboard';
+      navLinks.insertBefore(dashLink, navLinks.firstChild);
+    }
+  }
+  
+  // Update nav badge
+  const badge = document.getElementById('nav-plan-badge');
+  if (badge && tier && tier !== 'FREE') {
+    badge.textContent = tier;
+    badge.style.display = 'inline-block';
+  }
+  
+  // Expose for external use
+  window.CDB_AUTH = { isAuthenticated, hasEmail, tier, email };
+  
+  // Listen for login events
+  window.addEventListener('cdb:login', function(e) {
+    document.querySelectorAll('[data-auth-gate="true"]').forEach(el => {
+      el.style.display = '';
+    });
+    if (e.detail?.tier && e.detail.tier !== 'FREE') {
+      if (badge) { badge.textContent = e.detail.tier; badge.style.display = 'inline-block'; }
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
 
@@ -546,12 +907,12 @@ a{color:var(--accent);text-decoration:none}
 <div class="ann-bar" style="overflow:hidden;padding:7px 0">
   <span class="ann-marquee">
     🔴 LIVE: Sentinel APEX monitoring <strong>CVEs in real-time</strong> &nbsp;|&nbsp;
-    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v25.0</span> — AI-Powered Cybersecurity Intelligence Platform &nbsp;|&nbsp;
+    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v26.0</span> — AI-Powered Cybersecurity Intelligence Platform &nbsp;|&nbsp;
     🛡️ Defense products auto-generated from every critical CVE &nbsp;|&nbsp;
     📡 <a href="https://t.me/cyberdudebivashSentinelApex" target="_blank" style="color:#fff;font-weight:800">Join Sentinel APEX on Telegram →</a> &nbsp;|&nbsp;
     🚀 Enterprise packages from ₹9,999 &nbsp;|&nbsp;
     🛠️ <a href="https://tools.cyberdudebivash.com" target="_blank" style="color:#fff">Production Tools Suite</a> &nbsp;|&nbsp;
-    💰 <strong id="ann-revenue-count">—</strong> security products sold &nbsp;|&nbsp;
+    
     🌐 Global threat intel: <strong id="ann-cve-count">loading...</strong> CVEs tracked &nbsp;|&nbsp;
   </span>
 </div>
@@ -580,7 +941,7 @@ a{color:var(--accent);text-decoration:none}
   <span class="soc-sep">|</span>
   <div class="soc-indicator" title="Live version from /api/version">
     <span style="color:var(--accent);font-weight:800">⬡</span>
-    <span id="soc-version">v25.0</span>
+    <span id="soc-version">v26.0</span>
   </div>
   <span class="soc-sep" style="margin-left:auto">|</span>
   <div class="soc-indicator" id="soc-threat-level" title="Global threat level">
@@ -605,36 +966,14 @@ a{color:var(--accent);text-decoration:none}
       <span style="background:linear-gradient(90deg,#00d4ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CYBERDUDEBIVASH AI</span>
     </a>
 
-    <!-- Desktop links -->
+    <!-- Desktop links — v26 conversion nav -->
     <div class="nav-links" id="nav-links-desktop">
-      <a href="#dashboard"  data-section="dashboard"  onclick="cdbNavigate('dashboard');return false">Dashboard</a>
-      <a href="#scanner"    data-section="scanner"    onclick="cdbNavigate('scanner');return false">Scanner</a>
-
-      <!-- Products dropdown -->
-      <div class="nav-dropdown">
-        <button class="nav-dd-toggle" onclick="cdbToggleDropdown(event,'nav-dd-products')" aria-expanded="false">
-          Products <span style="font-size:9px;opacity:.7">▼</span>
-        </button>
-        <div class="nav-dd-menu" id="nav-dd-products" role="menu">
-          <a href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseDropdowns();return false">🛡 Defense Marketplace</a>
-          <a href="#pricing"           onclick="cdbNavigate('pricing');cdbCloseDropdowns();return false">💰 Pricing Plans</a>
-          <a href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseDropdowns();return false">🌐 Global Compliance</a>
-          <a href="#threat-hunting"    onclick="cdbNavigate('threat-hunting');cdbCloseDropdowns();return false">🎯 Threat Hunting</a>
-          <a href="#vuln-management"   onclick="cdbNavigate('vuln-management');cdbCloseDropdowns();return false">🔬 Vuln Management</a>
-          <a href="#global-threat-map" onclick="cdbNavigate('global-threat-map');cdbCloseDropdowns();return false">🗺 Global Threat Map</a>
-          <a href="#incident-response" onclick="cdbNavigate('incident-response');cdbCloseDropdowns();return false">🚨 IR Playbook</a>
-          <a href="#zero-day-intel"    onclick="cdbNavigate('zero-day-intel');cdbCloseDropdowns();return false">⚡ Zero-Day Intel</a>
-          <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseDropdowns()">🛠 Tools Suite ↗</a>
-        </div>
-      </div>
-
-      <a href="#pricing"    data-section="pricing"    onclick="cdbNavigate('pricing');return false">Pricing</a>
-
+      <a href="#scanner" data-section="scanner" onclick="cdbNavigate('scanner');return false">Free Scan</a>
+      <a href="#pricing" data-section="pricing" onclick="cdbNavigate('pricing');return false">Pricing</a>
+      <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener">Threat Intel ↗</a>
       <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
-
-      <a href="#enterprise" data-section="enterprise" onclick="cdbNavigate('enterprise');return false" class="nav-cta">Enterprise</a>
+      <a href="#enterprise" data-section="enterprise" onclick="cdbNavigate('enterprise');return false" class="nav-cta">Book Assessment</a>
     </div>
-
     <!-- Right actions: Notification Bell + Hamburger -->
     <div class="nav-actions" style="display:flex;align-items:center;gap:10px">
       <!-- Notification Bell -->
@@ -694,7 +1033,7 @@ a{color:var(--accent);text-decoration:none}
   backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
 ">
   <span style="color:#22c55e;font-weight:800">● LIVE</span>
-  <span>⚡ Platform <span style="color:#00ff88;font-weight:900" id="sb-version">v25.0</span></span>
+  <span>⚡ Platform <span style="color:#00ff88;font-weight:900" id="sb-version">v26.0</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
   <span>🧠 Adaptive Brain <span style="color:#00d4ff">ACTIVE</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
@@ -703,7 +1042,7 @@ a{color:var(--accent);text-decoration:none}
   <span>🤖 MYTHOS v3 <span style="color:#a855f7">RUNNING</span></span>
   <span style="color:rgba(255,255,255,.15)">|</span>
   <span>👥 <span id="sb-online" style="color:#f59e0b">...</span> online now</span>
-  <span style="margin-left:auto;color:rgba(255,255,255,.2)">cyberdudebivash.in · production · v25.0.0</span>
+  <span style="margin-left:auto;color:rgba(255,255,255,.2)">cyberdudebivash.in · production · v26.0.0</span>
 </div>
 <script>
 (function CDB_STATUS_BAR(){
@@ -924,7 +1263,7 @@ a{color:var(--accent);text-decoration:none}
       <span class="urgency-dot"></span>
       <span id="hero-urgency-text" style="font-size:12px;color:rgba(255,255,255,.55)">
         Live threat monitoring active — <strong id="hero-live-scans" style="color:#ef4444">...</strong> scans run today
-        · <strong style="color:#f59e0b">247 threats</strong> detected in last hour
+        
       </span>
     </div>
     <!-- Activity bar injected by revenue-engine-v14.js -->
@@ -938,19 +1277,13 @@ a{color:var(--accent);text-decoration:none}
     <span class="badge">🇮🇳 DPDP Act 2023</span>
     <span class="badge">📋 ISO 27001 · GDPR · PCI-DSS</span>
     <span class="badge" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#10b981">✅ Free Preview — No Card Required</span>
-    <span class="badge" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25);color:#22c55e">✅ Free Preview — No Card Required</span>
+
   </div>
 
-  <!-- Secondary CTAs -->
+  <!-- Single secondary CTA — v26: one conversion path only -->
   <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
     <a href="/booking.html" style="color:#94a3b8;font-size:12px;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 14px;transition:all .2s" onmouseover="this.style.borderColor='rgba(0,212,255,.3)';this.style.color='#00d4ff'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)';this.style.color='#94a3b8'">
-      📅 Book Enterprise Demo →
-    </a>
-    <a href="/intel.html" style="color:#94a3b8;font-size:12px;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 14px;transition:all .2s" onmouseover="this.style.borderColor='rgba(124,58,237,.3)';this.style.color='#a78bfa'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)';this.style.color='#94a3b8'">
-      🛰 Live Threat Intel →
-    </a>
-    <a href="/academy.html" style="color:#94a3b8;font-size:12px;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 14px;transition:all .2s" onmouseover="this.style.borderColor='rgba(16,185,129,.3)';this.style.color='#10b981'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)';this.style.color='#94a3b8'">
-      🎓 Security Academy →
+      📅 Book Free Security Consultation →
     </a>
   </div>
 
@@ -1028,7 +1361,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <!-- ═══════════════════════ SECURITY DASHBOARD ═══════════════════════ -->
-<section id="dashboard" class="dashboard-section">
+<section id="dashboard" class="dashboard-section" style="display:none" data-auth-gate="true" data-section-id="dashboard">
   <div class="dashboard-inner">
     <div style="text-align:center;margin-bottom:36px;position:relative">
       <div class="section-label-v11" style="justify-content:center;margin-bottom:10px">
@@ -1403,7 +1736,7 @@ a{color:var(--accent);text-decoration:none}
           <button class="soc-refresh-btn" onclick="socClearLog()" style="margin-left:auto">CLR</button>
         </div>
         <div class="soc-log-feed" id="socLogFeed">
-          <div class="soc-log-line soc-log-info"><span class="soc-log-ts" id="soc-log-init-ts">--:--:--</span><span class="soc-log-tag soc-tag-info">SYS</span><span>CYBERDUDEBIVASH SOC Platform v25.0 — Adaptive Cyber Brain ONLINE · Sentinel APEX v5.0 · MYTHOS v3.0</span></div>
+          <div class="soc-log-line soc-log-info"><span class="soc-log-ts" id="soc-log-init-ts">--:--:--</span><span class="soc-log-tag soc-tag-info">SYS</span><span>CYBERDUDEBIVASH SOC Platform v26.0 — Adaptive Cyber Brain ONLINE · Sentinel APEX v5.0 · MYTHOS v3.0</span></div>
           <div class="soc-log-line soc-log-ok"><span class="soc-log-ts">--:--:--</span><span class="soc-log-tag soc-tag-ok">OK</span><span>All engines online - Sentinel APEX, MYTHOS, AI CyberBrain active</span></div>
         </div>
       </div>
@@ -2059,7 +2392,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <!-- ════════ SENTINEL APEX DEFENSE SOLUTIONS MARKETPLACE ════════ -->
-<section id="defense-solutions" style="background:linear-gradient(180deg,#080818 0%,#0d0d24 100%);padding:80px 20px">
+<section id="defense-solutions" style="display:none;background:linear-gradient(180deg,#080818 0%,#0d0d24 100%);padding:80px 20px" data-auth-gate="true" data-section-id="defense-solutions">
   <div class="section-inner" style="max-width:1200px;margin:0 auto">
 
     <!-- Section header -->
@@ -2731,7 +3064,7 @@ a{color:var(--accent);text-decoration:none}
 </style>
 
 <!-- ════════ MYTHOS AI CYBER ANALYST ════════ -->
-<section id="ai-analyst" style="background:linear-gradient(180deg,#05050f 0%,#0a0a1e 100%);padding:80px 20px;border-top:1px solid rgba(0,212,255,.1)">
+<section id="ai-analyst" style="display:none;background:linear-gradient(180deg,#05050f 0%,#0a0a1e 100%);padding:80px 20px;border-top:1px solid rgba(0,212,255,.1)" data-auth-gate="true" data-section-id="ai-analyst">
 <div style="max-width:1200px;margin:0 auto">
 
   <!-- Header -->
@@ -2873,7 +3206,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ THREAT INTELLIGENCE KNOWLEDGE GRAPH ════════ -->
-<section id="threat-graph" style="background:linear-gradient(180deg,#0a0a1e 0%,#080812 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)">
+<section id="threat-graph" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#080812 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)" data-auth-gate="true" data-section-id="threat-graph">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:40px">
@@ -3058,7 +3391,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 2: AUTONOMOUS SOC COMMAND CENTER ════════ -->
-<section id="autonomous-soc" style="background:linear-gradient(180deg,#02020a 0%,#05051a 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.15)">
+<section id="autonomous-soc" style="display:none;background:linear-gradient(180deg,#02020a 0%,#05051a 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.15)" data-auth-gate="true" data-section-id="autonomous-soc">
 <div style="max-width:1200px;margin:0 auto">
 
   <!-- Header -->
@@ -3149,7 +3482,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 2: SIEM INTEGRATION DEPLOY ════════ -->
-<section id="siem-deploy" style="background:linear-gradient(180deg,#05051a 0%,#080818 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)">
+<section id="siem-deploy" style="display:none;background:linear-gradient(180deg,#05051a 0%,#080818 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)" data-auth-gate="true" data-section-id="siem-deploy">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:48px">
@@ -3216,7 +3549,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 2: ORGANIZATION MEMORY SYSTEM ════════ -->
-<section id="org-memory" style="background:linear-gradient(180deg,#080818 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(34,197,94,.1)">
+<section id="org-memory" style="display:none;background:linear-gradient(180deg,#080818 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(34,197,94,.1)" data-auth-gate="true" data-section-id="org-memory">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:48px">
@@ -3288,7 +3621,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 2: API ECONOMY + DEVELOPER PLATFORM ════════ -->
-<section id="api-economy" style="background:linear-gradient(180deg,#050510 0%,#070710 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.1)">
+<section id="api-economy" style="display:none;background:linear-gradient(180deg,#050510 0%,#070710 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.1)" data-auth-gate="true" data-section-id="api-economy">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:52px">
@@ -3417,7 +3750,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 3: AUTONOMOUS DEFENSE ENGINE ════════ -->
-<section id="auto-defense" style="background:linear-gradient(180deg,#030308 0%,#05050f 100%);padding:80px 20px;border-top:1px solid rgba(239,68,68,.15)">
+<section id="auto-defense" style="display:none;background:linear-gradient(180deg,#030308 0%,#05050f 100%);padding:80px 20px;border-top:1px solid rgba(239,68,68,.15)" data-auth-gate="true" data-section-id="auto-defense">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <div style="display:inline-block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:24px;padding:6px 18px;font-size:11px;color:#ef4444;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">AI Autonomous Threat Response</div>
@@ -3490,7 +3823,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 3: DATA DOMINANCE ENGINE ════════ -->
-<section id="data-dominance" style="background:linear-gradient(180deg,#05050f 0%,#03030a 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)">
+<section id="data-dominance" style="display:none;background:linear-gradient(180deg,#05050f 0%,#03030a 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)" data-auth-gate="true" data-section-id="data-dominance">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <div style="display:inline-block;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:24px;padding:6px 18px;font-size:11px;color:#818cf8;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">AI Threat Intelligence Platform</div>
@@ -3526,8 +3859,128 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════ PHASE 3: EXECUTIVE HUB ════════ -->
-<section id="executive-hub" style="background:linear-gradient(180deg,#03030a 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(16,185,129,.15)">
-<div style="max-width:1200px;margin:0 auto">
+<section id="executive-hub" style="display:none;background:linear-gradient(180deg,#03030a 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(16,185,129,.15)" data-auth-gate="true" data-section-id="executive-hub">
+
+<!-- v26 Funnel Dashboard — inside executive hub, auth-gated -->
+<div id="v26-funnel-dashboard" style="margin-top:32px;padding:24px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px">
+  <div style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#64748b;text-transform:uppercase;margin-bottom:16px">📊 Revenue Funnel — Live</div>
+  <div id="v26-funnel-steps" style="display:flex;flex-direction:column;gap:10px">
+    <div class="v26-funnel-row" data-step="page_land">
+      <div style="width:130px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">Page Visits</div>
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:22px;overflow:hidden;position:relative">
+        <div class="v26-bar" style="height:100%;background:#185FA5;border-radius:4px;width:0%;transition:width .6s ease;display:flex;align-items:center;padding:0 8px">
+          <span class="v26-bar-label" style="font-size:11px;font-weight:600;color:#fff;white-space:nowrap">—</span>
+        </div>
+      </div>
+      <div class="v26-pct" style="width:40px;font-size:11px;color:#64748b;text-align:right;flex-shrink:0">100%</div>
+    </div>
+    <div class="v26-funnel-row" data-step="scan_start">
+      <div style="width:130px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">Scan Starts</div>
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:22px;overflow:hidden">
+        <div class="v26-bar" style="height:100%;background:#1D9E75;border-radius:4px;width:0%;transition:width .6s ease;display:flex;align-items:center;padding:0 8px">
+          <span class="v26-bar-label" style="font-size:11px;font-weight:600;color:#fff">—</span>
+        </div>
+      </div>
+      <div class="v26-pct" style="width:40px;font-size:11px;color:#64748b;text-align:right">—</div>
+    </div>
+    <div class="v26-funnel-row" data-step="email_captured">
+      <div style="width:130px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">Emails Captured</div>
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:22px;overflow:hidden">
+        <div class="v26-bar" style="height:100%;background:#3B6D11;border-radius:4px;width:0%;transition:width .6s ease;display:flex;align-items:center;padding:0 8px">
+          <span class="v26-bar-label" style="font-size:11px;font-weight:600;color:#fff">—</span>
+        </div>
+      </div>
+      <div class="v26-pct" style="width:40px;font-size:11px;color:#64748b;text-align:right">—</div>
+    </div>
+    <div class="v26-funnel-row" data-step="report_purchased">
+      <div style="width:130px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">Reports Sold</div>
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:22px;overflow:hidden">
+        <div class="v26-bar" style="height:100%;background:#BA7517;border-radius:4px;width:0%;transition:width .6s ease;display:flex;align-items:center;padding:0 8px">
+          <span class="v26-bar-label" style="font-size:11px;font-weight:600;color:#fff">—</span>
+        </div>
+      </div>
+      <div class="v26-pct" style="width:40px;font-size:11px;color:#64748b;text-align:right">—</div>
+    </div>
+    <div class="v26-funnel-row" data-step="assessment_booked">
+      <div style="width:130px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">Assessments</div>
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:22px;overflow:hidden">
+        <div class="v26-bar" style="height:100%;background:#D85A30;border-radius:4px;width:0%;transition:width .6s ease;display:flex;align-items:center;padding:0 8px">
+          <span class="v26-bar-label" style="font-size:11px;font-weight:600;color:#fff">—</span>
+        </div>
+      </div>
+      <div class="v26-pct" style="width:40px;font-size:11px;color:#64748b;text-align:right">—</div>
+    </div>
+    <div class="v26-funnel-row" data-step="subscription_started">
+      <div style="width:130px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">Subscriptions</div>
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:22px;overflow:hidden">
+        <div class="v26-bar" style="height:100%;background:#A32D2D;border-radius:4px;width:0%;transition:width .6s ease;display:flex;align-items:center;padding:0 8px">
+          <span class="v26-bar-label" style="font-size:11px;font-weight:600;color:#fff">—</span>
+        </div>
+      </div>
+      <div class="v26-pct" style="width:40px;font-size:11px;color:#64748b;text-align:right">—</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
+    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px 14px;text-align:center;flex:1;min-width:90px">
+      <div id="v26-mrr" style="font-size:18px;font-weight:800;color:#10b981">₹—</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">MRR</div>
+    </div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;text-align:center;flex:1;min-width:90px">
+      <div id="v26-conversion" style="font-size:18px;font-weight:800;color:#f59e0b">—%</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">Scan→Email</div>
+    </div>
+    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px 14px;text-align:center;flex:1;min-width:90px">
+      <div id="v26-emails-total" style="font-size:18px;font-weight:800;color:#818cf8">—</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">Total Emails</div>
+    </div>
+  </div>
+</div>
+<script>
+// Load funnel data from Worker
+(function loadFunnelDashboard() {
+  async function load() {
+    try {
+      const res = await fetch('/api/gtm/funnel-dashboard?period=30d');
+      if (!res.ok) return;
+      const data = await res.json();
+      const steps = data.funnel || data.steps || [];
+      const topCount = steps[0]?.count || 1;
+      
+      steps.forEach((step, i) => {
+        const row = document.querySelector('.v26-funnel-row[data-step="' + step.event + '"]');
+        if (!row) return;
+        const pct = Math.min(100, Math.round((step.count / topCount) * 100));
+        const bar = row.querySelector('.v26-bar');
+        const label = row.querySelector('.v26-bar-label');
+        const pctEl = row.querySelector('.v26-pct');
+        if (bar) { setTimeout(() => bar.style.width = pct + '%', 100 * i); }
+        if (label) label.textContent = step.count.toLocaleString('en-IN');
+        if (pctEl) pctEl.textContent = pct + '%';
+      });
+      
+      if (data.mrr !== undefined) {
+        const el = document.getElementById('v26-mrr');
+        if (el) el.textContent = '₹' + Number(data.mrr).toLocaleString('en-IN');
+      }
+      if (data.scan_to_email_rate !== undefined) {
+        const el = document.getElementById('v26-conversion');
+        if (el) el.textContent = Number(data.scan_to_email_rate).toFixed(1) + '%';
+      }
+      if (data.total_emails !== undefined) {
+        const el = document.getElementById('v26-emails-total');
+        if (el) el.textContent = Number(data.total_emails).toLocaleString('en-IN');
+      }
+    } catch(e) { /* non-blocking */ }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', load);
+  } else {
+    load();
+  }
+})();
+</script>
+
+  <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <div style="display:inline-block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:24px;padding:6px 18px;font-size:11px;color:#10b981;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">CISO Command Center</div>
     <h2 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin:0 0 16px;background:linear-gradient(135deg,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Executive Security Command Center</h2>
@@ -3785,7 +4238,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ══════════════════════════ PHASE 4: PROPOSAL GENERATOR ══════════════════════════ -->
-<section id="proposal-gen" style="background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)">
+<section id="proposal-gen" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)" data-auth-gate="true" data-section-id="proposal-gen">
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#6366f1;text-transform:uppercase;margin-bottom:16px">AI Proposal Engine</span>
@@ -3893,7 +4346,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ══════════════════════════ PHASE 4: AFFILIATE HUB ══════════════════════════ -->
-<section id="affiliate-hub" style="background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)">
+<section id="affiliate-hub" style="display:none;background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)" data-auth-gate="true" data-section-id="affiliate-hub">
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:16px">Partner & Affiliate Program</span>
@@ -4027,7 +4480,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ══════════════════════════ PHASE 4: GROWTH ANALYTICS ══════════════════════════ -->
-<section id="growth-analytics" style="background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)">
+<section id="growth-analytics" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)" data-auth-gate="true" data-section-id="growth-analytics">
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#ec4899;text-transform:uppercase;margin-bottom:16px">Growth Intelligence</span>
@@ -4188,7 +4641,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <!-- ════════════════════════ TRAINING ACADEMY SECTION ════════════════════════ -->
-<section id="academy-section" style="padding:72px 24px;background:linear-gradient(180deg,#060610,#08080f,#050510)">
+<section id="academy-section" style="display:none;padding:72px 24px;background:linear-gradient(180deg,#060610,#08080f,#050510)" data-auth-gate="true" data-section-id="academy-section">
 <style>
 /* ── ACADEMY SECTION STYLES ── */
 @keyframes acs-glow{0%,100%{border-color:rgba(0,255,136,.2);box-shadow:0 4px 24px rgba(0,0,0,.4)}50%{border-color:rgba(0,255,136,.4);box-shadow:0 4px 32px rgba(0,255,136,.1)}}
@@ -4307,6 +4760,127 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ════════════════════════════════ PRICING ════════════════════════════════ -->
+
+<!-- ═══ v26 ASSESSMENT CTA — PRIMARY REVENUE SECTION ═══ -->
+<section id="assessment-cta" style="background:linear-gradient(135deg,#0a0a1a 0%,#0d0d28 50%,#0a0a1a 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.2);border-bottom:1px solid rgba(245,158,11,.1)">
+  <div style="max-width:780px;margin:0 auto;text-align:center">
+    
+    <!-- Label -->
+    <div style="display:inline-block;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:24px;padding:6px 18px;font-size:11px;color:#f59e0b;letter-spacing:.15em;font-weight:800;text-transform:uppercase;margin-bottom:20px">
+      🎯 Most Popular Service
+    </div>
+    
+    <h2 style="font-size:clamp(26px,4vw,42px);font-weight:900;color:#fff;margin:0 0 16px;line-height:1.15;letter-spacing:-.5px">
+      Full Security Assessment<br>
+      <span style="background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">₹9,999 — Delivered in 72 Hours</span>
+    </h2>
+    
+    <p style="font-size:clamp(14px,1.8vw,17px);color:#94a3b8;max-width:580px;margin:0 auto 32px;line-height:1.65">
+      A real security expert reviews your domain, infrastructure, and AI systems. 
+      You get a 50-page report, a remediation roadmap, and a 30-minute call with our lead analyst.
+    </p>
+    
+    <!-- What's included -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:36px;text-align:left">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px">
+        <div style="color:#f59e0b;font-size:18px;margin-bottom:6px">📋</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">50-Page Report</div>
+        <div style="font-size:11px;color:#64748b">Every finding documented with evidence</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px">
+        <div style="color:#10b981;font-size:18px;margin-bottom:6px">🛣️</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">Remediation Roadmap</div>
+        <div style="font-size:11px;color:#64748b">Prioritized fix plan by business risk</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px">
+        <div style="color:#00d4ff;font-size:18px;margin-bottom:6px">📞</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">30-Min Expert Call</div>
+        <div style="font-size:11px;color:#64748b">Live walkthrough with our lead analyst</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px">
+        <div style="color:#a78bfa;font-size:18px;margin-bottom:6px">⚡</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">72-Hour Delivery</div>
+        <div style="font-size:11px;color:#64748b">Results within 3 business days</div>
+      </div>
+    </div>
+    
+    <!-- CTA buttons -->
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
+      <button onclick="cdbBookAssessment()" 
+        style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;padding:16px 36px;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:.02em;box-shadow:0 4px 24px rgba(245,158,11,.4);transition:transform .15s,box-shadow .15s"
+        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(245,158,11,.5)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 24px rgba(245,158,11,.4)'">
+        Book Assessment — ₹9,999 →
+      </button>
+      <a href="https://wa.me/918179881447?text=Hi%2C+I%27m+interested+in+a+Security+Assessment+for+my+domain" 
+        target="_blank" rel="noopener"
+        style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;padding:16px 28px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;transition:background .2s"
+        onmouseover="this.style.background='rgba(34,197,94,.18)'" onmouseout="this.style.background='rgba(34,197,94,.1)'">
+        💬 WhatsApp Us First
+      </a>
+    </div>
+    
+    <!-- Trust footer -->
+    <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+      <span style="font-size:12px;color:#475569">✓ GST Invoice Included</span>
+      <span style="font-size:12px;color:#475569">✓ DPDP Act 2023 Compliant</span>
+      <span style="font-size:12px;color:#475569">✓ CIN: U74999OR2024PTC049281</span>
+      <span style="font-size:12px;color:#475569">✓ 72-Hour Delivery SLA</span>
+    </div>
+  </div>
+</section>
+
+<script>
+window.cdbBookAssessment = async function() {
+  const email = localStorage.getItem('cdb_email') || '';
+  
+  // If no email, capture first
+  if (!email || !email.includes('@')) {
+    window.cdbShowEmailGate({
+      module: 'assessment',
+      riskLevel: 'HIGH',
+      findingCount: 0,
+      onComplete: function(capturedEmail) {
+        window.cdbBookAssessment();
+      }
+    });
+    return;
+  }
+  
+  // Track click
+  CDB_FUNNEL?.track('assessment_cta_click', { email });
+  
+  // Attempt Razorpay checkout for assessment (₹9,999)
+  try {
+    const res = await fetch('/api/payments/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module: 'assessment', target: 'assessment', plan: 'ASSESSMENT', email, price_inr: 9999 }),
+    });
+    if (!res.ok) throw new Error('order_failed');
+    const order = await res.json();
+    if (!order.key_id) throw new Error('no_key');
+    await cdbLoadRazorpay();
+    const rzp = new window.RazorpayNative({
+      key: order.key_id, amount: order.amount, currency: 'INR',
+      name: 'CYBERDUDEBIVASH AI Security Hub',
+      description: 'Full Security Assessment — 72-Hour Delivery',
+      order_id: order.order_id, prefill: { email },
+      theme: { color: '#f59e0b' },
+      handler: async function(rp) {
+        await fetch('/api/payments/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...rp, module:'assessment', target:'assessment', email}) });
+        if (typeof TOAST !== 'undefined') TOAST.success('Assessment booked! We'll contact you within 4 hours at ' + email, 'Assessment Confirmed');
+        CDB_FUNNEL?.track('assessment_booked', { email });
+      },
+    });
+    rzp.open();
+  } catch(err) {
+    // Fallback: redirect to booking page
+    window.open('/booking.html?service=assessment&email=' + encodeURIComponent(email), '_blank');
+  }
+};
+</script>
+
 <section id="pricing">
   <div class="section-inner">
     <div class="section-label">Enterprise Pricing</div>
@@ -4648,7 +5222,7 @@ a{color:var(--accent);text-decoration:none}
 </section>
 
 <!-- ═══════════════ GLOBAL COMPLIANCE PACKS + MSSP ═══════════════ -->
-<section id="compliance-global" style="background:#080818;padding:80px 20px;border-top:1px solid rgba(255,255,255,.05)">
+<section id="compliance-global" style="display:none;background:#080818;padding:80px 20px;border-top:1px solid rgba(255,255,255,.05)" data-auth-gate="true" data-section-id="compliance-global">
   <div class="section-inner" style="max-width:1200px;margin:0 auto">
 
     <!-- Header -->
@@ -5039,7 +5613,7 @@ a{color:var(--accent);text-decoration:none}
 <!-- ═══════════════════════════════════════════════════════════════
      MONETIZATION ZONE: AdSense + Affiliate Banners
      ═══════════════════════════════════════════════════════════════ -->
-<section id="monetization-zone" style="background:#0a0a1a;padding:32px 20px;max-width:1200px;margin:0 auto">
+<section id="monetization-zone" style="display:none;background:#0a0a1a;padding:32px 20px;max-width:1200px;margin:0 auto" data-auth-gate="true" data-section-id="monetization-zone">
 
   <!-- ── Sponsored Programs Header Banner ── -->
   <div style="margin-bottom:28px;border-radius:14px;overflow:hidden;border:1px solid rgba(0,212,255,.18);background:linear-gradient(135deg,#050520 0%,#0a0a2e 50%,#05051a 100%);padding:28px 32px;position:relative" id="sponsored-header-banner">
@@ -5408,7 +5982,7 @@ footer.v14-footer::before {
 </style>
 
 <!-- GOD v19: THREAT HUNTING -->
-<section id="threat-hunting" style="background:linear-gradient(180deg,#020208 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(239,68,68,.25)">
+<section id="threat-hunting" style="display:none;background:linear-gradient(180deg,#020208 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(239,68,68,.25)" data-auth-gate="true" data-section-id="threat-hunting">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(239,68,68,.3)">&#x1F3AF; ADVANCED THREAT HUNTING</span>
@@ -5461,7 +6035,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: VULNERABILITY MANAGEMENT -->
-<section id="vuln-management" style="background:linear-gradient(180deg,#060614 0%,#0a0a1e 100%);padding:80px 20px;border-top:2px solid rgba(245,158,11,.2)">
+<section id="vuln-management" style="display:none;background:linear-gradient(180deg,#060614 0%,#0a0a1e 100%);padding:80px 20px;border-top:2px solid rgba(245,158,11,.2)" data-auth-gate="true" data-section-id="vuln-management">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(245,158,11,.15);color:#f59e0b;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(245,158,11,.3)">&#x1F52C; VULNERABILITY MANAGEMENT</span>
@@ -5504,7 +6078,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: GLOBAL THREAT MAP -->
-<section id="global-threat-map" style="background:linear-gradient(180deg,#0a0a1e 0%,#020210 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.2)">
+<section id="global-threat-map" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#020210 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.2)" data-auth-gate="true" data-section-id="global-threat-map">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:40px">
     <span style="background:rgba(0,212,255,.1);color:#00d4ff;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(0,212,255,.25)">&#x1F5FA; GLOBAL THREAT INTELLIGENCE MAP</span>
@@ -5541,7 +6115,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: INCIDENT RESPONSE -->
-<section id="incident-response" style="background:linear-gradient(180deg,#020210 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(236,72,153,.2)">
+<section id="incident-response" style="display:none;background:linear-gradient(180deg,#020210 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(236,72,153,.2)" data-auth-gate="true" data-section-id="incident-response">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(236,72,153,.12);color:#ec4899;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(236,72,153,.3)">&#x1F6A8; INCIDENT RESPONSE CENTER</span>
@@ -5598,7 +6172,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: ZERO-DAY INTELLIGENCE -->
-<section id="zero-day-intel" style="background:linear-gradient(180deg,#060614 0%,#030308 100%);padding:80px 20px;border-top:2px solid rgba(168,85,247,.25)">
+<section id="zero-day-intel" style="display:none;background:linear-gradient(180deg,#060614 0%,#030308 100%);padding:80px 20px;border-top:2px solid rgba(168,85,247,.25)" data-auth-gate="true" data-section-id="zero-day-intel">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(168,85,247,.15);color:#a855f7;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(168,85,247,.3)">&#x26A1; ZERO-DAY INTELLIGENCE</span>
@@ -5909,7 +6483,7 @@ footer.v14-footer::before {
         </div>
         <div style="text-align:right">
           <div style="font-size:11px;color:#64748b;line-height:2">
-            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v25.0</span><br>
+            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v26.0</span><br>
             <a href="mailto:bivash@cyberdudebivash.com" style="color:#94a3b8">bivash@cyberdudebivash.com</a><br>
             <a href="https://wa.me/918179881447" target="_blank" style="color:#94a3b8">+91 8179881447</a> ·
             <a href="https://discord.gg/cyberdudebivash" target="_blank" style="color:#94a3b8">Discord: cybercoder127001</a>
@@ -8842,6 +9416,10 @@ function localEngine(module, payload) {
 
 // ─── Hero Quick Scan ────────────────────────────────────────────────────
 function heroQuickScan() {
+  // ── v26: Trigger email gate after free scan ──────────────────────────────
+  window._lastScanDomain = domain;
+  window._lastScanModule = 'domain';
+
   const val = document.getElementById('heroScanInput')?.value?.trim();
   if (!val) {
     document.getElementById('heroScanInput')?.focus();
@@ -12246,7 +12824,7 @@ function injectStatusBar(){
     '<div style="display:flex;align-items:center;gap:8px">'+
     '<span style="color:rgba(255,255,255,.3)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools ready</span></span>'+
     '<span style="color:rgba(255,255,255,.2)">|</span>'+
-    '<span style="color:rgba(255,255,255,.3)">v25.0.0</span>'+
+    '<span style="color:rgba(255,255,255,.3)">v26.0.0</span>'+
     '</div>';
   document.body.appendChild(bar);
   setInterval(function(){

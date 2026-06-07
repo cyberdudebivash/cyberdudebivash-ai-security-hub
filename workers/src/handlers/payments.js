@@ -94,6 +94,14 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     Object.assign(MODULE_PRICES['subscription'], subPlan);
   }
 
+  // Assessment/threat-intel/red-team: one-time products with fixed pricing
+  if (['assessment', 'threat_intel', 'red_team'].includes(module)) {
+    // Pricing already set in MODULE_PRICES — no override needed
+    if (body.price_inr) {
+      MODULE_PRICES[module].amount = Math.round(Number(body.price_inr) * 100);
+    }
+  }
+
   // Defense: use price_inr from request body
   if (module === 'defense' && body.price_inr) {
     MODULE_PRICES['defense'].amount = Math.round(Number(body.price_inr) * 100);

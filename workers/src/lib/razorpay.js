@@ -14,6 +14,10 @@ export const MODULE_PRICES = {
   redteam:        { amount: 99900,   label: '₹999',    name: 'Red Team Report'               },
   identity:       { amount: 79900,   label: '₹799',    name: 'Identity Security Report'      },
   compliance:     { amount: 49900,   label: '₹499',    name: 'Compliance Report'             },
+  // Assessment products (one-time)
+  assessment:     { amount: 999900,  label: '₹9,999',  name: 'Full Security Assessment'    },
+  threat_intel:   { amount: 1499900, label: '₹14,999', name: 'Threat Intelligence Report'   },
+  red_team:       { amount: 2499900, label: '₹24,999', name: 'Red Team Assessment'           },
   // Subscription plans (monthly billing)
   subscription:   { amount: 49900,   label: '₹499',    name: 'Starter Plan (Monthly)'        },
   // Defense marketplace
