@@ -48,6 +48,14 @@
 
 // ─── Sync scan handlers (v4 — backward compat) ───────────────────────────────
 
+
+// ── v28 AI SECURITY PLATFORM IMPORTS ─────────────────────────────────────────
+import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
+import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
+import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
+import { handleAIThreatFeed, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement } from './handlers/aiServices.js';
+
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
 import { handleBookAssessment, handleConfirmAssessment, handleGetAssessment, handleListAssessments, handleUpdateAssessmentStatus } from './handlers/assessmentBooking.js';
@@ -4179,6 +4187,76 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }, { status: 405 }), request));
     }
 
+
+
+  // ── v28: AI SECURITY POSTURE MANAGEMENT (PILLAR 1) ────────────────────────
+  if (path === '/api/ai-security/assets' && method === 'GET') {
+    return handleListAIAssets(request, env, authCtx);
+  }
+  if (path === '/api/ai-security/assets/register' && method === 'POST') {
+    return handleRegisterAIAsset(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/assets/') && path.endsWith('/scan') && method === 'POST') {
+    return handleScanAIAsset(request, env, authCtx);
+  }
+  if (path === '/api/ai-security/dashboard' && method === 'GET') {
+    return handleASPMDashboard(request, env, authCtx);
+  }
+
+  // ── v28: AI GOVERNANCE CENTER (PILLAR 2) ───────────────────────────────────
+  if (path === '/api/ai-security/governance/frameworks') {
+    return handleListFrameworks(request, env);
+  }
+  if (path === '/api/ai-security/governance/assess' && method === 'POST') {
+    return handleGovernanceAssess(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/governance/') && path.endsWith('/answer') && method === 'POST') {
+    return handleGovernanceAnswer(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/governance/') && method === 'GET') {
+    return handleGetGovernanceAssessment(request, env, authCtx);
+  }
+
+  // ── v28: AI RED TEAM PLATFORM (PILLAR 3) ──────────────────────────────────
+  if (path === '/api/ai-security/redteam/engage' && method === 'POST') {
+    return handleRedTeamEngage(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/redteam/') && path.endsWith('/attack') && method === 'POST') {
+    return handleRedTeamAttack(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/redteam/') && path.endsWith('/report')) {
+    return handleRedTeamReport(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/redteam/') && method === 'GET') {
+    return handleGetRedTeamEngagement(request, env, authCtx);
+  }
+
+  // ── v28: AI AGENT SECURITY (PILLAR 4) ─────────────────────────────────────
+  if (path === '/api/ai-security/agents/scan' && method === 'POST') {
+    return handleScanAgent(request, env, authCtx);
+  }
+  if (path === '/api/ai-security/agents/register' && method === 'POST') {
+    return handleRegisterAgent(request, env, authCtx);
+  }
+  if (path === '/api/ai-security/agents' && method === 'GET') {
+    return handleListAgents(request, env, authCtx);
+  }
+
+  // ── v28: AI THREAT INTELLIGENCE FEED (PILLAR 5) ───────────────────────────
+  if (path.startsWith('/api/ai-security/threat-feed')) {
+    return handleAIThreatFeed(request, env);
+  }
+
+  // ── v28: AI SECURITY SERVICES (PILLAR 6) ──────────────────────────────────
+  if (path === '/api/ai-security/services/catalog') {
+    return handleServiceCatalog(request, env);
+  }
+  if (path === '/api/ai-security/services/book' && method === 'POST') {
+    return handleBookAIService(request, env, authCtx);
+  }
+  if (path.startsWith('/api/ai-security/services/') && method === 'GET') {
+    return handleGetAIServiceEngagement(request, env, authCtx);
+  }
 
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
   if (path === '/api/ceo/dashboard' || path === '/api/ceo/dashboard/kpis') {
