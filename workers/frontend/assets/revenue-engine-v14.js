@@ -533,7 +533,7 @@ async function hydrateStateFromAPI() {
     setTimeout(tick, 7000);
   }
 
-  return { start, getState: () => state, _applyToUI };
+  return { start, getState: () => state, _applyToUI, hydrateStateFromAPI };
 })();
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1137,15 +1137,18 @@ function _applyStateToUI() {
 
 function _init() {
   // Phase 0: Load real API data FIRST — before any UI injection
-  // hydrateStateFromAPI populates state from /api/health + /api/platform/activity
-  // The hero bar will only show when real data arrives (or stay hidden)
-  hydrateStateFromAPI().then(() => {
+  // hydrateStateFromAPI is exported from ACTIVITY_ENGINE closure
+  // Using ACTIVITY_ENGINE.hydrateStateFromAPI() prevents ReferenceError
+  const _hydrate = ACTIVITY_ENGINE.hydrateStateFromAPI.bind(ACTIVITY_ENGINE);
+  window.hydrateStateFromAPI = _hydrate; // global alias for safety
+
+  _hydrate().then(() => {
     // Re-apply UI after data loads to overwrite HTML defaults
     ACTIVITY_ENGINE._applyToUI && ACTIVITY_ENGINE._applyToUI();
     _applyStateToUI();
   }).catch(() => {});
   // Refresh real state every 5 minutes
-  setInterval(() => { hydrateStateFromAPI().then(() => _applyStateToUI()).catch(()=>{}); }, 300000);
+  setInterval(() => { _hydrate().then(() => _applyStateToUI()).catch(()=>{}); }, 300000);
 
   // Phase 1: Conversion engine
   _initConversionEngine();
