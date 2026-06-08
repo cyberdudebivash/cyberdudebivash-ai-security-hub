@@ -47,6 +47,12 @@
  */
 
 // ─── Sync scan handlers (v4 — backward compat) ───────────────────────────────
+
+// ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
+import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
+import { handleBookAssessment, handleConfirmAssessment, handleGetAssessment, handleListAssessments, handleUpdateAssessmentStatus } from './handlers/assessmentBooking.js';
+import { handleTrustCenter, handleTrustMetrics, handleTrustCompany, handleSubmitTestimonial } from './handlers/trustCenter.js';
+
 import { handleDomainScan }        from './handlers/domain.js';
 import { handleAIScan }            from './handlers/ai.js';
 import { handleRedteamScan }       from './handlers/redteam.js';
@@ -4172,6 +4178,46 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         docs: 'GET /api',
       }, { status: 405 }), request));
     }
+
+
+  // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
+  if (path === '/api/ceo/dashboard' || path === '/api/ceo/dashboard/kpis') {
+    return handleCEODashboard(request, env, authCtx);
+  }
+  if (path === '/api/ceo/snapshot' && method === 'POST') {
+    return handleCEOSnapshot(request, env, authCtx);
+  }
+
+  // ── v27: ASSESSMENT BOOKING ────────────────────────────────────────────────
+  if (path === '/api/assessments/book' && method === 'POST') {
+    return handleBookAssessment(request, env);
+  }
+  if (path === '/api/assessments/confirm' && method === 'POST') {
+    return handleConfirmAssessment(request, env);
+  }
+  if (path === '/api/assessments' && method === 'GET') {
+    return handleListAssessments(request, env, authCtx);
+  }
+  if (path.startsWith('/api/assessments/') && method === 'GET') {
+    return handleGetAssessment(request, env, authCtx);
+  }
+  if (path.includes('/api/assessments/') && path.endsWith('/status') && method === 'PUT') {
+    return handleUpdateAssessmentStatus(request, env, authCtx);
+  }
+
+  // ── v27: TRUST CENTER ──────────────────────────────────────────────────────
+  if (path === '/api/trust/center') {
+    return handleTrustCenter(request, env);
+  }
+  if (path === '/api/trust/metrics') {
+    return handleTrustMetrics(request, env);
+  }
+  if (path === '/api/trust/company') {
+    return handleTrustCompany(request, env);
+  }
+  if (path === '/api/trust/testimonial' && method === 'POST') {
+    return handleSubmitTestimonial(request, env);
+  }
 
     // ── 404 ─────────────────────────────────────────────────────────────────
     return withSecurityHeaders(withCors(Response.json({
