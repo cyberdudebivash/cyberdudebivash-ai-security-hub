@@ -1264,7 +1264,7 @@ a{color:var(--accent);text-decoration:none}
     <div class="hero-urgency" style="margin-top:8px">
       <span class="urgency-dot"></span>
       <span id="hero-urgency-text" style="font-size:12px;color:rgba(255,255,255,.55)">
-        Live threat monitoring active — Sentinel APEX monitoring CVEs · Threat Intel Feed <strong id="hero-live-scans" style="color:#ef4444"></strong>
+        Live threat monitoring active — Sentinel APEX · CVE Monitoring · <span id="hero-live-scans" style="color:#ef4444;font-weight:900"></span><span id="hero-live-label" style="color:rgba(255,255,255,.55)"> threat intelligence active</span>
         
       </span>
     </div>
@@ -6246,7 +6246,7 @@ window.cdbBookAssessment = async function() {
     </div>
     <div class="risk-blk-ticker">
       <div class="risk-blk-tdot"></div>
-      <div class="risk-blk-ttxt">Last detection: <span id="rb-last-cve">—</span> — flagged <span id="rb-time-ago">3 min ago</span></div>
+      <div class="risk-blk-ttxt" id="rb-cve-ticker" style="display:none">Last detection: <span id="rb-last-cve">—</span> — <span id="rb-time-ago">just now</span></div>
     </div>
   </div>
 </div>
@@ -6996,11 +6996,19 @@ footer.v14-footer::before {
       safe('rb-cve-active',  cveActive!==null  ? Number(cveActive).toLocaleString('en-IN')  : '—');
       if (threatsHour !== null) safe('rb-threats-hour', threatsHour);
       else { var eth=el('rb-threats-hour'); if(eth&&eth.closest) eth.closest('.risk-blk-stat')?.style.setProperty('display','none'); }
-      if (latestCve) { safe('rb-last-cve', latestCve); safe('rb-time-ago','just now'); }
+      if (latestCve) {
+        safe('rb-last-cve', latestCve);
+        safe('rb-time-ago', 'just now');
+        var ticker = document.getElementById('rb-cve-ticker');
+        if (ticker) ticker.style.display = 'block';
+      }
 
       // Hero live scans
-      if (scansToday!==null) safe('hero-live-scans', Number(scansToday).toLocaleString('en-IN'));
-      else safe('hero-live-scans','...');
+      if (scansToday!==null) {
+        safe('hero-live-scans', Number(scansToday).toLocaleString('en-IN'));
+        var lbl = document.getElementById('hero-live-label');
+        if (lbl) lbl.textContent = ' scans completed';
+      }
 
       // Trust center
       safe('tm-scans', scansToday!==null ? Number(scansToday).toLocaleString('en-IN') : '—');
@@ -10141,7 +10149,7 @@ function localEngine(module, payload) {
     locked_findings: findings.filter(f => f.is_premium).map(f => ({ ...f, preview: f.description.slice(0,40)+'...' })),
     locked_findings_count: findings.filter(f => f.is_premium).length,
     is_premium_locked: true,
-    monetization: { unlock_price: '₹299', payment_url: TOOLS_URL + '/#pricing', upgrade_cta: `Unlock ${findings.filter(f=>f.is_premium).length} more findings — PDF report available` },
+    monetization: { unlock_price: '₹199', amount: 19900, payment_url: TOOLS_URL + '/#pricing', upgrade_cta: `Unlock ${findings.filter(f=>f.is_premium).length} more findings — Full PDF report included` },
     recommendations: ['Upgrade to full report for complete findings', 'Contact bivash@cyberdudebivash.com for enterprise support'],
   };
 }
@@ -12349,11 +12357,11 @@ window.addEventListener('load', () => {
       font-size:13px; font-family:sans-serif; box-shadow:0 2px 12px rgba(0,0,0,.3);
     `;
 
-    const plans = { free: { upgrade: 'STARTER', price: '₹499/mo', discount: '₹299 today' }, starter: { upgrade: 'PRO', price: '₹1,499/mo', discount: '₹1,199 today' } };
+    const plans = { free: { upgrade: 'STARTER', price: '₹499/mo', discount: '₹499/mo' }, starter: { upgrade: 'PRO', price: '₹1,499/mo', discount: '₹1,499/mo' } };
     const offer = plans[PLAN] || plans.free;
 
     banner.innerHTML = `
-      <span>⚡ Limited-time offer — Upgrade to <strong>${offer.upgrade}</strong> for just <strong>${offer.discount}</strong></span>
+      <span>⚡ Upgrade to <strong>${offer.upgrade}</strong> — <strong>${offer.price}</strong> · Full access · Cancel anytime</span>
       <span id="cdb-countdown" style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-weight:700;min-width:80px;text-align:center">24:00:00</span>
       <a href="#pricing" onclick="(function(){var el=document.getElementById('pricing');if(el){el.scrollIntoView({behavior:'smooth'});}else if(typeof cdbNavigate==='function'){cdbNavigate('pricing');}return false;})()" style="background:#fff;color:#4f46e5;padding:6px 16px;border-radius:20px;font-weight:700;text-decoration:none;white-space:nowrap;font-size:12px">
         Upgrade Now →
@@ -12624,7 +12632,7 @@ window.addEventListener('load', () => {
         <p style="color:#94a3b8;font-size:13px;margin:0 0 20px">Upgrade to STARTER to unlock all CVE details, IOCs, CVSS breakdown, and remediation steps</p>
         <a href="/upgrade?plan=starter&ref=report_gate"
            style="display:block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;text-decoration:none;margin-bottom:10px">
-          Unlock Full Report — ₹299 first month
+          Unlock Full Report — ₹199 · PDF Included
         </a>
         <a href="/api/checkout?product=basic_report&price=199&ref=report_gate_buy"
            style="display:block;background:transparent;border:1px solid #4f46e5;color:#818cf8;padding:10px 24px;border-radius:10px;font-size:13px;text-decoration:none">

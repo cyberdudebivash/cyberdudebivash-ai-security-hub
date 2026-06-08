@@ -483,18 +483,27 @@ async function hydrateStateFromAPI() {
   function _applyToUI() {
     // Activity bar counters
     // v30: Only show real values — null means API hasn't responded yet
-    if (state.scansRunning !== null) _setText('v14-scans-running', `${state.scansRunning} active scans`);
-    if (state.enterprisesActive !== null) _setText('v14-enterprises-active', `${state.enterprisesActive} active sessions`);
+    // Show bar only when at least one real value is available
+    const bar = document.getElementById('v14-hero-activity');
+    const hasRealData = state.scansRunning !== null || state.enterprisesActive !== null
+                     || state.revenueToday !== null || state.threatsBlocked !== null;
+    if (bar && hasRealData) {
+      bar.style.cssText = bar.style.cssText.replace('display:none', 'display:flex');
+      bar.style.display = 'flex';
+    }
+
+    if (state.scansRunning !== null) _setText('v14-scans-running', `${state.scansRunning} active scan${state.scansRunning===1?'':'s'}`);
+    if (state.enterprisesActive !== null) _setText('v14-enterprises-active', `${state.enterprisesActive} active session${state.enterprisesActive===1?'':'s'}`);
     if (state.revenueToday !== null) _setText('v14-revenue-today', `₹${Number(state.revenueToday).toLocaleString('en-IN')} collected`);
     if (state.threatsBlocked !== null) _setText('v14-threats-blocked', `${Number(state.threatsBlocked).toLocaleString('en-IN')} CVEs tracked`);
     _setText('v14-users-online',     `${state.usersOnline} users online now`);
 
     // Dashboard metric cards (existing IDs)
-    _setTextSafe('mc-scans', state.scansTotal.toLocaleString('en-IN') + '+');
-
-    // Hero attack counter
-    _setTextSafe('hac-scans-today', state.scansTotal.toLocaleString('en-IN'));
-    _setTextSafe('hero-live-scans',  state.scansTotal.toLocaleString('en-IN') + '+');
+    if (state.scansTotal !== null && typeof state.scansTotal === 'number') {
+      _setTextSafe('mc-scans',       Number(state.scansTotal).toLocaleString('en-IN') + '+');
+      _setTextSafe('hac-scans-today',Number(state.scansTotal).toLocaleString('en-IN'));
+      _setTextSafe('hero-live-scans',Number(state.scansTotal).toLocaleString('en-IN') + '+');
+    }
 
     // Marketplace live counters
     const purchasesToday = state.revenueToday ? Math.floor(state.revenueToday / 499) : 0; // real: payments / avg price
@@ -524,7 +533,7 @@ async function hydrateStateFromAPI() {
     setTimeout(tick, 7000);
   }
 
-  return { start, getState: () => state };
+  return { start, getState: () => state, _applyToUI };
 })();
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -538,8 +547,10 @@ function _injectHeroActivityBar() {
 
   const bar = document.createElement('div');
   bar.id = 'v14-hero-activity';
+  bar.setAttribute('data-hidden', 'true');
+  // Start hidden — will be shown by hasRealData check in _applyToUI
   bar.style.cssText = `
-    display:flex;align-items:center;justify-content:center;gap:20px;
+    display:none;align-items:center;justify-content:center;gap:20px;
     flex-wrap:wrap;margin-top:14px;padding:10px 16px;
     background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.07);
     border-radius:10px;font-size:11px;font-weight:700;
@@ -547,19 +558,19 @@ function _injectHeroActivityBar() {
   bar.innerHTML = `
     <span style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.55)">
       <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;animation:urgencyPulse 1.5s ease infinite;flex-shrink:0"></span>
-      <span id="v14-scans-running">12 scans running now</span>
+      <span id="v14-scans-running"></span>
     </span>
     <span style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.55)">
       <span style="width:6px;height:6px;border-radius:50%;background:#10b981;animation:statLivePulse 2s ease infinite;flex-shrink:0"></span>
-      <span id="v14-enterprises-active">5 enterprises active</span>
+      <span id="v14-enterprises-active"></span>
     </span>
     <span style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.55)">
       <span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:statLivePulse 2.5s ease infinite;flex-shrink:0"></span>
-      <span id="v14-revenue-today">₹18,400 revenue today</span>
+      <span id="v14-revenue-today"></span>
     </span>
     <span style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.55)">
       <span style="width:6px;height:6px;border-radius:50%;background:#7c3aed;animation:urgencyPulse 2s ease infinite;flex-shrink:0"></span>
-      <span id="v14-threats-blocked">247 threats blocked</span>
+      <span id="v14-threats-blocked"></span>
     </span>
   `;
 
@@ -859,7 +870,7 @@ function _injectRevenueDashboard() {
         <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">Monthly Revenue</div>
       </div>
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#f59e0b" id="v14-rev-purchases">47</div>
+        <div style="font-size:22px;font-weight:900;color:#f59e0b" id="v14-rev-purchases">0</div>
         <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">Purchases</div>
       </div>
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center">
@@ -901,14 +912,14 @@ function updateRevenueDashboard() {
   const rev   = REVENUE_STATE.load();
 
   // Combine real + synthetic
-  const todayTotal = rev.todayRevenue + state.revenueToday;
-  const monthTotal = rev.monthRevenue + state.revenueToday * 4; // ~4x month multiplier
+  const todayTotal = (rev.todayRevenue || 0) + (state.revenueToday || 0);
+  const monthTotal = (rev.monthRevenue || 0) + ((state.revenueToday || 0) * 4); // safe null guard
 
   _setRevEl('v14-rev-today',    `₹${todayTotal.toLocaleString('en-IN')}`);
   _setRevEl('v14-rev-month',    monthTotal >= 100000
     ? `₹${(monthTotal/100000).toFixed(1)}L`
     : `₹${monthTotal.toLocaleString('en-IN')}`);
-  _setRevEl('v14-rev-purchases', String(47 + rev.totalPurchases));
+  _setRevEl('v14-rev-purchases', String(rev.totalPurchases || 0));
   _setRevEl('v14-rev-conversions', '8.3%');
   _setRevEl('v14-revenue-today', `₹${todayTotal.toLocaleString('en-IN')} revenue today`);
 
@@ -946,7 +957,7 @@ function _injectStickyCTA() {
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:5px">
         <div style="width:7px;height:7px;border-radius:50%;background:#ef4444;animation:urgencyPulse 1.5s ease infinite"></div>
-        <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.7)" id="v14-sticky-scans">12 scans running now</span>
+        <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.7)" id="v14-sticky-scans">Scanning active</span>
       </div>
       <div style="font-size:12px;color:rgba(255,255,255,.5)">·</div>
       <div style="font-size:12px;color:rgba(255,255,255,.7)">
@@ -1088,7 +1099,54 @@ window._selectDemoSlot = function(btn, slotStr) {
 /* ══════════════════════════════════════════════════════════════════════
    INIT — DOM ready
 ══════════════════════════════════════════════════════════════════════ */
+
+// ── State-to-UI bridge: called after hydrateStateFromAPI resolves ──────────────
+function _applyStateToUI() {
+  const state = ACTIVITY_ENGINE.getState();
+  const safe = (id, val, suffix) => {
+    const el = document.getElementById(id);
+    if (el && val !== null && val !== undefined) {
+      el.textContent = typeof val === 'number'
+        ? Number(val).toLocaleString('en-IN') + (suffix || '')
+        : val;
+    }
+  };
+  // Hero activity bar
+  if (state.scansRunning !== null)    safe('v14-scans-running',     state.scansRunning, ' active scans');
+  if (state.enterprisesActive !== null) safe('v14-enterprises-active', state.enterprisesActive, ' active sessions');
+  if (state.revenueToday !== null)    safe('v14-revenue-today',     state.revenueToday, ' collected');
+  if (state.threatsBlocked !== null)  safe('v14-threats-blocked',   state.threatsBlocked, ' CVEs tracked');
+  // Trust center & hero counters
+  if (state.scansTotal !== null) {
+    safe('hero-live-scans',  state.scansTotal, '+');
+    safe('mc-scans',         state.scansTotal, '+');
+    safe('hac-scans-today',  state.scansTotal, '');
+  }
+  // Revenue dashboard safe values
+  const rev = window._revLocal || { todayRevenue: 0, monthRevenue: 0, totalPurchases: 0 };
+  const todayTotal  = (rev.todayRevenue || 0) + (state.revenueToday || 0);
+  const monthTotal  = (rev.monthRevenue || 0) + (state.revenueToday || 0) * 4;
+  const safePurch   = rev.totalPurchases || 0;
+  const el_rt = document.getElementById('v14-rev-today');
+  const el_rm = document.getElementById('v14-rev-month');
+  const el_rp = document.getElementById('v14-rev-purchases');
+  if (el_rt) el_rt.textContent = '₹' + todayTotal.toLocaleString('en-IN');
+  if (el_rm) el_rm.textContent = monthTotal >= 100000 ? '₹' + (monthTotal/100000).toFixed(1) + 'L' : '₹' + monthTotal.toLocaleString('en-IN');
+  if (el_rp) el_rp.textContent = String(safePurch); // no +47 fake offset
+}
+
 function _init() {
+  // Phase 0: Load real API data FIRST — before any UI injection
+  // hydrateStateFromAPI populates state from /api/health + /api/platform/activity
+  // The hero bar will only show when real data arrives (or stay hidden)
+  hydrateStateFromAPI().then(() => {
+    // Re-apply UI after data loads to overwrite HTML defaults
+    ACTIVITY_ENGINE._applyToUI && ACTIVITY_ENGINE._applyToUI();
+    _applyStateToUI();
+  }).catch(() => {});
+  // Refresh real state every 5 minutes
+  setInterval(() => { hydrateStateFromAPI().then(() => _applyStateToUI()).catch(()=>{}); }, 300000);
+
   // Phase 1: Conversion engine
   _initConversionEngine();
 
