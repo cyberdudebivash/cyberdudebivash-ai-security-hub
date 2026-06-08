@@ -56,6 +56,10 @@ import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGe
 import { handleAIThreatFeed, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
 import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement } from './handlers/aiServices.js';
 
+// ── v29 NEW SCANNER IMPORTS ───────────────────────────────────────────────────
+import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handleMCPQuickAssess } from './handlers/mcpSecurityScanner.js';
+import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibeCodeScanner.js';
+
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
 import { handleBookAssessment, handleConfirmAssessment, handleGetAssessment, handleListAssessments, handleUpdateAssessmentStatus } from './handlers/assessmentBooking.js';
@@ -4297,7 +4301,27 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     return handleSubmitTestimonial(request, env);
   }
 
-    // ── 404 ─────────────────────────────────────────────────────────────────
+  // ── v29: MCP SECURITY SCANNER (World's First) ─────────────────────────────
+  if (path === '/api/mcp-security/scan' && method === 'POST') {
+    return handleMCPSecurityScan(request, env, authCtx);
+  }
+  if (path.startsWith('/api/mcp-security/results/') && method === 'GET') {
+    return handleMCPScanResult(request, env, authCtx);
+  }
+  if (path === '/api/mcp-security/threats' && method === 'GET') {
+    return handleMCPThreatFeed(request, env);
+  }
+  if (path === '/api/mcp-security/assess' && method === 'POST') {
+    return handleMCPQuickAssess(request, env);
+  }
+
+  // ── v29: VIBE CODE SECURITY SCANNER ─────────────────────────────────────
+  if (path === '/api/vibe-code/scan' && method === 'POST') {
+    return handleVibeCodeScan(request, env, authCtx);
+  }
+  if (path === '/api/vibe-code/patterns' && method === 'GET') {
+    return handleVibeCodePatterns(request, env);
+  }
     return withSecurityHeaders(withCors(Response.json({
       error:    'Not Found',
       path,

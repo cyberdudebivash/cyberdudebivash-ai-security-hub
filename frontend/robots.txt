@@ -28,6 +28,11 @@ Disallow: /.git/
 Disallow: /workers/
 Disallow: /src/
 
+# Allow public intelligence feeds for SEO (AI threat intel, MCP threats)
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
+
 # ── Google-specific rules ─────────────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
