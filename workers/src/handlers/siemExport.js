@@ -137,7 +137,7 @@ export async function handleSiemExport(request, env, authCtx) {
         source,
         format: 'json',
         count: records.length,
-        platform: 'CYBERDUDEBIVASH AI Security Hub v8.1',
+        platform: 'CYBERDUDEBIVASH AI Security Hub v32.0 (STIX 2.1 Full Graph)',
         data: records,
       }, null, 2);
       contentType = 'application/json';
@@ -407,7 +407,151 @@ function buildSTIX(records, source, ts) {
     }
   }
 
+  // ── P2-1: STIX 2.1 Relationship Graph Objects ────────────────────────────────
+  // Per customer audit: flat JSON listing replaced with full graph relationship strings
+  // Now includes: vulnerability→indicator, attack-pattern, intrusion-set, malware nodes
+  // with explicit directed relationship edges for MISP/OpenCTI/CrowdStrike compatibility
+  const vulnerabilityIds = bundle.objects
+    .filter(o => o.type === 'vulnerability')
+    .map(o => ({ id: o.id, cve: o.name }));
+
+  const indicatorIds = bundle.objects
+    .filter(o => o.type === 'indicator')
+    .map(o => o.id);
+
+  // Link each indicator to its source vulnerability (indicates relationship)
+  for (const ind of bundle.objects.filter(o => o.type === 'indicator')) {
+    const sourceVuln = vulnerabilityIds.find(v =>
+      ind.external_references?.some(ref => ref.external_id === v.cve)
+    );
+    if (sourceVuln) {
+      bundle.objects.push({
+        type: 'relationship',
+        id: `relationship--${crypto.randomUUID()}`,
+        spec_version: '2.1',
+        created: ts,
+        modified: ts,
+        relationship_type: 'indicates',
+        source_ref: ind.id,
+        target_ref: sourceVuln.id,
+        description: `Indicator observed in exploitation of ${sourceVuln.cve}`,
+      });
+    }
+  }
+
+  // Add attack-pattern objects from MITRE ATT&CK tactics
+  const seenTechniques = new Set();
+  for (const rec of records) {
+    const tactics = rec.mitre_tactics || rec.mitre_technique
+      ? [rec.mitre_technique].filter(Boolean)
+      : [];
+    for (const tactic of tactics) {
+      if (seenTechniques.has(tactic)) continue;
+      seenTechniques.add(tactic);
+      const apId = `attack-pattern--${crypto.randomUUID()}`;
+      bundle.objects.push({
+        type: 'attack-pattern',
+        id: apId,
+        spec_version: '2.1',
+        created: ts,
+        modified: ts,
+        name: tactic,
+        description: `MITRE ATT&CK Technique: ${tactic}`,
+        external_references: [{
+          source_name: 'mitre-attack',
+          external_id: tactic.match(/T\d{4}(\.\d{3})?/)?.[0] || tactic,
+          url: `https://attack.mitre.org/techniques/${tactic.match(/T\d{4}/)?.[0] || ''}`,
+        }],
+        kill_chain_phases: [{
+          kill_chain_name: 'mitre-attack',
+          phase_name: rec.mitre_phase || 'unknown',
+        }],
+      });
+
+      // Link vulnerability to attack-pattern (uses relationship)
+      const linkedVuln = vulnerabilityIds.find(v => v.cve === rec.cve_id);
+      if (linkedVuln) {
+        bundle.objects.push({
+          type: 'relationship',
+          id: `relationship--${crypto.randomUUID()}`,
+          spec_version: '2.1',
+          created: ts,
+          modified: ts,
+          relationship_type: 'uses',
+          source_ref: linkedVuln.id,
+          target_ref: apId,
+          description: `${rec.cve_id} uses technique ${tactic}`,
+        });
+      }
+    }
+  }
+
+  // Add threat-actor / intrusion-set for known APT attributions
+  const seenActors = new Set();
+  for (const rec of records) {
+    const actor = rec.threat_actor || rec.apt_group;
+    if (!actor || seenActors.has(actor)) continue;
+    seenActors.add(actor);
+    const actorId = `intrusion-set--${crypto.randomUUID()}`;
+    bundle.objects.push({
+      type: 'intrusion-set',
+      id: actorId,
+      spec_version: '2.1',
+      created: ts,
+      modified: ts,
+      name: actor,
+      description: `Threat actor attributed to exploitation activity`,
+      aliases: [actor],
+      first_seen: rec.created_at || ts,
+      resource_level: 'government', // default — override with real intel
+      primary_motivation: 'opportunistic',
+    });
+
+    // Link actor to vulnerability (exploits relationship)
+    const linkedVuln = vulnerabilityIds.find(v => v.cve === rec.cve_id);
+    if (linkedVuln) {
+      bundle.objects.push({
+        type: 'relationship',
+        id: `relationship--${crypto.randomUUID()}`,
+        spec_version: '2.1',
+        created: ts,
+        modified: ts,
+        relationship_type: 'exploits',
+        source_ref: actorId,
+        target_ref: linkedVuln.id,
+        description: `${actor} has been observed exploiting ${rec.cve_id || 'this vulnerability'}`,
+      });
+    }
+  }
+
+  // Identity → authored-by relationship for all objects
+  const identityId = `identity--cyberdudebivash`;
+  for (const obj of bundle.objects.filter(o => o.type !== 'identity' && o.type !== 'relationship')) {
+    bundle.objects.push({
+      type: 'relationship',
+      id: `relationship--${crypto.randomUUID()}`,
+      spec_version: '2.1',
+      created: ts,
+      modified: ts,
+      relationship_type: 'authored-by',
+      source_ref: obj.id,
+      target_ref: identityId,
+      description: 'Intelligence authored by CYBERDUDEBIVASH Sentinel APEX',
+    });
+  }
+
+  // Bundle metadata
+  bundle.x_cyberdudebivash_meta = {
+    platform:       'CYBERDUDEBIVASH AI Security Hub',
+    sentinel_apex:  true,
+    stix_profile:   'full-graph',    // P2-1: was flat-listing, now full graph
+    object_count:   bundle.objects.length,
+    relationship_count: bundle.objects.filter(o => o.type === 'relationship').length,
+    generated_at:   ts,
+  };
+
   return bundle;
+
 }
 
 // ─── CEF (ArcSight Common Event Format) Builder ───────────────────────────────

@@ -204,7 +204,7 @@ window.CDB_FUNNEL = CDB_FUNNEL;
     </h2>
     <p style="font-size:14px;color:#94a3b8;margin:0 0 24px;line-height:1.6">
       Enter your work email to see your full security preview — free.<br>
-      <span style="color:#64748b;font-size:12px">Full report with remediation: ₹199</span>
+      <span style="color:#64748b;font-size:12px">Full report with remediation: ₹999</span>
     </p>
     
     <!-- Email input -->
@@ -335,8 +335,8 @@ window.cdbShowPostScanCTA = function(ctx) {
   
   const level = ctx?.riskLevel || 'HIGH';
   const domain = ctx?.domain || 'your domain';
-  const PRICES = { domain:'₹199', ai:'₹499', redteam:'₹999', identity:'₹799', compliance:'₹499' };
-  const price = PRICES[ctx?.module] || '₹199';
+  const PRICES = { domain:'₹999', ai:'₹2,499', redteam:'₹4,999', identity:'₹1,999', compliance:'₹1,999' };
+  const price = PRICES[ctx?.module] || '₹999';
   
   const banner = document.createElement('div');
   banner.id = 'cdb-post-scan-cta';
@@ -400,7 +400,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
     rzp.open();
   } catch(err) {
     // Fallback to manual payment
-    if (typeof CDB_PAYMENT !== 'undefined') CDB_PAYMENT.open({ product: module, productLabel: 'Security Report — ' + target, amountLabel: '₹199' });
+    if (typeof CDB_PAYMENT !== 'undefined') CDB_PAYMENT.open({ product: module, productLabel: 'Security Report — ' + target, amountLabel: '₹999' });
   }
 };
 </script>
@@ -471,7 +471,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
 <meta property="og:site_name" content="CYBERDUDEBIVASH AI Security Hub">
 <meta property="og:locale" content="en_IN">
 <meta property="og:title" content="CYBERDUDEBIVASH AI Security Hub | Real-Time Cybersecurity Intelligence">
-<meta property="og:description" content="AI-powered platform: domain scanning, AI threat detection (OWASP LLM Top 10), red team simulation, identity & compliance. Free preview available. Reports from ₹199.">
+<meta property="og:description" content="AI-powered platform: domain scanning, AI threat detection (OWASP LLM Top 10), red team simulation, identity & compliance. Free preview available. Reports from ₹999.">
 <!-- og:image — MUST be absolute URL. File exists at /og-image.png (served directly by _redirects before SPA wildcard) -->
 <meta property="og:image" content="https://cyberdudebivash.in/og-image.png">
 <meta property="og:image:secure_url" content="https://cyberdudebivash.in/og-image.png">
@@ -488,7 +488,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
 <meta name="twitter:site" content="@cyberdudebivash">
 <meta name="twitter:creator" content="@cyberdudebivash">
 <meta name="twitter:title" content="CYBERDUDEBIVASH AI Security Hub | Cybersecurity Intelligence Platform">
-<meta name="twitter:description" content="Scan your domain, detect AI threats & simulate red team attacks — free. Reports from ₹199. 5 modules: Domain · AI · Red Team · Identity · Compliance.">
+<meta name="twitter:description" content="Scan your domain, detect AI threats & simulate red team attacks — free. Reports from ₹999. 5 modules: Domain · AI · Red Team · Identity · Compliance.">
 <meta name="twitter:image" content="https://cyberdudebivash.in/og-image.png">
 <meta name="twitter:image:alt" content="CYBERDUDEBIVASH AI Security Hub Dashboard">
 
@@ -651,7 +651,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
       "name": "How much does a security scan cost?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "A free security preview is available for all users. Full detailed reports start at ₹199 for Domain Security, ₹499 for AI Security (OWASP LLM), ₹999 for Red Team simulation, and ₹9,999/month for enterprise plans with unlimited scans."
+        "text": "A free security preview is available for all users. Full detailed reports start at ₹999 for Domain Security, ₹2,499 for AI Security (OWASP LLM), ₹4,999 for Red Team simulation, and ₹9,999/month for enterprise plans with unlimited scans."
       }
     },
     {
@@ -1237,7 +1237,7 @@ a{color:var(--accent);text-decoration:none}
   </h1>
   <p class="hero-sub" style="font-size:clamp(14px,2vw,18px);max-width:660px;margin:0 auto 24px;color:#94a3b8">
     AI-powered security intelligence: domain vulnerabilities, OWASP LLM threats, red team attack paths &amp; compliance gaps — all in one platform.<br>
-    <strong style="color:#00d4ff">Free preview</strong> · Full report from <strong style="color:#f59e0b">₹199</strong> · Results in &lt;30 seconds
+    <strong style="color:#00d4ff">Free preview</strong> · Full report from <strong style="color:#f59e0b">₹999</strong> · Results in &lt;30 seconds
   </p>
 
   <!-- SINGLE PRIMARY ACTION — Hero Quick Scan -->
@@ -1356,7 +1356,7 @@ a{color:var(--accent);text-decoration:none}
       <div class="stat-label">Avg Scan Time</div>
     </div>
     <div class="stat-item">
-      <div class="stat-num" style="color:#f59e0b">₹199</div>
+      <div class="stat-num" style="color:#f59e0b">₹999</div>
       <div class="stat-label">Full Report</div>
     </div>
   </div>
@@ -6222,7 +6222,7 @@ window.cdbBookAssessment = async function() {
     <span class="rb-sep">|</span>
     <div class="rb-attn-item" style="color:#f59e0b"><div class="rb-dot rb-dot-orange"></div>⚠️ <span id="ae-cve-count">3</span> critical CVEs today</div>
     <span class="rb-sep">|</span>
-    <div class="rb-attn-item" style="color:#ef4444"><div class="rb-dot rb-dot-red"></div>🚨 Reports from ₹199 · <a href="#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
+    <div class="rb-attn-item" style="color:#ef4444"><div class="rb-dot rb-dot-red"></div>🚨 Reports from ₹999 · <a href="#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
     <span class="rb-sep">|</span>
     <div class="rb-attn-item" style="color:rgba(255,255,255,.35);font-size:10px">Intel updated: <span id="ae-update-time">just now</span></div>
   </div>
@@ -6238,11 +6238,11 @@ window.cdbBookAssessment = async function() {
       <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-scans-today">—</div><div class="risk-blk-lbl">Scans today</div></div>
       <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-cve-active">—</div><div class="risk-blk-lbl">Active CVEs tracked</div></div>
       <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-threats-hour">—</div><div class="risk-blk-lbl">Threats found this hour</div></div>
-      <div class="risk-blk-stat"><div class="risk-blk-num">₹199</div><div class="risk-blk-lbl">Full report — instant</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num">₹999</div><div class="risk-blk-lbl">Full report — instant</div></div>
     </div>
     <div class="risk-blk-ctas">
       <a href="#scanner" class="risk-blk-cta-red">🔴 Scan Your Domain Now — FREE</a>
-      <a href="#pricing" class="risk-blk-cta-green">💰 Unlock Full Report ₹199</a>
+      <a href="#pricing" class="risk-blk-cta-green">💰 Unlock Full Report ₹999</a>
     </div>
     <div class="risk-blk-ticker">
       <div class="risk-blk-tdot"></div>
@@ -6839,7 +6839,7 @@ footer.v14-footer::before {
           ⚔️ CYBERDUDEBIVASH®
         </div>
         <p style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:14px;max-width:280px">
-          AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹199.
+          AI-powered cybersecurity intelligence platform. MITRE ATT&amp;CK · OWASP LLM Top 10 · Zero Trust · DPDP Act 2023. Reports from ₹999.
         </p>
         <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:5px">
           <a href="mailto:bivash@cyberdudebivash.com" class="v14-footer-link-dim">📧 bivash@cyberdudebivash.com</a>
@@ -10149,7 +10149,7 @@ function localEngine(module, payload) {
     locked_findings: findings.filter(f => f.is_premium).map(f => ({ ...f, preview: f.description.slice(0,40)+'...' })),
     locked_findings_count: findings.filter(f => f.is_premium).length,
     is_premium_locked: true,
-    monetization: { unlock_price: '₹199', amount: 19900, payment_url: TOOLS_URL + '/#pricing', upgrade_cta: `Unlock ${findings.filter(f=>f.is_premium).length} more findings — Full PDF report included` },
+    monetization: { unlock_price: '₹999', amount: 99900, payment_url: TOOLS_URL + '/#pricing', upgrade_cta: `Unlock ${findings.filter(f=>f.is_premium).length} more findings — Full PDF report included` },
     recommendations: ['Upgrade to full report for complete findings', 'Contact bivash@cyberdudebivash.com for enterprise support'],
   };
 }
@@ -12001,8 +12001,8 @@ function buildIntelligenceInsightPanel(module, data) {
           <div style="font-size:12px;color:var(--text-dim)">Executive brief · Remediation roadmap · Compliance mapping · MITRE ATT&CK full chain</div>
         </div>
       </div>
-      <button class="btn v9-cta-btn" onclick="startPayment('${module}','${(_payTarget||target||'unknown').replace(/'/g,String.fromCharCode(39))}',${({'redteam':99900,'identity':79900,'ai':49900,'compliance':49900})[module]||19900},'${module === 'redteam' ? '₹999' : module === 'identity' ? '₹799' : module === 'ai' ? '₹499' : '₹199'}')">
-        Unlock Full Report — ${module === 'redteam' ? '₹999' : module === 'identity' ? '₹799' : module === 'ai' ? '₹499' : '₹199'}
+      <button class="btn v9-cta-btn" onclick="startPayment('${module}','${(_payTarget||target||'unknown').replace(/'/g,String.fromCharCode(39))}',${({'redteam':99900,'identity':79900,'ai':49900,'compliance':49900})[module]||19900},'${module === 'redteam' ? '₹999' : module === 'identity' ? '₹1,999' : module === 'ai' ? '₹2,499' : '₹999'}')">
+        Unlock Full Report — ${module === 'redteam' ? '₹999' : module === 'identity' ? '₹1,999' : module === 'ai' ? '₹2,499' : '₹999'}
       </button>
     </div>` : ''}
   `;
@@ -12016,8 +12016,8 @@ function showUpgradeTrigger(module, data) {
   const crits  = (data.findings || []).filter(f => f.severity === 'CRITICAL').length;
   if (score < 50 && crits === 0) return; // only show for significant risk
 
-  const prices = { domain: '₹199', ai: '₹499', redteam: '₹999', identity: '₹799', compliance: '₹499' };
-  const price  = prices[module] || '₹199';
+  const prices = { domain: '₹999', ai: '₹2,499', redteam: '₹4,999', identity: '₹1,999', compliance: '₹499' };
+  const price  = prices[module] || '₹999';
   const color  = level === 'CRITICAL' ? '#ef4444' : level === 'HIGH' ? '#f97316' : '#f59e0b';
 
   // Add urgency block below results (if doesn't already exist)
@@ -12632,11 +12632,11 @@ window.addEventListener('load', () => {
         <p style="color:#94a3b8;font-size:13px;margin:0 0 20px">Upgrade to STARTER to unlock all CVE details, IOCs, CVSS breakdown, and remediation steps</p>
         <a href="/upgrade?plan=starter&ref=report_gate"
            style="display:block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;text-decoration:none;margin-bottom:10px">
-          Unlock Full Report — ₹199 · PDF Included
+          Unlock Full Report — ₹999 · PDF Included
         </a>
         <a href="/api/checkout?product=basic_report&price=199&ref=report_gate_buy"
            style="display:block;background:transparent;border:1px solid #4f46e5;color:#818cf8;padding:10px 24px;border-radius:10px;font-size:13px;text-decoration:none">
-          Buy this report only — ₹199
+          Buy this report only — ₹999
         </a>
       </div>
     `;
@@ -20180,9 +20180,9 @@ function v21CloseUrgencyModal(){var m=document.getElementById('v21-urgency-modal
 function v21TriggerUrgencyPayment(){
   v21CloseUrgencyModal();
   // Route directly to CDB_PAYMENT (global manual payment system)
-  var prices={domain:'₹199',ai:'₹499',redteam:'₹999',identity:'₹799',compliance:'₹499'};
+  var prices={domain:'₹999',ai:'₹2,499',redteam:'₹4,999',identity:'₹1,999',compliance:'₹499'};
   var label=(_v21Module?_v21Module.toUpperCase()+' Security Report':' Security Report')+(_v21Target?' — '+_v21Target:'');
-  var amt=prices[_v21Module]||'₹199';
+  var amt=prices[_v21Module]||'₹999';
   if(typeof CDB_PAYMENT!=='undefined'&&typeof CDB_PAYMENT.open==='function'){
     CDB_PAYMENT.open({product:'scan-'+(_v21Module||'report'),productLabel:label,amountLabel:amt,amount:amt});
     return;

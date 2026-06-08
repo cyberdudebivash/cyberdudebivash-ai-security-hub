@@ -326,7 +326,7 @@ async function fetchNVDFeed(env, opts = {}) {
         title:            `${cve.id} — ${desc.substring(0, 80)}`,
         cvss_score:       cvss,
         cvss_vector:      vector,
-        severity:         cvssToSeverity(cvss),
+        severity:         cvssToSeverity(cvss), // always computed from CVSS (P1-2 fix)
         type:             classifyType(desc),
         description:      desc,
         affected_systems: cpes.length ? cpes : extractAffectedSystems(desc),
@@ -382,7 +382,16 @@ async function enrichWithEPSS(env, cveIds = []) {
  */
 export async function normalizeIntelItem(raw, env) {
   const cvss    = parseFloat(raw.cvss_score || raw.cvss || raw.base_score || 0);
-  const severity = raw.severity || cvssToSeverity(cvss);
+  // P1-2 FIX: CVSS score is the authoritative source for severity.
+  // raw.severity (from NVD metadata) can be desynchronized — e.g. CVE-2024-58348
+  // (CVSS 9.8 RCE) was tagged LOW due to NVD parent-category override.
+  // Rule: if CVSS >= 7.0, always use cvssToSeverity(cvss), never trust raw.severity.
+  // Only use raw.severity when CVSS is 0 or missing (non-CVE intel items).
+  const severity = (cvss >= 7.0)
+    ? cvssToSeverity(cvss)                              // CVSS score wins for high/critical
+    : (raw.severity && raw.severity !== 'NONE')
+      ? raw.severity                                     // trust raw for low/medium/info
+      : cvssToSeverity(cvss);                            // fallback to computed
 
   // Build normalized object
   const normalized = {
@@ -540,6 +549,7 @@ export async function getIntelFeed(env, opts = {}) {
 // CLASSIFICATION HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// P1-2: Authoritative CVSS→Severity mapping (NVD CVSS v3.1 thresholds)
 export function cvssToSeverity(score) {
   const s = parseFloat(score) || 0;
   if (s >= 9.0) return 'CRITICAL';
@@ -547,6 +557,17 @@ export function cvssToSeverity(score) {
   if (s >= 4.0) return 'MEDIUM';
   if (s >  0.0) return 'LOW';
   return 'INFO';
+}
+
+// Validate and correct severity label against CVSS score
+// Prevents NVD metadata desync from mis-tagging CVSS 9.8 as LOW
+export function validateSeverityAgainstCVSS(severity, cvssScore) {
+  const computed = cvssToSeverity(cvssScore);
+  const sev = (severity || '').toUpperCase();
+  // For CRITICAL/HIGH CVSS scores, reject any severity lower than computed
+  if (cvssScore >= 9.0 && !['CRITICAL'].includes(sev)) return 'CRITICAL';
+  if (cvssScore >= 7.0 && !['CRITICAL','HIGH'].includes(sev)) return 'HIGH';
+  return computed; // always prefer CVSS-derived over metadata label
 }
 
 function normalizeSeverity(s) {

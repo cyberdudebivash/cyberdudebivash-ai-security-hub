@@ -82,12 +82,51 @@ function injectPaymentModal() {
 
     <div id="cgpm-body" style="padding:16px 24px 24px">
 
-      <!-- UPI Pane -->
+      <!-- UPI Pane — P0-2: UPI Deep-Link + Dynamic QR + NEFT wiring -->
       <div id="cgpm-pane-upi">
+        <!-- Dynamic QR — generated from UPI deep-link for exact amount -->
         <div style="text-align:center;margin-bottom:14px">
-          <img src="/assets/payment/upi-qr.png" alt="UPI QR"
-            style="width:160px;height:160px;border-radius:12px;border:2px solid rgba(0,255,204,.3);
-                   object-fit:cover;background:rgba(255,255,255,.05)">
+          <div id="cgpm-upi-qr-wrap" style="display:inline-block;position:relative">
+            <img id="cgpm-upi-qr-img"
+              src="/assets/payment/upi-qr.png"
+              alt="UPI QR — scan with any UPI app"
+              style="width:180px;height:180px;border-radius:12px;border:2px solid rgba(0,255,204,.3);
+                     object-fit:cover;background:rgba(255,255,255,.05)">
+            <div id="cgpm-qr-loading" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);
+                 border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#00ffcc">
+              Generating QR...
+            </div>
+          </div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px">
+            Scan with Google Pay · PhonePe · Paytm · BHIM · Any UPI App
+          </div>
+        </div>
+        <!-- UPI Deep-Link Buttons — direct app launch -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="cgpm-upi-apps">
+          <a id="cgpm-gpay-link" href="#" target="_blank"
+            style="display:flex;align-items:center;justify-content:center;gap:6px;
+                   background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.3);
+                   border-radius:8px;padding:10px 8px;text-decoration:none;color:#74a7ff;font-size:12px;font-weight:700">
+            <span style="font-size:16px">🟡</span> Google Pay
+          </a>
+          <a id="cgpm-phonepe-link" href="#" target="_blank"
+            style="display:flex;align-items:center;justify-content:center;gap:6px;
+                   background:rgba(98,0,238,.15);border:1px solid rgba(98,0,238,.3);
+                   border-radius:8px;padding:10px 8px;text-decoration:none;color:#b39ddb;font-size:12px;font-weight:700">
+            <span style="font-size:16px">💜</span> PhonePe
+          </a>
+          <a id="cgpm-paytm-link" href="#" target="_blank"
+            style="display:flex;align-items:center;justify-content:center;gap:6px;
+                   background:rgba(0,180,220,.15);border:1px solid rgba(0,180,220,.3);
+                   border-radius:8px;padding:10px 8px;text-decoration:none;color:#4dd0e1;font-size:12px;font-weight:700">
+            <span style="font-size:16px">💙</span> Paytm
+          </a>
+          <a id="cgpm-bhim-link" href="#" target="_blank"
+            style="display:flex;align-items:center;justify-content:center;gap:6px;
+                   background:rgba(255,153,0,.15);border:1px solid rgba(255,153,0,.3);
+                   border-radius:8px;padding:10px 8px;text-decoration:none;color:#ffcc80;font-size:12px;font-weight:700">
+            <span style="font-size:16px">🟠</span> BHIM
+          </a>
         </div>
         <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
                     border-radius:10px;padding:12px;margin-bottom:10px">
@@ -215,6 +254,55 @@ window.CDB_PAY = {
     document.body.style.overflow = 'hidden';
     this.tab('upi');
     sessionStorage.setItem('cdb_pay_intent', JSON.stringify({ product, amountInr, label, ts: Date.now() }));
+    // P0-2: Wire UPI deep-links with exact amount and generate dynamic QR
+    if (amountInr) {
+      try { this._setupUPIRails(label || product || 'Security Service', amountInr); }
+      catch(e) { console.warn('[CDB_PAY] UPI setup failed:', e.message); }
+    }
+  },
+
+  // ── P0-2: UPI Deep-Link + Dynamic QR Rail ─────────────────────────────────
+  _buildUPIDeepLink(vpa, amountInr, note) {
+    const params = new URLSearchParams({
+      pa: vpa,
+      pn: CFG.upiName || 'Bivash Kumar Nayak',
+      am: String(Number(amountInr || 0).toFixed(2)),
+      cu: 'INR',
+      tn: (note || 'CYBERDUDEBIVASH').slice(0, 50),
+    });
+    return `upi://pay?${params.toString()}`;
+  },
+
+  _generateDynamicQR(upiUri, size) {
+    // api.qrserver.com — free, no API key, supports custom colors
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size||180}x${size||180}&data=${encodeURIComponent(upiUri)}&color=00ffcc&bgcolor=0d0d1a&margin=8`;
+  },
+
+  _setupUPIRails(productLabel, amountInr) {
+    const note = `${(productLabel||'CDB').slice(0,30)} ${new Date().toISOString().slice(0,10)}`;
+    const upiUri = this._buildUPIDeepLink(CFG.upi1, amountInr, note);
+
+    // Standard UPI intent: works with any NPCI-registered app
+    const set = (id, href) => { const el = document.getElementById(id); if (el) el.href = href; };
+
+    // Build query string for each app's proprietary scheme
+    const q = new URLSearchParams({ pa: CFG.upi1, pn: CFG.upiName||'Bivash Kumar Nayak',
+      am: String(Number(amountInr||0).toFixed(2)), cu: 'INR', tn: note });
+
+    set('cgpm-gpay-link',    `tez://upi/pay?${q}`);     // Google Pay (Tez)
+    set('cgpm-phonepe-link', `phonepe://pay?${q}`);      // PhonePe
+    set('cgpm-paytm-link',   `paytmmp://pay?${q}`);      // Paytm
+    set('cgpm-bhim-link',    upiUri);                     // BHIM + generic UPI
+
+    // Dynamic QR — regenerated for exact amount (not static /assets/payment/upi-qr.png)
+    const qrImg = document.getElementById('cgpm-upi-qr-img');
+    if (qrImg && amountInr > 0) {
+      qrImg.style.opacity = '0.3';
+      const tmp = new Image();
+      tmp.onload  = () => { qrImg.src = tmp.src; qrImg.style.opacity = '1'; };
+      tmp.onerror = () => { qrImg.style.opacity = '1'; }; // fallback to static
+      tmp.src = this._generateDynamicQR(upiUri, 180);
+    }
   },
   close() {
     const m = document.getElementById('cdb-global-pay-modal');

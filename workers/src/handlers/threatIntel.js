@@ -43,16 +43,21 @@ function parsePagination(url) {
 
 // ─── Determine plan tier limits ───────────────────────────────────────────────
 function getPlanLimits(tier = 'FREE') {
+  // detection_rules: controls access to sigma_rule, kql_query, yara_rule, suricata_rule (P1-1)
   const limits = {
-    FREE:       { max_results: 5,  ioc_access: false, export: false, full_detail: false },
-    STARTER:    { max_results: 20, ioc_access: false, export: false, full_detail: true  },
-    PRO:        { max_results: 50, ioc_access: true,  export: true,  full_detail: true  },
-    ENTERPRISE: { max_results: 100, ioc_access: true, export: true,  full_detail: true  },
+    FREE:           { max_results: 5,   ioc_access: false, export: false, full_detail: false, detection_rules: false },
+    STARTER:        { max_results: 20,  ioc_access: false, export: false, full_detail: true,  detection_rules: false },
+    PRO:            { max_results: 50,  ioc_access: true,  export: true,  full_detail: true,  detection_rules: true  },
+    ENTERPRISE:     { max_results: 100, ioc_access: true,  export: true,  full_detail: true,  detection_rules: true  },
+    ENTERPRISE_SOC: { max_results: 500, ioc_access: true,  export: true,  full_detail: true,  detection_rules: true  },
   };
   return limits[tier] || limits.FREE;
 }
 
 // ─── Redact IOC fields for non-PRO users ─────────────────────────────────────
+// P1-1 REMEDIATION: Field-level payload sanitizer for premium detection assets
+// Per customer escalation audit — sigma_rule, kql_query, yara_rule, suricata_rule
+// must be stripped from serialized output unless JWT is bound to Pro Defense / Enterprise SOC
 function applyMonetizationGate(entry, planLimits) {
   const out = { ...entry };
 
@@ -61,20 +66,52 @@ function applyMonetizationGate(entry, planLimits) {
   try { out.affected_products = typeof out.affected_products === 'string' ? JSON.parse(out.affected_products) : out.affected_products; } catch { out.affected_products = []; }
   try { out.weakness_types = typeof out.weakness_types === 'string' ? JSON.parse(out.weakness_types) : out.weakness_types; } catch { out.weakness_types = []; }
 
+  // ── CRITICAL PAYWALL: Detection Rule Assets (P1-1) ─────────────────────────
+  // Sigma rules, KQL hunting scripts, YARA rules, Suricata signatures are
+  // premium enterprise assets — must NEVER appear in public serialized output
+  const PREMIUM_FIELDS = ['sigma_rule', 'kql_query', 'kql_detection', 'yara_rule',
+                           'suricata_rule', 'ids_signature', 'firewall_script',
+                           'ir_playbook', 'hunting_query', 'detection_logic'];
+  if (!planLimits.detection_rules) {
+    for (const field of PREMIUM_FIELDS) {
+      if (out[field] !== undefined) {
+        out[field] = {
+          gated:       true,
+          field:       field,
+          plan_required: 'PRO_DEFENSE',
+          upgrade_url: '/pricing#pro',
+          preview:     out[field] ? String(out[field]).slice(0, 40) + '…[PRO required]' : null,
+        };
+      }
+    }
+    // Also strip from nested defense_solutions array
+    if (Array.isArray(out.defense_solutions)) {
+      out.defense_solutions = out.defense_solutions.map(ds => {
+        const gatedDs = { ...ds };
+        for (const field of PREMIUM_FIELDS) {
+          if (gatedDs[field]) gatedDs[field] = { gated: true, plan_required: 'PRO_DEFENSE' };
+        }
+        return gatedDs;
+      });
+    }
+  }
+
+  // ── IOC Paywall ─────────────────────────────────────────────────────────────
   if (!planLimits.ioc_access) {
-    // Gate IOCs behind PRO
-    out.iocs = { gated: true, upgrade_url: 'https://tools.cyberdudebivash.com/#pricing', hint: 'Upgrade to PRO to see IOC details' };
+    out.iocs = { gated: true, upgrade_url: '/pricing#pro', hint: 'Upgrade to PRO to see IOC details' };
   } else {
     try { out.iocs = typeof out.iocs === 'string' ? JSON.parse(out.iocs) : out.iocs; } catch { out.iocs = []; }
   }
 
+  // ── FREE tier field truncation ───────────────────────────────────────────────
   if (!planLimits.full_detail) {
-    // FREE: truncate description
     if (out.description) out.description = out.description.slice(0, 150) + '… [Upgrade for full details]';
     out.cvss_vector        = null;
     out.affected_products  = out.affected_products?.slice(0, 1);
     out.weakness_types     = [];
     out.mitre_technique    = null;
+    out.mitre_tactics      = [];
+    out.exploit_references = null;
   }
 
   return out;

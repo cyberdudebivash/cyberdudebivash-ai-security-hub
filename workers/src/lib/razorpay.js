@@ -8,10 +8,13 @@
 import { resilientFetch } from './resilience.js';
 
 // ─── Module pricing (amount in paise = INR × 100) ────────────────────────────
+// ── MODULE PRICES v32 — Repriced per customer escalation audit ──────────────
+// Previous: domain ₹199 (underpriced vs computation cost + CVE correlation)
+// Now: Minimum ₹999 baseline for retail reports (P0-1 remediation)
 export const MODULE_PRICES = {
-  domain:         { amount: 19900,   label: '₹199',    name: 'Domain Security Report'       },
-  ai:             { amount: 49900,   label: '₹499',    name: 'AI Security Report'            },
-  redteam:        { amount: 99900,   label: '₹999',    name: 'Red Team Report'               },
+  domain:         { amount: 99900,   label: '₹999',    name: 'Domain Security Report'       },
+  ai:             { amount: 249900,  label: '₹2,499',  name: 'AI Security Report'            },
+  redteam:        { amount: 499900,  label: '₹4,999',  name: 'Red Team Report'               },
   identity:       { amount: 79900,   label: '₹799',    name: 'Identity Security Report'      },
   compliance:     { amount: 49900,   label: '₹499',    name: 'Compliance Report'             },
   // Assessment products (one-time)
@@ -29,7 +32,10 @@ export const SUBSCRIPTION_PRICES = {
   STARTER:    { amount: 49900,   label: '₹499',    period: 'monthly', name: 'Starter Plan'    },
   PRO:        { amount: 149900,  label: '₹1,499',  period: 'monthly', name: 'Pro Plan'         },
   ENTERPRISE: { amount: 499900,  label: '₹4,999',  period: 'monthly', name: 'Enterprise Plan'  },
-  MSSP:       { amount: 4999900, label: '₹49,999', period: 'monthly', name: 'MSSP Plan'        },
+  MSSP:          { amount: 4999900,  label: '₹49,999',  period: 'monthly', name: 'MSSP Plan'             },
+  // P2-2: New enterprise tier per customer escalation audit
+  ENTERPRISE_SOC: { amount: 4119900,  label: '₹41,199',  period: 'monthly', name: 'Autonomic Threat Intel API' },
+  MSSP_PARTNER:   { amount: 199900,   label: '₹1,999',   period: 'monthly', name: 'Multi-Tenant MSSP Workspace'  },
 };
 
 // ─── Create Razorpay Order ────────────────────────────────────────────────────
