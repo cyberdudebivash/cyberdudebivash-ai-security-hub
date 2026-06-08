@@ -618,7 +618,7 @@ async function healthResponseAsync(env) {
   return Response.json({
     status,
     service:   'CYBERDUDEBIVASH AI Security Hub',
-    version:   env.VERSION || env.PLATFORM_VERSION || '21.0.0',
+    version:   env.VERSION || env.PLATFORM_VERSION || '29.0.0',
     company:   'CyberDudeBivash Pvt. Ltd.',
     website:   'https://cyberdudebivash.in',
     tools:     'https://tools.cyberdudebivash.com',
@@ -1026,7 +1026,7 @@ export default {
         db:        checks.db,
         intel:     checks.intel,
         revenue:   checks.revenue,
-        version:   env.VERSION || env.PLATFORM_VERSION || '21.0.0',
+        version:   env.VERSION || env.PLATFORM_VERSION || '29.0.0',
         details,
         response_ms: Date.now() - start,
         timestamp: new Date().toISOString(),
@@ -1163,8 +1163,8 @@ export default {
     }
     if (path === '/api/version' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
-        version:          env.VERSION || env.PLATFORM_VERSION || '21.0.0',
-        platform_version: env.PLATFORM_VERSION || '21.0.0',
+        version:          env.VERSION || env.PLATFORM_VERSION || '29.0.0',
+        platform_version: env.PLATFORM_VERSION || '29.0.0',
         commit:           env.COMMIT || (env.CF_VERSION_METADATA?.id) || 'unknown',
         timestamp:        new Date().toISOString(),
         environment:      env.ENVIRONMENT || 'production',
@@ -1198,7 +1198,7 @@ export default {
       ]);
       return withSecurityHeaders(withCors(Response.json({
         ok: true,
-        version: env.PLATFORM_VERSION || '21.0.0',
+        version: env.PLATFORM_VERSION || '29.0.0',
         timestamp: new Date().toISOString(),
         engines: {
           database:    dbStatus.status==='fulfilled' && dbStatus.value ? 'online' : 'degraded',

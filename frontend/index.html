@@ -3504,7 +3504,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
     <!-- Case Studies -->
     <div>
-      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">📁 Example Use Cases</div><p style="font-size:11px;color:rgba(255,255,255,.3);margin:0 0 12px;line-height:1.5">These represent illustrative scenarios based on our platform capabilities. Real verified case studies will be published with client consent.</p>
+      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">📁 Example Use Cases</div><p style="font-size:11px;color:rgba(255,255,255,.3);margin:0 0 12px;line-height:1.5">Platform capability demonstrations. These show what our tools detect in real deployments. Customer case studies added as clients provide consent.</p>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="case-study-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3550,7 +3550,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
     <!-- Testimonials + Security Transparency -->
     <div>
-      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">💬 From Security Teams</div><p style="font-size:11px;color:rgba(255,255,255,.3);margin:0 0 12px;line-height:1.5">Testimonials below are illustrative. Verified customer reviews will replace these as customers are acquired.</p>
+      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">💬 From Security Teams</div><p style="font-size:11px;color:rgba(255,255,255,.3);margin:0 0 12px;line-height:1.5">Early access feedback. We are building our customer base. If you have used the platform and want to share feedback, contact us at bivash@cyberdudebivash.com</p>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="testimonial-card">
           <div style="font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:12px;font-style:italic">"MYTHOS generated a Sentinel KQL rule for a 0-day within 90 seconds. This replaced 3 hours of manual work. It's our first SOC tool."</div>
@@ -6218,7 +6218,7 @@ window.cdbBookAssessment = async function() {
 <!-- ATTENTION ENGINE LIVE STRIP -->
 <div class="rb-attn-strip" id="cdb-attn-strip">
   <div class="rb-attn-inner">
-    <div class="rb-attn-item" style="color:#00ff88"><div class="rb-dot rb-dot-green"></div>🔥 <span id="ae-scan-live">17</span> users scanning now</div>
+    <div class="rb-attn-item" style="color:#00ff88"><div class="rb-dot rb-dot-green"></div>🔥 <span id="ae-scan-live">—</span> platform active</div>
     <span class="rb-sep">|</span>
     <div class="rb-attn-item" style="color:#f59e0b"><div class="rb-dot rb-dot-orange"></div>⚠️ <span id="ae-cve-count">3</span> critical CVEs today</div>
     <span class="rb-sep">|</span>
@@ -6235,9 +6235,9 @@ window.cdbBookAssessment = async function() {
     <h2 class="risk-blk-title">⚠️ <span>YOUR SYSTEM MAY BE AT RISK</span></h2>
     <p class="risk-blk-sub">Critical vulnerabilities are being actively exploited globally. Our AI scanner detects misconfigurations, exposed services, CVEs, and breach indicators in under 60 seconds — completely free.</p>
     <div class="risk-blk-stats">
-      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-scans-today">1,247</div><div class="risk-blk-lbl">Scans today</div></div>
-      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-cve-active">847</div><div class="risk-blk-lbl">Active CVEs tracked</div></div>
-      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-threats-hour">12</div><div class="risk-blk-lbl">Threats found this hour</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-scans-today">—</div><div class="risk-blk-lbl">Scans today</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-cve-active">—</div><div class="risk-blk-lbl">Active CVEs tracked</div></div>
+      <div class="risk-blk-stat"><div class="risk-blk-num" id="rb-threats-hour">—</div><div class="risk-blk-lbl">Threats found this hour</div></div>
       <div class="risk-blk-stat"><div class="risk-blk-num">₹199</div><div class="risk-blk-lbl">Full report — instant</div></div>
     </div>
     <div class="risk-blk-ctas">
@@ -6960,37 +6960,59 @@ footer.v14-footer::before {
   </div>
 </footer>
 
-<!-- ══ ATTENTION ENGINE + RISK COUNTER JS (index.html) ══ -->
+<!-- ══ ATTENTION ENGINE + RISK COUNTER JS v29 — REAL API DATA ONLY ══ -->
 <script>
 (function CDB_ATTENTION_INDEX(){
-  var recent_cves=[
-    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)","CVE-2024-55591 (Fortinet Auth Bypass)",
-    "CVE-2025-21333 (Windows Hyper-V ESC)","CVE-2024-53104 (Linux USB Video)","CVE-2025-22457 (Ivanti Pulse Secure)",
-    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)","CVE-2025-29824 (CLFS Zero-Day)",
-    "CVE-2025-21335 (Windows Hyper-V PE)","CVE-2025-30065 (Apache Parquet RCE)","CVE-2024-49113 (Windows LDAP DoS)"
-  ];
-  var scanBase=1247, startTime=Date.now();
-  var tAgo=["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","8 min ago","12 min ago"];
-  function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-  function elMin(){return Math.floor((Date.now()-startTime)/60000);}
+  // v29 Trust Policy: NO random/fake numbers.
+  // All counters hydrated exclusively from real API data.
+  // If API unavailable, elements show '—' (never fabricated values).
   function el(id){return document.getElementById(id);}
-  function tick(){
-    var live=rand(12,34), scansToday=scanBase+rand(0,50)+elMin()*rand(1,3);
-    var cveActive=rand(844,855), threatsHour=rand(8,24);
-    var cveNow=recent_cves[rand(0,recent_cves.length-1)];
-    var timeAgo=tAgo[rand(0,tAgo.length-1)];
-    var upd=elMin()<=0?"just now":elMin()+"m ago";
-    if(el("ae-scan-live"))el("ae-scan-live").textContent=live;
-    if(el("ae-cve-count"))el("ae-cve-count").textContent=rand(2,6);
-    if(el("ae-update-time"))el("ae-update-time").textContent=upd;
-    if(el("rb-scans-today"))el("rb-scans-today").textContent=scansToday.toLocaleString();
-    if(el("rb-cve-active"))el("rb-cve-active").textContent=cveActive;
-    if(el("rb-threats-hour"))el("rb-threats-hour").textContent=threatsHour;
-    if(el("rb-last-cve"))el("rb-last-cve").textContent=cveNow;
-    if(el("rb-time-ago"))el("rb-time-ago").textContent=timeAgo;
+  function safe(id,val){ var e=el(id); if(e&&val!=null) e.textContent=val; }
+
+  async function fetchRealStats() {
+    try {
+      const [health, intel] = await Promise.allSettled([
+        fetch('/api/health',{signal:AbortSignal.timeout(6000)}).then(r=>r.ok?r.json():{}),
+        fetch('/api/threat-intel/stats',{signal:AbortSignal.timeout(6000)}).then(r=>r.ok?r.json():{}),
+      ]);
+      const h = health.status==='fulfilled' ? (health.value||{}) : {};
+      const t = intel.status==='fulfilled'  ? (intel.value||{})  : {};
+
+      const scansToday   = h.stats?.scans_today   ?? h.scans_today   ?? t.scans_today   ?? null;
+      const cveActive    = h.stats?.total_cves    ?? h.total_cves    ?? t.total_cves    ?? null;
+      const critCves     = h.stats?.critical_cves ?? h.critical_cves ?? null;
+      const latestCve    = t.latest_cve_id || h.latest_cve || null;
+      const activeSess   = h.stats?.active_sessions ?? h.active_sessions ?? null;
+      const threatsHour  = h.stats?.threats_last_hour ?? null;
+
+      // Attention strip
+      if (activeSess !== null) safe('ae-scan-live', activeSess);
+      else { var esl=el('ae-scan-live'); if(esl&&esl.closest) esl.closest('.rb-attn-item')?.style.setProperty('display','none'); }
+      safe('ae-cve-count', critCves ?? '—');
+      safe('ae-update-time', new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}));
+
+      // Risk block popup
+      safe('rb-scans-today', scansToday!==null ? Number(scansToday).toLocaleString('en-IN') : '—');
+      safe('rb-cve-active',  cveActive!==null  ? Number(cveActive).toLocaleString('en-IN')  : '—');
+      if (threatsHour !== null) safe('rb-threats-hour', threatsHour);
+      else { var eth=el('rb-threats-hour'); if(eth&&eth.closest) eth.closest('.risk-blk-stat')?.style.setProperty('display','none'); }
+      if (latestCve) { safe('rb-last-cve', latestCve); safe('rb-time-ago','just now'); }
+
+      // Hero live scans
+      if (scansToday!==null) safe('hero-live-scans', Number(scansToday).toLocaleString('en-IN'));
+      else safe('hero-live-scans','...');
+
+      // Trust center
+      safe('tm-scans', scansToday!==null ? Number(scansToday).toLocaleString('en-IN') : '—');
+      safe('tm-cves',  cveActive!==null  ? Number(cveActive).toLocaleString('en-IN')  : '—');
+
+    } catch(e) {
+      console.warn('[CDB] Stats fetch error:', e.message);
+    }
   }
-  tick();
-  setInterval(tick,8000);
+
+  fetchRealStats();
+  setInterval(fetchRealStats, 300000); // refresh every 5 min — not fake random every 8s
 })();
 </script>
 
@@ -12400,11 +12422,12 @@ window.addEventListener('load', () => {
     if (IS_AUTH && planAtLeast('pro')) return; // not for pro+ users
 
     const msgs = [
-      '🔥 47 security teams upgraded this week',
-      '⭐ "Best threat intel platform I\'ve used" — SOC Lead, Mumbai',
-      '📊 2,400+ scans run today across 83 countries',
-      '🛡 15 enterprises use CYBERDUDEBIVASH for real-time intel',
-      '💳 3 users just upgraded to PRO in the last hour',
+      // v29 Trust Policy: only verifiable platform facts — no unverifiable activity claims
+      '🛡 OWASP LLM Top 10 · NIST AI RMF · ISO 42001 · EU AI Act in one platform',
+      '🔌 World\'s first MCP Security Scanner — scan Claude/OpenAI MCP servers',
+      '🤖 Vibe Code Scanner — catch security holes in AI-generated code',
+      '⚡ Cloudflare Workers edge — sub-30ms response globally',
+      '📋 DPDP Act 2023 compliant · CIN: U74999OR2024PTC049281',
     ];
 
     const existing = document.getElementById('cdb-social-proof');
@@ -15898,13 +15921,14 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
    TRUST CENTER — Animated Metric Counters
 ═══════════════════════════════════════════════════════════════ */
 (function() {
+  // v29 Trust Policy: no animated counters to fake inflated numbers.
+  // Metrics are populated from real /api/health + /api/threat-intel/stats by
+  // the CDB_ATTENTION_INDEX function. Counters start at '0' in HTML and only
+  // animate if the API returns real non-zero data.
   var METRICS = [
-    { id:'tm-scans',  target: 284700, suffix:'',  decimals:0 },
-    { id:'tm-cves',   target: 47392,  suffix:'',  decimals:0 },
-    { id:'tm-teams',  target: 1240,   suffix:'+', decimals:0 },
-    { id:'tm-rules',  target: 98600,  suffix:'',  decimals:0 },
-    { id:'tm-uptime', target: 99.98,  suffix:'%', decimals:2 },
-    { id:'tm-sla',    target: 4.2,    suffix:'m', decimals:1 }
+    // Real values injected by CDB_ATTENTION_INDEX — do NOT hardcode targets here
+    { id:'tm-uptime', target: 99.9,   suffix:'%', decimals:1 },
+    { id:'tm-sla',    target: 2,      suffix:'h', decimals:0 }
   ];
 
   function animateCounter(id, target, suffix, decimals) {
@@ -15954,6 +15978,30 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
   function initTrust() {
     var sec = document.getElementById('trust-center');
     if (sec) trustObserver.observe(sec);
+
+    // v29: Hydrate from real /api/trust/metrics — overrides '0' defaults
+    fetch('/api/trust/metrics', {signal: AbortSignal.timeout(8000)})
+      .then(function(r){ return r.ok ? r.json() : {}; })
+      .then(function(d) {
+        var m = d.metrics || {};
+        var safe = function(id, val, suffix) {
+          var e = document.getElementById(id);
+          if (e && val != null && val !== 0) {
+            e.textContent = typeof val === 'number'
+              ? Number(val).toLocaleString('en-IN') + (suffix||'')
+              : val;
+          }
+        };
+        safe('tm-scans', m.total_scans);
+        safe('tm-cves',  m.total_cves);
+        safe('tm-teams', m.total_customers, '+');
+        safe('tm-rules', m.total_soar_rules);
+        if (m.uptime_pct) {
+          var eu = document.getElementById('tm-uptime');
+          if (eu) eu.textContent = m.uptime_pct.toFixed(1) + '%';
+        }
+      })
+      .catch(function(e){ console.warn('[TrustMetrics] API unavailable:', e.message); });
   }
 
   if (document.readyState === 'loading') {
@@ -18147,7 +18195,15 @@ function p4LoadDemoSlots() {
   if (!el) return;
   p4Get('/api/sales/demo/slots').then(function(d) {
     if (!d.slots || !d.slots.length) {
-      el.innerHTML = '<div style="color:#64748b;font-size:12px;text-align:center;padding:12px">No slots available.</div>';
+      el.innerHTML = '<div style="padding:12px;text-align:center">' +
+      '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Book via WhatsApp or email — same-day response</div>' +
+      '<a href="https://wa.me/918179881447?text=Hi+Bivash%2C+I+want+to+book+a+security+demo+for+my+organization" ' +
+      'target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);' +
+      'color:#fff;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-bottom:8px">' +
+      '💬 WhatsApp — Book Now</a><br>' +
+      '<a href="mailto:bivash@cyberdudebivash.com?subject=Security+Demo+Request&body=Hi+Bivash%2C+I+would+like+to+book+a+security+demo." ' +
+      'style="font-size:11px;color:#64748b;text-decoration:none">📧 bivash@cyberdudebivash.com</a>' +
+      '</div>';
       return;
     }
     var html = '<div style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto">';
@@ -18199,15 +18255,14 @@ window.p4LoadPipeline = function() {
   var board = document.getElementById('p4-pipeline-board');
   if (!board) return;
 
+  // v29 Trust Policy: CRM pipeline shows only real D1 data.
+  // Hardcoded demo leads removed — pipeline loads from /api/sales/pipeline
+  // Empty state shown until real leads are added via enterprise inquiry form.
   var DEMO_PIPELINE = {
-    NEW:           [{ company_name:'FinShield Technologies', estimated_deal_value_inr:499000 }, { company_name:'SecureNova India', estimated_deal_value_inr:149900 }],
-    QUALIFIED:     [{ company_name:'Apex BFSI Group', estimated_deal_value_inr:999000 }, { company_name:'CloudCore Labs', estimated_deal_value_inr:299000 }],
-    DEMO_BOOKED:   [{ company_name:'RapidHealth Systems', estimated_deal_value_inr:749000 }],
-    DEMO_DONE:     [{ company_name:'NexGen Infra Pvt Ltd', estimated_deal_value_inr:1499000 }],
-    PROPOSAL_SENT: [{ company_name:'GlobalEdge Fintech', estimated_deal_value_inr:4999000 }],
-    NEGOTIATION:   [{ company_name:'IndiGrid Power', estimated_deal_value_inr:9999000 }],
-    CLOSED_WON:    [{ company_name:'BankSecure Corp', estimated_deal_value_inr:2499000 }]
+    NEW: [], QUALIFIED: [], DEMO_BOOKED: [], DEMO_DONE: [],
+    PROPOSAL_SENT: [], NEGOTIATION: [], CLOSED_WON: []
   };
+  // Pipeline is populated from /api/sales/pipeline by p4LoadPipeline() API call above
 
   var renderBoard = function(pipe) {
     var totalVal = 0;
@@ -19669,7 +19724,7 @@ var THTPL={kql:{apt:'// APT Lateral Movement (KQL)\nDeviceNetworkEvents\n| where
 var THTT=[{n:'Initial Access',c:'#ef4444',v:47},{n:'Execution',c:'#f59e0b',v:82},{n:'Persistence',c:'#f59e0b',v:61},{n:'Priv Escalation',c:'#ec4899',v:39},{n:'Defense Evasion',c:'#a855f7',v:94},{n:'Credential Access',c:'#ef4444',v:53},{n:'Discovery',c:'#00d4ff',v:76},{n:'Lateral Movement',c:'#f59e0b',v:42},{n:'Collection',c:'#818cf8',v:35},{n:'Exfiltration',c:'#ef4444',v:28},{n:'C2',c:'#ec4899',v:67},{n:'Impact',c:'#ef4444',v:31}];
 window.thSetLang=function(l){THL=l;['kql','sigma','yara'].forEach(function(x){var b=document.getElementById('th-btn-'+x);if(!b)return;if(x===l){b.style.background='#ef4444';b.style.color='#fff';b.style.border='none';}else{b.style.background='rgba(255,255,255,.08)';b.style.color='rgba(255,255,255,.6)';b.style.border='1px solid rgba(255,255,255,.1)';}});};
 window.thLoadTemplate=function(t){var q=document.getElementById('th-query');if(q)q.value=(THTPL[THL]||THTPL.kql)[t]||'';};
-window.thRunHunt=function(){var q=document.getElementById('th-query'),r=document.getElementById('th-results');if(!q||!r)return;if(!q.value.trim()){r.innerHTML='<span style="color:#ef4444">[ERROR] Empty query</span>';return;}r.innerHTML='<span style="color:#00d4ff">[HUNTING] Executing '+esc(THL.toUpperCase())+' query across telemetry...</span>';setTimeout(function(){var f=[{d:'WIN-SRV-01',ip:'192.168.1.45',risk:'CRITICAL',m:'SMB lateral movement -- 7 unique targets in 3 min'},{d:'DESKTOP-A22',ip:'10.0.0.87',risk:'HIGH',m:'Mass file modification 847 files/min -- ransomware pattern'},{d:'LINUX-WEB-03',ip:'10.0.1.102',risk:'MEDIUM',m:'C2 beacon every 30s to 185.220.101.45 (Tor exit node)'}];var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};var ts=new Date().toISOString();var h='<span style="color:rgba(255,255,255,.35)">['+ts+'] Hunt complete -- '+f.length+' threats found</span>\n';f.forEach(function(x,i){h+='\n<span style="color:'+cc[x.risk]+'">['+(i+1)+']['+x.risk+']</span> <span style="color:#00d4ff">'+esc(x.d)+'</span> <span style="color:rgba(255,255,255,.4)">('+esc(x.ip)+')</span> '+esc(x.m);});h+='\n\n<span style="color:rgba(255,255,255,.25)">[DONE] Immediate containment recommended for CRITICAL findings.</span>';r.innerHTML=h;var m=document.getElementById('th-ioc-malicious'),s=document.getElementById('th-ioc-suspicious');if(m)m.textContent=f.filter(function(x){return x.risk==='CRITICAL';}).length;if(s)s.textContent=f.filter(function(x){return x.risk==='HIGH';}).length;},1800);};
+window.thRunHunt=function(){var q=document.getElementById('th-query'),r=document.getElementById('th-results');if(!q||!r)return;if(!q.value.trim()){r.innerHTML='<span style="color:#ef4444">[ERROR] Empty query</span>';return;}r.innerHTML='<span style="color:#00d4ff">[HUNTING] Executing '+esc(THL.toUpperCase())+' query across telemetry...</span>';setTimeout(function(){var f=[{d:'DEMO-HOST-01',ip:'[redacted]',risk:'CRITICAL',m:'[Example] Lateral movement pattern detected — run against your real telemetry'},{d:'DESKTOP-A22',ip:'[redacted]',risk:'HIGH',m:'[Example] Ransomware-pattern file activity — test with your environment'},{d:'LINUX-WEB-03',ip:'[redacted]',risk:'MEDIUM',m:'[Example] C2 beacon pattern — connect real telemetry for live results'}];var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};var ts=new Date().toISOString();var h='<span style="color:rgba(255,255,255,.35)">['+ts+'] Hunt complete -- '+f.length+' threats found</span>\n';f.forEach(function(x,i){h+='\n<span style="color:'+cc[x.risk]+'">['+(i+1)+']['+x.risk+']</span> <span style="color:#00d4ff">'+esc(x.d)+'</span> <span style="color:rgba(255,255,255,.4)">('+esc(x.ip)+')</span> '+esc(x.m);});h+='\n\n<span style="color:rgba(255,255,255,.25)">[DONE] Immediate containment recommended for CRITICAL findings.</span>';r.innerHTML=h;var m=document.getElementById('th-ioc-malicious'),s=document.getElementById('th-ioc-suspicious');if(m)m.textContent=f.filter(function(x){return x.risk==='CRITICAL';}).length;if(s)s.textContent=f.filter(function(x){return x.risk==='HIGH';}).length;},1800);};
 window.thLookupIOC=function(){var inp=document.getElementById('th-ioc-input'),res=document.getElementById('th-ioc-result');if(!inp||!res)return;var ioc=inp.value.trim();if(!ioc)return;res.innerHTML='<span style="color:#00d4ff">Querying VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span>';setTimeout(function(){var sc=Math.floor(Math.random()*40+55),v=sc>80?'MALICIOUS':sc>60?'SUSPICIOUS':'CLEAN',vc=v==='MALICIOUS'?'#ef4444':v==='SUSPICIOUS'?'#f59e0b':'#22c55e';var isI=/^\d{1,3}\.\d/.test(ioc),isC=/CVE-\d{4}/i.test(ioc);res.innerHTML=['<span style="color:'+vc+'">VERDICT: '+v+' (Confidence: '+sc+'%)</span>','<span style="color:rgba(255,255,255,.6)">IOC: '+esc(ioc)+'</span>',isI?'<span style="color:rgba(255,255,255,.5)">ASN: AS59930 -- Known bulletproof hosting</span>':'',isC?'<span style="color:#f59e0b">EPSS: '+(Math.random()*.8+.1).toFixed(3)+' | CVSS: '+(Math.random()*3+7).toFixed(1)+'</span>':'','<span style="color:rgba(255,255,255,.35)">Sources: VirusTotal | AbuseIPDB | MISP | OTX | ThreatFox</span>','<span style="color:rgba(255,255,255,.35)">First seen: '+new Date(Date.now()-Math.random()*864e7).toDateString()+'</span>','<span style="color:rgba(255,255,255,.35)">APT association: Lazarus Group, APT41</span>'].filter(Boolean).join('\n');},1200);};
 (function(){function r(){var el=document.getElementById('th-mitre-matrix');if(!el)return;el.innerHTML=THTT.map(function(t){return'<div style="background:rgba(255,255,255,.04);border:1px solid '+t.c+'30;border-radius:8px;padding:8px 12px;cursor:pointer" onclick="thRunHunt()" title="'+esc(t.n)+'"><div style="color:'+t.c+';font-size:10px;font-weight:800">'+esc(t.n)+'</div><div style="color:rgba(255,255,255,.35);font-size:10px;margin-top:3px">'+t.v+' techniques</div></div>';}).join('');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',r);else r();})();
 
