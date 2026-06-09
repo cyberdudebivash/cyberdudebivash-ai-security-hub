@@ -38,3 +38,21 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 CREATE INDEX IF NOT EXISTS idx_scans_user ON scans(user_id);
 CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at);
 CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+
+
+-- ══════════════════════════════════════════════════════════════════════
+-- MYTHOS ORCHESTRATOR — Run Audit Log
+-- Added v31: tracks every autonomous tool-generation run
+-- ══════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS mythos_runs (
+  id               TEXT    PRIMARY KEY,                         -- job_XXXXXXXX_XXXXXX
+  status           TEXT    NOT NULL DEFAULT 'PENDING',          -- RUNNING | COMPLETE | FAILED
+  tools_generated  INTEGER NOT NULL DEFAULT 0,
+  tools_published  INTEGER NOT NULL DEFAULT 0,
+  tools_failed     INTEGER NOT NULL DEFAULT 0,
+  duration_ms      INTEGER NOT NULL DEFAULT 0,
+  intel_count      INTEGER NOT NULL DEFAULT 0,
+  run_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_mythos_runs_run_at ON mythos_runs(run_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mythos_runs_status  ON mythos_runs(status);

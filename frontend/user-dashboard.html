@@ -2253,13 +2253,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const startTime = Date.now();
 
     try {
-      const res = await fetch('https://cyberdudebivash-security-hub.workers.dev/api/ai/analyze', {
+      // Use API_BASE from config (not hardcoded URL) — v31 fix
+      const _apiEndpoint = (window.CONFIG?.API_BASE || API_BASE || 'https://cyberdudebivash-security-hub.workers.dev') + '/api/ai/analyze';
+      const res = await fetch(_apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${_token}`
         },
-        body: JSON.stringify({ prompt: userMsg, system: systemPrompt, stream: true })
+        body: JSON.stringify({ prompt: userMsg, system: systemPrompt })
       });
 
       if (!res.ok) {
