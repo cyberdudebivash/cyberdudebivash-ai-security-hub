@@ -61,6 +61,13 @@
 #   /refund-policy      → refund-policy.html
 #   /user-dashboard     → user-dashboard.html      ← was causing ERR_TOO_MANY_REDIRECTS
 #   /admin-payments     → admin-payments.html
+#   /api-docs           → api-docs.html            ← NEW: Interactive API Documentation
+#   /ai-governance-frameworks → ai-governance-frameworks.html  ← NEW: AI Governance Center
+#   /attack-library     → attack-library.html      ← NEW: AI Attack Library
+#   /agent-threats      → agent-threats.html       ← NEW: Agent Security Intelligence
+#   /intel-hub          → intel-hub.html           ← NEW: Threat Intelligence Hub
+#   /vibe-code-scanner  → vibe-code-scanner.html   ← NEW: Vibe Code Security Scanner
+#   /ai-security-services → ai-security-services.html ← NEW: AI Security Services Catalog
 #
 # ── NO SPA catch-all (/* /index.html 200) ──
 #   Removing this allows step ③ to fire for all page clean-URLs.

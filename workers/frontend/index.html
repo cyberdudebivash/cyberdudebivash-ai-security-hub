@@ -2479,8 +2479,7 @@ app.get('/api/user', (req, res) => {
   <div style="font-size:18px;margin-bottom:8px">🔍</div>
   <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:6px">Need Expert Help?</div>
   <p style="font-size:13px;color:#94a3b8;margin:0 0 14px;max-width:400px;margin-left:auto;margin-right:auto">Our security analyst will review your findings personally, build a remediation roadmap, and explain every risk on a 30-minute call.</p>
-  <button onclick="cdbBookAssessment()" 
-    style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;margin-right:10px">
+  <button onclick="if(typeof cdbBookAssessment==='function'){cdbBookAssessment()}else{window.location='/ai-security-services?service=ai_security_assessment'}" 
     Book Assessment — ₹9,999 →
   </button>
   <div style="font-size:11px;color:#475569;margin-top:8px">72-hour delivery · 50-page report · 30-min expert call</div>
@@ -5028,7 +5027,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(0,212,255,.08);color:#00d4ff;padding:3px 10px;border-radius:20px">Exposure Mapping</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="/api/ai-security/services/catalog" onclick="cdbBookAISecurity('ai_security_assessment');return false" style="flex:1;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
+          <a href="/ai-security-services?service=ai_security_assessment" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_security_assessment');return false}" style="flex:1;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
           <a href="/api-docs" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">API Docs ↗</a>
         </div>
       </div>
@@ -5052,7 +5051,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(129,140,248,.08);color:#818cf8;padding:3px 10px;border-radius:20px">Risk Register</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="#" onclick="cdbBookAISecurity('ai_governance_assessment');return false" style="flex:1;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);color:#818cf8;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
+          <a href="/ai-security-services?service=ai_governance_assessment" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_governance_assessment');return false}" style="flex:1;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);color:#818cf8;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
           <a href="/ai-governance-frameworks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Frameworks ↗</a>
         </div>
       </div>
@@ -5076,7 +5075,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(239,68,68,.08);color:#ef4444;padding:3px 10px;border-radius:20px">Data Exfiltration</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="#" onclick="cdbBookAISecurity('ai_redteam_engagement');return false" style="flex:1;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Start Red Team →</a>
+          <a href="/ai-security-services?service=ai_redteam_engagement" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_redteam_engagement');return false}" style="flex:1;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Start Red Team →</a>
           <a href="/attack-library" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Attack Library ↗</a>
         </div>
       </div>
@@ -5146,8 +5145,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#94a3b8">Managed AI Security</span><span style="color:#a78bfa;font-weight:700">₹49,999/mo</span></div>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="#" onclick="cdbBookAISecurity('ai_security_assessment');return false" style="flex:1;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#a78bfa;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Book Service →</a>
-          <a href="/api/ai-security/services/catalog" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Full Catalog ↗</a>
+          <a href="/ai-security-services?service=ai_security_assessment" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_security_assessment');return false}" style="flex:1;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#a78bfa;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Book Service →</a>
+          <a href="/ai-security-services" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Full Catalog ↗</a>
         </div>
       </div>
 
@@ -5160,7 +5159,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <div style="font-size:13px;color:#64748b">Book a free 30-minute AI security scoping call. We'll identify your top 3 risks in the first session.</div>
       </div>
       <div style="display:flex;gap:12px;flex-shrink:0">
-        <button onclick="cdbBookAISecurity('ai_security_assessment')"
+        <button onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_security_assessment')}else{window.location='/ai-security-services'}"
           style="background:linear-gradient(135deg,#00d4ff,#818cf8);border:none;color:#000;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer">
           Book Free Scoping Call →
         </button>
@@ -5270,7 +5269,7 @@ window.cdbShowAgentScan = function() {
     
     <!-- CTA buttons -->
     <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
-      <button onclick="cdbBookAssessment()" 
+      <button onclick="if(typeof cdbBookAssessment==='function'){cdbBookAssessment()}else{window.location='/ai-security-services?service=ai_security_assessment'}" 
         style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;padding:16px 36px;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:.02em;box-shadow:0 4px 24px rgba(245,158,11,.4);transition:transform .15s,box-shadow .15s"
         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(245,158,11,.5)'"
         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 24px rgba(245,158,11,.4)'">
