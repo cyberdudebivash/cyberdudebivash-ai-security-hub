@@ -25,8 +25,8 @@ const REV = {
   api: (window.CONFIG && window.CONFIG.API_BASE) || 'https://cyberdudebivash-security-hub.workers.dev',
   storageKey: 'cdb_rev_engine_v14',
   // Payment amounts (paise) per module
-  moduleAmounts: { domain:19900, ai:49900, redteam:99900, identity:69900, compliance:49900 },
-  modulePrices:  { domain:'₹199', ai:'₹499', redteam:'₹999', identity:'₹699', compliance:'₹499' },
+  moduleAmounts: { domain:99900, ai:99900, redteam:99900, identity:99900, compliance:99900 },
+  modulePrices:  { domain:'₹999', ai:'₹999', redteam:'₹999', identity:'₹999', compliance:'₹999' },
   bundlePrice:   1999,
 };
 
@@ -110,8 +110,8 @@ function _injectStrongPaywall(panel, module, data, target) {
   // Remove any old weak paywall
   panel.querySelectorAll('.v14-strong-paywall').forEach(el => el.remove());
 
-  const amount    = REV.moduleAmounts[module] || 19900;
-  const price     = REV.modulePrices[module]  || '₹199';
+  const amount    = REV.moduleAmounts[module] || 99900;
+  const price     = REV.modulePrices[module]  || '₹999';
   const score     = data.risk_score || 0;
   const level     = data.risk_level || 'MEDIUM';
   const lColor    = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#a78bfa', LOW:'#10b981' }[level] || '#f59e0b';
@@ -379,7 +379,7 @@ function _injectAISellingCTAs(module, data) {
 
   const score  = data.risk_score || 0;
   const target = (window._currentScan && window._currentScan.target) || data.target || 'your system';
-  const price  = REV.modulePrices[module] || '₹199';
+  const price  = REV.modulePrices[module] || '₹999';
   const amount = REV.moduleAmounts[module] || 19900;
   const tgt    = target.replace(/'/g, "&#39;");
 
@@ -961,7 +961,7 @@ function _injectStickyCTA() {
       </div>
       <div style="font-size:12px;color:rgba(255,255,255,.5)">·</div>
       <div style="font-size:12px;color:rgba(255,255,255,.7)">
-        Reports from <strong style="color:#f59e0b">₹199</strong> · Instant access
+        Reports from <strong style="color:#f59e0b">₹999</strong> · Instant access
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">

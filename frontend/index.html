@@ -6068,7 +6068,7 @@ window.cdbBookAssessment = async function() {
       <div class="card"><div class="card-icon">📋</div><div class="card-title">Compliance Starter Pack</div><div class="card-desc">ISO 27001 gap analysis templates, policy documents, and ISMS implementation roadmap.</div><div class="card-price">₹999</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
       <div class="card"><div class="card-icon">🎯</div><div class="card-title">Red Team Playbook</div><div class="card-desc">MITRE ATT&CK-aligned red team scenarios with scripts, reporting templates, and methodology guide.</div><div class="card-price">₹1,499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
       <div class="card"><div class="card-icon">🔐</div><div class="card-title">Zero Trust Blueprint</div><div class="card-desc">NIST SP 800-207 implementation guide for Zero Trust Architecture with vendor comparisons.</div><div class="card-price">₹799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-      <div class="card"><div class="card-icon">🌐</div><div class="card-title">Domain Security Checklist</div><div class="card-desc">100-point domain hardening checklist: TLS, DNS, headers, subdomains, email security.</div><div class="card-price">₹199</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
+      <div class="card"><div class="card-icon">🌐</div><div class="card-title">Domain Security Checklist</div><div class="card-desc">100-point domain hardening checklist: TLS, DNS, headers, subdomains, email security.</div><div class="card-price">₹499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
       <div class="card"><div class="card-icon">📊</div><div class="card-title">DPDP Act Compliance Kit</div><div class="card-desc">India-specific DPDP Act 2023 compliance templates — Data Fiduciary obligations, consent forms, DPO policies.</div><div class="card-price">₹699</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
     </div>
     <div style="text-align:center;margin-top:32px">
@@ -12639,7 +12639,7 @@ window.addEventListener('load', () => {
            style="display:block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;text-decoration:none;margin-bottom:10px">
           Unlock Full Report — ₹999 · PDF Included
         </a>
-        <a href="/api/checkout?product=basic_report&price=199&ref=report_gate_buy"
+        <a href="#" onclick="event.preventDefault();window.CDB_CHECKOUT_MODAL&&CDB_CHECKOUT_MODAL.openReport('domain');return false;"
            style="display:block;background:transparent;border:1px solid #4f46e5;color:#818cf8;padding:10px 24px;border-radius:10px;font-size:13px;text-decoration:none">
           Buy this report only — ₹999
         </a>
@@ -19692,6 +19692,8 @@ window.showPaymentInstructions = function() {
      Real-Time Activity · Marketplace Urgency · Enterprise CRM
      Payment Verification · Revenue Tracking · Full Integration
      ═══════════════════════════════════════════════════════════════════ -->
+<script src="/assets/geo-currency-router.js"></script>
+<script src="/assets/checkout-modal.js" defer></script>
 <script src="/assets/revenue-engine-v14.js" defer></script>
 
 <!-- GOD MODE v16: MCP Control Client — THE OPERATING SYSTEM -->

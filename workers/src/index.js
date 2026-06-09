@@ -4355,6 +4355,34 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     return handleGetMyPlan(request, env, authCtx);
   }
 
+
+    // ── GET /api/geo — Edge geolocation + currency detection ─────────────────
+    if (path === '/api/geo' && method === 'GET') {
+      const cf       = request.cf || {};
+      const country  = (cf.country || request.headers.get('CF-IPCountry') || 'IN').toUpperCase();
+      const currency = country === 'IN' ? 'INR' : 'USD';
+      const symbol   = currency === 'INR' ? '₹' : '$';
+      return new Response(JSON.stringify({
+        country, currency, symbol,
+        plans: currency === 'INR'
+          ? { STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 }
+          : { STARTER: 6,   PRO: 19,   ENTERPRISE: 59,   MSSP: 119  },
+        report_price: currency === 'INR' ? 999 : 12,
+        ts: Date.now(),
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type':                'application/json',
+          'Cache-Control':               'public, max-age=3600, s-maxage=3600',
+          'CDN-Cache-Control':           'max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+          'Vary':                        'CF-IPCountry',
+          'X-Country':                   country,
+          'X-Currency':                  currency,
+        },
+      });
+    }
+
     return withSecurityHeaders(withCors(Response.json({
       error:    'Not Found',
       path,

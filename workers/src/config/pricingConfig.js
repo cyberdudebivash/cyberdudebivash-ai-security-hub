@@ -133,8 +133,8 @@ const PRICING_CONFIG = Object.freeze({
 
   // ── Pay-per-report ───────────────────────────────────────────
   reports: Object.freeze({
-    domain:     Object.freeze({ price_inr: 199,  label: 'Domain Report — ₹199'  }),
-    ai:         Object.freeze({ price_inr: 499,  label: 'AI Security Report — ₹499' }),
+    domain:     Object.freeze({ price_inr: 999,  label: 'Domain Report — ₹999'  }),
+    ai:         Object.freeze({ price_inr: 999,  label: 'AI Security Report — ₹999' }),
     redteam:    Object.freeze({ price_inr: 999,  label: 'Red Team Report — ₹999' }),
     compliance: Object.freeze({ price_inr: 799,  label: 'Compliance Report — ₹799' }),
     identity:   Object.freeze({ price_inr: 699,  label: 'Identity Report — ₹699' }),
