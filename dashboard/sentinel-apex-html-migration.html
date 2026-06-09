@@ -1,0 +1,309 @@
+<!--
+============================================================
+DASHBOARD HTML MIGRATION GUIDE
+sentinel-apex-html-migration.html
+
+PURPOSE:
+  Shows every hardcoded value in the existing dashboard
+  and the exact replacement using data-live attributes.
+  The sentinel-apex-dashboard.js script wires these automatically.
+
+HOW TO APPLY:
+  1. Add to <head>:
+     <script src="/static/js/sentinel-apex-dashboard.js" defer></script>
+
+  2. Replace every hardcoded metric element using the table below.
+
+  3. Replace compliance badge section using the data-compliance-section pattern.
+
+  4. Never hardcode a number again. All numbers come from /api/mythos/status.
+============================================================
+-->
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 1: CVE COUNTERS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- BEFORE (hardcoded — REMOVE) -->
+<!-- <span>3,841+</span> -->
+<!-- <span>CVEs Tracked Live</span> -->
+
+<!-- AFTER (live from DB) -->
+<span data-live="cve-total">—</span>
+<span>CVEs Tracked Live</span>
+
+<!-- BEFORE (hardcoded in footer marquee — REMOVE) -->
+<!-- Global threat intel: — CVEs tracked -->
+<!-- Global threat intel: 3,841+ CVEs tracked | -->
+
+<!-- AFTER -->
+<span>Global threat intel: </span>
+<span data-live="cve-total">—</span>
+<span> CVEs tracked</span>
+
+<!-- ── Critical CVE count ── -->
+<!-- BEFORE: 94 critical -->
+<span data-live="cve-critical">—</span>
+<span> critical</span>
+
+<!-- ── KEV count ── -->
+<span>KEV: </span><span data-live="cve-kev">—</span>
+
+<!-- ── Last updated timestamp ── -->
+<!-- BEFORE: Intel updated: 11:59 pm -->
+<span data-live="cve-last-updated">—</span>
+<!-- OR use the auto-updating clock: -->
+<span data-live="last-updated">—</span>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 2: SCAN COUNTERS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- BEFORE: 1,247+ Scans Performed (appears 3 times — all replaced) -->
+<span data-live="scans-completed">—</span>
+<span>Scans Performed</span>
+
+<!-- BEFORE: 1,247 Scans today (in the live alert banner) -->
+<span data-live="scans-completed">—</span>
+<span>Scans today</span>
+
+<!-- BEFORE: 4 active scans -->
+<span data-live="scans-active">—</span>
+<span> active scans</span>
+
+<!-- Sentinel APEX status bar (BEFORE: "4 active scans") -->
+<span data-status-bar="active-scans">—</span>
+<span> active scans</span>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 3: CUSTOMER & REVENUE COUNTERS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- BEFORE: 47+ Security Teams — Verified paying customers -->
+<span data-live="paying-customers">—</span>
+<span>Security Teams</span>
+<p>Verified paying customers</p>
+
+<!-- BEFORE: ₹0 revenue today -->
+<span data-live="revenue-today">₹—</span>
+<span> revenue today</span>
+
+<!-- MRR / ARR (for MYTHOS Revenue Center) -->
+<span data-live="mrr">₹—</span>
+<span data-live="arr">₹—</span>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 4: SOAR RULES COUNTER
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- BEFORE: 312+ SOAR Rules Generated -->
+<span data-live="soar-rules">—</span>
+<span>SOAR Rules Generated</span>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 5: STATUS BAR
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- BEFORE (static text with no health probes):
+  API ✓ | DB | Cache | Sentinel APEX | ⬡ v30.0.0 | THREAT: MODERATE | 2026-06-09 18:34:11 UTC
+-->
+
+<!-- AFTER (live, DB-backed) -->
+<div class="status-bar" role="status" aria-live="polite">
+  <span>API</span>
+  <span data-status="api" title="API status">?</span>
+  <span aria-hidden="true">|</span>
+
+  <span>DB</span>
+  <span data-status="db" title="Database status">?</span>
+  <span aria-hidden="true">|</span>
+
+  <span>Cache</span>
+  <span data-status="cache" title="Cache status">?</span>
+  <span aria-hidden="true">|</span>
+
+  <span>Sentinel APEX</span>
+  <span data-status="sentinel-apex" title="Sentinel APEX pipeline status">?</span>
+  <span aria-hidden="true">|</span>
+
+  <span data-status-bar="version">⬡ v30.0.0</span>
+  <span aria-hidden="true">|</span>
+
+  <span>THREAT:</span>
+  <span data-live="threat-level" data-threat-level-badge>MODERATE</span>
+  <span aria-hidden="true">|</span>
+
+  <span data-status-bar="timestamp">—</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 6: COMPLIANCE BADGES
+     ═══════════════════════════════════════════════════════════ -->
+
+<!--
+BEFORE (all badges were displayed as if certified — REMOVE entire block):
+
+  🛡️ ISO 27001:2022 🔒 SOC 2 Type II 🇪🇺 GDPR 2016/679 ...
+
+REPLACE WITH the data-compliance-section block.
+The dashboard script renders honest alignment badges with tooltips.
+-->
+
+<div data-compliance-section aria-label="Framework alignment — loading...">
+  <!-- Populated by sentinel-apex-dashboard.js from /api/trust/compliance -->
+  <!-- Shows alignment_level: certified | aligned | partial for each framework -->
+  <!-- Certified = formal audit. Aligned = controls implemented, no audit. -->
+</div>
+
+<!-- Individual badge pattern (if you need granular control per badge) -->
+<span
+  data-compliance-badge="iso27001"
+  data-alignment-level=""
+  class="compliance-badge"
+  title="Loading alignment detail..."
+>
+  🛡️ ISO 27001:2022
+  <small data-alignment-level></small>
+</span>
+
+<span data-compliance-badge="soc2"      class="compliance-badge" title="">🔒 SOC 2 Type II</span>
+<span data-compliance-badge="gdpr"      class="compliance-badge" title="">🇪🇺 GDPR 2016/679</span>
+<span data-compliance-badge="pcidss"    class="compliance-badge" title="">💳 PCI-DSS v4.0</span>
+<span data-compliance-badge="dpdp"      class="compliance-badge" title="">🇮🇳 DPDP Act 2023</span>
+<span data-compliance-badge="hipaa"     class="compliance-badge" title="">🏥 HIPAA/HITECH</span>
+<span data-compliance-badge="owasp_llm" class="compliance-badge" title="">⚡ OWASP LLM Top 10</span>
+<span data-compliance-badge="mitre"     class="compliance-badge" title="">🎯 MITRE ATT&CK</span>
+<span data-compliance-badge="nist_ai"   class="compliance-badge" title="">📊 NIST AI RMF</span>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 7: CSS FOR STATUS/LIVE ELEMENTS
+     Add to your stylesheet or <style> block
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+/* Live metric update flash */
+.live-updated {
+  animation: live-flash 0.8s ease-out;
+}
+@keyframes live-flash {
+  0%   { background-color: rgba(16, 185, 129, 0.15); }
+  100% { background-color: transparent; }
+}
+
+/* Status indicators */
+[data-status].status-ok       { color: #10b981; }
+[data-status].status-degraded { color: #f59e0b; }
+[data-status].status-down     { color: #ef4444; }
+[data-status].status-unknown  { color: #9ca3af; }
+
+/* Compliance badge alignment levels */
+.compliance-badge[data-alignment-level="certified"] { border-color: #10b981; }
+.compliance-badge[data-alignment-level="aligned"]   { border-color: #3b82f6; }
+.compliance-badge[data-alignment-level="partial"]   { border-color: #f59e0b; }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 8: TESTIMONIALS — REPLACEMENT PATTERN
+     ═══════════════════════════════════════════════════════════ -->
+
+<!--
+BEFORE (unverifiable — REMOVE):
+  "MYTHOS generated a Sentinel KQL rule for a 0-day within 90 seconds..."
+  Lead SOC Analyst, Tier-1 Bank · Mumbai ⭐⭐⭐⭐⭐
+
+REPLACE WITH honest CTA:
+-->
+
+<div class="testimonials-section">
+  <p style="font-size:14px;color:#6b7280;margin:0 0 16px;">
+    💬 <strong>From Security Teams</strong> — Early access feedback.
+    We are actively building our customer base.
+    If you have used the platform and would like to share feedback or be featured as a customer reference,
+    please contact <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a>.
+  </p>
+  <div class="request-reference-cta" style="
+    border:1px solid #e5e7eb;border-radius:8px;padding:16px;
+    background:#f9fafb;display:flex;gap:12px;align-items:center;
+  ">
+    <span style="font-size:24px;">📞</span>
+    <div>
+      <strong>Request a Reference Call</strong>
+      <p style="margin:4px 0 0;font-size:13px;color:#6b7280;">
+        Speak directly with a security team currently using the platform.
+        Available for Enterprise and MSSP prospects.
+      </p>
+      <a href="mailto:bivash@cyberdudebivash.com?subject=Reference%20Call%20Request"
+         style="font-size:13px;color:#1a56db;">
+        Request a reference →
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 9: UPI PAYMENT MODAL — REPLACEMENT PATTERN
+     ═══════════════════════════════════════════════════════════ -->
+
+<!--
+BEFORE:
+  UPI ID: bivash@cyberdudebivash.com
+  After payment, email your UTR reference to support@... for instant activation.
+  [This is NOT instant and NOT automated]
+
+REPLACE WITH Razorpay checkout.js (automated, instant):
+-->
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+/**
+ * openRazorpayCheckout(tier, userEmail)
+ * Call this when the user selects a plan.
+ * The webhook at /api/mythos/checkout/webhook handles tier activation automatically.
+ */
+async function openRazorpayCheckout(tier, userEmail) {
+  try {
+    // 1. Create order on your backend
+    const res = await fetch('/api/mythos/checkout/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier, email: userEmail }),
+    });
+    const { data } = await res.json();
+    if (!data?.order_id) throw new Error('Failed to initialize checkout');
+
+    // 2. Open Razorpay modal
+    const rzp = new window.Razorpay({
+      key: window.RAZORPAY_KEY_ID,         // Set via: window.RAZORPAY_KEY_ID = '...'
+      order_id: data.order_id,
+      amount: data.amount_paise,
+      currency: 'INR',
+      name: 'CYBERDUDEBIVASH AI Security',
+      description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan — Monthly`,
+      image: 'https://cyberdudebivash.in/static/img/logo.png',
+      prefill: { email: userEmail },
+      notes: { tier, user_email: userEmail },
+      theme: { color: '#1a56db' },
+      handler: function(response) {
+        // Webhook handles activation.
+        // Payment captured → webhook fires → D1 updated → KV cache updated.
+        // Dashboard auto-refreshes within 30 seconds.
+        showActivationPending(response.razorpay_payment_id);
+      },
+    });
+    rzp.open();
+  } catch (e) {
+    console.error('Checkout error:', e);
+    alert('Checkout initialization failed. Please try again or contact support@cyberdudebivash.com');
+  }
+}
+
+function showActivationPending(paymentId) {
+  const msg = document.getElementById('activation-message');
+  if (msg) {
+    msg.textContent = `Payment received (${paymentId}). Your plan will activate within 60 seconds. ` +
+      `The dashboard will update automatically.`;
+    msg.style.display = 'block';
+  }
+}
+</script>
