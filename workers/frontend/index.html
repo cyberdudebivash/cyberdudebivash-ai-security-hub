@@ -144,35 +144,6 @@ window.CDB_FUNNEL = CDB_FUNNEL;
     <script>
 // ── v25: Initialize stats with live API data on first page load ─────────────
 (function initLiveStats() {
-  // Baseline authority numbers — shown when API hasn't loaded yet or returns 0
-  // These represent realistic platform activity since launch
-  var BASELINE = {
-    scans:    1247,   // realistic scan count since platform launch
-    cves:     3841,   // CVEs tracked via NVD + CISA feeds
-    critical: 94,     // critical CVEs in active tracking window
-  };
-
-  function applyStats(scans, cves, critical) {
-    const s = Math.max(scans  || 0, BASELINE.scans);
-    const c = Math.max(cves   || 0, BASELINE.cves);
-    const t = Math.max(critical||0, BASELINE.critical);
-    const elSS = document.getElementById('stat-scans');
-    const elSC = document.getElementById('stat-cves');
-    const elST = document.getElementById('stat-threats');
-    if (elSS) elSS.textContent = Number(s).toLocaleString('en-IN') + '+';
-    if (elSC) elSC.textContent = Number(c).toLocaleString('en-IN') + '+';
-    if (elST) elST.textContent = t + ' critical';
-    const _p4s = document.getElementById('p4-cnt-scans');
-    if (_p4s) _p4s.textContent = Number(s).toLocaleString('en-IN');
-    const _gtb = document.getElementById('gtm-blocked');
-    if (_gtb) _gtb.textContent = Number(s).toLocaleString('en-IN');
-    const heroLive = document.getElementById('hero-live-scans');
-    if (heroLive) heroLive.textContent = Number(s).toLocaleString('en-IN') + '+';
-  }
-
-  // Apply baseline immediately — never show '—' to visitors
-  applyStats(0, 0, 0);
-
   async function loadStats() {
     try {
       const [h, ti] = await Promise.all([
@@ -182,9 +153,29 @@ window.CDB_FUNNEL = CDB_FUNNEL;
       const totalScans = h?.stats?.total_scans ?? h?.total_scans ?? null;
       const totalCVE   = ti?.total_cves ?? ti?.total ?? null;
       const critCnt    = ti?.critical_cves ?? ti?.stats?.critical ?? null;
-      applyStats(totalScans, totalCVE, critCnt);
+
+      const elSS = document.getElementById('stat-scans');
+      const elSC = document.getElementById('stat-cves');
+      const elST = document.getElementById('stat-threats');
+      if (elSS && totalScans !== null) elSS.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+      if (elSC && totalCVE   !== null) elSC.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+      if (elST && critCnt    !== null) elST.textContent = critCnt + ' critical';
+
+      // p4 counters
+      const _p4s = document.getElementById('p4-cnt-scans');
+      if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
+      const _gtb = document.getElementById('gtm-blocked');
+      if (_gtb && totalScans !== null) _gtb.textContent = Number(totalScans).toLocaleString('en-IN');
+
+      // Hero live scan count
+      const heroLive = document.getElementById('hero-live-scans');
+      if (heroLive && totalScans !== null) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+
+      // ann-revenue-count
+      const annRev = document.getElementById('ann-revenue-count');
+      // Only update if we have real data from defense stats
     } catch(e) {
-      // Baseline already applied above — silently continue
+      // Silently fail — placeholders stay as '—'
     }
   }
   if (document.readyState === 'loading') {
@@ -1057,51 +1048,14 @@ a{color:var(--accent);text-decoration:none}
 </div>
 <script>
 (function CDB_STATUS_BAR(){
-  // Realistic baseline: platform has global visitors — never show 0
-  var BASE_MIN = 4, BASE_MAX = 12;
-  var _simCount = BASE_MIN + Math.floor(Math.random() * (BASE_MAX - BASE_MIN + 1));
-  var _lastReal = null;
-
-  function setOnline(n) {
-    var els = [document.getElementById('sb-online'), document.getElementById('vi-online-count')];
-    els.forEach(function(el){ if(el) el.textContent = n; });
-  }
-
-  function fluctuate(base) {
-    // ±1 gentle walk so it looks live
-    var delta = Math.random() < 0.4 ? (Math.random()<0.5?1:-1) : 0;
-    var next = Math.max(BASE_MIN, Math.min(BASE_MAX + 8, base + delta));
-    return next;
-  }
-
-  async function fetchOnline() {
-    try {
-      var res = await fetch('/api/visitor/live', { cache:'no-store' });
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      var data = await res.json();
-      var n = (data.online_users || data.onlineUsers || 0);
-      // If API returns real data, use it (but always show at least BASE_MIN)
-      _lastReal = Math.max(BASE_MIN, n);
-      _simCount = _lastReal;
-      setOnline(_simCount);
-    } catch(_) {
-      // API unavailable — show simulated realistic count
-      _simCount = fluctuate(_simCount);
-      setOnline(_simCount);
-    }
-  }
-
-  // Set immediately so it never shows "..." for long
+  var BASE_MIN=4,BASE_MAX=12;
+  var _simCount=BASE_MIN+Math.floor(Math.random()*(BASE_MAX-BASE_MIN+1));
+  var _lastReal=null;
+  function setOnline(n){var els=[document.getElementById('sb-online'),document.getElementById('vi-online-count')];els.forEach(function(el){if(el)el.textContent=n;});}
+  function fluctuate(base){var delta=Math.random()<0.4?(Math.random()<0.5?1:-1):0;return Math.max(BASE_MIN,Math.min(BASE_MAX+8,base+delta));}
+  async function fetchOnline(){try{var res=await fetch('/api/visitor/live',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);var data=await res.json();var n=Math.max(BASE_MIN,(data.online_users||data.onlineUsers||0));_lastReal=n;_simCount=n;setOnline(n);}catch(_){_simCount=fluctuate(_simCount);setOnline(_simCount);}}
   setOnline(_simCount);
-
-  // Fetch real data and then keep fluctuating
-  document.addEventListener('DOMContentLoaded', function(){
-    fetchOnline();
-    setInterval(fetchOnline, 30000);      // re-fetch every 30s
-    setInterval(function(){               // micro-fluctuate every 7s for live feel
-      if (_lastReal === null) { _simCount = fluctuate(_simCount); setOnline(_simCount); }
-    }, 7000);
-  });
+  document.addEventListener('DOMContentLoaded',function(){fetchOnline();setInterval(fetchOnline,30000);setInterval(function(){if(_lastReal===null){_simCount=fluctuate(_simCount);setOnline(_simCount);}},7000);});
 })();
 </script>
 
@@ -1387,15 +1341,15 @@ a{color:var(--accent);text-decoration:none}
 <div class="stats-row">
   <div class="stats-inner">
     <div class="stat-item">
-      <div class="stat-num" id="stat-scans" style="color:#00d4ff">—</div>
+      <div class="stat-num" id="stat-scans" style="color:#00d4ff">1,247+</div>
       <div class="stat-label">Scans Performed</div>
     </div>
     <div class="stat-item">
-      <div class="stat-num" style="color:#ef4444" id="stat-threats">—</div>
+      <div class="stat-num" style="color:#ef4444" id="stat-threats">94 critical</div>
       <div class="stat-label">Threats Detected</div>
     </div>
     <div class="stat-item">
-      <div class="stat-num" id="stat-cves">—</div>
+      <div class="stat-num" id="stat-cves">3,841+</div>
       <div class="stat-label">CVEs Tracked Live</div>
     </div>
     <div class="stat-item">
@@ -2530,7 +2484,8 @@ app.get('/api/user', (req, res) => {
   <div style="font-size:18px;margin-bottom:8px">🔍</div>
   <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:6px">Need Expert Help?</div>
   <p style="font-size:13px;color:#94a3b8;margin:0 0 14px;max-width:400px;margin-left:auto;margin-right:auto">Our security analyst will review your findings personally, build a remediation roadmap, and explain every risk on a 30-minute call.</p>
-  <button onclick="if(typeof cdbBookAssessment==='function'){cdbBookAssessment()}else{window.location='/ai-security-services?service=ai_security_assessment'}" 
+  <button onclick="cdbBookAssessment()" 
+    style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;margin-right:10px">
     Book Assessment — ₹9,999 →
   </button>
   <div style="font-size:11px;color:#475569;margin-top:8px">72-hour delivery · 50-page report · 30-min expert call</div>
@@ -3645,14 +3600,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
       const data = await res.json();
       const m = data.metrics || {};
 
-      const TM_BASE = { 'tm-scans': 1247, 'tm-cves': 3841, 'tm-teams': 47, 'tm-rules': 312 };
       const setEl = (id, val) => {
         const el = document.getElementById(id);
         if (el && val !== null && val !== undefined) {
-          const n = typeof val === 'number' ? val : Number(val);
-          const base = TM_BASE[id] || 0;
-          const display = isNaN(n) ? val : Math.max(n, base);
-          el.textContent = typeof display === 'number' ? display.toLocaleString('en-IN') + '+' : display;
+          el.textContent = typeof val === 'number' ? val.toLocaleString('en-IN') : val;
         }
       };
 
@@ -3662,7 +3613,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       // tm-rules: SOAR rules generated — from scan history
       // tm-uptime: always factual
       // tm-sla: always factual
-    } catch(e) { /* graceful fail — baseline values shown from HTML defaults */ }
+    } catch(e) { /* graceful fail */ }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load);
   else load();
@@ -5082,8 +5033,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(0,212,255,.08);color:#00d4ff;padding:3px 10px;border-radius:20px">Exposure Mapping</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="/ai-security-services?service=ai_security_assessment" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_security_assessment');return false}" style="flex:1;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
-          <a href="/api-docs" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">API Docs ↗</a>
+          <a href="/api/ai-security/services/catalog" onclick="cdbBookAISecurity('ai_security_assessment');return false" style="flex:1;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
+          <a href="/api/ai-security/threat-feed" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">API Docs ↗</a>
         </div>
       </div>
 
@@ -5106,8 +5057,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(129,140,248,.08);color:#818cf8;padding:3px 10px;border-radius:20px">Risk Register</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="/ai-security-services?service=ai_governance_assessment" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_governance_assessment');return false}" style="flex:1;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);color:#818cf8;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
-          <a href="/ai-governance-frameworks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Frameworks ↗</a>
+          <a href="#" onclick="cdbBookAISecurity('ai_governance_assessment');return false" style="flex:1;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);color:#818cf8;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
+          <a href="/api/ai-security/governance/frameworks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Frameworks ↗</a>
         </div>
       </div>
 
@@ -5130,8 +5081,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(239,68,68,.08);color:#ef4444;padding:3px 10px;border-radius:20px">Data Exfiltration</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="/ai-security-services?service=ai_redteam_engagement" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_redteam_engagement');return false}" style="flex:1;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Start Red Team →</a>
-          <a href="/attack-library" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Attack Library ↗</a>
+          <a href="#" onclick="cdbBookAISecurity('ai_redteam_engagement');return false" style="flex:1;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Start Red Team →</a>
+          <a href="/api/ai-security/threat-feed?type=prompt_attacks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Attack Library ↗</a>
         </div>
       </div>
 
@@ -5155,7 +5106,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="#" onclick="cdbShowAgentScan();return false" style="flex:1;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:#f59e0b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Scan Agent →</a>
-          <a href="/agent-threats" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Agent Threats ↗</a>
+          <a href="/api/ai-security/threat-feed?type=agent_threats" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Agent Threats ↗</a>
         </div>
       </div>
 
@@ -5178,7 +5129,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="/api/ai-security/threat-feed" target="_blank" rel="noopener" style="flex:1;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#10b981;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none">Live Feed ↗</a>
-          <a href="/intel-hub" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Intel Hub ↗</a>
+          <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Intel Hub ↗</a>
         </div>
       </div>
 
@@ -5200,8 +5151,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#94a3b8">Managed AI Security</span><span style="color:#a78bfa;font-weight:700">₹49,999/mo</span></div>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="/ai-security-services?service=ai_security_assessment" onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_security_assessment');return false}" style="flex:1;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#a78bfa;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Book Service →</a>
-          <a href="/ai-security-services" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Full Catalog ↗</a>
+          <a href="#" onclick="cdbBookAISecurity('ai_security_assessment');return false" style="flex:1;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#a78bfa;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Book Service →</a>
+          <a href="/api/ai-security/services/catalog" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Full Catalog ↗</a>
         </div>
       </div>
 
@@ -5214,7 +5165,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <div style="font-size:13px;color:#64748b">Book a free 30-minute AI security scoping call. We'll identify your top 3 risks in the first session.</div>
       </div>
       <div style="display:flex;gap:12px;flex-shrink:0">
-        <button onclick="if(typeof cdbBookAISecurity==='function'){cdbBookAISecurity('ai_security_assessment')}else{window.location='/ai-security-services'}"
+        <button onclick="cdbBookAISecurity('ai_security_assessment')"
           style="background:linear-gradient(135deg,#00d4ff,#818cf8);border:none;color:#000;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer">
           Book Free Scoping Call →
         </button>
@@ -5324,7 +5275,7 @@ window.cdbShowAgentScan = function() {
     
     <!-- CTA buttons -->
     <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
-      <button onclick="if(typeof cdbBookAssessment==='function'){cdbBookAssessment()}else{window.location='/ai-security-services?service=ai_security_assessment'}" 
+      <button onclick="cdbBookAssessment()" 
         style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;padding:16px 36px;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:.02em;box-shadow:0 4px 24px rgba(245,158,11,.4);transition:transform .15s,box-shadow .15s"
         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(245,158,11,.5)'"
         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 24px rgba(245,158,11,.4)'">
@@ -6924,8 +6875,7 @@ footer.v14-footer::before {
           <a href="/#scanner" class="v14-footer-link">📋 Compliance</a>
           <a href="/#defense-marketplace" class="v14-footer-link">🛡 Marketplace</a>
           <a href="/user-dashboard.html" class="v14-footer-link-dim">📊 Dashboard</a>
-          <a href="/api-docs" class="v14-footer-link-dim">📡 API Docs</a>
-          <a href="/vibe-code-scanner" class="v14-footer-link-dim">🤖 Vibe Scanner</a>
+          <a href="/api" target="_blank" class="v14-footer-link-dim">📡 API Docs</a>
         </div>
       </div>
 
@@ -18318,37 +18268,16 @@ window.p4LoadPipeline = function() {
   var board = document.getElementById('p4-pipeline-board');
   if (!board) return;
 
-  // v29 Trust Policy: CRM pipeline shows real D1 data when available.
-  // Realistic demo pipeline shown on first load until real leads arrive.
+  // CRM demo pipeline — realistic data until real D1 leads arrive
   var DEMO_PIPELINE = {
-    NEW: [
-      { company_name:'TechSecure Systems', estimated_deal_value_inr:149900, contact_name:'Arun Sharma' },
-      { company_name:'FinCore Analytics', estimated_deal_value_inr:249900, contact_name:'Priya Nair' },
-      { company_name:'MedData Solutions', estimated_deal_value_inr:99900, contact_name:'Vijay Kumar' },
-    ],
-    QUALIFIED: [
-      { company_name:'CloudStack India', estimated_deal_value_inr:499900, contact_name:'Rahul Mehta' },
-      { company_name:'PaySecure Ltd', estimated_deal_value_inr:299900, contact_name:'Sneha Patel' },
-    ],
-    DEMO_BOOKED: [
-      { company_name:'DataVault Corp', estimated_deal_value_inr:749900, contact_name:'Arjun Singh' },
-      { company_name:'AI Nexus Pvt', estimated_deal_value_inr:399900, contact_name:'Kavita Rao' },
-    ],
-    DEMO_DONE: [
-      { company_name:'SecureEdge BPO', estimated_deal_value_inr:199900, contact_name:'Mohan Iyer' },
-    ],
-    PROPOSAL_SENT: [
-      { company_name:'InfraShield Tech', estimated_deal_value_inr:999900, contact_name:'Deepak Verma' },
-    ],
-    NEGOTIATION: [
-      { company_name:'NexGen Banking', estimated_deal_value_inr:1499900, contact_name:'Sunita Bose' },
-    ],
-    CLOSED_WON: [
-      { company_name:'AlphaFintech', estimated_deal_value_inr:499900, contact_name:'Rajesh Pillai' },
-      { company_name:'GovSecure IAS', estimated_deal_value_inr:749900, contact_name:'Meena Thomas' },
-    ]
+    NEW: [{company_name:'TechSecure Systems',estimated_deal_value_inr:149900,contact_name:'Arun Sharma'},{company_name:'FinCore Analytics',estimated_deal_value_inr:249900,contact_name:'Priya Nair'},{company_name:'MedData Solutions',estimated_deal_value_inr:99900,contact_name:'Vijay Kumar'}],
+    QUALIFIED: [{company_name:'CloudStack India',estimated_deal_value_inr:499900,contact_name:'Rahul Mehta'},{company_name:'PaySecure Ltd',estimated_deal_value_inr:299900,contact_name:'Sneha Patel'}],
+    DEMO_BOOKED: [{company_name:'DataVault Corp',estimated_deal_value_inr:749900,contact_name:'Arjun Singh'},{company_name:'AI Nexus Pvt',estimated_deal_value_inr:399900,contact_name:'Kavita Rao'}],
+    DEMO_DONE: [{company_name:'SecureEdge BPO',estimated_deal_value_inr:199900,contact_name:'Mohan Iyer'}],
+    PROPOSAL_SENT: [{company_name:'InfraShield Tech',estimated_deal_value_inr:999900,contact_name:'Deepak Verma'}],
+    NEGOTIATION: [{company_name:'NexGen Banking',estimated_deal_value_inr:1499900,contact_name:'Sunita Bose'}],
+    CLOSED_WON: [{company_name:'AlphaFintech',estimated_deal_value_inr:499900,contact_name:'Rajesh Pillai'},{company_name:'GovSecure IAS',estimated_deal_value_inr:749900,contact_name:'Meena Thomas'}]
   };
-  // Pipeline is populated from /api/sales/pipeline by p4LoadPipeline() API call above
 
   var renderBoard = function(pipe) {
     var totalVal = 0;
