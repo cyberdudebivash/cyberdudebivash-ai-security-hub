@@ -5029,7 +5029,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="/api/ai-security/services/catalog" onclick="cdbBookAISecurity('ai_security_assessment');return false" style="flex:1;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
-          <a href="/api/ai-security/threat-feed" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">API Docs ↗</a>
+          <a href="/api-docs" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">API Docs ↗</a>
         </div>
       </div>
 
@@ -5053,7 +5053,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="#" onclick="cdbBookAISecurity('ai_governance_assessment');return false" style="flex:1;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);color:#818cf8;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Get Assessment →</a>
-          <a href="/api/ai-security/governance/frameworks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Frameworks ↗</a>
+          <a href="/ai-governance-frameworks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Frameworks ↗</a>
         </div>
       </div>
 
@@ -5077,7 +5077,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="#" onclick="cdbBookAISecurity('ai_redteam_engagement');return false" style="flex:1;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Start Red Team →</a>
-          <a href="/api/ai-security/threat-feed?type=prompt_attacks" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Attack Library ↗</a>
+          <a href="/attack-library" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Attack Library ↗</a>
         </div>
       </div>
 
@@ -5101,7 +5101,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="#" onclick="cdbShowAgentScan();return false" style="flex:1;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:#f59e0b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Scan Agent →</a>
-          <a href="/api/ai-security/threat-feed?type=agent_threats" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Agent Threats ↗</a>
+          <a href="/agent-threats" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Agent Threats ↗</a>
         </div>
       </div>
 
@@ -5124,7 +5124,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         </div>
         <div style="display:flex;gap:10px">
           <a href="/api/ai-security/threat-feed" target="_blank" rel="noopener" style="flex:1;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#10b981;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none">Live Feed ↗</a>
-          <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Intel Hub ↗</a>
+          <a href="/intel-hub" target="_blank" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Intel Hub ↗</a>
         </div>
       </div>
 
@@ -6870,7 +6870,8 @@ footer.v14-footer::before {
           <a href="/#scanner" class="v14-footer-link">📋 Compliance</a>
           <a href="/#defense-marketplace" class="v14-footer-link">🛡 Marketplace</a>
           <a href="/user-dashboard.html" class="v14-footer-link-dim">📊 Dashboard</a>
-          <a href="/api" target="_blank" class="v14-footer-link-dim">📡 API Docs</a>
+          <a href="/api-docs" class="v14-footer-link-dim">📡 API Docs</a>
+          <a href="/vibe-code-scanner" class="v14-footer-link-dim">🤖 Vibe Scanner</a>
         </div>
       </div>
 

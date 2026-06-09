@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f59e0b">
+<title>AI Agent Threat Intelligence | CYBERDUDEBIVASH AI Security Hub</title>
+<meta name="description" content="Live AI agent threat intelligence — security advisories for OpenAI Agents, LangChain, CrewAI, AutoGen, and MCP deployments. Real-time monitoring and risk scoring.">
+<link rel="canonical" href="https://cyberdudebivash.in/agent-threats">
+<style>
+:root{
+  --bg:#0a0a1a;--surface:#0f0f2e;--border:#1e1e4a;
+  --accent:#f59e0b;--accent-glow:rgba(245,158,11,.1);
+  --accent2:#ef4444;--accent3:#10b981;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#111130;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,26,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:14px;font-weight:900;color:#f59e0b;text-decoration:none}
+.nav-links a{color:var(--text-muted);font-size:13px;font-weight:600;margin-left:24px}
+.nav-links a:hover{color:#f59e0b;text-decoration:none}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#0d0a04 0%,#1a1204 50%,#0d0a04 100%);border-bottom:1px solid rgba(245,158,11,.15);padding:64px 24px 48px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 40% at 70% 50%,rgba(245,158,11,.05) 0%,transparent 70%)}
+.hero-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.hero-left{}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#f59e0b;font-size:11px;font-weight:800;letter-spacing:.12em;padding:5px 14px;border-radius:20px;margin-bottom:18px;text-transform:uppercase}
+.hero h1{font-size:clamp(26px,4vw,46px);font-weight:900;color:#fff;margin-bottom:12px;line-height:1.1}
+.hero h1 span{color:#f59e0b}
+.hero p{font-size:15px;color:var(--text-muted);line-height:1.6;margin-bottom:24px}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.btn-primary{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:11px 22px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-primary:hover{background:rgba(245,158,11,.22)}
+.btn-secondary{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text-muted);padding:11px 22px;border-radius:9px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s}
+.btn-secondary:hover{background:rgba(255,255,255,.08);color:#fff}
+
+/* LIVE STATUS PANEL */
+.status-panel{background:rgba(10,10,26,.8);border:1px solid rgba(245,158,11,.2);border-radius:16px;padding:22px}
+.sp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sp-title{font-size:13px;font-weight:800;color:#fff}
+.live-dot{display:flex;align-items:center;gap:6px;font-size:11px;color:#10b981}
+.live-dot::before{content:'';width:7px;height:7px;background:#10b981;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.sp-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sp-stat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.sp-stat-val{font-size:22px;font-weight:900;color:#f59e0b}
+.sp-stat-label{font-size:10px;color:var(--text-dim);margin-top:2px}
+.sp-feed{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.sp-item{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.02);border-radius:8px;padding:9px 12px}
+.sp-sev{font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;text-transform:uppercase;min-width:56px;text-align:center}
+.crit{background:rgba(239,68,68,.15);color:#ef4444}
+.high-s{background:rgba(245,158,11,.15);color:#f59e0b}
+.med{background:rgba(251,191,36,.1);color:#fbbf24}
+.sp-item-text{font-size:12px;color:var(--text-muted);flex:1;line-height:1.3}
+.sp-time{font-size:10px;color:var(--text-dim)}
+
+/* MAIN CONTENT */
+.main{max-width:1200px;margin:0 auto;padding:40px 24px}
+
+/* AGENT RISK GRID */
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:40px}
+.agent-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;transition:all .2s;cursor:pointer}
+.agent-card:hover{border-color:rgba(245,158,11,.25);transform:translateY(-2px)}
+.agent-logo{font-size:32px;margin-bottom:8px}
+.agent-name{font-size:14px;font-weight:800;color:#fff;margin-bottom:6px}
+.risk-meter{height:6px;background:rgba(255,255,255,.06);border-radius:3px;margin-bottom:8px;overflow:hidden}
+.risk-fill{height:100%;border-radius:3px;transition:width 1s ease}
+.risk-fill.critical{background:linear-gradient(90deg,#ef4444,#dc2626)}
+.risk-fill.high{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.risk-fill.medium{background:linear-gradient(90deg,#10b981,#059669)}
+.agent-risk-label{font-size:11px;font-weight:700}
+.risk-critical{color:#ef4444}
+.risk-high{color:#f59e0b}
+.risk-medium{color:#10b981}
+.advisory-count{font-size:11px;color:var(--text-dim);margin-top:4px}
+
+/* ADVISORY CARDS */
+.advisory-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.section-title{font-size:20px;font-weight:800;color:#fff}
+.feed-filter{display:flex;gap:8px}
+.feed-btn{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text-muted);padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.feed-btn.active,.feed-btn:hover{background:var(--accent-glow);border-color:rgba(245,158,11,.3);color:#f59e0b}
+
+.advisory-list{display:flex;flex-direction:column;gap:16px}
+.advisory{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;transition:all .2s}
+.advisory:hover{border-color:rgba(245,158,11,.2)}
+.adv-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.adv-id{font-size:11px;font-family:monospace;background:rgba(245,158,11,.08);color:#f59e0b;padding:3px 10px;border-radius:6px;font-weight:700}
+.adv-sev{font-size:10px;font-weight:800;padding:3px 10px;border-radius:12px}
+.adv-crit{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.15)}
+.adv-high{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.15)}
+.adv-med{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.15)}
+.adv-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:6px}
+.adv-affected{font-size:12px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.adv-desc{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:14px}
+.adv-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.adv-tag{font-size:10px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.12);color:var(--text-dim);padding:2px 9px;border-radius:10px}
+.adv-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.adv-meta{display:flex;gap:16px;font-size:11px;color:var(--text-dim)}
+.adv-actions{display:flex;gap:8px}
+.btn-adv{font-size:12px;font-weight:700;padding:7px 14px;border-radius:7px;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-adv.primary{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b}
+.btn-adv.primary:hover{background:rgba(245,158,11,.2)}
+.btn-adv.ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-muted)}
+.btn-adv.ghost:hover{background:rgba(255,255,255,.08);color:#fff}
+.new-badge{font-size:9px;background:#ef4444;color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:6px;vertical-align:middle}
+
+/* CTA */
+.cta-band{background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(239,68,68,.04));border:1px solid rgba(245,158,11,.15);border-radius:16px;padding:36px;text-align:center;margin-top:40px}
+
+footer{background:var(--surface);border-top:1px solid var(--border);padding:32px 24px;text-align:center;font-size:13px;color:var(--text-dim)}
+footer a{color:#f59e0b;margin:0 8px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">🤖 CYBERDUDEBIVASH</a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/attack-library">Attack Library</a>
+    <a href="/intel-hub">Intel Hub</a>
+    <a href="/contact.html">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-tag">🤖 Pillar 4 — AI Agent Security</div>
+      <h1>AI Agent <span>Threat Intelligence</span></h1>
+      <p>Real-time security advisories and threat intelligence for AI agent frameworks. Monitor OpenAI Agents, LangChain, CrewAI, AutoGen, and MCP deployments against known attack vectors.</p>
+      <div class="hero-actions">
+        <a href="/pricing" class="btn-primary">Scan My Agent →</a>
+        <a href="/agent-threats#advisories" class="btn-secondary">Browse Advisories</a>
+      </div>
+    </div>
+    <div class="status-panel">
+      <div class="sp-header">
+        <span class="sp-title">🛰 Live Threat Monitor</span>
+        <span class="live-dot">LIVE</span>
+      </div>
+      <div class="sp-stats">
+        <div class="sp-stat"><div class="sp-stat-val" id="adv-count">23</div><div class="sp-stat-label">Active Advisories</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="crit-count" style="color:#ef4444">7</div><div class="sp-stat-label">Critical Severity</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="fw-count">6</div><div class="sp-stat-label">Frameworks Tracked</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="upd-time" style="font-size:14px">2h ago</div><div class="sp-stat-label">Last Updated</div></div>
+      </div>
+      <div class="sp-feed" id="live-feed">
+        <div class="sp-item"><span class="sp-sev crit">CRITICAL</span><span class="sp-item-text">MCP Tool Poisoning via Malicious Server</span><span class="sp-time">1h</span></div>
+        <div class="sp-item"><span class="sp-sev high-s">HIGH</span><span class="sp-item-text">LangChain Agent Tool Abuse Escalation</span><span class="sp-time">3h</span></div>
+        <div class="sp-item"><span class="sp-sev crit">CRITICAL</span><span class="sp-item-text">AutoGen Speaker Selection Injection</span><span class="sp-time">6h</span></div>
+        <div class="sp-item"><span class="sp-sev med">MEDIUM</span><span class="sp-item-text">CrewAI Memory Poisoning via Task Output</span><span class="sp-time">12h</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- AGENT RISK OVERVIEW -->
+  <div style="margin-bottom:32px">
+    <div class="section-title" style="margin-bottom:6px">Agent Framework Risk Overview</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Current threat exposure by AI agent framework. Click to filter advisories.</div>
+    <div class="agent-grid">
+      <div class="agent-card" onclick="filterAdvisories('openai')">
+        <div class="agent-logo">🧠</div>
+        <div class="agent-name">OpenAI Agents</div>
+        <div class="risk-meter"><div class="risk-fill critical" style="width:72%"></div></div>
+        <div class="agent-risk-label risk-critical">HIGH RISK — 72</div>
+        <div class="advisory-count">8 active advisories</div>
+      </div>
+      <div class="agent-card" onclick="filterAdvisories('langchain')">
+        <div class="agent-logo">🔗</div>
+        <div class="agent-name">LangChain</div>
+        <div class="risk-meter"><div class="risk-fill critical" style="width:85%"></div></div>
+        <div class="agent-risk-label risk-critical">CRITICAL — 85</div>
+        <div class="advisory-count">11 active advisories</div>
+      </div>
+      <div class="agent-card" onclick="filterAdvisories('crewai')">
+        <div class="agent-logo">👥</div>
+        <div class="agent-name">CrewAI</div>
+        <div class="risk-meter"><div class="risk-fill high" style="width:61%"></div></div>
+        <div class="agent-risk-label risk-high">HIGH — 61</div>
+        <div class="advisory-count">6 active advisories</div>
+      </div>
+      <div class="agent-card" onclick="filterAdvisories('autogen')">
+        <div class="agent-logo">⚡</div>
+        <div class="agent-name">AutoGen</div>
+        <div class="risk-meter"><div class="risk-fill high" style="width:67%"></div></div>
+        <div class="agent-risk-label risk-high">HIGH — 67</div>
+        <div class="advisory-count">7 active advisories</div>
+      </div>
+      <div class="agent-card" onclick="filterAdvisories('mcp')">
+        <div class="agent-logo">🔌</div>
+        <div class="agent-name">MCP</div>
+        <div class="risk-meter"><div class="risk-fill critical" style="width:91%"></div></div>
+        <div class="agent-risk-label risk-critical">CRITICAL — 91</div>
+        <div class="advisory-count">9 active advisories</div>
+      </div>
+      <div class="agent-card" onclick="filterAdvisories('all')">
+        <div class="agent-logo">🌐</div>
+        <div class="agent-name">All Frameworks</div>
+        <div class="risk-meter"><div class="risk-fill critical" style="width:80%"></div></div>
+        <div class="agent-risk-label risk-critical">OVERALL — 80</div>
+        <div class="advisory-count">View all advisories</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADVISORIES -->
+  <div id="advisories">
+    <div class="advisory-header">
+      <div class="section-title">Security Advisories <span id="fw-filter-label" style="font-size:14px;color:#f59e0b;font-weight:700"></span></div>
+      <div class="feed-filter">
+        <button class="feed-btn active" onclick="sortAdvisories('latest',this)">Latest</button>
+        <button class="feed-btn" onclick="sortAdvisories('critical',this)">Critical First</button>
+      </div>
+    </div>
+
+    <div class="advisory-list" id="advisory-list">
+
+      <div class="advisory" data-fw="mcp" data-sev="critical">
+        <div class="adv-header">
+          <span class="adv-id">CDB-AGT-2025-0019</span>
+          <span class="adv-sev adv-crit">CRITICAL <span class="new-badge">NEW</span></span>
+        </div>
+        <div class="adv-title">MCP Tool Poisoning via Malicious Server Description</div>
+        <div class="adv-affected">🔌 Affects: <strong style="color:#fff">All MCP Clients</strong> — Claude Desktop, Cursor, Copilot Studio</div>
+        <div class="adv-desc">A malicious MCP server can inject adversarial instructions into its tool descriptions that execute when an LLM reads the server's capabilities. This "tool poisoning" can override the host system prompt and hijack the connected AI assistant to exfiltrate data, access unauthorized tools, or impersonate the user.</div>
+        <div class="adv-tags">
+          <span class="adv-tag">MCP</span><span class="adv-tag">Tool Poisoning</span><span class="adv-tag">Prompt Injection</span><span class="adv-tag">LLM01</span><span class="adv-tag">AML.T0054</span>
+        </div>
+        <div class="adv-footer">
+          <div class="adv-meta">
+            <span>📅 Jun 7, 2025</span>
+            <span>⚠️ No patch available</span>
+            <span>🔍 CVSS: 9.8</span>
+          </div>
+          <div class="adv-actions">
+            <a href="/pricing" class="btn-adv primary">Full Advisory →</a>
+            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="advisory" data-fw="langchain" data-sev="critical">
+        <div class="adv-header">
+          <span class="adv-id">CDB-AGT-2025-0017</span>
+          <span class="adv-sev adv-crit">CRITICAL</span>
+        </div>
+        <div class="adv-title">LangChain Agent Tool Abuse via Injected ReAct Instructions</div>
+        <div class="adv-affected">🔗 Affects: <strong style="color:#fff">LangChain ≤ 0.2.x</strong> — React Agent, OpenAI Tools Agent</div>
+        <div class="adv-desc">ReAct agents that process user-controlled inputs without sanitization can be manipulated through injected "Thought:" / "Action:" sequences that mimic the agent's internal reasoning format. The agent follows the injected plan, executing arbitrary tool calls with the agent's full permission scope.</div>
+        <div class="adv-tags">
+          <span class="adv-tag">LangChain</span><span class="adv-tag">ReAct</span><span class="adv-tag">Tool Abuse</span><span class="adv-tag">LLM08</span><span class="adv-tag">CWE-77</span>
+        </div>
+        <div class="adv-footer">
+          <div class="adv-meta">
+            <span>📅 Jun 3, 2025</span>
+            <span>✅ Patch: 0.3.0+</span>
+            <span>🔍 CVSS: 9.1</span>
+          </div>
+          <div class="adv-actions">
+            <a href="/pricing" class="btn-adv primary">Full Advisory →</a>
+            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="advisory" data-fw="autogen" data-sev="critical">
+        <div class="adv-header">
+          <span class="adv-id">CDB-AGT-2025-0015</span>
+          <span class="adv-sev adv-crit">CRITICAL</span>
+        </div>
+        <div class="adv-title">AutoGen Multi-Agent Speaker Selection Injection</div>
+        <div class="adv-affected">⚡ Affects: <strong style="color:#fff">AutoGen Studio</strong> — GroupChat with LLM-based speaker selection</div>
+        <div class="adv-desc">In AutoGen GroupChat configurations using LLM-based speaker selection, an attacker can inject content that causes the orchestrator to incorrectly route messages — enabling a lower-privilege agent to impersonate a higher-privilege agent and execute unauthorized code or tool calls.</div>
+        <div class="adv-tags">
+          <span class="adv-tag">AutoGen</span><span class="adv-tag">Multi-Agent</span><span class="adv-tag">Speaker Selection</span><span class="adv-tag">Privilege Escalation</span>
+        </div>
+        <div class="adv-footer">
+          <div class="adv-meta">
+            <span>📅 May 28, 2025</span>
+            <span>⚠️ Mitigation available</span>
+            <span>🔍 CVSS: 8.9</span>
+          </div>
+          <div class="adv-actions">
+            <a href="/pricing" class="btn-adv primary">Full Advisory →</a>
+            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="advisory" data-fw="openai" data-sev="high">
+        <div class="adv-header">
+          <span class="adv-id">CDB-AGT-2025-0014</span>
+          <span class="adv-sev adv-high">HIGH</span>
+        </div>
+        <div class="adv-title">OpenAI Agents SDK — Handoff Hijacking via Tainted Context</div>
+        <div class="adv-affected">🧠 Affects: <strong style="color:#fff">OpenAI Agents SDK</strong> — Multi-agent handoffs</div>
+        <div class="adv-desc">When using agent handoffs in the OpenAI Agents SDK, the receiving agent inherits the full conversation history including any injected content from previous turns. A compromised or tainted agent can use its handoff to propagate injection payloads to downstream agents with different permission scopes.</div>
+        <div class="adv-tags">
+          <span class="adv-tag">OpenAI Agents</span><span class="adv-tag">Handoff</span><span class="adv-tag">Context Propagation</span><span class="adv-tag">LLM08</span>
+        </div>
+        <div class="adv-footer">
+          <div class="adv-meta">
+            <span>📅 May 22, 2025</span>
+            <span>✅ Patch: v1.4.0+</span>
+            <span>🔍 CVSS: 8.2</span>
+          </div>
+          <div class="adv-actions">
+            <a href="/pricing" class="btn-adv primary">Full Advisory →</a>
+            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="advisory" data-fw="crewai" data-sev="medium">
+        <div class="adv-header">
+          <span class="adv-id">CDB-AGT-2025-0011</span>
+          <span class="adv-sev adv-med">MEDIUM</span>
+        </div>
+        <div class="adv-title">CrewAI Memory Store Poisoning via Crafted Task Output</div>
+        <div class="adv-affected">👥 Affects: <strong style="color:#fff">CrewAI ≤ 0.30</strong> — Long-term memory with vector store</div>
+        <div class="adv-desc">Malicious content stored in CrewAI's long-term memory vector store can influence future agent decisions when retrieved. An attacker who controls any task output can inject adversarial embeddings that persistently bias the crew's behavior across sessions.</div>
+        <div class="adv-tags">
+          <span class="adv-tag">CrewAI</span><span class="adv-tag">Memory Poisoning</span><span class="adv-tag">Vector Store</span><span class="adv-tag">LLM03</span>
+        </div>
+        <div class="adv-footer">
+          <div class="adv-meta">
+            <span>📅 May 15, 2025</span>
+            <span>✅ Patch: 0.31+</span>
+            <span>🔍 CVSS: 6.5</span>
+          </div>
+          <div class="adv-actions">
+            <a href="/pricing" class="btn-adv primary">Full Advisory →</a>
+            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-band">
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px">Continuously Monitor Your AI Agent Deployments</div>
+    <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px">Get real-time alerts when new advisories affect your registered agents. Includes auto-scan, risk scoring, and remediation guidance.</div>
+    <a href="/pricing" style="display:inline-block;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;margin-right:12px">Register Agent for Monitoring →</a>
+    <a href="/attack-library" style="display:inline-block;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text-muted);padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">View Attack Library</a>
+  </div>
+</div>
+
+<footer>
+  <div>© 2025 CyberDudeBivash Pvt. Ltd. — All Rights Reserved</div>
+  <div style="margin-top:8px">
+    <a href="/">Home</a><a href="/attack-library">Attack Library</a><a href="/intel-hub">Intel Hub</a><a href="/contact.html">Contact</a>
+  </div>
+</footer>
+
+<script>
+function filterAdvisories(fw){
+  const label=document.getElementById('fw-filter-label');
+  const items=document.querySelectorAll('.advisory');
+  if(fw==='all'){label.textContent='';items.forEach(i=>i.style.display='block');return;}
+  label.textContent='— '+fw.toUpperCase();
+  items.forEach(i=>{i.style.display=i.dataset.fw===fw?'block':'none'});
+  document.getElementById('advisories').scrollIntoView({behavior:'smooth'});
+}
+function sortAdvisories(mode,btn){
+  document.querySelectorAll('.feed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const list=document.getElementById('advisory-list');
+  const items=[...list.querySelectorAll('.advisory')];
+  if(mode==='critical'){
+    items.sort((a,b)=>{
+      const order={critical:0,high:1,medium:2,low:3};
+      return (order[a.dataset.sev]||3)-(order[b.dataset.sev]||3);
+    });
+    items.forEach(i=>list.appendChild(i));
+  }
+}
+// Animate counters
+window.addEventListener('load',()=>{
+  animateCounter('adv-count',0,23,1000);
+  animateCounter('crit-count',0,7,1000);
+});
+function animateCounter(id,start,end,duration){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const step=(end-start)/(duration/16);
+  let cur=start;
+  const timer=setInterval(()=>{
+    cur+=step;
+    if(cur>=end){cur=end;clearInterval(timer);}
+    el.textContent=Math.round(cur);
+  },16);
+}
+</script>
+</body>
+</html>
