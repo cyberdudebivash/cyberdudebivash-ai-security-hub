@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CYBERDUDEBIVASH AI Security Hub — Main Router v20.0
  * Global Cyber Intelligence Dominance System
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
@@ -55,6 +55,16 @@ import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAsse
 import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
 import { handleAIThreatFeed, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
 import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement } from './handlers/aiServices.js';
+
+
+// ── v30.0 P0/P1 REMEDIATION IMPORTS ────────────────────────────────────────
+import { refreshPlatformMetrics, servePlatformMetrics }    from './services/metricsHydration.js';
+import { enforceGovernanceBatch, validateIngestPayload, logP0Violation } from './middleware/severityGovernanceGate.js';
+import { issueScanToken, verifyScanToken, scanTokenError } from './lib/scanTokenEngine.js';
+import {
+  gatewayRequestCeiling, applyFreemiumPaywall, handleSubscriptionCheckout,
+  handleWebhookStripe, handleGetMyPlan, normalizeTier,
+} from './handlers/subscriptionPaywallEngine.js';
 
 // ── v29 NEW SCANNER IMPORTS ───────────────────────────────────────────────────
 import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handleMCPQuickAssess } from './handlers/mcpSecurityScanner.js';
@@ -4326,6 +4336,25 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   if (path === '/api/vibe-code/patterns' && method === 'GET') {
     return handleVibeCodePatterns(request, env);
   }
+
+  // -- v30.0: Platform Metrics ------------------------------------------------
+  if (path === '/api/platform/metrics') {
+    return servePlatformMetrics(request, env);
+  }
+
+  // -- v30.0: Scan Token issuance ---------------------------------------------
+  if (path === '/api/scan/token') {
+    return issueScanToken(request, env);
+  }
+
+  // -- v30.0: Subscription Checkout + Plan ------------------------------------
+  if (path === '/api/subscription/checkout') {
+    return handleSubscriptionCheckout(request, env, authCtx);
+  }
+  if (path === '/api/subscription/plan' && method === 'GET') {
+    return handleGetMyPlan(request, env, authCtx);
+  }
+
     return withSecurityHeaders(withCors(Response.json({
       error:    'Not Found',
       path,
@@ -4347,7 +4376,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
     // ── HOURLY: Threat Intel Ingestion (Sentinel APEX v2.0 — D1-backed) ──
     // Runs every cron trigger — priority pipeline
+    // ── v30.0: Platform Metrics Hydration ───────────────────────────────────────
     ctx.waitUntil(
+      refreshPlatformMetrics(env)
+        .then(r => console.log('[CRON] MetricsHydration:', JSON.stringify(r)))
+        .catch(e => console.error('[CRON] MetricsHydration error:', e?.message))
+    );
+
+ctx.waitUntil(
       runIngestion(env)
         .then(r => console.log('[CRON] Threat Ingestion:', JSON.stringify({
           sources:  r.sources,

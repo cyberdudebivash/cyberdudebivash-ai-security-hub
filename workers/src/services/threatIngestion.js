@@ -10,6 +10,7 @@
  *   5. Built-in seed        — curated high-value entries for cold-start
  */
 
+import { enforceGovernanceBatch } from '../middleware/severityGovernanceGate.js';
 import { extractIOCs, extractIOCsFromText }   from './iocExtractor.js';
 import { enrichEntry, enrichBatch }           from './enrichment.js';
 import { triggerIntelAlerts }                 from '../lib/alerts.js';

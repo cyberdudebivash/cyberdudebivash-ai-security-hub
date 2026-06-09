@@ -4336,6 +4336,25 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   if (path === '/api/vibe-code/patterns' && method === 'GET') {
     return handleVibeCodePatterns(request, env);
   }
+
+  // -- v30.0: Platform Metrics ------------------------------------------------
+  if (path === '/api/platform/metrics') {
+    return servePlatformMetrics(request, env);
+  }
+
+  // -- v30.0: Scan Token issuance ---------------------------------------------
+  if (path === '/api/scan/token') {
+    return issueScanToken(request, env);
+  }
+
+  // -- v30.0: Subscription Checkout + Plan ------------------------------------
+  if (path === '/api/subscription/checkout') {
+    return handleSubscriptionCheckout(request, env, authCtx);
+  }
+  if (path === '/api/subscription/plan' && method === 'GET') {
+    return handleGetMyPlan(request, env, authCtx);
+  }
+
     return withSecurityHeaders(withCors(Response.json({
       error:    'Not Found',
       path,
