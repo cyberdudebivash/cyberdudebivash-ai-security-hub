@@ -219,6 +219,15 @@ import {
 } from './handlers/mythosHandler.js';
 import { runMythosCron } from './services/mythosOrchestrator.js';
 
+// ─── MYTHOS REVENUE ENGINE v30.0.2 ───────────────────────────────────────────
+// Multi-rail checkout (UPI/Bank/Crypto/Razorpay), MYTHOS AI scan, compliance map
+import {
+  handleMythosCheckout,
+  handleMythosWebhook,
+  handleMythosScan,
+  handleMythosCompliance,
+} from './handlers/mythosRevenueEngine.js';
+
 // ─── FINANCIAL SYSTEM: Pricing + Payment Config (v14 — IMMUTABLE) ───────────
 import {
   handlePricing, handlePaymentConfig, handlePaymentMutationGuard,
@@ -2786,6 +2795,27 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/mythos/analyze' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleMythosAnalyze(request, env, authCtx || {}), request));
+    }
+
+    // ── MYTHOS REVENUE ENGINE v30.0.2 ─────────────────────────────────────────
+    // POST /api/mythos/checkout/initialize — multi-rail UPI/Bank/Crypto/Razorpay
+    if (path === '/api/mythos/checkout/initialize' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMythosCheckout(request, env, authCtx || {}), request));
+    }
+    // POST /api/mythos/checkout/webhook — Razorpay HMAC-verified webhook
+    if (path === '/api/mythos/checkout/webhook' && method === 'POST') {
+      return withSecurityHeaders(await handleMythosWebhook(request, env));
+    }
+    // POST /api/mythos/scan — MYTHOS AI autonomous domain scan (paywall-aware)
+    if (path === '/api/mythos/scan' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMythosScan(request, env, authCtx || {}), request));
+    }
+    // POST /api/mythos/compliance — framework compliance map (ISO/SOC2/DPDP/GDPR)
+    if (path === '/api/mythos/compliance' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMythosCompliance(request, env, authCtx || {}), request));
     }
 
     // ── PHASE 2: Autonomous SOC Mode ──────────────────────────────────────────

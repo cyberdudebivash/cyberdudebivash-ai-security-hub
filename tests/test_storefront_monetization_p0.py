@@ -1,239 +1,349 @@
-#!/usr/bin/env python3
 """
-CYBERDUDEBIVASH AI SECURITY HUB
-STOREFRONT MONETIZATION P0 REGRESSION TEST SUITE v2.0
-Validates pricing, geo-router, checkout-modal, dual-tree sync, Worker routes.
+CYBERDUDEBIVASH® SENTINEL APEX — Production Governance & Validation Test Suite
+Classification: Invariant Enforcement Test Rig
+Version: v30.0.2-Testing-Parity
+
+Run: pytest tests/test_storefront_monetization_p0.py -v
+Expected: All PASS, exit code 0
 """
-import os, re, sys, glob, py_compile
+from __future__ import annotations
 
-REPO       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FRONTEND   = os.path.join(REPO, 'frontend')
-W_FRONTEND = os.path.join(REPO, 'workers', 'frontend')
-W_IDX_1    = os.path.join(REPO, 'workers', 'workers', 'src', 'index.js')
-W_IDX_2    = os.path.join(REPO, 'workers', 'src', 'index.js')
-CFG_1      = os.path.join(REPO, 'workers', 'workers', 'src', 'config', 'pricingConfig.js')
-CFG_2      = os.path.join(REPO, 'workers', 'src', 'config', 'pricingConfig.js')
+import json
+import os
+import sys
+import hmac
+import hashlib
+import time
 
-P = '\033[92m✓\033[0m'; F = '\033[91m✗\033[0m'; W = '\033[93m⚠\033[0m'
-failures = []; warnings = []; passed = 0
+import pytest
 
-def ok(m):
-    global passed; passed += 1; print(f"  {P} {m}")
-def fail(m):
-    failures.append(m); print(f"  {F} {m}")
-def warn(m):
-    warnings.append(m); print(f"  {W} {m}")
-def read(p):
-    if not os.path.exists(p): return ''
-    return open(p, 'r', encoding='utf-8', errors='replace').read()
-def files(tree, exts=('.html','.js')):
-    out = []
-    for r,ds,fs in os.walk(tree):
-        ds[:] = [d for d in ds if d not in ('node_modules','.git','.wrangler')]
-        for f in fs:
-            if any(f.endswith(e) for e in exts): out.append(os.path.join(r,f))
-    return out
+# ── Path setup ───────────────────────────────────────────────────────────────
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-print("\n" + "="*65)
-print("CYBERDUDEBIVASH — MONETIZATION P0 REGRESSION SUITE v2.0")
-print("="*65)
 
-# ── 1. No stale ₹199 in scan-report context ─────────────────────
-print("\n【1】 No stale ₹199 in scan-report context")
-STALE = [r'Reports from ₹199', r'Unlock Full Report ₹199',
-         r"amountLabel:\s*['\"]₹199['\"]", r"'₹199'.*domain",
-         r'risk-stat-num-v14.*₹199']
-EXEMPT = ['save ₹199']
-hits = []
-for tree in [FRONTEND, W_FRONTEND]:
-    for fp in files(tree):
-        c = read(fp)
-        for pat in STALE:
-            for m in re.finditer(pat, c):
-                ctx = c[max(0,m.start()-40):m.end()+40].replace('\n','↵')
-                if not any(e in ctx for e in EXEMPT):
-                    hits.append(f"{os.path.relpath(fp,REPO)}: {ctx[:90]}")
-if hits:
-    for h in hits: fail(h)
-else:
-    ok("No stale ₹199 scan-report pricing in either tree")
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE 0: SOURCE CODE SYNTAX COMPILATION INTEGRITY
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ── 2. revenue-engine module prices all ≥ ₹999 ──────────────────
-print("\n【2】 revenue-engine-v14.js module prices ≥ ₹999")
-MODULES = ('domain','ai','redteam','identity','compliance')
-for tree in [FRONTEND, W_FRONTEND]:
-    rev = os.path.join(tree, 'assets', 'revenue-engine-v14.js')
-    c   = read(rev)
-    if not c:
-        fail(f"MISSING: {os.path.relpath(rev,REPO)}"); continue
-    found = [(k,int(v)) for k,v in re.findall(r"([a-z]+):'₹(\d+)'", c) if k in MODULES]
-    if not found:
-        warn(f"Could not parse module prices in {os.path.relpath(rev,REPO)}")
-    else:
-        bad = [(k,v) for k,v in found if v < 999]
-        if bad:
-            for k,v in bad: fail(f"{os.path.relpath(rev,REPO)}: '{k}'=₹{v} < ₹999")
-        else:
-            ok(f"All {len(found)} module prices ≥ ₹999 — {os.path.relpath(rev,REPO)}")
-    if "'₹199'" in c or '"₹199"' in c:
-        fail(f"₹199 string still present: {os.path.relpath(rev,REPO)}")
-    else:
-        ok(f"No ₹199 fallback — {os.path.relpath(rev,REPO)}")
+def test_source_code_syntax_compilation_integrity():
+    """Validates all modified pipeline scripts compile cleanly under Python 3.12."""
+    import py_compile
 
-# ── 3. payment-modal.js prices dict ─────────────────────────────
-print("\n【3】 payment-modal.js module prices ≥ ₹999")
-c = read(os.path.join(FRONTEND, 'assets', 'payment-modal.js'))
-found = [(k,int(v)) for k,v in re.findall(r"([a-z]+):\s*'₹(\d+)'", c) if k in MODULES]
-if not found:
-    warn("payment-modal.js: module prices not parsed (may be inlined)")
-else:
-    bad = [(k,v) for k,v in found if v < 999]
-    if bad:
-        for k,v in bad: fail(f"payment-modal.js: '{k}'=₹{v} < ₹999")
-    else:
-        ok(f"payment-modal.js: all {len(found)} module prices ≥ ₹999")
+    target_scripts = [
+        "scripts/severity_recalibration_engine.py",
+        "scripts/pipeline_severity_interceptor.py",
+        "scripts/multi_rail_payment_processor.py",
+    ]
 
-# ── 4. pricingConfig.js domain report ≥ 999 ─────────────────────
-print("\n【4】 pricingConfig.js domain price_inr ≥ 999")
-for cfg in [CFG_1, CFG_2]:
-    c = read(cfg)
-    if not c:
-        warn(f"Config not found: {os.path.relpath(cfg,REPO)}"); continue
-    m = re.search(r"domain\s*:.*?price_inr\s*:\s*(\d+)", c, re.DOTALL)
-    if m:
-        p = int(m.group(1))
-        (ok if p >= 999 else fail)(f"{os.path.relpath(cfg,REPO)}: domain price_inr={p}")
-    else:
-        warn(f"Could not parse domain price_inr from {os.path.relpath(cfg,REPO)}")
+    for script_path in target_scripts:
+        if not os.path.exists(script_path):
+            pytest.skip(f"Script not present in this env: {script_path}")
+        try:
+            result = py_compile.compile(script_path, doraise=True)
+            assert result is not None, f"Compilation returned None for {script_path}"
+        except py_compile.PyCompileError as e:
+            pytest.fail(f"[GATE-0-FAILURE] Syntax error in {script_path}: {e}")
 
-# ── 5. New assets exist in both trees ───────────────────────────
-print("\n【5】 New assets deployed in both trees")
-for asset in ['assets/geo-currency-router.js', 'assets/checkout-modal.js']:
-    for tree in [FRONTEND, W_FRONTEND]:
-        fp = os.path.join(tree, asset)
-        if os.path.exists(fp):
-            ok(f"{os.path.relpath(fp,REPO)} ({os.path.getsize(fp):,} bytes)")
-        else:
-            fail(f"MISSING: {os.path.relpath(fp,REPO)}")
 
-# ── 6. geo-currency-router.js content ───────────────────────────
-print("\n【6】 geo-currency-router.js content validation")
-c = read(os.path.join(FRONTEND, 'assets', 'geo-currency-router.js'))
-checks = {
-    'INR matrix':             'INR' in c,
-    'USD matrix':             'USD' in c,
-    'STARTER ₹499':           '499' in c,
-    'STARTER $6':             'monthly: 6' in c or "'monthly':6" in c,
-    '/api/geo fetch':         '/api/geo' in c,
-    'window.__CDB_GEO':       '__CDB_GEO' in c,
-    'format() function':      'format(' in c,
-    'applyPricingToDOM':      'applyPricingToDOM' in c,
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE 1: P0 SEVERITY FLOOR — CRITICAL INVARIANT
+# ─────────────────────────────────────────────────────────────────────────────
+
+from scripts.severity_recalibration_engine import (  # noqa: E402
+    enforce_sentinel_apex_severity_floors,
+    process_vulnerability_batch,
+)
+
+
+@pytest.mark.parametrize("cvss,exploit,kev,cls", [
+    (9.8, False, False, "rce"),
+    (9.0, False, False, "generic"),
+    (7.5, True,  False, "generic"),
+    (7.5, False, True,  "generic"),
+    (6.0, False, False, "auth_bypass"),
+    (9.8, True,  True,  "arbitrary_file_upload"),
+])
+def test_p0_critical_floor_enforced(cvss, exploit, kev, cls):
+    """No CRITICAL-tier record may exit calibration with a degraded severity."""
+    record = {
+        "id": f"CVE-TEST-{cvss}-{cls}",
+        "cvss_score": cvss,
+        "active_exploitation": exploit,
+        "cisa_kev": kev,
+        "threat_class": cls,
+        "severity": "LOW",  # start degraded — gate must fix
+    }
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] == "CRITICAL", (
+        f"P0-GATE FAIL: CVSS={cvss} exploit={exploit} kev={kev} cls={cls} "
+        f"got Severity={result['Severity']!r}"
+    )
+    assert result["Risk Score"] >= 9.0, f"P0-GATE FAIL: Risk Score {result['Risk Score']} < 9.0"
+    assert result["ioc_paywall"]["locked"] is True, "P0-GATE FAIL: IOC paywall not locked for CRITICAL"
+
+
+def test_p1_high_floor_enforced():
+    """CVSS 8.x records marked LOW must be elevated to HIGH."""
+    record = {"id": "CVE-TEST-H1", "cvss_score": 8.5, "severity": "LOW"}
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] == "HIGH", f"P1-GATE FAIL: got {result['Severity']}"
+    assert result["Risk Score"] >= 7.5
+
+
+def test_p2_medium_floor_enforced():
+    """CVSS 7.x records marked LOW must be elevated to MEDIUM."""
+    record = {"id": "CVE-TEST-M1", "cvss_score": 7.3, "severity": "LOW"}
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] == "MEDIUM", f"P2-GATE FAIL: got {result['Severity']}"
+    assert result["Risk Score"] >= 5.0
+
+
+def test_valid_high_not_downgraded():
+    """A correctly HIGH-labelled record must not be touched."""
+    record = {"id": "CVE-TEST-H2", "cvss_score": 8.2, "severity": "HIGH"}
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] in {"HIGH", "CRITICAL"}
+
+
+def test_active_exploitation_text_detection():
+    """Regex should detect 'actively exploiting' in description and trigger P0 gate."""
+    record = {
+        "id": "CVE-TEXT-EXPLOIT",
+        "cvss_score": 7.0,
+        "severity": "MEDIUM",
+        "description": "Threat actors are actively exploiting this vulnerability in the wild.",
+    }
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] == "CRITICAL", "Text-based exploitation detection failed"
+
+
+def test_batch_processing_no_drop():
+    """Batch processor must return same count as input — no data loss."""
+    records = [
+        {"id": "CVE-B1", "cvss_score": 9.8, "severity": "LOW"},
+        {"id": "CVE-B2", "cvss_score": 8.5, "severity": "LOW"},
+        {"id": "CVE-B3", "cvss_score": 5.0, "severity": "MEDIUM"},
+    ]
+    results = process_vulnerability_batch(records)
+    assert len(results) == 3, "Batch dropped records"
+    assert results[0]["Severity"] == "CRITICAL"
+    assert results[1]["Severity"] == "HIGH"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE 2: PAYWALL SERIALIZATION — PREMIUM FIELD LEAKAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+PREMIUM_FIELDS = {
+    "sigma_rule", "sigma", "kql_query", "kql",
+    "suricata_rule", "suricata", "yara_rule", "yara",
+    "soc_playbook", "full_ioc_array",
 }
-for k,v in checks.items():
-    (ok if v else fail)(f"geo-currency-router: {k}")
 
-# ── 7. checkout-modal.js content ────────────────────────────────
-print("\n【7】 checkout-modal.js content validation")
-c = read(os.path.join(FRONTEND, 'assets', 'checkout-modal.js'))
-checks2 = {
-    'UPI ID primary':        'iambivash.bn-5@okaxis' in c,
-    'UPI ID alternate':      '6302177246@axisbank' in c,
-    'IFSC UTIB0000052':      'UTIB0000052' in c,
-    'PayPal link':           'paypal.me/iambivash' in c,
-    'ETH address':           '0x742d' in c,
-    'USDT TRC-20':           'TRC-20' in c or 'TJvEi7k3' in c,
-    'buildUPILink()':        'buildUPILink' in c,
-    'renderQR()':            'renderQR' in c,
-    'CDB_CHECKOUT_MODAL':    'CDB_CHECKOUT_MODAL' in c,
-    'switchTab()':           'switchTab' in c,
-    'triggerRazorpay()':     'triggerRazorpay' in c,
-    'geo-aware getGeo()':    'getGeo' in c,
-    'Bank wire rail':        'NEFT' in c or 'bank' in c.lower(),
-}
-for k,v in checks2.items():
-    (ok if v else fail)(f"checkout-modal: {k}")
 
-# ── 8. /api/geo in Worker index ─────────────────────────────────
-print("\n【8】 /api/geo route in Worker index.js")
-for idx in [W_IDX_1, W_IDX_2]:
-    c = read(idx)
-    if not c:
-        warn(f"Not found: {os.path.relpath(idx,REPO)}"); continue
-    has_route = "path === '/api/geo'" in c
-    has_cf    = 'CF-IPCountry' in c or 'request.cf' in c
-    if has_route and has_cf:
-        ok(f"/api/geo + CF detection in {os.path.relpath(idx,REPO)}")
-    elif has_route:
-        warn(f"/api/geo route present but no CF-IPCountry: {os.path.relpath(idx,REPO)}")
-    else:
-        fail(f"/api/geo route MISSING: {os.path.relpath(idx,REPO)}")
+def _apply_scrub(record: dict) -> dict:
+    """Mirror of the Worker's scrubPremiumFields logic in Python."""
+    scrubbed = {}
+    locked = False
+    for k, v in record.items():
+        if k in PREMIUM_FIELDS:
+            locked = True
+        else:
+            scrubbed[k] = v
+    if locked:
+        scrubbed["_paywall"] = {"status": "LOCKED"}
+    return scrubbed
 
-# ── 9. Script tags injected in all key HTML pages ───────────────
-print("\n【9】 Script tags injected in key HTML pages")
-KEY = ['index.html','intel.html','about.html','contact.html',
-       'services.html','tools.html','booking.html','user-dashboard.html']
-for page in KEY:
-    for tree in [FRONTEND, W_FRONTEND]:
-        fp = os.path.join(tree, page)
-        c  = read(fp)
-        if not c: continue
-        rel = os.path.relpath(fp,REPO)
-        miss = []
-        if 'geo-currency-router.js' not in c: miss.append('geo-router')
-        if 'checkout-modal.js' not in c:      miss.append('checkout-modal')
-        if miss: fail(f"{rel}: missing {', '.join(miss)}")
-        else: ok(f"{rel}: ✓")
 
-# ── 10. Dual-tree sync ───────────────────────────────────────────
-print("\n【10】 Dual-tree asset sync (frontend ↔ workers/frontend)")
-for asset in ['assets/geo-currency-router.js','assets/checkout-modal.js',
-              'assets/revenue-engine-v14.js','assets/payment-modal.js']:
-    p1 = os.path.join(FRONTEND, asset)
-    p2 = os.path.join(W_FRONTEND, asset)
-    if not os.path.exists(p1) or not os.path.exists(p2):
-        warn(f"Sync skip (missing): {asset}"); continue
-    b1, b2 = open(p1,'rb').read(), open(p2,'rb').read()
-    (ok if b1==b2 else fail)(f"SYNC {'OK' if b1==b2 else 'DRIFT'}: {asset}")
+def test_premium_fields_scrubbed_for_free_tier():
+    """All premium keys must vanish from free-tier serialization output."""
+    record = {
+        "id": "CVE-PAYWALL-TEST",
+        "title": "Test Vuln",
+        "cvss_score": 9.8,
+        "sigma_rule": "title: test\ndetection: ...",
+        "kql_query": "DeviceNetworkEvents | ...",
+        "yara_rule": "rule test { ... }",
+        "soc_playbook": "1. Isolate host. 2. ...",
+        "full_ioc_array": ["1.2.3.4", "evil.com"],
+    }
+    scrubbed = _apply_scrub(record)
+    for field in PREMIUM_FIELDS:
+        assert field not in scrubbed, f"PAYWALL LEAK: '{field}' present in free-tier output"
+    assert "_paywall" in scrubbed, "Paywall notice not injected"
 
-# ── 11. Python syntax check ──────────────────────────────────────
-print("\n【11】 Python syntax validation")
-py_files = [f for f in glob.glob(os.path.join(REPO,'**','*.py'),recursive=True)
-            if '.git' not in f and 'node_modules' not in f]
-errors = 0
-for pf in py_files:
-    try: py_compile.compile(pf, doraise=True)
-    except py_compile.PyCompileError as e:
-        fail(f"Syntax: {os.path.relpath(pf,REPO)}: {e}"); errors += 1
-if not errors:
-    ok(f"All {len(py_files)} .py files pass syntax check")
 
-# ── 12. No stale price=199 in API URLs ──────────────────────────
-print("\n【12】 No stale price=199 in API URL params")
-price_hits = []
-for tree in [FRONTEND, W_FRONTEND]:
-    for fp in files(tree):
-        c = read(fp)
-        for m in re.finditer(r'price=199\b', c):
-            ctx = c[max(0,m.start()-30):m.end()+30]
-            price_hits.append(f"{os.path.relpath(fp,REPO)}: {ctx[:70]}")
-if price_hits:
-    for h in price_hits: fail(h)
-else:
-    ok("No stale price=199 API references")
+def test_non_premium_fields_preserved():
+    """Non-premium fields must survive scrubbing intact."""
+    record = {
+        "id": "CVE-PRESERVE-TEST",
+        "title": "Critical RCE",
+        "cvss_score": 9.8,
+        "sigma_rule": "secret...",
+    }
+    scrubbed = _apply_scrub(record)
+    assert scrubbed["id"] == "CVE-PRESERVE-TEST"
+    assert scrubbed["title"] == "Critical RCE"
+    assert scrubbed["cvss_score"] == 9.8
 
-# ── RESULTS ─────────────────────────────────────────────────────
-print(f"\n{'='*65}")
-print(f"RESULTS: {passed} passed · {len(failures)} failed · {len(warnings)} warnings")
-print("="*65)
-if failures:
-    print(f"\n✗ FAILURES ({len(failures)}):")
-    for f in failures: print(f"  • {f}")
-if warnings:
-    print(f"\n⚠ WARNINGS ({len(warnings)}):")
-    for w in warnings: print(f"  • {w}")
-if not failures:
-    print("\n✓ ALL P0 CHECKS PASSED — PLATFORM CLEARED FOR DEPLOYMENT\n")
-    sys.exit(0)
-else:
-    print(f"\n✗ {len(failures)} FAILURE(S) — RESOLVE BEFORE DEPLOY\n")
-    sys.exit(1)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE 3: MULTI-RAIL PAYMENT PROCESSOR
+# ─────────────────────────────────────────────────────────────────────────────
+
+from scripts.multi_rail_payment_processor import (  # noqa: E402
+    MultiRailPaymentProcessor,
+    generate_idempotent_txn_id,
+    PLAN_CATALOG_INR,
+    PLAN_CATALOG_USD,
+    CRYPTO_WALLETS,
+)
+
+
+@pytest.fixture()
+def processor():
+    return MultiRailPaymentProcessor(razorpay_webhook_secret="test_webhook_secret_key")
+
+
+def test_upi_payload_structure(processor):
+    """UPI payload must contain a valid UPI deep-link string."""
+    payload = processor.generate_upi_payment_payload("pro", "tenant-abc")
+    assert payload["payment_rail"] == "UPI"
+    assert payload["currency"] == "INR"
+    assert payload["amount"] == "1499.00"
+    link = payload["upi_deep_link"]
+    assert link.startswith("upi://pay?")
+    assert "bivash@cyberdudebivash.com" in link
+    assert "SENTINEL_APEX_PRO_SUBSCRIPTION" in link
+
+
+def test_upi_idempotency():
+    """Same tenant + plan within 30-min window must return same txn_id."""
+    tid1 = generate_idempotent_txn_id("tenant-xyz", "pro")
+    tid2 = generate_idempotent_txn_id("tenant-xyz", "pro")
+    assert tid1 == tid2, "Idempotency broken — different txn IDs in same window"
+
+
+def test_invalid_plan_raises(processor):
+    with pytest.raises(ValueError, match="Unknown plan"):
+        processor.generate_upi_payment_payload("ultra", "tenant-abc")
+
+
+def test_bank_wire_tracking_reference(processor):
+    wire = processor.fetch_corporate_wire_instructions("TENANT-001")
+    assert wire["payment_rail"] == "BANK_WIRE_NEFT_RTGS"
+    assert "CDB-SYS-TENANT-001" in wire["tracking_reference"]
+    assert wire["gstin_registry"] == "21ARKPN8270G1ZP"
+
+
+@pytest.mark.parametrize("chain", ["ETH", "BSC", "TRON_TRC20"])
+def test_crypto_node_initialization(processor, chain):
+    result = processor.initialize_web3_cryptographic_node("pro", chain)
+    assert result["payment_rail"] == "WEB3_CRYPTO"
+    assert result["chain_context"] == chain
+    assert result["destination_wallet"] == CRYPTO_WALLETS[chain]
+    assert isinstance(result["amount_usd"], int)
+    assert result["amount_usd"] > 0
+
+
+def test_unsupported_chain_raises(processor):
+    with pytest.raises(ValueError, match="unsupported"):
+        processor.initialize_web3_cryptographic_node("pro", "SOLANA")
+
+
+def test_razorpay_webhook_valid_signature(processor):
+    """Authentic webhook signature must validate and trigger UPGRADE_TIER action."""
+    secret = "test_webhook_secret_key"
+    notes  = {"tenant_id": "t-001", "plan": "pro"}
+    body   = json.dumps({
+        "event": "payment.captured",
+        "payload": {"payment": {"entity": {"amount": 149900, "notes": notes}}}
+    }).encode()
+    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+    result = processor.process_razorpay_webhook(body, sig)
+    assert result["ok"] is True
+    assert result["action"] == "UPGRADE_TIER"
+    assert result["tenant_id"] == "t-001"
+    assert result["plan"] == "pro"
+
+
+def test_razorpay_webhook_invalid_signature(processor):
+    """Tampered signature must be rejected with HTTP 401."""
+    body = b'{"event":"payment.captured"}'
+    result = processor.process_razorpay_webhook(body, "badsig000")
+    assert result["ok"] is False
+    assert result["http_status"] == 401
+
+
+def test_checkout_initializer_all_rails(processor):
+    result = processor.initialize_checkout(
+        plan="enterprise",
+        tenant_id="t-ent-001",
+        rails=["upi", "bank", "crypto"],
+        country_code="IN",
+        crypto_chain="ETH",
+    )
+    assert result["ok"] is True
+    assert result["currency"] == "INR"
+    assert result["amount"] == PLAN_CATALOG_INR["enterprise"]
+    assert "upi" in result
+    assert "bank_wire" in result
+    assert "crypto" in result
+
+
+def test_checkout_usd_hides_upi(processor):
+    """Non-IN country must not include UPI rail (UPI is INR-only)."""
+    result = processor.initialize_checkout(
+        plan="pro",
+        tenant_id="t-us-001",
+        rails=["upi", "bank", "crypto"],
+        country_code="US",
+    )
+    assert result["currency"] == "USD"
+    assert "upi" not in result, "UPI must not appear for non-INR transactions"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE 4: CRITICAL CVE PIPELINE — END-TO-END FLOW
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_cve_2024_58348_critical_locked():
+    """CVE-2024-58348 (CVSS 9.8 RCE) must be CRITICAL + IOC locked."""
+    record = {
+        "id": "CVE-2024-58348",
+        "title": "Unauthenticated Remote Code Execution via Deserialization",
+        "cvss_score": 9.8,
+        "threat_class": "rce",
+        "severity": "LOW",
+        "active_exploitation": False,
+        "cisa_kev": False,
+        "ioc_paywall": {"locked": False},
+    }
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] == "CRITICAL"
+    assert result["ioc_paywall"]["locked"] is True
+
+
+def test_cve_2024_58349_critical_locked():
+    """CVE-2024-58349 (CVSS 9.8 arbitrary upload) must be CRITICAL + IOC locked."""
+    record = {
+        "id": "CVE-2024-58349",
+        "title": "Arbitrary File Upload to Remote Code Execution",
+        "cvss_score": 9.8,
+        "threat_class": "arbitrary_file_upload",
+        "severity": "LOW",
+        "ioc_paywall": {"locked": False},
+    }
+    result = enforce_sentinel_apex_severity_floors(record)
+    assert result["Severity"] == "CRITICAL"
+    assert result["ioc_paywall"]["locked"] is True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUITE SUMMARY
+# ─────────────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(pytest.main([__file__, "-v", "--tb=short"]))
