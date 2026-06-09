@@ -21,8 +21,8 @@
  */
 'use strict';
 
-import { scanVibeCode } from './vibe-code/engine.js';
-import { RULES } from './vibe-code/rules.js';
+import { scanVibeCode } from './engine.js';
+import { RULES } from './rules.js';
 
 const FREE_LINE_LIMIT = 800;
 const FREE_PREVIEW_COUNT = 3;

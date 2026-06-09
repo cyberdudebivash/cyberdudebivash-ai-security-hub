@@ -58,7 +58,7 @@ import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement
 
 // ── v29 NEW SCANNER IMPORTS ───────────────────────────────────────────────────
 import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handleMCPQuickAssess } from './handlers/mcpSecurityScanner.js';
-import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibeCodeScanner.js';
+import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibe-code/vibeCodeScanner.js';
 
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
