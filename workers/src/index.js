@@ -268,6 +268,10 @@ import {
   handleComplianceScan, handleAISecurityScan, handleEnterpriseAIScan,
   handleVulnAssessmentScan, handleThreatHuntingScan,
   handleAPISecurityScan, handleCloudSecurityScan,
+  // ── NEW: 5 additional engines (formerly manual) ──
+  handleSaaSSecurityScan, handleConfigReviewScan,
+  handleAIGovernanceScan, handleDevSecOpsScan,
+  handleConsultationPrep,
 } from './handlers/serviceHandlers.js';
 
 // ─── PHASE 2: Autonomous SOC Mode ────────────────────────────────────────────
@@ -3057,6 +3061,28 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/scan/cloud-security' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleCloudSecurityScan(request, env, authCtx || {}), request));
+    }
+
+    // ── MYTHOS-Powered new scan endpoints (formerly manual services) ──────────
+    if (path === '/api/scan/saas-security' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSaaSSecurityScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/config-review' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleConfigReviewScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/ai-governance' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAIGovernanceScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/devsecops' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDevSecOpsScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/consultation-prep' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleConsultationPrep(request, env, authCtx || {}), request));
     }
 
     // ── END SERVICE CATALOG v36 ───────────────────────────────────────────────

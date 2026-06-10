@@ -1,7 +1,8 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Service Order Engine v1.0
+ * CYBERDUDEBIVASH AI Security Hub — Service Order Engine v2.0
+ * MYTHOS-Powered: All 18 services — automated dispatch + MYTHOS AI enrichment
  * Handles: order creation, payment webhooks, report token generation,
- *          automated assessment dispatch, report retrieval
+ *          automated assessment dispatch, MYTHOS AI enrichment, report retrieval
  */
 
 import { runSSLCheck }                  from './sslSecurityEngine.js';
@@ -12,9 +13,18 @@ import { runVulnAssessment }            from './vulnAssessmentEngine.js';
 import { runThreatHuntingReview }       from './threatHuntingEngine.js';
 import { runAPISecurityAssessment }     from './apiSecurityEngine.js';
 import { runCloudSecurityAudit }        from './cloudSecurityEngine.js';
+// ── NEW: 5 additional automated engines ───────────────────────────────────────
+import { runSaaSSecurityAssessment }    from './saasSecurityEngine.js';
+import { runConfigReviewAssessment }    from './configReviewEngine.js';
+import { runAIGovernanceAssessment }    from './aiGovernanceEngine.js';
+import { runDevSecOpsAssessment }       from './devSecOpsEngine.js';
+import { runConsultationPreAssessment } from './consultationPreAssessEngine.js';
+// ── MYTHOS AI Enrichment ───────────────────────────────────────────────────────
+import { enrichAssessmentWithMYTHOS }   from './mythosEnrichmentEngine.js';
 
-// ── Engine dispatch map ───────────────────────────────────────────────────────
+// ── Engine dispatch map (all 18 services) ────────────────────────────────────
 const ENGINE_DISPATCH = {
+  // ── Original 10 automated engines ──────────────────────────────────────────
   ssl:                   (env, inputs, orderId) => runSSLCheck(env, inputs.domain || inputs.target_domain, orderId),
   cti_brief:             (env, inputs, orderId) => generateCTIBrief(env, inputs.industry || 'General', orderId),
   cti_report:            (env, inputs, orderId) => generateThreatIntelReport(env, inputs.domain || '', inputs.industry || 'General', orderId),
@@ -25,6 +35,16 @@ const ENGINE_DISPATCH = {
   threat_hunting:        (env, inputs, orderId) => runThreatHuntingReview(env, inputs, orderId),
   api_security:          (env, inputs, orderId) => runAPISecurityAssessment(env, inputs.api_base_url || inputs.domain, orderId),
   cloud_security:        (env, inputs, orderId) => runCloudSecurityAudit(env, inputs, orderId),
+  // ── New 5 engines (formerly manual services) ──────────────────────────────
+  saas_security:         (env, inputs, orderId) => runSaaSSecurityAssessment(env, inputs, orderId),
+  config_review:         (env, inputs, orderId) => runConfigReviewAssessment(env, inputs, orderId),
+  ai_governance:         (env, inputs, orderId) => runAIGovernanceAssessment(env, inputs, orderId),
+  devsecops:             (env, inputs, orderId) => runDevSecOpsAssessment(env, inputs, orderId),
+  // ── Consultation pre-assessment (service-aware) ────────────────────────────
+  consultation:          (env, inputs, orderId) => runConsultationPreAssessment(env, inputs, orderId, inputs._service_ref || 'CDB-CONSULT-001'),
+  consultation_aisec:    (env, inputs, orderId) => runConsultationPreAssessment(env, inputs, orderId, 'CDB-AISEC-001'),
+  consultation_ti:       (env, inputs, orderId) => runConsultationPreAssessment(env, inputs, orderId, 'CDB-TI-001'),
+  consultation_shc:      (env, inputs, orderId) => runConsultationPreAssessment(env, inputs, orderId, 'CDB-SHC-001'),
 };
 
 // ── Token generation ──────────────────────────────────────────────────────────
@@ -111,7 +131,7 @@ export async function createServiceOrder(env, body) {
   };
 }
 
-// ── Dispatch the right engine ─────────────────────────────────────────────────
+// ── Dispatch the right engine + MYTHOS AI enrichment ─────────────────────────
 export async function dispatchAssessment(env, engineName, inputs, orderId) {
   const engine = ENGINE_DISPATCH[engineName];
   if (!engine) {
@@ -127,7 +147,43 @@ export async function dispatchAssessment(env, engineName, inputs, orderId) {
   } catch {}
 
   try {
+    // ── Phase 1: Run the assessment engine ────────────────────────────────
     const result = await engine(env, inputs, orderId);
+
+    // ── Phase 2: MYTHOS AI Enrichment (post-assessment intelligence layer) ─
+    // Only enrich assessments that have findings (skip consultation pre-assess)
+    if (result && result.findings && result.findings.length >= 0 && !result.meta?.report_type?.includes('PRE-ASSESSMENT')) {
+      try {
+        const enriched = await enrichAssessmentWithMYTHOS(env, {
+          report:       result,
+          findings:     result.findings || [],
+          service_name: result.meta?.service_name || engineName,
+          service_ref:  result.meta?.service    || null,
+          target:       inputs.domain || inputs.target_domain || inputs.api_base_url || '',
+          sector:       inputs.industry || inputs.target_industry || 'Technology',
+          tier:         'PRO',
+          probe_results: result.probe_results || {},
+        });
+
+        // Persist the MYTHOS-enriched report back to D1
+        if (env?.DB && orderId) {
+          await env.DB.prepare(
+            `UPDATE service_assessments SET
+               report_json       = ?,
+               mythos_enriched   = 1,
+               updated_at        = datetime('now')
+             WHERE order_id = ? ORDER BY created_at DESC LIMIT 1`
+          ).bind(JSON.stringify(enriched), orderId).run().catch(() => {});
+        }
+
+        return enriched;
+      } catch (enrichErr) {
+        console.error('[ServiceOrder] MYTHOS enrichment error:', enrichErr.message);
+        // Return un-enriched result — assessment still valid
+        return result;
+      }
+    }
+
     return result;
   } catch (e) {
     console.error('[ServiceOrder] Engine error:', engineName, e.message);

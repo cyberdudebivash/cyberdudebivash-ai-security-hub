@@ -1,6 +1,6 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Service Catalog & Order Handlers v1.0
- * Routes for all 18 services, order management, and report delivery
+ * CYBERDUDEBIVASH AI Security Hub — Service Catalog & Order Handlers v2.0
+ * MYTHOS-Powered: All 18 services — direct scan routes + MYTHOS AI enrichment
  */
 
 import {
@@ -13,6 +13,7 @@ import {
   dispatchAssessment,
 } from '../services/serviceOrderEngine.js';
 
+// ── Original 10 engines ───────────────────────────────────────────────────────
 import { runSSLCheck }                       from '../services/sslSecurityEngine.js';
 import { generateCTIBrief, generateThreatIntelReport } from '../services/ctiReportEngine.js';
 import { runComplianceAssessment }           from '../services/complianceEngine.js';
@@ -21,6 +22,14 @@ import { runVulnAssessment }                 from '../services/vulnAssessmentEng
 import { runThreatHuntingReview }            from '../services/threatHuntingEngine.js';
 import { runAPISecurityAssessment }          from '../services/apiSecurityEngine.js';
 import { runCloudSecurityAudit }             from '../services/cloudSecurityEngine.js';
+// ── New 5 engines ─────────────────────────────────────────────────────────────
+import { runSaaSSecurityAssessment }         from '../services/saasSecurityEngine.js';
+import { runConfigReviewAssessment }         from '../services/configReviewEngine.js';
+import { runAIGovernanceAssessment }         from '../services/aiGovernanceEngine.js';
+import { runDevSecOpsAssessment }            from '../services/devSecOpsEngine.js';
+import { runConsultationPreAssessment }      from '../services/consultationPreAssessEngine.js';
+// ── MYTHOS enrichment ─────────────────────────────────────────────────────────
+import { enrichAssessmentWithMYTHOS }        from '../services/mythosEnrichmentEngine.js';
 
 function ok(data, status = 200) {
   return Response.json(data, { status });
@@ -259,4 +268,102 @@ export async function handleCloudSecurityScan(request, env, authCtx) {
   const body   = await parseBody(request);
   const report = await runCloudSecurityAudit(env, body, null);
   return ok({ success: true, service: 'CDB-CSAU-001', ...report });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEW ENGINES — formerly manual services, now MYTHOS-automated
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── POST /api/scan/saas-security — SaaS security assessment ──────────────────
+export async function handleSaaSSecurityScan(request, env, authCtx) {
+  if (!authCtx?.isAdmin && !['PRO','ENTERPRISE'].includes(authCtx?.tier)) {
+    return Response.json({
+      error:       'PRO or ENTERPRISE plan required',
+      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+    }, { status: 403 });
+  }
+  const body   = await parseBody(request);
+  let report   = await runSaaSSecurityAssessment(env, body, null);
+  // MYTHOS enrichment
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'SaaS Security Assessment', service_ref: 'CDB-SAASSEC-001',
+      target: body.domain || body.target_domain || '', sector: body.industry || 'Technology', tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
+  return ok({ success: true, service: 'CDB-SAASSEC-001', ...report });
+}
+
+// ── POST /api/scan/config-review — security configuration review ──────────────
+export async function handleConfigReviewScan(request, env, authCtx) {
+  if (!authCtx?.isAdmin && !['PRO','ENTERPRISE'].includes(authCtx?.tier)) {
+    return Response.json({
+      error:       'PRO or ENTERPRISE plan required',
+      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+    }, { status: 403 });
+  }
+  const body   = await parseBody(request);
+  let report   = await runConfigReviewAssessment(env, body, null);
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'Security Configuration Review', service_ref: 'CDB-SCRA-001',
+      target: body.company || body.organization || '', sector: body.industry || 'Technology', tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
+  return ok({ success: true, service: 'CDB-SCRA-001', ...report });
+}
+
+// ── POST /api/scan/ai-governance — AI governance assessment ───────────────────
+export async function handleAIGovernanceScan(request, env, authCtx) {
+  if (!authCtx?.isAdmin && authCtx?.tier !== 'ENTERPRISE') {
+    return Response.json({
+      error:       'ENTERPRISE plan required',
+      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+    }, { status: 403 });
+  }
+  const body   = await parseBody(request);
+  let report   = await runAIGovernanceAssessment(env, body, null);
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'AI Governance Consulting', service_ref: 'CDB-AIGOV-001',
+      target: body.company || body.organization || '', sector: body.industry || 'Technology', tier: 'ENTERPRISE',
+    });
+  } catch {}
+  return ok({ success: true, service: 'CDB-AIGOV-001', ...report });
+}
+
+// ── POST /api/scan/devsecops — DevSecOps security optimization ────────────────
+export async function handleDevSecOpsScan(request, env, authCtx) {
+  if (!authCtx?.isAdmin && authCtx?.tier !== 'ENTERPRISE') {
+    return Response.json({
+      error:       'ENTERPRISE plan required',
+      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+    }, { status: 403 });
+  }
+  const body   = await parseBody(request);
+  let report   = await runDevSecOpsAssessment(env, body, null);
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'DevSecOps Security Optimization', service_ref: 'CDB-DSO-001',
+      target: body.company || body.organization || '', sector: body.industry || 'Technology', tier: 'ENTERPRISE',
+    });
+  } catch {}
+  return ok({ success: true, service: 'CDB-DSO-001', ...report });
+}
+
+// ── POST /api/scan/consultation-prep — consultation pre-assessment brief ──────
+export async function handleConsultationPrep(request, env, authCtx) {
+  const body       = await parseBody(request);
+  const serviceRef = body.service_ref || 'CDB-CONSULT-001';
+  const allowed    = ['CDB-CONSULT-001','CDB-AISEC-001','CDB-TI-001','CDB-SHC-001'];
+  if (!allowed.includes(serviceRef)) {
+    return err(`service_ref must be one of: ${allowed.join(', ')}`, 400);
+  }
+  body._service_ref = serviceRef;
+  const report = await runConsultationPreAssessment(env, body, null, serviceRef);
+  return ok({ success: true, service: serviceRef, ...report });
 }
