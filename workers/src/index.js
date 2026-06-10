@@ -247,6 +247,22 @@ import {
   handleIntelRisk,
 } from './handlers/intelAPIHandlers.js';
 
+// ─── Phase B: AI Security Posture Management (AI SPM) ────────────────────────
+import {
+  handleAISPMInventory,
+  handleAISPMOWASP,
+  handleAISPMGovernance,
+  handleAISPMReport,
+} from './handlers/aiSPMHandlers.js';
+
+// ─── Phase B: Executive Risk Platform ────────────────────────────────────────
+import {
+  handleExecutiveRiskBrief,
+  handleExecutiveDashboard,
+  handleExecutiveForecast,
+  handleBoardReport,
+} from './handlers/executiveRiskHandlers.js';
+
 // ─── MYTHOS GOD MODE v4.0 — Full autonomous platform orchestrator ─────────────
 // 12-phase pipeline: intel → brain → tools → ASPM → hunt → ZT → compliance
 //   → CISO pack → SOAR → metrics → revenue → finalize
@@ -2941,6 +2957,42 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/intel/risk' && (method === 'GET' || method === 'POST')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIntelRisk(request, env, authCtx || {}), request));
+    }
+
+    // ── Phase B: AI Security Posture Management ───────────────────────────────
+    if (path === '/api/aispm/inventory' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAISPMInventory(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/aispm/owasp-llm' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAISPMOWASP(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/aispm/governance' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAISPMGovernance(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/aispm/report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAISPMReport(request, env, authCtx || {}), request));
+    }
+
+    // ── Phase B: Executive Risk Platform ─────────────────────────────────────
+    if (path === '/api/executive/risk-brief' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleExecutiveRiskBrief(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/executive/dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleExecutiveDashboard(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/executive/forecast' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleExecutiveForecast(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/executive/board-report' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleBoardReport(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
