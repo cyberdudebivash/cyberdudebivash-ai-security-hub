@@ -1,211 +1,53 @@
 /**
- * CYBERDUDEBIVASH MYTHOS AI PROVIDER — Claude Sovereign Engine v1.0
- * ═══════════════════════════════════════════════════════════════════════════════
- * Production-grade Anthropic Claude integration for the entire platform.
+ * CYBERDUDEBIVASH MYTHOS AI PROVIDER — Multi-Provider Sovereign Engine v2.0
+ * ════════════════════════════════════════════════════════════════════════════
+ * Thin compatibility shim — delegates to AIProviderRouter.
+ * All existing callClaude() callers work unchanged.
  *
- * Model Routing (tier-aware):
- *   ENTERPRISE → claude-opus-4-8        (max intelligence, board-level reports)
- *   PRO        → claude-sonnet-4-6      (production balance: speed + precision)
- *   FREE       → claude-haiku-4-5-20251001  (fast, cost-efficient)
- *   FALLBACK   → Cloudflare Workers AI  (if ANTHROPIC_API_KEY not set)
+ * Provider chain (no vendor lock-in):
+ *   Groq → DeepSeek → Cloudflare Workers AI → OpenRouter → Anthropic (optional)
  *
- * Features:
- *   • Unified async `callClaude(env, opts)` interface
- *   • MYTHOS sovereign system persona injected on every call
- *   • Retry with exponential backoff (2 retries, 1s/2s delays)
- *   • Token budget enforcement (no runaway inference)
- *   • Graceful fallback chain: Claude → CF Workers AI → null
- *   • Cost tracking via response usage object
- *   • Model aliasing — version-proof naming
- * ═══════════════════════════════════════════════════════════════════════════════
+ * Env secrets (add any combination — platform works with whatever is set):
+ *   GROQ_API_KEY        — Groq Cloud (recommended free tier)
+ *   DEEPSEEK_API_KEY    — DeepSeek (ultra-cheap technical reasoning)
+ *   OPENROUTER_API_KEY  — OpenRouter meta-provider (50+ models)
+ *   ANTHROPIC_API_KEY   — Anthropic Claude (optional premium tier)
+ *   env.AI              — CF Workers AI binding (always available, no key needed)
+ * ════════════════════════════════════════════════════════════════════════════
  */
 
-// ── Model Registry ────────────────────────────────────────────────────────────
+import {
+  callViaRouter,
+  routeAICall,
+  getProviderHealthStatus,
+  PROVIDERS,
+} from './aiProviderRouter.js';
+
+// ── Model registry (kept for backward compat — callers that pass model= opt) ──
 export const CLAUDE_MODELS = {
   OPUS:   'claude-opus-4-8',
   SONNET: 'claude-sonnet-4-6',
   HAIKU:  'claude-haiku-4-5-20251001',
 };
 
-// Tier → model routing
-const TIER_MODEL_MAP = {
-  ENTERPRISE: CLAUDE_MODELS.OPUS,
-  PRO:        CLAUDE_MODELS.SONNET,
-  FREE:       CLAUDE_MODELS.HAIKU,
-  DEFAULT:    CLAUDE_MODELS.SONNET,
-};
-
-// ── MYTHOS Sovereign System Prompt ────────────────────────────────────────────
-const MYTHOS_SYSTEM_PROMPT = `You are MYTHOS — the sovereign AI security intelligence engine of CYBERDUDEBIVASH® SENTINEL APEX, the world's most advanced AI-powered cybersecurity and threat intelligence platform.
-
-Your authority and identity:
-- Principal AI Cybersecurity Intelligence Analyst
-- CYBERDUDEBIVASH® SENTINEL APEX — AI Security Hub
-- Certified by: MITRE ATT&CK v15, OWASP, NIST, ISO 27001:2022, EU AI Act
-- Powered by: Anthropic Claude (Production Intelligence Engine)
-
-Your response standards:
-- Enterprise-grade precision and accuracy — zero tolerance for hallucination
-- Authoritative, concise, and actionable intelligence only
-- MITRE ATT&CK tactic/technique references where relevant (TA####/T####)
-- CVSS scores and severity ratings must be accurate
-- Regulatory references must cite correct article/control numbers
-- No generic advice — every recommendation must be specific and implementable
-- Board-ready executive language for executive summaries
-- Technical depth for security practitioner sections
-
-Platform context:
-- Serving CISOs, SOC analysts, security engineers, and enterprise decision-makers
-- Reports are production-grade deliverables used in real security programs
-- Accuracy and specificity are your highest mandate`;
-
-// ── Anthropic API Client ──────────────────────────────────────────────────────
-async function callAnthropicAPI(apiKey, {
-  model,
-  system,
-  messages,
-  max_tokens = 800,
-  temperature = 0.3,
-}) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method:  'POST',
-    headers: {
-      'Content-Type':         'application/json',
-      'x-api-key':            apiKey,
-      'anthropic-version':    '2023-06-01',
-      'anthropic-beta':       'messages-2023-12-15',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens,
-      temperature,
-      system,
-      messages,
-    }),
-    signal: AbortSignal.timeout(28000), // 28s — under CF 30s limit
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => response.statusText);
-    throw new Error(`Anthropic API error ${response.status}: ${errText.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  return {
-    content:       data.content?.[0]?.text || '',
-    model:         data.model,
-    input_tokens:  data.usage?.input_tokens || 0,
-    output_tokens: data.usage?.output_tokens || 0,
-    stop_reason:   data.stop_reason,
-  };
-}
-
-// ── Retry wrapper ─────────────────────────────────────────────────────────────
-async function withRetry(fn, retries = 2, delayMs = 1000) {
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      const isLast = attempt > retries;
-      const isRetryable = err.message?.includes('529') || // Anthropic overloaded
-                          err.message?.includes('500') ||
-                          err.message?.includes('timeout') ||
-                          err.message?.includes('network');
-      if (isLast || !isRetryable) throw err;
-      await new Promise(r => setTimeout(r, delayMs * attempt));
-    }
-  }
-}
-
-// ── CF Workers AI fallback ────────────────────────────────────────────────────
-async function callCFWorkersAI(env, prompt, maxTokens = 400) {
-  if (!env?.AI) return null;
-  try {
-    const resp = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-      messages:   [{ role: 'user', content: prompt }],
-      max_tokens: maxTokens,
-    });
-    return resp?.response || null;
-  } catch {
-    return null;
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// PRIMARY EXPORT: callClaude — unified AI call interface
-// ═════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// PRIMARY EXPORT: callClaude — unchanged interface, now router-backed
+// ════════════════════════════════════════════════════════════════════════════
 /**
- * @param {object} env          — Worker env bindings (needs ANTHROPIC_API_KEY)
+ * @param {object} env          — Worker env bindings
  * @param {object} opts
  * @param {string} opts.prompt  — User message / task
- * @param {string} [opts.system]— Additional system context (appended to MYTHOS base)
- * @param {string} [opts.tier]  — 'ENTERPRISE'|'PRO'|'FREE' — drives model selection
- * @param {string} [opts.model] — Override model directly (bypasses tier routing)
- * @param {number} [opts.max_tokens=800] — Response token budget
- * @param {number} [opts.temperature=0.3] — 0=deterministic, 1=creative
- * @param {boolean}[opts.json_mode=false] — Append JSON-only instruction to prompt
- * @returns {Promise<{content: string, model: string, source: string, tokens: object}|null>}
+ * @param {string} [opts.system]— Additional system context
+ * @param {string} [opts.tier]  — 'ENTERPRISE'|'PRO'|'FREE'
+ * @param {string} [opts.model] — Ignored by router (kept for caller compat)
+ * @param {number} [opts.max_tokens=800]
+ * @param {number} [opts.temperature=0.3]
+ * @param {boolean}[opts.json_mode=false]
+ * @param {string} [opts.task_type] — Optional routing hint
+ * @returns {Promise<{content,model,source,provider,tokens}|null>}
  */
-export async function callClaude(env, {
-  prompt,
-  system      = '',
-  tier        = 'PRO',
-  model       = null,
-  max_tokens  = 800,
-  temperature = 0.3,
-  json_mode   = false,
-}) {
-  const apiKey = env?.ANTHROPIC_API_KEY;
-
-  // Select model
-  const selectedModel = model || TIER_MODEL_MAP[tier] || TIER_MODEL_MAP.DEFAULT;
-
-  // Build system prompt
-  const fullSystem = system
-    ? `${MYTHOS_SYSTEM_PROMPT}\n\n${system}`
-    : MYTHOS_SYSTEM_PROMPT;
-
-  // JSON mode: append instruction
-  const finalPrompt = json_mode
-    ? `${prompt}\n\nRespond with valid JSON only. No explanation outside the JSON object.`
-    : prompt;
-
-  // ── Path 1: Anthropic Claude (primary) ────────────────────────────────────
-  if (apiKey) {
-    try {
-      const result = await withRetry(() => callAnthropicAPI(apiKey, {
-        model:       selectedModel,
-        system:      fullSystem,
-        messages:    [{ role: 'user', content: finalPrompt }],
-        max_tokens,
-        temperature,
-      }));
-
-      return {
-        content: result.content,
-        model:   result.model,
-        source:  'anthropic',
-        tokens:  { input: result.input_tokens, output: result.output_tokens },
-      };
-    } catch (err) {
-      console.error(`[MYTHOS AI] Claude API error (model: ${selectedModel}):`, err.message);
-      // Fall through to CF Workers AI
-    }
-  }
-
-  // ── Path 2: Cloudflare Workers AI (fallback) ──────────────────────────────
-  const cfResult = await callCFWorkersAI(env, finalPrompt, Math.min(max_tokens, 500));
-  if (cfResult) {
-    return {
-      content: cfResult,
-      model:   'llama-3-8b-instruct',
-      source:  'cloudflare-workers-ai',
-      tokens:  { input: 0, output: 0 },
-    };
-  }
-
-  // ── Path 3: No AI available ───────────────────────────────────────────────
-  return null;
+export async function callClaude(env, opts) {
+  return callViaRouter(env, opts);
 }
 
 // ── Convenience: generate executive narrative ─────────────────────────────────
@@ -225,8 +67,6 @@ export async function generateExecutiveNarrative(env, {
     .map(f => `• [${f.severity}] ${f.title || f.id}: ${(f.description || '').slice(0, 120)}`)
     .join('\n');
 
-  const model = tier === 'ENTERPRISE' ? CLAUDE_MODELS.OPUS : CLAUDE_MODELS.SONNET;
-
   const prompt = `Generate a 3-paragraph enterprise security intelligence brief for:
 
 Target: ${target || 'the assessed system'}
@@ -245,7 +85,13 @@ Paragraph 3: Strategic 90-day security roadmap with measurable milestones (3-4 s
 
 Standards: Enterprise-grade precision. MITRE ATT&CK references where applicable. No generic advice.`;
 
-  const result = await callClaude(env, { prompt, tier, model, max_tokens: 500, temperature: 0.2 });
+  const result = await routeAICall(env, {
+    prompt,
+    task_type:   'executive',
+    tier,
+    max_tokens:  500,
+    temperature: 0.2,
+  });
   return result?.content || null;
 }
 
@@ -268,7 +114,13 @@ Identify the top 2-3 most likely threat actors or attack campaigns relevant to t
 
 Be specific and evidence-based. Reference CISA advisories or known campaigns where applicable.`;
 
-  const result = await callClaude(env, { prompt, tier, max_tokens: 400, temperature: 0.1 });
+  const result = await routeAICall(env, {
+    prompt,
+    task_type:   'threat_intel',
+    tier,
+    max_tokens:  400,
+    temperature: 0.1,
+  });
   return result?.content || null;
 }
 
@@ -293,53 +145,19 @@ Provide:
 
 Be concise and actionable. Format for a CISO presentation.`;
 
-  const result = await callClaude(env, { prompt, tier, max_tokens: 500, temperature: 0.2 });
+  const result = await routeAICall(env, {
+    prompt,
+    task_type:   'executive',
+    tier,
+    max_tokens:  500,
+    temperature: 0.2,
+  });
   return result?.content || null;
 }
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ── Health check (used by GET /api/ai/health) ─────────────────────────────────
 export async function checkAIProviderHealth(env) {
-  const apiKey = env?.ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    return {
-      status:    'degraded',
-      provider:  'cloudflare-workers-ai',
-      model:     'llama-3-8b-instruct',
-      claude:    false,
-      message:   'ANTHROPIC_API_KEY not set — running on Cloudflare Workers AI fallback. Set secret for Claude upgrade.',
-    };
-  }
-
-  try {
-    const result = await callAnthropicAPI(apiKey, {
-      model:      CLAUDE_MODELS.HAIKU,  // use haiku for health check (cheapest)
-      system:     'You are a health check service.',
-      messages:   [{ role: 'user', content: 'Reply with: MYTHOS AI ONLINE' }],
-      max_tokens: 20,
-      temperature: 0,
-    });
-
-    return {
-      status:    'healthy',
-      provider:  'anthropic',
-      model:     CLAUDE_MODELS.SONNET,  // production model
-      models: {
-        enterprise: CLAUDE_MODELS.OPUS,
-        pro:        CLAUDE_MODELS.SONNET,
-        free:       CLAUDE_MODELS.HAIKU,
-      },
-      claude:    true,
-      response:  result.content,
-      message:   'Anthropic Claude API operational — MYTHOS AI at full production power',
-    };
-  } catch (err) {
-    return {
-      status:   'error',
-      provider: 'anthropic',
-      claude:   false,
-      error:    err.message,
-      message:  'Anthropic API key set but connection failed. Verify key validity.',
-    };
-  }
+  // Import the router's compat health check
+  const { checkAIProviderHealth: routerHealthCheck } = await import('./aiProviderRouter.js');
+  return routerHealthCheck(env);
 }

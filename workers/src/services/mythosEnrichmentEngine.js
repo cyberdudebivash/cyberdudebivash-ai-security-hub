@@ -13,7 +13,8 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { callClaude, CLAUDE_MODELS } from '../core/mythosAIProvider.js';
+import { callClaude } from '../core/mythosAIProvider.js';
+import { routeAICall } from '../core/aiProviderRouter.js';
 import {
   computeRiskScore,
   predictAttackPaths,
@@ -68,7 +69,7 @@ function mapFindingsToMITRE(findings) {
   return Array.from(mapped.values());
 }
 
-// ── AI Narrative Generator — Anthropic Claude (Primary) ──────────────────────
+// ── AI Narrative Generator — Router-backed (any provider) ────────────────────
 async function generateAINarrative(env, { target, service_name, riskScore, riskLevel, findings, sector, tier = 'PRO' }) {
   if (!findings || findings.length === 0) return null;
 
@@ -79,6 +80,8 @@ async function generateAINarrative(env, { target, service_name, riskScore, riskL
       .map(f => `• [${f.severity}] ${f.title || f.id}: ${(f.description || '').slice(0, 120)}`)
       .join('\n');
 
+    if (!topFindings) return null; // only generate when there are real findings
+
     const prompt = `Generate an enterprise security intelligence brief for:
 
 Target: ${target || 'the assessed system'}
@@ -87,7 +90,7 @@ Risk Score: ${riskScore}/100 (${riskLevel})
 Industry: ${sector || 'Technology'}
 
 Key findings:
-${topFindings || '• Multiple security vulnerabilities detected requiring immediate attention'}
+${topFindings}
 
 Write 3 paragraphs:
 1. Executive threat posture summary — specific risk level, business exposure, urgency (2-3 sentences)
@@ -96,14 +99,15 @@ Write 3 paragraphs:
 
 Enterprise-grade precision. MITRE ATT&CK references where applicable. No generic advice.`;
 
-    const result = await callClaude(env, {
+    const result = await routeAICall(env, {
       prompt,
-      tier:       tier || 'PRO',
-      max_tokens: 500,
+      task_type:   'executive',
+      tier:        tier || 'PRO',
+      max_tokens:  500,
       temperature: 0.2,
     });
 
-    return result?.content || null;
+    return result ? { content: result.content, provider: result.provider, model: result.model } : null;
   } catch (e) {
     console.error('[MYTHOS-Enrichment] AI narrative error:', e.message);
     return null;
@@ -259,10 +263,10 @@ export async function enrichAssessmentWithMYTHOS(env, {
     // Autonomous Remediation Plan
     autonomous_remediation_plan: remediationPlan,
 
-    // AI Narrative (Workers AI)
+    // AI Narrative (router-selected provider)
     ai_executive_brief: aiNarrative
-      ? { generated: true,  narrative: aiNarrative,  model: 'claude-sonnet-4-6' }
-      : { generated: false, narrative: null, note: 'Upgrade to PRO for AI-generated executive briefs (Claude Sonnet 4.6)' },
+      ? { generated: true,  narrative: aiNarrative.content, provider: aiNarrative.provider, model: aiNarrative.model }
+      : { generated: false, narrative: null, note: 'No CRITICAL/HIGH findings — AI narrative generated only when actionable findings are present' },
 
     // D1 Threat Actor Overlay
     threat_actor_overlay: mythosActors

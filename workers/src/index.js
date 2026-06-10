@@ -490,8 +490,9 @@ import {
   handleZeroTrustVerify,
 } from './services/zeroTrustEngine.js';
 
-// ─── MYTHOS AI Provider — Anthropic Claude health check ──────────────────────
+// ─── MYTHOS AI Provider Router — multi-provider, zero vendor lock-in ─────────
 import { checkAIProviderHealth } from './core/mythosAIProvider.js';
+import { getProviderHealthStatus } from './core/aiProviderRouter.js';
 
 // ─── GOD MODE v20: Authority Engine — CVE Reports + Blog Auto-Generation ─────
 import {
@@ -3254,6 +3255,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/ai/health' && method === 'GET') {
       const health = await checkAIProviderHealth(env);
       return withSecurityHeaders(withCors(Response.json({ success: true, ...health, timestamp: new Date().toISOString() }), request));
+    }
+
+    // ── MYTHOS AI Providers Status — multi-provider health + routing map ──────
+    if (path === '/api/ai/providers/status' && method === 'GET') {
+      try {
+        const status = await getProviderHealthStatus(env);
+        return withSecurityHeaders(withCors(Response.json({
+          success:   true,
+          timestamp: new Date().toISOString(),
+          ...status,
+        }), request));
+      } catch (err) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: err.message }, { status: 500 }), request));
+      }
     }
 
     // ── END SERVICE CATALOG v36 ───────────────────────────────────────────────
