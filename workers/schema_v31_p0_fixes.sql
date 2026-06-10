@@ -22,10 +22,8 @@ ALTER TABLE threat_intel ADD COLUMN active_exploitation INTEGER NOT NULL DEFAULT
 -- Backfill: entries ingested from source='cisa_kev' are KEV entries
 UPDATE threat_intel SET cisa_kev = 1 WHERE source = 'cisa_kev' AND cisa_kev = 0;
 
--- Backfill: entries with actively_exploited=1 have active_exploitation=1
-UPDATE threat_intel
-SET active_exploitation = 1
-WHERE actively_exploited = 1 AND active_exploitation = 0;
+-- NOTE: actively_exploited column does not exist in threat_intel — backfill skipped.
+-- active_exploitation defaults to 0; set via application logic going forward.
 
 -- ── Fix 2: compliance_alignments — new table for honest badge display
 -- Replaces hardcoded "certified" badges with verifiable alignment records
