@@ -562,14 +562,15 @@ export async function handleAIChat(request, env) {
   const intent  = detectIntent(message);
   const result  = buildAnalystResponse(intent, message, context);
 
-  // Optionally persist session to KV
+  // Persist session to KV — uses SECURITY_HUB_KV (single binding); falls back to THREAT_INTEL alias
   try {
-    if (env.THREAT_INTEL && session_id) {
+    const kv = env.SECURITY_HUB_KV || env.THREAT_INTEL;
+    if (kv && session_id) {
       const key = `chat:${session_id}`;
-      const prev = await env.THREAT_INTEL.get(key, 'json') || [];
+      const prev = await kv.get(key, 'json') || [];
       prev.push({ role: 'user', content: message, ts: Date.now() });
       prev.push({ role: 'analyst', content: result.response, ts: Date.now() });
-      await env.THREAT_INTEL.put(key, JSON.stringify(prev.slice(-20)), { expirationTtl: 86400 });
+      await kv.put(key, JSON.stringify(prev.slice(-20)), { expirationTtl: 86400 });
     }
   } catch (_) {}
 
@@ -732,7 +733,4 @@ union CommonSecurityLog, W3CIISLog
     platform,
     rules:     output,
     generated: today,
-    author:    'CYBERDUDEBIVASH MYTHOS AI',
-    timestamp: new Date().toISOString(),
-  });
-}
+    author:    'C

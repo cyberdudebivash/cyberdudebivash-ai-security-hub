@@ -1,28 +1,33 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Platform Metrics Hydration Engine v30.0
- * P0 REMEDIATION: Eliminates all zeroed/placeholder public metrics.
+ * CYBERDUDEBIVASH AI Security Hub — Platform Metrics Hydration Engine v30.1
+ * P0 FIX: Corrects column name bugs introduced in v30.0
  *
- * Architecture:
- *   L1 — KV snapshot cache (45-second TTL) — primary serving path
- *   L2 — Circuit-breaker-guarded live D1 query — fires only on cold cache
- *   L3 — Last-known-healthy snapshot (stale read, clearly labelled) — DB unreachable
+ * CHANGES FROM v30.0:
+ *   - Line 79 BUG: `cisa_kev=1` and `active_exploitation=1` columns did not exist
+ *     in threat_intel → all queries returned 0. Fixed after schema_v31_p0_fixes.sql
+ *     adds both columns and backfills from source='cisa_kev' and actively_exploited=1.
+ *   - Index 4 BUG: get(5) was used for active_customers (wrong — index 4 is subscriptions,
+ *     index 5 is revenue_today). Fixed with explicit named variable destructuring.
+ *   - active_customers now reads from subscriptions table (correct source).
+ *   - soar_rules_total added from soar_rules table if it exists, else 0.
  *
- * Background worker: scheduled via cron "0 * * * *" (every 10 min via existing slot 1)
- * Pull path:  GET /api/platform/metrics  →  servePlatformMetrics()
- * Push path:  cron triggers refreshPlatformMetrics() inside ctx.waitUntil()
+ * Architecture unchanged — 3-layer cache is correct and kept as-is:
+ *   L1 — KV snapshot cache (45-second TTL)
+ *   L2 — Circuit-breaker-guarded live D1 query
+ *   L3 — Last-known-healthy stale snapshot
  */
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const CACHE_KEY_LIVE   = 'platform:metrics:live';
-const CACHE_KEY_STALE  = 'platform:metrics:stale';
-const LIVE_TTL_SEC     = 45;          // hard TTL per the P0 spec
-const STALE_TTL_SEC    = 3600 * 6;    // stale snapshot survives 6 h for L3 fallback
-const CB_KEY           = 'cb:metrics-d1';
-const CB_OPEN_TTL_SEC  = 60;
-const CB_FAIL_LIMIT    = 4;
-const D1_TIMEOUT_MS    = 4000;
+// ─── Constants (unchanged from v30.0) ────────────────────────────────────────
+const CACHE_KEY_LIVE  = 'platform:metrics:live';
+const CACHE_KEY_STALE = 'platform:metrics:stale';
+const LIVE_TTL_SEC    = 45;
+const STALE_TTL_SEC   = 3600 * 6;
+const CB_KEY          = 'cb:metrics-d1';
+const CB_OPEN_TTL_SEC = 60;
+const CB_FAIL_LIMIT   = 4;
+const D1_TIMEOUT_MS   = 4000;
 
-// ─── Circuit Breaker (KV-backed, shared across isolates) ─────────────────────
+// ─── Circuit Breaker (unchanged from v30.0) ──────────────────────────────────
 async function cbGet(env) {
   try {
     const raw = await env.SECURITY_HUB_KV.get(CB_KEY);
@@ -64,7 +69,7 @@ async function cbAllow(env) {
   } catch { return true; }
 }
 
-// ─── D1 Hydration Query (all 10 parallel reads in one batch) ─────────────────
+// ─── D1 Hydration Query — FIXED ──────────────────────────────────────────────
 async function fetchLiveMetricsFromD1(env) {
   const db = env.SECURITY_HUB_DB || env.DB;
   if (!db) throw new Error('D1 binding unavailable');
@@ -72,17 +77,25 @@ async function fetchLiveMetricsFromD1(env) {
   const timeout = new Promise((_, rej) =>
     setTimeout(() => rej(new Error('D1 timeout after 4000ms')), D1_TIMEOUT_MS));
 
+  // FIX: Use explicit index positions matching the batch array below.
+  // v30.0 had get(5) for both active_customers AND revenue_today — wrong.
+  // The batch array is now numbered with a comment on every line.
   const queries = db.batch([
-    db.prepare("SELECT COALESCE(SUM(1),0) AS v FROM scan_history"),
-    db.prepare("SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history"),
-    db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')"),
-    db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE cisa_kev=1 OR active_exploitation=1"),
-    db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'"),
-    db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND created_at > datetime('now','-1 day')"),
-    db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')"),
-    db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel"),
-    db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM assessment_bookings WHERE status IN ('confirmed','completed')"),
-    db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80"),
+    /* 0 */ db.prepare("SELECT COALESCE(SUM(1),0) AS v FROM scan_history"),
+    /* 1 */ db.prepare("SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history"),
+    /* 2 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')"),
+    // FIX: cisa_kev and active_exploitation now exist after schema_v31_p0_fixes.sql
+    /* 3 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE cisa_kev=1 OR active_exploitation=1"),
+    // FIX: active_customers reads from subscriptions table, not payments
+    /* 4 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'"),
+    /* 5 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND created_at > datetime('now','-1 day')"),
+    /* 6 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')"),
+    /* 7 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel"),
+    /* 8 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM assessment_bookings WHERE status IN ('confirmed','completed')"),
+    /* 9 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80"),
+    /* 10 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE cisa_kev=1"),
+    // soar_rules table added in v31 — graceful if absent
+    /* 11 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM soar_rules").catch(() => ({ results: [{ v: 0 }] })),
   ]);
 
   const results = await Promise.race([queries, timeout]);
@@ -93,13 +106,17 @@ async function fetchLiveMetricsFromD1(env) {
     total_scans:          get(0),
     scans_today:          get(1),
     critical_threats:     get(2),
+    // FIX: was get(3) on wrong columns before migration — now correct
     active_exploitation:  get(3),
-    active_customers:     get(5),  // index 4 = subscriptions (kept for completeness)
+    // FIX: was get(5) (revenue_today) in v30.0 — now correct index 4
+    active_customers:     get(4),
     revenue_today_inr:    get(5),
     revenue_month_inr:    get(6),
     total_cves_tracked:   get(7),
     assessments_complete: get(8),
     high_risk_scans:      get(9),
+    kev_count:            get(10),
+    soar_rules_total:     get(11),
     uptime_pct:           99.9,
     cve_alert_sla:        '< 2 hours',
     assessment_sla:       '72 hours',
@@ -108,7 +125,7 @@ async function fetchLiveMetricsFromD1(env) {
   };
 }
 
-// ─── Background Refresh (call from ctx.waitUntil inside scheduled handler) ───
+// ─── Background Refresh (unchanged interface — called from cron ctx.waitUntil)
 export async function refreshPlatformMetrics(env) {
   const kv = env.SECURITY_HUB_KV;
   if (!kv) return { skipped: true, reason: 'no_kv' };
@@ -126,8 +143,40 @@ export async function refreshPlatformMetrics(env) {
       kv.put(CACHE_KEY_STALE, payload, { expirationTtl: STALE_TTL_SEC }),
     ]);
 
+    // Also write individual keys to platform_metrics D1 table so
+    // trustCenter.js handleTrustMetrics() reads real values
+    const db = env.SECURITY_HUB_DB || env.DB;
+    if (db) {
+      await db.batch([
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='total_scans'")
+          .bind(metrics.total_scans),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='total_cves'")
+          .bind(metrics.total_cves_tracked),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='total_customers'")
+          .bind(metrics.active_customers),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='scans_today'")
+          .bind(metrics.scans_today),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='critical_threats'")
+          .bind(metrics.critical_threats),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='revenue_today'")
+          .bind(metrics.revenue_today_inr),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='revenue_month'")
+          .bind(metrics.revenue_month_inr),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='kev_count'")
+          .bind(metrics.kev_count),
+        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='soar_rules_total'")
+          .bind(metrics.soar_rules_total),
+      ]).catch(() => {}); // fire-and-forget — KV is primary serving path
+    }
+
     await cbRecord(env, true);
-    return { refreshed: true, scans: metrics.total_scans, cves: metrics.total_cves_tracked };
+    return {
+      refreshed: true,
+      scans:     metrics.total_scans,
+      cves:      metrics.total_cves_tracked,
+      customers: metrics.active_customers,
+      kev:       metrics.kev_count,
+    };
 
   } catch (err) {
     await cbRecord(env, false);
@@ -135,7 +184,7 @@ export async function refreshPlatformMetrics(env) {
   }
 }
 
-// ─── Serve Layer (GET /api/platform/metrics) ─────────────────────────────────
+// ─── Serve Layer (GET /api/platform/metrics) — unchanged interface ────────────
 export async function servePlatformMetrics(request, env) {
   const kv = env.SECURITY_HUB_KV;
 
@@ -150,12 +199,11 @@ export async function servePlatformMetrics(request, env) {
     return new Response(JSON.stringify(data), { status, headers: { ...cors, ...extra } });
   }
 
-  // OPTIONS preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: cors });
   }
 
-  // ── L1: live KV cache (< 45s) ───────────────────────────────────────────
+  // ── L1: live KV cache (< 45s) ──────────────────────────────────────────
   if (kv) {
     try {
       const cached = await kv.get(CACHE_KEY_LIVE);
@@ -186,7 +234,7 @@ export async function servePlatformMetrics(request, env) {
     }
   }
 
-  // ── L3: stale snapshot fallback (clearly labelled) ──────────────────────
+  // ── L3: stale snapshot fallback (clearly labelled) ─────────────────────
   if (kv) {
     try {
       const stale = await kv.get(CACHE_KEY_STALE);
@@ -205,17 +253,17 @@ export async function servePlatformMetrics(request, env) {
     } catch {}
   }
 
-  // ── L4: ultimate safe-default (never zero, never fake) ──────────────────
+  // ── L4: safe-default — null not zero, never fake ─────────────────────
   return jsonR({
     success: false,
     metrics: {
-      total_scans:         null,
-      total_cves_tracked:  null,
-      active_customers:    null,
-      uptime_pct:          99.9,
-      cve_alert_sla:       '< 2 hours',
-      source:              'unavailable',
-      note:                'Metrics temporarily unavailable',
+      total_scans:        null,
+      total_cves_tracked: null,
+      active_customers:   null,
+      uptime_pct:         99.9,
+      cve_alert_sla:      '< 2 hours',
+      source:             'unavailable',
+      note:               'Metrics temporarily unavailable',
     },
     cache: 'unavailable',
   }, 503);

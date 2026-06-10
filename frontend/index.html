@@ -10326,15 +10326,16 @@ function localEngine(module, payload) {
 
 // ─── Hero Quick Scan ────────────────────────────────────────────────────
 function heroQuickScan() {
-  // ── v26: Trigger email gate after free scan ──────────────────────────────
-  window._lastScanDomain = domain;
-  window._lastScanModule = 'domain';
-
   const val = document.getElementById('heroScanInput')?.value?.trim();
   if (!val) {
     document.getElementById('heroScanInput')?.focus();
     return;
   }
+
+  // ── v26: Trigger email gate after free scan ──────────────────────────────
+  window._lastScanDomain = val;
+  window._lastScanModule = 'domain';
+
   // Pre-fill domain tab + switch to it
   const domainInput = document.getElementById('domainInput');
   if (domainInput) domainInput.value = val;
@@ -13668,8 +13669,9 @@ async function initMythosUI(){
   try{
     var r=await fetch('/api/mythos/status');
     var d=await r.json();
-    var total=d.total_tools||d.stats&&d.stats.total_generated||10;
-    var pub=d.total_published||d.stats&&d.stats.total_published||5;
+    var m=d.metrics||d.stats||{};
+    var total=m.total_tools||d.total_tools||d.stats&&d.stats.total_generated||0;
+    var pub=m.total_published||d.total_published||d.stats&&d.stats.total_published||0;
     var running=d.is_running||false;
     
     // SOC log
@@ -13704,7 +13706,7 @@ window.p13TriggerMythos=async function(btn){
   if(typeof logSOC==='function')logSOC('MYTHOS: Triggering AI defense generation...','ai','ai');
   try{
     var r=await fetch('/api/mythos/run',{method:'POST',
-      headers:{'x-admin-key':'mythos-admin-k3y-cbd-2026-secure','Content-Type':'application/json'},
+      headers:{'x-admin-key':'REDACTED_ROTATED_KEY','Content-Type':'application/json'},
       body:JSON.stringify({trigger:'ui-p13',max_solutions:5})});
     var d=await r.json();
     if(d.job_id||d.status==='running'){
@@ -14536,13 +14538,18 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       const r = await fetch(API+'/api/mythos/status');
       if(!r.ok) throw new Error('status '+r.status);
       const d = await r.json();
-      const s = d.status||d;
-      document.getElementById('ag-m-tools')?.innerHTML !== undefined && (document.getElementById('ag-m-tools').textContent = s.total_tools||s.tools_generated||'—');
-      document.getElementById('ag-m-published').textContent = s.total_published||s.published||'—';
-      document.getElementById('ag-m-pipeline').textContent = s.active_jobs||s.jobs||'0';
-      document.getElementById('ag-m-uptime').textContent = s.uptime||'100%';
-      document.getElementById('ag-lbl-mythos').textContent = (s.total_tools||s.tools_generated||0)+' tools';
-      _appendLog('ag-mythos-log', `MYTHOS: ${s.total_tools||0} tools · ${s.total_published||0} published · pipeline ${s.status||'nominal'}`, 'ai');
+      // API shape: { success, is_running, metrics: { total_tools, total_published, total_runs, total_failed }, last_run, recent_runs }
+      const m = d.metrics || {};
+      const tools     = m.total_tools     || d.total_tools     || 0;
+      const published = m.total_published || d.total_published || 0;
+      const runs      = m.total_runs      || d.total_runs      || 0;
+      const isRunning = d.is_running || false;
+      document.getElementById('ag-m-tools')?.innerHTML !== undefined && (document.getElementById('ag-m-tools').textContent = tools || '—');
+      document.getElementById('ag-m-published').textContent = published || '—';
+      document.getElementById('ag-m-pipeline').textContent = isRunning ? '1 active' : '0';
+      document.getElementById('ag-m-uptime').textContent = '100%';
+      document.getElementById('ag-lbl-mythos').textContent = tools+' tools';
+      _appendLog('ag-mythos-log', `MYTHOS: ${tools} tools · ${published} published · ${runs} runs · pipeline ${isRunning?'RUNNING':'nominal'}`, 'ai');
     }catch(e){
       _appendLog('ag-mythos-log', `MYTHOS status unreachable: ${e.message}`, 'warn');
       // Demo fallback
@@ -14677,7 +14684,7 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       const btn = document.querySelector('[onclick="CDB_AGCONSOLE.triggerMythos()"]');
       if(btn){ btn.disabled=true; btn.textContent='⏳ Running...'; }
       try{
-        const r = await fetch(API+'/api/mythos/run',{method:'POST',headers:{...{_authH},'Content-Type':'application/json'},body:JSON.stringify({source:'manual_admin'})});
+        const r = await fetch(API+'/api/mythos/run',{method:'POST',headers:{..._authH(),'x-admin-key':'REDACTED_ROTATED_KEY','Content-Type':'application/json'},body:JSON.stringify({source:'manual_admin'})});
         const d = await r.json();
         _appendLog('ag-mythos-log', `✅ MYTHOS run triggered: job ${d.job_id||'queued'}`, 'ok');
         setTimeout(()=>_loadMythos(), 3000);
@@ -20602,17 +20609,4 @@ function v21TriggerUrgencyPayment(){
   // (keeps Razorpay flow working while adding multi-rail as first option)
   const _origStartSub = window.startSubscription;
   window.startSubscription = function(planKey) {
-    // Map existing plan key → MYTHOS plan
-    const map = { STARTER:'starter', PRO:'pro', ENTERPRISE:'enterprise' };
-    const mPlan = map[planKey] || planKey.toLowerCase();
-    open(mPlan);
-    // Also run original Razorpay flow as fallback (fires in Razorpay tab)
-    // Users can choose their preferred rail in the modal
-  };
-
-  document.addEventListener('DOMContentLoaded', init);
-})();
-</script>
-<!-- END MYTHOS AI REVENUE ENGINE -->
-</body>
-</html>
+    // Map existing plan key �

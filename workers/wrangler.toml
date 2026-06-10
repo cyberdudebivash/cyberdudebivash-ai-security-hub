@@ -13,6 +13,8 @@ WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
 TELEGRAM    = "https://t.me/cyberdudebivashSentinelApex"
 CONTACT     = "bivash@cyberdudebivash.com"
+# ── MYTHOS Admin Key (rotate via: wrangler secret put ADMIN_KEY) ─────────────
+ADMIN_KEY   = "REDACTED_ROTATED_KEY"
 
 # ── KV Namespace ──────────────────────────────────────────────────────────────
 # Already live: npx wrangler kv:namespace create SECURITY_HUB_KV
@@ -145,9 +147,4 @@ crons = [
 # ── Custom domain routes ──────────────────────────────────────────────────────
 # Uncomment after configuring DNS:
 # [[routes]]
-# pattern   = "api.cyberdudebivash.in/*"
-# zone_name = "cyberdudebivash.in"
-
-# [[routes]]
-# pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebiv
+# patte
