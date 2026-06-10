@@ -2836,7 +2836,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/mythos/god-mode/run — trigger full 12-phase run (admin)
     if (path === '/api/mythos/god-mode/run' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleGodModeRun(request, env, authCtx || {}), request));
+      return withSecurityHeaders(withCors(await handleGodModeRun(request, env, authCtx || {}, ctx), request));
     }
     // GET /api/mythos/god-mode/status — live pipeline status (public)
     if (path === '/api/mythos/god-mode/status' && method === 'GET') {

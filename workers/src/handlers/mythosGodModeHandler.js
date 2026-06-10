@@ -24,7 +24,7 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 });
 
 // ── POST /api/mythos/god-mode/run ─────────────────────────────────────────────
-export async function handleGodModeRun(request, env, authCtx) {
+export async function handleGodModeRun(request, env, authCtx, ctx) {
   // Auth: accept ADMIN_KEY directly or ENTERPRISE tier
   const apiKey  = request.headers.get('x-api-key') || request.headers.get('X-Api-Key') || '';
   const isAdmin = (env.ADMIN_KEY && apiKey === env.ADMIN_KEY) ||
@@ -47,8 +47,9 @@ export async function handleGodModeRun(request, env, authCtx) {
   const body     = await request.json().catch(() => ({}));
   const maxItems = Math.min(parseInt(body.max_items || '10'), 20);
 
-  // Fire-and-forget — response returns immediately, pipeline runs in background
+  // Register with ctx.waitUntil so Cloudflare keeps the worker alive for the full pipeline
   const runPromise = runGodMode(env, { maxItems, trigger: 'api' });
+  if (ctx?.waitUntil) ctx.waitUntil(runPromise);
   runPromise.catch(err => console.error('[GOD MODE API] run error:', err.message));
 
   // Give KV 200ms to record the new job_id
