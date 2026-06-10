@@ -263,6 +263,9 @@ import {
   handleBoardReport,
 } from './handlers/executiveRiskHandlers.js';
 
+// ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
+import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
+
 // ─── MYTHOS GOD MODE v4.0 — Full autonomous platform orchestrator ─────────────
 // 12-phase pipeline: intel → brain → tools → ASPM → hunt → ZT → compliance
 //   → CISO pack → SOAR → metrics → revenue → finalize
@@ -2959,6 +2962,22 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleIntelRisk(request, env, authCtx || {}), request));
     }
 
+    // ── Phase C: MYTHOS Platform Governor API ────────────────────────────────
+    if (path === '/api/governor/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGovernorStatus(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/governor/report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGovernorReport(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/governor/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (!authCtx?.isAdmin) return withSecurityHeaders(withCors(Response.json({ error: 'Admin only' }, { status: 403 }), request));
+      const result = await runPlatformGovernor(env);
+      return withSecurityHeaders(withCors(Response.json({ success: true, ...result }), request));
+    }
+
     // ── Phase B: AI Security Posture Management ───────────────────────────────
     if (path === '/api/aispm/inventory' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
@@ -5135,6 +5154,21 @@ ctx.waitUntil(
           );
         } catch (e) {
           console.error('[CRON] MYTHOS GOD MODE error:', e?.message);
+        }
+      })());
+
+      // ── Phase C: MYTHOS Autonomous Platform Governor — runs alongside GOD MODE ──
+      ctx.waitUntil((async () => {
+        try {
+          const govResult = await runPlatformGovernor(env);
+          console.log(
+            `[CRON] GOVERNOR: ${govResult.overall_status} — ` +
+            `${govResult.summary?.healthy || 0}/${govResult.summary?.total_subsystems || 0} healthy, ` +
+            `${govResult.summary?.repaired || 0} repaired, ` +
+            `${govResult.summary?.alerts_sent || 0} alerts`
+          );
+        } catch (e) {
+          console.error('[CRON] GOVERNOR error:', e?.message);
         }
       })());
     }
