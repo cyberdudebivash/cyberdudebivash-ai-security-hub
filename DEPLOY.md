@@ -1,5 +1,35 @@
 # CYBERDUDEBIVASH Platform — Deploy Commands (Session 2026-06-10)
 
+---
+
+## ⚠️ P0 HOTFIX — Run This First (AI Engine v9.0 Tables Missing from Live DB)
+
+All 10 AI Engine v9.0 tables are missing from the live D1 database.
+Every `/api/ai-security/*`, `/api/cyber-brain/*`, `/api/zero-trust/*`, `/api/hunt/*` call
+will return 500 until this is applied.
+
+```bash
+cd C:\Users\Administrator\Desktop\cyberdudebivash-ai-security-hub\workers
+
+# Apply AI Engine v9.0 schema (ai_assets, ai_governance_assessments, ai_redteam_*, ai_agent_inventory, ai_threat_feed, etc.)
+npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_v28.sql --remote
+
+# Apply remaining schemas (safe — all IF NOT EXISTS)
+npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_v29.sql --remote
+npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_v30_p0p1.sql --remote
+npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_v31_p0_fixes.sql --remote
+npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_mcp_learning.sql --remote
+npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_revenue_autopilot.sql --remote
+```
+
+After running, verify tables exist:
+```bash
+npx wrangler d1 execute cyberdudebivash-security-hub --remote --command="SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'ai_%' ORDER BY name;"
+```
+Expected output: `ai_agent_inventory`, `ai_assets`, `ai_findings`, `ai_governance_assessments`, `ai_posture_scores`, `ai_redteam_attempts`, `ai_redteam_engagements`, `ai_risk_register`, `ai_service_engagements`, `ai_threat_feed`
+
+---
+
 The commit is already staged locally. Run these commands in order from your terminal.
 
 ---

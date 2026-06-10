@@ -1292,6 +1292,111 @@ jobs:
           else
             echo "ℹ️  schema_v12.sql not found — skipping"
           fi
+
+          # ── v15: hunt sessions, vuln management, org memory, MCP tables ──────
+          if [ -f workers/schema_v15.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v15.sql --remote
+            echo "✅ schema_v15.sql applied"
+          else
+            echo "ℹ️  schema_v15.sql not found — skipping"
+          fi
+
+          # ── v21: adaptive cyber brain, MITRE mappings ──────────────────────
+          if [ -f workers/schema_v21_adaptive_brain.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v21_adaptive_brain.sql --remote
+            echo "✅ schema_v21_adaptive_brain.sql applied"
+          else
+            echo "ℹ️  schema_v21_adaptive_brain.sql not found — skipping"
+          fi
+
+          # ── v22: production fix tables ─────────────────────────────────────
+          if [ -f workers/schema_v22_production_fix.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v22_production_fix.sql --remote
+            echo "✅ schema_v22_production_fix.sql applied"
+          else
+            echo "ℹ️  schema_v22_production_fix.sql not found — skipping"
+          fi
+
+          # ── v24 FINAL: assessment booking, trust center, CEO dashboard ──────
+          if [ -f workers/schema_v24_FINAL.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v24_FINAL.sql --remote
+            echo "✅ schema_v24_FINAL.sql applied"
+          else
+            echo "ℹ️  schema_v24_FINAL.sql not found — skipping"
+          fi
+
+          # ── v27: revenue autopilot, MCP security tables ────────────────────
+          if [ -f workers/schema_v27.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v27.sql --remote
+            echo "✅ schema_v27.sql applied"
+          else
+            echo "ℹ️  schema_v27.sql not found — skipping"
+          fi
+
+          # ── v28: AI ENGINE v9.0 TABLES (P0 — required for all AI capabilities)
+          # Creates: ai_assets, ai_findings, ai_governance_assessments, ai_risk_register,
+          #          ai_redteam_engagements, ai_redteam_attempts, ai_agent_inventory,
+          #          ai_threat_feed, ai_service_engagements, ai_posture_scores
+          if [ -f workers/schema_v28.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v28.sql --remote
+            echo "✅ schema_v28.sql applied (AI ASPM, Governance, Red Team, Agent Inventory, Threat Feed)"
+          else
+            echo "⚠️  schema_v28.sql not found — AI Engine v9.0 tables will be missing!"
+          fi
+
+          # ── v29: MCP security scans, vibe code scans ──────────────────────
+          if [ -f workers/schema_v29.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v29.sql --remote
+            echo "✅ schema_v29.sql applied (mcp_security_scans, vibe_code_scans)"
+          else
+            echo "ℹ️  schema_v29.sql not found — skipping"
+          fi
+
+          # ── v30: compliance alignments, webhook events ─────────────────────
+          if [ -f workers/schema_v30_p0p1.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v30_p0p1.sql --remote
+            echo "✅ schema_v30_p0p1.sql applied"
+          else
+            echo "ℹ️  schema_v30_p0p1.sql not found — skipping"
+          fi
+
+          # ── v31: p0 production fixes ───────────────────────────────────────
+          if [ -f workers/schema_v31_p0_fixes.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v31_p0_fixes.sql --remote
+            echo "✅ schema_v31_p0_fixes.sql applied"
+          else
+            echo "ℹ️  schema_v31_p0_fixes.sql not found — skipping"
+          fi
+
+          # ── v32: mythos_runs trigger_source, hotfixes ─────────────────────
+          if [ -f workers/schema_v32_hotfix.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v32_hotfix.sql --remote
+            echo "✅ schema_v32_hotfix.sql applied"
+          else
+            echo "ℹ️  schema_v32_hotfix.sql not found — skipping"
+          fi
+
+          if [ -f workers/schema_v32_mythos_runs.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v32_mythos_runs.sql --remote
+            echo "✅ schema_v32_mythos_runs.sql applied"
+          else
+            echo "ℹ️  schema_v32_mythos_runs.sql not found — skipping"
+          fi
+
+          # ── MCP learning + revenue autopilot tables ────────────────────────
+          if [ -f workers/schema_mcp_learning.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_mcp_learning.sql --remote
+            echo "✅ schema_mcp_learning.sql applied"
+          else
+            echo "ℹ️  schema_mcp_learning.sql not found — skipping"
+          fi
+
+          if [ -f workers/schema_revenue_autopilot.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_revenue_autopilot.sql --remote
+            echo "✅ schema_revenue_autopilot.sql applied"
+          else
+            echo "ℹ️  schema_revenue_autopilot.sql not found — skipping"
+          fi
         env:
           CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -1309,19 +1414,20 @@ jobs:
         if: always()
         run: |
           {
-            echo "## 🗄 D1 Schema Migration — v12.0"
+            echo "## 🗄 D1 Schema Migration — v33.0 (AI Engine v9.0)"
             echo ""
             echo "**Database:** \`cyberdudebivash-security-hub\`"
             echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "**Triggered by:** ${{ github.actor }}"
             echo ""
-            echo "Applied schemas: schema.sql, schema_v8.sql, schema_v10.sql, schema_threat_intel.sql, schema_migrations_v2.sql, schema_v12.sql"
-            echo "Total tables: ~67 (core + monitoring + defense marketplace + threat intel + GTM growth + Agentic AI + Anomaly + Predictive)"
+            echo "Applied schemas: schema.sql → schema_v8 → v10 → gtm → threat_intel → migrations_v2 → v12 → v15 → v21 → v22 → v24 → v27 → **v28 (AI ENGINE)** → v29 → v30 → v31 → v32 → mcp_learning → revenue_autopilot"
+            echo "Total tables: ~100+ (full platform)"
             echo ""
-            echo "### v12 New Tables"
-            echo "- agent_actions, agent_event_queue (Agentic AI Remediation Engine)"
-            echo "- ip_blocklist, session_blacklist, virtual_patches, credential_rotation_log (Enforcement)"
-            echo "- user_behavior_baseline, behavior_events, anomaly_events (Behavioral Anomaly Detection)"
-            echo "- threat_predictions, apt_profiles (Predictive Threat Intelligence)"
-            echo "- user_roles, rate_limit_state (RBAC + Rate Limiting)"
+            echo "### v28 AI Engine v9.0 Tables (NEW)"
+            echo "- ai_assets, ai_findings (AI ASPM — Asset Inventory + Security Score)"
+            echo "- ai_governance_assessments, ai_risk_register (AI Governance: NIST AI RMF / ISO 42001 / EU AI Act)"
+            echo "- ai_redteam_engagements, ai_redteam_attempts (AI Red Team Platform)"
+            echo "- ai_agent_inventory (Agent Security — Excessive Agency / Tool Abuse)"
+            echo "- ai_threat_feed (AI Threat Intelligence: Prompt Attacks / Agent Threats / AI CVEs)"
+            echo "- ai_service_engagements, ai_posture_scores (AI Security Services)"
           } >> "$GITHUB_STEP_SUMMARY"

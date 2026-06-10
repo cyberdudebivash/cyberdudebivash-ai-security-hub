@@ -1,3 +1,5 @@
+import { ok, fail } from '../lib/response.js';
+
 /**
  * CYBERDUDEBIVASH AI Security Hub — Zero Trust Security Engine v19.0
  * Never trust, always verify — per-request risk scoring for every API call.
@@ -276,7 +278,7 @@ export async function handleTrustScore(request, env, authCtx) {
   const trustCtx = await computeTrustScore(request, authCtx, env);
   const anomalies = await detectSessionAnomaly(request, authCtx, env);
 
-  return Response.json({
+  return ok(request, {
     identity:     authCtx.identity || 'anonymous',
     tier:         authCtx.tier || 'FREE',
     trust:        trustCtx,
@@ -293,7 +295,7 @@ export async function handleTrustScore(request, env, authCtx) {
 // ─── Handler: GET /api/zero-trust/anomalies ───────────────────────────────────
 export async function handleZeroTrustAnomalies(request, env, authCtx) {
   if (!authCtx.authenticated) {
-    return Response.json({ error: 'Authentication required' }, { status: 401 });
+    return fail(request, 'Authentication required', 401, 'ERR_UNAUTHORIZED');
   }
 
   const anomalies = [];
@@ -308,7 +310,7 @@ export async function handleZeroTrustAnomalies(request, env, authCtx) {
   }
 
   anomalies.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-  return Response.json({
+  return ok(request, {
     identity:  authCtx.identity,
     anomalies,
     total:     anomalies.length,
@@ -319,7 +321,7 @@ export async function handleZeroTrustAnomalies(request, env, authCtx) {
 // ─── Handler: POST /api/zero-trust/verify ────────────────────────────────────
 export async function handleZeroTrustVerify(request, env, authCtx) {
   if (!authCtx.authenticated) {
-    return Response.json({ error: 'Authentication required' }, { status: 401 });
+    return fail(request, 'Authentication required', 401, 'ERR_UNAUTHORIZED');
   }
 
   const trustCtx = await computeTrustScore(request, authCtx, env);
@@ -333,7 +335,7 @@ export async function handleZeroTrustVerify(request, env, authCtx) {
     ).catch(() => {});
   }
 
-  return Response.json({
+  return ok(request, {
     verified:    true,
     identity:    authCtx.identity,
     trust_score: Math.min(100, trustCtx.trust_score + 20), // boost for explicit verification

@@ -1,3 +1,5 @@
+import { ok, fail } from '../lib/response.js';
+
 /**
  * CYBERDUDEBIVASH AI Security Hub — CyberBrain Engine v19.0
  * Central AI Intelligence Core: aggregates vulnerabilities, threat actors, asset telemetry,
@@ -407,7 +409,7 @@ Be specific, actionable, authoritative. No fluff.`;
 export async function handleCyberBrainAnalyze(request, env, authCtx) {
   let body;
   try { body = await request.json(); }
-  catch { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
+  catch { return fail(request, 'Invalid JSON body', 400, 'ERR_BAD_REQUEST'); }
 
   const {
     target  = '',
@@ -419,14 +421,14 @@ export async function handleCyberBrainAnalyze(request, env, authCtx) {
   } = body;
 
   if (!Array.isArray(findings)) {
-    return Response.json({ error: 'findings must be an array' }, { status: 400 });
+    return fail(request, 'findings must be an array', 400, 'ERR_BAD_REQUEST');
   }
 
   const result = await runCyberBrainAnalysis(env, {
     findings, vulns, assets, sector, tier: authCtx.tier || 'FREE', target, module,
   });
 
-  return Response.json(result);
+  return ok(request, result);
 }
 
 // ─── Handler: GET /api/cyber-brain/risk-score ─────────────────────────────────
@@ -440,11 +442,11 @@ export async function handleRiskScore(request, env, authCtx) {
     const hour = new Date().toISOString().slice(0, 13);
     const cached = await env.SECURITY_HUB_KV.get(`cyberbrain:${target}:${module}:${hour}`).catch(() => null);
     if (cached) {
-      try { return Response.json({ ...JSON.parse(cached), cached: true }); } catch {}
+      try { return ok(request, { ...JSON.parse(cached), cached: true }); } catch {}
     }
   }
 
-  return Response.json({
+  return ok(request, {
     target, module,
     riskScore: 0,
     riskLevel: 'UNKNOWN',
@@ -468,7 +470,7 @@ export async function handleAttackPaths(request, env, authCtx) {
 
   const paths = predictAttackPaths(mockFindings, [], riskScore);
 
-  return Response.json({
+  return ok(request, {
     risk_score:   riskScore,
     attack_paths: paths,
     chain_count:  paths.length,
@@ -482,7 +484,7 @@ export async function handleThreatActors(request, env, authCtx) {
   const url    = new URL(request.url);
   const sector = url.searchParams.get('sector') || 'technology';
   const actors = correlateThretActors([], sector);
-  return Response.json({
+  return ok(request, {
     sector,
     threat_actors: actors,
     total: actors.length,
@@ -496,7 +498,7 @@ export async function handleRemediationPlan(request, env, authCtx) {
   const score  = parseInt(url.searchParams.get('risk_score') || '50', 10);
   const tier   = authCtx.tier || 'FREE';
   const actions = generateRemediation([], score, tier);
-  return Response.json({
+  return ok(request, {
     risk_score: score,
     tier,
     actions,
