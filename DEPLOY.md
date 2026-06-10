@@ -2,11 +2,36 @@
 
 ---
 
-## ⚠️ P0 HOTFIX — Run This First (AI Engine v9.0 Tables Missing from Live DB)
+## ✅ COMPLETED — AI Engine v9.0 Schema Applied (2026-06-10)
 
-All 10 AI Engine v9.0 tables are missing from the live D1 database.
-Every `/api/ai-security/*`, `/api/cyber-brain/*`, `/api/zero-trust/*`, `/api/hunt/*` call
-will return 500 until this is applied.
+All 10 AI Engine v9.0 tables have been applied to the live D1 database (149 tables total):
+`ai_assets`, `ai_findings`, `ai_governance_assessments`, `ai_risk_register`,
+`ai_redteam_engagements`, `ai_redteam_attempts`, `ai_agent_inventory`,
+`ai_threat_feed`, `ai_service_engagements`, `ai_posture_scores`
+
+Schemas applied: v28 ✅ · v29 ✅ · v30 ✅ · mcp_learning ✅ · revenue_autopilot ✅
+
+---
+
+## 🚀 PENDING — Deploy Worker (wrangler deploy)
+
+The code is committed and pushed. Only the worker deploy remains.
+The wrangler OAuth token needs a browser refresh before deploy will work.
+
+**Run these two commands in a terminal (cmd or PowerShell):**
+
+```cmd
+cd C:\Users\Administrator\Desktop\cyberdudebivash-ai-security-hub\workers
+npx wrangler login
+```
+Complete the browser OAuth flow, then immediately run:
+```cmd
+npx wrangler deploy
+```
+
+---
+
+## ~~⚠️ P0 HOTFIX~~ (Already Applied — ignore)
 
 ```bash
 cd C:\Users\Administrator\Desktop\cyberdudebivash-ai-security-hub\workers

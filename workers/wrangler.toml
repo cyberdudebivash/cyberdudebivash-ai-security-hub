@@ -128,18 +128,19 @@ binding = "AI"
 #   consumeEvents()    — unconditional on every cron invocation → hourly via slot 1
 #   runPredictiveBatch()— cron==='0 * * * *' condition → hourly via slot 1
 #   runPatchingBatch() — unconditional on every cron invocation
-#   runMythosCron()    — cron==='0 */12 * * *' || cron==='0 6 * * *' → slots 3+4
+#   runGodModeCron()   — cron==='0 */6 * * *' || cron==='0 6 * * *' → slots 3+4
+#   runMythosCron()    — cron==='0 */12 * * *' → legacy fallback (now superseded by God Mode)
 #
 #   Slot 1: Hourly    — v12 Anomaly + Predictive + Agent Bus + Monitoring + Purge
 #   Slot 2: 4×/day   — Sentinel APEX CVE feed refresh
-#   Slot 3: Every 12h — v10 Defense product generation + MYTHOS generation
-#   Slot 4: 6 AM      — v10 Content pipeline (CVE→Blog→Social) + MYTHOS daily run
+#   Slot 3: Every 6h  — MYTHOS GOD MODE v4.0 (12-phase full platform sweep)
+#   Slot 4: 6 AM      — v10 Content pipeline + MYTHOS GOD MODE daily run
 #   Slot 5: 11 PM     — v10 Daily revenue snapshot
 [triggers]
 crons = [
   "0 * * * *",         # Slot 1 — Hourly:    v12 Anomaly + Predictive + Agent Bus + Monitoring
   "0 0,6,12,18 * * *", # Slot 2 — 4x/day:   Sentinel APEX CVE feed refresh
-  "0 */12 * * *",      # Slot 3 — Every 12h: v10 Defense products + MYTHOS generation
+  "0 */6 * * *",       # Slot 3 — Every 6h:  MYTHOS GOD MODE v4.0 full 12-phase autonomous run
   "0 6 * * *",         # Slot 4 — 6 AM:      v10 Content pipeline + MYTHOS daily run
   "0 23 * * *"         # Slot 5 — 11 PM:     v10 Daily revenue snapshot
 ]

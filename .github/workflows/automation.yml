@@ -1383,6 +1383,14 @@ jobs:
             echo "ℹ️  schema_v32_mythos_runs.sql not found — skipping"
           fi
 
+          # ── v33: MYTHOS GOD MODE v4.0 — audit table + metrics + AI asset seeds
+          if [ -f workers/schema_v33_mythos_god_mode.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v33_mythos_god_mode.sql --remote
+            echo "✅ schema_v33_mythos_god_mode.sql applied (mythos_god_mode_runs, platform_metrics seeds, AI asset seeds)"
+          else
+            echo "ℹ️  schema_v33_mythos_god_mode.sql not found — skipping"
+          fi
+
           # ── MCP learning + revenue autopilot tables ────────────────────────
           if [ -f workers/schema_mcp_learning.sql ]; then
             npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_mcp_learning.sql --remote
@@ -1414,16 +1422,21 @@ jobs:
         if: always()
         run: |
           {
-            echo "## 🗄 D1 Schema Migration — v33.0 (AI Engine v9.0)"
+            echo "## 🗄 D1 Schema Migration — v33.0 (MYTHOS GOD MODE v4.0)"
             echo ""
             echo "**Database:** \`cyberdudebivash-security-hub\`"
             echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "**Triggered by:** ${{ github.actor }}"
             echo ""
-            echo "Applied schemas: schema.sql → schema_v8 → v10 → gtm → threat_intel → migrations_v2 → v12 → v15 → v21 → v22 → v24 → v27 → **v28 (AI ENGINE)** → v29 → v30 → v31 → v32 → mcp_learning → revenue_autopilot"
-            echo "Total tables: ~100+ (full platform)"
+            echo "Applied schemas: schema.sql → schema_v8 → v10 → gtm → threat_intel → migrations_v2 → v12 → v15 → v21 → v22 → v24 → v27 → **v28 (AI ENGINE)** → v29 → v30 → v31 → v32 → **v33 (GOD MODE)** → mcp_learning → revenue_autopilot"
+            echo "Total tables: 152+ (full platform)"
             echo ""
-            echo "### v28 AI Engine v9.0 Tables (NEW)"
+            echo "### v33 MYTHOS GOD MODE v4.0 Tables (NEW)"
+            echo "- mythos_god_mode_runs (full 12-phase run audit table)"
+            echo "- platform_metrics seeds: soar_rules_total, kev_count, revenue_opportunities, god_mode_runs, hunt_sessions_total, zt_anomalies_total, compliance_gaps_total"
+            echo "- ai_assets seeds: API Engine, MYTHOS Orchestrator, Sentinel APEX, Cyber Brain v3"
+            echo ""
+            echo "### v28 AI Engine v9.0 Tables"
             echo "- ai_assets, ai_findings (AI ASPM — Asset Inventory + Security Score)"
             echo "- ai_governance_assessments, ai_risk_register (AI Governance: NIST AI RMF / ISO 42001 / EU AI Act)"
             echo "- ai_redteam_engagements, ai_redteam_attempts (AI Red Team Platform)"

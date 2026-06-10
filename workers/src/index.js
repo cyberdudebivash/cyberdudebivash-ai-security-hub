@@ -228,6 +228,20 @@ import {
   handleMythosCompliance,
 } from './handlers/mythosRevenueEngine.js';
 
+// ─── MYTHOS GOD MODE v4.0 — Full autonomous platform orchestrator ─────────────
+// 12-phase pipeline: intel → brain → tools → ASPM → hunt → ZT → compliance
+//   → CISO pack → SOAR → metrics → revenue → finalize
+import {
+  handleGodModeRun,
+  handleGodModeStatus,
+  handleGodModeReport,
+  handleGodModeCISOIntel,
+  handleGodModeHuntPack,
+  handleGodModeCompliance,
+  handleGodModeASPM,
+} from './handlers/mythosGodModeHandler.js';
+import { runGodModeCron } from './services/mythosGodMode.js';
+
 // ─── FINANCIAL SYSTEM: Pricing + Payment Config (v14 — IMMUTABLE) ───────────
 import {
   handlePricing, handlePaymentConfig, handlePaymentMutationGuard,
@@ -2818,6 +2832,40 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMythosCompliance(request, env, authCtx || {}), request));
     }
 
+    // ── MYTHOS GOD MODE v4.0 — full autonomous 12-phase platform orchestrator ──
+    // POST /api/mythos/god-mode/run — trigger full 12-phase run (admin)
+    if (path === '/api/mythos/god-mode/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGodModeRun(request, env, authCtx || {}), request));
+    }
+    // GET /api/mythos/god-mode/status — live pipeline status (public)
+    if (path === '/api/mythos/god-mode/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGodModeStatus(request, env), request));
+    }
+    // GET /api/mythos/god-mode/report[/:jobId] — full run report
+    if (path.startsWith('/api/mythos/god-mode/report') && method === 'GET') {
+      const jobId = path.replace('/api/mythos/god-mode/report', '').replace(/^\//, '') || 'latest';
+      return withSecurityHeaders(withCors(await handleGodModeReport(request, env, null, jobId), request));
+    }
+    // GET /api/mythos/god-mode/ciso — CISO intel pack + board report
+    if (path === '/api/mythos/god-mode/ciso' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGodModeCISOIntel(request, env, authCtx || {}), request));
+    }
+    // GET /api/mythos/god-mode/hunt-pack — latest SOAR hunt pack (KQL + Sigma + YARA)
+    if (path === '/api/mythos/god-mode/hunt-pack' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGodModeHuntPack(request, env, authCtx || {}), request));
+    }
+    // GET /api/mythos/god-mode/compliance — compliance posture snapshot
+    if (path === '/api/mythos/god-mode/compliance' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGodModeCompliance(request, env), request));
+    }
+    // GET /api/mythos/god-mode/aspm — AI asset security posture + ZT anomalies
+    if (path === '/api/mythos/god-mode/aspm' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGodModeASPM(request, env), request));
+    }
+
     // ── PHASE 2: Autonomous SOC Mode ──────────────────────────────────────────
     if (path === '/api/auto-soc/mode' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
@@ -4760,14 +4808,33 @@ ctx.waitUntil(
       }
     })());
 
-    // ── MYTHOS ORCHESTRATOR CORE — autonomous tool generation (every 12h) ──────
-    if (cron === '0 */12 * * *' || cron === '0 6 * * *') {
+    // ── MYTHOS GOD MODE v4.0 — full 12-phase autonomous platform sweep ───────────
+    // Runs every 6h (replaces the old 12h-only orchestrator cron).
+    // Also runs at daily 6am and on the midnight all-jobs cron.
+    if (cron === '0 */6 * * *' || cron === '0 6 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const result = await runGodModeCron(env);
+          console.log(
+            `[CRON] MYTHOS GOD MODE: ` +
+            `${result.summary?.intel_processed || 0} intel, ` +
+            `${result.summary?.tools_generated || 0} tools, ` +
+            `posture: ${result.summary?.posture_score || 0}/100`
+          );
+        } catch (e) {
+          console.error('[CRON] MYTHOS GOD MODE error:', e?.message);
+        }
+      })());
+    }
+
+    // ── MYTHOS ORCHESTRATOR CORE — legacy tool generation fallback (every 12h) ──
+    if (cron === '0 */12 * * *') {
       ctx.waitUntil((async () => {
         try {
           const result = await runMythosCron(env);
-          console.log(`[CRON] MYTHOS: ${result.total_tools} tools generated, ${result.total_published} published, ${result.total_failed} failed`);
+          console.log(`[CRON] MYTHOS CORE: ${result.total_tools} tools generated, ${result.total_published} published`);
         } catch (e) {
-          console.error('[CRON] MYTHOS Orchestrator error:', e?.message);
+          console.error('[CRON] MYTHOS Core error:', e?.message);
         }
       })());
     }
