@@ -1399,6 +1399,14 @@ jobs:
             echo "ℹ️  schema_v34_threat_intel_fix.sql not found — skipping"
           fi
 
+          # ── v35: High-Revenue Feature Tables — IOC Enrichment, ASM, Brand Protection, Threat Actors, CRQ, TPRM
+          if [ -f workers/schema_v35_revenue_features.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v35_revenue_features.sql --remote
+            echo "✅ schema_v35_revenue_features.sql applied (ioc_enrichment_cache, asm_targets, asm_assets, brand_monitors, brand_threats, threat_actors, tprm_vendors, crq_assessments)"
+          else
+            echo "ℹ️  schema_v35_revenue_features.sql not found — skipping"
+          fi
+
           # ── MCP learning + revenue autopilot tables ────────────────────────
           if [ -f workers/schema_mcp_learning.sql ]; then
             npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_mcp_learning.sql --remote

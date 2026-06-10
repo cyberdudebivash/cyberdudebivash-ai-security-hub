@@ -228,6 +228,16 @@ import {
   handleMythosCompliance,
 } from './handlers/mythosRevenueEngine.js';
 
+// ─── HIGH-REVENUE FEATURES v1.0 — IOC Enrichment, ASM, Brand Protection, Threat Actors, CRQ ──
+import {
+  handleIOCEnrich, handleIOCEnrichBatch,
+  handleASMAddTarget, handleASMListTargets, handleASMGetReport, handleASMTriggerScan,
+  handleBrandAddMonitor, handleBrandListMonitors, handleBrandGetThreats, handleBrandTriggerScan,
+  handleListThreatActors, handleGetThreatActor, handleSearchThreatActors,
+  handleAttributeIOC, handleSeedThreatActors,
+  handleCRQAssessment,
+} from './handlers/revenueFeatures.js';
+
 // ─── MYTHOS GOD MODE v4.0 — Full autonomous platform orchestrator ─────────────
 // 12-phase pipeline: intel → brain → tools → ASPM → hunt → ZT → compliance
 //   → CISO pack → SOAR → metrics → revenue → finalize
@@ -2867,6 +2877,91 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ── PHASE 2: Autonomous SOC Mode ──────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // HIGH-REVENUE FEATURES v1.0
+    // IOC Enrichment | ASM | Brand Protection | Threat Actors | CRQ
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── IOC Enrichment ────────────────────────────────────────────────────────
+    if (path === '/api/ioc/enrich' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIOCEnrich(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/ioc/enrich/batch' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIOCEnrichBatch(request, env, authCtx || {}), request));
+    }
+
+    // ── Attack Surface Management ─────────────────────────────────────────────
+    if (path === '/api/asm/targets' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleASMAddTarget(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/asm/targets' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleASMListTargets(request, env, authCtx || {}), request));
+    }
+    if (path.startsWith('/api/asm/targets/') && path.endsWith('/scan') && method === 'POST') {
+      const targetId = path.replace('/api/asm/targets/', '').replace('/scan', '');
+      const authCtx  = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleASMTriggerScan(request, env, authCtx || {}, targetId), request));
+    }
+    if (path.startsWith('/api/asm/targets/') && path.endsWith('/report') && method === 'GET') {
+      const targetId = path.replace('/api/asm/targets/', '').replace('/report', '');
+      const authCtx  = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleASMGetReport(request, env, authCtx || {}, targetId), request));
+    }
+
+    // ── Brand Protection ──────────────────────────────────────────────────────
+    if (path === '/api/brand/monitors' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleBrandAddMonitor(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/brand/monitors' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleBrandListMonitors(request, env, authCtx || {}), request));
+    }
+    if (path.startsWith('/api/brand/monitors/') && path.endsWith('/scan') && method === 'POST') {
+      const monitorId = path.replace('/api/brand/monitors/', '').replace('/scan', '');
+      const authCtx   = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleBrandTriggerScan(request, env, authCtx || {}, monitorId), request));
+    }
+    if (path.startsWith('/api/brand/monitors/') && path.endsWith('/threats') && method === 'GET') {
+      const monitorId = path.replace('/api/brand/monitors/', '').replace('/threats', '');
+      const authCtx   = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleBrandGetThreats(request, env, authCtx || {}, monitorId), request));
+    }
+
+    // ── Threat Actor Profiling ────────────────────────────────────────────────
+    if (path === '/api/threat-actors' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleListThreatActors(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/threat-actors/search' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSearchThreatActors(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/threat-actors/attribute' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAttributeIOC(request, env, authCtx || {}), request));
+    }
+    if (path.startsWith('/api/threat-actors/') && method === 'GET') {
+      const actorId = path.replace('/api/threat-actors/', '');
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGetThreatActor(request, env, authCtx || {}, actorId), request));
+    }
+    if (path === '/api/admin/threat-actors/seed' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleSeedThreatActors(request, env, {}), request));
+    }
+
+    // ── Cyber Risk Quantification (CRQ) ───────────────────────────────────────
+    if (path === '/api/crq/assess' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCRQAssessment(request, env, authCtx || {}), request));
+    }
+
+    // ── END HIGH-REVENUE FEATURES ─────────────────────────────────────────────
+
     if (path === '/api/auto-soc/mode' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleGetMode(request, env, authCtx), request));
