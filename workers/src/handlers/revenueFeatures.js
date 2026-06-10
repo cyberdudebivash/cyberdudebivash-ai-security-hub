@@ -138,7 +138,7 @@ export async function handleIOCEnrichBatch(request, env, authCtx) {
 
 // ─── ─── ─── ATTACK SURFACE MANAGEMENT ─── ─── ────────────────────────────────
 
-export async function handleASMAddTarget(request, env, authCtx) {
+export async function handleASMAddTarget(request, env, authCtx, ctx) {
   const tier = authCtx?.tier || 'FREE';
   if (tier === 'FREE') {
     return json({
@@ -166,10 +166,11 @@ export async function handleASMAddTarget(request, env, authCtx) {
       VALUES (?, ?, ?, ?, 'pending')
     `).bind(targetId, userId, domain, body.org_name || domain).run();
 
-    // Trigger background scan (fire-and-forget)
-    runASMScan(env, targetId, domain).catch(e =>
+    // Trigger background scan via ctx.waitUntil so it survives the HTTP response
+    const scanPromise = runASMScan(env, targetId, domain).catch(e =>
       console.error('[ASM] Background scan error:', e.message)
     );
+    if (ctx?.waitUntil) ctx.waitUntil(scanPromise);
 
     return json({
       success: true,
@@ -216,7 +217,7 @@ export async function handleASMGetReport(request, env, authCtx, targetId) {
   }
 }
 
-export async function handleASMTriggerScan(request, env, authCtx, targetId) {
+export async function handleASMTriggerScan(request, env, authCtx, targetId, ctx) {
   const tier = authCtx?.tier || 'FREE';
   if (tier === 'FREE') {
     return json({ success: false, error: 'ASM requires PRO or ENTERPRISE plan' }, 403);
@@ -230,10 +231,11 @@ export async function handleASMTriggerScan(request, env, authCtx, targetId) {
     // Mark as scanning
     await env.DB.prepare(`UPDATE asm_targets SET scan_status = 'scanning', updated_at = datetime('now') WHERE id = ?`).bind(targetId).run();
 
-    // Trigger background scan
-    runASMScan(env, targetId, target.domain).catch(e =>
+    // Trigger background scan via ctx.waitUntil
+    const scanP = runASMScan(env, targetId, target.domain).catch(e =>
       console.error('[ASM] Scan error:', e.message)
     );
+    if (ctx?.waitUntil) ctx.waitUntil(scanP);
 
     return json({
       success: true,
@@ -246,7 +248,7 @@ export async function handleASMTriggerScan(request, env, authCtx, targetId) {
 
 // ─── ─── ─── BRAND PROTECTION ─── ─── ────────────────────────────────────────
 
-export async function handleBrandAddMonitor(request, env, authCtx) {
+export async function handleBrandAddMonitor(request, env, authCtx, ctx) {
   const tier = authCtx?.tier || 'FREE';
   if (tier === 'FREE') {
     return json({
@@ -276,10 +278,11 @@ export async function handleBrandAddMonitor(request, env, authCtx) {
       VALUES (?, ?, ?, ?, ?)
     `).bind(monitorId, userId, brand, domain, JSON.stringify(body.keywords || [])).run();
 
-    // Trigger background scan
-    runBrandScan(env, monitorId, brand, domain).catch(e =>
+    // Trigger background scan via ctx.waitUntil
+    const brandScanP = runBrandScan(env, monitorId, brand, domain).catch(e =>
       console.error('[Brand] Scan error:', e.message)
     );
+    if (ctx?.waitUntil) ctx.waitUntil(brandScanP);
 
     return json({
       success: true,
@@ -356,16 +359,17 @@ export async function handleBrandGetThreats(request, env, authCtx, monitorId) {
   }
 }
 
-export async function handleBrandTriggerScan(request, env, authCtx, monitorId) {
+export async function handleBrandTriggerScan(request, env, authCtx, monitorId, ctx) {
   if (!env.DB) return json({ success: false, error: 'Database unavailable' }, 503);
 
   try {
     const monitor = await env.DB.prepare('SELECT * FROM brand_monitors WHERE id = ?').bind(monitorId).first();
     if (!monitor) return json({ success: false, error: 'Monitor not found' }, 404);
 
-    runBrandScan(env, monitorId, monitor.brand_name, monitor.primary_domain).catch(e =>
+    const brandP = runBrandScan(env, monitorId, monitor.brand_name, monitor.primary_domain).catch(e =>
       console.error('[Brand] Scan error:', e.message)
     );
+    if (ctx?.waitUntil) ctx.waitUntil(brandP);
 
     return json({
       success: true,

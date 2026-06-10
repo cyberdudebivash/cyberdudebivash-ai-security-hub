@@ -2895,7 +2895,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // ── Attack Surface Management ─────────────────────────────────────────────
     if (path === '/api/asm/targets' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleASMAddTarget(request, env, authCtx || {}), request));
+      return withSecurityHeaders(withCors(await handleASMAddTarget(request, env, authCtx || {}, ctx), request));
     }
     if (path === '/api/asm/targets' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
@@ -2904,7 +2904,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path.startsWith('/api/asm/targets/') && path.endsWith('/scan') && method === 'POST') {
       const targetId = path.replace('/api/asm/targets/', '').replace('/scan', '');
       const authCtx  = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleASMTriggerScan(request, env, authCtx || {}, targetId), request));
+      return withSecurityHeaders(withCors(await handleASMTriggerScan(request, env, authCtx || {}, targetId, ctx), request));
     }
     if (path.startsWith('/api/asm/targets/') && path.endsWith('/report') && method === 'GET') {
       const targetId = path.replace('/api/asm/targets/', '').replace('/report', '');
@@ -2915,7 +2915,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // ── Brand Protection ──────────────────────────────────────────────────────
     if (path === '/api/brand/monitors' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleBrandAddMonitor(request, env, authCtx || {}), request));
+      return withSecurityHeaders(withCors(await handleBrandAddMonitor(request, env, authCtx || {}, ctx), request));
     }
     if (path === '/api/brand/monitors' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
@@ -2924,7 +2924,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path.startsWith('/api/brand/monitors/') && path.endsWith('/scan') && method === 'POST') {
       const monitorId = path.replace('/api/brand/monitors/', '').replace('/scan', '');
       const authCtx   = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleBrandTriggerScan(request, env, authCtx || {}, monitorId), request));
+      return withSecurityHeaders(withCors(await handleBrandTriggerScan(request, env, authCtx || {}, monitorId, ctx), request));
     }
     if (path.startsWith('/api/brand/monitors/') && path.endsWith('/threats') && method === 'GET') {
       const monitorId = path.replace('/api/brand/monitors/', '').replace('/threats', '');
