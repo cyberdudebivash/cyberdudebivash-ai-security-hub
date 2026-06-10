@@ -103,6 +103,16 @@ dead_letter_queue  = "scan-jobs-dlq"
 # V10.0 new env vars (non-secret, plain text):
 #   Already set: TELEGRAM = "https://t.me/cyberdudebivashSentinelApex" (channel link)
 #
+# V31.0 MYTHOS AI Claude Upgrade (Anthropic API — REQUIRED for Claude Sonnet/Opus):
+#   ANTHROPIC_API_KEY         — Anthropic API key (sk-ant-...)
+#                               Get: https://console.anthropic.com → API Keys → Create
+#                               Run: npx wrangler secret put ANTHROPIC_API_KEY
+#                               Without this key, platform falls back to Cloudflare Workers AI (llama-3-8b)
+#                               Model routing with key set:
+#                                 ENTERPRISE tier → claude-opus-4-8
+#                                 PRO tier        → claude-sonnet-4-6  (primary production model)
+#                                 FREE tier       → claude-haiku-4-5-20251001
+#
 # V7.0 monetization setup (Razorpay):
 #   1. Create an account at https://razorpay.com
 #   2. Generate API keys in Settings → API Keys

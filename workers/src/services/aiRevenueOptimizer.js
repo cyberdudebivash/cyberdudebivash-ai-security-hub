@@ -1,10 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// CYBERDUDEBIVASH AI Security Hub — AI Revenue Optimizer v8.1
+// CYBERDUDEBIVASH AI Security Hub — AI Revenue Optimizer v8.2
 // Phase 3: Behavioral analysis → auto-triggered upsells, upgrade paths,
 //          product recommendations, churn prevention, and revenue maximization
 //
 // Pure business logic — no I/O. Pass env for DB/KV access.
 // ═══════════════════════════════════════════════════════════════════════════
+
+import { callClaude } from '../core/mythosAIProvider.js';
 
 // ── Upgrade paths by current plan ────────────────────────────────────────────
 const UPGRADE_PATHS = {
@@ -825,12 +827,9 @@ async function generateAIInsight(env, profile, upsell, products) {
       `Write ONE sentence (max 20 words) of personalized advice to maximize their security posture and value from upgrading.`,
     ].join(' ');
 
-    const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 60,
-    });
+    const response = await callClaude(env, { prompt, tier: 'FREE', max_tokens: 60, temperature: 0.4 });
 
-    return response?.response?.trim() || null;
+    return response?.content?.trim() || null;
   } catch {
     return null;
   }

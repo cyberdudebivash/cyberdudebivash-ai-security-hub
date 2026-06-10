@@ -1,17 +1,19 @@
 /**
- * CYBERDUDEBIVASH MYTHOS AI ENRICHMENT ENGINE v1.0
+ * CYBERDUDEBIVASH MYTHOS AI ENRICHMENT ENGINE v2.0
  * ═══════════════════════════════════════════════════════════════════════════════
  * Integrates MYTHOS Cyber Brain into every automated service assessment.
+ * Upgraded: Anthropic Claude (Sonnet 4.6 / Opus 4.8) — sovereign intelligence
  *
  * Provides:
  *   • MITRE ATT&CK v15 tactic/technique mapping from findings
- *   • AI-generated executive narrative (via Cloudflare Workers AI)
+ *   • AI-generated executive narrative (Anthropic Claude — production-grade)
  *   • Attack path prediction and threat actor correlation
  *   • Autonomous remediation priority engine
  *   • MYTHOS authority signature and confidence scoring
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
+import { callClaude, CLAUDE_MODELS } from '../core/mythosAIProvider.js';
 import {
   computeRiskScore,
   predictAttackPaths,
@@ -66,9 +68,8 @@ function mapFindingsToMITRE(findings) {
   return Array.from(mapped.values());
 }
 
-// ── AI Narrative Generator via Workers AI ────────────────────────────────────
-async function generateAINarrative(env, { target, service_name, riskScore, riskLevel, findings, sector }) {
-  if (!env?.AI) return null;
+// ── AI Narrative Generator — Anthropic Claude (Primary) ──────────────────────
+async function generateAINarrative(env, { target, service_name, riskScore, riskLevel, findings, sector, tier = 'PRO' }) {
   if (!findings || findings.length === 0) return null;
 
   try {
@@ -78,7 +79,7 @@ async function generateAINarrative(env, { target, service_name, riskScore, riskL
       .map(f => `• [${f.severity}] ${f.title || f.id}: ${(f.description || '').slice(0, 120)}`)
       .join('\n');
 
-    const prompt = `You are MYTHOS, the sovereign AI security analyst for CYBERDUDEBIVASH AI Security Hub.
+    const prompt = `Generate an enterprise security intelligence brief for:
 
 Target: ${target || 'the assessed system'}
 Service: ${service_name}
@@ -88,18 +89,21 @@ Industry: ${sector || 'Technology'}
 Key findings:
 ${topFindings || '• Multiple security vulnerabilities detected requiring immediate attention'}
 
-Write a 3-paragraph authoritative security intelligence brief:
-1. Executive threat posture summary (2-3 sentences, specific risk level)
-2. Top 3 immediate critical actions with business impact context
-3. Strategic 90-day security roadmap recommendation
+Write 3 paragraphs:
+1. Executive threat posture summary — specific risk level, business exposure, urgency (2-3 sentences)
+2. Top 3 immediate critical actions with business impact — what breaks if ignored
+3. Strategic 90-day security roadmap with measurable milestones
 
-Be precise, authoritative, enterprise-grade. No generic advice.`;
+Enterprise-grade precision. MITRE ATT&CK references where applicable. No generic advice.`;
 
-    const resp = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 400,
+    const result = await callClaude(env, {
+      prompt,
+      tier:       tier || 'PRO',
+      max_tokens: 500,
+      temperature: 0.2,
     });
-    return resp?.response || null;
+
+    return result?.content || null;
   } catch (e) {
     console.error('[MYTHOS-Enrichment] AI narrative error:', e.message);
     return null;
@@ -257,8 +261,8 @@ export async function enrichAssessmentWithMYTHOS(env, {
 
     // AI Narrative (Workers AI)
     ai_executive_brief: aiNarrative
-      ? { generated: true,  narrative: aiNarrative,  model: 'llama-3-8b-instruct' }
-      : { generated: false, narrative: null, note: 'Upgrade to PRO for AI-generated executive briefs' },
+      ? { generated: true,  narrative: aiNarrative,  model: 'claude-sonnet-4-6' }
+      : { generated: false, narrative: null, note: 'Upgrade to PRO for AI-generated executive briefs (Claude Sonnet 4.6)' },
 
     // D1 Threat Actor Overlay
     threat_actor_overlay: mythosActors

@@ -1,5 +1,5 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Global Authority Engine v20.0
+ * CYBERDUDEBIVASH AI Security Hub — Global Authority Engine v21.0
  * ────────────────────────────────────────────────────────────────
  * Automatically generates:
  *   1. CVE Reports      — structured, PDF-ready technical advisories
@@ -19,6 +19,8 @@
  *   GET  /api/authority/bulletin     — latest threat intelligence digest
  *   GET  /api/authority/stats        — content generation statistics
  */
+
+import { callClaude } from './mythosAIProvider.js';
 
 // ─── MITRE technique descriptions (subset) ───────────────────────────────────
 const MITRE_LABELS = {
@@ -304,15 +306,11 @@ function buildBulletinTemplate(recentCVEs = [], topIOCs = []) {
   };
 }
 
-// ─── AI Narrative Enhancer ────────────────────────────────────────────────────
-async function enhanceWithAI(env, prompt, fallback) {
-  if (!env?.AI) return fallback;
+// ─── AI Narrative Enhancer — Anthropic Claude (primary) ──────────────────────
+async function enhanceWithAI(env, prompt, fallback, tier = 'PRO') {
   try {
-    const resp = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 400,
-    });
-    return resp?.response?.trim() || fallback;
+    const result = await callClaude(env, { prompt, tier, max_tokens: 400, temperature: 0.3 });
+    return result?.content?.trim() || fallback;
   } catch {
     return fallback;
   }

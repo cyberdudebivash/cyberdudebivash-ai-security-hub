@@ -452,6 +452,9 @@ import {
   handleZeroTrustVerify,
 } from './services/zeroTrustEngine.js';
 
+// ─── MYTHOS AI Provider — Anthropic Claude health check ──────────────────────
+import { checkAIProviderHealth } from './core/mythosAIProvider.js';
+
 // ─── GOD MODE v20: Authority Engine — CVE Reports + Blog Auto-Generation ─────
 import {
   handleCVEReport,
@@ -3083,6 +3086,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/scan/consultation-prep' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleConsultationPrep(request, env, authCtx || {}), request));
+    }
+
+    // ── MYTHOS AI Provider Health Check ──────────────────────────────────────
+    if (path === '/api/ai/health' && method === 'GET') {
+      const health = await checkAIProviderHealth(env);
+      return withSecurityHeaders(withCors(Response.json({ success: true, ...health, timestamp: new Date().toISOString() }), request));
     }
 
     // ── END SERVICE CATALOG v36 ───────────────────────────────────────────────

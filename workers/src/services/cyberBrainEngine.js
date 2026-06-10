@@ -1,4 +1,5 @@
 import { ok, fail } from '../lib/response.js';
+import { callClaude } from '../core/mythosAIProvider.js';
 
 /**
  * CYBERDUDEBIVASH AI Security Hub — CyberBrain Engine v19.0
@@ -359,9 +360,9 @@ export async function runCyberBrainAnalysis(env, {
   const mitreCoverage        = assessMITRECoverage(findings);
   const exploitProbability   = Math.min(0.99, riskScore / 100 * 0.85 + (vulns.filter(v => v.in_kev).length * 0.03));
 
-  // Try Workers AI for narrative if available
+  // Try Anthropic Claude for narrative (primary), CF Workers AI fallback
   let aiNarrative = null;
-  if (env?.AI && findings.length > 0 && tier !== 'FREE') {
+  if (findings.length > 0 && tier !== 'FREE') {
     try {
       const prompt = `You are a senior cybersecurity analyst. Given these findings for ${target}:
 ${findings.slice(0,5).map(f => `- ${f.title}: ${f.description || ''}`).join('\n')}
@@ -370,11 +371,8 @@ Risk score: ${riskScore}/100 (${riskLevel})
 Write a 2-paragraph executive briefing: (1) current threat posture, (2) top 3 immediate actions.
 Be specific, actionable, authoritative. No fluff.`;
 
-      const aiResp = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 300,
-      });
-      aiNarrative = aiResp?.response || null;
+      const result = await callClaude(env, { prompt, tier: tier || 'PRO', max_tokens: 300, temperature: 0.2 });
+      aiNarrative = result?.content || null;
     } catch {}
   }
 

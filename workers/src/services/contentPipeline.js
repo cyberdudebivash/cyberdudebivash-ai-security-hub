@@ -1,9 +1,12 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub v10.0
+ * CYBERDUDEBIVASH AI Security Hub v11.0
  * Automated Content Pipeline — Phase 4
  * CVE → Blog → LinkedIn → Telegram → Platform
  * Full monetization funnel: Content → Traffic → Purchase
+ * Upgraded: Anthropic Claude (primary AI engine)
  */
+
+import { callClaude } from '../core/mythosAIProvider.js';
 
 // ─── Blog post generator from CVE / threat intel ─────────────────────────────
 export async function generateBlogPost(env, intel) {
@@ -17,21 +20,14 @@ export async function generateBlogPost(env, intel) {
   const tags  = buildTags(intel);
   const publishedAt = new Date().toISOString();
 
-  // AI-generate content if Workers AI available, else use template engine
+  // AI-generate content via Anthropic Claude (primary), else use template engine
   let content = '';
   let excerpt = '';
   try {
-    if (env.AI) {
-      const prompt = buildBlogPrompt(intel);
-      const aiResp = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-        messages: [
-          { role: 'system', content: 'You are a world-class cybersecurity writer for CYBERDUDEBIVASH AI Security Hub. Write authoritative, SEO-optimized blog posts about threats and vulnerabilities. Always end with a CTA to purchase the matching defense solution. Be specific, technical, and urgent.' },
-          { role: 'user',   content: prompt },
-        ],
-        max_tokens: 1800,
-      });
-      content = aiResp?.response || '';
-    }
+    const prompt = buildBlogPrompt(intel);
+    const system = 'You are a world-class cybersecurity writer for CYBERDUDEBIVASH AI Security Hub. Write authoritative, SEO-optimized blog posts about threats and vulnerabilities. Always end with a CTA to purchase the matching defense solution. Be specific, technical, and urgent.';
+    const result = await callClaude(env, { prompt, system, tier: 'PRO', max_tokens: 1800, temperature: 0.4 });
+    content = result?.content || '';
   } catch { /* fall to template */ }
 
   if (!content) content = buildBlogTemplate(intel);

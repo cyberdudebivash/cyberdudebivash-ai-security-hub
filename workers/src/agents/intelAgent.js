@@ -1,10 +1,11 @@
 /**
- * CYBERDUDEBIVASH MYTHOS — Intel Agent v1.0
+ * CYBERDUDEBIVASH MYTHOS — Intel Agent v2.0
  * ══════════════════════════════════════════
  * AI-powered threat intelligence analysis engine.
- * Uses Cloudflare Workers AI (Llama 3.1) for deep analysis.
- * Falls back to rule-based analysis if AI binding unavailable.
+ * Uses Anthropic Claude (primary) with CF Workers AI fallback.
  */
+
+import { callClaude } from '../core/mythosAIProvider.js';
 
 // ── MITRE ATT&CK technique registry ──────────────────────────────────────────
 const MITRE = {
@@ -122,25 +123,20 @@ function buildPatchGuidance(intel) {
   return { has_patch: hasPatch, steps, kev_mandated: kev };
 }
 
-// ── Workers AI enhanced analysis ─────────────────────────────────────────────
+// ── Anthropic Claude enhanced analysis (primary) ─────────────────────────────
 async function aiEnhancedAnalysis(intel, env) {
-  if (!env?.AI) return null;
   try {
-    const resp = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-      messages: [{
-        role: 'user',
-        content: `You are a senior cybersecurity analyst. Analyze this CVE and return JSON only — no markdown, no explanation.
+    const prompt = `Analyze this CVE and return JSON only — no markdown, no explanation.
 CVE: ${intel.id || intel.cve_id}  Severity: ${intel.severity} (CVSS: ${intel.cvss_score})
 Type: ${intel.type}  Exploited: ${intel.exploit_status || 'unknown'}
 Description: ${(intel.description || '').slice(0, 300)}
 Affected: ${(intel.affected_systems || []).join(', ')}
 
 Return this JSON:
-{"executive_summary":"2-3 sentence board-level summary","technical_impact":"1-2 sentences","threat_actor":"APT/Criminal/Opportunistic/Unknown","business_risk":"short business impact description","immediate_actions":["action1","action2","action3"],"kql_detection":"one-line KQL or SPL query"}`,
-      }],
-      max_tokens: 400,
-    });
-    const text  = resp?.response || '';
+{"executive_summary":"2-3 sentence board-level summary","technical_impact":"1-2 sentences","threat_actor":"APT/Criminal/Opportunistic/Unknown","business_risk":"short business impact description","immediate_actions":["action1","action2","action3"],"kql_detection":"one-line KQL or SPL query"}`;
+
+    const result = await callClaude(env, { prompt, tier: 'PRO', max_tokens: 400, temperature: 0.1, json_mode: true });
+    const text = result?.content || '';
     const match = text.match(/\{[\s\S]*\}/);
     return match ? JSON.parse(match[0]) : null;
   } catch (e) {
