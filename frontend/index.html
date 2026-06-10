@@ -20577,4 +20577,87 @@ function v21TriggerUrgencyPayment(){
     const amtEl   = document.getElementById('m-crypto-amount');
     const walEl   = document.getElementById('m-crypto-wallet');
     if (assetEl) assetEl.textContent  = asset;
-    if (amtEl)  
+    if (amtEl)   amtEl.textContent    = `$${usd}.00`;
+    if (walEl)   walEl.textContent    = wallet;
+  }
+
+  function copy(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (!btn) return;
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }).catch(() => {});
+  }
+
+  function copyRef(btn) {
+    const ref = document.getElementById('m-wire-ref')?.textContent || '';
+    copy(ref, btn);
+  }
+
+  function copyCrypto(btn) {
+    const chain  = document.getElementById('m-chain-select')?.value || 'ETH';
+    copy(CRYPTO_WALLETS[chain] || '', btn);
+  }
+
+  function rzpPay() {
+    if (!window.Razorpay) {
+      showToast('Razorpay not loaded — please refresh and try again.', 'warn');
+      return;
+    }
+    const amountINR = PRICING_INR[_currentPlan] || 1499;
+    const rzp = new window.Razorpay({
+      key:         _rzpKeyId || '',
+      amount:      amountINR * 100,
+      currency:    'INR',
+      name:        'CYBERDUDEBIVASH PVT LTD',
+      description: `SENTINEL APEX ${_currentPlan.toUpperCase()} SUBSCRIPTION`,
+      handler: function(res) {
+        close();
+        showToast('✅ Payment successful! Your plan activates within 2 minutes.', 'success');
+      },
+      modal: { ondismiss: function() { showToast('Payment cancelled.', 'info'); } },
+    });
+    rzp.open();
+  }
+
+  function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    const bg = type==='success'?'#21c55d': type==='warn'?'#f59e0b': '#334155';
+    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:10001;` +
+      `background:${bg};color:${type==='success'||type==='warn'?'#000':'#fff'};` +
+      `padding:.7rem 1.3rem;border-radius:8px;font-size:.85rem;max-width:340px;` +
+      `box-shadow:0 4px 20px rgba(0,0,0,.5);animation:fadeIn .3s ease`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
+  }
+
+  // Close on overlay click
+  document.getElementById('mythosOverlay').addEventListener('click', function(e) {
+    if (e.target === this) close();
+  });
+
+  // Expose global API
+  window.CDB_MYTHOS = { open, close, switchTab, updateChain, copy, copyRef, copyCrypto, rzpPay };
+  // Alias for pricing card buttons (backward compat)
+  window.openMythosCheckout = open;
+
+  // Wire up existing startSubscription calls to also open MYTHOS modal
+  // (keeps Razorpay flow working while adding multi-rail as first option)
+  const _origStartSub = window.startSubscription;
+  window.startSubscription = function(planKey) {
+    // Map existing plan key → MYTHOS plan
+    const map = { STARTER:'starter', PRO:'pro', ENTERPRISE:'enterprise' };
+    const mPlan = map[planKey] || planKey.toLowerCase();
+    open(mPlan);
+    // Also run original Razorpay flow as fallback (fires in Razorpay tab)
+    // Users can choose their preferred rail in the modal
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+<!-- END MYTHOS AI REVENUE ENGINE -->
+</body>
+</html>

@@ -271,4 +271,6 @@ export async function handleGetPaymentConfig(request, env) {
       products: PRODUCT_CATALOG,
     });
   } catch (e) {
-    return jsonErr('Failed to get payment config: ' + e.mess
+    return jsonErr('Failed to get payment config: ' + e.message, 500);
+  }
+}

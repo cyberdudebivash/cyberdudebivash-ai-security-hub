@@ -433,4 +433,14 @@ export function enforceFeatureGate(feature, tier = 'FREE') {
     feature,
     current_plan: tier,
     required_plan: required,
-    upg
+    upgrade_cta:  {
+      message:   `Upgrade to ${upgrade.name} for ₹${upgrade.price_inr}/mo to unlock this feature`,
+      route:     upgrade.route,
+      price_inr: upgrade.price_inr,
+    },
+    platform: 'CYBERDUDEBIVASH AI Security Hub v20.0',
+  }, { status: 402 });
+}
+
+// ─── Export usage incrementer for use in scan/API handlers ────────────────────
+export { incrementUsage, getUsage };

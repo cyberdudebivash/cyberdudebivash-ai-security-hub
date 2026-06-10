@@ -318,4 +318,11 @@ export async function getMythosJob(env, jobId) {
 export async function runMythosCron(env) {
   console.log('[MYTHOS CRON] Starting autonomous orchestration run...');
   try {
-    const result = await runMythosOrchestra
+    const result = await runMythosOrchestration(env, { maxItems: 5 });
+    console.log(`[MYTHOS CRON] Done — ${result.total_tools} tools generated, ${result.total_published} published`);
+    return result;
+  } catch (err) {
+    console.error('[MYTHOS CRON] Critical failure:', err);
+    throw err;
+  }
+}
