@@ -257,6 +257,19 @@ import {
   handlePricing, handlePaymentConfig, handlePaymentMutationGuard,
 } from './handlers/pricingHandler.js';
 
+// ─── SERVICE CATALOG v36 — 18 production services + automated engines ─────────
+import {
+  handleGetServiceCatalog, handleGetService,
+  handleCreateOrder as handleCreateServiceOrder, handleGetReport as handleGetServiceReport,
+  handleListOrders as handleListServiceOrders,
+  handleUpdateOrderStatus as handleUpdateServiceOrderStatus,
+  handleTriggerAssessment,
+  handleSSLScan, handleCTIBriefScan, handleThreatIntelReport,
+  handleComplianceScan, handleAISecurityScan, handleEnterpriseAIScan,
+  handleVulnAssessmentScan, handleThreatHuntingScan,
+  handleAPISecurityScan, handleCloudSecurityScan,
+} from './handlers/serviceHandlers.js';
+
 // ─── PHASE 2: Autonomous SOC Mode ────────────────────────────────────────────
 import {
   handleGetMode, handleSetMode, handleGetPipeline, handleRunPipeline,
@@ -2961,6 +2974,92 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ── END HIGH-REVENUE FEATURES ─────────────────────────────────────────────
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // SERVICE CATALOG v36 — 18 Production Services + Automated Engines
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── Service Catalog ───────────────────────────────────────────────────────
+    if (path === '/api/services' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGetServiceCatalog(request, env, authCtx || {}), request));
+    }
+    if (path.match(/^\/api\/services\/([A-Z0-9-]+)$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      const refId   = path.match(/^\/api\/services\/([A-Z0-9-]+)$/)[1];
+      return withSecurityHeaders(withCors(await handleGetService(request, env, authCtx || {}, refId), request));
+    }
+
+    // ── Service Orders ────────────────────────────────────────────────────────
+    if (path === '/api/services/orders' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCreateServiceOrder(request, env, authCtx || {}, ctx), request));
+    }
+    if (path === '/api/services/orders' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleListServiceOrders(request, env, authCtx || {}), request));
+    }
+    if (path.match(/^\/api\/services\/orders\/([^/]+)\/status$/) && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      const orderId = path.match(/^\/api\/services\/orders\/([^/]+)\/status$/)[1];
+      return withSecurityHeaders(withCors(await handleUpdateServiceOrderStatus(request, env, authCtx || {}, orderId), request));
+    }
+    if (path.match(/^\/api\/services\/orders\/([^/]+)\/trigger$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      const orderId = path.match(/^\/api\/services\/orders\/([^/]+)\/trigger$/)[1];
+      return withSecurityHeaders(withCors(await handleTriggerAssessment(request, env, authCtx || {}, orderId, ctx), request));
+    }
+
+    // ── Report Retrieval by Token ─────────────────────────────────────────────
+    if (path.match(/^\/api\/services\/report\/([a-f0-9]{32,})$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      const token   = path.match(/^\/api\/services\/report\/([a-f0-9]{32,})$/)[1];
+      return withSecurityHeaders(withCors(await handleGetServiceReport(request, env, authCtx || {}, token), request));
+    }
+
+    // ── Direct Automated Scan Endpoints ──────────────────────────────────────
+    if (path === '/api/scan/ssl' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSSLScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/cti-brief' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCTIBriefScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/threat-intel-report' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleThreatIntelReport(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/compliance' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleComplianceScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/ai-security' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAISecurityScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/ai-security-enterprise' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleEnterpriseAIScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/vuln-assessment' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleVulnAssessmentScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/threat-hunting' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleThreatHuntingScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/api-security' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAPISecurityScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/cloud-security' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCloudSecurityScan(request, env, authCtx || {}), request));
+    }
+
+    // ── END SERVICE CATALOG v36 ───────────────────────────────────────────────
 
     if (path === '/api/auto-soc/mode' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
