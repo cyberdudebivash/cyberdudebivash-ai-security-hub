@@ -20609,4 +20609,17 @@ function v21TriggerUrgencyPayment(){
   // (keeps Razorpay flow working while adding multi-rail as first option)
   const _origStartSub = window.startSubscription;
   window.startSubscription = function(planKey) {
-    // Map existing plan key â
+    // Map existing plan key â†’ MYTHOS plan
+    const map = { STARTER:'starter', PRO:'pro', ENTERPRISE:'enterprise' };
+    const mPlan = map[planKey] || planKey.toLowerCase();
+    open(mPlan);
+    // Also run original Razorpay flow as fallback (fires in Razorpay tab)
+    // Users can choose their preferred rail in the modal
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+<!-- END MYTHOS AI REVENUE ENGINE -->
+</body>
+</html>

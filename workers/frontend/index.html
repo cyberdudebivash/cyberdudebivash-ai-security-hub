@@ -20273,4 +20273,21 @@ function v21TriggerUrgencyPayment(){
 
       // Hero live scan count
       const heroLive = document.getElementById('hero-live-scans');
-      if (heroLive && totalScan
+      if (heroLive && totalScans !== null) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
+
+      // ann-revenue-count
+      const annRev = document.getElementById('ann-revenue-count');
+      // Only update if we have real data from defense stats
+    } catch(e) {
+      // Silently fail — placeholders stay as '—'
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadStats);
+  } else {
+    loadStats();
+  }
+})();
+</script>
+</body>
+</html>
