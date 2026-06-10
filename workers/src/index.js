@@ -266,6 +266,16 @@ import {
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
+// ─── Phase D: Enterprise Trust & Sales Readiness ──────────────────────────────
+import {
+  handleTrustCenter   as handleEnterpriseTrustCenter,
+  handleStatusPage,
+  handleDocsPortal,
+  handleSecurityCenter,
+  handleEnterpriseInquiry,
+  handleEnterpriseSalesKit,
+} from './handlers/enterprisePortalHandlers.js';
+
 // ─── MYTHOS GOD MODE v4.0 — Full autonomous platform orchestrator ─────────────
 // 12-phase pipeline: intel → brain → tools → ASPM → hunt → ZT → compliance
 //   → CISO pack → SOAR → metrics → revenue → finalize
@@ -1278,8 +1288,14 @@ export default {
       }), request));
     }
 
-    // ── v13 Status — comprehensive engine health + metrics ─────────────────
-    if ((path === '/api/v13/status' || path === '/api/status') && method === 'GET') {
+    // ── Phase D Live Status Page (replaces v13 at /api/status) ───────────────
+    if (path === '/api/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleStatusPage(request, env, authCtx || {}), request));
+    }
+
+    // ── v13 Status (legacy — keep at /api/v13/status) ─────────────────────────
+    if (path === '/api/v13/status' && method === 'GET') {
       const [dbStatus, kvStatus, threatRows, agentRows, anomalyRows] = await Promise.allSettled([
         env.DB?.prepare('SELECT 1').first(),
         env.KV?.get('healthcheck_ts'),
@@ -2976,6 +2992,28 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       if (!authCtx?.isAdmin) return withSecurityHeaders(withCors(Response.json({ error: 'Admin only' }, { status: 403 }), request));
       const result = await runPlatformGovernor(env);
       return withSecurityHeaders(withCors(Response.json({ success: true, ...result }), request));
+    }
+
+    // ── Phase D: Enterprise Trust & Sales Readiness ──────────────────────────
+    if (path === '/api/trust-center' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleEnterpriseTrustCenter(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/docs' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDocsPortal(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/security-center' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSecurityCenter(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/enterprise/inquire' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleEnterpriseInquiry(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/enterprise/sales-kit' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleEnterpriseSalesKit(request, env, authCtx || {}), request));
     }
 
     // ── Phase B: AI Security Posture Management ───────────────────────────────
