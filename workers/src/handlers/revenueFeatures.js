@@ -567,7 +567,7 @@ export async function handleCRQAssessment(request, env, authCtx) {
     data: {
       assessment_id:          assessmentId,
       org_name, industry,
-      risk_band,
+      risk_band:                      riskBand,
       annualized_loss_expectancy_usd: totalALE,
       avg_breach_cost_usd:    Math.round(avgBreachCost),
       insurance_gap_usd:      Math.round(insuranceGap),
