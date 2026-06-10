@@ -12,10 +12,8 @@
 --       INSERT OR IGNORE skips if seed row already exists.
 -- ============================================================================
 
--- ── Step 1: Add missing column to existing table ───────────────────────────
--- SQLite allows ADD COLUMN with a DEFAULT even for NOT NULL columns.
--- This is safe to run — existing rows get DEFAULT value 'cron'.
-ALTER TABLE mythos_runs ADD COLUMN trigger_source TEXT NOT NULL DEFAULT 'cron';
+-- ── Step 1: trigger_source column already exists (added by earlier migration) ─
+-- ALTER TABLE skipped — column present. Only seed row needed.
 
 -- ── Step 2: Seed row — explicit column list avoids trigger_source ambiguity ─
 INSERT OR IGNORE INTO mythos_runs
