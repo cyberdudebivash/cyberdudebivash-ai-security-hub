@@ -733,7 +733,4 @@ union CommonSecurityLog, W3CIISLog
     platform,
     rules:     output,
     generated: today,
-    author:    'CYBERDUDEBIVASH MYTHOS AI',
-    timestamp: new Date().toISOString(),
-  });
-}
+    author:    'C

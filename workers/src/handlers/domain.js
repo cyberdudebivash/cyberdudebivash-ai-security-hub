@@ -13,6 +13,8 @@ import { resolveDomain, inferTLSGrade }      from '../lib/dns.js';
 import { fullBlacklistCheck }                from '../lib/dnsbl.js';
 // v21.0 — Adaptive CyberBrain enrichment (non-blocking, PRO+ tier)
 import { enrichScanAdaptive } from '../core/adaptiveCyberBrain.js';
+// v32.0 — Enterprise Intelligence enrichment (ATT&CK T-codes, EPSS, threat actors, CVE correlation)
+import { enrichScanEnterprise, enrichFindingsWithATTACK, matchThreatActors, quantifyBusinessImpact } from '../services/enterpriseIntelligence.js';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
@@ -299,6 +301,8 @@ export async function handleDomainScan(request, env, authCtx = {}) {
         powered_by: 'CYBERDUDEBIVASH AI Security Hub',
       },
     };
+    // v32.0 — Enterprise intelligence enrichment (non-blocking, always runs)
+    scanResult = await enrichScanEnterprise(scanResult, 'domain', env).catch(() => scanResult);
     await cacheScan(env, domain, scanResult);
 
   } else {
@@ -345,15 +349,4 @@ export async function handleDomainScan(request, env, authCtx = {}) {
           ).bind(
             authCtx.user_id, jobId, scanId, domain, 'domain',
             scanResult.risk_score || 0, scanResult.risk_level || 'LOW',
-            scanResult.grade || 'A', dataSource, 'completed'
-          ).run();
-        }
-      }
-    } catch { /* non-blocking — never fail the scan response */ }
-  })();
-
-  return Response.json(addMonetizationFlags(scanResult, 'domain', authCtx, scanId), {
-    status: 200,
-    headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v21.0' },
-  });
-}
+    

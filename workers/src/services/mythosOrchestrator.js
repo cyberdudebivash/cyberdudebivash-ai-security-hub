@@ -21,6 +21,7 @@ import {
   generateSigmaRule, generateHardeningScript, generateIRPlaybook,
   generateYARARule, generateThreatHuntPack,
   generateExecutiveBriefing, generateAPISecurityModule,
+  generateSentinelAnalyticsRule, generateSTIXBundle,
 } from '../lib/solutionTemplates.js';
 
 // ── KV namespace keys ─────────────────────────────────────────────────────────
@@ -34,16 +35,19 @@ const KV = {
 
 // ── Tool generator dispatch table ─────────────────────────────────────────────
 const GENERATORS = {
-  firewall_script:  (i, a) => generateWAFRule(i, a),
-  sigma_rule:       (i, a) => generateSigmaRule(i, a),
-  yara_rule:        (i, a) => generateYARARule(i, a),
-  ir_playbook:      (i, a) => generateIRPlaybook(i, a),
-  ids_signature:    (i, a) => generateIDSSignature(i, a),
-  hardening_script: (i, a) => generateHardeningScript(i, a),
-  threat_hunt_pack: (i, a) => generateThreatHuntPack(i, a),
-  python_scanner:   (i, a) => generatePythonDetectionScript(i, a),
-  exec_briefing:    (i, a) => generateExecutiveBriefing(i, a),
-  api_module:       (i, a) => generateAPISecurityModule(i, a),
+  firewall_script:      (i, a) => generateWAFRule(i, a),
+  sigma_rule:           (i, a) => generateSigmaRule(i, a),
+  yara_rule:            (i, a) => generateYARARule(i, a),
+  ir_playbook:          (i, a) => generateIRPlaybook(i, a),
+  ids_signature:        (i, a) => generateIDSSignature(i, a),
+  hardening_script:     (i, a) => generateHardeningScript(i, a),
+  threat_hunt_pack:     (i, a) => generateThreatHuntPack(i, a),
+  python_scanner:       (i, a) => generatePythonDetectionScript(i, a),
+  exec_briefing:        (i, a) => generateExecutiveBriefing(i, a),
+  api_module:           (i, a) => generateAPISecurityModule(i, a),
+  // V2.1: New production-grade generators
+  sentinel_rule:        (i, a) => generateSentinelAnalyticsRule(i, a),
+  stix_bundle:          (i, a) => generateSTIXBundle(i, a),
 };
 
 // ── Execute one tool-generation task with self-correction loop ────────────────
@@ -314,11 +318,4 @@ export async function getMythosJob(env, jobId) {
 export async function runMythosCron(env) {
   console.log('[MYTHOS CRON] Starting autonomous orchestration run...');
   try {
-    const result = await runMythosOrchestration(env, { maxItems: 5 });
-    console.log(`[MYTHOS CRON] Done — ${result.total_tools} tools generated, ${result.total_published} published`);
-    return result;
-  } catch (err) {
-    console.error('[MYTHOS CRON] Critical failure:', err);
-    throw err;
-  }
-}
+    const result = await runMythosOrchestra

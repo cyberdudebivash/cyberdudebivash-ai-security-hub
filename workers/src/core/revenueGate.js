@@ -3,10 +3,10 @@
  * ──────────────────────────────────────────────────────────────
  * Subscription Plans, Feature Gating, Usage-Based Billing, Upsell Engine.
  *
- * Plans:
- *   STARTER    ₹199/month  — basic scans, 50 API calls/day, community support
- *   PRO        ₹999/month  — AI brain, dark web, MITRE heatmap, 500 API calls/day
- *   ENTERPRISE ₹9999/month — unlimited, custom SLA, white-label, dedicated support
+ * Plans (v32 pricing — source of truth):
+ *   STARTER    ₹499/month   — basic scans, 100 API calls/day, email support
+ *   PRO        ₹1,499/month — AI brain, dark web, MITRE heatmap, 500 API calls/day
+ *   ENTERPRISE ₹4,999/month — unlimited, custom SLA, white-label, dedicated support
  *
  * Feature Gate Enforcement:
  *   Middleware checks user's plan before granting access to gated features.
@@ -16,6 +16,8 @@
  *   Per-scan and per-API-call counters stored in KV.
  *   Overage charges computed at billing period end.
  */
+
+import { ok, fail } from '../lib/response.js';
 
 // ─── Plan Definitions ─────────────────────────────────────────────────────────
 export const SUBSCRIPTION_PLANS = {
@@ -51,8 +53,8 @@ export const SUBSCRIPTION_PLANS = {
   STARTER: {
     id:          'STARTER',
     name:        'Starter',
-    price_inr:   199,
-    price_usd:   2.40,
+    price_inr:   499,
+    price_usd:   5.99,
     billing:     'monthly',
     description: 'For individuals and small teams',
     limits: {
@@ -75,7 +77,7 @@ export const SUBSCRIPTION_PLANS = {
       per_scan:     2,     // ₹2 per scan over limit
       per_api_call: 0.10,  // ₹0.10 per API call over limit
     },
-    cta:      'Start for ₹199/mo',
+    cta:      'Start for ₹499/mo',
     route:    '/checkout?plan=starter',
     popular:  false,
     badge:    null,
@@ -84,8 +86,8 @@ export const SUBSCRIPTION_PLANS = {
   PRO: {
     id:          'PRO',
     name:        'Pro',
-    price_inr:   999,
-    price_usd:   11.99,
+    price_inr:   1499,
+    price_usd:   17.99,
     billing:     'monthly',
     description: 'Full AI power for security professionals',
     limits: {
@@ -108,7 +110,7 @@ export const SUBSCRIPTION_PLANS = {
       per_scan:     1,     // ₹1 per scan over limit
       per_api_call: 0.05,  // ₹0.05 per API call over limit
     },
-    cta:      'Go Pro — ₹999/mo',
+    cta:      'Go Pro — ₹1,499/mo',
     route:    '/checkout?plan=pro',
     popular:  true,
     badge:    '🔥 Most Popular',
@@ -117,8 +119,8 @@ export const SUBSCRIPTION_PLANS = {
   ENTERPRISE: {
     id:          'ENTERPRISE',
     name:        'Enterprise',
-    price_inr:   9999,
-    price_usd:   119.99,
+    price_inr:   4999,
+    price_usd:   59.99,
     billing:     'monthly',
     description: 'Unlimited power for teams and enterprises',
     limits: {
@@ -199,19 +201,25 @@ export async function handleGetPlansV20(request, env, authCtx) {
     ...p,
     display_price: currency === 'USD'
       ? `$${p.price_usd}/mo`
-      : (p.price_inr === 0 ? 'Free' : `₹${p.price_inr}/mo`),
+      : (p.price_inr === 0 ? 'Free' : `₹${p.price_inr.toLocaleString('en-IN')}/mo`),
     is_current: p.id === userTier,
     can_upgrade: PLAN_RANK[p.id] > PLAN_RANK[userTier],
   }));
 
-  return Response.json({
+  return ok(request, {
     plans,
-    current_plan:  userTier,
+    current_plan:    userTier,
     currency,
-    billing_info:  'All plans billed monthly. Cancel anytime.',
-    payment_methods: ['UPI', 'Card', 'Net Banking', 'PayPal', 'Crypto'],
-    platform:      'CYBERDUDEBIVASH AI Security Hub v20.0',
-    generated_at:  new Date().toISOString(),
+    billing_info:    'All plans billed monthly. Cancel anytime.',
+    payment_methods: {
+      upi:     'iambivash.bn-5@okaxis',
+      paypal:  'https://www.paypal.com/paypalme/iambivash',
+      bank:    'Axis Bank IFSC UTIB0000052 · AC 915010024617260',
+      crypto:  '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796 (BNB Smart Chain)',
+      support: 'bivash@cyberdudebivash.com · +91 8179881447',
+      sla:     '2–4 hour activation',
+    },
+    platform: 'CYBERDUDEBIVASH AI Security Hub v20.0',
   });
 }
 
@@ -223,10 +231,7 @@ export async function handleSubscribeV20(request, env, authCtx) {
   const { plan, payment_method = 'razorpay', coupon = null } = body;
 
   if (!SUBSCRIPTION_PLANS[plan]) {
-    return Response.json({
-      error: 'Invalid plan',
-      valid_plans: Object.keys(SUBSCRIPTION_PLANS).filter(p => p !== 'FREE'),
-    }, { status: 400 });
+    return fail(request, 'Invalid plan. Valid: ' + Object.keys(SUBSCRIPTION_PLANS).filter(p => p !== 'FREE').join(', '), 400, 'ERR_INVALID_PLAN');
   }
 
   const selectedPlan = SUBSCRIPTION_PLANS[plan];
@@ -234,10 +239,7 @@ export async function handleSubscribeV20(request, env, authCtx) {
   const currentTier  = authCtx.tier || 'FREE';
 
   if (PLAN_RANK[plan] <= PLAN_RANK[currentTier]) {
-    return Response.json({
-      error: `You are already on ${currentTier}. Choose a higher tier.`,
-      current_plan: currentTier,
-    }, { status: 400 });
+    return fail(request, `You are already on ${currentTier}. Choose a higher tier.`, 400, 'ERR_ALREADY_SUBSCRIBED');
   }
 
   let finalPrice = selectedPlan.price_inr;
@@ -279,22 +281,25 @@ export async function handleSubscribeV20(request, env, authCtx) {
     ).catch(() => {});
   }
 
-  return Response.json({
-    ok: true,
-    subscription_id: subscriptionId,
+  return ok(request, {
+    subscription_id:   subscriptionId,
     plan,
-    price_inr:       finalPrice,
-    original_price:  selectedPlan.price_inr,
-    coupon:          couponApplied,
+    price_inr:         finalPrice,
+    original_price:    selectedPlan.price_inr,
+    coupon:            couponApplied,
     payment_method,
-    next_step:       payment_method === 'razorpay'
-      ? 'POST /api/payments/order with subscription_id to get Razorpay order_id'
-      : 'Contact billing@cyberdudebivash.com for manual payment',
+    next_step:         'POST /api/payments/create-order with subscription_id to create payment order',
+    payment_info: {
+      upi:     'iambivash.bn-5@okaxis',
+      paypal:  'https://www.paypal.com/paypalme/iambivash',
+      support: 'bivash@cyberdudebivash.com',
+      sla:     '2–4 hour activation after payment',
+    },
     features_unlocked: Object.entries(selectedPlan.limits)
       .filter(([, v]) => v === true)
       .map(([k]) => k),
     platform: 'CYBERDUDEBIVASH AI Security Hub v20.0',
-  });
+  }, 201);
 }
 
 // ─── Handler: GET /api/revenue/gate/:feature ─────────────────────────────────
@@ -428,14 +433,4 @@ export function enforceFeatureGate(feature, tier = 'FREE') {
     feature,
     current_plan: tier,
     required_plan: required,
-    upgrade_cta:  {
-      message:   `Upgrade to ${upgrade.name} for ₹${upgrade.price_inr}/mo to unlock this feature`,
-      route:     upgrade.route,
-      price_inr: upgrade.price_inr,
-    },
-    platform: 'CYBERDUDEBIVASH AI Security Hub v20.0',
-  }, { status: 402 });
-}
-
-// ─── Export usage incrementer for use in scan/API handlers ────────────────────
-export { incrementUsage, getUsage };
+    upg

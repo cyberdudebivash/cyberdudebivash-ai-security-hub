@@ -119,20 +119,21 @@ export async function handleSubmitPayment(request, env) {
       verified_by:    null,
     };
 
-    await env.CDB_KV.put(`payment:record:${payment_id}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 180 }); // 180d
+    const KV = env.SECURITY_HUB_KV;
+    await KV.put(`payment:record:${payment_id}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 180 }); // 180d
 
     // Append to index
     let index = [];
-    try { index = JSON.parse(await env.CDB_KV.get('payment:index') || '[]'); } catch (_) {}
+    try { index = JSON.parse(await KV.get('payment:index') || '[]'); } catch (_) {}
     index.unshift({ payment_id, status: 'pending', amount_inr: record.amount_inr, payer_email: record.payer_email, created_at: record.created_at, product_id });
     if (index.length > 500) index = index.slice(0, 500);
-    await env.CDB_KV.put('payment:index', JSON.stringify(index));
+    await KV.put('payment:index', JSON.stringify(index));
 
     // User-level index
     let userIndex = [];
-    try { userIndex = JSON.parse(await env.CDB_KV.get(`payment:user:${record.payer_email}`) || '[]'); } catch (_) {}
+    try { userIndex = JSON.parse(await KV.get(`payment:user:${record.payer_email}`) || '[]'); } catch (_) {}
     userIndex.unshift({ payment_id, status: 'pending', amount_inr: record.amount_inr, product_id, created_at: record.created_at });
-    await env.CDB_KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
+    await KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
 
     return jsonOk({
       payment_id,
@@ -152,14 +153,15 @@ export async function handleGetPaymentStatus(request, env) {
     const payment_id = url.searchParams.get('payment_id');
     const email      = url.searchParams.get('email');
 
+    const KV = env.SECURITY_HUB_KV;
     if (payment_id) {
-      const record = JSON.parse(await env.CDB_KV.get(`payment:record:${payment_id}`) || 'null');
+      const record = JSON.parse(await KV.get(`payment:record:${payment_id}`) || 'null');
       if (!record) return jsonErr('Payment not found', 404);
       return jsonOk({ payment: record });
     }
 
     if (email) {
-      const userIndex = JSON.parse(await env.CDB_KV.get(`payment:user:${email.toLowerCase()}`) || '[]');
+      const userIndex = JSON.parse(await KV.get(`payment:user:${email.toLowerCase()}`) || '[]');
       return jsonOk({ payments: userIndex });
     }
 
@@ -176,14 +178,15 @@ export async function handleListPayments(request, env) {
     const status = url.searchParams.get('status') || 'all';
     const limit  = parseInt(url.searchParams.get('limit') || '50');
 
-    let index = JSON.parse(await env.CDB_KV.get('payment:index') || '[]');
+    const KV = env.SECURITY_HUB_KV;
+    let index = JSON.parse(await KV.get('payment:index') || '[]');
     if (status !== 'all') index = index.filter(p => p.status === status);
 
     // Enrich with full records for first N
     const enriched = [];
     for (const entry of index.slice(0, Math.min(limit, 100))) {
       try {
-        const record = JSON.parse(await env.CDB_KV.get(`payment:record:${entry.payment_id}`) || 'null');
+        const record = JSON.parse(await KV.get(`payment:record:${entry.payment_id}`) || 'null');
         if (record) enriched.push(record);
       } catch (_) { enriched.push(entry); }
     }
@@ -212,30 +215,31 @@ export async function handleVerifyPayment(request, env) {
       return jsonErr('Provide payment_id and action (approve|reject)', 400);
     }
 
-    const record = JSON.parse(await env.CDB_KV.get(`payment:record:${payment_id}`) || 'null');
+    const KV = env.SECURITY_HUB_KV;
+    const record = JSON.parse(await KV.get(`payment:record:${payment_id}`) || 'null');
     if (!record) return jsonErr('Payment not found', 404);
 
     record.status      = action === 'approve' ? 'verified' : 'rejected';
     record.verified_at = new Date().toISOString();
     record.admin_note  = admin_note || '';
 
-    await env.CDB_KV.put(`payment:record:${payment_id}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 180 });
+    await KV.put(`payment:record:${payment_id}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 180 });
 
     // Update index entry status
-    let index = JSON.parse(await env.CDB_KV.get('payment:index') || '[]');
+    let index = JSON.parse(await KV.get('payment:index') || '[]');
     index = index.map(p => p.payment_id === payment_id ? { ...p, status: record.status } : p);
-    await env.CDB_KV.put('payment:index', JSON.stringify(index));
+    await KV.put('payment:index', JSON.stringify(index));
 
     // Update user index status
-    let userIndex = JSON.parse(await env.CDB_KV.get(`payment:user:${record.payer_email}`) || '[]');
+    let userIndex = JSON.parse(await KV.get(`payment:user:${record.payer_email}`) || '[]');
     userIndex = userIndex.map(p => p.payment_id === payment_id ? { ...p, status: record.status } : p);
-    await env.CDB_KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
+    await KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
 
     // If approved — activate plan for user
     if (action === 'approve' && record.user_id && record.user_id !== 'anonymous') {
       const product = PRODUCT_CATALOG[record.product_id];
       if (product && product.plan_key) {
-        await env.CDB_KV.put(
+        await KV.put(
           `user:plan:${record.user_id}`,
           JSON.stringify({ plan: product.plan_key, activated_at: new Date().toISOString(), payment_id }),
           { expirationTtl: 60 * 60 * 24 * 400 }
@@ -267,6 +271,4 @@ export async function handleGetPaymentConfig(request, env) {
       products: PRODUCT_CATALOG,
     });
   } catch (e) {
-    return jsonErr('Failed to get payment config: ' + e.message, 500);
-  }
-}
+    return jsonErr('Failed to get payment config: ' + e.mess

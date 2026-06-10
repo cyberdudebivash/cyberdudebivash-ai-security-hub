@@ -29,6 +29,40 @@ const MITRE_TACTICS = {
   command_and_control:{ id:'TA0011', name:'C2',                    icon:'📡' },
 };
 
+// Real ATT&CK technique database — keyword → structured T-code object
+const TECHNIQUE_DB = {
+  'tls':            { id:'T1040',   name:'Network Sniffing',                   url:'https://attack.mitre.org/techniques/T1040/' },
+  'ssl':            { id:'T1557',   name:'Adversary-in-the-Middle (AitM)',      url:'https://attack.mitre.org/techniques/T1557/' },
+  'dns tunnel':     { id:'T1071.004',name:'DNS Application Layer Protocol',    url:'https://attack.mitre.org/techniques/T1071/004/' },
+  'dns':            { id:'T1590.002',name:'DNS Passive Collection',             url:'https://attack.mitre.org/techniques/T1590/002/' },
+  'dnssec':         { id:'T1565.002',name:'Transmitted Data Manipulation',     url:'https://attack.mitre.org/techniques/T1565/002/' },
+  'spf':            { id:'T1566.002',name:'Spear Phishing via Service',        url:'https://attack.mitre.org/techniques/T1566/002/' },
+  'dkim':           { id:'T1566.002',name:'Spear Phishing via Service',        url:'https://attack.mitre.org/techniques/T1566/002/' },
+  'dmarc':          { id:'T1566',   name:'Phishing',                           url:'https://attack.mitre.org/techniques/T1566/' },
+  'hsts':           { id:'T1557',   name:'Adversary-in-the-Middle (AitM)',      url:'https://attack.mitre.org/techniques/T1557/' },
+  'header':         { id:'T1505',   name:'Server Software Component',          url:'https://attack.mitre.org/techniques/T1505/' },
+  'csp':            { id:'T1059.007',name:'JavaScript / Cross-Site Scripting', url:'https://attack.mitre.org/techniques/T1059/007/' },
+  'port':           { id:'T1595.001',name:'Scanning IP Blocks',                url:'https://attack.mitre.org/techniques/T1595/001/' },
+  'subdomain':      { id:'T1584',   name:'Compromise Infrastructure',          url:'https://attack.mitre.org/techniques/T1584/' },
+  'password spray': { id:'T1110.003',name:'Password Spraying',                 url:'https://attack.mitre.org/techniques/T1110/003/' },
+  'brute force':    { id:'T1110',   name:'Brute Force',                        url:'https://attack.mitre.org/techniques/T1110/' },
+  'mfa':            { id:'T1621',   name:'MFA Request Generation',             url:'https://attack.mitre.org/techniques/T1621/' },
+  'phish':          { id:'T1566',   name:'Phishing',                           url:'https://attack.mitre.org/techniques/T1566/' },
+  'injection':      { id:'T1190',   name:'Exploit Public-Facing Application',  url:'https://attack.mitre.org/techniques/T1190/' },
+  'prompt inject':  { id:'T1059',   name:'Command and Scripting Interpreter',  url:'https://attack.mitre.org/techniques/T1059/' },
+  'xss':            { id:'T1059.007',name:'JavaScript / XSS',                  url:'https://attack.mitre.org/techniques/T1059/007/' },
+  'csrf':           { id:'T1185',   name:'Browser Session Hijacking',          url:'https://attack.mitre.org/techniques/T1185/' },
+  'privilege':      { id:'T1548',   name:'Abuse Elevation Control Mechanism',  url:'https://attack.mitre.org/techniques/T1548/' },
+  'stale':          { id:'T1078.003',name:'Local Accounts (stale)',            url:'https://attack.mitre.org/techniques/T1078/003/' },
+  'lateral':        { id:'T1021',   name:'Remote Services',                    url:'https://attack.mitre.org/techniques/T1021/' },
+  'ransomware':     { id:'T1486',   name:'Data Encrypted for Impact',          url:'https://attack.mitre.org/techniques/T1486/' },
+  'exfil':          { id:'T1041',   name:'Exfiltration Over C2 Channel',       url:'https://attack.mitre.org/techniques/T1041/' },
+  'backdoor':       { id:'T1505.003',name:'Web Shell',                         url:'https://attack.mitre.org/techniques/T1505/003/' },
+  'credential':     { id:'T1552',   name:'Unsecured Credentials',              url:'https://attack.mitre.org/techniques/T1552/' },
+  'token':          { id:'T1528',   name:'Steal Application Access Token',     url:'https://attack.mitre.org/techniques/T1528/' },
+  'default':        { id:'T1190',   name:'Exploit Public-Facing Application',  url:'https://attack.mitre.org/techniques/T1190/' },
+};
+
 // Finding keyword → ATT&CK tactic mapping
 const FINDING_TACTIC_MAP = {
   tls:                ['initial_access','defense_evasion'],
@@ -161,6 +195,7 @@ const SEV_WEIGHTS = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 /**
  * Generate comprehensive AI brain insights from a scan result.
  * Optionally uses Workers AI if env.AI is bound.
+ * V3: adds exploit_probability, structured T-codes, ₹ business impact.
  */
 export async function generateAIInsights(scanResult, module, env = null) {
   const findings  = [...(scanResult.findings || []), ...(scanResult.locked_findings || [])];
@@ -168,15 +203,36 @@ export async function generateAIInsights(scanResult, module, env = null) {
   const level     = scanResult.risk_level || 'MEDIUM';
   const target    = scanResult.target || scanResult.domain || scanResult.model_name || 'the assessed system';
 
+  const crits  = findings.filter(f => f.severity === 'CRITICAL').length;
+  const highs  = findings.filter(f => f.severity === 'HIGH').length;
+  const totalSev = findings.reduce((s, f) => s + (SEV_WEIGHTS[f.severity] || 0), 0);
+  const maxSev   = Math.max(findings.length * 4, 1);
+
+  // V3: exploit_probability — prefer enterprise intelligence enrichment, fall back to computed
+  const exploit_probability =
+    scanResult?.enterprise_intelligence?.exploit_probability_pct
+    ?? Math.round(Math.min(98, 10 + crits * 20 + highs * 10 + (score / 3)));
+
   // Build structured insight object
   const insights = {
     executive_brief:    buildExecutiveBrief(scanResult, module, target, findings, score, level),
     threat_narrative:   buildThreatNarrative(findings, module, target, score, level),
     attack_scenario:    buildAttackScenario(findings, module, target),
     remediation_plan:   buildDetailedRemediationPlan(findings, module),
-    mitre_mapping:      buildMitreMapping(findings, module),
+    mitre_mapping:      buildMitreMapping(findings, module),  // V3: now returns flat array
     risk_forecast:      buildRiskForecast(score, findings, module),
     blog_post:          generateBlogPost(scanResult, module, target, findings),
+    // V3 top-level convenience fields (mirrors aiAnalysis.js format)
+    exploit_probability,
+    exploit_probability_label: crits > 0 ? 'CRITICAL' : highs > 0 ? 'HIGH' : score > 35 ? 'MEDIUM' : 'LOW',
+    risk_summary: {
+      score,
+      level,
+      crits,
+      highs,
+      total_findings: findings.length,
+      exploit_probability,
+    },
   };
 
   // Enhance with Workers AI if available (optional, graceful fallback)
@@ -403,36 +459,61 @@ function estimateEffortHours(finding) {
 }
 
 /**
+ * Resolve a finding title to a structured ATT&CK technique object.
+ * Returns { id, name, url } from TECHNIQUE_DB.
+ */
+function resolveATTACKTechnique(title) {
+  const t = (title || '').toLowerCase();
+  for (const [keyword, tech] of Object.entries(TECHNIQUE_DB)) {
+    if (t.includes(keyword)) return tech;
+  }
+  return TECHNIQUE_DB['default'];
+}
+
+/**
  * Dynamically map findings to MITRE ATT&CK tactics and techniques.
+ * V3: Returns a flat array of technique objects with id/name/url/tactic
+ * (compatible with both frontend renderV2Tab and legacy callers).
+ * The full structured object is available on .detail for callers that need it.
  */
 export function buildMitreMapping(findings, module) {
+  const seenIds  = new Set();
+  const flatList = [];
   const tacticSet = new Set();
-  const mappings  = [];
+  const detailedMappings = [];
 
   findings.forEach(f => {
     const titleLower = (f.title || '').toLowerCase();
+    const technique  = resolveATTACKTechnique(f.title);
     const matchedTactics = new Set();
 
     Object.entries(FINDING_TACTIC_MAP).forEach(([keyword, tactics]) => {
-      if (titleLower.includes(keyword)) {
-        tactics.forEach(t => matchedTactics.add(t));
-      }
+      if (titleLower.includes(keyword)) tactics.forEach(t => matchedTactics.add(t));
     });
-
-    // Default tactic if no keyword matched
-    if (!matchedTactics.size) {
-      matchedTactics.add('initial_access');
-    }
+    if (!matchedTactics.size) matchedTactics.add('initial_access');
 
     const tacticsArr = [...matchedTactics].map(k => MITRE_TACTICS[k]).filter(Boolean);
     tacticsArr.forEach(t => tacticSet.add(t.id));
 
-    mappings.push({
-      finding_id:     f.id || f.title?.slice(0, 8),
-      finding_title:  f.title,
-      severity:       f.severity,
-      tactics:        tacticsArr,
-      technique_hint: getTechniqueHint(f.title, module),
+    // Deduplicate techniques in flat list by ID
+    if (!seenIds.has(technique.id)) {
+      seenIds.add(technique.id);
+      const tactic = tacticsArr[0] || MITRE_TACTICS.initial_access;
+      flatList.push({
+        id:     technique.id,
+        name:   technique.name,
+        url:    technique.url,
+        tactic: tactic?.name || 'Initial Access',
+        severity: f.severity,
+      });
+    }
+
+    detailedMappings.push({
+      finding_id:    f.id || f.title?.slice(0, 8),
+      finding_title: f.title,
+      severity:      f.severity,
+      technique,
+      tactics:       tacticsArr,
     });
   });
 
@@ -440,31 +521,22 @@ export function buildMitreMapping(findings, module) {
     Object.values(MITRE_TACTICS).find(t => t.id === id)
   ).filter(Boolean);
 
-  return {
+  // Return flat array (frontend-compatible) with detail attached
+  flatList.detail = {
     tactics_covered: uniqueTactics,
-    technique_count: mappings.reduce((s, m) => s + m.tactics.length, 0),
-    mappings,
+    technique_count: flatList.length,
+    mappings:        detailedMappings,
     coverage_pct:    Math.round((uniqueTactics.length / Object.keys(MITRE_TACTICS).length) * 100),
-    navigator_url:   `https://mitre-attack.github.io/attack-navigator/`,
+    navigator_url:   'https://mitre-attack.github.io/attack-navigator/',
   };
+
+  return flatList;
 }
 
+/** @deprecated — use resolveATTACKTechnique() for structured output */
 function getTechniqueHint(title, module) {
-  const t = (title || '').toLowerCase();
-  if (/tls|ssl/)           { /* */ }
-  if (/dns tunnel/.test(t)) return 'T1071.004 — DNS Application Layer Protocol';
-  if (/dns/.test(t))        return 'T1590.002 — DNS / Passive DNS';
-  if (/phish/.test(t))      return 'T1566.002 — Spear Phishing via Service';
-  if (/password spray/.test(t)) return 'T1110.003 — Password Spraying';
-  if (/mfa/.test(t))        return 'T1621 — Multi-Factor Authentication Request Generation';
-  if (/prompt inject/.test(t)) return 'T1059 — Command and Scripting Interpreter (AI context)';
-  if (/privilege/.test(t))  return 'T1078 — Valid Accounts / T1548 — Abuse Elevation Mechanism';
-  if (/stale|inactive/.test(t)) return 'T1078.003 — Local Accounts';
-  if (/lateral/.test(t))    return 'T1021 — Remote Services';
-  if (/ransomware/.test(t)) return 'T1486 — Data Encrypted for Impact';
-  if (/exfil/.test(t))      return 'T1041 — Exfiltration Over C2 Channel';
-  if (/header|csp/.test(t)) return 'T1505 — Server Software Component';
-  return 'T1190 — Exploit Public-Facing Application';
+  const tech = resolveATTACKTechnique(title);
+  return `${tech.id} — ${tech.name}`;
 }
 
 /**
@@ -520,108 +592,4 @@ export function generateBlogPost(scanResult, module, target, findings) {
   const titleOptions = {
     domain:     `${crits > 0 ? 'CRITICAL: ' : ''}${target} Security Audit — ${crits + highs} High-Risk Findings Discovered`,
     ai:         `AI Security Assessment: ${target} Scored ${score}/100 — ${crits > 0 ? 'Critical LLM Vulnerabilities Found' : 'OWASP LLM Analysis Complete'}`,
-    redteam:    `Red Team Report: ${target} — ${score >= 70 ? 'Multiple Attack Paths Confirmed' : 'Attack Simulation Complete'}`,
-    identity:   `Identity Security Audit: ${target} — ${crits + highs} Zero Trust Gaps Identified`,
-    compliance: `Compliance Gap Report: ${target} — ${score >= 60 ? 'Significant Regulatory Exposure' : 'Compliance Assessment Complete'}`,
-  };
-
-  const intro = `We recently conducted a ${module.toUpperCase()} security assessment using the CYBERDUDEBIVASH AI Security Hub platform. Here's what we found — and why it matters to every security professional.`;
-
-  let body = `## Overview\n\n${intro}\n\n**Risk Score:** ${score}/100 | **Risk Level:** ${level} | **Assessment Date:** ${date}\n\n`;
-
-  if (topFinding) {
-    body += `## Key Finding: ${topFinding.title}\n\n${topFinding.description || 'A significant security vulnerability was identified.'}\n\n**Why this matters:** ${ctx.attack_patterns[0]}\n\n`;
-  }
-
-  body += `## Attack Context\n\n${ctx.attack_patterns[1] || ctx.attack_patterns[0]}\n\nThreat actors including ${ctx.threat_actors.slice(0, 2).join(' and ')} are known to exploit these exact patterns.\n\n`;
-
-  body += `## Findings Summary\n\n| Severity | Count |\n|----------|-------|\n`;
-  ['CRITICAL','HIGH','MEDIUM','LOW'].forEach(sev => {
-    const count = findings.filter(f => f.severity === sev).length;
-    if (count > 0) body += `| ${sev} | ${count} |\n`;
-  });
-
-  body += `\n## Key Recommendations\n\n`;
-  findings.slice(0, 3).forEach((f, i) => {
-    body += `${i + 1}. **${f.title}**: ${f.recommendation || f.description || 'Remediate promptly'}\n`;
-  });
-
-  body += `\n## Conclusion\n\nSecurity is not a checkbox — it's a continuous process. ${ctx.business_impact[0]}. The CYBERDUDEBIVASH AI Security Hub provides real-time AI-driven assessments to help organizations stay ahead of threat actors.\n\n`;
-  body += `🔒 **Scan your infrastructure at [cyberdudebivash.in](https://cyberdudebivash.in)**\n\n---\n*Generated by CYBERDUDEBIVASH AI Security Hub | ${date}*`;
-
-  const telegramPost = buildTelegramPost(scanResult, module, target, findings, score, level);
-
-  return {
-    title:          titleOptions[module] || titleOptions.domain,
-    body_md:        body,
-    excerpt:        intro,
-    tags:           JSON.stringify([module, 'cybersecurity', 'AI', level.toLowerCase(), 'India', 'CYBERDUDEBIVASH']),
-    telegram_post:  telegramPost,
-    linkedin_post:  buildLinkedInPost(scanResult, module, target, findings, score, level),
-    word_count:     body.split(' ').length,
-  };
-}
-
-function buildTelegramPost(scanResult, module, target, findings, score, level) {
-  const crits = findings.filter(f => f.severity === 'CRITICAL').length;
-  const highs = findings.filter(f => f.severity === 'HIGH').length;
-  const emoji = level === 'CRITICAL' ? '🚨' : level === 'HIGH' ? '⚠️' : level === 'MEDIUM' ? '🔔' : '✅';
-
-  return `${emoji} <b>Security Alert — ${module.toUpperCase()} Assessment</b>
-
-📊 Target: <code>${target}</code>
-🎯 Risk Score: <b>${score}/100</b> (${level})
-🔴 Critical: ${crits} | 🟠 High: ${highs}
-
-${crits > 0 ? `⚡ IMMEDIATE ACTION REQUIRED\n${findings.find(f=>f.severity==='CRITICAL')?.title || 'Critical finding detected'}\n\n` : ''}📋 Full report available at CYBERDUDEBIVASH AI Security Hub
-
-🔗 https://cyberdudebivash.in
-📢 Join: https://t.me/cyberdudebivashSentinelApex`;
-}
-
-function buildLinkedInPost(scanResult, module, target, findings, score, level) {
-  const crits    = findings.filter(f => f.severity === 'CRITICAL').length;
-  const ctx      = ATTACK_CONTEXTS[module] || ATTACK_CONTEXTS.domain;
-  const topFinding = findings.find(f => f.severity === 'CRITICAL') || findings.find(f => f.severity === 'HIGH') || findings[0];
-
-  return `🔒 Security Intelligence Report | ${module.toUpperCase()} Assessment
-
-I recently ran a security assessment and the results are worth sharing with the community.
-
-📊 Risk Score: ${score}/100 | Level: ${level}
-${crits > 0 ? `⚠️ ${crits} CRITICAL finding(s) identified` : '✅ No critical findings — good security hygiene'}
-${topFinding ? `\n🎯 Top Finding: ${topFinding.title}` : ''}
-
-Key insight: ${ctx.attack_patterns[0].slice(0, 120)}...
-
-The CYBERDUDEBIVASH AI Security Hub platform powered this assessment — combining real-time threat intelligence with AI-driven security analysis.
-
-#Cybersecurity #AI #SecurityIntelligence #InfoSec #CyberDudeBivash #India
-
-🌐 Try it: https://cyberdudebivash.in`;
-}
-
-/**
- * Optional Workers AI enhancement — enriches narrative with LLM reasoning.
- */
-async function enhanceWithWorkersAI(env, narrative, module, target) {
-  const prompt = `You are a senior cybersecurity consultant. Enhance this security assessment narrative with additional real-world context, specific exploit techniques, and actionable insights. Keep it under 300 words. Be direct and technical.
-
-Module: ${module}
-Target: ${target}
-
-Narrative:
-${narrative.slice(0, 500)}
-
-Enhanced insight:`;
-
-  try {
-    const result = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 400,
-    });
-    return result?.response || null;
-  } catch {
-    return null;
-  }
-}
+    redteam:    `Red Team Re

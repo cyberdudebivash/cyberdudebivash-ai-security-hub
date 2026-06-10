@@ -4239,6 +4239,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-arr">$—</div><div class="p3-kpi-label">ARR</div><div class="p3-kpi-sub">Annual Run Rate</div></div>
     <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-paying">—</div><div class="p3-kpi-label">Paying Customers</div><div class="p3-kpi-sub">Active</div></div>
   </div>
+  <!-- Live Security ROI (from D1 data — populated by cdbExecLoad) -->
+  <div id="p3-security-roi-live" style="display:none;margin-bottom:16px"></div>
   <!-- Risk Summary + Report Gen -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px">
     <div style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:16px;padding:24px">
@@ -11109,9 +11111,15 @@ async function _fetchAIBrainV2Impl(module, data) {
   ]);
 
   // Parse responses with graceful fallback for each
+  // Unwraps the standard { success, data, error, timestamp } API envelope.
   async function safeJson(res, label) {
     if (!res.ok) return { _failed: true, _reason: res._timeout ? 'timeout' : 'api_error', label };
-    try { return await res.json(); } catch { return { _failed: true, _reason: 'parse_error', label }; }
+    try {
+      const r = await res.json();
+      if (r && r.success === true && r.data) return r.data;
+      if (r && r.success === false) return { _failed: true, _reason: r.error || 'api_error', label };
+      return r;
+    } catch { return { _failed: true, _reason: 'parse_error', label }; }
   }
   const [analyze, simulate, forecast] = await Promise.all([
     safeJson(analyzeRes,  'analyze'),
@@ -11165,11 +11173,11 @@ function renderV2Tab(module, tab, data) {
     content.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
         <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:28px;font-weight:800;color:#ef4444">${d.exploit_probability}%</div>
+          <div style="font-size:28px;font-weight:800;color:#ef4444">${d.exploit_probability != null ? d.exploit_probability : (d.exploitation_likelihood != null ? Math.round(d.exploitation_likelihood * 100) : 'N/A')}${d.exploit_probability != null || d.exploitation_likelihood != null ? '%' : ''}</div>
           <div style="font-size:11px;color:var(--text-dim)">Exploit Probability</div>
         </div>
         <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:20px;font-weight:800;color:var(--accent)">${(d.threat_actors||[]).slice(0,1)[0] || 'APT/Cybercrime'}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--accent)">${(d.threat_actors||[]).slice(0,1).map(a => typeof a === 'object' ? a.name : a)[0] || 'APT/Cybercrime'}</div>
           <div style="font-size:11px;color:var(--text-dim)">Primary Threat Actor</div>
         </div>
       </div>
@@ -17887,7 +17895,13 @@ window.cdbEnrichCVE = function() {
 
 // ── EXECUTIVE HUB ───────────────────────────────────────────────────────────
 window.cdbExecLoad = function() {
-  p3Req('/api/executive/dashboard').then(function(data) {
+  Promise.all([
+    p3Req('/api/executive/dashboard').catch(function() { return {}; }),
+    safeFetch('/api/ciso/metrics').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
+  ]).then(function(results) {
+  var data     = results[0] || {};
+  var cisoRaw  = results[1] || {};
+  var ciso     = (cisoRaw && cisoRaw.success && cisoRaw.data) ? cisoRaw.data : cisoRaw;
     var kpis = data.kpis || {};
     var rev  = data.revenue || {};
 
@@ -17896,13 +17910,30 @@ window.cdbExecLoad = function() {
       if (el) el.textContent = (val !== undefined && val !== null) ? val : '—';
     }
     setKpi('p3-kpi-threats',    p3Fmt(kpis.threats_blocked));
-    setKpi('p3-kpi-rules',      p3Fmt(kpis.rules_deployed));
+    setKpi('p3-kpi-rules',      p3Fmt(kpis.rules_deployed || (ciso.platform && ciso.platform.mythos_tools_published)));
     setKpi('p3-kpi-compliance', (kpis.compliance_score || '—') + (kpis.compliance_score ? '/100' : ''));
-    setKpi('p3-kpi-mttd',       kpis.mttd_minutes);
-    setKpi('p3-kpi-mttr',       kpis.mttr_minutes);
+    var mttdH = ciso.kpis && ciso.kpis.mttd_hours;
+    var mttrH = ciso.kpis && ciso.kpis.mttr_hours;
+    setKpi('p3-kpi-mttd', mttdH != null ? Math.round(mttdH * 60) : kpis.mttd_minutes);
+    setKpi('p3-kpi-mttr', mttrH != null ? Math.round(mttrH * 60) : kpis.mttr_minutes);
     setKpi('p3-kpi-mrr',        p3FmtMoney(kpis.mrr_total));
     setKpi('p3-kpi-arr',        p3FmtMoney(kpis.arr));
     setKpi('p3-kpi-paying',     p3Fmt(kpis.paying_customers));
+
+    var roi = ciso.security_roi;
+    var roiEl = document.getElementById('p3-security-roi-live');
+    if (roiEl && roi && roi.roi_multiple > 0) {
+      roiEl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:12px;margin-bottom:16px">' +
+          '<div style="font-size:36px;font-weight:900;color:#10b981;line-height:1">' + roi.roi_multiple + 'x</div>' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:700;color:#f1f5f9">Security ROI (Live)</div>' +
+            '<div style="font-size:12px;color:#64748b">' + (roi.roi_label || '') + '</div>' +
+            '<div style="font-size:11px;color:#10b981;margin-top:4px">Risk reduced: ' + roi.breach_probability_without + ' → ' + roi.breach_probability_with + ' | Tools auto-generated: ' + (roi.tools_auto_generated || 0) + '</div>' +
+          '</div>' +
+        '</div>';
+      roiEl.style.display = 'block';
+    }
 
     // Risk findings
     var riskEl = document.getElementById('p3-risk-findings');
@@ -17920,7 +17951,7 @@ window.cdbExecLoad = function() {
         }).join('');
       }
     }
-  });
+  }); // end Promise.all .then
   window.cdbMSSPLoad();
   window.cdbListReports();
 };
@@ -20230,64 +20261,4 @@ function v21TriggerUrgencyPayment(){
 /* 4. WhatsApp FAB tooltip */
 (function(){
   var btn=document.getElementById('v21-wa-btn'),tip=document.getElementById('v21-wa-tooltip');
-  if(!btn||!tip)return;
-  setTimeout(function(){tip.style.display='block';setTimeout(function(){tip.style.display='none';},5000);},3000);
-  btn.addEventListener('mouseenter',function(){tip.style.display='block';});
-  if(btn.parentElement)btn.parentElement.addEventListener('mouseleave',function(){tip.style.display='none';});
-})();
-
-/* 5. Patch initP12 to not hardcode "all systems operational" */
-(function(){
-  var orig=window.initP12;
-  if(typeof orig==='function'){window.initP12=async function(){await orig.call(this);if(typeof logSOC==='function')logSOC('Phase 12 online - real health verification in progress...','sys','info');};}
-})();
-</script>
-
-<script>
-// ── v25: Initialize stats with live API data on first page load ─────────────
-(function initLiveStats() {
-  async function loadStats() {
-    try {
-      const [h, ti] = await Promise.all([
-        fetch('/api/health').then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/threat-intel/stats').then(r => r.ok ? r.json() : null).catch(() => null),
-      ]);
-      const _rawScans = h?.stats?.total_scans ?? h?.total_scans ?? 0;
-      const totalScans = _applyFloor(_rawScans, _SCAN_BASELINE);
-      const _rawCVE = ti?.total_cves ?? ti?.total ?? 0;
-      const totalCVE   = _applyFloor(_rawCVE, _CVE_BASELINE);
-      const critCnt    = ti?.critical_cves ?? ti?.stats?.critical ?? _THREAT_BASELINE;
-
-      const elSS = document.getElementById('stat-scans');
-      const elSC = document.getElementById('stat-cves');
-      const elST = document.getElementById('stat-threats');
-      if (elSS) elSS.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
-      if (elSC) elSC.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
-      if (elST) elST.textContent = critCnt + ' critical';
-
-      // p4 counters
-      const _p4s = document.getElementById('p4-cnt-scans');
-      if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
-      const _gtb = document.getElementById('gtm-blocked');
-      if (_gtb && totalScans !== null) _gtb.textContent = Number(totalScans).toLocaleString('en-IN');
-
-      // Hero live scan count
-      const heroLive = document.getElementById('hero-live-scans');
-      if (heroLive && totalScans !== null) heroLive.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
-
-      // ann-revenue-count
-      const annRev = document.getElementById('ann-revenue-count');
-      // Only update if we have real data from defense stats
-    } catch(e) {
-      // Silently fail — placeholders stay as '—'
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadStats);
-  } else {
-    loadStats();
-  }
-})();
-</script>
-</body>
-</html>
+  if(!btn||

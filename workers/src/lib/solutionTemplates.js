@@ -1647,5 +1647,6 @@ function generateUUID(seed) {
   return `${p1}-${p2.slice(0,4)}-4${p2.slice(5,8)}-${p3.slice(0,4)}-${p4}${p5.slice(0,8)}`;
 }
 
-// ── MYTHOS Extension: re-export V2 generators (YARA, ThreatHunt, ExecBriefing, APIModule) ──
-export { generateYARARule, generateThreatHuntPack, generateExecutiveBriefing, generateAPISecurityModule } from './solutionTemplatesV2.js';
+// ── MYTHOS Extension: re-export V2 generators ────────────────────────────────
+// v2.0: YARA, ThreatHunt, ExecBriefing, APIModule
+// v2.1: SentinelAnalyticsRule, STIXBundle

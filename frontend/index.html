@@ -4270,6 +4270,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-arr">$—</div><div class="p3-kpi-label">ARR</div><div class="p3-kpi-sub">Annual Run Rate</div></div>
     <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-paying">—</div><div class="p3-kpi-label">Paying Customers</div><div class="p3-kpi-sub">Active</div></div>
   </div>
+  <!-- Live Security ROI (from D1 data — populated by cdbExecLoad) -->
+  <div id="p3-security-roi-live" style="display:none;margin-bottom:16px"></div>
   <!-- Risk Summary + Report Gen -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px">
     <div style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:16px;padding:24px">
@@ -11140,9 +11142,15 @@ async function _fetchAIBrainV2Impl(module, data) {
   ]);
 
   // Parse responses with graceful fallback for each
+  // Unwraps the standard { success, data, error, timestamp } API envelope.
   async function safeJson(res, label) {
     if (!res.ok) return { _failed: true, _reason: res._timeout ? 'timeout' : 'api_error', label };
-    try { return await res.json(); } catch { return { _failed: true, _reason: 'parse_error', label }; }
+    try {
+      const r = await res.json();
+      if (r && r.success === true && r.data) return r.data;
+      if (r && r.success === false) return { _failed: true, _reason: r.error || 'api_error', label };
+      return r;
+    } catch { return { _failed: true, _reason: 'parse_error', label }; }
   }
   const [analyze, simulate, forecast] = await Promise.all([
     safeJson(analyzeRes,  'analyze'),
@@ -11196,11 +11204,11 @@ function renderV2Tab(module, tab, data) {
     content.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
         <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:28px;font-weight:800;color:#ef4444">${d.exploit_probability}%</div>
+          <div style="font-size:28px;font-weight:800;color:#ef4444">${d.exploit_probability != null ? d.exploit_probability : (d.exploitation_likelihood != null ? Math.round(d.exploitation_likelihood * 100) : 'N/A')}${d.exploit_probability != null || d.exploitation_likelihood != null ? '%' : ''}</div>
           <div style="font-size:11px;color:var(--text-dim)">Exploit Probability</div>
         </div>
         <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:20px;font-weight:800;color:var(--accent)">${(d.threat_actors||[]).slice(0,1)[0] || 'APT/Cybercrime'}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--accent)">${(d.threat_actors||[]).slice(0,1).map(a => typeof a === 'object' ? a.name : a)[0] || 'APT/Cybercrime'}</div>
           <div style="font-size:11px;color:var(--text-dim)">Primary Threat Actor</div>
         </div>
       </div>
@@ -17917,7 +17925,15 @@ window.cdbEnrichCVE = function() {
 
 // ── EXECUTIVE HUB ───────────────────────────────────────────────────────────
 window.cdbExecLoad = function() {
-  p3Req('/api/executive/dashboard').then(function(data) {
+  // Parallel: exec dashboard + CISO metrics (D1-authoritative security data)
+  Promise.all([
+    p3Req('/api/executive/dashboard').catch(function() { return {}; }),
+    safeFetch('/api/ciso/metrics').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
+  ]).then(function(results) {
+  var data     = results[0] || {};
+  var cisoRaw  = results[1] || {};
+  // Unwrap CISO envelope: { success, data, ... }
+  var ciso     = (cisoRaw && cisoRaw.success && cisoRaw.data) ? cisoRaw.data : cisoRaw;
     var kpis = data.kpis || {};
     var rev  = data.revenue || {};
 
@@ -17926,13 +17942,35 @@ window.cdbExecLoad = function() {
       if (el) el.textContent = (val !== undefined && val !== null) ? val : '—';
     }
     setKpi('p3-kpi-threats',    p3Fmt(kpis.threats_blocked));
-    setKpi('p3-kpi-rules',      p3Fmt(kpis.rules_deployed));
+    setKpi('p3-kpi-rules',      p3Fmt(kpis.rules_deployed || (ciso.platform && ciso.platform.mythos_tools_published)));
     setKpi('p3-kpi-compliance', (kpis.compliance_score || '—') + (kpis.compliance_score ? '/100' : ''));
-    setKpi('p3-kpi-mttd',       kpis.mttd_minutes);
-    setKpi('p3-kpi-mttr',       kpis.mttr_minutes);
+    // Prefer CISO metrics (real D1 data) for MTTD/MTTR; convert hours → minutes for display
+    var mttdH = ciso.kpis && ciso.kpis.mttd_hours;
+    var mttrH = ciso.kpis && ciso.kpis.mttr_hours;
+    setKpi('p3-kpi-mttd', mttdH != null ? Math.round(mttdH * 60) : kpis.mttd_minutes);
+    setKpi('p3-kpi-mttr', mttrH != null ? Math.round(mttrH * 60) : kpis.mttr_minutes);
     setKpi('p3-kpi-mrr',        p3FmtMoney(kpis.mrr_total));
     setKpi('p3-kpi-arr',        p3FmtMoney(kpis.arr));
     setKpi('p3-kpi-paying',     p3Fmt(kpis.paying_customers));
+
+    // ── Security ROI card (from CISO D1 metrics) ───────────────────────────
+    var roi = ciso.security_roi;
+    var roiEl = document.getElementById('p3-security-roi-live');
+    if (roiEl && roi && roi.roi_multiple > 0) {
+      roiEl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:12px;margin-bottom:16px">' +
+          '<div style="font-size:36px;font-weight:900;color:#10b981;line-height:1">' + roi.roi_multiple + 'x</div>' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:700;color:#f1f5f9">Security ROI (Live)</div>' +
+            '<div style="font-size:12px;color:#64748b">' + (roi.roi_label || '') + '</div>' +
+            '<div style="font-size:11px;color:#10b981;margin-top:4px">' +
+              'Risk reduced: ' + roi.breach_probability_without + ' → ' + roi.breach_probability_with +
+              ' | Tools auto-generated: ' + (roi.tools_auto_generated || 0) +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      roiEl.style.display = 'block';
+    }
 
     // Risk findings
     var riskEl = document.getElementById('p3-risk-findings');
@@ -17950,7 +17988,7 @@ window.cdbExecLoad = function() {
         }).join('');
       }
     }
-  });
+  }); // end Promise.all .then
   window.cdbMSSPLoad();
   window.cdbListReports();
 };
@@ -20539,87 +20577,4 @@ function v21TriggerUrgencyPayment(){
     const amtEl   = document.getElementById('m-crypto-amount');
     const walEl   = document.getElementById('m-crypto-wallet');
     if (assetEl) assetEl.textContent  = asset;
-    if (amtEl)   amtEl.textContent    = `$${usd}.00`;
-    if (walEl)   walEl.textContent    = wallet;
-  }
-
-  function copy(text, btn) {
-    navigator.clipboard.writeText(text).then(() => {
-      if (!btn) return;
-      const orig = btn.textContent;
-      btn.textContent = '✓ Copied';
-      setTimeout(() => { btn.textContent = orig; }, 1500);
-    }).catch(() => {});
-  }
-
-  function copyRef(btn) {
-    const ref = document.getElementById('m-wire-ref')?.textContent || '';
-    copy(ref, btn);
-  }
-
-  function copyCrypto(btn) {
-    const chain  = document.getElementById('m-chain-select')?.value || 'ETH';
-    copy(CRYPTO_WALLETS[chain] || '', btn);
-  }
-
-  function rzpPay() {
-    if (!window.Razorpay) {
-      showToast('Razorpay not loaded — please refresh and try again.', 'warn');
-      return;
-    }
-    const amountINR = PRICING_INR[_currentPlan] || 1499;
-    const rzp = new window.Razorpay({
-      key:         _rzpKeyId || '',
-      amount:      amountINR * 100,
-      currency:    'INR',
-      name:        'CYBERDUDEBIVASH PVT LTD',
-      description: `SENTINEL APEX ${_currentPlan.toUpperCase()} SUBSCRIPTION`,
-      handler: function(res) {
-        close();
-        showToast('✅ Payment successful! Your plan activates within 2 minutes.', 'success');
-      },
-      modal: { ondismiss: function() { showToast('Payment cancelled.', 'info'); } },
-    });
-    rzp.open();
-  }
-
-  function showToast(msg, type) {
-    const t = document.createElement('div');
-    t.textContent = msg;
-    const bg = type==='success'?'#21c55d': type==='warn'?'#f59e0b': '#334155';
-    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:10001;` +
-      `background:${bg};color:${type==='success'||type==='warn'?'#000':'#fff'};` +
-      `padding:.7rem 1.3rem;border-radius:8px;font-size:.85rem;max-width:340px;` +
-      `box-shadow:0 4px 20px rgba(0,0,0,.5);animation:fadeIn .3s ease`;
-    document.body.appendChild(t);
-    setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
-  }
-
-  // Close on overlay click
-  document.getElementById('mythosOverlay').addEventListener('click', function(e) {
-    if (e.target === this) close();
-  });
-
-  // Expose global API
-  window.CDB_MYTHOS = { open, close, switchTab, updateChain, copy, copyRef, copyCrypto, rzpPay };
-  // Alias for pricing card buttons (backward compat)
-  window.openMythosCheckout = open;
-
-  // Wire up existing startSubscription calls to also open MYTHOS modal
-  // (keeps Razorpay flow working while adding multi-rail as first option)
-  const _origStartSub = window.startSubscription;
-  window.startSubscription = function(planKey) {
-    // Map existing plan key → MYTHOS plan
-    const map = { STARTER:'starter', PRO:'pro', ENTERPRISE:'enterprise' };
-    const mPlan = map[planKey] || planKey.toLowerCase();
-    open(mPlan);
-    // Also run original Razorpay flow as fallback (fires in Razorpay tab)
-    // Users can choose their preferred rail in the modal
-  };
-
-  document.addEventListener('DOMContentLoaded', init);
-})();
-</script>
-<!-- END MYTHOS AI REVENUE ENGINE -->
-</body>
-</html>
+    if (amtEl)  

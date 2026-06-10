@@ -147,9 +147,4 @@ crons = [
 # ── Custom domain routes ──────────────────────────────────────────────────────
 # Uncomment after configuring DNS:
 # [[routes]]
-# pattern   = "api.cyberdudebivash.in/*"
-# zone_name = "cyberdudebivash.in"
-
-# [[routes]]
-# pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "cyberdudebiv
+# patte
