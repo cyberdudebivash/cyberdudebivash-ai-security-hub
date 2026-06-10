@@ -206,11 +206,13 @@ export async function handleGetPlansV20(request, env, authCtx) {
     can_upgrade: PLAN_RANK[p.id] > PLAN_RANK[userTier],
   }));
 
-  return ok(request, {
+  // REM-12: flatten plans to top level (no data wrapper) for API consistency
+  return Response.json({
+    success:      true,
     plans,
-    current_plan:    userTier,
+    current_plan: userTier,
     currency,
-    billing_info:    'All plans billed monthly. Cancel anytime.',
+    billing_info: 'All plans billed monthly. Cancel anytime.',
     payment_methods: {
       upi:     'iambivash.bn-5@okaxis',
       paypal:  'https://www.paypal.com/paypalme/iambivash',
@@ -219,7 +221,8 @@ export async function handleGetPlansV20(request, env, authCtx) {
       support: 'bivash@cyberdudebivash.com · +91 8179881447',
       sla:     '2–4 hour activation',
     },
-    platform: 'CYBERDUDEBIVASH AI Security Hub v20.0',
+    platform:   'CYBERDUDEBIVASH AI Security Hub v20.0',
+    timestamp:  new Date().toISOString(),
   });
 }
 

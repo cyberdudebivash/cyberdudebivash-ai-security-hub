@@ -77,10 +77,16 @@ export async function handleAISPMInventory(request, env, authCtx) {
   }
 
   const body        = await request.json().catch(() => ({}));
-  const org         = body.organization || body.org || 'Unknown Organization';
-  const models      = body.models       || [];
+  const org         = body.organization || body.org_name || body.org || 'Unknown Organization';
   const domain      = body.domain       || '';
   const integrations = body.integrations || [];
+  // REM-06: normalise models — accept both string names and full objects
+  const rawModels   = body.models || [];
+  const models = rawModels.map(m =>
+    typeof m === 'string'
+      ? { name: m, type: 'LLM', access_controls: false, output_filtering: false, input_validation: false, monitoring: false, data_classification: false }
+      : m
+  );
 
   // Auto-detect common AI usage patterns from provided context
   const detectedRisks = [];
@@ -294,10 +300,12 @@ Generate a 90-day AI governance improvement roadmap with: Month 1 quick wins, Mo
   } catch {}
 
   return ok({
-    success:      true,
-    service:      'CDB-AISPM-003',
-    organization: org,
+    success:         true,
+    service:         'CDB-AISPM-003',
+    organization:    org,
     sector,
+    governance_score: overall,
+    maturity_level:   maturity.level,
     maturity: {
       overall_score: overall,
       ...maturity,

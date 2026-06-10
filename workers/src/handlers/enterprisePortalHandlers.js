@@ -413,17 +413,16 @@ export async function handleEnterpriseInquiry(request, env, authCtx) {
     return ok({ success: false, error: 'company and email are required' }, 400);
   }
 
-  // Store lead in D1
+  // Store lead in D1 — REM-04: user_id=NULL avoids FK violation; email stored in notes
   try {
     await env.DB?.prepare(`
       INSERT INTO service_orders (id, user_id, service_ref, status, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      VALUES (?, NULL, ?, ?, ?, datetime('now'))
     `).bind(
       crypto.randomUUID(),
-      email,
       'ENTERPRISE-LEAD',
       'pending',
-      JSON.stringify({ company, name, employees, use_case, message: message?.slice(0, 500) }),
+      JSON.stringify({ company, name, email, employees, use_case, message: message?.slice(0, 500) }),
     ).run().catch(() => {});
   } catch {}
 

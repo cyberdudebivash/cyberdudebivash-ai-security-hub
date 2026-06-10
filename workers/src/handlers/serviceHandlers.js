@@ -31,6 +31,31 @@ import { runConsultationPreAssessment }      from '../services/consultationPreAs
 // ── MYTHOS enrichment ─────────────────────────────────────────────────────────
 import { enrichAssessmentWithMYTHOS }        from '../services/mythosEnrichmentEngine.js';
 
+// ── Scan observability: KV counter + audit log (REM-07 / REM-08) ────────────
+async function trackScan(env, { service, target, userId, tier, outcome = 'started' }) {
+  try {
+    const kv = env.KV || env.SECURITY_HUB_KV;
+    if (!kv) return;
+    const day = new Date().toISOString().slice(0, 10);
+    // Increment daily scan counter
+    const cur = parseInt(await kv.get(`scan_count:total:${day}`).catch(() => '0') || '0', 10);
+    await kv.put(`scan_count:total:${day}`, String(cur + 1), { expirationTtl: 90 * 86400 }).catch(() => {});
+    // Write audit event
+    const id = `audit_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    await kv.put(`audit:${day}:${id}`, JSON.stringify({
+      id,
+      type:       `scan.${outcome}`,
+      actor:      userId || 'anonymous',
+      actor_tier: tier   || 'FREE',
+      resource:   service,
+      action:     'execute',
+      outcome,
+      details:    { target },
+      timestamp:  new Date().toISOString(),
+    }), { expirationTtl: 90 * 86400 }).catch(() => {});
+  } catch {}
+}
+
 function ok(data, status = 200) {
   return Response.json(data, { status });
 }
@@ -149,11 +174,21 @@ export async function handleSSLScan(request, env, authCtx) {
   const body   = await parseBody(request);
   const domain = body.domain || body.target;
   if (!domain) return err('domain is required', 400);
+  void trackScan(env, { service: 'ssl-scan', target: domain, userId: authCtx?.userId, tier: authCtx?.tier });
 
-  const report = await runSSLCheck(env, domain, null);
+  let report = await runSSLCheck(env, domain, null);
   // Promote nested executive_summary fields to top level for API consumers
   const risk_score = report?.executive_summary?.risk_score ?? null;
   const risk_level = report?.executive_summary?.risk_level ?? null;
+  // MYTHOS enrichment — REM-02
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'SSL Security Scan', service_ref: 'CDB-SSL-001',
+      target: domain, sector: 'Infrastructure',
+      tier: authCtx?.tier || 'FREE',
+    });
+  } catch {}
   return ok({ success: true, service: 'CDB-SSL-001', risk_score, risk_level, ...report });
 }
 
@@ -161,7 +196,17 @@ export async function handleSSLScan(request, env, authCtx) {
 export async function handleCTIBriefScan(request, env, authCtx) {
   const body     = await parseBody(request);
   const industry = body.industry || 'General';
-  const report   = await generateCTIBrief(env, industry, null);
+  void trackScan(env, { service: 'cti-brief', target: body.target || industry, userId: authCtx?.userId, tier: authCtx?.tier });
+  let report     = await generateCTIBrief(env, industry, null);
+  // MYTHOS enrichment — REM-02
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'CTI Brief', service_ref: 'CDB-CTI-PRO-001',
+      target: body.target || industry, sector: industry,
+      tier: authCtx?.tier || 'FREE',
+    });
+  } catch {}
   return ok({ success: true, service: 'CDB-CTI-PRO-001', ...report });
 }
 
@@ -187,7 +232,16 @@ export async function handleComplianceScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
-  const report = await runComplianceAssessment(env, body, null);
+  let report   = await runComplianceAssessment(env, body, null);
+  // MYTHOS enrichment — REM-02
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'Compliance Assessment', service_ref: 'CDB-COMP-001',
+      target: body.domain || body.target || '', sector: body.industry || 'General',
+      tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
   return ok({ success: true, service: 'CDB-COMP-001', ...report });
 }
 
@@ -237,7 +291,17 @@ export async function handleVulnAssessmentScan(request, env, authCtx) {
   const body   = await parseBody(request);
   const domain = body.domain || body.target;
   if (!domain) return err('domain is required', 400);
-  const report = await runVulnAssessment(env, domain, null);
+  void trackScan(env, { service: 'vuln-assessment', target: domain, userId: authCtx?.userId, tier: authCtx?.tier });
+  let report   = await runVulnAssessment(env, domain, null);
+  // MYTHOS enrichment — REM-02
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || report.vulnerabilities || [],
+      service_name: 'Vulnerability Assessment', service_ref: 'CDB-VA-001',
+      target: domain, sector: body.sector || 'General',
+      tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
   return ok({ success: true, service: 'CDB-VA-001', ...report });
 }
 
@@ -263,8 +327,10 @@ export async function handleAPISecurityScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body    = await parseBody(request);
-  const apiUrl  = body.api_base_url || body.domain || body.url;
-  if (!apiUrl) return err('api_base_url is required', 400);
+  // REM-05: accept target, domain, url, or api_base_url interchangeably
+  const apiUrl  = body.api_base_url || body.target || body.domain || body.url;
+  if (!apiUrl) return err('target or api_base_url is required', 400);
+  void trackScan(env, { service: 'api-security', target: apiUrl, userId: authCtx?.userId, tier: authCtx?.tier });
   const report  = await runAPISecurityAssessment(env, apiUrl, null, body);
   return ok({ success: true, service: 'CDB-APISEC-001', ...report });
 }

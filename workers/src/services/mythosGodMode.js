@@ -1004,10 +1004,29 @@ export async function runGodMode(env, opts = {}) {
 // ── Status query ─────────────────────────────────────────────────────────────
 export async function getGodModeStatus(env) {
   const kv = env.SECURITY_HUB_KV;
-  const [status, report, metrics] = await Promise.all([
+  const db = env.SECURITY_HUB_DB || env.DB;
+
+  // REM-09: unified lifetime metrics from canonical mythos_runs D1 table
+  let unifiedMetrics = { total_runs: 0, total_intel: 0, total_tools: 0, total_critical: 0 };
+  try {
+    const row = await db?.prepare(
+      `SELECT COUNT(*) as runs,
+              SUM(tools_generated) as tools,
+              SUM(tools_published) as published,
+              SUM(intel_count)     as intel
+       FROM mythos_runs WHERE status='COMPLETE'`
+    ).first().catch(() => null);
+    if (row) {
+      unifiedMetrics.total_runs   = row.runs    || 0;
+      unifiedMetrics.total_tools  = row.tools   || 0;
+      unifiedMetrics.total_published = row.published || 0;
+      unifiedMetrics.total_intel  = row.intel   || 0;
+    }
+  } catch {}
+
+  const [status, report] = await Promise.all([
     kv?.get(KV.GOD_STATUS,  'json').catch(() => null),
     kv?.get(KV.GOD_REPORT,  'json').catch(() => null),
-    kv?.get(KV.GOD_METRICS, 'json').catch(() => null),
   ]);
 
   return {
@@ -1027,7 +1046,7 @@ export async function getGodModeStatus(env) {
       posture_grade:   report.summary?.posture_grade,
       completed_at:    report.completed_at,
     } : null,
-    lifetime_metrics: metrics || { total_runs: 0, total_intel: 0, total_tools: 0, total_critical: 0 },
+    lifetime_metrics: unifiedMetrics, // REM-09: sourced from canonical mythos_runs D1
     pipeline: [
       'Phase 1: Intel Sweep',       'Phase 2: Cyber Brain Analysis',
       'Phase 3: Tool Generation',    'Phase 4: AI Security Sweep',

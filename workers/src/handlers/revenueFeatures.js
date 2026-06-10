@@ -175,9 +175,13 @@ export async function handleASMAddTarget(request, env, authCtx, ctx) {
     `).bind(targetId, userId, domain, body.org_name || domain).run();
 
     // Trigger background scan via ctx.waitUntil so it survives the HTTP response
-    const scanPromise = runASMScan(env, targetId, domain).catch(e =>
-      console.error('[ASM] Background scan error:', e.message)
-    );
+    // REM-03: on failure, mark target as 'failed' so status doesn't stay 'scanning'
+    const scanPromise = runASMScan(env, targetId, domain).catch(async (e) => {
+      console.error('[ASM] Background scan error:', e.message);
+      await env.DB?.prepare(
+        "UPDATE asm_targets SET scan_status='failed', updated_at=datetime('now') WHERE id=?"
+      ).bind(targetId).run().catch(() => {});
+    });
     if (ctx?.waitUntil) ctx.waitUntil(scanPromise);
 
     return json({
@@ -239,10 +243,13 @@ export async function handleASMTriggerScan(request, env, authCtx, targetId, ctx)
     // Mark as scanning
     await env.DB.prepare(`UPDATE asm_targets SET scan_status = 'scanning', updated_at = datetime('now') WHERE id = ?`).bind(targetId).run();
 
-    // Trigger background scan via ctx.waitUntil
-    const scanP = runASMScan(env, targetId, target.domain).catch(e =>
-      console.error('[ASM] Scan error:', e.message)
-    );
+    // Trigger background scan via ctx.waitUntil — REM-03: mark failed on error
+    const scanP = runASMScan(env, targetId, target.domain).catch(async (e) => {
+      console.error('[ASM] Scan error:', e.message);
+      await env.DB?.prepare(
+        "UPDATE asm_targets SET scan_status='failed', updated_at=datetime('now') WHERE id=?"
+      ).bind(targetId).run().catch(() => {});
+    });
     if (ctx?.waitUntil) ctx.waitUntil(scanP);
 
     return json({

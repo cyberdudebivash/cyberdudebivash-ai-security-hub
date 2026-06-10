@@ -75,7 +75,7 @@ export async function handleExecutiveRiskBrief(request, env, authCtx) {
   if (gate) return gate;
 
   const body    = await request.json().catch(() => ({}));
-  const org     = body.organization || body.org || 'Your Organization';
+  const org     = body.organization || body.org_name || body.org || 'Your Organization';
   const sector  = body.sector || body.industry || 'Technology';
   const domain  = body.domain || '';
   const period  = body.period || 'Q2 2026';
