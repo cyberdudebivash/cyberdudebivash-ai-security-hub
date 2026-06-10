@@ -68,27 +68,23 @@ export async function handleSignup(request, env) {
     return Response.json({ error: 'Registration unavailable — try again' }, { status: 503 });
   }
 
-  // Hash password (PBKDF2 — takes ~50ms on paid Workers)
+  // Hash password (PBKDF2 — takes ~30ms at 50k iterations on paid Workers)
   const { hash, salt } = await hashPassword(rawPass);
 
+  // Pre-generate UUID (users.id is TEXT PRIMARY KEY — must supply value)
+  const userId = crypto.randomUUID();
+
   // Insert user
-  let userId;
   try {
-    const result = await env.DB.prepare(
-      `INSERT INTO users (email, password_hash, password_salt, full_name, company, tier, status)
-       VALUES (?, ?, ?, ?, ?, 'FREE', 'active')
-       RETURNING id`
-    ).bind(email, hash, salt, fullName.slice(0,100) || null, company.slice(0,100) || null).first();
-    userId = result?.id;
+    await env.DB.prepare(
+      `INSERT INTO users (id, email, password_hash, password_salt, full_name, company, tier, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'FREE', 'active')`
+    ).bind(userId, email, hash, salt, fullName.slice(0,100) || null, company.slice(0,100) || null).run();
   } catch (e) {
     if (e?.message?.includes('UNIQUE')) {
       return Response.json({ error: 'Email already registered' }, { status: 409 });
     }
-    return Response.json({ error: 'Registration failed — try again' }, { status: 500 });
-  }
-
-  if (!userId) {
-    return Response.json({ error: 'Registration failed' }, { status: 500 });
+    return Response.json({ error: 'Registration failed — try again', detail: e?.message?.slice(0,80) }, { status: 500 });
   }
 
   // Auto-create first API key (fire-and-forget)

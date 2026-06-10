@@ -66,11 +66,19 @@ async function checkAndTrackUsage(env, authCtx, feature) {
 // ─── ─── ─── IOC ENRICHMENT ─── ─── ───────────────────────────────────────────
 
 export async function handleIOCEnrich(request, env, authCtx) {
-  const url    = new URL(request.url);
-  const value  = url.searchParams.get('value')?.trim();
-  const type   = url.searchParams.get('type') || null;
+  const url = new URL(request.url);
+  // Accept both GET query params and POST body
+  let value = url.searchParams.get('value')?.trim() || null;
+  let type  = url.searchParams.get('type') || null;
+  if (!value && request.method === 'POST') {
+    try {
+      const body = await request.json().catch(() => ({}));
+      value = body?.value?.trim() || body?.ioc?.trim() || null;
+      type  = type || body?.type || null;
+    } catch {}
+  }
 
-  if (!value) return json({ success: false, error: 'Missing ?value= parameter' }, 400);
+  if (!value) return json({ success: false, error: 'Missing value parameter (query ?value= or POST body {value|ioc})' }, 400);
   if (value.length > 512) return json({ success: false, error: 'Value too long (max 512 chars)' }, 400);
 
   // Rate limit
