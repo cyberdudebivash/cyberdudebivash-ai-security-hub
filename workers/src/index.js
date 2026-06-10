@@ -238,6 +238,15 @@ import {
   handleCRQAssessment,
 } from './handlers/revenueFeatures.js';
 
+// ─── Phase B: Threat Intelligence API Economy ─────────────────────────────────
+import {
+  handleIntelIOC,
+  handleIntelCVE,
+  handleIntelActor,
+  handleIntelTTP,
+  handleIntelRisk,
+} from './handlers/intelAPIHandlers.js';
+
 // ─── MYTHOS GOD MODE v4.0 — Full autonomous platform orchestrator ─────────────
 // 12-phase pipeline: intel → brain → tools → ASPM → hunt → ZT → compliance
 //   → CISO pack → SOAR → metrics → revenue → finalize
@@ -2910,6 +2919,28 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/ioc/enrich/batch' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIOCEnrichBatch(request, env, authCtx || {}), request));
+    }
+
+    // ── Phase B: Threat Intelligence API Economy ──────────────────────────────
+    if (path === '/api/intel/ioc' && (method === 'GET' || method === 'POST')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIntelIOC(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/intel/cve' && (method === 'GET' || method === 'POST')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIntelCVE(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/intel/actor' && (method === 'GET' || method === 'POST')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIntelActor(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/intel/ttp' && (method === 'GET' || method === 'POST')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIntelTTP(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/intel/risk' && (method === 'GET' || method === 'POST')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleIntelRisk(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
