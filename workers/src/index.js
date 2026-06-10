@@ -2773,20 +2773,42 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // ── v21.0: GET /api/scan/stats — scan statistics summary ─────────────────────
     if (path === '/api/scan/stats' && method === 'GET') {
       try {
+        const today = new Date().toISOString().slice(0, 10);
+        // Read last 7 days of KV scan counters (written by trackScan in serviceHandlers)
+        const kvDays = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+          kvDays.push(d);
+        }
+        const kvCounts = await Promise.all(
+          kvDays.map(d => env.SECURITY_HUB_KV?.get(`scan_count:total:${d}`).catch(() => null))
+        );
+        const kvTodayCount  = parseInt(kvCounts[0] || '0', 10);
+        const kvTotalScans  = kvCounts.reduce((s, v) => s + parseInt(v || '0', 10), 0);
+
+        // Also check D1 scan_history for users with accounts
         const [row, threatRow] = await Promise.all([
           env.DB?.prepare(`SELECT COUNT(*) as total_scans, SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today, SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN risk_score >= 50 AND risk_score < 80 THEN 1 ELSE 0 END) as high, AVG(risk_score) as avg_risk FROM scan_history`).first().catch(() => null),
           env.DB?.prepare(`SELECT COUNT(*) as cve_count, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical_cves FROM threat_intel`).first().catch(() => null),
         ]);
+
+        // Use KV counts as canonical (covers all API-key and anonymous scans)
+        // Fall back to D1 for authenticated users if KV is empty
+        const totalScans  = Math.max(kvTotalScans, row?.total_scans || 0);
+        const todayScans  = Math.max(kvTodayCount,  row?.today       || 0);
+
         return withSecurityHeaders(withCors(Response.json({
-          success:      true,
-          total_scans:  row?.total_scans || 0,
-          today:        row?.today       || 0,
-          critical:     row?.critical    || 0,
-          high:         row?.high        || 0,
-          avg_risk:     Math.round(row?.avg_risk || 0),
-          cve_count:    threatRow?.cve_count || 0,
+          success:       true,
+          total_scans:   totalScans,
+          today:         todayScans,
+          critical:      row?.critical   || 0,
+          high:          row?.high       || 0,
+          avg_risk:      Math.round(row?.avg_risk || 0),
+          cve_count:     threatRow?.cve_count    || 0,
           critical_cves: threatRow?.critical_cves || 0,
-          timestamp:    new Date().toISOString(),
+          kv_scans_7d:   kvTotalScans,
+          d1_scans:      row?.total_scans || 0,
+          timestamp:     new Date().toISOString(),
         }), request));
       } catch(e) {
         return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));

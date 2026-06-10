@@ -232,6 +232,7 @@ export async function handleComplianceScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'compliance-scan', target: body.domain || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report   = await runComplianceAssessment(env, body, null);
   // MYTHOS enrichment — REM-02
   try {
@@ -254,6 +255,7 @@ export async function handleAISecurityScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body     = await parseBody(request);
+  void trackScan(env, { service: 'ai-security-scan', target: body.domain || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report     = await runAISecurityScan(env, body, null);
   // MYTHOS enrichment
   try {
@@ -276,6 +278,7 @@ export async function handleEnterpriseAIScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'enterprise-ai-scan', target: body.domain || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   const report = await runEnterpriseAIAssessment(env, body, null);
   return ok({ success: true, service: 'CDB-AISA-001', ...report });
 }
@@ -314,6 +317,7 @@ export async function handleThreatHuntingScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'threat-hunting-scan', target: body.domain || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   const report = await runThreatHuntingReview(env, body, null);
   return ok({ success: true, service: 'CDB-THR-001', ...report });
 }
@@ -344,6 +348,7 @@ export async function handleCloudSecurityScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body     = await parseBody(request);
+  void trackScan(env, { service: 'cloud-security-scan', target: body.cloud_provider || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report     = await runCloudSecurityAudit(env, body, null);
   // MYTHOS enrichment
   try {
@@ -370,6 +375,7 @@ export async function handleSaaSSecurityScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'saas-security-scan', target: body.domain || body.target_domain || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report   = await runSaaSSecurityAssessment(env, body, null);
   // MYTHOS enrichment
   try {
@@ -391,6 +397,7 @@ export async function handleConfigReviewScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'config-review-scan', target: body.company || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report   = await runConfigReviewAssessment(env, body, null);
   try {
     report = await enrichAssessmentWithMYTHOS(env, {
@@ -411,6 +418,7 @@ export async function handleAIGovernanceScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'ai-governance-scan', target: body.company || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report   = await runAIGovernanceAssessment(env, body, null);
   try {
     report = await enrichAssessmentWithMYTHOS(env, {
@@ -431,6 +439,7 @@ export async function handleDevSecOpsScan(request, env, authCtx) {
     }, { status: 403 });
   }
   const body   = await parseBody(request);
+  void trackScan(env, { service: 'devsecops-scan', target: body.company || body.target || 'generic', userId: authCtx?.userId, tier: authCtx?.tier });
   let report   = await runDevSecOpsAssessment(env, body, null);
   try {
     report = await enrichAssessmentWithMYTHOS(env, {

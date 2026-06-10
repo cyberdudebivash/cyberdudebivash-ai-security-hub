@@ -121,17 +121,44 @@ export async function handleMythosAnalyze(request, env, authCtx) {
 // ── GET /api/mythos/metrics ───────────────────────────────────────────────────
 export async function handleMythosMetrics(request, env, authCtx) {
   try {
-    const [metrics, lastRun, mktStats, intelStats] = await Promise.all([
+    const [legacyMetrics, lastRun, mktStats, intelStats, godModeRow, scanKV] = await Promise.all([
       env.SECURITY_HUB_KV?.get('mythos:metrics', 'json').catch(() => null),
       env.SECURITY_HUB_KV?.get('mythos:last_run', 'json').catch(() => null),
       env.DB?.prepare(`SELECT COUNT(*) as total, SUM(purchase_count) as sales, SUM(view_count) as views FROM defense_solutions WHERE is_active=1`).first().catch(() => null),
       env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN is_exploited=1 OR known_ransomware=1 THEN 1 ELSE 0 END) as processed FROM threat_intel`).first().catch(() =>
         env.DB?.prepare(`SELECT COUNT(*) as total, 0 as processed FROM threat_intel`).first().catch(() => null)
       ),
+      // GOD MODE canonical metrics from D1 mythos_runs
+      env.DB?.prepare(`SELECT COUNT(*) as runs, SUM(intel_processed) as intel, SUM(tools_generated) as tools FROM mythos_runs WHERE status='COMPLETE'`).first().catch(() => null),
+      // KV scan counters from trackScan (today + yesterday)
+      Promise.all([
+        env.SECURITY_HUB_KV?.get(`scan_count:total:${new Date().toISOString().slice(0,10)}`).catch(() => null),
+        env.SECURITY_HUB_KV?.get(`scan_count:total:${new Date(Date.now()-86400000).toISOString().slice(0,10)}`).catch(() => null),
+      ]).catch(() => [null, null]),
     ]);
+
+    // Unify legacy (mythosOrchestrator) + GOD MODE (mythosGodMode) metrics — single source of truth
+    const legacyRuns   = legacyMetrics?.total_runs    || 0;
+    const legacyTools  = legacyMetrics?.total_tools   || 0;
+    const godRuns      = godModeRow?.runs              || 0;
+    const godIntel     = godModeRow?.intel             || 0;
+    const godTools     = godModeRow?.tools             || 0;
+    const kvScans      = (parseInt(scanKV?.[0] || '0', 10)) + (parseInt(scanKV?.[1] || '0', 10));
+
+    const unified = {
+      total_runs:       legacyRuns + godRuns,
+      total_tools:      legacyTools + godTools,
+      total_published:  legacyMetrics?.total_published || 0,
+      total_failed:     legacyMetrics?.total_failed    || 0,
+      god_mode_runs:    godRuns,
+      intel_processed:  godIntel,
+      scans_tracked:    kvScans,
+      data_sources:     ['legacy-orchestrator', 'god-mode-d1', 'kv-scan-counters'],
+    };
+
     return json({
       success:    true,
-      mythos:     metrics || { total_runs: 0, total_tools: 0, total_published: 0, total_failed: 0 },
+      mythos:     unified,
       last_run:   lastRun || null,
       marketplace:{ total_solutions: mktStats?.total || 0, total_sales: mktStats?.sales || 0, total_views: mktStats?.views || 0 },
       intel_feed: { total: intelStats?.total || 0, processed: intelStats?.processed || 0,
