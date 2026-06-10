@@ -2903,7 +2903,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // ══════════════════════════════════════════════════════════════════════════
 
     // ── IOC Enrichment ────────────────────────────────────────────────────────
-    if (path === '/api/ioc/enrich' && method === 'GET') {
+    if (path === '/api/ioc/enrich' && (method === 'GET' || method === 'POST')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIOCEnrich(request, env, authCtx || {}), request));
     }

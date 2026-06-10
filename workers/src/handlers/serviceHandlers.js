@@ -151,7 +151,10 @@ export async function handleSSLScan(request, env, authCtx) {
   if (!domain) return err('domain is required', 400);
 
   const report = await runSSLCheck(env, domain, null);
-  return ok({ success: true, service: 'CDB-SSL-001', ...report });
+  // Promote nested executive_summary fields to top level for API consumers
+  const risk_score = report?.executive_summary?.risk_score ?? null;
+  const risk_level = report?.executive_summary?.risk_level ?? null;
+  return ok({ success: true, service: 'CDB-SSL-001', risk_score, risk_level, ...report });
 }
 
 // ── POST /api/scan/cti-brief — instant CTI brief ──────────────────────────────
@@ -196,8 +199,17 @@ export async function handleAISecurityScan(request, env, authCtx) {
       upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
     }, { status: 403 });
   }
-  const body   = await parseBody(request);
-  const report = await runAISecurityScan(env, body, null);
+  const body     = await parseBody(request);
+  let report     = await runAISecurityScan(env, body, null);
+  // MYTHOS enrichment
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'AI Security Scan', service_ref: 'CDB-AISS-001',
+      target: body.domain || body.target || '', sector: body.industry || 'Technology',
+      tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
   return ok({ success: true, service: 'CDB-AISS-001', ...report });
 }
 
@@ -265,8 +277,17 @@ export async function handleCloudSecurityScan(request, env, authCtx) {
       upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
     }, { status: 403 });
   }
-  const body   = await parseBody(request);
-  const report = await runCloudSecurityAudit(env, body, null);
+  const body     = await parseBody(request);
+  let report     = await runCloudSecurityAudit(env, body, null);
+  // MYTHOS enrichment
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'Cloud Security Audit', service_ref: 'CDB-CSAU-001',
+      target: body.domain || body.cloud_provider || '', sector: body.industry || 'Technology',
+      tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
   return ok({ success: true, service: 'CDB-CSAU-001', ...report });
 }
 

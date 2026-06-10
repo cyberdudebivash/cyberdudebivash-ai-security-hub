@@ -1,11 +1,12 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Password Security v5.0
+ * CYBERDUDEBIVASH AI Security Hub — Password Security v5.1
  * PBKDF2-SHA256 via Web Crypto API (CF Workers native)
- * 200,000 iterations — NIST SP 800-132 compliant
+ * 50,000 iterations — CF Workers CPU-budget safe (≤30ms), above NIST minimum (10,000)
  * No external dependencies. Timing-safe comparison.
+ * v5.1: Reduced from 200,000 → 50,000 iterations to fix CF Workers CPU limit crash (error 1101)
  */
 
-const PBKDF2_ITERATIONS = 200_000;
+const PBKDF2_ITERATIONS = 50_000;
 const PBKDF2_HASH       = 'SHA-256';
 const KEY_LENGTH_BITS   = 256; // 32 bytes
 const SALT_BYTES        = 32;
