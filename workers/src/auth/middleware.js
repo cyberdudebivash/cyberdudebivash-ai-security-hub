@@ -109,6 +109,27 @@ export async function resolveAuthV5(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') ||
              request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
 
+  // 0. Admin key — env.ADMIN_KEY bypass (ENTERPRISE tier, all features unlocked)
+  if (env.ADMIN_KEY) {
+    const rawKey = request.headers.get('x-api-key') ||
+                   request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '';
+    if (rawKey === env.ADMIN_KEY) {
+      return {
+        authenticated: true,
+        method:        'admin_key',
+        identity:      'admin',
+        user_id:       'admin',
+        email:         'admin@cyberdudebivash.com',
+        tier:          'ENTERPRISE',
+        limits:        TIER_LIMITS.ENTERPRISE ?? { daily_limit: -1 },
+        label:         'Admin (ENTERPRISE)',
+        key_id:        'admin',
+        ip,
+        isAdmin:       true,
+      };
+    }
+  }
+
   // 1. Try JWT (authenticated user)
   const jwtCtx = await resolveFromJWT(request, env);
   if (jwtCtx) return jwtCtx;
