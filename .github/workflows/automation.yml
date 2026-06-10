@@ -1391,6 +1391,14 @@ jobs:
             echo "ℹ️  schema_v33_mythos_god_mode.sql not found — skipping"
           fi
 
+          # ── v34: threat_intel column fix — add cvss, source_url, exploit_status, tags, etc.
+          if [ -f workers/schema_v34_threat_intel_fix.sql ]; then
+            npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_v34_threat_intel_fix.sql --remote
+            echo "✅ schema_v34_threat_intel_fix.sql applied (threat_intel: 13 missing columns added)"
+          else
+            echo "ℹ️  schema_v34_threat_intel_fix.sql not found — skipping"
+          fi
+
           # ── MCP learning + revenue autopilot tables ────────────────────────
           if [ -f workers/schema_mcp_learning.sql ]; then
             npx wrangler d1 execute cyberdudebivash-security-hub --file=./workers/schema_mcp_learning.sql --remote
@@ -1422,13 +1430,13 @@ jobs:
         if: always()
         run: |
           {
-            echo "## 🗄 D1 Schema Migration — v33.0 (MYTHOS GOD MODE v4.0)"
+            echo "## 🗄 D1 Schema Migration — v34.0 (threat_intel column fix)"
             echo ""
             echo "**Database:** \`cyberdudebivash-security-hub\`"
             echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "**Triggered by:** ${{ github.actor }}"
             echo ""
-            echo "Applied schemas: schema.sql → schema_v8 → v10 → gtm → threat_intel → migrations_v2 → v12 → v15 → v21 → v22 → v24 → v27 → **v28 (AI ENGINE)** → v29 → v30 → v31 → v32 → **v33 (GOD MODE)** → mcp_learning → revenue_autopilot"
+            echo "Applied schemas: schema.sql → schema_v8 → v10 → gtm → threat_intel → migrations_v2 → v12 → v15 → v21 → v22 → v24 → v27 → **v28 (AI ENGINE)** → v29 → v30 → v31 → v32 → **v33 (GOD MODE)** → **v34 (threat_intel fix)** → mcp_learning → revenue_autopilot"
             echo "Total tables: 152+ (full platform)"
             echo ""
             echo "### v33 MYTHOS GOD MODE v4.0 Tables (NEW)"
