@@ -36,16 +36,44 @@ from .middleware.rate_limit import RateLimitMiddleware
 from agents.core import (
     AgentRegistry, MasterOrchestrator, QualityGate, PolicyEngine
 )
+# ── Threat Intelligence ───────────────────────────────────────────────────────
 from agents.threat_intel import (
     IOCIntelligenceAgent, CVEIntelligenceAgent,
     MalwareIntelligenceAgent, ThreatActorAgent,
+    EnrichmentAgent, CampaignIntelligenceAgent,
+    DarkWebMonitoringAgent, OSINTAgent, ZeroDayResearchAgent,
 )
-from agents.soc import SOCTier1Agent, IncidentResponseAgent, ThreatHuntingAgent
-from agents.executive import CISOAgent, CEOAgent
-from agents.ai_security import PromptInjectionAgent, AIGovernanceAgent
-from agents.security_engineering import ComplianceAgent
-from agents.customer import CustomerSuccessAgent
+# ── SOC ───────────────────────────────────────────────────────────────────────
+from agents.soc import (
+    SOCTier1Agent, SOCTier2Agent, SOCTier3Agent,
+    IncidentResponseAgent, ThreatHuntingAgent,
+    DetectionEngineeringAgent, ForensicsAgent,
+    PhishingAnalysisAgent, SIEMCorrelationAgent, RansomwareResponseAgent,
+)
+# ── Executive ─────────────────────────────────────────────────────────────────
+from agents.executive import CISOAgent, CEOAgent, CROAgent, CTOAgent
+# ── AI Security ───────────────────────────────────────────────────────────────
+from agents.ai_security import (
+    PromptInjectionAgent, AIGovernanceAgent,
+    AIRedTeamAgent, AIRuntimeSecurityAgent, AIRiskAgent,
+)
+# ── Security Engineering ──────────────────────────────────────────────────────
+from agents.security_engineering import (
+    ComplianceAgent, SecurityArchitectureAgent, CloudSecurityAgent,
+    DevSecOpsAgent, VulnerabilityAgent, PenetrationTestingAgent, RedTeamAgent,
+    APISecurityAgent, ContainerSecurityAgent, IdentitySecurityAgent,
+    NetworkSecurityAgent, EndpointSecurityAgent, SupplyChainSecurityAgent,
+    DataLossPreventionAgent, ThreatModelingAgent, EmailSecurityAgent,
+    WebApplicationSecurityAgent, IoTSecurityAgent, BlockchainSecurityAgent,
+    PrivilegedAccessAgent, RegulatoryReportingAgent,
+)
+# ── Revenue ───────────────────────────────────────────────────────────────────
+from agents.revenue import SubscriptionAgent, BillingAgent, OnboardingAgent, RenewalAgent
+# ── Content / Research ────────────────────────────────────────────────────────
+from agents.content import ResearchAgent, BlogAgent, WhitepaperAgent, ContentIntelligenceAgent
 from agents.research import ThreatResearchAgent
+# ── Customer ──────────────────────────────────────────────────────────────────
+from agents.customer import CustomerSuccessAgent, MSSPAgent, VendorRiskAgent, CyberInsuranceAgent
 from config.settings import settings
 from config.ai_router import AIProviderRouter
 
@@ -132,27 +160,76 @@ async def lifespan(app: FastAPI):
     )
     app_state.registry = AgentRegistry(redis_client=app_state.redis)
     app_state.registry.register_all([
-        # Threat Intel layer
+        # ── Threat Intelligence (9 agents) ────────────────────────────────
         IOCIntelligenceAgent(**shared_deps),
         CVEIntelligenceAgent(**shared_deps),
         MalwareIntelligenceAgent(**shared_deps),
         ThreatActorAgent(**shared_deps),
-        # SOC layer
+        EnrichmentAgent(**shared_deps),
+        CampaignIntelligenceAgent(**shared_deps),
+        DarkWebMonitoringAgent(**shared_deps),
+        OSINTAgent(**shared_deps),
+        ZeroDayResearchAgent(**shared_deps),
+        # ── SOC (10 agents) ───────────────────────────────────────────────
         SOCTier1Agent(**shared_deps),
+        SOCTier2Agent(**shared_deps),
+        SOCTier3Agent(**shared_deps),
         IncidentResponseAgent(**shared_deps),
         ThreatHuntingAgent(**shared_deps),
-        # Executive layer
+        DetectionEngineeringAgent(**shared_deps),
+        ForensicsAgent(**shared_deps),
+        PhishingAnalysisAgent(**shared_deps),
+        SIEMCorrelationAgent(**shared_deps),
+        RansomwareResponseAgent(**shared_deps),
+        # ── Executive (4 agents) ──────────────────────────────────────────
         CISOAgent(**shared_deps),
         CEOAgent(**shared_deps),
-        # AI Security layer
+        CROAgent(**shared_deps),
+        CTOAgent(**shared_deps),
+        # ── AI Security (5 agents) ────────────────────────────────────────
         PromptInjectionAgent(**shared_deps),
         AIGovernanceAgent(**shared_deps),
-        # Security Engineering
+        AIRedTeamAgent(**shared_deps),
+        AIRuntimeSecurityAgent(**shared_deps),
+        AIRiskAgent(**shared_deps),
+        # ── Security Engineering (21 agents) ─────────────────────────────
         ComplianceAgent(**shared_deps),
-        # Customer
-        CustomerSuccessAgent(**shared_deps),
-        # Research
+        SecurityArchitectureAgent(**shared_deps),
+        CloudSecurityAgent(**shared_deps),
+        DevSecOpsAgent(**shared_deps),
+        VulnerabilityAgent(**shared_deps),
+        PenetrationTestingAgent(**shared_deps),
+        RedTeamAgent(**shared_deps),
+        APISecurityAgent(**shared_deps),
+        ContainerSecurityAgent(**shared_deps),
+        IdentitySecurityAgent(**shared_deps),
+        NetworkSecurityAgent(**shared_deps),
+        EndpointSecurityAgent(**shared_deps),
+        SupplyChainSecurityAgent(**shared_deps),
+        DataLossPreventionAgent(**shared_deps),
+        ThreatModelingAgent(**shared_deps),
+        EmailSecurityAgent(**shared_deps),
+        WebApplicationSecurityAgent(**shared_deps),
+        IoTSecurityAgent(**shared_deps),
+        BlockchainSecurityAgent(**shared_deps),
+        PrivilegedAccessAgent(**shared_deps),
+        RegulatoryReportingAgent(**shared_deps),
+        # ── Revenue (4 agents) ────────────────────────────────────────────
+        SubscriptionAgent(**shared_deps),
+        BillingAgent(**shared_deps),
+        OnboardingAgent(**shared_deps),
+        RenewalAgent(**shared_deps),
+        # ── Content / Research (5 agents) ────────────────────────────────
+        ResearchAgent(**shared_deps),
+        BlogAgent(**shared_deps),
+        WhitepaperAgent(**shared_deps),
+        ContentIntelligenceAgent(**shared_deps),
         ThreatResearchAgent(**shared_deps),
+        # ── Customer (4 agents) ───────────────────────────────────────────
+        CustomerSuccessAgent(**shared_deps),
+        MSSPAgent(**shared_deps),
+        VendorRiskAgent(**shared_deps),
+        CyberInsuranceAgent(**shared_deps),
     ])
 
     # 7. Build orchestrator
@@ -169,86 +246,96 @@ async def lifespan(app: FastAPI):
 
     logger.info(
         "macos.ready",
-        agents=len(app_state.registry),
-        ai_providers=app_state.ai_router.active_provider_count,
+        version=settings.VERSION,
+        agents=app_state.registry.count(),
+        intents=len(app_state.orchestrator.get_diagnostics().get("supported_intents", [])),
     )
 
-    # Attach state to app
-    app.state.registry     = app_state.registry
-    app.state.orchestrator = app_state.orchestrator
-    app.state.quality_gate = app_state.quality_gate
-    app.state.policy       = app_state.policy
-    app.state.ai_router    = app_state.ai_router
-
-    yield  # ← Application runs here
+    yield  # ← app is now serving requests
 
     # Shutdown
     logger.info("macos.shutdown")
-    if app_state.pg_pool:
-        await app_state.pg_pool.close()
     if app_state.redis:
         await app_state.redis.aclose()
+    if app_state.pg_pool:
+        await app_state.pg_pool.close()
 
-# ─── FastAPI application ───────────────────────────────────────────────────────
+
+# ─── FastAPI App ─────────────────────────────────────────────────────────────
 app = FastAPI(
     title="CYBERDUDEBIVASH® Multi-Agent Cybersecurity OS",
-    description="Production-grade AI cybersecurity platform with 50+ specialist agents",
     version=settings.VERSION,
-    docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
-    redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
-    openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None,
     lifespan=lifespan,
 )
 
-# ─── Middleware stack ─────────────────────────────────────────────────────────
+# Middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(RateLimitMiddleware)
 
-# ─── OpenTelemetry instrumentation (optional) ────────────────────────────────
-if FastAPIInstrumentation:
-    FastAPIInstrumentation().instrument_app(app)
 
-# ─── Request ID + timing middleware ──────────────────────────────────────────
 @app.middleware("http")
-async def request_middleware(request: Request, call_next):
+async def request_id_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     request.state.request_id = request_id
-    request.state.start_time = time.monotonic()
-
-    if _structlog_available:
-        structlog.contextvars.bind_contextvars(request_id=request_id)
-
     response = await call_next(request)
-    elapsed  = (time.monotonic() - request.state.start_time) * 1000
-
-    response.headers["X-Request-ID"]    = request_id
-    response.headers["X-Response-Time"] = f"{elapsed:.2f}ms"
-    response.headers["X-Platform"]      = "CYBERDUDEBIVASH-MACOS"
+    response.headers["X-Request-ID"] = request_id
     return response
 
-# ─── Global exception handler ─────────────────────────────────────────────────
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("unhandled_exception", path=str(request.url), error=str(exc))
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error":      "Internal server error",
-            "request_id": getattr(request.state, "request_id", "unknown"),
-            "platform":   "CYBERDUDEBIVASH MACOS",
-        }
-    )
+
+# ─── Routers ─────────────────────────────────────────────────────────────────
+app.include_router(health_router)
+app.include_router(intel_router,      prefix="/api/intel",      tags=["Threat Intel"])
+app.include_router(soc_router,        prefix="/api/soc",        tags=["SOC"])
+app.include_router(executive_router,  prefix="/api/executive",  tags=["Executive"])
+app.include_router(ai_security_router,prefix="/api/ai-security",tags=["AI Security"])
+app.include_router(compliance_router, prefix="/api/compliance", tags=["Compliance"])
+app.include_router(customer_router,   prefix="/api/customer",   tags=["Customer"])
+
 
 # ─── Core orchestration endpoint ─────────────────────────────────────────────
-@app.post("/v1/orchestrate", tags=["Orchestration"])
-async def orchestrate(
+@app.post("/api/orchestrate", dependencies=[Depends(verify_token)])
+async def orchestrate(request: Request):
+    """
+    Universal entry point — every request routes through MasterOrchestrator.
+    Body: {intent, payload, context, org_id, user_id, tier}
+    """
+    body = await request.json()
+    agent_request = AgentRequest(
+        request_id=str(uuid.uuid4()),
+        intent=body.get("intent", ""),
+        payload=body.get("payload", {}),
+        context=body.get("context", {}),
+        org_id=body.get("org_id", "default"),
+        user_id=body.get("user_id", ""),
+        tier=body.get("tier", "FREE"),
+    )
+    result = await app_state.orchestrator.orchestrate(agent_request)
+    return JSONResponse(content=result.model_dump())
+
+
+@app.get("/api/agents", dependencies=[Depends(verify_token)])
+async def list_agents():
+    """List all registered agents and their capabilities."""
+    return {"agents": app_state.registry.list_all()}
+
+
+@app.get("/api/intents")
+async def list_intents():
+    """List all supported orchestration intents."""
+    return app_state.orchestrator.get_diagnostics()
+
+
+# ─── Entry point ─────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=False)
+def orchestrate(
     request: Request,
     body:    Dict[str, Any],
     auth:    Dict = Depends(verify_token),

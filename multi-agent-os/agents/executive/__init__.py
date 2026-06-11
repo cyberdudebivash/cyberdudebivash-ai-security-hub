@@ -1,3 +1,7 @@
-from .ciso_agent import CISOAgent
+"""CYBERDUDEBIVASH® MACOS — Executive Agents Package"""
 from .ceo_agent import CEOAgent
-__all__ = ["CISOAgent", "CEOAgent"]
+from .ciso_agent import CISOAgent
+from .cro_agent import CROAgent
+from .cto_agent import CTOAgent
+
+__all__ = ["CEOAgent", "CISOAgent", "CROAgent", "CTOAgent"]

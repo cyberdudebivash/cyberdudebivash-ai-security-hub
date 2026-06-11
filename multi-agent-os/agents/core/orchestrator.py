@@ -35,53 +35,86 @@ from .policy_engine import PolicyEngine
 
 # ─── Intent → Layer routing table ────────────────────────────────────────────
 INTENT_ROUTING: Dict[str, List[str]] = {
-    # Threat Intelligence
-    "analyze_ioc":          ["ioc_intelligence", "threat_actor", "enrichment"],
-    "lookup_cve":           ["cve_intelligence", "vulnerability"],
-    "analyze_malware":      ["malware_intelligence", "threat_actor"],
-    "get_threat_actor":     ["threat_actor", "campaign_intelligence"],
-    "threat_brief":         ["threat_research", "cve_intelligence", "malware_intelligence"],
-    "enrich_threat":        ["enrichment", "ioc_intelligence"],
+    # ── Threat Intelligence ───────────────────────────────────────────────────
+    "analyze_ioc":              ["ioc_intelligence", "threat_actor", "enrichment"],
+    "lookup_cve":               ["cve_intelligence", "vulnerability"],
+    "analyze_malware":          ["malware_intelligence", "threat_actor"],
+    "get_threat_actor":         ["threat_actor", "campaign_intelligence"],
+    "threat_brief":             ["threat_research", "cve_intelligence", "malware_intelligence"],
+    "enrich_threat":            ["enrichment", "ioc_intelligence"],
+    "dark_web_monitor":         ["dark_web_monitoring", "enrichment"],
+    "osint_scan":               ["osint", "enrichment"],
+    "zero_day_alert":           ["zero_day_research", "cve_intelligence", "vulnerability"],
+    "campaign_analysis":        ["campaign_intelligence", "threat_actor", "ioc_intelligence"],
 
-    # AI Security
-    "assess_prompt_injection": ["prompt_injection", "ai_risk"],
-    "ai_red_team":          ["ai_red_team", "ai_governance"],
-    "ai_governance_check":  ["ai_governance", "compliance"],
-    "ai_runtime_alert":     ["ai_runtime_security", "incident_response"],
-    "ai_risk_assessment":   ["ai_risk", "ai_governance"],
+    # ── AI Security ───────────────────────────────────────────────────────────
+    "assess_prompt_injection":  ["prompt_injection", "ai_risk"],
+    "ai_red_team":              ["ai_red_team", "ai_governance"],
+    "ai_governance_check":      ["ai_governance", "compliance"],
+    "ai_runtime_alert":         ["ai_runtime_security", "incident_response"],
+    "ai_risk_assessment":       ["ai_risk", "ai_governance"],
 
-    # SOC
-    "analyze_alert":        ["soc_tier1", "enrichment"],
-    "escalate_alert":       ["soc_tier2", "threat_hunting"],
-    "critical_incident":    ["soc_tier3", "incident_response", "ciso"],
-    "threat_hunt":          ["threat_hunting", "detection_engineering"],
-    "create_detection":     ["detection_engineering", "soc_tier2"],
-    "incident_response":    ["incident_response", "soc_tier3"],
+    # ── SOC ───────────────────────────────────────────────────────────────────
+    "analyze_alert":            ["soc_tier1", "enrichment"],
+    "escalate_alert":           ["soc_tier2", "threat_hunting"],
+    "critical_incident":        ["soc_tier3", "incident_response", "ciso"],
+    "threat_hunt":              ["threat_hunting", "detection_engineering"],
+    "create_detection":         ["detection_engineering", "soc_tier2"],
+    "incident_response":        ["incident_response", "soc_tier3"],
+    "analyze_phishing":         ["phishing_analysis", "enrichment", "soc_tier1"],
+    "correlate_alerts":         ["siem_correlation", "threat_hunting"],
+    "ransomware_response":      ["ransomware_response", "soc_tier3", "incident_response"],
+    "forensic_investigation":   ["forensics", "soc_tier2", "detection_engineering"],
 
-    # Security Engineering
-    "architecture_review":  ["security_architecture", "cloud_security"],
-    "compliance_check":     ["compliance", "ai_governance"],
-    "vulnerability_scan":   ["vulnerability", "soc_tier1"],
-    "devsecops_review":     ["devsecops", "vulnerability"],
-    "cloud_security_check": ["cloud_security", "security_architecture"],
+    # ── Security Engineering ──────────────────────────────────────────────────
+    "architecture_review":      ["security_architecture", "cloud_security"],
+    "compliance_check":         ["compliance", "ai_governance"],
+    "vulnerability_scan":       ["vulnerability", "soc_tier1"],
+    "devsecops_review":         ["devsecops", "vulnerability"],
+    "cloud_security_check":     ["cloud_security", "security_architecture"],
+    "pentest_planning":         ["penetration_testing", "security_architecture"],
+    "red_team_exercise":        ["red_team", "detection_engineering", "threat_hunting"],
+    "api_security_check":       ["api_security", "vulnerability"],
+    "container_security":       ["container_security", "devsecops"],
+    "identity_review":          ["identity_security", "privileged_access"],
+    "network_security_check":   ["network_security", "security_architecture"],
+    "endpoint_security":        ["endpoint_security", "vulnerability"],
+    "supply_chain_check":       ["supply_chain_security", "devsecops"],
+    "dlp_assessment":           ["data_loss_prevention", "compliance"],
+    "threat_modeling":          ["threat_modeling", "security_architecture"],
+    "email_security_check":     ["email_security", "phishing_analysis"],
+    "web_app_security":         ["web_application_security", "api_security"],
+    "iot_security":             ["iot_security", "network_security"],
+    "blockchain_security":      ["blockchain_security", "vulnerability"],
+    "pam_assessment":           ["privileged_access", "identity_security"],
+    "regulatory_report":        ["regulatory_reporting", "compliance"],
+    "vendor_risk_assessment":   ["vendor_risk", "compliance"],
+    "cyber_insurance_assessment": ["cyber_insurance", "compliance", "vulnerability"],
 
-    # Executive
-    "ciso_briefing":        ["ciso", "threat_research"],
-    "board_report":         ["ceo", "ciso", "cro"],
-    "risk_register":        ["ciso", "compliance"],
-    "executive_summary":    ["ceo", "cto", "ciso"],
-    "revenue_metrics":      ["cro", "subscription"],
+    # ── Executive ─────────────────────────────────────────────────────────────
+    "ciso_briefing":            ["ciso", "threat_research"],
+    "board_report":             ["ceo", "ciso", "cro"],
+    "risk_register":            ["ciso", "compliance"],
+    "executive_summary":        ["ceo", "cto", "ciso"],
+    "revenue_metrics":          ["cro", "subscription"],
+    "technical_roadmap":        ["cto", "ciso"],
+    "growth_strategy":          ["cro", "ceo"],
 
-    # Customer
-    "onboarding":           ["onboarding", "customer_success"],
-    "support_request":      ["customer_success", "soc_tier1"],
-    "subscription_query":   ["subscription", "billing"],
-    "renewal":              ["renewal", "customer_success"],
+    # ── Customer / Revenue ────────────────────────────────────────────────────
+    "onboarding":               ["onboarding", "customer_success"],
+    "support_request":          ["customer_success", "soc_tier1"],
+    "subscription_query":       ["subscription", "billing"],
+    "renewal":                  ["renewal", "customer_success"],
+    "billing_inquiry":          ["billing", "customer_success"],
+    "mssp_dashboard":           ["mssp", "soc_tier1", "threat_research"],
+    "plan_details":             ["subscription"],
 
-    # Research
-    "generate_blog":        ["blog", "research", "content_intelligence"],
-    "threat_report":        ["research", "threat_research"],
-    "whitepaper":           ["whitepaper", "research"],
+    # ── Research / Content ────────────────────────────────────────────────────
+    "generate_blog":            ["blog", "research", "content_intelligence"],
+    "threat_report":            ["research", "threat_research"],
+    "whitepaper":               ["whitepaper", "research"],
+    "content_strategy":         ["content_intelligence", "research"],
+    "research_query":           ["research", "threat_research"],
 }
 
 # ─── Parallel execution groups (agents that run simultaneously) ──────────────
@@ -260,62 +293,56 @@ class MasterOrchestrator:
             })
             try:
                 resp = await agent.process(enriched_request)
+                responses.append(enriched_request)
                 responses.append(resp)
             except Exception as e:
                 logger.error("agent.sequential_error", agent=name, error=str(e))
 
         return responses
 
-    # ── Response synthesis ────────────────────────────────────────────────────
-    async def _synthesize_response(
-        self,
-        responses: List[AgentResponse],
-        qr: QualityReport,
-        intent: str,
-        payload: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """Merge multi-agent results into a single coherent response."""
+    # ── Quality gate ──────────────────────────────────────────────────────────
+    async def _apply_quality_gate(
+        self, responses: List[AgentResponse], request: AgentRequest
+    ) -> Tuple[bool, QualityReport]:
+        """Run QualityGate over all agent responses."""
         if not responses:
-            return {"error": "No agent responses produced", "intent": intent}
+            from .quality_gate import QualityReport
+            return False, QualityReport(
+                approved=False, accuracy=0, security=0,
+                completeness=0, compliance=0, confidence=0,
+                reason="No agent responses",
+            )
+        return await self.quality_gate.evaluate(responses, request)
 
-        # Primary result from highest-confidence agent
-        primary = max(responses, key=lambda r: r.confidence_score)
-        merged  = dict(primary.result)
-
-        # Merge supplementary findings from other agents
-        supplementary = [r for r in responses if r.agent_id != primary.agent_id]
-        if supplementary:
-            merged["supplementary_findings"] = [
-                {"agent": r.agent_name, "layer": r.layer.value, "result": r.result}
-                for r in supplementary if r.status == AgentStatus.COMPLETED
-            ]
-
-        # Attach quality metadata
-        merged["_orchestration_meta"] = {
-            "quality_score":    qr.overall_score,
-            "confidence":       primary.confidence_score,
-            "agents_invoked":   [r.agent_name for r in responses],
-            "approved":         qr.overall_score >= 95.0,
-            "hallucination_risk": primary.hallucination_risk,
-            "sources":          primary.sources,
-        }
-
+    # ── Synthesize ────────────────────────────────────────────────────────────
+    def _synthesize(
+        self, responses: List[AgentResponse], request: AgentRequest
+    ) -> Dict[str, Any]:
+        """Merge agent results into a unified response."""
+        merged: Dict[str, Any] = {"intent": request.intent, "agents": []}
+        for resp in responses:
+            merged["agents"].append({
+                "agent": resp.agent_name,
+                "status": resp.status.value,
+                "result": resp.result,
+                "confidence": resp.confidence,
+            })
+        # Primary result = first successful agent
+        for resp in responses:
+            if resp.status == AgentStatus.SUCCESS:
+                merged.update(resp.result)
+                break
         return merged
 
-    # ── Audit persistence ─────────────────────────────────────────────────────
-    async def _persist_audit(
-        self, orch_id: str, tenant_id: str, user_id: str,
-        intent: str, agents: List[str], qr: "QualityReport",
-        elapsed_ms: float, approved: bool,
-    ):
-        if not self.db:
-            return
-        try:
-            async with self.db.acquire() as conn:
-                await conn.execute("""
-                    INSERT INTO agent_audit_log
-                    (id, tenant_id, user_id, intent, agents_invoked, quality_score,
-                     approved, elapsed_ms, created_at)
+    # ── Diagnostics ───────────────────────────────────────────────────────────
+    def get_diagnostics(self) -> Dict[str, Any]:
+        """Return orchestrator runtime diagnostics."""
+        return {
+            "registered_agents": self.registry.count(),
+            "supported_intents": list(INTENT_ROUTING.keys()),
+            "parallel_groups": list(PARALLEL_GROUPS.keys()),
+        }
+  approved, elapsed_ms, created_at)
                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
                 """, orch_id, tenant_id, user_id, intent,
                     ",".join(agents), qr.overall_score, approved, elapsed_ms)
