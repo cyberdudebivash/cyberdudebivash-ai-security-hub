@@ -9,12 +9,16 @@ import asyncio
 import time
 from typing import Any, Dict, Iterator, List, Optional, Type
 
-import structlog
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
+
 from pydantic import BaseModel
 
 from .base_agent import AgentLayer, BaseAgent
-
-logger = structlog.get_logger(__name__)
 
 class AgentRecord(BaseModel):
     agent_id:       str
@@ -173,5 +177,4 @@ class AgentRegistry:
             "healthy_agents": healthy,
             "degraded":       total - healthy,
             "by_layer":       by_layer,
-            "all_intents":    sorted({i for r in self._records.values() for i in r.intents}),
         }

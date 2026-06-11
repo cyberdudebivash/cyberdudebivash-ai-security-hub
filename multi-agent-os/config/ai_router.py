@@ -10,10 +10,17 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
-import httpx
-import structlog
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore
 
-logger = structlog.get_logger(__name__)
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 PROVIDER_PRIORITY = ["groq", "deepseek", "cloudflare", "openrouter", "anthropic"]
 
@@ -227,7 +234,7 @@ class AIProviderRouter:
             "total_configured":    sum(1 for p in PROVIDER_PRIORITY if
                                        (p != "cloudflare" and self._keys.get(p)) or
                                        (p == "cloudflare" and all(self._keys.get("cloudflare", ())))),
-            "latency_ms":  {k: round(v*1000, 1) for k, v in self._latency.items()},
+            "latency_ms":   {k: round(v*1000, 1) for k, v in self._latency.items()},
             "error_counts": self._errors,
-            "anthropic_status": "optional" + (" — configured" if self._keys["anthropic"] else " — not configured"),
+            "anthropic_status": "optional - " + ("configured" if self._keys.get("anthropic") else "not configured"),
         }

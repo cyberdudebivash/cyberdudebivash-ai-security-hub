@@ -10,35 +10,49 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Dict
 
-import structlog
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentation
+
+# Optional observability — platform runs without these installed
+try:
+    import structlog
+    _structlog_available = True
+except ImportError:
+    import logging as _logging
+    _structlog_available = False
+
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentation
+except ImportError:
+    FastAPIInstrumentation = None  # type: ignore
 
 from .routes import intel_router, soc_router, executive_router, ai_security_router
 from .routes import compliance_router, customer_router, health_router
 from .middleware.auth import verify_token
 from .middleware.rate_limit import RateLimitMiddleware
-from ..agents.core import (
+from agents.core import (
     AgentRegistry, MasterOrchestrator, QualityGate, PolicyEngine
 )
-from ..agents.threat_intel import (
+from agents.threat_intel import (
     IOCIntelligenceAgent, CVEIntelligenceAgent,
     MalwareIntelligenceAgent, ThreatActorAgent,
 )
-from ..agents.soc import SOCTier1Agent, IncidentResponseAgent, ThreatHuntingAgent
-from ..agents.executive import CISOAgent, CEOAgent
-from ..agents.ai_security import PromptInjectionAgent, AIGovernanceAgent
-from ..agents.security_engineering import ComplianceAgent
-from ..agents.customer import CustomerSuccessAgent
-from ..agents.research import ThreatResearchAgent
-from ..config.settings import settings
-from ..config.ai_router import AIProviderRouter
+from agents.soc import SOCTier1Agent, IncidentResponseAgent, ThreatHuntingAgent
+from agents.executive import CISOAgent, CEOAgent
+from agents.ai_security import PromptInjectionAgent, AIGovernanceAgent
+from agents.security_engineering import ComplianceAgent
+from agents.customer import CustomerSuccessAgent
+from agents.research import ThreatResearchAgent
+from config.settings import settings
+from config.ai_router import AIProviderRouter
 
-logger = structlog.get_logger(__name__)
+if _structlog_available:
+    logger = structlog.get_logger(__name__)
+else:
+    logger = _logging.getLogger(__name__)
 
 # ─── Application state container ─────────────────────────────────────────────
 class AppState:
@@ -197,8 +211,9 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(RateLimitMiddleware)
 
-# ─── OpenTelemetry instrumentation ───────────────────────────────────────────
-FastAPIInstrumentation().instrument_app(app)
+# ─── OpenTelemetry instrumentation (optional) ────────────────────────────────
+if FastAPIInstrumentation:
+    FastAPIInstrumentation().instrument_app(app)
 
 # ─── Request ID + timing middleware ──────────────────────────────────────────
 @app.middleware("http")
@@ -207,7 +222,8 @@ async def request_middleware(request: Request, call_next):
     request.state.request_id = request_id
     request.state.start_time = time.monotonic()
 
-    structlog.contextvars.bind_contextvars(request_id=request_id)
+    if _structlog_available:
+        structlog.contextvars.bind_contextvars(request_id=request_id)
 
     response = await call_next(request)
     elapsed  = (time.monotonic() - request.state.start_time) * 1000
@@ -275,8 +291,7 @@ if __name__ == "__main__":
         "api.main:app",
         host="0.0.0.0",
         port=8000,
-        workers=settings.WORKERS,
-        loop="uvloop",
-        http="httptools",
+        workers=1,
+        loop="asyncio",
         log_level="info",
     )

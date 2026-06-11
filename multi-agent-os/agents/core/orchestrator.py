@@ -12,18 +12,26 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple, Type
 
-import structlog
-from opentelemetry import trace
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
+
+try:
+    from opentelemetry import trace
+    _tracer = trace.get_tracer(__name__)
+except ImportError:
+    trace, _tracer = None, None  # type: ignore
+
 from pydantic import BaseModel
 
 from .base_agent import (
-    AgentLayer, AgentRequest, AgentResponse, AgentStatus, BaseAgent
+    AgentLayer, AgentRequest, AgentResponse, AgentStatus, BaseAgent, _NoopSpan
 )
 from .quality_gate import QualityGate, QualityReport
 from .policy_engine import PolicyEngine
-
-logger = structlog.get_logger(__name__)
-tracer = trace.get_tracer(__name__)
 
 # ─── Intent → Layer routing table ────────────────────────────────────────────
 INTENT_ROUTING: Dict[str, List[str]] = {
@@ -137,7 +145,7 @@ class MasterOrchestrator:
         orch_id  = str(uuid.uuid4())
         start_ms = time.monotonic() * 1000
 
-        with tracer.start_as_current_span(
+        _ctx = (_tracer.start_as_current_span(
             "orchestrator.orchestrate",
             attributes={
                 "orchestration.id": orch_id,
@@ -145,7 +153,8 @@ class MasterOrchestrator:
                 "tenant.id": tenant_id,
                 "tier": tier,
             },
-        ) as span:
+        ) if _tracer else _NoopSpan())
+        with _ctx as span:
             logger.info("orchestration.start", orch_id=orch_id, intent=intent, tenant_id=tenant_id)
 
             # 1. Policy pre-check

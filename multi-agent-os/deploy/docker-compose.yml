@@ -1,8 +1,6 @@
 # CYBERDUDEBIVASH® Multi-Agent Cybersecurity OS
 # Docker Compose — Full local development stack
-# Usage: docker-compose up -d
-
-version: "3.9"
+# Usage: docker compose -f deploy/docker-compose.yml up -d
 
 x-common-env: &common-env
   ENVIRONMENT: development

@@ -12,9 +12,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import structlog
-
-logger = structlog.get_logger(__name__)
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 class KnowledgeSource(str, Enum):
     MITRE_ATTACK   = "mitre_attack"
@@ -229,4 +232,3 @@ class KnowledgeBase:
         ]
         for doc in static_docs:
             await self.add_document(doc)
-        logger.info("knowledge_base.seeded", count=len(static_docs))

@@ -8,10 +8,14 @@ from __future__ import annotations
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import structlog
-from pydantic import BaseModel
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
-logger = structlog.get_logger(__name__)
+from pydantic import BaseModel
 
 # ─── Tier definitions ─────────────────────────────────────────────────────────
 TIER_HIERARCHY = ["FREE", "STARTER", "PRO", "ENTERPRISE", "GLOBAL_ENTERPRISE"]
@@ -90,6 +94,7 @@ class PolicyEngine:
         self.redis = redis_client
         self.db    = pg_pool
         self._decisions_log: List[Dict[str, Any]] = []
+        self._rate_limited:  set = set()  # user_ids currently rate-limited
 
     async def check_request(
         self,
@@ -195,3 +200,10 @@ class PolicyEngine:
 
     def get_rate_limit(self, tier: str) -> int:
         return TIER_RATE_LIMITS.get(tier.upper(), 10)
+
+    def get_stats(self) -> Dict[str, Any]:
+        return {
+            "total_decisions":    len(self._decisions_log),
+            "rate_limited_users": len(self._rate_limited),
+            "recent_decisions": self._decisions_log[-10:] if self._decisions_log else [],
+        }

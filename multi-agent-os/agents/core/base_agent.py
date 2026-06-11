@@ -13,13 +13,32 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-from opentelemetry import trace
-from opentelemetry.trace import SpanKind
 from pydantic import BaseModel, Field
-import structlog
 
-logger = structlog.get_logger(__name__)
-tracer = trace.get_tracer(__name__)
+# Optional observability — platform works without these installed
+try:
+    from opentelemetry import trace
+    from opentelemetry.trace import SpanKind
+    _tracer = trace.get_tracer(__name__)
+except ImportError:
+    trace, SpanKind, _tracer = None, None, None  # type: ignore
+
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
+
+def tracer():
+    return _tracer
+
+class _NoopSpan:
+    """No-op context manager when OTel is not installed."""
+    def __enter__(self): return self
+    def __exit__(self, *_): pass
+    def set_attribute(self, *_): pass
+    def set_status(self, *_): pass
 
 # ─── Agent Tier + Layer ───────────────────────────────────────────────────────
 class AgentLayer(str, Enum):
@@ -182,9 +201,11 @@ class BaseAgent(ABC):
         self.status = AgentStatus.RUNNING
         self._request_count += 1
 
-        with tracer.start_as_current_span(
+        # Use OTel span if available, otherwise use a no-op context manager
+        _t = tracer()
+        _ctx = (_t.start_as_current_span(
             f"agent.{self.name}.process",
-            kind=SpanKind.INTERNAL,
+            kind=SpanKind.INTERNAL if SpanKind else None,
             attributes={
                 "agent.name":    self.name,
                 "agent.layer":   self.layer.value,
@@ -193,7 +214,8 @@ class BaseAgent(ABC):
                 "user.id":       request.user_id,
                 "intent":        request.intent,
             },
-        ) as span:
+        ) if _t else _NoopSpan())
+        with _ctx as span:
             audit: List[Dict[str, Any]] = []
             attempt = 0
 

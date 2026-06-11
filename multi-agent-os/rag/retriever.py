@@ -5,9 +5,13 @@ Attaches relevant knowledge context to agent prompts automatically.
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from .knowledge_base import KnowledgeBase, KnowledgeSource
-import structlog
 
-logger = structlog.get_logger(__name__)
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 INTENT_KNOWLEDGE_MAP: Dict[str, List[KnowledgeSource]] = {
     "analyze_ioc":           [KnowledgeSource.MITRE_ATTACK, KnowledgeSource.IOC_FEEDS],

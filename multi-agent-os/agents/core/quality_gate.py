@@ -9,10 +9,14 @@ import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-import structlog
-from pydantic import BaseModel, Field
+try:
+    import structlog
+    logger = structlog.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
-logger = structlog.get_logger(__name__)
+from pydantic import BaseModel, Field
 
 # ─── Quality Report ────────────────────────────────────────────────────────────
 class DimensionScore(BaseModel):
@@ -274,5 +278,5 @@ class QualityGate:
             accuracy_score=0, security_score=0, completeness_score=0,
             compliance_score=0, confidence_score=0, overall_score=0,
             hallucination_detected=False, hallucination_risk=0.0,
-            approved=False, fail_reasons=[reason],
+            approved=False, fail_reasons=[reason], upgrade_triggers=[],
         )
