@@ -1003,20 +1003,25 @@ a{color:var(--accent);text-decoration:none}
   <div class="nav-inner">
 
     <!-- Logo — always navigates home -->
-    <a class="nav-brand" href="#home" onclick="cdbNavigate('hero');return false" aria-label="CYBERDUDEBIVASH AI — Home" style="font-weight:900;letter-spacing:.02em;text-shadow:0 0 16px rgba(0,212,255,.5);filter:drop-shadow(0 0 8px rgba(0,212,255,.3))">
-      <span style="filter:drop-shadow(0 0 4px rgba(0,212,255,.6))">⚔️</span>
-      <span style="background:linear-gradient(90deg,#00d4ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CYBERDUDEBIVASH AI</span>
+    <a class="nav-brand" href="#home" onclick="cdbNavigate('hero');return false" aria-label="CYBERDUDEBIVASH AI Security Hub — Home"
+       style="font-weight:900;letter-spacing:.02em;display:inline-flex;align-items:center;gap:7px;text-decoration:none;flex-shrink:0">
+      <span style="font-size:18px;animation:cdbShieldPulse 2.5s ease-in-out infinite">⚔️</span>
+      <div style="display:flex;flex-direction:column;line-height:1.15">
+        <span style="font-size:13px;font-weight:900;letter-spacing:.04em;background:linear-gradient(90deg,#00d4ff,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap">CYBERDUDEBIVASH®</span>
+        <span style="font-size:8px;font-weight:700;color:rgba(0,212,255,.5);letter-spacing:.12em;text-transform:uppercase">AI SECURITY HUB</span>
+      </div>
     </a>
 
-    <!-- Desktop links — v26 conversion nav -->
+    <!-- Desktop links — production enterprise nav -->
     <div class="nav-links" id="nav-links-desktop">
-      <a href="#scanner" data-section="scanner" onclick="cdbNavigate('scanner');return false">Free Scan</a>
+      <a href="#scanner" data-section="scanner" onclick="cdbNavigate('scanner');return false" style="display:inline-flex;align-items:center;gap:4px">⚡ Free Scan</a>
       <a href="#pricing" data-section="pricing" onclick="cdbNavigate('pricing');return false">Pricing</a>
-      <a href="#ai-platform" onclick="document.getElementById('ai-platform').scrollIntoView({behavior:'smooth'});return false">AI Security</a>
-      <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener">Threat Intel ↗</a>
+      <a href="#ai-platform" onclick="document.getElementById('ai-platform')?.scrollIntoView({behavior:'smooth'});return false">AI Security</a>
+      <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px">🛰 Threat Intel ↗</a>
       <a href="#trust-center" data-section="trust-center" onclick="cdbNavigate('trust-center');return false">Trust</a>
       <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
-      <a href="#enterprise" data-section="enterprise" onclick="cdbNavigate('enterprise');return false" class="nav-cta">Book Assessment</a>
+      <a href="#enterprise" data-section="enterprise" onclick="cdbNavigate('enterprise');return false" class="nav-cta"
+         style="background:linear-gradient(135deg,#00d4ff,#6366f1)!important;color:#000!important;font-weight:800!important;letter-spacing:.03em!important;box-shadow:0 0 20px rgba(0,212,255,.3)!important">⚡ Book Demo</a>
     </div>
     <!-- Right actions: Notification Bell + Hamburger -->
     <div class="nav-actions" style="display:flex;align-items:center;gap:10px">
@@ -1064,6 +1069,31 @@ a{color:var(--accent);text-decoration:none}
     <a href="https://tools.cyberdudebivash.com" target="_blank" rel="noopener" onclick="cdbCloseMobileNav()">🛠 Tools Suite ↗</a>
   </div>
 </nav>
+
+<!-- ── CYBERDUDEBIVASH® Floating Brand Sticky Pin — always visible ── -->
+<div id="cdb-brand-sticky-pin" role="banner" aria-label="CYBERDUDEBIVASH AI Security Hub">
+  <div class="cdb-bsp-inner">
+    <span class="cdb-bsp-shield">⚔️</span>
+    <div>
+      <span class="cdb-bsp-name">CYBERDUDEBIVASH®</span>
+      <span class="cdb-bsp-sub">AI SECURITY HUB</span>
+    </div>
+    <div class="cdb-bsp-divider"></div>
+    <div class="cdb-bsp-live">
+      <span class="cdb-bsp-dot"></span>
+      <span class="cdb-bsp-livetxt">LIVE</span>
+    </div>
+    <div class="cdb-bsp-divider"></div>
+    <div class="cdb-bsp-tabs" id="cdb-bsp-tabs">
+      <a class="cdb-bsp-tab" href="#enterprise-sales" onclick="cdbNavigate('enterprise-sales');return false">💼 Sales</a>
+      <a class="cdb-bsp-tab" href="#proposal-gen"     onclick="cdbNavigate('proposal-gen');return false">📄 Proposals</a>
+      <a class="cdb-bsp-tab" href="#affiliate-hub"    onclick="cdbNavigate('affiliate-hub');return false">🤝 Affiliate</a>
+      <a class="cdb-bsp-tab" href="#growth-analytics" onclick="cdbNavigate('growth-analytics');return false">📈 Growth</a>
+    </div>
+    <div class="cdb-bsp-divider"></div>
+    <span class="cdb-bsp-v">v30.0</span>
+  </div>
+</div>
 
 <!-- ── v21.0 Platform Status Bar ─────────────────────────── -->
 <div id="v21-status-bar" style="
@@ -1412,23 +1442,40 @@ a{color:var(--accent);text-decoration:none}
 <!-- ═══════════════════════ SECURITY DASHBOARD ═══════════════════════ -->
 <section id="dashboard" class="dashboard-section" style="display:none" data-auth-gate="true" data-section-id="dashboard">
   <div class="dashboard-inner">
-    <div style="text-align:center;margin-bottom:36px;position:relative">
-      <div class="section-label-v11" style="justify-content:center;margin-bottom:10px">
-        <span style="width:auto">Live Intelligence</span>
+    <div style="text-align:center;margin-bottom:36px;position:relative;padding:32px 24px 28px;background:linear-gradient(135deg,rgba(0,212,255,.05),rgba(99,102,241,.04),rgba(168,85,247,.03));border:1px solid rgba(0,212,255,.1);border-radius:20px;overflow:hidden">
+      <!-- BG radial glow -->
+      <div style="position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:400px;height:200px;background:radial-gradient(ellipse,rgba(0,212,255,.07) 0%,transparent 70%);pointer-events:none"></div>
+      <!-- Brand identity strip -->
+      <div style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(99,102,241,.08));border:1px solid rgba(0,212,255,.2);border-radius:30px;padding:4px 16px 4px 12px;margin-bottom:16px">
+        <span style="font-size:13px;animation:cdbShieldPulse 2s ease-in-out infinite">⚔️</span>
+        <span style="font-size:9px;font-weight:900;letter-spacing:.16em;background:linear-gradient(90deg,#00d4ff,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CYBERDUDEBIVASH® AI SECURITY HUB</span>
+        <span style="width:1px;height:14px;background:rgba(0,212,255,.3)"></span>
+        <span style="font-size:8px;font-weight:800;color:rgba(0,212,255,.7);letter-spacing:.08em">v30.0</span>
       </div>
-      <h2 class="section-title" style="margin-bottom:8px;font-size:clamp(24px,4vw,40px)">
+      <div class="section-label-v11" style="justify-content:center;margin-bottom:10px">
+        <span style="width:auto;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(99,102,241,.1));border-color:rgba(0,212,255,.25);color:#00d4ff">Live Intelligence</span>
+      </div>
+      <h2 class="section-title" style="margin-bottom:10px;font-size:clamp(24px,4vw,42px);background:linear-gradient(135deg,#fff 40%,rgba(0,212,255,.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
         🛡 Security Command Center
       </h2>
-      <p style="color:var(--text-muted);font-size:14px;max-width:560px;margin:0 auto 16px">
-        Real-time platform metrics · AI threat analysis · Live CVE intelligence · Monetization engine
+      <p style="color:var(--text-muted);font-size:14px;max-width:600px;margin:0 auto 20px;line-height:1.6">
+        Real-time platform metrics · AI threat analysis · Live CVE intelligence · Enterprise monetization engine
       </p>
-      <!-- Live platform status row -->
-      <div style="display:inline-flex;align-items:center;gap:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:30px;padding:6px 16px;font-size:11px;font-weight:700">
-        <span><span class="status-dot green"></span>All Systems Operational</span>
-        <span style="color:var(--text-dim)">|</span>
-        <span style="color:var(--text-muted)" id="dash-last-refresh">Loading...</span>
-        <span style="color:var(--text-dim)">|</span>
-        <span style="color:var(--accent);cursor:pointer" onclick="refreshDashboardMetrics()">↻ Refresh</span>
+      <!-- Status pills row -->
+      <div style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:30px;padding:5px 16px;font-size:11px;font-weight:700">
+          <span><span class="status-dot green"></span>All Systems Operational</span>
+          <span style="color:var(--text-dim)">|</span>
+          <span style="color:var(--text-muted)" id="dash-last-refresh">Loading...</span>
+          <span style="color:var(--text-dim)">|</span>
+          <span style="color:var(--accent);cursor:pointer" onclick="refreshDashboardMetrics()">↻ Refresh</span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:30px;padding:5px 14px;font-size:10px;font-weight:800">
+          <span style="color:#ef4444">⚠️</span><span style="color:#fca5a5">THREAT: <span id="dash-threat-level" style="color:#ef4444">HIGH</span></span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:30px;padding:5px 14px;font-size:10px;font-weight:800;color:#00d4ff">
+          🧠 MYTHOS AI ACTIVE
+        </div>
       </div>
     </div>
 
@@ -17321,6 +17368,187 @@ function renderPipeline(stages) {
 .p3-exec-RECOMMEND { background: rgba(99,102,241,.15); color: #818cf8; }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   CYBERDUDEBIVASH® BRAND PANEL + PREMIUM DASHBOARD — ENTERPRISE GRADE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Brand Float Nav Panel Keyframes ───────────────────────────────────── */
+@keyframes cdbBrandPulse {
+  0%,100% { box-shadow:0 0 18px rgba(0,212,255,.18),0 0 40px rgba(99,102,241,.08); }
+  50%      { box-shadow:0 0 28px rgba(0,212,255,.32),0 0 55px rgba(168,85,247,.14); }
+}
+@keyframes cdbBrandShimmer {
+  0%   { transform:translateX(-100%); }
+  100% { transform:translateX(200%); }
+}
+@keyframes cdbShieldPulse {
+  0%,100% { filter:drop-shadow(0 0 4px rgba(0,212,255,.7)); }
+  50%     { filter:drop-shadow(0 0 10px rgba(0,212,255,1)) drop-shadow(0 0 18px rgba(168,85,247,.6)); }
+}
+@keyframes cdbLiveDot {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%     { opacity:.4; transform:scale(1.4); }
+}
+@keyframes p4SlideUp { from{transform:translateX(-50%) translateY(16px);opacity:0} to{transform:translateX(-50%) translateY(0);opacity:1} }
+
+/* ── Floating Brand Pin — always-visible sticky strip ───────────────────── */
+#cdb-brand-sticky-pin {
+  position: fixed;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9800;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s, top .3s;
+}
+#cdb-brand-sticky-pin.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cdb-bsp-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg,rgba(5,5,20,.96),rgba(10,10,35,.96));
+  border: 1px solid rgba(0,212,255,.3);
+  border-radius: 40px;
+  padding: 7px 20px 7px 14px;
+  box-shadow: 0 4px 32px rgba(0,0,0,.6), 0 0 24px rgba(0,212,255,.15), 0 0 60px rgba(99,102,241,.08);
+  backdrop-filter: blur(20px);
+  white-space: nowrap;
+}
+.cdb-bsp-shield {
+  font-size: 16px;
+  animation: cdbShieldPulse 2s ease-in-out infinite;
+}
+.cdb-bsp-name {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg,#00d4ff 0%,#818cf8 35%,#a78bfa 65%,#f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.cdb-bsp-sub {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: rgba(0,212,255,.6);
+  letter-spacing: .08em;
+  display: block;
+  margin-top: 1px;
+}
+.cdb-bsp-divider {
+  width: 1px; height: 24px;
+  background: linear-gradient(180deg,transparent,rgba(0,212,255,.35),transparent);
+}
+.cdb-bsp-live {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cdb-bsp-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: cdbLiveDot 1.2s ease-in-out infinite;
+}
+.cdb-bsp-livetxt {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #22c55e;
+  letter-spacing: .1em;
+}
+.cdb-bsp-v {
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255,255,255,.25);
+  letter-spacing: .06em;
+}
+.cdb-bsp-tabs {
+  display: flex;
+  gap: 2px;
+}
+.cdb-bsp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  color: rgba(148,163,184,.8);
+  cursor: pointer;
+  transition: all .2s;
+  text-decoration: none;
+  letter-spacing: .03em;
+}
+.cdb-bsp-tab:hover { color:#fff; background:rgba(0,212,255,.1); border-color:rgba(0,212,255,.25); }
+.cdb-bsp-tab.active { color:#00d4ff; background:rgba(0,212,255,.12); border-color:rgba(0,212,255,.35); }
+
+/* ── Premium Dashboard Metrics ──────────────────────────────────────────── */
+.metric-card {
+  background: linear-gradient(135deg,rgba(10,10,28,.9),rgba(8,8,22,.95)) !important;
+  border: 1px solid rgba(var(--mc-color-rgb,0,212,255),.18) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04) !important;
+  transition: transform .2s, box-shadow .2s !important;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--mc-color,#00d4ff),transparent);
+  opacity:.7;
+}
+.metric-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 24px rgba(var(--mc-color-rgb,0,212,255),.1) !important;
+}
+.metric-value { font-family:'SF Mono','Fira Code',monospace !important; }
+
+/* ── Enhanced Dashboard Section Header ──────────────────────────────────── */
+.dashboard-section .dashboard-inner > div:first-child {
+  background: linear-gradient(135deg,rgba(0,212,255,.04),rgba(99,102,241,.04));
+  border: 1px solid rgba(0,212,255,.08);
+  border-radius: 20px;
+  padding: 28px 24px 24px !important;
+  margin-bottom: 32px !important;
+  position: relative;
+  overflow: hidden;
+}
+.dashboard-section .dashboard-inner > div:first-child::before {
+  content:'';
+  position:absolute;
+  top:-60px;right:-60px;
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(0,212,255,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* ── Phase 4 Section Premium Headers ────────────────────────────────────── */
+#enterprise-sales, #proposal-gen, #affiliate-hub, #growth-analytics {
+  background: linear-gradient(180deg,rgba(5,5,16,.98) 0%,rgba(3,3,10,1) 100%) !important;
+  position: relative;
+}
+#enterprise-sales::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(245,158,11,.4),transparent); }
+#proposal-gen::before     { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(99,102,241,.4),transparent); }
+#affiliate-hub::before    { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(168,85,247,.4),transparent); }
+#growth-analytics::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(236,72,153,.4),transparent); }
+
+/* ── Nav active-state glow ──────────────────────────────────────────────── */
+#main-nav { border-bottom:1px solid rgba(0,212,255,.08) !important; }
+#main-nav .nav-inner {
+  background: linear-gradient(135deg,rgba(5,5,18,.97),rgba(8,8,25,.98)) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    PHASE 4 CSS — Enterprise Sales + Proposal + Affiliate + Growth Analytics
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -18197,21 +18425,83 @@ function p4Get(path) { return p4Api(path); }
 /* ── Nav injection ─────────────────────────────────────────────────────── */
 function p4InjectNav() {
   var links = [
-    { href: '#enterprise-sales', label: 'Sales' },
-    { href: '#proposal-gen',     label: 'Proposals' },
-    { href: '#affiliate-hub',    label: 'Affiliate' },
-    { href: '#growth-analytics', label: 'Growth' }
+    { href: '#enterprise-sales', label: 'Sales',     icon: '💼', color: '#f59e0b' },
+    { href: '#proposal-gen',     label: 'Proposals', icon: '📄', color: '#6366f1' },
+    { href: '#affiliate-hub',    label: 'Affiliate', icon: '🤝', color: '#a855f7' },
+    { href: '#growth-analytics', label: 'Growth',    icon: '📈', color: '#ec4899' }
   ];
   var navEl = document.getElementById('p3-dynamic-nav') || document.querySelector('.cdb-nav-links') || document.querySelector('nav');
   if (!navEl) return;
+
+  /* ── Brand Panel — inject ONCE before the phase-4 links ── */
+  if (!navEl.querySelector('#cdb-brand-float-nav')) {
+    var brand = document.createElement('div');
+    brand.id = 'cdb-brand-float-nav';
+    brand.innerHTML = [
+      '<div style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(99,102,241,.12),rgba(168,85,247,.12));',
+      'border:1px solid rgba(0,212,255,.28);border-radius:30px;padding:5px 14px 5px 10px;',
+      'box-shadow:0 0 18px rgba(0,212,255,.18),0 0 40px rgba(99,102,241,.08);',
+      'backdrop-filter:blur(12px);position:relative;overflow:hidden;cursor:default;',
+      'animation:cdbBrandPulse 3s ease-in-out infinite">',
+      '<div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(0,212,255,.06),transparent);',
+      'animation:cdbBrandShimmer 2.5s linear infinite;pointer-events:none"></div>',
+      '<span style="font-size:15px;filter:drop-shadow(0 0 6px rgba(0,212,255,.8));animation:cdbShieldPulse 1.5s ease-in-out infinite">⚔️</span>',
+      '<div style="display:flex;flex-direction:column;line-height:1.2">',
+      '<span style="font-size:9.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;',
+      'background:linear-gradient(90deg,#00d4ff,#818cf8,#a78bfa,#f472b6);',
+      '-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;',
+      'white-space:nowrap">CYBERDUDEBIVASH®</span>',
+      '<span style="font-size:8px;font-weight:700;letter-spacing:.08em;color:rgba(99,212,255,.7);white-space:nowrap">AI SECURITY HUB</span>',
+      '</div>',
+      '<div style="width:1px;height:22px;background:linear-gradient(180deg,transparent,rgba(0,212,255,.4),transparent)"></div>',
+      '<div style="display:flex;align-items:center;gap:3px">',
+      '<span style="width:5px;height:5px;border-radius:50%;background:#22c55e;',
+      'box-shadow:0 0 6px #22c55e;animation:cdbLiveDot 1s ease-in-out infinite"></span>',
+      '<span style="font-size:8px;font-weight:800;color:#22c55e;letter-spacing:.06em">LIVE</span>',
+      '</div>',
+      '</div>'
+    ].join('');
+    navEl.appendChild(brand);
+  }
+
+  /* ── Separator ── */
+  if (!navEl.querySelector('#cdb-p4-sep')) {
+    var sep = document.createElement('span');
+    sep.id = 'cdb-p4-sep';
+    sep.style.cssText = 'width:1px;height:20px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.15),transparent);margin:0 4px;flex-shrink:0';
+    navEl.appendChild(sep);
+  }
+
+  /* ── Tab links ── */
   links.forEach(function(l) {
     if (navEl.querySelector('[href="' + l.href + '"]')) return;
     var a = document.createElement('a');
     a.href = l.href;
-    a.textContent = l.label;
-    a.style.cssText = 'color:#94a3b8;text-decoration:none;font-size:14px;padding:6px 12px;border-radius:8px;transition:color .2s';
-    a.addEventListener('mouseenter', function() { a.style.color = '#e2e8f0'; });
-    a.addEventListener('mouseleave', function() { a.style.color = '#94a3b8'; });
+    a.innerHTML = '<span style="font-size:11px">' + l.icon + '</span><span>' + l.label + '</span>';
+    a.style.cssText = [
+      'display:inline-flex;align-items:center;gap:4px;',
+      'color:rgba(148,163,184,.85);text-decoration:none;font-size:12px;font-weight:600;',
+      'padding:5px 11px;border-radius:20px;transition:all .2s;letter-spacing:.03em;',
+      'border:1px solid transparent;white-space:nowrap'
+    ].join('');
+    a.addEventListener('mouseenter', function() {
+      a.style.color = l.color;
+      a.style.background = 'rgba(' + (l.color==='#f59e0b'?'245,158,11':l.color==='#6366f1'?'99,102,241':l.color==='#a855f7'?'168,85,247':'236,72,153') + ',.1)';
+      a.style.borderColor = l.color.replace('#','') + '44';
+    });
+    a.addEventListener('mouseleave', function() {
+      a.style.color = 'rgba(148,163,184,.85)';
+      a.style.background = '';
+      a.style.borderColor = 'transparent';
+    });
+    a.addEventListener('click', function() {
+      navEl.querySelectorAll('[data-p4tab]').forEach(function(x){ x.style.color='rgba(148,163,184,.85)'; x.style.background=''; x.style.borderColor='transparent'; });
+      a.style.color = '#fff';
+      a.style.background = 'linear-gradient(135deg,' + l.color + '22,' + l.color + '11)';
+      a.style.borderColor = l.color + '55';
+    });
+    a.setAttribute('data-p4tab', '1');
+    a.setAttribute('onclick', "cdbNavigate('" + l.href.slice(1) + "');return false");
     navEl.appendChild(a);
   });
 }
@@ -18924,6 +19214,33 @@ document.addEventListener('DOMContentLoaded', function() {
   // Expose paywall hook for Phase 3 sections
   window.P4_PAYWALL = p4ShowPaywallModal;
   window.P4_RECORD_EVENT = p4RecordBehaviorEvent;
+  // Brand sticky pin — show when scrolled past hero
+  (function() {
+    var pin = document.getElementById('cdb-brand-sticky-pin');
+    if (!pin) return;
+    var tabs = pin.querySelectorAll('.cdb-bsp-tab');
+    var sections = ['enterprise-sales','proposal-gen','affiliate-hub','growth-analytics'];
+    // Show pin when any phase-4 section or dashboard is in view
+    var scrollCb = function() {
+      var y = window.scrollY || window.pageYOffset;
+      var show = y > 300;
+      if (show) pin.classList.add('visible'); else pin.classList.remove('visible');
+      // Highlight active tab
+      var active = '';
+      sections.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var r = el.getBoundingClientRect();
+        if (r.top <= 160 && r.bottom > 100) active = '#' + id;
+      });
+      tabs.forEach(function(t) {
+        if (active && t.getAttribute('href') === active) t.classList.add('active');
+        else t.classList.remove('active');
+      });
+    };
+    window.addEventListener('scroll', scrollCb, { passive: true });
+    scrollCb();
+  })();
 });
 
 // Fallback for sync execution
