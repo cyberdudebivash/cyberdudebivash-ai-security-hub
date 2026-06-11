@@ -5196,7 +5196,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <span style="font-size:11px;background:rgba(245,158,11,.08);color:#f59e0b;padding:3px 10px;border-radius:20px">MCP</span>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="#" onclick="cdbShowAgentScan();return false" style="flex:1;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:#f59e0b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Scan Agent →</a>
+          <a href="/agent-threats" style="flex:1;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:#f59e0b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none">Scan Agent →</a>
           <a href="/agent-threats" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Agent Threats ↗</a>
         </div>
       </div>
@@ -5242,7 +5242,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#94a3b8">Managed AI Security</span><span style="color:#a78bfa;font-weight:700">₹49,999/mo</span></div>
         </div>
         <div style="display:flex;gap:10px">
-          <a href="#" onclick="cdbBookAISecurity('ai_security_assessment');return false" style="flex:1;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#a78bfa;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Book Service →</a>
+          <a href="#" onclick="cdbBookAISecurity('ai_managed_security');return false" style="flex:1;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#a78bfa;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;text-decoration:none">Book Service →</a>
           <a href="/ai-security-services" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Full Catalog ↗</a>
         </div>
       </div>
@@ -5270,56 +5270,186 @@ document.addEventListener('cdb:scan:complete', function(e) {
   </div>
 </section><!-- end #ai-platform -->
 
+<!-- ── PRODUCTION SERVICE BOOKING MODAL v29 ─────────────────────────────────── -->
+<div id="cdb-svc-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);overflow-y:auto;padding:20px 16px">
+  <div style="max-width:540px;margin:40px auto;background:#0d0d1f;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.7)">
+    <button onclick="closeCdbSvcModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#475569;font-size:20px;cursor:pointer;padding:4px 10px;line-height:1" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#475569'">&#x2715;</button>
+    <div style="margin-bottom:24px">
+      <div id="csm-tag" style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div id="csm-icon" style="font-size:26px"></div>
+        <div id="csm-title" style="font-size:20px;font-weight:900;color:#fff"></div>
+      </div>
+      <div id="csm-desc" style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:12px"></div>
+      <div id="csm-price-bar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"></div>
+    </div>
+    <div id="csm-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Full Name *</div>
+          <input id="csm-name" type="text" placeholder="Jane Smith" autocomplete="name" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Work Email *</div>
+          <input id="csm-email" type="email" placeholder="you@company.com" autocomplete="email" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Company</div>
+          <input id="csm-company" type="text" placeholder="Acme Corp" autocomplete="organization" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Phone / WhatsApp</div>
+          <input id="csm-phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Website / AI System / Domain *</div>
+        <input id="csm-domain" type="text" placeholder="yourcompany.com or describe your AI system" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Requirements / Notes</div>
+        <textarea id="csm-notes" rows="2" placeholder="AI systems in scope, compliance needs, timeline, or specific security concerns..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'"></textarea>
+      </div>
+      <div id="csm-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px"></div>
+      <button id="csm-submit-btn" onclick="submitCdbSvcBooking()" style="width:100%;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;border:none;letter-spacing:.02em">Submit Engagement Request &#x2192;</button>
+      <div style="text-align:center;margin-top:14px;font-size:11px;color:#334155">
+        Direct contact: <a href="https://wa.me/918179881447" target="_blank" rel="noopener" style="color:#22c55e;font-weight:700;text-decoration:none">&#x1F4AC; WhatsApp</a>
+        &nbsp;&middot;&nbsp;
+        <a href="mailto:security@cyberdudebivash.com" style="color:#475569;text-decoration:none">security@cyberdudebivash.com</a>
+      </div>
+    </div>
+    <div id="csm-loading" style="display:none;text-align:center;padding:52px 20px">
+      <div id="csm-spin" style="font-size:38px;margin-bottom:16px;display:inline-block">&#x2699;</div>
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:6px">Submitting your request...</div>
+      <div style="font-size:12px;color:#475569">Routing securely to our security team</div>
+    </div>
+    <div id="csm-success" style="display:none;text-align:center;padding:36px 20px">
+      <div style="font-size:52px;margin-bottom:16px">&#x2705;</div>
+      <div style="font-size:19px;font-weight:900;color:#fff;margin-bottom:10px">Engagement Request Confirmed!</div>
+      <div id="csm-success-msg" style="font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.65"></div>
+      <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.15);border-radius:12px;padding:18px;margin-bottom:22px;text-align:left">
+        <div style="font-size:12px;color:#22c55e;font-weight:800;margin-bottom:6px">What happens next?</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7">Our security team reviews your request within <strong style="color:#94a3b8">4 business hours</strong>. You receive a detailed scope document and timeline by email. A <strong style="color:#94a3b8">30-minute discovery call</strong> is scheduled at your convenience.</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a href="https://wa.me/918179881447?text=Hi%2C+I+just+submitted+an+engagement+request+on+cyberdudebivash.in" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#22c55e;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">&#x1F4AC; Connect on WhatsApp</a>
+        <button onclick="closeCdbSvcModal()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:10px 18px;border-radius:9px;font-size:13px;cursor:pointer">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>@keyframes csm-spin{to{transform:rotate(360deg)}}</style>
+
 <script>
-// ── v28 AI Security booking + agent scan functions ────────────────────────────
-window.cdbBookAISecurity = async function(serviceId) {
-  const email = localStorage.getItem('cdb_email') || '';
-  if (!email || !email.includes('@')) {
-    window.cdbShowEmailGate({
-      module: 'ai_security',
-      riskLevel: 'HIGH',
-      findingCount: 0,
-      onComplete: function() { window.cdbBookAISecurity(serviceId); }
-    });
-    return;
-  }
-  // Track funnel event
-  CDB_FUNNEL?.track('ai_service_cta_click', { service: serviceId, email });
-  // Fetch service details
-  try {
-    const res  = await fetch('/api/ai-security/services/catalog');
-    const data = await res.json();
-    const svc  = (data.catalog||[]).find(s => s.id === serviceId);
-    if (!svc) { window.open('/booking.html?service=' + serviceId, '_blank'); return; }
-    // Show info then redirect to booking
-    if (confirm(svc.name + '\n' + svc.price_label + (svc.delivery_days?' · '+svc.delivery_days+'-day delivery':'') + '\n\nSubmit interest and we'll contact you within 4 hours?')) {
-      const bookRes = await fetch('/api/ai-security/services/book', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ service_id:serviceId, email })
-      });
-      const bookData = await bookRes.json();
-      if (bookData.success) {
-        if (typeof TOAST !== 'undefined') {
-          TOAST.success('Booking confirmed! We'll contact you at ' + email + ' within 4 hours.', svc.name);
-        } else {
-          alert('Confirmed! We'll contact you at ' + email + ' within 4 business hours.');
-        }
-      }
-    }
-  } catch(e) {
-    window.open('/booking.html?service='+serviceId+'&email='+encodeURIComponent(email), '_blank');
+// ── v29 PRODUCTION AI SERVICE BOOKING MODAL ──────────────────────────────────
+var _CDB_SVCS = {
+  ai_security_assessment: {
+    tag:'PILLAR 1 — AI SECURITY POSTURE MANAGEMENT', icon:'🛡️',
+    title:'AI Security Posture Assessment',
+    desc:'Comprehensive AI security review: asset inventory, OWASP LLM Top 10 checks, exposure mapping, risk scoring, and a prioritised remediation roadmap.',
+    price:'₹9,999', delivery:'72-hour delivery', color:'#00d4ff', rgb:'0,212,255'
+  },
+  ai_governance_assessment: {
+    tag:'PILLAR 2 — AI GOVERNANCE CENTER', icon:'⚖️',
+    title:'AI Governance Assessment',
+    desc:'Framework-aligned governance review: NIST AI RMF, ISO 42001, EU AI Act, and DPDP Act 2023 compliance — with gap analysis and remediation roadmap.',
+    price:'₹49,999', delivery:'5-day delivery', color:'#818cf8', rgb:'129,140,248'
+  },
+  ai_redteam_engagement: {
+    tag:'PILLAR 3 — AI RED TEAM PLATFORM', icon:'🎯',
+    title:'AI Red Team Engagement',
+    desc:'Adversarial testing across 6 attack categories: prompt injection, jailbreaking, agent takeover, tool abuse, RAG poisoning, and data exfiltration.',
+    price:'₹99,999', delivery:'7-day engagement', color:'#ef4444', rgb:'239,68,68'
+  },
+  ai_managed_security: {
+    tag:'PILLAR 6 — AI SECURITY SERVICES', icon:'💼',
+    title:'AI Security Service Engagement',
+    desc:'Expert-delivered AI security engagements: AI Security Assessment, AI Governance, AI Red Team, Managed AI Security, and Executive AI Risk Advisory.',
+    price:'From ₹9,999', delivery:'4-hour response SLA', color:'#a78bfa', rgb:'167,139,250'
   }
 };
 
-window.cdbShowAgentScan = function() {
-  const domain = prompt('Enter your agent name or framework (e.g., "Customer Support Agent — LangChain"):');
-  if (!domain) return;
-  document.getElementById('ai-platform').scrollIntoView({ behavior:'smooth' });
-  const email = localStorage.getItem('cdb_email') || '';
-  if (!email) {
-    window.cdbShowEmailGate({ module:'agent_scan', riskLevel:'HIGH', findingCount:0, onComplete:function(){ window.cdbShowAgentScan(); } });
-  }
+var _cdbActiveSvc = null;
+
+window.cdbBookAISecurity = function(serviceId) {
+  var cfg = _CDB_SVCS[serviceId] || _CDB_SVCS['ai_managed_security'];
+  _cdbActiveSvc = serviceId;
+  var tag = document.getElementById('csm-tag'), icon = document.getElementById('csm-icon'),
+      title = document.getElementById('csm-title'), desc = document.getElementById('csm-desc'),
+      pbar = document.getElementById('csm-price-bar'), sbtn = document.getElementById('csm-submit-btn');
+  if (tag)   { tag.textContent = cfg.tag; tag.style.color = cfg.color; }
+  if (icon)  icon.textContent = cfg.icon;
+  if (title) title.textContent = cfg.title;
+  if (desc)  desc.textContent = cfg.desc;
+  if (pbar)  pbar.innerHTML = '<span style="font-size:22px;font-weight:900;color:' + cfg.color + '">' + cfg.price + '</span>'
+    + '<span style="font-size:11px;color:#475569;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:3px 10px;border-radius:10px">' + cfg.delivery + '</span>';
+  if (sbtn) { sbtn.style.background = 'rgba(' + cfg.rgb + ',.15)'; sbtn.style.border = '1px solid rgba(' + cfg.rgb + ',.35)'; sbtn.style.color = cfg.color; }
+  document.getElementById('csm-form').style.display = 'block';
+  document.getElementById('csm-loading').style.display = 'none';
+  document.getElementById('csm-success').style.display = 'none';
+  var errEl = document.getElementById('csm-error'); if (errEl) errEl.style.display = 'none';
+  var modal = document.getElementById('cdb-svc-modal');
+  if (modal) { modal.style.display = 'block'; document.body.style.overflow = 'hidden'; }
+  try { CDB_FUNNEL && CDB_FUNNEL.track && CDB_FUNNEL.track('ai_service_modal_open', { service: serviceId }); } catch(e) {}
 };
+
+function closeCdbSvcModal() {
+  var modal = document.getElementById('cdb-svc-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function submitCdbSvcBooking() {
+  var name    = (document.getElementById('csm-name').value    || '').trim();
+  var email   = (document.getElementById('csm-email').value   || '').trim();
+  var company = (document.getElementById('csm-company').value || '').trim();
+  var phone   = (document.getElementById('csm-phone').value   || '').trim();
+  var domain  = (document.getElementById('csm-domain').value  || '').trim();
+  var notes   = (document.getElementById('csm-notes').value   || '').trim();
+  if (!name)                          { showCsmErr('Full name is required.'); return; }
+  if (!email || !email.includes('@')) { showCsmErr('Please enter a valid work email.'); return; }
+  if (!domain)                        { showCsmErr('Please enter your website or AI system name.'); return; }
+  var errEl = document.getElementById('csm-error'); if (errEl) errEl.style.display = 'none';
+  document.getElementById('csm-form').style.display = 'none';
+  document.getElementById('csm-loading').style.display = 'block';
+  var spin = document.getElementById('csm-spin');
+  if (spin) spin.style.animation = 'csm-spin 1s linear infinite';
+  var cfg = _CDB_SVCS[_cdbActiveSvc] || {};
+  try {
+    await fetch('https://tools.cyberdudebivash.com/api/leads/magnet', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:email, name:name, company:company, phone:phone,
+        source:'pillar-cta-' + (_cdbActiveSvc || 'unknown'), type:'service_inquiry',
+        meta:{ domain:domain, notes:notes, service:_cdbActiveSvc, service_title:cfg.title || '' }
+      }), signal: AbortSignal.timeout(9000)
+    });
+  } catch(e) {}
+  fetch('https://tools.cyberdudebivash.com/api/ai-security/services/book', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ service_id:_cdbActiveSvc, email:email, company:company, name:name, phone:phone, notes:notes })
+  }).catch(function() {});
+  try { localStorage.setItem('cdb_email', email); } catch(e) {}
+  try { CDB_FUNNEL && CDB_FUNNEL.track && CDB_FUNNEL.track('ai_service_inquiry_submitted', { service:_cdbActiveSvc, email:email }); } catch(e) {}
+  var smsg = document.getElementById('csm-success-msg');
+  if (smsg) smsg.textContent = 'Thank you, ' + name + '! Your ' + (cfg.title || 'service') + ' request has been received. Our team will contact you at ' + email + ' within 4 business hours with a detailed scope and engagement plan.';
+  document.getElementById('csm-loading').style.display = 'none';
+  document.getElementById('csm-success').style.display = 'block';
+}
+
+function showCsmErr(msg) {
+  var el = document.getElementById('csm-error');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// PILLAR 4: redirect to /agent-threats which has the full working agent scan modal
+window.cdbShowAgentScan = function() { window.location.href = '/agent-threats'; };
+
+document.addEventListener('DOMContentLoaded', function() {
+  var modal = document.getElementById('cdb-svc-modal');
+  if (modal) modal.addEventListener('click', function(e) { if (e.target === this) closeCdbSvcModal(); });
+});
 </script>
 
 <section id="assessment-cta" style="background:linear-gradient(135deg,#0a0a1a 0%,#0d0d28 50%,#0a0a1a 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.2);border-bottom:1px solid rgba(245,158,11,.1)">
@@ -5429,7 +5559,7 @@ window.cdbBookAssessment = async function() {
       theme: { color: '#f59e0b' },
       handler: async function(rp) {
         await fetch('/api/payments/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...rp, module:'assessment', target:'assessment', email}) });
-        if (typeof TOAST !== 'undefined') TOAST.success('Assessment booked! We'll contact you within 4 hours at ' + email, 'Assessment Confirmed');
+        if (typeof TOAST !== 'undefined') TOAST.success('Assessment booked! We\'ll contact you within 4 hours at ' + email, 'Assessment Confirmed');
         CDB_FUNNEL?.track('assessment_booked', { email });
       },
     });
@@ -10343,7 +10473,7 @@ function localEngine(module, payload) {
         rec:'Implement prompt injection guards: validate all input against blocklist/allowlist patterns, use separate system/user context windows, deploy LLM-specific WAF rules, and never execute tool calls on user-controlled strings.',
         cvss:'9.3', mitre:'T1059', cve:'CVE-2024-5184' },
       { id:'LLM-002', title:'LLM02: Insecure Output Handling — XSS via AI Response', sev:'CRITICAL',
-        desc:'AI-generated content is rendered directly in the browser DOM without sanitization. An attacker who manipulates the model output can inject JavaScript that executes in the user's browser context.',
+        desc:'AI-generated content is rendered directly in the browser DOM without sanitization. An attacker who manipulates the model output can inject JavaScript that executes in the user\'s browser context.',
         rec:'Sanitize all LLM outputs using DOMPurify before rendering. Escape HTML entities in all AI-generated content. Use a Content Security Policy to block inline script execution.',
         cvss:'9.0', mitre:'T1059.007', cve:'' },
       { id:'LLM-003', title:'LLM06: Sensitive Information Disclosure', sev:'HIGH',
@@ -10473,7 +10603,7 @@ function localEngine(module, payload) {
         rec:'Revoke all exposed credentials immediately. Implement pre-commit secret scanning (GitGuardian, Trufflehog). Add .env to .gitignore. Deploy AWS Macie for secrets detection.',
         cvss:'10.0', mitre:'T1552.001', cve:'' },
       { id:'DRK-003', title:'Ransomware Group — Your Domain Listed as Target', sev:'CRITICAL',
-        desc:'Your organization domain appears on a ransomware group's target list on a dark web forum. Initial access broker activity detected. Likely reconnaissance phase active.',
+        desc:'Your organization domain appears on a ransomware group\'s target list on a dark web forum. Initial access broker activity detected. Likely reconnaissance phase active.',
         rec:'Immediately harden external attack surface. Engage threat intelligence team. Activate incident response retainer. Review and update IR playbook for ransomware scenario.',
         cvss:'9.5', mitre:'T1591', cve:'' },
       { id:'DRK-004', title:'Employee PII on Criminal Marketplace', sev:'HIGH',
@@ -10499,7 +10629,7 @@ function localEngine(module, payload) {
         rec:'Implement Content Security Policy with strict-dynamic. Encode all user-controlled output with context-aware encoding (HTML, JS, URL). Use framework-level XSS protection (React JSX, etc.).',
         cvss:'8.8', mitre:'T1059.007', cve:'CWE-79' },
       { id:'APP-004', title:'Insecure Direct Object Reference — Unauthorized Data Access', sev:'HIGH',
-        desc:'IDOR vulnerability allows any authenticated user to access other users' records by incrementing numeric IDs in API requests. 10,000+ user records accessible without authorization.',
+        desc:'IDOR vulnerability allows any authenticated user to access other users\' records by incrementing numeric IDs in API requests. 10,000+ user records accessible without authorization.',
         rec:'Implement object-level authorization checks on all API endpoints. Replace sequential IDs with UUIDs. Add authorization middleware that validates user ownership before data access.',
         cvss:'8.1', mitre:'T1078', cve:'CWE-639' },
       { id:'APP-005', title:'Sensitive Data Exposure — PII in Error Messages', sev:'HIGH',
@@ -21772,4 +21902,4 @@ function v21TriggerUrgencyPayment(){
         </div>
         <div class="cdb-kpi-card accent-orange">
           <div class="cdb-kpi-label">Risk Score</div>
-          <di
+      
