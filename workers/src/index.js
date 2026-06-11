@@ -52,6 +52,13 @@
 // ── v31.0 ENTERPRISE DASHBOARD STREAM ────────────────────────────────────────
 import { handleDashboardStream } from './handlers/dashboardStream.js';
 
+// ── v32.0 PHASE 2 ENTERPRISE PLATFORM IMPORTS ─────────────────────────────
+import { handleRevenueMetrics, handleRevenueSnapshot }                              from './handlers/revenueMetrics.js';
+import { handleListCustomers, handleCreateCustomer, handleCustomerMetrics, handleUpdateCustomer, handleMSSPOverview } from './handlers/msspWorkspace.js';
+import { handleListCases, handleGetCase, handleCreateCase, handleUpdateCase, handleAddCaseComment, handleCaseMetrics } from './handlers/socCases.js';
+import { handleListActors, handleGetActor, handleIOCSearch, handleAddIOC, handleCTIStats }                             from './handlers/ctiWorkbench.js';
+import { handleDeepHealth, handleServicesList }                                     from './handlers/deepHealth.js';
+
 // ── v28 AI SECURITY PLATFORM IMPORTS ─────────────────────────────────────────
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
@@ -1599,6 +1606,104 @@ export default {
     if (path === '/api/dashboard/stream' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
       return await handleDashboardStream(request, env, authCtx);
+    }
+
+    // ── v32.0 Phase 2 Enterprise Platform Routes ────────────────────────────
+
+    // Revenue Metrics
+    if (path === '/api/revenue/metrics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleRevenueMetrics(request, env, authCtx), request));
+    }
+    if (path === '/api/revenue/snapshot' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleRevenueSnapshot(request, env, authCtx), request));
+    }
+
+    // MSSP Workspace
+    if (path === '/api/mssp/overview' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleMSSPOverview(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/customers' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleListCustomers(request, env, authCtx), request));
+    }
+    if (path === '/api/mssp/customers' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleCreateCustomer(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/mssp\/customers\/[^/]+\/metrics$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const customerId = path.split('/')[4];
+      return withSecurityHeaders(withCors(await handleCustomerMetrics(request, env, authCtx, customerId), request));
+    }
+    if (path.match(/^\/api\/mssp\/customers\/[^/]+$/) && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env);
+      const customerId = path.split('/')[4];
+      return withSecurityHeaders(withCors(await handleUpdateCustomer(request, env, authCtx, customerId), request));
+    }
+
+    // SOC Cases
+    if (path === '/api/soc/cases/metrics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleCaseMetrics(request, env, authCtx), request));
+    }
+    if (path === '/api/soc/cases' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleListCases(request, env, authCtx), request));
+    }
+    if (path === '/api/soc/cases' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleCreateCase(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/soc\/cases\/[^/]+\/comments$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const caseId = path.split('/')[4];
+      return withSecurityHeaders(withCors(await handleAddCaseComment(request, env, authCtx, caseId), request));
+    }
+    if (path.match(/^\/api\/soc\/cases\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const caseId = path.split('/')[4];
+      if (caseId !== 'metrics') return withSecurityHeaders(withCors(await handleGetCase(request, env, authCtx, caseId), request));
+    }
+    if (path.match(/^\/api\/soc\/cases\/[^/]+$/) && method === 'PATCH') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const caseId = path.split('/')[4];
+      return withSecurityHeaders(withCors(await handleUpdateCase(request, env, authCtx, caseId), request));
+    }
+
+    // CTI Workbench
+    if (path === '/api/cti/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleCTIStats(request, env, authCtx), request));
+    }
+    if (path === '/api/cti/actors' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleListActors(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/cti\/actors\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const actorId = path.split('/')[4];
+      return withSecurityHeaders(withCors(await handleGetActor(request, env, authCtx, actorId), request));
+    }
+    if (path === '/api/cti/ioc/search' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleIOCSearch(request, env, authCtx), request));
+    }
+    if (path === '/api/cti/ioc' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleAddIOC(request, env, authCtx), request));
+    }
+
+    // Platform Observability
+    if (path === '/api/platform/health/deep' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleDeepHealth(request, env, authCtx), request));
+    }
+    if (path === '/api/platform/health/services' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleServicesList(request, env, authCtx), request));
     }
 
     // GET /api/threat-intel/stream — SSE real-time feed (Phase 1)
