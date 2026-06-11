@@ -403,7 +403,7 @@ import {
 // ─── PHASE 4: Sales CRM Pipeline ─────────────────────────────────────────────
 import {
   handleCreateLead, handleListLeads, handleGetLead,
-  handleAdvanceStage, handleAddNote, handleQualifyLead, handleCloseLead,
+  handleAdvanceStage, handleAddNote as handleAddSalesNote, handleQualifyLead, handleCloseLead,
   handleBookDemo, handleGetDemoSlots,
   handleGetPipeline as handleGetSalesPipeline,
   handleGetMetrics as handleGetSalesMetrics,
@@ -4044,7 +4044,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
     if (path.startsWith('/api/sales/leads/') && path.endsWith('/note') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
-      return withSecurityHeaders(withCors(await handleAddNote(request, env, authCtx), request));
+      return withSecurityHeaders(withCors(await handleAddSalesNote(request, env, authCtx), request));
     }
     if (path.startsWith('/api/sales/leads/') && path.endsWith('/qualify') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
