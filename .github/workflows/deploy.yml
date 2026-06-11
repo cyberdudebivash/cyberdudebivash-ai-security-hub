@@ -158,17 +158,25 @@ jobs:
         working-directory: workers
         run: npm ci --prefer-offline
 
-      - name: Patch KV Namespace ID
+      - name: Patch wrangler.toml (KV + account_id)
         env:
           KV_NAMESPACE_ID: ${{ secrets.WORKERS_KV_NAMESPACE_ID }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # account_id is NOT hardcoded in wrangler.toml — Wrangler reads CLOUDFLARE_ACCOUNT_ID env var.
+          # This step only patches KV namespace ID if the secret is set.
           if [ -n "$KV_NAMESPACE_ID" ]; then
             sed -i "s/REPLACE_WITH_YOUR_KV_NAMESPACE_ID/${KV_NAMESPACE_ID}/g" workers/wrangler.toml
-            sed -i "s/\${CLOUDFLARE_ACCOUNT_ID}/${CF_ACCOUNT_ID}/g" workers/wrangler.toml
-            echo "✅ KV namespace patched"
+            echo "✅ KV namespace ID patched from secret"
           else
-            echo "ℹ️  WORKERS_KV_NAMESPACE_ID not set — skipping KV patch"
+            echo "ℹ️  WORKERS_KV_NAMESPACE_ID not set — KV ID uses value already in wrangler.toml"
+          fi
+          # Always remove any accidental hardcoded account_id (belt-and-suspenders)
+          if grep -q '^account_id' workers/wrangler.toml; then
+            sed -i '/^account_id/d' workers/wrangler.toml
+            echo "✅ Removed stale account_id from wrangler.toml — using CLOUDFLARE_ACCOUNT_ID env var"
+          else
+            echo "✅ No hardcoded account_id in wrangler.toml — CLOUDFLARE_ACCOUNT_ID env var will be used"
           fi
 
       - name: Deploy Workers to Cloudflare
