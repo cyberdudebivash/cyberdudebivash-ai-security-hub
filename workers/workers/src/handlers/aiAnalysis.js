@@ -177,7 +177,8 @@ export const handleAIAnalyze = withErrorBoundary(async (request, env) => {
   // MITRE ATT&CK mapping
   const mitre_mapping = techniques.map(t => ({
     ...t,
-    applicable: attack_chain.some(c => c.technique?.id === t.id) || Math.random() > 0.4,
+    // applicable: only mark true when technique genuinely correlates — no random fallback
+    applicable: attack_chain.some(c => c.technique?.id === t.id),
     risk_contribution: Math.round(sh(t.id + riskResult.severity) % 40 + (riskResult.severity === 'CRITICAL' ? 50 : riskResult.severity === 'HIGH' ? 30 : 15)),
   })).filter(t => t.applicable);
 

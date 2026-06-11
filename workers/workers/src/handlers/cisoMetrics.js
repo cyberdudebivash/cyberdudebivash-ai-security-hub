@@ -198,8 +198,11 @@ async function saveIncidents(env, incidents) {
   await env.SECURITY_HUB_KV.put(KV_INCIDENTS_KEY, JSON.stringify(incidents.slice(0, 500)), { expirationTtl: 86400 * 180 });
 }
 
+// Deterministic incident ID derived from timestamp — no Math.random()
 function generateIncidentId() {
-  return 'INC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+  const ts = Date.now();
+  const seq = String(ts % 100000).padStart(5, '0');
+  return 'INC-' + new Date().getFullYear() + '-' + seq;
 }
 
 // ─── Seed incidents (realistic activity log for fresh environments) ───────────
@@ -273,13 +276,23 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
   const riskRegister = buildRiskRegister(scanHistory, incidents);
   const complianceStatus = buildComplianceStatus(scanHistory);
 
-  // Platform-wide scan stats (live from KV counters)
-  let platformStats = { total_scans: 1247, threats_detected: 8934, critical_findings: 234, users: 892 };
+  // Platform-wide scan stats (live from KV counters + D1)
+  let platformStats = { total_scans: 0, threats_detected: 0, critical_findings: 0, users: 0 };
   if (env?.SECURITY_HUB_KV) {
     try {
       const ps = await env.SECURITY_HUB_KV.get('platform:stats', { type: 'json' });
       if (ps) platformStats = { ...platformStats, ...ps };
     } catch {}
+  }
+  // Real API call count from D1 audit_log (last 24h) — no Math.random()
+  let apiCallsToday = 0;
+  if (env?.DB) {
+    try {
+      const row = await env.DB.prepare(
+        `SELECT COUNT(*) as cnt FROM audit_log WHERE created_at > datetime('now', '-1 day')`
+      ).first();
+      apiCallsToday = row?.cnt || 0;
+    } catch { apiCallsToday = 0; }
   }
 
   // Rolling 30-day scan velocity
@@ -333,11 +346,11 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
 
     // ── Platform stats ────────────────────────────────────────────────────────
     platform: {
-      total_scans:          platformStats.total_scans  || 1247,
-      threats_detected:     platformStats.threats_detected || 8934,
-      critical_findings:    platformStats.critical_findings || 234,
-      total_users:          platformStats.users || 892,
-      api_calls_today:      Math.floor(Math.random() * 3000) + 2000,
+      total_scans:          platformStats.total_scans  || 0,
+      threats_detected:     platformStats.threats_detected || 0,
+      critical_findings:    platformStats.critical_findings || 0,
+      total_users:          platformStats.users || 0,
+      api_calls_today:      apiCallsToday,
       uptime_pct:           '99.97',
     },
 

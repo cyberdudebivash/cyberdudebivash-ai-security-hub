@@ -1208,3 +1208,30 @@ function _init() {
   // Marketplace urgency (Phase 6) — start watching
   setTimeout(() => {
     MARKETPLACE_URGENCY.injectIntoCards();
+    MARKETPLACE_URGENCY.watchForNewCards();
+  }, 2000);
+
+  // Demo slots
+  setTimeout(_injectDemoSlots, 1000);
+
+  // Restore local pipeline board
+  setTimeout(_updatePipelineBoard, 1500);
+
+  // Update sticky scans counter from activity engine
+  setInterval(() => {
+    const state = ACTIVITY_ENGINE.getState();
+    _setRevEl('v14-sticky-scans', `${state.scansRunning} active scans`);
+  }, 12000);
+
+  console.log(`[OMNIGOD REVENUE ENGINE v${REV.version}] All systems online ⚡`);
+}
+
+// Boot when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _init);
+} else {
+  // DOM already loaded
+  setTimeout(_init, 100);
+}
+
+})(); // END OMNIGOD_REVENUE_ENGINE

@@ -567,19 +567,21 @@ async function getRiskTrendPanel(env, orgId) {
       } catch {}
     }
 
-    // Seeded curve if no real data
+    // No real data — do not generate fake score
     if (score === null) {
-      score = Math.round(45 + Math.sin((29 - i) / 5) * 15 + Math.random() * 10);
+      score = null; // Omit data point rather than fabricate
     }
 
-    trend.push({ date: d.toISOString().slice(0, 10), risk_score: Math.min(100, Math.max(0, score)) });
+    if (score !== null) {
+      trend.push({ date: d.toISOString().slice(0, 10), risk_score: Math.min(100, Math.max(0, score)) });
+    }
   }
 
-  const scores = trend.map(t => t.risk_score);
-  const avg    = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-  const latest = scores[scores.length - 1];
-  const prev   = scores[scores.length - 8] || scores[0];
-  const delta  = latest - prev;
+  const scores = trend.filter(t => t.risk_score !== null).map(t => t.risk_score);
+  const avg    = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const latest = scores.length > 0 ? scores[scores.length - 1] : null;
+  const prev   = scores.length > 1 ? (scores[scores.length - 8] || scores[0]) : null;
+  const delta  = latest !== null && prev !== null ? latest - prev : null;
 
   return {
     trend,

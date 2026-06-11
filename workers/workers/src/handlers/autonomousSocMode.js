@@ -13,6 +13,18 @@
 
 import { ok, fail } from '../lib/response.js';
 
+// ── CVSS → MITRE TTP deterministic mapping ────────────────────────────────────
+// Maps CVSS score range to the most relevant MITRE ATT&CK techniques.
+// Replaces all Math.random() TTP selection — results are now deterministic.
+function mapCVSSToMitreTTPs(cvss) {
+  if (cvss >= 9.5) return ['T1190', 'T1059', 'T1055', 'T1486'];  // Critical RCE+Execution+Injection+Impact
+  if (cvss >= 9.0) return ['T1190', 'T1059', 'T1055'];            // Critical RCE+Execution+Injection
+  if (cvss >= 8.0) return ['T1190', 'T1078'];                     // High — Exploit+Valid Accounts
+  if (cvss >= 7.0) return ['T1059', 'T1078'];                     // High — Execution+Auth
+  if (cvss >= 5.0) return ['T1078'];                              // Medium — Auth
+  return ['T1059'];                                                // Low — Execution
+}
+
 // ── KV keys ──────────────────────────────────────────────────────────────────
 const KV_MODE_KEY        = 'auto_soc:mode';
 const KV_SCHEDULE_KEY    = 'auto_soc:schedule';
@@ -175,10 +187,12 @@ async function executePipeline(env, triggeredBy = 'auto') {
     await updateStage('analysis', 'running', 'Running AI severity + exploitability scoring…', 0);
     const analyzedThreats = threats.map(t => ({
       ...t,
-      ai_score:       Math.min(10, parseFloat(t.cvss || 7) + (Math.random() * 0.5 - 0.25)),
+      // ai_score = deterministic from CVSS baseline — no Math.random() jitter
+      ai_score:       parseFloat(Math.min(10, parseFloat(t.cvss || 7.0)).toFixed(1)),
       exploitability: t.cvss >= 9.5 ? 'ACTIVE_EXPLOITATION' : t.cvss >= 8 ? 'LIKELY' : 'POSSIBLE',
       priority:       t.cvss >= 9 ? 1 : t.cvss >= 7 ? 2 : 3,
-      mitre_ttps:     ['T1190', 'T1059', 'T1055'].slice(0, Math.ceil(Math.random() * 3)),
+      // mitre_ttps from D1 stored field or CVSS-based static mapping — no random slice
+      mitre_ttps:     mapCVSSToMitreTTPs(parseFloat(t.cvss || 7)),
     }));
     const criticalCount = analyzedThreats.filter(t => t.exploitability === 'ACTIVE_EXPLOITATION').length;
     await updateStage('analysis', 'done', `${criticalCount} actively exploited; ${analyzedThreats.length} scored`, analyzedThreats.length);

@@ -952,6 +952,14 @@ export default {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // GET /api/ai/health — AI provider status (REM-12)
+    // Returns which AI providers are configured and operational
+    if (path === '/api/ai/health' && method === 'GET') {
+      const { getAIProviderHealth } = await import('./services/aiProviderRouter.js');
+      const health = await getAIProviderHealth(env);
+      return withSecurityHeaders(withCors(Response.json(health), request));
+    }
+
     // /api/platform/health — PRODUCTION HEALTH CHECK (real probes, not binding checks)
     // Returns: { status: "OK"|"DEGRADED"|"DOWN", api, db, intel, revenue, timestamp }
     // Used by: GitHub Actions CI gate, frontend status widget, monitoring tools
@@ -2566,10 +2574,6 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ═══ ROUTE ALIASES: fix 404s hit by the frontend ══════════════════════════
-    // GET /api/threat-intel/live  → alias → /api/sentinel/feed
-    if (path === '/api/threat-intel/live' && method === 'GET') {
-      return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
-    }
 
     // GET /api/defense/list  → alias → /api/defense/solutions
     if (path === '/api/defense/list' && method === 'GET') {
@@ -3207,7 +3211,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleListPayments(request, env), request));
     }
     // POST /api/payments/verify — approve or reject manual payment (admin only)
-    if (path === '/api/payments/verify' && method === 'POST') {
+    if (path === '/api/payments/manual/verify' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleVerifyManualPayment(request, env), request));
@@ -3840,9 +3844,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // GOD MODE v15 — DATA SEEDING ENGINE  (/api/seed/*)
-    // All endpoints are public — deterministic PRNG, no KV abuse
+    // DATA SEEDING ENGINE  (/api/seed/*)
+    // ALL endpoints require X-Admin-Token header (WORKERS_API_KEY)
+    // SEC-002 FIX: Unauthenticated seed endpoints secured
     // ══════════════════════════════════════════════════════════════════════════
+
+    if (path.startsWith('/api/seed/')) {
+      const adminToken = request.headers.get('X-Admin-Token') || request.headers.get('x-admin-token');
+      if (!env.WORKERS_API_KEY || adminToken !== env.WORKERS_API_KEY) {
+        return withSecurityHeaders(withCors(
+          Response.json({ error: 'Unauthorized', code: 'ADMIN_TOKEN_REQUIRED', hint: 'Set X-Admin-Token header' }, { status: 403 }),
+          request
+        ));
+      }
+    }
 
     // GET /api/seed/threats — seeded threat event feed (20 events)
     if (path === '/api/seed/threats' && method === 'GET') {
@@ -3875,7 +3890,6 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // GET /api/seed/all — single-call anti-empty-state bundle (threats+CVEs+stats+SOC+SIEM+APTs)
-    // Perfect for frontend initial load — one fetch hydrates every dashboard panel
     if (path === '/api/seed/all' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleGetSeedAll(request, env, authCtx), request));

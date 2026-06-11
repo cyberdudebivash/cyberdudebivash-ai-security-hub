@@ -10,8 +10,8 @@
  * GET  /api/ai-security/exposure-map        -> public exposure mapping
  */
 
-const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,PUT,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization' };
-const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}});
+// CORS applied by centralized withCors() in index.js — no per-handler wildcard
+const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{'Content-Type':'application/json'}});
 const err  = (m,s=400) => json({success:false,error:m},s);
 
 // OWASP LLM Top 10 2025 checks per asset type

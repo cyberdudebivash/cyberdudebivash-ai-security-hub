@@ -304,9 +304,9 @@ async function runDomainScan(domain, env) {
 async function runGenericScan(module, target, payload, env) {
   const engines = {
     ai:         () => import('../engine.js').then(m => m.aiScanEngine(target, payload.use_case || 'other')),
-    redteam:    () => import('../engine.js').then(m => m.redteamScanEngine(target, payload.attack_surface)),
-    identity:   () => import('../engine.js').then(m => m.identityScanEngine(target)),
-    compliance: () => import('../engine.js').then(m => m.complianceScanEngine(payload.framework || 'ISO27001', target)),
+    redteam:    () => import('../engine.js').then(m => m.redteamEngine(target, payload.attack_surface || 'external')),
+    identity:   () => import('../engine.js').then(m => m.identityScanEngine(target, payload.identity_provider || 'other')),
+    compliance: () => import('../engine.js').then(m => m.complianceEngine(target, (payload.framework || 'iso27001').toLowerCase())),
   };
   const fn = engines[module];
   if (!fn) throw new Error(`Unknown scan module: ${module}`);

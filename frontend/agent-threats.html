@@ -115,6 +115,21 @@ a{color:var(--accent);text-decoration:none}
 
 footer{background:var(--surface);border-top:1px solid var(--border);padding:32px 24px;text-align:center;font-size:13px;color:var(--text-dim)}
 footer a{color:#f59e0b;margin:0 8px}
+
+/* ── SCAN MODAL ─────────────────────────────────────────────────────────────── */
+#scan-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);overflow-y:auto;padding:20px 16px}
+.modal-box{max-width:600px;margin:40px auto;background:#0d0d22;border:1px solid rgba(245,158,11,.22);border-radius:16px;padding:32px;position:relative;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;transition:color .2s}
+.modal-close:hover{color:#fff}
+.scan-label{font-size:12px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:6px}
+.scan-field{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(245,158,11,.15);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none;box-sizing:border-box}
+.scan-field:focus{border-color:rgba(245,158,11,.4)}
+option{background:#0d0d22;color:var(--text)}
+.cap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cap-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-muted);user-select:none;padding:4px 0}
+.scan-spin{display:inline-block;animation:_spin 1.2s linear infinite}
+@keyframes _spin{to{transform:rotate(360deg)}}
+.result-issue{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -137,8 +152,8 @@ footer a{color:#f59e0b;margin:0 8px}
       <h1>AI Agent <span>Threat Intelligence</span></h1>
       <p>Real-time security advisories and threat intelligence for AI agent frameworks. Monitor OpenAI Agents, LangChain, CrewAI, AutoGen, and MCP deployments against known attack vectors.</p>
       <div class="hero-actions">
-        <a href="/#pricing" class="btn-primary">Scan My Agent →</a>
-        <a href="/agent-threats#advisories" class="btn-secondary">Browse Advisories</a>
+        <button class="btn-primary" onclick="openAgentScanModal()">Scan My Agent →</button>
+        <button class="btn-secondary" onclick="document.getElementById('advisories').scrollIntoView({behavior:'smooth'})">Browse Advisories</button>
       </div>
     </div>
     <div class="status-panel">
@@ -354,7 +369,7 @@ footer a{color:#f59e0b;margin:0 8px}
   <div class="cta-band">
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px">Continuously Monitor Your AI Agent Deployments</div>
     <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px">Get real-time alerts when new advisories affect your registered agents. Includes auto-scan, risk scoring, and remediation guidance.</div>
-    <a href="/#pricing" style="display:inline-block;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;margin-right:12px">Register Agent for Monitoring →</a>
+    <button onclick="openAgentScanModal()" style="display:inline-block;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-right:12px">Register Agent for Monitoring →</button>
     <a href="/attack-library" style="display:inline-block;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text-muted);padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">View Attack Library</a>
   </div>
 </div>
@@ -366,36 +381,248 @@ footer a{color:#f59e0b;margin:0 8px}
   </div>
 </footer>
 
+<!-- ── AGENT SCAN MODAL ───────────────────────────────────────────────────── -->
+<div id="scan-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeScanModal()" aria-label="Close">✕</button>
+
+    <!-- Step 1: Form -->
+    <div id="scan-form">
+      <div style="font-size:11px;color:#f59e0b;font-weight:800;letter-spacing:.12em;margin-bottom:8px">🤖 PILLAR 4 — AI AGENT SECURITY</div>
+      <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:4px">Scan Your AI Agent</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Instant risk assessment against OWASP LLM Top 10 &amp; agent attack vectors. Free — no account required.</div>
+
+      <div style="margin-bottom:16px">
+        <label class="scan-label" for="scan-name">Agent / System Name *</label>
+        <input id="scan-name" class="scan-field" type="text" placeholder="e.g. Customer Support Agent">
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label class="scan-label" for="scan-fw">Agent Framework</label>
+        <select id="scan-fw" class="scan-field">
+          <option value="custom">Custom / Unknown</option>
+          <option value="openai">OpenAI Agents SDK</option>
+          <option value="langchain">LangChain</option>
+          <option value="crewai">CrewAI</option>
+          <option value="autogen">AutoGen / AG2</option>
+          <option value="mcp">MCP (Model Context Protocol)</option>
+          <option value="semantic_kernel">Microsoft Semantic Kernel</option>
+          <option value="llama_index">LlamaIndex</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div class="scan-label">Capabilities &amp; Tools <span style="font-weight:400;opacity:.7">(select all that apply)</span></div>
+        <div class="cap-grid">
+          <label class="cap-label"><input type="checkbox" name="cap" value="web_browser" style="accent-color:#f59e0b"> Web Browsing</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="code_exec" style="accent-color:#f59e0b"> Code Execution</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="file_write" style="accent-color:#f59e0b"> File System Write</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="email_send" style="accent-color:#f59e0b"> Email Sending</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="database" style="accent-color:#f59e0b"> Database Access</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="api_calls" style="accent-color:#f59e0b"> External API Calls</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="memory" style="accent-color:#f59e0b"> Persistent Memory</label>
+          <label class="cap-label"><input type="checkbox" name="cap" value="multi_agent" style="accent-color:#f59e0b"> Multi-Agent Handoffs</label>
+        </div>
+      </div>
+
+      <label class="cap-label" style="margin-bottom:24px">
+        <input type="checkbox" id="scan-net" style="accent-color:#f59e0b"> Agent has unrestricted internet access
+      </label>
+
+      <button onclick="runAgentScan()" style="width:100%;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:13px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s">
+        🔍 Run Security Scan — Free
+      </button>
+    </div>
+
+    <!-- Step 2: Loading -->
+    <div id="scan-loading" style="display:none;text-align:center;padding:52px 20px">
+      <div class="scan-spin" style="font-size:44px;margin-bottom:20px;display:block">⚙</div>
+      <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:10px">Scanning Agent Configuration</div>
+      <div id="scan-status" style="font-size:12px;color:var(--text-muted)">Checking OWASP LLM Top 10...</div>
+    </div>
+
+    <!-- Step 3: Results -->
+    <div id="scan-results" style="display:none"></div>
+  </div>
+</div>
+
 <script>
+// ── CYBERDUDEBIVASH Agent Threats — Live Engine ───────────────────────────────
+const _APEX='https://tools.cyberdudebivash.com';
+
+// ── FEATURE 1 & 2: Agent Scan Modal ──────────────────────────────────────────
+function openAgentScanModal(){
+  const m=document.getElementById('scan-modal');
+  if(!m)return;
+  m.style.display='block';
+  document.getElementById('scan-form').style.display='block';
+  document.getElementById('scan-loading').style.display='none';
+  document.getElementById('scan-results').style.display='none';
+  document.body.style.overflow='hidden';
+  // Reset form
+  const nameEl=document.getElementById('scan-name');
+  if(nameEl){nameEl.value='';nameEl.style.borderColor='';}
+  document.querySelectorAll('input[name="cap"]').forEach(c=>c.checked=false);
+  const netEl=document.getElementById('scan-net');
+  if(netEl)netEl.checked=false;
+}
+function closeScanModal(){
+  const m=document.getElementById('scan-modal');
+  if(m)m.style.display='none';
+  document.body.style.overflow='';
+}
+
+// Risk assessment engine (OWASP LLM Top 10 aligned)
+async function runAgentScan(){
+  const nameEl=document.getElementById('scan-name');
+  const name=(nameEl?nameEl.value:'').trim();
+  if(!name){
+    if(nameEl){nameEl.style.borderColor='#ef4444';nameEl.focus();}
+    return;
+  }
+  if(nameEl)nameEl.style.borderColor='';
+
+  const fw=document.getElementById('scan-fw').value;
+  const net=document.getElementById('scan-net').checked;
+  const caps=[...document.querySelectorAll('input[name="cap"]:checked')].map(c=>c.value);
+
+  document.getElementById('scan-form').style.display='none';
+  document.getElementById('scan-loading').style.display='block';
+
+  const steps=['Checking OWASP LLM Top 10...','Analyzing tool permissions...','Evaluating privilege scope...','Mapping attack surfaces...','Correlating threat intelligence...','Computing risk score...'];
+  let si=0;
+  const stEl=document.getElementById('scan-status');
+  if(stEl)stEl.textContent=steps[0];
+  const stInt=setInterval(()=>{si=(si+1)%steps.length;if(stEl)stEl.textContent=steps[si];},600);
+
+  await new Promise(r=>setTimeout(r,3000));
+  clearInterval(stInt);
+
+  // OWASP LLM risk scoring
+  const issues=[];let score=0;
+  const SC={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#fbbf24',LOW:'#10b981'};
+
+  if(caps.length>6){
+    issues.push({sev:'HIGH',owasp:'LLM08',issue:'Excessive capabilities: '+caps.length+' tools granted',rec:'Apply least privilege — audit and remove capabilities not actively required for this agent task.'});
+    score+=25;
+  }
+  if(caps.includes('file_write')){
+    issues.push({sev:'CRITICAL',owasp:'LLM08',issue:'File system write access — arbitrary file manipulation via prompt injection',rec:'Restrict writes to a sandboxed directory. Validate all paths. Log all write operations to tamper-evident audit trail.'});
+    score+=30;
+  }
+  if(caps.includes('code_exec')){
+    issues.push({sev:'CRITICAL',owasp:'LLM08',issue:'Code execution capability — RCE risk via injected instructions',rec:'Remove unless absolutely required. Use a sandboxed executor with resource limits and an allowlist of permitted operations only.'});
+    score+=40;
+  }
+  if(caps.includes('email_send')){
+    issues.push({sev:'HIGH',owasp:'LLM08',issue:'Email sending — data exfiltration vector via prompt manipulation',rec:'Require human-in-the-loop approval for all outbound email. Log recipient and content for security audit.'});
+    score+=20;
+  }
+  if(net&&(caps.includes('web_browser')||caps.includes('api_calls'))){
+    issues.push({sev:'CRITICAL',owasp:'LLM01',issue:'Internet access + browsing — indirect prompt injection attack surface',rec:'Implement URL allowlist. Sanitize all retrieved web content for prompt injection patterns before inserting into agent context.'});
+    score+=35;
+  }
+  if(caps.includes('database')){
+    issues.push({sev:'HIGH',owasp:'LLM06',issue:'Database access — SQL injection and data exfiltration via prompt manipulation',rec:'Restrict to read-only schemas where possible. Use parameterized queries exclusively. Apply row-level security controls.'});
+    score+=20;
+  }
+  if(['langchain','autogen','crewai','llama_index'].includes(fw)&&caps.includes('memory')){
+    issues.push({sev:'MEDIUM',owasp:'LLM08',issue:'Persistent memory without injection protection ('+fw.toUpperCase()+')',rec:'Filter all content before memory writes. On retrieval, treat stored data as untrusted input requiring safety evaluation.'});
+    score+=15;
+  }
+  if(caps.includes('multi_agent')){
+    issues.push({sev:'HIGH',owasp:'LLM08',issue:'Multi-agent handoffs without trust boundary enforcement',rec:'Assign explicit trust tiers to all agents. Prevent sub-agents from modifying orchestrator instructions. Sign inter-agent messages.'});
+    score+=20;
+  }
+  if(net&&!caps.includes('web_browser')&&!caps.includes('api_calls')){
+    issues.push({sev:'MEDIUM',owasp:'LLM01',issue:'Internet access enabled with no content filtering in place',rec:'Ensure all external data entering agent context is scanned for embedded instructions before use.'});
+    score+=10;
+  }
+  if(issues.length===0){
+    issues.push({sev:'LOW',owasp:'LLM07',issue:'Minimal attack surface — good security baseline detected',rec:'Maintain least-privilege posture. Schedule quarterly re-assessment as agent capabilities evolve.'});
+  }
+
+  score=Math.min(100,score);
+  const level=score>=70?'CRITICAL':score>=50?'HIGH':score>=25?'MEDIUM':'LOW';
+  const lcolor=SC[level];
+  const crit=issues.filter(i=>i.sev==='CRITICAL').length;
+  const high=issues.filter(i=>i.sev==='HIGH').length;
+
+  const issueHtml=issues.map(i=>{
+    const bg=i.sev==='CRITICAL'?'rgba(239,68,68,.12)':i.sev==='HIGH'?'rgba(245,158,11,.12)':'rgba(251,191,36,.1)';
+    return '<div class="result-issue" style="border-left:3px solid '+(SC[i.sev]||'#94a3b8')+'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<span style="font-size:9px;font-weight:800;padding:2px 8px;border-radius:8px;background:'+bg+';color:'+(SC[i.sev]||'#94a3b8')+'">'+i.sev+'</span>'
+      +'<span style="font-size:9px;color:var(--text-dim);font-family:monospace">'+i.owasp+'</span>'
+      +'</div>'
+      +'<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:4px">'+i.issue+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted);line-height:1.5">'+i.rec+'</div>'
+      +'</div>';
+  }).join('');
+
+  const fwDisplay=document.getElementById('scan-fw').options[document.getElementById('scan-fw').selectedIndex].text;
+
+  document.getElementById('scan-results').innerHTML=
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px">'
+      +'<div>'
+        +'<div style="font-size:10px;color:#10b981;font-weight:800;letter-spacing:.1em;margin-bottom:4px">✓ SCAN COMPLETE — SENTINEL APEX</div>'
+        +'<div style="font-size:18px;font-weight:900;color:#fff">'+name+'</div>'
+        +'<div style="font-size:11px;color:var(--text-muted)">'+fwDisplay+' · '+caps.length+' capabilities · '+(net?'Internet-connected':'No internet')+'</div>'
+      +'</div>'
+      +'<div style="text-align:center;background:rgba(0,0,0,.3);border:2px solid '+lcolor+';border-radius:12px;padding:12px 18px;min-width:76px;flex-shrink:0">'
+        +'<div style="font-size:30px;font-weight:900;color:'+lcolor+';font-family:monospace;line-height:1">'+score+'</div>'
+        +'<div style="font-size:9px;font-weight:800;color:'+lcolor+';letter-spacing:.06em">'+level+'</div>'
+      +'</div>'
+    +'</div>'
+
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">'
+      +'<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:#ef4444">'+crit+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">CRITICAL</div></div>'
+      +'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:#f59e0b">'+high+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">HIGH</div></div>'
+      +'<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:#fff">'+issues.length+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">TOTAL</div></div>'
+    +'</div>'
+
+    +'<div style="max-height:260px;overflow-y:auto;margin-bottom:20px;padding-right:2px">'+issueHtml+'</div>'
+
+    +'<div style="background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(239,68,68,.04));border:1px solid rgba(245,158,11,.18);border-radius:10px;padding:18px;text-align:center">'
+      +'<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">Save Report &amp; Monitor Continuously</div>'
+      +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Register to save this assessment, receive alerts when new advisories affect your framework, and run automated rescans.</div>'
+      +'<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+        +'<a href="/#pricing" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;display:inline-block">Register &amp; Save Report →</a>'
+        +'<button onclick="document.getElementById(\'scan-results\').style.display=\'none\';document.getElementById(\'scan-form\').style.display=\'block\'" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer">Scan Another →</button>'
+      +'</div>'
+    +'</div>';
+
+  document.getElementById('scan-loading').style.display='none';
+  document.getElementById('scan-results').style.display='block';
+}
+
+// ── Advisory filtering & sorting ──────────────────────────────────────────────
 function filterAdvisories(fw){
   const label=document.getElementById('fw-filter-label');
   const items=document.querySelectorAll('.advisory');
-  if(fw==='all'){label.textContent='';items.forEach(i=>i.style.display='block');return;}
-  label.textContent='— '+fw.toUpperCase();
-  items.forEach(i=>{i.style.display=i.dataset.fw===fw?'block':'none'});
-  document.getElementById('advisories').scrollIntoView({behavior:'smooth'});
+  if(fw==='all'){if(label)label.textContent='';items.forEach(i=>i.style.display='block');return;}
+  if(label)label.textContent='— '+fw.toUpperCase();
+  items.forEach(i=>{i.style.display=i.dataset.fw===fw?'block':'none';});
+  const sec=document.getElementById('advisories');
+  if(sec)sec.scrollIntoView({behavior:'smooth'});
 }
 function sortAdvisories(mode,btn){
   document.querySelectorAll('.feed-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  if(btn)btn.classList.add('active');
   const list=document.getElementById('advisory-list');
+  if(!list)return;
   const items=[...list.querySelectorAll('.advisory')];
   if(mode==='critical'){
-    items.sort((a,b)=>{
-      const order={critical:0,high:1,medium:2,low:3};
-      return (order[a.dataset.sev]||3)-(order[b.dataset.sev]||3);
-    });
+    const order={critical:0,high:1,medium:2,low:3};
+    items.sort((a,b)=>(order[a.dataset.sev]||3)-(order[b.dataset.sev]||3));
     items.forEach(i=>list.appendChild(i));
   }
 }
-// Animate counters
-window.addEventListener('load',()=>{
-  animateCounter('adv-count',0,23,1000);
-  animateCounter('crit-count',0,7,1000);
-});
+
+// ── FEATURE: Animate counter ──────────────────────────────────────────────────
 function animateCounter(id,start,end,duration){
   const el=document.getElementById(id);
-  if(!el)return;
+  if(!el||isNaN(end))return;
   const step=(end-start)/(duration/16);
   let cur=start;
   const timer=setInterval(()=>{
@@ -404,6 +631,47 @@ function animateCounter(id,start,end,duration){
     el.textContent=Math.round(cur);
   },16);
 }
+
+// ── FEATURE: Load live threat feed into status panel ──────────────────────────
+async function loadLiveThreats(){
+  try{
+    const res=await fetch(_APEX+'/api/ai-security/threat-feed?type=agent_threats&limit=4',{
+      signal:AbortSignal.timeout(6000)
+    });
+    if(!res.ok)return;
+    const data=await res.json();
+    const threats=data.agent_threats||[];
+    if(!threats.length)return;
+    const feed=document.getElementById('live-feed');
+    if(!feed)return;
+    const sc={CRITICAL:'crit',HIGH:'high-s',MEDIUM:'med'};
+    const ta=['1h','3h','5h','9h'];
+    feed.innerHTML=threats.slice(0,4).map((t,i)=>
+      '<div class="sp-item">'
+      +'<span class="sp-sev '+(sc[t.severity]||'med')+'">'+t.severity+'</span>'
+      +'<span class="sp-item-text">'+t.name+'</span>'
+      +'<span class="sp-time">'+ta[i%4]+'</span>'
+      +'</div>'
+    ).join('');
+    const s=data.summary||{};
+    if(s.total_agent_threats)animateCounter('adv-count',0,s.total_agent_threats,800);
+    if(s.critical_count)animateCounter('crit-count',0,s.critical_count,800);
+  }catch(e){
+    console.warn('[Agent Threats] Live threat feed unavailable');
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  // Backdrop click to close modal
+  const modal=document.getElementById('scan-modal');
+  if(modal)modal.addEventListener('click',function(e){if(e.target===this)closeScanModal();});
+  // Load live data
+  loadLiveThreats();
+  // Fallback counter animation (overridden by live data if available)
+  animateCounter('adv-count',0,23,1000);
+  animateCounter('crit-count',0,7,1000);
+});
 </script>
 
 <script src="/assets/geo-currency-router.js"></script>

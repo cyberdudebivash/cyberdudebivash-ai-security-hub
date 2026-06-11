@@ -1,10 +1,12 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Advanced Scan Engine v3.0
- * Fully deterministic, no external calls, edge-native
- * Same input → same score (seeded from target string)
+ * CYBERDUDEBIVASH AI Security Hub — Security Engine v4.0
+ * REMEDIATED: Seeded fake data eliminated. Framework content is real.
+ * Domain scan: real HTTP/DNS is primary (domain.js); this is the fallback engine only.
+ * AI/RedTeam/Identity/Compliance: framework-based assessment templates — no seeded scores.
  */
 
-// ─── Deterministic Core ───────────────────────────────────────────────────────
+// ─── Domain Fallback Utilities ─────────────────────────────────────────────
+// strHash / sr / ri / pick used ONLY in domainScanEngine (fallback path only)
 export function strHash(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
@@ -45,160 +47,126 @@ const HEADER_CHECKS     = [
   { name:'Permissions-Policy',       risk_if_missing: 5,  premium: true  },
 ];
 
-// ─── Domain Scan Engine v3 ────────────────────────────────────────────────────
+/**
+ * domainScanEngine — FALLBACK ONLY
+ * This function is only called when live DNS/TLS fetch fails in domain.js.
+ * Primary path uses real DoH + TLS probe. See handlers/domain.js.
+ * Results here are deterministic but NOT real measurements.
+ */
 export function domainScanEngine(domain) {
   const seed = strHash(domain);
   const tld  = domain.split('.').pop().toLowerCase();
 
-  // Score factors
   const tldRisk    = HIGH_RISK_TLDS.has(tld) ? 25 : 0;
   const phishRisk  = PHISH_KEYWORDS.some(k => domain.toLowerCase().includes(k)) ? 30 : 0;
   const lenRisk    = domain.length > 40 ? 15 : domain.length > 25 ? 8 : 0;
-  const numRisk    = /\d{4,}/.test(domain) ? 10 : 0;         // long number strings = suspicious
+  const numRisk    = /\d{4,}/.test(domain) ? 10 : 0;
   const hyphenRisk = (domain.match(/-/g)||[]).length > 2 ? 8 : 0;
   const tlsGrade   = pick(['WEAK','FAIR','STRONG'], seed, 5);
   const tlsRisk    = TLS_GRADES[tlsGrade].risk;
-  const dnssecOk   = sr(seed, 6) > 0.6;                       // 40% chance DNSSEC missing
+  const dnssecOk   = sr(seed, 6) > 0.6;
   const dnsRisk    = dnssecOk ? 0 : 20;
   const baseRisk   = ri(5, 15, seed, 7);
 
   const rawScore = tldRisk + phishRisk + lenRisk + numRisk + hyphenRisk + tlsRisk + dnsRisk + baseRisk;
   const riskScore = Math.min(100, rawScore);
 
-  // Subdomain exposure
   const exposedSubs = COMMON_SUBDOMAINS
     .filter((_, i) => sr(seed, i + 20) > 0.65)
     .slice(0, ri(2, 5, seed, 50));
 
-  // Header analysis
   const missingHeaders = HEADER_CHECKS.filter((_, i) => sr(seed, i + 30) > 0.5);
   const headerRiskTotal = missingHeaders.reduce((a, h) => a + h.risk_if_missing, 0);
 
-  // Open port intelligence
-  const openPorts = [];
-  const portMap   = { 21:'FTP', 22:'SSH', 23:'Telnet', 25:'SMTP', 80:'HTTP', 443:'HTTPS',
-                      3306:'MySQL', 3389:'RDP', 6379:'Redis', 8080:'HTTP-Alt', 8443:'HTTPS-Alt', 27017:'MongoDB' };
-  Object.entries(portMap).forEach(([port, svc], i) => {
-    if (sr(seed, i + 40) > 0.7) openPorts.push({ port: Number(port), service: svc,
-      risk: ['3389','23','3306','6379','27017'].includes(port) ? 'HIGH' : 'MEDIUM',
-      premium: i >= 2 });
-  });
-
-  // Build structured findings
   const findings = [
     {
       id: 'DOM-001',
-      title: 'TLS/SSL Configuration',
+      title: 'TLS/SSL Configuration (Estimate)',
       severity: tlsGrade === 'WEAK' ? 'CRITICAL' : tlsGrade === 'FAIR' ? 'MEDIUM' : 'LOW',
-      description: `TLS grade: ${tlsGrade}. ${TLS_GRADES[tlsGrade].label}. ${tlsGrade === 'WEAK' ? 'Deprecated TLS 1.0/1.1 detected — exploitable via BEAST/POODLE attacks.' : 'Configuration meets baseline requirements.'}`,
-      supported_versions: TLS_GRADES[tlsGrade].versions,
+      description: `[FALLBACK ESTIMATE — not a live scan] TLS grade estimated as ${tlsGrade}. ${TLS_GRADES[tlsGrade].label}. Run a live scan for real TLS version data.`,
       recommendation: 'Enforce TLS 1.3 minimum. Disable TLS 1.0/1.1. Configure PFS cipher suites.',
       cvss_base: tlsGrade === 'WEAK' ? 7.4 : tlsGrade === 'FAIR' ? 4.3 : 2.1,
       is_premium: false,
+      requires_live_scan: true,
     },
     {
       id: 'DOM-002',
-      title: 'DNSSEC Validation',
+      title: 'DNSSEC Validation (Estimate)',
       severity: dnssecOk ? 'LOW' : 'HIGH',
-      description: dnssecOk
-        ? 'DNSSEC validation is configured. DNS responses are cryptographically signed.'
-        : 'DNSSEC is NOT enabled. Domain is vulnerable to DNS cache poisoning and BGP hijacking attacks.',
-      dnssec_status: dnssecOk ? 'ENABLED' : 'DISABLED',
+      description: `[FALLBACK ESTIMATE — not a live scan] DNSSEC status estimated from domain string hash. Run a live scan for real DNSSEC validation.`,
       recommendation: 'Enable DNSSEC at your registrar and DNS provider. Implement DS records and NSEC3.',
       cvss_base: dnssecOk ? 2.0 : 6.8,
       is_premium: false,
+      requires_live_scan: true,
     },
     {
       id: 'DOM-003',
-      title: 'HTTP Security Headers Audit',
+      title: 'HTTP Security Headers Audit (Estimate)',
       severity: headerRiskTotal > 30 ? 'HIGH' : headerRiskTotal > 15 ? 'MEDIUM' : 'LOW',
-      description: `${missingHeaders.length} critical security headers missing. Combined header risk score: ${headerRiskTotal}. Missing: ${missingHeaders.map(h=>h.name).join(', ')}.`,
+      description: `[FALLBACK ESTIMATE — not a live scan] ${missingHeaders.length} headers estimated missing. Run a live scan to check real response headers.`,
       missing_headers: missingHeaders.map(h => ({ header: h.name, risk_score: h.risk_if_missing })),
       recommendation: 'Implement all OWASP security headers. Validate at securityheaders.com.',
       cvss_base: headerRiskTotal > 30 ? 6.1 : 4.3,
       is_premium: false,
+      requires_live_scan: true,
     },
     {
       id: 'DOM-004',
-      title: 'Subdomain Enumeration',
-      severity: exposedSubs.length > 4 ? 'HIGH' : exposedSubs.length > 2 ? 'MEDIUM' : 'LOW',
-      description: `${exposedSubs.length} exposed subdomains detected: ${exposedSubs.map(s=>s+'.'+domain).join(', ')}. Each expands the external attack surface.`,
-      exposed_subdomains: exposedSubs.map(s => `${s}.${domain}`),
-      recommendation: 'Audit all subdomains. Disable unused. Apply WAF rules. Ensure no dev/staging subdomains are publicly accessible.',
-      cvss_base: exposedSubs.length > 3 ? 5.3 : 3.1,
+      title: 'Subdomain Enumeration (Estimate)',
+      severity: 'MEDIUM',
+      description: '[FALLBACK ESTIMATE — not a live scan] Subdomain exposure requires live enumeration. Results below are domain-hash estimates only.',
+      estimated_subdomains: exposedSubs.map(s => `${s}.${domain}`),
+      recommendation: 'Run live subdomain enumeration. Audit all subdomains. Disable unused dev/staging.',
+      cvss_base: 3.1,
       is_premium: true,
-    },
-    {
-      id: 'DOM-005',
-      title: 'Open Port Intelligence',
-      severity: openPorts.filter(p=>p.risk==='HIGH').length > 1 ? 'CRITICAL' : 'HIGH',
-      description: `${openPorts.length} open ports detected. ${openPorts.filter(p=>p.risk==='HIGH').length} high-risk services exposed (${openPorts.filter(p=>p.risk==='HIGH').map(p=>p.service).join(', ')}).`,
-      open_ports: openPorts.slice(0, 4),
-      recommendation: 'Close all non-essential ports. Place services behind VPN. Restrict RDP/SSH to allowlisted IPs only.',
-      cvss_base: 7.5,
-      is_premium: true,
+      requires_live_scan: true,
     },
     {
       id: 'DOM-006',
       title: 'SPF / DMARC / DKIM Email Security',
-      severity: pick(['HIGH','MEDIUM','CRITICAL'], seed, 60),
-      description: `Email security posture for ${domain}: SPF strict policy ${sr(seed,61)>0.5?'MISSING':'WEAK'}, DMARC policy ${sr(seed,62)>0.5?'missing':'p=none (not enforced)'}, DKIM ${sr(seed,63)>0.6?'not detected':'detected but selector exposure risk'}.`,
-      recommendation: 'Set SPF -all, DMARC p=reject rua=, and rotate DKIM keys every 6 months.',
-      cvss_base: 6.5,
-      is_premium: true,
-    },
-    {
-      id: 'DOM-007',
-      title: 'Threat Intelligence Match',
-      severity: phishRisk > 0 ? 'CRITICAL' : pick(['LOW','MEDIUM'], seed, 70),
+      severity: phishRisk > 0 ? 'CRITICAL' : 'MEDIUM',
       description: phishRisk > 0
-        ? `Domain "${domain}" matches known phishing keyword patterns. Cross-referenced against ${ri(1200,1800,seed,71)}M+ IOC records. ${ri(2,6,seed,72)} threat feed matches.`
-        : `Domain cross-referenced against ${ri(1200,1800,seed,71)}M+ breach and IOC records. No active blocklist matches detected.`,
-      threat_feeds_checked: ri(10,15,seed,73),
-      recommendation: 'Continuously monitor domain reputation. Subscribe to automated threat intelligence feeds.',
-      cvss_base: phishRisk > 0 ? 9.1 : 2.5,
+        ? `Domain "${domain}" matches known phishing keyword patterns. Verify SPF, DMARC, and DKIM via live scan.`
+        : `Email security posture requires live DNS TXT record lookup. Run a live scan for real SPF/DMARC/DKIM data.`,
+      recommendation: 'Set SPF -all, DMARC p=reject rua=, and rotate DKIM keys every 6 months.',
+      cvss_base: phishRisk > 0 ? 7.5 : 4.3,
       is_premium: true,
+      requires_live_scan: true,
     },
   ];
 
   return {
     module: 'domain_scanner',
-    version: '3.0.0',
+    version: '4.0.0',
     target: domain,
+    data_source: 'deterministic_fallback',
+    is_simulation: true,
+    fallback_reason: 'Live DNS unavailable — heuristic engine used. Results are estimates only.',
     risk_score: riskScore,
     risk_level: riskLevel(riskScore),
     grade: riskScore >= 80 ? 'F' : riskScore >= 60 ? 'D' : riskScore >= 40 ? 'C' : riskScore >= 20 ? 'B' : 'A',
-    summary: `Domain "${domain}" assessed across 7 security dimensions. Risk score: ${riskScore}/100 (${riskLevel(riskScore)}). ${findings.filter(f=>['CRITICAL','HIGH'].includes(f.severity)).length} critical/high severity findings.`,
-    tls_grade: tlsGrade,
-    dnssec_enabled: dnssecOk,
-    exposed_subdomain_count: exposedSubs.length,
-    open_port_count: openPorts.length,
-    header_risk_score: headerRiskTotal,
+    summary: `[ESTIMATE] Domain "${domain}" assessed via heuristic engine (fallback). Real scan unavailable. Risk score: ${riskScore}/100 (${riskLevel(riskScore)}). Retry for live results.`,
     findings,
     scan_metadata: {
-      engine_version: '3.0.0',
+      engine_version: '4.0.0',
       scan_timestamp: new Date().toISOString(),
-      scan_modules: ['tls','dnssec','http_headers','subdomains','open_ports','email_security','threat_intel'],
+      data_source: 'heuristic_fallback',
       powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+      notice: 'Live scan unavailable. All findings are heuristic estimates, not real measurements.',
     },
   };
 }
 
-// ─── AI Security Scan Engine v3 ───────────────────────────────────────────────
+// ─── AI Security Framework Engine v4 ─────────────────────────────────────────
+// REMEDIATED: Removed seeded risk_score (ri(45,88,seed,1)).
+// Removed seeded detection filtering (sr(seed,i+60) > 0.45).
+// All OWASP LLM Top 10 items listed as requiring validation — no fake "detected" flags.
 const PROMPT_INJECTION_PATTERNS = [
-  { pattern:'Ignore previous instructions', severity:'CRITICAL', desc:'Classic direct prompt injection attempt pattern detected in model interface.' },
-  { pattern:'System prompt override',        severity:'CRITICAL', desc:'System prompt manipulation vector identified in input processing pipeline.' },
-  { pattern:'Jailbreak bypass',              severity:'HIGH',     desc:'Known jailbreak pattern susceptibility detected in model configuration.' },
-  { pattern:'Role confusion attack',         severity:'HIGH',     desc:'Model identity/role manipulation via conflicting instruction injection.' },
-  { pattern:'Indirect data exfil',           severity:'HIGH',     desc:'Indirect injection via user-controlled content in RAG/document pipeline.' },
-];
-
-const LLM_MISCONFIGS = [
-  { id:'MSCFG-001', title:'Verbose error exposure',       desc:'Model stack traces or system prompt fragments leaked in error responses.' },
-  { id:'MSCFG-002', title:'Unbounded token budget',       desc:'No max_tokens limit enforced — allows DoS via inference exhaustion.' },
-  { id:'MSCFG-003', title:'No output length enforcement', desc:'Responses can exceed safe size, enabling data exfiltration via verbosity.' },
-  { id:'MSCFG-004', title:'Tool call validation absent',  desc:'Function/tool calls not validated before execution — arbitrary code risk.' },
-  { id:'MSCFG-005', title:'Memory persistence risk',      desc:'Conversation history persisted without sanitization — cross-session injection.' },
+  { id:'PI-001', pattern:'Direct Prompt Injection',    severity:'CRITICAL', desc:'User-controlled input can override system instructions. Test: inject "Ignore all previous instructions" variants.' },
+  { id:'PI-002', pattern:'Indirect Prompt Injection',  severity:'CRITICAL', desc:'External content (documents, web pages, emails) in the context window can inject instructions.' },
+  { id:'PI-003', pattern:'System Prompt Override',     severity:'HIGH',     desc:'Adversarial inputs attempt to reveal or override the system prompt.' },
+  { id:'PI-004', pattern:'Role Confusion Attack',      severity:'HIGH',     desc:'Model identity manipulation via conflicting instruction injection (e.g., "You are now...").' },
+  { id:'PI-005', pattern:'Jailbreak Pattern Exposure', severity:'HIGH',     desc:'Known jailbreak patterns (DAN, developer mode, base64 encoding) exploiting model guardrail weaknesses.' },
 ];
 
 const OWASP_LLM = [
@@ -214,179 +182,343 @@ const OWASP_LLM = [
   { id:'LLM10', title:'Model Theft',                 desc:'Model API lacks authentication + query monitoring — extraction possible.',       cvss: 7.1 },
 ];
 
+/**
+ * aiScanEngine — Framework-based assessment (OWASP LLM Top 10)
+ * REMEDIATED v4: No seeded risk_score. No fake "detected" filtering.
+ * Returns a full OWASP LLM Top 10 framework analysis requiring validation.
+ * risk_score is derived from use_case risk profile, not random seed.
+ */
 export function aiScanEngine(modelName, useCase) {
-  const seed = strHash(modelName + useCase);
-  const riskScore = ri(45, 88, seed, 1);
-  const SEVS = ['CRITICAL','HIGH','MEDIUM','LOW'];
+  // Use-case risk profile — deterministic from known risk levels, not random
+  const useCaseRisk = {
+    agent: 85, rag: 78, code_generation: 75, 'code-generation': 75,
+    chatbot: 65, recommendation: 60, classification: 55,
+    image: 50, vision: 50, voice: 50, other: 65,
+  };
+  const riskScore = useCaseRisk[useCase] ?? 65;
 
-  // Prompt injection scan
-  const injectionFindings = PROMPT_INJECTION_PATTERNS.map((p, i) => ({
-    id: `PI-00${i+1}`,
-    category: 'Prompt Injection',
-    title: p.pattern,
-    severity: sr(seed, i+10) > 0.4 ? p.severity : 'MEDIUM',
-    description: p.desc,
-    mitigation: 'Implement strict input validation, output filtering, and instruction hierarchies.',
-    cvss_base: p.severity === 'CRITICAL' ? ri(8,10,seed,i+100)/10 : ri(5,8,seed,i+100)/10,
-    detected: sr(seed, i+60) > 0.45,
-    is_premium: i >= 2,
-  })).filter(f => f.detected);
-
-  // OWASP LLM findings
-  const owaspFindings = OWASP_LLM.map((item, i) => ({
+  const findings = OWASP_LLM.map((item) => ({
     id: item.id,
     title: item.title,
-    severity: pick(SEVS, seed, i * 7),
+    severity: item.cvss >= 9.0 ? 'CRITICAL' : item.cvss >= 8.0 ? 'HIGH' : item.cvss >= 6.0 ? 'MEDIUM' : 'LOW',
     description: item.desc,
     cvss_base: item.cvss,
     recommendation: `Implement ${item.title} controls per OWASP LLM Top 10 v1.1 guidance.`,
-    reference: `https://owasp.org/www-project-top-10-for-large-language-model-applications/`,
-    is_premium: i >= 2,
+    reference: 'https://owasp.org/www-project-top-10-for-large-language-model-applications/',
+    validation_status: 'REQUIRES_TESTING',
+    is_premium: item.id !== 'LLM01' && item.id !== 'LLM02',
   }));
 
-  // Misconfiguration findings
-  const misconfigFindings = LLM_MISCONFIGS.map((m, i) => ({
-    id: m.id,
-    category: 'Misconfiguration',
-    title: m.title,
-    severity: pick(['HIGH','MEDIUM'], seed, i+80),
-    description: m.desc,
-    recommendation: 'Review model API configuration and enforce strict operational boundaries.',
-    detected: sr(seed, i+90) > 0.5,
-    is_premium: true,
-  })).filter(f => f.detected);
-
-  const allFindings = [...injectionFindings, ...owaspFindings.slice(0,2), ...misconfigFindings];
-  const premFindings= [...owaspFindings.slice(2), ...injectionFindings.filter(f=>f.is_premium)];
+  const injectionChecks = PROMPT_INJECTION_PATTERNS.map(p => ({
+    ...p,
+    validation_status: 'REQUIRES_TESTING',
+    mitigation: 'Implement strict input validation, output filtering, and instruction hierarchies.',
+    is_premium: p.id !== 'PI-001',
+  }));
 
   return {
     module: 'ai_scanner',
-    version: '3.0.0',
+    version: '4.0.0',
     target: modelName,
     use_case: useCase,
+    assessment_type: 'framework_analysis',
     risk_score: riskScore,
     risk_level: riskLevel(riskScore),
-    summary: `AI model "${modelName}" assessed against OWASP LLM Top 10, prompt injection vectors, and misconfiguration patterns. ${allFindings.filter(f=>['CRITICAL','HIGH'].includes(f.severity)).length} high-severity issues identified.`,
+    data_source: 'owasp_llm_framework',
+    summary: `AI model "${modelName}" assessed against OWASP LLM Top 10 and ${PROMPT_INJECTION_PATTERNS.length} injection pattern categories. Use-case risk profile: ${riskScore}/100 (${riskLevel(riskScore)}). All findings require manual validation or penetration testing.`,
     owasp_coverage: 'LLM01-LLM10 (100%)',
-    prompt_injection_vectors_tested: PROMPT_INJECTION_PATTERNS.length,
-    prompt_injection_detected: injectionFindings.length,
-    misconfiguration_count: misconfigFindings.length,
-    findings: allFindings,
-    premium_findings: premFindings.map(f => ({ ...f, description: f.description.slice(0,30)+'... [LOCKED]', recommendation: '[UNLOCK TO VIEW]' })),
+    frameworks: ['OWASP LLM Top 10 v1.1', 'MITRE ATLAS', 'NIST AI RMF'],
+    prompt_injection_checks: injectionChecks.length,
+    findings: findings.filter(f => !f.is_premium),
+    premium_findings: findings.filter(f => f.is_premium).map(f => ({
+      ...f, description: f.description.slice(0,40)+'... [UPGRADE TO VIEW]',
+      recommendation: '[UPGRADE TO VIEW]'
+    })),
+    injection_vectors: injectionChecks.filter(c => !c.is_premium),
     scan_metadata: {
-      engine_version: '3.0.0',
+      engine_version: '4.0.0',
       scan_timestamp: new Date().toISOString(),
-      frameworks: ['OWASP LLM Top 10 v1.1','MITRE ATLAS','NIST AI RMF'],
+      assessment_note: 'Framework analysis only. No live model probing performed. All findings require manual validation.',
       powered_by: 'CYBERDUDEBIVASH AI Security Hub',
     },
   };
 }
 
-// ─── Red Team Engine v3 ───────────────────────────────────────────────────────
+// ─── Red Team Scenario Engine v4 ─────────────────────────────────────────────
+// REMEDIATED: Removed seeded result (SUCCEEDED/BLOCKED/PARTIALLY_SUCCEEDED).
+// Removed seeded dwell_time_simulated and detection_evaded.
+// Now presents scenarios as PLANNED attack paths — not fake executed results.
 const RT_SCENARIOS = [
-  { id:'RT-001', tactic:'Initial Access',    tech:'T1566',      name:'Spear Phishing',          desc:'LinkedIn-harvested executive persona targeting with weaponized PDF payload.' },
-  { id:'RT-002', tactic:'Credential Access', tech:'T1110.003',  name:'Password Spraying',       desc:'Low-and-slow spray against Azure AD/Entra ID — 1 attempt/30min to evade lockout.' },
-  { id:'RT-003', tactic:'Discovery',         tech:'T1046',      name:'Network Service Scan',    desc:'Internal network recon identifying lateral movement paths and unpatched services.' },
-  { id:'RT-004', tactic:'Lateral Movement',  tech:'T1550.002',  name:'Pass the Hash',           desc:'NTLM hash capture via Responder + PTH to high-value targets.' },
-  { id:'RT-005', tactic:'Persistence',       tech:'T1053',      name:'Scheduled Task Backdoor', desc:'SYSTEM-context scheduled task for persistent re-entry after detection.' },
-  { id:'RT-006', tactic:'Exfiltration',      tech:'T1048',      name:'DNS Tunneling Exfil',     desc:'Slow data exfiltration via DNS TXT records to attacker-controlled resolver.' },
-  { id:'RT-007', tactic:'Defense Evasion',   tech:'T1070',      name:'Log Tampering',           desc:'Event log clearing + timestamp manipulation to blind SOC detection.' },
-  { id:'RT-008', tactic:'Impact',            tech:'T1486',      name:'Ransomware Simulation',   desc:'Ransomware deployment simulation on isolated test VM — encryption + ransom note drop.' },
+  { id:'RT-001', tactic:'Initial Access',    tech:'T1566',     tactic_id:'TA0001', name:'Spear Phishing',          desc:'LinkedIn-harvested executive persona targeting with weaponized PDF payload.', cvss: 8.1 },
+  { id:'RT-002', tactic:'Credential Access', tech:'T1110.003', tactic_id:'TA0006', name:'Password Spraying',       desc:'Low-and-slow spray against Azure AD/Entra ID — 1 attempt/30min to evade lockout.', cvss: 7.5 },
+  { id:'RT-003', tactic:'Discovery',         tech:'T1046',     tactic_id:'TA0007', name:'Network Service Scan',    desc:'Internal network recon identifying lateral movement paths and unpatched services.', cvss: 5.3 },
+  { id:'RT-004', tactic:'Lateral Movement',  tech:'T1550.002', tactic_id:'TA0008', name:'Pass the Hash',           desc:'NTLM hash capture via Responder + PTH to high-value targets.', cvss: 8.8 },
+  { id:'RT-005', tactic:'Persistence',       tech:'T1053',     tactic_id:'TA0003', name:'Scheduled Task Backdoor', desc:'SYSTEM-context scheduled task for persistent re-entry after detection.', cvss: 7.8 },
+  { id:'RT-006', tactic:'Exfiltration',      tech:'T1048',     tactic_id:'TA0010', name:'DNS Tunneling Exfil',     desc:'Slow data exfiltration via DNS TXT records to attacker-controlled resolver.', cvss: 7.5 },
+  { id:'RT-007', tactic:'Defense Evasion',   tech:'T1070',     tactic_id:'TA0005', name:'Log Tampering',           desc:'Event log clearing + timestamp manipulation to blind SOC detection.', cvss: 6.5 },
+  { id:'RT-008', tactic:'Impact',            tech:'T1486',     tactic_id:'TA0040', name:'Ransomware Simulation',   desc:'Ransomware deployment simulation on isolated test VM — encryption + ransom note drop.', cvss: 9.0 },
 ];
 
+/**
+ * redteamEngine — Red team SCENARIO PLAN generator
+ * REMEDIATED v4: No seeded results (SUCCEEDED/BLOCKED). No fake dwell times.
+ * Returns planned attack scenarios mapped to MITRE ATT&CK.
+ * Execution status is NOT simulated — requires a real red team engagement.
+ */
 export function redteamEngine(targetOrg, scope) {
-  const seed = strHash(targetOrg + scope);
-  const RESULTS = ['SUCCEEDED','PARTIALLY_SUCCEEDED','BLOCKED'];
-  const SEVS    = ['CRITICAL','HIGH','MEDIUM'];
-  const findings = RT_SCENARIOS.map((s, i) => ({
-    ...s,
-    severity: pick(SEVS, seed, i * 11),
-    result:   pick(RESULTS, seed, i * 13),
-    dwell_time_simulated: `${ri(2,72,seed,i*17)} hours`,
-    detection_evaded: sr(seed, i*19) > 0.5,
-    is_premium: i >= 2,
-  }));
-  const succeeded = findings.filter(f => f.result === 'SUCCEEDED').length;
+  const scopeFilter = {
+    external:   ['RT-001','RT-002','RT-006'],
+    internal:   ['RT-003','RT-004','RT-005','RT-007','RT-008'],
+    web:        ['RT-001','RT-002'],
+    cloud:      ['RT-001','RT-002','RT-006'],
+    api:        ['RT-001','RT-003'],
+    hybrid:     ['RT-001','RT-002','RT-003','RT-004'],
+    full:       RT_SCENARIOS.map(s => s.id),
+  };
+  const scopeIds = scopeFilter[scope] ?? scopeFilter.external;
+  const scenarios = RT_SCENARIOS
+    .filter(s => scopeIds.includes(s.id))
+    .map(s => ({
+      ...s,
+      severity: s.cvss >= 9.0 ? 'CRITICAL' : s.cvss >= 8.0 ? 'HIGH' : s.cvss >= 6.0 ? 'MEDIUM' : 'LOW',
+      status: 'PLANNED',
+      mitre_url: `https://attack.mitre.org/techniques/${s.tech.replace('.','/')}/`,
+      is_premium: ['RT-003','RT-004','RT-005','RT-006','RT-007','RT-008'].includes(s.id),
+    }));
+
+  const highRisk = scenarios.filter(s => ['CRITICAL','HIGH'].includes(s.severity)).length;
+
   return {
-    module:'redteam_engine', version:'3.0.0', target:targetOrg, scope,
-    risk_score: ri(45,92,seed,2), risk_level: riskLevel(ri(45,92,seed,2)),
-    attack_paths_succeeded: succeeded, attack_paths_total: RT_SCENARIOS.length,
-    detection_rate: `${ri(30,75,seed,3)}%`,
-    findings,
-    mitre_tactics: [...new Set(RT_SCENARIOS.map(s=>s.tactic))],
-    scan_metadata: { engine_version:'3.0.0', scan_timestamp:new Date().toISOString() },
+    module: 'redteam_engine',
+    version: '4.0.0',
+    target: targetOrg,
+    scope,
+    assessment_type: 'scenario_plan',
+    data_source: 'mitre_attack_framework',
+    risk_score: highRisk >= 4 ? 85 : highRisk >= 2 ? 70 : 55,
+    risk_level: highRisk >= 4 ? 'CRITICAL' : highRisk >= 2 ? 'HIGH' : 'MEDIUM',
+    scenarios_planned: scenarios.length,
+    scenarios_in_scope: scenarios.length,
+    critical_high_scenarios: highRisk,
+    summary: `Red team scenario plan for "${targetOrg}" (scope: ${scope}). ${scenarios.length} attack scenarios mapped to MITRE ATT&CK. ${highRisk} critical/high-severity vectors. All scenarios require a live red team engagement for execution and results.`,
+    findings: scenarios.filter(s => !s.is_premium),
+    premium_findings: scenarios.filter(s => s.is_premium).map(s => ({
+      ...s, desc: s.desc.slice(0,40)+'... [UPGRADE TO VIEW]'
+    })),
+    mitre_tactics: [...new Set(scenarios.map(s => s.tactic))],
+    mitre_tactics_with_ids: [...new Set(scenarios.map(s => `${s.tactic_id}: ${s.tactic}`))],
+    engagement_note: 'These are planned scenarios. Execution results require a contracted red team engagement.',
+    scan_metadata: {
+      engine_version: '4.0.0',
+      scan_timestamp: new Date().toISOString(),
+      framework: 'MITRE ATT&CK v14',
+      powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+    },
   };
 }
 
-// ─── Identity Security Engine v3 ─────────────────────────────────────────────
+// ─── Identity Security Framework Engine v4 ───────────────────────────────────
+// REMEDIATED: Removed seeded percentages from finding descriptions.
+// Findings now describe framework requirements, not fake org-specific metrics.
+/**
+ * identityScanEngine — Identity security assessment template
+ * REMEDIATED v4: No seeded MFA percentages. No fake account counts.
+ * Returns identity security framework checklist requiring customer data input.
+ */
 export function identityScanEngine(orgName, identityProvider) {
-  const seed = strHash(orgName + identityProvider);
-  const ztScore = ri(20, 65, seed, 8);
+  const idpRisk = {
+    'Azure AD': 0, 'Entra ID': 0, 'Okta': 0, 'Google Workspace': 5,
+    'Active Directory': 15, 'LDAP': 25, 'Local': 35, 'other': 20,
+  };
+  const baseRisk = idpRisk[identityProvider] ?? 20;
+
   const findings = [
-    { id:'IDN-001', title:'MFA Enrollment Gap', severity:'HIGH',
-      description:`${ri(15,40,seed,1)}% of accounts lack MFA. Passwordless adoption at ${ri(0,15,seed,9)}%.`,
-      recommendation:'Enforce FIDO2/passkey MFA via Conditional Access. Target 100% coverage in 30 days.', is_premium:false, cvss_base:7.5 },
-    { id:'IDN-002', title:'Privileged Account Exposure', severity:'CRITICAL',
-      description:`${ri(3,12,seed,2)} privileged accounts without PAM/JIT. ${ri(1,4,seed,10)} have standing admin rights 24/7.`,
-      recommendation:'Deploy PIM with time-bound JIT access. Require MFA for all privileged ops.', is_premium:false, cvss_base:9.0 },
-    { id:'IDN-003', title:'Stale Account Accumulation', severity:'MEDIUM',
-      description:`${ri(20,60,seed,3)} inactive accounts (>90 days). ${ri(2,8,seed,11)} ex-employee accounts still active.`,
-      recommendation:'Implement automated lifecycle management. 90-day inactivity = auto-disable.', is_premium:true, cvss_base:6.1 },
-    { id:'IDN-004', title:'Lateral Movement Risk', severity:'HIGH',
-      description:`Over-provisioned roles detected. ${ri(5,20,seed,4)} users have admin rights in 3+ systems.`,
-      recommendation:'Run role mining. Right-size all permissions using least-privilege baseline.', is_premium:true, cvss_base:7.2 },
-    { id:'IDN-005', title:'Credential Breach Exposure', severity:sr(seed,12)>0.5?'CRITICAL':'HIGH',
-      description:`Credentials cross-referenced against ${ri(1.2,1.8,seed,13).toFixed(1)}B+ breached records. ${ri(0,5,seed,14)} potential matches.`,
-      recommendation:'Force reset for exposed accounts. Enable breach alerting via identity protection.', is_premium:true, cvss_base:8.5 },
-    { id:'IDN-006', title:'Zero Trust Maturity', severity:ztScore<40?'HIGH':'MEDIUM',
-      description:`Zero Trust score: ${ztScore}/100. Identity-centric perimeter not fully established. Weakest pillars: ${pick(['Device Compliance','Network Segmentation','Data Classification'],seed,15)}.`,
-      recommendation:'Adopt NIST SP 800-207 ZTA framework. Prioritize identity and device verification pillars.', is_premium:true, cvss_base:6.8 },
+    {
+      id: 'IDN-001', title: 'MFA Enrollment Gap', severity: 'HIGH',
+      description: 'Assess MFA enrollment across all user accounts. Target: 100% MFA coverage. Prioritize privileged accounts. Check for passwordless/FIDO2 adoption.',
+      recommendation: 'Enforce FIDO2/passkey MFA via Conditional Access. Target 100% coverage in 30 days.',
+      checklist: ['All users have MFA enrolled','Privileged accounts use phishing-resistant MFA','Passwordless adoption tracked','MFA bypass policies documented'],
+      cvss_base: 7.5, is_premium: false,
+    },
+    {
+      id: 'IDN-002', title: 'Privileged Account Exposure', severity: 'CRITICAL',
+      description: 'Audit privileged accounts for standing permissions. Identify accounts with 24/7 admin rights. Verify PAM/JIT controls are in place.',
+      recommendation: 'Deploy PIM with time-bound JIT access. Require MFA for all privileged operations.',
+      checklist: ['PAM solution deployed','JIT access enabled for admin roles','Standing admin rights eliminated','Privileged session recording active'],
+      cvss_base: 9.0, is_premium: false,
+    },
+    {
+      id: 'IDN-003', title: 'Stale Account Accumulation', severity: 'MEDIUM',
+      description: 'Identify accounts inactive >90 days. Verify ex-employee account deprovisioning. Check for orphaned service accounts.',
+      recommendation: 'Implement automated lifecycle management. 90-day inactivity threshold for auto-disable.',
+      checklist: ['Inactive account review process documented','Ex-employee accounts deprovisioned within 24h','Service account inventory current','Account review cadence established'],
+      cvss_base: 6.1, is_premium: true,
+    },
+    {
+      id: 'IDN-004', title: 'Lateral Movement Risk', severity: 'HIGH',
+      description: 'Identify over-provisioned roles. Audit users with admin rights across multiple systems. Apply least-privilege baseline.',
+      recommendation: 'Run role mining analysis. Right-size all permissions using least-privilege baseline.',
+      checklist: ['Role mining completed','Cross-system admin rights inventoried','Least-privilege baseline defined','Entitlement review scheduled quarterly'],
+      cvss_base: 7.2, is_premium: true,
+    },
+    {
+      id: 'IDN-005', title: 'Credential Breach Exposure', severity: 'CRITICAL',
+      description: 'Check credentials against known breach databases (HaveIBeenPwned, HIBP Enterprise, SpyCloud). Configure breach alerting.',
+      recommendation: 'Force reset for exposed accounts. Enable breach alerting via identity protection service.',
+      checklist: ['HIBP Enterprise or equivalent integrated','Breach alerting active','Compromised credential response playbook documented','Dark web monitoring enabled'],
+      cvss_base: 8.5, is_premium: true,
+    },
+    {
+      id: 'IDN-006', title: 'Zero Trust Maturity', severity: baseRisk > 20 ? 'HIGH' : 'MEDIUM',
+      description: `Zero Trust assessment for ${identityProvider} environment. Evaluate identity, device, network, application, and data pillars against NIST SP 800-207.`,
+      recommendation: 'Adopt NIST SP 800-207 ZTA framework. Prioritize identity and device verification pillars.',
+      checklist: ['Identity pillar: MFA + CAP','Device pillar: MDM + compliance','Network pillar: microsegmentation','Data pillar: classification + DLP'],
+      cvss_base: 6.8, is_premium: true,
+    },
   ];
+
+  const freefindings = findings.filter(f => !f.is_premium);
+  const premFindings = findings.filter(f => f.is_premium);
+  const highSev = findings.filter(f => ['CRITICAL','HIGH'].includes(f.severity)).length;
+  const riskScore = Math.min(100, baseRisk + highSev * 10);
+
   return {
-    module:'identity_scanner', version:'3.0.0', target:orgName, identity_provider:identityProvider,
-    risk_score:ri(30,80,seed,3), risk_level:riskLevel(ri(30,80,seed,3)), zero_trust_score:ztScore,
-    mfa_coverage_estimate:`${100-ri(15,40,seed,1)}%`, privileged_account_risk:'HIGH',
-    findings,
-    scan_metadata:{ engine_version:'3.0.0', scan_timestamp:new Date().toISOString() },
+    module: 'identity_scanner',
+    version: '4.0.0',
+    target: orgName,
+    identity_provider: identityProvider,
+    assessment_type: 'framework_checklist',
+    data_source: 'identity_security_framework',
+    risk_score: riskScore,
+    risk_level: riskLevel(riskScore),
+    summary: `Identity security framework assessment for "${orgName}" using ${identityProvider}. ${findings.length} control areas assessed. ${highSev} critical/high priority items require immediate action. Checklist items require customer data to score.`,
+    findings: freefindings,
+    premium_findings: premFindings.map(f => ({
+      ...f, description: '[UPGRADE TO VIEW]', checklist: ['[UPGRADE TO VIEW]']
+    })),
+    scan_metadata: {
+      engine_version: '4.0.0',
+      scan_timestamp: new Date().toISOString(),
+      frameworks: ['NIST SP 800-207','CISA Zero Trust Maturity Model','CIS Controls v8'],
+      assessment_note: 'Checklist items require customer identity data for quantitative scoring.',
+      powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+    },
   };
 }
 
-// ─── Compliance Engine v3 ─────────────────────────────────────────────────────
+// ─── Compliance Framework Engine v4 ──────────────────────────────────────────
+// REMEDIATED: Removed seeded compliance percentages (ri(30,72,seed,1)).
+// Returns real framework domain mapping without fake compliance scores.
 const FRAMEWORKS = {
-  iso27001:{ name:'ISO 27001:2022',       price:'₹999',   domains:['A.5 Organizational Controls','A.6 People Controls','A.7 Physical Controls','A.8 Technological Controls'],            controls: 93 },
-  soc2:    { name:'SOC 2 Type II',        price:'₹1,499', domains:['Security (CC6-CC9)','Availability (A1)','Processing Integrity (PI1)','Confidentiality (C1)','Privacy (P1-P8)'],      controls: 64 },
-  gdpr:    { name:'GDPR 2016/679',        price:'₹799',   domains:['Lawful Basis & Consent','Data Subject Rights','Data Protection by Design','Breach Notification & DPA'],              controls: 99 },
-  pcidss:  { name:'PCI-DSS v4.0',         price:'₹1,999', domains:['Network Security Controls','Cardholder Data Protection','Vulnerability Management','Strong Access Control'],         controls: 264},
-  dpdp:    { name:'DPDP Act 2023 (India)','price':'₹499', domains:['Data Fiduciary Obligations','Data Principal Rights','Consent Framework','Cross-Border Data Transfer'],               controls: 45 },
-  hipaa:   { name:'HIPAA/HITECH',         price:'₹1,499', domains:['Administrative Safeguards','Physical Safeguards','Technical Safeguards','Breach Notification Rule'],                  controls: 74 },
+  iso27001: { name:'ISO 27001:2022',     price:'₹999',   domains:['A.5 Organizational Controls','A.6 People Controls','A.7 Physical Controls','A.8 Technological Controls'],            controls: 93,  cert_body:'UKAS/DAkkS accredited CB' },
+  soc2:     { name:'SOC 2 Type II',      price:'₹1,499', domains:['Security (CC6-CC9)','Availability (A1)','Processing Integrity (PI1)','Confidentiality (C1)','Privacy (P1-P8)'],      controls: 64,  cert_body:'AICPA-licensed CPA firm' },
+  gdpr:     { name:'GDPR 2016/679',      price:'₹799',   domains:['Lawful Basis & Consent','Data Subject Rights','Data Protection by Design','Breach Notification & DPA'],              controls: 99,  cert_body:'GDPR-accredited body' },
+  pcidss:   { name:'PCI-DSS v4.0',       price:'₹1,999', domains:['Network Security Controls','Cardholder Data Protection','Vulnerability Management','Strong Access Control'],         controls: 264, cert_body:'PCI QSA' },
+  dpdp:     { name:'DPDP Act 2023',      price:'₹499',   domains:['Data Fiduciary Obligations','Data Principal Rights','Consent Framework','Cross-Border Data Transfer'],               controls: 45,  cert_body:'MeitY notified body' },
+  hipaa:    { name:'HIPAA/HITECH',       price:'₹1,499', domains:['Administrative Safeguards','Physical Safeguards','Technical Safeguards','Breach Notification Rule'],                  controls: 74,  cert_body:'HHS-recognized auditor' },
 };
 
+/**
+ * complianceEngine — Compliance framework gap analysis generator
+ * REMEDIATED v4: No seeded compliance percentages. No fake scores.
+ * Returns framework domain mapping and gap categories requiring assessment.
+ */
 export function complianceEngine(orgName, framework) {
   const fw   = FRAMEWORKS[framework] || FRAMEWORKS.iso27001;
-  const seed = strHash(orgName + framework);
-  const complianceScore = ri(30, 72, seed, 1);
+  const controlsPerDomain = Math.floor(fw.controls / fw.domains.length);
+
   const gaps = fw.domains.map((domain, i) => ({
-    domain, compliance_percent: ri(35,80,seed,i*9), gap_count: ri(2,12,seed,i*11),
-    critical_gaps: ri(0,4,seed,i*13), controls_assessed: Math.floor(fw.controls/fw.domains.length),
+    domain,
+    controls_in_scope: controlsPerDomain,
+    status: 'ASSESSMENT_REQUIRED',
+    compliance_score: null,
+    gap_count: null,
+    key_requirements: getKeyRequirements(framework, i),
     is_premium: i >= 1,
   }));
-  const worst = gaps.reduce((a,b) => a.compliance_percent < b.compliance_percent ? a : b);
+
   return {
-    module:'compliance_generator', version:'3.0.0', target:orgName, framework:fw.name, framework_key:framework,
-    risk_score:100-complianceScore, compliance_score:complianceScore, risk_level:riskLevel(100-complianceScore),
-    total_controls:fw.controls, gaps_identified:gaps.reduce((a,g)=>a+g.gap_count,0),
-    critical_gaps_total:gaps.reduce((a,g)=>a+g.critical_gaps,0),
-    summary:`${fw.name} compliance for "${orgName}": ${complianceScore}% readiness. ${gaps.reduce((a,g)=>a+g.gap_count,0)} total gaps across ${fw.domains.length} domains.`,
-    free_preview:{ overall_score:complianceScore, weakest_domain:{ name:worst.domain, score:worst.compliance_percent }, critical_gaps:gaps.reduce((a,g)=>a+g.critical_gaps,0) },
-    domain_assessments:gaps,
-    remediation_roadmap:[
-      `Week 1-2: Address critical gaps in "${worst.domain}"`,
-      `Month 1: Complete gap remediation for top 3 domains`,
-      `Month 3: Internal audit + evidence collection`,
-      `Month 6: Readiness assessment + certification engagement`,
+    module: 'compliance_generator',
+    version: '4.0.0',
+    target: orgName,
+    framework: fw.name,
+    framework_key: framework,
+    assessment_type: 'gap_analysis_template',
+    data_source: 'compliance_framework_mapping',
+    risk_score: null,
+    compliance_score: null,
+    score_note: 'Compliance score requires a formal assessment with customer evidence. No score generated without evidence.',
+    total_controls: fw.controls,
+    domains_in_scope: fw.domains.length,
+    certification_body: fw.cert_body,
+    summary: `${fw.name} gap analysis framework for "${orgName}". ${fw.controls} controls across ${fw.domains.length} domains. Formal assessment required for compliance scoring.`,
+    free_preview: {
+      framework: fw.name,
+      total_controls: fw.controls,
+      domains: fw.domains,
+      first_domain: { name: fw.domains[0], controls: controlsPerDomain, key_requirements: getKeyRequirements(framework, 0) },
+    },
+    domain_assessments: gaps.filter(g => !g.is_premium),
+    premium_domains: gaps.filter(g => g.is_premium).map(g => ({
+      domain: g.domain, controls_in_scope: g.controls_in_scope, status: '[UPGRADE TO VIEW]'
+    })),
+    remediation_roadmap: [
+      `Week 1-2: Kick-off gap assessment with ${fw.cert_body} or internal compliance team`,
+      `Month 1: Evidence collection for ${fw.domains[0]} domain`,
+      `Month 2-3: Complete gap remediation across all ${fw.domains.length} domains`,
+      `Month 4-5: Internal audit + evidence package preparation`,
+      `Month 6: Formal assessment with ${fw.cert_body}`,
     ],
-    full_report_price:fw.price,
-    payment_url:`https://rzp.io/l/cyberdudebivash-${framework}`,
-    scan_metadata:{ engine_version:'3.0.0', scan_timestamp:new Date().toISOString() },
+    full_report_price: fw.price,
+    payment_url: `https://cyberdudebivash.in/checkout?product=${framework}-compliance`,
+    scan_metadata: {
+      engine_version: '4.0.0',
+      scan_timestamp: new Date().toISOString(),
+      assessment_note: 'Gap analysis template only. Compliance scoring requires formal evidence review.',
+      powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+    },
   };
+}
+
+function getKeyRequirements(framework, domainIndex) {
+  const requirements = {
+    iso27001: [
+      ['Information security policies','Roles and responsibilities','Risk treatment plan'],
+      ['Security awareness training','Background checks','Disciplinary process'],
+      ['Physical access controls','Clean desk policy','Equipment security'],
+      ['Access control','Cryptography','Secure development','Vulnerability management'],
+    ],
+    soc2: [
+      ['CC6: Logical access','CC7: System operations','CC8: Change management'],
+      ['A1: Availability commitments','Capacity planning','Recovery testing'],
+      ['PI1: Processing completeness','Error handling','Input/output reconciliation'],
+      ['C1: Confidentiality commitments','Data classification','Encryption at rest'],
+    ],
+    gdpr: [
+      ['Lawful basis documented','Consent mechanism','Privacy notices'],
+      ['Data subject request process','Response SLA (30 days)','Identity verification'],
+      ['Privacy by design documented','DPIA process','Data minimization'],
+      ['72h breach notification process','DPA registration','Processor contracts'],
+    ],
+    pcidss: [
+      ['Network segmentation','Firewall policy','Default password changes'],
+      ['CHD discovery and mapping','Encryption (AES-256)','Key management'],
+      ['Vulnerability scanning','Penetration testing','Patch management SLA'],
+      ['Unique IDs for access','MFA for admin','Need-to-know access controls'],
+    ],
+    dpdp: [
+      ['Consent framework','Processing records','Fiduciary registration'],
+      ['Data principal access rights','Correction rights','Erasure rights'],
+      ['Consent collection mechanism','Withdrawal process','Records retention'],
+      ['Data localization assessment','Transfer mechanisms','Standard clauses'],
+    ],
+    hipaa: [
+      ['Security officer designated','Risk analysis completed','Sanction policy'],
+      ['Facility access controls','Workstation security','Device disposal'],
+      ['Access controls (164.312(a))','Audit controls','Transmission security'],
+      ['Breach assessment process','60-day notification','HHS reporting'],
+    ],
+  };
+  const fwReqs = requirements[framework] || requirements.iso27001;
+  return fwReqs[domainIndex] || fwReqs[0];
 }
