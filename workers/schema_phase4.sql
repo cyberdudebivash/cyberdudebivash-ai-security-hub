@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS platform_metrics_snapshots (
   platform_status TEXT NOT NULL DEFAULT 'operational',
   mrr             REAL NOT NULL DEFAULT 0,
   arr             REAL NOT NULL DEFAULT 0,
-  budget_alert    TEXT DEFAULT NULL CHECK(budget_alert IN (NULL,'WARNING','CRITICAL')),
+  budget_alert    TEXT DEFAULT NULL CHECK(budget_alert IS NULL OR budget_alert IN ('WARNING','CRITICAL')),
   computed_at     TEXT NOT NULL DEFAULT (datetime('now')),
   valid_until     TEXT NOT NULL,
   UNIQUE(org_id)
