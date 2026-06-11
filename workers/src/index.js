@@ -59,6 +59,16 @@ import { handleListCases, handleGetCase, handleCreateCase, handleUpdateCase, han
 import { handleListActors, handleGetActor, handleIOCSearch, handleAddIOC, handleCTIStats }                             from './handlers/ctiWorkbench.js';
 import { handleDeepHealth, handleServicesList }                                     from './handlers/deepHealth.js';
 
+// ── v33.0 PHASE 3 ENTERPRISE MATURITY IMPORTS ─────────────────────────────
+import { handleCustomerHealth, handleCustomerHealthByOrg, handleCustomerSuccessOverview, handleRefreshHealthScores, handleCustomerSuccessPlaybooks } from './handlers/customerSuccess.js';
+import { handleListReports, handleCreateReport, handleGetReport, handleDownloadReport, handleReportTemplates, handleScheduleReport } from './handlers/reportingEngine.js';
+import { handleGlobalSearch, handleSaveSearch, handleListSavedSearches, handleDeleteSavedSearch } from './handlers/globalSearch.js';
+import { handleListWorkflows, handleCreateWorkflow, handleUpdateWorkflow, handleDeleteWorkflow, handleExecuteWorkflow, handleWorkflowExecutions, handleWorkflowTemplates } from './handlers/workflowAutomation.js';
+import { handleGetTheme, handleUpdateTheme, handleDeleteTheme, handleGetThemeByOrg } from './handlers/whiteLabelMSSP.js';
+import { handleIngestEvent, handleGrowthMetrics, handleConversionFunnel, handleFeatureAdoption, handlePruneEvents } from './handlers/productAnalytics.js';
+import { handleGetPreferences, handleUpdatePreferences, handleNotificationLog, handleTestNotification, handleAdminSendNotification } from './handlers/notificationPlatform.js';
+import { handleSLAReport, handleErrorBudget, handleCapacityMetrics, handleListIncidents, handleCreateIncident } from './handlers/reliabilityEngineering.js';
+
 // ── v28 AI SECURITY PLATFORM IMPORTS ─────────────────────────────────────────
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
@@ -1705,6 +1715,239 @@ export default {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       return withSecurityHeaders(withCors(await handleServicesList(request, env, authCtx), request));
     }
+
+    // ── v33.0 PHASE 3 ENTERPRISE MATURITY ROUTES ─────────────────────────────
+
+    // ── Customer Success Platform ─────────────────────────────────────────────
+    if (path === '/api/customer-success/health' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCustomerHealth(request, env), request));
+    }
+    if (path.match(/^\/api\/customer-success\/health\/([^/]+)$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const orgId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleCustomerHealthByOrg(request, env, orgId), request));
+    }
+    if (path === '/api/customer-success/overview' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCustomerSuccessOverview(request, env), request));
+    }
+    if (path === '/api/customer-success/refresh' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleRefreshHealthScores(request, env), request));
+    }
+    if (path === '/api/customer-success/playbooks' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCustomerSuccessPlaybooks(request, env), request));
+    }
+
+    // ── Reporting Engine ──────────────────────────────────────────────────────
+    if (path === '/api/reports' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListReports(request, env), request));
+    }
+    if (path === '/api/reports' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCreateReport(request, env), request));
+    }
+    if (path === '/api/reports/templates' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleReportTemplates(request, env), request));
+    }
+    if (path === '/api/reports/schedule' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleScheduleReport(request, env), request));
+    }
+    if (path.match(/^\/api\/reports\/([^/]+)$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const jobId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleGetReport(request, env, jobId), request));
+    }
+    if (path.match(/^\/api\/reports\/([^/]+)\/download$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const jobId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleDownloadReport(request, env, jobId), request));
+    }
+
+    // ── Global Search ─────────────────────────────────────────────────────────
+    if (path === '/api/search' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGlobalSearch(request, env), request));
+    }
+    if (path === '/api/search/saved' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListSavedSearches(request, env), request));
+    }
+    if (path === '/api/search/saved' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleSaveSearch(request, env), request));
+    }
+    if (path.match(/^\/api\/search\/saved\/([^/]+)$/) && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const searchId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleDeleteSavedSearch(request, env, searchId), request));
+    }
+
+    // ── Workflow Automation ───────────────────────────────────────────────────
+    if (path === '/api/workflows/templates' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleWorkflowTemplates(request, env), request));
+    }
+    if (path === '/api/workflows' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListWorkflows(request, env), request));
+    }
+    if (path === '/api/workflows' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCreateWorkflow(request, env), request));
+    }
+    if (path.match(/^\/api\/workflows\/([^/]+)$/) && method === 'PATCH') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const wfId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleUpdateWorkflow(request, env, wfId), request));
+    }
+    if (path.match(/^\/api\/workflows\/([^/]+)$/) && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const wfId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleDeleteWorkflow(request, env, wfId), request));
+    }
+    if (path.match(/^\/api\/workflows\/([^/]+)\/execute$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const wfId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleExecuteWorkflow(request, env, wfId), request));
+    }
+    if (path.match(/^\/api\/workflows\/([^/]+)\/executions$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const wfId = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleWorkflowExecutions(request, env, wfId), request));
+    }
+
+    // ── White Label MSSP ──────────────────────────────────────────────────────
+    if (path === '/api/white-label/theme' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGetTheme(request, env), request));
+    }
+    if (path === '/api/white-label/theme' && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleUpdateTheme(request, env), request));
+    }
+    if (path === '/api/white-label/theme' && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleDeleteTheme(request, env), request));
+    }
+    if (path.match(/^\/api\/white-label\/theme\/([^/]+)$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      const orgId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleGetThemeByOrg(request, env, orgId), request));
+    }
+
+    // ── Product Analytics ─────────────────────────────────────────────────────
+    if (path === '/api/analytics/p3/event' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleIngestEvent(request, env), request));
+    }
+    if (path === '/api/analytics/p3/growth' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGrowthMetrics(request, env), request));
+    }
+    if (path === '/api/analytics/p3/funnel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleConversionFunnel(request, env), request));
+    }
+    if (path === '/api/analytics/p3/adoption' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleFeatureAdoption(request, env), request));
+    }
+    if (path === '/api/analytics/p3/prune' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handlePruneEvents(request, env), request));
+    }
+
+    // ── Notification Platform ─────────────────────────────────────────────────
+    if (path === '/api/notifications/preferences' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGetPreferences(request, env), request));
+    }
+    if (path === '/api/notifications/preferences' && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleUpdatePreferences(request, env), request));
+    }
+    if (path === '/api/notifications/log' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleNotificationLog(request, env), request));
+    }
+    if (path === '/api/notifications/test' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleTestNotification(request, env), request));
+    }
+    if (path === '/api/notifications/send' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleAdminSendNotification(request, env), request));
+    }
+
+    // ── Reliability Engineering ───────────────────────────────────────────────
+    if (path === '/api/reliability/sla' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleSLAReport(request, env), request));
+    }
+    if (path === '/api/reliability/error-budget' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleErrorBudget(request, env), request));
+    }
+    if (path === '/api/reliability/capacity' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCapacityMetrics(request, env), request));
+    }
+    if (path === '/api/reliability/incidents' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListIncidents(request, env), request));
+    }
+    if (path === '/api/reliability/incident' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCreateIncident(request, env), request));
+    }
+    // ── END PHASE 3 ROUTES ────────────────────────────────────────────────────
 
     // GET /api/threat-intel/stream — SSE real-time feed (Phase 1)
     // Must be BEFORE the /:id catch-all
