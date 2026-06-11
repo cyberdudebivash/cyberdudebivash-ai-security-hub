@@ -351,70 +351,67 @@ footer a{color:#10b981;margin:0 8px}
 </footer>
 
 <script>
+// ── CYBERDUDEBIVASH Intel Hub — Live Data Engine ──────────────────────────────
+const _INTEL_API='https://tools.cyberdudebivash.com';
+
 // Clock
 function tick(){
   const n=new Date();
-  document.getElementById('nav-time').textContent=n.toUTCString().split(' ').slice(4,5)[0]+' UTC';
+  const el=document.getElementById('nav-time');
+  if(el)el.textContent=n.toUTCString().split(' ').slice(4,5)[0]+' UTC';
 }
 tick();setInterval(tick,1000);
 
 // Terminal animation
 const TERM_LINES=[
-  {delay:0,  html:'<span class="prompt">sentinel@apex:~$</span> <span class="cmd">python3 -m sentinel.pipeline --fetch-threats</span>'},
-  {delay:400,html:'<span class="out">[+] Connecting to 15 RSS feeds...</span>'},
-  {delay:800,html:'<span class="ok">[✓] Feed 1: NVD CVE (312 items)</span>'},
-  {delay:1100,html:'<span class="ok">[✓] Feed 3: CERT-IN (87 items)</span>'},
-  {delay:1400,html:'<span class="warn">[!] New CRITICAL: CVE-2025-4891 (CVSS 9.8)</span>'},
-  {delay:1700,html:'<span class="out">[+] Running risk scoring engine...</span>'},
+  {delay:0,   html:'<span class="prompt">sentinel@apex:~$</span> <span class="cmd">python3 -m sentinel.pipeline --fetch-threats</span>'},
+  {delay:400, html:'<span class="out">[+] Connecting to 15 RSS feeds...</span>'},
+  {delay:800, html:'<span class="ok">[&#x2713;] Feed 1: NVD CVE fetched</span>'},
+  {delay:1100,html:'<span class="ok">[&#x2713;] Feed 3: CERT-IN fetched</span>'},
+  {delay:1400,html:'<span class="warn">[!] New CRITICAL entry detected (CVSS 9.8)</span>'},
+  {delay:1700,html:'<span class="out">[+] Running AI risk scoring engine...</span>'},
   {delay:2000,html:'<span class="hit">[ALERT] TLP:RED — AI agent exploit chain detected</span>'},
-  {delay:2400,html:'<span class="ok">[✓] 847 items processed, 34 CRITICAL flagged</span>'},
+  {delay:2400,html:'<span class="ok">[&#x2713;] Items processed, CRITICAL entries flagged</span>'},
   {delay:2800,html:'<span class="out">[+] Publishing to Sentinel APEX dashboard...</span>'},
-  {delay:3200,html:'<span class="ok">[✓] intel.cyberdudebivash.com updated</span>'},
+  {delay:3200,html:'<span class="ok">[&#x2713;] intel.cyberdudebivash.com updated</span>'},
   {delay:3500,html:'<span class="prompt">sentinel@apex:~$</span> <span class="term-cursor"></span>'},
 ];
 const tb=document.getElementById('terminal-body');
-TERM_LINES.forEach(l=>{
-  setTimeout(()=>{
-    const div=document.createElement('div');
-    div.className='term-line';
-    div.innerHTML=l.html;
-    tb.appendChild(div);
-    div.style.animation='termline .3s forwards';
-    tb.scrollTop=tb.scrollHeight;
-  },l.delay);
-});
+if(tb){
+  TERM_LINES.forEach(l=>{
+    setTimeout(()=>{
+      const div=document.createElement('div');
+      div.className='term-line';
+      div.innerHTML=l.html;
+      tb.appendChild(div);
+      tb.scrollTop=tb.scrollHeight;
+    },l.delay);
+  });
+}
 
-// Feed filter
+// Feed tab filter — re-applies after live content loads
 function switchTab(type,btn){
   document.querySelectorAll('.feed-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  if(btn)btn.classList.add('active');
   document.querySelectorAll('.intel-item').forEach(i=>{
     i.style.display=(type==='all'||i.dataset.type===type)?'grid':'none';
   });
 }
 
-// Subscribe
-function subscribe(){
-  const e=document.getElementById('sub-email');
-  if(!e.value||!e.value.includes('@')){e.style.borderColor='#ef4444';return;}
-  e.style.borderColor='#10b981';
-  e.value='';
-  const btn=e.nextElementSibling;
-  btn.textContent='✓ Subscribed!';btn.style.color='#10b981';
-  setTimeout(()=>{btn.textContent='Subscribe to Threat Feed';btn.style.color='';},3000);
+// Animate counter to a target value
+function animateCounter(id,start,end,duration){
+  const el=document.getElementById(id);
+  if(!el||isNaN(end))return;
+  const step=(end-start)/(duration/16);
+  let cur=start;
+  const timer=setInterval(()=>{
+    cur+=step;
+    if(cur>=end){cur=end;clearInterval(timer);}
+    el.textContent=Math.round(cur).toLocaleString();
+  },16);
 }
 
-// Animate counters on load
-['stat-total','stat-crit','stat-cve','stat-actors'].forEach(id=>{
-  const el=document.getElementById(id);
-  if(!el)return;
-  const target=parseInt(el.textContent);
-  let cur=0;const step=target/50;
-  const t=setInterval(()=>{cur+=step;if(cur>=target){cur=target;clearInterval(t);}el.textContent=Math.round(cur);},20);
-});
-</script>
-
-<script src="/assets/geo-currency-router.js"></script>
-<script src="/assets/checkout-modal.js" defer></script>
-</body>
-</html>
+// ── FEATURE 5: Real email subscription ───────────────────────────────────────
+async function subscribe(){
+  const e=document.getElementById('sub-email');
+ 
