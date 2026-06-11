@@ -8924,7 +8924,7 @@ function setLoading(module, on, msg = '') {
 
   if (on) {
     // Show skeleton loader in results panel while scanning
-    if (panel) panel.innerHTML = buildSkeletonCard(module);
+    if (panel) { panel.classList.add('show'); panel.innerHTML = buildSkeletonCard(module); }
     startScanSteps(module);
   } else {
     stopScanSteps(module);
@@ -10030,6 +10030,7 @@ function renderPlanBadge() {
 function showQuotaUpgradeCTA(module) {
   const resultsEl = document.getElementById(`results-${module}`);
   if (!resultsEl) return;
+  resultsEl.classList.add('show'); // fix: results-panel is display:none without .show
   const plan = SUBSCRIPTION.getPlan();
   const nextPlan = plan === 'FREE' ? 'STARTER (₹499/mo)' : plan === 'STARTER' ? 'PRO (₹1,499/mo)' : 'Enterprise';
   resultsEl.innerHTML = `
@@ -12380,6 +12381,7 @@ function buildSkeletonCard(module) {
 function showErrorState(module, message, retryFn = null) {
   const panel = document.getElementById(`results-${module}`);
   if (!panel) return;
+  panel.classList.add('show'); // fix: results-panel is display:none without .show
   const retryBtn = retryFn
     ? `<button class="btn-retry" onclick="(${retryFn.toString()})()">↻ Retry</button>`
     : '';
@@ -21897,9 +21899,4 @@ function v21TriggerUrgencyPayment(){
       <div class="cdb-kpi-grid">
         <div class="cdb-kpi-card accent-purple">
           <div class="cdb-kpi-label">AI Assets</div>
-          <div class="cdb-kpi-value" id="cdb-ai-total-assets">—</div>
-          <div class="cdb-kpi-sub">Registered AI systems</div>
-        </div>
-        <div class="cdb-kpi-card accent-orange">
-          <div class="cdb-kpi-label">Risk Score</div>
-      
+          <div class="cdb-kpi-value" id="cdb-ai-total-as
