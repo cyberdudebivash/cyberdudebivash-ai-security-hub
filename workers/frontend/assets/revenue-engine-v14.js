@@ -117,9 +117,10 @@ function _injectStrongPaywall(panel, module, data, target) {
   const lColor    = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#a78bfa', LOW:'#10b981' }[level] || '#f59e0b';
   const lockedCnt = (data.locked_findings || []).length;
 
-  // Urgency: how many people viewed similar reports today
-  const viewCount = null; // v30: removed fake view counter
+  // FIX v30.1: viewCount was set to null, causing "null security teams" to render in the DOM.
+  // Now using factual, scan-derived urgency data only — no fake social counters.
   const fixTime   = module === 'redteam' ? '72 hours' : module === 'compliance' ? '48 hours' : '24 hours';
+  const critFindings = (data.findings || []).filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH').length;
 
   const paywall = document.createElement('div');
   paywall.className = 'v14-strong-paywall';
@@ -194,15 +195,23 @@ function _injectStrongPaywall(panel, module, data, target) {
       </div>
     </div>
 
-    <!-- Social proof urgency -->
-    <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding:10px 14px;
+    <!-- Urgency bar — factual data only, no fake counters (v30.1 fix) -->
+    ${(critFindings > 0 || lockedCnt > 0) ? `
+    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px 14px;
                 background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px">
       <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;
                   animation:urgencyPulse 1.5s ease infinite"></div>
       <div style="font-size:12px;color:rgba(255,255,255,.6)">
-        <strong style="color:#ef4444">${viewCount} security teams</strong> scanned similar targets today ·
-        <strong style="color:#f59e0b">${lockedCnt} critical risks</strong> require immediate patching
+        ${critFindings > 0
+          ? `<strong style="color:#ef4444">${critFindings} critical/high finding${critFindings > 1 ? 's' : ''}</strong> detected in this scan`
+          : `<strong style="color:#f59e0b">${lockedCnt} premium finding${lockedCnt > 1 ? 's' : ''}</strong> available in full report`
+        }
+        &nbsp;·&nbsp; Full remediation roadmap unlocked with report
       </div>
+    </div>` : ''}
+    <!-- Trust footer -->
+    <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.25);text-align:center">
+      ✅ Zero data collection on scan targets &nbsp;·&nbsp; GST Invoice included &nbsp;·&nbsp; CIN: U74999OR2024PTC049281
     </div>
   `;
 
@@ -1199,30 +1208,3 @@ function _init() {
   // Marketplace urgency (Phase 6) — start watching
   setTimeout(() => {
     MARKETPLACE_URGENCY.injectIntoCards();
-    MARKETPLACE_URGENCY.watchForNewCards();
-  }, 2000);
-
-  // Demo slots
-  setTimeout(_injectDemoSlots, 1000);
-
-  // Restore local pipeline board
-  setTimeout(_updatePipelineBoard, 1500);
-
-  // Update sticky scans counter from activity engine
-  setInterval(() => {
-    const state = ACTIVITY_ENGINE.getState();
-    _setRevEl('v14-sticky-scans', `${state.scansRunning} active scans`);
-  }, 12000);
-
-  console.log(`[OMNIGOD REVENUE ENGINE v${REV.version}] All systems online ⚡`);
-}
-
-// Boot when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _init);
-} else {
-  // DOM already loaded
-  setTimeout(_init, 100);
-}
-
-})(); // END OMNIGOD_REVENUE_ENGINE
