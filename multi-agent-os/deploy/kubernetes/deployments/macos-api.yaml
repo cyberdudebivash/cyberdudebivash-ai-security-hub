@@ -1,0 +1,125 @@
+# CYBERDUDEBIVASH® MACOS — Kubernetes Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cdb-macos-api
+  namespace: cdb-production
+  labels:
+    app: cdb-macos-api
+    tier: backend
+    version: "1.0.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cdb-macos-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: cdb-macos-api
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "8000"
+        prometheus.io/path:   "/metrics"
+    spec:
+      serviceAccountName: cdb-macos
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup:   1001
+      containers:
+        - name: api
+          image: cdb/macos-api:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: ENVIRONMENT
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cdb-macos-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cdb-macos-secrets
+                  key: redis-url
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cdb-ai-secrets
+                  key: groq-api-key
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cdb-ai-secrets
+                  key: anthropic-api-key
+                  optional: true    # Explicitly optional
+          envFrom:
+            - configMapRef:
+                name: cdb-macos-config
+          resources:
+            requests:
+              cpu:    "500m"
+              memory: "512Mi"
+            limits:
+              cpu:    "2000m"
+              memory: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem:   true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: [cdb-macos-api]
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdb-macos-api-pdb
+  namespace: cdb-production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: cdb-macos-api

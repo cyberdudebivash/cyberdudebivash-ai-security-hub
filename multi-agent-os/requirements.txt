@@ -1,0 +1,48 @@
+# CYBERDUDEBIVASH® Multi-Agent Cybersecurity OS
+# Python 3.12+ required
+
+# Core framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+
+# Async + performance
+uvloop>=0.19.0
+httptools>=0.6.1
+httpx>=0.27.0
+asyncpg>=0.29.0
+redis[hiredis]>=5.0.4
+
+# AI / LangGraph
+langchain>=0.2.0
+langgraph>=0.1.0
+langchain-core>=0.2.0
+openai>=1.30.0  # Client lib (provider-agnostic, works with any OpenAI-compatible API)
+
+# Vector DB
+qdrant-client>=1.9.0
+
+# Observability
+opentelemetry-api>=1.24.0
+opentelemetry-sdk>=1.24.0
+opentelemetry-instrumentation-fastapi>=0.45b0
+opentelemetry-exporter-otlp-proto-grpc>=1.24.0
+prometheus-client>=0.20.0
+structlog>=24.2.0
+
+# Security
+PyJWT>=2.8.0
+cryptography>=42.0.0
+bcrypt>=4.1.0
+
+# Kafka
+aiokafka>=0.11.0
+
+# Data
+orjson>=3.10.0
+
+# Testing
+pytest>=8.2.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0

@@ -1,0 +1,177 @@
+# CYBERDUDEBIVASH® Multi-Agent Cybersecurity OS
+# Docker Compose — Full local development stack
+# Usage: docker-compose up -d
+
+version: "3.9"
+
+x-common-env: &common-env
+  ENVIRONMENT: development
+  DATABASE_URL: postgresql://cdb:cdb_secret@postgres:5432/cdb_macos
+  REDIS_URL: redis://redis:6379/0
+  QDRANT_URL: http://qdrant:6333
+  KAFKA_BROKERS: kafka:9092
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_SERVICE_NAME: cdb-macos
+  ADMIN_API_KEY: cdb-macos-admin-2026
+  # AI Providers — set via .env file, NOT hardcoded here
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}   # OPTIONAL
+  CF_ACCOUNT_ID: ${CF_ACCOUNT_ID:-}
+  CF_API_TOKEN: ${CF_API_TOKEN:-}
+
+services:
+  # ── MACOS API ──────────────────────────────────────────────────────────────
+  macos-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: cdb/macos-api:latest
+    container_name: cdb-macos-api
+    ports:
+      - "8000:8000"
+    environment: *common-env
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis:    {condition: service_healthy}
+      qdrant:   {condition: service_started}
+      kafka:    {condition: service_started}
+    volumes:
+      - ../:/app
+    networks: [cdb-network]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cdb-postgres
+    environment:
+      POSTGRES_DB:       cdb_macos
+      POSTGRES_USER:     cdb
+      POSTGRES_PASSWORD: cdb_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../schemas/postgres_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    networks: [cdb-network]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cdb -d cdb_macos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: cdb-redis
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+    volumes:
+      - redis_data:/data
+    networks: [cdb-network]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Qdrant Vector DB ───────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: cdb-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks: [cdb-network]
+    restart: unless-stopped
+
+  # ── Kafka ──────────────────────────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: cdb-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks: [cdb-network]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: cdb-kafka
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks: [cdb-network]
+    restart: unless-stopped
+
+  # ── OpenTelemetry Collector ────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.101.0
+    container_name: cdb-otel
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ../observability/otel-config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks: [cdb-network]
+    restart: unless-stopped
+
+  # ── Prometheus ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: cdb-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks: [cdb-network]
+    restart: unless-stopped
+
+  # ── Grafana ────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: cdb-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-cdb_grafana_2026}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../observability/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../observability/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3001:3000"
+    networks: [cdb-network]
+    restart: unless-stopped
+
+networks:
+  cdb-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
