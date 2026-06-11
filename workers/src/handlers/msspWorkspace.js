@@ -7,7 +7,8 @@
  *           enterprise/admin for own-org views.
  */
 
-import { nanoid } from 'nanoid'; // available via CF Workers
+// Use native CF Workers crypto — no external package needed
+const nanoid = (n = 21) => crypto.randomUUID().replace(/-/g, '').slice(0, n);
 
 function requireMSSPAdmin(authCtx) {
   return authCtx?.role === 'admin' || authCtx?.role === 'mssp_admin';

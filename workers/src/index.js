@@ -61,13 +61,26 @@ import { handleDeepHealth, handleServicesList }                                 
 
 // ── v33.0 PHASE 3 ENTERPRISE MATURITY IMPORTS ─────────────────────────────
 import { handleCustomerHealth, handleCustomerHealthByOrg, handleCustomerSuccessOverview, handleRefreshHealthScores, handleCustomerSuccessPlaybooks } from './handlers/customerSuccess.js';
-import { handleListReports, handleCreateReport, handleGetReport, handleDownloadReport, handleReportTemplates, handleScheduleReport } from './handlers/reportingEngine.js';
+// Aliased to avoid collision with executiveReport.js (handleListReports, handleGetReport)
+import {
+  handleListReports as handleListEnterpriseReports,
+  handleCreateReport as handleCreateEnterpriseReport,
+  handleGetReport as handleGetEnterpriseReport,
+  handleDownloadReport as handleDownloadEnterpriseReport,
+  handleReportTemplates as handleEnterpriseReportTemplates,
+  handleScheduleReport as handleScheduleEnterpriseReport,
+} from './handlers/reportingEngine.js';
 import { handleGlobalSearch, handleSaveSearch, handleListSavedSearches, handleDeleteSavedSearch } from './handlers/globalSearch.js';
 import { handleListWorkflows, handleCreateWorkflow, handleUpdateWorkflow, handleDeleteWorkflow, handleExecuteWorkflow, handleWorkflowExecutions, handleWorkflowTemplates } from './handlers/workflowAutomation.js';
 import { handleGetTheme, handleUpdateTheme, handleDeleteTheme, handleGetThemeByOrg } from './handlers/whiteLabelMSSP.js';
 import { handleIngestEvent, handleGrowthMetrics, handleConversionFunnel, handleFeatureAdoption, handlePruneEvents } from './handlers/productAnalytics.js';
 import { handleGetPreferences, handleUpdatePreferences, handleNotificationLog, handleTestNotification, handleAdminSendNotification } from './handlers/notificationPlatform.js';
-import { handleSLAReport, handleErrorBudget, handleCapacityMetrics, handleListIncidents, handleCreateIncident } from './handlers/reliabilityEngineering.js';
+// Aliased to avoid collision with cisoMetrics.js (handleCreateIncident)
+import {
+  handleSLAReport, handleErrorBudget, handleCapacityMetrics,
+  handleListIncidents as handleListReliabilityIncidents,
+  handleCreateIncident as handleCreateReliabilityIncident,
+} from './handlers/reliabilityEngineering.js';
 
 // ── v28 AI SECURITY PLATFORM IMPORTS ─────────────────────────────────────────
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
@@ -1750,34 +1763,34 @@ export default {
     if (path === '/api/reports' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleListReports(request, env), request));
+      return withSecurityHeaders(withCors(await handleListEnterpriseReports(request, env), request));
     }
     if (path === '/api/reports' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleCreateReport(request, env), request));
+      return withSecurityHeaders(withCors(await handleCreateEnterpriseReport(request, env), request));
     }
     if (path === '/api/reports/templates' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleReportTemplates(request, env), request));
+      return withSecurityHeaders(withCors(await handleEnterpriseReportTemplates(request, env), request));
     }
     if (path === '/api/reports/schedule' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleScheduleReport(request, env), request));
+      return withSecurityHeaders(withCors(await handleScheduleEnterpriseReport(request, env), request));
     }
     if (path.match(/^\/api\/reports\/([^/]+)$/) && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
       const jobId = path.split('/').pop();
-      return withSecurityHeaders(withCors(await handleGetReport(request, env, jobId), request));
+      return withSecurityHeaders(withCors(await handleGetEnterpriseReport(request, env, jobId), request));
     }
     if (path.match(/^\/api\/reports\/([^/]+)\/download$/) && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
       const jobId = path.split('/')[3];
-      return withSecurityHeaders(withCors(await handleDownloadReport(request, env, jobId), request));
+      return withSecurityHeaders(withCors(await handleDownloadEnterpriseReport(request, env, jobId), request));
     }
 
     // ── Global Search ─────────────────────────────────────────────────────────
@@ -1940,12 +1953,12 @@ export default {
     if (path === '/api/reliability/incidents' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleListIncidents(request, env), request));
+      return withSecurityHeaders(withCors(await handleListReliabilityIncidents(request, env), request));
     }
     if (path === '/api/reliability/incident' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleCreateIncident(request, env), request));
+      return withSecurityHeaders(withCors(await handleCreateReliabilityIncident(request, env), request));
     }
     // ── END PHASE 3 ROUTES ────────────────────────────────────────────────────
 
