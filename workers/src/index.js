@@ -82,6 +82,13 @@ import {
   handleCreateIncident as handleCreateReliabilityIncident,
 } from './handlers/reliabilityEngineering.js';
 
+// ── v34.0 PHASE 4 GOD MODE IMPORTS ───────────────────────────────────────────
+import { handleGetMetrics, handleRefreshMetrics, handleMetricsHistory, handlePlatformStatus } from './handlers/platformMetricsAuthority.js';
+import { handleGetTimeline, handleListEvidence, handleAddEvidence, handleListNotes, handleAddNote, handleEscalateCase, handleInvestigationSummary, handleResolveCase } from './handlers/socInvestigations.js';
+import { handleListWatchlists, handleCreateWatchlist, handleListWatchlistEntries, handleAddWatchlistEntry, handleDeleteWatchlist, handleWatchlistMatch, handleEnrichIOC, handleSTIXExport } from './handlers/ctiPlatformV2.js';
+import { handleCreateSnapshot, handleRevenueHistory, handleRevenueForecast, handleRevenueWaterfall, handleCohortAnalysis, handleTierMix } from './handlers/revenueIntelligence.js';
+import { handleGetExpansionScore, handleListSegments, handleLogUpsellEvent, handleUpsellFunnel, handleFeatureGates } from './handlers/commercializationEngine.js';
+
 // ── v28 AI SECURITY PLATFORM IMPORTS ─────────────────────────────────────────
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
@@ -1961,6 +1968,176 @@ export default {
       return withSecurityHeaders(withCors(await handleCreateReliabilityIncident(request, env), request));
     }
     // ── END PHASE 3 ROUTES ────────────────────────────────────────────────────
+
+    // ── v34.0 PHASE 4 GOD MODE ROUTES ────────────────────────────────────────
+
+    // ── Platform Metrics Authority: /api/authority/* ──────────────────────────
+    if (path === '/api/authority/metrics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGetMetrics(request, env), request));
+    }
+    if (path === '/api/authority/refresh' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleRefreshMetrics(request, env), request));
+    }
+    if (path === '/api/authority/history' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleMetricsHistory(request, env), request));
+    }
+    if (path === '/api/authority/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handlePlatformStatus(request, env), request));
+    }
+
+    // ── SOC Investigation Depth: /api/soc/inv/:caseId/* ──────────────────────
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/timeline$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGetTimeline(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/evidence$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListEvidence(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/evidence$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleAddEvidence(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/notes$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListNotes(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/notes$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleAddNote(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/escalate$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleEscalateCase(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/summary$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleInvestigationSummary(request, env), request));
+    }
+    if (path.match(/^\/api\/soc\/inv\/[^/]+\/resolve$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleResolveCase(request, env), request));
+    }
+
+    // ── CTI Platform V2: /api/cti/v2/* ───────────────────────────────────────
+    // NOTE: /watchlists/match must come BEFORE the /:id catch-all
+    if (path === '/api/cti/v2/watchlists/match' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleWatchlistMatch(request, env), request));
+    }
+    if (path === '/api/cti/v2/watchlists' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListWatchlists(request, env), request));
+    }
+    if (path === '/api/cti/v2/watchlists' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCreateWatchlist(request, env), request));
+    }
+    if (path.match(/^\/api\/cti\/v2\/watchlists\/[^/]+\/entries$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListWatchlistEntries(request, env), request));
+    }
+    if (path.match(/^\/api\/cti\/v2\/watchlists\/[^/]+\/entries$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleAddWatchlistEntry(request, env), request));
+    }
+    if (path.match(/^\/api\/cti\/v2\/watchlists\/[^/]+$/) && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleDeleteWatchlist(request, env), request));
+    }
+    if (path === '/api/cti/v2/ioc/enrich' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleEnrichIOC(request, env), request));
+    }
+    if (path === '/api/cti/v2/stix/export' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleSTIXExport(request, env), request));
+    }
+
+    // ── Revenue Intelligence: /api/revenue/intel/* ───────────────────────────
+    if (path === '/api/revenue/intel/snapshot' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCreateSnapshot(request, env), request));
+    }
+    if (path === '/api/revenue/intel/history' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleRevenueHistory(request, env), request));
+    }
+    if (path === '/api/revenue/intel/forecast' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleRevenueForecast(request, env), request));
+    }
+    if (path === '/api/revenue/intel/waterfall' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleRevenueWaterfall(request, env), request));
+    }
+    if (path === '/api/revenue/intel/cohorts' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleCohortAnalysis(request, env), request));
+    }
+    if (path === '/api/revenue/intel/tiermix' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleTierMix(request, env), request));
+    }
+
+    // ── Commercialization Engine: /api/commercial/* ───────────────────────────
+    if (path.match(/^\/api\/commercial\/expansion\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleGetExpansionScore(request, env), request));
+    }
+    if (path === '/api/commercial/segments' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleListSegments(request, env), request));
+    }
+    if (path === '/api/commercial/upsell/event' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleLogUpsellEvent(request, env), request));
+    }
+    if (path === '/api/commercial/upsell/funnel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleUpsellFunnel(request, env), request));
+    }
+    if (path === '/api/commercial/features/gates' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleFeatureGates(request, env), request));
+    }
+
+    // ── END PHASE 4 ROUTES ────────────────────────────────────────────────────
 
     // GET /api/threat-intel/stream — SSE real-time feed (Phase 1)
     // Must be BEFORE the /:id catch-all
