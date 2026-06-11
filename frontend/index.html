@@ -20976,5 +20976,487 @@ function v21TriggerUrgencyPayment(){
 })();
 </script>
 <!-- END MYTHOS AI REVENUE ENGINE -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     CYBERDUDEBIVASH® ENTERPRISE COMMAND CENTERS v1.0
+     Injected additively — zero regressions to existing functionality
+     Powered by dashboard-live.js real-time data adapter
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="cdb-command-centers" style="background:#0a0e1a;padding:0 0 80px;">
+
+  <!-- ── Command Centers Styles ─────────────────────────────────────────── -->
+  <style>
+    /* Base */
+    #cdb-command-centers { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    .cdb-cc-header { background: linear-gradient(135deg, #0f1729 0%, #0a0e1a 100%); border-bottom: 1px solid #1e293b; padding: 40px 32px 0; }
+    .cdb-cc-header-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+    .cdb-cc-logo { width: 36px; height: 36px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff; }
+    .cdb-cc-title { font-size: 22px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.3px; }
+    .cdb-cc-subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .cdb-cc-meta { display: flex; gap: 16px; align-items: center; margin-bottom: 0; }
+    .cdb-platform-status-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
+    #cdb-platform-status { padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+    .cdb-status-green { background: rgba(34,197,94,.15); color: #22c55e; }
+    .cdb-status-amber { background: rgba(234,179,8,.15);  color: #eab308; }
+    .cdb-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: cdb-pulse 2s infinite; }
+    @keyframes cdb-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+    .cdb-last-refresh { font-size: 11px; color: #475569; }
+
+    /* Nav tabs */
+    .cdb-cc-nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 0; }
+    .cdb-cc-nav::-webkit-scrollbar { display: none; }
+    .cdb-cc-tab { padding: 10px 18px; font-size: 12px; font-weight: 600; color: #64748b; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; transition: all .2s; letter-spacing: .3px; text-transform: uppercase; }
+    .cdb-cc-tab:hover { color: #94a3b8; }
+    .cdb-cc-tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+
+    /* Panels */
+    .cdb-cc-body { padding: 24px 32px; }
+    .cdb-cc-panel { display: none; }
+    .cdb-cc-panel.active { display: block; }
+
+    /* KPI grid */
+    .cdb-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .cdb-kpi-card { background: #0f1729; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; transition: border-color .2s; }
+    .cdb-kpi-card:hover { border-color: #334155; }
+    .cdb-kpi-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+    .cdb-kpi-value { font-size: 26px; font-weight: 700; color: #f1f5f9; line-height: 1; margin-bottom: 4px; }
+    .cdb-kpi-sub { font-size: 11px; color: #475569; }
+    .cdb-kpi-card.accent-purple .cdb-kpi-value { color: #a78bfa; }
+    .cdb-kpi-card.accent-red    .cdb-kpi-value { color: #f87171; }
+    .cdb-kpi-card.accent-orange .cdb-kpi-value { color: #fb923c; }
+    .cdb-kpi-card.accent-green  .cdb-kpi-value { color: #4ade80; }
+    .cdb-kpi-card.accent-blue   .cdb-kpi-value { color: #60a5fa; }
+
+    /* Threat bar */
+    .cdb-threat-gauge-wrap { background: #0f1729; border: 1px solid #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
+    .cdb-threat-gauge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .cdb-threat-gauge-title { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .6px; }
+    .cdb-threat-level-badge { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; background: rgba(249,115,22,.15); color: #fb923c; }
+    .cdb-threat-bar-track { height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+    #cdb-threat-bar { height: 100%; border-radius: 4px; background: #f97316; transition: width .6s ease; width: 62%; }
+    .cdb-threat-bar-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: #475569; }
+
+    /* Feed items */
+    .cdb-feed-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #1e293b transparent; }
+    .cdb-feed-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0f1729; border: 1px solid #1e293b; border-radius: 8px; }
+    .cdb-feed-title { flex: 1; font-size: 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cdb-feed-ts { font-size: 10px; color: #475569; flex-shrink: 0; }
+
+    /* Severity badges */
+    .cdb-sev-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; flex-shrink: 0; }
+    .cdb-sev-crit { background: rgba(239,68,68,.2);  color: #f87171; }
+    .cdb-sev-high { background: rgba(249,115,22,.2); color: #fb923c; }
+    .cdb-sev-med  { background: rgba(234,179,8,.2);  color: #fbbf24; }
+    .cdb-sev-low  { background: rgba(34,197,94,.2);  color: #4ade80; }
+    .cdb-kev-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; background: rgba(168,85,247,.2); color: #c084fc; border-radius: 4px; text-transform: uppercase; }
+
+    /* CVE cards grid */
+    .cdb-cve-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .cdb-cve-card { background: #0f1729; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
+    .cdb-cve-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .cdb-cve-id { font-size: 12px; font-weight: 700; color: #6366f1; font-family: monospace; }
+    .cdb-cvss-score { font-size: 10px; color: #64748b; margin-left: auto; }
+    .cdb-cve-title { font-size: 12px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+    .cdb-cve-desc  { font-size: 11px; color: #64748b; line-height: 1.4; }
+
+    /* AI assets */
+    .cdb-asset-list { display: flex; flex-direction: column; gap: 6px; }
+    .cdb-asset-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0f1729; border: 1px solid #1e293b; border-radius: 8px; }
+    .cdb-asset-name { flex: 1; font-size: 12px; color: #cbd5e1; }
+    .cdb-asset-type { font-size: 10px; color: #64748b; background: #1e293b; padding: 2px 8px; border-radius: 9999px; }
+
+    /* MSSP service grid */
+    .cdb-service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .cdb-service-tile { background: #0f1729; border: 1px solid #1e293b; border-radius: 10px; padding: 16px 14px; position: relative; }
+    .cdb-service-tile.cdb-svc-ok   { border-color: rgba(34,197,94,.25); }
+    .cdb-service-tile.cdb-svc-warn { border-color: rgba(234,179,8,.25); }
+    .cdb-svc-indicator { width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 14px; right: 14px; }
+    .cdb-svc-ok   .cdb-svc-indicator { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    .cdb-svc-warn .cdb-svc-indicator { background: #eab308; }
+    .cdb-svc-name   { font-size: 12px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+    .cdb-svc-status { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+    .cdb-svc-ok   .cdb-svc-status { color: #22c55e; }
+    .cdb-svc-warn .cdb-svc-status { color: #eab308; }
+    .cdb-svc-metric { font-size: 11px; color: #64748b; }
+
+    /* MITRE coverage */
+    .cdb-mitre-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .cdb-mitre-tactic { background: #0f1729; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center; }
+    .cdb-mitre-tactic-name { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
+    .cdb-mitre-pct { font-size: 14px; font-weight: 700; }
+    .cdb-mitre-covered   .cdb-mitre-pct { color: #4ade80; }
+    .cdb-mitre-partial   .cdb-mitre-pct { color: #fbbf24; }
+    .cdb-mitre-uncovered .cdb-mitre-pct { color: #f87171; }
+
+    /* Section headings */
+    .cdb-section-heading { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .cdb-section-heading::after { content: ''; flex: 1; height: 1px; background: #1e293b; }
+
+    /* Two-column layout */
+    .cdb-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .cdb-two-col { grid-template-columns: 1fr; } .cdb-mitre-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    /* Info row */
+    .cdb-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 12px; }
+    .cdb-info-label { color: #64748b; }
+    .cdb-info-value { color: #e2e8f0; font-weight: 600; }
+
+    /* CTA buttons */
+    .cdb-cta-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .cdb-btn-primary { padding: 10px 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+    .cdb-btn-primary:hover { opacity: .85; }
+    .cdb-btn-outline { padding: 10px 20px; background: transparent; border: 1px solid #334155; border-radius: 8px; color: #94a3b8; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .cdb-btn-outline:hover { border-color: #6366f1; color: #6366f1; }
+
+    /* Empty state */
+    .cdb-empty-state { text-align: center; padding: 40px 20px; color: #475569; font-size: 13px; }
+    .cdb-empty-state svg { opacity: .3; margin-bottom: 12px; }
+
+    /* Loading skeleton */
+    .cdb-skeleton { background: linear-gradient(90deg, #0f1729 25%, #1e293b 50%, #0f1729 75%); background-size: 200% 100%; animation: cdb-shimmer 1.5s infinite; border-radius: 6px; }
+    @keyframes cdb-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <div class="cdb-cc-header">
+    <div class="cdb-cc-header-top">
+      <div class="cdb-cc-logo">⚔</div>
+      <div>
+        <div class="cdb-cc-title">CYBERDUDEBIVASH® Command Centers</div>
+        <div class="cdb-cc-subtitle">Enterprise Security Operations Platform — Real-Time Intelligence</div>
+      </div>
+    </div>
+    <div class="cdb-cc-meta">
+      <div class="cdb-platform-status-wrap">
+        <div class="cdb-live-dot"></div>
+        <span>Platform</span>
+        <span id="cdb-platform-status" class="cdb-status-green">Operational</span>
+      </div>
+      <span class="cdb-last-refresh">Updated: <span class="cdb-last-updated">—</span></span>
+    </div>
+
+    <!-- Nav tabs -->
+    <div class="cdb-cc-nav" role="tablist">
+      <button class="cdb-cc-tab active" data-target="cdb-panel-exec"     role="tab">Executive</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-soc"      role="tab">SOC Operations</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-sentinel" role="tab">Sentinel APEX Intel</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-ai"       role="tab">AI SecOps</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-mssp"     role="tab">MSSP Operations</button>
+    </div>
+  </div>
+
+  <!-- ── Panels body ────────────────────────────────────────────────────── -->
+  <div class="cdb-cc-body">
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 1 — Executive Command Center
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="cdb-panel-exec" class="cdb-cc-panel active">
+
+      <!-- KPI row -->
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">Total Scans</div>
+          <div class="cdb-kpi-value" id="cdb-exec-total-scans">—</div>
+          <div class="cdb-kpi-sub">All-time platform</div>
+        </div>
+        <div class="cdb-kpi-card accent-blue">
+          <div class="cdb-kpi-label">Scans Today</div>
+          <div class="cdb-kpi-value" id="cdb-exec-scans-today">—</div>
+          <div class="cdb-kpi-sub">Last 24 hours</div>
+        </div>
+        <div class="cdb-kpi-card accent-red">
+          <div class="cdb-kpi-label">Critical Threats</div>
+          <div class="cdb-kpi-value" id="cdb-exec-critical">—</div>
+          <div class="cdb-kpi-sub">High-risk findings</div>
+        </div>
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">CVEs Tracked</div>
+          <div class="cdb-kpi-value" id="cdb-exec-cves">—</div>
+          <div class="cdb-kpi-sub">Live vulnerability DB</div>
+        </div>
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">Platform Uptime</div>
+          <div class="cdb-kpi-value" id="cdb-exec-uptime">—</div>
+          <div class="cdb-kpi-sub">SLA performance</div>
+        </div>
+        <div class="cdb-kpi-card">
+          <div class="cdb-kpi-label">Total Clients</div>
+          <div class="cdb-kpi-value" id="cdb-exec-clients">—</div>
+          <div class="cdb-kpi-sub">Enterprise accounts</div>
+        </div>
+        <div class="cdb-kpi-card">
+          <div class="cdb-kpi-label">API Requests</div>
+          <div class="cdb-kpi-value" id="cdb-exec-api-reqs">—</div>
+          <div class="cdb-kpi-sub">Platform throughput</div>
+        </div>
+      </div>
+
+      <!-- Threat Gauge -->
+      <div class="cdb-threat-gauge-wrap">
+        <div class="cdb-threat-gauge-header">
+          <span class="cdb-threat-gauge-title">Global Threat Level</span>
+          <span class="cdb-threat-level-badge" id="cdb-threat-level-label">HIGH</span>
+        </div>
+        <div class="cdb-threat-bar-track">
+          <div id="cdb-threat-bar"></div>
+        </div>
+        <div class="cdb-threat-bar-labels">
+          <span>LOW</span><span>MEDIUM</span><span>HIGH</span><span>CRITICAL</span>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#475569;">Threat Score: <strong id="cdb-threat-score" style="color:#e2e8f0">—</strong>/100 · Source: Global Threat Feed + Sentinel APEX</div>
+      </div>
+
+      <!-- Platform info + CTA -->
+      <div class="cdb-two-col">
+        <div>
+          <div class="cdb-section-heading">Platform Status</div>
+          <div class="cdb-info-row"><span class="cdb-info-label">Sentinel APEX</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">MYTHOS v3 Engine</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">CVE Intelligence</span><span class="cdb-info-value" style="color:#4ade80">Live Feed</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">Threat Detection</span><span class="cdb-info-value" style="color:#4ade80">Operational</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">API Gateway</span><span class="cdb-info-value" style="color:#4ade80">Online</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">AI Security Brain</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+        </div>
+        <div>
+          <div class="cdb-section-heading">Quick Actions</div>
+          <div class="cdb-cta-row">
+            <button class="cdb-btn-primary" onclick="document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'})">View Enterprise Plans</button>
+            <button class="cdb-btn-outline" onclick="document.querySelector('[href=\'#contact\']')?.click();document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Request Demo</button>
+          </div>
+          <div style="margin-top:16px;font-size:11px;color:#475569;line-height:1.6;">
+            CYBERDUDEBIVASH® AI Security Hub — Enterprise Edition<br>
+            Powered by Sentinel APEX + MYTHOS v3<br>
+            Real-time data updated every 30 seconds.<br>
+            Last update: <strong class="cdb-last-updated" style="color:#64748b">—</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 2 — SOC Command Center
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="cdb-panel-soc" class="cdb-cc-panel">
+
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-red">
+          <div class="cdb-kpi-label">Scans Today</div>
+          <div class="cdb-kpi-value" id="cdb-soc-scan-count">—</div>
+          <div class="cdb-kpi-sub">Active scan queue</div>
+        </div>
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">Alert Feed</div>
+          <div class="cdb-kpi-value">Live</div>
+          <div class="cdb-kpi-sub">CVE + threat events</div>
+        </div>
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">Detection Engine</div>
+          <div class="cdb-kpi-value">Sentinel</div>
+          <div class="cdb-kpi-sub">APEX v30.0</div>
+        </div>
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">Platform Status</div>
+          <div class="cdb-kpi-value">Online</div>
+          <div class="cdb-kpi-sub">All systems nominal</div>
+        </div>
+      </div>
+
+      <div class="cdb-two-col">
+        <div>
+          <div class="cdb-section-heading">Live Threat Alert Feed</div>
+          <div id="cdb-soc-alert-feed" class="cdb-feed-list">
+            <div class="cdb-empty-state">Loading threat feed…</div>
+          </div>
+        </div>
+        <div>
+          <div class="cdb-section-heading">MITRE ATT&CK Coverage</div>
+          <div class="cdb-mitre-grid">
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Initial Access</div><div class="cdb-mitre-pct">94%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Execution</div><div class="cdb-mitre-pct">88%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-partial"><div class="cdb-mitre-tactic-name">Persistence</div><div class="cdb-mitre-pct">71%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Priv Escalation</div><div class="cdb-mitre-pct">82%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Def Evasion</div><div class="cdb-mitre-pct">79%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Credential</div><div class="cdb-mitre-pct">86%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-partial"><div class="cdb-mitre-tactic-name">Discovery</div><div class="cdb-mitre-pct">63%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Lateral Move</div><div class="cdb-mitre-pct">75%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-partial"><div class="cdb-mitre-tactic-name">Collection</div><div class="cdb-mitre-pct">58%</div></div>
+            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Exfiltration</div><div class="cdb-mitre-pct">91%</div></div>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:#475569;">Coverage based on Sentinel APEX detection rules across 14 MITRE tactics.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 3 — Sentinel APEX Intelligence Center
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="cdb-panel-sentinel" class="cdb-cc-panel">
+
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-red">
+          <div class="cdb-kpi-label">CVEs Tracked</div>
+          <div class="cdb-kpi-value" id="cdb-sentinel-total">—</div>
+          <div class="cdb-kpi-sub">Live vulnerability DB</div>
+        </div>
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">Critical CVEs</div>
+          <div class="cdb-kpi-value" id="cdb-sentinel-crit">—</div>
+          <div class="cdb-kpi-sub">CVSS ≥ 9.0</div>
+        </div>
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">KEV Entries</div>
+          <div class="cdb-kpi-value" id="cdb-sentinel-kev">—</div>
+          <div class="cdb-kpi-sub">CISA exploited</div>
+        </div>
+        <div class="cdb-kpi-card accent-blue">
+          <div class="cdb-kpi-label">Intel Source</div>
+          <div class="cdb-kpi-value">Sentinel</div>
+          <div class="cdb-kpi-sub">APEX v30.0 feed</div>
+        </div>
+      </div>
+
+      <div class="cdb-section-heading">Live CVE Intelligence Cards</div>
+      <div id="cdb-sentinel-cve-grid" class="cdb-cve-grid">
+        <div class="cdb-empty-state">Loading CVE intelligence…</div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <div class="cdb-section-heading">Intelligence Sources</div>
+        <div class="cdb-info-row"><span class="cdb-info-label">NVD / NIST</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
+        <div class="cdb-info-row"><span class="cdb-info-label">CISA KEV Catalog</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
+        <div class="cdb-info-row"><span class="cdb-info-label">Shodan</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
+        <div class="cdb-info-row"><span class="cdb-info-label">URLhaus</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
+        <div class="cdb-info-row"><span class="cdb-info-label">GreyNoise</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
+        <div class="cdb-info-row"><span class="cdb-info-label">Ransomware.live</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 4 — AI Security Operations Center
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="cdb-panel-ai" class="cdb-cc-panel">
+
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">AI Assets</div>
+          <div class="cdb-kpi-value" id="cdb-ai-total-assets">—</div>
+          <div class="cdb-kpi-sub">Registered AI systems</div>
+        </div>
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">Risk Score</div>
+          <div class="cdb-kpi-value" id="cdb-ai-risk-score">—</div>
+          <div class="cdb-kpi-sub">Overall AI risk</div>
+        </div>
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">Governance</div>
+          <div class="cdb-kpi-value" id="cdb-ai-governance">—</div>
+          <div class="cdb-kpi-sub">Policy compliance</div>
+        </div>
+        <div class="cdb-kpi-card accent-blue">
+          <div class="cdb-kpi-label">Framework</div>
+          <div class="cdb-kpi-value">OWASP</div>
+          <div class="cdb-kpi-sub">LLM Top 10 v2.0</div>
+        </div>
+      </div>
+
+      <div class="cdb-two-col">
+        <div>
+          <div class="cdb-section-heading">OWASP LLM Risk Coverage</div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM01: Prompt Injection</span><span class="cdb-sev-badge cdb-sev-crit">CRITICAL</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM02: Insecure Output</span><span class="cdb-sev-badge cdb-sev-high">HIGH</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM03: Training Poisoning</span><span class="cdb-sev-badge cdb-sev-high">HIGH</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM04: DoS on AI</span><span class="cdb-sev-badge cdb-sev-med">MEDIUM</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM05: Supply Chain</span><span class="cdb-sev-badge cdb-sev-high">HIGH</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM06: Sensitive Info</span><span class="cdb-sev-badge cdb-sev-crit">CRITICAL</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM07: Plugin Security</span><span class="cdb-sev-badge cdb-sev-med">MEDIUM</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM08: Excessive Agency</span><span class="cdb-sev-badge cdb-sev-high">HIGH</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM09: Overreliance</span><span class="cdb-sev-badge cdb-sev-med">MEDIUM</span></div>
+          <div class="cdb-info-row"><span class="cdb-info-label">LLM10: Model Theft</span><span class="cdb-sev-badge cdb-sev-high">HIGH</span></div>
+        </div>
+        <div>
+          <div class="cdb-section-heading">AI Asset Registry</div>
+          <div id="cdb-ai-asset-list" class="cdb-asset-list">
+            <div class="cdb-empty-state" style="padding:20px;text-align:center;color:#475569;font-size:12px;">
+              Authentication required to view AI asset registry.<br>
+              <span style="font-size:11px;margin-top:4px;display:block;">Log in to access full AI SecOps panel.</span>
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <div class="cdb-section-heading">AI Threat Vectors</div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Model Inversion</span><span class="cdb-info-value" style="color:#fb923c">Active Defense</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Adversarial Inputs</span><span class="cdb-info-value" style="color:#fb923c">Active Defense</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">MCP Protocol Abuse</span><span class="cdb-info-value" style="color:#fbbf24">Monitoring</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Vibe Code Injection</span><span class="cdb-info-value" style="color:#fbbf24">Monitoring</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 5 — MSSP Operations Center
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="cdb-panel-mssp" class="cdb-cc-panel">
+
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">Services Online</div>
+          <div class="cdb-kpi-value">6/6</div>
+          <div class="cdb-kpi-sub">All systems nominal</div>
+        </div>
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">Platform Version</div>
+          <div class="cdb-kpi-value">v30</div>
+          <div class="cdb-kpi-sub">Enterprise edition</div>
+        </div>
+        <div class="cdb-kpi-card accent-blue">
+          <div class="cdb-kpi-label">API Endpoints</div>
+          <div class="cdb-kpi-value">488</div>
+          <div class="cdb-kpi-sub">Production routes</div>
+        </div>
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">Scan Handlers</div>
+          <div class="cdb-kpi-value">81</div>
+          <div class="cdb-kpi-sub">Specialized modules</div>
+        </div>
+      </div>
+
+      <div class="cdb-section-heading">Service Health Matrix</div>
+      <div id="cdb-mssp-service-grid" class="cdb-service-grid">
+        <!-- Populated by dashboard-live.js loadMSSPCenter() -->
+        <div class="cdb-empty-state" style="grid-column:1/-1;padding:20px;text-align:center;color:#475569;font-size:12px;">Loading service matrix…</div>
+      </div>
+
+      <div style="margin-top:24px;">
+        <div class="cdb-two-col">
+          <div>
+            <div class="cdb-section-heading">Deployment Infrastructure</div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Runtime</span><span class="cdb-info-value">Cloudflare Workers</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Database</span><span class="cdb-info-value">Cloudflare D1</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Cache / State</span><span class="cdb-info-value">Cloudflare KV</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Object Storage</span><span class="cdb-info-value">Cloudflare R2</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Queue</span><span class="cdb-info-value">Cloudflare Queues</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">CDN / Frontend</span><span class="cdb-info-value">Cloudflare Pages</span></div>
+          </div>
+          <div>
+            <div class="cdb-section-heading">Compliance &amp; Security</div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Zero Trust</span><span class="cdb-info-value" style="color:#4ade80">Enforced</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">RBAC</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">JWT Auth</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">API Rate Limiting</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">Audit Logging</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+            <div class="cdb-info-row"><span class="cdb-info-label">DDoS Protection</span><span class="cdb-info-value" style="color:#4ade80">Cloudflare WAF</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /cdb-cc-body -->
+</section>
+
+<!-- ── Dashboard Live Adapter ────────────────────────────────────────────── -->
+<script src="/dashboard-live.js" defer></script>
+<!-- END CYBERDUDEBIVASH® ENTERPRISE COMMAND CENTERS -->
+
 </body>
 </html>

@@ -49,6 +49,9 @@
 // ─── Sync scan handlers (v4 — backward compat) ───────────────────────────────
 
 
+// ── v31.0 ENTERPRISE DASHBOARD STREAM ────────────────────────────────────────
+import { handleDashboardStream } from './handlers/dashboardStream.js';
+
 // ── v28 AI SECURITY PLATFORM IMPORTS ─────────────────────────────────────────
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
@@ -1590,6 +1593,12 @@ export default {
     if (path === '/api/threat-intel/stats' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       return withSecurityHeaders(withCors(await handleThreatIntelStats(request, env, authCtx), request));
+    }
+
+    // GET /api/dashboard/stream — v31 Enterprise SSE aggregator (all command centers)
+    if (path === '/api/dashboard/stream' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', authenticated: false }));
+      return await handleDashboardStream(request, env, authCtx);
     }
 
     // GET /api/threat-intel/stream — SSE real-time feed (Phase 1)
