@@ -16,6 +16,7 @@
  */
 
 import { callClaude } from '../core/mythosAIProvider.js';
+import { lookupCVE   } from '../services/cveEngine.js';
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
 function json(data, status = 200) {
@@ -227,42 +228,72 @@ export async function handleIntelCVE(request, env, authCtx) {
     }
   } catch {}
 
-  // AI enrichment (PRO+)
+  // ── Static CVE_DB fallback when D1 has no record ────────────────────────────
+  // CRITICAL FIX: prevents hallucination on unknown CVEs
+  let staticCVE = null;
+  if (!record && cveId) {
+    staticCVE = lookupCVE(cveId); // returns null if not in static DB
+  }
+
+  // Resolved record: D1 takes priority, static DB is fallback, null = not found
+  const resolved = record
+    ? {
+        cve_id:       record.cve_id || cveId,
+        title:        record.title,
+        description:  record.description,
+        cvss_score:   record.cvss_score,
+        kev_listed:   record.actively_exploited === 1 || record.kev === 1 || false,
+        source:       record.source || 'NVD',
+        found_in_db:  true,
+      }
+    : staticCVE
+    ? {
+        cve_id:       staticCVE.id,
+        title:        `${staticCVE.id} — ${staticCVE.description.slice(0, 60)}`,
+        description:  staticCVE.description,
+        cvss_score:   staticCVE.cvss,
+        kev_listed:   staticCVE.exploited || false,
+        source:       'CYBERDUDEBIVASH Static Intel DB (NVD/CISA KEV)',
+        found_in_db:  true,
+        cwe:          staticCVE.cwe,
+        epss:         staticCVE.epss,
+        nvd_url:      staticCVE.nvd_url,
+      }
+    : null;
+
+  const cvssScore = resolved?.cvss_score || null;
+  const severity  = cvssScore ? (cvssScore >= 9 ? 'CRITICAL' : cvssScore >= 7 ? 'HIGH' : cvssScore >= 4 ? 'MEDIUM' : 'LOW') : null;
+
+  // ── AI enrichment — ONLY when CVE is actually found ─────────────────────────
+  // SECURITY: Never run AI enrichment on unknown CVEs — prevents hallucination
   let aiEnrichment = null;
-  if (authCtx?.tier !== 'FREE' || authCtx?.isAdmin) {
+  if (resolved && (authCtx?.tier !== 'FREE' || authCtx?.isAdmin)) {
     try {
       const prompt = cveId
-        ? `Provide threat intelligence for ${cveId}: exploitation status, affected products, patch availability, CVSS context, and attacker motivation. Be concise (4-5 sentences).`
+        ? `Provide a concise threat intelligence brief for ${resolved.cve_id}:
+Description: ${resolved.description}
+CVSS: ${resolved.cvss_score} (${severity})
+KEV Listed: ${resolved.kev_listed}
+
+Cover: active exploitation evidence, affected products/versions, patch availability, attacker motivation, and top 2 defensive actions. 4-5 sentences. Be precise — do not add information not grounded in the description above.`
         : `Search threat intelligence for: "${search}". Summarize relevant CVEs, risk level, and recommended actions. Be concise.`;
       const result = await callClaude(env, { prompt, tier: 'PRO', max_tokens: 250, temperature: 0.1 });
       aiEnrichment = result?.content?.trim() || null;
     } catch {}
   }
 
-  const cvssScore = record?.cvss_score || (cveId ? 7.5 : null);
-  const severity  = cvssScore ? (cvssScore >= 9 ? 'CRITICAL' : cvssScore >= 7 ? 'HIGH' : cvssScore >= 4 ? 'MEDIUM' : 'LOW') : null;
-
   return json({
     success:  true,
     api:      'CYBERDUDEBIVASH Threat Intel API',
     endpoint: 'cve',
     query:    { cve_id: cveId || null, search: search || null },
-    result:   record ? {
-      cve_id:       record.cve_id || cveId,
-      title:        record.title,
-      description:  record.description,
-      cvss_score:   record.cvss_score,
-      severity,
-      published_at: record.published_at || record.created_at,
-      patch_url:    record.patch_url || null,
-      kev_listed:   record.actively_exploited === 1 || record.kev === 1 || false,
-      source:       record.source || 'NVD',
-    } : {
-      cve_id:       cveId || null,
-      found_in_db:  false,
-      note:         'CVE not in local database. AI analysis below based on public knowledge.',
-      cvss_score:   null,
-      kev_listed:   false,
+    result:   resolved || {
+      cve_id:      cveId || null,
+      found_in_db: false,
+      note:        `CVE not in local database. Reference: https://nvd.nist.gov/vuln/detail/${cveId || ''}`,
+      cvss_score:  null,
+      severity:    null,
+      kev_listed:  false,
     },
     ai_enrichment:    aiEnrichment,
     mitre_mapping:    cveId ? 'T1190 (Exploit Public-Facing Application)' : null,

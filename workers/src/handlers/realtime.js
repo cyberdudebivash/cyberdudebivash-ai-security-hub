@@ -253,7 +253,14 @@ async function buildPlatformStats(env) {
         env.DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE severity = 'HIGH'`).first().catch(() => ({ n: 0 })),
         env.DB.prepare(`SELECT created_at FROM scan_jobs ORDER BY created_at DESC LIMIT 1`).first().catch(() => null),
       ]);
-      const totalScans = Math.max((scansJobs?.n || 0), (scansHist?.n || 0));
+      // v40.0: Also read KV counter as authoritative source (written by all scan handlers)
+      let kvCount = 0;
+      try {
+        const day = new Date().toISOString().slice(0, 10);
+        const kvVal = await env?.SECURITY_HUB_KV?.get(`scan_count:total:${day}`).catch(() => null);
+        kvCount = parseInt(kvVal || '0', 10) || 0;
+      } catch {}
+      const totalScans = Math.max((scansJobs?.n || 0), (scansHist?.n || 0), kvCount);
       stats.total_scans_today = totalScans;
       stats.active_threats    = threats?.n  || 0;
       stats.critical_cves     = crits?.n    || 0;

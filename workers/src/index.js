@@ -2980,7 +2980,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ── Phase B: Threat Intelligence API Economy ──────────────────────────────
-    if (path === '/api/intel/ioc' && (method === 'GET' || method === 'POST')) {
+    if ((path === '/api/intel/ioc' || path === '/api/intel/ioc/enrich') && (method === 'GET' || method === 'POST')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIntelIOC(request, env, authCtx || {}), request));
     }
@@ -2988,7 +2988,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIntelCVE(request, env, authCtx || {}), request));
     }
-    if (path === '/api/intel/actor' && (method === 'GET' || method === 'POST')) {
+    if ((path === '/api/intel/actor' || path === '/api/intel/threat-actors') && (method === 'GET' || method === 'POST')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIntelActor(request, env, authCtx || {}), request));
     }
@@ -3040,7 +3040,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ── Phase B: AI Security Posture Management ───────────────────────────────
-    if (path === '/api/aispm/inventory' && method === 'POST') {
+    if ((path === '/api/aispm/inventory' || path === '/api/aispm/scan') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleAISPMInventory(request, env, authCtx || {}), request));
     }
@@ -3076,7 +3076,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
-    if (path === '/api/asm/targets' && method === 'POST') {
+    if ((path === '/api/asm/targets' || path === '/api/asm/scan') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleASMAddTarget(request, env, authCtx || {}, ctx), request));
     }
@@ -3432,7 +3432,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleSetMRRConfig(request, env, authCtx), request));
     }
-    if (path === '/api/executive/report' && method === 'POST') {
+    if ((path === '/api/executive/report' || path === '/api/reports/executive') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleGenerateReport(request, env, authCtx), request));
     }

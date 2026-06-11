@@ -8,7 +8,7 @@ function genScanId() { return 'sc_' + Date.now().toString(36) + Math.random().to
 
 export async function handleCompliance(request, env, authCtx = {}) {
   const body    = await parseBody(request);
-  const orgVal  = validateString(sanitizeString(body?.org_name || body?.org || body?.organization || ''), 'org_name', 2, 120);
+  const orgVal  = validateString(sanitizeString(body?.org_name || body?.org || body?.organization || body?.domain || body?.target || ''), 'org_name', 2, 120);
   if (!orgVal.valid) return Response.json({ error: 'Validation failed', message: orgVal.message }, { status: 400 });
 
   const fwVal   = validateEnum((body?.framework || 'iso27001').toLowerCase(), 'framework', VALID_FRAMEWORKS, 'iso27001');

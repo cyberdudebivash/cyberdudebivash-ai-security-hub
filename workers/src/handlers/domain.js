@@ -15,6 +15,20 @@ import { fullBlacklistCheck }                from '../lib/dnsbl.js';
 import { enrichScanAdaptive } from '../core/adaptiveCyberBrain.js';
 // v32.0 — Enterprise Intelligence enrichment (ATT&CK T-codes, EPSS, threat actors, CVE correlation)
 import { enrichScanEnterprise, enrichFindingsWithATTACK, matchThreatActors, quantifyBusinessImpact } from '../services/enterpriseIntelligence.js';
+// v40.0 — MYTHOS enrichment (all scan types)
+import { enrichAssessmentWithMYTHOS } from '../services/mythosEnrichmentEngine.js';
+
+// ─── KV scan counter — reliable cross-handler increment ──────────────────────
+async function incrementScanCounter(env) {
+  try {
+    const kv  = env.SECURITY_HUB_KV;
+    if (!kv) return;
+    const day = new Date().toISOString().slice(0, 10);
+    const key = `scan_count:total:${day}`;
+    const cur = parseInt((await kv.get(key).catch(() => '0')) || '0', 10);
+    await kv.put(key, String(cur + 1), { expirationTtl: 90 * 86400 }).catch(() => {});
+  } catch {}
+}
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
@@ -327,37 +341,55 @@ export async function handleDomainScan(request, env, authCtx = {}) {
       .catch(() => scanResult);
   }
 
-  // ── v22.0: Non-blocking D1 scan tracking (fixes zero-counter bug) ──────────
-  (async () => {
-    try {
-      if (env?.DB) {
-        const jobId = `sync_${scanId}`;
-        await env.DB.prepare(
-          `INSERT OR IGNORE INTO scan_jobs
-           (id, module, target, status, risk_level, risk_score, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
-        ).bind(
-          jobId, 'domain', domain, 'completed',
-          scanResult.risk_level || 'LOW',
-          scanResult.risk_score || 0
-        ).run();
-        // Write to scan_history for authenticated users
-        if (authCtx?.user_id) {
-          await env.DB.prepare(
-            `INSERT INTO scan_history (user_id, job_id, scan_id, target, module, risk_score, risk_level, grade, data_source, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          ).bind(
-            authCtx.user_id, jobId, scanId, domain, 'domain',
-            scanResult.risk_score || 0, scanResult.risk_level || 'LOW',
-            scanResult.grade || 'A', dataSource, 'completed'
-          ).run();
-        }
-      }
-    } catch { /* non-blocking — never fail the scan response */ }
-  })();
+  // ── v40.0: MYTHOS enrichment on all domain scans ────────────────────────────
+  try {
+    scanResult = await enrichAssessmentWithMYTHOS(env, {
+      report:       scanResult,
+      findings:     scanResult.findings || [],
+      service_name: 'Domain & DNS Security Scanner',
+      service_ref:  'CDB-DOM-001',
+      target:       domain,
+      sector:       authCtx?.sector || 'Technology',
+      tier:         authCtx?.tier   || 'FREE',
+      probe_results: { status: scanResult.risk_level, api_accessible: true },
+    });
+  } catch { /* non-blocking — MYTHOS enrichment must never break scan response */ }
 
-  return Response.json(addMonetizationFlags(scanResult, 'domain', authCtx, scanId), {
+  // ── v40.1+: Guaranteed D1 tracking — awaited before response (no ctx.waitUntil needed) ───
+  const finalResponse = Response.json(addMonetizationFlags(scanResult, 'domain', authCtx, scanId), {
     status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v32.0' },
   });
+  try {
+    void incrementScanCounter(env);
+    if (env?.DB) {
+      const jobId   = `sync_${crypto.randomUUID().slice(0,8)}_${scanId}`;
+      const identity = authCtx?.user_id || authCtx?.keyId || 'api_anon';
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO scan_jobs
+         (id, user_id, identity, module, target, status, risk_level, risk_score, completed_at)
+         VALUES (?, ?, ?, 'domain', ?, 'completed', ?, ?, datetime('now'))`
+      ).bind(
+        jobId,
+        authCtx?.user_id || null,
+        identity,
+        domain,
+        scanResult.risk_level || 'LOW',
+        scanResult.risk_score || 0
+      ).run();
+      if (authCtx?.user_id) {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO scan_history (user_id, job_id, scan_id, target, module, risk_score, risk_level, grade, data_source, status)
+           VALUES (?, ?, ?, ?, 'domain', ?, ?, ?, ?, 'completed')`
+        ).bind(
+          authCtx.user_id, jobId, scanId, domain,
+          scanResult.risk_score || 0,
+          scanResult.risk_level || 'LOW',
+          scanResult.grade || 'A',
+          dataSource || 'live_dns'
+        ).run();
+      }
+    }
+  } catch { /* tracking must never break scan response */ }
+  return finalResponse;
 }
