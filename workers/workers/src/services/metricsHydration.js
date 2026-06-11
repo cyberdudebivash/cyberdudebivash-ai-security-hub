@@ -84,8 +84,8 @@ async function fetchLiveMetricsFromD1(env) {
     /* 0 */ db.prepare("SELECT COALESCE(SUM(1),0) AS v FROM scan_history"),
     /* 1 */ db.prepare("SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history"),
     /* 2 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')"),
-    // FIX: cisa_kev and active_exploitation now exist after schema_v31_p0_fixes.sql
-    /* 3 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE cisa_kev=1 OR active_exploitation=1"),
+    // Use columns confirmed in remote schema: actively_exploited + source
+    /* 3 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
     // FIX: active_customers reads from subscriptions table, not payments
     /* 4 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'"),
     /* 5 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND created_at > datetime('now','-1 day')"),
@@ -93,7 +93,7 @@ async function fetchLiveMetricsFromD1(env) {
     /* 7 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel"),
     /* 8 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM assessment_bookings WHERE status IN ('confirmed','completed')"),
     /* 9 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80"),
-    /* 10 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE cisa_kev=1"),
+    /* 10 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
     // soar_rules table added in v31 — graceful if absent
     /* 11 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM soar_rules").catch(() => ({ results: [{ v: 0 }] })),
   ]);
