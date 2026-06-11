@@ -2401,32 +2401,24 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   avg_risk_score      REAL    DEFAULT 0.0,
   total_scans         INTEGER DEFAULT 0,
   total_purchases     INTEGER DEFAULT 0,
-  total_revenue_inr   INTEGER DEFAULT 0,
-  last_active         TEXT    NOT NULL DEFAULT (datetime('now')),
-  updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+  total_rev
+-- ════════════════════════════════════════════════════════════════════════════════
+-- Platform Health Checks — stores automated 6-hourly health test results
+-- Written by the scheduled() cron handler on 0 */6 * * *
+-- ════════════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS platform_health_checks (
+  id              TEXT    PRIMARY KEY,
+  overall_status  TEXT    NOT NULL DEFAULT 'UNKNOWN',  -- PASS | DEGRADED | FAIL
+  passing         INTEGER NOT NULL DEFAULT 0,
+  failing         INTEGER NOT NULL DEFAULT 0,
+  duration_ms     INTEGER,
+  results_json    TEXT,   -- JSON array of { name, status, detail, ran_at }
+  checked_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_profiles_behavior ON user_profiles(conversion_behavior);
-CREATE INDEX IF NOT EXISTS idx_user_profiles_pattern  ON user_profiles(risk_pattern);
-
--- Phase 5: Context performance stats
-CREATE TABLE IF NOT EXISTS mcp_context_stats (
-  id                  TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  context             TEXT    NOT NULL,           -- scan_result | dashboard | exit_intent
-  recommendation_type TEXT    NOT NULL,
-  item_id             TEXT    NOT NULL,
-  total_shown         INTEGER NOT NULL DEFAULT 0,
-  total_conversions   INTEGER NOT NULL DEFAULT 0,
-  conversion_rate     REAL    NOT NULL DEFAULT 0.0,
-  updated_at          TEXT    NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(context, recommendation_type, item_id)
-);
-
--- Phase 7: A/B experiment tracking
-CREATE TABLE IF NOT EXISTS mcp_ab_results (
-  id                  TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  experiment_id       TEXT    NOT NULL,           -- e.g. 'cta_variant_bundle_202601'
-  variant             TEXT    NOT NULL,           -- 'A' | 'B'
+CREATE INDEX IF NOT EXISTS idx_health_checks_time   ON platform_health_checks(checked_at DESC);
+CREATE INDEX IF NOT EXISTS idx_health_checks_status ON platform_health_checks(overall_status);
+XT    NOT NULL,           -- 'A' | 'B'
   item_id             TEXT,
   cta_text            TEXT,
   context             TEXT,

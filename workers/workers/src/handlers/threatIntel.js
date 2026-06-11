@@ -337,6 +337,7 @@ export async function handleThreatIntelStats(request, env, authCtx = {}) {
 
       stats = {
         total_advisories:    total?.n ?? 0,
+        total_cves:          total?.n ?? 0,   // alias for frontend attention engine
         critical:            bySevMap.CRITICAL ?? 0,
         high:                bySevMap.HIGH ?? 0,
         medium:              bySevMap.MEDIUM ?? 0,

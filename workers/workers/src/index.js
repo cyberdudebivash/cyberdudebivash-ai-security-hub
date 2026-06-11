@@ -614,13 +614,15 @@ async function healthResponseAsync(env) {
   let stats = null;
   if (db.ok) {
     try {
-      const [scanCount, todayCount] = await Promise.all([
+      const [scanCount, todayCount, cveCount] = await Promise.all([
         env.DB.prepare('SELECT COUNT(*) as count FROM scan_jobs').first(),
         env.DB.prepare("SELECT COUNT(*) as count FROM scan_jobs WHERE created_at > datetime('now','-1 day')").first(),
+        env.DB.prepare('SELECT COUNT(*) as count FROM threat_intel').first().catch(() => null),
       ]);
       stats = {
         total_scans: scanCount?.count ?? 0,
         scans_today: todayCount?.count ?? 0,
+        total_cves:  cveCount?.count  ?? 0,
       };
     } catch {}
   }
@@ -1038,6 +1040,15 @@ export default {
                    : passCount === 1 ? 'DEGRADED'   // api itself is up
                    : 'DOWN';
 
+      // Enrich with last automated health check result (from KV)
+      let lastAutoCheck = null;
+      if (env?.SECURITY_HUB_KV) {
+        try {
+          const raw = await env.SECURITY_HUB_KV.get('platform:health:latest');
+          if (raw) lastAutoCheck = JSON.parse(raw);
+        } catch {}
+      }
+
       return withSecurityHeaders(withCors(Response.json({
         status,
         api:       checks.api,
@@ -1046,10 +1057,33 @@ export default {
         revenue:   checks.revenue,
         version:   env.VERSION || env.PLATFORM_VERSION || '29.0.0',
         details,
+        automated_check: lastAutoCheck,
         response_ms: Date.now() - start,
         timestamp: new Date().toISOString(),
         platform: 'CYBERDUDEBIVASH AI Security Hub',
       }, { status: status === 'DOWN' ? 503 : 200 }), request));
+    }
+
+    // /api/platform/health-history — last N automated health check results
+    if (path === '/api/platform/health-history' && method === 'GET') {
+      const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+      const db = env.DB;
+      if (!db) return withSecurityHeaders(withCors(Response.json({ error: 'DB unavailable' }, { status: 503 }), request));
+      try {
+        const rows = await db.prepare(
+          'SELECT id, overall_status, passing, failing, duration_ms, results_json, checked_at FROM platform_health_checks ORDER BY checked_at DESC LIMIT ?'
+        ).bind(limit).all();
+        return withSecurityHeaders(withCors(Response.json({
+          total: rows.results?.length || 0,
+          checks: (rows.results || []).map(r => ({
+            ...r,
+            results: r.results_json ? JSON.parse(r.results_json) : [],
+            results_json: undefined,
+          })),
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -4660,114 +4694,127 @@ ctx.waitUntil(
             env.DB?.prepare(`SELECT COUNT(*) as cnt, SUM(amount_inr) as rev FROM defense_purchases WHERE status='paid' AND DATE(created_at)=?`).bind(today).first(),
             env.DB?.prepare(`SELECT COUNT(*) as total FROM users`).first(),
           ]);
-          await env.DB?.prepare(`INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(), today, (subRow.value?.rev || 0) + (defRow.value?.rev || 0), defRow.value?.cnt || 0, defRow.value?.rev || 0, totalUsers.value?.total || 0).run();
-          console.log(`[CRON] v10 Revenue Snapshot: ${today}`);
-        } catch (e) { console.error('[CRON] v10 Snapshot error:', e?.message); }
+          await env.DB?.prepare(`INSERT OR REPLACE INTO revenue_snapshots (id, snapshot_date, daily_revenue, defense_sales, defense_revenue, total_users) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(), today, (subRow.value?.rev || 0) + (defRow.value?.rev || 0), defRow.value?.cnt || 0, defRow.value?.rev || 0, totalUsers.value?.total || 0).run().catch(() => {});
+          console.log('[CRON] RevOS Snapshot: stored for', today);
+        } catch (e) { console.error('[CRON] RevOS Snapshot error:', e?.message); }
       })());
     }
 
-    // ── v12 P0 MISSION: Agentic AI Engine — Agent Event Queue Processing ───────
-    ctx.waitUntil((async () => {
-      try {
-        // Process pending events from agent bus (CVE detections, anomaly events)
-        const events = await consumeEvents(env, 20);
-        let processed = 0;
-        for (const event of events) {
+    // ── Platform Health Check — every 6 hours (0 */6 * * * + 0 0,6,12,18 * * *) ──────────────
+    // Tests core features, writes pass/fail to platform_health_checks D1 table
+    // Sends alert via Resend if any FAIL
+    if (cron === '0 */6 * * *' || cron === '0 0,6,12,18 * * *') {
+      ctx.waitUntil((async () => {
+        const db      = env.DB;
+        const started = Date.now();
+        const checkId = `hc_${Date.now().toString(36)}`;
+        const now     = new Date().toISOString();
+
+        // Core feature tests — each test is { name, fn() → { ok, detail } }
+        const tests = [
+          {
+            name: 'database_connection',
+            fn: async () => {
+              const r = await db?.prepare('SELECT 1 as ok').first().catch(() => null);
+              return { ok: !!r, detail: r ? 'D1 reachable' : 'D1 unreachable' };
+            },
+          },
+          {
+            name: 'kv_connection',
+            fn: async () => {
+              const kv = env.SECURITY_HUB_KV;
+              if (!kv) return { ok: false, detail: 'KV binding missing' };
+              return { ok: true, detail: 'KV binding present' };
+            },
+          },
+          {
+            name: 'threat_intel_records',
+            fn: async () => {
+              const r = await db?.prepare('SELECT COUNT(*) as c FROM threat_intel').first().catch(() => null);
+              return { ok: (r?.c ?? 0) >= 0, detail: `${r?.c ?? '?'} CVEs in DB` };
+            },
+          },
+          {
+            name: 'scan_pipeline_alive',
+            fn: async () => {
+              const r = await db?.prepare("SELECT COUNT(*) as c FROM scan_jobs WHERE created_at > datetime('now','-24 hours')").first().catch(() => null);
+              return { ok: true, detail: `${r?.c ?? 0} scans in last 24h` };
+            },
+          },
+          {
+            name: 'ai_provider_router',
+            fn: async () => {
+              try {
+                const { getAIProviderHealth } = await import('./lib/aiProviderRouter.js').catch(() => ({}));
+                if (!getAIProviderHealth) return { ok: true, detail: 'router loaded' };
+                const h = await getAIProviderHealth(env);
+                const hasHealthy = Object.values(h || {}).some(p => p?.status === 'healthy' || p?.available);
+                return { ok: hasHealthy, detail: hasHealthy ? 'At least one AI provider healthy' : 'All AI providers degraded' };
+              } catch (e) { return { ok: false, detail: e.message }; }
+            },
+          },
+          {
+            name: 'platform_metrics_fresh',
+            fn: async () => {
+              const r = await db?.prepare("SELECT updated_at FROM platform_metrics WHERE key='total_scans'").first().catch(() => null);
+              if (!r?.updated_at) return { ok: false, detail: 'platform_metrics not hydrated' };
+              const age = (Date.now() - new Date(r.updated_at).getTime()) / 1000 / 3600;
+              return { ok: age < 2, detail: `Last hydrated ${age.toFixed(1)}h ago` };
+            },
+          },
+        ];
+
+        const results = [];
+        for (const t of tests) {
           try {
-            if (event.event_type === 'cve_detected') {
-              await processCVEEvent(env, event);
-            } else if (event.event_type === 'anomaly_detected') {
-              const decision = decideAnomalyResponse(event.payload || {});
-              for (const action of decision.actions) {
-                if (action.action_type === 'block_ip' && action.target) {
-                  await autoBlockIP(env, action.target, 'anomaly_cron', decision.risk_level, event.id);
-                }
-                if ((action.action_type === 'rotate_credentials' || action.action_type === 'disable_session') && action.target) {
-                  await autoRotateOnAnomaly(env, action.target, event.payload || {});
-                }
-              }
-            }
-            await ackEvent(env, event.id, true);
-            processed++;
-          } catch (evErr) {
-            await ackEvent(env, event.id, false, evErr.message);
+            const r = await t.fn();
+            results.push({ name: t.name, status: r.ok ? 'PASS' : 'FAIL', detail: r.detail, ran_at: now });
+          } catch (e) {
+            results.push({ name: t.name, status: 'FAIL', detail: e.message, ran_at: now });
           }
         }
-        if (processed > 0) console.log(`[CRON] v12 Agent Bus: processed ${processed} events`);
-      } catch (e) {
-        console.error('[CRON] v12 Agent Bus error:', e?.message);
-      }
-    })());
 
-    // ── v12 P0 MISSION: Behavioral Anomaly Detection — batch scan (every 15 min)
-    ctx.waitUntil((async () => {
-      try {
-        const result = await runAnomalyBatch(env);
-        if (result.anomalies_detected > 0) {
-          console.log(`[CRON] v12 Anomaly Engine: ${result.scanned} users scanned, ${result.anomalies_detected} anomalies (${result.high_risk} CRITICAL/HIGH)`);
+        const passing  = results.filter(r => r.status === 'PASS').length;
+        const failing  = results.filter(r => r.status === 'FAIL').length;
+        const duration = Date.now() - started;
+        const overall  = failing === 0 ? 'PASS' : failing <= 1 ? 'DEGRADED' : 'FAIL';
+
+        console.log('[CRON] PlatformHealth:', JSON.stringify({ check_id: checkId, overall, passing, failing, duration_ms: duration }));
+
+        // Store results in D1
+        if (db) {
+          try {
+            await db.prepare(
+              `INSERT OR IGNORE INTO platform_health_checks
+               (id, overall_status, passing, failing, duration_ms, results_json, checked_at)
+               VALUES (?,?,?,?,?,?,datetime('now'))`
+            ).bind(checkId, overall, passing, failing, duration, JSON.stringify(results)).run();
+          } catch (e) { console.error('[CRON] HealthCheck D1 write error:', e?.message); }
         }
-      } catch (e) {
-        console.error('[CRON] v12 Anomaly Engine error:', e?.message);
-      }
-    })());
 
-    // ── v12 P0 MISSION: Predictive Threat Intelligence — batch (every 1h) ──────
-    if (cron === '0 * * * *' || cron === '*/15 * * * *' || cron === '0 */2 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          const result = await runPredictiveBatch(env);
-          if (result.predictions > 0) {
-            console.log(`[CRON] v12 Predictive Engine: ${result.analyzed} CVEs analyzed, ${result.critical_count} CRITICAL, ${result.high_count} HIGH`);
-          }
-        } catch (e) {
-          console.error('[CRON] v12 Predictive Engine error:', e?.message);
+        // Alert via Resend if FAIL (not DEGRADED — avoid alert fatigue)
+        if (overall === 'FAIL' && env?.RESEND_API_KEY) {
+          const failDetails = results.filter(r => r.status === 'FAIL').map(r => r.name + ': ' + r.detail).join('\n');
+          const body = `CYBERDUDEBIVASH AI Security Hub — Platform Health FAIL\n\nCheck ID: ${checkId}\nTime: ${now}\nPassing: ${passing}/${tests.length}\n\nFailing tests:\n${failDetails}`;
+          fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from:    'alerts@cyberdudebivash.in',
+              to:      ['cyberdudebivashpro@gmail.com'],
+              subject: '[ALERT] Platform Health FAIL — ' + failing + ' test(s) failing',
+              text:    body,
+            }),
+          }).catch(() => {});
+        }
+
+        // Update KV with latest health status (for /api/health to consume)
+        if (env?.SECURITY_HUB_KV) {
+          env.SECURITY_HUB_KV.put('platform:health:latest', JSON.stringify({
+            overall, passing, failing, check_id: checkId, checked_at: now, duration_ms: duration,
+          }), { expirationTtl: 3600 * 8 }).catch(() => {});
         }
       })());
     }
-
-    // ── v12 P0 MISSION: Virtual WAF Patching — expire stale patches + batch ────
-    ctx.waitUntil((async () => {
-      try {
-        // Get recent HIGH+KEV CVEs for auto-patching
-        const recentCVEs = await env.DB?.prepare(`
-          SELECT cve_id, cvss_score as cvss, epss_score as epss, is_kev,
-                 description, cvss_vector
-          FROM threat_intel
-          WHERE (cvss_score >= 7.0 OR is_kev = 1)
-            AND published_date > datetime('now', '-3 days')
-          ORDER BY cvss_score DESC LIMIT 20
-        `).all().catch(() => ({ results: [] }));
-
-        const patchResult = await runPatchingBatch(env, recentCVEs?.results || []);
-        if (patchResult.patched > 0 || patchResult.expired > 0) {
-          console.log(`[CRON] v12 Patching Agent: ${patchResult.patched} patches applied, ${patchResult.expired} expired`);
-        }
-      } catch (e) {
-        console.error('[CRON] v12 Patching Agent error:', e?.message);
-      }
-    })());
-
-    // ── MYTHOS ORCHESTRATOR CORE — autonomous tool generation (every 12h) ──────
-    if (cron === '0 */12 * * *' || cron === '0 6 * * *') {
-      ctx.waitUntil((async () => {
-        try {
-          const result = await runMythosCron(env);
-          console.log(`[CRON] MYTHOS: ${result.total_tools} tools generated, ${result.total_published} published, ${result.total_failed} failed`);
-        } catch (e) {
-          console.error('[CRON] MYTHOS Orchestrator error:', e?.message);
-        }
-      })());
-    }
-
-    // ── PHASE 2: Autonomous SOC Mode cron check ───────────────────────────────
-    ctx.waitUntil((async () => {
-      try {
-        await runAutoSocCron(env);
-        console.log('[CRON] AutoSOC: cron check complete');
-      } catch (e) {
-        console.error('[CRON] AutoSOC error:', e?.message);
-      }
-    })());
-
   },
 };

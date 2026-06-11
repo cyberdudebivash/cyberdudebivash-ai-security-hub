@@ -147,24 +147,25 @@ export async function refreshPlatformMetrics(env) {
     // trustCenter.js handleTrustMetrics() reads real values
     const db = env.SECURITY_HUB_DB || env.DB;
     if (db) {
+      // Use INSERT OR REPLACE (upsert) — UPDATE silently no-ops on missing rows
       await db.batch([
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='total_scans'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('total_scans', ?, datetime('now'))")
           .bind(metrics.total_scans),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='total_cves'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('total_cves', ?, datetime('now'))")
           .bind(metrics.total_cves_tracked),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='total_customers'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('total_customers', ?, datetime('now'))")
           .bind(metrics.active_customers),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='scans_today'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('scans_today', ?, datetime('now'))")
           .bind(metrics.scans_today),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='critical_threats'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('critical_threats', ?, datetime('now'))")
           .bind(metrics.critical_threats),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='revenue_today'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('revenue_today', ?, datetime('now'))")
           .bind(metrics.revenue_today_inr),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='revenue_month'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('revenue_month', ?, datetime('now'))")
           .bind(metrics.revenue_month_inr),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='kev_count'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('kev_count', ?, datetime('now'))")
           .bind(metrics.kev_count),
-        db.prepare("UPDATE platform_metrics SET value_int=?, updated_at=datetime('now') WHERE key='soar_rules_total'")
+        db.prepare("INSERT OR REPLACE INTO platform_metrics (key, value_int, updated_at) VALUES ('soar_rules_total', ?, datetime('now'))")
           .bind(metrics.soar_rules_total),
       ]).catch(() => {}); // fire-and-forget — KV is primary serving path
     }
