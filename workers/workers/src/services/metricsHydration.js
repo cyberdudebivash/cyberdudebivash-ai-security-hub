@@ -253,48 +253,4 @@ export async function servePlatformMetrics(request, env) {
         const payload = JSON.stringify(metrics);
         Promise.all([
           kv.put(CACHE_KEY_LIVE,  payload, { expirationTtl: LIVE_TTL_SEC }),
-          kv.put(CACHE_KEY_STALE, payload, { expirationTtl: STALE_TTL_SEC }),
-        ]).catch(() => {});
-      }
-      await cbRecord(env, true);
-      return jsonR({ success: true, metrics, cache: 'live_d1', age: 'fresh' });
-
-    } catch (err) {
-      await cbRecord(env, false);
-    }
-  }
-
-  // ── L3: stale snapshot fallback (clearly labelled) ─────────────────────
-  if (kv) {
-    try {
-      const stale = await kv.get(CACHE_KEY_STALE);
-      if (stale) {
-        const m = JSON.parse(stale);
-        m.source = 'stale_snapshot';
-        m.stale  = true;
-        return jsonR({
-          success:  true,
-          metrics:  m,
-          cache:    'stale',
-          age:      'degraded',
-          note:     'Live metrics temporarily unavailable — showing last healthy snapshot',
-        }, 200, { 'Cache-Control': 'no-store' });
-      }
-    } catch {}
-  }
-
-  // ── L4: safe-default — null not zero, never fake ─────────────────────
-  return jsonR({
-    success: false,
-    metrics: {
-      total_scans:        null,
-      total_cves_tracked: null,
-      active_customers:   null,
-      uptime_pct:         99.9,
-      cve_alert_sla:      '< 2 hours',
-      source:             'unavailable',
-      note:               'Metrics temporarily unavailable',
-    },
-    cache: 'unavailable',
-  }, 503);
-}
+          kv.put(CACHE_KEY_STALE, pa

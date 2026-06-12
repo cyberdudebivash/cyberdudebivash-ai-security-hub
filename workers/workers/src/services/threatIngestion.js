@@ -21,140 +21,154 @@ const EPSS_API_BASE  = 'https://api.first.org/data/1.0/epss';
 const FETCH_TIMEOUT  = 10000; // 10s per source
 
 // ─── Built-in seed data — REAL current CVEs, never empty feed ─────────────────
-// These are real published CVEs as of April 2026. Refresh periodically.
+// Verified high-impact 2025 CVEs. Live NVD/CISA cron replaces these with
+// current 2026 CVEs automatically on each ingestion run.
 const SEED_ENTRIES = [
+  // ── CRITICAL — CVSS 10.0 ─────────────────────────────────────────────────────
   {
-    id: 'CVE-2024-3400', title: 'PAN-OS Command Injection (CRITICAL 0-day)', severity: 'CRITICAL',
-    cvss: 10.0, description: 'A command injection vulnerability in the GlobalProtect feature of Palo Alto Networks PAN-OS software allows an unauthenticated attacker to execute arbitrary code with root privileges on the firewall.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-3400',
-    published_at: '2024-04-12', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["RCE","ZeroDay","NetworkDevice","PaloAlto"]',
-    affected_products: '["cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-77"]',
+    id: 'CVE-2025-32433', title: 'Erlang/OTP SSH Unauthenticated RCE — CVSS 10.0 CRITICAL', severity: 'CRITICAL',
+    cvss: 10.0, description: 'A critical unauthenticated remote code execution vulnerability in Erlang/OTP SSH server allows attackers to execute arbitrary OS commands by sending crafted SSH messages before authentication completes. Any Erlang-based system exposing SSH (including RabbitMQ, CouchDB) is affected.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-32433',
+    published_at: '2025-04-16', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","SSH","Erlang","Network","ZeroDay","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:erlang:otp:*:*:*:*:*:*:*:*","cpe:2.3:a:rabbitmq:rabbitmq:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-306"]',
   },
   {
-    id: 'CVE-2024-21762', title: 'Fortinet FortiOS SSL VPN Out-of-Bounds Write', severity: 'CRITICAL',
-    cvss: 9.6, description: 'An out-of-bounds write vulnerability in Fortinet FortiOS SSL VPN allows a remote unauthenticated attacker to execute arbitrary code or commands via HTTP requests.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-21762',
-    published_at: '2024-02-08', exploit_status: 'confirmed', known_ransomware: 1,
-    tags: '["RCE","VPN","Fortinet","ActiveExploitation"]',
-    affected_products: '["cpe:2.3:o:fortinet:fortios:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-787"]',
+    id: 'CVE-2025-30065', title: 'Apache Parquet Java Deserialization RCE — CVSS 10.0 CRITICAL', severity: 'CRITICAL',
+    cvss: 10.0, description: 'A critical deserialization vulnerability in Apache Parquet Java (< 1.15.1) allows remote code execution when processing maliciously crafted Parquet files. Big data pipelines, ETL systems, and analytics platforms reading from untrusted sources are fully compromised.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-30065',
+    published_at: '2025-04-01', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["RCE","Apache","Deserialization","BigData","DataPipeline","SupplyChain"]',
+    affected_products: '["cpe:2.3:a:apache:parquet:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-502"]',
+  },
+  // ── CRITICAL — CVSS 9.8 ──────────────────────────────────────────────────────
+  {
+    id: 'CVE-2025-31161', title: 'CrushFTP Authentication Bypass — CVSS 9.8 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.8, description: 'A session fixation vulnerability in CrushFTP 10/11 allows unauthenticated remote attackers to hijack admin sessions and execute arbitrary commands. Actively exploited in the wild with public PoC. Thousands of internet-exposed CrushFTP instances are affected.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-31161',
+    published_at: '2025-04-03', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["AuthBypass","FTP","RCE","ActiveExploitation","SessionFixation"]',
+    affected_products: '["cpe:2.3:a:crushftp:crushftp:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-384"]',
   },
   {
-    id: 'CVE-2024-27198', title: 'JetBrains TeamCity Authentication Bypass', severity: 'CRITICAL',
-    cvss: 9.8, description: 'An authentication bypass vulnerability in JetBrains TeamCity before 2023.11.4 allows an unauthenticated attacker to create admin accounts via the REST API.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-27198',
-    published_at: '2024-03-04', exploit_status: 'confirmed', known_ransomware: 1,
-    tags: '["AuthBypass","CI/CD","JetBrains","SupplyChain"]',
-    affected_products: '["cpe:2.3:a:jetbrains:teamcity:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-288"]',
+    id: 'CVE-2025-3248', title: 'Langflow AI Platform Unauthenticated RCE — CVSS 9.8 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.8, description: 'A critical code injection vulnerability in Langflow AI platform (< 1.3.0) allows unauthenticated remote code execution through the /api/v1/validate/code endpoint. Any publicly exposed Langflow instance is fully compromised without credentials.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-3248',
+    published_at: '2025-04-07', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","AISecuity","LLM","CodeInjection","ZeroDay","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:langflow:langflow:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-94"]',
   },
   {
-    id: 'CVE-2024-1709', title: 'ConnectWise ScreenConnect Authentication Bypass', severity: 'CRITICAL',
-    cvss: 10.0, description: 'A path traversal vulnerability in ConnectWise ScreenConnect 23.9.7 and prior allows unauthenticated users to create admin accounts and gain access to confidential files.',
-    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-1709',
-    published_at: '2024-02-19', exploit_status: 'confirmed', known_ransomware: 1,
-    tags: '["AuthBypass","PathTraversal","RMM","SupplyChain"]',
-    affected_products: '["cpe:2.3:a:connectwise:screenconnect:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-22","CWE-288"]',
-  },
-  {
-    id: 'CVE-2024-21893', title: 'Ivanti Pulse Secure SSRF (Server-Side Request Forgery)', severity: 'HIGH',
-    cvss: 8.2, description: 'A server-side request forgery vulnerability in the SAML component of Ivanti Connect Secure and Ivanti Policy Secure allows an attacker to access certain restricted resources without authentication.',
-    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-21893',
-    published_at: '2024-02-02', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["SSRF","VPN","Ivanti","AuthBypass"]',
-    affected_products: '["cpe:2.3:a:ivanti:connect_secure:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-918"]',
-  },
-  {
-    id: 'CVE-2024-4577', title: 'PHP CGI Argument Injection (Windows)', severity: 'CRITICAL',
-    cvss: 9.8, description: 'An argument injection vulnerability in PHP on Windows with CGI mode allows remote unauthenticated attackers to execute arbitrary code. Affects PHP 8.1, 8.2, 8.3 on Windows.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-4577',
-    published_at: '2024-06-06', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["RCE","PHP","CGI","Windows","WebServer"]',
-    affected_products: '["cpe:2.3:a:php:php:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-88"]',
-  },
-  {
-    id: 'CVE-2024-38094', title: 'Microsoft SharePoint Remote Code Execution', severity: 'HIGH',
-    cvss: 7.2, description: 'A deserialization vulnerability in Microsoft SharePoint Server allows an authenticated attacker with Site Owner permissions to execute arbitrary code remotely.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-38094',
-    published_at: '2024-07-09', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["RCE","Microsoft","SharePoint","Deserialization"]',
-    affected_products: '["cpe:2.3:a:microsoft:sharepoint_server:*:*:*:*:*:*:*:*"]',
+    id: 'CVE-2025-23006', title: 'SonicWall SMA100 Pre-Auth Deserialization RCE — CVSS 9.8 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.8, description: 'A pre-authentication deserialization vulnerability in SonicWall Secure Mobile Access (SMA) 100 series allows remote attackers to execute arbitrary OS commands with root privileges. Actively exploited as a zero-day before patch availability.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-23006',
+    published_at: '2025-01-22', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","VPN","SonicWall","ZeroDay","ActiveExploitation","Deserialization"]',
+    affected_products: '["cpe:2.3:o:sonicwall:sma100_firmware:*:*:*:*:*:*:*:*"]',
     weakness_types: '["CWE-502"]',
   },
   {
-    id: 'CVE-2024-21626', title: 'runc Container Escape (Leaky Vessels)', severity: 'HIGH',
-    cvss: 8.6, description: 'A file descriptor leak in runc allows a malicious container to break out of the container namespace and gain full root access on the host system.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-21626',
-    published_at: '2024-01-31', exploit_status: 'poc_available', known_ransomware: 0,
-    tags: '["ContainerEscape","Docker","Kubernetes","runc","CloudSecurity"]',
-    affected_products: '["cpe:2.3:a:opencontainers:runc:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-403"]',
-  },
-  {
-    id: 'CVE-2024-6387', title: 'regreSSHion — OpenSSH Remote Code Execution', severity: 'CRITICAL',
-    cvss: 8.1, description: 'A signal handler race condition in OpenSSH\'s server (sshd) on glibc-based Linux allows unauthenticated remote code execution as root. Affects OpenSSH < 4.4p1 and 8.5p1–9.8p1.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-6387',
-    published_at: '2024-07-01', exploit_status: 'poc_available', known_ransomware: 0,
-    tags: '["RCE","SSH","Linux","RaceCondition","RootAccess"]',
-    affected_products: '["cpe:2.3:a:openbsd:openssh:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-362"]',
-  },
-  {
-    id: 'CVE-2024-30078', title: 'Windows Wi-Fi Driver Remote Code Execution', severity: 'HIGH',
-    cvss: 8.8, description: 'A remote code execution vulnerability in the Windows Wi-Fi Driver allows an unauthenticated attacker in Wi-Fi proximity to execute code on an affected system by sending specially crafted network packets.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-30078',
-    published_at: '2024-06-11', exploit_status: 'unconfirmed', known_ransomware: 0,
-    tags: '["RCE","Windows","WiFi","Network"]',
-    affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-122"]',
-  },
-  {
-    id: 'CVE-2024-23897', title: 'Jenkins Arbitrary File Read', severity: 'CRITICAL',
-    cvss: 9.8, description: 'A path traversal vulnerability in Jenkins allows unauthenticated attackers to read arbitrary files on the Jenkins controller filesystem, potentially leading to RCE via credential extraction.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-23897',
-    published_at: '2024-01-24', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["PathTraversal","CI/CD","Jenkins","CredentialLeak","SupplyChain"]',
-    affected_products: '["cpe:2.3:a:jenkins:jenkins:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-22"]',
-  },
-  {
-    id: 'CVE-2025-21444', title: 'Windows Kernel Privilege Escalation (2025)', severity: 'HIGH',
-    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows kernel allows a local attacker to escalate privileges to SYSTEM level, bypassing security boundaries.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-21444',
-    published_at: '2025-01-14', exploit_status: 'unconfirmed', known_ransomware: 0,
-    tags: '["PrivEsc","Windows","Kernel","LocalExploit"]',
+    id: 'CVE-2025-21298', title: 'Windows OLE Remote Code Execution — CVSS 9.8 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.8, description: 'A critical use-after-free vulnerability in Windows Object Linking and Embedding (OLE) allows remote code execution when a victim opens a specially crafted email in Outlook. No interaction beyond opening the email is required — zero-click attack vector in preview pane.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-21298',
+    published_at: '2025-01-14', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["RCE","Windows","OLE","Microsoft","EmailAttack","ZeroClick"]',
     affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
     weakness_types: '["CWE-416"]',
   },
   {
-    id: 'CVE-2025-24085', title: 'Apple CoreMedia Use-After-Free (0-day)', severity: 'HIGH',
-    cvss: 7.8, description: 'A use-after-free issue in Apple CoreMedia was exploited in the wild against targeted individuals. Successfully exploiting this vulnerability may allow an attacker to elevate privileges.',
-    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24085',
-    published_at: '2025-01-27', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["PrivEsc","Apple","iOS","macOS","ZeroDay","ActiveExploitation"]',
-    affected_products: '["cpe:2.3:o:apple:ios:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-416"]',
+    id: 'CVE-2025-24813', title: 'Apache Tomcat Partial PUT Remote Code Execution — CVSS 9.8 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.8, description: 'A remote code execution vulnerability in Apache Tomcat (10.1.0–10.1.33, 11.0.0–11.0.1) when partial PUT is enabled allows unauthenticated attackers to upload malicious JSP content and execute it remotely.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24813',
+    published_at: '2025-03-10', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","Apache","Tomcat","WebServer","FileUpload","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:apache:tomcat:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-44"]',
   },
   {
-    id: 'CVE-2025-22457', title: 'Ivanti Connect Secure Stack Overflow RCE', severity: 'CRITICAL',
-    cvss: 9.0, description: 'A stack-based buffer overflow in Ivanti Connect Secure before version 22.7R2.5 allows an unauthenticated remote attacker to achieve code execution. Actively exploited by UNC5221 (China-nexus).',
-    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-22457',
-    published_at: '2025-04-03', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["RCE","VPN","Ivanti","APT","BufferOverflow","ActiveExploitation"]',
+    id: 'CVE-2025-1974', title: 'Ingress NGINX IngressNightmare RCE — CVSS 9.8 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.8, description: 'A critical unauthenticated RCE in Kubernetes Ingress NGINX Controller allows attackers to inject arbitrary NGINX configurations via the admission controller webhook, enabling code execution and access to all cluster secrets across all namespaces.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-1974',
+    published_at: '2025-03-24', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["RCE","Kubernetes","NGINX","CloudSecurity","IngressNightmare","ClusterTakeover"]',
+    affected_products: '["cpe:2.3:a:kubernetes:ingress-nginx:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-94"]',
+  },
+  // ── CRITICAL — CVSS 9.0–9.1 ──────────────────────────────────────────────────
+  {
+    id: 'CVE-2025-29927', title: 'Next.js Middleware Authorization Bypass — CVSS 9.1 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.1, description: 'A critical authorization bypass in Next.js (< 15.2.3) allows attackers to skip middleware authentication by sending a forged x-middleware-subrequest header. Authentication walls protecting routes and API endpoints are completely bypassed without credentials.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-29927',
+    published_at: '2025-03-21', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["AuthBypass","NextJS","WebApp","Middleware","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:vercel:next.js:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-285"]',
+  },
+  {
+    id: 'CVE-2025-0282', title: 'Ivanti Connect Secure Stack Buffer Overflow RCE — CVSS 9.0 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.0, description: 'A stack-based buffer overflow in Ivanti Connect Secure (< 22.7R2.5) allows unauthenticated remote code execution. Exploited as a zero-day by China-nexus threat actor UNC5337 before patch release. Mass exploitation campaigns observed globally.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-0282',
+    published_at: '2025-01-08', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","VPN","Ivanti","APT","BufferOverflow","ZeroDay","ActiveExploitation","China"]',
     affected_products: '["cpe:2.3:a:ivanti:connect_secure:*:*:*:*:*:*:*:*"]',
     weakness_types: '["CWE-121"]',
   },
   {
-    id: 'CVE-2025-29824', title: 'Windows CLFS Driver Privilege Escalation (0-day)', severity: 'HIGH',
-    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows Common Log File System Driver allows a local attacker to gain SYSTEM privileges. Exploited in the wild by ransomware operators (RansomEXX).',
+    id: 'CVE-2025-22457', title: 'Ivanti Connect Secure Stack Overflow RCE (UNC5221) — CVSS 9.0 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.0, description: 'A stack-based buffer overflow in Ivanti Connect Secure before 22.7R2.5 allows unauthenticated remote code execution. Actively exploited by UNC5221 (China-nexus APT) deploying TRAILBLAZE and BRUSHFIRE malware implants.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-22457',
+    published_at: '2025-04-03', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","VPN","Ivanti","APT","BufferOverflow","ActiveExploitation","China","Malware"]',
+    affected_products: '["cpe:2.3:a:ivanti:connect_secure:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-121"]',
+  },
+  {
+    id: 'CVE-2025-34028', title: 'Commvault Command Center Path Traversal RCE — CVSS 9.0 CRITICAL', severity: 'CRITICAL',
+    cvss: 9.0, description: 'A path traversal vulnerability in Commvault Command Center allows unauthenticated remote attackers to upload ZIP archives to arbitrary server locations. ZIP entries traverse outside the intended directory, enabling webshell deployment and full server compromise.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-34028',
+    published_at: '2025-04-28', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","PathTraversal","Commvault","BackupSoftware","ActiveExploitation","ZipSlip"]',
+    affected_products: '["cpe:2.3:a:commvault:command_center:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-22"]',
+  },
+  // ── HIGH — CVSS 7.8–8.2 ──────────────────────────────────────────────────────
+  {
+    id: 'CVE-2025-29824', title: 'Windows CLFS Driver Privilege Escalation 0-day (RansomEXX) — CVSS 7.8 HIGH', severity: 'HIGH',
+    cvss: 7.8, description: 'A use-after-free in the Windows Common Log File System Driver allows local privilege escalation to SYSTEM. Exploited in the wild by the RansomEXX ransomware group as part of post-exploitation chains. Patches released April 2025 Patch Tuesday.',
     source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-29824',
     published_at: '2025-04-08', exploit_status: 'confirmed', known_ransomware: 1,
-    tags: '["PrivEsc","Windows","ZeroDay","Ransomware","CLFS"]',
+    tags: '["PrivEsc","Windows","ZeroDay","Ransomware","CLFS","UseAfterFree"]',
+    affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-416"]',
+  },
+  {
+    id: 'CVE-2025-24085', title: 'Apple CoreMedia Use-After-Free 0-day (Active Exploitation) — CVSS 7.8 HIGH', severity: 'HIGH',
+    cvss: 7.8, description: 'A use-after-free in Apple CoreMedia was exploited against specific targeted individuals before patching. Successful exploitation elevates privileges on iOS and macOS. Apple confirmed active in-the-wild exploitation in the patch advisory.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24085',
+    published_at: '2025-01-27', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["PrivEsc","Apple","iOS","macOS","ZeroDay","ActiveExploitation","UseAfterFree"]',
+    affected_products: '["cpe:2.3:o:apple:ios:*:*:*:*:*:*:*:*","cpe:2.3:o:apple:macos:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-416"]',
+  },
+  {
+    id: 'CVE-2025-24989', title: 'Microsoft Power Pages Improper Access Control (0-day) — CVSS 8.2 HIGH', severity: 'HIGH',
+    cvss: 8.2, description: 'An improper access control vulnerability in Microsoft Power Pages allows unauthenticated attackers to elevate privileges over a network, bypassing registration controls to gain unauthorized access. Microsoft confirmed exploitation before patch release.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24989',
+    published_at: '2025-02-19', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["PrivEsc","Microsoft","PowerPages","Cloud","ActiveExploitation","ZeroDay"]',
+    affected_products: '["cpe:2.3:a:microsoft:power_pages:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-284"]',
+  },
+  {
+    id: 'CVE-2025-21444', title: 'Windows Kernel Use-After-Free Privilege Escalation — CVSS 7.8 HIGH', severity: 'HIGH',
+    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows kernel allows a local attacker to escalate privileges to SYSTEM level, bypassing security zone restrictions. Part of the January 2025 Patch Tuesday batch.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-21444',
+    published_at: '2025-01-14', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["PrivEsc","Windows","Kernel","LocalExploit","UseAfterFree"]',
     affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
     weakness_types: '["CWE-416"]',
   },
@@ -222,7 +236,7 @@ function buildTags(desc = '', cpes = [], weaknesses = []) {
 }
 
 // ─── MODULE 1: Fetch NVD CVEs ─────────────────────────────────────────────────
-export async function fetchNVDCVEs(daysBack = 7) {
+export async function fetchNVDCVEs(daysBack = 14) {
   const now   = new Date();
   const start = new Date(now.getTime() - daysBack * 86400 * 1000);
   // NVD date format: 2024-01-01T00:00:00.000 UTC%2B00:00
@@ -575,115 +589,4 @@ export async function runIngestion(env) {
     errors.push(`CISA KEV: ${e.message}`);
   }
 
-  // 3. Fetch NVD (may be rate-limited — graceful fallback)
-  try {
-    const nvd = await fetchNVDCVEs(7);
-    if (nvd.length > 0) {
-      allEntries.push(...nvd);
-      sources.push(`nvd(${nvd.length})`);
-    }
-  } catch (e) {
-    errors.push(`NVD: ${e.message}`);
-  }
-
-  // 4. GitHub advisories (best effort)
-  try {
-    const ghsa = await fetchGitHubAdvisories();
-    if (ghsa.length > 0) {
-      allEntries.push(...ghsa);
-      sources.push(`github(${ghsa.length})`);
-    }
-  } catch (e) {
-    errors.push(`GitHub: ${e.message}`);
-  }
-
-  // 5. Deduplicate all entries
-  const deduped = deduplicateEntries(allEntries);
-
-  // 6. Extract IOCs (run on descriptions)
-  for (const entry of deduped) {
-    try {
-      const iocList = extractIOCsFromText(entry.description || '');
-      if (iocList.length > 0) {
-        entry.iocs = JSON.stringify(iocList);
-      }
-    } catch {}
-  }
-
-  // 7. Enrich entries (CVSS lookup, exploit status)
-  for (const entry of deduped) {
-    try {
-      const enriched = enrichEntry(entry);
-      Object.assign(entry, enriched);
-    } catch {}
-  }
-
-  // 7b. Fetch EPSS scores for all CVE IDs
-  try {
-    const cveIds  = deduped.filter(e => /^CVE-\d{4}-\d{4,}$/.test(e.id)).map(e => e.id);
-    const epssMap = await fetchEPSSScores(cveIds);
-    applyEPSSScores(deduped, epssMap);
-    sources.push(`epss(${Object.keys(epssMap).length})`);
-  } catch (e) {
-    errors.push(`EPSS: ${e.message}`);
-    // Fallback: set exploit_available from existing fields
-    for (const entry of deduped) {
-      entry.actively_exploited = entry.exploit_status === 'confirmed' || !!entry.known_ransomware;
-      entry.exploit_available  = entry.exploit_status !== 'unconfirmed';
-      entry.epss_score         = null;
-    }
-  }
-
-  // 8. Store in D1 (if available)
-  let stored = { inserted: 0, updated: 0, errors: [] };
-  if (env?.DB) {
-    stored = await storeInD1(env.DB, deduped);
-    errors.push(...stored.errors);
-  }
-
-  // 8b. Phase 6: Broadcast threat alerts for newly ingested high-risk entries
-  // Runs asynchronously — does not block ingestion result
-  const alertCandidates = deduped.filter(e =>
-    (parseFloat(e.cvss || 0) >= 9.0 || e.exploit_status === 'confirmed' || (e.epss_score || 0) >= 0.8)
-  );
-  if (alertCandidates.length > 0) {
-    triggerIntelAlerts(env, alertCandidates).catch(() => {});
-  }
-
-  // 9. Log ingestion run
-  const runId = `run_${Date.now()}`;
-  if (env?.DB) {
-    try {
-      await env.DB.prepare(`
-        INSERT INTO ingestion_runs (id, sources, inserted, updated, errors, duration_ms, success)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        runId,
-        JSON.stringify(sources),
-        stored.inserted,
-        stored.updated,
-        JSON.stringify(errors),
-        Date.now() - startTime,
-        errors.length === 0 ? 1 : 0,
-      ).run();
-    } catch {}
-  }
-
-  // 10. Cache result summary in KV
-  const summary = {
-    ran_at:    new Date().toISOString(),
-    sources,
-    total:     deduped.length,
-    inserted:  stored.inserted,
-    errors:    errors.length,
-    duration_ms: Date.now() - startTime,
-  };
-  if (env?.SECURITY_HUB_KV) {
-    env.SECURITY_HUB_KV.put('sentinel:ingestion:last_run', JSON.stringify(summary), { expirationTtl: 86400 }).catch(() => {});
-  }
-
-  return { success: true, ...summary, entries: deduped };
-}
-
-// Export seed data for inline fallback
-export { SEED_ENTRIES };
+  // 3. Fetch NVD — 14-day wind

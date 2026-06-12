@@ -28,7 +28,7 @@
     IFSC:         'UTIB0000052',
     BANK_BRANCH:  'Bhubaneswar Corporate Branch',
     GSTIN:        '21ARKPN8270G1ZP',
-    CIN:          'U74999OR2024PTC049281',
+    PAN:          'ARKPN8270G',
     PAYPAL_LINK:  'https://paypal.me/iambivash',
     CRYPTO: Object.freeze({
       ETH:  '0x742d35Cc6634C0532925a3b8D4E3bC4b5B7e88FA',

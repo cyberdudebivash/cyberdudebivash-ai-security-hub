@@ -5657,7 +5657,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
       <span style="font-size:12px;color:#475569">✓ GST Invoice Included</span>
       <span style="font-size:12px;color:#475569">✓ DPDP Act 2023 Compliant</span>
-      <span style="font-size:12px;color:#475569">✓ CIN: U74999OR2024PTC049281</span>
+      <span style="font-size:12px;color:#475569">✓ PAN: ARKPN8270G</span>
       <span style="font-size:12px;color:#475569">✓ 72-Hour Delivery SLA</span>
     </div>
   </div>
@@ -7076,7 +7076,7 @@ footer.v14-footer::before {
       ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
     </div>
     <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
-      CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; AI-Powered Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
+      PAN: ARKPN8270G &nbsp;·&nbsp; AI-Powered Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
     </div>
   </div>
 
@@ -7344,7 +7344,7 @@ footer.v14-footer::before {
       <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="font-size:11px;color:#94a3b8;font-weight:500;line-height:1.7">
           © <span id="footer-year">2026</span> <span style="color:#e2e8f0;font-weight:800">CYBERDUDEBIVASH PRIVATE LIMITED</span>. All rights reserved.<br>
-          <span style="color:#64748b">GST: 21ARKPN8270G1ZP &nbsp;·&nbsp; CIN: U74999OR2024PTC049281 &nbsp;·&nbsp; Registered: Odisha, India &nbsp;·&nbsp; Platform: AI Security Hub v<span id="footer-version">30.0</span></span>
+          <span style="color:#64748b">GST: 21ARKPN8270G1ZP &nbsp;·&nbsp; PAN: ARKPN8270G &nbsp;·&nbsp; Registered: Odisha, India &nbsp;·&nbsp; Platform: AI Security Hub v<span id="footer-version">30.0</span></span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
           <a href="https://cyberdudebivash.in/privacy" style="font-size:10px;color:#475569;text-decoration:none" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Privacy Policy</a>
@@ -13292,7 +13292,7 @@ window.addEventListener('load', () => {
       '🔌 World\'s first MCP Security Scanner — scan Claude/OpenAI MCP servers',
       '🤖 Vibe Code Scanner — catch security holes in AI-generated code',
       '⚡ Cloudflare Workers edge — sub-30ms response globally',
-      '📋 DPDP Act 2023 compliant · CIN: U74999OR2024PTC049281',
+      '📋 DPDP Act 2023 compliant · PAN: ARKPN8270G',
     ];
 
     const existing = document.getElementById('cdb-social-proof');
@@ -13734,6 +13734,17 @@ window.cdbNavigate = function(sectionId) {
     const fallback = document.querySelector('[id*="' + sectionId.replace(/[^a-z0-9-]/gi,'') + '"]');
     if (fallback) { fallback.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     return;
+  }
+
+  // P0 FIX: force-show any auth-gated section that is still hidden
+  // (auth-gate script may not have run yet, or user navigated directly)
+  const cs = window.getComputedStyle(el);
+  if (cs.display === 'none' || el.style.display === 'none') {
+    el.style.display = '';
+    // If still none after removal of inline style, set block
+    if (window.getComputedStyle(el).display === 'none') {
+      el.style.display = 'block';
+    }
   }
 
   const navEl   = document.getElementById('main-nav');
@@ -19094,18 +19105,30 @@ window.cdbSaveWhitelabel = function() {
 
 // ── Navigation injection ──────────────────────────────────────────────────────
 function p3InjectNav() {
-  var nav = document.querySelector('nav ul, .nav-links, #nav-links');
+  // Target the desktop nav links div directly
+  var nav = document.getElementById('nav-links-desktop') ||
+            document.querySelector('.nav-links') ||
+            document.querySelector('nav ul');
   if (!nav) return;
   var items = [
-    { href: '#auto-defense',   label: 'Defense' },
-    { href: '#data-dominance', label: 'Data Intel' },
-    { href: '#executive-hub',  label: 'CISO Hub' },
+    { href: '#auto-defense',   sectionId: 'auto-defense',   label: 'Defense' },
+    { href: '#data-dominance', sectionId: 'data-dominance', label: 'Data Intel' },
+    { href: '#executive-hub',  sectionId: 'executive-hub',  label: 'CISO Hub' },
   ];
   items.forEach(function(item) {
-    if (nav.querySelector('a[href="' + item.href + '"]')) return;
-    var li = document.createElement('li');
-    li.innerHTML = '<a href="' + item.href + '" style="position:relative">' + item.label + '</a>';
-    nav.appendChild(li);
+    // Skip if already injected
+    if (nav.querySelector('[data-p3nav="' + item.sectionId + '"]')) return;
+    var a = document.createElement('a');
+    a.href = item.href;
+    a.setAttribute('data-p3nav', item.sectionId);
+    a.setAttribute('data-section', item.sectionId);
+    a.textContent = item.label;
+    // Proper cdbNavigate click handler — shows auth-gated section + scrolls
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (typeof cdbNavigate === 'function') cdbNavigate(item.sectionId);
+    });
+    nav.appendChild(a);
   });
 }
 
@@ -21477,7 +21500,7 @@ function v21TriggerUrgencyPayment(){
         <h3>🏦 NEFT / RTGS / IMPS Bank Transfer</h3>
         <div class="m-wire-row"><span class="m-wire-label">Beneficiary</span><span class="m-wire-val">CYBERDUDEBIVASH PVT LTD</span></div>
         <div class="m-wire-row"><span class="m-wire-label">GSTIN</span><span class="m-wire-val">21ARKPN8270G1ZP</span><button class="m-copy-btn" onclick="CDB_MYTHOS.copy('21ARKPN8270G1ZP',this)">Copy</button></div>
-        <div class="m-wire-row"><span class="m-wire-label">CIN</span><span class="m-wire-val">U74999OR2024PTC049281</span></div>
+        <div class="m-wire-row"><span class="m-wire-label">PAN</span><span class="m-wire-val">ARKPN8270G</span></div>
         <div class="m-wire-row"><span class="m-wire-label">Amount</span><span class="m-wire-val" id="m-wire-amount">₹1,499</span></div>
         <div class="m-wire-row"><span class="m-wire-label">Reference</span><span class="m-wire-val" id="m-wire-ref">CDB-SYS-LOADING</span><button class="m-copy-btn" onclick="CDB_MYTHOS.copyRef(this)">Copy</button></div>
       </div>
@@ -22197,323 +22220,4 @@ function v21TriggerUrgencyPayment(){
           </div>
           <div style="margin-top:16px;font-size:11px;color:#475569;line-height:1.6;">
             CYBERDUDEBIVASH® AI Security Hub — Enterprise Edition<br>
-            Powered by Sentinel APEX + MYTHOS v3<br>
-            Real-time data updated every 30 seconds.<br>
-            Last update: <strong class="cdb-last-updated" style="color:#64748b">—</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         PANEL 2 — SOC Command Center
-         ════════════════════════════════════════════════════════════════════ -->
-    <div id="cdb-panel-soc" class="cdb-cc-panel">
-
-      <div class="cdb-kpi-grid">
-        <div class="cdb-kpi-card accent-red">
-          <div class="cdb-kpi-label">Scans Today</div>
-          <div class="cdb-kpi-value" id="cdb-soc-scan-count">—</div>
-          <div class="cdb-kpi-sub">Active scan queue</div>
-        </div>
-        <div class="cdb-kpi-card accent-orange">
-          <div class="cdb-kpi-label">Alert Feed</div>
-          <div class="cdb-kpi-value">Live</div>
-          <div class="cdb-kpi-sub">CVE + threat events</div>
-        </div>
-        <div class="cdb-kpi-card accent-purple">
-          <div class="cdb-kpi-label">Detection Engine</div>
-          <div class="cdb-kpi-value">Sentinel</div>
-          <div class="cdb-kpi-sub">APEX v30.0</div>
-        </div>
-        <div class="cdb-kpi-card accent-green">
-          <div class="cdb-kpi-label">Platform Status</div>
-          <div class="cdb-kpi-value">Online</div>
-          <div class="cdb-kpi-sub">All systems nominal</div>
-        </div>
-      </div>
-
-      <div class="cdb-two-col">
-        <div>
-          <div class="cdb-section-heading">Live Threat Alert Feed</div>
-          <div id="cdb-soc-alert-feed" class="cdb-feed-list">
-            <div class="cdb-empty-state">Loading threat feed…</div>
-          </div>
-        </div>
-        <div>
-          <div class="cdb-section-heading">MITRE ATT&CK Coverage</div>
-          <div class="cdb-mitre-grid">
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Initial Access</div><div class="cdb-mitre-pct">94%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Execution</div><div class="cdb-mitre-pct">88%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-partial"><div class="cdb-mitre-tactic-name">Persistence</div><div class="cdb-mitre-pct">71%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Priv Escalation</div><div class="cdb-mitre-pct">82%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Def Evasion</div><div class="cdb-mitre-pct">79%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Credential</div><div class="cdb-mitre-pct">86%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-partial"><div class="cdb-mitre-tactic-name">Discovery</div><div class="cdb-mitre-pct">63%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Lateral Move</div><div class="cdb-mitre-pct">75%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-partial"><div class="cdb-mitre-tactic-name">Collection</div><div class="cdb-mitre-pct">58%</div></div>
-            <div class="cdb-mitre-tactic cdb-mitre-covered"><div class="cdb-mitre-tactic-name">Exfiltration</div><div class="cdb-mitre-pct">91%</div></div>
-          </div>
-          <div style="margin-top:12px;font-size:11px;color:#475569;">Coverage based on Sentinel APEX detection rules across 14 MITRE tactics.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         PANEL 3 — Sentinel APEX Intelligence Center
-         ════════════════════════════════════════════════════════════════════ -->
-    <div id="cdb-panel-sentinel" class="cdb-cc-panel">
-
-      <div class="cdb-kpi-grid">
-        <div class="cdb-kpi-card accent-red">
-          <div class="cdb-kpi-label">CVEs Tracked</div>
-          <div class="cdb-kpi-value" id="cdb-sentinel-total">—</div>
-          <div class="cdb-kpi-sub">Live vulnerability DB</div>
-        </div>
-        <div class="cdb-kpi-card accent-orange">
-          <div class="cdb-kpi-label">Critical CVEs</div>
-          <div class="cdb-kpi-value" id="cdb-sentinel-crit">—</div>
-          <div class="cdb-kpi-sub">CVSS ≥ 9.0</div>
-        </div>
-        <div class="cdb-kpi-card accent-purple">
-          <div class="cdb-kpi-label">KEV Entries</div>
-          <div class="cdb-kpi-value" id="cdb-sentinel-kev">—</div>
-          <div class="cdb-kpi-sub">CISA exploited</div>
-        </div>
-        <div class="cdb-kpi-card accent-blue">
-          <div class="cdb-kpi-label">Intel Source</div>
-          <div class="cdb-kpi-value">Sentinel</div>
-          <div class="cdb-kpi-sub">APEX v30.0 feed</div>
-        </div>
-      </div>
-
-      <div class="cdb-section-heading">Live CVE Intelligence Cards</div>
-      <div id="cdb-sentinel-cve-grid" class="cdb-cve-grid">
-        <div class="cdb-empty-state">Loading CVE intelligence…</div>
-      </div>
-
-      <div style="margin-top:20px;">
-        <div class="cdb-section-heading">Intelligence Sources</div>
-        <div class="cdb-info-row"><span class="cdb-info-label">NVD / NIST</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
-        <div class="cdb-info-row"><span class="cdb-info-label">CISA KEV Catalog</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
-        <div class="cdb-info-row"><span class="cdb-info-label">Shodan</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
-        <div class="cdb-info-row"><span class="cdb-info-label">URLhaus</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
-        <div class="cdb-info-row"><span class="cdb-info-label">GreyNoise</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
-        <div class="cdb-info-row"><span class="cdb-info-label">Ransomware.live</span><span class="cdb-info-value" style="color:#4ade80">Connected</span></div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         PANEL 4 — AI Security Operations Center
-         ════════════════════════════════════════════════════════════════════ -->
-    <div id="cdb-panel-ai" class="cdb-cc-panel">
-
-      <div class="cdb-kpi-grid">
-        <div class="cdb-kpi-card accent-purple">
-          <div class="cdb-kpi-label">AI Assets</div>
-          <div class="cdb-kpi-value" id="cdb-ai-total-assets">—</div>
-          <div class="cdb-kpi-sub">Registered AI systems</div>
-        </div>
-        <div class="cdb-kpi-card accent-orange">
-          <div class="cdb-kpi-label">Risk Score</div>
-      
-
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     COMMAND CENTERS REAL-TIME DATA INIT v1.0
-     Wires all KPI fields (cdb-exec-*, cdb-soc-*, cdb-sentinel-*) to live APIs
-     Sources: /api/platform/metrics · /api/threat-intel/stats · /api/health
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<script>
-(function initCommandCenters() {
-  'use strict';
-
-  function setKpi(id, value, suffix) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (value === null || value === undefined) return; // leave '—' intact
-    var v = (typeof value === 'number') ? Number(value).toLocaleString('en-IN') : String(value);
-    el.textContent = v + (suffix || '');
-  }
-
-  function setLastUpdated() {
-    var t = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
-    Array.from(document.querySelectorAll('.cdb-last-updated')).forEach(function(e) { e.textContent = t; });
-  }
-
-  function setThreatGauge(tiStats) {
-    var bar   = document.getElementById('cdb-threat-bar');
-    var label = document.getElementById('cdb-threat-level-label');
-    var scoreEl = document.getElementById('cdb-threat-score');
-    if (!tiStats) {
-      // API unavailable — render UNKNOWN state instead of leaving '—' indefinitely
-      if (scoreEl) scoreEl.textContent = '—';
-      if (label)   label.textContent   = 'UNKNOWN';
-      if (bar)     { bar.style.width = '5%'; bar.style.background = '#475569'; bar.style.borderRadius = '4px'; bar.style.height = '100%'; }
-      return;
-    }
-
-    var total = tiStats.total_advisories || tiStats.total_cves || 0;
-    var crit  = tiStats.critical || 0;
-    var high  = tiStats.high     || 0;
-
-    // Derive threat level from ratio of critical+high to total
-    var ratio = total > 0 ? (crit * 3 + high) / total : 0;
-    var level, pct, color;
-    if (crit > 100 || ratio > 0.15)      { level='CRITICAL'; pct=92; color='#ef4444'; }
-    else if (crit > 20 || ratio > 0.05)  { level='HIGH';     pct=68; color='#f97316'; }
-    else if (high > 10 || ratio > 0.01)  { level='MODERATE'; pct=42; color='#eab308'; }
-    else                                  { level='LOW';       pct=20; color='#22c55e'; }
-
-    var score = total > 0 ? Math.min(99, Math.round((crit * 3 + high * 1.5) / total * 100)) : 0;
-
-    if (bar) { bar.style.width = pct + '%'; bar.style.background = color; bar.style.borderRadius = '4px'; bar.style.height = '100%'; }
-    if (label) { label.textContent = level; label.style.color = color; }
-    if (scoreEl) scoreEl.textContent = score;
-  }
-
-  function renderAlertFeed(entries) {
-    var el = document.getElementById('cdb-soc-alert-feed');
-    if (!el) return;
-    if (!entries || !entries.length) {
-      el.innerHTML = '<div style="color:#64748b;padding:16px 0;font-size:12px;">No critical alerts — platform nominal</div>';
-      return;
-    }
-    var color = { CRITICAL:'#ef4444', HIGH:'#f97316', MEDIUM:'#eab308', LOW:'#22c55e' };
-    el.innerHTML = entries.slice(0, 8).map(function(e) {
-      var sev = (e.severity || 'MEDIUM').toUpperCase();
-      var c   = color[sev] || '#94a3b8';
-      var ts  = e.published_at ? timeAgo(e.published_at) : 'recent';
-      return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b;align-items:flex-start;">' +
-        '<span style="min-width:58px;font-size:10px;font-weight:700;color:' + c + ';padding-top:1px;">' + sev + '</span>' +
-        '<div><div style="font-size:12px;color:#cbd5e1;line-height:1.4;">' + (e.title || e.cve_id || e.id || 'Threat event') + '</div>' +
-        '<div style="font-size:10px;color:#475569;margin-top:2px;">' + (e.source || 'Sentinel APEX') + ' · ' + ts + '</div></div></div>';
-    }).join('');
-  }
-
-  function renderCveGrid(entries) {
-    var el = document.getElementById('cdb-sentinel-cve-grid');
-    if (!el) return;
-    if (!entries || !entries.length) {
-      el.innerHTML = '<div style="color:#64748b;padding:16px;font-size:12px;grid-column:1/-1;">CVE intelligence feed updating — check back shortly</div>';
-      return;
-    }
-    var bg = { CRITICAL:'rgba(239,68,68,.12)', HIGH:'rgba(249,115,22,.10)', MEDIUM:'rgba(234,179,8,.08)', LOW:'rgba(34,197,94,.08)' };
-    var tc = { CRITICAL:'#ef4444', HIGH:'#f97316', MEDIUM:'#eab308', LOW:'#22c55e' };
-    el.innerHTML = entries.slice(0, 6).map(function(e) {
-      var sev  = (e.severity || 'MEDIUM').toUpperCase();
-      var cvss = e.cvss_score || e.cvss || null;
-      var desc = (e.title || e.description || '').slice(0, 90);
-      return '<div style="background:' + (bg[sev]||'rgba(100,116,139,.08)') + ';border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:14px;">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">' +
-        '<span style="font-size:10px;font-weight:700;color:' + (tc[sev]||'#94a3b8') + ';">' + sev + '</span>' +
-        (cvss ? '<span style="font-size:10px;color:#94a3b8;">CVSS ' + parseFloat(cvss).toFixed(1) + '</span>' : '') + '</div>' +
-        '<div style="font-size:12px;font-weight:600;color:#e2e8f0;margin-bottom:4px;">' + (e.cve_id || e.id || '—') + '</div>' +
-        '<div style="font-size:10px;color:#94a3b8;line-height:1.4;">' + (desc ? desc + (desc.length >= 90 ? '…' : '') : 'No description available') + '</div></div>';
-    }).join('');
-  }
-
-  function timeAgo(ts) {
-    var diff = (Date.now() - new Date(ts).getTime()) / 1000;
-    if (diff < 60)    return 'just now';
-    if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    return Math.floor(diff / 86400) + 'd ago';
-  }
-
-  async function loadCommandCenterData() {
-    // Parallel fetch — all three sources, non-blocking individual failures
-    var [pmRes, tiRes, hRes] = await Promise.allSettled([
-      fetch('/api/platform/metrics', {signal: AbortSignal.timeout(8000)}).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/threat-intel/stats',  {signal: AbortSignal.timeout(8000)}).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/health',              {signal: AbortSignal.timeout(6000)}).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]);
-
-    var metrics  = pmRes.status === 'fulfilled' && pmRes.value?.metrics  ? pmRes.value.metrics  : null;
-    // FIX: threat-intel/stats wraps response in data.stats (not top-level stats)
-    // Response: { success:true, data: { stats: {...} }, timestamp: "..." }
-    var tiStats  = tiRes.status === 'fulfilled'
-      ? (tiRes.value?.stats || tiRes.value?.data?.stats || null)
-      : null;
-    var health   = hRes.status  === 'fulfilled' ? (hRes.value  || {})   : {};
-
-    // ── Executive Panel ──────────────────────────────────────────────────
-    var totalScans  = metrics?.total_scans         ?? health.stats?.total_scans  ?? null;
-    var scansToday  = metrics?.scans_today         ?? health.stats?.scans_today  ?? null;
-    var critThreats = metrics?.critical_threats    ?? null;
-    var cvesTracked = metrics?.total_cves_tracked  ?? tiStats?.total_cves ?? tiStats?.total_advisories ?? null;
-    var uptimePct   = metrics?.uptime_pct          ?? 99.9;
-    var clients     = metrics?.active_customers    ?? null;
-
-    setKpi('cdb-exec-total-scans',  totalScans);
-    setKpi('cdb-exec-scans-today',  scansToday);
-    setKpi('cdb-exec-critical',     critThreats);
-    setKpi('cdb-exec-cves',         cvesTracked);
-    setKpi('cdb-exec-uptime',       typeof uptimePct === 'number' ? uptimePct.toFixed(1) : uptimePct, '%');
-    setKpi('cdb-exec-clients',      clients);
-    // API requests: scan-request proxy until dedicated counter is available
-    if (totalScans !== null) setKpi('cdb-exec-api-reqs', totalScans);
-
-    // Platform status badge
-    var statusEl = document.getElementById('cdb-platform-status');
-    if (statusEl) {
-      var st = health.status || 'ok';
-      statusEl.textContent = st === 'ok' ? 'Operational' : st === 'degraded' ? 'Degraded' : 'Error';
-      statusEl.className = st === 'ok' ? 'cdb-status-green' : 'cdb-status-amber';
-    }
-
-    // Threat gauge
-    setThreatGauge(tiStats);
-
-    // ── SOC Panel ────────────────────────────────────────────────────────
-    setKpi('cdb-soc-scan-count', scansToday ?? totalScans);
-
-    // Live threat feed for SOC alert feed
-    try {
-      var feedResp = await fetch('/api/threat-intel?limit=10&sort=published_at&order=desc', {signal: AbortSignal.timeout(8000)});
-      if (feedResp.ok) {
-        var feedData = await feedResp.json();
-        var entries  = feedData.entries || feedData.results || feedData.data || [];
-        renderAlertFeed(entries.filter(function(e) { return ['CRITICAL','HIGH'].includes((e.severity||'').toUpperCase()); }));
-      } else { renderAlertFeed([]); }
-    } catch(e) { renderAlertFeed([]); }
-
-    // ── Sentinel Panel ───────────────────────────────────────────────────
-    setKpi('cdb-sentinel-total', tiStats?.total_advisories ?? tiStats?.total_cves ?? null);
-    setKpi('cdb-sentinel-crit',  tiStats?.critical ?? null);
-    setKpi('cdb-sentinel-kev',   tiStats?.kev_count ?? tiStats?.kev ?? null);
-
-    // CVE intelligence cards
-    try {
-      var cveResp = await fetch('/api/threat-intel?limit=6&severity=CRITICAL&sort=cvss&order=desc', {signal: AbortSignal.timeout(8000)});
-      if (cveResp.ok) {
-        var cveData = await cveResp.json();
-        renderCveGrid(cveData.entries || cveData.results || cveData.data || []);
-      } else { renderCveGrid([]); }
-    } catch(e) { renderCveGrid([]); }
-
-    // ── AI Panel ─────────────────────────────────────────────────────────
-    try {
-      var aiResp = await fetch('/api/aispm/inventory', {signal: AbortSignal.timeout(6000)});
-      if (aiResp.ok) {
-        var aiData = await aiResp.json();
-        var assetCount = aiData.total ?? aiData.count ?? (Array.isArray(aiData.assets) ? aiData.assets.length : null);
-        setKpi('cdb-ai-total-assets', assetCount);
-      }
-    } catch(e) {}
-
-    setLastUpdated();
-  }
-
-  // Boot on DOMContentLoaded or immediately if already ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { loadCommandCenterData().catch(function(){}); });
-  } else {
-    loadCommandCenterData().catch(function(){});
-  }
-
-  // Refresh every 60 seconds
-  setInterval(function() { loadCommandCenterData().catch(function(){}); }, 60000);
-})();
-</script>
-<!-- END COMMAND CENTERS REAL-TIME INIT -->
+            Powered by Sentinel APEX + M
