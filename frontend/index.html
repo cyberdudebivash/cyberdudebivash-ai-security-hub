@@ -208,8 +208,8 @@ window.CDB_FUNNEL = CDB_FUNNEL;
     </p>
     
     <!-- Skip link -->
-    <a href="#" onclick="cdbGateSkip();return false" style="font-size:12px;color:#334155;text-decoration:underline">
-      Skip for now (limited preview only)
+    <a href="#" onclick="cdbGateSkip();return false" style="font-size:13px;color:#94a3b8;text-decoration:underline;font-weight:600;padding:8px 0;display:inline-block">
+      Skip for now (limited preview only) →
     </a>
   </div>
 </div>
@@ -9262,8 +9262,9 @@ function renderResults(module, data) {
   // Only fires on real API results (not fallback), not on paid users
   const _gateEmail = localStorage.getItem('cdb_email');
   const _gateTier  = localStorage.getItem('cdb_tier') || 'FREE';
-  if (!_gateEmail && _gateTier === 'FREE' && data.risk_score !== undefined) {
+  if (!_gateEmail && _gateTier === 'FREE' && data.risk_score !== undefined && !sessionStorage.getItem('cdb_gate_shown') && !localStorage.getItem('cdb_gate_shown')) {
     // Small delay to let user see the risk score first
+    // Gate already shown this session (leadModal) → skip, show CTA instead
     setTimeout(() => {
       if (typeof window.cdbShowEmailGate === 'function' && !localStorage.getItem('cdb_email')) {
         window.cdbShowEmailGate({
@@ -9438,6 +9439,8 @@ async function submitLead() {
 
   sessionStorage.setItem('cbd_lead_captured', '1');
   sessionStorage.setItem('cbd_lead_email', email); // Used for Razorpay prefill
+  localStorage.setItem('cdb_email', email);         // FIX: sync to localStorage — prevents Gate 2 re-firing
+  localStorage.setItem('cdb_gate_shown', '1');      // FIX: mark gate as shown permanently
   leadCaptured = true;
   hideModal('leadModal');
   btn.disabled = false;
@@ -9454,6 +9457,7 @@ async function submitLead() {
 
 function skipLead() {
   sessionStorage.setItem('cbd_lead_captured', '1');
+  sessionStorage.setItem('cdb_gate_shown', '1');    // FIX: suppress Gate 2 for this session
   leadCaptured = true;
   hideModal('leadModal');
   if (pendingScanModule && pendingScanPayload) {
