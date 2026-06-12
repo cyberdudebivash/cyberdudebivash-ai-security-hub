@@ -159,3 +159,75 @@
     line-height: 1.15 !important;
   }
 }
+
+/* ══════════════ COMMAND CENTER POLISH + INJECTED STRIPS ( ≤ 768px ) ══════════════ */
+@media (max-width: 768px) {
+  /* Command-center tab rail (5 tabs) already scrolls; add momentum + no shrink */
+  #cdb-command-centers .cdb-cc-nav { -webkit-overflow-scrolling: touch; }
+  #cdb-command-centers .cdb-cc-tab { flex: 0 0 auto; }
+  /* KPI numbers/labels wrap rather than overflow their card */
+  #cdb-command-centers .cdb-kpi-value,
+  #cdb-command-centers .cdb-kpi-label { overflow-wrap: anywhere; }
+  /* Any element opting into horizontal scroll keeps momentum & stays in-viewport
+     (covers JS-injected enterprise command / authority strips) */
+  [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+}
+
+/* ══════════════ MOBILE TRANSFORMATION PHASE 1 — VISIBLE-DEFECT FIXES ( ≤ 768px ) ══════════════
+   Evidence: live mobile screenshots (cut-off Phase-4 strip, sub-44px tap targets) + WebFetch.
+   All rules max-width-scoped => desktop ( ≥769px ) renders byte-identical (0 regression). */
+@media (max-width: 768px) {
+
+  /* FIX 1 — Phase-4 business command strip ("Sales / Proposals / Affiliate / Growth").
+     Was clipped at the left edge on phones. Make the rail a horizontal, momentum-scrolling
+     row that starts flush-left and never pushes the page wider than the viewport. */
+  .cdb-bsp-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none;            /* Firefox: hide bar, keep scroll */
+    max-width: 100% !important;
+    justify-content: flex-start !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    scroll-snap-type: x proximity;
+  }
+  .cdb-bsp-tabs::-webkit-scrollbar { display: none; }   /* WebKit: hide bar */
+  .cdb-bsp-tab {
+    flex: 0 0 auto !important;        /* never shrink — text stays readable */
+    scroll-snap-align: start;
+    min-height: 44px;                 /* Apple HIG / WCAG 2.5.5 touch target */
+    display: inline-flex;
+    align-items: center;
+  }
+  .cdb-bsp-divider { flex: 0 0 auto; }
+
+  /* FIX 2 — Minimum 44×44px touch targets for primary interactive controls.
+     Improves one-handed usability + accessibility (WCAG 2.5.5) + tap-accuracy = fewer
+     mis-taps on CTAs (direct conversion lift). Scoped to nav/CTA/button roles only so
+     it cannot disturb dense data tables. */
+  a.btn, button, .nav-links a, .cta, .cdb-cta, [role="button"],
+  .scan-btn, .cdb-cc-tab, .pricing-cta {
+    min-height: 44px;
+  }
+
+  /* FIX 3 — Universal injected-bar containment. Any JS-injected sticky/floating bar
+     (authority strip, urgency bar, ticker) is capped to the viewport so it can never
+     create horizontal page scroll on a phone. Complements overflow-x:clip safety net. */
+  .cdb-bsp-bar, .cdb-authority-strip, [class*="-strip"][style*="position:fixed"] {
+    max-width: 100vw !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* FIX 4 — Tap-friendly form controls: comfortable height + spacing so mobile
+     scan/checkout forms feel native (reduces form-abandonment). 16px font already
+     set earlier prevents iOS focus-zoom. */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    min-height: 44px;
+  }
+}

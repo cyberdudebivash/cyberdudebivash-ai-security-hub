@@ -20860,9 +20860,12 @@ window.showPaymentInstructions = function() {
 <!-- GOD MODE v16: MCP Control Client — THE OPERATING SYSTEM -->
 <!-- Safe: module type with window.MCPControl global fallback -->
 <script type="module">
-  import { MCPControl } from '/src/mcpControl.js';
-  // Expose globally for inline scan result hooks
-  window.MCPControl = MCPControl;
+  // Resilient load: a static top-level import throws an UNCAUGHT SyntaxError (→ global
+  // error banner) if the module 404s or returns HTML. Dynamic import() is catchable, so
+  // any failure degrades silently to the no-op fallback defined in the next script block.
+  import('/src/mcpControl.js')
+    .then(function(m){ window.MCPControl = m.MCPControl; })
+    .catch(function(err){ console.warn('[MCPControl] optional module unavailable:', err && err.message); });
 </script>
 <!-- Inline fallback: if module import fails (older browsers), MCPControl is a no-op -->
 <script>
@@ -22196,4 +22199,120 @@ function v21TriggerUrgencyPayment(){
           <div class="cdb-section-heading">Quick Actions</div>
           <div class="cdb-cta-row">
             <button class="cdb-btn-primary" onclick="document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'})">View Enterprise Plans</button>
-            <button class="cdb-btn-outline" onclick="(function(){var s=document.getElementById('enterprise')||document.getElementById('ciso-command-center')||document.getElementById('pricing')
+            <button class="cdb-btn-outline" onclick="(document.getElementById('enterprise')||document.getElementById('pricing'))?.scrollIntoView({behavior:'smooth'})">📅 Book Enterprise Demo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END Executive panel -->
+
+    <!-- ══════════════════ PANEL 2 — SOC Operations ══════════════════ -->
+    <div id="cdb-panel-soc" class="cdb-cc-panel" role="tabpanel" aria-label="SOC Operations">
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-blue">
+          <div class="cdb-kpi-label">Scans Processed</div>
+          <div class="cdb-kpi-value" id="cdb-soc-scan-count">—</div>
+          <div class="cdb-kpi-sub">SOC pipeline · live</div>
+        </div>
+        <div class="cdb-kpi-card accent-red">
+          <div class="cdb-kpi-label">Detection</div>
+          <div class="cdb-kpi-value" style="font-size:20px;color:#4ade80">Operational</div>
+          <div class="cdb-kpi-sub">MITRE ATT&amp;CK engine</div>
+        </div>
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">Response</div>
+          <div class="cdb-kpi-value" style="font-size:20px;color:#4ade80">Automated</div>
+          <div class="cdb-kpi-sub">SOAR playbooks active</div>
+        </div>
+      </div>
+      <div class="cdb-section-heading" style="margin-top:18px">Live SOC Alert Feed</div>
+      <div id="cdb-soc-alert-feed" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        <div style="color:#64748b;font-size:13px;padding:16px;text-align:center">Connecting to Sentinel APEX live threat feed…</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ PANEL 3 — Sentinel APEX Intel ══════════════════ -->
+    <div id="cdb-panel-sentinel" class="cdb-cc-panel" role="tabpanel" aria-label="Sentinel APEX Intel">
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">CVEs Tracked</div>
+          <div class="cdb-kpi-value" id="cdb-sentinel-total">—</div>
+          <div class="cdb-kpi-sub">NVD + CISA KEV</div>
+        </div>
+        <div class="cdb-kpi-card accent-red">
+          <div class="cdb-kpi-label">Critical</div>
+          <div class="cdb-kpi-value" id="cdb-sentinel-crit">—</div>
+          <div class="cdb-kpi-sub">CVSS ≥ 9.0</div>
+        </div>
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">In KEV</div>
+          <div class="cdb-kpi-value" id="cdb-sentinel-kev">—</div>
+          <div class="cdb-kpi-sub">Known exploited</div>
+        </div>
+      </div>
+      <div class="cdb-section-heading" style="margin-top:18px">Live CVE Intelligence</div>
+      <div id="cdb-sentinel-cve-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px">
+        <div style="color:#64748b;font-size:13px;padding:16px;text-align:center;grid-column:1/-1">Loading real-time CVE intelligence from Sentinel APEX…</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ PANEL 4 — AI SecOps ══════════════════ -->
+    <div id="cdb-panel-ai" class="cdb-cc-panel" role="tabpanel" aria-label="AI SecOps">
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-purple">
+          <div class="cdb-kpi-label">AI Assets</div>
+          <div class="cdb-kpi-value" id="cdb-ai-total-assets">—</div>
+          <div class="cdb-kpi-sub">Models · Agents · RAG</div>
+        </div>
+        <div class="cdb-kpi-card accent-red">
+          <div class="cdb-kpi-label">Risk Score</div>
+          <div class="cdb-kpi-value" id="cdb-ai-risk-score">—</div>
+          <div class="cdb-kpi-sub">OWASP LLM weighted</div>
+        </div>
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">Governance</div>
+          <div class="cdb-kpi-value" id="cdb-ai-governance" style="font-size:18px">—</div>
+          <div class="cdb-kpi-sub">NIST AI RMF · ISO 42001</div>
+        </div>
+      </div>
+      <div class="cdb-section-heading" style="margin-top:18px">AI Asset Inventory (AISPM)</div>
+      <div id="cdb-ai-asset-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        <div style="color:#64748b;font-size:13px;padding:16px;text-align:center">Scanning AI asset inventory…</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ PANEL 5 — MSSP Operations ══════════════════ -->
+    <div id="cdb-panel-mssp" class="cdb-cc-panel" role="tabpanel" aria-label="MSSP Operations">
+      <div class="cdb-kpi-grid">
+        <div class="cdb-kpi-card accent-blue">
+          <div class="cdb-kpi-label">Managed Clients</div>
+          <div class="cdb-kpi-value" id="cdb-mssp-clients">—</div>
+          <div class="cdb-kpi-sub">Multi-tenant</div>
+        </div>
+        <div class="cdb-kpi-card accent-green">
+          <div class="cdb-kpi-label">White-Label</div>
+          <div class="cdb-kpi-value" style="font-size:20px;color:#4ade80">Active</div>
+          <div class="cdb-kpi-sub">Reseller program</div>
+        </div>
+        <div class="cdb-kpi-card accent-orange">
+          <div class="cdb-kpi-label">Revenue Share</div>
+          <div class="cdb-kpi-value">30%</div>
+          <div class="cdb-kpi-sub">Partner margin</div>
+        </div>
+      </div>
+      <div class="cdb-section-heading" style="margin-top:18px">Managed Service Portfolio</div>
+      <div id="cdb-mssp-service-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px">
+        <div style="color:#64748b;font-size:13px;padding:16px;text-align:center;grid-column:1/-1">Loading managed service portfolio…</div>
+      </div>
+    </div>
+
+  </div>
+  <!-- END .cdb-cc-body -->
+</section>
+<!-- END #cdb-command-centers -->
+
+<!-- Real-time data adapter — powers all 5 command-center panels: tab switching, KPIs, live feeds -->
+<script src="/dashboard-live.js" defer></script>
+
+</body>
+</html>
