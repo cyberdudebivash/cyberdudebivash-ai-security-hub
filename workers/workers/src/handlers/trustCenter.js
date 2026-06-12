@@ -281,4 +281,42 @@ export async function handleTrustCenter(request, env) {
       service_levels: COMPANY_INFO.methodology.sla,
       contact: {
         email:    COMPANY_INFO.email,
-        whatsapp: COM
+        whatsapp: COMPANY_INFO.whatsapp,
+      },
+    });
+
+  } catch (e) {
+    return json({ success: false, error: e.message }, 500);
+  }
+}
+
+// ── POST /api/trust/testimonial ───────────────────────────────────────────────
+// Unchanged: submissions are pending (verified=0) until admin review.
+export async function handleSubmitTestimonial(request, env) {
+  let body;
+  try { body = await request.json(); }
+  catch { return json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  const { name, role, company, content, rating } = body;
+  if (!content || content.length < 20) {
+    return json({ success: false, error: 'Content too short (minimum 20 characters)' }, 400);
+  }
+
+  const id = 'ts_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const db = env.SECURITY_HUB_DB || env.DB;
+  if (!db) return json({ success: false, error: 'DB unavailable' }, 503);
+
+  await db.prepare(
+    "INSERT INTO trust_signals (id, type, title, content, company, verified, visible) VALUES (?, 'testimonial', ?, ?, ?, 0, 0)"
+  ).bind(
+    id,
+    ((name || 'Anonymous') + (role ? ' — ' + role : '')).slice(0, 200),
+    content.slice(0, 2000),
+    (company || '').slice(0, 200),
+  ).run();
+
+  return json({
+    success: true,
+    message: 'Thank you. Your testimonial will appear publicly after verification by our team.',
+  });
+}

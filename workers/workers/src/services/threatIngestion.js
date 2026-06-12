@@ -589,4 +589,131 @@ export async function runIngestion(env) {
     errors.push(`CISA KEV: ${e.message}`);
   }
 
-  // 3. Fetch NVD — 14-day wind
+  // 3. Fetch NVD — 14-day window for recent CVEs
+  try {
+    const nvd = await fetchNVDCVEs(14);
+    if (nvd.length > 0) {
+      allEntries.push(...nvd);
+      sources.push(`nvd_14d(${nvd.length})`);
+    }
+  } catch (e) {
+    errors.push(`NVD: ${e.message}`);
+  }
+
+  // 3b. Bootstrap deep-sync — fetch last 90 days to backfill 2026 CVEs
+  // Only runs when D1 has fewer than 50 threat_intel rows (cold start / fresh deploy)
+  if (env?.DB) {
+    try {
+      const countRow = await env.DB.prepare('SELECT COUNT(*) as cnt FROM threat_intel').first();
+      const rowCount = countRow?.cnt ?? 0;
+      if (rowCount < 50) {
+        const nvdDeep = await fetchNVDCVEs(90);
+        if (nvdDeep.length > 0) {
+          allEntries.push(...nvdDeep);
+          sources.push(`nvd_90d_bootstrap(${nvdDeep.length})`);
+        }
+      }
+    } catch {}
+  }
+
+  // 4. GitHub advisories (best effort)
+  try {
+    const ghsa = await fetchGitHubAdvisories();
+    if (ghsa.length > 0) {
+      allEntries.push(...ghsa);
+      sources.push(`github(${ghsa.length})`);
+    }
+  } catch (e) {
+    errors.push(`GitHub: ${e.message}`);
+  }
+
+  // 5. Deduplicate all entries
+  const deduped = deduplicateEntries(allEntries);
+
+  // 6. Extract IOCs (run on descriptions)
+  for (const entry of deduped) {
+    try {
+      const iocList = extractIOCsFromText(entry.description || '');
+      if (iocList.length > 0) {
+        entry.iocs = JSON.stringify(iocList);
+      }
+    } catch {}
+  }
+
+  // 7. Enrich entries (CVSS lookup, exploit status)
+  for (const entry of deduped) {
+    try {
+      const enriched = enrichEntry(entry);
+      Object.assign(entry, enriched);
+    } catch {}
+  }
+
+  // 7b. Fetch EPSS scores for all CVE IDs
+  try {
+    const cveIds  = deduped.filter(e => /^CVE-\d{4}-\d{4,}$/.test(e.id)).map(e => e.id);
+    const epssMap = await fetchEPSSScores(cveIds);
+    applyEPSSScores(deduped, epssMap);
+    sources.push(`epss(${Object.keys(epssMap).length})`);
+  } catch (e) {
+    errors.push(`EPSS: ${e.message}`);
+    // Fallback: set exploit_available from existing fields
+    for (const entry of deduped) {
+      entry.actively_exploited = entry.exploit_status === 'confirmed' || !!entry.known_ransomware;
+      entry.exploit_available  = entry.exploit_status !== 'unconfirmed';
+      entry.epss_score         = null;
+    }
+  }
+
+  // 8. Store in D1 (if available)
+  let stored = { inserted: 0, updated: 0, errors: [] };
+  if (env?.DB) {
+    stored = await storeInD1(env.DB, deduped);
+    errors.push(...stored.errors);
+  }
+
+  // 8b. Phase 6: Broadcast threat alerts for newly ingested high-risk entries
+  // Runs asynchronously — does not block ingestion result
+  const alertCandidates = deduped.filter(e =>
+    (parseFloat(e.cvss || 0) >= 9.0 || e.exploit_status === 'confirmed' || (e.epss_score || 0) >= 0.8)
+  );
+  if (alertCandidates.length > 0) {
+    triggerIntelAlerts(env, alertCandidates).catch(() => {});
+  }
+
+  // 9. Log ingestion run
+  const runId = `run_${Date.now()}`;
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(`
+        INSERT INTO ingestion_runs (id, sources, inserted, updated, errors, duration_ms, success)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        runId,
+        JSON.stringify(sources),
+        stored.inserted,
+        stored.updated,
+        JSON.stringify(errors),
+        Date.now() - startTime,
+        errors.length === 0 ? 1 : 0,
+      ).run();
+    } catch {}
+  }
+
+  // 10. Cache result summary in KV
+  const summary = {
+    ran_at:    new Date().toISOString(),
+    sources,
+    total:     deduped.length,
+    inserted:  stored.inserted,
+    errors:    errors.length,
+    duration_ms: Date.now() - startTime,
+  };
+  if (env?.SECURITY_HUB_KV) {
+    env.SECURITY_HUB_KV.put('sentinel:ingestion:last_run', JSON.stringify(summary), { expirationTtl: 86400 }).catch(() => {});
+  }
+
+  return { success: true, ...summary, entries: deduped };
+}
+
+// Export seed data for inline fallback
+export { SEED_ENTRIES };
