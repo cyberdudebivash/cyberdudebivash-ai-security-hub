@@ -1,0 +1,161 @@
+/*!
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CYBERDUDEBIVASH® AI SECURITY HUB — UNIVERSAL MOBILE / TABLET RESPONSIVE LAYER
+ * File   : /assets/cdb-mobile-responsive.css
+ * Version: v1.0.0   (2026-06-13)
+ * Owner  : Platform Engineering
+ * ───────────────────────────────────────────────────────────────────────────
+ * ZERO-REGRESSION GUARANTEE
+ *   Every declaration in this file lives inside a `@media (max-width: …)`
+ *   query. Viewports ≥ 769px receive NO rules from this sheet, so desktop and
+ *   large-tablet-landscape rendering is byte-for-byte identical to before.
+ *
+ * NON-DESTRUCTIVE
+ *   No HTML markup or JavaScript is changed. This sheet is purely additive and
+ *   loaded site-wide. It only *constrains* layout on small screens; it never
+ *   introduces new behaviour or removes content.
+ *
+ * STRATEGY (phones & tablets)
+ *   1. Contain horizontal overflow without breaking position:sticky (clip).
+ *   2. Collapse fixed multi-column grids (inline + class based) to fit.
+ *   3. Make wide tables scroll inside their box instead of breaking the page.
+ *   4. Harden forms for iOS (16px = no focus-zoom).
+ *   5. Keep fixed / floating UI inside the viewport.
+ *   6. Right-size oversized section padding & very large headings.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ══════════════════ TABLET / LARGE-PHONE  ( ≤ 768px ) ═══════════════════ */
+@media (max-width: 768px) {
+
+  /* 1 ─ Overflow & sizing guards.
+         `overflow-x: clip` contains horizontal overflow WITHOUT establishing a
+         scroll container, so sticky headers keep working (unlike overflow:hidden). */
+  html {
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+    scroll-padding-top: 72px;            /* anchor jumps clear the sticky nav */
+  }
+  body { overflow-x: clip; max-width: 100%; }
+
+  img, svg, video, canvas, iframe, picture, embed, object {
+    max-width: 100% !important;
+    height: auto;
+  }
+  pre, code, kbd, samp {                 /* long hashes / URLs wrap, not overflow */
+    white-space: pre-wrap !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  a, button { touch-action: manipulation; }   /* kill 300ms tap delay (no layout change) */
+
+  /* 2 ─ Neutralise the only TRUE fixed pixel widths that exceed phone width.
+         (`max-width`/`min-width` declarations are excluded so fluid containers
+          such as `max-width:1200px` are left untouched.) */
+  [style*="width:400px"]:not([style*="max-width:400px"]):not([style*="min-width:400px"]),
+  [style*="width: 400px"]:not([style*="max-width: 400px"]):not([style*="min-width: 400px"]),
+  [style*="width:340px"]:not([style*="max-width:340px"]):not([style*="min-width:340px"]) {
+    width: auto !important;
+    max-width: 100% !important;
+  }
+  [style*="min-width:560px"] { min-width: 0 !important; }   /* feature-comparison table */
+
+  /* 3 ─ Collapse INLINE fixed multi-column grids → 2 columns.
+         `minmax(0,1fr)` lets columns shrink below content width (prevents blow-out).
+         Responsive `auto-fit` / `auto-fill` grids do NOT match these selectors. */
+  [style*="grid-template-columns:1fr 1fr"],   [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:repeat(2"],  [style*="grid-template-columns: repeat(2"],
+  [style*="grid-template-columns:repeat(3"],  [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns:repeat(4"],  [style*="grid-template-columns: repeat(4"],
+  [style*="grid-template-columns:repeat(5"],  [style*="grid-template-columns: repeat(5"],
+  [style*="grid-template-columns:repeat(6"],  [style*="grid-template-columns: repeat(6"],
+  [style*="grid-template-columns:repeat(7"],  [style*="grid-template-columns:repeat(8"],
+  [style*="grid-template-columns:2fr"],       [style*="grid-template-columns: 2fr"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  /* INLINE fixed-pixel sidebar layouts (e.g. "300px 1fr", "1fr 380px") → stack */
+  [style*="grid-template-columns:220px"], [style*="grid-template-columns: 220px"],
+  [style*="grid-template-columns:300px"], [style*="grid-template-columns: 300px"],
+  [style*="grid-template-columns:320px"], [style*="grid-template-columns: 320px"],
+  [style*="grid-template-columns:340px"], [style*="grid-template-columns:360px"],
+  [style*="grid-template-columns:380px"],
+  [style*="1fr 300px"], [style*="1fr 320px"], [style*="1fr 340px"],
+  [style*="1fr 360px"], [style*="1fr 380px"], [style*="1fr 400px"],
+  [style*="1fr 460px"], [style*="1fr 480px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 4 ─ Collapse CLASS-based grids found across all pages.
+         (grid-template-columns is inert on non-grid elements, so generic class
+          names like .main / .grid-2 are safe — they only affect real grids.) */
+  /* 4a · Layout & sidebar blocks → single column */
+  .mission-content, .mission-grid, .stats-grid, .stats-row, .cert-grid, .delivery-steps,
+  .hero-inner, .cap-grid, .form-row, .form-row-2, .form-grid, .booking-container,
+  .use-case-selector, .faq-grid, .gd-grid-bottom, .g2-meta-grid, .cdb-two-col,
+  .roi-container, .grid-2, .grid-3, .stat-grid, .ciso-kpi-grid, .acy-cols, .v14fu-cols,
+  .g2-layout, .soc-layout, .scanner-wrap, .main {
+    grid-template-columns: 1fr !important;
+  }
+  /* 4b · Dense stat / calendar / badge grids → keep 2-up (avoid over-stacking) */
+  .g1-summary, .g3-stats, .g4-kpis, .cdb-mitre-grid, .sp-stats,
+  .days-grid, .date-buttons, .timeline, .ctas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* 5 ─ Wide tables → contained horizontal scroll (page never overflows) */
+  table {
+    display: block !important;
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  table th, table td { white-space: nowrap; }
+
+  /* 6 ─ Forms: 16px font prevents iOS focus-zoom; keep controls inside viewport */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select, textarea {
+    font-size: 16px !important;
+    max-width: 100%;
+  }
+
+  /* 7 ─ Keep fixed / floating UI (bottom bars, toasts, modals) within the viewport */
+  [style*="position:fixed"], [style*="position: fixed"] { max-width: 100vw; }
+
+  /* 8 ─ Right-size oversized vertical section padding (horizontal padding preserved) */
+  [style*="padding:80px"],  [style*="padding: 80px"]  { padding-top: 48px !important; padding-bottom: 48px !important; }
+  [style*="padding:100px"], [style*="padding: 100px"] { padding-top: 54px !important; padding-bottom: 54px !important; }
+  [style*="padding:120px"], [style*="padding: 120px"] { padding-top: 60px !important; padding-bottom: 60px !important; }
+}
+
+/* ══════════════════════════ PHONE  ( ≤ 520px ) ═════════════════════════ */
+@media (max-width: 520px) {
+
+  /* Inline multi-column grids → single column */
+  [style*="grid-template-columns:1fr 1fr"],  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:repeat(2"], [style*="grid-template-columns: repeat(2"],
+  [style*="grid-template-columns:repeat(3"], [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns:repeat(4"], [style*="grid-template-columns: repeat(4"],
+  [style*="grid-template-columns:repeat(5"], [style*="grid-template-columns: repeat(5"],
+  [style*="grid-template-columns:repeat(6"], [style*="grid-template-columns:2fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Class layout grids → single column on phones */
+  .g1-summary, .g2-meta-grid, .sp-stats, .days-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Keep these legible as 2-up rather than a tall single stack */
+  .g3-stats, .g4-kpis, .cdb-mitre-grid, .timeline, .ctas-grid, .date-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Scale very large fixed headings / hero numbers so they never overflow */
+  [style*="font-size:64px"], [style*="font-size:60px"], [style*="font-size:56px"],
+  [style*="font-size:52px"], [style*="font-size:48px"], [style*="font-size:44px"],
+  [style*="font-size:42px"], [style*="font-size:40px"] {
+    font-size: clamp(26px, 8.5vw, 40px) !important;
+    line-height: 1.15 !important;
+  }
+}
