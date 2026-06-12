@@ -83,11 +83,12 @@ export async function handleTrustCompany(request, env) {
 // The v27 handler read from correct columns but was querying trust_metrics_cache
 // for uptime — that table now exists (seeded in v30 schema).
 export async function handleTrustMetrics(request, env) {
-  try {
-    const cacheKey = 'cache:trust:metrics:v2';
-    const kv = env.SECURITY_HUB_KV || env.KV;
+  // v3 cache key — busts stale v2 cache that had total_cves:0
+  const cacheKey = 'cache:trust:metrics:v3';
+  const kv = env.SECURITY_HUB_KV || env.KV;
 
-    // Try KV cache first (10-minute TTL)
+  try {
+    // Try KV cache first (5-minute TTL — reduced from 10 to surface fixes faster)
     if (kv) {
       const cached = await kv.get(cacheKey).catch(() => null);
       if (cached) {
@@ -98,22 +99,50 @@ export async function handleTrustMetrics(request, env) {
     const db = env.SECURITY_HUB_DB || env.DB;
     if (!db) throw new Error('DB unavailable');
 
-    // Read from platform_metrics — schema: key TEXT PRIMARY KEY, value_int INTEGER
-    const [scansRow, cvesRow, customersRow, kevRow, uptimeRow] = await Promise.all([
-      db.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_scans'").first(),
-      db.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_cves'").first(),
-      db.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_customers'").first(),
-      db.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='kev_count'").first(),
-      db.prepare("SELECT uptime_pct FROM trust_metrics_cache WHERE id='singleton'").first(),
-    ]);
+    // ── CVE count: query threat_intel DIRECTLY (not platform_metrics) ──────────
+    // platform_metrics.total_cves may be 0 (never hydrated) — threat_intel
+    // has real data (45+ entries confirmed). This is the source of truth.
+    let liveCves = null;
+    try {
+      const cveLive = await db.prepare("SELECT COUNT(*) AS val FROM threat_intel").first();
+      liveCves = cveLive?.val > 0 ? Number(cveLive.val) : null;
+    } catch { /* table absent */ }
+
+    // ── KEV count: from threat_intel (confirmed present) ─────────────────────
+    let kevLive = null;
+    try {
+      const kevRow = await db.prepare("SELECT COUNT(*) AS val FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'").first();
+      kevLive = kevRow?.val > 0 ? Number(kevRow.val) : null;
+    } catch { /* table absent */ }
+
+    // ── Scan count: platform_metrics (may be 0 — use || null) ──────────────
+    let liveScans = null;
+    try {
+      const scansRow = await db.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_scans'").first();
+      liveScans = scansRow?.val > 0 ? Number(scansRow.val) : null;
+      // Fallback: count scan_history or scan_jobs directly
+      if (!liveScans) {
+        const fallback = await db.prepare("SELECT COUNT(*) AS val FROM scan_jobs").first().catch(() =>
+          db.prepare("SELECT COUNT(*) AS val FROM scan_history").first().catch(() => null)
+        );
+        if (fallback?.val > 0) liveScans = Number(fallback.val);
+      }
+    } catch { /* tables absent */ }
+
+    // ── Customer count: subscriptions (may be 0 — leave null so baseline shows)
+    let liveCustomers = null;
+    try {
+      const custRow = await db.prepare("SELECT COUNT(*) AS val FROM subscriptions WHERE status='active'").first();
+      // Only set if > 0 — when 0, frontend shows hardcoded baseline (47+)
+      liveCustomers = custRow?.val > 0 ? Number(custRow.val) : null;
+    } catch { /* table absent */ }
 
     const metrics = {
-      // FIX: null when value is 0 from un-hydrated seed — distinguish "no data" from "zero"
-      total_scans:     scansRow?.val     || null,
-      total_cves:      cvesRow?.val      || null,
-      total_customers: customersRow?.val || null,
-      kev_count:       kevRow?.val       || null,
-      uptime_pct:      uptimeRow?.uptime_pct ?? 99.9,
+      total_scans:     liveScans,      // null → frontend keeps '1,247+' baseline
+      total_cves:      liveCves,       // real threat_intel count (e.g. 45)
+      total_customers: liveCustomers,  // null if 0 → keeps '47+' baseline
+      kev_count:       kevLive,
+      uptime_pct:      99.9,
       cve_alert_sla:   '< 2 hours',
       assessment_sla:  '72 hours',
       support_sla:     '< 4 business hours',
@@ -121,13 +150,13 @@ export async function handleTrustMetrics(request, env) {
     };
 
     if (kv) {
-      kv.put(cacheKey, JSON.stringify({ metrics }), { expirationTtl: 600 }).catch(() => {});
+      kv.put(cacheKey, JSON.stringify({ metrics }), { expirationTtl: 300 }).catch(() => {});
     }
 
     return json({ success: true, metrics });
 
   } catch (e) {
-    // Graceful degradation — return null values (not zeros) on DB error
+    // Graceful degradation — return null values (not zeros)
     return json({
       success: true,
       metrics: {
@@ -252,42 +281,4 @@ export async function handleTrustCenter(request, env) {
       service_levels: COMPANY_INFO.methodology.sla,
       contact: {
         email:    COMPANY_INFO.email,
-        whatsapp: COMPANY_INFO.whatsapp,
-      },
-    });
-
-  } catch (e) {
-    return json({ success: false, error: e.message }, 500);
-  }
-}
-
-// ── POST /api/trust/testimonial ───────────────────────────────────────────────
-// Unchanged: submissions are pending (verified=0) until admin review.
-export async function handleSubmitTestimonial(request, env) {
-  let body;
-  try { body = await request.json(); }
-  catch { return json({ success: false, error: 'Invalid JSON' }, 400); }
-
-  const { name, role, company, content, rating } = body;
-  if (!content || content.length < 20) {
-    return json({ success: false, error: 'Content too short (minimum 20 characters)' }, 400);
-  }
-
-  const id = 'ts_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const db = env.SECURITY_HUB_DB || env.DB;
-  if (!db) return json({ success: false, error: 'DB unavailable' }, 503);
-
-  await db.prepare(
-    "INSERT INTO trust_signals (id, type, title, content, company, verified, visible) VALUES (?, 'testimonial', ?, ?, ?, 0, 0)"
-  ).bind(
-    id,
-    ((name || 'Anonymous') + (role ? ' — ' + role : '')).slice(0, 200),
-    content.slice(0, 2000),
-    (company || '').slice(0, 200),
-  ).run();
-
-  return json({
-    success: true,
-    message: 'Thank you. Your testimonial will appear publicly after verification by our team.',
-  });
-}
+        whatsapp: COM

@@ -69,59 +69,82 @@ async function cbAllow(env) {
   } catch { return true; }
 }
 
-// ─── D1 Hydration Query — FIXED ──────────────────────────────────────────────
+// ─── D1 Hydration — Resilient per-table try-catch (v32.1) ───────────────────
+// CRITICAL ARCHITECTURE NOTE:
+//   db.batch() is ALL-OR-NOTHING. One missing table aborts the entire batch.
+//   Remote D1 may not have all tables (scan_history vs scan_jobs, subscriptions,
+//   payments, assessment_bookings). Any missing table was crashing the batch,
+//   tripping the circuit breaker, and returning 503 for all metrics.
+//
+//   Fix: each table queried individually with try-catch. Core tables
+//   (threat_intel) are confirmed present. Optional tables default to 0 on error.
+// ─────────────────────────────────────────────────────────────────────────────
+async function safeQuery(db, sql, fallback = 0) {
+  try {
+    const row = await db.prepare(sql).first();
+    return Number(row?.v ?? row?.count ?? row?.val ?? fallback);
+  } catch { return fallback; }
+}
+
 async function fetchLiveMetricsFromD1(env) {
   const db = env.SECURITY_HUB_DB || env.DB;
   if (!db) throw new Error('D1 binding unavailable');
 
-  const timeout = new Promise((_, rej) =>
-    setTimeout(() => rej(new Error('D1 timeout after 4000ms')), D1_TIMEOUT_MS));
-
-  // FIX: Use explicit index positions matching the batch array below.
-  // v30.0 had get(5) for both active_customers AND revenue_today — wrong.
-  // The batch array is now numbered with a comment on every line.
-  // NOTE: db.prepare() returns D1PreparedStatement, NOT a Promise.
-  // Calling .catch() on a PreparedStatement is a no-op / TypeError — it corrupts db.batch().
-  // soar_rules table may not exist in all environments — query it separately with try-catch.
-  const queries = db.batch([
-    /* 0 */ db.prepare("SELECT COALESCE(SUM(1),0) AS v FROM scan_history"),
-    /* 1 */ db.prepare("SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history"),
-    /* 2 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')"),
-    // Use columns confirmed in remote schema: actively_exploited + source
-    /* 3 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
-    // active_customers reads from subscriptions table
-    /* 4 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'"),
-    /* 5 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND created_at > datetime('now','-1 day')"),
-    /* 6 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')"),
-    /* 7 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel"),
-    /* 8 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM assessment_bookings WHERE status IN ('confirmed','completed')"),
-    /* 9 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80"),
-    /* 10 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
+  // ── Confirmed-present tables: run in parallel ──────────────────────────────
+  const [
+    totalCves,
+    critHighCves,
+    kevCves,
+    allKev,
+  ] = await Promise.all([
+    safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel"),
+    safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')"),
+    safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
+    safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
   ]);
 
-  const results = await Promise.race([queries, timeout]);
-
-  // soar_rules queried separately — table may not exist in all envs
-  let soarRulesTotal = 0;
+  // ── Scan tables: try scan_history first, fall back to scan_jobs ────────────
+  let totalScans = 0, scansToday = 0, highRiskScans = 0;
   try {
-    const soarRow = await db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM soar_rules").first();
-    soarRulesTotal = Number(soarRow?.v ?? 0);
-  } catch { /* table absent — default 0 */ }
+    const [s, t, h] = await db.batch([
+      db.prepare("SELECT COALESCE(SUM(1),0) AS v FROM scan_history"),
+      db.prepare("SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history"),
+      db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80"),
+    ]);
+    totalScans  = Number(s?.results?.[0]?.v ?? 0);
+    scansToday  = Number(t?.results?.[0]?.v ?? 0);
+    highRiskScans = Number(h?.results?.[0]?.v ?? 0);
+  } catch {
+    // scan_history absent — fall back to scan_jobs
+    try {
+      const [s, t] = await db.batch([
+        db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_jobs"),
+        db.prepare("SELECT COALESCE(SUM(CASE WHEN created_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_jobs"),
+      ]);
+      totalScans = Number(s?.results?.[0]?.v ?? 0);
+      scansToday = Number(t?.results?.[0]?.v ?? 0);
+    } catch { /* both tables absent — default 0 */ }
+  }
 
-  const get = (i) => Number(results[i]?.results?.[0]?.v ?? 0);
+  // ── Optional revenue/subscription tables: always individual try-catch ──────
+  const activeCustomers     = await safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'");
+  const revenueTodayInr     = await safeQuery(db, "SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND created_at > datetime('now','-1 day')");
+  const revenueMonthInr     = await safeQuery(db, "SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')");
+  const assessmentsComplete = await safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM assessment_bookings WHERE status IN ('confirmed','completed')");
+  const soarRulesTotal      = await safeQuery(db, "SELECT COALESCE(COUNT(*),0) AS v FROM soar_rules");
 
   return {
-    total_scans:          get(0),
-    scans_today:          get(1),
-    critical_threats:     get(2),
-    active_exploitation:  get(3),
-    active_customers:     get(4),
-    revenue_today_inr:    get(5),
-    revenue_month_inr:    get(6),
-    total_cves_tracked:   get(7),
-    assessments_complete: get(8),
-    high_risk_scans:      get(9),
-    kev_count:            get(10),
+    total_scans:          totalScans,
+    scans_today:          scansToday,
+    critical_threats:     critHighCves,
+    active_exploitation:  kevCves,
+    active_customers:     activeCustomers,
+    revenue_today_inr:    revenueTodayInr,
+    revenue_month_inr:    revenueMonthInr,
+    total_cves_tracked:   totalCves,
+    assessments_complete: assessmentsComplete,
+    high_risk_scans:      highRiskScans,
+    kev_count:            allKev,
     soar_rules_total:     soarRulesTotal,
     uptime_pct:           99.9,
     cve_alert_sla:        '< 2 hours',
@@ -230,48 +253,4 @@ export async function servePlatformMetrics(request, env) {
         const payload = JSON.stringify(metrics);
         Promise.all([
           kv.put(CACHE_KEY_LIVE,  payload, { expirationTtl: LIVE_TTL_SEC }),
-          kv.put(CACHE_KEY_STALE, payload, { expirationTtl: STALE_TTL_SEC }),
-        ]).catch(() => {});
-      }
-      await cbRecord(env, true);
-      return jsonR({ success: true, metrics, cache: 'live_d1', age: 'fresh' });
-
-    } catch (err) {
-      await cbRecord(env, false);
-    }
-  }
-
-  // ── L3: stale snapshot fallback (clearly labelled) ─────────────────────
-  if (kv) {
-    try {
-      const stale = await kv.get(CACHE_KEY_STALE);
-      if (stale) {
-        const m = JSON.parse(stale);
-        m.source = 'stale_snapshot';
-        m.stale  = true;
-        return jsonR({
-          success:  true,
-          metrics:  m,
-          cache:    'stale',
-          age:      'degraded',
-          note:     'Live metrics temporarily unavailable — showing last healthy snapshot',
-        }, 200, { 'Cache-Control': 'no-store' });
-      }
-    } catch {}
-  }
-
-  // ── L4: safe-default — null not zero, never fake ─────────────────────
-  return jsonR({
-    success: false,
-    metrics: {
-      total_scans:        null,
-      total_cves_tracked: null,
-      active_customers:   null,
-      uptime_pct:         99.9,
-      cve_alert_sla:      '< 2 hours',
-      source:             'unavailable',
-      note:               'Metrics temporarily unavailable',
-    },
-    cache: 'unavailable',
-  }, 503);
-}
+          kv.put(CACHE_KEY_STALE, pa
