@@ -22220,4 +22220,8 @@ function v21TriggerUrgencyPayment(){
           <div class="cdb-section-heading">Quick Actions</div>
           <div class="cdb-cta-row">
             <button class="cdb-btn-primary" onclick="document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'})">View Enterprise Plans</button>
-            <button class="cdb-btn-outline" onclick="(function(){var s=document.getElementById('enterprise')||document.getElementById('ciso-command-center')||document.getElementById('pricing')
+            <button class="cdb-btn-outline" onclick="(function(){var s=document.getElementById('enterprise')||document.getElementById('ciso-command-center')||document.getElementById('pricing');if(s){s.scrollIntoView({behavior:'smooth'});var demoBtn=document.querySelector('[data-tab=\'book-demo\']')||document.querySelector('[onclick*=\'book-demo\']');if(demoBtn){setTimeout(function(){demoBtn.click();},400);}}else{window.location.href='/#enterprise';}})()">Request Demo</button>
+          </div>
+          <div style="margin-top:16px;font-size:11px;color:#475569;line-height:1.6;">
+            CYBERDUDEBIVASH® AI Security Hub — Enterprise Edition<br>
+            Powered by Sentinel APEX + M
