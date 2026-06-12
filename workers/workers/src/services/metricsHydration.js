@@ -80,13 +80,16 @@ async function fetchLiveMetricsFromD1(env) {
   // FIX: Use explicit index positions matching the batch array below.
   // v30.0 had get(5) for both active_customers AND revenue_today — wrong.
   // The batch array is now numbered with a comment on every line.
+  // NOTE: db.prepare() returns D1PreparedStatement, NOT a Promise.
+  // Calling .catch() on a PreparedStatement is a no-op / TypeError — it corrupts db.batch().
+  // soar_rules table may not exist in all environments — query it separately with try-catch.
   const queries = db.batch([
     /* 0 */ db.prepare("SELECT COALESCE(SUM(1),0) AS v FROM scan_history"),
     /* 1 */ db.prepare("SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history"),
     /* 2 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')"),
     // Use columns confirmed in remote schema: actively_exploited + source
     /* 3 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
-    // FIX: active_customers reads from subscriptions table, not payments
+    // active_customers reads from subscriptions table
     /* 4 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'"),
     /* 5 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND created_at > datetime('now','-1 day')"),
     /* 6 */ db.prepare("SELECT COALESCE(SUM(amount_inr),0) AS v FROM payments WHERE status='captured' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')"),
@@ -94,11 +97,16 @@ async function fetchLiveMetricsFromD1(env) {
     /* 8 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM assessment_bookings WHERE status IN ('confirmed','completed')"),
     /* 9 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80"),
     /* 10 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE actively_exploited=1 OR source='cisa_kev'"),
-    // soar_rules table added in v31 — graceful if absent
-    /* 11 */ db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM soar_rules").catch(() => ({ results: [{ v: 0 }] })),
   ]);
 
   const results = await Promise.race([queries, timeout]);
+
+  // soar_rules queried separately — table may not exist in all envs
+  let soarRulesTotal = 0;
+  try {
+    const soarRow = await db.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM soar_rules").first();
+    soarRulesTotal = Number(soarRow?.v ?? 0);
+  } catch { /* table absent — default 0 */ }
 
   const get = (i) => Number(results[i]?.results?.[0]?.v ?? 0);
 
@@ -106,9 +114,7 @@ async function fetchLiveMetricsFromD1(env) {
     total_scans:          get(0),
     scans_today:          get(1),
     critical_threats:     get(2),
-    // FIX: was get(3) on wrong columns before migration — now correct
     active_exploitation:  get(3),
-    // FIX: was get(5) (revenue_today) in v30.0 — now correct index 4
     active_customers:     get(4),
     revenue_today_inr:    get(5),
     revenue_month_inr:    get(6),
@@ -116,7 +122,7 @@ async function fetchLiveMetricsFromD1(env) {
     assessments_complete: get(8),
     high_risk_scans:      get(9),
     kev_count:            get(10),
-    soar_rules_total:     get(11),
+    soar_rules_total:     soarRulesTotal,
     uptime_pct:           99.9,
     cve_alert_sla:        '< 2 hours',
     assessment_sla:       '72 hours',

@@ -7279,7 +7279,8 @@ footer.v14-footer::before {
       // Attention strip
       if (activeSess !== null) safe('ae-scan-live', activeSess);
       else { var esl=el('ae-scan-live'); if(esl&&esl.closest) esl.closest('.rb-attn-item')?.style.setProperty('display','none'); }
-      safe('ae-cve-count', critCves ?? '—');
+      // Show 0 (not '—') when critCves is null — DB is empty, not an error
+      safe('ae-cve-count', critCves !== null && critCves !== undefined ? critCves : 0);
       safe('ae-update-time', new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}));
 
       // Risk block popup
@@ -7303,7 +7304,11 @@ footer.v14-footer::before {
 
       // Trust center
       safe('tm-scans', Number(_applyFloor(scansToday||0, _SCAN_BASELINE)).toLocaleString('en-IN') + '+');
-      safe('tm-cves',  cveActive!==null  ? Number(cveActive).toLocaleString('en-IN')  : '—');
+      // Only update tm-cves when API returns real data — don't overwrite hardcoded '3,841+' baseline with '—'
+      if (cveActive !== null && cveActive !== undefined) {
+        safe('tm-cves', Number(cveActive).toLocaleString('en-IN'));
+      }
+      // else: leave hardcoded baseline intact — API data unavailable, baseline is better than '—'
 
     } catch(e) {
       console.warn('[CDB] Stats fetch error:', e.message);
@@ -21998,7 +22003,13 @@ function v21TriggerUrgencyPayment(){
     var bar   = document.getElementById('cdb-threat-bar');
     var label = document.getElementById('cdb-threat-level-label');
     var scoreEl = document.getElementById('cdb-threat-score');
-    if (!tiStats) return;
+    if (!tiStats) {
+      // API unavailable — render UNKNOWN state instead of leaving '—' indefinitely
+      if (scoreEl) scoreEl.textContent = '—';
+      if (label)   label.textContent   = 'UNKNOWN';
+      if (bar)     { bar.style.width = '5%'; bar.style.background = '#475569'; bar.style.borderRadius = '4px'; bar.style.height = '100%'; }
+      return;
+    }
 
     var total = tiStats.total_advisories || tiStats.total_cves || 0;
     var crit  = tiStats.critical || 0;

@@ -1195,10 +1195,10 @@
             Upgrade to unlock more scans, advanced modules, and enterprise features.
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="window.CDB_PAY && CDB_PAY.open('PRO','2999','Pro Plan — Unlimited Scans')">
+            <button class="btn btn-primary" onclick="selectPlan('pro')">
               ⚡ Upgrade to Pro — ₹2,999/mo
             </button>
-            <button class="btn" style="border:1px solid var(--accent2);color:var(--accent2)" onclick="window.CDB_PAY && CDB_PAY.open('ENTERPRISE','9999','Enterprise Plan')">
+            <button class="btn" style="border:1px solid var(--accent2);color:var(--accent2)" onclick="selectPlan('enterprise')">
               🏢 Enterprise — ₹9,999/mo
             </button>
           </div>
@@ -3178,7 +3178,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
             ${hasAccess
               ? `<a href="${tool.path}" class="btn btn-primary" style="font-size:.8rem;padding:7px 14px">Launch Tool →</a>`
               : `<button class="btn btn-primary" style="font-size:.8rem;padding:7px 14px"
-                   onclick="window.CDB_PAY && CDB_PAY.open('PRO','2999','Pro Plan — Unlock All Tools')">
+                   onclick="selectPlan('pro')">
                    Upgrade to Unlock
                  </button>`
             }
