@@ -15,16 +15,22 @@ on:
 permissions:
   contents: read
 
+# Cancel in-progress test runs on the same ref to save runner minutes
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Unit tests (required) ────────────────────────────────────────────────
   unit-tests:
     name: Unit Tests (Vitest)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults: { run: { working-directory: workers } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "20", cache: "npm", cache-dependency-path: workers/package-lock.json }
+        with: { node-version: "24", cache: "npm", cache-dependency-path: workers/package-lock.json }
       - run: npm ci || npm install
       - name: Run unit tests
         run: npx vitest run --reporter=dot
@@ -33,6 +39,7 @@ jobs:
   header-assert:
     name: Security Header Assertions
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Assert critical headers present in frontend/_headers
@@ -50,10 +57,11 @@ jobs:
   a11y:
     name: Accessibility (axe)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "20" }
+        with: { node-version: "24" }
       - name: axe-core CLI scan of live pages
         run: |
           npm i -g @axe-core/cli
@@ -64,10 +72,11 @@ jobs:
   lighthouse:
     name: Lighthouse CI (mobile)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "20" }
+        with: { node-version: "24" }
       - name: Run Lighthouse CI
         run: |
           npm i -g @lhci/cli
@@ -78,10 +87,11 @@ jobs:
   e2e:
     name: E2E Smoke (Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "20" }
+        with: { node-version: "24" }
       - name: Playwright smoke
         run: |
           npm i -D @playwright/test

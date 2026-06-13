@@ -54,7 +54,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "24"
   WRANGLER_VERSION: "4"
   PLATFORM_VERSION: "21.0.0"
   # ── Endpoint hierarchy (smoke test tries these in order) ─────────────────

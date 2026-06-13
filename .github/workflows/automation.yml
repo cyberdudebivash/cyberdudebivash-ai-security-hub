@@ -81,6 +81,10 @@ on:
         default: 'false'
         type: boolean
 
+# Least-privilege: automation only reads repo contents; secrets are injected via env
+permissions:
+  contents: read
+
 # ─────────────────────────────────────────────────────────────────────────────
 # NO WORKFLOW-LEVEL CONCURRENCY — each job manages its own.
 # This prevents jobs from cancelling each other when multiple crons overlap.

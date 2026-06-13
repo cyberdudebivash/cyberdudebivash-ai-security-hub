@@ -40,6 +40,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege: CI only needs to read repo contents
+permissions:
+  contents: read
+
 # Cancel in-progress runs on the same branch to save runner minutes
 concurrency:
   group: ci-${{ github.ref }}
@@ -58,10 +62,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: workers/package-lock.json
 
@@ -353,10 +357,10 @@ jobs:
           echo "✅ Python dependency audit complete"
 
       # ── 4d. Node.js Dependency Audit ─────────────────────────────────────
-      - name: Setup Node.js 20 (for audit)
+      - name: Setup Node.js 24 (for audit)
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: "[Advisory] Node.js dependency audit (npm audit)"
         continue-on-error: true

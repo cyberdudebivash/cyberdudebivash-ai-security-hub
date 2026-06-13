@@ -191,7 +191,7 @@ window.CDB_FUNNEL = CDB_FUNNEL;
     
     <!-- Email input -->
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      <input id="cdb-gate-email" type="email" placeholder="your@company.com" autocomplete="email"
+      <input id="cdb-gate-email" aria-label="Company Email" type="email" placeholder="your@company.com" autocomplete="email"
         style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:13px 16px;color:#fff;font-size:15px;outline:none;transition:border .2s"
         onfocus="this.style.borderColor='rgba(0,212,255,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.15)'"
         onkeydown="if(event.key==='Enter')cdbGateSubmit()">
@@ -1298,7 +1298,7 @@ a{color:var(--accent);text-decoration:none}
   <!-- SINGLE PRIMARY ACTION — Hero Quick Scan -->
   <div class="hero-scan-wrap">
     <div class="hero-scan-row">
-      <input id="heroScanInput" type="text" class="hero-scan-input"
+      <input id="heroScanInput" aria-label="Domain to scan" type="text" class="hero-scan-input"
         placeholder="🔍 Enter your domain (e.g. example.com) — instant risk score"
         autocomplete="off" spellcheck="false">
       <button class="btn btn-primary hero-scan-btn"
@@ -1418,7 +1418,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <!-- ═══════════════════════ SECURITY DASHBOARD ═══════════════════════ -->
-<section id="dashboard" class="dashboard-section" style="display:none" data-auth-gate="true" data-section-id="dashboard">
+<section id="dashboard" class="dashboard-section" style="display:none" data-auth-gate="true" data-section-id="dashboard-2">
   <div class="dashboard-inner">
     <div style="text-align:center;margin-bottom:36px;position:relative;padding:32px 24px 28px;background:linear-gradient(135deg,rgba(0,212,255,.05),rgba(99,102,241,.04),rgba(168,85,247,.03));border:1px solid rgba(0,212,255,.1);border-radius:20px;overflow:hidden">
       <!-- BG radial glow -->
@@ -1900,18 +1900,18 @@ a{color:var(--accent);text-decoration:none}
   <!-- Tabs -->
   <div class="tab-nav" role="tablist">
     <button role="tab" aria-selected="true" class="tab-btn active" onclick="switchTab('domain')" data-tab="domain">🌐 Domain</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('ai')" data-tab="ai">🤖 AI Security</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('redteam')" data-tab="redteam">🎯 Red Team</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('identity')" data-tab="identity">🔐 Identity</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('compliance')" data-tab="compliance">📋 Compliance</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('threatintel')" data-tab="threatintel">🛡️ Threat Intel</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('simulation')" data-tab="simulation">⚔️ Simulation</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('cloudsec')" data-tab="cloudsec">☁️ Cloud Security</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('darkscan')" data-tab="darkscan">🕵️ Dark Web</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('appsec')" data-tab="appsec">📱 AppSec</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('mcp_sec')" data-tab="mcp_sec">🔌 MCP Security</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('vibe_code')" data-tab="vibe_code">🤖 Vibe Code</button>
-    <button role="tab" class="tab-btn" onclick="switchTab('reports')" data-tab="reports">📊 Reports</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('ai')" data-tab="ai">🤖 AI Security</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('redteam')" data-tab="redteam">🎯 Red Team</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('identity')" data-tab="identity">🔐 Identity</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('compliance')" data-tab="compliance">📋 Compliance</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('threatintel')" data-tab="threatintel">🛡️ Threat Intel</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('simulation')" data-tab="simulation">⚔️ Simulation</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('cloudsec')" data-tab="cloudsec">☁️ Cloud Security</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('darkscan')" data-tab="darkscan">🕵️ Dark Web</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('appsec')" data-tab="appsec">📱 AppSec</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('mcp_sec')" data-tab="mcp_sec">🔌 MCP Security</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('vibe_code')" data-tab="vibe_code">🤖 Vibe Code</button>
+    <button role="tab" aria-selected="false" class="tab-btn" onclick="switchTab('reports')" data-tab="reports">📊 Reports</button>
   </div>
 
   <!-- Domain Tab -->
@@ -2124,7 +2124,7 @@ a{color:var(--accent);text-decoration:none}
         <div class="form-row" style="margin-top:8px">
           <div class="form-group">
             <label>Module to Simulate</label>
-            <select id="simModule">
+            <select id="simModule" aria-label="Simulation module">
               <option value="domain">🌐 Domain</option>
               <option value="ai">🤖 AI Security</option>
               <option value="redteam">🎯 Red Team</option>
@@ -2134,7 +2134,7 @@ a{color:var(--accent);text-decoration:none}
           </div>
           <div class="form-group">
             <label>Target (optional)</label>
-            <input id="simTarget" type="text" placeholder="e.g. example.com">
+            <input id="simTarget" aria-label="Simulation target domain" type="text" placeholder="e.g. example.com">
           </div>
         </div>
         <p style="color:var(--text-muted);font-size:12px;margin-top:4px">💡 Run a module scan first to get richer simulation results. Or simulate with a synthetic risk profile.</p>
@@ -2291,8 +2291,8 @@ a{color:var(--accent);text-decoration:none}
   "rate_limits": null,
   "egress_controls": null
 }' style="width:100%;min-height:180px;background:rgba(0,0,0,.4);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:12px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;outline:none;line-height:1.5"></textarea>
-        <div style="font-size:11px;color:#475569;margin-top:6px">Or provide MCP server URL: <input id="mcp-server-url" type="url" placeholder="https://your-mcp-server.com" style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:11px;width:240px;outline:none"></div>
-        <div style="font-size:11px;color:#475569;margin-top:4px">Server name: <input id="mcp-server-name" type="text" placeholder="My MCP Server" style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:11px;width:200px;outline:none"></div>
+        <div style="font-size:11px;color:#475569;margin-top:6px">Or provide MCP server URL: <input id="mcp-server-url" aria-label="MCP Server URL" type="url" placeholder="https://your-mcp-server.com" style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:11px;width:240px;outline:none"></div>
+        <div style="font-size:11px;color:#475569;margin-top:4px">Server name: <input id="mcp-server-name" aria-label="MCP Server Name" type="text" placeholder="My MCP Server" style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:11px;width:200px;outline:none"></div>
       </div>
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#64748b;line-height:1.7">
         <strong style="color:#94a3b8">Detects:</strong> Unrestricted tool scope · Missing auth enforcement · Data exfiltration chains · Prompt injection via tool results · Privilege escalation · Secret exposure · Missing rate limits · Session leakage
@@ -2336,7 +2336,7 @@ app.get('/api/user', (req, res) => {
 });" style="width:100%;min-height:220px;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;outline:none;line-height:1.5"></textarea>
         <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
           <label style="font-size:12px;color:#64748b">Language:</label>
-          <select id="vibe-code-language" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:12px;outline:none">
+          <select id="vibe-code-language" aria-label="Programming language" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:12px;outline:none">
             <option value="javascript">JavaScript / Node.js</option>
             <option value="typescript">TypeScript</option>
             <option value="python">Python</option>
@@ -2345,7 +2345,7 @@ app.get('/api/user', (req, res) => {
             <option value="go">Go</option>
           </select>
           <label style="font-size:12px;color:#64748b">AI Tool:</label>
-          <select id="vibe-code-source" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:12px;outline:none">
+          <select id="vibe-code-source" aria-label="AI tool" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 8px;color:#e2e8f0;font-size:12px;outline:none">
             <option value="cursor">Cursor</option>
             <option value="copilot">GitHub Copilot</option>
             <option value="claude">Claude Code</option>
@@ -2660,7 +2660,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 
 <!-- ════════ SENTINEL APEX DEFENSE SOLUTIONS MARKETPLACE ════════ -->
-<section id="defense-solutions" style="display:none;background:linear-gradient(180deg,#080818 0%,#0d0d24 100%);padding:80px 20px" data-auth-gate="true" data-section-id="defense-solutions">
+<section id="defense-solutions" style="display:none;background:linear-gradient(180deg,#080818 0%,#0d0d24 100%);padding:80px 20px" data-auth-gate="true" data-section-id="defense-solutions-2">
   <div class="section-inner" style="max-width:1200px;margin:0 auto">
 
     <!-- Section header -->
@@ -2729,7 +2729,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <!-- FOMO live notification strip -->
     <div id="ds-live-notif" style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:10px 18px;margin-bottom:36px;font-size:13px;color:rgba(255,255,255,.7);min-height:38px;display:flex;align-items:center;gap:10px;overflow:hidden">
       <span style="color:#00d4ff;font-weight:700;white-space:nowrap">● LIVE</span>
-      <span id="ds-live-msg">Loading live purchase activity...</span>
+      <span id="ds-live-msg-2">Loading live purchase activity...</span>
     </div>
 
     <!-- Solutions grid -->
@@ -2779,9 +2779,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <h3 style="font-size:20px;font-weight:800;margin:0 0 6px">🔧 Request Custom Defense Solution</h3>
     <p style="color:rgba(255,255,255,.5);font-size:13px;margin:0 0 24px">Our AI generates tailored security tools within 24 hours</p>
     <div style="display:flex;flex-direction:column;gap:14px">
-      <input id="csr-email"    type="email"  placeholder="your@email.com *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
-      <input id="csr-cve"      type="text"   placeholder="CVE ID (e.g. CVE-2024-12345)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
-      <select id="csr-type" style="background:#1a1a30;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <input id="csr-email" aria-label="Email address"    type="email"  placeholder="your@email.com *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <input id="csr-cve" aria-label="CVE ID"      type="text"   placeholder="CVE ID (e.g. CVE-2024-12345)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <select id="csr-type" aria-label="Report type" style="background:#1a1a30;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
         <option value="">Solution Type</option>
         <option value="firewall_script">🔥 Firewall Script</option>
         <option value="sigma_rule">🔍 Sigma Detection Rule</option>
@@ -2790,7 +2790,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <option value="python_scanner">🐍 Python Scanner</option>
         <option value="all">All Types Bundle</option>
       </select>
-      <input id="csr-stack" type="text" placeholder="Tech stack (e.g. AWS + Ubuntu + nginx)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+      <input id="csr-stack" aria-label="Technology stack" type="text" placeholder="Tech stack (e.g. AWS + Ubuntu + nginx)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
       <textarea id="csr-desc" rows="3" placeholder="Describe your security needs *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none;resize:vertical"></textarea>
     </div>
     <div style="display:flex;gap:12px;margin-top:20px">
@@ -3034,7 +3034,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <p style="color:rgba(255,255,255,.5);font-size:14px;margin:0 0 24px">One-time purchase — lifetime access</p>
         <div style="font-size:36px;font-weight:900;color:#00d4ff;margin-bottom:24px">₹${priceInr?.toLocaleString('en-IN')}</div>
         <div style="display:flex;flex-direction:column;gap:10px;max-width:360px;margin:0 auto">
-          <input id="pur-email" type="email" placeholder="Your email (for delivery)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
+          <input id="pur-email" aria-label="Email for delivery" type="email" placeholder="Your email (for delivery)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none">
           <button id="pur-btn" onclick="initiatePayment('${solutionId}','${title?.replace(/'/g,"\\'")}',${priceInr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:8px;font-weight:900;font-size:15px;cursor:pointer">
             💳 Secure Checkout
           </button>
@@ -3451,7 +3451,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </style>
 
 <!-- ════════ MYTHOS AI CYBER ANALYST ════════ -->
-<section id="ai-analyst" style="display:none;background:linear-gradient(180deg,#05050f 0%,#0a0a1e 100%);padding:80px 20px;border-top:1px solid rgba(0,212,255,.1)" data-auth-gate="true" data-section-id="ai-analyst">
+<section id="ai-analyst" style="display:none;background:linear-gradient(180deg,#05050f 0%,#0a0a1e 100%);padding:80px 20px;border-top:1px solid rgba(0,212,255,.1)" data-auth-gate="true" data-section-id="ai-analyst-2">
 <div style="max-width:1200px;margin:0 auto">
 
   <!-- Header -->
@@ -3504,7 +3504,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <!-- Input -->
       <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2)">
         <div style="display:flex;gap:8px">
-          <input id="mythos-chat-input" type="text"
+          <input id="mythos-chat-input" aria-label="Chat message" type="text"
             placeholder="Ask about CVEs, generate rules, simulate attacks..."
             style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:11px 14px;color:#fff;font-size:13px;outline:none;font-family:inherit"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cdbAnalystSend()}"
@@ -3539,12 +3539,12 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <div style="display:flex;flex-direction:column;gap:10px">
           <div>
             <label style="font-size:11px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px">CVE ID / THREAT</label>
-            <input id="soar-cve-input" type="text" placeholder="CVE-2024-21762 or threat name"
+            <input id="soar-cve-input" aria-label="CVE or threat name" type="text" placeholder="CVE-2024-21762 or threat name"
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;outline:none;margin-top:4px;font-family:monospace">
           </div>
           <div>
             <label style="font-size:11px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px">PLATFORM</label>
-            <select id="soar-platform-select"
+            <select id="soar-platform-select" aria-label="SOAR platform"
               style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;outline:none;margin-top:4px">
               <option value="sigma">Sigma (Universal)</option>
               <option value="splunk">Splunk SPL</option>
@@ -3593,7 +3593,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ THREAT INTELLIGENCE KNOWLEDGE GRAPH ════════ -->
-<section id="threat-graph" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#080812 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)" data-auth-gate="true" data-section-id="threat-graph">
+<section id="threat-graph" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#080812 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)" data-auth-gate="true" data-section-id="threat-graph-2">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:40px">
@@ -3611,7 +3611,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <button onclick="cdbGraphFilter('cve')" id="graph-btn-cve" class="graph-filter-btn">CVEs</button>
     <button onclick="cdbGraphFilter('malware')" id="graph-btn-malware" class="graph-filter-btn">Malware</button>
     <button onclick="cdbGraphFilter('ttp')" id="graph-btn-ttp" class="graph-filter-btn">TTPs</button>
-    <input id="graph-search" type="text" placeholder="Search nodes..."
+    <input id="graph-search" aria-label="Search threat graph nodes" type="text" placeholder="Search nodes..."
       style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 14px;color:#fff;font-size:12px;outline:none;width:180px"
       oninput="cdbGraphSearch(this.value)">
   </div>
@@ -3809,7 +3809,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 2: AUTONOMOUS SOC COMMAND CENTER ════════ -->
-<section id="autonomous-soc" style="display:none;background:linear-gradient(180deg,#02020a 0%,#05051a 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.15)" data-auth-gate="true" data-section-id="autonomous-soc">
+<section id="autonomous-soc" style="display:none;background:linear-gradient(180deg,#02020a 0%,#05051a 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.15)" data-auth-gate="true" data-section-id="autonomous-soc-2">
 <div style="max-width:1200px;margin:0 auto">
 
   <!-- Header -->
@@ -3853,7 +3853,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <!-- Scheduler -->
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 36px;text-align:center;min-width:220px">
       <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:16px">SCHEDULER</div>
-      <select id="auto-soc-interval" onchange="cdbAutoSOCSetSchedule()" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);color:#e2e8f0;padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;width:100%">
+      <select id="auto-soc-interval" aria-label="Automation scheduler interval" onchange="cdbAutoSOCSetSchedule()" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);color:#e2e8f0;padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;width:100%">
         <option value="15">Every 15 min</option>
         <option value="30">Every 30 min</option>
         <option value="60" selected>Every hour</option>
@@ -3900,7 +3900,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 2: SIEM INTEGRATION DEPLOY ════════ -->
-<section id="siem-deploy" style="display:none;background:linear-gradient(180deg,#05051a 0%,#080818 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)" data-auth-gate="true" data-section-id="siem-deploy">
+<section id="siem-deploy" style="display:none;background:linear-gradient(180deg,#05051a 0%,#080818 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)" data-auth-gate="true" data-section-id="siem-deploy-2">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:48px">
@@ -3933,15 +3933,15 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div style="grid-column:1/-1">
         <label id="siem-config-url-label" style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);display:block;margin-bottom:6px;text-transform:uppercase">Webhook URL</label>
-        <input id="siem-config-url" type="url" placeholder="https://..." style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <input id="siem-config-url" aria-label="SIEM URL" type="url" placeholder="https://..." style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);display:block;margin-bottom:6px;text-transform:uppercase">Auth Token (optional)</label>
-        <input id="siem-config-token" type="password" placeholder="Bearer token / API key" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <input id="siem-config-token" aria-label="API bearer token" type="password" placeholder="Bearer token / API key" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);display:block;margin-bottom:6px;text-transform:uppercase">HEC Token (Splunk only)</label>
-        <input id="siem-config-hec" type="password" placeholder="Splunk HEC token" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <input id="siem-config-hec" aria-label="Splunk HEC token" type="password" placeholder="Splunk HEC token" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -3967,7 +3967,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 2: ORGANIZATION MEMORY SYSTEM ════════ -->
-<section id="org-memory" style="display:none;background:linear-gradient(180deg,#080818 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(34,197,94,.1)" data-auth-gate="true" data-section-id="org-memory">
+<section id="org-memory" style="display:none;background:linear-gradient(180deg,#080818 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(34,197,94,.1)" data-auth-gate="true" data-section-id="org-memory-2">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:48px">
@@ -4039,7 +4039,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 2: API ECONOMY + DEVELOPER PLATFORM ════════ -->
-<section id="api-economy" style="display:none;background:linear-gradient(180deg,#050510 0%,#070710 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.1)" data-auth-gate="true" data-section-id="api-economy">
+<section id="api-economy" style="display:none;background:linear-gradient(180deg,#050510 0%,#070710 100%);padding:80px 20px;border-top:1px solid rgba(245,158,11,.1)" data-auth-gate="true" data-section-id="api-economy-2">
 <div style="max-width:1200px;margin:0 auto">
 
   <div style="text-align:center;margin-bottom:52px">
@@ -4100,8 +4100,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px">
       <div style="font-size:14px;font-weight:800;color:#e2e8f0;margin-bottom:20px">🔑 API Key Management</div>
       <div style="margin-bottom:16px">
-        <input id="api-key-name" type="text" placeholder="Key name (e.g. production-siem)" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:10px">
-        <select id="api-key-plan" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <input id="api-key-name" aria-label="API key name" type="text" placeholder="Key name (e.g. production-siem)" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:10px">
+        <select id="api-key-plan" aria-label="API key plan" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
           <option value="starter">Starter — 1,000 req/day</option>
           <option value="pro">Pro — 10,000 req/day</option>
           <option value="enterprise">Enterprise — Unlimited</option>
@@ -4168,7 +4168,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 3: AUTONOMOUS DEFENSE ENGINE ════════ -->
-<section id="auto-defense" style="display:none;background:linear-gradient(180deg,#030308 0%,#05050f 100%);padding:80px 20px;border-top:1px solid rgba(239,68,68,.15)" data-auth-gate="true" data-section-id="auto-defense">
+<section id="auto-defense" style="display:none;background:linear-gradient(180deg,#030308 0%,#05050f 100%);padding:80px 20px;border-top:1px solid rgba(239,68,68,.15)" data-auth-gate="true" data-section-id="auto-defense-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <div style="display:inline-block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:24px;padding:6px 18px;font-size:11px;color:#ef4444;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">AI Autonomous Threat Response</div>
@@ -4206,10 +4206,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <button onclick="cdbDefenseSaveConfig()" style="background:linear-gradient(135deg,#ef4444,#f97316);border:none;padding:8px 20px;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:600">Save Config</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px">Min CVSS Score</label><input type="number" id="p3-cvss-min" min="0" max="10" step="0.1" value="9.0" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px">Max Auto-Deploys/Day</label><input type="number" id="p3-max-deploys" min="1" max="100" value="10" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
-      <div style="display:flex;align-items:center;gap:12px;padding-top:20px"><label style="font-size:13px;color:#94a3b8;cursor:pointer"><input type="checkbox" id="p3-require-kev" style="margin-right:8px"> Require KEV listing</label></div>
-      <div style="display:flex;align-items:center;gap:12px;padding-top:20px"><label style="font-size:13px;color:#94a3b8;cursor:pointer"><input type="checkbox" id="p3-require-active-exp" style="margin-right:8px"> Require active exploitation</label></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px">Min CVSS Score</label><input type="number" id="p3-cvss-min" aria-label="Minimum CVSS score" min="0" max="10" step="0.1" value="9.0" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px">Max Auto-Deploys/Day</label><input type="number" id="p3-max-deploys" aria-label="Maximum deployments" min="1" max="100" value="10" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
+      <div style="display:flex;align-items:center;gap:12px;padding-top:20px"><label style="font-size:13px;color:#94a3b8;cursor:pointer"><input type="checkbox" id="p3-require-kev" aria-label="Require KEV only" style="margin-right:8px"> Require KEV listing</label></div>
+      <div style="display:flex;align-items:center;gap:12px;padding-top:20px"><label style="font-size:13px;color:#94a3b8;cursor:pointer"><input type="checkbox" id="p3-require-active-exp" aria-label="Require active exploitation" style="margin-right:8px"> Require active exploitation</label></div>
     </div>
   </div>
   <!-- Stats Bar -->
@@ -4241,7 +4241,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 3: DATA DOMINANCE ENGINE ════════ -->
-<section id="data-dominance" style="display:none;background:linear-gradient(180deg,#05050f 0%,#03030a 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)" data-auth-gate="true" data-section-id="data-dominance">
+<section id="data-dominance" style="display:none;background:linear-gradient(180deg,#05050f 0%,#03030a 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)" data-auth-gate="true" data-section-id="data-dominance-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <div style="display:inline-block;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:24px;padding:6px 18px;font-size:11px;color:#818cf8;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">AI Threat Intelligence Platform</div>
@@ -4259,8 +4259,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
   <div style="background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.2);border-radius:16px;padding:28px;margin-bottom:32px">
     <h3 style="margin:0 0 16px;font-size:1rem;color:#a78bfa;font-weight:600">🔬 Instant CVE Enrichment &amp; Confidence Scoring</h3>
     <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <input type="text" id="p3-cve-input" placeholder="CVE-2024-xxxx or vulnerability title" style="flex:1;min-width:200px;background:rgba(255,255,255,.05);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 16px;color:#f1f5f9;font-size:14px">
-      <input type="number" id="p3-cvss-input" placeholder="CVSS (0-10)" step="0.1" min="0" max="10" style="width:140px;background:rgba(255,255,255,.05);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 16px;color:#f1f5f9;font-size:14px">
+      <input type="text" id="p3-cve-input" aria-label="CVE ID or vulnerability title" placeholder="CVE-2024-xxxx or vulnerability title" style="flex:1;min-width:200px;background:rgba(255,255,255,.05);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 16px;color:#f1f5f9;font-size:14px">
+      <input type="number" id="p3-cvss-input" aria-label="CVSS score 0 to 10" placeholder="CVSS (0-10)" step="0.1" min="0" max="10" style="width:140px;background:rgba(255,255,255,.05);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 16px;color:#f1f5f9;font-size:14px">
       <button onclick="cdbEnrichCVE()" style="background:linear-gradient(135deg,#6366f1,#a78bfa);border:none;padding:10px 24px;border-radius:10px;color:#fff;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap">Enrich →</button>
     </div>
     <div id="p3-enrich-result" style="min-height:20px"></div>
@@ -4277,7 +4277,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ════════ PHASE 3: EXECUTIVE HUB ════════ -->
-<section id="executive-hub" style="display:none;background:linear-gradient(180deg,#03030a 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(16,185,129,.15)" data-auth-gate="true" data-section-id="executive-hub">
+<section id="executive-hub" style="display:none;background:linear-gradient(180deg,#03030a 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(16,185,129,.15)" data-auth-gate="true" data-section-id="executive-hub-2">
 
 <!-- v26 Funnel Dashboard — inside executive hub, auth-gated -->
 <div id="v26-funnel-dashboard" style="margin-top:32px;padding:24px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px">
@@ -4426,7 +4426,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.15);border-radius:16px;padding:24px">
       <h3 style="margin:0 0 16px;font-size:1rem;color:#34d399;font-weight:600">📄 CISO Report Generator</h3>
       <div style="display:grid;gap:12px">
-        <select id="p3-report-type" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px">
+        <select id="p3-report-type" aria-label="CISO report type" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px">
           <option value="monthly">Monthly Executive Report</option>
           <option value="quarterly">Quarterly Board Report</option>
           <option value="incident">Incident Summary Report</option>
@@ -4443,7 +4443,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
       <h3 style="margin:0;font-size:1.1rem;color:#f1f5f9;font-weight:700">🏢 MSSP Client Portfolio</h3>
       <div style="display:flex;gap:10px">
-        <input type="text" id="p3-mssp-search" placeholder="Search clients..." oninput="cdbMSSPSearch()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 14px;color:#f1f5f9;font-size:13px;width:200px">
+        <input type="text" id="p3-mssp-search" aria-label="Search clients" placeholder="Search clients..." oninput="cdbMSSPSearch()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 14px;color:#f1f5f9;font-size:13px;width:200px">
         <button onclick="cdbShowOnboardModal()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;padding:8px 20px;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:600">+ Onboard Client</button>
       </div>
     </div>
@@ -4461,10 +4461,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <button onclick="cdbSaveWhitelabel()" style="background:linear-gradient(135deg,#6366f1,#a78bfa);border:none;padding:8px 20px;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:600">Save Config</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Brand Name</label><input type="text" id="p3-wl-name" placeholder="Your Company" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px;box-sizing:border-box"></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Support Email</label><input type="email" id="p3-wl-email" placeholder="support@company.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px;box-sizing:border-box"></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Primary Color</label><input type="color" id="p3-wl-color" value="#6366f1" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 8px;height:38px;cursor:pointer"></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Custom Domain</label><input type="text" id="p3-wl-domain" placeholder="security.yourcompany.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Brand Name</label><input type="text" id="p3-wl-name" aria-label="Company name" placeholder="Your Company" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Support Email</label><input type="email" id="p3-wl-email" aria-label="Support email" placeholder="support@company.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Primary Color</label><input type="color" id="p3-wl-color" aria-label="Brand color" value="#6366f1" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 8px;height:38px;cursor:pointer"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Custom Domain</label><input type="text" id="p3-wl-domain" aria-label="Custom domain" placeholder="security.yourcompany.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:13px;box-sizing:border-box"></div>
     </div>
   </div>
 </div>
@@ -4475,10 +4475,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
   <div style="background:#0d0d1a;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:32px;width:90%;max-width:460px">
     <h3 style="margin:0 0 24px;color:#34d399;font-size:1.1rem;font-weight:700">Onboard New MSSP Client</h3>
     <div style="display:grid;gap:14px">
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Company Name *</label><input type="text" id="p3-ob-name" placeholder="Acme Corp" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Domain *</label><input type="text" id="p3-ob-domain" placeholder="acmecorp.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Sector</label><select id="p3-ob-sector" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px"><option>FINANCE</option><option>HEALTHCARE</option><option>RETAIL</option><option>GOVERNMENT</option><option>TECHNOLOGY</option><option>ENERGY</option><option>OTHER</option></select></div>
-      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Contact Email</label><input type="email" id="p3-ob-email" placeholder="ciso@acmecorp.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Company Name *</label><input type="text" id="p3-ob-name" aria-label="Organization name" placeholder="Acme Corp" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Domain *</label><input type="text" id="p3-ob-domain" aria-label="Organization domain" placeholder="acmecorp.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Sector</label><select id="p3-ob-sector" aria-label="Industry sector" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px"><option>FINANCE</option><option>HEALTHCARE</option><option>RETAIL</option><option>GOVERNMENT</option><option>TECHNOLOGY</option><option>ENERGY</option><option>OTHER</option></select></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px">Contact Email</label><input type="email" id="p3-ob-email" aria-label="CISO email" placeholder="ciso@acmecorp.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#f1f5f9;font-size:14px;box-sizing:border-box"></div>
     </div>
     <div style="display:flex;gap:12px;margin-top:24px">
       <button onclick="cdbOnboardClient()" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);border:none;padding:12px;border-radius:10px;color:#fff;cursor:pointer;font-size:14px;font-weight:700">Onboard Client</button>
@@ -4533,8 +4533,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <input id="p4-lead-name" class="p4-input" type="text" placeholder="Full Name *">
-          <input id="p4-lead-email" class="p4-input" type="email" placeholder="Work Email *">
+          <input id="p4-lead-name" aria-label="Full name" class="p4-input" type="text" placeholder="Full Name *">
+          <input id="p4-lead-email" aria-label="Work email" class="p4-input" type="email" placeholder="Work Email *">
           <input id="p4-lead-company" class="p4-input" type="text" placeholder="Company Name *">
           <input id="p4-lead-title" class="p4-input" type="text" placeholder="Job Title (e.g. CISO)">
           <select id="p4-lead-sector" class="p4-input" aria-label="Industry Sector">
@@ -4576,7 +4576,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           </select>
         </div>
         <div style="grid-column:1/-1;margin-bottom:12px">
-          <input id="p4-lead-phone" class="p4-input" type="text" placeholder="Phone / WhatsApp" style="width:100%;box-sizing:border-box">
+          <input id="p4-lead-phone" aria-label="Phone or WhatsApp" class="p4-input" type="text" placeholder="Phone / WhatsApp" style="width:100%;box-sizing:border-box">
         </div>
         <textarea id="p4-lead-notes" class="p4-input" placeholder="Describe your security challenge..." style="width:100%;height:80px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
         <button onclick="p4CreateLead()" class="p4-btn-primary" style="width:100%">⚡ Submit Enterprise Inquiry</button>
@@ -4596,10 +4596,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <div style="color:#64748b;font-size:13px;text-align:center;padding:20px">Loading available slots…</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <input id="p4-demo-name" class="p4-input" type="text" placeholder="Your Name *">
-          <input id="p4-demo-email" class="p4-input" type="email" placeholder="Work Email *">
-          <input id="p4-demo-company" class="p4-input" type="text" placeholder="Company *">
-          <input id="p4-demo-phone" class="p4-input" type="text" placeholder="Phone / WhatsApp">
+          <input id="p4-demo-name" aria-label="Your name" class="p4-input" type="text" placeholder="Your Name *">
+          <input id="p4-demo-email" aria-label="Work email" class="p4-input" type="email" placeholder="Work Email *">
+          <input id="p4-demo-company" aria-label="Company" class="p4-input" type="text" placeholder="Company *">
+          <input id="p4-demo-phone" aria-label="Phone or WhatsApp" class="p4-input" type="text" placeholder="Phone / WhatsApp">
         </div>
         <button onclick="p4BookDemo()" class="p4-btn-secondary" style="width:100%;margin-bottom:12px">📅 Confirm Demo Booking</button>
         <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px">
@@ -4658,7 +4658,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ══════════════════════════ PHASE 4: PROPOSAL GENERATOR ══════════════════════════ -->
-<section id="proposal-gen" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)" data-auth-gate="true" data-section-id="proposal-gen">
+<section id="proposal-gen" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)" data-auth-gate="true" data-section-id="proposal-gen-2">
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#6366f1;text-transform:uppercase;margin-bottom:16px">AI Proposal Engine</span>
@@ -4688,7 +4688,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           </div>
         </div>
         <div style="display:grid;gap:12px;margin-bottom:20px">
-          <select id="p4-roi-sector" class="p4-input" onchange="p4CalcROI()">
+          <select id="p4-roi-sector" aria-label="ROI sector" class="p4-input" onchange="p4CalcROI()">
             <option value="default">Select Industry Sector</option>
             <option value="finance">Finance / FinTech (₹2CR avg breach cost)</option>
             <option value="banking">Banking (₹2.5CR avg breach cost)</option>
@@ -4696,7 +4696,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
             <option value="government">Government (₹1.5CR avg breach cost)</option>
             <option value="default">Other (₹1CR avg breach cost)</option>
           </select>
-          <select id="p4-roi-plan" class="p4-input" onchange="p4CalcROI()">
+          <select id="p4-roi-plan" aria-label="ROI plan" class="p4-input" onchange="p4CalcROI()">
             <option value="STARTER_PLUS">Starter Plus — ₹49,900/yr</option>
             <option value="PROFESSIONAL" selected>Professional — ₹1,49,900/yr</option>
             <option value="ENTERPRISE_SHIELD">Enterprise Shield — ₹4,99,900/yr</option>
@@ -4718,10 +4718,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <input id="p4-prop-company" class="p4-input" type="text" placeholder="Client Company *">
-          <input id="p4-prop-contact" class="p4-input" type="text" placeholder="Contact Name *">
-          <input id="p4-prop-email" class="p4-input" type="email" placeholder="Contact Email *">
-          <select id="p4-prop-sector" class="p4-input">
+          <input id="p4-prop-company" aria-label="Client company" class="p4-input" type="text" placeholder="Client Company *">
+          <input id="p4-prop-contact" aria-label="Contact name" class="p4-input" type="text" placeholder="Contact Name *">
+          <input id="p4-prop-email" aria-label="Contact email" class="p4-input" type="email" placeholder="Contact Email *">
+          <select id="p4-prop-sector" aria-label="Proposal sector" class="p4-input">
             <option value="default">Industry *</option>
             <option value="finance">Finance / FinTech</option>
             <option value="banking">Banking</option>
@@ -4730,14 +4730,14 @@ document.addEventListener('cdb:scan:complete', function(e) {
             <option value="technology">Technology</option>
             <option value="other">Other</option>
           </select>
-          <select id="p4-prop-size" class="p4-input">
+          <select id="p4-prop-size" aria-label="Organization size" class="p4-input">
             <option value="medium">Org Size *</option>
             <option value="small">Small (1–50)</option>
             <option value="medium">Medium (51–500)</option>
             <option value="large">Large (501–5000)</option>
             <option value="enterprise">Enterprise (5000+)</option>
           </select>
-          <select id="p4-prop-package" class="p4-input">
+          <select id="p4-prop-package" aria-label="Service package" class="p4-input">
             <option value="PROFESSIONAL">Select Package *</option>
             <option value="STARTER_PLUS">Starter Plus</option>
             <option value="PROFESSIONAL">Professional</option>
@@ -4766,7 +4766,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ══════════════════════════ PHASE 4: AFFILIATE HUB ══════════════════════════ -->
-<section id="affiliate-hub" style="display:none;background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)" data-auth-gate="true" data-section-id="affiliate-hub">
+<section id="affiliate-hub" style="display:none;background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)" data-auth-gate="true" data-section-id="affiliate-hub-2">
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:16px">Partner & Affiliate Program</span>
@@ -4840,10 +4840,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
             </div>
           </div>
           <div style="display:grid;gap:12px;margin-bottom:16px">
-            <input id="p4-aff-name" class="p4-input" type="text" placeholder="Your Full Name *">
-            <input id="p4-aff-email" class="p4-input" type="email" placeholder="Email Address *">
-            <input id="p4-aff-company" class="p4-input" type="text" placeholder="Company / Brand (optional)">
-            <select id="p4-aff-type" class="p4-input">
+            <input id="p4-aff-name" aria-label="Full name" class="p4-input" type="text" placeholder="Your Full Name *">
+            <input id="p4-aff-email" aria-label="Email address" class="p4-input" type="email" placeholder="Email Address *">
+            <input id="p4-aff-company" aria-label="Company or brand" class="p4-input" type="text" placeholder="Company / Brand (optional)">
+            <select id="p4-aff-type" aria-label="Affiliate type" class="p4-input">
               <option value="individual">Individual / Freelancer</option>
               <option value="agency">Security Agency</option>
               <option value="mssp">MSSP / VAR</option>
@@ -4900,7 +4900,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </section>
 
 <!-- ══════════════════════════ PHASE 4: GROWTH ANALYTICS ══════════════════════════ -->
-<section id="growth-analytics" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)" data-auth-gate="true" data-section-id="growth-analytics">
+<section id="growth-analytics" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)" data-auth-gate="true" data-section-id="growth-analytics-2">
   <div style="max-width:1400px;margin:0 auto">
     <div style="text-align:center;margin-bottom:56px">
       <span style="display:inline-block;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#ec4899;text-transform:uppercase;margin-bottom:16px">Growth Intelligence</span>
@@ -4947,7 +4947,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <div style="margin-bottom:12px">
           <div style="font-size:12px;color:#64748b;margin-bottom:8px">Simulate behavior event to test triggers:</div>
           <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-            <select id="p4-trigger-event" class="p4-input" style="font-size:12px">
+            <select id="p4-trigger-event" aria-label="Trigger event" class="p4-input" style="font-size:12px">
               <option value="scan_completed">scan_completed (scans_today++)</option>
               <option value="ai_query">ai_query (ai_queries_today++)</option>
               <option value="api_call">api_call (api_calls_month++)</option>
@@ -4976,13 +4976,13 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <div style="margin-bottom:12px">
           <div style="font-size:12px;color:#64748b;margin-bottom:8px">Preview CTA for plan/context:</div>
           <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">
-            <select id="p4-cta-plan" class="p4-input" style="font-size:12px">
+            <select id="p4-cta-plan" aria-label="Upgrade plan" class="p4-input" style="font-size:12px">
               <option value="FREE">FREE plan</option>
               <option value="STARTER">STARTER plan</option>
               <option value="PRO">PRO plan</option>
               <option value="ENTERPRISE">ENTERPRISE plan</option>
             </select>
-            <select id="p4-cta-context" class="p4-input" style="font-size:12px">
+            <select id="p4-cta-context" aria-label="Plan context" class="p4-input" style="font-size:12px">
               <option value="scan">scan</option>
               <option value="ai">ai</option>
               <option value="api">api</option>
@@ -5061,7 +5061,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 
 <!-- ════════════════════════ TRAINING ACADEMY SECTION ════════════════════════ -->
-<section id="academy-section" style="display:none;padding:72px 24px;background:linear-gradient(180deg,#060610,#08080f,#050510)" data-auth-gate="true" data-section-id="academy-section">
+<section id="academy-section" style="display:none;padding:72px 24px;background:linear-gradient(180deg,#060610,#08080f,#050510)" data-auth-gate="true" data-section-id="academy-section-2">
 <style>
 /* ── ACADEMY SECTION STYLES ── */
 @keyframes acs-glow{0%,100%{border-color:rgba(0,255,136,.2);box-shadow:0 4px 24px rgba(0,0,0,.4)}50%{border-color:rgba(0,255,136,.4);box-shadow:0 4px 32px rgba(0,255,136,.1)}}
@@ -5408,26 +5408,26 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div>
           <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Full Name *</div>
-          <input id="csm-name" type="text" placeholder="Jane Smith" autocomplete="name" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+          <input id="csm-name" aria-label="Your name" type="text" placeholder="Jane Smith" autocomplete="name" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
         </div>
         <div>
           <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Work Email *</div>
-          <input id="csm-email" type="email" placeholder="you@company.com" autocomplete="email" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+          <input id="csm-email" aria-label="Company email" type="email" placeholder="you@company.com" autocomplete="email" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div>
           <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Company</div>
-          <input id="csm-company" type="text" placeholder="Acme Corp" autocomplete="organization" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+          <input id="csm-company" aria-label="Company name" type="text" placeholder="Acme Corp" autocomplete="organization" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
         </div>
         <div>
           <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Phone / WhatsApp</div>
-          <input id="csm-phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+          <input id="csm-phone" aria-label="Phone number" type="tel" placeholder="+91 98765 43210" autocomplete="tel" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
         </div>
       </div>
       <div style="margin-bottom:12px">
         <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Website / AI System / Domain *</div>
-        <input id="csm-domain" type="text" placeholder="yourcompany.com or describe your AI system" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
+        <input id="csm-domain" aria-label="Domain or AI system description" type="text" placeholder="yourcompany.com or describe your AI system" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'">
       </div>
       <div style="margin-bottom:20px">
         <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Requirements / Notes</div>
@@ -5981,11 +5981,11 @@ window.cdbBookAssessment = async function() {
         <p style="font-size:13px;color:rgba(255,255,255,.45);margin:0 0 20px">30-min call with our lead analyst. Zero obligation.</p>
         <div style="display:flex;flex-direction:column;gap:12px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <input id="entCompany" type="text" placeholder="Company name *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
-            <input id="entContact" type="text" placeholder="Your name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <input id="entCompany" aria-label="Company name" type="text" placeholder="Company name *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <input id="entContact" aria-label="Your name" type="text" placeholder="Your name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <input id="entEmail" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <input id="entEmail" aria-label="Business email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
             <input id="entDomain" type="text" placeholder="Domain (optional)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
           </div>
           <select id="entPackage" aria-label="Service Package" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
@@ -6047,7 +6047,7 @@ window.cdbBookAssessment = async function() {
 </section>
 
 <!-- ═══════════════ GLOBAL COMPLIANCE PACKS + MSSP ═══════════════ -->
-<section id="compliance-global" style="display:none;background:#080818;padding:80px 20px;border-top:1px solid rgba(255,255,255,.05)" data-auth-gate="true" data-section-id="compliance-global">
+<section id="compliance-global" style="display:none;background:#080818;padding:80px 20px;border-top:1px solid rgba(255,255,255,.05)" data-auth-gate="true" data-section-id="compliance-global-2">
   <div class="section-inner" style="max-width:1200px;margin:0 auto">
 
     <!-- Header -->
@@ -6123,8 +6123,8 @@ window.cdbBookAssessment = async function() {
     <h3 id="ent-modal-title" style="font-size:18px;font-weight:800;margin:0 0 6px">Order Enterprise Package</h3>
     <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Manual payment — UPI · Bank · PayPal · Crypto</p>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <input id="ent-modal-email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
-      <input id="ent-modal-company" type="text" placeholder="Company name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="ent-modal-email" aria-label="Business email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="ent-modal-company" aria-label="Company name" type="text" placeholder="Company name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
       <textarea id="ent-modal-req" rows="3" placeholder="Your requirements..." style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
       <div id="ent-modal-price" style="font-size:28px;font-weight:900;color:#f59e0b;text-align:center;padding:10px 0"></div>
       <button id="ent-modal-btn" onclick="processEnterpriseOrder()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
@@ -6143,15 +6143,15 @@ window.cdbBookAssessment = async function() {
     <h3 style="font-size:18px;font-weight:800;margin:0 0 6px">🏷️ Apply as MSSP Partner</h3>
     <p style="color:rgba(255,255,255,.45);font-size:13px;margin:0 0 20px">Join our reseller program — start in 48 hours</p>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <input id="mssp-company" type="text" placeholder="Company name *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
-      <input id="mssp-email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
-      <input id="mssp-website" type="url" placeholder="Website URL" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
-      <select id="mssp-tier" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="mssp-company" aria-label="Company name" type="text" placeholder="Company name *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="mssp-email" aria-label="Business email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="mssp-website" aria-label="Website URL" type="url" placeholder="Website URL" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <select id="mssp-tier" aria-label="MSSP tier" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
         <option value="reseller">Reseller — ₹14,999/mo (10 clients)</option>
         <option value="silver">MSSP Silver — ₹29,999/mo (50 clients)</option>
         <option value="gold">MSSP Gold — ₹49,999/mo (Unlimited)</option>
       </select>
-      <input id="mssp-clients" type="number" placeholder="Current managed clients count" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+      <input id="mssp-clients" aria-label="Number of managed clients" type="number" placeholder="Current managed clients count" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
       <textarea id="mssp-message" rows="2" placeholder="Tell us about your business..." style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
       <button onclick="submitMSSPApplication()" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
         Submit Application
@@ -6441,7 +6441,7 @@ window.cdbBookAssessment = async function() {
 <!-- ═══════════════════════════════════════════════════════════════
      MONETIZATION ZONE: AdSense + Affiliate Banners
      ═══════════════════════════════════════════════════════════════ -->
-<section id="monetization-zone" style="display:none;background:#0a0a1a;padding:32px 20px;max-width:1200px;margin:0 auto" data-auth-gate="true" data-section-id="monetization-zone">
+<section id="monetization-zone" style="display:none;background:#0a0a1a;padding:32px 20px;max-width:1200px;margin:0 auto" data-auth-gate="true" data-section-id="monetization-zone-2">
 
   <!-- ── Sponsored Programs Header Banner ── -->
   <div style="margin-bottom:28px;border-radius:14px;overflow:hidden;border:1px solid rgba(0,212,255,.18);background:linear-gradient(135deg,#050520 0%,#0a0a2e 50%,#05051a 100%);padding:28px 32px;position:relative" id="sponsored-header-banner">
@@ -6810,7 +6810,7 @@ footer.v14-footer::before {
 </style>
 
 <!-- GOD v19: THREAT HUNTING -->
-<section id="threat-hunting" style="display:none;background:linear-gradient(180deg,#020208 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(239,68,68,.25)" data-auth-gate="true" data-section-id="threat-hunting">
+<section id="threat-hunting" style="display:none;background:linear-gradient(180deg,#020208 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(239,68,68,.25)" data-auth-gate="true" data-section-id="threat-hunting-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(239,68,68,.3)">&#x1F3AF; ADVANCED THREAT HUNTING</span>
@@ -6838,7 +6838,7 @@ footer.v14-footer::before {
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(239,68,68,.2);border-radius:16px;padding:24px">
       <span style="color:#ef4444;font-size:13px;font-weight:800">&#x1F50D; IOC INTELLIGENCE LOOKUP</span>
       <div style="margin-top:14px;display:flex;gap:8px">
-        <input id="th-ioc-input" type="text" placeholder="IP, domain, hash, CVE-ID..." style="flex:1;background:#0a0a14;border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none"/>
+        <input id="th-ioc-input" aria-label="IP address, domain, hash, or CVE ID" type="text" placeholder="IP, domain, hash, CVE-ID..." style="flex:1;background:#0a0a14;border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none"/>
         <button onclick="thLookupIOC()" style="background:#ef4444;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer">Lookup</button>
       </div>
       <div id="th-ioc-result" style="margin-top:14px;min-height:140px;background:#050510;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:rgba(255,255,255,.6)"><span style="color:rgba(255,255,255,.25)">// Enter an IOC to query VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span></div>
@@ -6863,7 +6863,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: VULNERABILITY MANAGEMENT -->
-<section id="vuln-management" style="display:none;background:linear-gradient(180deg,#060614 0%,#0a0a1e 100%);padding:80px 20px;border-top:2px solid rgba(245,158,11,.2)" data-auth-gate="true" data-section-id="vuln-management">
+<section id="vuln-management" style="display:none;background:linear-gradient(180deg,#060614 0%,#0a0a1e 100%);padding:80px 20px;border-top:2px solid rgba(245,158,11,.2)" data-auth-gate="true" data-section-id="vuln-management-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(245,158,11,.15);color:#f59e0b;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(245,158,11,.3)">&#x1F52C; VULNERABILITY MANAGEMENT</span>
@@ -6879,7 +6879,7 @@ footer.v14-footer::before {
   <div style="display:grid;grid-template-columns:300px 1fr;gap:24px">
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(245,158,11,.2);border-radius:16px;padding:20px">
       <span style="color:#f59e0b;font-size:12px;font-weight:800">CVE LOOKUP</span>
-      <input id="vm-cve-input" type="text" placeholder="CVE-2024-1234 or product name" style="width:100%;margin-top:10px;background:#050510;border:1px solid rgba(245,158,11,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
+      <input id="vm-cve-input" aria-label="CVE ID or product name" type="text" placeholder="CVE-2024-1234 or product name" style="width:100%;margin-top:10px;background:#050510;border:1px solid rgba(245,158,11,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
       <button onclick="vmLookupCVE()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;padding:11px;border-radius:8px;font-weight:900;font-size:13px;cursor:pointer">&#x1F52C; Analyze CVE</button>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
         <div style="color:rgba(255,255,255,.4);font-size:11px;font-weight:700;margin-bottom:4px">QUICK FILTERS</div>
@@ -6906,7 +6906,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: GLOBAL THREAT MAP -->
-<section id="global-threat-map" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#020210 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.2)" data-auth-gate="true" data-section-id="global-threat-map">
+<section id="global-threat-map" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#020210 100%);padding:80px 20px;border-top:2px solid rgba(0,212,255,.2)" data-auth-gate="true" data-section-id="global-threat-map-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:40px">
     <span style="background:rgba(0,212,255,.1);color:#00d4ff;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(0,212,255,.25)">&#x1F5FA; GLOBAL THREAT INTELLIGENCE MAP</span>
@@ -6943,7 +6943,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: INCIDENT RESPONSE -->
-<section id="incident-response" style="display:none;background:linear-gradient(180deg,#020210 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(236,72,153,.2)" data-auth-gate="true" data-section-id="incident-response">
+<section id="incident-response" style="display:none;background:linear-gradient(180deg,#020210 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(236,72,153,.2)" data-auth-gate="true" data-section-id="incident-response-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(236,72,153,.12);color:#ec4899;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(236,72,153,.3)">&#x1F6A8; INCIDENT RESPONSE CENTER</span>
@@ -6955,7 +6955,7 @@ footer.v14-footer::before {
       <span style="color:#ec4899;font-size:12px;font-weight:800">INCIDENT CLASSIFIER</span>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
         <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">INCIDENT TYPE</label>
-          <select id="ir-type" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none">
+          <select id="ir-type" aria-label="Incident type" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none">
             <option value="ransomware">&#x1F480; Ransomware Attack</option>
             <option value="apt">&#x1F575; APT Intrusion</option>
             <option value="breach">&#x1F513; Data Breach</option>
@@ -6965,14 +6965,14 @@ footer.v14-footer::before {
           </select>
         </div>
         <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">SEVERITY</label>
-          <select id="ir-severity" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none">
+          <select id="ir-severity" aria-label="Incident severity" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none">
             <option value="p1">P1 -- Critical / Business Down</option>
             <option value="p2">P2 -- High / Major Impact</option>
             <option value="p3">P3 -- Medium / Contained</option>
           </select>
         </div>
         <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">AFFECTED SYSTEMS</label>
-          <input id="ir-systems" type="text" placeholder="e.g., AD, Exchange, AWS S3..." style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
+          <input id="ir-systems" aria-label="Affected systems" type="text" placeholder="e.g., AD, Exchange, AWS S3..." style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
         </div>
         <div><label style="color:rgba(255,255,255,.5);font-size:11px;font-weight:700;display:block;margin-bottom:4px">INDICATORS</label>
           <textarea id="ir-iocs" rows="3" placeholder="Suspicious IPs, hashes, domains..." style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:12px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
@@ -7000,7 +7000,7 @@ footer.v14-footer::before {
 </section>
 
 <!-- GOD v19: ZERO-DAY INTELLIGENCE -->
-<section id="zero-day-intel" style="display:none;background:linear-gradient(180deg,#060614 0%,#030308 100%);padding:80px 20px;border-top:2px solid rgba(168,85,247,.25)" data-auth-gate="true" data-section-id="zero-day-intel">
+<section id="zero-day-intel" style="display:none;background:linear-gradient(180deg,#060614 0%,#030308 100%);padding:80px 20px;border-top:2px solid rgba(168,85,247,.25)" data-auth-gate="true" data-section-id="zero-day-intel-2">
 <div style="max-width:1200px;margin:0 auto">
   <div style="text-align:center;margin-bottom:48px">
     <span style="background:rgba(168,85,247,.15);color:#a855f7;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(168,85,247,.3)">&#x26A1; ZERO-DAY INTELLIGENCE</span>
@@ -7028,7 +7028,7 @@ footer.v14-footer::before {
       <span style="color:#a855f7;font-size:12px;font-weight:800">&#x1F514; EARLY WARNING ALERTS</span>
       <div style="margin-top:10px">
         <div style="display:flex;gap:8px;margin-bottom:10px">
-          <input id="zd-alert-target" type="text" placeholder="Your domain or product..." style="flex:1;background:#050510;border:1px solid rgba(168,85,247,.25);border-radius:8px;color:#fff;padding:8px 10px;font-size:12px;outline:none"/>
+          <input id="zd-alert-target" aria-label="Domain or product" type="text" placeholder="Your domain or product..." style="flex:1;background:#050510;border:1px solid rgba(168,85,247,.25);border-radius:8px;color:#fff;padding:8px 10px;font-size:12px;outline:none"/>
           <button onclick="zdSetAlert()" style="background:#a855f7;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Set Alert</button>
         </div>
         <div id="zd-alerts-list" style="font-size:12px;color:rgba(255,255,255,.4)">No alerts configured. Enter a target to monitor for zero-day mentions across dark web and exploit sources.</div>
@@ -8150,7 +8150,7 @@ async function loadThreatIntel(filter = {}) {
         style="background:${filter.severity === s || (s === 'All' && !filter.severity) ? 'rgba(124,58,237,.3)' : 'rgba(255,255,255,.05)'};border:1px solid var(--border);color:${s === 'CRITICAL' ? '#ef4444' : s === 'HIGH' ? '#f97316' : s === 'MEDIUM' ? '#eab308' : 'var(--text-muted)'};padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">
         ${s}
       </button>`).join('')}
-    <input id="ti-search" placeholder="Search CVEs..." onkeydown="if(event.key==='Enter')loadThreatIntel({query:this.value})"
+    <input id="ti-search" aria-label="Search CVEs" placeholder="Search CVEs..." onkeydown="if(event.key==='Enter')loadThreatIntel({query:this.value})"
       style="flex:1;min-width:140px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-size:12px" />
   </div>`;
 
@@ -12316,12 +12316,12 @@ async function createMonitorModal() {
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <label style="font-size:12px;color:rgba(255,255,255,.5);display:block;margin-bottom:4px">Monitor Name</label>
-          <input id="_mon-name" type="text" value="${defaultName}"
+          <input id="_mon-name" aria-label="Monitor name" type="text" value="${defaultName}"
             style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
         </div>
         <div>
           <label style="font-size:12px;color:rgba(255,255,255,.5);display:block;margin-bottom:4px">Schedule</label>
-          <select id="_mon-schedule" style="width:100%;background:#1a1a30;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
+          <select id="_mon-schedule" aria-label="Monitoring schedule" style="width:100%;background:#1a1a30;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
             <option value="hourly">⚡ Hourly</option>
             <option value="daily" selected>📅 Daily</option>
             <option value="weekly">📆 Weekly</option>
@@ -14432,7 +14432,7 @@ function showLeadModal(){
     '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#00d4ff;text-transform:uppercase;margin-bottom:8px">FREE ENTERPRISE THREAT REPORT</div>'+
     '<h3 style="font-size:21px;font-weight:900;margin:0 0 10px;line-height:1.25">Get Your Personalized<br>Vulnerability Assessment</h3>'+
     '<p style="font-size:13px;color:rgba(255,255,255,.5);margin:0 0 22px;line-height:1.6">8 CRITICAL CVEs active right now. We will analyze your exposure and send a tailored report — free, no credit card.</p>'+
-    '<input id="p13-lead-email" type="email" placeholder="your@company.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(0,212,255,.25);border-radius:10px;padding:13px 16px;color:#fff;font-size:14px;outline:none;margin-bottom:12px">'+
+    '<input id="p13-lead-email" aria-label="Email address" type="email" placeholder="your@company.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(0,212,255,.25);border-radius:10px;padding:13px 16px;color:#fff;font-size:14px;outline:none;margin-bottom:12px">'+
     '<button id="p13-lead-btn" onclick="p13SubmitLead()" style="width:100%;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:14px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">&#9889; Get Free Threat Report &#8594;</button>'+
     '<p style="font-size:11px;color:rgba(255,255,255,.25);margin:0">No spam. Used by 500+ security teams. 1-click unsubscribe.</p>'+
     '<div id="p13-lead-status" style="margin-top:10px;font-size:13px;min-height:20px"></div></div>';
@@ -14838,16 +14838,16 @@ if(document.readyState==='loading'){
 
       <!-- ── Confirmation Form ───────────────────────────────────────────── -->
       <div style="display:flex;flex-direction:column;gap:10px">
-        <select id="cdb-pay-method" class="cdb-pay-input" style="appearance:auto;cursor:pointer;color:rgba(255,255,255,.85)">
+        <select id="cdb-pay-method" aria-label="Payment method" class="cdb-pay-input" style="appearance:auto;cursor:pointer;color:rgba(255,255,255,.85)">
           <option value="UPI">📱 UPI Transfer</option>
           <option value="BANK">🏦 Bank Transfer (NEFT / IMPS / RTGS)</option>
           <option value="PAYPAL">🌐 PayPal</option>
           <option value="CRYPTO_BNB">₿ Crypto — BNB (BEP20)</option>
           <option value="CRYPTO_ETH">₿ Crypto — ETH (ERC20)</option>
         </select>
-        <input id="cdb-pay-txn" class="cdb-pay-input" type="text" autocomplete="off" spellcheck="false"
+        <input id="cdb-pay-txn" aria-label="Transaction ID or UTR number" class="cdb-pay-input" type="text" autocomplete="off" spellcheck="false"
           placeholder="Transaction ID / UTR Number / TX Hash *" />
-        <input id="cdb-pay-email" class="cdb-pay-input" type="email" autocomplete="email"
+        <input id="cdb-pay-email" aria-label="Email for confirmation" class="cdb-pay-input" type="email" autocomplete="email"
           placeholder="Your email — for confirmation &amp; access activation *" />
 
         <!-- Screenshot upload -->
@@ -14855,7 +14855,7 @@ if(document.readyState==='loading'){
           <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
             📸 Upload Payment Screenshot (recommended)
           </div>
-          <input id="cdb-pay-screenshot" type="file" accept="image/*,.pdf"
+          <input id="cdb-pay-screenshot" aria-label="Payment screenshot" type="file" accept="image/*,.pdf"
             style="font-size:11px;color:rgba(255,255,255,.55);width:100%;cursor:pointer"
             onchange="CDB_PAYMENT._onScreenshot(this)" />
           <div id="cdb-pay-screenshot-preview" style="margin-top:8px;display:none">
@@ -15689,11 +15689,11 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
     <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:10px;padding:16px;margin-bottom:20px">
       <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Create New Key</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input id="cdb-key-name-inp" placeholder="Key name (e.g. CI Pipeline, SIEM Integration)"
+        <input id="cdb-key-name-inp" aria-label="API key name" placeholder="Key name (e.g. CI Pipeline, SIEM Integration)"
           style="flex:1;min-width:200px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 14px;color:#fff;font-size:12px;outline:none;font-family:inherit;transition:border-color .2s"
           onfocus="this.style.borderColor='rgba(0,212,255,.4)'" onblur="this.style.borderColor='rgba(255,255,255,.1)'"
           onkeydown="event.key==='Enter'&&CDB_APIKEYS.create()">
-        <select id="cdb-key-scope-sel" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;cursor:pointer;outline:none;font-family:inherit">
+        <select id="cdb-key-scope-sel" aria-label="API key scope" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;cursor:pointer;outline:none;font-family:inherit">
           <option value="read">Read only</option>
           <option value="scan" selected>Scan</option>
           <option value="full">Full access</option>
@@ -20509,10 +20509,10 @@ p4SetupObserver();
         <span>✅</span>
         <span>After Payment — Submit for Verification</span>
       </div>
-      <input class="mpm-input" id="mpm-txn-id" type="text" placeholder="Transaction ID / UTR Number *" required>
+      <input class="mpm-input" id="mpm-txn-id" aria-label="Transaction ID or UTR number" type="text" placeholder="Transaction ID / UTR Number *" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <input class="mpm-input" id="mpm-payer-name" type="text" placeholder="Your Full Name *" style="margin-bottom:0">
-        <input class="mpm-input" id="mpm-payer-email" type="email" placeholder="Email Address *" style="margin-bottom:0">
+        <input class="mpm-input" id="mpm-payer-name" aria-label="Full name" type="text" placeholder="Your Full Name *" style="margin-bottom:0">
+        <input class="mpm-input" id="mpm-payer-email" aria-label="Email address" type="email" placeholder="Email Address *" style="margin-bottom:0">
       </div>
       <div style="margin:10px 0">
         <label class="mpm-file-label" for="mpm-screenshot">
@@ -21500,7 +21500,7 @@ function v21TriggerUrgencyPayment(){
         <h3>🔗 Web3 / Crypto Payment</h3>
         <div style="margin-bottom:.7rem">
           <label style="font-size:.8rem;color:#94a3b8">Network:</label>
-          <select id="m-chain-select" onchange="CDB_MYTHOS.updateChain()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:.28rem .6rem;border-radius:4px;margin-left:.4rem">
+          <select id="m-chain-select" aria-label="Blockchain network" onchange="CDB_MYTHOS.updateChain()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:.28rem .6rem;border-radius:4px;margin-left:.4rem">
             <option value="ETH">Ethereum (ETH)</option>
             <option value="BSC">Binance Smart Chain (BNB)</option>
             <option value="TRON_TRC20">Tron TRC-20 (USDT)</option>
@@ -22118,11 +22118,11 @@ function v21TriggerUrgencyPayment(){
 
     <!-- Nav tabs -->
     <div class="cdb-cc-nav" role="tablist">
-      <button class="cdb-cc-tab active" data-target="cdb-panel-exec"     role="tab">Executive</button>
-      <button class="cdb-cc-tab"        data-target="cdb-panel-soc"      role="tab">SOC Operations</button>
-      <button class="cdb-cc-tab"        data-target="cdb-panel-sentinel" role="tab">Sentinel APEX Intel</button>
-      <button class="cdb-cc-tab"        data-target="cdb-panel-ai"       role="tab">AI SecOps</button>
-      <button class="cdb-cc-tab"        data-target="cdb-panel-mssp"     role="tab">MSSP Operations</button>
+      <button class="cdb-cc-tab active" data-target="cdb-panel-exec"     role="tab" aria-selected="true">Executive</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-soc"      role="tab" aria-selected="false">SOC Operations</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-sentinel" role="tab" aria-selected="false">Sentinel APEX Intel</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-ai"       role="tab" aria-selected="false">AI SecOps</button>
+      <button class="cdb-cc-tab"        data-target="cdb-panel-mssp"     role="tab" aria-selected="false">MSSP Operations</button>
     </div>
   </div>
 
