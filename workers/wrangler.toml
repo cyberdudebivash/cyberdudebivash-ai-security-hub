@@ -1,4 +1,4 @@
-﻿name               = "cyberdudebivash-security-hub"
+name               = "cyberdudebivash-security-hub"
 main               = "src/index.js"
 compatibility_date = "2024-01-01"
 # account_id is intentionally omitted — injected at deploy time via CLOUDFLARE_ACCOUNT_ID env var
