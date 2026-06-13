@@ -94,6 +94,12 @@ import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleLi
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
 import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
 import { handleAIThreatFeed, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+
+// v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
+import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
+import { handleAIRedTeamPro } from './handlers/aiRedTeamPro.js';
+import { handleDeveloperPortal } from './handlers/developerPortal.js';
+import { handleExecutiveCommandCenter } from './handlers/executiveCommandCenter.js';
 import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement } from './handlers/aiServices.js';
 
 
@@ -5308,6 +5314,26 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
 
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
+    // v20.0 GOD MODE: AI GOVERNANCE PRO (EU AI Act, NIST AI RMF, ISO 42001)
+  if (path.startsWith('/api/ai-governance/')) {
+    return handleAIGovernancePro(request, env);
+  }
+
+  // v20.0 GOD MODE: AI RED TEAM PRO (MITRE ATLAS v2.1)
+  if (path.startsWith('/api/ai-redteam/')) {
+    return handleAIRedTeamPro(request, env);
+  }
+
+  // v20.0 GOD MODE: DEVELOPER PORTAL / API ECONOMY
+  if (path.startsWith('/api/developer/')) {
+    return handleDeveloperPortal(request, env);
+  }
+
+  // v20.0 GOD MODE: EXECUTIVE COMMAND CENTER PRO (FAIR, Board, ROI)
+  if (path.startsWith('/api/executive/')) {
+    return handleExecutiveCommandCenter(request, env);
+  }
+
   if (path === '/api/ceo/dashboard' || path === '/api/ceo/dashboard/kpis') {
     return handleCEODashboard(request, env, authCtx);
   }

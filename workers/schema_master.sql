@@ -4292,3 +4292,140 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_snapshots_period ON revenue_snapshots(peri
 PRAGMA foreign_keys = ON;
 
 -- Schema master contains 198 tables and 540 indexes
+-- ============================================================================
+-- v20.0 GOD MODE: AI GOVERNANCE PRO TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS ai_model_registry (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  name TEXT NOT NULL,
+  version TEXT NOT NULL DEFAULT '1.0',
+  model_type TEXT NOT NULL,
+  data_classification TEXT NOT NULL,
+  deployment_context TEXT NOT NULL,
+  autonomy_level TEXT NOT NULL,
+  impact_domain TEXT NOT NULL,
+  explainability TEXT NOT NULL,
+  bias_tested INTEGER NOT NULL DEFAULT 0,
+  risk_score INTEGER NOT NULL DEFAULT 0,
+  risk_level TEXT NOT NULL DEFAULT 'LOW',
+  eu_ai_act_category TEXT NOT NULL DEFAULT 'MINIMAL',
+  owner_email TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  metadata TEXT DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_model_registry_org ON ai_model_registry(org_id);
+CREATE INDEX IF NOT EXISTS idx_ai_model_registry_risk ON ai_model_registry(risk_level);
+CREATE INDEX IF NOT EXISTS idx_ai_model_registry_eu ON ai_model_registry(eu_ai_act_category);
+CREATE INDEX IF NOT EXISTS idx_ai_model_registry_status ON ai_model_registry(status);
+
+CREATE TABLE IF NOT EXISTS ai_governance_policies (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  rules TEXT DEFAULT '[]',
+  enforcement_level TEXT NOT NULL DEFAULT 'WARN',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_governance_policies_org ON ai_governance_policies(org_id);
+
+-- ============================================================================
+-- v20.0 GOD MODE: AI RED TEAM PRO TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS ai_redteam_campaigns (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  target_model TEXT NOT NULL DEFAULT 'unknown',
+  target_endpoint TEXT DEFAULT '',
+  technique_ids TEXT DEFAULT '[]',
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  created_by TEXT DEFAULT 'anonymous',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_redteam_campaigns_org ON ai_redteam_campaigns(org_id);
+CREATE INDEX IF NOT EXISTS idx_ai_redteam_campaigns_status ON ai_redteam_campaigns(status);
+
+-- ============================================================================
+-- v20.0 GOD MODE: DEVELOPER PORTAL TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS developer_webhooks (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  url TEXT NOT NULL,
+  events TEXT DEFAULT '[]',
+  secret TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  last_tested_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_developer_webhooks_org ON developer_webhooks(org_id);
+CREATE INDEX IF NOT EXISTS idx_developer_webhooks_status ON developer_webhooks(status);
+
+-- api_keys table extends existing (add if not exist)
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  name TEXT NOT NULL DEFAULT 'Default Key',
+  key_hash TEXT NOT NULL,
+  scopes TEXT DEFAULT '["read"]',
+  expires_at TEXT,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
+
+-- ============================================================================
+-- v20.0 GOD MODE: EXECUTIVE COMMAND CENTER TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS fair_risk_assessments (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  scenario_name TEXT NOT NULL DEFAULT 'Unnamed Scenario',
+  inputs TEXT DEFAULT '{}',
+  outputs TEXT DEFAULT '{}',
+  risk_level TEXT NOT NULL DEFAULT 'LOW',
+  ale INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fair_risk_assessments_org ON fair_risk_assessments(org_id);
+CREATE INDEX IF NOT EXISTS idx_fair_risk_assessments_risk ON fair_risk_assessments(risk_level);
+CREATE INDEX IF NOT EXISTS idx_fair_risk_assessments_ale ON fair_risk_assessments(ale DESC);
+
+CREATE TABLE IF NOT EXISTS executive_kri_values (
+  org_id TEXT NOT NULL,
+  period TEXT NOT NULL,
+  kri_values TEXT DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, period)
+);
+
+CREATE TABLE IF NOT EXISTS executive_reports (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL DEFAULT 'default',
+  report_type TEXT NOT NULL DEFAULT 'BOARD',
+  quarter TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_executive_reports_org ON executive_reports(org_id);
+CREATE INDEX IF NOT EXISTS idx_executive_reports_type ON executive_reports(report_type);
