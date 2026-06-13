@@ -882,7 +882,7 @@ a{color:var(--accent);text-decoration:none}
      PRELOADER — hides raw HTML until JS initializes (prevents
      flash of unstyled SOC status bar / nav drawer / v9.0 text)
      ══════════════════════════════════════════════════════════ -->
-<div id="cdb-preloader" style="position:fixed;inset:0;z-index:2147483647;background:#0a0a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease,visibility .5s ease">
+<div id="cdb-preloader" style="position:fixed;inset:0;z-index:2147483647;background:#0a0a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease,visibility .5s ease" role="presentation" aria-hidden="true">
   <div style="position:relative;margin-bottom:24px">
     <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(0,212,255,.15);border-top-color:#00d4ff;animation:cdb-spin .8s linear infinite"></div>
     <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px">⚔️</div>
@@ -922,7 +922,7 @@ a{color:var(--accent);text-decoration:none}
 <div id="global-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(239,68,68,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;text-align:center;backdrop-filter:blur(4px);cursor:pointer" onclick="this.style.display='none'"></div>
 
 <!-- Announcement Bar v11 -->
-<div class="ann-bar" style="overflow:hidden;padding:7px 0">
+<div role="region" aria-label="Site Announcement" class="ann-bar" style="overflow:hidden;padding:7px 0">
   <span class="ann-marquee">
     🔴 LIVE: Sentinel APEX monitoring <strong>CVEs in real-time</strong> &nbsp;|&nbsp;
     ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px"</span>v30.0</span> — Enterprise AI Security Platform &nbsp;|&nbsp;
@@ -7424,7 +7424,7 @@ footer.v14-footer::before {
 </script>
 
 <!-- Compliance Badge Detail Modal -->
-<div class="badge-modal-overlay" id="badgeModalOverlay" onclick="closeBadgeModal(event)">
+<div class="badge-modal-overlay" id="badgeModalOverlay" onclick="closeBadgeModal(event)" role="dialog" aria-label="Achievement badge">
   <div class="badge-modal" id="badgeModalBox">
     <h3 id="badgeModalTitle">Framework Controls</h3>
     <div class="badge-modal-sub" id="badgeModalSub"></div>
@@ -14891,7 +14891,7 @@ if(document.readyState==='loading'){
 #cdb-pay-howto.open{display:flex}
 #cdb-pay-howto-inner{background:#0a0a1e;border:1px solid rgba(0,212,255,.2);border-radius:20px;max-width:600px;width:100%;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.8)}
 </style>
-<div id="cdb-pay-howto" onclick="if(event.target===this)document.getElementById('cdb-pay-howto').classList.remove('open')">
+<div id="cdb-pay-howto" onclick="if(event.target===this)document.getElementById('cdb-pay-howto').classList.remove('open')" role="dialog" aria-label="Payment instructions">
   <div id="cdb-pay-howto-inner">
     <div style="background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,58,237,.08));border-bottom:1px solid rgba(255,255,255,.07);padding:22px 28px 18px;border-radius:20px 20px 0 0;position:relative">
       <button onclick="document.getElementById('cdb-pay-howto').classList.remove('open')" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
@@ -21190,7 +21190,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 <!-- V21.0 PRODUCTION ENGINE - Real Status + Urgency Conversion + Enterprise CTAs -->
 
 <!-- PERSISTENT WHATSAPP FLOATING BUTTON -->
-<div id="v21-whatsapp-fab" style="position:fixed;bottom:28px;right:24px;z-index:99999;display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+<div role="complementary" aria-label="Quick contact links" id="v21-whatsapp-fab" style="position:fixed;bottom:28px;right:24px;z-index:99999;display:flex;flex-direction:column;align-items:flex-end;gap:10px">
   <div id="v21-wa-tooltip" style="background:#1a2235;border:1px solid rgba(0,212,255,.25);border-radius:12px;padding:10px 16px;font-size:12px;color:#e2e8f0;max-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:none;line-height:1.5">
     &#x1F4AC; <strong>Enterprise inquiry?</strong><br><span style="color:#94a3b8">Chat with Bivash on WhatsApp for custom deployments.</span>
   </div>
@@ -21199,7 +21199,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 </div>
 
 <!-- ENTERPRISE DEMO BOOKING MODAL -->
-<div id="v21-calendly-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+<div id="v21-calendly-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center" role="dialog" aria-label="Schedule a meeting">
   <div style="background:#0f1729;border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:32px;max-width:500px;width:90%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6)">
     <button onclick="document.getElementById('v21-calendly-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer">&#x2715;</button>
     <div style="text-align:center;margin-bottom:24px">
@@ -21224,7 +21224,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 </div>
 
 <!-- HIGH-SEVERITY URGENCY CONVERSION MODAL -->
-<div id="v21-urgency-modal" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);align-items:center;justify-content:center">
+<div id="v21-urgency-modal" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);align-items:center;justify-content:center" role="dialog" aria-label="Limited time offer">
   <div style="background:#0f1729;border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:0;max-width:480px;width:94%;overflow:hidden;box-shadow:0 20px 80px rgba(239,68,68,.3)">
     <div style="background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(220,38,38,.1));border-bottom:1px solid rgba(239,68,68,.3);padding:16px 24px;display:flex;align-items:center;gap:12px">
       <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 12px #ef4444;animation:v21WAPulse 1s ease infinite;flex-shrink:0"></div>
@@ -21265,7 +21265,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 </div>
 
 <!-- REAL SYSTEM STATUS BANNER (only shows if DEGRADED or DOWN) -->
-<div id="v21-status-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;padding:6px 20px;font-size:11px;font-weight:700;letter-spacing:.08em;text-align:center;transition:all .3s"></div>
+<div id="v21-status-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;padding:6px 20px;font-size:11px;font-weight:700;letter-spacing:.08em;text-align:center;transition:all .3s" role="region" aria-label="Platform status"></div>
 
 <style>
 @keyframes v21WAPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
@@ -21444,7 +21444,7 @@ function v21TriggerUrgencyPayment(){
      ══════════════════════════════════════════════════════════════════════ -->
 
 <!-- MYTHOS CHECKOUT MODAL -->
-<div class="mythos-overlay" id="mythosOverlay">
+<div role="dialog" aria-modal="true" aria-label="Subscription plans" class="mythos-overlay" id="mythosOverlay">
   <div class="mythos-modal">
     <button class="m-close" onclick="CDB_MYTHOS.close()">×</button>
     <h2>🛡 SENTINEL APEX — Upgrade</h2>
@@ -21744,7 +21744,7 @@ function v21TriggerUrgencyPayment(){
      Injected additively — zero regressions to existing functionality
      Powered by dashboard-live.js real-time data adapter
      ═══════════════════════════════════════════════════════════════════════════ -->
-<section id="cdb-command-centers" style="background:#0a0e1a;padding:0 0 80px;">
+<section id="cdb-command-centers" style="background:#0a0e1a;padding:0 0 80px;" aria-label="Command Center Dashboard">
 
   <!-- ── Command Centers Styles ─────────────────────────────────────────── -->
   <style>
@@ -22044,7 +22044,7 @@ function v21TriggerUrgencyPayment(){
 
     /* ── Section headings ────────────────────────────────────────────────── */
     .cdb-section-heading {
-      font-size: 10px; font-weight: 700; color: rgba(100,116,139,.7);
+      font-size: 10px; font-weight: 700; color: #94a3b8;
       text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
       display: flex; align-items: center; gap: 10px;
     }
