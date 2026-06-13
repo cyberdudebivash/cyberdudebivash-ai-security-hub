@@ -5212,6 +5212,30 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       ));
     }
 
+    // ── SENTINEL APEX™ Intelligence Marketplace (/api/marketplace/*) ─────────
+    // Wired: Task 23-25 — commerce engine: catalog, checkout, subscribe, entitlements
+    if (path.startsWith('/api/marketplace/')) {
+      const mktAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      const { handleMarketplace } = await import('./handlers/sentinelApexMarketplace.js');
+      return withSecurityHeaders(withCors(await handleMarketplace(request, env, mktAuthCtx, path, method), request));
+    }
+
+    // ── SENTINEL APEX™ Intelligence Preview System (/api/preview/*) ──────────
+    // Wired: Task 24 — live intelligence preview cards with paywall conversion hooks
+    if (path.startsWith('/api/preview/')) {
+      const prevAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      const { handleIntelligencePreview } = await import('./handlers/intelligencePreview.js');
+      return withSecurityHeaders(withCors(await handleIntelligencePreview(request, env, prevAuthCtx), request));
+    }
+
+    // ── SENTINEL APEX™ Provisioning Engine (/api/provision/*) ────────────────
+    // Wired: Task 25 — auto-provision tenant/entitlements/API keys after purchase
+    if (path.startsWith('/api/provision/')) {
+      const provAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      const { handleProvisioning } = await import('./handlers/provisioningEngine.js');
+      return withSecurityHeaders(withCors(await handleProvisioning(request, env, provAuthCtx, path, method), request));
+    }
+
     // ── v22.0 PRODUCTION ROUTE FIXES ─────────────────────────────────────────
     // GET /api/defense-marketplace → alias → /api/defense/solutions (frontend uses old path)
     if (path === '/api/defense-marketplace' && method === 'GET') {
