@@ -2173,7 +2173,7 @@ a{color:var(--accent);text-decoration:none}
 <p style="margin-bottom:16px">Scan your Model Context Protocol (MCP) server configuration for security vulnerabilities: unauthorized tool access, data exfiltration vectors, prompt injection surfaces, and privilege escalation paths.</p>
 <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:16px;margin-bottom:16px">
 <div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">MCP Server Configuration (JSON)</div>
-<textarea id="mcp-config-input" placeholder='{
+<textarea aria-label="MCP configuration JSON input" id="mcp-config-input" placeholder='{
   "tools": [
     { "name": "read_file", "description": "Read files from filesystem" },
     { "name": "web_search", "description": "Search the web" },
@@ -2213,7 +2213,7 @@ a{color:var(--accent);text-decoration:none}
 <p style="margin-bottom:16px">Scan AI-generated code for the top security vulnerabilities introduced by Cursor, GitHub Copilot, Claude Code, and ChatGPT. Trend Micro named vibe-coded insecure code as the #1 emerging threat of 2026.</p>
 <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:16px;margin-bottom:16px">
 <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Paste Your AI-Generated Code</div>
-<textarea id="vibe-code-input" placeholder="// Paste your AI-generated code here — supports JavaScript, TypeScript, Python, PHP, Java, Go
+<textarea aria-label="AI-generated code input for security review" id="vibe-code-input" placeholder="// Paste your AI-generated code here — supports JavaScript, TypeScript, Python, PHP, Java, Go
 // Free: up to 200 lines | Paid (₹499): full codebase analysis
 
 const express = require('express');
@@ -2661,7 +2661,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <option value="all">All Types Bundle</option>
 </select>
 <input aria-label="Technology stack" id="csr-stack" placeholder="Tech stack (e.g. AWS + Ubuntu + nginx)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none" type="text"/>
-<textarea id="csr-desc" placeholder="Describe your security needs *" rows="3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none;resize:vertical"></textarea>
+<textarea aria-label="Describe your security needs" id="csr-desc" placeholder="Describe your security needs *" rows="3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;outline:none;resize:vertical"></textarea>
 </div>
 <div style="display:flex;gap:12px;margin-top:20px">
 <button onclick="submitCustomRequest()" style="flex:1;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px">
@@ -4374,7 +4374,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div style="grid-column:1/-1;margin-bottom:12px">
 <input aria-label="Phone or WhatsApp" class="p4-input" id="p4-lead-phone" placeholder="Phone / WhatsApp" style="width:100%;box-sizing:border-box" type="text"/>
 </div>
-<textarea class="p4-input" id="p4-lead-notes" placeholder="Describe your security challenge..." style="width:100%;height:80px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
+<textarea aria-label="Security challenge description" class="p4-input" id="p4-lead-notes" placeholder="Describe your security challenge..." style="width:100%;height:80px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
 <button class="p4-btn-primary" onclick="p4CreateLead()" style="width:100%">⚡ Submit Enterprise Inquiry</button>
 <div id="p4-lead-result" style="margin-top:12px;font-size:13px;color:#10b981;display:none"></div>
 </div>
@@ -4534,7 +4534,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <option value="CUSTOM_ENTERPRISE">Custom Enterprise</option>
 </select>
 </div>
-<textarea class="p4-input" id="p4-prop-challenges" placeholder="Key security challenges / compliance requirements…" style="width:100%;height:70px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
+<textarea aria-label="Security challenges and compliance requirements" class="p4-input" id="p4-prop-challenges" placeholder="Key security challenges / compliance requirements…" style="width:100%;height:70px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
 <button class="p4-btn-primary" onclick="p4GenerateProposal()" style="width:100%">📄 Generate Enterprise Proposal</button>
 <div id="p4-prop-result" style="margin-top:12px;font-size:13px;display:none"></div>
 </div>
@@ -5176,7 +5176,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 <div style="margin-bottom:20px">
 <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Requirements / Notes</div>
-<textarea id="csm-notes" onblur="this.style.borderColor='rgba(255,255,255,.08)'" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" placeholder="AI systems in scope, compliance needs, timeline, or specific security concerns..." rows="2" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+<textarea aria-label="AI systems in scope and compliance notes" id="csm-notes" onblur="this.style.borderColor='rgba(255,255,255,.08)'" onfocus="this.style.borderColor='rgba(255,255,255,.25)'" placeholder="AI systems in scope, compliance needs, timeline, or specific security concerns..." rows="2" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
 </div>
 <div id="csm-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px"></div>
 <button id="csm-submit-btn" onclick="submitCdbSvcBooking()" style="width:100%;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;border:none;letter-spacing:.02em">Submit Engagement Request →</button>
@@ -5710,7 +5710,7 @@ window.cdbBookAssessment = async function() {
 <option value="urgent">Urgent (respond in 4h)</option>
 <option value="immediate">Immediate (active incident)</option>
 </select>
-<textarea id="entReq" placeholder="Describe your security needs, industry, team size, compliance requirements... *" rows="3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
+<textarea aria-label="Enterprise security requirements" id="entReq" placeholder="Describe your security needs, industry, team size, compliance requirements... *" rows="3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
 <div class="alert" id="alert-enterprise"></div>
 <button id="btn-enterprise" onclick="submitEnterpriseV10()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
             📨 Send Enterprise Inquiry
@@ -5826,7 +5826,7 @@ window.cdbBookAssessment = async function() {
 <div style="display:flex;flex-direction:column;gap:12px">
 <input aria-label="Business email" id="ent-modal-email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none" type="email"/>
 <input aria-label="Company name" id="ent-modal-company" placeholder="Company name" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none" type="text"/>
-<textarea id="ent-modal-req" placeholder="Your requirements..." rows="3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
+<textarea aria-label="Enterprise project requirements" id="ent-modal-req" placeholder="Your requirements..." rows="3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
 <div id="ent-modal-price" style="font-size:28px;font-weight:900;color:#f59e0b;text-align:center;padding:10px 0"></div>
 <button id="ent-modal-btn" onclick="processEnterpriseOrder()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
         💳 Proceed to Payment
@@ -5852,7 +5852,7 @@ window.cdbBookAssessment = async function() {
 <option value="gold">MSSP Gold — ₹49,999/mo (Unlimited)</option>
 </select>
 <input aria-label="Number of managed clients" id="mssp-clients" placeholder="Current managed clients count" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none" type="number"/>
-<textarea id="mssp-message" placeholder="Tell us about your business..." rows="2" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
+<textarea aria-label="Business information for MSSP inquiry" id="mssp-message" placeholder="Tell us about your business..." rows="2" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;resize:vertical"></textarea>
 <button onclick="submitMSSPApplication()" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
         Submit Application
       </button>
@@ -6494,7 +6494,7 @@ footer.v14-footer::before {
 <button id="th-btn-yara" onclick="thSetLang('yara')" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.1);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">YARA</button>
 </div>
 </div>
-<textarea id="th-query" placeholder="// KQL: Hunt lateral movement
+<textarea aria-label="KQL threat hunt query" id="th-query" placeholder="// KQL: Hunt lateral movement
 DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by DeviceName,RemoteIP | where count_ &gt; 5" rows="7" style="width:100%;background:#0a0a14;border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#00ff88;font-family:monospace;font-size:12px;padding:12px;resize:vertical;box-sizing:border-box;outline:none"></textarea>
 <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
 <button onclick="thRunHunt()" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer">🎯 Execute Hunt</button>
@@ -6640,7 +6640,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <input aria-label="Affected systems" id="ir-systems" placeholder="e.g., AD, Exchange, AWS S3..." style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box" type="text"/>
 </div>
 <div><label style="color:rgba(255,255,255,.72);font-size:11px;font-weight:700;display:block;margin-bottom:4px">INDICATORS</label>
-<textarea id="ir-iocs" placeholder="Suspicious IPs, hashes, domains..." rows="3" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:12px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+<textarea aria-label="Indicators of compromise for incident response" id="ir-iocs" placeholder="Suspicious IPs, hashes, domains..." rows="3" style="width:100%;background:#050510;border:1px solid rgba(236,72,153,.25);border-radius:8px;color:#fff;padding:10px;font-size:12px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
 </div>
 <button onclick="irGeneratePlaybook()" style="width:100%;background:linear-gradient(135deg,#ec4899,#be185d);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer">🚨 Generate IR Playbook</button>
 <button onclick="irDeclareIncident()" style="width:100%;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:11px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer">🔴 Declare Active Incident</button>
