@@ -973,7 +973,7 @@ function _injectStickyCTA() {
   if (document.getElementById('v14-sticky-cta')) return;
 
   const cta = document.createElement('div');
-  cta.id = 'v14-sticky-cta';
+  cta.id = 'v14-sticky-cta';cta.setAttribute('role','region');cta.setAttribute('aria-label','Upgrade Call to Action');
   cta.style.cssText = `
     position:fixed;bottom:0;left:0;right:0;z-index:9990;
     background:linear-gradient(90deg,rgba(10,10,26,.97),rgba(15,15,46,.97));

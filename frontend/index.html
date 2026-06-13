@@ -903,17 +903,17 @@ a{color:var(--accent);text-decoration:none}
 <span class="soc-sep">|</span>
 <div class="soc-indicator" title="Database">
 <span class="soc-dot yellow" id="soc-db-dot"></span>
-<span>DB</span>
+<span style="color:#94a3b8">DB</span>
 </div>
 <span class="soc-sep">|</span>
 <div class="soc-indicator" title="KV Cache">
 <span class="soc-dot yellow" id="soc-kv-dot"></span>
-<span>Cache</span>
+<span style="color:#94a3b8">Cache</span>
 </div>
 <span class="soc-sep">|</span>
 <div class="soc-indicator" title="Sentinel Threat Intel">
 <span class="soc-dot green" id="soc-sentinel-dot"></span>
-<span>Sentinel APEX</span>
+<span style="color:#94a3b8">Sentinel APEX</span>
 </div>
 <span class="soc-sep">|</span>
 <div class="soc-indicator" title="Live version from /api/version">
@@ -2711,7 +2711,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 .ds-card.critical:hover { border-color:rgba(239,68,68,.55);box-shadow:0 16px 48px rgba(239,68,68,.12) }
 .ds-card.high { border-color:rgba(245,158,11,.2) }
 .ds-card.high:hover { border-color:rgba(245,158,11,.5);box-shadow:0 16px 48px rgba(245,158,11,.1) }
-.ds-sev-critical { background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3) }
+.ds-sev-critical { background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3) }
 .ds-sev-high     { background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3) }
 .ds-sev-medium   { background:rgba(234,179,8,.12);color:#eab308;border:1px solid rgba(234,179,8,.25) }
 .ds-sev-low      { background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2)  }
@@ -3154,7 +3154,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   display:inline-block;padding:2px 8px;border-radius:12px;
   font-size:10px;font-weight:800;letter-spacing:.06em;margin-left:8px;
 }
-.graph-node-apt     {background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.graph-node-apt     {background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
 .graph-node-cve     {background:rgba(245,158,11,.2);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
 .graph-node-malware {background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)}
 .graph-node-ttp     {background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
@@ -4001,7 +4001,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:4px">Autonomous Defense Mode</div>
 <div style="font-size:10px;color:#ef4444;font-weight:600;margin-bottom:8px;letter-spacing:.5px">ENTERPRISE · FULLY AUTOMATED RESPONSE</div>
 <div style="font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:12px">Zero-touch threat neutralization. AI detects, generates detection rules, and deploys to SIEM autonomously — 2-minute MTTD.</div>
-<div style="display:inline-block;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:3px 12px;font-size:11px;font-weight:600">🏢 Enterprise Grade</div>
+<div style="display:inline-block;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:3px 12px;font-size:11px;font-weight:600">🏢 Enterprise Grade</div>
 </div>
 </div>
 <!-- Config Panel -->
@@ -5483,7 +5483,7 @@ window.cdbBookAssessment = async function() {
 <!-- PRO (featured) -->
 <div class="price-card featured" id="plan-card-pro">
 <div class="featured-label">MOST POPULAR</div>
-<div class="price-name" style="color:#8b5cf6">PRO</div>
+<div class="price-name" style="color:#c4b5fd">PRO</div>
 <div class="price-amount">₹1,499</div>
 <div class="price-period">/month · Unlimited scans</div>
 <ul class="price-features">
@@ -5520,21 +5520,21 @@ window.cdbBookAssessment = async function() {
 <!-- Feature comparison table — FULLY POPULATED -->
 <div aria-label="Pricing comparison table" style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:28px;overflow-x:auto;margin-top:32px" tabindex="0">
 <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Complete Feature Comparison</div>
-<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:560px">
+<table tabindex="0" style="width:100%;border-collapse:collapse;font-size:13px;min-width:560px">
 <thead>
 <tr style="border-bottom:1px solid var(--border)">
 <th style="text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:600;min-width:200px">Feature</th>
 <th style="text-align:center;padding:10px 14px;color:var(--text-muted)">Free</th>
 <th style="text-align:center;padding:10px 14px;color:#3b82f6">Starter</th>
-<th style="text-align:center;padding:10px 14px;color:#8b5cf6">Pro</th>
+<th style="text-align:center;padding:10px 14px;color:#c4b5fd">Pro</th>
 <th style="text-align:center;padding:10px 14px;color:#f59e0b">Enterprise</th>
 <th style="text-align:center;padding:10px 14px;color:#e879f9">MSSP</th>
 </tr>
 </thead>
 <tbody>
 <!-- Scans & Modules -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">Scanning &amp; Modules</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Daily Scans</td><td style="text-align:center;color:var(--text-muted)">5</td><td style="text-align:center;color:#3b82f6">50</td><td style="text-align:center;color:#8b5cf6">500</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Scanning &amp; Modules</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Daily Scans</td><td style="text-align:center;color:var(--text-muted)">5</td><td style="text-align:center;color:#3b82f6">50</td><td style="text-align:center;color:#c4b5fd">500</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Domain Vulnerability Scanner</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Security (OWASP LLM Top 10)</td><td style="text-align:center;color:var(--text-muted)">Preview</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Red Team Simulation</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
@@ -5545,40 +5545,40 @@ window.cdbBookAssessment = async function() {
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Dark Web Exposure Scanner</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AppSec / DAST (OWASP Top 10 Web)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <!-- AI & Intelligence -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">AI &amp; Intelligence</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst (Chat)</td><td style="text-align:center;color:var(--text-muted)">5 queries</td><td style="text-align:center;color:#3b82f6">20/mo</td><td style="text-align:center;color:#8b5cf6">100/mo</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">AI &amp; Intelligence</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst (Chat)</td><td style="text-align:center;color:var(--text-muted)">5 queries</td><td style="text-align:center;color:#3b82f6">20/mo</td><td style="text-align:center;color:#c4b5fd">100/mo</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Attack Simulation &amp; Kill Chain</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SOAR Rule Generation (Sigma/YARA/KQL)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MITRE ATT&amp;CK TTP Mapping</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Risk Forecast &amp; Predictive Scoring</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Executive Dashboard</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <!-- Reports & Export -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">Reports &amp; Export</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Reports &amp; Export</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">PDF Security Reports</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Board Report (PDF)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Report Retention</td><td style="text-align:center;color:var(--text-muted)">7 days</td><td style="text-align:center;color:#3b82f6">30 days</td><td style="text-align:center;color:#8b5cf6">90 days</td><td style="text-align:center;color:#f59e0b">1 year</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Report Retention</td><td style="text-align:center;color:var(--text-muted)">7 days</td><td style="text-align:center;color:#3b82f6">30 days</td><td style="text-align:center;color:#c4b5fd">90 days</td><td style="text-align:center;color:#f59e0b">1 year</td></tr>
 <!-- API & Integration -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">API &amp; Integrations</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#8b5cf6">500 req/day</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Keys</td><td style="text-align:center;color:var(--text-muted)">1</td><td style="text-align:center;color:#3b82f6">2</td><td style="text-align:center;color:#8b5cf6">5</td><td style="text-align:center;color:#f59e0b">20</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">API &amp; Integrations</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#c4b5fd">500 req/day</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Keys</td><td style="text-align:center;color:var(--text-muted)">1</td><td style="text-align:center;color:#3b82f6">2</td><td style="text-align:center;color:#c4b5fd">5</td><td style="text-align:center;color:#f59e0b">20</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SIEM Integration (Splunk/Sentinel/Elastic)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Webhook / Custom Integrations</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <!-- Enterprise -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">Enterprise Features</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Enterprise Features</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Multi-User Seats</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#f59e0b">10 seats</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SSO / SAML Integration</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">White-Label Platform</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SLA Guarantee (99.9% Uptime)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr><td style="padding:9px 14px">Support</td><td style="text-align:center;color:var(--text-muted)">Community</td><td style="text-align:center;color:#3b82f6">Email</td><td style="text-align:center;color:#8b5cf6">Priority</td><td style="text-align:center;color:#f59e0b">Dedicated CSM</td><td style="text-align:center;color:#e879f9">24/7 TAM</td></tr>
+<tr><td style="padding:9px 14px">Support</td><td style="text-align:center;color:var(--text-muted)">Community</td><td style="text-align:center;color:#3b82f6">Email</td><td style="text-align:center;color:#c4b5fd">Priority</td><td style="text-align:center;color:#f59e0b">Dedicated CSM</td><td style="text-align:center;color:#e879f9">24/7 TAM</td></tr>
 <!-- AI Security rows -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">AI Security (Unique to CDB)</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">AI Security (Unique to CDB)</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI SPM — Asset Inventory</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓ Multi-org</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Agentic AI Security Testing</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓ Custom</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">RAG Pipeline Security Audit</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Governance (NIST AI RMF / EU AI Act)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst — Advanced</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#8b5cf6">GPT-4 class</td><td style="text-align:center;color:#f59e0b">Unlimited</td><td style="text-align:center;color:#e879f9">Custom model</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst — Advanced</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#c4b5fd">GPT-4 class</td><td style="text-align:center;color:#f59e0b">Unlimited</td><td style="text-align:center;color:#e879f9">Custom model</td></tr>
 <!-- MSSP rows -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase">MSSP / Multi-Tenant</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">MSSP / Multi-Tenant</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Multi-Tenant Client Management</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓ Unlimited clients</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">White-Label Platform</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓ Full white-label</td></tr>
 <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Client Branded Reports</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
@@ -6119,12 +6119,12 @@ window.cdbBookAssessment = async function() {
 <div class="cards-grid">
 <div class="card"><div class="card-icon">🛡️</div><div class="card-title">AI Security Toolkit <span style="background:rgba(0,212,255,.15);color:#00d4ff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">OWASP LLM</span></div><div class="card-desc">Complete OWASP LLM Top 10 implementation guide — checklists, test cases, remediation templates for every LLM vulnerability class.</div><div class="card-price">₹499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
 <div class="card"><div class="card-icon">📋</div><div class="card-title">Compliance Starter Pack <span style="background:rgba(129,140,248,.15);color:#818cf8;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">ISO 27001</span></div><div class="card-desc">ISO 27001:2022 gap analysis templates, SoA document, policy library (25 policies), and ISMS implementation roadmap with PDCA cycle.</div><div class="card-price">₹999</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-<div class="card"><div class="card-icon">🎯</div><div class="card-title">Red Team Playbook <span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">MITRE ATT&amp;CK</span></div><div class="card-desc">12 adversary simulation scenarios mapped to MITRE ATT&amp;CK v15. Includes AI-specific attack chains, tools list, rules of engagement, and final report template.</div><div class="card-price">₹1,499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
+<div class="card"><div class="card-icon">🎯</div><div class="card-title">Red Team Playbook <span style="background:rgba(239,68,68,.15);color:#fca5a5;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">MITRE ATT&amp;CK</span></div><div class="card-desc">12 adversary simulation scenarios mapped to MITRE ATT&amp;CK v15. Includes AI-specific attack chains, tools list, rules of engagement, and final report template.</div><div class="card-price">₹1,499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
 <div class="card"><div class="card-icon">🔐</div><div class="card-title">Zero Trust Blueprint <span style="background:rgba(16,185,129,.15);color:#10b981;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">NIST 800-207</span></div><div class="card-desc">Zero Trust Architecture implementation guide: NIST SP 800-207 controls, microsegmentation designs, identity-first access models, and vendor evaluation matrix.</div><div class="card-price">₹799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
 <div class="card"><div class="card-icon">🌐</div><div class="card-title">Domain Security Checklist <span style="background:rgba(234,179,8,.15);color:#eab308;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">TLS/DNS</span></div><div class="card-desc">100-point hardening checklist: TLS 1.3 config, DNSSEC, DMARC/SPF/DKIM, HTTP security headers, subdomain takeover prevention, and certificate pinning guide.</div><div class="card-price">₹499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
 <div class="card"><div class="card-icon">📊</div><div class="card-title">DPDP Act Compliance Kit <span style="background:rgba(249,115,22,.15);color:#f97316;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">INDIA</span></div><div class="card-desc">India DPDP Act 2023 compliance kit: Data Fiduciary obligations, consent mechanism templates, DPO appointment guide, breach notification SOP, and audit checklist.</div><div class="card-price">₹699</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-<div class="card" style="border-color:rgba(168,85,247,0.72);background:rgba(168,85,247,.04)"><div class="card-icon">🤖</div><div class="card-title">AI Governance Toolkit <span style="background:rgba(168,85,247,.2);color:#a855f7;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">EU AI ACT</span></div><div class="card-desc">EU AI Act readiness kit + NIST AI RMF implementation: AI system risk classification, conformity assessment templates, and incident response playbook for AI systems.</div><div class="card-price">₹1,299</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-<div class="card" style="border-color:rgba(239,68,68,0.72);background:rgba(239,68,68,.04)"><div class="card-icon">🚨</div><div class="card-title">SOC Analyst Runbook <span style="background:rgba(239,68,68,.2);color:#ef4444;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">TIER 1-3</span></div><div class="card-desc">Tier 1-3 SOC analyst runbooks: 20 incident response playbooks (phishing, ransomware, insider threat, APT), escalation matrix, and SIEM alert triage guide.</div><div class="card-price">₹1,799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
+<div class="card" style="border-color:rgba(168,85,247,0.72);background:rgba(168,85,247,.04)"><div class="card-icon">🤖</div><div class="card-title">AI Governance Toolkit <span style="background:rgba(168,85,247,.2);color:#d8b4fe;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">EU AI ACT</span></div><div class="card-desc">EU AI Act readiness kit + NIST AI RMF implementation: AI system risk classification, conformity assessment templates, and incident response playbook for AI systems.</div><div class="card-price">₹1,299</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
+<div class="card" style="border-color:rgba(239,68,68,0.72);background:rgba(239,68,68,.04)"><div class="card-icon">🚨</div><div class="card-title">SOC Analyst Runbook <span style="background:rgba(239,68,68,.2);color:#fca5a5;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">TIER 1-3</span></div><div class="card-desc">Tier 1-3 SOC analyst runbooks: 20 incident response playbooks (phishing, ransomware, insider threat, APT), escalation matrix, and SIEM alert triage guide.</div><div class="card-price">₹1,799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
 <div class="card" style="border-color:rgba(245,158,11,0.72);background:rgba(245,158,11,.04)"><div class="card-icon">📦</div><div class="card-title">Enterprise Security Bundle <span style="background:rgba(245,158,11,.2);color:#f59e0b;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">SAVE 40%</span></div><div class="card-desc">All 8 products bundled: AI Toolkit + Compliance Pack + Red Team Playbook + Zero Trust Blueprint + Domain Checklist + DPDP Kit + AI Governance + SOC Runbook. Best value.</div><div class="card-price" style="color:#f59e0b">₹4,499 <span style="font-size:11px;color:var(--text-muted);text-decoration:line-through;font-weight:400">₹7,493</span></div><a class="card-link" href="https://tools.cyberdudebivash.com" style="background:rgba(245,158,11,.15);border-color:rgba(245,158,11,0.72);color:#f59e0b" target="_blank">Get Bundle →</a></div>
 </div>
 <div style="text-align:center;margin-top:32px">
@@ -6480,7 +6480,7 @@ footer.v14-footer::before {
 <section data-auth-gate="true" data-section-id="threat-hunting-2" id="threat-hunting" style="display:none;background:linear-gradient(180deg,#020208 0%,#060614 100%);padding:80px 20px;border-top:2px solid rgba(239,68,68,.25)">
 <div style="max-width:1200px;margin:0 auto">
 <div style="text-align:center;margin-bottom:48px">
-<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(239,68,68,.3)">🎯 ADVANCED THREAT HUNTING</span>
+<span style="background:rgba(239,68,68,.15);color:#fca5a5;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(239,68,68,.3)">🎯 ADVANCED THREAT HUNTING</span>
 <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Proactive <span style="color:#ef4444">Threat Hunting</span> Engine</h2>
 <p style="color:rgba(255,255,255,.72);font-size:15px;max-width:600px;margin:0 auto">Hunt adversaries before they strike. KQL, Sigma &amp; YARA query execution, IOC lookup, MITRE ATT&amp;CK coverage matrix.</p>
 </div>
@@ -7826,7 +7826,7 @@ async function loadThreatIntel(filter = {}) {
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
               <span style="font-weight:800;font-size:13px;font-family:monospace">${item.id || ''}</span>
-              ${kev    ? `<span style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid #ef444455;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">⚡ CISA KEV</span>` : ''}
+              ${kev    ? `<span style="background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid #ef444455;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">⚡ CISA KEV</span>` : ''}
               ${ransom ? `<span style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef444433;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">💀 RANSOMWARE</span>` : ''}
               ${item.threat_category ? `<span style="background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);border-radius:4px;padding:1px 6px;font-size:9px">${item.threat_category}</span>` : ''}
             </div>
@@ -7925,7 +7925,7 @@ async function runSimulation() {
           <div style="font-weight:800;font-size:15px">⚔️ Attack Simulation: ${sim.target || target}</div>
           <div style="color:var(--text-muted);font-size:12px;margin-top:4px">Module: ${module.toUpperCase()} · Risk: <strong style="color:#ef4444">${rc.engine_risk_score ?? sim.risk_score ?? '—'}/10</strong> · Severity: <strong>${rc.engine_severity || sim.risk_level || '—'}</strong></div>
         </div>
-        <span style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid #ef444455;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700">KEV: ${rc.cisa_kev_applicable ? '✅ YES' : '❌ No'}</span>
+        <span style="background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid #ef444455;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700">KEV: ${rc.cisa_kev_applicable ? '✅ YES' : '❌ No'}</span>
       </div></div>`;
 
     const chain = sim.kill_chain || sim.simulation_steps || [];
@@ -11283,7 +11283,7 @@ function renderAIBrainTab(module, tab, insights) {
       const fc = insights.risk_forecast;
       if (!fc) { html = '<em>No forecast data</em>'; break; }
       html += `<div style="margin-bottom:12px;font-style:italic;color:var(--warn);font-size:12px">⚠️ ${fc.key_insight}</div>`;
-      html += `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      html += `<table tabindex="0" style="width:100%;border-collapse:collapse;font-size:12px">
         <tr style="color:var(--text-dim);font-size:11px">
           <th style="text-align:left;padding:4px 8px">Timeline</th>
           <th style="text-align:center;padding:4px 8px">No Action</th>
@@ -13802,7 +13802,7 @@ function addGateOverlay(el,tierLabel,tierKey){if(el.querySelector('.gate-overlay
 function updatePlanUI(){document.querySelectorAll('.nav-tier-badge, #nav-plan-badge').forEach(function(b){b.textContent=window.CDB_PLAN;b.style.background=window.CDB_PLAN==='PRO'?'rgba(139,92,246,.2)':window.CDB_PLAN==='ENTERPRISE'?'rgba(245,158,11,.2)':'rgba(0,212,255,.1)';});}
 
 /* UPGRADE MODAL */
-window.openUpgradeModal=function(tier){logSOC('Upgrade flow: '+tier,'sys','info');var m=document.getElementById('cdb-upgrade-modal');if(!m){m=document.createElement('div');m.id='cdb-upgrade-modal';m.innerHTML='<div class="cdb-upgrade-box"><button class="cdb-upg-close" onclick="closeUpgradeModal()">&#10005;</button><div class="cdb-upg-header"><div class="cdb-upg-icon">&#9889;</div><div class="cdb-upg-title">Upgrade Your Plan</div><div class="cdb-upg-sub">Unlock enterprise-grade AI cybersecurity capabilities</div></div><div class="cdb-plan-cards"><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;STARTER&#39;,this)"><div class="cdb-plan-name" style="color:#3b82f6">STARTER</div><div class="cdb-plan-price">&#8377;499</div><div class="cdb-plan-period">/month &middot; 10 scans</div></div><div class="cdb-plan-opt selected" id="upg-pro-opt" onclick="selectUpgradePlan(&#39;PRO&#39;,this)"><div class="cdb-plan-name" style="color:#8b5cf6">PRO <span style="font-size:8px;background:rgba(139,92,246,.2);padding:1px 5px;border-radius:3px">POPULAR</span></div><div class="cdb-plan-price">&#8377;1,499</div><div class="cdb-plan-period">/month &middot; Unlimited</div></div><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;ENTERPRISE&#39;,this)" style="grid-column:span 2"><div class="cdb-plan-name" style="color:#f59e0b">ENTERPRISE</div><div class="cdb-plan-price">&#8377;4,999</div><div class="cdb-plan-period">/month &middot; 10 seats + API + SLA</div></div></div><button class="cdb-upg-cta" id="cdb-upg-cta-btn" onclick="proceedUpgrade()">&#9889; Upgrade to Pro &mdash; &#8377;1,499/mo</button><div style="text-align:center;margin-top:8px;font-size:10px;color:var(--text-dim)">UPI &middot; Bank &middot; PayPal &middot; Crypto &middot; 2&ndash;4 hr activation</div></div>';m.addEventListener('click',function(e){if(e.target===m)closeUpgradeModal();});document.body.appendChild(m);}if(tier==='ENTERPRISE'){var eo=document.querySelector('.cdb-plan-opt:last-child');selectUpgradePlan('ENTERPRISE',eo);}m.classList.add('open');};
+window.openUpgradeModal=function(tier){logSOC('Upgrade flow: '+tier,'sys','info');var m=document.getElementById('cdb-upgrade-modal');if(!m){m=document.createElement('div');m.id='cdb-upgrade-modal';m.innerHTML='<div class="cdb-upgrade-box"><button class="cdb-upg-close" onclick="closeUpgradeModal()">&#10005;</button><div class="cdb-upg-header"><div class="cdb-upg-icon">&#9889;</div><div class="cdb-upg-title">Upgrade Your Plan</div><div class="cdb-upg-sub">Unlock enterprise-grade AI cybersecurity capabilities</div></div><div class="cdb-plan-cards"><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;STARTER&#39;,this)"><div class="cdb-plan-name" style="color:#3b82f6">STARTER</div><div class="cdb-plan-price">&#8377;499</div><div class="cdb-plan-period">/month &middot; 10 scans</div></div><div class="cdb-plan-opt selected" id="upg-pro-opt" onclick="selectUpgradePlan(&#39;PRO&#39;,this)"><div class="cdb-plan-name" style="color:#c4b5fd">PRO <span style="font-size:8px;background:rgba(139,92,246,.2);padding:1px 5px;border-radius:3px">POPULAR</span></div><div class="cdb-plan-price">&#8377;1,499</div><div class="cdb-plan-period">/month &middot; Unlimited</div></div><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;ENTERPRISE&#39;,this)" style="grid-column:span 2"><div class="cdb-plan-name" style="color:#f59e0b">ENTERPRISE</div><div class="cdb-plan-price">&#8377;4,999</div><div class="cdb-plan-period">/month &middot; 10 seats + API + SLA</div></div></div><button class="cdb-upg-cta" id="cdb-upg-cta-btn" onclick="proceedUpgrade()">&#9889; Upgrade to Pro &mdash; &#8377;1,499/mo</button><div style="text-align:center;margin-top:8px;font-size:10px;color:var(--text-dim)">UPI &middot; Bank &middot; PayPal &middot; Crypto &middot; 2&ndash;4 hr activation</div></div>';m.addEventListener('click',function(e){if(e.target===m)closeUpgradeModal();});document.body.appendChild(m);}if(tier==='ENTERPRISE'){var eo=document.querySelector('.cdb-plan-opt:last-child');selectUpgradePlan('ENTERPRISE',eo);}m.classList.add('open');};
 window._selectedUpgradePlan='PRO';
 window.selectUpgradePlan=function(plan,el){window._selectedUpgradePlan=plan;document.querySelectorAll('.cdb-plan-opt').forEach(function(o){o.classList.remove('selected');});if(el)el.classList.add('selected');var prices={STARTER:'&#8377;499',PRO:'&#8377;1,499',ENTERPRISE:'&#8377;4,999'};var btn=document.getElementById('cdb-upg-cta-btn');if(btn)btn.innerHTML='&#9889; Upgrade to '+plan+' &mdash; '+prices[plan]+'/mo';};
 window.closeUpgradeModal=function(){var m=document.getElementById('cdb-upgrade-modal');if(m)m.classList.remove('open');};
@@ -14153,7 +14153,7 @@ window.p13TriggerMythos=async function(btn){
 function injectStatusBar(){
   if(document.getElementById('p13-status-bar'))return;
   var bar=document.createElement('div');
-  bar.id='p13-status-bar';
+  bar.id='p13-status-bar';bar.setAttribute('role','region');bar.setAttribute('aria-label','System Status Bar');
   bar.style.cssText='position:fixed;bottom:0;left:0;right:0;background:rgba(5,5,16,.97);border-top:1px solid rgba(0,212,255,.12);padding:5px 18px;display:flex;align-items:center;justify-content:space-between;z-index:9000;font-size:11px;backdrop-filter:blur(12px);flex-wrap:wrap;gap:8px';
   bar.innerHTML='<div style="display:flex;align-items:center;gap:10px">'+
     '<span style="color:#00d4ff;font-weight:900;letter-spacing:1px">SENTINEL APEX</span>'+
@@ -14833,7 +14833,7 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
   </div>
 
   <!-- Engine status bar -->
-  <div id="cdb-ag-engine-bar" style="display:flex;gap:8px;padding:16px 24px;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,.06)">
+  <div id="cdb-ag-engine-bar" tabindex="0" role="region" aria-label="Engine Status" style="display:flex;gap:8px;padding:16px 24px;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,.06)">
     <div class="cdb-engine-status"><div class="cdb-engine-dot online" id="ag-dot-mythos"></div><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.72)">MYTHOS</span><span class="v13-badge ai" id="ag-lbl-mythos">Loading...</span></div>
     <div class="cdb-engine-status"><div class="cdb-engine-dot online" id="ag-dot-anomaly"></div><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.72)">Anomaly</span><span class="v13-badge ok" id="ag-lbl-anomaly">Active</span></div>
     <div class="cdb-engine-status"><div class="cdb-engine-dot online" id="ag-dot-predict"></div><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.72)">Predictive</span><span class="v13-badge warn" id="ag-lbl-predict">Scoring</span></div>
@@ -14888,8 +14888,8 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-p-kev" style="color:#c4b5fd">—</div><div class="cdb-ag-metric-lbl">KEV Flagged</div></div>
     </div>
     <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.72);letter-spacing:.08em;text-transform:uppercase">Top Risk Predictions (Next 72h)</div>
-    <div id="ag-pred-table" style="overflow-x:auto">
-      <table class="cdb-ag-table"><thead><tr>
+    <div id="ag-pred-table" style="overflow-x:auto" tabindex="0" role="region" aria-label="Risk Predictions Table">
+      <table class="cdb-ag-table" tabindex="0"><thead><tr>
         <th>CVE</th><th>Exploit Prob</th><th>Window</th><th>Action</th>
       </tr></thead><tbody id="ag-pred-tbody">
         <tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,.72);padding:20px">Loading predictions...</td></tr>
@@ -14906,8 +14906,8 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-act-blocked" style="color:#ef4444">—</div><div class="cdb-ag-metric-lbl">IPs Blocked</div></div>
     </div>
     <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.72);letter-spacing:.08em;text-transform:uppercase">Recent Autonomous Actions</div>
-    <div id="ag-actions-table" style="overflow-x:auto">
-      <table class="cdb-ag-table"><thead><tr>
+    <div id="ag-actions-table" style="overflow-x:auto" tabindex="0" role="region" aria-label="Autonomous Actions Table">
+      <table class="cdb-ag-table" tabindex="0"><thead><tr>
         <th>Action</th><th>Target</th><th>Source</th><th>Risk</th><th>Status</th><th>Time</th>
       </tr></thead><tbody id="ag-actions-tbody">
         <tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,.72);padding:20px">Loading agent actions...</td></tr>
@@ -16266,7 +16266,7 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
     if (!el) return;
     var badgeClass = 'graph-node-' + n.type;
     var typeLabel = { apt:'APT Group', cve:'CVE', malware:'Malware', ttp:'TTP (MITRE)' }[n.type] || n.type.toUpperCase();
-    var cvssHtml = n.cvss ? ' <span style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:800">CVSS '+n.cvss+'</span>' : '';
+    var cvssHtml = n.cvss ? ' <span style="background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:800">CVSS '+n.cvss+'</span>' : '';
     el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       + '<span style="font-weight:800;color:#e2e8f0;font-size:14px">' + n.label + '</span>'
       + '<span class="graph-node-badge ' + badgeClass + '">' + typeLabel + '</span>'
@@ -18476,7 +18476,7 @@ window.cdbEnrichCVE = function() {
         '</div>' +
         '<div class="p3-conf-bar" style="margin-bottom:12px"><div class="p3-conf-fill" style="width:' + data.confidence_score + '%;background:' + confColor + '"></div></div>' +
         (data.signals ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' +
-          (data.signals.kev_listed ? '<span style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 9px;font-size:10px;font-weight:600">CISA KEV</span>' : '') +
+          (data.signals.kev_listed ? '<span style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 9px;font-size:10px;font-weight:600">CISA KEV</span>' : '') +
           (data.signals.active_exploitation ? '<span style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:6px;padding:2px 9px;font-size:10px;font-weight:600">ACTIVE EXPLOITATION</span>' : '') +
           (data.signals.exploit_public ? '<span style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);border-radius:6px;padding:2px 9px;font-size:10px;font-weight:600">PUBLIC EXPLOIT</span>' : '') +
           (data.signals.apt_attribution ? '<span style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:2px 9px;font-size:10px;font-weight:600">APT LINKED</span>' : '') +
@@ -18629,7 +18629,7 @@ function p3RenderMSSPGrid(clients) {
       '<span class="p3-client-sector">' + (c.sector || 'UNKNOWN') + '</span>' +
       '<span class="p3-client-sector" style="background:rgba(99,102,241,.08);color:#818cf8">' + (c.tier || 'PRO') + '</span>' +
       '<span class="' + statusCls + '">' + (c.status || 'ACTIVE') + '</span>' +
-      (c.alert_count ? '<span style="background:rgba(239,68,68,.15);color:#ef4444;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">' + c.alert_count + '</span>' : '') +
+      (c.alert_count ? '<span style="background:rgba(239,68,68,.15);color:#fca5a5;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">' + c.alert_count + '</span>' : '') +
       '</div>';
   }).join('');
 }
@@ -20479,7 +20479,7 @@ window.thLookupIOC=function(){var inp=document.getElementById('th-ioc-input'),re
 
 /* === VULNERABILITY MANAGEMENT === */
 var VMD={critical:[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS',cvss:10.0,epss:.942,kev:true,patch:false,d:'Command injection in GlobalProtect. Exploited by UTA0218. 150K+ devices exposed. No workaround without disabling feature.'},{id:'CVE-2024-21762',p:'Fortinet FortiOS',cvss:9.6,epss:.893,kev:true,patch:true,d:'Out-of-bounds write SSL VPN unauthenticated RCE. Apply patch immediately.'},{id:'CVE-2021-44228',p:'Apache Log4j',cvss:10.0,epss:.975,kev:true,patch:true,d:'Log4Shell JNDI injection RCE. Most exploited vulnerability of the decade.'},{id:'CVE-2023-34362',p:'MOVEit Transfer',cvss:9.8,epss:.971,kev:true,patch:true,d:'SQL injection to RCE. Cl0p ransomware campaign hit 2,500+ orgs.'}],kev:[{id:'CVE-2024-27198',p:'JetBrains TeamCity',cvss:9.8,epss:.953,kev:true,patch:true,d:'Auth bypass -- full CI/CD server takeover. Patch to 2023.11.4+.'},{id:'CVE-2023-4966',p:'Citrix NetScaler',cvss:9.4,epss:.965,kev:true,patch:true,d:'Citrix Bleed session disclosure. Update and invalidate all active sessions.'},{id:'CVE-2024-1708',p:'ConnectWise ScreenConnect',cvss:8.4,epss:.945,kev:true,patch:true,d:'Path traversal RCE. Immediate patch + credential rotation required.'}],epss:[{id:'CVE-2026-1340',p:'OpenSSL 3.x',cvss:8.2,epss:.812,kev:false,patch:false,d:'Memory corruption in X.509 parsing. Remote trigger possible. High EPSS exploitation probability.'},{id:'CVE-2026-20131',p:'Cisco IOS XE',cvss:7.8,epss:.786,kev:false,patch:false,d:'Priv escalation in web UI. Disable HTTP server as temporary mitigation.'}],zero:[{id:'ZD-2026-001',p:'Windows CLFS',cvss:8.8,epss:0,kev:false,patch:false,d:'Kernel priv escalation. No patch. Limited exploitation by threat actors.'},{id:'ZD-2026-002',p:'Chrome V8',cvss:9.0,epss:0,kev:false,patch:false,d:'Type confusion JIT sandbox escape. PoC in underground forums. Update Chrome immediately.'}]};
-function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
+function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#fca5a5;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
 window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.72)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,0.72);font-size:11px">None</span>';};
 window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var fake={id:id,p:'Target System',cvss:8.5,epss:.612,kev:false,patch:true,d:'NVD/MITRE/CISA live lookup returns real CVSS vectors, affected versions, patch links and EPSS probability in production.'};var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=vmC(fake);};
 window.vmRem=function(id){var w=document.getElementById('vm-col-wip');if(w)w.innerHTML='<div style="background:rgba(245,158,11,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:#f59e0b">'+esc(id)+'</div>'+w.innerHTML;if(typeof TOAST!=='undefined')TOAST.info('Remediation started: '+id,'Remediation');};
