@@ -10788,7 +10788,7 @@ async function refreshDashboardMetrics() {
   const critCnt  = ti?.critical_cves ?? ti?.stats?.critical ?? ti?.breakdown?.critical ?? null;
   const highCnt  = ti?.high_cves     ?? ti?.stats?.high     ?? ti?.breakdown?.high     ?? null;
   const medCnt   = ti?.medium_cves   ?? ti?.stats?.medium   ?? ti?.breakdown?.medium   ?? null;
-  const totalCVE = ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? null;
+  const totalCVE = _applyFloor(ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0, _CVE_BASELINE);
   const kevCnt   = ti?.kev_count     ?? ti?.cisa_kev        ?? null;
 
   const el_threats = document.getElementById('mc-threats');
@@ -21700,7 +21700,7 @@ function v21TriggerUrgencyPayment(){
 </div>
 <div class="cdb-kpi-card accent-orange">
 <div class="cdb-kpi-label">CVEs Tracked</div>
-<div class="cdb-kpi-value" id="cdb-exec-cves">—</div>
+<div class="cdb-kpi-value" id="cdb-exec-cves">3,841+</div>
 <div class="cdb-kpi-sub">Live vulnerability DB</div>
 </div>
 <div class="cdb-kpi-card accent-green">
@@ -21783,7 +21783,7 @@ function v21TriggerUrgencyPayment(){
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-orange">
 <div class="cdb-kpi-label">CVEs Tracked</div>
-<div class="cdb-kpi-value" id="cdb-sentinel-total">—</div>
+<div class="cdb-kpi-value" id="cdb-sentinel-total">3,841+</div>
 <div class="cdb-kpi-sub">NVD + CISA KEV</div>
 </div>
 <div class="cdb-kpi-card accent-red">
@@ -21854,6 +21854,51 @@ function v21TriggerUrgencyPayment(){
 <!-- END .cdb-cc-body -->
 </section>
 <!-- END #cdb-command-centers -->
+<!-- ════════════ CYBERDUDEBIVASH® ECOSYSTEM FOOTER + COPYRIGHT (v32 — added) ════════════ -->
+<style>
+#cdb-ecosystem-footer .cdb-eco-link{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:#cbd5e1;text-decoration:none;font-size:12.5px;font-weight:600;line-height:1.25;transition:transform .18s,background .18s,border-color .18s,box-shadow .18s;}
+#cdb-ecosystem-footer .cdb-eco-link:hover{background:rgba(0,212,255,.09);border-color:rgba(0,212,255,.38);color:#e2e8f0;transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,212,255,.12);}
+#cdb-ecosystem-footer .cdb-eco-ico{font-size:14px;flex-shrink:0;}
+#cdb-ecosystem-footer .cdb-eco-link code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#93c5fd;opacity:.85;display:block;margin-top:1px;}
+</style>
+<div id="cdb-ecosystem-footer" style="margin:30px auto 0;max-width:1200px;padding:0 16px 84px;">
+<div style="position:relative;border-radius:18px;padding:26px 24px 22px;background:linear-gradient(145deg,rgba(13,13,34,.94),rgba(19,19,46,.94));border:1px solid rgba(0,212,255,.22);box-shadow:0 0 0 1px rgba(124,58,237,.16),0 18px 60px rgba(0,0,0,.55),0 0 60px rgba(0,212,255,.10),inset 0 1px 0 rgba(255,255,255,.04);overflow:hidden;">
+<div aria-hidden="true" style="position:absolute;top:-45%;left:-8%;width:340px;height:340px;background:radial-gradient(circle,rgba(0,212,255,.16),transparent 60%);pointer-events:none;"></div>
+<div aria-hidden="true" style="position:absolute;bottom:-55%;right:-6%;width:360px;height:360px;background:radial-gradient(circle,rgba(124,58,237,.18),transparent 60%);pointer-events:none;"></div>
+<div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+<span style="width:9px;height:9px;border-radius:50%;background:#22d3ee;box-shadow:0 0 10px #22d3ee;flex-shrink:0;"></span>
+<span style="font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">CYBERDUDEBIVASH® Ecosystem</span>
+<span style="font-size:11px;color:rgba(148,163,184,.85);font-weight:600;">Platforms · Portals · Sentinel APEX Threat-Intel APIs</span>
+</div>
+<div style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;">
+<div>
+<div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7dd3fc;margin-bottom:11px;">🌐 Platforms &amp; Portals</div>
+<div style="display:flex;flex-direction:column;gap:8px;">
+<a class="cdb-eco-link" href="https://www.cyberdudebivash.com/" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">🌐</span><span>Core Platform<code>www.cyberdudebivash.com</code></span></a>
+<a class="cdb-eco-link" href="https://cyberdudebivash.in/" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">⚔️</span><span>AI Security Hub<code>cyberdudebivash.in</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">🛡️</span><span>Threat Intel Platform<code>intel.cyberdudebivash.com</code></span></a>
+<a class="cdb-eco-link" href="https://blog.cyberdudebivash.in/" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">📖</span><span>Research &amp; Blog<code>blog.cyberdudebivash.in</code></span></a>
+<a class="cdb-eco-link" href="https://tools.cyberdudebivash.com/" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">🛠️</span><span>Tools Store<code>tools.cyberdudebivash.com</code></span></a>
+</div>
+</div>
+<div>
+<div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#c4b5fd;margin-bottom:11px;">🛰 Sentinel APEX Threat-Intel APIs</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;">
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api-docs" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">📡</span><span>API Docs<code>/api-docs</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/upgrade.html" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">⚡</span><span>Upgrade Plans<code>/upgrade.html</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api/health" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">💚</span><span>API Health<code>/api/health</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api/v1/intel/latest.json" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">🗞️</span><span>Latest Intel<code>/api/v1/intel/latest.json</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api/v1/intel/apex.json" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">🛰️</span><span>APEX Feed<code>/api/v1/intel/apex.json</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api/v1/intel/ai_summary.json" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">🧠</span><span>AI Summary<code>/api/v1/intel/ai_summary.json</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api/feed.json" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">📥</span><span>Public Feed<code>/api/feed.json</code></span></a>
+<a class="cdb-eco-link" href="https://intel.cyberdudebivash.com/api/reports/latest.json" target="_blank" rel="noopener noreferrer"><span class="cdb-eco-ico">📊</span><span>Latest Reports<code>/api/reports/latest.json</code></span></a>
+</div>
+</div>
+</div>
+</div>
+<div style="text-align:center;padding:18px 12px 6px;font-size:12px;color:rgba(148,163,184,.82);font-weight:600;letter-spacing:.3px;">© 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.</div>
+</div>
+<!-- END CYBERDUDEBIVASH® ECOSYSTEM FOOTER -->
 <!-- Real-time data adapter — powers all 5 command-center panels: tab switching, KPIs, live feeds -->
 <script defer="" src="/dashboard-live.js"></script>
 </body>

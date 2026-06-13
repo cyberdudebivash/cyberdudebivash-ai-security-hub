@@ -585,10 +585,6 @@ function _injectHeroActivityBar() {
       <span id="v14-enterprises-active"></span>
     </span>
     <span style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.55)">
-      <span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:statLivePulse 2.5s ease infinite;flex-shrink:0"></span>
-      <span id="v14-revenue-today"></span>
-    </span>
-    <span style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.55)">
       <span style="width:6px;height:6px;border-radius:50%;background:#7c3aed;animation:urgencyPulse 2s ease infinite;flex-shrink:0"></span>
       <span id="v14-threats-blocked"></span>
     </span>

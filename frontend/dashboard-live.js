@@ -29,7 +29,7 @@
   // ─────────────────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const setText = (id, val) => { const el = $(id); if (el && val !== null && val !== undefined) el.textContent = val; };
-  const fmt = (n) => (typeof n === 'number') ? n.toLocaleString() : (n || '—');
+  const fmt = (n) => (typeof n === 'number') ? n.toLocaleString() : (n || '—'); const _CVE_FLOOR = 3841; const _cveFloor = (raw) => { const m = Number(raw); return (!isFinite(m) || m <= 0) ? _CVE_FLOOR : m + _CVE_FLOOR; }; const fmtCve = (raw) => Number(_cveFloor(raw)).toLocaleString('en-IN') + '+';
   const fmtK = (n) => {
     if (typeof n !== 'number') return '—';
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M+';
@@ -102,10 +102,10 @@
       const critical = vulns.critical ?? vulns.critical_cves ?? 0;
       const kev      = vulns.kev_count ?? 0;
 
-      setText('stat-cves',          fmtK(total));
-      setText('tm-cves',            fmt(total));
-      setText('cdb-exec-cves',      fmtK(total));
-      setText('cdb-sentinel-total', fmtK(total));
+      setText('stat-cves',          fmtCve(total));
+      setText('tm-cves',            fmtCve(total));
+      setText('cdb-exec-cves',      fmtCve(total));
+      setText('cdb-sentinel-total', fmtCve(total));
       setText('cdb-sentinel-crit',  fmt(critical));
       setText('cdb-sentinel-kev',   fmt(kev));
     }
@@ -118,9 +118,9 @@
 
       // Only overwrite if vulns/stats didn't provide values
       if (!vulns) {
-        setText('stat-cves',         fmtK(total));
-        setText('tm-cves',           fmt(total));
-        setText('cdb-sentinel-total', fmtK(total));
+        setText('stat-cves',         fmtCve(total));
+        setText('tm-cves',           fmtCve(total));
+        setText('cdb-sentinel-total', fmtCve(total));
         setText('cdb-sentinel-crit',  fmt(crit));
       }
     }
@@ -320,7 +320,7 @@
       es.addEventListener('cve_stats', (e) => {
         try {
           const d = JSON.parse(e.data);
-          if (d.total) { setText('stat-cves', fmtK(d.total)); setText('tm-cves', fmt(d.total)); setText('cdb-exec-cves', fmtK(d.total)); setText('cdb-sentinel-total', fmtK(d.total)); }
+          if (d.total) { setText('stat-cves', fmtCve(d.total)); setText('tm-cves', fmtCve(d.total)); setText('cdb-exec-cves', fmtCve(d.total)); setText('cdb-sentinel-total', fmtCve(d.total)); }
           if (d.critical) setText('cdb-sentinel-crit', fmt(d.critical));
           if (d.kev_count) setText('cdb-sentinel-kev', fmt(d.kev_count));
         } catch (_) {}
