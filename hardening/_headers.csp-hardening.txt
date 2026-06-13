@@ -1,0 +1,27 @@
+# ============================================================================
+# CSP HARDENING — closes gap R2 (script-src 'unsafe-inline') SAFELY.
+#
+# WHY report-only first: the platform is inline-script-heavy. Flipping the
+# enforced CSP to remove 'unsafe-inline' blind WOULD break inline handlers
+# (regression risk = HIGH). Instead, ship a *Report-Only* tightened policy
+# ALONGSIDE the current enforced one. Browsers execute everything as today but
+# report what WOULD have been blocked, so you find every inline script before
+# enforcing. Zero user-facing risk.
+#
+# ROLLOUT:
+#   1. Add the Report-Only line below to frontend/_headers under the /* block.
+#   2. Add a /api/csp-report endpoint (or use report-uri.com) to collect reports.
+#   3. Migrate flagged inline scripts to external files or add per-script nonces.
+#   4. When reports are clean for ~1 week, move the tightened policy into the
+#      enforced Content-Security-Policy line and delete 'unsafe-inline'.
+#   5. Validate with hardening/handlers-csp note + the header-assert CI job.
+#
+# ROLLBACK: delete the Report-Only line. It never blocks anything, so rollback
+# is risk-free even mid-rollout.
+# ============================================================================
+
+# --- ADD THIS LINE to the /* section of frontend/_headers (report-only) ------
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://pagead2.googlesyndication.com https://partner.googleadservices.com https://www.googletagmanager.com https://www.google-analytics.com https://adservice.google.com https://ep.cyberdudebivash.in; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.workers.dev https://cyberdudebivash.in https://*.cyberdudebivash.in https://www.google-analytics.com https://api.razorpay.com https://lumberjack.razorpay.com; font-src 'self' https://fonts.gstatic.com; frame-src https://api.razorpay.com https://rzp.io; frame-ancestors 'none'; form-action 'self' https://rzp.io https://api.razorpay.com; object-src 'none'; base-uri 'self'; report-uri /api/csp-report
+
+# NOTE: the only difference vs the live enforced policy is script-src DROPS
+# 'unsafe-inline'. Everything else is identical, so style/inline-style is untouched.

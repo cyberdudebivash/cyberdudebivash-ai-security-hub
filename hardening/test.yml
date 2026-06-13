@@ -1,0 +1,90 @@
+# ============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Automated Test & Quality Gate
+# Closes gap R4 (CI ran lint only). INSTALL: copy to .github/workflows/test.yml
+# Adds required gates: unit tests, header/security assertions, Lighthouse, a11y.
+# Treats warnings as failures per board policy.
+# ============================================================================
+name: Test & Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Unit tests (required) ────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: workers } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20", cache: "npm", cache-dependency-path: workers/package-lock.json }
+      - run: npm ci || npm install
+      - name: Run unit tests
+        run: npx vitest run --reporter=dot
+
+  # ── Security header assertions (required) ────────────────────────────────
+  header-assert:
+    name: Security Header Assertions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert critical headers present in frontend/_headers
+        run: |
+          set -e
+          H=frontend/_headers
+          for needle in "Strict-Transport-Security" "X-Frame-Options: DENY" \
+            "X-Content-Type-Options: nosniff" "Content-Security-Policy" \
+            "Referrer-Policy" "Permissions-Policy"; do
+            grep -q "$needle" "$H" || { echo "::error::missing header: $needle"; exit 1; }
+          done
+          echo "All critical security headers present."
+
+  # ── Accessibility (required) ─────────────────────────────────────────────
+  a11y:
+    name: Accessibility (axe)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: axe-core CLI scan of live pages
+        run: |
+          npm i -g @axe-core/cli
+          npx @axe-core/cli https://cyberdudebivash.in/ --exit || \
+            { echo "::error::accessibility violations found"; exit 1; }
+
+  # ── Lighthouse performance gate (required) ───────────────────────────────
+  lighthouse:
+    name: Lighthouse CI (mobile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Run Lighthouse CI
+        run: |
+          npm i -g @lhci/cli
+          lhci autorun --config=lighthouserc.json || \
+            { echo "::error::Lighthouse budget not met"; exit 1; }
+
+  # ── E2E smoke (required) ─────────────────────────────────────────────────
+  e2e:
+    name: E2E Smoke (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Playwright smoke
+        run: |
+          npm i -D @playwright/test
+          npx playwright install --with-deps chromium
+          npx playwright test tests/e2e --reporter=line || \
+            { echo "::error::E2E smoke failed"; exit 1; }
