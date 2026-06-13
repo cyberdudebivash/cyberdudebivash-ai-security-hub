@@ -1,10 +1,11 @@
-# =============================================================================
-# CYBERDUDEBIVASH AI Security Hub — Cloudflare Pages Response Headers v14.0
+﻿# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub â€” Cloudflare Pages Response Headers v14.0
 # P0 FIX: CSP now includes Google Fonts, AdSense, Razorpay, Workers.dev CORS.
 # =============================================================================
 
-# ── Security + CSP headers on ALL routes ─────────────────────────────────────
+# â”€â”€ Security + CSP headers on ALL routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /*
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://pagead2.googlesyndication.com https://partner.googleadservices.com https://www.googletagmanager.com https://www.google-analytics.com https://adservice.google.com https://ep.cyberdudebivash.in; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.workers.dev https://cyberdudebivash.in https://*.cyberdudebivash.in https://www.google-analytics.com https://api.razorpay.com https://lumberjack.razorpay.com; font-src 'self' https://fonts.gstatic.com; frame-src https://api.razorpay.com https://rzp.io; frame-ancestors 'none'; form-action 'self' https://rzp.io https://api.razorpay.com; object-src 'none'; base-uri 'self'; report-uri /api/csp-report
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
@@ -16,7 +17,7 @@
   Vary: Accept-Encoding
 
 
-# ── HTML — NEVER cache, always fresh from server ──────────────────────────────
+# â”€â”€ HTML â€” NEVER cache, always fresh from server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
@@ -26,16 +27,16 @@
 /*.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
-# ── version.json — never cache (CI injects build-time values) ────────────────
+# â”€â”€ version.json â€” never cache (CI injects build-time values) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /version.json
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   Content-Type: application/json; charset=utf-8
 
-# ── API routes — never cache ──────────────────────────────────────────────────
+# â”€â”€ API routes â€” never cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /api/*
   Cache-Control: no-store, no-cache
 
-# ── Versioned static assets — cache forever (immutable) ──────────────────────
+# â”€â”€ Versioned static assets â€” cache forever (immutable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Covers v8/v9/v10/v11/v12/v13/v14 naming conventions
 /*.v8.*
   Cache-Control: public, max-age=31536000, immutable
@@ -53,12 +54,12 @@
   Cache-Control: public, max-age=31536000, immutable
 
 
-# ── JSON data files — short cache ────────────────────────────────────────────
+# â”€â”€ JSON data files â€” short cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /data/*.json
   Content-Type: application/json; charset=utf-8
   Cache-Control: public, max-age=300, stale-while-revalidate=600
 
-# ── XML / TXT / manifest ──────────────────────────────────────────────────────
+# â”€â”€ XML / TXT / manifest â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /sitemap.xml
   Content-Type: application/xml; charset=utf-8
   Cache-Control: public, max-age=86400
@@ -74,12 +75,12 @@
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=86400
 
-# ── Service Worker — never cache (must always be fresh) ───────────────────────
+# â”€â”€ Service Worker â€” never cache (must always be fresh) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /sw.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   Service-Worker-Allowed: /
 
-# ── OG Image — explicit Content-Type for social crawlers ─────────────────────
+# â”€â”€ OG Image â€” explicit Content-Type for social crawlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /og-image.png
   Content-Type: image/png
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
@@ -90,7 +91,7 @@
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
   X-Content-Type-Options: nosniff
 
-# ── Static images — moderate cache ───────────────────────────────────────────
+# â”€â”€ Static images â€” moderate cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /*.png
   Content-Type: image/png
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
@@ -111,7 +112,7 @@
   Content-Type: image/x-icon
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 
-# ── Fonts — cache forever (immutable) ────────────────────────────────────────
+# â”€â”€ Fonts â€” cache forever (immutable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /*.woff2
   Content-Type: font/woff2
   Cache-Control: public, max-age=31536000, immutable

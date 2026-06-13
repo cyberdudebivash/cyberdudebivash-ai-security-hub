@@ -1,0 +1,31 @@
+# ============================================================================
+# Secret-scanning gate - prevents any plaintext credential from being merged.
+# INSTALL: copy to .github/workflows/gitleaks.yml
+# Closes the prevention gap behind the ADMIN_KEY incident (P1).
+# Scans the full history on push/PR and fails the build on any finding.
+# ============================================================================
+name: Secret Scan (gitleaks)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so past commits are scanned too
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          # No license needed for public repos.
+        # Fails the job (non-zero) if any secret is detected.
