@@ -837,6 +837,18 @@
       </div>
     </div>
     <div class="sidebar-section">
+      <div class="sidebar-label">SENTINEL APEX™</div>
+      <div class="nav-item" data-page="intel-reports" onclick="showPage('intel-reports',this);loadIntelReports()">
+        <span class="nav-icon">🔐</span> Intel Reports
+      </div>
+      <div class="nav-item" data-page="subscriptions" onclick="showPage('subscriptions',this);loadSubscriptions()">
+        <span class="nav-icon">🔄</span> Subscriptions
+      </div>
+      <div class="nav-item" data-page="api-usage" onclick="showPage('api-usage',this);loadAPIUsage()">
+        <span class="nav-icon">📊</span> API Usage
+      </div>
+    </div>
+    <div class="sidebar-section">
       <div class="sidebar-label">Developer</div>
       <div class="nav-item" data-page="apikeys" onclick="showPage('apikeys',this)">
         <span class="nav-icon">🔑</span> API Keys
@@ -1246,6 +1258,138 @@
               <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">
                 Select a key to view usage
               </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INTEL REPORTS (SENTINEL APEX™) ══ -->
+    <div id="page-intel-reports" class="page">
+      <div class="page-title">Intel Reports — SENTINEL APEX™</div>
+      <div class="page-subtitle">Download purchased intelligence reports. Reports are generated on demand from live threat data.</div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">Reports Owned</div><div class="stat-value" id="ir-count">—</div></div>
+        <div class="stat-card"><div class="stat-label">Downloads Used</div><div class="stat-value" id="ir-downloads">—</div></div>
+        <div class="stat-card"><div class="stat-label">Entitlement Tier</div><div class="stat-value" id="ir-tier">—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-weight:600;font-size:1rem">Purchased Reports</div>
+            <a href="/sentinel-apex-marketplace.html" class="btn btn-primary" style="font-size:.8rem;padding:7px 16px">Browse Reports →</a>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Report</th><th>Purchased</th><th>Status</th><th>Downloads</th><th>Action</th></tr>
+            </thead>
+            <tbody id="intel-reports-table">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div style="font-weight:600;margin-bottom:12px">Feature Entitlements</div>
+          <div id="entitlements-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+            <div style="color:var(--muted);text-align:center;padding:20px;grid-column:1/-1"><span class="spinner"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SUBSCRIPTIONS (SENTINEL APEX™ Self-Service) ══ -->
+    <div id="page-subscriptions" class="page">
+      <div class="page-title">Subscription Management</div>
+      <div class="page-subtitle">View, upgrade, pause, or cancel your SENTINEL APEX™ subscriptions.</div>
+
+      <div id="subs-loading" style="text-align:center;padding:48px;color:var(--muted)"><span class="spinner"></span> Loading subscriptions…</div>
+      <div id="subs-empty" style="display:none" class="card">
+        <div class="card-body" style="text-align:center;padding:40px">
+          <div style="font-size:2.5rem;margin-bottom:12px">📦</div>
+          <div style="font-weight:700;font-size:1.1rem;margin-bottom:8px">No Active Subscriptions</div>
+          <div style="color:var(--muted);margin-bottom:20px">Subscribe to SENTINEL APEX™ APIs for continuous threat intelligence access.</div>
+          <a href="/sentinel-apex-marketplace.html" class="btn btn-primary">View Plans →</a>
+        </div>
+      </div>
+      <div id="subs-list" style="display:none"></div>
+
+      <!-- Upgrade Path -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-body">
+          <div style="font-weight:600;margin-bottom:12px">Available Upgrades</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="upgrade-options">
+            <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px">
+              <div style="font-weight:700;color:var(--accent2);margin-bottom:6px">⚡ PRO — $49/mo</div>
+              <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px">All 5 intel endpoints, 1,000 req/day, STIX export, AI predictions</div>
+              <a href="/sentinel-apex-marketplace.html#plans" class="btn btn-outline" style="font-size:.78rem;padding:6px 14px;width:100%;text-align:center">Upgrade →</a>
+            </div>
+            <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px">
+              <div style="font-weight:700;color:var(--accent);margin-bottom:6px">🏢 TEAM — $99/mo</div>
+              <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px">SIEM webhooks, multi-seat, kill chain mapping, 10,000 req/day</div>
+              <a href="/sentinel-apex-marketplace.html#plans" class="btn btn-outline" style="font-size:.78rem;padding:6px 14px;width:100%;text-align:center">Upgrade →</a>
+            </div>
+            <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px">
+              <div style="font-weight:700;color:#fbbf24;margin-bottom:6px">🔑 ENTERPRISE — $499/mo</div>
+              <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Unlimited, dedicated endpoint, white-label, SLA, board reports</div>
+              <a href="/contact.html" class="btn btn-primary" style="font-size:.78rem;padding:6px 14px;width:100%;text-align:center">Contact Sales →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ API USAGE (SENTINEL APEX™) ══ -->
+    <div id="page-api-usage" class="page">
+      <div class="page-title">API Usage Dashboard</div>
+      <div class="page-subtitle">Monitor your SENTINEL APEX™ API consumption and quota utilization.</div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">Today's Requests</div><div class="stat-value" id="au-today">—</div></div>
+        <div class="stat-card"><div class="stat-label">Daily Limit</div><div class="stat-value" id="au-limit">—</div></div>
+        <div class="stat-card"><div class="stat-label">Remaining Today</div><div class="stat-value" id="au-remaining">—</div></div>
+        <div class="stat-card"><div class="stat-label">Current Tier</div><div class="stat-value" id="au-tier">—</div></div>
+      </div>
+
+      <!-- Usage bar -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <span style="font-weight:600">Daily Quota Usage</span>
+            <span id="au-pct" style="color:var(--accent);font-weight:700">—</span>
+          </div>
+          <div style="background:var(--bg3);border-radius:100px;height:12px;overflow:hidden">
+            <div id="au-bar" style="height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);width:0%;transition:width 1s;border-radius:100px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.78rem;color:var(--muted)">
+            <span>0 requests</span>
+            <span id="au-limit-label">— limit</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Endpoint breakdown -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body">
+          <div style="font-weight:600;margin-bottom:16px">Endpoint Access Status</div>
+          <div id="endpoint-status" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+            <div style="color:var(--muted);text-align:center;padding:20px;grid-column:1/-1"><span class="spinner"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order history -->
+      <div class="card">
+        <div class="card-body">
+          <div style="font-weight:600;margin-bottom:16px">Recent Orders</div>
+          <table>
+            <thead><tr><th>Order ID</th><th>Product</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="orders-table">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span></td></tr>
             </tbody>
           </table>
         </div>
@@ -3747,6 +3891,216 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mkBridge);
   } else { mkBridge(); }
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  SENTINEL APEX™ SELF-SERVICE PORTAL (Task 8)
+//  Intel Reports · Subscriptions · API Usage
+// ═══════════════════════════════════════════════════════════
+(function() {
+  const APEX_API = 'https://cyberdudebivash-security-hub.cyberdudebivash.workers.dev';
+
+  function apexFetch(path, opts = {}) {
+    const token = localStorage.getItem('cdb_token') || localStorage.getItem('apex_token');
+    return fetch(APEX_API + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}), ...(opts.headers || {}) },
+    }).then(r => r.json()).catch(() => null);
+  }
+
+  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'; }
+  function statusBadge(s) {
+    const map = { paid: 'color:#10b981', active: 'color:#10b981', trial: 'color:#00d4ff', cancelled: 'color:#ef4444', expired: 'color:#64748b' };
+    return `<span style="font-weight:700;${map[s] || ''}">${(s||'').toUpperCase()}</span>`;
+  }
+
+  // ── Intel Reports ──────────────────────────────────────────────────────────
+  window.loadIntelReports = async function() {
+    const token = localStorage.getItem('cdb_token');
+    if (!token) {
+      document.getElementById('intel-reports-table').innerHTML =
+        '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sign in to view your reports.</td></tr>';
+      return;
+    }
+
+    // Load orders + entitlements in parallel
+    const [orders, ents] = await Promise.all([
+      apexFetch('/api/marketplace/orders'),
+      apexFetch('/api/marketplace/entitlements'),
+    ]);
+
+    // Stats
+    const reportOrders = (orders?.orders || []).filter(o => (o.product_id || '').startsWith('rpt-'));
+    document.getElementById('ir-count').textContent = reportOrders.length;
+    document.getElementById('ir-tier').textContent  = ents?.tier || '—';
+    const totalDownloads = reportOrders.reduce((s, o) => s + (o.downloads_used || 0), 0);
+    document.getElementById('ir-downloads').textContent = totalDownloads;
+
+    // Reports table
+    const tbody = document.getElementById('intel-reports-table');
+    if (!reportOrders.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">
+        No intelligence reports purchased yet.
+        <br><a href="/sentinel-apex-marketplace.html" style="color:var(--accent)">Browse Reports →</a>
+      </td></tr>`;
+    } else {
+      tbody.innerHTML = reportOrders.map(o => {
+        const hasDownload = !!o.download_url;
+        return `<tr>
+          <td style="font-weight:600;color:var(--text)">${o.product_id || '—'}</td>
+          <td style="color:var(--muted)">${fmtDate(o.created_at)}</td>
+          <td>${statusBadge(o.status)}</td>
+          <td style="color:var(--muted)">${o.downloads_used || 0} / 10</td>
+          <td>${hasDownload
+            ? `<a href="${APEX_API}${o.download_url}" target="_blank" class="btn btn-primary" style="font-size:.75rem;padding:6px 12px">⬇️ Download</a>`
+            : `<button onclick="generateReport('${o.id}')" class="btn btn-outline" style="font-size:.75rem;padding:6px 12px" id="gen-btn-${o.id}">⚡ Generate</button>`
+          }</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Entitlements grid
+    const grid = document.getElementById('entitlements-grid');
+    const e = ents?.entitlements || {};
+    const allFeatures = ['api_access','threat_feed_full','stix_21_export','siem_webhook','kill_chain_mapping','ai_predictions','actor_attribution','report_download','pdf_reports','dashboard_pro','multi_seat','board_reports','analyst_briefings'];
+    grid.innerHTML = allFeatures.map(f => {
+      const granted = !!e[f]?.granted;
+      const icon = granted ? '✅' : '🔒';
+      const label = f.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+      return `<div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:.82rem">
+        <span>${icon}</span>
+        <span style="color:${granted ? 'var(--text)' : 'var(--muted)'}">${label}</span>
+      </div>`;
+    }).join('');
+  };
+
+  window.generateReport = async function(orderId) {
+    const btn = document.getElementById(`gen-btn-${orderId}`);
+    if (btn) { btn.textContent = '⏳ Generating…'; btn.disabled = true; }
+    const result = await apexFetch(`/api/report/generate/${orderId}`, { method: 'POST' });
+    if (result?.download_url) {
+      const url = APEX_API + result.download_url;
+      if (btn) { btn.outerHTML = `<a href="${url}" target="_blank" class="btn btn-primary" style="font-size:.75rem;padding:6px 12px">⬇️ Download</a>`; }
+      window.open(url, '_blank');
+    } else {
+      if (btn) { btn.textContent = '⚠️ Error'; btn.disabled = false; }
+      alert(result?.error || 'Report generation failed. Contact support@cyberdudebivash.com');
+    }
+  };
+
+  // ── Subscriptions ──────────────────────────────────────────────────────────
+  window.loadSubscriptions = async function() {
+    document.getElementById('subs-loading').style.display = 'block';
+    document.getElementById('subs-list').style.display   = 'none';
+    document.getElementById('subs-empty').style.display  = 'none';
+
+    const data = await apexFetch('/api/marketplace/subscriptions');
+    document.getElementById('subs-loading').style.display = 'none';
+
+    const subs = data?.subscriptions || [];
+    if (!subs.length) {
+      document.getElementById('subs-empty').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('subs-list').style.display = 'block';
+    document.getElementById('subs-list').innerHTML = subs.map(s => {
+      const tier     = (s.plan_id || s.tier || '').toUpperCase();
+      const amount   = s.amount_usd ? `$${s.amount_usd}/mo` : s.amount_inr ? `₹${s.amount_inr.toLocaleString('en-IN')}/mo` : '—';
+      const renews   = fmtDate(s.next_billing_date || s.renews_at);
+      const isActive = ['active','trial'].includes(s.status);
+      return `<div class="card" style="margin-bottom:16px">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+            <div>
+              <div style="font-size:1.1rem;font-weight:700;margin-bottom:4px">${tier} Plan</div>
+              <div style="color:var(--muted);font-size:.85rem">
+                ${statusBadge(s.status)} &nbsp;·&nbsp; ${amount} &nbsp;·&nbsp; Renews ${renews}
+              </div>
+              <div style="color:var(--muted);font-size:.78rem;margin-top:4px">Sub ID: ${s.id || s.subscription_id || '—'}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${isActive ? `<button onclick="cancelSubscription('${s.id || s.subscription_id}')" class="btn btn-outline" style="border-color:var(--danger);color:var(--danger);font-size:.78rem;padding:7px 14px">Cancel</button>` : ''}
+              <a href="/sentinel-apex-marketplace.html#plans" class="btn btn-primary" style="font-size:.78rem;padding:7px 14px">Upgrade →</a>
+            </div>
+          </div>
+          ${s.features ? `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px">
+            ${(s.features || []).map(f => `<span style="background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:2px 8px;font-size:.72rem">${f.replace(/_/g,' ')}</span>`).join('')}
+          </div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  };
+
+  window.cancelSubscription = async function(subId) {
+    if (!confirm('Cancel this subscription? Your access continues until the current billing period ends.')) return;
+    const result = await apexFetch(`/api/marketplace/cancel`, { method: 'POST', body: JSON.stringify({ subscription_id: subId }) });
+    if (result?.success || result?.status === 'cancelled') {
+      alert('Subscription cancelled. You will retain access until your current period ends.');
+      loadSubscriptions();
+    } else {
+      alert(result?.error || 'Cancellation failed. Contact support@cyberdudebivash.com');
+    }
+  };
+
+  // ── API Usage ──────────────────────────────────────────────────────────────
+  window.loadAPIUsage = async function() {
+    const [ents, orders] = await Promise.all([
+      apexFetch('/api/marketplace/entitlements'),
+      apexFetch('/api/marketplace/orders'),
+    ]);
+
+    const tier    = ents?.tier || 'FREE';
+    const limits  = { FREE: 100, STARTER: 500, PRO: 1000, TEAM: 10000, ENTERPRISE: Infinity, MSSP: Infinity };
+    const daily   = limits[tier] || 100;
+    const reqs    = ents?.api_requests_today || 0;
+    const remain  = daily === Infinity ? '∞' : Math.max(0, daily - reqs);
+    const pct     = daily === Infinity ? 0 : Math.min(100, Math.round(reqs / daily * 100));
+
+    document.getElementById('au-today').textContent     = reqs;
+    document.getElementById('au-limit').textContent     = daily === Infinity ? '∞' : daily.toLocaleString();
+    document.getElementById('au-remaining').textContent = remain === '∞' ? '∞' : remain.toLocaleString();
+    document.getElementById('au-tier').textContent      = tier;
+    document.getElementById('au-pct').textContent       = pct + '%';
+    document.getElementById('au-bar').style.width       = pct + '%';
+    document.getElementById('au-limit-label').textContent = daily === Infinity ? 'Unlimited' : daily.toLocaleString() + ' / day';
+
+    // Endpoint status grid
+    const TIER_ENDPOINTS = {
+      FREE: ['ioc','cve'], STARTER: ['ioc','cve'], PRO: ['ioc','cve','actor','ttp','risk'],
+      TEAM: ['ioc','cve','actor','ttp','risk'], ENTERPRISE: ['ioc','cve','actor','ttp','risk'],
+    };
+    const allowed = TIER_ENDPOINTS[tier] || ['ioc','cve'];
+    const all5    = ['ioc','cve','actor','ttp','risk'];
+    document.getElementById('endpoint-status').innerHTML = all5.map(ep => {
+      const on = allowed.includes(ep);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:12px;background:var(--card2);border:1px solid ${on ? 'rgba(16,185,129,.3)' : 'var(--border)'};border-radius:8px">
+        <span style="font-size:1.2rem">${on ? '✅' : '🔒'}</span>
+        <div>
+          <div style="font-weight:600;font-size:.9rem">/api/intel/${ep}</div>
+          <div style="font-size:.72rem;color:var(--muted)">${on ? 'Available' : 'PRO+ required'}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Orders table
+    const orderList = (orders?.orders || []).slice(0, 20);
+    const tbody = document.getElementById('orders-table');
+    if (!orderList.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No orders yet.</td></tr>';
+    } else {
+      tbody.innerHTML = orderList.map(o =>
+        `<tr>
+          <td style="font-family:monospace;font-size:.78rem;color:var(--muted)">${(o.id||'—').slice(0,14)}…</td>
+          <td style="color:var(--text)">${o.product_id || o.plan || '—'}</td>
+          <td style="color:var(--accent)">${o.amount_usd ? '$'+o.amount_usd : o.amount_inr ? '₹'+Number(o.amount_inr).toLocaleString('en-IN') : '—'}</td>
+          <td>${statusBadge(o.status)}</td>
+          <td style="color:var(--muted)">${fmtDate(o.created_at)}</td>
+        </tr>`
+      ).join('');
+    }
+  };
+
 })();
 </script>
 </body>

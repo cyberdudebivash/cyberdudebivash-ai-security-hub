@@ -17,6 +17,7 @@
 
 import { callClaude } from '../core/mythosAIProvider.js';
 import { lookupCVE   } from '../services/cveEngine.js';
+import { checkEntitlement, FEATURES } from '../middleware/entitlementCheck.js';
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
 function json(data, status = 200) {
@@ -30,34 +31,67 @@ function json(data, status = 200) {
 }
 
 function tierLimits(tier) {
-  if (tier === 'ENTERPRISE') return { daily: Infinity, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true };
-  if (tier === 'PRO')        return { daily: 1000,     endpoints: ['ioc','cve','actor','ttp','risk'], stix: false };
-  return                            { daily: 100,      endpoints: ['ioc','cve'],                      stix: false };
+  if (tier === 'ENTERPRISE' || tier === 'MSSP') return { daily: Infinity, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
+  if (tier === 'TEAM')  return { daily: 10000, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
+  if (tier === 'PRO')   return { daily: 1000,  endpoints: ['ioc','cve','actor','ttp','risk'], stix: false };
+  return                       { daily: 100,   endpoints: ['ioc','cve'],                      stix: false };
 }
+
+// Feature required per endpoint (for entitlement table check)
+const ENDPOINT_FEATURE = {
+  ioc:   FEATURES.API_ACCESS,
+  cve:   FEATURES.API_ACCESS,
+  actor: FEATURES.THREAT_FEED_FULL,
+  ttp:   FEATURES.THREAT_FEED_FULL,
+  risk:  FEATURES.THREAT_FEED_FULL,
+};
 
 async function checkIntelQuota(env, authCtx, endpoint) {
   const tier   = authCtx?.tier || 'FREE';
-  const limits = tierLimits(tier);
+  const userId = authCtx?.userId || authCtx?.id || null;
 
-  if (!limits.endpoints.includes(endpoint)) {
-    return { allowed: false, reason: `${endpoint.toUpperCase()} endpoint requires PRO or ENTERPRISE plan`, upgrade: 'https://tools.cyberdudebivash.com/#pricing' };
+  // ── Step 1: Check customer_entitlements table (v39 grants) ─────────────────
+  const requiredFeature = ENDPOINT_FEATURE[endpoint] || FEATURES.API_ACCESS;
+  if (userId && env.DB) {
+    try {
+      const entResult = await checkEntitlement(env.DB, userId, requiredFeature, tier);
+      if (entResult.granted && entResult.source === 'entitlement') {
+        // Has explicit entitlement grant — use entitlement-derived daily limit
+        const limits = tierLimits(tier);
+        if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'entitlement' };
+
+        const key = `intel_quota:${userId}:${new Date().toISOString().slice(0,10)}`;
+        const kv  = env.KV || env.SECURITY_HUB_KV;
+        try {
+          const current = parseInt(await kv?.get(key) || '0', 10);
+          if (current >= limits.daily) return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html', reset: 'tomorrow 00:00 UTC' };
+          await kv?.put(key, String(current + 1), { expirationTtl: 86400 });
+          return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'entitlement' };
+        } catch { return { allowed: true, tier, remaining: 'unknown', source: 'entitlement' }; }
+      }
+    } catch {}
   }
 
-  if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited' };
+  // ── Step 2: Legacy tier-based check (backward compatibility) ───────────────
+  const limits = tierLimits(tier);
+  if (!limits.endpoints.includes(endpoint)) {
+    return { allowed: false, reason: `${endpoint.toUpperCase()} endpoint requires PRO or ENTERPRISE plan`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html' };
+  }
 
-  const userId = authCtx?.userId || authCtx?.id || 'anon';
-  const key    = `intel_quota:${userId}:${new Date().toISOString().slice(0,10)}`;
-  const kv     = env.KV || env.SECURITY_HUB_KV;
+  if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'tier' };
+
+  const key = `intel_quota:${userId || 'anon'}:${new Date().toISOString().slice(0,10)}`;
+  const kv  = env.KV || env.SECURITY_HUB_KV;
 
   try {
     const current = parseInt(await kv?.get(key) || '0', 10);
     if (current >= limits.daily) {
-      return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached on ${tier} plan`, upgrade: 'https://tools.cyberdudebivash.com/#pricing', reset: 'tomorrow 00:00 UTC' };
+      return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached on ${tier} plan`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html', reset: 'tomorrow 00:00 UTC' };
     }
     await kv?.put(key, String(current + 1), { expirationTtl: 86400 });
-    return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1 };
+    return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'tier' };
   } catch {
-    return { allowed: true, tier, remaining: 'unknown' };
+    return { allowed: true, tier, remaining: 'unknown', source: 'tier' };
   }
 }
 

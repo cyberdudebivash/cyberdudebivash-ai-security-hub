@@ -2080,6 +2080,11 @@ export default {
     }
     if (path === '/api/cti/v2/stix/export' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      // STIX 2.1 export — PRO+ entitlement gate (Task 9)
+      const { featureGate, FEATURES } = await import('./middleware/entitlementCheck.js');
+      const stixGate = await featureGate(env.DB, authCtx, FEATURES.STIX_21_EXPORT);
+      if (stixGate) return withSecurityHeaders(withCors(stixGate, request));
       request.user = authCtx;
       return withSecurityHeaders(withCors(await handleSTIXExport(request, env), request));
     }
@@ -4366,17 +4371,23 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(handleSiemInfo(), request));
     }
 
-    // POST /api/export/siem — generate export file (PRO/ENTERPRISE)
+    // POST /api/export/siem — generate export file (TEAM+ entitlement gate — Task 9)
     if (path === '/api/export/siem' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const { featureGate, FEATURES: SIEM_FEATS } = await import('./middleware/entitlementCheck.js');
+      const siemGate = await featureGate(env.DB, authCtx, SIEM_FEATS.SIEM_WEBHOOK);
+      if (siemGate) return withSecurityHeaders(withCors(siemGate, request));
       return withSecurityHeaders(withCors(await handleSiemExport(request, env, authCtx), request));
     }
 
-    // GET /api/export/siem/stream — streaming NDJSON (ENTERPRISE only)
+    // GET /api/export/siem/stream — streaming NDJSON (TEAM+ entitlement gate — Task 9)
     if (path === '/api/export/siem/stream' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
       if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      const { featureGate, FEATURES: STREAM_FEATS } = await import('./middleware/entitlementCheck.js');
+      const streamGate = await featureGate(env.DB, authCtx, STREAM_FEATS.SIEM_WEBHOOK);
+      if (streamGate) return withSecurityHeaders(withCors(streamGate, request));
       // Streaming response — no withCors wrapper (returns raw stream)
       return await handleSiemStream(request, env, authCtx);
     }
@@ -5234,6 +5245,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const provAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
       const { handleProvisioning } = await import('./handlers/provisioningEngine.js');
       return withSecurityHeaders(withCors(await handleProvisioning(request, env, provAuthCtx, path, method), request));
+    }
+
+    // ── SENTINEL APEX™ Secure Report Downloads + AI Report Generation ────────
+    // Wired: Task 7 — KV-token signed download delivery + dynamic report generation
+    if (path.startsWith('/api/download/') || path.startsWith('/api/report/')) {
+      const dlAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      const { handleSecureDownload } = await import('./handlers/secureDownload.js');
+      return withSecurityHeaders(withCors(await handleSecureDownload(request, env, dlAuthCtx, path, method), request));
     }
 
     // ── v22.0 PRODUCTION ROUTE FIXES ─────────────────────────────────────────
