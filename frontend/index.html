@@ -423,7 +423,6 @@ window.cdbTriggerReportPurchase = async function(module, target) {
   });
 })();
 </script>
-
 </head></html>
 <!-- ═══════════════════════════════════════════════════════════════════════════
      OPEN GRAPH v10.0 — GOD LEVEL
@@ -841,7 +840,6 @@ a{color:var(--accent);text-decoration:none}
 [data-cdb-plan]{transition:opacity .2s}
 </style>
 <link href="/assets/cdb-mobile-responsive.css" rel="stylesheet"/>
-
 <body>
 <!-- ═══════════════════════════════════════════════════════════
      PRELOADER — hides raw HTML until JS initializes (prevents
@@ -986,16 +984,16 @@ a{color:var(--accent);text-decoration:none}
 </div>
 <!-- Mobile drawer -->
 <div aria-hidden="true" class="nav-mobile-drawer" id="nav-mobile-drawer">
-<a data-section="hero" href="#home" onclick="cdbNavigate('hero');cdbCloseMobileNav();return false">🏠 Home</a>
-<a data-section="dashboard" href="#dashboard" onclick="cdbNavigate('dashboard');cdbCloseMobileNav();return false">📊 Dashboard</a>
-<a data-section="scanner" href="#scanner" onclick="cdbNavigate('scanner');cdbCloseMobileNav();return false">🔍 Scanner</a>
+<a data-section="hero" href="#home" onclick="cdbNavigate('hero');cdbCloseMobileNav();return false" tabindex="-1">🏠 Home</a>
+<a data-section="dashboard" href="#dashboard" onclick="cdbNavigate('dashboard');cdbCloseMobileNav();return false" tabindex="-1">📊 Dashboard</a>
+<a data-section="scanner" href="#scanner" onclick="cdbNavigate('scanner');cdbCloseMobileNav();return false" tabindex="-1">🔍 Scanner</a>
 <div class="nav-mob-sep"></div>
-<a data-section="defense-solutions" href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseMobileNav();return false">🛡 Defense Marketplace</a>
-<a data-section="pricing" href="#pricing" onclick="cdbNavigate('pricing');cdbCloseMobileNav();return false">💰 Pricing</a>
-<a data-section="enterprise" href="#enterprise" onclick="cdbNavigate('enterprise');cdbCloseMobileNav();return false">🏢 Enterprise</a>
+<a data-section="defense-solutions" href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseMobileNav();return false" tabindex="-1">🛡 Defense Marketplace</a>
+<a data-section="pricing" href="#pricing" onclick="cdbNavigate('pricing');cdbCloseMobileNav();return false" tabindex="-1">💰 Pricing</a>
+<a data-section="enterprise" href="#enterprise" onclick="cdbNavigate('enterprise');cdbCloseMobileNav();return false" tabindex="-1">🏢 Enterprise</a>
 <div class="nav-mob-sep"></div>
-<a data-section="compliance-global" href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false">🌐 Global Compliance</a>
-<a href="https://tools.cyberdudebivash.com" onclick="cdbCloseMobileNav()" rel="noopener" target="_blank">🛠 Tools Suite ↗</a>
+<a data-section="compliance-global" href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false" tabindex="-1">🌐 Global Compliance</a>
+<a href="https://tools.cyberdudebivash.com" onclick="cdbCloseMobileNav()" rel="noopener" tabindex="-1" target="_blank">🛠 Tools Suite ↗</a>
 </div>
 </nav>
 <main aria-label="Main content" id="main-content">
@@ -1108,31 +1106,31 @@ a{color:var(--accent);text-decoration:none}
 </div>
 <!-- Clone for seamless scroll loop -->
 <div aria-hidden="true" class="eco-items" id="eco-items-2" inert="">
-<a class="eco-item" data-eco="main" href="https://cyberdudebivash.com" rel="noopener" target="_blank">
+<a class="eco-item" data-eco="main" href="https://cyberdudebivash.com" rel="noopener" tabindex="-1" target="_blank">
 <span class="eco-item-dot" style="background:#00d4ff"></span>
 <span class="eco-item-icon">🌐</span>
 <span>cyberdudebivash.com</span>
 <span style="font-size:10px;color:var(--text-dim)">Core Platform</span>
 </a>
-<a class="eco-item" data-eco="intel" href="https://intel.cyberdudebivash.com" rel="noopener" target="_blank">
+<a class="eco-item" data-eco="intel" href="https://intel.cyberdudebivash.com" rel="noopener" tabindex="-1" target="_blank">
 <span class="eco-item-dot" style="background:#ef4444;animation-delay:.4s"></span>
 <span class="eco-item-icon">🛡️</span>
 <span>intel.cyberdudebivash.com</span>
 <span style="font-size:10px;color:var(--text-dim)">Threat Intel</span>
 </a>
-<a class="eco-item" data-eco="tools" href="https://tools.cyberdudebivash.com" rel="noopener" target="_blank">
+<a class="eco-item" data-eco="tools" href="https://tools.cyberdudebivash.com" rel="noopener" tabindex="-1" target="_blank">
 <span class="eco-item-dot" style="background:#8b5cf6;animation-delay:.8s"></span>
 <span class="eco-item-icon">🛠️</span>
 <span>tools.cyberdudebivash.com</span>
 <span style="font-size:10px;color:var(--text-dim)">Tools Store</span>
 </a>
-<a class="eco-item" data-eco="blog" href="https://blog.cyberdudebivash.in" rel="noopener" target="_blank">
+<a class="eco-item" data-eco="blog" href="https://blog.cyberdudebivash.in" rel="noopener" tabindex="-1" target="_blank">
 <span class="eco-item-dot" style="background:#f59e0b;animation-delay:1.2s"></span>
 <span class="eco-item-icon">📖</span>
 <span>blog.cyberdudebivash.in</span>
 <span style="font-size:10px;color:var(--text-dim)">Research &amp; Blog</span>
 </a>
-<a class="eco-item" data-eco="telegram" href="https://t.me/cyberdudebivashSentinelApex" rel="noopener" target="_blank">
+<a class="eco-item" data-eco="telegram" href="https://t.me/cyberdudebivashSentinelApex" rel="noopener" tabindex="-1" target="_blank">
 <span class="eco-item-dot" style="background:#22c55e;animation-delay:1.6s"></span>
 <span class="eco-item-icon">✈️</span>
 <span>Sentinel APEX</span>
@@ -21850,4 +21848,3 @@ function v21TriggerUrgencyPayment(){
 <!-- Real-time data adapter — powers all 5 command-center panels: tab switching, KPIs, live feeds -->
 <script defer="" src="/dashboard-live.js"></script>
 </body>
-
