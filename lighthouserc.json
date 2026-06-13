@@ -1,12 +1,8 @@
 {
   "ci": {
     "collect": {
-      "url": [
-        "https://cyberdudebivash.in/",
-        "https://cyberdudebivash.in/pricing.html",
-        "https://cyberdudebivash.in/tools.html"
-      ],
-      "numberOfRuns": 3,
+      "url": ["http://localhost:3000/"],
+      "numberOfRuns": 1,
       "settings": {
         "emulatedFormFactor": "mobile",
         "throttlingMethod": "simulate",

@@ -86,11 +86,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
-      - name: Run Lighthouse CI
+      - name: Run Lighthouse CI against local build
+        # Serves frontend/ locally to eliminate the live-URL race condition
+        # (previously: 3 URLs × 3 runs = 9 scans against a pre-deploy site).
+        # Now: 1 URL × 1 run against the checked-out source.
         run: |
-          npm i -g @lhci/cli
+          npm i -g @lhci/cli serve
+          serve frontend/ --no-request-logging -p 3000 &
+          SERVER_PID=$!
+          sleep 4
           lhci autorun --config=lighthouserc.json || \
-            { echo "::error::Lighthouse budget not met"; exit 1; }
+            { kill $SERVER_PID 2>/dev/null; echo "::error::Lighthouse budget not met"; exit 1; }
+          kill $SERVER_PID 2>/dev/null
+          echo "✅ Lighthouse CI passed"
 
   # ── E2E smoke (required) ─────────────────────────────────────────────────
   e2e:

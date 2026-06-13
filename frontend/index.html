@@ -1012,10 +1012,10 @@ a{color:var(--accent);text-decoration:none}
         <div id="cdb-notif-panel" style="display:none;position:absolute;top:calc(100% + 10px);right:0;width:340px;background:rgba(8,8,20,.98);border:1px solid rgba(0,212,255,.18);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.75);z-index:9999;overflow:hidden;backdrop-filter:blur(24px)">
           <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:12px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.1em">🔔 Notifications</span>
-            <button onclick="CDB_NOTIF.markAllRead()" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:10px;cursor:pointer;font-weight:700;letter-spacing:.05em">Mark all read</button>
+            <button onclick="CDB_NOTIF.markAllRead()" style="background:none;border:none;color:rgba(255,255,255,.68);font-size:10px;cursor:pointer;font-weight:700;letter-spacing:.05em">Mark all read</button>
           </div>
           <div id="cdb-notif-list" style="max-height:340px;overflow-y:auto;padding:8px">
-            <div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.2);font-size:12px">Loading alerts...</div>
+            <div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.62);font-size:12px">Loading alerts...</div>
           </div>
           <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.06);text-align:center">
             <a href="#" onclick="cdbNavigate('soc-command');CDB_NOTIF.close();return false" style="font-size:11px;font-weight:700;color:#00d4ff">View SOC Dashboard →</a>
@@ -1086,13 +1086,13 @@ a{color:var(--accent);text-decoration:none}
 ">
   <span style="color:#22c55e;font-weight:800">● LIVE</span>
   <span>⚡ Platform <span style="color:#00ff88;font-weight:900" id="sb-version">v30.0</span></span>
-  <span style="color:rgba(255,255,255,.15)">|</span>
+  <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
   <span>🧠 Adaptive Brain <span style="color:#00d4ff">ACTIVE</span></span>
-  <span style="color:rgba(255,255,255,.15)">|</span>
+  <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
   <span>🛰 Sentinel APEX v5 <span style="color:#00ff88">ONLINE</span></span>
-  <span style="color:rgba(255,255,255,.15)">|</span>
+  <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
   <span>🤖 MYTHOS v3 <span style="color:#a855f7">RUNNING</span></span>
-  <span style="color:rgba(255,255,255,.15)">|</span>
+  <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
   <span>👥 <span id="sb-online" style="color:#f59e0b">...</span> online now</span>
   <span style="margin-left:auto;color:#00ff88;font-weight:700;letter-spacing:.04em">cyberdudebivash.in · production · v30.0.0 · MCP Scanner · Vibe Code Scanner</span>
 </div>
@@ -1310,7 +1310,7 @@ a{color:var(--accent);text-decoration:none}
         ⚡ Scan Free →
       </button>
     </div>
-    <div class="hero-scan-examples" style="color:rgba(255,255,255,.4);font-size:11px">
+    <div class="hero-scan-examples" style="color:rgba(255,255,255,0.72);font-size:11px">
       Try: <a onclick="heroSetDomain('example.com');return false" href="#">example.com</a> ·
       <a onclick="heroSetDomain('github.com');return false" href="#">github.com</a> ·
       <a onclick="heroSetDomain('google.com');return false" href="#">google.com</a> ·
@@ -1328,12 +1328,12 @@ a{color:var(--accent);text-decoration:none}
 
   <!-- Trust signals — authority + conversion optimized -->
   <div class="trust-badges" style="margin-top:18px;gap:8px">
-    <span class="badge" style="background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.25);color:#00d4ff">🛡 OWASP LLM Top 10</span>
+    <span class="badge" style="background:rgba(0,212,255,.08);border-color:rgba(0,212,255,0.72);color:#00d4ff">🛡 OWASP LLM Top 10</span>
     <span class="badge">🎯 MITRE ATT&amp;CK</span>
     <span class="badge">🔐 Zero Trust</span>
     <span class="badge">🇮🇳 DPDP Act 2023</span>
     <span class="badge">📋 ISO 27001 · GDPR · PCI-DSS</span>
-    <span class="badge" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#10b981">✅ Free Preview — No Card Required</span>
+    <span class="badge" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,0.72);color:#10b981">✅ Free Preview — No Card Required</span>
 
   </div>
 
@@ -1374,9 +1374,9 @@ a{color:var(--accent);text-decoration:none}
     </div>
     <div id="vi-visitors-row" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <!-- visitor pills injected by JS -->
-      <span style="font-size:10px;color:rgba(255,255,255,.3);font-style:italic">Loading visitor data...</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.65);font-style:italic">Loading visitor data...</span>
     </div>
-    <div style="font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.05em">
+    <div style="font-size:9px;color:rgba(255,255,255,.62);letter-spacing:.05em">
       🔒 Data anonymized · updates every 10s
     </div>
   </div>
@@ -1431,7 +1431,7 @@ a{color:var(--accent);text-decoration:none}
         <span style="font-size:8px;font-weight:800;color:rgba(0,212,255,.7);letter-spacing:.08em">v30.0</span>
       </div>
       <div class="section-label-v11" style="justify-content:center;margin-bottom:10px">
-        <span style="width:auto;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(99,102,241,.1));border-color:rgba(0,212,255,.25);color:#00d4ff">Live Intelligence</span>
+        <span style="width:auto;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(99,102,241,.1));border-color:rgba(0,212,255,0.72);color:#00d4ff">Live Intelligence</span>
       </div>
       <h2 class="section-title" style="margin-bottom:10px;font-size:clamp(24px,4vw,42px);background:linear-gradient(135deg,#fff 40%,rgba(0,212,255,.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
         🛡 Security Command Center
@@ -1463,7 +1463,7 @@ a{color:var(--accent);text-decoration:none}
       <div class="metric-card" style="--mc-color:#00d4ff">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="metric-icon" style="font-size:20px">🔍</div>
-          <span class="metric-live-badge" style="background:rgba(0,212,255,.12);color:var(--accent);border-color:rgba(0,212,255,.2);font-size:8px">LIVE</span>
+          <span class="metric-live-badge" style="background:rgba(0,212,255,.12);color:var(--accent);border-color:rgba(0,212,255,0.72);font-size:8px">LIVE</span>
         </div>
         <div class="metric-value cyber-mono" id="mc-scans" style="font-size:clamp(24px,4vw,36px);line-height:1">—</div>
         <div class="metric-label" style="margin-top:4px">Total Scans Run</div>
@@ -1480,7 +1480,7 @@ a{color:var(--accent);text-decoration:none}
       <div class="metric-card" style="--mc-color:#ef4444">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="metric-icon" style="font-size:20px">⚠️</div>
-          <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.25);font-size:8px" id="mc-threat-badge">SENTINEL</span>
+          <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,0.72);font-size:8px" id="mc-threat-badge">SENTINEL</span>
         </div>
         <div class="metric-value cyber-mono" id="mc-threats" style="font-size:clamp(24px,4vw,36px);line-height:1;color:#f59e0b">HIGH</div>
         <div class="metric-label" style="margin-top:4px">Global Threat Level</div>
@@ -1502,7 +1502,7 @@ a{color:var(--accent);text-decoration:none}
       <div class="metric-card" style="--mc-color:#7c3aed">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="metric-icon" style="font-size:20px">🧠</div>
-          <span class="metric-live-badge" style="background:rgba(124,58,237,.12);color:#a78bfa;border-color:rgba(124,58,237,.25);font-size:8px">APEX</span>
+          <span class="metric-live-badge" style="background:rgba(124,58,237,.12);color:#a78bfa;border-color:rgba(124,58,237,0.72);font-size:8px">APEX</span>
         </div>
         <div class="metric-value cyber-mono" id="mc-cves" style="font-size:clamp(24px,4vw,36px);line-height:1">—</div>
         <div class="metric-label" style="margin-top:4px">CVEs Tracked (30d)</div>
@@ -1517,7 +1517,7 @@ a{color:var(--accent);text-decoration:none}
       <div class="metric-card" style="--mc-color:#10b981">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="metric-icon" style="font-size:20px">💰</div>
-          <span class="metric-live-badge" style="background:rgba(16,185,129,.1);color:#6ee7b7;border-color:rgba(16,185,129,.2);font-size:8px">MONETIZED</span>
+          <span class="metric-live-badge" style="background:rgba(16,185,129,.1);color:#6ee7b7;border-color:rgba(16,185,129,0.72);font-size:8px">MONETIZED</span>
         </div>
         <div class="metric-value cyber-mono" id="mc-revenue" style="font-size:clamp(20px,3.5vw,32px);line-height:1;color:#10b981">₹—</div>
         <div class="metric-label" style="margin-top:4px">Defense Products Revenue</div>
@@ -1543,7 +1543,7 @@ a{color:var(--accent);text-decoration:none}
         <div class="scan-line"></div>
         <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between">
           <span>🎯 Security Posture</span>
-          <span id="posture-api-badge" class="metric-live-badge" style="background:rgba(0,212,255,.12);color:var(--accent);border-color:rgba(0,212,255,.2);font-size:8px">LIVE</span>
+          <span id="posture-api-badge" class="metric-live-badge" style="background:rgba(0,212,255,.12);color:var(--accent);border-color:rgba(0,212,255,0.72);font-size:8px">LIVE</span>
         </div>
 
         <!-- Risk Ring v11 -->
@@ -1708,7 +1708,7 @@ a{color:var(--accent);text-decoration:none}
           <div class="soc-panel-hdr">
             <span class="soc-panel-icon">&#9889;</span>
             <span class="soc-panel-title-v12">ATTACK GRAPH</span>
-            <span class="soc-badge-live" style="background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,.3)">LIVE SIM</span>
+            <span class="soc-badge-live" style="background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,0.72)">LIVE SIM</span>
           </div>
           <div class="soc-graph-wrap">
             <svg id="socAttackSvg" viewBox="0 0 400 220" style="width:100%;height:180px">
@@ -1764,7 +1764,7 @@ a{color:var(--accent);text-decoration:none}
           <div class="soc-panel-hdr">
             <span class="soc-panel-icon">&#129504;</span>
             <span class="soc-panel-title-v12">AI VERDICT ENGINE</span>
-            <span class="soc-badge-live" style="background:rgba(124,58,237,.15);color:#a78bfa;border-color:rgba(124,58,237,.3)">CYBERBRAIN</span>
+            <span class="soc-badge-live" style="background:rgba(124,58,237,.15);color:#a78bfa;border-color:rgba(124,58,237,0.72)">CYBERBRAIN</span>
           </div>
           <div id="socSelectedThreat" class="soc-selected-threat">
             <div style="text-align:center;padding:24px 16px;color:var(--text-dim)">
@@ -1817,10 +1817,10 @@ a{color:var(--accent);text-decoration:none}
     </div><!-- /cdb-soc-v12 -->
 
     <!-- V9.0 Intelligence Command Panel -->
-    <div class="sentinel-panel" style="border-color:rgba(124,58,237,.3);margin-bottom:16px">
+    <div class="sentinel-panel" style="border-color:rgba(124,58,237,0.72);margin-bottom:16px">
       <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between">
         <span>🧠 AI Threat Intelligence Summary</span>
-        <span class="metric-live-badge" style="background:rgba(124,58,237,.2);color:#a78bfa;border-color:rgba(124,58,237,.4)">SENTINEL APEX</span>
+        <span class="metric-live-badge" style="background:rgba(124,58,237,.2);color:#a78bfa;border-color:rgba(124,58,237,0.72)">SENTINEL APEX</span>
       </div>
       <div id="intel-summary-widget">
         <div class="v9-intel-loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><span style="margin-left:8px;font-size:12px;color:var(--text-muted)">Loading threat intelligence…</span></div>
@@ -1833,7 +1833,7 @@ a{color:var(--accent);text-decoration:none}
       <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1">
         <div style="display:flex;align-items:center;gap:10px">
           <span>🛡️ Sentinel APEX — Live CVE Intelligence</span>
-          <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.2);font-size:8px">LIVE</span>
+          <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,0.72);font-size:8px">LIVE</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button onclick="initSentinelFeed()" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">↻ Refresh</button>
@@ -2299,7 +2299,7 @@ a{color:var(--accent);text-decoration:none}
       </div>
       <div class="scan-btn-row">
         <button class="btn btn-primary" onclick="runMCPScan()" id="btn-mcp_sec" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">🔌 Scan MCP Server</button>
-        <button class="btn" onclick="loadMCPThreatFeed()" style="margin-left:8px;border-color:rgba(124,58,237,.4);color:#a78bfa">📡 Live MCP Threats</button>
+        <button class="btn" onclick="loadMCPThreatFeed()" style="margin-left:8px;border-color:rgba(124,58,237,0.72);color:#a78bfa">📡 Live MCP Threats</button>
         <div class="loading-dots" id="loading-mcp_sec" style="display:none">
           <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
           <span class="scan-state-msg" id="msg-mcp_sec">Analyzing MCP tool permissions...</span>
@@ -2371,7 +2371,7 @@ app.get('/api/user', (req, res) => {
       </div>
       <div class="scan-btn-row">
         <button class="btn btn-primary" onclick="runVibeCodeScan()" id="btn-vibe_code" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">🤖 Scan AI-Generated Code</button>
-        <button class="btn" onclick="loadVibeCodePatterns()" style="margin-left:8px;border-color:rgba(245,158,11,.4);color:#f59e0b">📋 View Pattern Catalog</button>
+        <button class="btn" onclick="loadVibeCodePatterns()" style="margin-left:8px;border-color:rgba(245,158,11,0.72);color:#f59e0b">📋 View Pattern Catalog</button>
         <div class="loading-dots" id="loading-vibe_code" style="display:none">
           <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div>
           <span class="scan-state-msg" id="msg-vibe_code">Scanning for AI-generated code vulnerabilities...</span>
@@ -2679,14 +2679,14 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <!-- FOMO counter bar -->
       <div id="ds-fomo-bar" style="display:inline-flex;align-items:center;gap:20px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 24px;font-size:13px;flex-wrap:wrap;justify-content:center">
         <span style="color:#00d4ff;font-weight:700">🔥 <span id="ds-purchases-today">47</span> solutions sold today</span>
-        <span style="color:rgba(255,255,255,.35)">|</span>
+        <span style="color:rgba(255,255,255,0.72)">|</span>
         <span style="color:#a78bfa">⚡ <span id="ds-teams-active">12</span> enterprise teams active now</span>
-        <span style="color:rgba(255,255,255,.35)">|</span>
+        <span style="color:rgba(255,255,255,0.72)">|</span>
         <span style="color:#f59e0b">🚨 <span id="ds-critical-count">3</span> CRITICAL threats live</span>
       </div>
 
       <!-- Live activity ticker -->
-      <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.4);
+      <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.72);
                   display:flex;align-items:center;gap:6px;justify-content:center">
         <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;
                      animation:urgencyPulse 1.5s ease infinite;flex-shrink:0"></span>
@@ -2895,7 +2895,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   function buildCard(s) {
     const sevCss = (s.severity || 'medium').toLowerCase();
     const priceTag = s.price_inr
-      ? `<span style="font-size:22px;font-weight:900;color:#00d4ff">₹${s.price_inr.toLocaleString('en-IN')}</span><span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:4px">/ ${s.price_usd ? '$'+s.price_usd : ''}</span>`
+      ? `<span style="font-size:22px;font-weight:900;color:#00d4ff">₹${s.price_inr.toLocaleString('en-IN')}</span><span style="font-size:11px;color:rgba(255,255,255,0.72);margin-left:4px">/ ${s.price_usd ? '$'+s.price_usd : ''}</span>`
       : '<span style="font-size:14px;color:#22c55e;font-weight:800">FREEMIUM ACCESS</span>';
     const demandPct = Math.round((s.demand_score || 0.5) * 100);
     const demandColor = demandPct >= 80 ? '#ef4444' : demandPct >= 60 ? '#f59e0b' : '#00d4ff';
@@ -2913,7 +2913,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <!-- Icon + title -->
       <div style="padding:16px 16px 12px">
         <div style="font-size:28px;margin-bottom:8px">${s.category_icon || '🔧'}</div>
-        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">${s.category_label || s.category}</div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.72);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">${s.category_label || s.category}</div>
         <h3 style="font-size:16px;font-weight:800;margin:0 0 8px;line-height:1.3;color:#fff">${s.title}</h3>
         <p style="font-size:12px;color:rgba(255,255,255,.5);margin:0 0 10px;line-height:1.5">${(s.preview || s.description || '').slice(0,100)}...</p>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${tags}</div>
@@ -2924,7 +2924,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       </div>
       <!-- Demand meter -->
       <div style="padding:0 16px 12px">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:4px">
           <span>Demand Score</span><span style="color:${demandColor};font-weight:700">${demandPct}%</span>
         </div>
         <div style="height:3px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden">
@@ -2933,7 +2933,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       </div>
       <!-- Social proof + CVE -->
       <div style="padding:0 16px 12px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;color:rgba(255,255,255,.4)">👥 ${s.social_proof || '—'}</span>
+        <span style="font-size:11px;color:rgba(255,255,255,0.72)">👥 ${s.social_proof || '—'}</span>
         <span style="font-size:10px;font-family:monospace;color:#a78bfa;background:rgba(124,58,237,.1);padding:2px 8px;border-radius:4px">${s.cve_id}</span>
       </div>
       <!-- Price + CTA -->
@@ -2968,7 +2968,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
       if (!append) grid.innerHTML = '';
       if (!solutions.length) {
-        if (!append) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,.4)">
+        if (!append) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,0.72)">
           <div style="font-size:40px;margin-bottom:16px">🛡️</div>
           <div style="font-size:16px;font-weight:700;margin-bottom:8px">Defense solutions generating now</div>
           <div style="font-size:13px">Our AI is processing live CVE intelligence. Check back in a few minutes.</div>
@@ -3038,7 +3038,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <button id="pur-btn" onclick="initiatePayment('${solutionId}','${title?.replace(/'/g,"\\'")}',${priceInr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:8px;font-weight:900;font-size:15px;cursor:pointer">
             💳 Secure Checkout
           </button>
-          <div style="font-size:11px;color:rgba(255,255,255,.35)">🔒 UPI · Bank Transfer · PayPal · Crypto · Instant Activation</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.68)">🔒 UPI · Bank Transfer · PayPal · Crypto · Instant Activation</div>
         </div>
         <div style="margin-top:20px;padding:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:12px;color:rgba(255,255,255,.6)">
           ✅ Instant download after payment · 📧 Email delivery · 🔄 365-day access
@@ -3079,7 +3079,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     const modal = document.getElementById('ds-modal');
     const body  = document.getElementById('ds-modal-body');
     if (!modal || !body) return;
-    body.innerHTML = '<div style="padding:60px;text-align:center;color:rgba(255,255,255,.4)">Loading solution details...</div>';
+    body.innerHTML = '<div style="padding:60px;text-align:center;color:rgba(255,255,255,0.72)">Loading solution details...</div>';
     modal.style.display = 'block';
     try {
       const r = await fetch(`/api/defense/solutions/${solutionId}`, {
@@ -3099,19 +3099,19 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <button onclick="document.getElementById('ds-modal').style.display='none'" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;flex-shrink:0">✕</button>
         </div>
         <p style="color:rgba(255,255,255,.65);font-size:14px;line-height:1.6;margin-bottom:20px">${s.description}</p>
-        ${s.apt_groups?.length ? `<div style="margin-bottom:16px"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">APT Groups</div><div style="display:flex;gap:6px;flex-wrap:wrap">${s.apt_groups.map(a=>`<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${a}</span>`).join('')}</div></div>` : ''}
-        ${s.mitre_techniques?.length ? `<div style="margin-bottom:20px"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">MITRE ATT&CK</div><div style="display:flex;gap:6px;flex-wrap:wrap">${s.mitre_techniques.map(m=>`<span style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${m}</span>`).join('')}</div></div>` : ''}
+        ${s.apt_groups?.length ? `<div style="margin-bottom:16px"><div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">APT Groups</div><div style="display:flex;gap:6px;flex-wrap:wrap">${s.apt_groups.map(a=>`<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${a}</span>`).join('')}</div></div>` : ''}
+        ${s.mitre_techniques?.length ? `<div style="margin-bottom:20px"><div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">MITRE ATT&CK</div><div style="display:flex;gap:6px;flex-wrap:wrap">${s.mitre_techniques.map(m=>`<span style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${m}</span>`).join('')}</div></div>` : ''}
         <div style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:24px">
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);margin-bottom:8px;text-transform:uppercase">Preview (First 10 lines)</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.72);margin-bottom:8px;text-transform:uppercase">Preview (First 10 lines)</div>
           <pre style="font-family:monospace;font-size:12px;color:#7dd3fc;margin:0;white-space:pre-wrap;overflow-x:auto">${s.preview || 'Preview loading...'}</pre>
         </div>
         ${d.has_access ? `<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:16px;margin-bottom:24px;font-family:monospace;font-size:11px;color:#7dd3fc;white-space:pre-wrap;overflow-x:auto;max-height:400px;overflow-y:auto">${d.full_content || ''}</div>` : ''}
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-          <div style="font-size:28px;font-weight:900;color:#00d4ff">₹${s.price_inr?.toLocaleString('en-IN')} <span style="font-size:14px;color:rgba(255,255,255,.4)">${s.price_usd ? '/ $'+s.price_usd : ''}</span></div>
+          <div style="font-size:28px;font-weight:900;color:#00d4ff">₹${s.price_inr?.toLocaleString('en-IN')} <span style="font-size:14px;color:rgba(255,255,255,0.72)">${s.price_usd ? '/ $'+s.price_usd : ''}</span></div>
           ${d.has_access ? '<span style="color:#22c55e;font-weight:800;font-size:14px">✅ Access Granted</span>' : `<button onclick="dsPurchase('${s.id}','${s.title?.replace(/'/g,"\\'")}',${s.price_inr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:13px 28px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">🔓 Unlock Solution</button>`}
         </div>`;
     } catch {
-      body.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(255,255,255,.4)">Failed to load solution details.</div>';
+      body.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.72)">Failed to load solution details.</div>';
     }
   };
 
@@ -3343,7 +3343,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   animation: trust-num-in .5s ease;
 }
 .trust-metric-label { font-size: 13px; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; letter-spacing: .1px; }
-.trust-metric-sub   { font-size: 10px; color: rgba(255,255,255,.35); font-weight: 500; letter-spacing: .3px; text-transform: uppercase; }
+.trust-metric-sub   { font-size: 10px; color: rgba(255,255,255,.68); font-weight: 500; letter-spacing: .3px; text-transform: uppercase; }
 .case-study-card {
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
   border-radius:16px;padding:28px;transition:all .3s;
@@ -3484,7 +3484,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
             </div>
           </div>
         </div>
-        <button onclick="cdbAnalystClear()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">Clear</button>
+        <button onclick="cdbAnalystClear()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,0.72);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">Clear</button>
       </div>
 
       <!-- Messages -->
@@ -3538,12 +3538,12 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
         <div style="display:flex;flex-direction:column;gap:10px">
           <div>
-            <label style="font-size:11px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px">CVE ID / THREAT</label>
+            <label style="font-size:11px;color:rgba(255,255,255,0.72);font-weight:700;letter-spacing:.5px">CVE ID / THREAT</label>
             <input id="soar-cve-input" aria-label="CVE or threat name" type="text" placeholder="CVE-2024-21762 or threat name"
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;outline:none;margin-top:4px;font-family:monospace">
           </div>
           <div>
-            <label style="font-size:11px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px">PLATFORM</label>
+            <label style="font-size:11px;color:rgba(255,255,255,0.72);font-weight:700;letter-spacing:.5px">PLATFORM</label>
             <select id="soar-platform-select" aria-label="SOAR platform"
               style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;outline:none;margin-top:4px">
               <option value="sigma">Sigma (Universal)</option>
@@ -3575,7 +3575,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
       <!-- Quick Stats Card -->
       <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px">
-        <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1px;margin-bottom:14px">ANALYST CAPABILITIES</div>
+        <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.68);letter-spacing:1px;margin-bottom:14px">ANALYST CAPABILITIES</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> CVE Analysis + MITRE ATT&CK mapping</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="color:#22c55e">✓</span> Sigma · Splunk · KQL · YARA · Elastic rules</div>
@@ -3621,12 +3621,12 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;position:relative">
       <canvas id="threat-graph-canvas" style="width:100%;display:block;cursor:grab" height="480"></canvas>
       <div style="position:absolute;bottom:12px;left:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:10px;color:rgba(255,255,255,.4);background:rgba(0,0,0,.5);padding:3px 8px;border-radius:4px">🖱 Drag nodes · Scroll zoom · Click for details</span>
+        <span style="font-size:10px;color:rgba(255,255,255,0.72);background:rgba(0,0,0,.5);padding:3px 8px;border-radius:4px">🖱 Drag nodes · Scroll zoom · Click for details</span>
       </div>
     </div>
     <!-- Detail Panel -->
     <div id="graph-detail" style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px;min-height:200px">
-      <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:1px;margin-bottom:12px">NODE DETAIL</div>
+      <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:1px;margin-bottom:12px">NODE DETAIL</div>
       <div id="graph-detail-content" style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7">
         Click any node to view threat intelligence details.
       </div>
@@ -3695,7 +3695,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
     <!-- Case Studies -->
     <div>
-      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">📁 Example Use Cases</div><p style="font-size:11px;color:rgba(255,255,255,.3);margin:0 0 12px;line-height:1.5">Platform capability demonstrations. These show what our tools detect in real deployments. Customer case studies added as clients provide consent.</p>
+      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.68);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">📁 Example Use Cases</div><p style="font-size:11px;color:rgba(255,255,255,.65);margin:0 0 12px;line-height:1.5">Platform capability demonstrations. These show what our tools detect in real deployments. Customer case studies added as clients provide consent.</p>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="case-study-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3741,13 +3741,13 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
     <!-- Testimonials + Security Transparency -->
     <div>
-      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">💬 From Security Teams</div><p style="font-size:11px;color:rgba(255,255,255,.3);margin:0 0 12px;line-height:1.5">Early access feedback. We are building our customer base. If you have used the platform and want to share feedback, contact us at bivash@cyberdudebivash.com</p>
+      <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.68);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">💬 From Security Teams</div><p style="font-size:11px;color:rgba(255,255,255,.65);margin:0 0 12px;line-height:1.5">Early access feedback. We are building our customer base. If you have used the platform and want to share feedback, contact us at bivash@cyberdudebivash.com</p>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="testimonial-card">
           <div style="font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:12px;font-style:italic">"MYTHOS generated a Sentinel KQL rule for a 0-day within 90 seconds. This replaced 3 hours of manual work. It's our first SOC tool."</div>
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:36px;height:36px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">👨‍💻</div>
-            <div><div style="font-weight:700;font-size:12px">Lead SOC Analyst</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Tier-1 Bank · Mumbai</div></div>
+            <div><div style="font-weight:700;font-size:12px">Lead SOC Analyst</div><div style="font-size:11px;color:rgba(255,255,255,0.72)">Tier-1 Bank · Mumbai</div></div>
             <div style="margin-left:auto">⭐⭐⭐⭐⭐</div>
           </div>
         </div>
@@ -3755,7 +3755,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <div style="font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:12px;font-style:italic">"The AI Cyber Analyst spotted a Lazarus Group indicator our $200K SIEM missed. The value-to-cost ratio is unmatched in the market."</div>
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:36px;height:36px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">🔐</div>
-            <div><div style="font-weight:700;font-size:12px">CISO</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Healthcare Group · Bangalore</div></div>
+            <div><div style="font-weight:700;font-size:12px">CISO</div><div style="font-size:11px;color:rgba(255,255,255,0.72)">Healthcare Group · Bangalore</div></div>
             <div style="margin-left:auto">⭐⭐⭐⭐⭐</div>
           </div>
         </div>
@@ -3830,29 +3830,29 @@ document.addEventListener('cdb:scan:complete', function(e) {
   <div style="display:flex;align-items:center;justify-content:center;gap:32px;margin-bottom:52px;flex-wrap:wrap">
     <!-- Toggle -->
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 36px;text-align:center;min-width:260px">
-      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:16px">AUTO SOC MODE</div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,0.72);text-transform:uppercase;margin-bottom:16px">AUTO SOC MODE</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-        <span id="auto-soc-status-label" style="font-size:13px;font-weight:700;color:rgba(255,255,255,.4)">OFF</span>
+        <span id="auto-soc-status-label" style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.72)">OFF</span>
         <button id="auto-soc-toggle-btn" onclick="cdbAutoSOCToggle()" style="position:relative;width:64px;height:32px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:999px;cursor:pointer;transition:all .3s">
           <span id="auto-soc-toggle-knob" style="position:absolute;left:4px;top:4px;width:22px;height:22px;background:#666;border-radius:50%;transition:all .3s"></span>
         </button>
         <span id="auto-soc-status-label-on" style="font-size:13px;font-weight:700;color:#10b981;display:none">ACTIVE</span>
       </div>
-      <div id="auto-soc-mode-indicator" style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.3)">Click to activate autonomous mode</div>
+      <div id="auto-soc-mode-indicator" style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.65)">Click to activate autonomous mode</div>
     </div>
 
     <!-- Run Now Button -->
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 36px;text-align:center;min-width:220px">
-      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:16px">MANUAL TRIGGER</div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,0.72);text-transform:uppercase;margin-bottom:16px">MANUAL TRIGGER</div>
       <button onclick="cdbAutoSOCRun()" id="auto-soc-run-btn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:10px 24px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;transition:all .2s">
         ▶ Run Now
       </button>
-      <div id="auto-soc-last-run" style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.3)">Never run</div>
+      <div id="auto-soc-last-run" style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.65)">Never run</div>
     </div>
 
     <!-- Scheduler -->
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 36px;text-align:center;min-width:220px">
-      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:16px">SCHEDULER</div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,0.72);text-transform:uppercase;margin-bottom:16px">SCHEDULER</div>
       <select id="auto-soc-interval" aria-label="Automation scheduler interval" onchange="cdbAutoSOCSetSchedule()" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);color:#e2e8f0;padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;width:100%">
         <option value="15">Every 15 min</option>
         <option value="30">Every 30 min</option>
@@ -3862,24 +3862,24 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <option value="720">Every 12 hours</option>
         <option value="1440">Daily</option>
       </select>
-      <div id="auto-soc-next-run" style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.3)">Set interval above</div>
+      <div id="auto-soc-next-run" style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.65)">Set interval above</div>
     </div>
 
     <!-- Live Metrics -->
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 36px;min-width:220px">
-      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:16px;text-align:center">LAST RUN METRICS</div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,0.72);text-transform:uppercase;margin-bottom:16px;text-align:center">LAST RUN METRICS</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div style="text-align:center"><div id="asoc-m-threats" style="font-size:22px;font-weight:900;color:#ef4444">—</div><div style="font-size:10px;color:rgba(255,255,255,.4)">Threats</div></div>
-        <div style="text-align:center"><div id="asoc-m-rules" style="font-size:22px;font-weight:900;color:#a78bfa">—</div><div style="font-size:10px;color:rgba(255,255,255,.4)">Rules Gen</div></div>
-        <div style="text-align:center"><div id="asoc-m-deployed" style="font-size:22px;font-weight:900;color:#00d4ff">—</div><div style="font-size:10px;color:rgba(255,255,255,.4)">Deployed</div></div>
-        <div style="text-align:center"><div id="asoc-m-alerts" style="font-size:22px;font-weight:900;color:#22c55e">—</div><div style="font-size:10px;color:rgba(255,255,255,.4)">Alerts</div></div>
+        <div style="text-align:center"><div id="asoc-m-threats" style="font-size:22px;font-weight:900;color:#ef4444">—</div><div style="font-size:10px;color:rgba(255,255,255,0.72)">Threats</div></div>
+        <div style="text-align:center"><div id="asoc-m-rules" style="font-size:22px;font-weight:900;color:#a78bfa">—</div><div style="font-size:10px;color:rgba(255,255,255,0.72)">Rules Gen</div></div>
+        <div style="text-align:center"><div id="asoc-m-deployed" style="font-size:22px;font-weight:900;color:#00d4ff">—</div><div style="font-size:10px;color:rgba(255,255,255,0.72)">Deployed</div></div>
+        <div style="text-align:center"><div id="asoc-m-alerts" style="font-size:22px;font-weight:900;color:#22c55e">—</div><div style="font-size:10px;color:rgba(255,255,255,0.72)">Alerts</div></div>
       </div>
     </div>
   </div>
 
   <!-- PIPELINE VISUALIZATION -->
   <div style="margin-bottom:40px">
-    <div style="text-align:center;font-size:12px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:24px">PIPELINE STAGES</div>
+    <div style="text-align:center;font-size:12px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.68);text-transform:uppercase;margin-bottom:24px">PIPELINE STAGES</div>
     <div id="asoc-pipeline" style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;overflow-x:auto;padding:4px">
       <!-- Stages injected by JS -->
     </div>
@@ -3892,7 +3892,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <button onclick="cdbAutoSOCRefreshLog()" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:#00d4ff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">↻ Refresh</button>
     </div>
     <div id="asoc-log" style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:rgba(255,255,255,.5);max-height:200px;overflow-y:auto">
-      <div style="color:rgba(255,255,255,.25)">— Waiting for pipeline activity —</div>
+      <div style="color:rgba(255,255,255,0.72)">— Waiting for pipeline activity —</div>
     </div>
   </div>
 
@@ -3918,7 +3918,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   <!-- Integration Grid -->
   <div id="siem-integration-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:40px">
     <!-- Cards injected by JS -->
-    <div style="display:flex;align-items:center;justify-content:center;padding:40px;color:rgba(255,255,255,.2);font-size:13px">Loading integrations…</div>
+    <div style="display:flex;align-items:center;justify-content:center;padding:40px;color:rgba(255,255,255,.62);font-size:13px">Loading integrations…</div>
   </div>
 
   <!-- Configure Panel -->
@@ -3932,15 +3932,15 @@ document.addEventListener('cdb:scan:complete', function(e) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div style="grid-column:1/-1">
-        <label id="siem-config-url-label" style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);display:block;margin-bottom:6px;text-transform:uppercase">Webhook URL</label>
+        <label id="siem-config-url-label" style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.72);display:block;margin-bottom:6px;text-transform:uppercase">Webhook URL</label>
         <input id="siem-config-url" aria-label="SIEM URL" type="url" placeholder="https://..." style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div>
-        <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);display:block;margin-bottom:6px;text-transform:uppercase">Auth Token (optional)</label>
+        <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.72);display:block;margin-bottom:6px;text-transform:uppercase">Auth Token (optional)</label>
         <input id="siem-config-token" aria-label="API bearer token" type="password" placeholder="Bearer token / API key" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div>
-        <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);display:block;margin-bottom:6px;text-transform:uppercase">HEC Token (Splunk only)</label>
+        <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.72);display:block;margin-bottom:6px;text-transform:uppercase">HEC Token (Splunk only)</label>
         <input id="siem-config-hec" aria-label="Splunk HEC token" type="password" placeholder="Splunk HEC token" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
     </div>
@@ -3955,11 +3955,11 @@ document.addEventListener('cdb:scan:complete', function(e) {
   <!-- Deploy Log -->
   <div style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase">📋 DEPLOYMENT LOG</div>
-      <button onclick="cdbSIEMRefreshLog()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.4);padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer">↻</button>
+      <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.68);letter-spacing:.08em;text-transform:uppercase">📋 DEPLOYMENT LOG</div>
+      <button onclick="cdbSIEMRefreshLog()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,0.72);padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer">↻</button>
     </div>
-    <div id="siem-deploy-log" style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:rgba(255,255,255,.4);max-height:160px;overflow-y:auto">
-      <div style="color:rgba(255,255,255,.2)">— No deployments yet —</div>
+    <div id="siem-deploy-log" style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:rgba(255,255,255,0.72);max-height:160px;overflow-y:auto">
+      <div style="color:rgba(255,255,255,0.72)">— No deployments yet —</div>
     </div>
   </div>
 
@@ -3993,25 +3993,25 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
         <div style="text-align:center;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:12px">
           <div id="mem-critical-count" style="font-size:24px;font-weight:900;color:#ef4444">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">Critical</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-top:2px">Critical</div>
         </div>
         <div style="text-align:center;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:12px">
           <div id="mem-high-count" style="font-size:24px;font-weight:900;color:#f59e0b">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">High</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-top:2px">High</div>
         </div>
         <div style="text-align:center;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.12);border-radius:10px;padding:12px">
           <div id="mem-total-count" style="font-size:24px;font-weight:900;color:#00d4ff">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">Total Events</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-top:2px">Total Events</div>
         </div>
       </div>
       <!-- Top CVEs -->
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Top CVEs Encountered</div>
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.68);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Top CVEs Encountered</div>
       <div id="mem-top-cves" style="font-size:12px;line-height:1.7;color:rgba(255,255,255,.5)">
-        <div style="color:rgba(255,255,255,.2)">— Run a scan to build your threat history —</div>
+        <div style="color:rgba(255,255,255,0.72)">— Run a scan to build your threat history —</div>
       </div>
       <!-- Attack trend -->
       <div style="margin-top:16px;padding:10px 14px;background:rgba(0,0,0,.2);border-radius:8px;font-size:12px">
-        <span style="color:rgba(255,255,255,.4)">Attack Trend: </span>
+        <span style="color:rgba(255,255,255,0.72)">Attack Trend: </span>
         <span id="mem-trend" style="font-weight:700;color:#e2e8f0">—</span>
       </div>
     </div>
@@ -4020,7 +4020,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px">
       <div style="font-size:13px;font-weight:800;color:#e2e8f0;margin-bottom:20px">🤖 AI Recommendations</div>
       <div id="mem-recommendations" style="display:flex;flex-direction:column;gap:10px">
-        <div style="text-align:center;padding:32px;color:rgba(255,255,255,.25);font-size:12px">
+        <div style="text-align:center;padding:32px;color:rgba(255,255,255,.62);font-size:12px">
           Loading AI recommendations…
         </div>
       </div>
@@ -4029,9 +4029,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
   <!-- Recent Events Log -->
   <div style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:20px">
-    <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">🕒 RECENT EVENTS</div>
+    <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.68);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">🕒 RECENT EVENTS</div>
     <div id="mem-events-log" style="font-size:12px;line-height:1.8;color:rgba(255,255,255,.45);max-height:180px;overflow-y:auto">
-      <div style="color:rgba(255,255,255,.2);font-style:italic">No events recorded yet. Start scanning to build your organization memory.</div>
+      <div style="color:rgba(255,255,255,0.72);font-style:italic">No events recorded yet. Start scanning to build your organization memory.</div>
     </div>
   </div>
 
@@ -4117,9 +4117,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
       </div>
       <!-- Existing Keys -->
       <div style="margin-top:20px">
-        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Active Keys</div>
-        <div id="api-keys-list" style="font-size:12px;color:rgba(255,255,255,.4)">
-          <div style="color:rgba(255,255,255,.2);font-size:11px">Login to view your API keys</div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.68);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Active Keys</div>
+        <div id="api-keys-list" style="font-size:12px;color:rgba(255,255,255,0.72)">
+          <div style="color:rgba(255,255,255,0.72);font-size:11px">Login to view your API keys</div>
         </div>
       </div>
     </div>
@@ -4133,19 +4133,19 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <!-- Usage Meters -->
       <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px">
             <span>API Calls (Today)</span><span id="usage-api-calls">0 / 1,000</span>
           </div>
           <div style="background:rgba(255,255,255,.06);border-radius:999px;height:6px"><div id="usage-api-bar" style="background:linear-gradient(90deg,#00d4ff,#7c3aed);height:6px;border-radius:999px;width:0%;transition:width 1s"></div></div>
         </div>
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px">
             <span>AI Analyses (This Month)</span><span id="usage-ai-analyses">0 / 100</span>
           </div>
           <div style="background:rgba(255,255,255,.06);border-radius:999px;height:6px"><div id="usage-ai-bar" style="background:linear-gradient(90deg,#a78bfa,#ec4899);height:6px;border-radius:999px;width:0%;transition:width 1s"></div></div>
         </div>
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px">
             <span>Rule Exports</span><span id="usage-rule-exports">0 / 50</span>
           </div>
           <div style="background:rgba(255,255,255,.06);border-radius:999px;height:6px"><div id="usage-rule-bar" style="background:linear-gradient(90deg,#f59e0b,#ef4444);height:6px;border-radius:999px;width:0%;transition:width 1s"></div></div>
@@ -4153,7 +4153,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
       </div>
       <!-- Cost tracker -->
       <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:14px;margin-bottom:14px">
-        <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">💳 Cost Tracker (Pay-Per-Use)</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.68);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">💳 Cost Tracker (Pay-Per-Use)</div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.5);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>API Calls</span><span id="cost-api">₹0.00</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.5);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>AI Analyses</span><span id="cost-ai">₹0.00</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;color:#e2e8f0;padding:8px 0 0;font-weight:700"><span>Total This Month</span><span id="cost-total">₹0.00</span></div>
@@ -4411,9 +4411,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div class="p3-kpi-card"><div class="p3-kpi-val" id="p3-kpi-compliance">—</div><div class="p3-kpi-label">Compliance Score</div><div class="p3-kpi-sub">/100</div></div>
     <div class="p3-kpi-card"><div class="p3-kpi-val" id="p3-kpi-mttd">—</div><div class="p3-kpi-label">MTTD</div><div class="p3-kpi-sub">minutes</div></div>
     <div class="p3-kpi-card"><div class="p3-kpi-val" id="p3-kpi-mttr">—</div><div class="p3-kpi-label">MTTR</div><div class="p3-kpi-sub">minutes</div></div>
-    <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-mrr">$—</div><div class="p3-kpi-label">MRR</div><div class="p3-kpi-sub">Monthly</div></div>
-    <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-arr">$—</div><div class="p3-kpi-label">ARR</div><div class="p3-kpi-sub">Annual Run Rate</div></div>
-    <div class="p3-kpi-card" style="border-color:rgba(16,185,129,.2)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-paying">—</div><div class="p3-kpi-label">Paying Customers</div><div class="p3-kpi-sub">Active</div></div>
+    <div class="p3-kpi-card" style="border-color:rgba(16,185,129,0.72)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-mrr">$—</div><div class="p3-kpi-label">MRR</div><div class="p3-kpi-sub">Monthly</div></div>
+    <div class="p3-kpi-card" style="border-color:rgba(16,185,129,0.72)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-arr">$—</div><div class="p3-kpi-label">ARR</div><div class="p3-kpi-sub">Annual Run Rate</div></div>
+    <div class="p3-kpi-card" style="border-color:rgba(16,185,129,0.72)"><div class="p3-kpi-val" style="color:#34d399" id="p3-kpi-paying">—</div><div class="p3-kpi-label">Paying Customers</div><div class="p3-kpi-sub">Active</div></div>
   </div>
   <!-- Live Security ROI (from D1 data — populated by cdbExecLoad) -->
   <div id="p3-security-roi-live" style="display:none;margin-bottom:16px"></div>
@@ -4535,8 +4535,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <input id="p4-lead-name" aria-label="Full name" class="p4-input" type="text" placeholder="Full Name *">
           <input id="p4-lead-email" aria-label="Work email" class="p4-input" type="email" placeholder="Work Email *">
-          <input id="p4-lead-company" class="p4-input" type="text" placeholder="Company Name *">
-          <input id="p4-lead-title" class="p4-input" type="text" placeholder="Job Title (e.g. CISO)">
+          <input id="p4-lead-company" aria-label="Company Name" class="p4-input" type="text" placeholder="Company Name *">
+          <input id="p4-lead-title" aria-label="Job Title" class="p4-input" type="text" placeholder="Job Title (e.g. CISO)">
           <select id="p4-lead-sector" class="p4-input" aria-label="Industry Sector">
             <option value="">Industry Sector *</option>
             <option value="finance">Finance / FinTech</option>
@@ -5107,13 +5107,13 @@ document.addEventListener('cdb:scan:complete', function(e) {
       </div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap">
         <span style="font-size:36px;font-weight:900;color:#ffd700;text-shadow:0 0 16px rgba(255,215,0,.4);line-height:1">₹1,999</span>
-        <span style="font-size:14px;color:rgba(255,255,255,.3);text-decoration:line-through">₹3,996</span>
+        <span style="font-size:14px;color:rgba(255,255,255,.65);text-decoration:line-through">₹3,996</span>
         <span style="font-size:12px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:4px 10px;color:#ff8888;font-weight:800">SAVE ₹1,997</span>
       </div>
       <button onclick="if(window.CDB_PAY)CDB_PAY.open('ULTIMATE_BUNDLE_2026',1999,'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026')" style="width:100%;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:14px;font-weight:900;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
         🚀 Get Ultimate Bundle — ₹1,999
       </button>
-      <div style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,.3)">🔥 <span id="acs-bundle-today">27</span> enrolled today · Instant delivery</div>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,.65)">🔥 <span id="acs-bundle-today">27</span> enrolled today · Instant delivery</div>
     </div>
 
     <!-- Course Mini Grid -->
@@ -5122,28 +5122,28 @@ document.addEventListener('cdb:scan:complete', function(e) {
       <a href="/academy.html" class="acs-course-mini" style="text-decoration:none">
         <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(0,255,136,.3))">📘</div>
         <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">SOC Analyst Playbook</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;line-height:1.4">SIEM · Threat Hunting · IR</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">SIEM · Threat Hunting · IR</div>
         <div class="acs-course-price">₹999</div>
       </a>
 
       <a href="/academy.html" class="acs-course-mini" style="text-decoration:none">
         <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(0,212,255,.3))">🤖</div>
         <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">AI Security Bundle</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;line-height:1.4">LLM · OWASP · Adversarial ML</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">LLM · OWASP · Adversarial ML</div>
         <div class="acs-course-price">₹1,199</div>
       </a>
 
       <a href="/academy.html" class="acs-course-mini" style="text-decoration:none">
         <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(124,58,237,.3))">🔍</div>
         <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">OSINT Starter Bundle</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;line-height:1.4">Recon · Shodan · Dark Web</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">Recon · Shodan · Dark Web</div>
         <div class="acs-course-price">₹499</div>
       </a>
 
       <a href="/academy.html" class="acs-course-mini" style="text-decoration:none">
         <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(245,158,11,.3))">🐍</div>
         <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">Python Automation Pack</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;line-height:1.4">CVE Scripts · Threat Intel APIs</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">CVE Scripts · Threat Intel APIs</div>
         <div class="acs-course-price">₹899</div>
       </a>
 
@@ -5155,19 +5155,19 @@ document.addEventListener('cdb:scan:complete', function(e) {
     <div style="display:flex;gap:32px;flex-wrap:wrap">
       <div style="text-align:center">
         <div style="font-size:24px;font-weight:900;color:#00ff88" id="stat-students-trained">—</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px">Students trained</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);letter-spacing:.05em;margin-top:2px">Students trained</div>
       </div>
       <div style="text-align:center">
         <div style="font-size:24px;font-weight:900;color:#00ff88">6</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px">Expert courses</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);letter-spacing:.05em;margin-top:2px">Expert courses</div>
       </div>
       <div style="text-align:center">
         <div style="font-size:24px;font-weight:900;color:#00ff88">₹499</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px">Starts from</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);letter-spacing:.05em;margin-top:2px">Starts from</div>
       </div>
       <div style="text-align:center">
         <div style="font-size:24px;font-weight:900;color:#00ff88">⚡</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px">Instant delivery</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.72);letter-spacing:.05em;margin-top:2px">Instant delivery</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -5905,7 +5905,7 @@ window.cdbBookAssessment = async function() {
         <div style="font-size:28px;margin-bottom:12px">🔍</div>
         <div style="font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Security Assessment</div>
         <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹9,999</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">One-time · 3 business days</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:16px">One-time · 3 business days</div>
         <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 50-page Assessment Report</li>
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Executive risk summary</li>
@@ -5924,7 +5924,7 @@ window.cdbBookAssessment = async function() {
         <div style="font-size:28px;margin-bottom:12px">🛰️</div>
         <div style="font-size:11px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Threat Intel Report</div>
         <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹14,999</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">One-time · 5 business days</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:16px">One-time · 5 business days</div>
         <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 30-day industry threat landscape</li>
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ APT targeting analysis</li>
@@ -5942,7 +5942,7 @@ window.cdbBookAssessment = async function() {
         <div style="font-size:28px;margin-bottom:12px">🏷️</div>
         <div style="font-size:11px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">MSSP White-Label</div>
         <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹49,999</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">Monthly · Unlimited clients</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:16px">Monthly · Unlimited clients</div>
         <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Full white-label dashboard</li>
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Your branding + custom domain</li>
@@ -5960,7 +5960,7 @@ window.cdbBookAssessment = async function() {
         <div style="font-size:28px;margin-bottom:12px">🤝</div>
         <div style="font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Annual Retainer</div>
         <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px">₹99,999</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">Per year · Priority SLA</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:16px">Per year · Priority SLA</div>
         <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px">
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ Monthly threat intel reports</li>
           <li style="font-size:12px;color:rgba(255,255,255,.6)">✅ 24 consultation calls/year</li>
@@ -5986,7 +5986,7 @@ window.cdbBookAssessment = async function() {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <input id="entEmail" aria-label="Business email" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
-            <input id="entDomain" type="text" placeholder="Domain (optional)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+            <input id="entDomain" aria-label="Domain (optional)" type="text" placeholder="Domain (optional)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
           </div>
           <select id="entPackage" aria-label="Service Package" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
             <option value="starter_enterprise">Security Assessment — ₹9,999</option>
@@ -6005,7 +6005,7 @@ window.cdbBookAssessment = async function() {
           <button id="btn-enterprise" onclick="submitEnterpriseV10()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#000;padding:13px;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer">
             📨 Send Enterprise Inquiry
           </button>
-          <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center">Response within 4 business hours · No commitment required</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.65);text-align:center">Response within 4 business hours · No commitment required</div>
           <div style="text-align:center;margin-top:6px"><a href="#pricing" style="font-size:12px;color:#00d4ff;text-decoration:underline;opacity:.8">⚡ View Pricing & Plans</a></div>
         </div>
       </div>
@@ -6426,9 +6426,9 @@ window.cdbBookAssessment = async function() {
       <div class="card"><div class="card-icon">🔐</div><div class="card-title">Zero Trust Blueprint <span style="background:rgba(16,185,129,.15);color:#10b981;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">NIST 800-207</span></div><div class="card-desc">Zero Trust Architecture implementation guide: NIST SP 800-207 controls, microsegmentation designs, identity-first access models, and vendor evaluation matrix.</div><div class="card-price">₹799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
       <div class="card"><div class="card-icon">🌐</div><div class="card-title">Domain Security Checklist <span style="background:rgba(234,179,8,.15);color:#eab308;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">TLS/DNS</span></div><div class="card-desc">100-point hardening checklist: TLS 1.3 config, DNSSEC, DMARC/SPF/DKIM, HTTP security headers, subdomain takeover prevention, and certificate pinning guide.</div><div class="card-price">₹499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
       <div class="card"><div class="card-icon">📊</div><div class="card-title">DPDP Act Compliance Kit <span style="background:rgba(249,115,22,.15);color:#f97316;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">INDIA</span></div><div class="card-desc">India DPDP Act 2023 compliance kit: Data Fiduciary obligations, consent mechanism templates, DPO appointment guide, breach notification SOP, and audit checklist.</div><div class="card-price">₹699</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-      <div class="card" style="border-color:rgba(168,85,247,.25);background:rgba(168,85,247,.04)"><div class="card-icon">🤖</div><div class="card-title">AI Governance Toolkit <span style="background:rgba(168,85,247,.2);color:#a855f7;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">EU AI ACT</span></div><div class="card-desc">EU AI Act readiness kit + NIST AI RMF implementation: AI system risk classification, conformity assessment templates, and incident response playbook for AI systems.</div><div class="card-price">₹1,299</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-      <div class="card" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.04)"><div class="card-icon">🚨</div><div class="card-title">SOC Analyst Runbook <span style="background:rgba(239,68,68,.2);color:#ef4444;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">TIER 1-3</span></div><div class="card-desc">Tier 1-3 SOC analyst runbooks: 20 incident response playbooks (phishing, ransomware, insider threat, APT), escalation matrix, and SIEM alert triage guide.</div><div class="card-price">₹1,799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
-      <div class="card" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)"><div class="card-icon">📦</div><div class="card-title">Enterprise Security Bundle <span style="background:rgba(245,158,11,.2);color:#f59e0b;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">SAVE 40%</span></div><div class="card-desc">All 8 products bundled: AI Toolkit + Compliance Pack + Red Team Playbook + Zero Trust Blueprint + Domain Checklist + DPDP Kit + AI Governance + SOC Runbook. Best value.</div><div class="card-price" style="color:#f59e0b">₹4,499 <span style="font-size:11px;color:var(--text-muted);text-decoration:line-through;font-weight:400">₹7,493</span></div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank" style="background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:#f59e0b">Get Bundle →</a></div>
+      <div class="card" style="border-color:rgba(168,85,247,0.72);background:rgba(168,85,247,.04)"><div class="card-icon">🤖</div><div class="card-title">AI Governance Toolkit <span style="background:rgba(168,85,247,.2);color:#a855f7;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">EU AI ACT</span></div><div class="card-desc">EU AI Act readiness kit + NIST AI RMF implementation: AI system risk classification, conformity assessment templates, and incident response playbook for AI systems.</div><div class="card-price">₹1,299</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
+      <div class="card" style="border-color:rgba(239,68,68,0.72);background:rgba(239,68,68,.04)"><div class="card-icon">🚨</div><div class="card-title">SOC Analyst Runbook <span style="background:rgba(239,68,68,.2);color:#ef4444;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">TIER 1-3</span></div><div class="card-desc">Tier 1-3 SOC analyst runbooks: 20 incident response playbooks (phishing, ransomware, insider threat, APT), escalation matrix, and SIEM alert triage guide.</div><div class="card-price">₹1,799</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
+      <div class="card" style="border-color:rgba(245,158,11,0.72);background:rgba(245,158,11,.04)"><div class="card-icon">📦</div><div class="card-title">Enterprise Security Bundle <span style="background:rgba(245,158,11,.2);color:#f59e0b;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">SAVE 40%</span></div><div class="card-desc">All 8 products bundled: AI Toolkit + Compliance Pack + Red Team Playbook + Zero Trust Blueprint + Domain Checklist + DPDP Kit + AI Governance + SOC Runbook. Best value.</div><div class="card-price" style="color:#f59e0b">₹4,499 <span style="font-size:11px;color:var(--text-muted);text-decoration:line-through;font-weight:400">₹7,493</span></div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank" style="background:rgba(245,158,11,.15);border-color:rgba(245,158,11,0.72);color:#f59e0b">Get Bundle →</a></div>
     </div>
     <div style="text-align:center;margin-top:32px">
       <a href="https://tools.cyberdudebivash.com" target="_blank" class="btn btn-primary" style="font-size:15px;padding:14px 36px">
@@ -6588,7 +6588,7 @@ window.cdbBookAssessment = async function() {
     <span class="rb-sep">|</span>
     <div class="rb-attn-item" style="color:#ef4444"><div class="rb-dot rb-dot-red"></div>🚨 Reports from ₹999 · <a href="#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
     <span class="rb-sep">|</span>
-    <div class="rb-attn-item" style="color:rgba(255,255,255,.35);font-size:10px">Intel updated: <span id="ae-update-time">just now</span></div>
+    <div class="rb-attn-item" style="color:rgba(255,255,255,0.72);font-size:10px">Intel updated: <span id="ae-update-time">just now</span></div>
   </div>
 </div>
 
@@ -6841,10 +6841,10 @@ footer.v14-footer::before {
         <input id="th-ioc-input" aria-label="IP address, domain, hash, or CVE ID" type="text" placeholder="IP, domain, hash, CVE-ID..." style="flex:1;background:#0a0a14;border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none"/>
         <button onclick="thLookupIOC()" style="background:#ef4444;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer">Lookup</button>
       </div>
-      <div id="th-ioc-result" style="margin-top:14px;min-height:140px;background:#050510;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:rgba(255,255,255,.6)"><span style="color:rgba(255,255,255,.25)">// Enter an IOC to query VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span></div>
+      <div id="th-ioc-result" style="margin-top:14px;min-height:140px;background:#050510;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:rgba(255,255,255,.6)"><span style="color:rgba(255,255,255,0.72)">// Enter an IOC to query VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span></div>
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center"><div style="color:#ef4444;font-size:20px;font-weight:900" id="th-ioc-malicious">0</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Malicious IOCs</div></div>
-        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;text-align:center"><div style="color:#f59e0b;font-size:20px;font-weight:900" id="th-ioc-suspicious">0</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Suspicious</div></div>
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center"><div style="color:#ef4444;font-size:20px;font-weight:900" id="th-ioc-malicious">0</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Malicious IOCs</div></div>
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;text-align:center"><div style="color:#f59e0b;font-size:20px;font-weight:900" id="th-ioc-suspicious">0</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Suspicious</div></div>
       </div>
     </div>
   </div>
@@ -6853,7 +6853,7 @@ footer.v14-footer::before {
       <span style="color:#ef4444;font-size:13px;font-weight:800">&#x1F534; HUNT RESULTS</span>
       <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;box-shadow:0 0 8px #22c55e80"></span>
     </div>
-    <div id="th-results" style="font-family:monospace;font-size:12px;color:#00ff88;line-height:1.9;min-height:80px"><span style="color:rgba(255,255,255,.25)">[SYSTEM] Threat hunting engine ready. Execute a query or select a template to begin...</span></div>
+    <div id="th-results" style="font-family:monospace;font-size:12px;color:#00ff88;line-height:1.9;min-height:80px"><span style="color:rgba(255,255,255,0.72)">[SYSTEM] Threat hunting engine ready. Execute a query or select a template to begin...</span></div>
   </div>
   <div style="margin-top:20px;background:rgba(255,255,255,.02);border:1px solid rgba(239,68,68,.12);border-radius:16px;padding:20px">
     <span style="color:#ef4444;font-size:13px;font-weight:800">&#x1F5C2; MITRE ATT&amp;CK COVERAGE MATRIX</span>
@@ -6882,7 +6882,7 @@ footer.v14-footer::before {
       <input id="vm-cve-input" aria-label="CVE ID or product name" type="text" placeholder="CVE-2024-1234 or product name" style="width:100%;margin-top:10px;background:#050510;border:1px solid rgba(245,158,11,.2);border-radius:8px;color:#fff;padding:10px;font-size:13px;outline:none;box-sizing:border-box"/>
       <button onclick="vmLookupCVE()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;padding:11px;border-radius:8px;font-weight:900;font-size:13px;cursor:pointer">&#x1F52C; Analyze CVE</button>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
-        <div style="color:rgba(255,255,255,.4);font-size:11px;font-weight:700;margin-bottom:4px">QUICK FILTERS</div>
+        <div style="color:rgba(255,255,255,0.72);font-size:11px;font-weight:700;margin-bottom:4px">QUICK FILTERS</div>
         <button onclick="vmFilter('critical')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x1F534; CVSS &ge;9.0 Critical</button>
         <button onclick="vmFilter('kev')" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x26A1; CISA KEV Catalog</button>
         <button onclick="vmFilter('epss')" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#818cf8;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">&#x1F4CA; EPSS &ge;50% Exploit</button>
@@ -6890,7 +6890,7 @@ footer.v14-footer::before {
       </div>
     </div>
     <div style="background:rgba(255,255,255,.02);border:1px solid rgba(245,158,11,.15);border-radius:16px;padding:24px;max-height:500px;overflow-y:auto">
-      <div id="vm-detail-panel"><div style="color:rgba(255,255,255,.3);text-align:center;padding:40px">Select a filter or enter a CVE ID to view CVSS vectors, EPSS scores and remediation guidance.</div></div>
+      <div id="vm-detail-panel"><div style="color:rgba(255,255,255,0.72);text-align:center;padding:40px">Select a filter or enter a CVE ID to view CVSS vectors, EPSS scores and remediation guidance.</div></div>
     </div>
   </div>
   <div style="margin-top:20px;background:rgba(255,255,255,.02);border:1px solid rgba(245,158,11,.12);border-radius:16px;padding:20px">
@@ -6914,11 +6914,11 @@ footer.v14-footer::before {
     <p style="color:rgba(255,255,255,.55);font-size:15px;max-width:600px;margin:0 auto">Real-time visualization of active attack campaigns, threat actor locations and global incident heatmap.</p>
   </div>
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px">
-    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#ef4444;font-size:22px;font-weight:900" id="gtm-attacks">47,293</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Attacks/Hour</div></div>
-    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#f59e0b;font-size:22px;font-weight:900" id="gtm-campaigns">218</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Active Campaigns</div></div>
-    <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#00d4ff;font-size:22px;font-weight:900" id="gtm-countries">94</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Countries Hit</div></div>
-    <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#a855f7;font-size:22px;font-weight:900" id="gtm-apts">37</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">APT Groups Active</div></div>
-    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#22c55e;font-size:22px;font-weight:900" id="gtm-blocked">—</div><div style="color:rgba(255,255,255,.4);font-size:10px;margin-top:2px">Blocked Today</div></div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#ef4444;font-size:22px;font-weight:900" id="gtm-attacks">47,293</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Attacks/Hour</div></div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#f59e0b;font-size:22px;font-weight:900" id="gtm-campaigns">218</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Active Campaigns</div></div>
+    <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#00d4ff;font-size:22px;font-weight:900" id="gtm-countries">94</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Countries Hit</div></div>
+    <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#a855f7;font-size:22px;font-weight:900" id="gtm-apts">37</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">APT Groups Active</div></div>
+    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div style="color:#22c55e;font-size:22px;font-weight:900" id="gtm-blocked">—</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Blocked Today</div></div>
   </div>
   <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:20px;position:relative;overflow:hidden">
     <canvas id="gtm-canvas" width="1100" height="460" style="width:100%;border-radius:12px;display:block;background:#030310"></canvas>
@@ -6986,14 +6986,14 @@ footer.v14-footer::before {
         <span style="color:#ec4899;font-size:13px;font-weight:800">&#x1F4CB; NIST 800-61 PLAYBOOK</span>
         <button onclick="irExportPlaybook()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#x2B07; Export PDF</button>
       </div>
-      <div id="ir-playbook-output" style="color:rgba(255,255,255,.6);font-size:13px;line-height:1.8;min-height:360px"><div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,.2)"><div style="font-size:40px;margin-bottom:12px">&#x1F6A8;</div><div>Select incident type and click Generate to receive a full NIST 800-61 playbook with MITRE ATT&amp;CK mapping, containment procedures and forensic checklists.</div></div></div>
+      <div id="ir-playbook-output" style="color:rgba(255,255,255,.6);font-size:13px;line-height:1.8;min-height:360px"><div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,.62)"><div style="font-size:40px;margin-bottom:12px">&#x1F6A8;</div><div>Select incident type and click Generate to receive a full NIST 800-61 playbook with MITRE ATT&amp;CK mapping, containment procedures and forensic checklists.</div></div></div>
     </div>
   </div>
   <div style="margin-top:20px;background:rgba(255,255,255,.02);border:1px solid rgba(236,72,153,.12);border-radius:16px;padding:20px">
     <span style="color:#ec4899;font-size:13px;font-weight:800">&#x23F1; INCIDENT TIMELINE</span>
     <div id="ir-timeline" style="margin-top:14px;padding-left:24px;position:relative">
       <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#ec4899,transparent)"></div>
-      <div style="color:rgba(255,255,255,.3);font-size:12px;padding:6px 0">No active incidents declared.</div>
+      <div style="color:rgba(255,255,255,0.72);font-size:12px;padding:6px 0">No active incidents declared.</div>
     </div>
   </div>
 </div>
@@ -7017,7 +7017,7 @@ footer.v14-footer::before {
       <span style="color:#a855f7;font-size:13px;font-weight:800">&#x1F480; ZERO-DAY INTELLIGENCE FEED</span>
       <button onclick="zdRefreshFeed()" style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#a855f7;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#x21BB; Refresh</button>
     </div>
-    <div id="zd-feed" style="display:flex;flex-direction:column;gap:12px"><div style="color:rgba(255,255,255,.3);text-align:center;padding:20px">Loading zero-day intelligence...</div></div>
+    <div id="zd-feed" style="display:flex;flex-direction:column;gap:12px"><div style="color:rgba(255,255,255,0.72);text-align:center;padding:20px">Loading zero-day intelligence...</div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
@@ -7031,7 +7031,7 @@ footer.v14-footer::before {
           <input id="zd-alert-target" aria-label="Domain or product" type="text" placeholder="Your domain or product..." style="flex:1;background:#050510;border:1px solid rgba(168,85,247,.25);border-radius:8px;color:#fff;padding:8px 10px;font-size:12px;outline:none"/>
           <button onclick="zdSetAlert()" style="background:#a855f7;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Set Alert</button>
         </div>
-        <div id="zd-alerts-list" style="font-size:12px;color:rgba(255,255,255,.4)">No alerts configured. Enter a target to monitor for zero-day mentions across dark web and exploit sources.</div>
+        <div id="zd-alerts-list" style="font-size:12px;color:rgba(255,255,255,0.72)">No alerts configured. Enter a target to monitor for zero-day mentions across dark web and exploit sources.</div>
       </div>
     </div>
   </div>
@@ -7055,7 +7055,7 @@ footer.v14-footer::before {
       position:relative;z-index:1">
       ⚔️ CYBERDUDEBIVASH PRIVATE LIMITED ⚔️
     </div>
-    <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.35);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
+    <div style="font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.68);margin-top:5px;text-transform:uppercase;position:relative;z-index:1">
       PAN: ARKPN8270G &nbsp;·&nbsp; AI-Powered Cybersecurity Intelligence Platform &nbsp;·&nbsp; Est. 2024
     </div>
   </div>
@@ -7286,7 +7286,7 @@ footer.v14-footer::before {
           <span style="font-size:22px">✈️</span>
           <div>
             <div style="font-size:12px;font-weight:800;color:#0088cc">Sentinel APEX</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.4)">Live threat intel channel</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.72)">Live threat intel channel</div>
           </div>
         </a>
       </div>
@@ -9063,7 +9063,7 @@ function startJobPolling(module, jobId) {
       } else if (job.status === 'failed') {
         clearInterval(_activeJobPoll);
         _activeJobPoll = null;
-        panel.innerHTML = `<div class="job-poll-card" style="border-color:rgba(239,68,68,.3)">
+        panel.innerHTML = `<div class="job-poll-card" style="border-color:rgba(239,68,68,0.72)">
           <div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ Scan Failed</div>
           <div style="font-size:13px;color:var(--text-muted)">${job.error_message || 'An error occurred. Please try again.'}</div>
         </div>`;
@@ -9197,7 +9197,7 @@ function renderResults(module, data) {
     ].map(m => `
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 8px;text-align:center">
       <div style="font-size:20px;font-weight:900;color:${m.color};line-height:1">${m.val}</div>
-      <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:4px;font-weight:600;letter-spacing:.3px">${m.lbl}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.68);margin-top:4px;font-weight:600;letter-spacing:.3px">${m.lbl}</div>
     </div>`).join('')}
   </div>`;
 
@@ -9316,7 +9316,7 @@ function renderFinding(f) {
 
     <!-- Header row -->
     <div style="display:flex;align-items:flex-start;gap:8px;padding:12px 14px 8px;flex-wrap:wrap">
-      ${f.id ? `<span style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);font-family:monospace;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;flex-shrink:0">${f.id}</span>` : ''}
+      ${f.id ? `<span style="font-size:10px;font-weight:800;color:rgba(255,255,255,.65);font-family:monospace;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;flex-shrink:0">${f.id}</span>` : ''}
       <span style="background:${sevColor}20;color:${sevColor};border:1px solid ${sevColor}40;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:800;letter-spacing:.5px;flex-shrink:0">${f.severity}</span>
       <span style="font-size:13px;font-weight:700;color:#f1f5f9;flex:1;line-height:1.4;min-width:0">${f.title}</span>
       <span style="font-size:10px;color:${sevColor};font-weight:700;white-space:nowrap;flex-shrink:0">⏱ ${patchSLA}</span>
@@ -9390,13 +9390,13 @@ function _buildTrainingUpsell(module, score, level) {
       <div style="flex:1;min-width:220px">
         <div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:4px;line-height:1.3">${course.title}</div>
         <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.6;margin-bottom:12px">${course.desc}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:14px">🔒 Instant PDF delivery · Secure payment</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.68);margin-bottom:14px">🔒 Instant PDF delivery · Secure payment</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <button onclick="if(window.CDB_PAY)CDB_PAY.open('${course.id}',${course.price},'${course.label.replace(/'/g,"\\'")}')" style="background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:900;cursor:pointer;transition:all .2s;white-space:nowrap">
             🔓 Start Learning — ₹${course.price}
           </button>
           <a href="/academy.html#bundle" style="font-size:12px;color:#00ffcc;font-weight:700;text-decoration:none;white-space:nowrap">🏆 Get All Courses ₹1,999 →</a>
-          <a href="/academy.html" style="font-size:11px;color:rgba(255,255,255,.35);text-decoration:none;white-space:nowrap">View Academy →</a>
+          <a href="/academy.html" style="font-size:11px;color:rgba(255,255,255,.68);text-decoration:none;white-space:nowrap">View Academy →</a>
         </div>
       </div>
     </div>
@@ -12312,7 +12312,7 @@ async function createMonitorModal() {
     </div>` : `
     <div style="background:#0f0f23;border:1px solid rgba(0,212,255,.3);border-radius:16px;padding:32px;max-width:440px;width:100%">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">📡 Create Monitor</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:20px">Auto-scan <strong style="color:var(--accent)">${target}</strong> on schedule</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.72);margin-bottom:20px">Auto-scan <strong style="color:var(--accent)">${target}</strong> on schedule</div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <label style="font-size:12px;color:rgba(255,255,255,.5);display:block;margin-bottom:4px">Monitor Name</label>
@@ -12334,7 +12334,7 @@ async function createMonitorModal() {
             📡 Create Monitor
           </button>
           <button onclick="document.getElementById('_monitor-modal')?.remove()"
-            style="background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);padding:11px 16px;border-radius:8px;cursor:pointer;font-size:13px">Cancel</button>
+            style="background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,0.72);padding:11px 16px;border-radius:8px;cursor:pointer;font-size:13px">Cancel</button>
         </div>
       </div>
     </div>`;
@@ -12363,7 +12363,7 @@ async function createMonitorModal() {
           <div style="font-size:48px;margin-bottom:12px">✅</div>
           <div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:8px">Monitor Created!</div>
           <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:4px">${name}</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.35);margin-bottom:20px">Next run: ${data.next_run_at ? new Date(data.next_run_at).toLocaleString('en-IN') : 'Scheduled'}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.68);margin-bottom:20px">Next run: ${data.next_run_at ? new Date(data.next_run_at).toLocaleString('en-IN') : 'Scheduled'}</div>
           <button onclick="document.getElementById('_monitor-modal')?.remove()"
             style="background:#22c55e;border:none;color:#000;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer">Done</button>
         </div>`;
@@ -13332,7 +13332,7 @@ window.addEventListener('load', () => {
     modal.innerHTML = `
       <div id="cdb-upsell-inner" style="background:#0c0c1e;border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:28px;max-width:520px;width:100%;position:relative;max-height:90vh;overflow-y:auto">
         <button onclick="document.getElementById('cdb-scan-upsell').remove()" style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px">×</button>
-        <div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.4)">
+        <div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.72)">
           <div style="font-size:32px;margin-bottom:12px">⚙️</div>
           <div>Analyzing threats &amp; fetching defense solutions...</div>
         </div>
@@ -13387,13 +13387,13 @@ window.addEventListener('load', () => {
     // Defense product cards
     const productsHtml = products.length ? `
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:10px">Recommended Defense Solutions</div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.72);margin-bottom:10px">Recommended Defense Solutions</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           ${products.map(p => `
             <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="flex:1;min-width:0">
                 <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title || p.category}</div>
-                <div style="font-size:10px;color:rgba(255,255,255,.4)">${(p.preview||'').slice(0,60)}...</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.72)">${(p.preview||'').slice(0,60)}...</div>
               </div>
               <button onclick="document.getElementById('cdb-scan-upsell').remove();dsPurchase('${p.id}','${(p.title||'').replace(/'/g,"\\'")}',${p.price_inr})" style="flex-shrink:0;background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:900;font-size:12px;cursor:pointer;white-space:nowrap">₹${(p.price_inr||499).toLocaleString('en-IN')} →</button>
             </div>`).join('')}
@@ -13434,7 +13434,7 @@ window.addEventListener('load', () => {
         🛡️ Browse All Defense Solutions →
       </a>
 
-      <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.25)">
+      <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.62)">
         🔒 UPI · Bank Transfer · PayPal · Crypto · Manual Verification · 365-day access
       </div>`;
 
@@ -14427,14 +14427,14 @@ function showLeadModal(){
   m.id='p13-lead';
   m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10002;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px)';
   m.innerHTML='<div style="background:linear-gradient(135deg,#080818,#0d0d28);border:1px solid rgba(0,212,255,.3);border-radius:20px;padding:40px;max-width:460px;width:100%;position:relative;text-align:center">'+
-    '<button onclick="document.getElementById(&#39;p13-lead&#39;).remove();sessionStorage.setItem(&#39;cdb_lead_p13&#39;,&#39;1&#39;)" style="position:absolute;top:14px;right:14px;background:none;border:none;color:rgba(255,255,255,.35);font-size:20px;cursor:pointer">&#10005;</button>'+
+    '<button onclick="document.getElementById(&#39;p13-lead&#39;).remove();sessionStorage.setItem(&#39;cdb_lead_p13&#39;,&#39;1&#39;)" style="position:absolute;top:14px;right:14px;background:none;border:none;color:rgba(255,255,255,.68);font-size:20px;cursor:pointer">&#10005;</button>'+
     '<div style="font-size:44px;margin-bottom:14px">&#128737;</div>'+
     '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#00d4ff;text-transform:uppercase;margin-bottom:8px">FREE ENTERPRISE THREAT REPORT</div>'+
     '<h3 style="font-size:21px;font-weight:900;margin:0 0 10px;line-height:1.25">Get Your Personalized<br>Vulnerability Assessment</h3>'+
     '<p style="font-size:13px;color:rgba(255,255,255,.5);margin:0 0 22px;line-height:1.6">8 CRITICAL CVEs active right now. We will analyze your exposure and send a tailored report — free, no credit card.</p>'+
     '<input id="p13-lead-email" aria-label="Email address" type="email" placeholder="your@company.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(0,212,255,.25);border-radius:10px;padding:13px 16px;color:#fff;font-size:14px;outline:none;margin-bottom:12px">'+
     '<button id="p13-lead-btn" onclick="p13SubmitLead()" style="width:100%;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:14px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">&#9889; Get Free Threat Report &#8594;</button>'+
-    '<p style="font-size:11px;color:rgba(255,255,255,.25);margin:0">No spam. Used by 500+ security teams. 1-click unsubscribe.</p>'+
+    '<p style="font-size:11px;color:rgba(255,255,255,.62);margin:0">No spam. Used by 500+ security teams. 1-click unsubscribe.</p>'+
     '<div id="p13-lead-status" style="margin-top:10px;font-size:13px;min-height:20px"></div></div>';
   m.addEventListener('click',function(e){if(e.target===m){m.remove();sessionStorage.setItem('cdb_lead_p13','1');}});
   document.body.appendChild(m);
@@ -14530,18 +14530,18 @@ function injectStatusBar(){
   bar.style.cssText='position:fixed;bottom:0;left:0;right:0;background:rgba(5,5,16,.97);border-top:1px solid rgba(0,212,255,.12);padding:5px 18px;display:flex;align-items:center;justify-content:space-between;z-index:9000;font-size:11px;backdrop-filter:blur(12px);flex-wrap:wrap;gap:8px';
   bar.innerHTML='<div style="display:flex;align-items:center;gap:10px">'+
     '<span style="color:#00d4ff;font-weight:900;letter-spacing:1px">SENTINEL APEX</span>'+
-    '<span style="color:rgba(255,255,255,.2)">|</span>'+
+    '<span style="color:rgba(255,255,255,0.72)">|</span>'+
     '<span style="color:#10b981;font-weight:700">&#9679; LIVE</span>'+
-    '<span id="soc-bar-time" style="color:rgba(255,255,255,.35)">--:--:-- UTC</span>'+
-    '<span style="color:rgba(255,255,255,.2)">|</span>'+
+    '<span id="soc-bar-time" style="color:rgba(255,255,255,0.72)">--:--:-- UTC</span>'+
+    '<span style="color:rgba(255,255,255,0.72)">|</span>'+
     '<span style="color:rgba(255,255,255,.5)">CRITICAL: <strong style="color:#ef4444" id="soc-bar-threats">8</strong></span>'+
-    '<span style="color:rgba(255,255,255,.2)">|</span>'+
+    '<span style="color:rgba(255,255,255,0.72)">|</span>'+
     '<span style="color:rgba(255,255,255,.5)">KEV: <strong style="color:#f59e0b" id="soc-bar-kev">41</strong></span>'+
     '</div>'+
     '<div style="display:flex;align-items:center;gap:8px">'+
-    '<span style="color:rgba(255,255,255,.3)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools ready</span></span>'+
-    '<span style="color:rgba(255,255,255,.2)">|</span>'+
-    '<span style="color:rgba(255,255,255,.3)">v30.0.0</span>'+
+    '<span style="color:rgba(255,255,255,0.72)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools ready</span></span>'+
+    '<span style="color:rgba(255,255,255,0.72)">|</span>'+
+    '<span style="color:rgba(255,255,255,0.72)">v30.0.0</span>'+
     '</div>';
   document.body.appendChild(bar);
   setInterval(function(){
@@ -14560,7 +14560,7 @@ function injectPredictivePanel(){
   p.innerHTML='<div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">'+
     '<span style="font-size:17px">&#128302;</span>'+
     '<div><div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#ef4444;text-transform:uppercase">MYTHOS PREDICTIVE INTELLIGENCE</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:1px">AI threat forecasting &mdash; refreshed every 6h</div></div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,0.72);margin-top:1px">AI threat forecasting &mdash; refreshed every 6h</div></div>'+
     '</div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">'+
     '<div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:9px;padding:12px">'+
@@ -14759,11 +14759,11 @@ if(document.readyState==='loading'){
             <img src="/assets/payment/upi-qr.png" alt="UPI QR Code — Bivash Kumar Nayak" class="cdb-qr-img"
               onclick="this.classList.toggle('zoomed')"
               onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='block';}">
-            <div style="display:none;font-size:11px;color:rgba(255,255,255,.3);padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">
+            <div style="display:none;font-size:11px;color:rgba(255,255,255,.65);padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">
               UPI: iambivash.bn-5@okaxis
             </div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px">Bivash Kumar Nayak</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.2);margin-top:2px">PhonePe · GPay · Paytm</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:6px">Bivash Kumar Nayak</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.62);margin-top:2px">PhonePe · GPay · Paytm</div>
           </div>
         </div>
       </div>
@@ -14802,7 +14802,7 @@ if(document.readyState==='loading'){
           style="display:block;text-align:center;background:rgba(0,112,243,.12);border:1px solid rgba(0,112,243,.3);color:#60a5fa;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-top:10px">
           🌐 Open PayPal.me → Send Directly
         </a>
-        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,.4);line-height:1.6;margin-top:10px">
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.72);line-height:1.6;margin-top:10px">
           ⚠️ Select <strong style="color:rgba(255,255,255,.65)">"Friends &amp; Family"</strong> to avoid fees. Add product name + your email in the note for faster activation.
         </div>
       </div>
@@ -14852,7 +14852,7 @@ if(document.readyState==='loading'){
 
         <!-- Screenshot upload -->
         <div style="background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.15);border-radius:8px;padding:12px 14px">
-          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.72);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
             📸 Upload Payment Screenshot (recommended)
           </div>
           <input id="cdb-pay-screenshot" aria-label="Payment screenshot" type="file" accept="image/*,.pdf"
@@ -14863,7 +14863,7 @@ if(document.readyState==='loading'){
               style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid rgba(255,255,255,.1);object-fit:contain" />
             <div style="font-size:10px;color:rgba(34,197,94,.8);margin-top:4px">✅ Screenshot attached</div>
           </div>
-          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px;line-height:1.5">
+          <div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:6px;line-height:1.5">
             Upload your payment confirmation screenshot for faster verification (optional but speeds up activation)
           </div>
         </div>
@@ -14875,7 +14875,7 @@ if(document.readyState==='loading'){
         ✅ I HAVE PAID — Submit Confirmation
       </button>
 
-      <div style="text-align:center;margin-top:14px;font-size:11px;color:rgba(255,255,255,.22);line-height:1.7">
+      <div style="text-align:center;margin-top:14px;font-size:11px;color:rgba(255,255,255,0.72);line-height:1.7">
         🔒 Verified manually by our team · Access activated within 2–4 hours<br>
         Questions? <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(0,212,255,.5)">bivash@cyberdudebivash.com</a>
         &nbsp;|&nbsp; <a href="tel:+918179881447" style="color:rgba(0,212,255,.5)">+91 8179881447</a>
@@ -14998,14 +14998,14 @@ if(document.readyState==='loading'){
 #cdb-agentic-console{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:flex-end;padding:80px 24px 24px}
 #cdb-agentic-inner{background:rgba(8,8,22,.98);border:1px solid rgba(0,212,255,.2);border-radius:18px;width:100%;max-width:860px;max-height:calc(100vh - 120px);overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.8)}
 .cdb-ag-tab-bar{display:flex;gap:0;background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.06)}
-.cdb-ag-tab{flex:1;padding:12px 8px;font-size:10px;font-weight:800;text-align:center;color:rgba(255,255,255,.35);cursor:pointer;transition:all .2s;letter-spacing:.06em;text-transform:uppercase;border:none;background:none;border-bottom:2px solid transparent}
+.cdb-ag-tab{flex:1;padding:12px 8px;font-size:10px;font-weight:800;text-align:center;color:rgba(255,255,255,.68);cursor:pointer;transition:all .2s;letter-spacing:.06em;text-transform:uppercase;border:none;background:none;border-bottom:2px solid transparent}
 .cdb-ag-tab.active{color:#00d4ff;border-bottom-color:#00d4ff;background:rgba(0,212,255,.04)}
 .cdb-ag-pane{display:none;padding:20px}
 .cdb-ag-pane.active{display:block}
 .cdb-ag-metric-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
 .cdb-ag-metric{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 14px}
 .cdb-ag-metric-val{font-size:22px;font-weight:900;color:#00d4ff;line-height:1}
-.cdb-ag-metric-lbl{font-size:10px;color:rgba(255,255,255,.35);margin-top:4px;letter-spacing:.05em}
+.cdb-ag-metric-lbl{font-size:10px;color:rgba(255,255,255,.68);margin-top:4px;letter-spacing:.05em}
 .cdb-ag-log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;max-height:220px;overflow-y:auto}
 .cdb-ag-log-line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);display:flex;gap:8px}
 .cdb-ag-log-ts{color:rgba(255,255,255,.2);flex-shrink:0}
@@ -15015,7 +15015,7 @@ if(document.readyState==='loading'){
 .cdb-ag-log-ai{color:#c4b5fd}
 .cdb-ag-log-info{color:rgba(255,255,255,.5)}
 .cdb-ag-table{width:100%;border-collapse:collapse;font-size:11px}
-.cdb-ag-table th{text-align:left;color:rgba(255,255,255,.3);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
+.cdb-ag-table th{text-align:left;color:rgba(255,255,255,.65);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
 .cdb-ag-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.7)}
 .cdb-ag-table tr:last-child td{border-bottom:none}
 .cdb-ag-table tr:hover td{background:rgba(255,255,255,.02)}
@@ -15097,10 +15097,10 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
       <div class="cdb-notif-dot" style="background:${sevColor}"></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.85);line-height:1.35;margin-bottom:2px">${_esc(a.title||a.cve_id||a.type||'Alert')}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(a.description||a.summary||a.message||'')}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.68);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(a.description||a.summary||a.message||'')}</div>
         <div style="display:flex;gap:6px;margin-top:4px;align-items:center">
           <span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(${sev==='CRITICAL'?'239,68,68':sev==='HIGH'?'245,158,11':'0,212,255'},.12);color:${sevColor}">${sev}</span>
-          ${timeAgo ? `<span style="font-size:9px;color:rgba(255,255,255,.2)">${timeAgo}</span>` : ''}
+          ${timeAgo ? `<span style="font-size:9px;color:rgba(255,255,255,.62)">${timeAgo}</span>` : ''}
         </div>
       </div>
     </div>`;
@@ -15165,7 +15165,7 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
     const el = document.getElementById('cdb-notif-list');
     if(!el) return;
     if(!_alerts.length){
-      el.innerHTML='<div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.25);font-size:12px">✅ No active alerts</div>';
+      el.innerHTML='<div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.62);font-size:12px">✅ No active alerts</div>';
       return;
     }
     el.innerHTML = _alerts.map(_renderItem).join('');
@@ -15231,7 +15231,7 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
     <div>
       <div style="font-size:11px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px">⚡ AGENTIC AI COMMAND CENTER</div>
       <div style="font-size:18px;font-weight:900;color:#fff">v12 Autonomous Engine Status</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:3px">MYTHOS · Anomaly · Predictive · Agent Bus — Real-time monitoring</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.68);margin-top:3px">MYTHOS · Anomaly · Predictive · Agent Bus — Real-time monitoring</div>
     </div>
     <button onclick="CDB_AGCONSOLE.close()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
   </div>
@@ -15261,7 +15261,7 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-m-uptime" style="color:#fcd34d">—</div><div class="cdb-ag-metric-lbl">Uptime</div></div>
     </div>
     <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase">Engine Activity Log</div>
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:.08em;text-transform:uppercase">Engine Activity Log</div>
       <button onclick="CDB_AGCONSOLE.triggerMythos()" class="v13-btn v13-btn-ghost" style="font-size:10px;padding:5px 12px">⚡ Trigger Run</button>
     </div>
     <div class="cdb-ag-log" id="ag-mythos-log">
@@ -15277,9 +15277,9 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-a-critical" style="color:#ef4444">—</div><div class="cdb-ag-metric-lbl">Critical/High</div></div>
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-a-actioned" style="color:#34d399">—</div><div class="cdb-ag-metric-lbl">Auto-Actioned</div></div>
     </div>
-    <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase">Anomaly Detection Engine — Isolation Forest + Z-Score</div>
+    <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:.08em;text-transform:uppercase">Anomaly Detection Engine — Isolation Forest + Z-Score</div>
     <div id="ag-anomaly-events" style="max-height:200px;overflow-y:auto">
-      <div style="text-align:center;padding:20px;color:rgba(255,255,255,.2);font-size:12px">Loading anomaly data...</div>
+      <div style="text-align:center;padding:20px;color:rgba(255,255,255,.62);font-size:12px">Loading anomaly data...</div>
     </div>
   </div>
 
@@ -15291,12 +15291,12 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-p-exploit" style="color:#f59e0b">—</div><div class="cdb-ag-metric-lbl">Exploit Prob &gt;70%</div></div>
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-p-kev" style="color:#c4b5fd">—</div><div class="cdb-ag-metric-lbl">KEV Flagged</div></div>
     </div>
-    <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase">Top Risk Predictions (Next 72h)</div>
+    <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:.08em;text-transform:uppercase">Top Risk Predictions (Next 72h)</div>
     <div id="ag-pred-table" style="overflow-x:auto">
       <table class="cdb-ag-table"><thead><tr>
         <th>CVE</th><th>Exploit Prob</th><th>Window</th><th>Action</th>
       </tr></thead><tbody id="ag-pred-tbody">
-        <tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,.2);padding:20px">Loading predictions...</td></tr>
+        <tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,.62);padding:20px">Loading predictions...</td></tr>
       </tbody></table>
     </div>
   </div>
@@ -15309,12 +15309,12 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-act-pending" style="color:#fcd34d">—</div><div class="cdb-ag-metric-lbl">Pending</div></div>
       <div class="cdb-ag-metric"><div class="cdb-ag-metric-val" id="ag-act-blocked" style="color:#ef4444">—</div><div class="cdb-ag-metric-lbl">IPs Blocked</div></div>
     </div>
-    <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase">Recent Autonomous Actions</div>
+    <div style="margin-bottom:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:.08em;text-transform:uppercase">Recent Autonomous Actions</div>
     <div id="ag-actions-table" style="overflow-x:auto">
       <table class="cdb-ag-table"><thead><tr>
         <th>Action</th><th>Target</th><th>Source</th><th>Risk</th><th>Status</th><th>Time</th>
       </tr></thead><tbody id="ag-actions-tbody">
-        <tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,.2);padding:20px">Loading agent actions...</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,.62);padding:20px">Loading agent actions...</td></tr>
       </tbody></table>
     </div>
   </div>
@@ -15386,12 +15386,12 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
               <span class="v13-badge ${ev.risk_level==='CRITICAL'?'crit':ev.risk_level==='HIGH'?'warn':'ok'}">${ev.risk_level||'MED'}</span>
               <div style="flex:1;font-size:11px">
                 <div style="color:rgba(255,255,255,.7);margin-bottom:2px">${ev.user_id?'User: '+ev.user_id.slice(0,8)+'...':'Unknown entity'}</div>
-                <div style="color:rgba(255,255,255,.3)">${ev.anomaly_types||'Behavioral deviation detected'}</div>
+                <div style="color:rgba(255,255,255,0.72)">${ev.anomaly_types||'Behavioral deviation detected'}</div>
               </div>
-              <div style="font-size:9px;color:rgba(255,255,255,.2);flex-shrink:0">${ev.created_at?new Date(ev.created_at).toLocaleTimeString('en-GB',{hour12:false}):''}</div>
+              <div style="font-size:9px;color:rgba(255,255,255,.62);flex-shrink:0">${ev.created_at?new Date(ev.created_at).toLocaleTimeString('en-GB',{hour12:false}):''}</div>
             </div>`).join('');
         } else if(ael){
-          ael.innerHTML='<div style="text-align:center;padding:20px;color:rgba(255,255,255,.25);font-size:12px">✅ No anomalies in current window</div>';
+          ael.innerHTML='<div style="text-align:center;padding:20px;color:rgba(255,255,255,.62);font-size:12px">✅ No anomalies in current window</div>';
         }
       }
     }catch(e){
@@ -15417,7 +15417,7 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
           tb.innerHTML = rows.map(p=>`<tr>
             <td style="color:#7dd3fc;font-family:monospace">${p.cve_id||'—'}</td>
             <td><div style="background:rgba(239,68,68,.12);color:#fca5a5;padding:2px 8px;border-radius:4px;font-weight:700;display:inline-block">${Math.round((p.probability_pct||p.exploit_probability||0)*100)/100}%</div></td>
-            <td style="color:rgba(255,255,255,.4)">${p.attack_window_label||p.expected_window_hrs+'h'||'72h'}</td>
+            <td style="color:rgba(255,255,255,0.72)">${p.attack_window_label||p.expected_window_hrs+'h'||'72h'}</td>
             <td style="color:#34d399;font-size:10px">${(p.recommended_action||'patch').slice(0,20)}</td>
           </tr>`).join('');
         }
@@ -15442,10 +15442,10 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
           tb.innerHTML = rows.map(a=>`<tr>
             <td style="color:#00d4ff;font-weight:700">${a.action_type||'—'}</td>
             <td style="font-family:monospace;font-size:10px;color:rgba(255,255,255,.5)">${(a.target||'').slice(0,18)}</td>
-            <td style="font-size:10px;color:rgba(255,255,255,.35)">${a.trigger_source||'—'}</td>
+            <td style="font-size:10px;color:rgba(255,255,255,.68)">${a.trigger_source||'—'}</td>
             <td><span class="v13-badge ${sevMap[a.risk_level]||'ok'}">${a.risk_level||'MED'}</span></td>
-            <td style="${statMap[a.execution_status]||'color:rgba(255,255,255,.4)'};font-weight:700;font-size:10px">${a.execution_status||'—'}</td>
-            <td style="font-size:9px;color:rgba(255,255,255,.2)">${a.created_at?new Date(a.created_at).toLocaleTimeString('en-GB',{hour12:false}):''}</td>
+            <td style="${statMap[a.execution_status]||'color:rgba(255,255,255,0.72)'};font-weight:700;font-size:10px">${a.execution_status||'—'}</td>
+            <td style="font-size:9px;color:rgba(255,255,255,.62)">${a.created_at?new Date(a.created_at).toLocaleTimeString('en-GB',{hour12:false}):''}</td>
           </tr>`).join('');
         }
       }
@@ -15682,12 +15682,12 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
     <button onclick="CDB_APIKEYS.close()" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.06);border:none;color:rgba(255,255,255,.5);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center">✕</button>
     <div style="font-size:11px;font-weight:800;color:#00d4ff;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">🔑 API Key Management</div>
     <div style="font-size:17px;font-weight:900;color:#fff">Developer Access Keys</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.35);margin-top:3px">Use keys with format <code style="color:#7dd3fc;background:rgba(125,211,252,.08);padding:1px 6px;border-radius:4px">cdb_*</code> as Bearer tokens or X-API-Key header</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.68);margin-top:3px">Use keys with format <code style="color:#7dd3fc;background:rgba(125,211,252,.08);padding:1px 6px;border-radius:4px">cdb_*</code> as Bearer tokens or X-API-Key header</div>
   </div>
   <div style="padding:20px 24px">
     <!-- Create new key -->
     <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:10px;padding:16px;margin-bottom:20px">
-      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Create New Key</div>
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.68);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Create New Key</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input id="cdb-key-name-inp" aria-label="API key name" placeholder="Key name (e.g. CI Pipeline, SIEM Integration)"
           style="flex:1;min-width:200px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 14px;color:#fff;font-size:12px;outline:none;font-family:inherit;transition:border-color .2s"
@@ -15709,14 +15709,14 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
       </div>
     </div>
     <!-- Key list -->
-    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
       <span>Your API Keys</span>
       <button onclick="CDB_APIKEYS.load()" style="background:none;border:none;color:rgba(0,212,255,.5);font-size:10px;cursor:pointer;font-weight:700">↻ Refresh</button>
     </div>
     <div id="cdb-key-list">
-      <div style="text-align:center;padding:24px;color:rgba(255,255,255,.2);font-size:12px">Loading keys...</div>
+      <div style="text-align:center;padding:24px;color:rgba(255,255,255,.62);font-size:12px">Loading keys...</div>
     </div>
-    <div style="margin-top:16px;padding:12px 14px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-radius:8px;font-size:11px;color:rgba(255,255,255,.4);line-height:1.6">
+    <div style="margin-top:16px;padding:12px 14px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.72);line-height:1.6">
       💡 <strong style="color:#fcd34d">Integration guide:</strong> Set <code style="color:#7dd3fc">Authorization: Bearer YOUR_KEY</code> or <code style="color:#7dd3fc">X-API-Key: YOUR_KEY</code> in requests to <code style="color:#7dd3fc">${API}</code>
     </div>
   </div>
@@ -15729,7 +15729,7 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
     const el = document.getElementById('cdb-key-list');
     if(!el) return;
     if(!_keys.length){
-      el.innerHTML='<div style="text-align:center;padding:24px;color:rgba(255,255,255,.2);font-size:12px">No API keys yet — create your first key above</div>';
+      el.innerHTML='<div style="text-align:center;padding:24px;color:rgba(255,255,255,.62);font-size:12px">No API keys yet — create your first key above</div>';
       return;
     }
     el.innerHTML = _keys.map(k=>`
@@ -15740,10 +15740,10 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
           <div style="display:flex;gap:8px;margin-top:4px">
             <span class="v13-badge ${k.is_active!==false?'ok':'warn'}">${k.is_active!==false?'Active':'Revoked'}</span>
             <span class="v13-badge ai">${k.scope||k.permissions||'scan'}</span>
-            <span style="font-size:9px;color:rgba(255,255,255,.25)">Used ${k.usage_count||0}× · Created ${k.created_at?new Date(k.created_at).toLocaleDateString('en-IN'):'—'}</span>
+            <span style="font-size:9px;color:rgba(255,255,255,.62)">Used ${k.usage_count||0}× · Created ${k.created_at?new Date(k.created_at).toLocaleDateString('en-IN'):'—'}</span>
           </div>
         </div>
-        ${k.is_active!==false ? `<button onclick="CDB_APIKEYS.revoke('${k.id||k.key_id}')" class="v13-btn v13-btn-danger" style="font-size:10px;padding:5px 12px;white-space:nowrap">Revoke</button>` : '<span style="font-size:10px;color:rgba(255,255,255,.2)">Revoked</span>'}
+        ${k.is_active!==false ? `<button onclick="CDB_APIKEYS.revoke('${k.id||k.key_id}')" class="v13-btn v13-btn-danger" style="font-size:10px;padding:5px 12px;white-space:nowrap">Revoke</button>` : '<span style="font-size:10px;color:rgba(255,255,255,.62)">Revoked</span>'}
       </div>`).join('');
   }
 
@@ -15950,7 +15950,7 @@ const CDB_ONBOARD = window.CDB_ONBOARD = (() => {
       `<div class="cdb-onboard-dot${i===idx?' active':''}"></div>`).join('');
 
     _card.innerHTML = `
-      <div style="font-size:11px;font-weight:900;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Step ${idx+1} of ${STEPS.length}</div>
+      <div style="font-size:11px;font-weight:900;color:rgba(255,255,255,.68);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Step ${idx+1} of ${STEPS.length}</div>
       <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;line-height:1.3">${s.title}</div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:14px">${s.body}</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -15958,7 +15958,7 @@ const CDB_ONBOARD = window.CDB_ONBOARD = (() => {
         <div style="flex:1;min-width:4px"></div>
         ${s.action ? `<button onclick="(${s.action.fn.toString()})()" class="v13-btn v13-btn-ghost" style="font-size:11px;padding:6px 12px">${s.action.label}</button>` : ''}
         <button onclick="CDB_ONBOARD.next()" class="v13-btn v13-btn-primary" style="font-size:11px;padding:6px 14px">${idx===STEPS.length-1?'Done ✓':'Next →'}</button>
-        <button onclick="CDB_ONBOARD.dismiss()" style="background:none;border:none;color:rgba(255,255,255,.25);cursor:pointer;font-size:11px;padding:6px;line-height:1" title="Skip tour">✕ Skip</button>
+        <button onclick="CDB_ONBOARD.dismiss()" style="background:none;border:none;color:rgba(255,255,255,.62);cursor:pointer;font-size:11px;padding:6px;line-height:1" title="Skip tour">✕ Skip</button>
       </div>
       <div class="cdb-onboard-step-dots" style="margin-top:12px">${dots}</div>`;
   }
@@ -16252,7 +16252,7 @@ window.cdbAnalystClear = function() {
   box.innerHTML = '<div style="display:flex;justify-content:flex-start">'
     + '<div class="mythos-bubble analyst-bubble">'
     + '🧠 <strong>MYTHOS cleared.</strong> New session started.<br>'
-    + '<span style="font-size:12px;color:rgba(255,255,255,.4)">Ready for next threat analysis.</span>'
+    + '<span style="font-size:12px;color:rgba(255,255,255,0.72)">Ready for next threat analysis.</span>'
     + '</div></div>';
 };
 
@@ -16679,7 +16679,7 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
       + cvssHtml
       + '</div>'
       + '<p style="font-size:12px;color:rgba(255,255,255,.6);margin:0;line-height:1.6">' + n.desc + '</p>'
-      + '<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.35)">'
+      + '<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.68)">'
       + 'Connections: <strong style="color:rgba(0,212,255,.7)">'
       + GRAPH_DATA.edges.filter(function(e){return e.from===n.id||e.to===n.id;}).length
       + '</strong></div>';
@@ -16695,7 +16695,7 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
     var activeBtn = document.getElementById('graph-btn-' + type);
     if (activeBtn) activeBtn.classList.add('active');
     var el = document.getElementById('graph-detail');
-    if (el) el.innerHTML = '<span style="color:rgba(255,255,255,.3);font-size:12px">Click any node to see threat details</span>';
+    if (el) el.innerHTML = '<span style="color:rgba(255,255,255,0.72);font-size:12px">Click any node to see threat details</span>';
   };
 
   window.cdbGraphSearch = function(query) {
@@ -17067,7 +17067,7 @@ function renderPipeline(stages) {
     card.innerHTML = '<div style="font-size:22px">' + stageDef.icon + '</div>'
       + '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.7);line-height:1.3;max-width:100px">' + stageDef.label + '</div>'
       + '<div style="font-size:9px;color:' + statusColor + ';font-weight:700;text-transform:uppercase">' + statusDot + ' ' + status.toUpperCase() + '</div>'
-      + (count > 0 ? '<div style="font-size:10px;color:rgba(255,255,255,.4)">' + count + ' items</div>' : '')
+      + (count > 0 ? '<div style="font-size:10px;color:rgba(255,255,255,0.72)">' + count + ' items</div>' : '')
       + (status === 'running' ? '<div style="margin-top:4px;width:16px;height:16px;border:2px solid rgba(0,212,255,.5);border-top-color:#00d4ff;border-radius:50%;animation:p2Spin .8s linear infinite"></div>' : '');
 
     container.appendChild(card);
@@ -17209,8 +17209,8 @@ window.cdbAutoSOCRefreshLog = function() {
         var color = { done:'#22c55e', error:'#ef4444', running:'#00d4ff', enabled:'#10b981', disabled:'#ef4444' }[entry.status] || 'rgba(255,255,255,.5)';
         var ts    = entry.ts ? new Date(entry.ts).toLocaleTimeString() : '';
         return '<div style="display:flex;gap:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
-          + '<span style="color:rgba(255,255,255,.25);flex-shrink:0">' + ts + '</span>'
-          + '<span style="color:rgba(255,255,255,.4);flex-shrink:0">[' + (entry.stage || '—').toUpperCase() + ']</span>'
+          + '<span style="color:rgba(255,255,255,0.72);flex-shrink:0">' + ts + '</span>'
+          + '<span style="color:rgba(255,255,255,0.72);flex-shrink:0">[' + (entry.stage || '—').toUpperCase() + ']</span>'
           + '<span style="color:' + color + '">' + (entry.output || '') + '</span>'
           + '</div>';
       }).join('');
@@ -17240,8 +17240,8 @@ function appendASocLog(stage, msg, color) {
   if (!logEl) return;
   var entry = document.createElement('div');
   entry.style.cssText = 'display:flex;gap:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);animation:p2SlideUp .2s ease';
-  entry.innerHTML = '<span style="color:rgba(255,255,255,.25);flex-shrink:0">' + new Date().toLocaleTimeString() + '</span>'
-    + '<span style="color:rgba(255,255,255,.4);flex-shrink:0">[' + stage.toUpperCase() + ']</span>'
+  entry.innerHTML = '<span style="color:rgba(255,255,255,0.72);flex-shrink:0">' + new Date().toLocaleTimeString() + '</span>'
+    + '<span style="color:rgba(255,255,255,0.72);flex-shrink:0">[' + stage.toUpperCase() + ']</span>'
     + '<span style="color:' + (color||'rgba(255,255,255,.5)') + '">' + msg + '</span>';
   // Remove placeholder
   var placeholder = logEl.querySelector('[style*="Waiting for pipeline"]');
@@ -17283,14 +17283,14 @@ function renderSIEMGrid(integrations) {
       + '<span style="font-size:20px">' + intg.icon + '</span>'
       + '<span style="font-weight:800;color:#e2e8f0;font-size:13px">' + intg.label + '</span>'
       + '</div>'
-      + '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;' + (intg.configured ? 'background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)' : 'background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1)') + '">'
+      + '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;' + (intg.configured ? 'background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)' : 'background:rgba(255,255,255,.06);color:rgba(255,255,255,0.72);border:1px solid rgba(255,255,255,.1)') + '">'
       + (intg.configured ? '✓ CONNECTED' : 'NOT SET') + '</span>'
       + '</div>'
-      + '<div style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:12px">' + intg.description + '</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,0.72);line-height:1.5;margin-bottom:12px">' + intg.description + '</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
       + '<button onclick="event.stopPropagation();cdbSIEMOpenConfig(\'' + intg.id + '\')" style="background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⚙️ Configure</button>'
       + (intg.configured ? '<button onclick="event.stopPropagation();cdbSIEMDeployRule(\'' + intg.id + '\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🚀 Deploy</button>' : '')
-      + (intg.deploy_count > 0 ? '<span style="font-size:10px;color:rgba(255,255,255,.3);align-self:center">' + intg.deploy_count + ' deploys</span>' : '')
+      + (intg.deploy_count > 0 ? '<span style="font-size:10px;color:rgba(255,255,255,.65);align-self:center">' + intg.deploy_count + ' deploys</span>' : '')
       + '</div>';
     grid.appendChild(card);
   });
@@ -17315,7 +17315,7 @@ function renderSIEMGridFallback() {
       + '<span style="font-size:18px">' + p.icon + '</span>'
       + '<span style="font-weight:800;color:#e2e8f0;font-size:13px">' + p.label + '</span>'
       + '</div>'
-      + '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">' + p.desc + '</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:12px">' + p.desc + '</div>'
       + '<button style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⚙️ Configure</button>'
       + '</div>';
   }).join('');
@@ -17455,15 +17455,15 @@ window.cdbSIEMRefreshLog = function() {
     .then(function(data) {
       var logEl = document.getElementById('siem-deploy-log');
       if (!logEl) return;
-      if (!data.log || data.log.length === 0) { logEl.innerHTML = '<div style="color:rgba(255,255,255,.2)">— No deployments yet —</div>'; return; }
+      if (!data.log || data.log.length === 0) { logEl.innerHTML = '<div style="color:rgba(255,255,255,0.72)">— No deployments yet —</div>'; return; }
       logEl.innerHTML = data.log.map(function(e) {
         var color = e.success ? '#22c55e' : '#ef4444';
         var ts    = e.ts ? new Date(e.ts).toLocaleString() : '';
         return '<div style="display:flex;gap:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);font-family:JetBrains Mono,monospace">'
-          + '<span style="color:rgba(255,255,255,.2);flex-shrink:0;font-size:10px">' + ts + '</span>'
-          + '<span style="color:rgba(255,255,255,.4);flex-shrink:0">' + (e.platform || '—') + '</span>'
+          + '<span style="color:rgba(255,255,255,0.72);flex-shrink:0;font-size:10px">' + ts + '</span>'
+          + '<span style="color:rgba(255,255,255,0.72);flex-shrink:0">' + (e.platform || '—') + '</span>'
           + '<span style="color:' + color + '">' + (e.success ? '✅' : '❌') + ' HTTP ' + (e.http_status || '—') + '</span>'
-          + (e.cve_id ? '<span style="color:rgba(255,255,255,.3);font-size:10px">' + e.cve_id + '</span>' : '')
+          + (e.cve_id ? '<span style="color:rgba(255,255,255,0.72);font-size:10px">' + e.cve_id + '</span>' : '')
           + '</div>';
       }).join('');
     }).catch(function(){});
@@ -17496,11 +17496,11 @@ window.cdbMemoryRefresh = function() {
           cveEl.innerHTML = patterns.top_cves.slice(0, 5).map(function(c) {
             return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
               + '<span style="color:#7dd3fc">' + c.name + '</span>'
-              + '<span style="color:rgba(255,255,255,.35);font-size:11px">' + c.count + 'x</span>'
+              + '<span style="color:rgba(255,255,255,0.72);font-size:11px">' + c.count + 'x</span>'
               + '</div>';
           }).join('');
         } else {
-          cveEl.innerHTML = '<div style="color:rgba(255,255,255,.2)">— No CVE data yet —</div>';
+          cveEl.innerHTML = '<div style="color:rgba(255,255,255,0.72)">— No CVE data yet —</div>';
         }
       }
 
@@ -17535,7 +17535,7 @@ function renderMemoryRecommendations(recs) {
   var el = document.getElementById('mem-recommendations');
   if (!el) return;
   if (!recs || recs.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:32px;color:rgba(255,255,255,.25);font-size:12px">No recommendations yet</div>';
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:rgba(255,255,255,.62);font-size:12px">No recommendations yet</div>';
     return;
   }
   el.innerHTML = recs.map(function(r) {
@@ -17555,14 +17555,14 @@ function renderMemoryEvents(events) {
   var el = document.getElementById('mem-events-log');
   if (!el) return;
   if (!events || events.length === 0) {
-    el.innerHTML = '<div style="color:rgba(255,255,255,.2);font-style:italic">No events recorded yet.</div>';
+    el.innerHTML = '<div style="color:rgba(255,255,255,0.72);font-style:italic">No events recorded yet.</div>';
     return;
   }
   el.innerHTML = events.map(function(ev) {
     var sevColor = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#a78bfa', LOW:'#22c55e', INFO:'#64748b' }[ev.severity] || '#64748b';
     var ts = ev.ts ? new Date(ev.ts).toLocaleString() : '';
     return '<div style="display:flex;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
-      + '<span style="color:rgba(255,255,255,.25);flex-shrink:0;font-size:11px">' + ts + '</span>'
+      + '<span style="color:rgba(255,255,255,0.72);flex-shrink:0;font-size:11px">' + ts + '</span>'
       + '<span style="color:' + sevColor + ';font-size:10px;font-weight:800;flex-shrink:0;text-transform:uppercase">' + (ev.severity||'INFO') + '</span>'
       + '<span style="color:rgba(255,255,255,.5)">' + (ev.threat_title || ev.event_type || 'Event') + '</span>'
       + (ev.cve_id ? '<span style="color:#7dd3fc;font-size:11px;flex-shrink:0">' + ev.cve_id + '</span>' : '')
@@ -17624,14 +17624,14 @@ window.cdbLoadAPIKeys = function() {
       if (!listEl) return;
       var keys = data.keys || data || [];
       if (!Array.isArray(keys) || keys.length === 0) {
-        listEl.innerHTML = '<div style="color:rgba(255,255,255,.25);font-size:11px">No active keys</div>';
+        listEl.innerHTML = '<div style="color:rgba(255,255,255,0.72);font-size:11px">No active keys</div>';
         return;
       }
       listEl.innerHTML = keys.slice(0, 5).map(function(k) {
         var keyStr = (k.key || k.api_key || k.id || '').slice(0, 20) + '…';
         return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           + '<span style="font-family:JetBrains Mono,monospace;font-size:11px;color:rgba(255,255,255,.5)">' + keyStr + '</span>'
-          + '<span style="font-size:10px;color:rgba(255,255,255,.3)">' + (k.plan || k.tier || 'starter') + '</span>'
+          + '<span style="font-size:10px;color:rgba(255,255,255,.65)">' + (k.plan || k.tier || 'starter') + '</span>'
           + '</div>';
       }).join('');
     }).catch(function(){});
@@ -17710,7 +17710,7 @@ window.cdbLoadAPIUsage = function() {
       + '<button onclick="cdbAnalystSend(\'Analyze ' + (cve||'this CVE') + ' and generate a fix plan\');document.getElementById(\'cdb-auto-decision-banner\').remove();if(typeof cdbNavigate===\'function\')cdbNavigate(\'ai-analyst\')" style="background:#ef4444;border:none;color:#fff;padding:7px 16px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer">⚡ Deploy Fix Now</button>'
       + '<button onclick="document.getElementById(\'cdb-auto-decision-banner\').remove()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer">Dismiss</button>'
       + '</div></div>'
-      + '<button onclick="document.getElementById(\'cdb-auto-decision-banner\').remove()" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:16px;flex-shrink:0;padding:0">✕</button>'
+      + '<button onclick="document.getElementById(\'cdb-auto-decision-banner\').remove()" style="background:none;border:none;color:rgba(255,255,255,0.72);cursor:pointer;font-size:16px;flex-shrink:0;padding:0">✕</button>'
       + '</div>';
 
     document.body.appendChild(banner);
@@ -17817,7 +17817,7 @@ function renderPipeline(stages) {
     card.innerHTML = '<div style="font-size:20px">' + stageDef.icon + '</div>'
       + '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.7);line-height:1.3;max-width:100px;text-align:center">' + stageDef.label + '</div>'
       + '<div style="font-size:9px;color:' + statusColor + ';font-weight:700;text-transform:uppercase">' + statusDot + ' ' + status.toUpperCase() + '</div>'
-      + (count > 0 ? '<div style="font-size:9px;color:rgba(255,255,255,.4)">' + count + ' items</div>' : '')
+      + (count > 0 ? '<div style="font-size:9px;color:rgba(255,255,255,0.72)">' + count + ' items</div>' : '')
       + (status === 'running' ? '<div style="margin-top:4px;width:14px;height:14px;border:2px solid rgba(0,212,255,.4);border-top-color:#00d4ff;border-radius:50%;animation:p2Spin .8s linear infinite"></div>' : '');
     container.appendChild(card);
 
@@ -18211,7 +18211,7 @@ function renderPipeline(stages) {
 .cdb-bsp-v {
   font-size: 8px;
   font-weight: 700;
-  color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.62);
   letter-spacing: .06em;
 }
 .cdb-bsp-tabs {
@@ -20909,14 +20909,14 @@ var THTPL={kql:{apt:'// APT Lateral Movement (KQL)\nDeviceNetworkEvents\n| where
 var THTT=[{n:'Initial Access',c:'#ef4444',v:47},{n:'Execution',c:'#f59e0b',v:82},{n:'Persistence',c:'#f59e0b',v:61},{n:'Priv Escalation',c:'#ec4899',v:39},{n:'Defense Evasion',c:'#a855f7',v:94},{n:'Credential Access',c:'#ef4444',v:53},{n:'Discovery',c:'#00d4ff',v:76},{n:'Lateral Movement',c:'#f59e0b',v:42},{n:'Collection',c:'#818cf8',v:35},{n:'Exfiltration',c:'#ef4444',v:28},{n:'C2',c:'#ec4899',v:67},{n:'Impact',c:'#ef4444',v:31}];
 window.thSetLang=function(l){THL=l;['kql','sigma','yara'].forEach(function(x){var b=document.getElementById('th-btn-'+x);if(!b)return;if(x===l){b.style.background='#ef4444';b.style.color='#fff';b.style.border='none';}else{b.style.background='rgba(255,255,255,.08)';b.style.color='rgba(255,255,255,.6)';b.style.border='1px solid rgba(255,255,255,.1)';}});};
 window.thLoadTemplate=function(t){var q=document.getElementById('th-query');if(q)q.value=(THTPL[THL]||THTPL.kql)[t]||'';};
-window.thRunHunt=function(){var q=document.getElementById('th-query'),r=document.getElementById('th-results');if(!q||!r)return;if(!q.value.trim()){r.innerHTML='<span style="color:#ef4444">[ERROR] Empty query</span>';return;}r.innerHTML='<span style="color:#00d4ff">[HUNTING] Executing '+esc(THL.toUpperCase())+' query across telemetry...</span>';setTimeout(function(){var f=[{d:'DEMO-HOST-01',ip:'[redacted]',risk:'CRITICAL',m:'[Example] Lateral movement pattern detected — run against your real telemetry'},{d:'DESKTOP-A22',ip:'[redacted]',risk:'HIGH',m:'[Example] Ransomware-pattern file activity — test with your environment'},{d:'LINUX-WEB-03',ip:'[redacted]',risk:'MEDIUM',m:'[Example] C2 beacon pattern — connect real telemetry for live results'}];var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};var ts=new Date().toISOString();var h='<span style="color:rgba(255,255,255,.35)">['+ts+'] Hunt complete -- '+f.length+' threats found</span>\n';f.forEach(function(x,i){h+='\n<span style="color:'+cc[x.risk]+'">['+(i+1)+']['+x.risk+']</span> <span style="color:#00d4ff">'+esc(x.d)+'</span> <span style="color:rgba(255,255,255,.4)">('+esc(x.ip)+')</span> '+esc(x.m);});h+='\n\n<span style="color:rgba(255,255,255,.25)">[DONE] Immediate containment recommended for CRITICAL findings.</span>';r.innerHTML=h;var m=document.getElementById('th-ioc-malicious'),s=document.getElementById('th-ioc-suspicious');if(m)m.textContent=f.filter(function(x){return x.risk==='CRITICAL';}).length;if(s)s.textContent=f.filter(function(x){return x.risk==='HIGH';}).length;},1800);};
-window.thLookupIOC=function(){var inp=document.getElementById('th-ioc-input'),res=document.getElementById('th-ioc-result');if(!inp||!res)return;var ioc=inp.value.trim();if(!ioc)return;res.innerHTML='<span style="color:#00d4ff">Querying VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span>';setTimeout(function(){var sc=Math.floor(Math.random()*40+55),v=sc>80?'MALICIOUS':sc>60?'SUSPICIOUS':'CLEAN',vc=v==='MALICIOUS'?'#ef4444':v==='SUSPICIOUS'?'#f59e0b':'#22c55e';var isI=/^\d{1,3}\.\d/.test(ioc),isC=/CVE-\d{4}/i.test(ioc);res.innerHTML=['<span style="color:'+vc+'">VERDICT: '+v+' (Confidence: '+sc+'%)</span>','<span style="color:rgba(255,255,255,.6)">IOC: '+esc(ioc)+'</span>',isI?'<span style="color:rgba(255,255,255,.5)">ASN: AS59930 -- Known bulletproof hosting</span>':'',isC?'<span style="color:#f59e0b">EPSS: '+(Math.random()*.8+.1).toFixed(3)+' | CVSS: '+(Math.random()*3+7).toFixed(1)+'</span>':'','<span style="color:rgba(255,255,255,.35)">Sources: VirusTotal | AbuseIPDB | MISP | OTX | ThreatFox</span>','<span style="color:rgba(255,255,255,.35)">First seen: '+new Date(Date.now()-Math.random()*864e7).toDateString()+'</span>','<span style="color:rgba(255,255,255,.35)">APT association: Lazarus Group, APT41</span>'].filter(Boolean).join('\n');},1200);};
-(function(){function r(){var el=document.getElementById('th-mitre-matrix');if(!el)return;el.innerHTML=THTT.map(function(t){return'<div style="background:rgba(255,255,255,.04);border:1px solid '+t.c+'30;border-radius:8px;padding:8px 12px;cursor:pointer" onclick="thRunHunt()" title="'+esc(t.n)+'"><div style="color:'+t.c+';font-size:10px;font-weight:800">'+esc(t.n)+'</div><div style="color:rgba(255,255,255,.35);font-size:10px;margin-top:3px">'+t.v+' techniques</div></div>';}).join('');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',r);else r();})();
+window.thRunHunt=function(){var q=document.getElementById('th-query'),r=document.getElementById('th-results');if(!q||!r)return;if(!q.value.trim()){r.innerHTML='<span style="color:#ef4444">[ERROR] Empty query</span>';return;}r.innerHTML='<span style="color:#00d4ff">[HUNTING] Executing '+esc(THL.toUpperCase())+' query across telemetry...</span>';setTimeout(function(){var f=[{d:'DEMO-HOST-01',ip:'[redacted]',risk:'CRITICAL',m:'[Example] Lateral movement pattern detected — run against your real telemetry'},{d:'DESKTOP-A22',ip:'[redacted]',risk:'HIGH',m:'[Example] Ransomware-pattern file activity — test with your environment'},{d:'LINUX-WEB-03',ip:'[redacted]',risk:'MEDIUM',m:'[Example] C2 beacon pattern — connect real telemetry for live results'}];var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};var ts=new Date().toISOString();var h='<span style="color:rgba(255,255,255,0.72)">['+ts+'] Hunt complete -- '+f.length+' threats found</span>\n';f.forEach(function(x,i){h+='\n<span style="color:'+cc[x.risk]+'">['+(i+1)+']['+x.risk+']</span> <span style="color:#00d4ff">'+esc(x.d)+'</span> <span style="color:rgba(255,255,255,0.72)">('+esc(x.ip)+')</span> '+esc(x.m);});h+='\n\n<span style="color:rgba(255,255,255,0.72)">[DONE] Immediate containment recommended for CRITICAL findings.</span>';r.innerHTML=h;var m=document.getElementById('th-ioc-malicious'),s=document.getElementById('th-ioc-suspicious');if(m)m.textContent=f.filter(function(x){return x.risk==='CRITICAL';}).length;if(s)s.textContent=f.filter(function(x){return x.risk==='HIGH';}).length;},1800);};
+window.thLookupIOC=function(){var inp=document.getElementById('th-ioc-input'),res=document.getElementById('th-ioc-result');if(!inp||!res)return;var ioc=inp.value.trim();if(!ioc)return;res.innerHTML='<span style="color:#00d4ff">Querying VirusTotal, AbuseIPDB, MISP, ThreatFox, OTX...</span>';setTimeout(function(){var sc=Math.floor(Math.random()*40+55),v=sc>80?'MALICIOUS':sc>60?'SUSPICIOUS':'CLEAN',vc=v==='MALICIOUS'?'#ef4444':v==='SUSPICIOUS'?'#f59e0b':'#22c55e';var isI=/^\d{1,3}\.\d/.test(ioc),isC=/CVE-\d{4}/i.test(ioc);res.innerHTML=['<span style="color:'+vc+'">VERDICT: '+v+' (Confidence: '+sc+'%)</span>','<span style="color:rgba(255,255,255,.6)">IOC: '+esc(ioc)+'</span>',isI?'<span style="color:rgba(255,255,255,.5)">ASN: AS59930 -- Known bulletproof hosting</span>':'',isC?'<span style="color:#f59e0b">EPSS: '+(Math.random()*.8+.1).toFixed(3)+' | CVSS: '+(Math.random()*3+7).toFixed(1)+'</span>':'','<span style="color:rgba(255,255,255,0.72)">Sources: VirusTotal | AbuseIPDB | MISP | OTX | ThreatFox</span>','<span style="color:rgba(255,255,255,0.72)">First seen: '+new Date(Date.now()-Math.random()*864e7).toDateString()+'</span>','<span style="color:rgba(255,255,255,0.72)">APT association: Lazarus Group, APT41</span>'].filter(Boolean).join('\n');},1200);};
+(function(){function r(){var el=document.getElementById('th-mitre-matrix');if(!el)return;el.innerHTML=THTT.map(function(t){return'<div style="background:rgba(255,255,255,.04);border:1px solid '+t.c+'30;border-radius:8px;padding:8px 12px;cursor:pointer" onclick="thRunHunt()" title="'+esc(t.n)+'"><div style="color:'+t.c+';font-size:10px;font-weight:800">'+esc(t.n)+'</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:3px">'+t.v+' techniques</div></div>';}).join('');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',r);else r();})();
 
 /* === VULNERABILITY MANAGEMENT === */
 var VMD={critical:[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS',cvss:10.0,epss:.942,kev:true,patch:false,d:'Command injection in GlobalProtect. Exploited by UTA0218. 150K+ devices exposed. No workaround without disabling feature.'},{id:'CVE-2024-21762',p:'Fortinet FortiOS',cvss:9.6,epss:.893,kev:true,patch:true,d:'Out-of-bounds write SSL VPN unauthenticated RCE. Apply patch immediately.'},{id:'CVE-2021-44228',p:'Apache Log4j',cvss:10.0,epss:.975,kev:true,patch:true,d:'Log4Shell JNDI injection RCE. Most exploited vulnerability of the decade.'},{id:'CVE-2023-34362',p:'MOVEit Transfer',cvss:9.8,epss:.971,kev:true,patch:true,d:'SQL injection to RCE. Cl0p ransomware campaign hit 2,500+ orgs.'}],kev:[{id:'CVE-2024-27198',p:'JetBrains TeamCity',cvss:9.8,epss:.953,kev:true,patch:true,d:'Auth bypass -- full CI/CD server takeover. Patch to 2023.11.4+.'},{id:'CVE-2023-4966',p:'Citrix NetScaler',cvss:9.4,epss:.965,kev:true,patch:true,d:'Citrix Bleed session disclosure. Update and invalidate all active sessions.'},{id:'CVE-2024-1708',p:'ConnectWise ScreenConnect',cvss:8.4,epss:.945,kev:true,patch:true,d:'Path traversal RCE. Immediate patch + credential rotation required.'}],epss:[{id:'CVE-2026-1340',p:'OpenSSL 3.x',cvss:8.2,epss:.812,kev:false,patch:false,d:'Memory corruption in X.509 parsing. Remote trigger possible. High EPSS exploitation probability.'},{id:'CVE-2026-20131',p:'Cisco IOS XE',cvss:7.8,epss:.786,kev:false,patch:false,d:'Priv escalation in web UI. Disable HTTP server as temporary mitigation.'}],zero:[{id:'ZD-2026-001',p:'Windows CLFS',cvss:8.8,epss:0,kev:false,patch:false,d:'Kernel priv escalation. No patch. Limited exploitation by threat actors.'},{id:'ZD-2026-002',p:'Chrome V8',cvss:9.0,epss:0,kev:false,patch:false,d:'Type confusion JIT sandbox escape. PoC in underground forums. Update Chrome immediately.'}]};
 function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.6);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
-window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.7)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,.3);font-size:11px">None</span>';};
+window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.7)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,0.72);font-size:11px">None</span>';};
 window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var fake={id:id,p:'Target System',cvss:8.5,epss:.612,kev:false,patch:true,d:'NVD/MITRE/CISA live lookup returns real CVSS vectors, affected versions, patch links and EPSS probability in production.'};var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=vmC(fake);};
 window.vmRem=function(id){var w=document.getElementById('vm-col-wip');if(w)w.innerHTML='<div style="background:rgba(245,158,11,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:#f59e0b">'+esc(id)+'</div>'+w.innerHTML;if(typeof TOAST!=='undefined')TOAST.info('Remediation started: '+id,'Remediation');};
 (function(){function i(){vmFilter('critical');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
@@ -20940,7 +20940,7 @@ function gtmCtr(){var el=document.getElementById('gtm-attacks');if(el)el.textCon
 /* === INCIDENT RESPONSE === */
 var IRPB={ransomware:'<div style="color:#ef4444;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F6A8; P1 RANSOMWARE RESPONSE &mdash; NIST 800-61 REV3</div><div style="color:#f59e0b;font-size:12px;font-weight:800;margin-bottom:8px">PHASE 1 &mdash; PREPARATION (T+0 to T+15min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate IR team bridge &mdash; alert CISO, Legal, Communications, Board</li><li>Snapshot affected VMs for forensic preservation before isolation</li><li>Notify cyber insurance carrier &mdash; preserve coverage</li><li>Open P1 incident ticket and assign IR lead</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 2 &mdash; IDENTIFICATION (T+15min to T+60min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Identify Patient Zero via EDR telemetry (CrowdStrike / Defender)</li><li>Determine ransomware family via ID-Ransomware tool</li><li>Map encrypted extensions and ransom note locations</li><li>Hunt lateral movement: SMB, PsExec, WMI, Cobalt Strike beacons</li><li>Search for data exfiltration via DLP, proxy logs, DNS queries</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 3 &mdash; CONTAINMENT (T+1h to T+4h)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Segment infected subnets &mdash; revoke network access at switch level</li><li>Reset ALL privileged credentials: AD, Azure AD, service accounts</li><li>Block C2 IOCs at NGFW, DNS sinkholes, and proxy layer</li><li>Disable VSS deletion &mdash; protect remaining shadow copies</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 4 &mdash; ERADICATION &amp; RECOVERY</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Wipe and reimage all affected systems from immutable golden image</li><li>Restore from offline/air-gapped backups with integrity validation</li><li>Deploy enhanced EDR and MFA before reconnecting to network</li><li>Conduct tabletop debrief and update IR plan</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1059 Execution','T1055 Injection','T1021 Lateral Move','T1083 Discovery','T1486 Encrypt Files','T1490 Inhibit Recovery'].map(function(t){return'<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',apt:'<div style="color:#a855f7;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F575; P1 APT INTRUSION &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate TI team + external DFIR retainer (Mandiant / CrowdStrike)</li><li>Establish out-of-band comms &mdash; assume primary channels compromised</li><li>Enable enhanced logging without alerting the adversary</li><li>Deploy deception assets: honeypots and honeytokens</li><li>Hunt LOLBins: powershell, certutil, regsvr32, wscript, mshta</li><li>Analyze DNS for DGA activity and long-TTL abnormalities</li><li>Retrieve memory dumps for offline forensic analysis</li><li>Map TTPs to MITRE ATT&amp;CK Navigator for attribution</li><li>Rotate ALL cryptographic keys, certs and API credentials</li><li>Enforce MFA and Just-In-Time privileged access everywhere</li></ul>',breach:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F513; P1 DATA BREACH &mdash; GDPR / DPDP ACT 2023</div><div style="color:#ef4444;font-size:12px;font-weight:800;margin-bottom:8px">CRITICAL: 72-HOUR REGULATORY NOTIFICATION CLOCK ACTIVE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage DPO and legal counsel immediately &mdash; preserve attorney privilege</li><li>Classify breached data: PII, PCI, PHI, trade secrets</li><li>Notify CERT-In within 6 hours (India) | DPA within 72h (GDPR)</li><li>Preserve all logs with forensic chain of custody</li><li>Enumerate affected individuals for breach notification</li><li>Prepare user notification per DPDP Act 2023 requirements</li></ul>',ddos:'<div style="color:#818cf8;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F30A; DDoS INCIDENT RESPONSE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Enable Cloudflare Under Attack mode immediately</li><li>Contact upstream ISP for BGP black-holing of attack sources</li><li>Analyze attack vector: volumetric, protocol, or application layer</li><li>Deploy geo-blocking and rate limiting at edge</li><li>Activate CDN failover and scale origin capacity</li><li>Document attack for law enforcement if warranted</li></ul>'};
 var IRTL=[];
-function irTL(msg){IRTL.unshift({ts:new Date().toISOString(),m:msg});var el=document.getElementById('ir-timeline');if(!el)return;el.innerHTML=IRTL.slice(0,8).map(function(e,i){return'<div style="padding:8px 0'+(i>0?';border-top:1px solid rgba(255,255,255,.05)':'')+'"><div style="color:rgba(255,255,255,.3);font-size:10px">'+esc(e.ts.slice(11,19)+' UTC')+'</div><div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">'+esc(e.m)+'</div></div>';}).join('');}
+function irTL(msg){IRTL.unshift({ts:new Date().toISOString(),m:msg});var el=document.getElementById('ir-timeline');if(!el)return;el.innerHTML=IRTL.slice(0,8).map(function(e,i){return'<div style="padding:8px 0'+(i>0?';border-top:1px solid rgba(255,255,255,.05)':'')+'"><div style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(e.ts.slice(11,19)+' UTC')+'</div><div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">'+esc(e.m)+'</div></div>';}).join('');}
 window.irGeneratePlaybook=function(){var t=document.getElementById('ir-type'),o=document.getElementById('ir-playbook-output');if(!t||!o)return;o.innerHTML='<div style="color:#00d4ff;text-align:center;padding:30px">Generating NIST 800-61 playbook with MITRE ATT&amp;CK mapping...</div>';setTimeout(function(){o.innerHTML=IRPB[t.value]||IRPB.ransomware;irTL('Playbook generated: '+t.options[t.selectedIndex].text);},1400);};
 window.irDeclareIncident=function(){var t=document.getElementById('ir-type'),l=t?t.options[t.selectedIndex].text:'Unknown';irTL('INCIDENT DECLARED: '+l);irTL('IR Bridge activated');irTL('Evidence preservation started');if(typeof TOAST!=='undefined')TOAST.error('Active Incident: '+l,'INCIDENT');};
 window.irExportPlaybook=function(){if(typeof TOAST!=='undefined')TOAST.info('PDF export available in PRO plan','Export');};
@@ -20948,13 +20948,13 @@ window.irExportPlaybook=function(){if(typeof TOAST!=='undefined')TOAST.info('PDF
 /* === ZERO-DAY INTELLIGENCE === */
 var ZDD=[{id:'ZD-2026-001',p:'Windows CLFS Driver',cvss:8.8,st:'ITW',dk:true,poc:true,pt:false,ag:'2d',d:'Kernel priv escalation via CLFS. Exploited by LAPSUS successor targeting financial sector. No patch available.'},{id:'ZD-2026-002',p:'Chrome V8 Engine',cvss:9.0,st:'PoC',dk:true,poc:true,pt:false,ag:'5d',d:'Type confusion in JIT compiler enables full sandbox escape. PoC in underground forums. Disable JS as emergency workaround.'},{id:'ZD-2026-003',p:'Palo Alto Cortex XDR',cvss:8.2,st:'Private',dk:true,poc:false,pt:false,ag:'1d',d:'Auth bypass in agent update mechanism. Nation-state actors exploiting against government networks.'},{id:'ZD-2026-004',p:'Cisco IOS XE Web UI',cvss:9.4,st:'ITW',dk:false,poc:true,pt:false,ag:'3d',d:'Unauthenticated RCE via HTTP request smuggling. 40,000+ enterprise routers at risk. Disable web UI now.'},{id:'ZD-2026-005',p:'OpenSSH 9.x Linux',cvss:8.1,st:'Researched',dk:false,poc:false,pt:true,ag:'7d',d:'Signal handler race condition pre-auth RCE on glibc Linux. Patch in 9.8p1 available now.'}];
 var ZDW=[{src:'Telegram',sig:'Ransomware gang recruiting affiliates -- targeting Indian healthcare',thr:'CRITICAL',t:'4h ago'},{src:'Dark Web Forum',sig:'0day auction: Exchange Server RCE -- $2M Monero asking price',thr:'CRITICAL',t:'8h ago'},{src:'Paste Site',sig:'Leaked VPN creds -- 847 Fortune 500 accounts exposed',thr:'HIGH',t:'12h ago'},{src:'GitHub (removed)',sig:'PoC for kernel vuln -- 200 stars before DMCA takedown',thr:'MEDIUM',t:'2d ago'},{src:'Underground Market',sig:'Cloud provider DB -- 2.1M credentials for sale',thr:'HIGH',t:'1d ago'}];
-function zdCard(z){var sc={ITW:'#ef4444',PoC:'#f59e0b',Private:'#a855f7',Researched:'#00d4ff'}[z.st]||'#818cf8';return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(168,85,247,.1);border-left:3px solid '+sc+';border-radius:10px;padding:14px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div><span style="font-weight:900;color:#fff;font-size:13px">'+esc(z.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:7px">'+esc(z.p)+'</span></div><div style="display:flex;gap:4px;flex-wrap:wrap"><span style="background:'+sc+'20;color:'+sc+';font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid '+sc+'40">'+esc(z.st)+'</span>'+(z.dk?'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">DARK WEB</span>':'')+(z.poc?'<span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PoC</span>':'')+(z.pt?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH</span>':'<span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'<span style="color:rgba(255,255,255,.3);font-size:10px">'+esc(z.ag)+'</span></div></div><div style="color:rgba(255,255,255,.65);font-size:12px;line-height:1.5;margin-bottom:8px">'+esc(z.d)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap"><span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">CVSS '+z.cvss.toFixed(1)+'</span><button onclick="zdW(\''+esc(z.id)+'\')" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:#a855f7;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Watch</button><button onclick="zdM(\''+esc(z.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Mitigate</button></div></div>';}
+function zdCard(z){var sc={ITW:'#ef4444',PoC:'#f59e0b',Private:'#a855f7',Researched:'#00d4ff'}[z.st]||'#818cf8';return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(168,85,247,.1);border-left:3px solid '+sc+';border-radius:10px;padding:14px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div><span style="font-weight:900;color:#fff;font-size:13px">'+esc(z.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:7px">'+esc(z.p)+'</span></div><div style="display:flex;gap:4px;flex-wrap:wrap"><span style="background:'+sc+'20;color:'+sc+';font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid '+sc+'40">'+esc(z.st)+'</span>'+(z.dk?'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">DARK WEB</span>':'')+(z.poc?'<span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PoC</span>':'')+(z.pt?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH</span>':'<span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'<span style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(z.ag)+'</span></div></div><div style="color:rgba(255,255,255,.65);font-size:12px;line-height:1.5;margin-bottom:8px">'+esc(z.d)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap"><span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">CVSS '+z.cvss.toFixed(1)+'</span><button onclick="zdW(\''+esc(z.id)+'\')" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:#a855f7;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Watch</button><button onclick="zdM(\''+esc(z.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Mitigate</button></div></div>';}
 function zdFeed(){var el=document.getElementById('zd-feed');if(el)el.innerHTML=ZDD.map(zdCard).join('');}
-function zdDW(){var el=document.getElementById('zd-darkweb');if(!el)return;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML=ZDW.map(function(d){return'<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:'+cc[d.thr]+';font-size:10px;font-weight:800">'+esc(d.thr)+'</span><span style="color:rgba(255,255,255,.3);font-size:10px">'+esc(d.t)+'</span></div><div style="color:rgba(255,255,255,.7);font-size:11px;line-height:1.5">'+esc(d.sig)+'</div><div style="color:rgba(255,255,255,.3);font-size:10px;margin-top:2px">via '+esc(d.src)+'</div></div>';}).join('');}
+function zdDW(){var el=document.getElementById('zd-darkweb');if(!el)return;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML=ZDW.map(function(d){return'<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:'+cc[d.thr]+';font-size:10px;font-weight:800">'+esc(d.thr)+'</span><span style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(d.t)+'</span></div><div style="color:rgba(255,255,255,.7);font-size:11px;line-height:1.5">'+esc(d.sig)+'</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">via '+esc(d.src)+'</div></div>';}).join('');}
 window.zdRefreshFeed=function(){var el=document.getElementById('zd-feed');if(el){el.style.opacity='.4';setTimeout(function(){zdFeed();el.style.opacity='1';},600);}};
 window.zdW=function(id){if(typeof TOAST!=='undefined')TOAST.info('Watching '+id,'Watch');};
 window.zdM=function(id){if(typeof TOAST!=='undefined')TOAST.info('Mitigation guidance loading for '+id,'Mitigate');};
-window.zdSetAlert=function(){var t=document.getElementById('zd-alert-target'),l=document.getElementById('zd-alerts-list');if(!t||!l)return;var v=t.value.trim();if(!v)return;l.innerHTML='<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px;color:rgba(255,255,255,.7)">Monitoring: <strong style="color:#a855f7">'+esc(v)+'</strong><br><span style="color:rgba(255,255,255,.35)">Dark web | Exploit markets | GitHub PoCs | Telegram</span></div>'+l.innerHTML;t.value='';if(typeof TOAST!=='undefined')TOAST.success('Alert set for '+v,'Zero-Day Alert');};
+window.zdSetAlert=function(){var t=document.getElementById('zd-alert-target'),l=document.getElementById('zd-alerts-list');if(!t||!l)return;var v=t.value.trim();if(!v)return;l.innerHTML='<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px;color:rgba(255,255,255,.7)">Monitoring: <strong style="color:#a855f7">'+esc(v)+'</strong><br><span style="color:rgba(255,255,255,0.72)">Dark web | Exploit markets | GitHub PoCs | Telegram</span></div>'+l.innerHTML;t.value='';if(typeof TOAST!=='undefined')TOAST.success('Alert set for '+v,'Zero-Day Alert');};
 (function(){function i(){zdFeed();zdDW();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === INTERSECTION COUNTER ANIMATIONS === */
@@ -21031,7 +21031,7 @@ async function updateLiveWidget() {
 
     const visitors = data.visitors || [];
     if (!visitors.length) {
-      rowEl.innerHTML = '<span style="font-size:10px;color:rgba(255,255,255,.3)">Awaiting visitor data…</span>';
+      rowEl.innerHTML = '<span style="font-size:10px;color:rgba(255,255,255,.65)">Awaiting visitor data…</span>';
       return;
     }
 
@@ -21042,7 +21042,7 @@ async function updateLiveWidget() {
       const city = v.city ? esc(v.city.substring(0, 14)) : '';
       return '<span class="vi-visitor-pill">' +
         flag + ' ' + dev + ' ' + (city || esc(v.country_code || '??')) +
-        ' <span style="color:rgba(255,255,255,.35);font-size:9px">' + ip + '</span>' +
+        ' <span style="color:rgba(255,255,255,0.72);font-size:9px">' + ip + '</span>' +
         '</span>';
     }).join('');
   } catch(e) {
@@ -21055,7 +21055,7 @@ async function updateLiveWidget() {
       {flag:'🇬🇧',dev:'🖥',city:'London',ip:'84.92.xxx.xxx'},
       {flag:'🇩🇪',dev:'🖥',city:'Berlin',ip:'91.189.xxx.xxx'},
     ].map(v => '<span class="vi-visitor-pill">' + v.flag + ' ' + v.dev + ' ' + v.city +
-      ' <span style="color:rgba(255,255,255,.35);font-size:9px">' + v.ip + '</span></span>'
+      ' <span style="color:rgba(255,255,255,0.72);font-size:9px">' + v.ip + '</span></span>'
     ).join('');
   }
 }
