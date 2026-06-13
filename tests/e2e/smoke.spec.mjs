@@ -1,10 +1,19 @@
 /* Playwright E2E smoke — the certified critical-path checks.
  * INSTALL: copy to tests/e2e/smoke.spec.mjs ; runs in test.yml (closes R4 E2E gate).
  * These assert the live site loads clean (no console errors — directly guards against
- * a repeat of the "Unexpected identifier 'defer'" incident) and the scan CTA exists. */
+ * a repeat of the "Unexpected identifier 'defer'" incident) and the scan CTA exists.
+ *
+ * FIX (2026-06-13): Changed waitUntil: 'networkidle' → 'load' on both tests that
+ * timed out. Root cause: the site issues continuous Workers API polling requests, so
+ * 'networkidle' (requires 500ms of silence) is never achieved within the 30s timeout.
+ * 'load' fires after the page and all synchronous resources are fetched — sufficient
+ * for catching SyntaxErrors and measuring layout overflow. Assertions are unchanged. */
 import { test, expect } from '@playwright/test';
 
 const BASE = process.env.SMOKE_BASE || 'https://cyberdudebivash.in';
+
+// Allow extra time for the live site on CI runners (cold CDN, etc.)
+test.setTimeout(60_000);
 
 test.describe('CYBERDUDEBIVASH production smoke', () => {
 
@@ -12,7 +21,9 @@ test.describe('CYBERDUDEBIVASH production smoke', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    // Use 'load' (not 'networkidle') — the site polls its Workers API continuously,
+    // making networkidle unreachable within any reasonable timeout.
+    await page.goto(BASE, { waitUntil: 'load' });
     // Guard against the exact regression class that broke mobile (defer SyntaxError).
     const fatal = errors.filter((e) => /SyntaxError|Unexpected identifier|defer/i.test(e));
     expect(fatal, 'no fatal JS errors on load').toEqual([]);
@@ -42,7 +53,8 @@ test.describe('CYBERDUDEBIVASH production smoke', () => {
 
   test('mobile viewport: no horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    // Use 'load' (not 'networkidle') for same reason as JS-errors test above.
+    await page.goto(BASE, { waitUntil: 'load' });
     const overflow = await page.evaluate(() =>
       document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, 'no horizontal scroll on 390px').toBeLessThanOrEqual(2);

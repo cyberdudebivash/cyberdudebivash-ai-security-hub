@@ -936,7 +936,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <!-- SOC Status Bar -->
-<div class="soc-statusbar" id="socStatusBar">
+<div class="soc-statusbar" id="socStatusBar" tabindex="0" role="region" aria-label="SOC Live Status">
   <div class="soc-indicator" title="API health">
     <span class="soc-dot yellow" id="soc-api-dot"></span>
     <span id="soc-api-label" style="color:#f59e0b;font-weight:700">API checking…</span>
@@ -997,7 +997,7 @@ a{color:var(--accent);text-decoration:none}
       <a href="#trust-center" data-section="trust-center" onclick="cdbNavigate('trust-center');return false">Trust</a>
       <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
       <a href="#enterprise" data-section="enterprise" onclick="cdbNavigate('enterprise');return false" class="nav-cta"
-         style="background:linear-gradient(135deg,#00d4ff,#6366f1)!important;color:#000!important;font-weight:800!important;letter-spacing:.03em!important;box-shadow:0 0 20px rgba(0,212,255,.3)!important">⚡ Book Demo</a>
+         style="background:linear-gradient(135deg,#00d4ff,#6366f1)!important;color:#000!important;font-weight:800!important;box-shadow:0 0 20px rgba(0,212,255,.3)!important">⚡ Book Demo</a>
     </div>
     <!-- Right actions: Notification Bell + Hamburger -->
     <div class="nav-actions" style="display:flex;align-items:center;gap:10px">
@@ -1046,8 +1046,10 @@ a{color:var(--accent);text-decoration:none}
   </div>
 </nav>
 
+<main id="main-content" aria-label="Main content">
+
 <!-- ── CYBERDUDEBIVASH® Floating Brand Sticky Pin — always visible ── -->
-<div id="cdb-brand-sticky-pin" role="banner" aria-label="CYBERDUDEBIVASH AI Security Hub">
+<div id="cdb-brand-sticky-pin" role="complementary" aria-label="CYBERDUDEBIVASH brand panel">
   <div class="cdb-bsp-inner">
     <span class="cdb-bsp-shield">⚔️</span>
     <div>
@@ -1077,7 +1079,7 @@ a{color:var(--accent);text-decoration:none}
   border-bottom:1px solid rgba(0,255,136,.12);
   padding:5px 20px;
   display:flex; align-items:center; gap:14px;
-  font-size:10px; color:rgba(255,255,255,.4);
+  font-size:10px; color:rgba(255,255,255,.65);
   font-family:monospace; letter-spacing:.04em;
   position:relative; z-index:98; flex-wrap:wrap;
   backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
@@ -1120,7 +1122,7 @@ a{color:var(--accent);text-decoration:none}
 <button id="back-to-top" onclick="cdbNavigate('hero')" aria-label="Back to top / Home" title="Back to Home">↑</button>
 
 <!-- ═══════════════ ECOSYSTEM TRAFFIC BANNER ═══════════════════════════════ -->
-<div id="eco-banner" role="banner" aria-label="CYBERDUDEBIVASH Ecosystem">
+<div id="eco-banner" role="region" aria-label="CYBERDUDEBIVASH Ecosystem">
   <div class="eco-inner">
     <span class="eco-label">🔥 ECOSYSTEM</span>
     <div class="eco-track">
@@ -1158,7 +1160,7 @@ a{color:var(--accent);text-decoration:none}
         </a>
       </div>
       <!-- Clone for seamless scroll loop -->
-      <div class="eco-items" id="eco-items-2" aria-hidden="true">
+      <div class="eco-items" id="eco-items-2" aria-hidden="true" inert>
         <a class="eco-item" href="https://cyberdudebivash.com" target="_blank" rel="noopener" data-eco="main">
           <span class="eco-item-dot" style="background:#00d4ff"></span>
           <span class="eco-item-icon">🌐</span>
@@ -1897,19 +1899,19 @@ a{color:var(--accent);text-decoration:none}
 
   <!-- Tabs -->
   <div class="tab-nav" role="tablist">
-    <button class="tab-btn active" onclick="switchTab('domain')" data-tab="domain">🌐 Domain</button>
-    <button class="tab-btn" onclick="switchTab('ai')" data-tab="ai">🤖 AI Security</button>
-    <button class="tab-btn" onclick="switchTab('redteam')" data-tab="redteam">🎯 Red Team</button>
-    <button class="tab-btn" onclick="switchTab('identity')" data-tab="identity">🔐 Identity</button>
-    <button class="tab-btn" onclick="switchTab('compliance')" data-tab="compliance">📋 Compliance</button>
-    <button class="tab-btn" onclick="switchTab('threatintel')" data-tab="threatintel">🛡️ Threat Intel</button>
-    <button class="tab-btn" onclick="switchTab('simulation')" data-tab="simulation">⚔️ Simulation</button>
-    <button class="tab-btn" onclick="switchTab('cloudsec')" data-tab="cloudsec">☁️ Cloud Security</button>
-    <button class="tab-btn" onclick="switchTab('darkscan')" data-tab="darkscan">🕵️ Dark Web</button>
-    <button class="tab-btn" onclick="switchTab('appsec')" data-tab="appsec">📱 AppSec</button>
-    <button class="tab-btn" onclick="switchTab('mcp_sec')" data-tab="mcp_sec">🔌 MCP Security</button>
-    <button class="tab-btn" onclick="switchTab('vibe_code')" data-tab="vibe_code">🤖 Vibe Code</button>
-    <button class="tab-btn" onclick="switchTab('reports')" data-tab="reports">📊 Reports</button>
+    <button role="tab" aria-selected="true" class="tab-btn active" onclick="switchTab('domain')" data-tab="domain">🌐 Domain</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('ai')" data-tab="ai">🤖 AI Security</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('redteam')" data-tab="redteam">🎯 Red Team</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('identity')" data-tab="identity">🔐 Identity</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('compliance')" data-tab="compliance">📋 Compliance</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('threatintel')" data-tab="threatintel">🛡️ Threat Intel</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('simulation')" data-tab="simulation">⚔️ Simulation</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('cloudsec')" data-tab="cloudsec">☁️ Cloud Security</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('darkscan')" data-tab="darkscan">🕵️ Dark Web</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('appsec')" data-tab="appsec">📱 AppSec</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('mcp_sec')" data-tab="mcp_sec">🔌 MCP Security</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('vibe_code')" data-tab="vibe_code">🤖 Vibe Code</button>
+    <button role="tab" class="tab-btn" onclick="switchTab('reports')" data-tab="reports">📊 Reports</button>
   </div>
 
   <!-- Domain Tab -->
@@ -4535,7 +4537,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <input id="p4-lead-email" class="p4-input" type="email" placeholder="Work Email *">
           <input id="p4-lead-company" class="p4-input" type="text" placeholder="Company Name *">
           <input id="p4-lead-title" class="p4-input" type="text" placeholder="Job Title (e.g. CISO)">
-          <select id="p4-lead-sector" class="p4-input">
+          <select id="p4-lead-sector" class="p4-input" aria-label="Industry Sector">
             <option value="">Industry Sector *</option>
             <option value="finance">Finance / FinTech</option>
             <option value="banking">Banking</option>
@@ -4550,7 +4552,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
             <option value="education">Education</option>
             <option value="other">Other</option>
           </select>
-          <select id="p4-lead-size" class="p4-input">
+          <select id="p4-lead-size" class="p4-input" aria-label="Company Size">
             <option value="">Company Size *</option>
             <option value="1-50">1–50 employees</option>
             <option value="51-200">51–200 employees</option>
@@ -4558,14 +4560,14 @@ document.addEventListener('cdb:scan:complete', function(e) {
             <option value="1001-5000">1,001–5,000 employees</option>
             <option value="5000+">5,000+ employees</option>
           </select>
-          <select id="p4-lead-budget" class="p4-input">
+          <select id="p4-lead-budget" class="p4-input" aria-label="Annual Security Budget">
             <option value="">Annual Security Budget</option>
             <option value="<5L">Under ₹5 Lakhs</option>
             <option value="5L-25L">₹5L – ₹25L</option>
             <option value="25L-1CR">₹25L – ₹1 Crore</option>
             <option value=">1CR">₹1 Crore+</option>
           </select>
-          <select id="p4-lead-urgency" class="p4-input">
+          <select id="p4-lead-urgency" class="p4-input" aria-label="Urgency Level">
             <option value="">Urgency Level</option>
             <option value="critical">Critical — Active incident</option>
             <option value="high">High — Deploy within 30 days</option>
@@ -5986,14 +5988,14 @@ window.cdbBookAssessment = async function() {
             <input id="entEmail" type="email" placeholder="Business email *" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
             <input id="entDomain" type="text" placeholder="Domain (optional)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
           </div>
-          <select id="entPackage" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+          <select id="entPackage" aria-label="Service Package" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
             <option value="starter_enterprise">Security Assessment — ₹9,999</option>
             <option value="threat_intel_report">Threat Intel Report — ₹14,999</option>
             <option value="mssp_package">MSSP White-Label — ₹49,999/mo</option>
             <option value="annual_retainer">Annual Retainer — ₹99,999/yr</option>
             <option value="consultation_only">Free Consultation Call</option>
           </select>
-          <select id="entUrgency" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
+          <select id="entUrgency" aria-label="Response Urgency" style="background:#131327;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none">
             <option value="normal">Normal (respond in 24h)</option>
             <option value="urgent">Urgent (respond in 4h)</option>
             <option value="immediate">Immediate (active incident)</option>
@@ -6416,7 +6418,7 @@ window.cdbBookAssessment = async function() {
   <div class="section-inner">
     <div class="section-label">Production Apps Suite</div>
     <h2 class="section-title">Security Intelligence Products</h2>
-    <p class="section-sub">Enterprise-grade toolkits, templates, and playbooks — all available at <a href="https://tools.cyberdudebivash.com" target="_blank" style="color:var(--accent)">tools.cyberdudebivash.com</a></p>
+    <p class="section-sub">Enterprise-grade toolkits, templates, and playbooks — all available at <a href="https://tools.cyberdudebivash.com" target="_blank" style="color:var(--accent);text-decoration:underline">tools.cyberdudebivash.com</a></p>
     <div class="cards-grid">
       <div class="card"><div class="card-icon">🛡️</div><div class="card-title">AI Security Toolkit <span style="background:rgba(0,212,255,.15);color:#00d4ff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">OWASP LLM</span></div><div class="card-desc">Complete OWASP LLM Top 10 implementation guide — checklists, test cases, remediation templates for every LLM vulnerability class.</div><div class="card-price">₹499</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
       <div class="card"><div class="card-icon">📋</div><div class="card-title">Compliance Starter Pack <span style="background:rgba(129,140,248,.15);color:#818cf8;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">ISO 27001</span></div><div class="card-desc">ISO 27001:2022 gap analysis templates, SoA document, policy library (25 policies), and ISMS implementation roadmap with PDCA cycle.</div><div class="card-price">₹999</div><a class="card-link" href="https://tools.cyberdudebivash.com" target="_blank">Get it →</a></div>
@@ -7036,6 +7038,8 @@ footer.v14-footer::before {
 </div>
 </section>
 
+
+</main>
 
 <footer class="v14-footer">
 
@@ -22055,7 +22059,7 @@ function v21TriggerUrgencyPayment(){
       display: flex; justify-content: space-between; align-items: center;
       padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 12px;
     }
-    .cdb-info-label { color: rgba(100,116,139,.8); }
+    .cdb-info-label { color: rgba(148,163,184,1); }
     .cdb-info-value { color: #e2e8f0; font-weight: 700; }
 
     /* ── CTA buttons — UPGRADED ──────────────────────────────────────────── */
