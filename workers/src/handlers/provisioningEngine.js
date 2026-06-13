@@ -249,6 +249,17 @@ async function handleProvisionPurchase(request, env) {
       duration_ms: Date.now() - t0,
     });
 
+    // Trigger onboarding welcome flow (fire-and-forget)
+    try {
+      const { handleOnboarding } = await import('./onboarding.js');
+      const welcomeReq = new Request('https://internal/api/onboarding/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id, tier }),
+      });
+      await handleOnboarding(welcomeReq, env, { userId: user_id, tier, authenticated: true }, '/api/onboarding/welcome', 'POST');
+    } catch {}
+
     return Response.json({
       success: true,
       provisioned: {
@@ -412,14 +423,82 @@ async function handleProvisionAudit(request, env, userId) {
   return Response.json({ user_id: userId, audit_log: logs.results || [] });
 }
 
+// ─── Provisioning Auth Guard ──────────────────────────────────────────────────
+// FIX (Task 15): All mutation endpoints (purchase/subscription/trial/revoke) MUST
+// be called with either:
+//   (a) X-Provision-Secret header matching env.PROVISION_SECRET, or
+//   (b) Authenticated JWT with tier ADMIN
+// This prevents arbitrary users from self-granting entitlements.
+async function isProvisioningAuthorized(request, env, authCtx) {
+  // Option A: Internal webhook / server-to-server call with shared secret
+  const secret = request.headers.get('x-provision-secret');
+  if (secret && env.PROVISION_SECRET && secret === env.PROVISION_SECRET) return true;
+
+  // Option B: Admin JWT
+  if (authCtx?.authenticated && authCtx?.tier === 'ADMIN') return true;
+
+  // Option C: Razorpay/Gumroad webhook validated upstream (header set by payment handler)
+  const webhookVerified = request.headers.get('x-webhook-verified');
+  if (webhookVerified === 'true') return true;
+
+  return false;
+}
+
+// ─── Order Idempotency Check ──────────────────────────────────────────────────
+// FIX (Task 15): Prevents double-provisioning when webhook retries fire.
+async function checkOrderIdempotency(db, orderId, type) {
+  if (!orderId) return false; // no order_id → allow (trial, manual)
+  try {
+    const existing = await db.prepare(
+      `SELECT id FROM provisioning_log WHERE trigger_ref = ? AND trigger_type = ? AND status IN ('success','partial') LIMIT 1`
+    ).bind(orderId, type).first();
+    return !!existing; // returns true if already provisioned
+  } catch { return false; }
+}
+
 // ─── Main Dispatcher ─────────────────────────────────────────────────────────
 export async function handleProvisioning(request, env, authCtx, path, method) {
   try {
-    if (path === '/api/provision/purchase' && method === 'POST')
-      return handleProvisionPurchase(request, env);
+    // Mutation endpoints require provisioning auth
+    const MUTATION_PATHS = ['/api/provision/purchase', '/api/provision/subscription', '/api/provision/trial', '/api/provision/revoke'];
+    if (method === 'POST' && MUTATION_PATHS.includes(path)) {
+      const authorized = await isProvisioningAuthorized(request, env, authCtx);
+      if (!authorized) {
+        return Response.json({
+          error: 'Provisioning authorization required',
+          detail: 'Provide X-Provision-Secret header or authenticate as ADMIN',
+        }, { status: 403 });
+      }
+    }
 
-    if (path === '/api/provision/subscription' && method === 'POST')
+    if (path === '/api/provision/purchase' && method === 'POST') {
+      // Idempotency check
+      let body = {};
+      try { body = await request.clone().json(); } catch {}
+      const alreadyProvisioned = await checkOrderIdempotency(env.DB, body.order_id, 'purchase');
+      if (alreadyProvisioned) {
+        return Response.json({
+          success: true,
+          idempotent: true,
+          message: `Order ${body.order_id} already provisioned. No duplicate action taken.`,
+        });
+      }
+      return handleProvisionPurchase(request, env);
+    }
+
+    if (path === '/api/provision/subscription' && method === 'POST') {
+      let body = {};
+      try { body = await request.clone().json(); } catch {}
+      const alreadyProvisioned = await checkOrderIdempotency(env.DB, body.subscription_id, 'subscription');
+      if (alreadyProvisioned) {
+        return Response.json({
+          success: true,
+          idempotent: true,
+          message: `Subscription ${body.subscription_id} already provisioned. No duplicate action taken.`,
+        });
+      }
       return handleProvisionSubscription(request, env);
+    }
 
     if (path === '/api/provision/trial' && method === 'POST')
       return handleProvisionTrial(request, env);

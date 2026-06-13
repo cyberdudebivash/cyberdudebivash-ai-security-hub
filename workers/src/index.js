@@ -5247,6 +5247,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleProvisioning(request, env, provAuthCtx, path, method), request));
     }
 
+    // ── SENTINEL APEX™ Onboarding & Welcome Flow (/api/onboarding/*) ──────────
+    if (path.startsWith('/api/onboarding/')) {
+      const obAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      const { handleOnboarding } = await import('./handlers/onboarding.js');
+      return withSecurityHeaders(withCors(await handleOnboarding(request, env, obAuthCtx, path, method), request));
+    }
+
+    // ── SENTINEL APEX™ Support & Help Centre (/api/support/*) ────────────────
+    if (path.startsWith('/api/support/')) {
+      const supAuthCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE' }));
+      const { handleSupport } = await import('./handlers/support.js');
+      return withSecurityHeaders(withCors(await handleSupport(request, env, supAuthCtx, path, method), request));
+    }
+
     // ── SENTINEL APEX™ Secure Report Downloads + AI Report Generation ────────
     // Wired: Task 7 — KV-token signed download delivery + dynamic report generation
     if (path.startsWith('/api/download/') || path.startsWith('/api/report/')) {

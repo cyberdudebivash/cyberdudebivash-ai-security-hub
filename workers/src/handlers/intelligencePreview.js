@@ -20,9 +20,38 @@ function userTier(authCtx) {
   return (authCtx.tier || 'FREE').toUpperCase();
 }
 
-function isPremium(authCtx) {
+// FIX (Task 20): isPremium now also checks customer_entitlements table in D1.
+// Users who purchased reports/subscriptions but have FREE JWT still get full access.
+async function isPremium(authCtx, db, feature = 'threat_feed_full') {
   const t = userTier(authCtx);
-  return t === 'PRO' || t === 'ENTERPRISE' || t === 'TEAM' || t === 'ADMIN';
+  if (t === 'PRO' || t === 'ENTERPRISE' || t === 'TEAM' || t === 'ADMIN' || t === 'MSSP') return true;
+
+  // Check purchased entitlements for FREE-tier users who bought a product
+  if (authCtx?.userId && db) {
+    try {
+      const row = await db.prepare(
+        `SELECT 1 FROM customer_entitlements
+         WHERE user_id = ? AND enabled = 1
+           AND (expires_at IS NULL OR expires_at > datetime('now'))
+           AND feature IN ('threat_feed_full','report_download','api_access')
+         LIMIT 1`
+      ).bind(authCtx.userId).first();
+      if (row) return true;
+    } catch {}
+  }
+  return false;
+}
+
+// KV rate limiter for FREE tier preview endpoints (10 req/min)
+async function checkPreviewRateLimit(kv, userId, limit = 10, windowSecs = 60) {
+  if (!kv || !userId) return { allowed: true };
+  const key = `preview_rl:${userId}:${Math.floor(Date.now() / (windowSecs * 1000))}`;
+  try {
+    const current = parseInt(await kv.get(key) || '0', 10);
+    if (current >= limit) return { allowed: false, current, limit };
+    await kv.put(key, String(current + 1), { expirationTtl: windowSecs * 2 });
+    return { allowed: true, current: current + 1, remaining: limit - current - 1 };
+  } catch { return { allowed: true }; }
 }
 
 function upgradePrompt(feature, price = '$49/month') {
@@ -46,7 +75,7 @@ async function handleCVEPreview(request, env, authCtx) {
     return Response.json({ error: 'Invalid CVE ID. Format: CVE-YYYY-NNNNN' }, { status: 400 });
   }
 
-  const premium = isPremium(authCtx);
+  const premium = await isPremium(authCtx, env?.DB);
 
   // Try to fetch live CVE data from D1 cache
   let cveData = null;
@@ -182,7 +211,7 @@ async function handleCVEPreview(request, env, authCtx) {
 async function handleThreatActorPreview(request, env, authCtx) {
   const url = new URL(request.url);
   const actorId = url.pathname.split('/').pop();
-  const premium = isPremium(authCtx);
+  const premium = await isPremium(authCtx, env?.DB);
 
   // Known APT profiles
   const KNOWN_ACTORS = {
@@ -290,7 +319,7 @@ async function handleThreatActorPreview(request, env, authCtx) {
 async function handleMalwarePreview(request, env, authCtx) {
   const url = new URL(request.url);
   const familyId = url.pathname.split('/').pop();
-  const premium = isPremium(authCtx);
+  const premium = await isPremium(authCtx, env?.DB);
 
   const MALWARE_FAMILIES = {
     'lockbit': { name: 'LockBit 3.0', type: 'ransomware', severity: 'CRITICAL', active: true },
@@ -390,7 +419,7 @@ async function handleMalwarePreview(request, env, authCtx) {
 
 // ─── IOC Feed Sample ──────────────────────────────────────────────────────────
 async function handleIOCSample(request, env, authCtx) {
-  const premium = isPremium(authCtx);
+  const premium = await isPremium(authCtx, env?.DB);
   const url = new URL(request.url);
   const limit = premium ? 100 : 10;
   const type = url.searchParams.get('type') || null;
@@ -457,7 +486,7 @@ async function handleIOCSample(request, env, authCtx) {
 
 // ─── Report Sample Preview ────────────────────────────────────────────────────
 async function handleReportSamplePreview(request, env, authCtx) {
-  const premium = isPremium(authCtx);
+  const premium = await isPremium(authCtx, env?.DB);
   const url = new URL(request.url);
   const reportType = url.searchParams.get('type') || 'tactical_dossier';
 
@@ -634,12 +663,14 @@ async function handleFeaturedIntelligence(request, env, authCtx) {
 }
 
 // ─── Unlock Preview (verify entitlement) ─────────────────────────────────────
+
+// ─── Unlock Preview (verify entitlement) ─────────────────────────────────────
 async function handlePreviewUnlock(request, env, authCtx) {
   if (!authCtx?.userId && !authCtx?.keyId) {
     return Response.json({ error: 'Authentication required to unlock content.' }, { status: 401 });
   }
 
-  if (!isPremium(authCtx)) {
+  if (!(await isPremium(authCtx, env?.DB))) {
     return Response.json({
       unlocked: false,
       current_tier: userTier(authCtx),
@@ -664,6 +695,30 @@ async function handlePreviewUnlock(request, env, authCtx) {
 export async function handleIntelligencePreview(request, env, authCtx) {
   const url = new URL(request.url);
   const path = url.pathname;
+  const kv = env?.KV || env?.SECURITY_HUB_KV;
+
+  // FIX (Task 20): KV rate limit for FREE-tier users — 10 preview requests/min
+  const tier = userTier(authCtx);
+  if (tier === 'FREE' && authCtx?.userId) {
+    const rl = await checkPreviewRateLimit(kv, authCtx.userId, 10, 60);
+    if (!rl.allowed) {
+      return Response.json({
+        error: 'Preview rate limit exceeded',
+        limit: rl.limit,
+        window_seconds: 60,
+        retry_after: 60,
+        upgrade_url: 'https://intel.cyberdudebivash.com/pricing.html',
+        cta: 'Upgrade to PRO for unlimited intelligence access — from $49/month',
+      }, {
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Limit': String(rl.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      });
+    }
+  }
 
   if (path.startsWith('/api/preview/cve/')) return handleCVEPreview(request, env, authCtx);
   if (path.startsWith('/api/preview/threat/')) return handleThreatActorPreview(request, env, authCtx);

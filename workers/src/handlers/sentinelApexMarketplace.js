@@ -84,7 +84,7 @@ const PRODUCT_CATALOG = {
     features: ['Unlimited API requests', 'Dedicated endpoint + SLA', 'SIEM webhook (all platforms)', 'Custom threat scoring', 'Private feed + white-label', 'Onboarding + integration', 'Monthly analyst briefings', 'Unlimited seats'],
     locked_features: [],
     cta: 'Contact Enterprise Sales',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=ENTERPRISE_API_INQUIRY',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=ENTERPRISE_API_INQUIRY',
     gumroad_url: null,
     featured: false, bestseller: false, new: false,
     delivery: 'custom_onboarding',
@@ -151,7 +151,7 @@ const PRODUCT_CATALOG = {
     features: ['Everything in all 3 detection packs', '6-month update subscription', 'Actor attribution dataset', '1-hour analyst briefing', 'Priority email support (48h SLA)', 'STIX 2.1 bundle', 'Custom rule tuning guide'],
     locked_features: [],
     cta: 'Get Full Bundle',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=APT_BUNDLE_ORDER',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=APT_BUNDLE_ORDER',
     gumroad_url: null,
     featured: false, bestseller: false, new: false,
     delivery: 'instant_download_plus_call',
@@ -186,7 +186,7 @@ const PRODUCT_CATALOG = {
     features: ['Monthly threat landscape', 'Top 10 risks by financial impact', 'Sector-specific threat analysis', 'Risk posture score', 'Strategic recommendations', '30/60/90 day trends', 'Branded PDF + PowerPoint', 'Analyst Q&A'],
     locked_features: [],
     cta: 'Subscribe to Reports',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=EXEC_REPORT_SUBSCRIPTION',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=EXEC_REPORT_SUBSCRIPTION',
     gumroad_url: null,
     featured: false, bestseller: false, new: false,
     delivery: 'monthly_email_pdf',
@@ -202,7 +202,7 @@ const PRODUCT_CATALOG = {
     features: ['Weekly top 10 critical threats', 'New CISA KEV additions', 'EPSS highlights (>20%)', 'Active actor campaign tracking', 'SOC action checklist', 'PDF + Slack webhook delivery'],
     locked_features: [],
     cta: 'Subscribe to Weekly Brief',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=WEEKLY_BRIEF_SUBSCRIPTION',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=WEEKLY_BRIEF_SUBSCRIPTION',
     gumroad_url: null,
     featured: false, bestseller: false, new: true,
     delivery: 'weekly_email_pdf',
@@ -219,7 +219,7 @@ const PRODUCT_CATALOG = {
     features: ['100+ essential SIEM detection rules', '15 incident response playbooks', 'SOC runbook library', 'Alert classification framework (P1-P4)', 'Threat feed config guide (10 free feeds)', 'SOC KPI dashboard template', 'MITRE ATT&CK coverage heatmap', 'On-call rotation policy'],
     locked_features: [],
     cta: 'Get SOC Starter Kit',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=SOC_KIT_ORDER',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=SOC_KIT_ORDER',
     gumroad_url: null,
     featured: false, bestseller: false, new: false,
     delivery: 'instant_download',
@@ -235,7 +235,7 @@ const PRODUCT_CATALOG = {
     features: ['Ransomware IR playbook (end-to-end)', 'Data breach notification workflow', 'APT containment playbook', 'Evidence collection + chain of custody', 'Forensics artifact scripts', 'Crisis communication templates', 'Post-incident review framework'],
     locked_features: [],
     cta: 'Get IR Defense Kit',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=IR_KIT_ORDER',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=IR_KIT_ORDER',
     gumroad_url: null,
     featured: false, bestseller: false, new: false,
     delivery: 'instant_download',
@@ -252,7 +252,7 @@ const PRODUCT_CATALOG = {
     features: ['25+ security policy templates (ISO 27001)', 'GRC framework implementation guide', 'Vendor risk questionnaire (100+ questions)', 'SOC 2 evidence package template', 'Board-level risk reporting template', 'Security awareness training outline', 'Annual pen test request template'],
     locked_features: [],
     cta: 'Get Enterprise Kit',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=ENT_KIT_ORDER',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=ENT_KIT_ORDER',
     gumroad_url: null,
     featured: false, bestseller: false, new: false,
     delivery: 'instant_download',
@@ -303,7 +303,7 @@ const PRODUCT_CATALOG = {
     features: ['Monthly AI threat landscape', 'New jailbreak disclosures', 'LLM CVE tracking', 'Adversarial ML research digest', 'Detection rule updates', 'Slack/webhook delivery'],
     locked_features: [],
     cta: 'Subscribe to AI Intel Feed',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=AI_FEED_SUBSCRIPTION',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=AI_FEED_SUBSCRIPTION',
     gumroad_url: null,
     featured: false, bestseller: false, new: true,
     delivery: 'monthly_webhook',
@@ -320,7 +320,7 @@ const PRODUCT_CATALOG = {
     features: ['All 3 Detection Engineering Packs', 'SOC Starter + IR + Enterprise Kits', 'AI-SPM + LLM Red Team + AI Defense', '1-year Pro API subscription', '12x Monthly Executive Risk Reports', '4x Analyst briefing calls (1hr)', 'Priority support (24h SLA)', 'Custom rule tuning'],
     locked_features: [],
     cta: 'Get Ultimate Bundle',
-    cta_url: 'mailto:bivashnayak.ai007@gmail.com?subject=APEX_ULTIMATE_BUNDLE',
+    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=APEX_ULTIMATE_BUNDLE',
     gumroad_url: null,
     featured: true, bestseller: false, new: false,
     delivery: 'custom_onboarding',
@@ -463,11 +463,11 @@ async function handleCheckout(request, env, authCtx) {
       url: paymentMethods.url,
       gumroad_direct: product.gumroad_url || null,
       upi_id: 'iambivash.bn-5@okaxis',
-      paypal: 'bivashnayak.ai007@gmail.com',
+      paypal: 'enterprise@cyberdudebivash.com',
       reference_id: sessionId,
       instructions: product.gumroad_url
         ? 'Click "Buy Now" to complete secure checkout via Gumroad. You will receive download access instantly.'
-        : `Complete payment via UPI/PayPal/Bank transfer using Reference ID: ${sessionId}. Email receipt to bivashnayak.ai007@gmail.com for manual provisioning within 24 hours.`,
+        : `Complete payment via UPI/PayPal/Bank transfer using Reference ID: ${sessionId}. Email receipt to enterprise@cyberdudebivash.com for manual provisioning within 24 hours.`,
     },
     delivery: {
       method: product.delivery,
@@ -480,7 +480,7 @@ async function handleCheckout(request, env, authCtx) {
       note: `Start your ${product.trial_days}-day free trial without payment.`,
     } : null,
     support: {
-      email: 'bivashnayak.ai007@gmail.com',
+      email: 'enterprise@cyberdudebivash.com',
       response_time: '24 hours',
     },
   });
@@ -534,11 +534,11 @@ async function handleRecordPurchase(request, env, authCtx) {
     product: { id: product.id, name: product.name },
     next_steps: [
       'Complete payment via your selected method',
-      `Email payment receipt to bivashnayak.ai007@gmail.com with order ID: ${purchaseId}`,
+      `Email payment receipt to enterprise@cyberdudebivash.com with order ID: ${purchaseId}`,
       'Access credentials will be delivered via email within 24 hours',
     ],
     track_url: `/api/marketplace/orders/${purchaseId}`,
-    support: 'bivashnayak.ai007@gmail.com',
+    support: 'enterprise@cyberdudebivash.com',
   });
 }
 
@@ -630,20 +630,61 @@ async function handleCancelSubscription(request, env, authCtx) {
   const subId = parts[parts.length - 2]; // /api/marketplace/subscriptions/:id/cancel
   const userId = getUserId(authCtx);
 
+  // Look up billing period end before cancelling (for access-until date)
+  let accessUntil = null;
   try {
+    const sub = await env.DB.prepare(
+      `SELECT current_period_end FROM subscriptions WHERE id = ? AND user_id = ?`
+    ).bind(subId, userId).first();
+    if (sub?.current_period_end) accessUntil = sub.current_period_end;
+  } catch {}
+
+  try {
+    // Cancel primary subscriptions table
     await env.DB.prepare(
       `UPDATE subscriptions SET status = 'cancelled', cancelled_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND user_id = ?`
     ).bind(subId, userId).run();
+  } catch {}
 
+  // FIX (Task 13): Also update customer_entitlements (schema v39) — disable features granted by this subscription
+  let featuresToRevoke = [];
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT feature FROM customer_entitlements WHERE user_id = ? AND source = 'subscription' AND source_ref = ? AND enabled = 1`
+    ).bind(userId, subId).all();
+    featuresToRevoke = (rows.results || []).map(r => r.feature);
+
+    if (featuresToRevoke.length > 0) {
+      await env.DB.prepare(
+        `UPDATE customer_entitlements
+         SET enabled = 0, updated_at = datetime('now')
+         WHERE user_id = ? AND source = 'subscription' AND source_ref = ? AND enabled = 1`
+      ).bind(userId, subId).run();
+    }
+  } catch {}
+
+  // Legacy fallback: also update marketplace_entitlements
+  try {
     await env.DB.prepare(
       `UPDATE marketplace_entitlements SET status = 'cancelled' WHERE subscription_id = ? AND user_id = ?`
+    ).bind(subId, userId).run();
+  } catch {}
+
+  // Also update intel_subscriptions table if present
+  try {
+    await env.DB.prepare(
+      `UPDATE intel_subscriptions SET status = 'cancelled', cancelled_at = datetime('now') WHERE id = ? AND user_id = ?`
     ).bind(subId, userId).run();
   } catch {}
 
   return Response.json({
     subscription_id: subId,
     status: 'cancelled',
-    message: 'Subscription cancelled. Access remains until the end of the current billing period.',
+    access_until: accessUntil,
+    features_revoked: featuresToRevoke,
+    message: accessUntil
+      ? `Subscription cancelled. Platform access continues until ${accessUntil}.`
+      : 'Subscription cancelled. Access remains until the end of the current billing period.',
   });
 }
 
@@ -702,55 +743,93 @@ async function handleListOrders(request, env, authCtx) {
 }
 
 // ─── GET /api/marketplace/entitlements ───────────────────────────────────────
+// FIX (Task 13): Reads from customer_entitlements (schema v39, written by provisioningEngine.js)
+// Also checks marketplace_entitlements (legacy) as fallback.
 async function handleGetEntitlements(request, env, authCtx) {
   const err = requireAuth(authCtx);
   if (err) return err;
   const userId = getUserId(authCtx);
 
-  let entitlements = [];
+  const tierRanks = { FREE: 0, STARTER: 1, PRO: 2, TEAM: 3, ENTERPRISE: 4, MSSP: 5, ADMIN: 6 };
+  let entitlementMap = {};
+  let effectiveTier = authCtx?.tier || 'FREE'; // start from JWT tier
+
+  // ── PRIMARY: customer_entitlements table (schema v39, provisioningEngine) ──
   try {
     const r = await env.DB.prepare(
-      `SELECT * FROM marketplace_entitlements WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC`
+      `SELECT feature, source, source_ref, tier_required, enabled, expires_at, granted_at
+       FROM customer_entitlements
+       WHERE user_id = ? AND enabled = 1
+         AND (expires_at IS NULL OR expires_at > datetime('now'))
+       ORDER BY granted_at DESC`
     ).bind(userId).all();
-    entitlements = r.results || [];
-  } catch {}
 
-  // Compute effective tier
-  const tierRanks = { FREE: 0, STARTER: 1, PRO: 2, TEAM: 3, ENTERPRISE: 4, ADMIN: 5 };
-  let effectiveTier = 'FREE';
-  for (const e of entitlements) {
-    if (e.tier_granted && (tierRanks[e.tier_granted] || 0) > (tierRanks[effectiveTier] || 0)) {
-      effectiveTier = e.tier_granted;
+    for (const row of r.results || []) {
+      entitlementMap[row.feature] = {
+        feature: row.feature, granted: true,
+        source: row.source, tier: row.tier_required,
+        expires_at: row.expires_at, granted_at: row.granted_at,
+      };
+      const t = (row.tier_required || 'FREE').toUpperCase();
+      if ((tierRanks[t] || 0) > (tierRanks[effectiveTier] || 0)) effectiveTier = t;
     }
+  } catch (e) {
+    console.warn('[Entitlements] customer_entitlements read error:', e?.message);
   }
 
-  // Check expirations
-  const now = new Date();
-  const active = entitlements.filter(e => !e.expires_at || new Date(e.expires_at) > now);
-  const expired = entitlements.filter(e => e.expires_at && new Date(e.expires_at) <= now);
+  // ── LEGACY FALLBACK: marketplace_entitlements table ────────────────────────
+  let legacyEntitlements = [];
+  try {
+    const lr = await env.DB.prepare(
+      `SELECT * FROM marketplace_entitlements WHERE user_id = ? AND status IN ('active','trial') ORDER BY created_at DESC`
+    ).bind(userId).all();
+    legacyEntitlements = (lr.results || []).filter(e => !e.expires_at || new Date(e.expires_at) > new Date());
+
+    for (const le of legacyEntitlements) {
+      const t = (le.tier_granted || 'FREE').toUpperCase();
+      if ((tierRanks[t] || 0) > (tierRanks[effectiveTier] || 0)) effectiveTier = t;
+    }
+  } catch {}
+
+  // ── API usage today from KV ────────────────────────────────────────────────
+  let apiRequestsToday = 0;
+  try {
+    const kv = env.KV || env.SECURITY_HUB_KV;
+    const key = `intel_quota:${userId}:${new Date().toISOString().slice(0, 10)}`;
+    apiRequestsToday = parseInt(await kv?.get(key) || '0', 10);
+  } catch {}
+
+  const tierLimitsMap = { FREE: 100, STARTER: 500, PRO: 1000, TEAM: 10000, ENTERPRISE: Infinity, MSSP: Infinity };
+  const dailyLimit = tierLimitsMap[effectiveTier] || 100;
 
   return Response.json({
     user_id: userId,
+    tier: effectiveTier,
     effective_tier: effectiveTier,
-    entitlements: active,
-    expired_entitlements: expired,
+    entitlements: entitlementMap,
+    legacy_entitlements: legacyEntitlements,
+    api_requests_today: apiRequestsToday,
+    api_requests_remaining: dailyLimit === Infinity ? 'unlimited' : Math.max(0, dailyLimit - apiRequestsToday),
     feature_access: {
-      api_requests_per_month: effectiveTier === 'ENTERPRISE' ? 'unlimited'
+      api_requests_per_day: dailyLimit === Infinity ? 'unlimited' : dailyLimit,
+      api_requests_per_month: effectiveTier === 'ENTERPRISE' || effectiveTier === 'MSSP' ? 'unlimited'
         : effectiveTier === 'TEAM' ? 100000
         : effectiveTier === 'PRO' ? 10000
         : 3000,
-      stix_21_access: effectiveTier !== 'FREE',
-      siem_webhook: effectiveTier === 'TEAM' || effectiveTier === 'ENTERPRISE',
-      ai_predictions: effectiveTier !== 'FREE',
-      full_ioc_analysis: effectiveTier !== 'FREE',
-      actor_attribution: effectiveTier !== 'FREE',
-      dedicated_endpoint: effectiveTier === 'ENTERPRISE',
+      stix_21_access: effectiveTier !== 'FREE' || !!entitlementMap['stix_21_export'],
+      siem_webhook: ['TEAM','ENTERPRISE','MSSP'].includes(effectiveTier) || !!entitlementMap['siem_webhook'],
+      ai_predictions: effectiveTier !== 'FREE' || !!entitlementMap['ai_predictions'],
+      full_ioc_analysis: effectiveTier !== 'FREE' || !!entitlementMap['threat_feed_full'],
+      actor_attribution: effectiveTier !== 'FREE' || !!entitlementMap['actor_attribution'],
+      dedicated_endpoint: effectiveTier === 'ENTERPRISE' || !!entitlementMap['dedicated_endpoint'],
       analyst_briefings: effectiveTier === 'ENTERPRISE' ? 'monthly' : effectiveTier === 'TEAM' ? 'quarterly' : false,
+      kill_chain_mapping: ['TEAM','ENTERPRISE','MSSP'].includes(effectiveTier) || !!entitlementMap['kill_chain_mapping'],
+      board_reports: effectiveTier === 'ENTERPRISE' || !!entitlementMap['board_reports'],
+      white_label: effectiveTier === 'ENTERPRISE' || effectiveTier === 'MSSP' || !!entitlementMap['white_label'],
     },
-    upgrades_available: effectiveTier !== 'ENTERPRISE' ? Object.values(PRODUCT_CATALOG)
-      .filter(p => (p.tier === 'PRO' || p.tier === 'ENTERPRISE') && p.type === 'subscription')
-      .map(p => ({ id: p.id, name: p.name, price: p.price, billing_period: p.billing_period }))
-      : [],
+    upgrades_available: effectiveTier === 'ENTERPRISE' ? [] : Object.values(PRODUCT_CATALOG)
+      .filter(p => (p.tier === 'PRO' || p.tier === 'TEAM' || p.tier === 'ENTERPRISE') && p.type === 'subscription')
+      .map(p => ({ id: p.id, name: p.name, price: p.price, billing_period: p.billing_period, trial_days: p.trial_days })),
   });
 }
 
@@ -923,6 +1002,21 @@ export async function handleMarketplace(request, env, authCtx, path, method) {
 
     if (path.match(/^\/api\/marketplace\/subscriptions\/[^/]+\/cancel$/) && method === 'POST')
       return handleCancelSubscription(request, env, authCtx);
+
+    // FIX (Task 13/14): /api/marketplace/cancel alias — dashboard JS calls this shorthand route.
+    if (path === '/api/marketplace/cancel' && method === 'POST') {
+      let body = {};
+      try { body = await request.clone().json(); } catch {}
+      const subId = body.subscription_id || body.id;
+      if (!subId) return Response.json({ error: 'subscription_id required' }, { status: 400 });
+      const rewrittenUrl = new URL(request.url);
+      rewrittenUrl.pathname = `/api/marketplace/subscriptions/${subId}/cancel`;
+      const rewritten = new Request(rewrittenUrl.toString(), {
+        method: 'POST', headers: request.headers, body: JSON.stringify(body),
+      });
+      return handleCancelSubscription(rewritten, env, authCtx);
+    }
+
 
     if (path.match(/^\/api\/marketplace\/subscriptions\/[^/]+\/upgrade$/) && method === 'POST')
       return handleUpgradeSubscription(request, env, authCtx);
