@@ -760,7 +760,7 @@ a{color:var(--accent);text-decoration:none}
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 20px; padding: 3px 10px;
-  font-size: 11px; color: rgba(255,255,255,.7);
+  font-size: 11px; color:rgba(255,255,255,.85);
   transition: all .2s ease;
 }
 .vi-visitor-pill:hover { border-color:rgba(0,212,255,.3); background:rgba(0,212,255,.05); }
@@ -2681,7 +2681,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 .ds-filter-btn {
   background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.1);
-  color:rgba(255,255,255,.6);
+  color:rgba(255,255,255,.85);
   padding:8px 16px;
   border-radius:999px;
   font-size:12px;
@@ -3114,7 +3114,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 .mythos-chip:hover {background:rgba(124,58,237,.3);color:#c4b5fd;transform:translateY(-1px)}
 .mythos-quick-btn {
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-  color:rgba(255,255,255,.7);padding:7px 14px;border-radius:8px;font-size:12px;
+  color:rgba(255,255,255,.85);padding:7px 14px;border-radius:8px;font-size:12px;
   font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;
 }
 .mythos-quick-btn:hover {
@@ -3136,7 +3136,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 /* ── Threat Knowledge Graph ──────────────────────────────────── */
 .graph-filter-btn {
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-  color:rgba(255,255,255,.55);padding:7px 18px;border-radius:20px;font-size:12px;
+  color:rgba(255,255,255,.85);padding:7px 18px;border-radius:20px;font-size:12px;
   font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.04em;
 }
 .graph-filter-btn:hover {
@@ -3212,7 +3212,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   animation: trust-num-in .5s ease;
 }
 .trust-metric-label { font-size: 13px; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; letter-spacing: .1px; }
-.trust-metric-sub   { font-size: 10px; color: rgba(255,255,255,.68); font-weight: 500; letter-spacing: .3px; text-transform: uppercase; }
+.trust-metric-sub   { font-size: 10px; color:rgba(255,255,255,.85); font-weight: 500; letter-spacing: .3px; text-transform: uppercase; }
 .case-study-card {
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
   border-radius:16px;padding:28px;transition:all .3s;
@@ -3227,7 +3227,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 }
 .testimonial-card::before {
   content:'"';position:absolute;top:-10px;left:20px;font-size:80px;
-  color:rgba(0,212,255,.12);line-height:1;font-family:serif;
+  color:rgba(0,212,255,.85);line-height:1;font-family:serif;
 }
 .testimonial-card:hover {border-color:rgba(124,58,237,.3);transform:translateY(-3px)}
 
@@ -3254,7 +3254,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 .trust-cert:hover::before { opacity: 1; }
 .trust-cert-icon { font-size: 22px; line-height:1; flex-shrink:0; }
 .trust-cert-name { font-size: 13px; font-weight: 700; color: #e2e8f0; white-space: nowrap; }
-.trust-cert-sub  { font-size: 10px; color: rgba(255,255,255,.38); font-weight: 500; margin-top: 2px; text-transform: uppercase; letter-spacing: .3px; }
+.trust-cert-sub  { font-size: 10px; color:rgba(255,255,255,.85); font-weight: 500; margin-top: 2px; text-transform: uppercase; letter-spacing: .3px; }
 
 /* ── Proof / Use-case Cards — GOD MODE v32.1 ───────────────────── */
 .proof-section { padding: 60px 20px; background: linear-gradient(180deg, #080d1e 0%, #06091a 100%); border-top: 1px solid rgba(255,255,255,.05); }
@@ -3278,7 +3278,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 .proof-card:hover::after { opacity:1; }
 .proof-card-icon  { font-size: 32px; margin-bottom: 14px; line-height:1; }
 .proof-card-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
-.proof-card-sub   { font-size: 12px; color: rgba(255,255,255,.4); line-height: 1.55; }
+.proof-card-sub   { font-size: 12px; color:rgba(255,255,255,.85); line-height: 1.55; }
 
 /* ── Case Study Cards upgrade ───────────────────────────────────── */
 .case-study-card {
@@ -3302,7 +3302,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   transition: all .28s !important;
   position: relative;
 }
-.testimonial-card::before { content:'"';position:absolute;top:-10px;left:20px;font-size:80px; color:rgba(0,212,255,.1);line-height:1;font-family:serif; }
+.testimonial-card::before { content:'"';position:absolute;top:-10px;left:20px;font-size:80px; color:rgba(0,212,255,.85);line-height:1;font-family:serif; }
 .testimonial-card:hover { border-color:rgba(124,58,237,.25) !important; transform:translateY(-4px) !important; box-shadow:0 10px 32px rgba(0,0,0,.4); }
 
 /* ── Global section/label polish ────────────────────────────────── */
@@ -5864,7 +5864,7 @@ window.cdbBookAssessment = async function() {
 </div>
 <style>
 .currency-btn {
-  background:transparent;border:none;color:rgba(255,255,255,.5);
+  background:transparent;border:none;color:rgba(255,255,255,.85);
   padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;
 }
 .currency-btn.active,.currency-btn:hover {
@@ -6229,18 +6229,18 @@ window.cdbBookAssessment = async function() {
 .rb-dot-green{background:#00ff88;box-shadow:0 0 6px #00ff88;animation:v14GreenPulse 1.2s ease-in-out infinite}
 .rb-dot-orange{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
 .rb-dot-red{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:rb-riskBlink 1.5s ease-in-out infinite}
-.rb-sep{color:rgba(255,255,255,.15)}
+.rb-sep{color:rgba(255,255,255,.85)}
 .risk-blk{position:relative;overflow:hidden;background:linear-gradient(135deg,#0a0205,#110308,#0d0208);border-top:2px solid rgba(239,68,68,.4);border-bottom:2px solid rgba(239,68,68,.2);padding:36px 24px;animation:rb-riskPulse 3s ease-in-out infinite}
 .risk-blk::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#ff6b6b,transparent);animation:rb-scanLine 2.5s linear infinite}
 .risk-blk-inner{max-width:1000px;margin:0 auto;text-align:center}
 .risk-blk-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#ff4444;margin-bottom:16px;animation:rb-shake 4s ease-in-out infinite}
 .risk-blk-title{font-size:clamp(20px,4vw,34px);font-weight:900;color:#fff;margin-bottom:8px}
 .risk-blk-title span{animation:rb-riskBlink 1.5s ease-in-out infinite}
-.risk-blk-sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:24px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.6}
+.risk-blk-sub{font-size:14px;color:rgba(255,255,255,.85);margin-bottom:24px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.6}
 .risk-blk-stats{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:28px}
 .risk-blk-stat{text-align:center;background:rgba(0,0,0,.4);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 18px;min-width:110px}
 .risk-blk-num{font-size:22px;font-weight:900;color:#ff4444;text-shadow:0 0 12px rgba(255,68,68,.6)}
-.risk-blk-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-top:2px}
+.risk-blk-lbl{font-size:10px;color:rgba(255,255,255,.85);letter-spacing:.05em;margin-top:2px}
 .risk-blk-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .risk-blk-cta-red{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:14px;font-weight:900;padding:14px 28px;border-radius:10px;text-decoration:none;box-shadow:0 0 24px rgba(239,68,68,.4);transition:all .2s}
 .risk-blk-cta-red:hover{box-shadow:0 0 40px rgba(239,68,68,.7);transform:translateY(-2px);color:#fff;text-decoration:none}
@@ -6248,7 +6248,7 @@ window.cdbBookAssessment = async function() {
 .risk-blk-cta-green:hover{background:rgba(0,255,136,.18);box-shadow:0 0 20px rgba(0,255,136,.3);transform:translateY(-2px);color:#00ff88;text-decoration:none}
 .risk-blk-ticker{margin-top:18px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
 .risk-blk-tdot{width:8px;height:8px;border-radius:50%;background:#ff4444;box-shadow:0 0 8px #ff4444;animation:rb-riskBlink 1s ease-in-out infinite}
-.risk-blk-ttxt{font-size:11px;color:rgba(255,255,255,.4);font-family:monospace}
+.risk-blk-ttxt{font-size:11px;color:rgba(255,255,255,.85);font-family:monospace}
 .risk-blk-ttxt span{color:#ff8888}
 </style>
 <!-- ATTENTION ENGINE LIVE STRIP -->
@@ -6374,7 +6374,7 @@ footer.v14-footer::before {
   letter-spacing:.02em;line-height:1.2;
 }
 .v14-page-desc {
-  font-size:10px;color:rgba(255,255,255,.45);
+  font-size:10px;color:rgba(255,255,255,.85);
   margin-top:2px;line-height:1.3;
 }
 .v14-page-arrow {
@@ -6413,7 +6413,7 @@ footer.v14-footer::before {
 .v14-footer-link-dim {
   display:flex;align-items:center;gap:6px;
   font-size:12px;font-weight:600;
-  color:rgba(255,255,255,.55) !important;
+  color:rgba(255,255,255,.85) !important;
   text-decoration:none;padding:4px 0;
   transition:all .2s;
 }
@@ -14319,13 +14319,13 @@ if(document.readyState==='loading'){
   #cdb-pay-modal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px}
   #cdb-pay-modal-inner{background:#0d0d1f;border:1px solid rgba(0,212,255,.25);border-radius:20px;max-width:520px;width:100%;max-height:94vh;overflow-y:auto;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.7)}
   .cdb-pay-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-  .cdb-pay-tab{flex:1;min-width:80px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.55);padding:9px 6px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;letter-spacing:.3px}
+  .cdb-pay-tab{flex:1;min-width:80px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.85);padding:9px 6px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;letter-spacing:.3px}
   .cdb-copy-btn{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
   .cdb-copy-btn:hover{background:rgba(0,212,255,.2)}
   .cdb-pay-field{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 14px;margin-bottom:8px}
-  .cdb-pay-field-label{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+  .cdb-pay-field-label{font-size:10px;color:rgba(255,255,255,.85);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
   .cdb-pay-field-val{font-family:monospace;font-size:12px;color:#e2e8f0;word-break:break-all}
-  .cdb-pay-section-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+  .cdb-pay-section-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
   .cdb-pay-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:11px 14px;color:#fff;font-size:13px;outline:none;box-sizing:border-box;transition:border-color .2s;font-family:inherit}
   .cdb-pay-input:focus{border-color:rgba(0,212,255,.5)}
   .cdb-pay-submit-btn{width:100%;background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-top:6px;transition:opacity .2s;letter-spacing:.3px;font-family:inherit}
@@ -14597,25 +14597,25 @@ if(document.readyState==='loading'){
 #cdb-agentic-console{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:flex-end;padding:80px 24px 24px}
 #cdb-agentic-inner{background:rgba(8,8,22,.98);border:1px solid rgba(0,212,255,.2);border-radius:18px;width:100%;max-width:860px;max-height:calc(100vh - 120px);overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.8)}
 .cdb-ag-tab-bar{display:flex;gap:0;background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.06)}
-.cdb-ag-tab{flex:1;padding:12px 8px;font-size:10px;font-weight:800;text-align:center;color:rgba(255,255,255,.68);cursor:pointer;transition:all .2s;letter-spacing:.06em;text-transform:uppercase;border:none;background:none;border-bottom:2px solid transparent}
+.cdb-ag-tab{flex:1;padding:12px 8px;font-size:10px;font-weight:800;text-align:center;color:rgba(255,255,255,.85);cursor:pointer;transition:all .2s;letter-spacing:.06em;text-transform:uppercase;border:none;background:none;border-bottom:2px solid transparent}
 .cdb-ag-tab.active{color:#00d4ff;border-bottom-color:#00d4ff;background:rgba(0,212,255,.04)}
 .cdb-ag-pane{display:none;padding:20px}
 .cdb-ag-pane.active{display:block}
 .cdb-ag-metric-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
 .cdb-ag-metric{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 14px}
 .cdb-ag-metric-val{font-size:22px;font-weight:900;color:#00d4ff;line-height:1}
-.cdb-ag-metric-lbl{font-size:10px;color:rgba(255,255,255,.68);margin-top:4px;letter-spacing:.05em}
+.cdb-ag-metric-lbl{font-size:10px;color:rgba(255,255,255,.85);margin-top:4px;letter-spacing:.05em}
 .cdb-ag-log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;max-height:220px;overflow-y:auto}
 .cdb-ag-log-line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);display:flex;gap:8px}
-.cdb-ag-log-ts{color:rgba(255,255,255,.2);flex-shrink:0}
+.cdb-ag-log-ts{color:rgba(255,255,255,.85);flex-shrink:0}
 .cdb-ag-log-ok{color:#34d399}
 .cdb-ag-log-warn{color:#fcd34d}
 .cdb-ag-log-err{color:#fca5a5}
 .cdb-ag-log-ai{color:#c4b5fd}
-.cdb-ag-log-info{color:rgba(255,255,255,.5)}
+.cdb-ag-log-info{color:rgba(255,255,255,.85)}
 .cdb-ag-table{width:100%;border-collapse:collapse;font-size:11px}
-.cdb-ag-table th{text-align:left;color:rgba(255,255,255,.65);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
-.cdb-ag-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.7)}
+.cdb-ag-table th{text-align:left;color:rgba(255,255,255,.85);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
+.cdb-ag-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.85)}
 .cdb-ag-table tr:last-child td{border-bottom:none}
 .cdb-ag-table tr:hover td{background:rgba(255,255,255,.02)}
 .cdb-engine-status{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:8px}
@@ -14629,7 +14629,7 @@ if(document.readyState==='loading'){
 .cdb-graph-v2-wrap{background:rgba(0,0,0,.25);border:1px solid rgba(0,212,255,.1);border-radius:10px;overflow:hidden;position:relative;height:360px}
 .cdb-graph-v2-svg{width:100%;height:100%}
 .cdb-graph-toolbar{display:flex;gap:8px;padding:10px 14px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}
-.cdb-graph-legend{display:flex;flex-wrap:wrap;gap:12px;padding:8px 14px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05);font-size:10px;color:rgba(255,255,255,.4)}
+.cdb-graph-legend{display:flex;flex-wrap:wrap;gap:12px;padding:8px 14px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05);font-size:10px;color:rgba(255,255,255,.85)}
 .cdb-graph-legend-item{display:flex;align-items:center;gap:4px}
 .cdb-graph-legend-dot{width:8px;height:8px;border-radius:50%}
 
@@ -17774,7 +17774,7 @@ function renderPipeline(stages) {
 .cdb-bsp-sub {
   font-size: 8.5px;
   font-weight: 700;
-  color: rgba(0,212,255,.6);
+  color:rgba(0,212,255,.85);
   letter-spacing: .08em;
   display: block;
   margin-top: 1px;
@@ -17804,7 +17804,7 @@ function renderPipeline(stages) {
 .cdb-bsp-v {
   font-size: 8px;
   font-weight: 700;
-  color: rgba(255,255,255,.62);
+  color:rgba(255,255,255,.85);
   letter-spacing: .06em;
 }
 .cdb-bsp-tabs {
@@ -21342,9 +21342,9 @@ function v21TriggerUrgencyPayment(){
     .cdb-cc-title {
       font-size: 22px; font-weight: 800; color: #f1f5f9; letter-spacing: -.5px;
     }
-    .cdb-cc-subtitle { font-size: 12px; color: rgba(148,163,184,.5); margin-bottom: 20px; position: relative; z-index: 1; letter-spacing: .2px; }
+    .cdb-cc-subtitle { font-size: 12px; color:rgba(148,163,184,.85); margin-bottom: 20px; position: relative; z-index: 1; letter-spacing: .2px; }
     .cdb-cc-meta { display: flex; gap: 16px; align-items: center; margin-bottom: 0; position: relative; z-index: 1; }
-    .cdb-platform-status-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(148,163,184,.7); }
+    .cdb-platform-status-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color:rgba(148,163,184,.85); }
     #cdb-platform-status { padding: 3px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
     .cdb-status-green { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
     .cdb-status-amber { background: rgba(234,179,8,.12);  color: #fbbf24; border: 1px solid rgba(234,179,8,.2); }
@@ -21357,7 +21357,7 @@ function v21TriggerUrgencyPayment(){
     .cdb-cc-nav::-webkit-scrollbar { display: none; }
     .cdb-cc-tab {
       padding: 11px 20px;
-      font-size: 11px; font-weight: 700; color: rgba(100,116,139,.7);
+      font-size: 11px; font-weight: 700; color:rgba(148,163,184,.85);
       background: transparent; border: none; border-bottom: 2px solid transparent;
       cursor: pointer; white-space: nowrap; transition: all .2s;
       letter-spacing: .5px; text-transform: uppercase;
@@ -21422,7 +21422,7 @@ function v21TriggerUrgencyPayment(){
     }
     .cdb-kpi-label {
       font-size: 10px;
-      color: rgba(148,163,184,.7);
+      color:rgba(148,163,184,.85);
       text-transform: uppercase;
       letter-spacing: .8px;
       font-weight: 600;
@@ -21485,7 +21485,7 @@ function v21TriggerUrgencyPayment(){
     .cdb-threat-gauge-title {
       font-size: 11px;
       font-weight: 700;
-      color: rgba(148,163,184,.6);
+      color:rgba(148,163,184,.85);
       text-transform: uppercase;
       letter-spacing: .9px;
     }
