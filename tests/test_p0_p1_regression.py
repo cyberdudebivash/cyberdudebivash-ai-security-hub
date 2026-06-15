@@ -191,3 +191,52 @@ def test_persist_audit_is_noop_without_pool(_multi_agent_on_path):
 
     # Must complete without raising (best-effort persistence).
     asyncio.run(orch._persist_audit("id", "t", "u", "intent", ["a"], _QR(), 1.0, True))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Container-boot guards (skip unless the full runtime deps are installed —
+# they run in the verify-runtime-integrity CI job which installs requirements.txt)
+# ─────────────────────────────────────────────────────────────────────────────
+def test_orm_models_map_cleanly(_ai_core_on_path, monkeypatch):
+    """SQLAlchemy models must map without reserved-attribute errors.
+
+    Regression for: UsageLog defined an attribute named 'metadata', which is
+    reserved by the Declarative API and raised InvalidRequestError on import.
+    """
+    pytest.importorskip("sqlalchemy")
+    monkeypatch.setenv("SECRET_KEY", secrets.token_hex(32))
+    monkeypatch.setenv("APP_ENV", "production")
+    import importlib
+
+    models = importlib.import_module("core.database.models")
+    # Reserved name was remapped to a safe attribute over the same DB column.
+    assert hasattr(models.UsageLog, "event_metadata")
+    assert models.UsageLog.__table__.c.metadata.name == "metadata"  # DB column unchanged
+
+
+def test_container_app_boots_and_health_ok(monkeypatch):
+    """generated_app.main:app (the container CMD target) must import and its
+    /health endpoint must return 200 — proves the container can boot.
+
+    Skips unless fastapi + full deps are present (verify-runtime-integrity CI).
+    """
+    pytest.importorskip("fastapi")
+    pytest.importorskip("sqlalchemy")
+    monkeypatch.setenv("SECRET_KEY", secrets.token_hex(32))
+    monkeypatch.setenv("APP_ENV", "production")
+    for p in (REPO_ROOT, AI_CORE):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    for mod in [m for m in list(sys.modules) if m == "core" or m.startswith("core.")]:
+        del sys.modules[mod]
+
+    import importlib
+
+    main = importlib.import_module("generated_app.main")
+    paths = {r.path for r in main.app.routes if hasattr(r, "path")}
+    assert "/health" in paths
+
+    from starlette.testclient import TestClient
+
+    with TestClient(main.app) as client:
+        assert client.get("/health").status_code == 200

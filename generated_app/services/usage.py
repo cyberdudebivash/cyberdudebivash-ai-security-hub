@@ -32,7 +32,7 @@ def log_usage(
             action=str(action)[:128],
             tokens_used=max(0, int(tokens)),
             cost=max(0.0, float(cost)),
-            metadata=metadata or {},
+            event_metadata=metadata or {},
         )
         db.add(usage)
         db.commit()
