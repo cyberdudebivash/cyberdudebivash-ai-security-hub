@@ -1218,6 +1218,10 @@ jobs:
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN expires_at TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE gumroad_licenses ADD COLUMN sale_id TEXT" 2>/dev/null || true
 
+          # ── mssp_customers (P0 #1 — per-partner tenant isolation) ────────────
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE mssp_customers ADD COLUMN partner_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="CREATE INDEX IF NOT EXISTS idx_mssp_customers_partner ON mssp_customers(partner_id)" 2>/dev/null || true
+
           echo "✅ Comprehensive drift patch complete — all columns across all tables patched"
 
       - name: Apply base schema

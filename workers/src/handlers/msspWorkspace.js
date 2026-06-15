@@ -18,6 +18,20 @@ function requireAuth(authCtx) {
   return authCtx?.authenticated === true;
 }
 
+// ─── Per-partner isolation scope ──────────────────────────────────────────────
+// Every mssp_customers query is scoped to the calling partner's id. Fail-closed:
+// without a scope id (or before the additive partner_id migration lands), the
+// scoped query simply yields no rows — never a cross-partner leak. (schema_v40)
+function partnerScope(authCtx) {
+  return authCtx?.userId ?? authCtx?.user_id ?? null;
+}
+
+// Empty, fail-closed list payload (used when there is no partner scope or the
+// scoped query cannot run yet).
+function emptyList(limit, offset) {
+  return { success: true, customers: [], total: 0, limit, offset };
+}
+
 // GET /api/mssp/customers
 export async function handleListCustomers(request, env, authCtx) {
   if (!requireMSSPAdmin(authCtx)) {
@@ -29,20 +43,23 @@ export async function handleListCustomers(request, env, authCtx) {
   const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json(emptyList(limit, offset)); // fail-closed
+
   try {
     const rows = await env.SECURITY_HUB_DB.prepare(`
       SELECT id, org_name, org_slug, contact_name, contact_email,
              tier, status, risk_score, compliance_score,
              mrr_cents, created_at, updated_at, last_activity_at
       FROM mssp_customers
-      WHERE status = ?
+      WHERE status = ? AND partner_id = ?
       ORDER BY risk_score DESC
       LIMIT ? OFFSET ?
-    `).bind(status, limit, offset).all();
+    `).bind(status, scope, limit, offset).all();
 
     const totalQ = await env.SECURITY_HUB_DB.prepare(
-      `SELECT COUNT(*) as total FROM mssp_customers WHERE status = ?`
-    ).bind(status).first();
+      `SELECT COUNT(*) as total FROM mssp_customers WHERE status = ? AND partner_id = ?`
+    ).bind(status, scope).first();
 
     return Response.json({
       success:   true,
@@ -52,7 +69,8 @@ export async function handleListCustomers(request, env, authCtx) {
       offset,
     });
   } catch (e) {
-    return Response.json({ success: false, error: e.message }, { status: 500 });
+    // Fail-closed: if partner_id is not present yet, show nothing — never leak.
+    return Response.json({ ...emptyList(limit, offset), degraded: true });
   }
 }
 
@@ -69,6 +87,9 @@ export async function handleCreateCustomer(request, env, authCtx) {
   const { org_name, contact_email, tier = 'starter', contact_name, notes } = body;
   if (!org_name) return Response.json({ error: 'org_name required' }, { status: 400 });
 
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 }); // fail-closed
+
   const id       = `cust_${nanoid(12)}`;
   const org_slug = org_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const now      = new Date().toISOString();
@@ -76,9 +97,9 @@ export async function handleCreateCustomer(request, env, authCtx) {
   try {
     await env.SECURITY_HUB_DB.prepare(`
       INSERT INTO mssp_customers
-        (id, org_name, org_slug, contact_name, contact_email, tier, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(id, org_name, org_slug, contact_name || null, contact_email || null, tier, notes || null, now, now).run();
+        (id, org_name, org_slug, contact_name, contact_email, tier, notes, partner_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(id, org_name, org_slug, contact_name || null, contact_email || null, tier, notes || null, scope, now, now).run();
 
     return Response.json({ success: true, customer: { id, org_name, org_slug, tier } }, { status: 201 });
   } catch (e) {
@@ -97,12 +118,15 @@ export async function handleCustomerMetrics(request, env, authCtx, customerId) {
 
   const db = env.SECURITY_HUB_DB;
 
-  // Get customer record
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'Customer not found' }, { status: 404 }); // fail-closed
+
+  // Get customer record — scoped to the calling partner
   let customer;
   try {
     customer = await db.prepare(
-      `SELECT * FROM mssp_customers WHERE id = ? OR org_slug = ?`
-    ).bind(customerId, customerId).first();
+      `SELECT * FROM mssp_customers WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
+    ).bind(customerId, customerId, scope).first();
   } catch (_) {}
 
   if (!customer) {
@@ -180,14 +204,17 @@ export async function handleUpdateCustomer(request, env, authCtx, customerId) {
     return Response.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 }); // fail-closed
+
   updates.updated_at = new Date().toISOString();
   const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
-  const values = [...Object.values(updates), customerId];
+  const setValues = Object.values(updates);
 
   try {
     await env.SECURITY_HUB_DB.prepare(
-      `UPDATE mssp_customers SET ${fields} WHERE id = ? OR org_slug = ?`
-    ).bind(...values, customerId).run();
+      `UPDATE mssp_customers SET ${fields} WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
+    ).bind(...setValues, customerId, customerId, scope).run();
     return Response.json({ success: true });
   } catch (e) {
     return Response.json({ success: false, error: e.message }, { status: 500 });
@@ -200,6 +227,14 @@ export async function handleMSSPOverview(request, env, authCtx) {
     return Response.json({ error: 'MSSP admin role required' }, { status: 403 });
   }
 
+  const scope = partnerScope(authCtx);
+  const emptyOverview = {
+    success: true, total_customers: 0, active_customers: 0, onboarding: 0,
+    high_risk_count: 0, total_mrr: 0, avg_risk_score: 0, avg_compliance: 0,
+    high_risk_customers: [], as_of: new Date().toISOString(),
+  };
+  if (!scope) return Response.json(emptyOverview); // fail-closed
+
   try {
     const summary = await env.SECURITY_HUB_DB.prepare(`
       SELECT
@@ -211,14 +246,16 @@ export async function handleMSSPOverview(request, env, authCtx) {
         AVG(risk_score) as avg_risk,
         AVG(compliance_score) as avg_compliance
       FROM mssp_customers
-    `).first();
+      WHERE partner_id = ?
+    `).bind(scope).first();
 
     const recentQ = await env.SECURITY_HUB_DB.prepare(`
       SELECT id, org_name, risk_score, status, tier, last_activity_at
       FROM mssp_customers
+      WHERE partner_id = ?
       ORDER BY risk_score DESC
       LIMIT 5
-    `).all();
+    `).bind(scope).all();
 
     return Response.json({
       success: true,
@@ -233,6 +270,7 @@ export async function handleMSSPOverview(request, env, authCtx) {
       as_of: new Date().toISOString(),
     });
   } catch (e) {
-    return Response.json({ success: false, error: e.message }, { status: 500 });
+    // Fail-closed: degrade to an empty overview rather than leak or 500.
+    return Response.json({ ...emptyOverview, degraded: true });
   }
 }

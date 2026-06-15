@@ -1937,8 +1937,10 @@ CREATE TABLE IF NOT EXISTS mssp_customers (
   last_activity_at TEXT,
   contract_start   TEXT,
   contract_end     TEXT,
-  mrr_cents        INTEGER DEFAULT 0
+  mrr_cents        INTEGER DEFAULT 0,
+  partner_id       TEXT  -- P0 #1: owning partner for per-tenant isolation (schema_v40)
 );
+CREATE INDEX IF NOT EXISTS idx_mssp_customers_partner ON mssp_customers(partner_id);
 
 -- From: schema_v24_ZERO_ERRORS.sql
 CREATE TABLE IF NOT EXISTS mssp_partners (
