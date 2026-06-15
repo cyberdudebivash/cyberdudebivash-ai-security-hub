@@ -342,7 +342,20 @@ class MasterOrchestrator:
             "supported_intents": list(INTENT_ROUTING.keys()),
             "parallel_groups": list(PARALLEL_GROUPS.keys()),
         }
-  approved, elapsed_ms, created_at)
+    # ── Audit persistence ─────────────────────────────────────────────────────
+    async def _persist_audit(
+        self, orch_id: str, tenant_id: str, user_id: str, intent: str,
+        agents: List[str], qr: Any, elapsed_ms: float, approved: bool,
+    ) -> None:
+        """Persist an orchestration audit record (best-effort; no-op without a pool)."""
+        if not self.db:
+            return
+        try:
+            async with self.db.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO agent_audit_log (
+                        session_id, tenant_id, user_id, intent, agents_invoked, quality_score,
+                        approved, elapsed_ms, created_at)
                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
                 """, orch_id, tenant_id, user_id, intent,
                     ",".join(agents), qr.overall_score, approved, elapsed_ms)

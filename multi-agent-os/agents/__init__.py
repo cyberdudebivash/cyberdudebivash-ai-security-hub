@@ -5,7 +5,7 @@ Exports all 50+ specialist agents across all domains.
 # Core
 from .core.base_agent import BaseAgent, AgentLayer, AgentCapability
 from .core.orchestrator import MasterOrchestrator
-from .core.registry import AgentRegistry
+from .core.agent_registry import AgentRegistry
 
 # SOC
 from .soc import (
