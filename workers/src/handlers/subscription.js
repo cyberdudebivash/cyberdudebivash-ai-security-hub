@@ -303,12 +303,18 @@ export async function checkMonthlyQuota(env, identity) {
   if (!queryParam) return { allowed: true, scans_used: 0, scans_limit: scanLimit };
 
   const col   = keyId ? 'key_id' : 'user_id';
-  const row   = await env.DB.prepare(
-    `SELECT COALESCE(SUM(request_count), 0) as total FROM api_key_usage
-     WHERE ${col} = ? AND date_bucket >= ?`
-  ).bind(queryParam, monthStart).first();
+  // Fail-open: a metering-table error must never 500 a paying customer's scan.
+  let used = 0;
+  try {
+    const row = await env.DB.prepare(
+      `SELECT COALESCE(SUM(request_count), 0) as total FROM api_key_usage
+       WHERE ${col} = ? AND date_bucket >= ?`
+    ).bind(queryParam, monthStart).first();
+    used = row?.total ?? 0;
+  } catch {
+    return { allowed: true, scans_used: 0, scans_limit: scanLimit };
+  }
 
-  const used = row?.total ?? 0;
   return {
     allowed:         used < scanLimit,
     scans_used:      used,

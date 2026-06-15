@@ -681,8 +681,18 @@ async function runSyncPipeline(request, env, routeKey, route) {
 
   // Monthly scan quota enforcement for STARTER plan (backend gate)
   if (authCtx.tier === 'STARTER') {
-    const monthlyCheck = await checkMonthlyQuota(request, env);
-    if (monthlyCheck) return monthlyCheck; // returns 429 if quota exceeded
+    const monthlyCheck = await checkMonthlyQuota(env, {
+      plan:   authCtx.tier,
+      keyId:  authCtx.method === 'api_key' ? (authCtx.keyId ?? authCtx.key_id) : null,
+      userId: authCtx.userId ?? authCtx.user_id ?? null,
+    });
+    if (!monthlyCheck.allowed) {
+      return rateLimitResponse(
+        { ...monthlyCheck, tier: authCtx.tier, reason: 'monthly_quota_reached',
+          remaining: monthlyCheck.scans_remaining ?? 0, retry_after: 86400 },
+        route.module
+      );
+    }
   }
 
   // D1-based quota (API keys) or KV-based rate limit (IP/JWT)

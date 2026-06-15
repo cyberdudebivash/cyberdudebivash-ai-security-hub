@@ -184,6 +184,7 @@ async function trackStats(env, endpoint) {
 export function rateLimitResponse(result, module) {
   const reasons = {
     burst_exceeded:       'Too many requests — slow down',
+    monthly_quota_reached:'Monthly scan quota reached for your plan — upgrade for more',
     daily_limit_reached:  `Daily limit reached for ${module} on Free tier`,
     global_daily_limit:   'Global daily limit reached',
     banned:               'Access suspended due to abuse',
