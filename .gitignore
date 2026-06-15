@@ -75,6 +75,8 @@ workspace/
 .wrangler/state/
 
 # ── Local runtime artifacts (SQLite dev DB, agent memory) ─────────────────────
+# NB: anchored to repo root so the tracked ai-core/memory package is unaffected.
 *.db
-cdb_ai.db
-memory/
+/cdb_ai.db
+/memory/
+/logs/
