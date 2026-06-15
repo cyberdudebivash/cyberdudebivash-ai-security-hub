@@ -3,7 +3,15 @@
 // GTM Growth Engine Phase 5: Usage Tracking + Rate Limiting + Billing Hooks
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Canonical SHA-256 key hashing (shared with auth/apiKeys.js) — sap_ keys are
+// stored and matched as hashes, never plaintext.
+import { hashApiKey } from '../auth/apiKeys.js';
 
+// Mask a raw key for safe logging: keep the sap_ prefix + last 4 chars only.
+function maskKey(raw) {
+  if (!raw || typeof raw !== 'string') return 'anon';
+  return `sap_…${raw.slice(-4)}`;
+}
 
 // ── Plan API quotas ──────────────────────────────────────────────────────────
 export const API_QUOTAS = {
@@ -79,7 +87,7 @@ export async function recordApiUsage(env, apiKey, email, endpoint, statusCode, l
     await env.DB.prepare(`
       INSERT INTO api_usage_log (id, api_key, email, endpoint, status_code, latency_ms, weight, logged_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).bind(crypto.randomUUID(), apiKey || 'anon', email || 'anon', endpoint, statusCode, latencyMs, weight).run();
+    `).bind(crypto.randomUUID(), maskKey(apiKey), email || 'anon', endpoint, statusCode, latencyMs, weight).run();
   } catch {
     // Non-blocking
   }
@@ -304,9 +312,10 @@ export async function handlePaymentSuccess(env, webhookData = {}) {
 export async function provisionApiKey(env, email, plan) {
   const apiKey  = `sap_${crypto.randomUUID().replace(/-/g, '').slice(0, 32)}`;
   const now     = new Date().toISOString();
+  const keyHash = await hashApiKey(apiKey);
 
   try {
-    // Store in D1
+    // Store the HASH in D1 — never the raw key (removes credential-dump exposure)
     await env.DB.prepare(`
       INSERT INTO api_keys (id, email, plan, api_key, active, created_at)
       VALUES (?, ?, ?, ?, 1, ?)
@@ -315,10 +324,10 @@ export async function provisionApiKey(env, email, plan) {
         api_key  = excluded.api_key,
         active   = 1,
         updated_at = excluded.created_at
-    `).bind(crypto.randomUUID(), email, plan, apiKey, now).run();
+    `).bind(crypto.randomUUID(), email, plan, keyHash, now).run();
 
-    // Cache key → email mapping in KV (fast auth lookup)
-    await env.SECURITY_HUB_KV?.put(`apikey:${apiKey}`, JSON.stringify({ email, plan }), {
+    // Cache under the HASHED KV name (raw key never appears in the key-space)
+    await env.SECURITY_HUB_KV?.put(`apikey:${keyHash}`, JSON.stringify({ email, plan }), {
       expirationTtl: 60 * 60 * 24 * 365, // 1 year
     });
 
@@ -335,20 +344,24 @@ export async function provisionApiKey(env, email, plan) {
 export async function resolveApiKey(env, apiKey) {
   if (!apiKey) return null;
 
-  // KV fast path
+  const keyHash = await hashApiKey(apiKey);
+
+  // KV fast path — hashed name first, then transitional legacy (raw-named) entry
   try {
-    const cached = await env.SECURITY_HUB_KV?.get(`apikey:${apiKey}`);
+    const cached = await env.SECURITY_HUB_KV?.get(`apikey:${keyHash}`)
+                ?? await env.SECURITY_HUB_KV?.get(`apikey:${apiKey}`);
     if (cached) return JSON.parse(cached);
   } catch {}
 
-  // D1 fallback
+  // D1 fallback — match the hashed row (new) or a legacy plaintext row (transition)
   try {
     const row = await env.DB.prepare(
-      `SELECT email, plan FROM api_keys WHERE api_key = ? AND active = 1 LIMIT 1`
-    ).bind(apiKey).first();
+      `SELECT email, plan FROM api_keys WHERE api_key IN (?, ?) AND active = 1 LIMIT 1`
+    ).bind(keyHash, apiKey).first();
 
     if (row) {
-      await env.SECURITY_HUB_KV?.put(`apikey:${apiKey}`, JSON.stringify(row), {
+      // Re-cache under the hashed name so future lookups skip the legacy path
+      await env.SECURITY_HUB_KV?.put(`apikey:${keyHash}`, JSON.stringify(row), {
         expirationTtl: 3600,
       }).catch(() => {});
       return row;
