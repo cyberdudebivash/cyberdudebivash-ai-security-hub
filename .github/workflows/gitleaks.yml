@@ -26,6 +26,9 @@ jobs:
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
+          # Required by gitleaks-action v2 to scan pull_request events
+          # (the action diffs the PR via the GitHub API).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
           # No license needed for public repos.
         # Fails the job (non-zero) if any secret is detected.
