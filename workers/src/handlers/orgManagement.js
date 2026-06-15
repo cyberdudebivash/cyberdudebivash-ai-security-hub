@@ -195,7 +195,7 @@ export async function handleOrgDashboard(request, env, authCtx, orgId) {
 
     // Recent scans (last 5)
     env.DB.prepare(
-      `SELECT sh.id, sh.module, sh.target_summary, sh.risk_score, sh.risk_level,
+      `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
               u.full_name as scanned_by, sh.created_at
        FROM scan_history sh
        LEFT JOIN users u ON u.id = sh.user_id
@@ -383,7 +383,7 @@ export async function handleOrgScans(request, env, authCtx, orgId) {
   const module = url.searchParams.get('module');
 
   const placeholders = memberIds.map(() => '?').join(',');
-  let query  = `SELECT sh.id, sh.module, sh.target_summary, sh.risk_score, sh.risk_level,
+  let query  = `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
                        u.full_name as scanned_by, sh.created_at
                 FROM scan_history sh LEFT JOIN users u ON u.id = sh.user_id
                 WHERE sh.user_id IN (${placeholders})`;

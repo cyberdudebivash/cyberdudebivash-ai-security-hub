@@ -104,6 +104,19 @@ async function resolveFromApiKey(request, env) {
   };
 }
 
+// ─── Auth-context normalization ───────────────────────────────────────────────
+// Consumers across the codebase read camelCase `userId`/`keyId`, while the
+// resolvers populate snake_case `user_id`/`key_id`. Without these aliases, org
+// CRUD, RBAC, anomaly detection and request audit logging silently read
+// `undefined`. Additive only — snake_case fields are left untouched.
+function withAuthAliases(ctx) {
+  if (ctx && typeof ctx === 'object') {
+    if (ctx.userId === undefined) ctx.userId = ctx.user_id ?? null;
+    if (ctx.keyId  === undefined) ctx.keyId  = ctx.key_id  ?? null;
+  }
+  return ctx;
+}
+
 // ─── Master auth resolver ─────────────────────────────────────────────────────
 export async function resolveAuthV5(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') ||
@@ -114,7 +127,7 @@ export async function resolveAuthV5(request, env) {
     const rawKey = request.headers.get('x-api-key') ||
                    request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '';
     if (rawKey === env.ADMIN_KEY) {
-      return {
+      return withAuthAliases({
         authenticated: true,
         method:        'admin_key',
         identity:      'admin',
@@ -126,20 +139,20 @@ export async function resolveAuthV5(request, env) {
         key_id:        'admin',
         ip,
         isAdmin:       true,
-      };
+      });
     }
   }
 
   // 1. Try JWT (authenticated user)
   const jwtCtx = await resolveFromJWT(request, env);
-  if (jwtCtx) return jwtCtx;
+  if (jwtCtx) return withAuthAliases(jwtCtx);
 
   // 2. Try API key (service/developer access)
   const keyCtx = await resolveFromApiKey(request, env);
-  if (keyCtx) return keyCtx;
+  if (keyCtx) return withAuthAliases(keyCtx);
 
   // 3. IP fallback (free tier, keyless access)
-  return {
+  return withAuthAliases({
     authenticated: true,
     method:        'ip_fallback',
     identity:      `ip:${ip}`,
@@ -150,7 +163,7 @@ export async function resolveAuthV5(request, env) {
     label:         'Free (IP)',
     key_id:        null,
     ip,
-  };
+  });
 }
 
 // ─── Track usage + enforce quota (call AFTER auth, BEFORE handler) ────────────
