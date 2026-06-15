@@ -124,7 +124,9 @@ class UsageLog(Base):
     action = Column(String(128), nullable=False)
     tokens_used = Column(Integer, default=0, nullable=False)
     cost = Column(Float, default=0.0, nullable=False)
-    metadata = Column(JSONText, nullable=True)
+    # 'metadata' is reserved by SQLAlchemy's Declarative API; map the Python
+    # attribute to the unchanged DB column name "metadata" (no migration).
+    event_metadata = Column("metadata", JSONText, nullable=True)
     timestamp = Column(DateTime, default=utcnow, nullable=False, index=True)
 
     tenant = relationship("Tenant", back_populates="usage_logs")

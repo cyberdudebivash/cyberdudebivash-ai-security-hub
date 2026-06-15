@@ -60,11 +60,23 @@ commit_p*.txt
 # ── Audit & generated output files ───────────────────────────────────────────
 CYBERDUDEBIVASH_KV_AUDIT_REPORT.docx
 tools_output/
-generated_app/
 workspace/
+
+# ── Large binary artifacts / accidental repo snapshots ───────────────────────
+# Source archives must never be committed (they bloat every clone and drift
+# from the live tree). Build/release artifacts belong in CI artifact storage,
+# not git. See ARTIFACT_RETENTION_POLICY.md.
+*.zip
 
 # ── Temporary files ───────────────────────────────────────────────────────────
 *.tmp
 *.bak
 *.orig
-.wrangler/state/ 
+.wrangler/state/
+
+# ── Local runtime artifacts (SQLite dev DB, agent memory) ─────────────────────
+# NB: anchored to repo root so the tracked ai-core/memory package is unaffected.
+*.db
+/cdb_ai.db
+/memory/
+/logs/

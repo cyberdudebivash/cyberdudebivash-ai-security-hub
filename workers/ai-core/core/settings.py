@@ -9,7 +9,11 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 
-_WEAK_SECRET = "CHANGE_ME_IN_PRODUCTION"
+# Sentinel default for SECRET_KEY. Intentionally shorter than the 32-char
+# minimum enforced by validate_secret_key(), so the application fails closed
+# unless a strong SECRET_KEY is supplied via the environment / .env file.
+_DEFAULT_SECRET_SENTINEL = "CHANGE_ME_IN_PRODUCTION"
+_WEAK_SECRET = _DEFAULT_SECRET_SENTINEL  # backward-compatible alias
 _ALLOWED_ENVS = {"development", "staging", "production"}
 
 

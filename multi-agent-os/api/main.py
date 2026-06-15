@@ -335,7 +335,12 @@ async def list_intents():
 # ─── Entry point ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=False)
-def orchestrate(
+# NOTE: stale, undecorated duplicate of the orchestrate handler left by an
+# incomplete merge. It is unreachable (no route decorator) but must remain
+# syntactically valid; the canonical route is defined above at @app.post(
+# "/api/orchestrate"). See Technical Debt report: orchestrate() signature
+# mismatch between this module and MasterOrchestrator.orchestrate().
+async def orchestrate(
     request: Request,
     body:    Dict[str, Any],
     auth:    Dict = Depends(verify_token),

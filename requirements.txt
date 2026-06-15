@@ -4,7 +4,11 @@
 # ============================================================
 
 # ── Core Framework ────────────────────────────────────────────
-fastapi==0.115.0
+# fastapi 0.115.3 is the minimal release whose starlette pin
+# (>=0.40.0,<0.42.0) is compatible with the pinned starlette below.
+# 0.115.0 required starlette<0.39.0, which made this file unresolvable
+# and broke `pip install -r requirements.txt` (Docker build failure).
+fastapi==0.115.3
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
 starlette==0.41.3
