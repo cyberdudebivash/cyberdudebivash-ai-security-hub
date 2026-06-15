@@ -72,4 +72,9 @@ workspace/
 *.tmp
 *.bak
 *.orig
-.wrangler/state/ 
+.wrangler/state/
+
+# ── Local runtime artifacts (SQLite dev DB, agent memory) ─────────────────────
+*.db
+cdb_ai.db
+memory/
