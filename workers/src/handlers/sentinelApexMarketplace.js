@@ -20,6 +20,8 @@
  *   GET  /api/marketplace/compare               - Plan comparison
  */
 
+import { verifyWebhookSignature } from '../lib/razorpay.js';
+
 // ─── Product Catalog ──────────────────────────────────────────────────────────
 const PRODUCT_CATALOG = {
   // API Subscriptions
@@ -980,6 +982,81 @@ async function handleComparePlans(request, env, authCtx) {
 }
 
 // ─── Main Dispatcher ─────────────────────────────────────────────────────────
+// ─── POST /api/marketplace/webhook ────────────────────────────────────────────
+// Closes the dead purchase→delivery chain. Confirms payment for an order, flips
+// it to 'paid' (the gate enforced by secureDownload.js) and activates the order's
+// entitlement — unblocking report generation + download.
+//
+// Authorized two independent ways:
+//   • Provider: a valid X-Razorpay-Signature over the raw request body, or
+//   • Admin: an authenticated admin (authCtx.isAdmin) confirming a manual
+//     UPI/bank/Gumroad payment.
+// Idempotent: a repeated/re-delivered confirmation on an already-paid order is a
+// no-op. Only the status column is written, so it is safe across the drifted
+// marketplace_orders schema variants.
+async function markOrderPaidAndProvision(env, order) {
+  await env.DB.prepare(
+    `UPDATE marketplace_orders SET status = 'paid', updated_at = datetime('now') WHERE id = ?`
+  ).bind(order.id).run();
+
+  // Activate the entitlement(s) tied to this order (best-effort, non-fatal).
+  try {
+    await env.DB.prepare(
+      `UPDATE marketplace_entitlements SET status = 'active' WHERE order_id = ?`
+    ).bind(order.id).run();
+  } catch {}
+}
+
+async function handleMarketplaceWebhook(request, env, authCtx) {
+  const rawBody = await request.text();
+
+  // ── Authorize ──
+  const sig = request.headers.get('X-Razorpay-Signature') ||
+              request.headers.get('x-razorpay-signature');
+  let providerVerified = false;
+  if (sig) {
+    providerVerified = await verifyWebhookSignature(env, rawBody, sig);
+    if (!providerVerified) {
+      return Response.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    }
+  }
+
+  let body;
+  try { body = rawBody ? JSON.parse(rawBody) : {}; }
+  catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  const orderId = body.order_id ||
+                  body?.payload?.payment?.entity?.notes?.order_id ||
+                  body?.payload?.order?.entity?.id || null;
+  if (!orderId) return Response.json({ error: 'order_id required' }, { status: 400 });
+
+  // No provider signature ⇒ require an authenticated admin to confirm manually.
+  if (!providerVerified && authCtx?.isAdmin !== true) {
+    return Response.json({ error: 'Admin authorization or valid provider signature required' }, { status: 403 });
+  }
+
+  let order;
+  try {
+    order = await env.DB.prepare(
+      `SELECT id, status FROM marketplace_orders WHERE id = ? LIMIT 1`
+    ).bind(orderId).first();
+  } catch {}
+  if (!order) return Response.json({ error: 'Order not found' }, { status: 404 });
+
+  // Idempotency — never double-provision.
+  if (order.status === 'paid') {
+    return Response.json({ status: 'already_paid', order_id: orderId, idempotent: true });
+  }
+
+  await markOrderPaidAndProvision(env, order);
+  return Response.json({
+    status: 'paid',
+    order_id: orderId,
+    provisioned: true,
+    via: providerVerified ? 'provider_signature' : 'admin_confirmation',
+  });
+}
+
 export async function handleMarketplace(request, env, authCtx, path, method) {
   try {
     if (path === '/api/marketplace/catalog' && method === 'GET')
@@ -993,6 +1070,9 @@ export async function handleMarketplace(request, env, authCtx, path, method) {
 
     if (path === '/api/marketplace/purchase' && method === 'POST')
       return handleRecordPurchase(request, env, authCtx);
+
+    if (path === '/api/marketplace/webhook' && method === 'POST')
+      return handleMarketplaceWebhook(request, env, authCtx);
 
     if (path === '/api/marketplace/subscribe' && method === 'POST')
       return handleCreateSubscription(request, env, authCtx);
@@ -1043,6 +1123,7 @@ export async function handleMarketplace(request, env, authCtx, path, method) {
         'GET /api/marketplace/catalog/:productId',
         'POST /api/marketplace/checkout',
         'POST /api/marketplace/purchase',
+        'POST /api/marketplace/webhook',
         'POST /api/marketplace/subscribe',
         'GET /api/marketplace/subscriptions',
         'POST /api/marketplace/subscriptions/:id/cancel',
