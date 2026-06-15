@@ -1180,6 +1180,10 @@ jobs:
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN actively_exploited INTEGER DEFAULT 0" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN exploit_available INTEGER DEFAULT 0" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN ioc_list TEXT DEFAULT '[]'" 2>/dev/null || true
+          # v40: columns required by MYTHOS GOD MODE phase-1 (threat_class, solution_generated).
+          # Without these the phase-1 SELECT throws "no such column" -> no_intel -> empty dashboard.
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN threat_class TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN solution_generated INTEGER DEFAULT 0" 2>/dev/null || true
 
           # ── leads (v8 extended columns not in schema_threat_intel.sql) ─────────────
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN company TEXT" 2>/dev/null || true

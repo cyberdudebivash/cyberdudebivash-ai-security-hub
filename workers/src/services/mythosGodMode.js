@@ -232,12 +232,32 @@ async function phase3_toolGeneration(env, intelItems) {
     intelItems,
   });
 
+  // Mark the processed CVEs as solved so the phase-1 backlog advances on the
+  // next run instead of reprocessing the same top-N. Guarded: if the
+  // solution_generated column is absent (pre-v40 schema) this is a no-op and
+  // never aborts the pipeline.
+  let solutionsMarked = 0;
+  try {
+    const db  = env.SECURITY_HUB_DB || env.DB;
+    const ids = [...new Set(intelItems.map(i => i.id || i.cve_id).filter(Boolean))].slice(0, 50);
+    if (db && ids.length) {
+      const placeholders = ids.map(() => '?').join(',');
+      await db.prepare(
+        `UPDATE threat_intel SET solution_generated = 1 WHERE id IN (${placeholders})`
+      ).bind(...ids).run();
+      solutionsMarked = ids.length;
+    }
+  } catch (err) {
+    console.warn('[GOD MODE P3] solution_generated mark skipped:', err.message);
+  }
+
   return {
-    job_id:          job.job_id,
-    tools_generated: job.total_tools     || 0,
-    tools_published: job.total_published || 0,
-    tools_failed:    job.total_failed    || 0,
-    status:          job.status,
+    job_id:           job.job_id,
+    tools_generated:  job.total_tools     || 0,
+    tools_published:  job.total_published || 0,
+    tools_failed:     job.total_failed    || 0,
+    solutions_marked: solutionsMarked,
+    status:           job.status,
   };
 }
 
