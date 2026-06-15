@@ -132,8 +132,9 @@
       const uptime    = trust.uptime_percent ?? trust.uptime ?? 99.9;
       const scansT    = trust.total_scans ?? 0;
 
-      setText('tm-teams',          fmt(customers));
-      setText('cdb-exec-clients',  fmt(customers));
+      // 'Verified paying customers' / 'Total clients' tiles were replaced with
+      // truthful capability metrics (Live Threat Feeds / AI Security Engines).
+      // Do not hydrate a customer count that is currently 0.
       setText('cdb-exec-uptime',   typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
       if (scansT > 0) setText('tm-scans', fmt(scansT));
     }
@@ -142,9 +143,9 @@
     const platform = await Bus.fetch('/api/platform/metrics');
     if (platform) {
       const uptime = platform.uptime_percent ?? platform.uptime ?? null;
-      const reqs   = platform.total_requests ?? platform.request_count ?? null;
       if (uptime !== null) setText('cdb-exec-uptime', typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
-      if (reqs   !== null) setText('cdb-exec-api-reqs', fmtK(reqs));
+      // 'API Requests' tile replaced with 'Compliance Frameworks' (static, truthful);
+      // no live request counter is exposed by /api/platform/metrics.
     }
 
     // ── /api/health ───────────────────────────────────────────────────────

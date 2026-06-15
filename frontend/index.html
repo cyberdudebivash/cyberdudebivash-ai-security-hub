@@ -3507,9 +3507,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div class="trust-metric-sub">NVD + CISA KEV real-time</div>
 </div>
 <div class="trust-metric-card">
-<div class="trust-metric-num" id="tm-teams">47+</div>
-<div class="trust-metric-label">Security Teams</div>
-<div class="trust-metric-sub">Verified paying customers</div>
+<div class="trust-metric-num" id="tm-feeds">4</div>
+<div class="trust-metric-label">Live Threat Feeds</div>
+<div class="trust-metric-sub">NVD · CISA KEV · EPSS · GitHub</div>
 </div>
 <div class="trust-metric-card">
 <div class="trust-metric-num" id="tm-rules">312+</div>
@@ -3630,7 +3630,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 
       setEl('tm-scans', _applyFloor(m.total_scans||0,_SCAN_BASELINE));
       setEl('tm-cves',  m.total_cves);
-      setEl('tm-teams', m.total_customers);
+      // tm-feeds tile is a static truthful capability metric (Live Threat Feeds); not hydrated.
       // tm-rules: SOAR rules generated — from scan history
       // tm-uptime: always factual
       // tm-sla: always factual
@@ -5534,42 +5534,42 @@ window.cdbBookAssessment = async function() {
 </thead>
 <tbody>
 <!-- Scans & Modules -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Scanning &amp; Modules</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Daily Scans</td><td style="text-align:center;color:var(--text-muted)">5</td><td style="text-align:center;color:#3b82f6">50</td><td style="text-align:center;color:#c4b5fd">500</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Domain Vulnerability Scanner</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Security (OWASP LLM Top 10)</td><td style="text-align:center;color:var(--text-muted)">Preview</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Red Team Simulation</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Identity &amp; Zero Trust Scanner</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Compliance (ISO/SOC2/GDPR/DPDP)</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Threat Intel (Live CVE/KEV Feed)</td><td style="text-align:center;color:var(--text-muted)">5 CVEs</td><td style="text-align:center;color:#22c55e">✓ 20</td><td style="text-align:center;color:#22c55e">✓ 50</td><td style="text-align:center;color:#22c55e">✓ Unlimited</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Cloud Security Posture (AWS/GCP/Azure)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Dark Web Exposure Scanner</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AppSec / DAST (OWASP Top 10 Web)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Scanning &amp; Modules</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Daily Scans</td><td style="text-align:center;color:var(--text-muted)">5</td><td style="text-align:center;color:#3b82f6">50</td><td style="text-align:center;color:#c4b5fd">500</td><td style="text-align:center;color:#f59e0b">Unlimited</td><td style="text-align:center;color:#e879f9">Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Domain Vulnerability Scanner</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Security (OWASP LLM Top 10)</td><td style="text-align:center;color:var(--text-muted)">Preview</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Red Team Simulation</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Identity &amp; Zero Trust Scanner</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Compliance (ISO/SOC2/GDPR/DPDP)</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Threat Intel (Live CVE/KEV Feed)</td><td style="text-align:center;color:var(--text-muted)">5 CVEs</td><td style="text-align:center;color:#22c55e">✓ 20</td><td style="text-align:center;color:#22c55e">✓ 50</td><td style="text-align:center;color:#22c55e">✓ Unlimited</td><td style="text-align:center;color:#e879f9">✓ Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Cloud Security Posture (AWS/GCP/Azure)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Dark Web Exposure Scanner</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AppSec / DAST (OWASP Top 10 Web)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <!-- AI & Intelligence -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">AI &amp; Intelligence</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst (Chat)</td><td style="text-align:center;color:var(--text-muted)">5 queries</td><td style="text-align:center;color:#3b82f6">20/mo</td><td style="text-align:center;color:#c4b5fd">100/mo</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Attack Simulation &amp; Kill Chain</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SOAR Rule Generation (Sigma/YARA/KQL)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MITRE ATT&amp;CK TTP Mapping</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Risk Forecast &amp; Predictive Scoring</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Executive Dashboard</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">AI &amp; Intelligence</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MYTHOS AI Analyst (Chat)</td><td style="text-align:center;color:var(--text-muted)">5 queries</td><td style="text-align:center;color:#3b82f6">20/mo</td><td style="text-align:center;color:#c4b5fd">100/mo</td><td style="text-align:center;color:#f59e0b">Unlimited</td><td style="text-align:center;color:#e879f9">Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">AI Attack Simulation &amp; Kill Chain</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SOAR Rule Generation (Sigma/YARA/KQL)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">MITRE ATT&amp;CK TTP Mapping</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Risk Forecast &amp; Predictive Scoring</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Executive Dashboard</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <!-- Reports & Export -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Reports &amp; Export</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">PDF Security Reports</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Board Report (PDF)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Report Retention</td><td style="text-align:center;color:var(--text-muted)">7 days</td><td style="text-align:center;color:#3b82f6">30 days</td><td style="text-align:center;color:#c4b5fd">90 days</td><td style="text-align:center;color:#f59e0b">1 year</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Reports &amp; Export</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">PDF Security Reports</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">CISO Board Report (PDF)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Report Retention</td><td style="text-align:center;color:var(--text-muted)">7 days</td><td style="text-align:center;color:#3b82f6">30 days</td><td style="text-align:center;color:#c4b5fd">90 days</td><td style="text-align:center;color:#f59e0b">1 year</td><td style="text-align:center;color:#e879f9">Custom</td></tr>
 <!-- API & Integration -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">API &amp; Integrations</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#c4b5fd">500 req/day</td><td style="text-align:center;color:#f59e0b">Unlimited</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Keys</td><td style="text-align:center;color:var(--text-muted)">1</td><td style="text-align:center;color:#3b82f6">2</td><td style="text-align:center;color:#c4b5fd">5</td><td style="text-align:center;color:#f59e0b">20</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SIEM Integration (Splunk/Sentinel/Elastic)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Webhook / Custom Integrations</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">API &amp; Integrations</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Access</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#c4b5fd">500 req/day</td><td style="text-align:center;color:#f59e0b">Unlimited</td><td style="text-align:center;color:#e879f9">Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">API Keys</td><td style="text-align:center;color:var(--text-muted)">1</td><td style="text-align:center;color:#3b82f6">2</td><td style="text-align:center;color:#c4b5fd">5</td><td style="text-align:center;color:#f59e0b">20</td><td style="text-align:center;color:#e879f9">Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SIEM Integration (Splunk/Sentinel/Elastic)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Webhook / Custom Integrations</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <!-- Enterprise -->
-<tr style="background:rgba(255,255,255,.02)"><td colspan="5" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Enterprise Features</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Multi-User Seats</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#f59e0b">10 seats</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SSO / SAML Integration</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">White-Label Platform</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
-<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SLA Guarantee (99.9% Uptime)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">Enterprise Features</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">Multi-User Seats</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#f59e0b">10 seats</td><td style="text-align:center;color:#e879f9">Unlimited</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SSO / SAML Integration</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">White-Label Platform</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 14px">SLA Guarantee (99.9% Uptime)</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center;color:#22c55e">✓</td><td style="text-align:center;color:#22c55e">✓</td></tr>
 <tr><td style="padding:9px 14px">Support</td><td style="text-align:center;color:var(--text-muted)">Community</td><td style="text-align:center;color:#3b82f6">Email</td><td style="text-align:center;color:#c4b5fd">Priority</td><td style="text-align:center;color:#f59e0b">Dedicated CSM</td><td style="text-align:center;color:#e879f9">24/7 TAM</td></tr>
 <!-- AI Security rows -->
 <tr style="background:rgba(255,255,255,.02)"><td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase">AI Security (Unique to CDB)</td></tr>
@@ -16463,7 +16463,6 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
         };
         safe('tm-scans', _applyFloor(m.total_scans||0,_SCAN_BASELINE));
         safe('tm-cves',  m.total_cves);
-        safe('tm-teams', m.total_customers, '+');
         safe('tm-rules', m.total_soar_rules);
         if (m.uptime_pct) {
           var eu = document.getElementById('tm-uptime');
@@ -21709,14 +21708,14 @@ function v21TriggerUrgencyPayment(){
 <div class="cdb-kpi-sub">SLA performance</div>
 </div>
 <div class="cdb-kpi-card">
-<div class="cdb-kpi-label">Total Clients</div>
-<div class="cdb-kpi-value" id="cdb-exec-clients">—</div>
-<div class="cdb-kpi-sub">Enterprise accounts</div>
+<div class="cdb-kpi-label">AI Security Engines</div>
+<div class="cdb-kpi-value" id="cdb-exec-engines">8</div>
+<div class="cdb-kpi-sub">ASPM · RedTeam · ZeroTrust · CISO</div>
 </div>
 <div class="cdb-kpi-card">
-<div class="cdb-kpi-label">API Requests</div>
-<div class="cdb-kpi-value" id="cdb-exec-api-reqs">—</div>
-<div class="cdb-kpi-sub">Platform throughput</div>
+<div class="cdb-kpi-label">Compliance Frameworks</div>
+<div class="cdb-kpi-value" id="cdb-exec-frameworks">6</div>
+<div class="cdb-kpi-sub">ISO·SOC2·NIST·GDPR·DPDP·OWASP</div>
 </div>
 </div>
 <!-- Threat Gauge -->
