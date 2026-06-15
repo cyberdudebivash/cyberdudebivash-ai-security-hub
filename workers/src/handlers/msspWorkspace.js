@@ -21,7 +21,7 @@ function requireAuth(authCtx) {
 // ─── Per-partner isolation scope ──────────────────────────────────────────────
 // Every mssp_customers query is scoped to the calling partner's id. Fail-closed:
 // without a scope id (or before the additive partner_id migration lands), the
-// scoped query simply yields no rows — never a cross-partner leak. (schema_v40)
+// scoped query simply yields no rows — never a cross-partner leak. (schema_v41)
 function partnerScope(authCtx) {
   return authCtx?.userId ?? authCtx?.user_id ?? null;
 }

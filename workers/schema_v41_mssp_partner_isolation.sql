@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- schema_v40 — MSSP per-partner tenant isolation (P0 #1)
+-- schema_v41 — MSSP per-partner tenant isolation (P0 #1)
 -- Additive only. Adds an owner column so every msspWorkspace query can be
 -- scoped to the calling partner, closing the cross-partner data-leak path.
 -- Idempotent: ADD COLUMN is wrapped with `|| true` by the migration job; the
