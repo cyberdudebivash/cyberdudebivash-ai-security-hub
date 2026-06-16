@@ -29,7 +29,24 @@
   // ─────────────────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const setText = (id, val) => { const el = $(id); if (el && val !== null && val !== undefined) el.textContent = val; };
-  const fmt = (n) => (typeof n === 'number') ? n.toLocaleString() : (n || '—'); const _CVE_FLOOR = 3841; const _cveFloor = (raw) => { const m = Number(raw); return (!isFinite(m) || m <= 0) ? _CVE_FLOOR : m + _CVE_FLOOR; }; const fmtCve = (raw) => Number(_cveFloor(raw)).toLocaleString('en-IN') + '+';
+  const fmt = (n) => (typeof n === 'number') ? n.toLocaleString() : (n || '—');
+  // Honest CVE count — the real number of advisories tracked in threat_intel.
+  // (Previously inflated by a hardcoded +3,841 "floor"; removed for metric integrity.)
+  const fmtCve = (raw) => {
+    const m = Number(raw);
+    if (!isFinite(m) || m < 0) return '—';
+    return m.toLocaleString('en-IN');
+  };
+  // Threat level + bar score derived from REAL critical/KEV counts (same thresholds
+  // as the platform's ai_summary), not a missing threat_score field.
+  const threatFrom = (crit, kev) => {
+    crit = Number(crit) || 0; kev = Number(kev) || 0;
+    if (kev > 50 || crit > 100) return { level: 'CRITICAL', score: 92 };
+    if (kev > 20 || crit > 50)  return { level: 'HIGH',     score: 74 };
+    if (kev > 5  || crit > 20)  return { level: 'MODERATE', score: 50 };
+    if (crit > 0)               return { level: 'LOW',      score: 28 };
+    return { level: 'MINIMAL', score: 10 };
+  };
   const fmtK = (n) => {
     if (typeof n !== 'number') return '—';
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M+';
@@ -73,82 +90,99 @@
   // CounterHydrator — wires static IDs to live values
   // ─────────────────────────────────────────────────────────────────────────
   async function hydrateCounters() {
-    // ── /api/scan/stats ──────────────────────────────────────────────────
-    const scans = await Bus.fetch('/api/scan/stats');
-    if (scans) {
-      const total    = scans.total_scans ?? scans.stats?.total_scans ?? 0;
-      const today    = scans.today ?? scans.stats?.scans_today ?? 0;
-      const critical = scans.critical ?? 0;
-      const critCves = scans.critical_cves ?? 0;
+    // ── /api/platform/metrics — SINGLE SOURCE OF TRUTH ───────────────────────
+    // Every headline counter is driven from this one endpoint so the hero, trust
+    // center and all command centers always show identical, real values. The
+    // metrics object already reconciles KV scan counters + D1 (see
+    // metricsHydration.js) and agrees with /api/scan/stats and threat-intel/stats.
+    const pm = await Bus.fetch('/api/platform/metrics');
+    const m  = pm?.metrics || null;
 
-      setText('stat-scans',     fmtK(total));
-      setText('stat-threats',   critical > 0 ? `${fmt(critical)} critical` : '—');
-      setText('tm-scans',       fmt(total));
-      setText('p4-scan-count',  fmtK(total));
-      setText('hero-live-scans', fmt(today));
-      setText('ae-cve-count',   fmt(critCves));
+    if (m) {
+      const total    = m.total_scans ?? 0;
+      const today    = m.scans_today ?? 0;
+      const critical = m.critical_threats ?? 0;
+      const cves     = m.total_cves_tracked ?? 0;
+      const kev      = m.kev_count ?? m.active_exploitation ?? 0;
+      const uptime   = m.uptime_pct ?? m.uptime_percent ?? m.uptime ?? null;
 
-      // Update command center live elements
+      // Scans
+      setText('stat-scans',           fmtK(total));
+      setText('tm-scans',             fmt(total));
+      setText('p4-scan-count',        fmtK(total));
+      setText('hero-live-scans',      fmt(today));
       setText('cdb-exec-total-scans', fmtK(total));
       setText('cdb-exec-scans-today', fmt(today));
-      setText('cdb-exec-critical',    fmt(critical));
       setText('cdb-soc-scan-count',   fmt(today));
-    }
 
-    // ── /api/vulns/stats ─────────────────────────────────────────────────
-    const vulns = await Bus.fetch('/api/vulns/stats');
-    if (vulns) {
-      const total    = vulns.total ?? vulns.total_cves ?? 0;
-      const critical = vulns.critical ?? vulns.critical_cves ?? 0;
-      const kev      = vulns.kev_count ?? 0;
+      // Scan-based critical findings (risk_score>=80) — sits beside scan counts,
+      // matches the SSE scan_count.critical so poll + stream never disagree.
+      const scanCritical = m.high_risk_scans ?? 0;
+      setText('stat-threats',      scanCritical > 0 ? `${fmt(scanCritical)} critical` : '—');
+      setText('cdb-exec-critical', fmt(scanCritical));
+      // CVE-critical (severity='CRITICAL') drives the threat-intel / Sentinel tiles.
+      setText('ae-cve-count',      fmt(critical));
 
-      setText('stat-cves',          fmtCve(total));
-      setText('tm-cves',            fmtCve(total));
-      setText('cdb-exec-cves',      fmtCve(total));
-      setText('cdb-sentinel-total', fmtCve(total));
+      // CVEs (honest counts — no fabricated floor)
+      setText('stat-cves',          fmtCve(cves));
+      setText('tm-cves',            fmtCve(cves));
+      setText('cdb-exec-cves',      fmtCve(cves));
+      setText('cdb-sentinel-total', fmtCve(cves));
       setText('cdb-sentinel-crit',  fmt(critical));
       setText('cdb-sentinel-kev',   fmt(kev));
-    }
 
-    // ── /api/threat-intel/stats ───────────────────────────────────────────
-    const intel = await Bus.fetch('/api/threat-intel/stats');
-    if (intel) {
-      const total  = intel.total_cves ?? intel.total ?? 0;
-      const crit   = intel.critical_cves ?? intel.critical ?? 0;
+      // Uptime
+      if (uptime !== null) {
+        setText('cdb-exec-uptime', typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
+      }
 
-      // Only overwrite if vulns/stats didn't provide values
-      if (!vulns) {
-        setText('stat-cves',         fmtCve(total));
-        setText('tm-cves',           fmtCve(total));
+      // Threat level + bar — derived from REAL critical/KEV counts
+      const t = threatFrom(critical, kev);
+      const colors = { CRITICAL: '#ef4444', HIGH: '#f97316', MODERATE: '#eab308', LOW: '#22c55e', MINIMAL: '#22c55e' };
+      setText('cdb-threat-level-label', t.level);
+      setText('cdb-threat-score',       t.score);
+      const tBar = $('cdb-threat-bar');
+      if (tBar) {
+        tBar.style.width      = Math.min(100, t.score) + '%';
+        tBar.style.background = colors[t.level] || colors.MODERATE;
+      }
+    } else {
+      // ── Fallback: SSOT unavailable — hydrate from scan/stats + threat-intel/stats
+      // (correctly mapped this time) so the page still shows real data on outage.
+      const scans = await Bus.fetch('/api/scan/stats');
+      if (scans) {
+        const total = scans.total_scans ?? 0;
+        const today = scans.today ?? 0;
+        const crit  = scans.critical_cves ?? scans.critical ?? 0;
+        setText('stat-scans',           fmtK(total));
+        setText('tm-scans',             fmt(total));
+        setText('p4-scan-count',        fmtK(total));
+        setText('hero-live-scans',      fmt(today));
+        setText('cdb-exec-total-scans', fmtK(total));
+        setText('cdb-exec-scans-today', fmt(today));
+        setText('cdb-soc-scan-count',   fmt(today));
+        setText('stat-threats',         crit > 0 ? `${fmt(crit)} critical` : '—');
+        setText('cdb-exec-critical',    fmt(crit));
+      }
+      const intel = await Bus.fetch('/api/threat-intel/stats');
+      const s = intel?.stats || intel || null;
+      if (s) {
+        const total = s.total_advisories ?? s.total_cves ?? s.total ?? 0;
+        const crit  = s.critical ?? s.critical_cves ?? 0;
+        const kev   = s.confirmed_exploited ?? s.kev_count ?? 0;
+        setText('stat-cves',          fmtCve(total));
+        setText('tm-cves',            fmtCve(total));
+        setText('cdb-exec-cves',      fmtCve(total));
         setText('cdb-sentinel-total', fmtCve(total));
         setText('cdb-sentinel-crit',  fmt(crit));
+        setText('cdb-sentinel-kev',   fmt(kev));
+        const t = threatFrom(crit, kev);
+        setText('cdb-threat-level-label', t.level);
+        setText('cdb-threat-score',       t.score);
       }
     }
 
-    // ── /api/trust/metrics ────────────────────────────────────────────────
-    const trust = await Bus.fetch('/api/trust/metrics');
-    if (trust) {
-      const customers = trust.total_customers ?? trust.customers ?? 0;
-      const uptime    = trust.uptime_percent ?? trust.uptime ?? 99.9;
-      const scansT    = trust.total_scans ?? 0;
-
-      // 'Verified paying customers' / 'Total clients' tiles were replaced with
-      // truthful capability metrics (Live Threat Feeds / AI Security Engines).
-      // Do not hydrate a customer count that is currently 0.
-      setText('cdb-exec-uptime',   typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
-      if (scansT > 0) setText('tm-scans', fmt(scansT));
-    }
-
-    // ── /api/platform/metrics ─────────────────────────────────────────────
-    const platform = await Bus.fetch('/api/platform/metrics');
-    if (platform) {
-      const uptime = platform.uptime_percent ?? platform.uptime ?? null;
-      if (uptime !== null) setText('cdb-exec-uptime', typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
-      // 'API Requests' tile replaced with 'Compliance Frameworks' (static, truthful);
-      // no live request counter is exposed by /api/platform/metrics.
-    }
-
-    // ── /api/health ───────────────────────────────────────────────────────
+    // ── /api/health — platform status badge ──────────────────────────────────
     const health = await Bus.fetch('/api/health');
     if (health) {
       const status = health.status || 'operational';
@@ -157,21 +191,6 @@
         badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
         badge.className   = badge.className.replace(/\bcdb-status-\w+/g, '');
         badge.classList.add(status === 'operational' ? 'cdb-status-green' : 'cdb-status-amber');
-      }
-    }
-
-    // ── /api/global-threat-feed/stats ────────────────────────────────────
-    const gtf = await Bus.fetch('/api/global-threat-feed/stats');
-    if (gtf) {
-      const score  = gtf.threat_score ?? gtf.threat_level ?? 0;
-      const level  = score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
-      const colors = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e' };
-      setText('cdb-threat-level-label', level);
-      setText('cdb-threat-score',       score);
-      const tBar = $('cdb-threat-bar');
-      if (tBar) {
-        tBar.style.width = Math.min(100, score) + '%';
-        tBar.style.background = colors[level] || colors.MEDIUM;
       }
     }
 

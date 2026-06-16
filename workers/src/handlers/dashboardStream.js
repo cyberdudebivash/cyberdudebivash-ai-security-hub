@@ -61,6 +61,26 @@ export async function handleDashboardStream(request, env, authCtx) {
     return resp.json();
   };
 
+  // Single source of truth — /api/platform/metrics reconciles KV + D1 and agrees
+  // with /api/scan/stats and /api/threat-intel/stats. SSE emits from it so the
+  // stream never contradicts the polled values.
+  const getMetrics = async () => {
+    try {
+      const pm = await workerFetch('/api/platform/metrics');
+      return pm?.metrics || null;
+    } catch { return null; }
+  };
+  // Threat level + bar score from REAL critical/KEV counts (same thresholds as
+  // the platform's ai_summary), not a hardcoded default.
+  const threatFrom = (crit, kev) => {
+    crit = Number(crit) || 0; kev = Number(kev) || 0;
+    if (kev > 50 || crit > 100) return { level: 'CRITICAL', score: 92 };
+    if (kev > 20 || crit > 50)  return { level: 'HIGH',     score: 74 };
+    if (kev > 5  || crit > 20)  return { level: 'MODERATE', score: 50 };
+    if (crit > 0)               return { level: 'LOW',      score: 28 };
+    return { level: 'MINIMAL', score: 10 };
+  };
+
   let lastScanTotal = 0;
   let closed = false;
 
@@ -88,26 +108,18 @@ export async function handleDashboardStream(request, env, authCtx) {
       }
     } catch (_) {}
 
-    // CVE stats — try /api/vulns/stats first, fallback to /api/threat-intel/stats
+    // CVE stats — from the single source of truth (matches the polled dashboard).
     try {
-      const v = await workerFetch('/api/vulns/stats');
-      await send('cve_stats', {
-        total:      v.total ?? v.total_cves ?? 0,
-        critical:   v.critical ?? v.critical_cves ?? 0,
-        kev_count:  v.kev_count ?? 0,
-        cve_count:  v.cve_count ?? v.total ?? 0,
-      });
-    } catch (_) {
-      try {
-        const t = await workerFetch('/api/threat-intel/stats');
+      const m = await getMetrics();
+      if (m) {
         await send('cve_stats', {
-          total:     t.total_cves ?? 0,
-          critical:  t.critical_cves ?? 0,
-          kev_count: t.kev_count ?? 0,
-          cve_count: t.total_cves ?? 0,
+          total:     m.total_cves_tracked ?? 0,
+          critical:  m.critical_threats ?? 0,
+          kev_count: m.kev_count ?? m.active_exploitation ?? 0,
+          cve_count: m.total_cves_tracked ?? 0,
         });
-      } catch (_2) {}
-    }
+      }
+    } catch (_) {}
 
     // Health check
     try {
@@ -124,10 +136,11 @@ export async function handleDashboardStream(request, env, authCtx) {
   // ── Threat level helper ───────────────────────────────────────────────────
   const sendThreatLevel = async () => {
     try {
-      const g = await workerFetch('/api/global-threat-feed/stats');
-      const score    = g.threat_score ?? g.threat_level ?? 62;
-      const level    = score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
-      await send('threat_level', { level, score, source: 'global-threat-feed' });
+      const m = await getMetrics();
+      if (m) {
+        const t = threatFrom(m.critical_threats, m.kev_count ?? m.active_exploitation);
+        await send('threat_level', { level: t.level, score: t.score, source: 'platform-metrics' });
+      }
     } catch (_) {}
   };
 
@@ -171,15 +184,17 @@ export async function handleDashboardStream(request, env, authCtx) {
           }
         } catch (_) {}
 
-        // CVE stats
+        // CVE stats — from the single source of truth (matches the polled dashboard).
         try {
-          const v = await workerFetch('/api/vulns/stats');
-          await send('cve_stats', {
-            total:     v.total ?? 0,
-            critical:  v.critical ?? 0,
-            kev_count: v.kev_count ?? 0,
-            cve_count: v.total ?? 0,
-          });
+          const m = await getMetrics();
+          if (m) {
+            await send('cve_stats', {
+              total:     m.total_cves_tracked ?? 0,
+              critical:  m.critical_threats ?? 0,
+              kev_count: m.kev_count ?? m.active_exploitation ?? 0,
+              cve_count: m.total_cves_tracked ?? 0,
+            });
+          }
         } catch (_) {}
       }
 
