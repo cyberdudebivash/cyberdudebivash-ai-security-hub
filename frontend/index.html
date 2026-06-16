@@ -13482,6 +13482,9 @@ window.addEventListener('load', () => {
 
   // ── Exit intent detection ────────────────────────────────────────────────
   function initExitIntent() {
+    return; // DISABLED: the "Wait — Before You Go / 50% off ₹249" exit-intent overlay
+            // trapped mobile/tablet users (full-screen overlay, hard-to-tap close).
+            // Kept as a no-op so all trigger sites stay harmless. Re-enable by removing this line.
     if (planAtLeast('starter') || sessionStorage.getItem('cdb_exit_shown')) return;
 
     let triggered = false;
@@ -14350,6 +14353,9 @@ function initMonetization(){
 }
 
 function showLeadModal(){
+  return; // DISABLED: the "FREE ENTERPRISE THREAT REPORT / Personalized Vulnerability
+          // Assessment" popup (#p13-lead) trapped mobile/tablet users. No-op keeps the
+          // 50s-timer + mouseleave trigger sites harmless. Re-enable by removing this line.
   if(document.getElementById('p13-lead')||_leadDone)return;
   var m=document.createElement('div');
   m.id='p13-lead';
