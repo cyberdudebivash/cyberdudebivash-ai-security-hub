@@ -138,7 +138,9 @@ export async function handleDashboardStream(request, env, authCtx) {
     try {
       const m = await getMetrics();
       if (m) {
-        const t = threatFrom(m.critical_threats, m.kev_count ?? m.active_exploitation);
+        // Recent-KEV window drives the level (not the full historical catalog).
+        const kevRecent = (typeof m.kev_recent === 'number') ? m.kev_recent : (m.kev_count ?? m.active_exploitation);
+        const t = threatFrom(m.critical_threats, kevRecent);
         await send('threat_level', { level: t.level, score: t.score, source: 'platform-metrics' });
       }
     } catch (_) {}

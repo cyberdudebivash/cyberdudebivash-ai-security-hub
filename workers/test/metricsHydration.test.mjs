@@ -32,6 +32,7 @@ function mockDB({ failTables = [], failAll = false } = {}) {
           if (/FROM scan_history/.test(sql))                    return 11;  // d1 total scans
           if (/severity='CRITICAL'/.test(sql))                  return 8;   // = stats.critical
           if (/severity='HIGH'/.test(sql))                      return 37;  // = stats.high
+          if (/published_at >= date/.test(sql))                 return 12;  // recent KEV (30d)
           if (/exploit_status='confirmed'/.test(sql))           return 41;  // = stats.confirmed_exploited (KEV)
           if (/FROM platform_metrics/.test(sql))                return 312; // soar_rules_total
           if (/FROM subscriptions/.test(sql)) {
@@ -78,6 +79,7 @@ describe('platform metrics — single source of truth', () => {
     expect(body.metrics.critical_threats).toBe(8);    // severity='CRITICAL'
     expect(body.metrics.high_threats).toBe(37);       // severity='HIGH'
     expect(body.metrics.kev_count).toBe(41);          // exploit_status='confirmed'
+    expect(body.metrics.kev_recent).toBe(12);         // KEV added in last 30d
     expect(body.metrics.active_exploitation).toBe(41); // back-compat alias
     expect(body.metrics.soar_rules_total).toBe(312);  // platform_metrics key
   });

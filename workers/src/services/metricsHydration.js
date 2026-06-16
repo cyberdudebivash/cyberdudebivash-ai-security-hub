@@ -105,6 +105,7 @@ async function fetchLiveMetricsFromD1(env) {
     "SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80",                       // 8 high-risk scans
     "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity='HIGH'",                        // 9 high-severity threats
     "SELECT COALESCE(value_int,0) AS v FROM platform_metrics WHERE key='soar_rules_total'",            // 10 SOAR rules generated
+    "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE exploit_status='confirmed' AND published_at >= date('now','-30 day')", // 11 recent KEV (30d) — drives threat level
   ];
 
   const timeout = new Promise((_, rej) =>
@@ -132,6 +133,7 @@ async function fetchLiveMetricsFromD1(env) {
     critical_threats:     get(2),
     high_threats:         get(9),
     kev_count:            get(3),
+    kev_recent:           get(11),  // KEV added in last 30d — basis for current threat level
     active_exploitation:  get(3),  // alias retained for back-compat
     active_customers:     get(4),
     revenue_today_inr:    Math.round(get(5) / 100),

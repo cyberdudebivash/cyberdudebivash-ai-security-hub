@@ -285,11 +285,71 @@ export async function fetchNVDCVEs(daysBack = 7) {
   return results;
 }
 
+// ─── Paginated NVD fetch (for bulk backfill) ──────────────────────────────────
+// NVD allows resultsPerPage up to 2000 + startIndex paging. Without an API key
+// the limit is 5 req/30s, so the bulk runner fetches ONE page per severity per
+// run and advances a KV cursor — accumulating breadth across successive runs.
+export async function fetchNVDPage({ severity = 'CRITICAL', startIndex = 0, resultsPerPage = 500, daysBack = 120 } = {}) {
+  const now   = new Date();
+  const start = new Date(now.getTime() - daysBack * 86400 * 1000);
+  const fmt   = (d) => d.toISOString().replace(/\.\d+Z$/, '.000 UTC+00:00');
+  const params = new URLSearchParams({
+    lastModStartDate: fmt(start),
+    lastModEndDate:   fmt(now),
+    cvssV3Severity:   severity,
+    resultsPerPage:   String(Math.min(resultsPerPage, 2000)),
+    startIndex:       String(startIndex),
+  });
+  const data = await safeFetch(`${NVD_API_BASE}?${params.toString()}`, {
+    headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/2.0 (security-research@cyberdudebivash.in)' },
+  }, 25000);
+
+  if (!data?.vulnerabilities) {
+    return { entries: [], totalResults: 0, nextIndex: startIndex, done: true };
+  }
+
+  const entries = data.vulnerabilities.map(item => {
+    const cve      = item.cve;
+    const id       = cve.id;
+    const desc     = cve.descriptions?.find(d => d.lang === 'en')?.value || '';
+    const metrics  = cve.metrics || {};
+    const cvssData = metrics.cvssMetricV31?.[0]?.cvssData || metrics.cvssMetricV30?.[0]?.cvssData;
+    const cvssV2   = metrics.cvssMetricV2?.[0]?.cvssData;
+    const cvss     = cvssData?.baseScore ?? cvssV2?.baseScore ?? null;
+    const cpes     = cve.configurations?.[0]?.nodes?.[0]?.cpeMatch?.slice(0, 5).map(c => c.criteria) || [];
+    const cwes     = cve.weaknesses?.map(w => w.description?.[0]?.value).filter(Boolean) || [];
+    return {
+      id,
+      title:             desc.length > 80 ? desc.slice(0, 77) + '...' : (desc || id),
+      severity:          normalizeSeverity(cvssData?.baseSeverity ?? severity),
+      cvss,
+      cvss_vector:       cvssData?.vectorString ?? null,
+      description:       desc.length > 400 ? desc.slice(0, 397) + '...' : desc,
+      source:            'nvd',
+      source_url:        `https://nvd.nist.gov/vuln/detail/${id}`,
+      published_at:      cve.published ? cve.published.split('T')[0] : null,
+      exploit_status:    'unconfirmed',
+      known_ransomware:  0,
+      tags:              JSON.stringify(buildTags(desc, cpes, cwes)),
+      affected_products: JSON.stringify(cpes),
+      weakness_types:    JSON.stringify(cwes),
+      iocs:              '[]',
+      enriched:          0,
+    };
+  });
+
+  const totalResults = data.totalResults || 0;
+  const nextIndex    = startIndex + (data.resultsPerPage || entries.length);
+  return { entries, totalResults, nextIndex, done: nextIndex >= totalResults || entries.length === 0 };
+}
+
 // ─── MODULE 2: Fetch CISA KEV ─────────────────────────────────────────────────
+// Default cap stays small for the fast 6h pipeline; the bulk backfill passes a
+// high cap to ingest the FULL catalog (~1,600 actively-exploited CVEs).
 export async function fetchCISAKEV(maxEntries = 25) {
   const data = await safeFetch(CISA_KEV_URL, {
     headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/2.0' },
-  });
+  }, 20000);
   if (!data?.vulnerabilities) return [];
 
   // Sort by dateAdded DESC, take most recent N
@@ -299,14 +359,15 @@ export async function fetchCISAKEV(maxEntries = 25) {
 
   return recent.map(v => {
     const desc = v.shortDescription || v.vulnerabilityName || '';
-    const tags = buildTags(desc, [], []);
+    const tags = buildTags(desc, [], v.cwes || []);
     if (!tags.includes('ActiveExploitation')) tags.push('ActiveExploitation');
+    if (v.knownRansomwareCampaignUse === 'Known' && !tags.includes('Ransomware')) tags.push('Ransomware');
 
     return {
       id:               v.cveID,
       title:            v.vulnerabilityName || v.cveID,
       severity:         'HIGH', // KEV entries are at minimum HIGH by definition
-      cvss:             null,   // will be enriched
+      cvss:             null,   // enriched later (KEV feed carries no CVSS)
       cvss_vector:      null,
       description:      desc.length > 400 ? desc.slice(0, 397) + '...' : desc,
       source:           'cisa_kev',
@@ -316,9 +377,11 @@ export async function fetchCISAKEV(maxEntries = 25) {
       known_ransomware: v.knownRansomwareCampaignUse === 'Known' ? 1 : 0,
       tags:             JSON.stringify([...new Set(tags)]),
       affected_products: JSON.stringify([`${v.vendorProject}: ${v.product}`]),
-      weakness_types:   '[]',
+      weakness_types:   JSON.stringify(v.cwes || []),
       iocs:             '[]',
       enriched:         0,
+      actively_exploited: 1,
+      exploit_available:  1,
       required_action:  v.requiredAction || null,
       due_date:         v.dueDate || null,
     };
@@ -500,9 +563,11 @@ export async function storeInD1(db, entries) {
   // Converge the schema before inserting — resilient to any historical drift.
   await ensureThreatIntelColumns(db);
 
-  // Process in batches of 10 to avoid D1 batch limits
-  for (let i = 0; i < entries.length; i += 10) {
-    const batch = entries.slice(i, i + 10);
+  // Process in batches of 25 (well within D1 statement/param limits) — keeps the
+  // round-trip count low when bulk-loading the full KEV catalog (~1,600 rows).
+  const BATCH = 25;
+  for (let i = 0; i < entries.length; i += BATCH) {
+    const batch = entries.slice(i, i + BATCH);
     const stmts = batch.map(e => db.prepare(`
       INSERT INTO threat_intel
         (id, title, severity, cvss, cvss_vector, description, source, source_url,
@@ -542,7 +607,7 @@ export async function storeInD1(db, entries) {
       await db.batch(stmts);
       inserted += batch.length;
     } catch (err) {
-      errors.push(`Batch ${i / 10}: ${err.message}`);
+      errors.push(`Batch ${i / BATCH}: ${err.message}`);
       // Fallback: insert one at a time to identify bad entries
       for (const e of batch) {
         try {
@@ -731,6 +796,134 @@ export async function runIngestion(env) {
   }
 
   return { success: true, ...summary, entries: deduped };
+}
+
+// ─── Bounded incremental EPSS enrichment ─────────────────────────────────────
+// Enriches up to `limit` rows that still lack an EPSS score so a large catalog
+// converges over successive runs without blowing the per-invocation time budget.
+export async function enrichUnscoredEPSS(env, limit = 120) {
+  const db = env?.DB;
+  if (!db) return { enriched: 0 };
+
+  let rows = [];
+  try {
+    const res = await db.prepare(
+      `SELECT id FROM threat_intel
+       WHERE epss_score IS NULL AND id LIKE 'CVE-%'
+       ORDER BY published_at DESC LIMIT ?`
+    ).bind(limit).all();
+    rows = res?.results || [];
+  } catch { return { enriched: 0 }; }
+  if (!rows.length) return { enriched: 0, scanned: 0 };
+
+  const ids     = rows.map(r => r.id);
+  const epssMap = await fetchEPSSScores(ids);
+  let enriched  = 0;
+  const scored  = Object.keys(epssMap);
+  for (let i = 0; i < scored.length; i += 25) {
+    const batch = scored.slice(i, i + 25);
+    const stmts = batch.map(id => {
+      const e = epssMap[id];
+      return db.prepare(
+        `UPDATE threat_intel
+         SET epss_score = ?, epss_percentile = ?,
+             exploit_available = MAX(COALESCE(exploit_available,0), ?),
+             updated_at = datetime('now')
+         WHERE id = ?`
+      ).bind(e.epss_score, e.epss_percentile, e.epss_score >= 0.3 ? 1 : 0, id);
+    });
+    try { await db.batch(stmts); enriched += batch.length; } catch {}
+  }
+  return { enriched, scanned: ids.length };
+}
+
+// ─── BULK BACKFILL — grow the catalog from dozens to thousands ───────────────
+// Ingests the FULL CISA KEV catalog in one pass (no rate limits → ~1,600 real,
+// actively-exploited CVEs) and optionally advances a KV-cursored NVD page per
+// severity. Skips the heavy per-entry EPSS/IOC work (enrichUnscoredEPSS handles
+// that incrementally) so it stays within the Workers time budget at scale.
+export async function runBulkBackfill(env, opts = {}) {
+  const startTime = Date.now();
+  const {
+    kevLimit        = 5000,   // effectively the full catalog
+    nvdBackfill     = false,  // off for the synchronous admin call; cron turns it on
+    nvdPerPage      = 500,
+    nvdDaysBack     = 120,
+    epssEnrichLimit = 120,
+  } = opts;
+
+  const db = env?.DB;
+  if (!db) return { success: false, error: 'no_db' };
+
+  const result = {
+    success: true, kev_inserted: 0, nvd_inserted: 0,
+    epss_enriched: 0, errors: [], sources: [],
+  };
+
+  // 1. Full CISA KEV (one fetch, no rate limit — the big jump)
+  try {
+    const kev = await fetchCISAKEV(kevLimit);
+    if (kev.length) {
+      const r = await storeInD1(db, kev);
+      result.kev_inserted = r.inserted;
+      result.sources.push(`cisa_kev(${kev.length})`);
+      if (r.errors?.length) result.errors.push(...r.errors.slice(0, 3));
+    }
+  } catch (e) { result.errors.push(`KEV: ${e.message}`); }
+
+  // 2. NVD paginated backfill — one page per severity per run, KV cursor
+  if (nvdBackfill) {
+    for (const sev of ['CRITICAL', 'HIGH']) {
+      const cursorKey = `nvd:backfill:cursor:${sev}`;
+      let startIndex = 0;
+      try {
+        const raw = await env.SECURITY_HUB_KV?.get(cursorKey);
+        startIndex = raw ? (parseInt(raw, 10) || 0) : 0;
+      } catch {}
+      try {
+        const page = await fetchNVDPage({ severity: sev, startIndex, resultsPerPage: nvdPerPage, daysBack: nvdDaysBack });
+        if (page.entries.length) {
+          const r = await storeInD1(db, page.entries);
+          result.nvd_inserted += r.inserted;
+          result.sources.push(`nvd_${sev.toLowerCase()}(${page.entries.length}@${startIndex})`);
+        }
+        const nextCursor = page.done ? 0 : page.nextIndex; // wrap when exhausted
+        await env.SECURITY_HUB_KV?.put(cursorKey, String(nextCursor), { expirationTtl: 86400 * 30 }).catch(() => {});
+      } catch (e) { result.errors.push(`NVD ${sev}: ${e.message}`); }
+      await new Promise(r => setTimeout(r, 6500)); // NVD rate limit: 5 req/30s
+    }
+  }
+
+  // 3. Bounded incremental EPSS enrichment
+  try {
+    const e = await enrichUnscoredEPSS(env, epssEnrichLimit);
+    result.epss_enriched = e.enriched || 0;
+  } catch (e) { result.errors.push(`EPSS: ${e.message}`); }
+
+  // 4. Current total + observability
+  try { result.total_now = (await db.prepare('SELECT COUNT(*) AS n FROM threat_intel').first())?.n || 0; }
+  catch { result.total_now = null; }
+  result.duration_ms = Date.now() - startTime;
+
+  try {
+    await db.prepare(
+      `INSERT INTO ingestion_runs (id, sources, inserted, updated, errors, duration_ms, success)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      `bulk_${Date.now()}`, JSON.stringify(result.sources),
+      result.kev_inserted + result.nvd_inserted, 0,
+      JSON.stringify(result.errors), result.duration_ms,
+      result.errors.length === 0 ? 1 : 0,
+    ).run();
+  } catch {}
+
+  if (env?.SECURITY_HUB_KV) {
+    env.SECURITY_HUB_KV.put('sentinel:backfill:last_run',
+      JSON.stringify({ ran_at: new Date().toISOString(), ...result }),
+      { expirationTtl: 86400 }).catch(() => {});
+  }
+
+  return result;
 }
 
 // Export seed data for inline fallback

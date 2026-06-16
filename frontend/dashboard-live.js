@@ -104,6 +104,10 @@
       const critical = m.critical_threats ?? 0;
       const cves     = m.total_cves_tracked ?? 0;
       const kev      = m.kev_count ?? m.active_exploitation ?? 0;
+      // Threat level reflects RECENT exploitation activity (KEV added in last 30d),
+      // not the full historical catalog — otherwise a large KEV count pins it to
+      // CRITICAL forever. Falls back to total KEV if the field isn't present yet.
+      const kevRecent = (typeof m.kev_recent === 'number') ? m.kev_recent : kev;
       const uptime   = m.uptime_pct ?? m.uptime_percent ?? m.uptime ?? null;
 
       // Scans
@@ -136,8 +140,8 @@
         setText('cdb-exec-uptime', typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
       }
 
-      // Threat level + bar — derived from REAL critical/KEV counts
-      const t = threatFrom(critical, kev);
+      // Threat level + bar — derived from REAL critical + recent-KEV counts
+      const t = threatFrom(critical, kevRecent);
       const colors = { CRITICAL: '#ef4444', HIGH: '#f97316', MODERATE: '#eab308', LOW: '#22c55e', MINIMAL: '#22c55e' };
       setText('cdb-threat-level-label', t.level);
       setText('cdb-threat-score',       t.score);

@@ -161,7 +161,7 @@ import {
   handleThreatIntelStream,
   handleV1Correlations, handleV1Graph, handleV1Hunting,
 } from './handlers/threatIntel.js';
-import { runIngestion }  from './services/threatIngestion.js';
+import { runIngestion, runBulkBackfill, enrichUnscoredEPSS }  from './services/threatIngestion.js';
 
 // ─── Sentinel APEX v3 — SOC Automation + Autonomous Defense ──────────────────
 import {
@@ -3423,6 +3423,27 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }), request));
     }
 
+    // POST /api/admin/backfill — bulk-grow threat_intel (full CISA KEV + NVD pages)
+    // Auth: Authorization: Bearer <ADMIN_TOKEN secret> (falls back to legacy token).
+    // Query: ?nvd=1 also advances one NVD page per severity (slower).
+    if (path === '/api/admin/backfill' && method === 'POST') {
+      const authHeader = request.headers.get('Authorization') || '';
+      const adminToken = env.ADMIN_TOKEN || env.BOOTSTRAP_TOKEN || 'bootstrap-cyberdude-2026';
+      if (!authHeader.includes(adminToken)) {
+        return withSecurityHeaders(withCors(Response.json({ error: 'Unauthorized' }, { status: 401 }), request));
+      }
+      const url      = new URL(request.url);
+      const nvd      = url.searchParams.get('nvd') === '1';
+      try {
+        const r = await runBulkBackfill(env, { nvdBackfill: nvd });
+        return withSecurityHeaders(withCors(Response.json({
+          success: r.success !== false, backfill: r, timestamp: new Date().toISOString(),
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ success: false, error: e.message }, { status: 500 }), request));
+      }
+    }
+
     // POST /api/defense/custom-request — submit custom solution request (public)
     if (path === '/api/defense/custom-request' && method === 'POST') {
       const { handleCustomSolutionRequest } = await import('./handlers/defenseMarketplace.js');
@@ -5558,6 +5579,29 @@ ctx.waitUntil(
         })))
         .catch(e => console.error('[CRON] Threat Ingestion error:', e?.message))
     );
+
+    // ── DAILY (6 AM): Bulk backfill — refresh the FULL CISA KEV catalog and
+    //    advance one paginated NVD page per severity (Phase-2 catalog growth). ──
+    if (cron === '0 6 * * *') {
+      ctx.waitUntil(
+        runBulkBackfill(env, { nvdBackfill: true })
+          .then(r => console.log('[CRON] Bulk Backfill:', JSON.stringify({
+            kev: r.kev_inserted, nvd: r.nvd_inserted, total: r.total_now,
+            epss: r.epss_enriched, errors: r.errors?.length, duration_ms: r.duration_ms,
+          })))
+          .catch(e => console.error('[CRON] Bulk Backfill error:', e?.message))
+      );
+    }
+
+    // ── 4x/DAY: Incremental EPSS enrichment — converge exploit-probability
+    //    scores across the large catalog without a single heavy pass. ──
+    if (cron === '0 0,6,12,18 * * *') {
+      ctx.waitUntil(
+        enrichUnscoredEPSS(env, 200)
+          .then(r => console.log('[CRON] EPSS enrichment:', JSON.stringify(r)))
+          .catch(e => console.error('[CRON] EPSS enrichment error:', e?.message))
+      );
+    }
 
     // ── HOURLY: Sentinel APEX legacy KV feed refresh ──
     ctx.waitUntil(
