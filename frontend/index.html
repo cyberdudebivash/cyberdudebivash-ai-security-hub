@@ -953,6 +953,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="nav-links" id="nav-links-desktop">
 <a data-section="scanner" href="#scanner" onclick="cdbNavigate('scanner');return false" style="display:inline-flex;align-items:center;gap:4px">⚡ Free Scan</a>
 <a data-section="pricing" href="#pricing" onclick="cdbNavigate('pricing');return false">Pricing</a>
+<a data-section="intel-api" href="#intel-api" onclick="cdbNavigate('intel-api');return false" style="display:inline-flex;align-items:center;gap:4px">🛰 API</a>
 <a href="#ai-platform" onclick="document.getElementById('ai-platform')?.scrollIntoView({behavior:'smooth'});return false">AI Security</a>
 <a href="https://intel.cyberdudebivash.com" rel="noopener" style="display:inline-flex;align-items:center;gap:4px" target="_blank">🛰 Threat Intel ↗</a>
 <a data-section="trust-center" href="#trust-center" onclick="cdbNavigate('trust-center');return false">Trust</a>
@@ -996,6 +997,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="nav-mob-sep"></div>
 <a data-section="defense-solutions" href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseMobileNav();return false" tabindex="-1">🛡 Defense Marketplace</a>
 <a data-section="pricing" href="#pricing" onclick="cdbNavigate('pricing');cdbCloseMobileNav();return false" tabindex="-1">💰 Pricing</a>
+<a data-section="intel-api" href="#intel-api" onclick="cdbNavigate('intel-api');cdbCloseMobileNav();return false" tabindex="-1">🛰 Threat-Intel API</a>
 <a data-section="enterprise" href="#enterprise" onclick="cdbNavigate('enterprise');cdbCloseMobileNav();return false" tabindex="-1">🏢 Enterprise</a>
 <div class="nav-mob-sep"></div>
 <a data-section="compliance-global" href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false" tabindex="-1">🌐 Global Compliance</a>
@@ -5602,6 +5604,193 @@ window.cdbBookAssessment = async function() {
 <div id="sub-modal-content"><!-- injected --></div>
 </div>
 </div>
+<!-- ═══════════════ SENTINEL APEX THREAT-INTEL API STOREFRONT (API Economy) ═══════════════ -->
+<section id="intel-api" style="background:linear-gradient(180deg,#070712 0%,#0a0a1c 100%);padding:80px 20px;border-top:1px solid rgba(0,212,255,.12)">
+<div class="section-inner" style="max-width:1200px;margin:0 auto">
+<div style="text-align:center;margin-bottom:14px">
+<span style="display:inline-flex;align-items:center;gap:7px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:100px;padding:6px 16px;font-size:12px;color:#00d4ff;font-weight:700;letter-spacing:.08em">🛰 SENTINEL APEX · API ECONOMY</span>
+</div>
+<h2 class="section-title" style="text-align:center">Threat-Intelligence API — Built for SOCs, MSSPs &amp; SIEMs</h2>
+<p class="section-sub" style="text-align:center;max-width:740px;margin:0 auto 6px">Programmatic access to <strong id="intel-api-cve-count" style="color:#00d4ff">1,600+</strong> real, deduplicated CVEs — the full CISA KEV catalog, EPSS exploit-probability scores, and STIX 2.1 bundle export for Splunk · Sentinel · Elastic. One <code style="color:#a5f3fc">x-api-key</code> header; your plan tier unlocks depth automatically.</p>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 4px">
+<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:100px;padding:5px 14px;font-size:12px;color:#fca5a5;font-weight:600">🔴 Full CISA KEV</span>
+<span style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:100px;padding:5px 14px;font-size:12px;color:#34d399;font-weight:600">📈 EPSS exploit scores</span>
+<span style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);border-radius:100px;padding:5px 14px;font-size:12px;color:#c4b5fd;font-weight:600">🧬 STIX 2.1 export</span>
+<span style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:100px;padding:5px 14px;font-size:12px;color:#7dd3fc;font-weight:600">⚡ Edge-cached free tier</span>
+</div>
+<!-- Tier grid: static real tiers (SSOT-aligned) — progressively re-rendered from /api/v1/intel/pricing.json -->
+<div id="intel-api-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(208px,1fr));gap:18px;margin:30px 0 22px">
+<div class="price-card" style="border-color:rgba(255,255,255,.08)">
+<div class="price-name" style="color:var(--text-muted)">FREE</div>
+<div class="price-amount" style="font-size:clamp(20px,2.6vw,28px);background:none;-webkit-text-fill-color:var(--text-muted);color:var(--text-muted)">₹0</div>
+<div class="price-period">No key needed · IP-based</div>
+<ul class="price-features">
+<li>25 items / request</li>
+<li>Recent CVEs, basic fields</li>
+<li>100 requests / day</li>
+<li>10 req / min</li>
+<li style="opacity:.5">— EPSS · STIX · full KEV</li>
+</ul>
+<a href="/api-docs" class="btn btn-primary" style="width:100%;justify-content:center;background:var(--surface2);border:1px solid var(--border);color:var(--text)">Try Free →</a>
+</div>
+<div class="price-card">
+<div class="price-name" style="color:#3b82f6">STARTER</div>
+<div class="price-amount">₹499</div>
+<div class="price-period">/month · per API key</div>
+<ul class="price-features">
+<li>100 items / request</li>
+<li>Full detail + EPSS scores</li>
+<li>Complete CISA KEV feed</li>
+<li>2,000 requests / day</li>
+<li>30 req / min</li>
+</ul>
+<button class="btn btn-primary" onclick="startSubscription('STARTER')" style="width:100%;justify-content:center;background:linear-gradient(135deg,#2563eb,#3b82f6)">⚡ Get Starter</button>
+</div>
+<div class="price-card featured">
+<div class="featured-label">MOST POPULAR</div>
+<div class="price-name" style="color:#c4b5fd">PRO</div>
+<div class="price-amount">₹1,499</div>
+<div class="price-period">/month · per API key</div>
+<ul class="price-features">
+<li>500 items / request</li>
+<li>Full detail + EPSS scores</li>
+<li>Complete CISA KEV feed</li>
+<li>STIX 2.1 bundle export</li>
+<li>20,000 requests / day</li>
+<li>60 req / min</li>
+</ul>
+<button class="btn btn-success" onclick="startSubscription('PRO')" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#8b5cf6)">🚀 Get Pro</button>
+</div>
+<div class="price-card">
+<div class="price-name" style="color:#f59e0b">ENTERPRISE</div>
+<div class="price-amount">₹4,999</div>
+<div class="price-period">/month · per API key</div>
+<ul class="price-features">
+<li>2,000 items / request</li>
+<li>Full detail + EPSS + STIX</li>
+<li>Unlimited daily quota</li>
+<li>120 req / min</li>
+<li>SIEM / TIP integration</li>
+</ul>
+<button class="btn btn-primary" onclick="startSubscription('ENTERPRISE')" style="width:100%;justify-content:center;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000">🏢 Get Enterprise</button>
+</div>
+<div class="price-card">
+<div class="price-name" style="color:#e879f9">MSSP</div>
+<div class="price-amount">₹9,999</div>
+<div class="price-period">/month · multi-tenant</div>
+<ul class="price-features">
+<li>5,000 items / request</li>
+<li>Full detail + EPSS + STIX</li>
+<li>Unlimited daily quota</li>
+<li>240 req / min</li>
+<li>White-label client feeds</li>
+</ul>
+<button class="btn btn-primary" onclick="startSubscription('MSSP')" style="width:100%;justify-content:center;background:linear-gradient(135deg,#a21caf,#e879f9);color:#000">♾ Get MSSP</button>
+</div>
+</div>
+<!-- Quickstart + actions -->
+<div style="display:grid;grid-template-columns:1fr;gap:18px;max-width:880px;margin:0 auto">
+<div style="background:#05050d;border:1px solid var(--border);border-radius:12px;padding:18px 20px;overflow-x:auto">
+<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Quickstart — authenticated feed</div>
+<pre style="margin:0;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#a5f3fc;white-space:pre-wrap;word-break:break-word"><span style="color:#64748b"># Paid tier — full catalog, EPSS, STIX</span>
+curl -H "x-api-key: <span style="color:#fbbf24">$YOUR_KEY</span>" \
+  https://cyberdudebivash.in/api/v1/intel/kev.json
+
+<span style="color:#64748b"># STIX 2.1 bundle for your SIEM/TIP (Pro+)</span>
+curl -H "x-api-key: <span style="color:#fbbf24">$YOUR_KEY</span>" \
+  https://cyberdudebivash.in/api/v1/intel/stix.json</pre>
+</div>
+</div>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px">
+<a href="/api-docs" class="btn btn-primary" style="background:linear-gradient(135deg,#0891b2,#06b6d4);color:#001;font-weight:800">📡 API Documentation</a>
+<a href="/api/v1/intel/pricing.json" target="_blank" rel="noopener" class="btn" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text)">{ } Live Pricing JSON</a>
+<a href="/sentinel-apex-marketplace.html" class="btn" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text)">🛰 Intel Marketplace</a>
+</div>
+<p style="text-align:center;font-size:12px;color:var(--text-dim);margin-top:16px">Subscribe to any paid plan → your API key inherits the tier automatically. FREE tier needs no key. GST invoice included · DPDP Act 2023 compliant.</p>
+</div>
+</section>
+<script>
+/* ── Sentinel APEX Threat-Intel API storefront ──────────────────────────────
+   Static cards above are SSOT-aligned (FEED_TIERS). This loader progressively
+   (1) reflects the live catalog size and (2) re-renders tiers from the live
+   pricing endpoint so the storefront stays in sync with the backend SSOT.
+   Any failure leaves the correct static cards untouched (zero empty-state). */
+(function () {
+  var TIER_UI = {
+    FREE:       { color: 'var(--text-muted)', cta: 'Try Free →',      grad: '',                                    txt: '',     muted: true,  featured: false, emoji: '' },
+    STARTER:    { color: '#3b82f6',           cta: '⚡ Get Starter',    grad: 'linear-gradient(135deg,#2563eb,#3b82f6)', txt: '#fff', featured: false },
+    PRO:        { color: '#c4b5fd',           cta: '🚀 Get Pro',        grad: 'linear-gradient(135deg,#7c3aed,#8b5cf6)', txt: '#fff', featured: true },
+    ENTERPRISE: { color: '#f59e0b',           cta: '🏢 Get Enterprise', grad: 'linear-gradient(135deg,#d97706,#f59e0b)', txt: '#000', featured: false },
+    MSSP:       { color: '#e879f9',           cta: '♾ Get MSSP',        grad: 'linear-gradient(135deg,#a21caf,#e879f9)', txt: '#000', featured: false },
+  };
+  function inr(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+
+  function tierCard(t) {
+    var ui = TIER_UI[String(t.tier || '').toUpperCase()];
+    if (!ui) return '';
+    var quota = (t.daily_quota === 'unlimited' || t.daily_quota < 0) ? 'Unlimited' : Number(t.daily_quota).toLocaleString('en-IN');
+    var feats = [];
+    feats.push(Number(t.max_results).toLocaleString('en-IN') + ' items / request');
+    if (ui.muted) {
+      feats.push('Recent CVEs, basic fields');
+      feats.push(quota + ' requests / day');
+      feats.push(t.rate_per_min + ' req / min');
+      feats.push('<span style="opacity:.5">— EPSS · STIX · full KEV</span>');
+    } else {
+      feats.push('Full detail' + (t.epss_scores ? ' + EPSS scores' : ''));
+      if (t.kev_full) feats.push('Complete CISA KEV feed');
+      if (t.stix_export) feats.push('STIX 2.1 bundle export');
+      feats.push(quota + ' requests / day');
+      feats.push(t.rate_per_min + ' req / min');
+    }
+    var price = (Number(t.price_inr) === 0) ? inr(0) : inr(t.price_inr);
+    var period = (String(t.tier).toUpperCase() === 'FREE') ? 'No key needed · IP-based'
+      : (String(t.tier).toUpperCase() === 'MSSP') ? '/month · multi-tenant' : '/month · per API key';
+    var cta = ui.muted
+      ? '<a href="/api-docs" class="btn btn-primary" style="width:100%;justify-content:center;background:var(--surface2);border:1px solid var(--border);color:var(--text)">' + ui.cta + '</a>'
+      : '<button class="btn ' + (ui.featured ? 'btn-success' : 'btn-primary') + '" onclick="startSubscription(\'' + esc(t.tier) + '\')" style="width:100%;justify-content:center;background:' + ui.grad + ';color:' + ui.txt + '">' + ui.cta + '</button>';
+    var amountStyle = ui.muted
+      ? 'font-size:clamp(20px,2.6vw,28px);background:none;-webkit-text-fill-color:var(--text-muted);color:var(--text-muted)' : '';
+    return '<div class="price-card' + (ui.featured ? ' featured' : '') + '"' + (ui.muted ? ' style="border-color:rgba(255,255,255,.08)"' : '') + '>'
+      + (ui.featured ? '<div class="featured-label">MOST POPULAR</div>' : '')
+      + '<div class="price-name" style="color:' + ui.color + '">' + esc(String(t.tier).toUpperCase()) + '</div>'
+      + '<div class="price-amount"' + (amountStyle ? ' style="' + amountStyle + '"' : '') + '>' + price + '</div>'
+      + '<div class="price-period">' + period + '</div>'
+      + '<ul class="price-features">' + feats.map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul>'
+      + cta + '</div>';
+  }
+
+  function renderTiers(tiers) {
+    var order = { FREE: 0, STARTER: 1, PRO: 2, ENTERPRISE: 3, MSSP: 4 };
+    var grid = document.getElementById('intel-api-grid');
+    if (!grid || !Array.isArray(tiers) || !tiers.length) return;
+    var cards = tiers
+      .filter(function (t) { return TIER_UI[String(t.tier || '').toUpperCase()]; })
+      .sort(function (a, b) { return (order[String(a.tier).toUpperCase()] ?? 9) - (order[String(b.tier).toUpperCase()] ?? 9); })
+      .map(tierCard).join('');
+    if (cards) grid.innerHTML = cards;
+  }
+
+  function syncCveCount() {
+    fetch('/api/threat-intel/stats').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      var n = d.total_cves || d.total || d.kev || 0;
+      var el = document.getElementById('intel-api-cve-count');
+      if (el && n > 0) el.textContent = Number(n).toLocaleString('en-IN') + '+';
+    }).catch(function () {});
+  }
+
+  function init() {
+    syncCveCount();
+    fetch('/api/v1/intel/pricing.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (d && Array.isArray(d.tiers)) renderTiers(d.tiers);
+    }).catch(function () { /* static cards remain */ });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
 <!-- ════════════════════════════════ ENTERPRISE ════════════════════════════ -->
 <!-- ═══════════════ ENTERPRISE LAYER v10.0 ═══════════════ -->
 <section id="enterprise" style="background:linear-gradient(180deg,#0a0a1a 0%,#0d0d22 100%);padding:80px 20px;border-top:1px solid rgba(255,255,255,.06)">
