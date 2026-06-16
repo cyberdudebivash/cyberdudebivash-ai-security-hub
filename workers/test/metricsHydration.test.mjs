@@ -27,11 +27,13 @@ function mockDB({ failTables = [], failAll = false } = {}) {
       return {
         async first() {
           if (failAll) throw new Error('D1 unreachable');
-          if (/FROM scan_history WHERE risk_score/.test(sql)) return 1;
-          if (/scanned_at > datetime/.test(sql))             return 0;   // d1 scans today
-          if (/FROM scan_history/.test(sql))                 return 11;  // d1 total scans
-          if (/severity IN/.test(sql))                       return 45;
-          if (/cisa_kev=1/.test(sql))                        return 41;
+          if (/FROM scan_history WHERE risk_score/.test(sql))   return 1;
+          if (/scanned_at > datetime/.test(sql))                return 0;   // d1 scans today
+          if (/FROM scan_history/.test(sql))                    return 11;  // d1 total scans
+          if (/severity='CRITICAL'/.test(sql))                  return 8;   // = stats.critical
+          if (/severity='HIGH'/.test(sql))                      return 37;  // = stats.high
+          if (/exploit_status='confirmed'/.test(sql))           return 41;  // = stats.confirmed_exploited (KEV)
+          if (/FROM platform_metrics/.test(sql))                return 312; // soar_rules_total
           if (/FROM subscriptions/.test(sql)) {
             if (failTables.includes('subscriptions')) throw new Error('no such table: subscriptions');
             return 3;
@@ -40,7 +42,7 @@ function mockDB({ failTables = [], failAll = false } = {}) {
             if (failTables.includes('payments')) throw new Error('no such column: amount');
             return 49900; // paise
           }
-          if (/FROM threat_intel/.test(sql))                 return 45;  // total CVEs (after WHERE variants)
+          if (/FROM threat_intel/.test(sql))                    return 45;  // total CVEs (after WHERE variants)
           return 0;
         },
       };
@@ -63,11 +65,21 @@ describe('platform metrics — single source of truth', () => {
     expect(body.cache).toBe('live_d1');
     // Working metrics populate from real data...
     expect(body.metrics.total_cves_tracked).toBe(45);
-    expect(body.metrics.active_exploitation).toBe(41);
+    expect(body.metrics.kev_count).toBe(41);
     expect(body.metrics.high_risk_scans).toBe(1);
     // ...drifted ones degrade to 0 instead of crashing the endpoint.
     expect(body.metrics.active_customers).toBe(0);
     expect(body.metrics.revenue_today_inr).toBe(0);
+  });
+
+  it('critical/KEV counts agree exactly with /api/threat-intel/stats (no contradictions)', async () => {
+    const env = { DB: mockDB(), SECURITY_HUB_KV: mockKV() };
+    const body = await (await call(env)).json();
+    expect(body.metrics.critical_threats).toBe(8);    // severity='CRITICAL'
+    expect(body.metrics.high_threats).toBe(37);       // severity='HIGH'
+    expect(body.metrics.kev_count).toBe(41);          // exploit_status='confirmed'
+    expect(body.metrics.active_exploitation).toBe(41); // back-compat alias
+    expect(body.metrics.soar_rules_total).toBe(312);  // platform_metrics key
   });
 
   it('total_scans blends KV counters with D1 (consistent with /api/scan/stats)', async () => {

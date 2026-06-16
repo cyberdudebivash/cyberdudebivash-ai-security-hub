@@ -90,17 +90,21 @@ async function fetchLiveMetricsFromD1(env) {
   const db = env.SECURITY_HUB_DB || env.DB;
   if (!db) throw new Error('D1 binding unavailable');
 
-  // Independent queries, ordered to match the original return shape.
+  // Independent queries. Severity/exploit columns mirror GET /api/threat-intel/stats
+  // EXACTLY (severity='CRITICAL', exploit_status='confirmed') so every surface
+  // reports the same 8 critical / 41 KEV — no contradictory numbers.
   const QUERIES = [
     "SELECT COALESCE(COUNT(*),0) AS v FROM scan_history",                                              // 0 d1 total scans
     "SELECT COALESCE(SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_history", // 1 d1 scans today
-    "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity IN ('CRITICAL','HIGH')",        // 2 critical+high threats
-    "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE cisa_kev=1 OR active_exploitation=1",    // 3 active exploitation
+    "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity='CRITICAL'",                    // 2 critical threats (= stats.critical)
+    "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE exploit_status='confirmed'",             // 3 KEV / confirmed-exploited (= stats.confirmed_exploited)
     "SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'",                       // 4 active customers
     "SELECT COALESCE(SUM(amount),0) AS v FROM payments WHERE status='paid' AND created_at > datetime('now','-1 day')",  // 5 revenue today (paise)
     "SELECT COALESCE(SUM(amount),0) AS v FROM payments WHERE status='paid' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')", // 6 revenue month (paise)
     "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel",                                              // 7 total CVEs tracked
     "SELECT COALESCE(COUNT(*),0) AS v FROM scan_history WHERE risk_score >= 80",                       // 8 high-risk scans
+    "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity='HIGH'",                        // 9 high-severity threats
+    "SELECT COALESCE(value_int,0) AS v FROM platform_metrics WHERE key='soar_rules_total'",            // 10 SOAR rules generated
   ];
 
   const timeout = new Promise((_, rej) =>
@@ -121,15 +125,19 @@ async function fetchLiveMetricsFromD1(env) {
   const get = (i) => settled[i]?.status === 'fulfilled' ? Number(settled[i].value ?? 0) : 0;
 
   // Blend KV + D1 scans (canonical, matches /api/scan/stats); revenue paise→INR.
+  // Field names match the frontend client contract (sentinel-apex-live-metrics.js).
   return {
     total_scans:          Math.max(kvScans.total, get(0)),
     scans_today:          Math.max(kvScans.today, get(1)),
     critical_threats:     get(2),
-    active_exploitation:  get(3),
+    high_threats:         get(9),
+    kev_count:            get(3),
+    active_exploitation:  get(3),  // alias retained for back-compat
     active_customers:     get(4),
     revenue_today_inr:    Math.round(get(5) / 100),
     revenue_month_inr:    Math.round(get(6) / 100),
     total_cves_tracked:   get(7),
+    soar_rules_total:     get(10),
     assessments_complete: 0,  // assessment_bookings table not provisioned yet — honest 0, not a proxy
     high_risk_scans:      get(8),
     uptime_pct:           99.9,
