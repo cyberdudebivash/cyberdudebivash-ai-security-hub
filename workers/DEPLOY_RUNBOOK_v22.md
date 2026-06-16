@@ -46,8 +46,10 @@ Expected: `Deployed cyberdudebivash-security-hub (version 22.0.0)`
 ## Step 3 — Bootstrap D1 data (re-run after schema migration)
 
 ```powershell
+# ADMIN_TOKEN is a Cloudflare Worker secret (wrangler secret put ADMIN_TOKEN).
+# Never commit the value; export it locally before running.
 curl -X POST `
-  -H "Authorization: Bearer bootstrap-cyberdude-2026" `
+  -H "Authorization: Bearer $env:ADMIN_TOKEN" `
   https://cyberdudebivash.in/api/admin/bootstrap
 ```
 

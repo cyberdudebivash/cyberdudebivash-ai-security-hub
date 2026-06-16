@@ -67,3 +67,6 @@ workspace/
 *.tmp
 *.bak
 *.orig
+
+# Stale build-check artifact (regenerable; not deployed — deploy uses src/index.js)
+dist_check/
