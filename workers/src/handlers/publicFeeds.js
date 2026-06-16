@@ -17,9 +17,26 @@
  */
 
 import { SEED_ENTRIES } from '../services/threatIngestion.js';
+import {
+  resolveFeedTier, enforceDailyLimit, gateItems, upgradeMeta,
+  pricingMatrix, toStixBundle,
+} from './intelMonetization.js';
 
 const PUBLISHER = 'CYBERDUDEBIVASH® Sentinel APEX';
 const UPGRADE_URL = 'https://cyberdudebivash.in/#pricing';
+
+function jsonError(message, status) {
+  return new Response(JSON.stringify({ error: message, upgrade_url: UPGRADE_URL }, null, 2), {
+    status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Powered-By': PUBLISHER },
+  });
+}
+
+function parseLimit(request) {
+  try {
+    const n = parseInt(new URL(request.url).searchParams.get('limit') || '', 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch { return null; }
+}
 
 // ─── Drift-defensive intel reader ─────────────────────────────────────────────
 // Maps a threat_intel row from EITHER historical column shape:
@@ -27,16 +44,32 @@ const UPGRADE_URL = 'https://cyberdudebivash.in/#pricing';
 //   schema_master.sql        → cve_id / cvss_score
 function normalizeItem(r) {
   const cve = r.cve_id || r.id || null;
+  // Full payload — premium fields are present for paid tiers and stripped for
+  // FREE by gateItems(). A missing column simply yields null (drift-safe).
   return {
-    id:           cve,
+    id:            cve,
     cve,
-    title:        r.title || 'Security advisory',
-    summary:      r.description ? String(r.description).slice(0, 280) : null,
-    severity:     String(r.severity || 'MEDIUM').toUpperCase(),
-    cvss:         r.cvss ?? r.cvss_score ?? null,
-    source:       r.source || PUBLISHER,
-    published_at: r.published_at || r.created_at || null,
+    title:         r.title || 'Security advisory',
+    summary:       r.description ? String(r.description).slice(0, 280) : null,
+    severity:      String(r.severity || 'MEDIUM').toUpperCase(),
+    cvss:          r.cvss ?? r.cvss_score ?? null,
+    cvss_vector:   r.cvss_vector ?? null,
+    epss_score:    r.epss_score ?? null,
+    epss_percentile: r.epss_percentile ?? null,
+    exploit_status:  r.exploit_status ?? null,
+    actively_exploited: (r.actively_exploited ?? (r.exploit_status === 'confirmed' ? 1 : 0)) ? 1 : 0,
+    known_ransomware: r.known_ransomware ? 1 : 0,
+    weakness_types:   safeJson(r.weakness_types),
+    source:        r.source || PUBLISHER,
+    source_url:    r.source_url ?? (cve ? `https://nvd.nist.gov/vuln/detail/${cve}` : null),
+    published_at:  r.published_at || r.created_at || null,
   };
+}
+
+function safeJson(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return []; } }
+  return [];
 }
 
 // Platform-wide ultimate fallback: the curated SEED_ENTRIES, identical to what
@@ -118,51 +151,78 @@ async function cachedJson(cacheKey, ttl, build) {
   }
 }
 
-function jsonResponse(obj, ttl) {
+function jsonResponse(obj, ttl, extraHeaders = {}) {
   return new Response(JSON.stringify(obj, null, 2), {
     headers: {
       'Content-Type':  'application/json; charset=utf-8',
       'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
       'X-Powered-By':  PUBLISHER,
+      ...extraHeaders,
     },
   });
 }
 
-// ─── Feed builders ────────────────────────────────────────────────────────────
-async function buildFeed(env) {
-  const items = await fetchRecentIntel(env, { limit: 50 });
+// ─── Feed builders (tier-aware) ───────────────────────────────────────────────
+async function buildFeed(env, ent, reqLimit) {
+  const raw = await fetchRecentIntel(env, { limit: ent.max_results });
+  const items = gateItems(raw, ent, reqLimit);
   return {
     feed:        'CYBERDUDEBIVASH Public Threat Feed',
     publisher:   PUBLISHER,
-    license:     'Free tier — attribution required. Full API: ' + UPGRADE_URL,
+    tier:        ent.tier,
+    license:     ent.tier === 'FREE' ? 'Free tier — attribution required. Full API: ' + UPGRADE_URL : 'Licensed API access',
     generated_at: new Date().toISOString(),
     count:       items.length,
     items,
+    upgrade:     upgradeMeta(ent),
   };
 }
 
-async function buildLatest(env) {
-  const items = await fetchRecentIntel(env, { limit: 100 });
+async function buildLatest(env, ent, reqLimit) {
+  const raw = await fetchRecentIntel(env, { limit: ent.max_results });
+  const items = gateItems(raw, ent, reqLimit);
   return {
-    version:      'v1',
-    feed:         'latest',
-    publisher:    PUBLISHER,
-    generated_at: new Date().toISOString(),
-    count:        items.length,
-    items,
+    version: 'v1', feed: 'latest', publisher: PUBLISHER, tier: ent.tier,
+    generated_at: new Date().toISOString(), count: items.length, items,
+    upgrade: upgradeMeta(ent),
   };
 }
 
-async function buildApex(env) {
-  const items = await fetchRecentIntel(env, { limit: 50, severities: ['CRITICAL', 'HIGH'] });
+async function buildApex(env, ent, reqLimit) {
+  const raw = await fetchRecentIntel(env, { limit: ent.max_results, severities: ['CRITICAL', 'HIGH'] });
+  const items = gateItems(raw, ent, reqLimit);
   return {
-    version:      'v1',
-    feed:         'sentinel-apex',
-    publisher:    PUBLISHER,
-    description:  'Curated critical & high-severity advisories from Sentinel APEX',
-    generated_at: new Date().toISOString(),
-    count:        items.length,
-    items,
+    version: 'v1', feed: 'sentinel-apex', publisher: PUBLISHER, tier: ent.tier,
+    description: 'Curated critical & high-severity advisories from Sentinel APEX',
+    generated_at: new Date().toISOString(), count: items.length, items,
+    upgrade: upgradeMeta(ent),
+  };
+}
+
+// KEV feed — the actively-exploited catalog (the crown jewel). FREE gets a
+// recent slice; paid tiers get the full ~1,600-entry catalog.
+async function fetchKEV(env, limit) {
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT * FROM threat_intel WHERE exploit_status='confirmed' ORDER BY published_at DESC LIMIT ?`
+      ).bind(limit).all();
+      const items = (rows?.results || []).map(normalizeItem);
+      if (items.length) return items;
+    } catch { /* fall through */ }
+  }
+  return seedItems(null).filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').slice(0, limit);
+}
+
+async function buildKev(env, ent, reqLimit) {
+  const raw = await fetchKEV(env, ent.kev_full ? ent.max_results : 25);
+  const items = gateItems(raw, ent, reqLimit);
+  return {
+    version: 'v1', feed: 'cisa-kev', publisher: PUBLISHER, tier: ent.tier,
+    description: 'CISA Known Exploited Vulnerabilities — confirmed in-the-wild exploitation',
+    full_catalog: ent.kev_full,
+    generated_at: new Date().toISOString(), count: items.length, items,
+    upgrade: upgradeMeta(ent),
   };
 }
 
@@ -191,8 +251,9 @@ async function buildAiSummary(env) {
   };
 }
 
-async function buildReports(env) {
-  const items = await fetchRecentIntel(env, { limit: 10, severities: ['CRITICAL', 'HIGH'] });
+async function buildReports(env, ent) {
+  const cap = Math.min(ent?.max_results ?? 10, 25);
+  const items = await fetchRecentIntel(env, { limit: cap, severities: ['CRITICAL', 'HIGH'] });
   const reports = items.map((it, i) => ({
     id:        it.cve || `BRIEF-${i + 1}`,
     type:      'threat-brief',
@@ -214,16 +275,69 @@ async function buildReports(env) {
   };
 }
 
+// ─── STIX 2.1 export (premium) ────────────────────────────────────────────────
+async function buildStix(env, ent, reqLimit) {
+  const raw   = await fetchKEV(env, ent.max_results);
+  const items = raw.slice(0, Math.min(ent.max_results, reqLimit || ent.max_results));
+  return toStixBundle(items, { tlp: 'clear' });
+}
+
+function rateHeaders(rl, ent) {
+  return {
+    'X-RateLimit-Tier':      ent.tier,
+    'X-RateLimit-Limit':     String(rl.limit),
+    'X-RateLimit-Remaining': String(rl.remaining),
+  };
+}
+
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
+// FREE (no key) → edge-cached, gated responses (identical for everyone).
+// Keyed (paid)  → dynamic, full-detail responses, rate-limited per key.
 export async function handlePublicFeeds(request, env, path) {
+  const ent = await resolveFeedTier(request, env);
+  if (ent.invalidKey) return jsonError('Invalid API key — obtain one at ' + UPGRADE_URL, 401);
+
+  // Public pricing — always available, heavily cached.
+  if (path === '/api/v1/intel/pricing.json') return jsonResponse(pricingMatrix(), 3600);
+
+  const reqLimit = parseLimit(request);
+
+  // STIX export is a paid-only entitlement.
+  if (path === '/api/v1/intel/stix.json') {
+    if (!ent.stix) {
+      return jsonError('STIX 2.1 export requires a Pro plan or above. Upgrade: ' + UPGRADE_URL, 402);
+    }
+    const rl = await enforceDailyLimit(env, ent, ent.identity);
+    if (!rl.allowed) return jsonError('Daily quota exceeded for your plan. Upgrade: ' + UPGRADE_URL, 429);
+    return jsonResponse(await buildStix(env, ent, reqLimit), 300, rateHeaders(rl, ent));
+  }
+
+  // Paid (keyed) callers → dynamic, full-detail, rate-limited (no shared cache).
+  if (ent.keyed) {
+    const rl = await enforceDailyLimit(env, ent, ent.identity);
+    if (!rl.allowed) return jsonError('Daily quota exceeded for your plan. Upgrade: ' + UPGRADE_URL, 429);
+    const headers = rateHeaders(rl, ent);
+    switch (path) {
+      case '/api/feed.json':                return jsonResponse(await buildFeed(env, ent, reqLimit),     60, headers);
+      case '/api/v1/intel/latest.json':     return jsonResponse(await buildLatest(env, ent, reqLimit),  60, headers);
+      case '/api/v1/intel/apex.json':       return jsonResponse(await buildApex(env, ent, reqLimit),    60, headers);
+      case '/api/v1/intel/kev.json':        return jsonResponse(await buildKev(env, ent, reqLimit),     60, headers);
+      case '/api/v1/intel/ai_summary.json': return jsonResponse(await buildAiSummary(env),              60, headers);
+      case '/api/reports/latest.json':      return jsonResponse(await buildReports(env, ent),           60, headers);
+      default:                              return jsonError('Unknown feed', 404);
+    }
+  }
+
+  // FREE (anonymous) → edge-cached gated responses. Cache key carries the FREE
+  // tier so a paid response can never leak into the shared cache.
   switch (path) {
-    case '/api/feed.json':                return cachedJson('feed:public:v3',     300, () => buildFeed(env));
-    case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:v3',     300, () => buildLatest(env));
-    case '/api/v1/intel/apex.json':       return cachedJson('feed:apex:v3',       300, () => buildApex(env));
-    case '/api/v1/intel/ai_summary.json': return cachedJson('feed:aisummary:v3',  600, () => buildAiSummary(env));
-    case '/api/reports/latest.json':      return cachedJson('feed:reports:v3',    600, () => buildReports(env));
-    default:
-      return Response.json({ error: 'Unknown feed' }, { status: 404 });
+    case '/api/feed.json':                return cachedJson('feed:public:free:v4',    300, () => buildFeed(env, ent, reqLimit));
+    case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:free:v4',    300, () => buildLatest(env, ent, reqLimit));
+    case '/api/v1/intel/apex.json':       return cachedJson('feed:apex:free:v4',      300, () => buildApex(env, ent, reqLimit));
+    case '/api/v1/intel/kev.json':        return cachedJson('feed:kev:free:v4',       300, () => buildKev(env, ent, reqLimit));
+    case '/api/v1/intel/ai_summary.json': return cachedJson('feed:aisummary:free:v4', 600, () => buildAiSummary(env));
+    case '/api/reports/latest.json':      return cachedJson('feed:reports:free:v4',   600, () => buildReports(env, ent));
+    default:                              return jsonError('Unknown feed', 404);
   }
 }
 
@@ -233,4 +347,7 @@ export const PUBLIC_FEED_PATHS = [
   '/api/v1/intel/apex.json',
   '/api/v1/intel/ai_summary.json',
   '/api/reports/latest.json',
+  '/api/v1/intel/kev.json',
+  '/api/v1/intel/stix.json',
+  '/api/v1/intel/pricing.json',
 ];

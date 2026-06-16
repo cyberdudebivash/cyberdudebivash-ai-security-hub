@@ -41,15 +41,26 @@ function mockEnv({ tier1Throws = false } = {}) {
 const call = (env, path) => handlePublicFeeds(new Request('https://x' + path), env, path);
 
 describe('public threat-intel feeds', () => {
-  it('exposes exactly the five advertised endpoints', () => {
-    expect(PUBLIC_FEED_PATHS).toEqual([
-      '/api/feed.json', '/api/v1/intel/latest.json', '/api/v1/intel/apex.json',
-      '/api/v1/intel/ai_summary.json', '/api/reports/latest.json',
-    ]);
+  it('exposes the advertised feeds plus the new monetized endpoints', () => {
+    expect(PUBLIC_FEED_PATHS).toContain('/api/feed.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/v1/intel/latest.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/v1/intel/apex.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/v1/intel/ai_summary.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/reports/latest.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/v1/intel/kev.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/v1/intel/stix.json');
+    expect(PUBLIC_FEED_PATHS).toContain('/api/v1/intel/pricing.json');
   });
 
-  it('all five return 200 JSON with real data', async () => {
-    for (const p of PUBLIC_FEED_PATHS) {
+  // FREE-accessible feeds (STIX is paid-only → covered separately).
+  const FREE_OK = [
+    '/api/feed.json', '/api/v1/intel/latest.json', '/api/v1/intel/apex.json',
+    '/api/v1/intel/ai_summary.json', '/api/reports/latest.json',
+    '/api/v1/intel/kev.json', '/api/v1/intel/pricing.json',
+  ];
+
+  it('all FREE-accessible feeds return 200 JSON with real data', async () => {
+    for (const p of FREE_OK) {
       const res = await call(mockEnv(), p);
       expect(res.status).toBe(200);
       expect(res.headers.get('Content-Type')).toContain('application/json');

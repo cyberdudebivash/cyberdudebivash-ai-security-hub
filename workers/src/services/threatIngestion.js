@@ -18,7 +18,7 @@ import { triggerIntelAlerts }                 from '../lib/alerts.js';
 const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
 const GITHUB_RSS_URL = 'https://github.com/advisories.atom';
-const EPSS_API_BASE  = 'https://api.first.org/data/1.0/epss';
+const EPSS_API_BASE  = 'https://api.first.org/data/v1/epss';
 const FETCH_TIMEOUT  = 10000; // 10s per source
 
 // ─── Built-in seed data — REAL current CVEs, never empty feed ─────────────────

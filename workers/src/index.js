@@ -1077,7 +1077,10 @@ export default {
       path === '/api/v1/intel/latest.json' ||
       path === '/api/v1/intel/apex.json' ||
       path === '/api/v1/intel/ai_summary.json' ||
-      path === '/api/reports/latest.json'
+      path === '/api/reports/latest.json' ||
+      path === '/api/v1/intel/kev.json' ||
+      path === '/api/v1/intel/stix.json' ||
+      path === '/api/v1/intel/pricing.json'
     )) {
       const { handlePublicFeeds } = await import('./handlers/publicFeeds.js');
       return withSecurityHeaders(withCors(await handlePublicFeeds(request, env, path), request));
