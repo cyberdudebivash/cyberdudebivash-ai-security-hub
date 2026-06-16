@@ -15,7 +15,9 @@ Allow: /academy
 Allow: /about
 Allow: /booking
 Allow: /contact
+Allow: /cve/
 Allow: /sitemap.xml
+Allow: /sitemap-cve.xml
 Allow: /og-image.png
 Allow: /assets/
 
@@ -74,3 +76,4 @@ Allow: /og-image.png
 
 # ── Sitemaps ──────────────────────────────────────────────────────────────────
 Sitemap: https://cyberdudebivash.in/sitemap.xml
+Sitemap: https://cyberdudebivash.in/sitemap-cve.xml

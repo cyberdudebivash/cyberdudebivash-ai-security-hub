@@ -80,3 +80,8 @@ workspace/
 /cdb_ai.db
 /memory/
 /logs/
+
+# CVE SEO generator data exports (transient)
+tools/_cve_raw.json
+tools/_cve_export.json
+tools/_cve_err.txt
