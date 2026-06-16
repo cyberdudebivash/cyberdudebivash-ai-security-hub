@@ -1,9 +1,13 @@
 /**
  * CYBERDUDEBIVASH AI Security Hub — API Key Auth Middleware
  * Tier system: FREE (5 req/day) | PRO (500/day) | ENTERPRISE (unlimited)
- * Keys stored in Cloudflare KV: apikey:{key} → JSON config
+ * Keys resolved from TWO stores (additive, KV-first):
+ *   1. Cloudflare KV  apikey:{key} → JSON config (subscription/Stripe-provisioned)
+ *   2. D1 api_keys (SHA-256 hashed) → self-serve keys generated via POST /api/keys
  * IP fallback for keyless FREE tier access
  */
+
+import { resolveApiKeyFromDB } from '../auth/apiKeys.js';
 
 // ─── Tier Definitions ────────────────────────────────────────────────────────
 export const TIERS = {
@@ -15,16 +19,39 @@ export const TIERS = {
 export const UPGRADE_URL   = 'https://cyberdudebivash.in/#pricing';
 export const CONTACT_EMAIL = 'bivash@cyberdudebivash.com';
 
-// ─── Validate API Key from KV ─────────────────────────────────────────────────
+// ─── Validate API Key: KV first, then D1 self-serve keys ──────────────────────
 async function resolveApiKey(key, env) {
-  if (!env?.SECURITY_HUB_KV) return null;
-  try {
-    const raw = await env.SECURITY_HUB_KV.get(`apikey:${key}`);
-    if (!raw) return null;
-    const cfg = JSON.parse(raw);
-    if (!cfg.active) return null;
-    return cfg; // { tier, owner_email, created_at, active, label }
-  } catch { return null; }
+  // 1. KV fast-path — subscription/Stripe-provisioned keys (legacy + paid flow).
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const raw = await env.SECURITY_HUB_KV.get(`apikey:${key}`);
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        if (cfg.active) return cfg; // { tier, owner_email, created_at, active, label } — unchanged KV semantics
+      }
+    } catch { /* fall through to D1 */ }
+  }
+
+  // 2. D1 fallback — self-serve keys generated via POST /api/keys (cdb_* format).
+  //    Lets a key created in the developer portal authenticate on the intel API
+  //    exactly as the docs promise ("obtain a key at /api/keys"). Tier follows the
+  //    user's CURRENT account tier so upgrades/downgrades apply immediately.
+  if (env?.DB && typeof key === 'string' && key.startsWith('cdb_')) {
+    try {
+      const row = await resolveApiKeyFromDB(env.DB, key);
+      if (row) {
+        return {
+          tier:        String(row.user_tier || row.tier || 'FREE').toUpperCase(),
+          owner_email: row.email || null,
+          active:      true,
+          label:       row.label || `${row.tier || 'FREE'} API Key`,
+          source:      'd1',
+        };
+      }
+    } catch { /* invalid/unavailable → null below */ }
+  }
+
+  return null;
 }
 
 // ─── Derive identity: key → ctx or IP → ctx ──────────────────────────────────

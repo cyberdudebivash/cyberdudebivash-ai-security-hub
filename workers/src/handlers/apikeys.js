@@ -27,7 +27,8 @@ export async function handleCreateKey(request, env, authCtx) {
   if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
 
   const body  = await parseBody(request);
-  const label = (body?.label || 'New Key').toString().slice(0, 60);
+  // Accept `label` or `name` (the developer-portal UI sends `name`).
+  const label = (body?.label || body?.name || 'New Key').toString().slice(0, 60);
 
   // Enforce per-tier key limit
   const maxKeys  = authCtx.tier === 'ENTERPRISE' ? 20 : authCtx.tier === 'PRO' ? 5 : 2;

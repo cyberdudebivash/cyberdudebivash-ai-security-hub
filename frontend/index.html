@@ -4033,11 +4033,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div style="font-size:14px;font-weight:800;color:#e2e8f0;margin-bottom:20px">🔑 API Key Management</div>
 <div style="margin-bottom:16px">
 <input aria-label="API key name" id="api-key-name" placeholder="Key name (e.g. production-siem)" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:10px" type="text"/>
-<select aria-label="API key plan" id="api-key-plan" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:13px;box-sizing:border-box">
-<option value="starter">Starter — 1,000 req/day</option>
-<option value="pro">Pro — 10,000 req/day</option>
-<option value="enterprise">Enterprise — Unlimited</option>
-</select>
+<div id="api-key-tier-note" style="font-size:11px;color:rgba(255,255,255,.6);background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.12);border-radius:8px;padding:8px 12px;line-height:1.5">🔑 Your key inherits your account plan — upgrade to raise its limits automatically. The same key works on the Sentinel APEX intel API (<code style="color:#7dd3fc">x-api-key</code>).</div>
 </div>
 <button onclick="cdbGenerateAPIKey()" style="width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;padding:12px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;margin-bottom:14px">
         + Generate API Key
@@ -4065,29 +4061,29 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
 <div>
 <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px">
-<span>API Calls (Today)</span><span id="usage-api-calls">0 / 1,000</span>
+<span>Daily Request Limit</span><span id="usage-api-calls">—</span>
 </div>
 <div style="background:rgba(255,255,255,.06);border-radius:999px;height:6px"><div id="usage-api-bar" style="background:linear-gradient(90deg,#00d4ff,#7c3aed);height:6px;border-radius:999px;width:0%;transition:width 1s"></div></div>
 </div>
 <div>
 <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px">
-<span>AI Analyses (This Month)</span><span id="usage-ai-analyses">0 / 100</span>
+<span>Active Keys</span><span id="usage-ai-analyses">—</span>
 </div>
 <div style="background:rgba(255,255,255,.06);border-radius:999px;height:6px"><div id="usage-ai-bar" style="background:linear-gradient(90deg,#a78bfa,#ec4899);height:6px;border-radius:999px;width:0%;transition:width 1s"></div></div>
 </div>
 <div>
 <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.72);margin-bottom:6px">
-<span>Rule Exports</span><span id="usage-rule-exports">0 / 50</span>
+<span>Monthly Request Limit</span><span id="usage-rule-exports">—</span>
 </div>
 <div style="background:rgba(255,255,255,.06);border-radius:999px;height:6px"><div id="usage-rule-bar" style="background:linear-gradient(90deg,#f59e0b,#ef4444);height:6px;border-radius:999px;width:0%;transition:width 1s"></div></div>
 </div>
 </div>
 <!-- Cost tracker -->
 <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:14px;margin-bottom:14px">
-<div style="font-size:11px;color:rgba(255,255,255,.72);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">💳 Cost Tracker (Pay-Per-Use)</div>
-<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.72);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>API Calls</span><span id="cost-api">₹0.00</span></div>
-<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.72);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>AI Analyses</span><span id="cost-ai">₹0.00</span></div>
-<div style="display:flex;justify-content:space-between;font-size:13px;color:#e2e8f0;padding:8px 0 0;font-weight:700"><span>Total This Month</span><span id="cost-total">₹0.00</span></div>
+<div style="font-size:11px;color:rgba(255,255,255,.72);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">📦 Current Plan</div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.72);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>Plan</span><span id="plan-tier" style="font-weight:700;color:#e2e8f0">—</span></div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.72);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>Burst limit</span><span id="plan-burst">—</span></div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.72);padding:8px 0 0"><span>Intel API access</span><span id="plan-intel" style="color:#34d399">✓ Enabled</span></div>
 </div>
 <button onclick="window.location='#pricing'" style="width:100%;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#f59e0b;padding:10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
         ⚡ Upgrade for Higher Limits →
@@ -15616,7 +15612,8 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
   let _built=false, _keys=[];
 
   function _authH(){
-    const tok = stored('jwt')||sessionStorage.getItem('cdb_jwt')||'';
+    // The login flow stores the JWT under 'cdb_token' (older keys kept as fallback).
+    const tok = localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||stored('jwt')||sessionStorage.getItem('cdb_jwt')||'';
     return tok ? {'Authorization':'Bearer '+tok,'Content-Type':'application/json'} : {'Content-Type':'application/json'};
   }
 
@@ -15681,19 +15678,24 @@ const CDB_APIKEYS = window.CDB_APIKEYS = (() => {
       el.innerHTML='<div style="text-align:center;padding:24px;color:rgba(255,255,255,.72);font-size:12px">No API keys yet — create your first key above</div>';
       return;
     }
-    el.innerHTML = _keys.map(k=>`
+    el.innerHTML = _keys.map(k=>{
+      const active = k.active !== 0 && k.active !== false;
+      const used   = k.last_used_at ? 'Last used ' + new Date(k.last_used_at).toLocaleDateString('en-IN') : 'Never used';
+      const created= k.created_at ? new Date(k.created_at).toLocaleDateString('en-IN') : '—';
+      return `
       <div class="cdb-key-row">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);margin-bottom:3px">${k.name||'Unnamed key'}</div>
-          <div class="cdb-key-mono">${k.key_prefix||k.key_id||'cdb_***...***'}</div>
-          <div style="display:flex;gap:8px;margin-top:4px">
-            <span class="v13-badge ${k.is_active!==false?'ok':'warn'}">${k.is_active!==false?'Active':'Revoked'}</span>
-            <span class="v13-badge ai">${k.scope||k.permissions||'scan'}</span>
-            <span style="font-size:9px;color:rgba(255,255,255,.72)">Used ${k.usage_count||0}× · Created ${k.created_at?new Date(k.created_at).toLocaleDateString('en-IN'):'—'}</span>
+          <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);margin-bottom:3px">${k.label||'Key'}</div>
+          <div class="cdb-key-mono">${k.key_prefix||'cdb_***...***'}</div>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center">
+            <span class="v13-badge ${active?'ok':'warn'}">${active?'Active':'Revoked'}</span>
+            <span class="v13-badge ai">${k.tier||'FREE'}</span>
+            <span style="font-size:9px;color:rgba(255,255,255,.72)">${used} · Created ${created}</span>
           </div>
         </div>
-        ${k.is_active!==false ? `<button onclick="CDB_APIKEYS.revoke('${k.id||k.key_id}')" class="v13-btn v13-btn-danger" style="font-size:10px;padding:5px 12px;white-space:nowrap">Revoke</button>` : '<span style="font-size:10px;color:rgba(255,255,255,.72)">Revoked</span>'}
-      </div>`).join('');
+        ${active ? `<button onclick="CDB_APIKEYS.revoke('${k.id}')" class="v13-btn v13-btn-danger" style="font-size:10px;padding:5px 12px;white-space:nowrap">Revoke</button>` : '<span style="font-size:10px;color:rgba(255,255,255,.72)">Revoked</span>'}
+      </div>`;
+    }).join('');
   }
 
   return {
@@ -17517,41 +17519,58 @@ function renderMemoryEvents(events) {
 /* ═══════════════════════════════════════════════════════════════
    API ECONOMY ENGINE
 ═══════════════════════════════════════════════════════════════ */
+/* Self-serve API keys (in-page #api-economy panel). Real auth, honest states,
+   NO fabricated keys/usage. Keys are cdb_* (D1) and work on the intel API. */
+function _cdbKeyAuthH() {
+  var tok = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || '';
+  var h = { 'Content-Type': 'application/json' };
+  if (tok) h['Authorization'] = 'Bearer ' + tok;
+  return h;
+}
+function _cdbKeySignedIn() {
+  return !!(localStorage.getItem('cdb_token') && localStorage.getItem('cdb_email'));
+}
+
 window.cdbGenerateAPIKey = function() {
   var nameEl = document.getElementById('api-key-name');
-  var planEl = document.getElementById('api-key-plan');
   var name   = nameEl ? nameEl.value.trim() : '';
   if (!name) { if(nameEl) { nameEl.style.borderColor='rgba(239,68,68,.5)'; setTimeout(function(){nameEl.style.borderColor='';},2000); } return; }
+  if (!_cdbKeySignedIn()) {
+    var listEl0 = document.getElementById('api-keys-list');
+    if (listEl0) listEl0.innerHTML = '<div style="color:#fcd34d;font-size:11px">⚠️ Please sign in to generate an API key.</div>';
+    return;
+  }
 
-  fetch('/api/keys', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name, plan: planEl ? planEl.value : 'starter' }),
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data) {
-    var keyVal = data.key || data.api_key || ('cdb_' + name.replace(/\s+/g,'_').toLowerCase() + '_' + Math.random().toString(36).slice(2,10));
-    var resEl  = document.getElementById('api-key-result');
-    var valEl  = document.getElementById('api-key-value');
+  fetch('/api/keys', { method: 'POST', headers: _cdbKeyAuthH(), body: JSON.stringify({ name: name }) })
+  .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, status: r.status, d: d }; }); })
+  .then(function(res) {
+    var resEl = document.getElementById('api-key-result');
+    var valEl = document.getElementById('api-key-value');
+    if (!res.ok || !res.d || !res.d.key) {
+      var msg = (res.d && (res.d.error || res.d.hint)) || ('Request failed (' + res.status + ')');
+      if (res.status === 401) msg = 'Please sign in to generate an API key.';
+      if (valEl) { valEl.textContent = '⚠️ ' + msg; valEl.style.color = '#fca5a5'; }
+      if (resEl) resEl.style.display = 'block';
+      return;
+    }
+    // Real key — shown ONCE
+    if (valEl) { valEl.textContent = res.d.key; valEl.style.color = '#a5f3fc'; }
     if (resEl) resEl.style.display = 'block';
-    if (valEl) valEl.textContent = keyVal;
-    cdbLoadAPIUsage();
+    if (nameEl) nameEl.value = '';
     cdbLoadAPIKeys();
   })
-  .catch(function() {
-    // Offline demo key
-    var demoKey = 'cdb_' + name.replace(/\s+/g,'_').toLowerCase() + '_' + Math.random().toString(36).slice(2,10);
-    var resEl   = document.getElementById('api-key-result');
-    var valEl   = document.getElementById('api-key-value');
+  .catch(function(e) {
+    var valEl = document.getElementById('api-key-value');
+    var resEl = document.getElementById('api-key-result');
+    if (valEl) { valEl.textContent = '⚠️ Network error — please try again.'; valEl.style.color = '#fca5a5'; }
     if (resEl) resEl.style.display = 'block';
-    if (valEl) valEl.textContent = demoKey;
   });
 };
 
 window.cdbCopyAPIKey = function() {
   var val = document.getElementById('api-key-value');
   var text = val ? val.textContent : '';
-  if (!text) return;
+  if (!text || text.indexOf('cdb_') !== 0) return; // never "copy" an error message
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(function() {
       var btn = document.querySelector('#api-key-result button');
@@ -17560,69 +17579,78 @@ window.cdbCopyAPIKey = function() {
   }
 };
 
+window.cdbRevokeAPIKey = function(id) {
+  if (!id || !_cdbKeySignedIn()) return;
+  if (!confirm('Revoke this API key? Applications using it will stop working immediately.')) return;
+  fetch('/api/keys/' + encodeURIComponent(id), { method: 'DELETE', headers: _cdbKeyAuthH() })
+    .then(function(){ cdbLoadAPIKeys(); })
+    .catch(function(){});
+};
+
 window.cdbLoadAPIKeys = function() {
-  fetch('/api/keys')
-    .then(function(r){ return r.json(); })
+  var listEl = document.getElementById('api-keys-list');
+  if (!listEl) return;
+  if (!_cdbKeySignedIn()) {
+    listEl.innerHTML = '<div style="color:rgba(255,255,255,0.6);font-size:11px">Sign in to view and manage your API keys.</div>';
+    return;
+  }
+  fetch('/api/keys', { headers: _cdbKeyAuthH() })
+    .then(function(r){ return r.ok ? r.json() : { _status: r.status }; })
     .then(function(data) {
-      var listEl = document.getElementById('api-keys-list');
-      if (!listEl) return;
-      var keys = data.keys || data || [];
+      if (data._status === 401) { listEl.innerHTML = '<div style="color:#fcd34d;font-size:11px">⚠️ Session expired — please sign in again.</div>'; return; }
+      var keys = (data && data.keys) || [];
       if (!Array.isArray(keys) || keys.length === 0) {
-        listEl.innerHTML = '<div style="color:rgba(255,255,255,0.72);font-size:11px">No active keys</div>';
+        listEl.innerHTML = '<div style="color:rgba(255,255,255,0.6);font-size:11px">No API keys yet — generate your first key above.</div>';
         return;
       }
-      listEl.innerHTML = keys.slice(0, 5).map(function(k) {
-        var keyStr = (k.key || k.api_key || k.id || '').slice(0, 20) + '…';
-        return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
-          + '<span style="font-family:JetBrains Mono,monospace;font-size:11px;color:rgba(255,255,255,.72)">' + keyStr + '</span>'
-          + '<span style="font-size:10px;color:rgba(255,255,255,.72)">' + (k.plan || k.tier || 'starter') + '</span>'
+      listEl.innerHTML = keys.map(function(k) {
+        var active = k.active !== 0 && k.active !== false;
+        var pre = (k.key_prefix || 'cdb_***') ;
+        var created = k.created_at ? new Date(k.created_at).toLocaleDateString('en-IN') : '';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+          + '<div style="min-width:0">'
+          + '<div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (k.label || 'Key') + '</div>'
+          + '<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:rgba(255,255,255,.55)">' + pre + (created ? ' · ' + created : '') + '</div>'
+          + '</div>'
+          + '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+          + '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:' + (active?'rgba(16,185,129,.12)':'rgba(148,163,184,.12)') + ';color:' + (active?'#34d399':'#94a3b8') + '">' + (k.tier || 'FREE') + '</span>'
+          + (active ? '<button onclick="cdbRevokeAPIKey(\'' + k.id + '\')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;font-size:9px;font-weight:700;padding:3px 9px;border-radius:6px;cursor:pointer">Revoke</button>' : '<span style="font-size:9px;color:#94a3b8">Revoked</span>')
+          + '</div>'
           + '</div>';
       }).join('');
-    }).catch(function(){});
+    }).catch(function(){ listEl.innerHTML = '<div style="color:rgba(255,255,255,0.6);font-size:11px">Could not load keys — try refresh.</div>'; });
 };
 
 window.cdbLoadAPIUsage = function() {
-  fetch('/api/keys/usage')
-    .then(function(r){ return r.json(); })
+  // Honest tier/quota view derived from the real /api/keys response (tier_limits).
+  // No fabricated usage numbers — meters show the plan's limits and key count.
+  var apiEl  = document.getElementById('usage-api-calls');
+  var aiEl    = document.getElementById('usage-ai-analyses');
+  var ruleEl = document.getElementById('usage-rule-exports');
+  function clearBars(){ ['usage-api-bar','usage-ai-bar','usage-rule-bar'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.width='0%'; }); }
+  if (!_cdbKeySignedIn()) {
+    if (apiEl) apiEl.textContent='—'; if (aiEl) aiEl.textContent='—'; if (ruleEl) ruleEl.textContent='—';
+    clearBars();
+    return;
+  }
+  fetch('/api/keys', { headers: _cdbKeyAuthH() })
+    .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(data) {
-      var usage = data.usage || data || {};
-      var calls = usage.api_calls || usage.requests_today || 0;
-      var ai    = usage.ai_analyses || usage.ai_requests || 0;
-      var rules = usage.rule_exports || 0;
-      var limC  = usage.limit_api_calls || 1000;
-      var limAI = usage.limit_ai || 100;
-      var limR  = usage.limit_rules || 50;
-
-      var apiEl  = document.getElementById('usage-api-calls');
-      var aiEl   = document.getElementById('usage-ai-analyses');
-      var ruleEl = document.getElementById('usage-rule-exports');
-      if (apiEl)  apiEl.textContent  = calls.toLocaleString() + ' / ' + limC.toLocaleString();
-      if (aiEl)   aiEl.textContent   = ai + ' / ' + limAI;
-      if (ruleEl) ruleEl.textContent = rules + ' / ' + limR;
-
-      // Progress bars
-      function setBar(id, val, lim) { var el=document.getElementById(id); if(el) el.style.width=Math.min(100,Math.round(val/lim*100))+'%'; }
-      setBar('usage-api-bar', calls, limC);
-      setBar('usage-ai-bar',  ai,    limAI);
-      setBar('usage-rule-bar', rules, limR);
-
-      // Cost
-      var costApi   = (calls   * 0.005).toFixed(2);
-      var costAI    = (ai      * 2.00).toFixed(2);
-      var costTotal = (parseFloat(costApi) + parseFloat(costAI)).toFixed(2);
-      var cA=document.getElementById('cost-api'), cAI=document.getElementById('cost-ai'), cT=document.getElementById('cost-total');
-      if(cA)  cA.textContent  = '₹' + costApi;
-      if(cAI) cAI.textContent = '₹' + costAI;
-      if(cT)  cT.textContent  = '₹' + costTotal;
+      if (!data) { if(apiEl)apiEl.textContent='—'; if(aiEl)aiEl.textContent='—'; if(ruleEl)ruleEl.textContent='—'; clearBars(); return; }
+      var lim = data.tier_limits || {};
+      var keyCount = (data.keys || []).filter(function(k){ return k.active !== 0 && k.active !== false; }).length;
+      var maxKeys = data.max_keys || 2;
+      var dailyLabel = (lim.daily_limit === -1) ? 'Unlimited' : (lim.daily_limit != null ? lim.daily_limit.toLocaleString() + ' req/day' : '—');
+      if (apiEl)  apiEl.textContent  = dailyLabel;
+      if (aiEl)   aiEl.textContent   = keyCount + ' / ' + maxKeys + ' keys';
+      if (ruleEl) ruleEl.textContent = (lim.monthly_limit === -1 ? 'Unlimited' : (lim.monthly_limit != null ? lim.monthly_limit.toLocaleString() + ' /mo' : '—'));
+      var dA=document.getElementById('usage-api-bar'); if(dA) dA.style.width = (lim.daily_limit===-1?100:0)+'%';
+      var kB=document.getElementById('usage-ai-bar'); if(kB) kB.style.width = Math.min(100, Math.round(keyCount/maxKeys*100))+'%';
+      // Current Plan summary (honest — tier from account, burst from real limits)
+      var tierEl=document.getElementById('plan-tier'); if(tierEl) tierEl.textContent = (localStorage.getItem('cdb_tier')||'FREE');
+      var burstEl=document.getElementById('plan-burst'); if(burstEl) burstEl.textContent = (lim.burst_per_min != null ? lim.burst_per_min + ' req/min' : '—');
     })
-    .catch(function() {
-      // Demo data
-      var demoVals = { api: 73, ai: 12, rules: 4 };
-      var dA=document.getElementById('usage-api-calls'),dAI=document.getElementById('usage-ai-analyses'),dR=document.getElementById('usage-rule-exports');
-      if(dA)  dA.textContent='73 / 1,000'; if(dAI) dAI.textContent='12 / 100'; if(dR) dR.textContent='4 / 50';
-      function setBar(id,v,l){var el=document.getElementById(id);if(el)el.style.width=Math.min(100,Math.round(v/l*100))+'%';}
-      setBar('usage-api-bar',73,1000); setBar('usage-ai-bar',12,100); setBar('usage-rule-bar',4,50);
-    });
+    .catch(function(){ if(apiEl)apiEl.textContent='—'; if(aiEl)aiEl.textContent='—'; if(ruleEl)ruleEl.textContent='—'; clearBars(); });
 };
 
 /* ═══════════════════════════════════════════════════════════════
