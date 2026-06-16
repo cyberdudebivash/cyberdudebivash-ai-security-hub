@@ -384,52 +384,89 @@ window.cdbTriggerReportPurchase = async function(module, target) {
 </script>
 <!-- ═══ END v26 EMAIL CAPTURE GATE ═══ -->
 <script>
-// ── v26 Auth Gate Controller ────────────────────────────────────────────────
-// Controls which sections are visible based on auth state
+// ── v31 Auth Gate Controller (deferred reveal + owner gate) ──────────────────
+// FIX: the original IIFE ran during <head> parse — before <body> existed — so its
+// querySelectorAll() matched zero gated sections and revealed nothing for returning
+// authenticated users (the "gated sections missing after login" bug). We now:
+//   (a) bootstrap an owner flag from /?owner=1 (UI gate only; data APIs stay
+//       server-side protected),
+//   (b) expose window.CDB_AUTH synchronously, and
+//   (c) APPLY gates after the DOM is parsed, idempotently.
+// Member sections (data-auth-gate="true") reveal for any authed user. Owner-internal
+// tooling (data-auth-gate="owner": proposal-gen, growth-analytics, CRM) reveals ONLY
+// for the owner — never for prospects or regular customers.
 (function initAuthGate() {
-  const email = localStorage.getItem('cdb_email');
-  const token = localStorage.getItem('cdb_token');
-  const tier  = localStorage.getItem('cdb_tier') || 'FREE';
-  
-  const isAuthenticated = !!(token && email);
-  const hasEmail = !!(email && email.includes('@'));
-  
-  // If authenticated / has token: reveal gated sections
-  if (isAuthenticated) {
-    document.querySelectorAll('[data-auth-gate="true"]').forEach(el => {
-      el.style.display = '';
-    });
-    
-    // Show dashboard link in nav
-    const navLinks = document.getElementById('nav-links-desktop');
-    if (navLinks && !navLinks.querySelector('[data-auth-section="dashboard"]')) {
-      const dashLink = document.createElement('a');
-      dashLink.href = '#dashboard';
-      dashLink.setAttribute('data-auth-section', 'dashboard');
-      dashLink.setAttribute('onclick', "cdbNavigate('dashboard');return false");
-      dashLink.textContent = 'Dashboard';
-      navLinks.insertBefore(dashLink, navLinks.firstChild);
+  // Owner bootstrap: /?owner=1 marks this browser as owner; /?owner=0 clears it.
+  try {
+    var qp = new URLSearchParams(location.search);
+    if (qp.get('owner') === '1') localStorage.setItem('cdb_owner', '1');
+    else if (qp.get('owner') === '0') localStorage.removeItem('cdb_owner');
+  } catch (e) {}
+
+  function readAuth() {
+    var email = localStorage.getItem('cdb_email');
+    var token = localStorage.getItem('cdb_token');
+    var tier  = localStorage.getItem('cdb_tier') || 'FREE';
+    return {
+      email: email,
+      tier: tier,
+      isAuthenticated: !!(token && email),
+      hasEmail: !!(email && email.indexOf('@') > -1),
+      isOwner: localStorage.getItem('cdb_owner') === '1'
+    };
+  }
+
+  // Expose synchronously for any early consumer.
+  window.CDB_AUTH = readAuth();
+
+  // Apply visibility gates. Safe to call repeatedly (idempotent).
+  window.cdbApplyGates = function cdbApplyGates() {
+    var a = window.CDB_AUTH = readAuth();
+
+    // Member sections reveal for any authenticated user (and for the owner).
+    if (a.isAuthenticated || a.isOwner) {
+      document.querySelectorAll('[data-auth-gate="true"]').forEach(function(el){ el.style.display = ''; });
     }
+    // Owner-internal sections + their toolbar tabs reveal ONLY for the owner.
+    if (a.isOwner) {
+      document.querySelectorAll('[data-auth-gate="owner"]').forEach(function(el){ el.style.display = ''; });
+      document.querySelectorAll('[data-owner-tab="1"]').forEach(function(el){ el.style.display = ''; });
+    }
+
+    // Plan badge.
+    var badge = document.getElementById('nav-plan-badge');
+    if (badge && a.tier && a.tier !== 'FREE') {
+      badge.textContent = a.tier;
+      badge.style.display = 'inline-block';
+    }
+
+    // Dashboard nav link for authenticated users.
+    if (a.isAuthenticated) {
+      var navLinks = document.getElementById('nav-links-desktop');
+      if (navLinks && !navLinks.querySelector('[data-auth-section="dashboard"]')) {
+        var dashLink = document.createElement('a');
+        dashLink.href = '#dashboard';
+        dashLink.setAttribute('data-auth-section', 'dashboard');
+        dashLink.setAttribute('onclick', "cdbNavigate('dashboard');return false");
+        dashLink.textContent = 'Dashboard';
+        navLinks.insertBefore(dashLink, navLinks.firstChild);
+      }
+    }
+  };
+
+  // Run AFTER the DOM is parsed (the original bug: this ran in <head>).
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.cdbApplyGates);
+  } else {
+    window.cdbApplyGates();
   }
-  
-  // Update nav badge
-  const badge = document.getElementById('nav-plan-badge');
-  if (badge && tier && tier !== 'FREE') {
-    badge.textContent = tier;
-    badge.style.display = 'inline-block';
-  }
-  
-  // Expose for external use
-  window.CDB_AUTH = { isAuthenticated, hasEmail, tier, email };
-  
-  // Listen for login events
+
+  // Re-apply on login.
   window.addEventListener('cdb:login', function(e) {
-    document.querySelectorAll('[data-auth-gate="true"]').forEach(el => {
-      el.style.display = '';
-    });
-    if (e.detail?.tier && e.detail.tier !== 'FREE') {
-      if (badge) { badge.textContent = e.detail.tier; badge.style.display = 'inline-block'; }
+    if (e && e.detail && e.detail.tier) {
+      try { localStorage.setItem('cdb_tier', e.detail.tier); } catch (_) {}
     }
+    window.cdbApplyGates();
   });
 })();
 </script>
@@ -1100,9 +1137,9 @@ a{color:var(--accent);text-decoration:none}
 <div class="cdb-bsp-tabs" id="cdb-bsp-tabs">
 <a class="cdb-bsp-tab" href="/sentinel-apex-marketplace.html">🛰 Intel Mkt</a>
 <a class="cdb-bsp-tab" href="#enterprise-sales" onclick="cdbNavigate('enterprise-sales');return false">💼 Sales</a>
-<a class="cdb-bsp-tab" href="#proposal-gen" onclick="cdbNavigate('proposal-gen');return false">📄 Proposals</a>
+<a class="cdb-bsp-tab" data-owner-tab="1" href="#proposal-gen" onclick="cdbNavigate('proposal-gen');return false" style="display:none">📄 Proposals</a>
 <a class="cdb-bsp-tab" href="#affiliate-hub" onclick="cdbNavigate('affiliate-hub');return false">🤝 Affiliate</a>
-<a class="cdb-bsp-tab" href="#growth-analytics" onclick="cdbNavigate('growth-analytics');return false">📈 Growth</a>
+<a class="cdb-bsp-tab" data-owner-tab="1" href="#growth-analytics" onclick="cdbNavigate('growth-analytics');return false" style="display:none">📈 Growth</a>
 </div>
 <div class="cdb-bsp-divider"></div>
 <span class="cdb-bsp-v">v30.0</span>
@@ -4497,8 +4534,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div id="p4-demo-result" style="margin-top:12px;font-size:13px;color:#10b981;display:none"></div>
 </div>
 </div>
-<!-- CRM Pipeline Board + Sales Metrics — internal sales ops; owner/admin only (auth-gated so prospects never see the vendor's own deal funnel) -->
-<div data-auth-gate="true" data-section-id="crm-ops-internal" style="display:none">
+<!-- CRM Pipeline Board + Sales Metrics — internal sales ops; OWNER ONLY (owner-gated so neither prospects nor regular customers see the vendor's own deal funnel) -->
+<div data-auth-gate="owner" data-section-id="crm-ops-internal" style="display:none">
 <div class="p4-card" style="margin-bottom:32px">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:gap;gap:12px">
 <div style="display:flex;align-items:center;gap:12px">
@@ -4544,8 +4581,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
    this inline check runs after the element exists and toggles it reliably. */
 (function(){
   try {
-    var authed = !!localStorage.getItem('cdb_token') && (localStorage.getItem('cdb_email')||'').indexOf('@') > -1;
-    if (authed) {
+    var isOwner = localStorage.getItem('cdb_owner') === '1';
+    if (isOwner) {
       var w = document.querySelector('[data-section-id="crm-ops-internal"]');
       if (w) w.style.display = '';
     }
@@ -4555,7 +4592,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </section>
 <!-- ══════════════════════════ PHASE 4: PROPOSAL GENERATOR ══════════════════════════ -->
-<section data-auth-gate="true" data-section-id="proposal-gen-2" id="proposal-gen" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)">
+<section data-auth-gate="owner" data-section-id="proposal-gen-2" id="proposal-gen" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(99,102,241,.15)">
 <div style="max-width:1400px;margin:0 auto">
 <div style="text-align:center;margin-bottom:56px">
 <span style="display:inline-block;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#6366f1;text-transform:uppercase;margin-bottom:16px">AI Proposal Engine</span>
@@ -4785,7 +4822,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </section>
 <!-- ══════════════════════════ PHASE 4: GROWTH ANALYTICS ══════════════════════════ -->
-<section data-auth-gate="true" data-section-id="growth-analytics-2" id="growth-analytics" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)">
+<section data-auth-gate="owner" data-section-id="growth-analytics-2" id="growth-analytics" style="display:none;background:linear-gradient(180deg,#030308 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(236,72,153,.15)">
 <div style="max-width:1400px;margin:0 auto">
 <div style="text-align:center;margin-bottom:56px">
 <span style="display:inline-block;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#ec4899;text-transform:uppercase;margin-bottom:16px">Growth Intelligence</span>
@@ -13661,6 +13698,16 @@ window.cdbNavigate = function(sectionId) {
     return;
   }
 
+  // OWNER GATE: never force-reveal owner-internal tooling (proposal-gen,
+  // growth-analytics, CRM) for non-owners — even via a crafted #hash or stale link.
+  if (el.getAttribute('data-auth-gate') === 'owner' &&
+      !(window.CDB_AUTH && window.CDB_AUTH.isOwner)) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    _currentSection = 'hero';
+    history.pushState({ section: 'hero' }, '', '#home');
+    return;
+  }
+
   // P0 FIX: force-show any auth-gated section that is still hidden
   // (auth-gate script may not have run yet, or user navigated directly)
   const cs = window.getComputedStyle(el);
@@ -19079,10 +19126,14 @@ function p4Get(path) { return p4Api(path); }
 function p4InjectNav() {
   var links = [
     { href: '#enterprise-sales', label: 'Sales',     icon: '💼', color: '#f59e0b' },
-    { href: '#proposal-gen',     label: 'Proposals', icon: '📄', color: '#6366f1' },
+    { href: '#proposal-gen',     label: 'Proposals', icon: '📄', color: '#6366f1', owner: true },
     { href: '#affiliate-hub',    label: 'Affiliate', icon: '🤝', color: '#a855f7' },
-    { href: '#growth-analytics', label: 'Growth',    icon: '📈', color: '#ec4899' }
+    { href: '#growth-analytics', label: 'Growth',    icon: '📈', color: '#ec4899', owner: true }
   ];
+  // Owner-internal tabs (Proposals, Growth) are injected only for the owner —
+  // prospects/customers never get nav entries to the vendor's sales/ops tooling.
+  var _isOwner = !!(window.CDB_AUTH && window.CDB_AUTH.isOwner);
+  if (!_isOwner) links = links.filter(function(l){ return !l.owner; });
   var navEl = document.getElementById('p3-dynamic-nav') || document.querySelector('.cdb-nav-links') || document.querySelector('nav');
   if (!navEl) return;
 
