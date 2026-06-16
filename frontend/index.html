@@ -661,6 +661,80 @@ window.cdbTriggerReportPurchase = async function(module, target) {
   ]
 }
 </script>
+<!-- Structured data: Sentinel APEX Threat-Intelligence API (tiered product) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "@id": "https://cyberdudebivash.in/#intel-api",
+  "name": "Sentinel APEX Threat Intelligence API",
+  "serviceType": "Cyber Threat Intelligence API",
+  "category": "Threat Intelligence",
+  "url": "https://cyberdudebivash.in/#intel-api",
+  "provider": {"@id": "https://cyberdudebivash.in/#organization"},
+  "areaServed": "Worldwide",
+  "audience": {"@type": "Audience", "audienceType": "SOC teams, MSSPs, security engineers, SIEM/TIP operators"},
+  "description": "Programmatic access to 1,600+ real, deduplicated CVEs — the full CISA KEV catalog, EPSS exploit-probability scores, and STIX 2.1 bundle export for Splunk, Microsoft Sentinel and Elastic. Tiered API authenticated with an x-api-key header; the FREE tier needs no key.",
+  "offers": {
+    "@type": "AggregateOffer",
+    "priceCurrency": "INR",
+    "lowPrice": "0",
+    "highPrice": "9999",
+    "offerCount": "5",
+    "url": "https://cyberdudebivash.in/#intel-api"
+  },
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Threat Intelligence API Plans",
+    "itemListElement": [
+      {
+        "@type": "Offer",
+        "name": "FREE",
+        "priceCurrency": "INR",
+        "price": "0",
+        "description": "25 items per request, recent CVEs and basic fields, 100 requests/day. No API key required (IP-based).",
+        "itemOffered": {"@type": "Service", "name": "Sentinel APEX Threat-Intel API — FREE tier"}
+      },
+      {
+        "@type": "Offer",
+        "name": "STARTER",
+        "priceCurrency": "INR",
+        "price": "499",
+        "priceSpecification": {"@type": "UnitPriceSpecification", "price": "499", "priceCurrency": "INR", "unitText": "MONTH"},
+        "description": "100 items per request, full detail with EPSS scores, complete CISA KEV feed, 2,000 requests/day.",
+        "itemOffered": {"@type": "Service", "name": "Sentinel APEX Threat-Intel API — STARTER tier"}
+      },
+      {
+        "@type": "Offer",
+        "name": "PRO",
+        "priceCurrency": "INR",
+        "price": "1499",
+        "priceSpecification": {"@type": "UnitPriceSpecification", "price": "1499", "priceCurrency": "INR", "unitText": "MONTH"},
+        "description": "500 items per request, EPSS scores, full CISA KEV feed, STIX 2.1 bundle export, 20,000 requests/day.",
+        "itemOffered": {"@type": "Service", "name": "Sentinel APEX Threat-Intel API — PRO tier"}
+      },
+      {
+        "@type": "Offer",
+        "name": "ENTERPRISE",
+        "priceCurrency": "INR",
+        "price": "4999",
+        "priceSpecification": {"@type": "UnitPriceSpecification", "price": "4999", "priceCurrency": "INR", "unitText": "MONTH"},
+        "description": "2,000 items per request, EPSS + STIX 2.1, unlimited daily quota, SIEM/TIP integration.",
+        "itemOffered": {"@type": "Service", "name": "Sentinel APEX Threat-Intel API — ENTERPRISE tier"}
+      },
+      {
+        "@type": "Offer",
+        "name": "MSSP",
+        "priceCurrency": "INR",
+        "price": "9999",
+        "priceSpecification": {"@type": "UnitPriceSpecification", "price": "9999", "priceCurrency": "INR", "unitText": "MONTH"},
+        "description": "5,000 items per request, EPSS + STIX 2.1, unlimited daily quota, white-label multi-tenant client feeds.",
+        "itemOffered": {"@type": "Service", "name": "Sentinel APEX Threat-Intel API — MSSP tier"}
+      }
+    ]
+  }
+}
+</script>
 <!-- ═══════════════════════════════════════════════════════════════════════════
      PERFORMANCE v10.0 — CORE WEB VITALS OPTIMIZED
      Preconnect: reduces TTFB for critical resources
