@@ -10,6 +10,7 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DASH   = readFileSync(resolve(__dirname, '../../frontend/dashboard-live.js'), 'utf8');
 const STREAM = readFileSync(resolve(__dirname, '../src/handlers/dashboardStream.js'), 'utf8');
+const HTML   = readFileSync(resolve(__dirname, '../../frontend/index.html'), 'utf8');
 
 describe('dashboard-live.js — no fabricated CVE metrics', () => {
   it('removed the hardcoded +3,841 CVE floor', () => {
@@ -45,5 +46,27 @@ describe('dashboardStream.js (SSE) — consistent with the polled dashboard', ()
 
   it('no longer hardcodes a default threat score of 62', () => {
     expect(STREAM).not.toContain('?? 62');
+  });
+});
+
+describe('index.html — credibility baseline fabrication removed', () => {
+  it('_applyFloor is a no-op (no `raw + baseline` inflation)', () => {
+    expect(HTML).not.toMatch(/return\s+raw\s*\+\s*baseline/);
+    expect(HTML).toMatch(/const _CVE_BASELINE\s*=\s*0/);
+    expect(HTML).toMatch(/const _SCAN_BASELINE\s*=\s*0/);
+  });
+
+  it('no fabricated static defaults remain in the live trust/hero tiles', () => {
+    expect(HTML).not.toMatch(/id="stat-cves"[^>]*>3,841\+/);
+    expect(HTML).not.toMatch(/id="tm-cves"[^>]*>3,841\+/);
+    expect(HTML).not.toMatch(/id="cdb-exec-cves"[^>]*>3,841\+/);
+    expect(HTML).not.toMatch(/id="cdb-sentinel-total"[^>]*>3,841\+/);
+    expect(HTML).not.toMatch(/id="stat-scans"[^>]*>1,247\+/);
+    expect(HTML).not.toMatch(/id="tm-scans"[^>]*>1,247\+/);
+  });
+
+  it('removed the agent "Demo data" fallback counters', () => {
+    expect(HTML).not.toContain('// Demo data if stats endpoint not live');
+    expect(HTML).not.toMatch(/getElementById\('ag-a-scanned'\)\.textContent='1,247'/);
   });
 });

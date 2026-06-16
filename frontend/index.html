@@ -26,13 +26,19 @@
 <link href="https://cyberdudebivash.in/" rel="canonical"/>
 <script>
 
-/* ── PLATFORM CREDIBILITY BASELINE (index.html v31) ─────────────────────── */
-const _SCAN_BASELINE  = 1247;  // historical scan floor
-const _CVE_BASELINE   = 3841;  // CVE tracking floor (NVD+CISA always active)
-const _THREAT_BASELINE = 94;   // threats detected floor
-function _applyFloor(raw, baseline) {
-  if (raw === null || raw === undefined || isNaN(raw) || raw === 0) return baseline;
-  return raw + baseline;
+/* ── METRIC INTEGRITY (index.html v31) ──────────────────────────────────────
+ * The former "credibility baseline" fabricated counts by adding a fixed floor
+ * (scans +1247, CVEs +3841, threats +94) and substituting it whenever the real
+ * value was 0. Enterprise/CISO trust requires accurate numbers, so _applyFloor
+ * is now a no-op that reports the REAL value. Baseline consts are retained
+ * (passed by existing call sites) but ignored. Grow real counts via ingestion,
+ * never via a display floor. */
+const _SCAN_BASELINE   = 0;
+const _CVE_BASELINE    = 0;
+const _THREAT_BASELINE = 0;
+function _applyFloor(raw, _baseline) {
+  const n = Number(raw);
+  return (!isFinite(n) || n < 0) ? 0 : n;
 }
 // ── v26 Conversion Funnel Tracker ─────────────────────────────────────────
 const CDB_FUNNEL = {
@@ -1254,7 +1260,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="hero-urgency" style="margin-top:8px">
 <span class="urgency-dot"></span>
 <span id="hero-urgency-text" style="font-size:12px;color:rgba(255,255,255,.72)">
-        Live threat monitoring active — Sentinel APEX · CVE Monitoring · <span id="hero-live-scans" style="color:#ef4444;font-weight:900">1,247+</span><span id="hero-live-label" style="color:rgba(255,255,255,.72)"> threat intelligence active</span>
+        Live threat monitoring active — Sentinel APEX · CVE Monitoring · <span id="hero-live-scans" style="color:#ef4444;font-weight:900">—</span><span id="hero-live-label" style="color:rgba(255,255,255,.72)"> threat intelligence active</span>
 </span>
 </div>
 <!-- Activity bar injected by revenue-engine-v14.js -->
@@ -1318,15 +1324,15 @@ a{color:var(--accent);text-decoration:none}
 <div class="stats-row">
 <div class="stats-inner">
 <div class="stat-item">
-<div class="stat-num" id="stat-scans" style="color:#00d4ff">1,247+</div>
+<div class="stat-num" id="stat-scans" style="color:#00d4ff">—</div>
 <div class="stat-label">Scans Performed</div>
 </div>
 <div class="stat-item">
-<div class="stat-num" id="stat-threats" style="color:#ef4444">94 critical</div>
+<div class="stat-num" id="stat-threats" style="color:#ef4444">—</div>
 <div class="stat-label">Threats Detected</div>
 </div>
 <div class="stat-item">
-<div class="stat-num" id="stat-cves">3,841+</div>
+<div class="stat-num" id="stat-cves">—</div>
 <div class="stat-label">CVEs Tracked Live</div>
 </div>
 <div class="stat-item">
@@ -3497,12 +3503,12 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <!-- Live Metrics Grid -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:56px">
 <div class="trust-metric-card">
-<div class="trust-metric-num" id="tm-scans">1,247+</div>
+<div class="trust-metric-num" id="tm-scans">—</div>
 <div class="trust-metric-label">Security Scans Run</div>
 <div class="trust-metric-sub">NVD + CISA feeds live</div>
 </div>
 <div class="trust-metric-card">
-<div class="trust-metric-num" id="tm-cves">3,841+</div>
+<div class="trust-metric-num" id="tm-cves">—</div>
 <div class="trust-metric-label">CVEs Tracked Live</div>
 <div class="trust-metric-sub">NVD + CISA KEV real-time</div>
 </div>
@@ -4298,7 +4304,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <!-- Authority Strip -->
 <div id="p4-authority-strip" style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:48px">
 <div class="p4-authority-pill">
-<span class="p4-auth-num" id="p4-scan-count">1,247+</span>
+<span class="p4-auth-num" id="p4-scan-count">—</span>
 <span class="p4-auth-lbl">Security Scans</span>
 </div>
 <div class="p4-authority-pill">
@@ -15000,15 +15006,10 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
         }
       }
     }catch(e){
-      // Demo data if stats endpoint not live
-      document.getElementById('ag-a-scanned').textContent='1,247';
-      document.getElementById('ag-a-detected').textContent='3';
-      document.getElementById('ag-a-critical').textContent='1';
-      document.getElementById('ag-a-actioned').textContent='1';
-      document.getElementById('ag-p-analyzed').textContent='4,819';
-      document.getElementById('ag-p-critical').textContent='38';
-      document.getElementById('ag-p-exploit').textContent='12';
-      document.getElementById('ag-p-kev').textContent='7';
+      // Stats endpoint unavailable — show honest placeholders, never demo data.
+      ['ag-a-scanned','ag-a-detected','ag-a-critical','ag-a-actioned',
+       'ag-p-analyzed','ag-p-critical','ag-p-exploit','ag-p-kev']
+        .forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent='—'; });
     }
 
     // Load predictions
@@ -21699,7 +21700,7 @@ function v21TriggerUrgencyPayment(){
 </div>
 <div class="cdb-kpi-card accent-orange">
 <div class="cdb-kpi-label">CVEs Tracked</div>
-<div class="cdb-kpi-value" id="cdb-exec-cves">3,841+</div>
+<div class="cdb-kpi-value" id="cdb-exec-cves">—</div>
 <div class="cdb-kpi-sub">Live vulnerability DB</div>
 </div>
 <div class="cdb-kpi-card accent-green">
@@ -21782,7 +21783,7 @@ function v21TriggerUrgencyPayment(){
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-orange">
 <div class="cdb-kpi-label">CVEs Tracked</div>
-<div class="cdb-kpi-value" id="cdb-sentinel-total">3,841+</div>
+<div class="cdb-kpi-value" id="cdb-sentinel-total">—</div>
 <div class="cdb-kpi-sub">NVD + CISA KEV</div>
 </div>
 <div class="cdb-kpi-card accent-red">
