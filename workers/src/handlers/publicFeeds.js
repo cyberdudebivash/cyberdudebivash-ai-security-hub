@@ -16,6 +16,8 @@
  * Cloudflare CDN edge cache (free, no KV quota) and carry CORS + cache headers.
  */
 
+import { SEED_ENTRIES } from '../services/threatIngestion.js';
+
 const PUBLISHER = 'CYBERDUDEBIVASH® Sentinel APEX';
 const UPGRADE_URL = 'https://cyberdudebivash.in/#pricing';
 
@@ -37,42 +39,63 @@ function normalizeItem(r) {
   };
 }
 
+// Platform-wide ultimate fallback: the curated SEED_ENTRIES, identical to what
+// the rest of the intel layer serves when threat_intel is empty. Keeps the
+// public feeds consistent with the dashboard instead of showing nothing.
+function seedItems(severities) {
+  const sevSet = severities && severities.length ? new Set(severities.map(s => s.toUpperCase())) : null;
+  let items = (SEED_ENTRIES || []).map(normalizeItem);
+  if (sevSet) items = items.filter(i => sevSet.has(i.severity));
+  return items;
+}
+
 async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
-  if (!env?.DB) return [];
   const sevBind   = severities && severities.length ? severities.map(s => s.toUpperCase()) : [];
   const sevClause = sevBind.length ? ` WHERE UPPER(severity) IN (${sevBind.map(() => '?').join(',')})` : '';
 
-  // Tier 1 — SELECT * avoids any SELECT-column drift; order by published_at
-  // (guaranteed: written by the ingestion engine and used by the live feed).
-  try {
-    const rows = await env.DB.prepare(
-      `SELECT * FROM threat_intel${sevClause} ORDER BY published_at DESC LIMIT ?`
-    ).bind(...sevBind, limit).all();
-    return (rows?.results || []).map(normalizeItem);
-  } catch { /* fall through */ }
+  if (env?.DB) {
+    // Tier 1 — SELECT * avoids SELECT-column drift; order by published_at.
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT * FROM threat_intel${sevClause} ORDER BY published_at DESC LIMIT ?`
+      ).bind(...sevBind, limit).all();
+      const items = (rows?.results || []).map(normalizeItem);
+      if (items.length) return items;
+    } catch { /* fall through */ }
 
-  // Tier 2 — no ORDER BY / no WHERE (in case even severity/published_at differ);
-  // filter + cap in JS. A schema mismatch can never 500 a public feed.
-  try {
-    const rows = await env.DB.prepare(`SELECT * FROM threat_intel LIMIT 500`).all();
-    let items = (rows?.results || []).map(normalizeItem);
-    if (sevBind.length) items = items.filter(i => sevBind.includes(i.severity));
-    return items.slice(0, limit);
-  } catch { /* fail-open: empty feed */ }
+    // Tier 2 — no ORDER BY / no WHERE; filter + cap in JS. Never 500s.
+    try {
+      const rows = await env.DB.prepare(`SELECT * FROM threat_intel LIMIT 500`).all();
+      let items = (rows?.results || []).map(normalizeItem);
+      if (sevBind.length) items = items.filter(i => sevBind.includes(i.severity));
+      if (items.length) return items.slice(0, limit);
+    } catch { /* fall through to seed */ }
+  }
 
-  return [];
+  // Tier 3 — curated seed fallback (platform-consistent, never empty).
+  return seedItems(severities).slice(0, limit);
+}
+
+function tally(items) {
+  const m = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  for (const it of items) if (it.severity in m) m[it.severity] += 1;
+  return { ...m, total: m.CRITICAL + m.HIGH + m.MEDIUM + m.LOW };
 }
 
 async function severityCounts(env) {
-  const m = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-  if (!env?.DB) return { ...m, total: 0 };
-  try {
-    const rows = await env.DB.prepare(
-      `SELECT UPPER(severity) as sev, COUNT(*) as c FROM threat_intel GROUP BY UPPER(severity)`
-    ).all();
-    for (const row of (rows?.results || [])) if (row.sev in m) m[row.sev] = row.c;
-  } catch { /* fail-open */ }
-  return { ...m, total: m.CRITICAL + m.HIGH + m.MEDIUM + m.LOW };
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT UPPER(severity) as sev, COUNT(*) as c FROM threat_intel GROUP BY UPPER(severity)`
+      ).all();
+      const m = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+      for (const row of (rows?.results || [])) if (row.sev in m) m[row.sev] = row.c;
+      const total = m.CRITICAL + m.HIGH + m.MEDIUM + m.LOW;
+      if (total > 0) return { ...m, total };
+    } catch { /* fall through to seed */ }
+  }
+  // Seed fallback — consistent with the platform's other intel surfaces.
+  return tally(seedItems(null));
 }
 
 // ─── Edge-cached JSON responder ───────────────────────────────────────────────
@@ -194,11 +217,11 @@ async function buildReports(env) {
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 export async function handlePublicFeeds(request, env, path) {
   switch (path) {
-    case '/api/feed.json':                return cachedJson('feed:public:v2',     300, () => buildFeed(env));
-    case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:v2',     300, () => buildLatest(env));
-    case '/api/v1/intel/apex.json':       return cachedJson('feed:apex:v2',       300, () => buildApex(env));
-    case '/api/v1/intel/ai_summary.json': return cachedJson('feed:aisummary:v2',  600, () => buildAiSummary(env));
-    case '/api/reports/latest.json':      return cachedJson('feed:reports:v2',    600, () => buildReports(env));
+    case '/api/feed.json':                return cachedJson('feed:public:v3',     300, () => buildFeed(env));
+    case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:v3',     300, () => buildLatest(env));
+    case '/api/v1/intel/apex.json':       return cachedJson('feed:apex:v3',       300, () => buildApex(env));
+    case '/api/v1/intel/ai_summary.json': return cachedJson('feed:aisummary:v3',  600, () => buildAiSummary(env));
+    case '/api/reports/latest.json':      return cachedJson('feed:reports:v3',    600, () => buildReports(env));
     default:
       return Response.json({ error: 'Unknown feed' }, { status: 404 });
   }

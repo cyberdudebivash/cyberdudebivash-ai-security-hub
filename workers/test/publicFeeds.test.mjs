@@ -85,11 +85,18 @@ describe('public threat-intel feeds', () => {
     expect(body.items[0].title).toBe('Critical RCE'); // real data still served
   });
 
-  it('fails open with no DB — 200 empty feed, never 500', async () => {
+  it('with no DB, serves the curated seed fallback (never empty, never 500)', async () => {
     const res = await call({}, '/api/feed.json');
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.count).toBe(0);
-    expect(body.items).toEqual([]);
+    expect(body.count).toBeGreaterThan(0);          // seed fallback, platform-consistent
+    expect(body.items.every(i => i.severity)).toBe(true);
+  });
+
+  it('ai_summary falls back to seed counts when DB is empty', async () => {
+    const res = await call({}, '/api/v1/intel/ai_summary.json');
+    const body = await res.json();
+    expect(body.counts.total).toBeGreaterThan(0);
+    expect(body.threat_level).not.toBe('LOW');      // seed has CRITICAL/HIGH CVEs
   });
 });
