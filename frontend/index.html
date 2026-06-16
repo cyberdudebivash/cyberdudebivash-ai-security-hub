@@ -4493,7 +4493,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div id="p4-demo-result" style="margin-top:12px;font-size:13px;color:#10b981;display:none"></div>
 </div>
 </div>
-<!-- CRM Pipeline Board -->
+<!-- CRM Pipeline Board + Sales Metrics — internal sales ops; owner/admin only (auth-gated so prospects never see the vendor's own deal funnel) -->
+<div data-auth-gate="true" data-section-id="crm-ops-internal" style="display:none">
 <div class="p4-card" style="margin-bottom:32px">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:gap;gap:12px">
 <div style="display:flex;align-items:center;gap:12px">
@@ -4530,6 +4531,23 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-demos">—</div><div class="p4-metric-lbl">Demos Booked</div></div>
 <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-won">—</div><div class="p4-metric-lbl">Deals Won</div></div>
 </div>
+</div><!-- /auth-gated internal CRM ops -->
+<script>
+/* Reveal the internal CRM/sales-ops block only for authenticated users (the owner).
+   Anonymous prospects must never see the vendor's own (empty) deal funnel — that
+   cost real signups. Self-contained + deterministic: the global head auth-gate runs
+   before <body> parses, so it cannot reveal body sections on a returning session;
+   this inline check runs after the element exists and toggles it reliably. */
+(function(){
+  try {
+    var authed = !!localStorage.getItem('cdb_token') && (localStorage.getItem('cdb_email')||'').indexOf('@') > -1;
+    if (authed) {
+      var w = document.querySelector('[data-section-id="crm-ops-internal"]');
+      if (w) w.style.display = '';
+    }
+  } catch (e) {}
+})();
+</script>
 </div>
 </section>
 <!-- ══════════════════════════ PHASE 4: PROPOSAL GENERATOR ══════════════════════════ -->

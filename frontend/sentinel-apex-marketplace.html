@@ -351,7 +351,7 @@
   <h1>Enterprise Threat<br><span class="accent">Intelligence Marketplace</span></h1>
   <p>Live CVE intelligence, threat actor dossiers, malware reports, and API subscriptions — powered by SENTINEL APEX™. Preview free. Unlock full intelligence.</p>
   <div class="hero-stats">
-    <div class="hero-stat"><strong id="stat-cves">—</strong><small>CVEs Tracked Live</small></div>
+    <div class="hero-stat"><strong id="stat-cves">1,600+</strong><small>CVEs Tracked Live</small></div>
     <div class="hero-stat"><strong id="stat-reports">8+</strong><small>Premium Reports</small></div>
     <div class="hero-stat"><strong id="stat-apis">5</strong><small>API Tiers</small></div>
     <div class="hero-stat"><strong>₹499/mo</strong><small>Starting Price</small></div>
@@ -569,7 +569,10 @@
 </div>
 
 <script>
-const API_BASE = 'https://cyberdudebivash-security-hub.cyberdudebivash.workers.dev';
+// Same-origin: this page is served from cyberdudebivash.in where /api/* routes to
+// the Worker. The old workers.dev host did not resolve (every call 404'd → stats
+// blank "—", CVE feed fell back to fabricated cards). Relative paths fix all of it.
+const API_BASE = '';
 
 // ── Utilities ──────────────────────────────────────────────────────────────
 function toast(msg, type = 'success') {
@@ -606,10 +609,13 @@ document.getElementById('purchase-modal').addEventListener('click', function(e) 
 // ── Load Stats ─────────────────────────────────────────────────────────────
 async function loadStats() {
   try {
-    const r = await fetch(`${API_BASE}/api/intel/stats`);
+    const r = await fetch(`${API_BASE}/api/threat-intel/stats`);
     if (r.ok) {
       const d = await r.json();
-      document.getElementById('stat-cves').textContent = (d.total_cves || d.total || 0).toLocaleString();
+      // SSOT shape: { success, data: { stats: { total_advisories, ... } } }
+      const s = (d && d.data && d.data.stats) || d.stats || d || {};
+      const n = s.total_advisories ?? s.total_cves ?? s.total ?? 0;
+      if (n > 0) document.getElementById('stat-cves').textContent = Number(n).toLocaleString();
     }
   } catch {}
 }
@@ -632,7 +638,9 @@ async function loadIntelTab(type, btn) {
 
 async function loadCVECards(container) {
   try {
-    const r = await fetch(`${API_BASE}/api/intel/threat?limit=6&severity=CRITICAL,HIGH`);
+    // Real, same-origin FREE-tier feed (25 recent CVEs, no key) — real KEV data,
+    // not the fabricated fallback below.
+    const r = await fetch(`${API_BASE}/api/v1/intel/latest.json`);
     const d = r.ok ? await r.json() : {};
     const items = d.items || d.results || d.data || [];
 
@@ -650,12 +658,12 @@ async function loadCVECards(container) {
             <span class="severity-badge sev-${sev}">${sev}</span>
           </div>
           <div class="card-body">
-            <h3>${escHtml(item.cve_id || item.title || 'Critical Vulnerability')}</h3>
-            <p>${escHtml((item.description || item.summary || '').substring(0, 160))}…</p>
+            <h3>${escHtml(item.cve || item.cve_id || item.id || item.title || 'Critical Vulnerability')}</h3>
+            <p>${escHtml((item.summary || item.description || '').substring(0, 160))}…</p>
             <div class="card-meta">
-              ${item.cvss_score ? `<span class="meta-item">CVSS <strong>${item.cvss_score}</strong></span>` : ''}
+              ${(item.cvss_score || item.cvss) ? `<span class="meta-item">CVSS <strong>${item.cvss_score || item.cvss}</strong></span>` : ''}
               ${item.epss_score ? `<span class="meta-item">EPSS <strong>${(item.epss_score * 100).toFixed(1)}%</strong></span>` : ''}
-              ${item.is_kev ? '<span class="meta-item" style="color:#ef4444">🔴 <strong>KEV</strong></span>' : ''}
+              ${(item.is_kev || item.source === 'cisa_kev') ? '<span class="meta-item" style="color:#ef4444">🔴 <strong>KEV</strong></span>' : ''}
             </div>
           </div>
           <div class="card-preview-bar">
