@@ -1071,6 +1071,18 @@ export default {
     }
 
     // ── Static / no-auth routes ─────────────────────────────────────────────
+    // ── Public Sentinel APEX threat-intel feeds (no auth — advertised in footer) ──
+    if (method === 'GET' && (
+      path === '/api/feed.json' ||
+      path === '/api/v1/intel/latest.json' ||
+      path === '/api/v1/intel/apex.json' ||
+      path === '/api/v1/intel/ai_summary.json' ||
+      path === '/api/reports/latest.json'
+    )) {
+      const { handlePublicFeeds } = await import('./handlers/publicFeeds.js');
+      return withSecurityHeaders(withCors(await handlePublicFeeds(request, env, path), request));
+    }
+
     if (path === '/api/health' && method === 'GET') {
       // KV OPTIMIZATION: wrap health in 60-second Cloudflare CDN edge cache.
       // This means 1 D1 probe per 60s instead of 1 per 30s per browser session.

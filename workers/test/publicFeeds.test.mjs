@@ -1,0 +1,94 @@
+/* Tests — public Sentinel APEX threat-intel feeds (Cluster 1 enhancement).
+ * The five endpoints advertised in the platform footer previously 404'd; these
+ * verify they return real-data JSON, filter correctly, and are drift-defensive
+ * (a schema mismatch or missing DB must never 500 a public feed). */
+import { describe, it, expect } from 'vitest';
+import { handlePublicFeeds, PUBLIC_FEED_PATHS } from '../src/handlers/publicFeeds.js';
+
+const ROWS = [
+  { cve_id: 'CVE-2026-1', title: 'Critical RCE', description: 'x', severity: 'critical', cvss_score: 9.8, source: 'NVD',  published_at: '2026-06-15', created_at: '2026-06-15' },
+  { cve_id: 'CVE-2026-2', title: 'High XSS',     description: 'y', severity: 'high',     cvss_score: 7.1, source: 'CISA', published_at: '2026-06-14', created_at: '2026-06-14' },
+  { cve_id: 'CVE-2026-3', title: 'Medium info',  description: 'z', severity: 'medium',   cvss_score: 5.0, source: 'NVD',  published_at: '2026-06-13', created_at: '2026-06-13' },
+];
+
+function mockEnv({ tier1Throws = false } = {}) {
+  return {
+    DB: {
+      prepare(sql) {
+        let b = [];
+        return {
+          bind(...a) { b = a; return this; },
+          async all() {
+            if (/GROUP BY/.test(sql)) {
+              return { results: [{ sev: 'CRITICAL', c: 1 }, { sev: 'HIGH', c: 1 }, { sev: 'MEDIUM', c: 1 }] };
+            }
+            // Tier-1 references cve_id/cvss_score; simulate drift error on that shape.
+            if (tier1Throws && /cvss_score/.test(sql)) throw new Error('no such column: cvss_score');
+            let r = ROWS;
+            if (/IN \(/.test(sql)) {
+              const sevs = b.slice(0, b.length - 1).map(s => s.toUpperCase());
+              r = ROWS.filter(x => sevs.includes(x.severity.toUpperCase()));
+            }
+            return { results: r.slice(0, b[b.length - 1]) };
+          },
+        };
+      },
+    },
+  };
+}
+
+const call = (env, path) => handlePublicFeeds(new Request('https://x' + path), env, path);
+
+describe('public threat-intel feeds', () => {
+  it('exposes exactly the five advertised endpoints', () => {
+    expect(PUBLIC_FEED_PATHS).toEqual([
+      '/api/feed.json', '/api/v1/intel/latest.json', '/api/v1/intel/apex.json',
+      '/api/v1/intel/ai_summary.json', '/api/reports/latest.json',
+    ]);
+  });
+
+  it('all five return 200 JSON with real data', async () => {
+    for (const p of PUBLIC_FEED_PATHS) {
+      const res = await call(mockEnv(), p);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toContain('application/json');
+      const body = await res.json();
+      expect(body.publisher).toMatch(/CYBERDUDEBIVASH/);
+    }
+  });
+
+  it('/api/feed.json includes recent items', async () => {
+    const body = await (await call(mockEnv(), '/api/feed.json')).json();
+    expect(body.count).toBe(3);
+    expect(body.items[0].cve).toBe('CVE-2026-1');
+    expect(body.items[0].severity).toBe('CRITICAL');
+  });
+
+  it('apex feed returns only CRITICAL/HIGH', async () => {
+    const body = await (await call(mockEnv(), '/api/v1/intel/apex.json')).json();
+    expect(body.items.every(i => ['CRITICAL', 'HIGH'].includes(i.severity))).toBe(true);
+    expect(body.items.some(i => i.severity === 'MEDIUM')).toBe(false);
+  });
+
+  it('ai_summary derives a deterministic threat level + counts', async () => {
+    const body = await (await call(mockEnv(), '/api/v1/intel/ai_summary.json')).json();
+    expect(body.counts.total).toBe(3);
+    expect(['LOW', 'MODERATE', 'HIGH', 'CRITICAL']).toContain(body.threat_level);
+  });
+
+  it('is drift-defensive — falls back to minimal columns when tier-1 query throws', async () => {
+    const res = await call(mockEnv({ tier1Throws: true }), '/api/feed.json');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.count).toBe(3); // recovered via tier-2 (minimal-column) query
+    expect(body.items[0].title).toBe('Critical RCE'); // real data still served
+  });
+
+  it('fails open with no DB — 200 empty feed, never 500', async () => {
+    const res = await call({}, '/api/feed.json');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.count).toBe(0);
+    expect(body.items).toEqual([]);
+  });
+});
