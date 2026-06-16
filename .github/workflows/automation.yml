@@ -1222,6 +1222,38 @@ jobs:
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE mssp_customers ADD COLUMN partner_id TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="CREATE INDEX IF NOT EXISTS idx_mssp_customers_partner ON mssp_customers(partner_id)" 2>/dev/null || true
 
+          # ── GTM growth-engine indexed columns ───────────────────────────────
+          # Guarantee every column indexed by schema_gtm_only.sql exists BEFORE
+          # that file's CREATE INDEX statements run. On a drifted DB an older
+          # table may predate one of these columns; CREATE TABLE IF NOT EXISTS is
+          # then a no-op and the subsequent CREATE INDEX aborts the whole --file
+          # batch. Adding the columns here (idempotent) makes that step pass.
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN plan TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN lead_score INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN is_enterprise INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE leads ADD COLUMN created_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE funnel_events ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE funnel_events ADD COLUMN stage TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE funnel_events ADD COLUMN created_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_sequences ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_sequences ADD COLUMN status TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_sequences ADD COLUMN next_send_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE email_tracking ADD COLUMN event TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE content_queue ADD COLUMN platform TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE content_queue ADD COLUMN status TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_usage_log ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE api_usage_log ADD COLUMN logged_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE sales_outreach ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE sales_outreach ADD COLUMN status TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE billing_events ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE growth_analytics ADD COLUMN event TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE growth_analytics ADD COLUMN created_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE upsell_events ADD COLUMN email TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE upsell_events ADD COLUMN trigger_type TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE region_events ADD COLUMN country TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE pricing_experiments ADD COLUMN variant TEXT" 2>/dev/null || true
+
           echo "✅ Comprehensive drift patch complete — all columns across all tables patched"
 
       - name: Apply base schema
