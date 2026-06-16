@@ -463,12 +463,42 @@ function deduplicateEntries(entries) {
   return [...seen.values()];
 }
 
+// ─── Self-healing schema: ensure every column the upsert writes exists ────────
+// The live threat_intel table drifted (e.g. it had cvss_score but no `cvss`),
+// which made every INSERT fail and left the table empty. Running idempotent
+// ADD COLUMNs here makes ingestion converge the schema on its own — no migration
+// dispatch required. Each ALTER is independently guarded; duplicates are no-ops.
+const THREAT_INTEL_COLUMNS = [
+  ['title', 'TEXT'], ['severity', 'TEXT'], ['cvss', 'REAL'], ['cvss_vector', 'TEXT'],
+  ['description', 'TEXT'], ['source', 'TEXT'], ['source_url', 'TEXT'], ['published_at', 'TEXT'],
+  ['exploit_status', 'TEXT'], ['known_ransomware', 'INTEGER DEFAULT 0'],
+  ['tags', "TEXT DEFAULT '[]'"], ['iocs', "TEXT DEFAULT '[]'"],
+  ['affected_products', "TEXT DEFAULT '[]'"], ['weakness_types', "TEXT DEFAULT '[]'"],
+  ['enriched', 'INTEGER DEFAULT 0'], ['epss_score', 'REAL'], ['epss_percentile', 'REAL'],
+  ['actively_exploited', 'INTEGER DEFAULT 0'], ['exploit_available', 'INTEGER DEFAULT 0'],
+  ['updated_at', 'TEXT'], ['created_at', 'TEXT'],
+];
+async function ensureThreatIntelColumns(db) {
+  // Create the table on a truly fresh DB (no-op if it already exists).
+  try {
+    await db.prepare(
+      `CREATE TABLE IF NOT EXISTS threat_intel (id TEXT PRIMARY KEY, title TEXT, severity TEXT)`
+    ).run();
+  } catch {}
+  for (const [name, type] of THREAT_INTEL_COLUMNS) {
+    try { await db.prepare(`ALTER TABLE threat_intel ADD COLUMN ${name} ${type}`).run(); } catch { /* already exists */ }
+  }
+}
+
 // ─── Store entries in D1 (upsert) ────────────────────────────────────────────
 export async function storeInD1(db, entries) {
   if (!db || !entries.length) return { inserted: 0, updated: 0, errors: [] };
 
   let inserted = 0, updated = 0;
   const errors = [];
+
+  // Converge the schema before inserting — resilient to any historical drift.
+  await ensureThreatIntelColumns(db);
 
   // Process in batches of 10 to avoid D1 batch limits
   for (let i = 0; i < entries.length; i += 10) {
