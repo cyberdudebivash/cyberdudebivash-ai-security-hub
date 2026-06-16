@@ -999,6 +999,24 @@ function apiInfoResponse() {
   });
 }
 
+// ─── Admin auth — fail-closed, constant-time ─────────────────────────────────
+// Requires the ADMIN_TOKEN secret (set via: wrangler secret put ADMIN_TOKEN).
+// No hardcoded fallback: if the secret is unset, ALL admin calls are refused.
+// Constant-time comparison + exact match (not substring) to avoid timing/prefix
+// leaks. Cron jobs invoke ingestion/backfill in-process and never use this path.
+function isAdminAuthorized(request, env) {
+  const configured = (env.ADMIN_TOKEN || '').trim();
+  if (!configured) return false; // fail closed when not configured
+  const auth = request.headers.get('Authorization') || '';
+  const presented = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!presented || presented.length !== configured.length) return false;
+  let diff = 0;
+  for (let i = 0; i < configured.length; i++) {
+    diff |= configured.charCodeAt(i) ^ presented.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 // ─── Main fetch handler ───────────────────────────────────────────────────────
 export default {
   async fetch(request, env, ctx) {
@@ -3400,10 +3418,9 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // POST /api/admin/bootstrap  — seed threat intel + defense marketplace
+    // Auth: Authorization: Bearer <ADMIN_TOKEN secret>  (fail-closed, constant-time).
     if (path === '/api/admin/bootstrap' && method === 'POST') {
-      // Simple token auth — pass Authorization: Bearer bootstrap-cyberdude-2026
-      const authHeader = request.headers.get('Authorization') || '';
-      if (!authHeader.includes('bootstrap-cyberdude-2026')) {
+      if (!isAdminAuthorized(request, env)) {
         return withSecurityHeaders(withCors(Response.json({ error: 'Unauthorized' }, { status: 401 }), request));
       }
       const results = { threat_intel: null, defense: null };
@@ -3427,12 +3444,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // POST /api/admin/backfill — bulk-grow threat_intel (full CISA KEV + NVD pages)
-    // Auth: Authorization: Bearer <ADMIN_TOKEN secret> (falls back to legacy token).
+    // Auth: Authorization: Bearer <ADMIN_TOKEN secret>  (fail-closed, constant-time).
     // Query: ?nvd=1 also advances one NVD page per severity (slower).
     if (path === '/api/admin/backfill' && method === 'POST') {
-      const authHeader = request.headers.get('Authorization') || '';
-      const adminToken = env.ADMIN_TOKEN || env.BOOTSTRAP_TOKEN || 'bootstrap-cyberdude-2026';
-      if (!authHeader.includes(adminToken)) {
+      if (!isAdminAuthorized(request, env)) {
         return withSecurityHeaders(withCors(Response.json({ error: 'Unauthorized' }, { status: 401 }), request));
       }
       const url      = new URL(request.url);

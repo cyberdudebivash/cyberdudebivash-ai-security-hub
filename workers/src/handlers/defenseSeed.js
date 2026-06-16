@@ -3,7 +3,7 @@
  * Bootstraps the defense_solutions D1 table with production-grade security tools
  * generated for real, actively-exploited CVEs.
  *
- * Run via: POST /api/admin/bootstrap  (Authorization: Bearer bootstrap-cyberdude-2026)
+ * Run via: POST /api/admin/bootstrap  (Authorization: Bearer <ADMIN_TOKEN secret>)
  * Safe to re-run — uses INSERT OR IGNORE on primary key.
  */
 
