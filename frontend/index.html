@@ -13103,6 +13103,8 @@ window.addEventListener('load', () => {
 
     const banner = document.createElement('div');
     banner.id = 'cdb-urgency-banner';
+    banner.setAttribute('role', 'complementary');
+    banner.setAttribute('aria-label', 'Upgrade offer');
     banner.style.cssText = `
       position:fixed; top:0; left:0; right:0; z-index:9999;
       background:linear-gradient(90deg,#4f46e5,#7c3aed);
@@ -13197,6 +13199,8 @@ window.addEventListener('load', () => {
 
     const ticker = document.createElement('div');
     ticker.id = 'cdb-social-proof';
+    ticker.setAttribute('role', 'complementary');
+    ticker.setAttribute('aria-label', 'Live activity');
     ticker.style.cssText = `
       position:fixed; bottom:80px; left:20px; z-index:8000;
       background:#1e1b4b; border:1px solid #4f46e5; border-radius:10px;
