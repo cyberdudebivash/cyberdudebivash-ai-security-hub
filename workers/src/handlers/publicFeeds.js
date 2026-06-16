@@ -20,14 +20,18 @@ const PUBLISHER = 'CYBERDUDEBIVASH® Sentinel APEX';
 const UPGRADE_URL = 'https://cyberdudebivash.in/#pricing';
 
 // ─── Drift-defensive intel reader ─────────────────────────────────────────────
+// Maps a threat_intel row from EITHER historical column shape:
+//   schema_threat_intel.sql → id / cvss      (the live ingestion shape)
+//   schema_master.sql        → cve_id / cvss_score
 function normalizeItem(r) {
+  const cve = r.cve_id || r.id || null;
   return {
-    id:           r.cve_id || null,
-    cve:          r.cve_id || null,
+    id:           cve,
+    cve,
     title:        r.title || 'Security advisory',
     summary:      r.description ? String(r.description).slice(0, 280) : null,
     severity:     String(r.severity || 'MEDIUM').toUpperCase(),
-    cvss:         r.cvss_score ?? null,
+    cvss:         r.cvss ?? r.cvss_score ?? null,
     source:       r.source || PUBLISHER,
     published_at: r.published_at || r.created_at || null,
   };
@@ -35,27 +39,26 @@ function normalizeItem(r) {
 
 async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
   if (!env?.DB) return [];
-  const sevBind = severities && severities.length ? severities.map(s => s.toUpperCase()) : [];
-  const sevClause = sevBind.length ? ` AND UPPER(severity) IN (${sevBind.map(() => '?').join(',')})` : '';
-  const order = 'COALESCE(published_at, created_at)';
+  const sevBind   = severities && severities.length ? severities.map(s => s.toUpperCase()) : [];
+  const sevClause = sevBind.length ? ` WHERE UPPER(severity) IN (${sevBind.map(() => '?').join(',')})` : '';
 
-  // Tier 1 — enriched (may reference columns that exist only on one schema shape)
+  // Tier 1 — SELECT * avoids any SELECT-column drift; order by published_at
+  // (guaranteed: written by the ingestion engine and used by the live feed).
   try {
     const rows = await env.DB.prepare(
-      `SELECT cve_id, title, description, severity, cvss_score, source, published_at, created_at
-       FROM threat_intel WHERE 1=1${sevClause} ORDER BY ${order} DESC LIMIT ?`
+      `SELECT * FROM threat_intel${sevClause} ORDER BY published_at DESC LIMIT ?`
     ).bind(...sevBind, limit).all();
     return (rows?.results || []).map(normalizeItem);
-  } catch { /* fall through to minimal */ }
+  } catch { /* fall through */ }
 
-  // Tier 2 — minimal guaranteed columns only (cannot reference drifted columns)
+  // Tier 2 — no ORDER BY / no WHERE (in case even severity/published_at differ);
+  // filter + cap in JS. A schema mismatch can never 500 a public feed.
   try {
-    const rows = await env.DB.prepare(
-      `SELECT title, description, severity, source, published_at, created_at
-       FROM threat_intel WHERE 1=1${sevClause} ORDER BY ${order} DESC LIMIT ?`
-    ).bind(...sevBind, limit).all();
-    return (rows?.results || []).map(normalizeItem);
-  } catch { /* fail-open: empty feed, never 500 */ }
+    const rows = await env.DB.prepare(`SELECT * FROM threat_intel LIMIT 500`).all();
+    let items = (rows?.results || []).map(normalizeItem);
+    if (sevBind.length) items = items.filter(i => sevBind.includes(i.severity));
+    return items.slice(0, limit);
+  } catch { /* fail-open: empty feed */ }
 
   return [];
 }
@@ -191,11 +194,11 @@ async function buildReports(env) {
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 export async function handlePublicFeeds(request, env, path) {
   switch (path) {
-    case '/api/feed.json':                return cachedJson('feed:public:v1',     300, () => buildFeed(env));
-    case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:v1',     300, () => buildLatest(env));
-    case '/api/v1/intel/apex.json':       return cachedJson('feed:apex:v1',       300, () => buildApex(env));
-    case '/api/v1/intel/ai_summary.json': return cachedJson('feed:aisummary:v1',  600, () => buildAiSummary(env));
-    case '/api/reports/latest.json':      return cachedJson('feed:reports:v1',    600, () => buildReports(env));
+    case '/api/feed.json':                return cachedJson('feed:public:v2',     300, () => buildFeed(env));
+    case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:v2',     300, () => buildLatest(env));
+    case '/api/v1/intel/apex.json':       return cachedJson('feed:apex:v2',       300, () => buildApex(env));
+    case '/api/v1/intel/ai_summary.json': return cachedJson('feed:aisummary:v2',  600, () => buildAiSummary(env));
+    case '/api/reports/latest.json':      return cachedJson('feed:reports:v2',    600, () => buildReports(env));
     default:
       return Response.json({ error: 'Unknown feed' }, { status: 404 });
   }

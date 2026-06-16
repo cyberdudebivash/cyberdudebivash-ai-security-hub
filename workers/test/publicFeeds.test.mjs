@@ -22,14 +22,15 @@ function mockEnv({ tier1Throws = false } = {}) {
             if (/GROUP BY/.test(sql)) {
               return { results: [{ sev: 'CRITICAL', c: 1 }, { sev: 'HIGH', c: 1 }, { sev: 'MEDIUM', c: 1 }] };
             }
-            // Tier-1 references cve_id/cvss_score; simulate drift error on that shape.
-            if (tier1Throws && /cvss_score/.test(sql)) throw new Error('no such column: cvss_score');
+            // Tier-1 orders by published_at; simulate a drift error on that query.
+            if (tier1Throws && /ORDER BY published_at/.test(sql)) throw new Error('no such column: published_at');
             let r = ROWS;
             if (/IN \(/.test(sql)) {
               const sevs = b.slice(0, b.length - 1).map(s => s.toUpperCase());
               r = ROWS.filter(x => sevs.includes(x.severity.toUpperCase()));
             }
-            return { results: r.slice(0, b[b.length - 1]) };
+            const lim = b.length ? b[b.length - 1] : undefined; // tier-2 has no binds
+            return { results: r.slice(0, lim) };
           },
         };
       },
@@ -80,7 +81,7 @@ describe('public threat-intel feeds', () => {
     const res = await call(mockEnv({ tier1Throws: true }), '/api/feed.json');
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.count).toBe(3); // recovered via tier-2 (minimal-column) query
+    expect(body.count).toBe(3); // recovered via tier-2 (no-order) query
     expect(body.items[0].title).toBe('Critical RCE'); // real data still served
   });
 
