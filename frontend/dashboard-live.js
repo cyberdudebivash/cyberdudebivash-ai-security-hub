@@ -169,7 +169,8 @@
         setText('cdb-exec-critical',    fmt(crit));
       }
       const intel = await Bus.fetch('/api/threat-intel/stats');
-      const s = intel?.stats || intel || null;
+      // Payload is wrapped in .data.stats — read that first or total_advisories is undefined.
+      const s = intel?.data?.stats || intel?.stats || intel || null;
       if (s) {
         const total = s.total_advisories ?? s.total_cves ?? s.total ?? 0;
         const crit  = s.critical ?? s.critical_cves ?? 0;

@@ -136,7 +136,9 @@ window.CDB_FUNNEL = CDB_FUNNEL;
       ]);
       const _rawScans = h?.stats?.total_scans ?? h?.total_scans ?? 0;
       const totalScans = _applyFloor(_rawScans, _SCAN_BASELINE);
-      const _rawCVE = ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0;
+      // /api/threat-intel/stats wraps payload in .data.stats — read that FIRST,
+      // else this resolves to 0 and the hero shows a stale "0+" (race vs dashboard-live.js).
+      const _rawCVE = ti?.data?.stats?.total_advisories ?? ti?.data?.stats?.total_cves ?? ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0;
       const totalCVE   = _applyFloor(_rawCVE, _CVE_BASELINE);
       const critCnt    = ti?.critical_cves ?? ti?.stats?.critical ?? _THREAT_BASELINE;
 
@@ -144,7 +146,9 @@ window.CDB_FUNNEL = CDB_FUNNEL;
       const elSC = document.getElementById('stat-cves');
       const elST = document.getElementById('stat-threats');
       if (elSS) elSS.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
-      if (elSC) elSC.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+      // Only write a real count; never overwrite the placeholder with "0" (keeps the
+      // hero consistent with the marketplace's "1,625", no stale 0 / no "+" drift).
+      if (elSC && totalCVE > 0) elSC.textContent = Number(totalCVE).toLocaleString('en-IN');
       if (elST) elST.textContent = critCnt + ' critical';
 
       // p4 counters
@@ -11076,7 +11080,7 @@ async function refreshDashboardMetrics() {
   const critCnt  = ti?.critical_cves ?? ti?.stats?.critical ?? ti?.breakdown?.critical ?? null;
   const highCnt  = ti?.high_cves     ?? ti?.stats?.high     ?? ti?.breakdown?.high     ?? null;
   const medCnt   = ti?.medium_cves   ?? ti?.stats?.medium   ?? ti?.breakdown?.medium   ?? null;
-  const totalCVE = _applyFloor(ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0, _CVE_BASELINE);
+  const totalCVE = _applyFloor(ti?.data?.stats?.total_advisories ?? ti?.data?.stats?.total_cves ?? ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0, _CVE_BASELINE);
   const kevCnt   = ti?.kev_count     ?? ti?.cisa_kev        ?? null;
 
   const el_threats = document.getElementById('mc-threats');
@@ -11191,8 +11195,8 @@ async function refreshDashboardMetrics() {
   const elStatCves    = document.getElementById('stat-cves');
   if (elStatScans && totalScans !== null)
     elStatScans.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
-  if (elStatCves && totalCVE !== null)
-    elStatCves.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+  if (elStatCves && totalCVE > 0)
+    elStatCves.textContent = Number(totalCVE).toLocaleString('en-IN');
   // p4 social proof counters
   const _p4s = document.getElementById('p4-cnt-scans');
   const _p4t = document.getElementById('p4-cnt-threats');
@@ -21257,7 +21261,9 @@ function v21TriggerUrgencyPayment(){
       ]);
       const _rawScans = h?.stats?.total_scans ?? h?.total_scans ?? 0;
       const totalScans = _applyFloor(_rawScans, _SCAN_BASELINE);
-      const _rawCVE = ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0;
+      // /api/threat-intel/stats wraps payload in .data.stats — read that FIRST,
+      // else this resolves to 0 and the hero shows a stale "0+" (race vs dashboard-live.js).
+      const _rawCVE = ti?.data?.stats?.total_advisories ?? ti?.data?.stats?.total_cves ?? ti?.stats?.total_cves ?? ti?.stats?.total_advisories ?? ti?.total_cves ?? ti?.total ?? 0;
       const totalCVE   = _applyFloor(_rawCVE, _CVE_BASELINE);
       const critCnt    = ti?.critical_cves ?? ti?.stats?.critical ?? _THREAT_BASELINE;
 
@@ -21265,7 +21271,9 @@ function v21TriggerUrgencyPayment(){
       const elSC = document.getElementById('stat-cves');
       const elST = document.getElementById('stat-threats');
       if (elSS) elSS.textContent = Number(totalScans).toLocaleString('en-IN') + '+';
-      if (elSC) elSC.textContent = Number(totalCVE).toLocaleString('en-IN') + '+';
+      // Only write a real count; never overwrite the placeholder with "0" (keeps the
+      // hero consistent with the marketplace's "1,625", no stale 0 / no "+" drift).
+      if (elSC && totalCVE > 0) elSC.textContent = Number(totalCVE).toLocaleString('en-IN');
       if (elST) elST.textContent = critCnt + ' critical';
 
       // p4 counters
