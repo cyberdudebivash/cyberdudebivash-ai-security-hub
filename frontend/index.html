@@ -19004,36 +19004,37 @@ window.p4LoadPipeline = function() {
   var board = document.getElementById('p4-pipeline-board');
   if (!board) return;
 
-  // CRM demo pipeline — realistic data until real D1 leads arrive
-  var DEMO_PIPELINE = {
-    NEW: [{company_name:'TechSecure Systems',estimated_deal_value_inr:149900,contact_name:'Arun Sharma'},{company_name:'FinCore Analytics',estimated_deal_value_inr:249900,contact_name:'Priya Nair'},{company_name:'MedData Solutions',estimated_deal_value_inr:99900,contact_name:'Vijay Kumar'}],
-    QUALIFIED: [{company_name:'CloudStack India',estimated_deal_value_inr:499900,contact_name:'Rahul Mehta'},{company_name:'PaySecure Ltd',estimated_deal_value_inr:299900,contact_name:'Sneha Patel'}],
-    DEMO_BOOKED: [{company_name:'DataVault Corp',estimated_deal_value_inr:749900,contact_name:'Arjun Singh'},{company_name:'AI Nexus Pvt',estimated_deal_value_inr:399900,contact_name:'Kavita Rao'}],
-    DEMO_DONE: [{company_name:'SecureEdge BPO',estimated_deal_value_inr:199900,contact_name:'Mohan Iyer'}],
-    PROPOSAL_SENT: [{company_name:'InfraShield Tech',estimated_deal_value_inr:999900,contact_name:'Deepak Verma'}],
-    NEGOTIATION: [{company_name:'NexGen Banking',estimated_deal_value_inr:1499900,contact_name:'Sunita Bose'}],
-    CLOSED_WON: [{company_name:'AlphaFintech',estimated_deal_value_inr:499900,contact_name:'Rajesh Pillai'},{company_name:'GovSecure IAS',estimated_deal_value_inr:749900,contact_name:'Meena Thomas'}]
-  };
+  // Real CRM pipeline only — no fabricated deals. Field mapping is defensive so
+  // it renders whatever the /api/sales/pipeline board provides (company /
+  // deal_value_est_inr), and shows an honest empty state when there are no leads.
+  var leadVal  = function(l){ return l.deal_value_est_inr || l.estimated_deal_value_inr || l.deal_value_inr || 0; };
+  var leadName = function(l){ return l.company || l.company_name || l.name || 'Unknown'; };
 
-  var renderBoard = function(pipe) {
-    var totalVal = 0;
-    var html = '';
+  var renderBoard = function(pipe, serverTotal) {
+    pipe = pipe || {};
+    var totalVal = 0, totalLeads = 0, html = '';
     PIPELINE_STAGES.forEach(function(stage) {
       var leads = pipe[stage] || [];
-      var stageVal = leads.reduce(function(s,l){return s+(l.estimated_deal_value_inr||0);},0);
-      totalVal += stageVal;
+      totalLeads += leads.length;
+      totalVal += leads.reduce(function(s,l){return s+leadVal(l);},0);
       html += '<div class="p4-kanban-col"><div class="p4-kanban-header" style="color:'+STAGE_COLORS[stage]+'">'+stage.replace(/_/g,' ')+' ('+leads.length+')</div>';
       if (!leads.length) {
         html += '<div style="color:#334155;font-size:11px;text-align:center;padding:8px">—</div>';
       } else {
         leads.slice(0,3).forEach(function(l){
-          html += '<div class="p4-kanban-card"><div class="p4-kc-name">'+(l.company_name||'Unknown')+'</div><div class="p4-kc-val">₹'+((l.estimated_deal_value_inr||0).toLocaleString('en-IN'))+'</div></div>';
+          html += '<div class="p4-kanban-card"><div class="p4-kc-name">'+leadName(l)+'</div><div class="p4-kc-val">₹'+(leadVal(l).toLocaleString('en-IN'))+'</div></div>';
         });
       }
       html += '</div>';
     });
-    board.innerHTML = html;
-    var revEl = document.getElementById('p4-pipeline-val');
+    // Honest empty state — never substitute fabricated deals.
+    if (totalLeads === 0) {
+      board.innerHTML = '<div style="width:100%;grid-column:1/-1;text-align:center;padding:36px 16px;color:#64748b;font-size:13px">No active deals in the pipeline yet — new leads appear here as they come in.</div>';
+    } else {
+      board.innerHTML = html;
+    }
+    if (typeof serverTotal === 'number' && serverTotal >= 0) totalVal = serverTotal;
+    var revEl = document.getElementById('p4-pipeline-revenue') || document.getElementById('p4-pipeline-val');
     var barEl = document.getElementById('p4-goal-bar');
     var pctEl = document.getElementById('p4-goal-pct');
     var goal = 10000000;
@@ -19041,19 +19042,19 @@ window.p4LoadPipeline = function() {
     if(revEl) revEl.textContent='₹'+totalVal.toLocaleString('en-IN')+' pipeline';
     if(barEl) barEl.style.width=pct+'%';
     if(pctEl) pctEl.textContent=pct+'% of ₹1CR';
-    var mLeads=0,mQual=0,mDemos=0,mWon=0;
-    Object.values(pipe).forEach(function(arr){mLeads+=arr.length;});
-    mQual  = (pipe.QUALIFIED||[]).length+(pipe.DEMO_BOOKED||[]).length;
-    mDemos = (pipe.DEMO_BOOKED||[]).length+(pipe.DEMO_DONE||[]).length;
-    mWon   = (pipe.CLOSED_WON||[]).length;
+    var mQual  = (pipe.QUALIFIED||[]).length+(pipe.DEMO_BOOKED||[]).length;
+    var mDemos = (pipe.DEMO_BOOKED||[]).length+(pipe.DEMO_DONE||[]).length;
+    var mWon   = (pipe.CLOSED_WON||[]).length;
     ['p4-m-leads','p4-m-qualified','p4-m-demos','p4-m-won'].forEach(function(id,i){
-      var el=document.getElementById(id); if(el) el.textContent=[mLeads,mQual,mDemos,mWon][i];
+      var el=document.getElementById(id); if(el) el.textContent=[totalLeads,mQual,mDemos,mWon][i];
     });
   };
 
   p4Get('/api/sales/pipeline').then(function(d) {
-    renderBoard((d&&d.pipeline) ? d.pipeline : DEMO_PIPELINE);
-  }).catch(function(){ renderBoard(DEMO_PIPELINE); });
+    var data = (d && d.data) ? d.data : (d || {});
+    var pipe = data.board || data.pipeline || {};
+    renderBoard(pipe, typeof data.pipeline_value_inr === 'number' ? data.pipeline_value_inr : undefined);
+  }).catch(function(){ renderBoard({}); });
 };
 
 function p4LoadSalesMetrics() {

@@ -69,4 +69,17 @@ describe('index.html — credibility baseline fabrication removed', () => {
     expect(HTML).not.toContain('// Demo data if stats endpoint not live');
     expect(HTML).not.toMatch(/getElementById\('ag-a-scanned'\)\.textContent='1,247'/);
   });
+
+  it('removed the fabricated CRM DEMO_PIPELINE board', () => {
+    expect(HTML).not.toContain('DEMO_PIPELINE');
+    expect(HTML).not.toContain('TechSecure Systems');
+    expect(HTML).not.toContain('FinCore Analytics');
+    expect(HTML).not.toContain('NexGen Banking');
+  });
+
+  it('CRM board reads the real /api/sales/pipeline board with an honest empty state', () => {
+    expect(HTML).toContain('/api/sales/pipeline');
+    expect(HTML).toContain('data.board');
+    expect(HTML).toContain('No active deals in the pipeline yet');
+  });
 });
