@@ -426,18 +426,21 @@ export async function handleCustomSolutionRequest(request, env, authCtx) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+// Parse a column that may hold a JSON-array string or a CSV string → string[].
+// Module-scoped so BOTH enrichSolution() and buildTags() can use it. (Previously
+// nested inside enrichSolution, which made buildTags throw ReferenceError → 500.)
+function parseJsonOrCsv(val) {
+  if (!val) return [];
+  const trimmed = val.trim();
+  if (trimmed.startsWith('[')) {
+    try { return JSON.parse(trimmed).filter(Boolean); } catch {}
+  }
+  return trimmed.split(',').map(x => x.replace(/[\[\]"]/g, '').trim()).filter(Boolean);
+}
+
 function enrichSolution(s) {
   const meta   = CATEGORY_META[s.category] || { label: s.category, icon: '🔧', badge: 'SOLUTION', difficulty: 'INTERMEDIATE' };
   const fomo   = SEVERITY_FOMO[s.severity]  || SEVERITY_FOMO.MEDIUM;
-  // FIX v22.0: apt_groups stored as JSON.stringify([...]) — parse correctly
-  function parseJsonOrCsv(val) {
-    if (!val) return [];
-    const trimmed = val.trim();
-    if (trimmed.startsWith('[')) {
-      try { return JSON.parse(trimmed).filter(Boolean); } catch {}
-    }
-    return trimmed.split(',').map(x => x.replace(/[\[\]"]/g, '').trim()).filter(Boolean);
-  }
   const apts   = parseJsonOrCsv(s.apt_groups);
   const mitres = parseJsonOrCsv(s.mitre_techniques);
 
