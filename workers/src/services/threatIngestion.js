@@ -533,7 +533,23 @@ export async function storeInD1(db, entries) {
           ).run();
           inserted++;
         } catch (e2) {
-          errors.push(`Entry ${e.id}: ${e2.message}`);
+          // Tier 3 — minimal guaranteed columns only. These have existed since
+          // threat_intel was created, so this insert is resilient to ANY drift
+          // in the richer columns and guarantees core CVE data is persisted.
+          try {
+            await db.prepare(`
+              INSERT OR REPLACE INTO threat_intel
+                (id, title, severity, cvss, description, source, published_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+              e.id, (e.title || '').slice(0, 200), e.severity || 'MEDIUM',
+              e.cvss ?? null, (e.description || '').slice(0, 500),
+              e.source || 'nvd', e.published_at || null,
+            ).run();
+            inserted++;
+          } catch (e3) {
+            errors.push(`Entry ${e.id}: ${e2.message} | min: ${e3.message}`);
+          }
         }
       }
     }
@@ -677,6 +693,7 @@ export async function runIngestion(env) {
     total:     deduped.length,
     inserted:  stored.inserted,
     errors:    errors.length,
+    error_samples: errors.slice(0, 5),
     duration_ms: Date.now() - startTime,
   };
   if (env?.SECURITY_HUB_KV) {

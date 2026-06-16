@@ -3407,7 +3407,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       // 1. Seed threat intel D1
       try {
         const ir = await runIngestion(env);
-        results.threat_intel = { inserted: ir.inserted, total: ir.total, sources: ir.sources };
+        results.threat_intel = { inserted: ir.inserted, total: ir.total, sources: ir.sources, errors: ir.errors, error_samples: ir.error_samples };
       } catch(e) { results.threat_intel = { error: e.message }; }
       // 2. Seed defense solutions D1
       try {
