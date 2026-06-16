@@ -9191,8 +9191,8 @@ function renderResults(module, data) {
     });
     if (mon.unlock_price) {
       // Determine payment amount: prefer backend-provided, fall back to module defaults
-      const _modAmounts = { domain:19900, ai:49900, redteam:99900, identity:79900, compliance:49900 };
-      const _payAmount  = mon.amount || _modAmounts[module] || 19900;
+      const _modAmounts = { domain:99900, ai:49900, redteam:99900, identity:79900, compliance:49900 };
+      const _payAmount  = mon.amount || _modAmounts[module] || 99900;
       const _payTarget  = data.target || _currentScan.target || 'unknown';
       html += `<div class="unlock-cta">
         <div class="unlock-price">${mon.unlock_price} <span>one-time</span></div>
@@ -9715,15 +9715,10 @@ window.showPaymentInstructions = function(){
   if(m) m.classList.add('open');
 };
 
-// Alias: any stray Razorpay call silently routes to CDB_PAYMENT
-window.Razorpay = function(opts){ return { open: ()=> CDB_PAYMENT.open({
-  product: opts?.notes?.pack_id || opts?.name || 'purchase',
-  productLabel: opts?.description || opts?.name || 'Purchase',
-  amountLabel: opts?.amount ? '₹' + (opts.amount/100).toLocaleString('en-IN') : '',
-  email: opts?.prefill?.email || '',
-})}; };
-
-// (Razorpay SDK loader replaced by unified manual payment system)
+// NOTE: The real Razorpay SDK is loaded on demand by cdbLoadRazorpay() and used
+// via window.RazorpayNative for instant, server-verified checkout. We must NOT
+// shadow window.Razorpay with a manual-modal stub — doing so neutered the live
+// gateway and forced every payment into the slow manual flow. (Removed.)
 const _noop = ()=>{};
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -10249,7 +10244,10 @@ function closeSubModal() {
   if (overlay) overlay.style.display = 'none';
 }
 
-async function startSubscription(planKey) {
+// Automated, server-verified Razorpay subscription checkout (instant activation).
+// Exposed under a stable name so the manual-payment override below can delegate
+// to it without being shadowed. Do NOT rename without updating window.startSubscription.
+async function cdbStartSubscriptionAuto(planKey) {
   const plan = PLAN_INFO[(planKey || '').toUpperCase()];
   if (!plan) { console.error('[CDB] Unknown plan:', planKey); return; }
 
@@ -12823,8 +12821,8 @@ function showUpgradeTrigger(module, data) {
 
   // FIX: declare target and amount — were previously undeclared (ReferenceError: target is not defined)
   const target  = data.target || data.domain || data.model_name || (typeof _currentScan !== 'undefined' ? _currentScan?.target : null) || 'unknown';
-  const amounts = { domain:19900, ai:49900, redteam:99900, identity:79900, compliance:49900, cloudsec:49900, darkscan:49900, appsec:49900, mcp_security:49900, vibe_code:49900 };
-  const amount  = amounts[module] || 19900;
+  const amounts = { domain:99900, ai:49900, redteam:99900, identity:79900, compliance:49900, cloudsec:49900, darkscan:49900, appsec:49900, mcp_security:49900, vibe_code:49900 };
+  const amount  = amounts[module] || 99900;
   const prices = { domain: '₹999', ai: '₹2,499', redteam: '₹4,999', identity: '₹1,999', compliance: '₹499' };
   const price  = prices[module] || '₹999';
   const color  = level === 'CRITICAL' ? '#ef4444' : level === 'HIGH' ? '#f97316' : '#f59e0b';
@@ -20405,7 +20403,7 @@ p4SetupObserver();
 </a>
 <!-- QR Code -->
 <div class="mpm-qr-wrap">
-<img alt="UPI QR Code — Bivash Kumar Nayak" class="mpm-qr-img" height="200" id="mpm-qr-img" loading="lazy" onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=null;" src="/assets/payment/upi-qr.png" width="200"/>
+<img alt="UPI QR — CYBERDUDEBIVASH PRIVATE LIMITED" class="mpm-qr-img" height="200" id="mpm-qr-img" loading="lazy" onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=null;" src="/assets/payment/upi-qr.png" width="200"/>
 <div class="mpm-qr-hint">Scan with any UPI app (PhonePe · GPay · Paytm · BHIM)</div>
 </div>
 </div>
@@ -20777,6 +20775,13 @@ window.startSubscription = function(plan) {
   };
   var p = plans[plan] || plans['PRO'];
   if (p.inr === 0) { window.location.hash = '#scanner'; return; }
+  // Self-serve tiers → AUTOMATED, server-verified Razorpay checkout (instant
+  // activation; Razorpay's own sheet offers UPI/cards/net-banking/wallets).
+  var autoPlans = { STARTER:1, PRO:1, ENTERPRISE:1 };
+  if (autoPlans[p.id] && typeof cdbStartSubscriptionAuto === 'function') {
+    return cdbStartSubscriptionAuto(p.id);
+  }
+  // MSSP / non-self-serve tiers and any fallback → manual payment flow.
   window.openManualPayment(p.id, p.inr, p.label);
 };
 
@@ -21183,7 +21188,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 <div style="background:#0f1729;border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:0;max-width:480px;width:94%;overflow:hidden;box-shadow:0 20px 80px rgba(239,68,68,.3)">
 <div style="background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(220,38,38,.1));border-bottom:1px solid rgba(239,68,68,.3);padding:16px 24px;display:flex;align-items:center;gap:12px">
 <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 12px #ef4444;animation:v21WAPulse 1s ease infinite;flex-shrink:0"></div>
-<span style="color:#fca5a5;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase">⚠ Active Exploitation Detected</span>
+<span style="color:#fca5a5;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase">⚠ Security Issues Found</span>
 <button onclick="v21CloseUrgencyModal()" style="margin-left:auto;background:none;border:none;color:#64748b;font-size:20px;cursor:pointer">✕</button>
 </div>
 <div style="padding:24px">
@@ -21191,12 +21196,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 <p id="v21-urgency-subtitle" style="color:#94a3b8;font-size:13px;margin:0 0 20px">Your scan revealed actively exploited vulnerabilities requiring immediate action.</p>
 <div id="v21-urgency-findings" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"></div>
 <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
-<span style="font-size:24px">⏱</span>
+<span style="font-size:24px">🛡</span>
 <div>
-<div style="color:#fca5a5;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px">Exploitation Window Closes In</div>
-<div id="v21-urgency-timer" style="color:#fff;font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">23:59:47</div>
+<div style="color:#fca5a5;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px">Prioritized Remediation</div>
+<div style="color:#e2e8f0;font-size:13px;line-height:1.4">Your full report ranks every finding by severity with step-by-step fixes.</div>
 </div>
-<div style="margin-left:auto;text-align:right"><div style="color:#94a3b8;font-size:10px">Based on CISA KEV</div><div style="color:#f97316;font-size:11px;font-weight:700">HIGH EXPLOITATION RISK</div></div>
 </div>
 <div style="margin-bottom:20px">
 <div style="color:#94a3b8;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Full Report Includes</div>
@@ -21208,7 +21212,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 </div>
 </div>
 <button onclick="v21TriggerUrgencyPayment()" style="width:100%;padding:16px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:16px;font-weight:800;box-shadow:0 4px 20px rgba(239,68,68,.4);margin-bottom:10px">
-        🔓 Unlock Full Report — ₹199
+        🔓 Unlock Full Report — ₹999
       </button>
 <div style="display:flex;gap:10px">
 <button onclick="v21CloseUrgencyModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#94a3b8;font-size:13px;cursor:pointer">Maybe Later</button>
@@ -21282,42 +21286,33 @@ function v21CheckScanForUrgency(mod,data){
   if((level==='CRITICAL'||level==='HIGH')&&data.is_premium_locked!==false){
     _v21Target=data.target||data.domain||data.model_name||'your system';_v21Module=mod;
     var t=document.getElementById('v21-urgency-title');
-    if(t)t.textContent=(level==='CRITICAL'?'CRITICAL: ':'HIGH RISK: ')+n+' Active Vulnerabilities on '+_v21Target;
+    if(t)t.textContent=(level==='CRITICAL'?'CRITICAL: ':'HIGH RISK: ')+n+' High-Risk Findings on '+_v21Target;
     var s=document.getElementById('v21-urgency-subtitle');
-    if(s)s.textContent=level==='CRITICAL'?'IMMEDIATE risk. Full report has IOCs and emergency patches.':'Actively exploited per CISA KEV. Patch within 72 hours.';
+    if(s)s.textContent=level==='CRITICAL'?'Critical issues found. The full report includes IOCs and step-by-step remediation.':'High-risk issues found. The full report includes prioritized, step-by-step fixes.';
     var pills=document.getElementById('v21-urgency-findings');
     if(pills){
       pills.innerHTML=findings.filter(function(f){return f.severity==='CRITICAL'||f.severity==='HIGH';}).slice(0,4).map(function(f){
         return '<div style="background:rgba('+(f.severity==='CRITICAL'?'239,68,68':'249,115,22')+',.15);border:1px solid rgba('+(f.severity==='CRITICAL'?'239,68,68':'249,115,22')+',.3);border-radius:999px;padding:4px 12px;font-size:11px;color:'+(f.severity==='CRITICAL'?'#fca5a5':'#fdba74')+';font-weight:700">'+(f.severity==='CRITICAL'?'&#x1F534;':'&#x1F7E0;')+' '+(f.title||'Vulnerability').slice(0,45)+'</div>';
       }).join('');
     }
-    setTimeout(function(){var m=document.getElementById('v21-urgency-modal');if(m)m.style.display='flex';v21StartUrgencyTimer();},1200);
+    setTimeout(function(){var m=document.getElementById('v21-urgency-modal');if(m)m.style.display='flex';},1200);
   }
 }
-function v21StartUrgencyTimer(){
-  clearInterval(_v21Timer);
-  var rem=23*3600+59*60+Math.floor(Math.random()*40+30);
-  _v21Timer=setInterval(function(){
-    rem=Math.max(0,rem-1);
-    var h=Math.floor(rem/3600),m=Math.floor((rem%3600)/60),s=rem%60;
-    var el=document.getElementById('v21-urgency-timer');
-    if(el)el.textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-    if(!rem){clearInterval(_v21Timer);if(el){el.textContent='WINDOW CLOSED';el.style.color='#ef4444';}}
-  },1000);
-}
-function v21CloseUrgencyModal(){var m=document.getElementById('v21-urgency-modal');if(m)m.style.display='none';clearInterval(_v21Timer);}
+function v21CloseUrgencyModal(){var m=document.getElementById('v21-urgency-modal');if(m)m.style.display='none';if(_v21Timer)clearInterval(_v21Timer);}
 function v21TriggerUrgencyPayment(){
   v21CloseUrgencyModal();
-  // Route directly to CDB_PAYMENT (global manual payment system)
-  var prices={domain:'₹999',ai:'₹2,499',redteam:'₹4,999',identity:'₹1,999',compliance:'₹499'};
-  var label=(_v21Module?_v21Module.toUpperCase()+' Security Report':' Security Report')+(_v21Target?' — '+_v21Target:'');
-  var amt=prices[_v21Module]||'₹999';
-  if(typeof CDB_PAYMENT!=='undefined'&&typeof CDB_PAYMENT.open==='function'){
-    CDB_PAYMENT.open({product:'scan-'+(_v21Module||'report'),productLabel:label,amountLabel:amt,amount:amt});
+  // Route to the AUTOMATED report purchase: create-order → Razorpay → verify →
+  // instant report unlock + download. Price is server-authoritative (₹999).
+  if(typeof cdbTriggerReportPurchase==='function'){
+    cdbTriggerReportPurchase(_v21Module||'domain',_v21Target||'your-domain');
     return;
   }
-  // Fallback: try startPayment then scroll to pricing
-  if(typeof startPayment==='function'){startPayment(_v21Module,_v21Target,0,amt);return;}
+  // Fallback: manual payment modal if the automated path is unavailable.
+  var label=(_v21Module?_v21Module.toUpperCase()+' Security Report':' Security Report')+(_v21Target?' — '+_v21Target:'');
+  if(typeof CDB_PAYMENT!=='undefined'&&typeof CDB_PAYMENT.open==='function'){
+    CDB_PAYMENT.open({product:'scan-'+(_v21Module||'report'),productLabel:label,amountLabel:'₹999',amount:'₹999'});
+    return;
+  }
   window.location.hash='#pricing';
 }
 (function hookRender(){
@@ -21567,10 +21562,11 @@ function v21TriggerUrgencyPayment(){
     if (_checkoutData.upi?.upi_deep_link) {
       const link = _checkoutData.upi.upi_deep_link;
       document.getElementById('m-upi-link').href = link;
-      // QR via Google Charts (free, no token needed)
+      // QR: use the static official UPI QR asset. (Google Image Charts was shut
+      // down by Google in 2024 and returns 503 — never use it.)
       const qrImg = document.createElement('img');
-      qrImg.src   = `https://chart.googleapis.com/chart?chs=160x160&cht=qr&chl=${encodeURIComponent(link)}&choe=UTF-8`;
-      qrImg.alt   = 'UPI QR Code';
+      qrImg.src   = '/assets/payment/upi-qr.png';
+      qrImg.alt   = 'UPI QR — CYBERDUDEBIVASH PRIVATE LIMITED';
       qrImg.style.cssText = 'width:160px;height:160px;border-radius:6px;background:#fff;padding:3px';
       const wrap = document.getElementById('m-qr-img');
       if (wrap) { wrap.innerHTML=''; wrap.appendChild(qrImg); }
@@ -21663,21 +21659,18 @@ function v21TriggerUrgencyPayment(){
     if (e.target === this) close();
   });
 
-  // Expose global API
+  // Expose global API (modal retained only as a manual fallback surface)
   window.CDB_MYTHOS = { open, close, switchTab, updateChain, copy, copyRef, copyCrypto, rzpPay };
-  // Alias for pricing card buttons (backward compat)
-  window.openMythosCheckout = open;
 
-  // Wire up existing startSubscription calls to also open MYTHOS modal
-  // (keeps Razorpay flow working while adding multi-rail as first option)
+  // Pricing-card entry points route to the AUTOMATED, server-verified Razorpay
+  // flow (startSubscription → /api/payments/create-order → Razorpay → /verify),
+  // which itself offers UPI/cards/net-banking/wallets with INSTANT activation.
+  // We deliberately do NOT hijack startSubscription into the manual MYTHOS modal.
   const _origStartSub = window.startSubscription;
-  window.startSubscription = function(planKey) {
-    // Map existing plan key → MYTHOS plan
-    const map = { STARTER:'starter', PRO:'pro', ENTERPRISE:'enterprise' };
-    const mPlan = map[planKey] || planKey.toLowerCase();
-    open(mPlan);
-    // Also run original Razorpay flow as fallback (fires in Razorpay tab)
-    // Users can choose their preferred rail in the modal
+  window.openMythosCheckout = function(plan) {
+    const key = (plan || 'pro').toUpperCase();
+    if (typeof _origStartSub === 'function') return _origStartSub(key);
+    return open((plan || 'pro').toLowerCase()); // last-resort manual fallback
   };
 
   document.addEventListener('DOMContentLoaded', init);
