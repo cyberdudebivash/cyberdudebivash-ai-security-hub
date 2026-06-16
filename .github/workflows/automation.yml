@@ -1254,6 +1254,28 @@ jobs:
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE region_events ADD COLUMN country TEXT" 2>/dev/null || true
           npx wrangler d1 execute $DB --remote --command="ALTER TABLE pricing_experiments ADD COLUMN variant TEXT" 2>/dev/null || true
 
+          # ── threat-intel schema indexed columns (Sentinel APEX v3) ──────────
+          # Live threat_intel/soc_* tables predate columns that schema_threat_intel.sql
+          # indexes (notably created_at). Guarantee them so its CREATE INDEX block
+          # applies cleanly on the drifted DB.
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN severity TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN source TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN published_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN created_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE threat_intel ADD COLUMN exploit_status TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE ioc_registry ADD COLUMN intel_id TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE ioc_registry ADD COLUMN type TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE hunting_alerts ADD COLUMN severity TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE hunting_alerts ADD COLUMN resolved INTEGER DEFAULT 0" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_alerts ADD COLUMN alert_type TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_alerts ADD COLUMN severity TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_alerts ADD COLUMN created_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_decisions ADD COLUMN priority TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_decisions ADD COLUMN created_at TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_response_actions ADD COLUMN priority TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_defense_actions ADD COLUMN defense_action TEXT" 2>/dev/null || true
+          npx wrangler d1 execute $DB --remote --command="ALTER TABLE soc_defense_actions ADD COLUMN created_at TEXT" 2>/dev/null || true
+
           echo "✅ Comprehensive drift patch complete — all columns across all tables patched"
 
       - name: Apply base schema
