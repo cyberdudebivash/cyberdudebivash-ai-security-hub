@@ -19139,7 +19139,13 @@ var API = '';
 var P4_SESSION = null;
 
 function p4Api(path, opts) {
-  return fetch(API + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts || {}))
+  opts = opts || {};
+  // Send the logged-in JWT so the owner authenticates to owner-only sales/CRM/
+  // proposal/funnel endpoints (server gates them to the owner email / admin key).
+  var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  var tok = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || '';
+  if (tok && !headers['Authorization']) headers['Authorization'] = 'Bearer ' + tok;
+  return fetch(API + path, Object.assign({}, opts, { headers: headers }))
     .then(function(r) { return r.json(); })
     .catch(function(e) { return { error: e.message }; });
 }
@@ -19378,6 +19384,9 @@ var STAGE_COLORS = {
 window.p4LoadPipeline = function() {
   var board = document.getElementById('p4-pipeline-board');
   if (!board) return;
+  // Owner-only data (server enforces). Skip the fetch entirely for non-owners so
+  // the public #enterprise-sales section never fires a 403 for prospects.
+  if (!(window.CDB_AUTH && window.CDB_AUTH.isOwner)) return;
 
   // Real CRM pipeline only — no fabricated deals. Field mapping is defensive so
   // it renders whatever the /api/sales/pipeline board provides (company /
@@ -19433,6 +19442,9 @@ window.p4LoadPipeline = function() {
 };
 
 function p4LoadSalesMetrics() {
+  // Owner-only data (server enforces) — skip for non-owners to avoid a 403 from
+  // the public #enterprise-sales section.
+  if (!(window.CDB_AUTH && window.CDB_AUTH.isOwner)) return;
   p4Get('/api/sales/metrics').then(function(d) {
     if (!d.metrics) return;
     var m = d.metrics;

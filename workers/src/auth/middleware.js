@@ -208,6 +208,31 @@ export function unauthorized(reason = 'missing') {
   }, { status: 401 });
 }
 
+// ─── Owner identity ───────────────────────────────────────────────────────────
+// The internal sales/CRM/proposal/funnel tooling is single-tenant (the owner's own
+// business data). "Owner" = the ADMIN_KEY bypass (isAdmin) OR a logged-in user whose
+// email matches the configured owner address(es). Default owner email can be
+// overridden/extended via env.OWNER_EMAILS (comma-separated).
+export function ownerEmails(env) {
+  const raw = (env && env.OWNER_EMAILS) || 'bivash@cyberdudebivash.com';
+  return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+}
+export function isOwner(authCtx, env) {
+  if (!authCtx) return false;
+  if (authCtx.isAdmin) return true;
+  const email = String(authCtx.email || '').toLowerCase();
+  return !!email && ownerEmails(env).includes(email);
+}
+
+// ─── Standard 403 (owner-only resource) ──────────────────────────────────────
+export function forbidden(message = 'This resource is restricted to the platform owner.') {
+  return Response.json({
+    error:   'Forbidden',
+    message,
+    contact: CONTACT_EMAIL,
+  }, { status: 403 });
+}
+
 // ─── Standard 429 (quota exceeded) ───────────────────────────────────────────
 export function quotaExceeded(result) {
   return Response.json({

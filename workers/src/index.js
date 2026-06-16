@@ -597,7 +597,7 @@ import {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
-import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL }   from './auth/middleware.js';
+import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
 import {
   withSecurityHeaders, checkBodySize,
@@ -4108,26 +4108,32 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
     if (path === '/api/sales/leads' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleListLeads(request, env, authCtx), request));
     }
     if (path.startsWith('/api/sales/leads/') && path.endsWith('/stage') && method === 'PUT') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleAdvanceStage(request, env, authCtx), request));
     }
     if (path.startsWith('/api/sales/leads/') && path.endsWith('/note') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleAddSalesNote(request, env, authCtx), request));
     }
     if (path.startsWith('/api/sales/leads/') && path.endsWith('/qualify') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleQualifyLead(request, env, authCtx), request));
     }
     if (path.startsWith('/api/sales/leads/') && path.endsWith('/close') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleCloseLead(request, env, authCtx), request));
     }
     if (path.startsWith('/api/sales/leads/') && method === 'GET' && !path.includes('/stage') && !path.includes('/note')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGetLead(request, env, authCtx), request));
     }
     if (path === '/api/sales/demo/book' && method === 'POST') {
@@ -4138,10 +4144,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
     if (path === '/api/sales/pipeline' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGetSalesPipeline(request, env, authCtx), request));
     }
     if (path === '/api/sales/metrics' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGetSalesMetrics(request, env, authCtx), request));
     }
 
@@ -4154,7 +4162,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // PUT /api/leads/update — update lead stage / fields (admin)
     if (path === '/api/leads/update' && method === 'PUT') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       const body = await request.json().catch(() => ({}));
       const leadId = body.id || body.lead_id;
       if (!leadId) return withSecurityHeaders(withCors(Response.json({ error: 'lead_id required' }, { status: 400 }), request));
@@ -4169,12 +4177,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/pipeline — pipeline board view (alias for /api/sales/pipeline)
     if (path === '/api/pipeline' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGetSalesPipeline(request, env, authCtx), request));
     }
     // GET /api/leads — list all leads (alias for GET /api/sales/leads)
     if (path === '/api/leads' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleListLeads(request, env, authCtx), request));
     }
 
@@ -4184,14 +4193,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
     if (path === '/api/proposals/generate' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGenerateProposal(request, env, authCtx), request));
     }
     if (path === '/api/proposals' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleListProposals(request, env, authCtx), request));
     }
     if (path.startsWith('/api/proposals/') && path.endsWith('/send') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleMarkProposalSent(request, env, authCtx), request));
     }
     if (path.startsWith('/api/proposals/') && path.endsWith('/accept') && method === 'POST') {
@@ -4253,6 +4265,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
     if (path === '/api/conversion/funnel' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGetFunnel(request, env, authCtx), request));
     }
     if (path === '/api/conversion/cta' && method === 'GET') {
