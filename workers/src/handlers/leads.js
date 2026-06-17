@@ -39,7 +39,24 @@ export async function handleLeadCapture(request, env) {
     converted:  false,
   };
 
-  // Store in KV: lead:{leadId} and index by email
+  // Persist to D1 for durable storage (KV is cache only, 90-day TTL causes data loss)
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO leads
+          (id, email, name, domain, source, module, scan_id,
+           ip_country, funnel_stage, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'lead', datetime('now'), datetime('now'))
+      `).bind(
+        leadId, email, '',
+        email.includes('@') ? email.split('@')[1] : '',
+        source, module, scanId || null,
+        request.headers.get('CF-IPCountry') || 'unknown',
+      ).run();
+    } catch { /* non-blocking — table may not have all columns on older schema */ }
+  }
+
+  // Store in KV: lead:{leadId} and index by email (cache layer)
   if (env?.SECURITY_HUB_KV) {
     try {
       await Promise.all([
