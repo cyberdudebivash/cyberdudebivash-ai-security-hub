@@ -95,6 +95,10 @@ import {
   handleMsspExpansionOpps,
 } from './handlers/msspOps.js';
 
+// ── v35.1 PHASE 5 P0 REVENUE INTELLIGENCE IMPORTS ──────────────────────────
+import { handleRevenueKPI, handleFunnelAnalytics } from './handlers/revenueKPI.js';
+import { runRenewalAutomation, seedRenewalQueue35d } from './handlers/renewalEngine.js';
+
 // ── v34.0 PHASE 4 GOD MODE IMPORTS ───────────────────────────────────────────
 import { handleGetMetrics, handleRefreshMetrics, handleMetricsHistory, handlePlatformStatus } from './handlers/platformMetricsAuthority.js';
 import { handleGetTimeline, handleListEvidence, handleAddEvidence, handleListNotes, handleAddNote, handleEscalateCase, handleInvestigationSummary, handleResolveCase } from './handlers/socInvestigations.js';
@@ -5751,6 +5755,21 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMsspExpansionOpps(request, env), request));
     }
 
+    // PHASE 5 P0 — REVENUE INTELLIGENCE & RECURRING REVENUE
+    // GET /api/revenue/kpi — Full KPI: Visitors, Leads, Proposals, Customers, MRR, ARR, CAC, LTV
+    if (path === '/api/revenue/kpi' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleRevenueKPI(request, env), request));
+    }
+
+    // GET /api/revenue/funnel-analytics — Per-funnel drop-off (all 5 revenue funnels)
+    if (path === '/api/revenue/funnel-analytics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleFunnelAnalytics(request, env), request));
+    }
+
     return withSecurityHeaders(withCors(Response.json({
       error:    'Not Found',
       path,
@@ -6006,6 +6025,14 @@ ctx.waitUntil(
           await runPaymentRecovery(env.DB, env);
           console.log('[CRON] v24 Billing: renewal queue + recovery run complete');
         } catch (e) { console.error('[CRON] v24 Billing error:', e?.message); }
+      })());
+      // v35.1 Phase 5 P0: Renewal automation — seed 35-day window + send reminders
+      ctx.waitUntil((async () => {
+        try {
+          await seedRenewalQueue35d(env);
+          const renewalResult = await runRenewalAutomation(env);
+          console.log('[CRON] Phase5 Renewals:', JSON.stringify(renewalResult));
+        } catch (e) { console.error('[CRON] Phase5 Renewals error:', e?.message); }
       })());
 
       // v23.0 RevOS: AI CS Analysis

@@ -76,9 +76,9 @@ export async function triggerPostPurchase(env, {
     try {
       await db.prepare(`
         INSERT INTO funnel_events
-          (id, email, stage, source, created_at)
+          (id, email, stage, meta, created_at)
         VALUES (?, ?, 'purchase', ?, ?)
-      `).bind('fe_' + evId, email, source, now).run();
+      `).bind('fe_' + evId, email, JSON.stringify({ source }), now).run();
     } catch { /* non-blocking */ }
 
     // 3 — Update lead record: mark as converted
@@ -130,9 +130,9 @@ export async function triggerEnterpriseInquiry(env, {
   try {
     await env.DB.prepare(`
       INSERT INTO funnel_events
-        (id, email, stage, source, created_at)
+        (id, email, stage, meta, created_at)
       VALUES (?, ?, 'email_capture', ?, ?)
-    `).bind('fe_ent_' + Date.now().toString(36), email, source, now).run();
+    `).bind('fe_ent_' + Date.now().toString(36), email, JSON.stringify({ source }), now).run();
   } catch { /* non-blocking */ }
 
   try {
