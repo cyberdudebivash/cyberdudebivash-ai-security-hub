@@ -23,6 +23,8 @@ import {
 import { generateHTMLReport } from '../lib/htmlReport.js';
 import { buildReport }        from '../lib/reportEngine.js';
 import { trackEvent }         from './analytics.js';
+import { sendPurchaseConfirmation } from '../services/emailEngine.js';
+import { createInvoice }            from '../services/v24/billingEngine.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -376,6 +378,31 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       report_id: reportId,
     });
   }
+
+  // Fire-and-forget: GST invoice + purchase confirmation email
+  const confirmedEmail = email || authCtx.email || null;
+  const priceInr       = Math.round((MODULE_PRICES[module]?.amount || 0) / 100);
+  Promise.all([
+    (env.DB && priceInr)
+      ? createInvoice(env.DB, {
+          userId:      authCtx.user_id || razorpay_payment_id,
+          email:       confirmedEmail || 'noreply@buyer',
+          lineItems:   [{ description: MODULE_PRICES[module]?.name || module, amount_inr: priceInr, quantity: 1 }],
+          paymentId:   razorpay_payment_id,
+          paymentMethod: 'razorpay',
+        }).catch(e => console.warn('[Payments] invoice error:', e.message))
+      : Promise.resolve(),
+    confirmedEmail
+      ? sendPurchaseConfirmation(env, {
+          to:          confirmedEmail,
+          productName: MODULE_PRICES[module]?.name || `${module} Report`,
+          amountInr:   priceInr,
+          paymentId:   razorpay_payment_id,
+          downloadUrl: `/api/reports/download/${accessToken}`,
+          accessExpires: expiresAt,
+        }).catch(e => console.warn('[Payments] email error:', e.message))
+      : Promise.resolve(),
+  ]).catch(() => {});
 
   return Response.json({
     success:      true,

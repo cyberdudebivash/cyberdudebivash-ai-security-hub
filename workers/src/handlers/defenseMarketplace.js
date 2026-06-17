@@ -5,6 +5,8 @@
  */
 
 import { generateAndStoreAll, fetchLiveIntel, generateDefenseTool, calculatePrice } from '../services/sentinelDefenseEngine.js';
+import { sendPurchaseConfirmation } from '../services/emailEngine.js';
+import { createInvoice } from '../services/v24/billingEngine.js';
 
 const CATEGORY_META = {
   firewall_script:    { label: 'Firewall Script',       icon: '🔥', badge: 'INSTANT DEPLOY',  difficulty: 'BEGINNER'     },
@@ -283,6 +285,31 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
 
     // Track FOMO
     trackFOMO(env, 'purchase', 'defense_solution', solutionId, row.title);
+
+    // Fire-and-forget: GST invoice + purchase confirmation email
+    const customerEmail = authCtx?.email || null;
+    Promise.all([
+      // GST invoice in D1
+      (env.DB && row.price_inr)
+        ? createInvoice(env.DB, {
+            userId:      authCtx?.userId || razorpay_payment_id,
+            email:       customerEmail || 'noreply@buyer',
+            lineItems:   [{ description: row.title, amount_inr: row.price_inr, quantity: 1 }],
+            paymentId:   razorpay_payment_id,
+            paymentMethod: 'razorpay',
+          }).catch(e => console.warn('[defenseMarketplace] invoice error:', e.message))
+        : Promise.resolve(),
+      // Confirmation email
+      customerEmail
+        ? sendPurchaseConfirmation(env, {
+            to:            customerEmail,
+            productName:   row.title,
+            amountInr:     row.price_inr,
+            paymentId:     razorpay_payment_id,
+            accessExpires: expiresAt,
+          }).catch(e => console.warn('[defenseMarketplace] email error:', e.message))
+        : Promise.resolve(),
+    ]).catch(() => {});
 
     return json({
       success: true,
