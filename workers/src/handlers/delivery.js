@@ -24,6 +24,8 @@
 
 // ─── Product Delivery Catalog ─────────────────────────────────────────────────
 // Maps product IDs to delivery content and instructions
+import { triggerPostPurchase } from '../services/lifecycleEngine.js';
+
 const DELIVERY_CATALOG = {
   // ── Subscription Plans ──
   STARTER: {
@@ -316,6 +318,17 @@ export async function handleDeliveryActivate(request, env) {
 
     // Dispatch Telegram notification (fire-and-forget)
     notifyDeliveryActivated(env, { payer_email, product_name: product.name, delivery_id: deliveryId, payment_id }).catch(() => {});
+
+    // Trigger post-purchase lifecycle: revenue attribution + email sequence (fire-and-forget)
+    triggerPostPurchase(env, {
+      email:        payer_email,
+      product:      product_id,
+      product_name: product.name,
+      amount_inr:   0, // amount retrieved from payments table by lifecycleEngine if needed
+      event_type:   'delivery_activated',
+      payment_id,
+      source:       'direct',
+    }).catch(() => {});
 
     return jsonOk({
       delivery_id:       deliveryId,

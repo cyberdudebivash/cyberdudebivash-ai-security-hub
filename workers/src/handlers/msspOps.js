@@ -12,6 +12,8 @@
  *   GET  /api/mssp/expansion-opps   — Partners eligible for tier upgrade
  */
 
+import { triggerMsspOnboarding } from '../services/lifecycleEngine.js';
+
 function ok(data, status = 200) {
   return Response.json(data, {
     status,
@@ -130,6 +132,11 @@ export async function handleAddMsspPartner(request, env) {
       return ok({ error: 'Database error: ' + e.message }, 500);
     }
   }
+
+  // Trigger MSSP onboarding lifecycle: welcome email sequence (fire-and-forget)
+  triggerMsspOnboarding(env, {
+    email: contact_email, company, tier: tier.toUpperCase(), partner_id: id,
+  }).catch(() => {});
 
   return ok({
     success: true,

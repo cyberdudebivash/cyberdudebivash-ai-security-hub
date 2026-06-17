@@ -430,9 +430,10 @@ async function verifyStripeSignature(body, sigHeader, secret) {
 async function activateSubscription(env, { email, plan, processor, external_id, amount_usd, amount_inr }) {
   const db = env.SECURITY_HUB_DB || env.DB;
   if (!db || !email) return;
-  const tier    = normalizeTier(plan);
-  const apiKey  = `cdb_${tier.toLowerCase().slice(0,4)}_${crypto.randomUUID().replace(/-/g,'').slice(0,20)}`;
-  const now     = new Date().toISOString();
+  const tier       = normalizeTier(plan);
+  const confirmedInr = amount_inr || Math.round((amount_usd || 0) * 83);
+  const apiKey     = `cdb_${tier.toLowerCase().slice(0,4)}_${crypto.randomUUID().replace(/-/g,'').slice(0,20)}`;
+  const now        = new Date().toISOString();
 
   try {
     await db.batch([
@@ -440,8 +441,7 @@ async function activateSubscription(env, { email, plan, processor, external_id, 
         `INSERT OR REPLACE INTO subscriptions
            (email, plan, status, processor, external_id, price_inr, activated_at, expires_at)
          VALUES (?,?,?,?,?,?,?, datetime('now','+31 days'))`
-      ).bind(email, tier, 'active', processor, external_id || null,
-             amount_inr || Math.round((amount_usd || 0) * 83), now),
+      ).bind(email, tier, 'active', processor, external_id || null, confirmedInr, now),
 
       db.prepare(
         `INSERT OR REPLACE INTO api_keys
@@ -457,6 +457,19 @@ async function activateSubscription(env, { email, plan, processor, external_id, 
         JSON.stringify({ tier, owner_email: email, created_at: now, active: true, label: tier }),
         { expirationTtl: 86400 * 32 });
     }
+
+    // Trigger post-purchase lifecycle: revenue attribution + onboarding email (fire-and-forget)
+    const { triggerPostPurchase } = await import('../services/lifecycleEngine.js');
+    triggerPostPurchase(env, {
+      email,
+      product:      `SUBSCRIPTION_${tier}`,
+      product_name: `${tier} Plan`,
+      amount_inr:   confirmedInr,
+      event_type:   'subscription_activated',
+      plan:         tier,
+      source:       processor || 'direct',
+      payment_id:   external_id || '',
+    }).catch(() => {});
   } catch (err) {
     console.error('[Subscription] activateSubscription error:', err.message);
   }
