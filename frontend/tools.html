@@ -934,7 +934,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
     </div>
     <div class="risk-cta-row-v14">
       <a href="/#scanner" class="risk-cta-red-v14">🔴 Scan Your Domain Now — FREE</a>
-      <a href="#" class="risk-cta-green-v14" onclick="event.preventDefault();if(window.CDB_PAYMENT){CDB_PAYMENT.open({product:'domain-report',productLabel:'Domain Security Full Report',amountLabel:'₹999'});}else{window.location.href='/#pricing';}return false;">💰 Unlock Full Report ₹999</a>
+      <a href="#" class="risk-cta-green-v14" onclick="event.preventDefault();window.cdbToolBuy('domain-report',999,'Domain Security Full Report');return false;">💰 Unlock Full Report ₹999</a>
     </div>
     <div class="risk-ticker-v14">
       <div class="risk-ticker-dot-v14"></div>
@@ -1642,29 +1642,100 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 <script src="/assets/payment-modal.js"></script>
 
 <script>
-/* CDB_PAY -> CDB_PAYMENT bridge (payment-modal.js is the real engine) */
-(function() {
-  function mkBridge() {
-    window.CDB_PAY = {
-      open: function(productId, priceInr, label) {
-        if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
-          CDB_PAYMENT.open({
-            product: productId,
-            productLabel: label || productId,
-            amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
-            amount: priceInr ? String(priceInr) : "",
-          });
-        } else { window.location.href = "/#pricing"; }
+/* Instant Razorpay checkout for Tools & AI Marketplace */
+(function () {
+  var _rzpLoaded = false;
+
+  function loadRzp() {
+    if (_rzpLoaded && window.RazorpayNative) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = function () { window.RazorpayNative = window.Razorpay; _rzpLoaded = true; resolve(); };
+      s.onerror = function () { reject(new Error('Razorpay SDK load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function cdbToolBuy(productId, priceInr, label) {
+    var email = '';
+    try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      email = (window.prompt('Enter your email to receive the purchased file/report:') || '').trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        alert('A valid email address is required to complete purchase and receive your file.');
+        return;
+      }
+      try { localStorage.setItem('cdb_email', email); } catch (e) {}
+    }
+
+    var manualFallback = function () {
+      if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+        CDB_PAYMENT.open({ product: productId, productLabel: label || productId,
+          amountLabel: priceInr ? '\u20B9' + Number(priceInr).toLocaleString('en-IN') : '', amount: priceInr ? String(priceInr) : '', email: email });
+      } else {
+        var msg = encodeURIComponent('Hi! I want to purchase: ' + (label || productId) + ' (\u20B9' + priceInr + '). Please share payment details.');
+        window.open('https://wa.me/918179881447?text=' + msg, '_blank');
       }
     };
-    /* Also expose openPayment alias */
-    window.openPayment = window.openPayment || function(id, price, label) {
-      window.CDB_PAY.open(id, price, label);
-    };
+
+    try {
+      var oRes = await fetch('/api/tools/purchase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, email: email, currency: 'INR' }),
+      });
+      var oData = await oRes.json().catch(function () { return {}; });
+      var order = oData && oData.order;
+
+      if (!oRes.ok || !order || !order.razorpay_key || !order.razorpay_order_id ||
+          String(order.razorpay_order_id).indexOf('order_') !== 0) {
+        manualFallback(); return;
+      }
+
+      await loadRzp();
+      if (!window.RazorpayNative) { manualFallback(); return; }
+
+      var rzp = new window.RazorpayNative({
+        key: order.razorpay_key, amount: order.amount, currency: 'INR',
+        name: 'CYBERDUDEBIVASH AI Security Hub',
+        description: label || productId,
+        order_id: order.razorpay_order_id,
+        prefill: { email: email },
+        theme: { color: '#10b981' },
+        handler: async function (rp) {
+          try {
+            var vRes = await fetch('/api/tools/verify', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: rp.razorpay_order_id,
+                razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature: rp.razorpay_signature,
+                product_id: productId, email: email,
+              }),
+            });
+            var vData = await vRes.json().catch(function () { return {}; });
+            if (vRes.ok && vData.success) {
+              alert('\u2705 Purchase Confirmed!\n\n' + (label || productId) +
+                '\n\nYour file/report will be delivered to ' + email + ' within 24 hours.\n\nPayment ID: ' + rp.razorpay_payment_id);
+            } else {
+              alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Delivery to ' + email + ' within 24 hours. Contact bivash@cyberdudebivash.com for support.');
+            }
+          } catch (e) {
+            alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Our team will deliver to ' + email + ' within 24 hours.');
+          }
+        },
+      });
+      rzp.open();
+    } catch (err) {
+      manualFallback();
+    }
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mkBridge);
-  } else { mkBridge(); }
+
+  window.cdbToolBuy = cdbToolBuy;
+
+  /* CDB_PAY bridge \u2014 routes all existing onclick calls through instant Razorpay */
+  window.CDB_PAY = { open: cdbToolBuy };
+  window.openPayment = function (id, price, label) { cdbToolBuy(id, price, label); };
 })();
 </script>
 </body>
