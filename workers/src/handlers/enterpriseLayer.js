@@ -3,6 +3,9 @@
  * Enterprise Layer Handler — Phase 5
  * Consultation booking, custom threat reports, enterprise packages
  */
+import { sendEmail } from '../services/emailEngine.js';
+
+const FOUNDER_EMAIL = 'bivash@cyberdudebivash.com';
 
 // ─── Enterprise package definitions ──────────────────────────────────────────
 const ENTERPRISE_PACKAGES = {
@@ -162,8 +165,31 @@ export async function handleBookConsultation(request, env, authCtx) {
       `INSERT INTO fomo_events (id, event_type, entity_type, display_name) VALUES (?,?,?,?)`
     ).bind(crypto.randomUUID(), 'signup', 'enterprise_lead', company_name?.slice(0, 40) || email).run().catch(() => {});
 
-    // Auto-send confirmation email via Resend
-    await sendConfirmationEmail(env, { email, contact_name, company_name, requirements, package_interest, id });
+    // Customer confirmation + founder real-time alert (both fire-and-forget)
+    Promise.all([
+      sendConfirmationEmail(env, { email, contact_name, company_name, requirements, package_interest, id }),
+      sendEmail(env, {
+        to:      FOUNDER_EMAIL,
+        subject: `🚨 NEW ENTERPRISE LEAD: ${company_name || email} [${urgency?.toUpperCase() || 'NORMAL'}]`,
+        html:    `<h2 style="color:#ef4444">New Enterprise Inquiry — Act Fast</h2>
+<table style="border-collapse:collapse;width:100%">
+  <tr><td style="padding:6px 12px;color:#6b7280">Company</td><td style="padding:6px 12px;font-weight:700">${company_name || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Contact</td><td style="padding:6px 12px">${contact_name || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Email</td><td style="padding:6px 12px"><a href="mailto:${email}">${email}</a></td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Phone</td><td style="padding:6px 12px">${phone || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Package</td><td style="padding:6px 12px">${package_interest || 'enterprise'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Urgency</td><td style="padding:6px 12px;color:#f59e0b;font-weight:700">${urgency?.toUpperCase()}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Industry</td><td style="padding:6px 12px">${industry || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Team Size</td><td style="padding:6px 12px">${team_size || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Budget</td><td style="padding:6px 12px">${annual_budget || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280;vertical-align:top">Requirements</td><td style="padding:6px 12px">${requirements}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Domain</td><td style="padding:6px 12px">${domain || 'N/A'}</td></tr>
+  <tr><td style="padding:6px 12px;color:#6b7280">Booking ID</td><td style="padding:6px 12px;font-family:monospace">${id}</td></tr>
+</table>
+<p style="margin-top:20px"><a href="mailto:${email}?subject=Re: Enterprise Security Consultation Booking ${id.slice(0,8).toUpperCase()}" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Reply to ${email} Now →</a></p>`,
+        text: `NEW ENTERPRISE LEAD\nCompany: ${company_name}\nContact: ${contact_name}\nEmail: ${email}\nPhone: ${phone}\nPackage: ${package_interest}\nUrgency: ${urgency}\nRequirements: ${requirements}\nBooking ID: ${id}`,
+      }),
+    ]).catch(() => {});
 
     return json({
       success: true,
@@ -313,40 +339,33 @@ export async function handleEnterpriseStats(request, env, authCtx) {
 
 // ─── Email helper ─────────────────────────────────────────────────────────────
 async function sendConfirmationEmail(env, { email, contact_name, company_name, requirements, package_interest, id }) {
-  const resendKey = env.RESEND_API_KEY;
-  if (!resendKey) return;
   try {
-    await fetch('https://api.resend.com/emails', {
-      method:  'POST',
-      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from:    'CYBERDUDEBIVASH AI <noreply@cyberdudebivash.com>',
-        to:      [email],
-        subject: `[Booking Confirmed] Enterprise Security Consultation — ${id.slice(0,8).toUpperCase()}`,
-        html: `
-          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#fff;padding:32px;border-radius:12px">
-            <div style="font-size:24px;font-weight:900;margin-bottom:4px">🛡️ CYBERDUDEBIVASH AI Security Hub</div>
-            <div style="color:#00d4ff;font-size:13px;margin-bottom:24px">Sentinel APEX — Enterprise Security</div>
-            <h2 style="color:#00d4ff">Consultation Request Confirmed</h2>
-            <p>Hi ${contact_name || 'there'},</p>
-            <p>We've received your enterprise consultation request for <strong>${company_name || 'your organization'}</strong>.</p>
-            <div style="background:#1a1a2e;border-radius:8px;padding:16px;margin:20px 0">
-              <div style="font-size:12px;color:#888;margin-bottom:8px">BOOKING REFERENCE</div>
-              <div style="font-family:monospace;font-size:18px;color:#00d4ff;font-weight:900">${id.slice(0,8).toUpperCase()}</div>
-            </div>
-            <p><strong>Package Interest:</strong> ${package_interest || 'Enterprise'}<br>
-            <strong>Requirements:</strong> ${requirements.slice(0, 200)}...</p>
-            <div style="background:rgba(0,212,255,.08);border-left:3px solid #00d4ff;padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0">
-              <strong>What happens next:</strong><br>
-              ✅ Our lead analyst reviews your requirements<br>
-              📅 You'll receive a calendar invite within 2 hours<br>
-              📊 Custom proposal sent before the call
-            </div>
-            <p>For urgent matters, reply to this email or contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a></p>
-            <hr style="border-color:#333;margin:24px 0">
-            <div style="font-size:11px;color:#555">CYBERDUDEBIVASH AI Security Hub · Sentinel APEX Platform · India</div>
-          </div>`,
-      }),
+    await sendEmail(env, {
+      to:      email,
+      subject: `[Booking Confirmed] Enterprise Security Consultation — ${id.slice(0,8).toUpperCase()}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#fff;padding:32px;border-radius:12px">
+        <div style="font-size:24px;font-weight:900;margin-bottom:4px">🛡️ CYBERDUDEBIVASH AI Security Hub</div>
+        <div style="color:#00d4ff;font-size:13px;margin-bottom:24px">Sentinel APEX — Enterprise Security</div>
+        <h2 style="color:#00d4ff">Consultation Request Confirmed</h2>
+        <p>Hi ${contact_name || 'there'},</p>
+        <p>We've received your enterprise consultation request for <strong>${company_name || 'your organization'}</strong>.</p>
+        <div style="background:#1a1a2e;border-radius:8px;padding:16px;margin:20px 0">
+          <div style="font-size:12px;color:#888;margin-bottom:8px">BOOKING REFERENCE</div>
+          <div style="font-family:monospace;font-size:18px;color:#00d4ff;font-weight:900">${id.slice(0,8).toUpperCase()}</div>
+        </div>
+        <p><strong>Package Interest:</strong> ${package_interest || 'Enterprise'}<br>
+        <strong>Requirements:</strong> ${requirements.slice(0, 200)}...</p>
+        <div style="background:rgba(0,212,255,.08);border-left:3px solid #00d4ff;padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0">
+          <strong>What happens next:</strong><br>
+          ✅ Our lead analyst reviews your requirements within 4 hours<br>
+          📅 You'll receive a calendar invite within 2 hours<br>
+          📊 Custom proposal sent before the call
+        </div>
+        <p>For urgent matters, reply to this email or contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a> · WhatsApp +91 8179881447</p>
+        <hr style="border-color:#333;margin:24px 0">
+        <div style="font-size:11px;color:#555">CYBERDUDEBIVASH PRIVATE LIMITED · PAN: ARKPN8270G · Odisha, India</div>
+      </div>`,
+      text: `Booking Confirmed — Ref: ${id.slice(0,8).toUpperCase()}\n\nHi ${contact_name || 'there'},\n\nYour enterprise consultation request has been received.\nPackage: ${package_interest}\nRef: ${id}\n\nOur team will contact you within 4 business hours.\nbivash@cyberdudebivash.com · +91 8179881447`,
     });
   } catch { /* non-critical */ }
 }

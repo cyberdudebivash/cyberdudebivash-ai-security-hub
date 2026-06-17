@@ -373,3 +373,108 @@ function json(data, status = 200) {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+// ─── POST /api/global/compliance-packs/verify ─────────────────────────────────
+export async function handleVerifyCompliancePack(request, env) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, pack_id, email } = body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !pack_id) {
+      return json({ success: false, error: 'Missing verification fields' }, 400);
+    }
+
+    const pack = COMPLIANCE_PACKS[pack_id];
+    if (!pack) return json({ success: false, error: 'Pack not found' }, 404);
+
+    // HMAC-SHA256 verify
+    const secret  = env.RAZORPAY_KEY_SECRET || '';
+    const payload = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const key     = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sigBuf  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+    const expected = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (expected !== razorpay_signature && secret) {
+      return json({ success: false, error: 'Payment signature verification failed' }, 400);
+    }
+
+    // Idempotency check
+    if (env.DB) {
+      const existing = await env.DB.prepare(
+        `SELECT id FROM payments WHERE razorpay_order_id = ? AND status = 'paid' LIMIT 1`
+      ).bind(razorpay_order_id).first().catch(() => null);
+      if (existing) {
+        return json({ success: true, access_granted: true, pack_name: pack.name,
+          delivery_note: 'Your compliance pack will be delivered to your email within 24 hours.', duplicate: true });
+      }
+    }
+
+    // Record purchase in D1
+    const purchaseId = `cp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+    if (env.DB) {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO payments (id, user_id, module, target, amount, currency, razorpay_order_id, razorpay_payment_id, status, email, created_at)
+         VALUES (?,?,?,?,?,?,?,?,'paid',?,datetime('now'))`
+      ).bind(purchaseId, email || null, 'compliance_pack', pack_id,
+             pack.price_inr * 100, 'INR', razorpay_order_id, razorpay_payment_id, email || null)
+       .run().catch(e => console.warn('[CompliancePack] D1 insert error:', e.message));
+    }
+
+    // 365-day access grant in KV
+    const accessKey = `access:compliance:${pack_id}:${email || razorpay_payment_id}`;
+    await env.SECURITY_HUB_KV?.put(accessKey, JSON.stringify({
+      granted_at: new Date().toISOString(),
+      payment_id: razorpay_payment_id,
+      pack_name:  pack.name,
+    }), { expirationTtl: 365 * 86400 }).catch(() => {});
+
+    // Fire-and-forget: GST invoice + customer email + founder alert
+    const FOUNDER = 'bivash@cyberdudebivash.com';
+    Promise.all([
+      (async () => {
+        try {
+          const { createInvoice } = await import('./v24/billingEngine.js');
+          if (env.DB && pack.price_inr) {
+            await createInvoice(env.DB, {
+              userId:      email || purchaseId,
+              email:       email || 'noreply@buyer',
+              lineItems:   [{ description: pack.name, amount_inr: pack.price_inr, quantity: 1 }],
+              paymentId:   razorpay_payment_id,
+              paymentMethod: 'razorpay',
+            });
+          }
+        } catch (e) { console.warn('[CompliancePack] invoice error:', e.message); }
+      })(),
+      (async () => {
+        try {
+          const { sendPurchaseConfirmation, sendEmail } = await import('./emailEngine.js');
+          await Promise.all([
+            email ? sendPurchaseConfirmation(env, {
+              to:          email,
+              productName: pack.name,
+              amountInr:   pack.price_inr,
+              paymentId:   razorpay_payment_id,
+            }) : Promise.resolve(),
+            // Founder delivery alert
+            sendEmail(env, {
+              to:      FOUNDER,
+              subject: `💰 NEW SALE: ${pack.name} — ₹${pack.price_inr.toLocaleString('en-IN')}`,
+              html:    `<h2 style="color:#10b981">New Compliance Pack Sale!</h2><table><tr><td><b>Pack</b></td><td>${pack.name}</td></tr><tr><td><b>Price</b></td><td>₹${pack.price_inr}</td></tr><tr><td><b>Customer</b></td><td>${email || 'N/A'}</td></tr><tr><td><b>Payment ID</b></td><td>${razorpay_payment_id}</td></tr></table><p><b>Action:</b> Deliver the compliance pack files to ${email || 'customer'} within 24 hours.</p>`,
+              text:    `SALE: ${pack.name} ₹${pack.price_inr}\nCustomer: ${email || 'N/A'}\nPayment: ${razorpay_payment_id}\nDeliver within 24h.`,
+            }),
+          ]);
+        } catch (e) { console.warn('[CompliancePack] email error:', e.message); }
+      })(),
+    ]).catch(() => {});
+
+    return json({
+      success:       true,
+      access_granted: true,
+      pack_name:     pack.name,
+      deliverables:  pack.deliverables || [],
+      delivery_note: 'Your compliance pack will be delivered to your email within 24 hours. A confirmation email has been sent.',
+    });
+  } catch (err) {
+    console.error('[CompliancePack] verify error:', err);
+    return json({ success: false, error: 'Verification failed. Contact support.', support: 'bivash@cyberdudebivash.com' }, 500);
+  }
+}

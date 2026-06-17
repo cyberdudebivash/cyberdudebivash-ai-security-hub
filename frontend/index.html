@@ -6471,14 +6471,85 @@ curl -H "x-api-key: <span style="color:#fbbf24">$YOUR_KEY</span>" \
     }
   };
 
-  /* ── Compliance pack purchase ────────────────────────────────── */
+  /* ── Compliance pack purchase — instant Razorpay ─────────────── */
   window.purchaseCompliancePack = async function(packId, packName, priceInr) {
-    CDB_PAYMENT.open({
-      product: 'compliance-' + packId,
-      productLabel: packName || ('Compliance Pack: ' + packId),
-      amountLabel: priceInr ? '₹' + Number(priceInr).toLocaleString('en-IN') : '',
-      amount: priceInr ? String(priceInr) : '',
-    });
+    // Prompt for email if not already captured
+    let email = '';
+    try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      email = (window.prompt('Enter your email address to proceed with purchase:') || '').trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        alert('A valid email address is required to purchase and receive the compliance pack.');
+        return;
+      }
+      try { localStorage.setItem('cdb_email', email); } catch (e) {}
+    }
+
+    const manualFallback = function() {
+      CDB_PAYMENT.open({
+        product:      'compliance-' + packId,
+        productLabel: packName || ('Compliance Pack: ' + packId),
+        amountLabel:  priceInr ? '₹' + Number(priceInr).toLocaleString('en-IN') : '',
+        amount:       priceInr ? String(priceInr) : '',
+        email,
+      });
+    };
+
+    try {
+      const oRes  = await fetch('/api/global/compliance-packs/purchase', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ pack_id: packId, email, currency: 'INR' }),
+      });
+      const oData = await oRes.json().catch(() => ({}));
+      const order = oData?.order;
+
+      if (!oRes.ok || !order?.razorpay_key || !order?.razorpay_order_id ||
+          String(order.razorpay_order_id).indexOf('order_') !== 0) {
+        manualFallback();
+        return;
+      }
+
+      await cdbLoadRazorpay();
+      if (!window.RazorpayNative) { manualFallback(); return; }
+
+      const rzp = new window.RazorpayNative({
+        key:         order.razorpay_key,
+        amount:      order.amount,
+        currency:    order.currency || 'INR',
+        name:        'CYBERDUDEBIVASH AI Security Hub',
+        description: packName || 'Compliance Pack',
+        order_id:    order.razorpay_order_id,
+        prefill:     { email },
+        theme:       { color: '#8b5cf6' },
+        handler: async function(rp) {
+          try {
+            const vRes  = await fetch('/api/global/compliance-packs/verify', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({
+                razorpay_order_id:   rp.razorpay_order_id,
+                razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature:  rp.razorpay_signature,
+                pack_id:             packId,
+                email,
+              }),
+            });
+            const vData = await vRes.json().catch(() => ({}));
+            if (vRes.ok && vData.success && vData.access_granted) {
+              alert(`✅ Purchase Confirmed!\n\n${packName || 'Compliance Pack'} has been purchased successfully.\n\nA confirmation email with download instructions will be sent to ${email} within 24 hours.\n\nPayment ID: ${rp.razorpay_payment_id}`);
+            } else {
+              alert(`Payment received (ID: ${rp.razorpay_payment_id}). Our team will verify and deliver the pack to ${email} within 24 hours. Contact bivash@cyberdudebivash.com for urgent support.`);
+            }
+          } catch (e) {
+            alert(`Payment received (ID: ${rp.razorpay_payment_id}). Our team will deliver to ${email} within 24 hours.`);
+          }
+        },
+      });
+      rzp.open();
+    } catch (err) {
+      manualFallback();
+    }
   };
 
   /* ── Enterprise form submit (existing submitEnterprise override) ─ */

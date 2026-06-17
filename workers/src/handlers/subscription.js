@@ -251,6 +251,38 @@ export async function handleActivateSubscription(request, env) {
       ).run().catch(() => {}); // Non-fatal — KV is source of truth
     }
 
+    // Fire-and-forget: GST invoice + plan activation email
+    const planDef = SUBSCRIPTION_PLANS[plan];
+    Promise.all([
+      (async () => {
+        try {
+          const { createInvoice } = await import('../services/v24/billingEngine.js');
+          if (env.DB && planDef?.price_inr) {
+            await createInvoice(env.DB, {
+              userId:      `sub_${sessionToken.slice(0, 16)}`,
+              email:       userEmail || 'noreply@buyer',
+              lineItems:   [{ description: `${planDef.name} Subscription (Monthly)`, amount_inr: planDef.price_inr, quantity: 1 }],
+              paymentId:   razorpay_payment_id,
+              paymentMethod: 'razorpay',
+            });
+          }
+        } catch (e) { console.warn('[Subscription] invoice error:', e.message); }
+      })(),
+      (async () => {
+        try {
+          if (!userEmail) return;
+          const { sendPurchaseConfirmation } = await import('../services/emailEngine.js');
+          await sendPurchaseConfirmation(env, {
+            to:          userEmail,
+            productName: `${planDef?.name || plan} Plan (Monthly Subscription)`,
+            amountInr:   planDef?.price_inr || 0,
+            paymentId:   razorpay_payment_id,
+            accessExpires: new Date(expiresAt).toISOString(),
+          });
+        } catch (e) { console.warn('[Subscription] email error:', e.message); }
+      })(),
+    ]).catch(() => {});
+
     return new Response(JSON.stringify({
       success:       true,
       plan,

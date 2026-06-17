@@ -584,3 +584,88 @@ export async function sendWelcomeEmail(env, email, lead, scanData = {}) {
   const html = template.html.replace(/\{\{EMAIL\}\}/g, encodeURIComponent(email));
   return sendEmail(env, { to: email, subject: template.subject, html, text: template.text });
 }
+
+/**
+ * Send purchase confirmation email after a successful Razorpay payment.
+ * Call fire-and-forget (don't await in the critical path).
+ *
+ * @param {object} env                - Cloudflare Workers env
+ * @param {object} opts
+ * @param {string} opts.to            - customer email
+ * @param {string} opts.productName   - human-readable product title
+ * @param {number} opts.amountInr     - total paid in INR (customer-facing price)
+ * @param {string} opts.paymentId     - Razorpay payment_id
+ * @param {string} [opts.downloadUrl] - direct download/access URL (scan reports)
+ * @param {string} [opts.invoiceNumber] - GST invoice number if created
+ * @param {string} [opts.accessExpires] - ISO date when access expires
+ */
+export async function sendPurchaseConfirmation(env, {
+  to, productName, amountInr, paymentId,
+  downloadUrl = null, invoiceNumber = null, accessExpires = null,
+}) {
+  if (!to || !productName) return { success: false, reason: 'missing_params' };
+
+  const subject = `✅ Purchase Confirmed — ${productName} | CYBERDUDEBIVASH`;
+  const gstInclusive = amountInr;
+  const baseAmt      = Math.round(gstInclusive / 1.18);
+  const gstAmt       = gstInclusive - baseAmt;
+  const expiryText   = accessExpires
+    ? `<p style="color:#94a3b8;font-size:14px">Access valid until: <strong style="color:#e2e8f0">${new Date(accessExpires).toLocaleDateString('en-IN', { year:'numeric', month:'long', day:'numeric' })}</strong></p>`
+    : '';
+  const downloadBtn  = downloadUrl
+    ? `<a href="${BASE_URL}${downloadUrl}" style="display:inline-block;margin-top:8px;padding:12px 28px;background:linear-gradient(135deg,#1e40af,#7c3aed);color:#fff;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px">⬇️ Download Your Report</a>`
+    : `<p style="color:#94a3b8;font-size:14px">Your access has been activated on the platform. Log in at <a href="${BASE_URL}" style="color:#60a5fa">${BASE_URL}</a> to access your purchase.</p>`;
+  const invoiceLine  = invoiceNumber
+    ? `<p style="color:#94a3b8;font-size:13px">GST Invoice: <strong style="color:#e2e8f0">${invoiceNumber}</strong> — available on request at <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a></p>`
+    : `<p style="color:#94a3b8;font-size:13px">GST invoice will be emailed within 24 hours. Contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a> for urgent requests.</p>`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0e1a">
+<tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937;overflow:hidden">
+  <tr><td style="background:linear-gradient(135deg,#065f46,#1e40af);padding:32px 40px;text-align:center">
+    <div style="font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px">✅ Purchase Confirmed</div>
+    <div style="font-size:14px;color:#bfdbfe;margin-top:6px">CYBERDUDEBIVASH® AI Security Hub</div>
+  </td></tr>
+  <tr><td style="padding:40px">
+    <h2 style="margin:0 0 6px;font-size:20px;color:#f1f5f9">${productName}</h2>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Payment ID: ${paymentId}</p>
+    <div style="background:#1f2937;border-radius:8px;padding:20px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding-bottom:12px;margin-bottom:12px">
+        <span style="color:#94a3b8;font-size:14px">${productName}</span>
+        <span style="color:#e2e8f0;font-size:14px">₹${baseAmt.toLocaleString('en-IN')}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding-bottom:12px;margin-bottom:12px">
+        <span style="color:#94a3b8;font-size:14px">GST @ 18% (GST: 21ARKPN8270G1ZP)</span>
+        <span style="color:#e2e8f0;font-size:14px">₹${gstAmt.toLocaleString('en-IN')}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:#f1f5f9;font-weight:700;font-size:16px">Total Paid</span>
+        <span style="color:#10b981;font-weight:800;font-size:18px">₹${gstInclusive.toLocaleString('en-IN')}</span>
+      </div>
+    </div>
+    ${expiryText}
+    <div style="text-align:center;margin:24px 0">${downloadBtn}</div>
+    ${invoiceLine}
+    <hr style="border:none;border-top:1px solid #1f2937;margin:28px 0">
+    <p style="color:#6b7280;font-size:13px;text-align:center">
+      Questions? Reply to this email or WhatsApp <strong style="color:#94a3b8">+91 8179881447</strong><br>
+      CYBERDUDEBIVASH PRIVATE LIMITED · PAN: ARKPN8270G · GST: 21ARKPN8270G1ZP<br>
+      29, Korai Rd, Ragadi, Odisha 755019, India
+    </p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  return sendEmail(env, {
+    to,
+    subject,
+    html,
+    text: `Purchase Confirmed: ${productName}\nAmount: ₹${gstInclusive}\nPayment ID: ${paymentId}\n\n${downloadUrl ? `Download: ${BASE_URL}${downloadUrl}` : 'Access your purchase at ' + BASE_URL}\n\nCYBERDUDEBIVASH PRIVATE LIMITED · GST: 21ARKPN8270G1ZP`,
+  });
+}

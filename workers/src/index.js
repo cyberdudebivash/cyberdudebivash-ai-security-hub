@@ -4421,11 +4421,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleGetCompliancePacks(request, env), request));
     }
 
-    // POST /api/global/compliance-packs/purchase — purchase compliance pack
+    // POST /api/global/compliance-packs/purchase — create Razorpay order for compliance pack
     if (path === '/api/global/compliance-packs/purchase' && method === 'POST') {
       const { handlePurchaseCompliancePack } = await import('./services/globalScale.js');
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handlePurchaseCompliancePack(request, env, authCtx ? { userId: authCtx.userId, email: authCtx.email } : {}), request));
+    }
+
+    // POST /api/global/compliance-packs/verify — verify payment + grant access + notify founder
+    if (path === '/api/global/compliance-packs/verify' && method === 'POST') {
+      const { handleVerifyCompliancePack } = await import('./services/globalScale.js');
+      return withSecurityHeaders(withCors(await handleVerifyCompliancePack(request, env), request));
     }
 
     // GET /api/global/mssp — MSSP tier info + pricing (public)

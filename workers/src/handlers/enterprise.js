@@ -4,6 +4,9 @@
  * POST /api/contact/enterprise
  */
 import { parseBody, validateString } from '../middleware/validation.js';
+import { sendEmail } from '../services/emailEngine.js';
+
+const FOUNDER_EMAIL = 'bivash@cyberdudebivash.com';
 
 function genEnterpriseId() {
   return 'ent_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
@@ -62,9 +65,39 @@ export async function handleEnterpriseContact(request, env) {
     } catch { /* non-blocking */ }
   }
 
-  // Notification stub — replace with actual email/webhook in production
-  // e.g. await sendSlackNotification(env.SLACK_WEBHOOK, record);
-  // e.g. await sendEmail(env.RESEND_API_KEY, 'bivashnayak.ai007@gmail.com', record);
+  // Fire-and-forget: customer acknowledgment + founder alert
+  Promise.all([
+    sendEmail(env, {
+      to:      contactEmail,
+      subject: `✅ Inquiry Received — CYBERDUDEBIVASH Enterprise [Ref: ${contactId.slice(0,8).toUpperCase()}]`,
+      html:    `<div style="font-family:sans-serif;background:#0a0e1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px;margin:0 auto">
+        <h2 style="color:#00d4ff">Enterprise Inquiry Confirmed</h2>
+        <p>Hi there,</p>
+        <p>We've received your enterprise security inquiry for <strong>${companyName}</strong>.</p>
+        <p><strong>Reference:</strong> <code style="background:#1f2937;padding:3px 8px;border-radius:4px">${contactId.slice(0,8).toUpperCase()}</code></p>
+        <p><strong>Package Interest:</strong> ${package_type} — ${PACKAGE_PRICES[package_type] || 'Contact for pricing'}</p>
+        <div style="background:rgba(0,212,255,.08);border-left:3px solid #00d4ff;padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0">
+          Our security architect will review your requirements and respond within <strong>24 business hours</strong>.
+        </div>
+        <p>For urgent matters: <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a> · WhatsApp +91 8179881447</p>
+      </div>`,
+      text: `Inquiry received. Ref: ${contactId.slice(0,8).toUpperCase()}. We'll respond within 24h. Contact: bivash@cyberdudebivash.com`,
+    }).catch(() => {}),
+    sendEmail(env, {
+      to:      FOUNDER_EMAIL,
+      subject: `🚨 ENTERPRISE CONTACT: ${companyName} [${package_type.toUpperCase()}]`,
+      html:    `<h2 style="color:#ef4444">New Enterprise Contact Form Submission</h2>
+<table style="border-collapse:collapse"><tr><td style="padding:6px 12px;color:#6b7280">Company</td><td style="padding:6px 12px;font-weight:700">${companyName}</td></tr>
+<tr><td style="padding:6px 12px;color:#6b7280">Email</td><td style="padding:6px 12px"><a href="mailto:${contactEmail}">${contactEmail}</a></td></tr>
+<tr><td style="padding:6px 12px;color:#6b7280">Phone</td><td style="padding:6px 12px">${record.phone || 'N/A'}</td></tr>
+<tr><td style="padding:6px 12px;color:#6b7280">Package</td><td style="padding:6px 12px">${package_type} — ${PACKAGE_PRICES[package_type] || 'custom'}</td></tr>
+<tr><td style="padding:6px 12px;color:#6b7280">Domain</td><td style="padding:6px 12px">${domain || 'N/A'}</td></tr>
+<tr><td style="padding:6px 12px;color:#6b7280;vertical-align:top">Requirements</td><td style="padding:6px 12px">${requirements}</td></tr>
+<tr><td style="padding:6px 12px;color:#6b7280">Ref</td><td style="padding:6px 12px;font-family:monospace">${contactId}</td></tr></table>
+<p><a href="mailto:${contactEmail}?subject=Re: Enterprise Inquiry ${contactId.slice(0,8).toUpperCase()}" style="background:#10b981;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Reply Now →</a></p>`,
+      text: `ENTERPRISE LEAD\nCompany: ${companyName}\nEmail: ${contactEmail}\nPackage: ${package_type}\nRequirements: ${requirements}\nRef: ${contactId}`,
+    }).catch(() => {}),
+  ]).catch(() => {});
 
   return Response.json({
     status: 'ok',

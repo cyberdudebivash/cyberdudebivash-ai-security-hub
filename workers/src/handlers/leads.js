@@ -52,6 +52,16 @@ export async function handleLeadCapture(request, env) {
     } catch { /* non-blocking */ }
   }
 
+  // Auto-enroll in welcome email drip (fire-and-forget)
+  if (env?.SECURITY_HUB_KV || env?.DB) {
+    (async () => {
+      try {
+        const { enrollInSequence } = await import('../services/emailEngine.js');
+        await enrollInSequence(env, email, 'welcome', { scan_id: scanId || null, module, source });
+      } catch (e) { console.warn('[leads] drip enroll error:', e.message); }
+    })();
+  }
+
   return Response.json({
     status: 'ok',
     lead_id: leadId,
