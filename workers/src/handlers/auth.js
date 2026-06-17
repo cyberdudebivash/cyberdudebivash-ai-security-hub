@@ -87,8 +87,11 @@ export async function handleSignup(request, env) {
     return Response.json({ error: 'Registration failed — try again', detail: e?.message?.slice(0,80) }, { status: 500 });
   }
 
-  // Auto-create first API key (fire-and-forget)
-  createApiKey(env.DB, userId, 'FREE', 'Default Key').catch(() => {});
+  // Auto-create the first API key and surface it ONCE in this response, so the
+  // user has an immediately-usable key (otherwise it consumed a key slot but its
+  // raw value was discarded — an unusable phantom key). Non-fatal on failure.
+  let firstKey = null;
+  try { firstKey = await createApiKey(env.DB, userId, 'FREE', 'Default Key'); } catch (_) {}
 
   // Generate tokens
   const accessToken  = await createAccessToken({ id: userId, email, tier: 'FREE' }, env.JWT_SECRET);
@@ -110,6 +113,8 @@ export async function handleSignup(request, env) {
     refresh_token: refreshData.token,
     token_type:    'Bearer',
     expires_in:    900, // 15 minutes
+    api_key:       firstKey?.raw_key || null,  // shown ONCE — store it now
+    api_key_note:  firstKey?.raw_key ? 'Your first API key — save it now; it cannot be retrieved again.' : null,
     next_steps: [
       'Use access_token in Authorization: Bearer header',
       `Generate API keys at ${PLATFORM_URL}/keys`,
