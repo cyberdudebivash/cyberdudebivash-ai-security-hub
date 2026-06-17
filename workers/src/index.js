@@ -1689,9 +1689,12 @@ export default {
 
     // ── v32.0 Phase 2 Enterprise Platform Routes ────────────────────────────
 
-    // Revenue Metrics
+    // Revenue Metrics — OWNER ONLY (platform financials: MRR/ARR/subscribers/
+    // conversion). Was exposed to anonymous; a second gated definition existed
+    // downstream but was dead code (this route matched first). Gated now.
     if (path === '/api/revenue/metrics' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleRevenueMetrics(request, env, authCtx), request));
     }
     if (path === '/api/revenue/snapshot' && method === 'POST') {
