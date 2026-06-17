@@ -85,3 +85,15 @@ workspace/
 tools/_cve_raw.json
 tools/_cve_export.json
 tools/_cve_err.txt
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
+
+# Stray root-level wrangler config: wrangler 4.x auto-scaffolds a root
+# wrangler.jsonc (assets-only, no bindings) whenever `wrangler` is run from the
+# repo root. The REAL Workers config is workers/wrangler.toml — always deploy
+# with: `npx wrangler deploy --config workers/wrangler.toml` (CI runs from
+# workers/). Ignore the root scaffold so it can never be committed or reach CI.
+/wrangler.jsonc
+/wrangler.json
