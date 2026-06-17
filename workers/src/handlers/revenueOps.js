@@ -15,6 +15,8 @@
  *   POST /api/attribution/track       — Track visitor→lead→customer attribution
  */
 
+import { triggerEnterpriseInquiry } from '../services/lifecycleEngine.js';
+
 function ok(data, status = 200) {
   return Response.json(data, {
     status,
@@ -455,6 +457,9 @@ export async function handleEnterpriseInquiryAlias(request, env) {
       ).run().catch(() => {});
     } catch { /* non-blocking */ }
   }
+
+  // Trigger enterprise nurture sequence (fire-and-forget)
+  triggerEnterpriseInquiry(env, { email, company, interest, source }).catch(() => {});
 
   return ok({
     success: true,

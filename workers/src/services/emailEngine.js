@@ -10,7 +10,7 @@ export const DRIP_SEQUENCES = {
   welcome: {
     id:     'welcome',
     name:   'Welcome Drip',
-    steps:  [0, 1, 2, 3],   // delay in days from signup
+    steps:  [0, 1, 2, 3],
     trigger:'email_captured',
   },
   enterprise: {
@@ -24,6 +24,31 @@ export const DRIP_SEQUENCES = {
     name:  'Trial Expiry Nudge',
     steps: [0, 1],
     trigger:'trial_expiring',
+  },
+  // ── Phase 4 post-purchase sequences ─────────────────────────────────────────
+  subscription_activated: {
+    id:    'subscription_activated',
+    name:  'Subscription Onboarding',
+    steps: [0, 2, 5],       // Day 0, Day 2, Day 5
+    trigger:'subscription_payment_confirmed',
+  },
+  assessment_delivered: {
+    id:    'assessment_delivered',
+    name:  'Assessment Delivery',
+    steps: [0, 3, 7],       // Day 0, Day 3, Day 7
+    trigger:'assessment_payment_confirmed',
+  },
+  enterprise_nurture: {
+    id:    'enterprise_nurture',
+    name:  'Enterprise Nurture',
+    steps: [0, 1, 3, 5, 7], // Day 0, 1, 3, 5, 7
+    trigger:'enterprise_inquiry_received',
+  },
+  mssp_onboarded: {
+    id:    'mssp_onboarded',
+    name:  'MSSP Partner Onboarding',
+    steps: [0, 3, 7],       // Day 0, Day 3, Day 7
+    trigger:'mssp_partner_created',
   },
 };
 
@@ -334,6 +359,450 @@ function templateDay3(lead, scanData = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PHASE 4 POST-PURCHASE TEMPLATES
+// ─────────────────────────────────────────────────────────────────────────────
+
+function templateSubscriptionDay0(lead, meta = {}) {
+  const tier = meta.plan || meta.product || 'PRO';
+  const subject = `✅ Your ${tier} Plan is Active — Here's Your API Key`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#065f46,#047857);padding:28px 40px;text-align:center">
+  <div style="font-size:26px;font-weight:800;color:#fff">🛡 CYBERDUDEBIVASH</div>
+  <div style="font-size:13px;color:#a7f3d0;margin-top:4px">Your ${tier} Plan is now active</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Welcome to Sentinel APEX ${tier}</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your subscription is active and your API key has been generated. Here's how to get started:</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0;border-left:4px solid #10b981">
+    <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">NEXT STEPS</div>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">1. <strong>Access your API key</strong> from your dashboard at <a href="${BASE_URL}/user-dashboard" style="color:#34d399">cyberdudebivash.in/user-dashboard</a></p>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">2. <strong>Run your first scan:</strong> POST /api/scan/domain with your API key in the Authorization header</p>
+    <p style="margin:0;color:#e2e8f0;font-size:14px">3. <strong>Need help?</strong> WhatsApp us at <strong>+91 81798 81447</strong> or email bivash@cyberdudebivash.com</p>
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="${BASE_URL}/user-dashboard" style="display:inline-block;background:linear-gradient(135deg,#065f46,#047857);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Access Dashboard →</a>
+  </div>
+  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · CYBERDUDEBIVASH PRIVATE LIMITED</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Your ${tier} API subscription is active. Access your dashboard at ${BASE_URL}/user-dashboard.\n\nNeed help? WhatsApp +91 81798 81447` };
+}
+
+function templateSubscriptionDay2(lead, meta = {}) {
+  const subject = 'Quick Start: 3 Scans to Run Today on Sentinel APEX';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#1e40af,#7c3aed);padding:28px 40px;text-align:center">
+  <div style="font-size:26px;font-weight:800;color:#fff">🛡 CYBERDUDEBIVASH</div>
+  <div style="font-size:13px;color:#bfdbfe;margin-top:4px">Getting Started Guide</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">3 High-Value Scans to Run Today</h2>
+  <p style="color:#94a3b8;font-size:15px">Here's how to get maximum ROI from your subscription in the first week:</p>
+  ${[
+    { icon: '🔍', title: 'Domain Security Scan', desc: 'POST /api/scan/domain — Maps your full attack surface in 90 seconds', priority: 'Start here' },
+    { icon: '🤖', title: 'AI Security Scan', desc: 'POST /api/scan/ai — Detects AI/LLM vulnerabilities in your infrastructure', priority: 'High value' },
+    { icon: '🛡', title: 'Compliance Check', desc: 'POST /api/generate/compliance — Generate ISO 27001 / SOC 2 gap analysis', priority: 'Quick win' },
+  ].map(s => `<div style="background:#1f2937;border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid #3b82f6">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:15px;font-weight:600;color:#f1f5f9">${s.icon} ${s.title}</div>
+      <span style="font-size:11px;color:#10b981;background:#064e3b;padding:3px 8px;border-radius:4px">${s.priority}</span>
+    </div>
+    <p style="margin:8px 0 0;color:#94a3b8;font-size:13px">${s.desc}</p>
+  </div>`).join('')}
+  <div style="text-align:center;margin:28px 0">
+    <a href="${BASE_URL}/tools" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Open Platform →</a>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `3 scans to run today on CYBERDUDEBIVASH:\n1. Domain Security: POST /api/scan/domain\n2. AI Security: POST /api/scan/ai\n3. Compliance: POST /api/generate/compliance\n\nOpen platform: ${BASE_URL}/tools` };
+}
+
+function templateSubscriptionDay5(lead, meta = {}) {
+  const tier = meta.plan || 'PRO';
+  const upgradeTarget = tier === 'STARTER' ? 'PRO' : 'ENTERPRISE';
+  const subject = `📈 How ${tier} Users Double Their Security Coverage`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#92400e,#d97706);padding:28px 40px;text-align:center">
+  <div style="font-size:26px;font-weight:800;color:#fff">📈 Expand Your Coverage</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">You're getting great value from your ${tier} plan. Teams that upgrade to <strong style="color:#f1f5f9">${upgradeTarget}</strong> see 3x faster incident detection.</p>
+  <div style="background:#1a1032;border-radius:8px;padding:20px;margin:20px 0;border:1px solid #4f46e5">
+    <div style="font-size:13px;color:#818cf8;font-weight:600;margin-bottom:12px">WHAT ${upgradeTarget} UNLOCKS</div>
+    ${tier === 'STARTER'
+      ? `<p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ 100 scans/day (vs 20)</p><p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Red Team simulator</p><p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ API access (1,000 calls/mo)</p><p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ SIEM export (JSON/CEF/STIX)</p>`
+      : `<p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Unlimited scans + multi-tenant org</p><p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Autonomous SOC (24/7 auto-response)</p><p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ SLA support + dedicated engineer</p>`
+    }
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="${UPGRADE_URL}?utm_source=email&utm_medium=lifecycle&utm_campaign=sub_d5" style="display:inline-block;background:linear-gradient(135deg,#92400e,#d97706);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Upgrade to ${upgradeTarget} →</a>
+    <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Questions? Reply to this email — Bivash reads every one personally.</p>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Upgrade to ${upgradeTarget} for 3x faster incident detection.\nSee pricing: ${UPGRADE_URL}` };
+}
+
+function templateAssessmentDay0(lead, meta = {}) {
+  const product = meta.product_name || 'Security Assessment';
+  const subject = `✅ ${product} Confirmed — What Happens Next`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#1e40af,#0284c7);padding:28px 40px;text-align:center">
+  <div style="font-size:26px;font-weight:800;color:#fff">🛡 CYBERDUDEBIVASH</div>
+  <div style="font-size:13px;color:#bae6fd;margin-top:4px">${product} — Payment Confirmed</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 8px;color:#f1f5f9;font-size:20px">Your Assessment is Confirmed</h2>
+  <p style="color:#94a3b8;font-size:15px;margin-bottom:24px">Thank you for your purchase. Here's exactly what happens next:</p>
+  ${[
+    { day: 'Within 2 hours', label: 'Analyst Assigned', desc: 'A senior security analyst will be assigned to your assessment and will email you to confirm scope.' },
+    { day: 'Day 1–2',        label: 'Active Testing',   desc: 'We conduct automated + manual security testing across your specified scope.' },
+    { day: 'Day 3',          label: 'Report Delivery',  desc: 'Full assessment report delivered to your email — executive summary + technical findings + remediation roadmap.' },
+  ].map((s, i) => `<div style="display:flex;gap:16px;margin-bottom:20px">
+    <div style="min-width:40px;height:40px;background:#1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;text-align:center;line-height:40px">${i + 1}</div>
+    <div>
+      <div style="font-size:12px;color:#60a5fa;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${s.day}</div>
+      <div style="font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:4px">${s.label}</div>
+      <p style="margin:0;color:#94a3b8;font-size:14px">${s.desc}</p>
+    </div>
+  </div>`).join('')}
+  <div style="background:#1f2937;border-radius:8px;padding:16px;margin-top:8px">
+    <p style="margin:0;color:#94a3b8;font-size:14px">Questions? WhatsApp <strong style="color:#e2e8f0">+91 81798 81447</strong> · or reply to this email.<br>Bivash reads every message personally.</p>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Your ${product} is confirmed.\n\nWhat happens next:\n1. Analyst assigned within 2 hours\n2. Active testing Days 1-2\n3. Report delivered Day 3\n\nQuestions? WhatsApp +91 81798 81447` };
+}
+
+function templateAssessmentDay3(lead, meta = {}) {
+  const product = meta.product_name || 'Security Assessment';
+  const subject = `🔍 Your ${product} is in Progress — Check-In`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#1e3a5f,#1e40af);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">🔍 Assessment In Progress</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your ${product} is actively running. Our analyst is reviewing findings now.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <div style="font-size:13px;color:#60a5fa;font-weight:600;margin-bottom:8px">WHILE YOU WAIT — PREPARE YOUR TEAM</div>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">✓ Identify your key stakeholders who should see the report</p>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">✓ Prepare a list of your critical systems (for remediation priority)</p>
+    <p style="margin:0;color:#e2e8f0;font-size:14px">✓ Block 1 hour for the executive brief we'll schedule after delivery</p>
+  </div>
+  <p style="color:#94a3b8;font-size:14px">Your report will arrive within the next 24 hours. Contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a> if you have questions about scope.</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Your ${product} is in progress. Report arriving within 24 hours.\n\nWhile you wait, prepare your team:\n- Identify key stakeholders\n- List critical systems\n- Block 1 hour for the executive brief\n\nQuestions: bivash@cyberdudebivash.com` };
+}
+
+function templateAssessmentDay7(lead, meta = {}) {
+  const subject = '🔄 Protect Your Business Year-Round — Upgrade to Continuous Monitoring';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">🔄 Stay Protected Year-Round</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your one-time assessment gave you a security snapshot. But threats evolve daily — <strong style="color:#f1f5f9">new CVEs are disclosed every 24 hours.</strong></p>
+  <div style="background:#1a1032;border-radius:8px;padding:20px;margin:20px 0;border:1px solid #4f46e5">
+    <div style="font-size:13px;color:#818cf8;font-weight:600;margin-bottom:12px">UPGRADE TO CONTINUOUS MONITORING</div>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Real-time vulnerability alerts (new CVEs within hours)</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Monthly automated re-assessments</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ AI threat predictions for your industry</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Compliance dashboards (ISO 27001, SOC 2, DPDP 2023)</p>
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="${UPGRADE_URL}?utm_source=email&utm_medium=lifecycle&utm_campaign=assessment_d7" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">See Subscription Plans →</a>
+    <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Starting at ₹499/month. Cancel anytime.</p>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Stay protected year-round with continuous monitoring.\nNew CVEs disclosed every 24 hours — your one-time assessment is a snapshot, not a shield.\n\nSee subscription plans: ${UPGRADE_URL}\nStarting at ₹499/month.` };
+}
+
+function templateEnterpriseDay0(lead, meta = {}) {
+  const company = meta.company || lead.name || 'your organization';
+  const subject = `📥 Enterprise Inquiry Received — We'll Respond Within 4 Hours`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 40px;text-align:center;border-bottom:2px solid #1e40af">
+  <div style="font-size:26px;font-weight:800;color:#fff">🏢 CYBERDUDEBIVASH Enterprise</div>
+  <div style="font-size:13px;color:#94a3b8;margin-top:4px">Inquiry Received</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Thank you for reaching out, ${company}</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">We've received your enterprise inquiry. A senior account executive will reach out within <strong style="color:#f1f5f9">4 business hours</strong> to schedule your discovery call.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <div style="font-size:13px;color:#60a5fa;font-weight:600;margin-bottom:12px">WHAT HAPPENS NEXT</div>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>Step 1:</strong> Discovery Call (30 min) — We understand your threat landscape and compliance requirements</p>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>Step 2:</strong> Custom Proposal — Tailored to your organization's size, industry, and risk profile</p>
+    <p style="margin:0;color:#e2e8f0;font-size:14px"><strong>Step 3:</strong> Implementation — Dedicated engineer, SLA support, quarterly reviews</p>
+  </div>
+  <p style="color:#94a3b8;font-size:14px">For urgent matters: <a href="https://wa.me/918179881447" style="color:#34d399">WhatsApp +91 81798 81447</a></p>
+  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · bivash@cyberdudebivash.com</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Enterprise inquiry received for ${company}.\n\nWe'll respond within 4 business hours.\nUrgent: WhatsApp +91 81798 81447\n\n— Bivash, Founder` };
+}
+
+function templateEnterpriseDay1(lead, meta = {}) {
+  const subject = '📊 How Enterprises Are Cutting Breach Risk by 73% with AI Security';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 40px;text-align:center;border-bottom:2px solid #1e40af">
+  <div style="font-size:24px;font-weight:800;color:#fff">📊 Enterprise Security Intelligence</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Why AI-Native Security Outperforms Traditional SIEM</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Enterprises using Sentinel APEX report a <strong style="color:#34d399">73% reduction in breach risk</strong> within 90 days of deployment.</p>
+  ${[
+    { stat: '73%', label: 'Breach risk reduction', color: '#ef4444' },
+    { stat: '4.2h', label: 'Mean time to detect (vs 197h industry avg)', color: '#f59e0b' },
+    { stat: '₹2.8Cr', label: 'Average annual savings vs traditional SIEM', color: '#10b981' },
+  ].map(s => `<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;background:#1f2937;border-radius:8px;padding:16px">
+    <div style="font-size:28px;font-weight:800;color:${s.color};min-width:80px">${s.stat}</div>
+    <div style="font-size:14px;color:#94a3b8">${s.label}</div>
+  </div>`).join('')}
+  <div style="text-align:center;margin:28px 0">
+    <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27d%20like%20to%20book%20a%20discovery%20call" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Book Discovery Call →</a>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Enterprises using Sentinel APEX report 73% breach risk reduction in 90 days.\n\nBook a discovery call: https://wa.me/918179881447` };
+}
+
+function templateEnterpriseDay3(lead, meta = {}) {
+  const subject = '📅 Ready to See a Live Demo? Book 30 Minutes This Week';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">📅 Live Demo — 30 Minutes</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">See Sentinel APEX Running on Your Domain</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">In 30 minutes, I'll show you live threat intelligence running on your organization's domain — real CVEs, real attack paths, real compliance gaps.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <div style="font-size:13px;color:#60a5fa;font-weight:600;margin-bottom:12px">WHAT YOU'LL SEE IN THE DEMO</div>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Live domain security scan (your domain, right now)</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ AI threat correlation with MITRE ATT&CK mapping</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ DPDP 2023 / ISO 27001 compliance dashboard</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ ROI calculator for your specific risk profile</p>
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27d%20like%20to%20book%20a%2030-minute%20demo%20of%20Sentinel%20APEX" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Book 30-Minute Demo →</a>
+    <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Available Mon–Sat 9am–7pm IST · No sales pressure</p>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Book a 30-minute live demo — see Sentinel APEX running on your domain.\n\nBook via WhatsApp: https://wa.me/918179881447\nAvailable Mon-Sat 9am-7pm IST` };
+}
+
+function templateEnterpriseDay5(lead, meta = {}) {
+  const company = meta.company || 'your organization';
+  const subject = `📄 Custom Proposal Ready for ${company}`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">📄 Your Custom Proposal</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Enterprise Security Proposal for ${company}</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Based on your inquiry, I've prepared a custom security proposal. Reply to this email or WhatsApp me and I'll send the full PDF proposal directly.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <div style="font-size:13px;color:#10b981;font-weight:600;margin-bottom:12px">WHAT'S IN YOUR PROPOSAL</div>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Custom threat assessment for your industry</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Recommended security stack with pricing</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Implementation timeline (30-60-90 day plan)</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ ROI analysis and breach cost comparison</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Reference contacts from similar deployments</p>
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20please%20send%20the%20enterprise%20proposal" style="display:inline-block;background:linear-gradient(135deg,#065f46,#047857);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Request Proposal PDF →</a>
+  </div>
+  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · bivash@cyberdudebivash.com</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Custom enterprise proposal ready for ${company}.\n\nReply to receive the full PDF proposal.\nWhatsApp: https://wa.me/918179881447\n\n— Bivash, Founder` };
+}
+
+function templateEnterpriseDay7(lead, meta = {}) {
+  const subject = '⏰ One Week On — Ready to Move Forward?';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#4a1d96,#7c3aed);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">⏰ Final Follow-Up</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Still Evaluating? I Can Help</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">It's been a week since your enterprise inquiry. If you're still evaluating, I can answer any questions in 15 minutes — pricing, implementation complexity, compliance coverage, anything.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <p style="margin:0;color:#e2e8f0;font-size:15px;font-style:italic">"We deployed Sentinel APEX in 48 hours and found 3 critical vulnerabilities our existing tools missed. The ROI was visible in week one."</p>
+    <p style="margin:12px 0 0;color:#94a3b8;font-size:13px">— CTO, Series B FinTech startup, Mumbai</p>
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27m%20ready%20to%20move%20forward%20with%20the%20enterprise%20plan" style="display:inline-block;background:linear-gradient(135deg,#4a1d96,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Let's Talk →</a>
+    <p style="margin:12px 0 0;color:#6b7280;font-size:13px">15-minute call. No pressure. Genuine conversation.</p>
+  </div>
+  <p style="color:#6b7280;font-size:13px">— Bivash · +91 81798 81447 · bivash@cyberdudebivash.com</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Still evaluating? I can answer any questions in 15 minutes.\nWhatsApp: https://wa.me/918179881447\n\n— Bivash, Founder` };
+}
+
+function templateMsspDay0(lead, meta = {}) {
+  const company = meta.company || 'your company';
+  const tier    = meta.tier || 'RESELLER';
+  const subject = `🤝 Welcome to CYBERDUDEBIVASH MSSP Program — ${company}`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f4c75,#1b6ca8);padding:28px 40px;text-align:center">
+  <div style="font-size:26px;font-weight:800;color:#fff">🤝 MSSP Partner Program</div>
+  <div style="font-size:13px;color:#bae6fd;margin-top:4px">${company} — ${tier} Tier</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Welcome to the MSSP Partner Network</h2>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your MSSP partner account has been created. You can now provision clients, customize your white-label portal, and start earning margin on every deployment.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <div style="font-size:13px;color:#38bdf8;font-weight:600;margin-bottom:12px">YOUR NEXT 3 ACTIONS</div>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>1. Access MSSP Portal:</strong> <a href="${BASE_URL}/mssp-command-center" style="color:#38bdf8">cyberdudebivash.in/mssp-command-center</a></p>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>2. Set up white-label:</strong> Add your brand name, domain, and primary color</p>
+    <p style="margin:0;color:#e2e8f0;font-size:14px"><strong>3. Onboard your first client:</strong> Use your Partner API key to provision client accounts</p>
+  </div>
+  <div style="background:#1a1032;border-radius:8px;padding:16px;margin:20px 0;border:1px solid #4f46e5">
+    <div style="font-size:13px;color:#818cf8;font-weight:600;margin-bottom:8px">YOUR ${tier} BENEFITS</div>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Up to 10 client seats</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ 20% margin on all client revenue</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ White-label dashboard + custom domain</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Partner API key for automation</p>
+  </div>
+  <p style="color:#6b7280;font-size:13px">Questions? WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong> or email bivash@cyberdudebivash.com</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Welcome to CYBERDUDEBIVASH MSSP Program, ${company}!\n\nYour ${tier} account is ready.\nAccess portal: ${BASE_URL}/mssp-command-center\n\nQuestions: WhatsApp +91 81798 81447` };
+}
+
+function templateMsspDay3(lead, meta = {}) {
+  const subject = '📋 How to Onboard Your First 3 MSSP Clients (Step-by-Step)';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f4c75,#1b6ca8);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">📋 Client Onboarding Guide</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Onboard Your First 3 Clients in 48 Hours</h2>
+  <p style="color:#94a3b8;font-size:15px">Fastest path from partner to revenue:</p>
+  ${[
+    { step: 1, action: 'Identify target clients', detail: 'SMBs with 50–500 employees, in finance, healthcare, or tech — highest pain, fastest purchase decisions' },
+    { step: 2, action: 'Use CYBERDUDEBIVASH demo', detail: 'Run a free scan on their domain at cyberdudebivash.in. Show them their risk score. Close the conversation in 20 minutes.' },
+    { step: 3, action: 'Onboard via MSSP portal', detail: 'Create client account in your portal, assign their domain, provision access. Automated from there.' },
+  ].map(s => `<div style="background:#1f2937;border-radius:8px;padding:16px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="min-width:32px;height:32px;background:#1b6ca8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;line-height:32px;text-align:center">${s.step}</div>
+      <div>
+        <div style="font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:4px">${s.action}</div>
+        <p style="margin:0;color:#94a3b8;font-size:13px">${s.detail}</p>
+      </div>
+    </div>
+  </div>`).join('')}
+  <p style="color:#6b7280;font-size:13px;margin-top:20px">Need help with a client pitch? Reply to this email — I'll send you a sales deck. — Bivash</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Onboard your first 3 clients in 48 hours:\n1. Identify SMBs in finance/healthcare/tech\n2. Run a free scan on their domain to demonstrate value\n3. Onboard via MSSP portal\n\nNeed a sales deck? Reply to this email. — Bivash` };
+}
+
+function templateMsspDay7(lead, meta = {}) {
+  const subject = '📈 Upgrade Your MSSP Tier — Unlock More Seats + Higher Margin';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+<tr><td style="background:linear-gradient(135deg,#0f4c75,#1b6ca8);padding:28px 40px;text-align:center">
+  <div style="font-size:24px;font-weight:800;color:#fff">📈 Scale Your MSSP Business</div>
+</td></tr>
+<tr><td style="padding:36px 40px">
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Partners who upgrade to <strong style="color:#f1f5f9">SILVER tier</strong> within their first 30 days add an average of 8 new clients in their second month.</p>
+  <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+    <div style="font-size:13px;color:#38bdf8;font-weight:600;margin-bottom:12px">SILVER TIER UNLOCKS</div>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ 25 client seats (vs 10)</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ 25% margin (vs 20%)</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Co-branded marketing materials</p>
+    <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Partner success manager</p>
+  </div>
+  <div style="text-align:center;margin:28px 0">
+    <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27d%20like%20to%20upgrade%20my%20MSSP%20tier" style="display:inline-block;background:linear-gradient(135deg,#0f4c75,#1b6ca8);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Upgrade to SILVER →</a>
+    <p style="margin:12px 0 0;color:#6b7280;font-size:13px">WhatsApp Bivash directly to discuss tier options</p>
+  </div>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `Upgrade to SILVER MSSP tier — 25 client seats + 25% margin.\nWhatsApp Bivash: https://wa.me/918179881447` };
+}
+
+// ─── Template dispatcher for all sequences ────────────────────────────────────
+function getSequenceTemplate(sequenceId, step, lead, meta) {
+  switch (sequenceId) {
+    case 'subscription_activated':
+      if (step === 0) return templateSubscriptionDay0(lead, meta);
+      if (step === 1) return templateSubscriptionDay2(lead, meta);
+      if (step === 2) return templateSubscriptionDay5(lead, meta);
+      return null;
+
+    case 'assessment_delivered':
+      if (step === 0) return templateAssessmentDay0(lead, meta);
+      if (step === 1) return templateAssessmentDay3(lead, meta);
+      if (step === 2) return templateAssessmentDay7(lead, meta);
+      return null;
+
+    case 'enterprise_nurture':
+      if (step === 0) return templateEnterpriseDay0(lead, meta);
+      if (step === 1) return templateEnterpriseDay1(lead, meta);
+      if (step === 2) return templateEnterpriseDay3(lead, meta);
+      if (step === 3) return templateEnterpriseDay5(lead, meta);
+      if (step === 4) return templateEnterpriseDay7(lead, meta);
+      return null;
+
+    case 'mssp_onboarded':
+      if (step === 0) return templateMsspDay0(lead, meta);
+      if (step === 1) return templateMsspDay3(lead, meta);
+      if (step === 2) return templateMsspDay7(lead, meta);
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SEQUENCE MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -534,15 +1003,23 @@ export async function runDripAutomation(env) {
     const meta       = JSON.parse(row.meta || '{}');
     const scanData   = meta.scanData || {};
 
-    // Build template
+    // Build template — dispatch by sequence_id, then step
     let template;
     try {
-      switch (step) {
-        case 0:  template = templateDay0(lead, scanData); break;
-        case 1:  template = templateDay1(lead, scanData); break;
-        case 2:  template = templateDay2(lead); break;
-        case 3:  template = templateDay3(lead, scanData); break;
-        default: await advanceSequence(env, row.id, step + 1, 0); continue;
+      const seqId = row.sequence_id || 'welcome';
+      if (seqId === 'welcome' || seqId === 'enterprise' || seqId === 'trial_expiry') {
+        // Legacy welcome/enterprise drip (original 4-day sequence)
+        switch (step) {
+          case 0:  template = templateDay0(lead, scanData); break;
+          case 1:  template = templateDay1(lead, scanData); break;
+          case 2:  template = templateDay2(lead); break;
+          case 3:  template = templateDay3(lead, scanData); break;
+          default: await advanceSequence(env, row.id, step + 1, 0); continue;
+        }
+      } else {
+        // Phase 4 post-purchase sequences
+        template = getSequenceTemplate(seqId, step, lead, meta);
+        if (!template) { await advanceSequence(env, row.id, step + 1, 0); continue; }
       }
     } catch {
       results.skipped++;
@@ -567,9 +1044,19 @@ export async function runDripAutomation(env) {
       results.errors++;
     }
 
-    // Advance sequence (next step is step+1, delay depends on step)
-    const DELAYS = [0, 1, 1, 1]; // Day 0 → Day 1 → Day 2 → Day 3
-    const delay = DELAYS[step] ?? 1;
+    // Advance sequence — delay depends on sequence type and step
+    const DELAY_MAP = {
+      welcome:                [0, 1, 1, 1],
+      enterprise:             [0, 1, 2, 2, 2],
+      trial_expiry:           [0, 1],
+      subscription_activated: [0, 2, 3],
+      assessment_delivered:   [0, 3, 4],
+      enterprise_nurture:     [0, 1, 2, 2, 2],
+      mssp_onboarded:         [0, 3, 4],
+    };
+    const seqId = row.sequence_id || 'welcome';
+    const delays = DELAY_MAP[seqId] || [0, 1, 1, 1];
+    const delay = delays[step] ?? 1;
     await advanceSequence(env, row.id, step + 1, delay);
   }
 
