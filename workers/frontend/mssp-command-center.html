@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>MSSP Partner Command Center | CYBERDUDEBIVASH AI Security Hub</title>
+<meta name="description" content="Internal MSSP Partner Command Center — tracking MSSP partnerships, white-label deployments, partner revenue, and API usage.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://cyberdudebivash.in/mssp-command-center">
+
+<style>
+:root{
+  --bg:#060614;--surface:#0c0c24;--surface2:#10102a;
+  --border:#1a1a3e;--border2:#252550;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;
+  --warn:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#0d0d28;--radius:12px;
+  --gold:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── TICKER ── */
+.ticker-bar{background:linear-gradient(90deg,#0a0a1e,#080820);border-bottom:1px solid rgba(124,58,237,.15);padding:8px 0;overflow:hidden}
+.ticker-inner{display:flex;gap:48px;animation:ticker 30s linear infinite;white-space:nowrap;will-change:transform}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item{font-size:11px;font-weight:700;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.ticker-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.td-red{background:#ef4444}.td-orange{background:#f59e0b}.td-green{background:#10b981}.td-blue{background:#00d4ff}.td-purple{background:#7c3aed}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:300;background:rgba(6,6,20,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 24px}
+.nav-inner{max-width:1400px;width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.nav-logo{font-size:13px;font-weight:900;color:var(--accent);letter-spacing:.04em;white-space:nowrap}
+.nav-logo span{color:var(--text-muted)}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-links a{color:var(--text-muted);font-size:12px;font-weight:600;padding:6px 12px;border-radius:7px;transition:all .2s;white-space:nowrap}
+.nav-links a:hover{color:var(--accent);background:rgba(0,212,255,.06);text-decoration:none}
+.nav-links a.active{color:var(--accent);background:rgba(0,212,255,.08)}
+@media(max-width:900px){.nav-links .hide-mob{display:none}}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(180deg,#07060f 0%,#0a091a 60%,#060612 100%);border-bottom:1px solid var(--border);padding:56px 24px 44px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,58,237,.08) 0%,transparent 65%)}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 40% 40% at 75% 50%,rgba(0,212,255,.05) 0%,transparent 60%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);color:#a78bfa;font-size:11px;font-weight:800;letter-spacing:.12em;padding:5px 16px;border-radius:20px;margin-bottom:20px;text-transform:uppercase;position:relative;z-index:1}
+.hero-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);animation:ld 2s infinite;flex-shrink:0}
+@keyframes ld{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(124,58,237,0)}}
+.hero h1{font-size:clamp(28px,4.5vw,48px);font-weight:900;color:#fff;line-height:1.08;margin-bottom:14px;position:relative;z-index:1}
+.hero h1 .grad{background:linear-gradient(135deg,var(--accent2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:16px;color:var(--text-muted);max-width:620px;margin:0 auto;position:relative;z-index:1;line-height:1.6}
+
+/* ── LAYOUT ── */
+.page{max-width:1360px;margin:0 auto;padding:0 24px}
+.section{padding:48px 0}
+.section-sm{padding:32px 0}
+.section-header{margin-bottom:32px}
+.section-header.flex{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.section-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:12px}
+.tag-purple{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa}
+.tag-blue{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--accent)}
+.tag-green{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:var(--accent3)}
+.tag-gold{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--gold)}
+.tag-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--danger)}
+.section-title{font-size:clamp(20px,3vw,28px);font-weight:900;color:#fff;margin-bottom:8px;line-height:1.15}
+.section-sub{font-size:14px;color:var(--text-muted);line-height:1.6}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:0}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 16px;position:relative;overflow:hidden;transition:border-color .25s}
+.kpi-card:hover{border-color:rgba(124,58,237,.25)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kpi-color,var(--accent2));opacity:.6}
+.kpi-label{font-size:9px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.kpi-value{font-size:26px;font-weight:900;color:var(--text);line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:10px;color:var(--text-dim)}
+
+/* ── PARTNER TABLE ── */
+.data-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.table-title{font-size:13px;font-weight:800;color:#fff}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
+.data-table th{padding:11px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.015)}
+.data-table td{padding:11px 14px;border-bottom:1px solid rgba(26,26,62,.5);color:var(--text-muted);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,.015)}
+.table-scroll{overflow-x:auto}
+.table-empty{padding:48px;text-align:center;color:var(--text-dim);font-size:12px}
+.tier-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
+.tier-reseller{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2)}
+.tier-whitelabel{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25)}
+.tier-oem{background:rgba(245,158,11,.1);color:var(--gold);border:1px solid rgba(245,158,11,.2)}
+.status-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
+.s-active{background:rgba(16,185,129,.12);color:var(--accent3);border:1px solid rgba(16,185,129,.25)}
+.s-inactive{background:rgba(100,116,139,.1);color:var(--text-dim);border:1px solid rgba(100,116,139,.2)}
+.s-setup{background:rgba(245,158,11,.1);color:var(--gold);border:1px solid rgba(245,158,11,.2)}
+.action-link{font-size:11px;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;font-family:inherit;font-weight:700;transition:color .2s}
+.action-link:hover{color:#7de8ff}
+
+/* ── WHITE LABEL STATUS BOARD ── */
+.wl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:800px){.wl-grid{grid-template-columns:1fr}}
+.wl-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;position:relative;overflow:hidden;transition:all .25s}
+.wl-card:hover{border-color:rgba(124,58,237,.25);transform:translateY(-2px)}
+.wl-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--wl-color,var(--accent2))}
+.wl-icon{font-size:28px;margin-bottom:12px;display:block}
+.wl-name{font-size:14px;font-weight:800;color:#fff;margin-bottom:12px}
+.wl-status-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.wl-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ws-active{background:var(--accent3)}
+.ws-setup{background:var(--gold)}
+.ws-available{background:var(--text-dim)}
+.wl-status-text{font-size:12px;font-weight:700}
+.wl-desc{font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.5}
+
+/* ── API USAGE TABLE ── */
+.usage-bar-wrap{display:inline-flex;align-items:center;gap:8px;min-width:120px}
+.usage-bar-bg{height:6px;width:80px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;flex-shrink:0}
+.usage-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.usage-pct{font-size:10px;font-weight:800;white-space:nowrap}
+
+/* ── MSSP REVENUE TREND (CSS BAR CHART) ── */
+.bar-chart{display:flex;align-items:flex-end;gap:10px;height:180px;padding:0 0 0 0}
+.bar-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px}
+.bc-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:16px}
+.chart-area{display:flex;align-items:flex-end;gap:8px;height:160px;border-bottom:1px solid var(--border);padding-bottom:0}
+.chart-col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.chart-bar{width:100%;background:linear-gradient(180deg,var(--accent2),rgba(124,58,237,.4));border-radius:4px 4px 0 0;min-height:2px;transition:height .8s ease;position:relative}
+.chart-bar:hover::after{content:attr(data-val);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;white-space:nowrap;pointer-events:none}
+.chart-month{font-size:9px;font-weight:700;color:var(--text-dim);text-align:center;margin-top:6px}
+.chart-val{font-size:9px;font-weight:800;color:var(--accent2)}
+
+/* ── EXPANSION OPPORTUNITIES ── */
+.exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:800px){.exp-grid{grid-template-columns:1fr}}
+.exp-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden}
+.exp-card.upgrade{border-color:rgba(16,185,129,.2)}
+.exp-card.upsell{border-color:rgba(245,158,11,.2)}
+.exp-card.churn{border-color:rgba(239,68,68,.2)}
+.exp-count{font-size:40px;font-weight:900;line-height:1;margin-bottom:8px}
+.exp-label{font-size:13px;font-weight:800;color:#fff;margin-bottom:6px}
+.exp-desc{font-size:11px;color:var(--text-muted);line-height:1.5}
+.exp-cta{margin-top:14px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:0;font-family:inherit;transition:color .2s}
+.exp-cta:hover{color:#7de8ff}
+
+/* ── ONBOARDING CHECKLIST ── */
+.checklist{display:flex;flex-direction:column;gap:12px}
+.check-item{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;transition:border-color .2s}
+.check-item.done{border-color:rgba(16,185,129,.2)}
+.check-item.pending{border-color:rgba(100,116,139,.15);opacity:.7}
+.check-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0}
+.ci-done{background:rgba(16,185,129,.15);color:var(--accent3);border:1px solid rgba(16,185,129,.25)}
+.ci-pending{background:rgba(100,116,139,.1);color:var(--text-dim);border:1px solid rgba(100,116,139,.2)}
+.check-text{font-size:13px;font-weight:600}
+.check-text.done-text{color:#fff}
+.check-text.pending-text{color:var(--text-muted)}
+.check-badge{margin-left:auto;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px}
+.cb-done{background:rgba(16,185,129,.1);color:var(--accent3);border:1px solid rgba(16,185,129,.2)}
+.cb-pending{background:rgba(100,116,139,.08);color:var(--text-dim);border:1px solid rgba(100,116,139,.15)}
+
+/* ── PRICING REFERENCE ── */
+.pricing-ref-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:800px){.pricing-ref-grid{grid-template-columns:1fr}}
+.price-ref-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;position:relative;overflow:hidden}
+.price-ref-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--pr-color,var(--accent))}
+.pr-icon{font-size:26px;margin-bottom:10px;display:block}
+.pr-tier{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--text-dim);margin-bottom:6px}
+.pr-name{font-size:16px;font-weight:900;color:#fff;margin-bottom:4px}
+.pr-price{font-size:26px;font-weight:900;color:var(--text);margin-bottom:12px;line-height:1}
+.pr-price span{font-size:13px;font-weight:600;color:var(--text-muted)}
+.pr-features{display:flex;flex-direction:column;gap:7px}
+.pr-feat{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:var(--text-muted);line-height:1.4}
+.pr-feat-icon{color:var(--accent3);flex-shrink:0;margin-top:1px}
+.pr-internal-note{margin-top:14px;padding:10px 12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:8px;font-size:11px;color:var(--gold);line-height:1.5}
+
+/* ── QUICK ACTIONS ── */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:800px){.qa-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.qa-grid{grid-template-columns:1fr}}
+.qa-btn{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s;text-align:left;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit}
+.qa-btn:hover{border-color:var(--accent2);background:rgba(124,58,237,.04);text-decoration:none;transform:translateY(-2px)}
+.qa-icon{font-size:22px}
+.qa-title{font-size:13px;font-weight:800;color:#fff}
+.qa-sub{font-size:11px;color:var(--text-dim)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.modal-title{font-size:16px;font-weight:800;color:#fff}
+.modal-close{background:transparent;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:4px;transition:color .2s}
+.modal-close:hover{color:#fff}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.form-input,.form-select,.form-textarea{background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 14px;font-size:13px;font-family:inherit;transition:border-color .2s;outline:none;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(124,58,237,.4)}
+.form-select option{background:var(--surface)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.form-row{grid-template-columns:1fr}}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* ── OWNER GATE MODAL ── */
+.gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-box{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;padding:36px;width:100%;max-width:420px;text-align:center}
+.gate-icon{font-size:40px;margin-bottom:16px;display:block}
+.gate-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:8px}
+.gate-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.5}
+.gate-input{background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:12px 16px;font-size:14px;font-family:inherit;outline:none;width:100%;margin-bottom:12px;text-align:center;letter-spacing:.1em}
+.gate-input:focus{border-color:rgba(124,58,237,.4)}
+.gate-err{font-size:12px;color:var(--danger);margin-bottom:12px;min-height:18px}
+
+/* ── BTNS ── */
+.btn{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;padding:11px 22px;border-radius:9px;border:none;cursor:pointer;transition:all .2s;text-decoration:none;white-space:nowrap}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#0099bb);color:#001018}
+.btn-primary:hover{box-shadow:0 6px 24px rgba(0,212,255,.3);color:#001018}
+.btn-purple{background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff}
+.btn-purple:hover{box-shadow:0 6px 24px rgba(124,58,237,.3);color:#fff}
+.btn-green{background:linear-gradient(135deg,#059669,var(--accent3));color:#fff}
+.btn-green:hover{box-shadow:0 6px 24px rgba(16,185,129,.3);color:#fff}
+.btn-ghost{background:rgba(255,255,255,.04);color:var(--text-muted);border:1px solid var(--border2)}
+.btn-ghost:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.btn-sm{padding:8px 16px;font-size:12px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--accent3);color:var(--text);font-size:13px;font-weight:700;padding:12px 20px;border-radius:10px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1}
+.toast.error{border-color:var(--danger)}
+
+/* ── FOOTER ── */
+footer{background:var(--surface);border-top:1px solid var(--border);padding:32px 24px;text-align:center}
+.footer-inner{max-width:900px;margin:0 auto}
+.footer-logo{font-size:14px;font-weight:900;color:var(--accent);margin-bottom:10px}
+.footer-links{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:14px}
+.footer-links a{font-size:11px;color:var(--text-dim);transition:color .2s}
+.footer-links a:hover{color:var(--accent);text-decoration:none}
+.footer-legal{font-size:11px;color:var(--text-dim);line-height:1.7}
+
+/* ── MISC ── */
+.empty-state{padding:48px;text-align:center}
+.empty-state-icon{font-size:36px;margin-bottom:14px}
+.empty-state-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:8px}
+.empty-state-sub{font-size:12px;color:var(--text-muted);margin-bottom:18px}
+</style>
+</head>
+<body>
+
+<!-- Owner Gate Modal -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-box">
+    <span class="gate-icon">🔒</span>
+    <div class="gate-title">Partner Ops — Restricted</div>
+    <p class="gate-sub">MSSP Command Center is an internal-only dashboard. Enter the owner password to continue.</p>
+    <input type="password" class="gate-input" id="gateInput" placeholder="••••••••••••••••••" autocomplete="current-password">
+    <div class="gate-err" id="gateErr"></div>
+    <button class="btn btn-purple" style="width:100%;justify-content:center" onclick="checkGate()">Unlock Dashboard</button>
+  </div>
+</div>
+
+<!-- Ticker -->
+<div class="ticker-bar" role="marquee" aria-label="MSSP partner ops alerts">
+  <div class="ticker-inner">
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>MSSP PARTNER OPS — INTERNAL ONLY</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>Reseller · White Label · OEM/Embedded partnerships</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>Track MSSP MRR · API Usage · Partner Onboarding</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>CONFIDENTIAL — CYBERDUDEBIVASH® Partner Intelligence</span>
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>White Label: &#x20b9;9,999/mo · Reseller: 30% margin · OEM: Custom</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>CYBERDUDEBIVASH® AI Security Hub — MSSP Command Center</span>
+    <!-- duplicate -->
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>MSSP PARTNER OPS — INTERNAL ONLY</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>Reseller · White Label · OEM/Embedded partnerships</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>Track MSSP MRR · API Usage · Partner Onboarding</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>CONFIDENTIAL — CYBERDUDEBIVASH® Partner Intelligence</span>
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>White Label: &#x20b9;9,999/mo · Reseller: 30% margin · OEM: Custom</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>CYBERDUDEBIVASH® AI Security Hub — MSSP Command Center</span>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="nav" role="navigation">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">⚔️ CYBERDUDEBIVASH® <span>AI SECURITY HUB</span></a>
+    <div class="nav-links">
+      <a href="/" class="hide-mob">Hub</a>
+      <a href="/ciso-hub" class="hide-mob">CISO Hub</a>
+      <a href="/admin-payments.html" class="hide-mob">Payments</a>
+      <a href="/revenue-command-center.html" class="hide-mob">Revenue</a>
+      <a href="/mssp-command-center.html" class="active">MSSP Center</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-dot"></span>
+    INTERNAL &middot; PARTNER OPS
+  </div>
+  <h1>MSSP Partner <span class="grad">Command Center</span></h1>
+  <p class="hero-sub">Track MSSP partnerships, white-label deployments, partner revenue, and API usage — all in one internal dashboard.</p>
+</section>
+
+<div class="page">
+
+  <!-- KPI Row -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-purple">PARTNER METRICS</div>
+      <h2 class="section-title">MSSP KPIs</h2>
+      <p class="section-sub">Live metrics from the partner API. Shows 0 if no data — no fabricated figures.</p>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card" style="--kpi-color:var(--accent2)">
+        <div class="kpi-label">Total MSSP Partners</div>
+        <div class="kpi-value" id="kpiTotalPartners">0</div>
+        <div class="kpi-sub">All tiers</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--accent3)">
+        <div class="kpi-label">Active MSSP Clients</div>
+        <div class="kpi-value" id="kpiActiveClients">0</div>
+        <div class="kpi-sub">Under management</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--gold)">
+        <div class="kpi-label">MSSP MRR</div>
+        <div class="kpi-value" id="kpiMSSPMRR">&#x20b9;0</div>
+        <div class="kpi-sub">Monthly recurring</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--accent)">
+        <div class="kpi-label">White Label Deploy.</div>
+        <div class="kpi-value" id="kpiWLDeploy">0</div>
+        <div class="kpi-sub">Active deployments</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--warn)">
+        <div class="kpi-label">Partner Pipeline</div>
+        <div class="kpi-value" id="kpiPartnerPipeline">&#x20b9;0</div>
+        <div class="kpi-sub">All pipeline stages</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Partner List -->
+  <div class="section">
+    <div class="section-header flex">
+      <div>
+        <div class="section-tag tag-blue">PARTNER DIRECTORY</div>
+        <h2 class="section-title">Partner List</h2>
+        <p class="section-sub">All active and prospective MSSP partners.</p>
+      </div>
+      <button class="btn btn-purple" onclick="openPartnerModal()">+ Add Partner</button>
+    </div>
+    <div class="data-table-wrap">
+      <div class="table-scroll" id="partnerTableWrap">
+        <div class="table-empty">Loading partners...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- White Label Status Board -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-purple">WHITE LABEL</div>
+      <h2 class="section-title">White Label Status Board</h2>
+      <p class="section-sub">Current deployment and configuration status for white-label offerings.</p>
+    </div>
+    <div class="wl-grid" id="wlStatusBoard">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- API Usage by Partner -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-blue">API USAGE</div>
+      <h2 class="section-title">API Usage by Partner</h2>
+      <p class="section-sub">Monthly API call consumption vs plan limits.</p>
+    </div>
+    <div class="data-table-wrap">
+      <div class="table-scroll" id="usageTableWrap">
+        <div class="table-empty">Loading API usage data...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MSSP Revenue Trend -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-gold">REVENUE TREND</div>
+      <h2 class="section-title">MSSP Revenue Trend</h2>
+      <p class="section-sub">6-month rolling MSSP revenue. Shows &#x20b9;0 bars if no data available.</p>
+    </div>
+    <div class="bar-chart-wrap">
+      <div class="bc-label">Monthly MSSP Revenue (Last 6 Months)</div>
+      <div class="chart-area" id="revTrendChart">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Expansion Opportunities -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-green">GROWTH</div>
+      <h2 class="section-title">Expansion Opportunities</h2>
+      <p class="section-sub">Automated signals for partner growth, upsell, and churn risk.</p>
+    </div>
+    <div class="exp-grid" id="expOppGrid">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MSSP Onboarding Checklist -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-purple">ONBOARDING</div>
+      <h2 class="section-title">MSSP Onboarding Checklist</h2>
+      <p class="section-sub">Standard onboarding flow for new MSSP partners. Track progress per partner.</p>
+    </div>
+    <div class="checklist">
+      <div class="check-item done">
+        <div class="check-icon ci-done">&#x2714;</div>
+        <span class="check-text done-text">NDA Signed</span>
+        <span class="check-badge cb-done">Completed</span>
+      </div>
+      <div class="check-item done">
+        <div class="check-icon ci-done">&#x2714;</div>
+        <span class="check-text done-text">API Keys Issued</span>
+        <span class="check-badge cb-done">Completed</span>
+      </div>
+      <div class="check-item done">
+        <div class="check-icon ci-done">&#x2714;</div>
+        <span class="check-text done-text">White Label Config</span>
+        <span class="check-badge cb-done">Completed</span>
+      </div>
+      <div class="check-item pending">
+        <div class="check-icon ci-pending">&#x25cb;</div>
+        <span class="check-text pending-text">First Client Onboarded</span>
+        <span class="check-badge cb-pending">Pending</span>
+      </div>
+      <div class="check-item pending">
+        <div class="check-icon ci-pending">&#x25cb;</div>
+        <span class="check-text pending-text">Revenue Share Agreement</span>
+        <span class="check-badge cb-pending">Pending</span>
+      </div>
+      <div class="check-item pending">
+        <div class="check-icon ci-pending">&#x25cb;</div>
+        <span class="check-text pending-text">QBR Scheduled</span>
+        <span class="check-badge cb-pending">Pending</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MSSP Pricing Reference -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-gold">INTERNAL PRICING</div>
+      <h2 class="section-title">MSSP Pricing Reference</h2>
+      <p class="section-sub">Internal-only reference. Do not share externally without authorization.</p>
+    </div>
+    <div class="pricing-ref-grid">
+      <div class="price-ref-card" style="--pr-color:var(--accent)">
+        <span class="pr-icon">🤝</span>
+        <div class="pr-tier">Reseller</div>
+        <div class="pr-name">Reseller Partner</div>
+        <div class="pr-price">30%<span> margin on all sales</span></div>
+        <div class="pr-features">
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Sell CYBERDUDEBIVASH products to your clients</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> 30% commission on every sale</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Co-branded sales materials</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Partner portal access</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Dedicated partner Slack channel</div>
+        </div>
+        <div class="pr-internal-note">&#x26a0;&#xfe0f; Internal: Minimum 2 deals/quarter to maintain active status</div>
+      </div>
+      <div class="price-ref-card" style="--pr-color:var(--accent2)">
+        <span class="pr-icon">&#x1f3f7;&#xfe0f;</span>
+        <div class="pr-tier">White Label</div>
+        <div class="pr-name">White Label Partner</div>
+        <div class="pr-price">&#x20b9;9,999<span>/mo base + usage</span></div>
+        <div class="pr-features">
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Full white-label branding</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Custom domain & portal</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> API access with rate limits</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Usage-based billing above base</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Priority support SLA</div>
+        </div>
+        <div class="pr-internal-note">&#x26a0;&#xfe0f; Internal: Usage billing = &#x20b9;0.50/API call over 10,000/mo</div>
+      </div>
+      <div class="price-ref-card" style="--pr-color:var(--gold)">
+        <span class="pr-icon">&#x2699;&#xfe0f;</span>
+        <div class="pr-tier">OEM / Embedded</div>
+        <div class="pr-name">OEM Partner</div>
+        <div class="pr-price">Custom<span> pricing</span></div>
+        <div class="pr-features">
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Embed in your product</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Custom integration support</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Volume-based pricing tiers</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> Dedicated technical account mgr</div>
+          <div class="pr-feat"><span class="pr-feat-icon">&#x2713;</span> SLA guarantees in contract</div>
+        </div>
+        <div class="pr-internal-note">&#x26a0;&#xfe0f; Internal: Contact founder directly. Minimum &#x20b9;1,00,000/year contract.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Quick Actions -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag tag-blue">QUICK ACTIONS</div>
+      <h2 class="section-title">Owner Quick Actions</h2>
+    </div>
+    <div class="qa-grid">
+      <div class="qa-btn" onclick="openPartnerModal()">
+        <span class="qa-icon">🤝</span>
+        <div class="qa-title">Add Partner</div>
+        <div class="qa-sub">Register new MSSP partner</div>
+      </div>
+      <a href="/proposal-generator.html" class="qa-btn">
+        <span class="qa-icon">📄</span>
+        <div class="qa-title">Generate MSSP Proposal</div>
+        <div class="qa-sub">Open proposal generator</div>
+      </a>
+      <div class="qa-btn" onclick="scrollToUsage()">
+        <span class="qa-icon">&#x1f4ca;</span>
+        <div class="qa-title">View API Usage</div>
+        <div class="qa-sub">Partner consumption stats</div>
+      </div>
+      <div class="qa-btn" onclick="exportPartnerCSV()">
+        <span class="qa-icon">&#x1f4e5;</span>
+        <div class="qa-title">Export Partner Report</div>
+        <div class="qa-sub">Download partners as CSV</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- Add Partner Modal -->
+<div class="modal-overlay" id="partnerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add MSSP Partner</div>
+      <button class="modal-close" onclick="closePartnerModal()">&times;</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Company Name *</label>
+        <input type="text" class="form-input" id="pCompany" placeholder="Partner Corp Ltd">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact Person *</label>
+        <input type="text" class="form-input" id="pContact" placeholder="Jane Doe">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Partner Tier *</label>
+        <select class="form-select" id="pTier">
+          <option value="Reseller">Reseller</option>
+          <option value="White Label">White Label</option>
+          <option value="OEM">OEM / Embedded</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contract Value (&#x20b9;/yr)</label>
+        <input type="number" class="form-input" id="pContractValue" placeholder="99999" min="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Contact Email</label>
+      <input type="email" class="form-input" id="pEmail" placeholder="partner@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-textarea" id="pNotes" placeholder="Partnership context, special terms, key contacts..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closePartnerModal()">Cancel</button>
+      <button class="btn btn-purple btn-sm" onclick="submitPartner()">Add Partner</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">⚔️ CYBERDUDEBIVASH® AI SECURITY HUB</div>
+    <div class="footer-links">
+      <a href="/">Hub</a>
+      <a href="/ciso-hub">CISO Hub</a>
+      <a href="/revenue-command-center.html">Revenue Center</a>
+      <a href="/admin-payments.html">Payments</a>
+      <a href="/privacy-policy.html">Privacy</a>
+      <a href="/terms-of-service.html">Terms</a>
+    </div>
+    <div class="footer-legal">
+      &copy; 2024&ndash;2025 CYBERDUDEBIVASH&reg; AI Security Hub. All rights reserved.<br>
+      INTERNAL DOCUMENT &mdash; PARTNER OPS CONFIDENTIAL &mdash; NOT FOR EXTERNAL DISTRIBUTION<br>
+      Owner-only dashboard. Unauthorized access is prohibited.
+    </div>
+  </div>
+</footer>
+
+<script>
+const API_BASE = 'https://cyberdudebivash.in';
+
+// ── OWNER GATE ──────────────────────────────────────────────────────────────
+(function() {
+  const GATE_PASS = 'cyberdudebivash2024admin';
+  const overlay = document.getElementById('gateOverlay');
+  if (localStorage.getItem('cdb_owner') === 'true') {
+    overlay.style.display = 'none';
+    return;
+  }
+  overlay.style.display = 'flex';
+  document.getElementById('gateInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkGate();
+  });
+  window.checkGate = function() {
+    const val = document.getElementById('gateInput').value;
+    const err = document.getElementById('gateErr');
+    if (val === GATE_PASS) {
+      localStorage.setItem('cdb_owner', 'true');
+      overlay.style.display = 'none';
+      loadAll();
+    } else {
+      err.textContent = 'Incorrect password. Try again.';
+      document.getElementById('gateInput').value = '';
+      document.getElementById('gateInput').focus();
+    }
+  };
+})();
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+function fmtINR(val) {
+  const n = Number(val) || 0;
+  if (n >= 1e7) return '₹' + (n/1e7).toFixed(1) + 'Cr';
+  if (n >= 1e5) return '₹' + (n/1e5).toFixed(1) + 'L';
+  if (n >= 1e3) return '₹' + (n/1e3).toFixed(1) + 'K';
+  return '₹' + n.toLocaleString('en-IN');
+}
+function fmtINRFull(val) {
+  const n = Number(val) || 0;
+  return '₹' + n.toLocaleString('en-IN');
+}
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+async function apiFetch(path) {
+  const r = await fetch(API_BASE + path, {
+    headers: { 'X-Owner-Key': localStorage.getItem('cdb_owner') || '' }
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── LOAD ALL ─────────────────────────────────────────────────────────────────
+function loadAll() {
+  loadMsspMetrics();
+  loadPartners();
+  loadWLStatus();
+  loadApiUsage();
+  loadRevTrend();
+  loadExpOpps();
+}
+if (localStorage.getItem('cdb_owner') === 'true') loadAll();
+
+// ── 1. MSSP KPI METRICS ──────────────────────────────────────────────────────
+async function loadMsspMetrics() {
+  try {
+    const d = await apiFetch('/api/mssp/metrics');
+    document.getElementById('kpiTotalPartners').textContent = Number(d.total_partners) || 0;
+    document.getElementById('kpiActiveClients').textContent = Number(d.active_clients) || 0;
+    document.getElementById('kpiMSSPMRR').textContent = fmtINR(d.mssp_mrr);
+    document.getElementById('kpiWLDeploy').textContent = Number(d.wl_deployments) || 0;
+    document.getElementById('kpiPartnerPipeline').textContent = fmtINR(d.pipeline_value);
+  } catch(e) {
+    document.getElementById('kpiTotalPartners').textContent = '0';
+    document.getElementById('kpiActiveClients').textContent = '0';
+    document.getElementById('kpiMSSPMRR').textContent = '₹0';
+    document.getElementById('kpiWLDeploy').textContent = '0';
+    document.getElementById('kpiPartnerPipeline').textContent = '₹0';
+  }
+}
+
+// ── 2. PARTNER LIST ───────────────────────────────────────────────────────────
+let partnerData = [];
+
+async function loadPartners() {
+  const wrap = document.getElementById('partnerTableWrap');
+  try {
+    const data = await apiFetch('/api/mssp/partners');
+    partnerData = Array.isArray(data) ? data : [];
+    if (partnerData.length === 0) {
+      wrap.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🤝</div>
+          <div class="empty-state-title">No Partners Yet</div>
+          <p class="empty-state-sub">Add your first MSSP partner to begin tracking partnerships.</p>
+          <button class="btn btn-purple btn-sm" onclick="openPartnerModal()">+ Add First Partner</button>
+        </div>
+      `;
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="data-table" id="partnerTable">
+        <thead><tr>
+          <th>Partner Name</th>
+          <th>Tier</th>
+          <th>Clients Under Mgmt</th>
+          <th>Monthly Revenue</th>
+          <th>API Usage</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${partnerData.map(p => `
+            <tr>
+              <td style="font-weight:700;color:#fff">${esc(p.company||'—')}</td>
+              <td><span class="tier-badge ${tierClass(p.tier)}">${esc(p.tier||'—')}</span></td>
+              <td style="font-weight:700;color:var(--accent)">${Number(p.clients_count)||0}</td>
+              <td style="font-weight:700;color:var(--accent3)">${fmtINRFull(p.monthly_revenue)}</td>
+              <td>${Number(p.api_calls||0).toLocaleString()} calls</td>
+              <td><span class="status-badge ${partnerStatusClass(p.status)}">${esc(p.status||'—')}</span></td>
+              <td>
+                <button class="action-link" onclick="viewPartner('${esc(p.id||p.company||'')}')">View</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    wrap.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🤝</div>
+        <div class="empty-state-title">No Partners Yet</div>
+        <p class="empty-state-sub">Add your first MSSP partner to begin tracking partnerships.</p>
+        <button class="btn btn-purple btn-sm" onclick="openPartnerModal()">+ Add First Partner</button>
+      </div>
+    `;
+  }
+}
+
+function tierClass(t) {
+  t = (t||'').toLowerCase();
+  if (t === 'white label' || t === 'whitelabel') return 'tier-whitelabel';
+  if (t === 'oem' || t === 'embedded') return 'tier-oem';
+  return 'tier-reseller';
+}
+function partnerStatusClass(s) {
+  s = (s||'').toLowerCase();
+  if (s === 'active') return 's-active';
+  if (s === 'setup' || s === 'in setup' || s === 'onboarding') return 's-setup';
+  return 's-inactive';
+}
+function viewPartner(id) {
+  showToast('Partner detail view coming soon.');
+}
+
+function openPartnerModal() {
+  ['pCompany','pContact','pEmail','pNotes'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('pContractValue').value = '';
+  document.getElementById('pTier').value = 'Reseller';
+  document.getElementById('partnerModal').classList.add('open');
+}
+function closePartnerModal() {
+  document.getElementById('partnerModal').classList.remove('open');
+}
+async function submitPartner() {
+  const company = document.getElementById('pCompany').value.trim();
+  const contact = document.getElementById('pContact').value.trim();
+  const tier = document.getElementById('pTier').value;
+  const contract_value = document.getElementById('pContractValue').value;
+  const email = document.getElementById('pEmail').value.trim();
+  const notes = document.getElementById('pNotes').value.trim();
+  if (!company || !contact) {
+    showToast('Company name and contact are required.', 'error');
+    return;
+  }
+  try {
+    const r = await fetch(API_BASE + '/api/mssp/partners', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Owner-Key': 'true' },
+      body: JSON.stringify({ company, contact, tier, contract_value: Number(contract_value)||0, email, notes })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    closePartnerModal();
+    showToast('Partner added successfully!');
+    loadPartners();
+    loadMsspMetrics();
+  } catch(e) {
+    showToast('Failed to save partner. Please try again.', 'error');
+  }
+}
+
+// ── 3. WHITE LABEL STATUS BOARD ───────────────────────────────────────────────
+async function loadWLStatus() {
+  const board = document.getElementById('wlStatusBoard');
+  let wlData = {};
+  try {
+    wlData = await apiFetch('/api/mssp/wl-status');
+  } catch(e) {}
+
+  const cards = [
+    {
+      key: 'api_status',
+      icon: '🛰️',
+      name: 'White Label API Status',
+      desc: 'Partner-facing API endpoint availability and authentication',
+      color: 'var(--accent)',
+      default: 'Available'
+    },
+    {
+      key: 'portal_status',
+      icon: '🖥️',
+      name: 'Branded Portal Status',
+      desc: 'White-label partner portal — branding, config, and client access',
+      color: 'var(--accent2)',
+      default: 'Available'
+    },
+    {
+      key: 'domain_status',
+      icon: '🌐',
+      name: 'Custom Domain Status',
+      desc: 'Custom domain mapping and SSL certificate provisioning',
+      color: 'var(--accent3)',
+      default: 'Available'
+    }
+  ];
+
+  board.innerHTML = cards.map(c => {
+    const rawStatus = (wlData[c.key] || c.default || 'Available');
+    const sl = rawStatus.toLowerCase();
+    const dotClass = sl.includes('active') ? 'ws-active' : sl.includes('setup') ? 'ws-setup' : 'ws-available';
+    const statusColor = sl.includes('active') ? 'var(--accent3)' : sl.includes('setup') ? 'var(--gold)' : 'var(--text-muted)';
+    return `
+      <div class="wl-card" style="--wl-color:${c.color}">
+        <span class="wl-icon">${c.icon}</span>
+        <div class="wl-name">${c.name}</div>
+        <div class="wl-status-row">
+          <span class="wl-status-dot ${dotClass}"></span>
+          <span class="wl-status-text" style="color:${statusColor}">${esc(rawStatus)}</span>
+        </div>
+        <div class="wl-desc">${c.desc}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── 4. API USAGE BY PARTNER ───────────────────────────────────────────────────
+async function loadApiUsage() {
+  const wrap = document.getElementById('usageTableWrap');
+  try {
+    const data = await apiFetch('/api/mssp/usage');
+    const rows = Array.isArray(data) ? data : [];
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="table-empty">No API usage data available. Partners will appear here once they begin using the API.</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="data-table" id="usageTable">
+        <thead><tr>
+          <th>Partner</th>
+          <th>API Calls (This Month)</th>
+          <th>Plan Limit</th>
+          <th>Usage</th>
+          <th>Status</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(u => {
+            const calls = Number(u.calls) || 0;
+            const limit = Number(u.limit) || 0;
+            const pct = limit > 0 ? Math.min(100, Math.round((calls/limit)*100)) : 0;
+            const barColor = pct >= 90 ? 'var(--danger)' : pct >= 80 ? 'var(--warn)' : 'var(--accent3)';
+            const usageStatus = pct >= 90 ? 's-failed' : pct >= 80 ? 's-pending' : 's-active';
+            const usageLabel = pct >= 90 ? 'Critical' : pct >= 80 ? 'High Usage' : 'Normal';
+            return `
+              <tr>
+                <td style="font-weight:700;color:#fff">${esc(u.partner||'—')}</td>
+                <td style="font-weight:700">${calls.toLocaleString()}</td>
+                <td>${limit > 0 ? limit.toLocaleString() : 'Unlimited'}</td>
+                <td>
+                  <div class="usage-bar-wrap">
+                    <div class="usage-bar-bg">
+                      <div class="usage-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+                    </div>
+                    <span class="usage-pct" style="color:${barColor}">${pct}%</span>
+                  </div>
+                </td>
+                <td><span class="status-badge ${usageStatus}">${usageLabel}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    wrap.innerHTML = '<div class="table-empty">Unable to load API usage data. API unavailable.</div>';
+  }
+}
+
+// ── 5. MSSP REVENUE TREND ─────────────────────────────────────────────────────
+async function loadRevTrend() {
+  const chart = document.getElementById('revTrendChart');
+  let months = [];
+  let values = [];
+  try {
+    const d = await apiFetch('/api/mssp/revenue-trend');
+    if (Array.isArray(d) && d.length > 0) {
+      months = d.map(r => r.month || '');
+      values = d.map(r => Number(r.revenue) || 0);
+    }
+  } catch(e) {}
+
+  // If no data, show 6 empty bars with placeholder month labels
+  if (months.length === 0) {
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toLocaleString('default', { month: 'short' }));
+      values.push(0);
+    }
+  }
+
+  const maxVal = Math.max(...values, 1);
+  chart.innerHTML = months.map((m, i) => {
+    const v = values[i] || 0;
+    const heightPct = Math.round((v / maxVal) * 100);
+    return `
+      <div class="chart-col">
+        <div class="chart-bar" style="height:${Math.max(heightPct, 1)}%;background:linear-gradient(180deg,var(--accent2),rgba(124,58,237,.3))" data-val="${fmtINRFull(v)}"></div>
+        <div class="chart-val">${fmtINR(v)}</div>
+        <div class="chart-month">${esc(m)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── 6. EXPANSION OPPORTUNITIES ────────────────────────────────────────────────
+async function loadExpOpps() {
+  const grid = document.getElementById('expOppGrid');
+  let data = { tier_upgrade: 0, api_limit: 0, inactive: 0 };
+  try {
+    const d = await apiFetch('/api/mssp/expansion-opps');
+    data = Object.assign(data, d || {});
+  } catch(e) {}
+
+  grid.innerHTML = `
+    <div class="exp-card upgrade">
+      <div class="exp-count" style="color:var(--accent3)">${Number(data.tier_upgrade)||0}</div>
+      <div class="exp-label">Partners Eligible for Tier Upgrade</div>
+      <p class="exp-desc">Partners who meet criteria to move from Reseller to White Label or White Label to OEM based on deal volume.</p>
+      <button class="exp-cta" onclick="showToast('Reviewing upgrade criteria...')">Review eligibility &rarr;</button>
+    </div>
+    <div class="exp-card upsell">
+      <div class="exp-count" style="color:var(--gold)">${Number(data.api_limit)||0}</div>
+      <div class="exp-label">Partners at 80%+ API Limit</div>
+      <p class="exp-desc">Upsell opportunity — these partners are approaching their plan limits and are candidates for an API plan upgrade.</p>
+      <button class="exp-cta" onclick="scrollToUsage()">View API usage &rarr;</button>
+    </div>
+    <div class="exp-card churn">
+      <div class="exp-count" style="color:var(--danger)">${Number(data.inactive)||0}</div>
+      <div class="exp-label">Partners with No Activity &gt;30 Days</div>
+      <p class="exp-desc">Churn risk — these partners have not made any API calls or recorded any client activity in the last 30 days.</p>
+      <button class="exp-cta" onclick="showToast('Preparing re-engagement list...')">Re-engage &rarr;</button>
+    </div>
+  `;
+}
+
+// ── EXPORT ───────────────────────────────────────────────────────────────────
+function exportPartnerCSV() {
+  if (!partnerData || partnerData.length === 0) {
+    showToast('No partner data to export.', 'error');
+    return;
+  }
+  const headers = ['Company','Contact','Tier','Clients Under Mgmt','Monthly Revenue (INR)','API Calls','Status'];
+  const rows = partnerData.map(p => [
+    p.company||'', p.contact||'', p.tier||'',
+    p.clients_count||0, p.monthly_revenue||0, p.api_calls||0, p.status||''
+  ]);
+  const csv = [headers,...rows].map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mssp-partners-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Partner report exported!');
+}
+
+function scrollToUsage() {
+  document.getElementById('usageTableWrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Close modal on overlay click
+document.getElementById('partnerModal').addEventListener('click', function(e) {
+  if (e.target === this) closePartnerModal();
+});
+</script>
+</body>
+</html>

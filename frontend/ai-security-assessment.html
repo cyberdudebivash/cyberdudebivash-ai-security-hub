@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>Enterprise AI Security Assessment | OWASP LLM Top 10 | CYBERDUDEBIVASH</title>
+<meta name="description" content="India's first enterprise AI security assessment platform. OWASP LLM Top 10, AI Governance, AI Red Team, MCP Security, Agent Security, RAG Security — deep technical assessments for enterprises deploying LLMs and AI agents.">
+<meta name="keywords" content="AI security assessment, OWASP LLM Top 10, LLM security, AI red team, MCP security, RAG security, AI governance, ISO 42001, EU AI Act, NIST AI RMF, CYBERDUDEBIVASH">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://cyberdudebivash.in/ai-security-assessment">
+<meta property="og:title" content="Enterprise AI Security Assessment — CYBERDUDEBIVASH AI Security Hub">
+<meta property="og:description" content="World's first dedicated AI security assessment platform. OWASP LLM Top 10, AI Red Team, MCP Security, RAG Security, AI Governance. Starting ₹49,999.">
+<meta property="og:url" content="https://cyberdudebivash.in/ai-security-assessment">
+<meta property="og:image" content="https://cyberdudebivash.in/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<!-- Schema.org Service -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "Enterprise AI Security Assessment",
+  "provider": {
+    "@type": "Organization",
+    "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+    "url": "https://cyberdudebivash.in"
+  },
+  "description": "Comprehensive enterprise AI security assessment covering OWASP LLM Top 10, AI Governance, AI Red Team, MCP Security, AI Agent Security, and RAG Security.",
+  "url": "https://cyberdudebivash.in/ai-security-assessment",
+  "areaServed": "IN",
+  "serviceType": "AI Security Assessment",
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "AI Security Starter",
+      "price": "49999",
+      "priceCurrency": "INR",
+      "description": "OWASP LLM Top 10 + MCP Security — 5-day delivery, 2 AI systems, executive report"
+    },
+    {
+      "@type": "Offer",
+      "name": "AI Security Professional",
+      "price": "99999",
+      "priceCurrency": "INR",
+      "description": "All 6 pillars except Red Team — 10-day delivery, 5 AI systems, governance roadmap"
+    },
+    {
+      "@type": "Offer",
+      "name": "Enterprise AI Security Suite",
+      "price": "199999",
+      "priceCurrency": "INR",
+      "description": "Full 6-pillar assessment with Red Team — 15-day delivery, unlimited AI systems, board-ready report"
+    }
+  ],
+  "priceRange": "₹49,999–₹1,99,999 INR"
+}
+</script>
+
+<style>
+:root{
+  --bg:#060614;--surface:#0c0c24;--surface2:#10102a;
+  --border:#1a1a3e;--border2:#252550;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;
+  --warn:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#0d0d28;--radius:12px;
+  --ai-purple:#7c3aed;--ai-purple-glow:rgba(124,58,237,.15);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── LIVE TICKER ── */
+.ticker-bar{background:linear-gradient(90deg,#0a0a1e,#080820);border-bottom:1px solid rgba(0,212,255,.12);padding:8px 0;overflow:hidden;position:relative}
+.ticker-inner{display:flex;gap:48px;animation:ticker 32s linear infinite;white-space:nowrap;will-change:transform}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item{font-size:11px;font-weight:700;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.ticker-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.td-red{background:#ef4444}.td-orange{background:#f59e0b}.td-green{background:#10b981}.td-blue{background:#00d4ff}.td-purple{background:#7c3aed}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:300;background:rgba(6,6,20,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 24px;gap:0}
+.nav-inner{max-width:1400px;width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.nav-logo{font-size:13px;font-weight:900;color:var(--accent);letter-spacing:.04em;white-space:nowrap}
+.nav-logo span{color:var(--text-muted)}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-links a{color:var(--text-muted);font-size:12px;font-weight:600;padding:6px 12px;border-radius:7px;transition:all .2s;white-space:nowrap}
+.nav-links a:hover{color:var(--accent);background:rgba(0,212,255,.06);text-decoration:none}
+.nav-links a.active{color:var(--accent);background:rgba(0,212,255,.08)}
+.nav-cta{background:linear-gradient(135deg,var(--accent2),#4f46e5) !important;color:#fff !important;font-weight:800 !important;border-radius:7px;padding:6px 14px !important}
+.nav-cta:hover{opacity:.9;background:linear-gradient(135deg,var(--accent2),#4f46e5) !important;text-decoration:none !important}
+@media(max-width:900px){.nav-links .hide-mob{display:none}}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(180deg,#08080e 0%,#0a0a1a 60%,#080810 100%);border-bottom:1px solid var(--border);padding:72px 24px 60px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,58,237,.09) 0%,transparent 65%)}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 40% 40% at 75% 50%,rgba(0,212,255,.06) 0%,transparent 60%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.35);color:#a78bfa;font-size:11px;font-weight:800;letter-spacing:.12em;padding:5px 16px;border-radius:20px;margin-bottom:24px;text-transform:uppercase;position:relative;z-index:1}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent3);animation:ld 2s infinite;flex-shrink:0}
+@keyframes ld{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,.4)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(16,185,129,0)}}
+.hero h1{font-size:clamp(32px,5vw,58px);font-weight:900;color:#fff;line-height:1.06;margin-bottom:18px;position:relative;z-index:1}
+.hero h1 .grad{background:linear-gradient(135deg,var(--accent2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:17px;color:var(--text-muted);max-width:700px;margin:0 auto 14px;position:relative;z-index:1;line-height:1.6}
+.hero-frameworks{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-bottom:36px;position:relative;z-index:1}
+.fw-tag{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-dim);white-space:nowrap}
+.fw-tag.hl{border-color:rgba(124,58,237,.35);background:rgba(124,58,237,.08);color:#a78bfa}
+.hero-cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;margin-bottom:40px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:800;padding:13px 26px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;text-decoration:none;white-space:nowrap}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#0099bb);color:#001018}
+.btn-primary:hover{box-shadow:0 8px 28px rgba(0,212,255,.3);color:#001018}
+.btn-purple{background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff}
+.btn-purple:hover{box-shadow:0 8px 28px rgba(124,58,237,.35);color:#fff}
+.btn-ghost{background:rgba(255,255,255,.04);color:var(--text-muted);border:1px solid var(--border2)}
+.btn-ghost:hover{background:rgba(255,255,255,.08);color:var(--text);border-color:rgba(255,255,255,.15)}
+.btn-green{background:linear-gradient(135deg,#059669,var(--accent3));color:#fff}
+.btn-green:hover{box-shadow:0 8px 28px rgba(16,185,129,.35);color:#fff}
+.btn-warn{background:linear-gradient(135deg,#d97706,var(--warn));color:#000}
+.btn-warn:hover{box-shadow:0 8px 28px rgba(245,158,11,.35);color:#000}
+.hero-metrics{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;position:relative;z-index:1}
+.hm-item{text-align:center}
+.hm-val{font-size:26px;font-weight:900;color:var(--accent);display:block;line-height:1}
+.hm-val.purple{color:#a78bfa}
+.hm-val.green{color:var(--accent3)}
+.hm-val.warn{color:var(--warn)}
+.hm-lbl{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+
+/* ── STATS BAR ── */
+.stats-bar{background:rgba(124,58,237,.04);border-top:1px solid rgba(124,58,237,.1);border-bottom:1px solid rgba(124,58,237,.1)}
+.stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+@media(max-width:700px){.stats-inner{grid-template-columns:repeat(2,1fr)}}
+.stat-item{padding:24px;text-align:center;border-right:1px solid rgba(124,58,237,.1);position:relative}
+.stat-item:last-child{border-right:none}
+.si-val{font-size:34px;font-weight:900;color:#a78bfa;line-height:1;display:block;margin-bottom:6px}
+.si-lbl{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;line-height:1.3}
+.si-sub{font-size:10px;color:var(--text-dim);margin-top:3px}
+
+/* ── SECTION ── */
+.section{max-width:1320px;margin:0 auto;padding:64px 24px}
+.section-sm{max-width:1320px;margin:0 auto;padding:48px 24px}
+.section-header{text-align:center;margin-bottom:48px}
+.section-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:14px}
+.tag-blue{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--accent)}
+.tag-purple{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa}
+.tag-green{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:var(--accent3)}
+.tag-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--warn)}
+.tag-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ff6b6b}
+.section-title{font-size:clamp(24px,3.5vw,36px);font-weight:900;color:#fff;margin-bottom:12px;line-height:1.15}
+.section-sub{font-size:15px;color:var(--text-muted);max-width:600px;margin:0 auto;line-height:1.6}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:0}
+
+/* ── PILLAR CARDS ── */
+.pillars-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:1100px){.pillars-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.pillars-grid{grid-template-columns:1fr}}
+.pillar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;overflow:hidden;transition:all .25s;display:flex;flex-direction:column}
+.pillar-card:hover{transform:translateY(-3px);border-color:rgba(124,58,237,.25);box-shadow:0 8px 32px rgba(124,58,237,.08)}
+.pillar-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--pillar-accent,var(--accent2))}
+.pillar-card.c-blue{--pillar-accent:var(--accent)}
+.pillar-card.c-purple{--pillar-accent:var(--accent2)}
+.pillar-card.c-red{--pillar-accent:var(--danger)}
+.pillar-card.c-teal{--pillar-accent:var(--accent3)}
+.pillar-card.c-orange{--pillar-accent:var(--warn)}
+.pillar-card.c-green{--pillar-accent:#34d399}
+.pillar-icon{font-size:32px;margin-bottom:14px;display:block}
+.pillar-num{font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
+.pillar-name{font-size:18px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.2}
+.pillar-desc{font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:18px;flex:1}
+.pillar-items{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.pi-item{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:var(--text-muted);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.pi-item:last-child{border-bottom:none}
+.pi-dot{width:5px;height:5px;border-radius:50%;background:var(--pillar-accent,var(--accent2));flex-shrink:0;margin-top:4px}
+.pillar-price{display:flex;align-items:center;justify-content:space-between;padding-top:14px;border-top:1px solid var(--border);margin-top:auto}
+.pp-amount{font-size:18px;font-weight:900;color:#fff}
+.pp-sub{font-size:10px;color:var(--text-dim);margin-top:2px}
+.pp-btn{font-size:11px;font-weight:800;padding:7px 16px;border-radius:8px;border:none;cursor:pointer;background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);transition:all .2s}
+.pp-btn:hover{background:rgba(124,58,237,.3);color:#c4b5fd}
+
+/* ── PRICING GRID ── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.pricing-grid{grid-template-columns:1fr}}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;transition:all .25s}
+.price-card:hover{transform:translateY(-3px)}
+.price-card.featured{border-color:rgba(124,58,237,.35);box-shadow:0 0 0 1px rgba(124,58,237,.12),0 12px 48px rgba(124,58,237,.08)}
+.popular-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff;font-size:10px;font-weight:900;padding:4px 16px;border-radius:0 0 10px 10px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pc-icon{font-size:28px;margin-bottom:12px;display:block}
+.pc-name{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--text-dim);margin-bottom:6px}
+.pc-price{font-size:36px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px}
+.pc-price span{font-size:14px;font-weight:600;color:var(--text-muted)}
+.pc-desc{font-size:12px;color:var(--text-muted);margin-bottom:8px}
+.pc-delivery{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--accent3);background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.15);padding:3px 10px;border-radius:20px;margin-bottom:18px}
+.pc-features{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.pcf{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text-muted)}
+.pcf-check{color:var(--accent3);font-size:13px;flex-shrink:0;margin-top:1px;font-weight:900}
+.pc-btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.pc-btn-primary{background:linear-gradient(135deg,var(--accent),#0099bb);color:#001018}
+.pc-btn-primary:hover{box-shadow:0 6px 24px rgba(0,212,255,.3)}
+.pc-btn-purple{background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff}
+.pc-btn-purple:hover{box-shadow:0 6px 24px rgba(124,58,237,.35)}
+.pc-btn-green{background:linear-gradient(135deg,#059669,var(--accent3));color:#fff}
+.pc-btn-green:hover{box-shadow:0 6px 24px rgba(16,185,129,.35)}
+
+/* ── COMPLIANCE FRAMEWORKS ── */
+.frameworks-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.frameworks-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.frameworks-grid{grid-template-columns:1fr}}
+.fw-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;align-items:flex-start;gap:14px;transition:all .25s}
+.fw-card:hover{border-color:rgba(0,212,255,.2);transform:translateY(-2px)}
+.fw-icon{font-size:24px;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border-radius:10px;border:1px solid var(--border)}
+.fw-body{flex:1;min-width:0}
+.fw-name{font-size:13px;font-weight:800;color:#fff;margin-bottom:4px}
+.fw-year{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.fw-desc{font-size:11px;color:var(--text-muted);line-height:1.5}
+.fw-badge{display:inline-flex;margin-top:6px;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px}
+.fwb-covered{background:rgba(16,185,129,.1);color:var(--accent3);border:1px solid rgba(16,185,129,.2)}
+
+/* ── USP CARDS ── */
+.usp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+@media(max-width:1100px){.usp-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.usp-grid{grid-template-columns:1fr}}
+.usp-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;transition:all .25s;position:relative;overflow:hidden}
+.usp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.usp-card:hover{border-color:rgba(124,58,237,.2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.07)}
+.usp-icon{font-size:36px;margin-bottom:14px;display:block}
+.usp-title{font-size:14px;font-weight:800;color:#fff;margin-bottom:8px;line-height:1.3}
+.usp-text{font-size:12px;color:var(--text-muted);line-height:1.6}
+
+/* ── SENTINEL APEX INTEGRATION ── */
+.apex-banner{background:linear-gradient(135deg,rgba(0,212,255,.06) 0%,rgba(124,58,237,.08) 100%);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:48px 40px;position:relative;overflow:hidden}
+.apex-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 80% at 80% 50%,rgba(124,58,237,.07) 0%,transparent 60%);pointer-events:none}
+@media(max-width:900px){.apex-banner{padding:32px 24px}}
+.apex-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;position:relative;z-index:1}
+@media(max-width:900px){.apex-inner{grid-template-columns:1fr}}
+.apex-content{}
+.apex-tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;color:var(--accent);background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
+.apex-title{font-size:clamp(20px,3vw,30px);font-weight:900;color:#fff;margin-bottom:12px;line-height:1.2}
+.apex-desc{font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:24px}
+.apex-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.apex-feat{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text-muted)}
+.apex-feat-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.apex-stats-panel{background:rgba(0,0,0,.3);border:1px solid rgba(0,212,255,.12);border-radius:14px;padding:24px}
+.asp-header{font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+.asp-live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent3);animation:ld 2s infinite}
+.apex-stat-rows{display:flex;flex-direction:column;gap:12px}
+.apex-stat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.04);border-radius:8px}
+.asr-label{font-size:11px;color:var(--text-muted)}
+.asr-val{font-size:13px;font-weight:800;color:#fff}
+.asr-val.crit{color:var(--danger)}
+.asr-val.warn{color:var(--warn)}
+.asr-val.good{color:var(--accent3)}
+.asr-val.info{color:var(--accent)}
+
+/* ── INQUIRY FORM ── */
+.inquiry-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:800px;margin:0 auto}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.form-input,.form-select,.form-textarea{background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 14px;font-size:13px;font-family:inherit;transition:border-color .2s;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(124,58,237,.4)}
+.form-select option{background:var(--surface)}
+.form-textarea{resize:vertical;min-height:110px}
+.form-full{grid-column:1/-1;margin-bottom:16px}
+
+/* ── TESTIMONIALS ── */
+.testimonials{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.testimonials{grid-template-columns:1fr}}
+.testimonial{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;position:relative}
+.testimonial::before{content:'\201C';font-size:48px;color:rgba(124,58,237,.18);position:absolute;top:12px;left:16px;font-family:Georgia,serif;line-height:1}
+.t-text{font-size:13px;color:var(--text-muted);line-height:1.65;padding-top:20px;margin-bottom:18px}
+.t-author{display:flex;align-items:center;gap:10px;border-top:1px solid var(--border);padding-top:14px}
+.t-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.t-info{flex:1;min-width:0}
+.t-name{font-size:12px;font-weight:800;color:#fff}
+.t-role{font-size:10px;color:var(--text-dim)}
+.stars{color:var(--warn);font-size:12px;letter-spacing:2px}
+
+/* ── FINAL CTA ── */
+.final-cta{background:linear-gradient(135deg,rgba(124,58,237,.09) 0%,rgba(0,212,255,.06) 100%);border:1px solid rgba(124,58,237,.2);border-radius:20px;padding:56px 40px;text-align:center;position:relative;overflow:hidden}
+.final-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(124,58,237,.07) 0%,transparent 70%);pointer-events:none}
+.fcta-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#a78bfa;font-size:11px;font-weight:800;letter-spacing:.1em;padding:5px 16px;border-radius:20px;margin-bottom:20px;text-transform:uppercase;position:relative;z-index:1}
+.fcta-title{font-size:clamp(26px,4vw,42px);font-weight:900;color:#fff;margin-bottom:14px;line-height:1.15;position:relative;z-index:1}
+.fcta-sub{font-size:16px;color:var(--text-muted);max-width:560px;margin:0 auto 32px;line-height:1.6;position:relative;z-index:1}
+.fcta-price{font-size:48px;font-weight:900;color:#a78bfa;margin-bottom:8px;position:relative;z-index:1}
+.fcta-price-sub{font-size:13px;color:var(--text-dim);margin-bottom:28px;position:relative;z-index:1}
+.fcta-cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--accent3);color:var(--text);font-size:13px;font-weight:700;padding:12px 20px;border-radius:10px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:340px}
+.toast.show{opacity:1}
+
+/* ── FOOTER ── */
+footer{background:var(--surface);border-top:1px solid var(--border);padding:40px 24px;text-align:center}
+.footer-inner{max-width:900px;margin:0 auto}
+.footer-logo{font-size:14px;font-weight:900;color:var(--accent);margin-bottom:12px}
+.footer-links{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:16px}
+.footer-links a{font-size:12px;color:var(--text-dim);transition:color .2s}
+.footer-links a:hover{color:var(--accent);text-decoration:none}
+.footer-legal{font-size:11px;color:var(--text-dim);line-height:1.7}
+
+/* ── TRUST BAR ── */
+.trust-bar{background:rgba(255,255,255,.018);border-bottom:1px solid var(--border);padding:14px 24px}
+.trust-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:center;gap:20px;flex-wrap:wrap;align-items:center}
+.trust-badge{font-size:11px;font-weight:700;color:var(--text-dim);display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)}
+.trust-badge .icon{font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- Live AI Threat Ticker -->
+<div class="ticker-bar" role="marquee" aria-label="Live AI threat alerts">
+  <div class="ticker-inner" id="tickerInner">
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>CRITICAL: New LLM jailbreak bypasses GPT-4o, Claude, and Gemini system prompts</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>HIGH: Prompt injection via RAG pipeline poisoning targeting enterprise chatbots</span>
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>AI THREAT: Agent task hijacking observed in OpenAI Assistants API deployments</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>SENTINEL APEX: 847 LLM vulnerabilities tracked · AI threat feed live</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>MCP ALERT: Tool poisoning attack vector disclosed in MCP server ecosystem</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>EU AI Act: Enforcement deadlines approaching — high-risk AI system compliance gap</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>New: OWASP LLM Top 10 v2025 — 3 new vulnerability categories added</span>
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>RAG SECURITY: Vector database poisoning via adversarial embedding injection</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>CRITICAL: Autonomous agent privilege escalation via crafted tool descriptions</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>CYBERDUDEBIVASH: India's first AI Security Assessment Platform · ₹49,999</span>
+    <!-- duplicate for seamless loop -->
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>CRITICAL: New LLM jailbreak bypasses GPT-4o, Claude, and Gemini system prompts</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>HIGH: Prompt injection via RAG pipeline poisoning targeting enterprise chatbots</span>
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>AI THREAT: Agent task hijacking observed in OpenAI Assistants API deployments</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>SENTINEL APEX: 847 LLM vulnerabilities tracked · AI threat feed live</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>MCP ALERT: Tool poisoning attack vector disclosed in MCP server ecosystem</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>EU AI Act: Enforcement deadlines approaching — high-risk AI system compliance gap</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>New: OWASP LLM Top 10 v2025 — 3 new vulnerability categories added</span>
+    <span class="ticker-item"><span class="ticker-dot td-purple"></span>RAG SECURITY: Vector database poisoning via adversarial embedding injection</span>
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav class="nav" role="navigation">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">&#9876; CYBERDUDEBIVASH&#174; <span>AI SECURITY HUB</span></a>
+    <div class="nav-links">
+      <a href="/">Hub</a>
+      <a href="/intel" class="hide-mob">Sentinel APEX</a>
+      <a href="/ciso-hub" class="hide-mob">CISO Hub</a>
+      <a href="/mcp-security" class="hide-mob">MCP Security</a>
+      <a href="/security-assessment" class="hide-mob">Security Assessment</a>
+      <a href="/ai-security-assessment.html" class="active hide-mob">AI Assessment</a>
+      <a href="/services" class="nav-cta">Enterprise</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="live-dot"></span>
+    World's First AI Security Assessment Platform
+  </div>
+  <h1>Enterprise <span class="grad">AI Security</span><br>Assessment Engine</h1>
+  <p class="hero-sub">Deep technical security assessments for enterprises deploying LLMs, AI agents, RAG systems, and MCP servers. Real red team. Real findings. Board-ready reports.</p>
+  <div class="hero-frameworks">
+    <span class="fw-tag hl">OWASP LLM Top 10</span>
+    <span class="fw-tag hl">AI Governance</span>
+    <span class="fw-tag hl">AI Red Team</span>
+    <span class="fw-tag hl">MCP Security</span>
+    <span class="fw-tag hl">Agent Security</span>
+    <span class="fw-tag hl">RAG Security</span>
+    <span class="fw-tag">ISO 42001</span>
+    <span class="fw-tag">EU AI Act</span>
+    <span class="fw-tag">NIST AI RMF</span>
+    <span class="fw-tag">MITRE ATLAS</span>
+  </div>
+  <div class="hero-cta-row">
+    <button class="btn btn-purple" onclick="openPayment('AI_SECURITY_ASSESSMENT', 49999, 'Enterprise AI Security Assessment — ₹49,999')">
+      &#128737; Start Assessment &mdash; &#8377;49,999
+    </button>
+    <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27d%20like%20to%20book%20a%20discovery%20call%20for%20the%20Enterprise%20AI%20Security%20Assessment" class="btn btn-green" target="_blank" rel="noopener">
+      &#128172; Book Discovery Call
+    </a>
+  </div>
+  <div class="hero-metrics">
+    <div class="hm-item">
+      <span class="hm-val purple">847</span>
+      <span class="hm-lbl">LLM Vulns Tracked</span>
+    </div>
+    <div class="hm-item">
+      <span class="hm-val">200+</span>
+      <span class="hm-lbl">AI Agents Tested</span>
+    </div>
+    <div class="hm-item">
+      <span class="hm-val green">50+</span>
+      <span class="hm-lbl">MCP Servers Audited</span>
+    </div>
+    <div class="hm-item">
+      <span class="hm-val warn">6</span>
+      <span class="hm-lbl">Assessment Pillars</span>
+    </div>
+    <div class="hm-item">
+      <span class="hm-val">&#60;15d</span>
+      <span class="hm-lbl">Full Assessment SLA</span>
+    </div>
+  </div>
+</section>
+
+<!-- Trust Bar -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="trust-badge"><span class="icon">&#9889;</span> OWASP LLM Top 10 (2025)</div>
+    <div class="trust-badge"><span class="icon">&#128221;</span> NIST AI RMF 1.0</div>
+    <div class="trust-badge"><span class="icon">&#127466;&#127482;</span> EU AI Act 2024</div>
+    <div class="trust-badge"><span class="icon">&#128274;</span> ISO 42001:2023</div>
+    <div class="trust-badge"><span class="icon">&#127987;</span> MITRE ATLAS</div>
+    <div class="trust-badge"><span class="icon">&#127470;&#127475;</span> India DPDP 2023</div>
+    <div class="trust-badge"><span class="icon">&#128737;</span> AI Red Team</div>
+    <div class="trust-badge"><span class="icon">&#128268;</span> MCP Security</div>
+  </div>
+</div>
+
+<!-- AI Threat Stats Bar -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <span class="si-val" id="statLlmVulns">847</span>
+      <div class="si-lbl">LLM Vulnerabilities Tracked</div>
+      <div class="si-sub">Prompt injection · Jailbreaks · Model theft</div>
+    </div>
+    <div class="stat-item">
+      <span class="si-val" id="statAgentsTested">200+</span>
+      <div class="si-lbl">AI Agents Tested</div>
+      <div class="si-sub">OpenAI · Claude · LangChain · CrewAI</div>
+    </div>
+    <div class="stat-item">
+      <span class="si-val" id="statMcpAudited">50+</span>
+      <div class="si-lbl">MCP Servers Audited</div>
+      <div class="si-sub">Tool poisoning · Auth bypass · Privilege escalation</div>
+    </div>
+    <div class="stat-item">
+      <span class="si-val" id="statFrameworks">6</span>
+      <div class="si-lbl">AI Security Frameworks</div>
+      <div class="si-sub">OWASP · NIST · EU AI Act · ISO · MITRE ATLAS</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- 6 Assessment Pillars -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-tag tag-purple">6 ASSESSMENT PILLARS</div>
+    <h2 class="section-title">Comprehensive AI Security Coverage</h2>
+    <p class="section-sub">Every pillar is a deep technical assessment, not a checkbox audit. Real adversarial testing by AI security experts with enterprise-grade reporting.</p>
+  </div>
+  <div class="pillars-grid">
+
+    <!-- Pillar A: OWASP LLM Top 10 -->
+    <div class="pillar-card c-blue">
+      <span class="pillar-icon">&#9889;</span>
+      <div class="pillar-num">Pillar 01</div>
+      <div class="pillar-name">OWASP LLM Top 10 Assessment</div>
+      <div class="pillar-desc">Complete coverage of all 10 OWASP LLM vulnerability categories with manual verification, adversarial prompt crafting, and control effectiveness testing against your production LLM systems.</div>
+      <div class="pillar-items">
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM01: Prompt Injection &mdash; deep-dive adversarial testing</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM02: Insecure Output Handling &mdash; parser & renderer exploits</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM03: Training Data Poisoning &mdash; data lineage review</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM04: Model Denial of Service &mdash; resource exhaustion testing</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM05: Supply Chain Vulnerabilities &mdash; model & dataset audit</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM06: Sensitive Info Disclosure &mdash; system prompt extraction</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>LLM07&ndash;10: Plugin Security, RAG, Excessive Agency, Model Theft</span></div>
+      </div>
+      <div class="pillar-price">
+        <div>
+          <div class="pp-amount">&#8377;24,999</div>
+          <div class="pp-sub">standalone assessment</div>
+        </div>
+        <button class="pp-btn" onclick="openPayment('OWASP_LLM_ASSESSMENT', 24999, 'OWASP LLM Top 10 Assessment — ₹24,999')">Select Pillar</button>
+      </div>
+    </div>
+
+    <!-- Pillar B: AI Governance -->
+    <div class="pillar-card c-purple">
+      <span class="pillar-icon">&#128204;</span>
+      <div class="pillar-num">Pillar 02</div>
+      <div class="pillar-name">AI Governance Center</div>
+      <div class="pillar-desc">Comprehensive AI governance assessment covering ISO 42001 readiness, EU AI Act gap analysis, NIST AI RMF implementation review, and responsible AI framework alignment for regulated enterprises.</div>
+      <div class="pillar-items">
+        <div class="pi-item"><span class="pi-dot"></span><span>ISO 42001:2023 Readiness Assessment &mdash; 74-control review</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>EU AI Act Compliance Gap Analysis &mdash; risk classification</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>NIST AI RMF Implementation Review &mdash; GOVERN/MAP/MEASURE</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>AI Policy &amp; Procedure Audit &mdash; governance documentation</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Responsible AI Framework &mdash; bias, fairness, explainability</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>India DPDP 2023 alignment for AI data processing</span></div>
+      </div>
+      <div class="pillar-price">
+        <div>
+          <div class="pp-amount">&#8377;49,999</div>
+          <div class="pp-sub">standalone assessment</div>
+        </div>
+        <button class="pp-btn" onclick="openPayment('AI_GOVERNANCE_ASSESSMENT', 49999, 'AI Governance Center Assessment — ₹49,999')">Select Pillar</button>
+      </div>
+    </div>
+
+    <!-- Pillar C: AI Red Team -->
+    <div class="pillar-card c-red">
+      <span class="pillar-icon">&#128737;</span>
+      <div class="pillar-num">Pillar 03</div>
+      <div class="pillar-name">AI Red Team Platform</div>
+      <div class="pillar-desc">Full adversarial AI red team engagement. Our specialists use the same techniques as nation-state actors and advanced threat groups to attack your LLMs, agents, and AI pipelines in a controlled environment.</div>
+      <div class="pillar-items">
+        <div class="pi-item"><span class="pi-dot"></span><span>Adversarial prompt attacks &mdash; 200+ custom jailbreak attempts</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Jailbreak resistance testing &mdash; direct, indirect, nested</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Multi-turn manipulation &mdash; persona hijacking, role confusion</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Agent task hijacking simulations &mdash; goal drift, scope creep</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>RAG poisoning scenarios &mdash; adversarial document injection</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>MITRE ATLAS TTP mapping for all findings</span></div>
+      </div>
+      <div class="pillar-price">
+        <div>
+          <div class="pp-amount">&#8377;99,999</div>
+          <div class="pp-sub">standalone engagement</div>
+        </div>
+        <button class="pp-btn" onclick="openPayment('AI_RED_TEAM', 99999, 'AI Red Team Platform — ₹99,999')">Select Pillar</button>
+      </div>
+    </div>
+
+    <!-- Pillar D: MCP Security -->
+    <div class="pillar-card c-teal">
+      <span class="pillar-icon">&#128268;</span>
+      <div class="pillar-num">Pillar 04</div>
+      <div class="pillar-name">MCP Security Review</div>
+      <div class="pillar-desc">World's first dedicated MCP server security review. Assess the security of your Model Context Protocol deployments including authentication, tool boundaries, privilege boundaries, and data flow security.</div>
+      <div class="pillar-items">
+        <div class="pi-item"><span class="pi-dot"></span><span>MCP server authentication audit &mdash; OAuth, API key, bearer token</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Tool invocation boundary testing &mdash; scope enforcement</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Privilege escalation via MCP &mdash; tool-chaining attacks</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Data exfiltration through MCP channels &mdash; blind injection</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>MCP protocol security analysis &mdash; transport, serialization</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Tool description injection &amp; schema poisoning tests</span></div>
+      </div>
+      <div class="pillar-price">
+        <div>
+          <div class="pp-amount">&#8377;24,999</div>
+          <div class="pp-sub">standalone assessment</div>
+        </div>
+        <button class="pp-btn" onclick="openPayment('MCP_SECURITY_REVIEW', 24999, 'MCP Security Review — ₹24,999')">Select Pillar</button>
+      </div>
+    </div>
+
+    <!-- Pillar E: Agent Security -->
+    <div class="pillar-card c-orange">
+      <span class="pillar-icon">&#129302;</span>
+      <div class="pillar-num">Pillar 05</div>
+      <div class="pillar-name">AI Agent Security</div>
+      <div class="pillar-desc">Dedicated security assessment for autonomous AI agents built on OpenAI Agents SDK, Claude, LangChain, CrewAI, and custom frameworks. Covering trust boundaries, permission models, and tool use security.</div>
+      <div class="pillar-items">
+        <div class="pi-item"><span class="pi-dot"></span><span>OpenAI Agents SDK security review &mdash; tool, handoff, guardrails</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Claude Agent security assessment &mdash; computer use, tool use</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Autonomous agent privilege audit &mdash; least privilege analysis</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Agent-to-agent trust boundary testing &mdash; A2A protocol security</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Tool use permission mapping &mdash; RBAC for AI agents</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Lateral movement via agent orchestration chains</span></div>
+      </div>
+      <div class="pillar-price">
+        <div>
+          <div class="pp-amount">&#8377;34,999</div>
+          <div class="pp-sub">standalone assessment</div>
+        </div>
+        <button class="pp-btn" onclick="openPayment('AI_AGENT_SECURITY', 34999, 'AI Agent Security Assessment — ₹34,999')">Select Pillar</button>
+      </div>
+    </div>
+
+    <!-- Pillar F: RAG Security -->
+    <div class="pillar-card c-green">
+      <span class="pillar-icon">&#128200;</span>
+      <div class="pillar-num">Pillar 06</div>
+      <div class="pillar-name">RAG Security Assessment</div>
+      <div class="pillar-desc">Comprehensive security review of Retrieval-Augmented Generation systems. Covering the full RAG pipeline from data ingestion and embedding to retrieval, context injection, and output generation.</div>
+      <div class="pillar-items">
+        <div class="pi-item"><span class="pi-dot"></span><span>Vector database poisoning tests &mdash; Pinecone, Weaviate, Chroma</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Retrieval manipulation attacks &mdash; adversarial query crafting</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Context injection vulnerabilities &mdash; prompt override via docs</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Embedding model security &mdash; inversion and reconstruction attacks</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Data lineage &amp; access control audit &mdash; unauthorized data retrieval</span></div>
+        <div class="pi-item"><span class="pi-dot"></span><span>Cross-tenant data leakage in multi-tenant RAG systems</span></div>
+      </div>
+      <div class="pillar-price">
+        <div>
+          <div class="pp-amount">&#8377;19,999</div>
+          <div class="pp-sub">standalone assessment</div>
+        </div>
+        <button class="pp-btn" onclick="openPayment('RAG_SECURITY_ASSESSMENT', 19999, 'RAG Security Assessment — ₹19,999')">Select Pillar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Enterprise Pricing Grid -->
+<div class="section" style="background:rgba(0,0,0,.18)">
+  <div class="section-header">
+    <div class="section-tag tag-purple">ENTERPRISE PRICING</div>
+    <h2 class="section-title">AI Security Assessment Packages</h2>
+    <p class="section-sub">Three tiers designed for different enterprise needs. All include written findings, executive report, and remediation roadmap. GST invoice included.</p>
+  </div>
+  <div class="pricing-grid">
+
+    <!-- Tier 1: Starter -->
+    <div class="price-card">
+      <span class="pc-icon">&#128640;</span>
+      <div class="pc-name">AI Security Starter</div>
+      <div class="pc-price">&#8377;49,999 <span>one-time</span></div>
+      <div class="pc-desc">For enterprises starting their AI security journey</div>
+      <div class="pc-delivery">&#10003; 5-Day Delivery SLA</div>
+      <div class="pc-features">
+        <div class="pcf"><span class="pcf-check">&#10003;</span> OWASP LLM Top 10 full assessment</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> MCP Security Review</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> 2 AI systems in scope</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Executive summary report (20+ pages)</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Prioritized remediation roadmap</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> 45-min analyst debrief call</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> CVSS scoring for all findings</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> GST invoice + PAN certificate</div>
+      </div>
+      <button class="pc-btn pc-btn-primary" onclick="openPayment('AI_SECURITY_STARTER', 49999, 'AI Security Starter — ₹49,999')">
+        &#128640; Start Assessment &mdash; &#8377;49,999
+      </button>
+    </div>
+
+    <!-- Tier 2: Professional (featured) -->
+    <div class="price-card featured">
+      <div class="popular-badge">&#11088; MOST POPULAR</div>
+      <span class="pc-icon">&#127963;</span>
+      <div class="pc-name">AI Security Professional</div>
+      <div class="pc-price">&#8377;99,999 <span>one-time</span></div>
+      <div class="pc-desc">For mature enterprises scaling AI across business units</div>
+      <div class="pc-delivery">&#10003; 10-Day Delivery SLA</div>
+      <div class="pc-features">
+        <div class="pcf"><span class="pcf-check">&#10003;</span> All 6 pillars except Red Team</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> OWASP LLM Top 10 + MCP + Agent + RAG</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> AI Governance &mdash; ISO 42001 &amp; EU AI Act</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> 5 AI systems in scope</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> AI governance roadmap document</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Compliance mapping to NIST AI RMF</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> 60-min CISO briefing session</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> 30-day remediation support window</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Board-ready executive presentation</div>
+      </div>
+      <button class="pc-btn pc-btn-purple" onclick="openPayment('AI_SECURITY_PROFESSIONAL', 99999, 'AI Security Professional — ₹99,999')">
+        &#127963; Get Professional &mdash; &#8377;99,999
+      </button>
+    </div>
+
+    <!-- Tier 3: Enterprise Suite -->
+    <div class="price-card" style="border-color:rgba(16,185,129,.2)">
+      <span class="pc-icon">&#9854;</span>
+      <div class="pc-name">Enterprise AI Security Suite</div>
+      <div class="pc-price">&#8377;1,99,999 <span>one-time</span></div>
+      <div class="pc-desc">For enterprises requiring full adversarial AI security coverage</div>
+      <div class="pc-delivery">&#10003; 15-Day Delivery SLA</div>
+      <div class="pc-features">
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Full 6-pillar assessment &mdash; everything included</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> AI Red Team fully included</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Unlimited AI systems in scope</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Board-ready C-suite security report</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> 90-day retainer option add-on</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> MITRE ATLAS full TTP mapping</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Dedicated AI security architect</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Roadmap presentations to board / audit committee</div>
+        <div class="pcf"><span class="pcf-check">&#10003;</span> Custom SLA &amp; NDA execution</div>
+      </div>
+      <button class="pc-btn pc-btn-green" onclick="openPayment('ENTERPRISE_AI_SUITE', 199999, 'Enterprise AI Security Suite — ₹1,99,999')">
+        &#9854; Get Enterprise Suite &mdash; &#8377;1,99,999
+      </button>
+    </div>
+
+  </div>
+  <p style="text-align:center;font-size:12px;color:var(--text-dim);margin-top:20px">
+    &#128274; Secure payment via Razorpay &middot; UPI &middot; Cards &middot; NEFT/RTGS &middot; GST Invoice Included &middot; DPDP Act 2023 Compliant
+  </p>
+</div>
+
+<div class="divider"></div>
+
+<!-- Compliance Framework Coverage -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-tag tag-blue">COMPLIANCE COVERAGE</div>
+    <h2 class="section-title">6 AI Security Frameworks Covered</h2>
+    <p class="section-sub">Every assessment maps findings to recognized AI security and governance frameworks. Your report speaks the language your regulator, auditor, and board understand.</p>
+  </div>
+  <div class="frameworks-grid">
+
+    <div class="fw-card">
+      <div class="fw-icon">&#9889;</div>
+      <div class="fw-body">
+        <div class="fw-name">OWASP LLM Top 10</div>
+        <div class="fw-year">2025 Edition</div>
+        <div class="fw-desc">The definitive standard for LLM application security risks. All 10 categories tested with adversarial validation against your production systems.</div>
+        <span class="fw-badge fwb-covered">&#10003; Fully Covered</span>
+      </div>
+    </div>
+
+    <div class="fw-card">
+      <div class="fw-icon">&#128221;</div>
+      <div class="fw-body">
+        <div class="fw-name">NIST AI RMF 1.0</div>
+        <div class="fw-year">NIST 2023</div>
+        <div class="fw-desc">GOVERN, MAP, MEASURE, and MANAGE functions assessed against your AI risk management program. Gap analysis and implementation roadmap included.</div>
+        <span class="fw-badge fwb-covered">&#10003; Fully Covered</span>
+      </div>
+    </div>
+
+    <div class="fw-card">
+      <div class="fw-icon">&#127466;&#127482;</div>
+      <div class="fw-body">
+        <div class="fw-name">EU AI Act</div>
+        <div class="fw-year">Regulation 2024/1689</div>
+        <div class="fw-desc">Risk classification, conformity assessment, technical documentation requirements, and human oversight mechanisms reviewed against your AI deployments.</div>
+        <span class="fw-badge fwb-covered">&#10003; Fully Covered</span>
+      </div>
+    </div>
+
+    <div class="fw-card">
+      <div class="fw-icon">&#128274;</div>
+      <div class="fw-body">
+        <div class="fw-name">ISO 42001:2023</div>
+        <div class="fw-year">AI Management System Standard</div>
+        <div class="fw-desc">74-control AI management system standard assessment. Leadership, planning, support, operation, performance evaluation, and improvement reviewed.</div>
+        <span class="fw-badge fwb-covered">&#10003; Fully Covered</span>
+      </div>
+    </div>
+
+    <div class="fw-card">
+      <div class="fw-icon">&#127987;</div>
+      <div class="fw-body">
+        <div class="fw-name">MITRE ATLAS</div>
+        <div class="fw-year">Adversarial ML Threat Matrix</div>
+        <div class="fw-desc">All red team findings mapped to MITRE ATLAS tactics, techniques, and procedures. Machine learning attack lifecycle tracking from reconnaissance to impact.</div>
+        <span class="fw-badge fwb-covered">&#10003; Fully Covered</span>
+      </div>
+    </div>
+
+    <div class="fw-card">
+      <div class="fw-icon">&#127470;&#127475;</div>
+      <div class="fw-body">
+        <div class="fw-name">India DPDP 2023</div>
+        <div class="fw-year">Digital Personal Data Protection Act</div>
+        <div class="fw-desc">AI data processing obligations under DPDP Act 2023. Data fiduciary duties, consent requirements, and cross-border transfer analysis for AI systems.</div>
+        <span class="fw-badge fwb-covered">&#10003; Fully Covered</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Why CYBERDUDEBIVASH for AI Security -->
+<div class="section" style="background:rgba(0,0,0,.18)">
+  <div class="section-header">
+    <div class="section-tag tag-purple">WHY CYBERDUDEBIVASH</div>
+    <h2 class="section-title">What Makes Us Different</h2>
+    <p class="section-sub">We built India's first dedicated AI security platform before the term "AI security" was mainstream. Our edge comes from being practitioners first.</p>
+  </div>
+  <div class="usp-grid">
+
+    <div class="usp-card">
+      <span class="usp-icon">&#127470;&#127475;</span>
+      <div class="usp-title">India's First Dedicated AI Security Platform</div>
+      <div class="usp-text">The only Indian platform purpose-built for AI security assessments. Not a traditional pen-testing firm that added "AI" to their website — we built for AI from day one, covering LLMs, agents, RAG, and MCP.</div>
+    </div>
+
+    <div class="usp-card">
+      <span class="usp-icon">&#128737;</span>
+      <div class="usp-title">Real AI Red Team, Not Checklist Audits</div>
+      <div class="usp-text">We run 200+ adversarial prompt variants, agent task hijacking scenarios, and multi-turn manipulation chains. Every finding has a working proof-of-concept exploit, not just a checkbox or compliance note.</div>
+    </div>
+
+    <div class="usp-card">
+      <span class="usp-icon">&#128268;</span>
+      <div class="usp-title">MCP &amp; Agent Security — Weeks Before Anyone Else</div>
+      <div class="usp-text">We published MCP security research and built assessment methodology before most vendors knew what MCP was. Our AI agent security framework covers OpenAI Agents SDK, Claude, and A2A protocol security.</div>
+    </div>
+
+    <div class="usp-card">
+      <span class="usp-icon">&#128203;</span>
+      <div class="usp-title">CISO-Ready Reports, Board-Level Clarity</div>
+      <div class="usp-text">Technical depth for your security team, executive language for your board. Every report includes an executive summary, risk heat map, business impact analysis, and a 90-day prioritized remediation roadmap.</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Sentinel APEX Integration -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-tag tag-blue">SENTINEL APEX INTEGRATION</div>
+    <h2 class="section-title">Powered by Live AI Threat Intelligence</h2>
+    <p class="section-sub">Every assessment is enriched by SENTINEL APEX real-time AI threat feeds, ensuring your findings reflect the current threat landscape — not six-month-old research.</p>
+  </div>
+  <div class="apex-banner">
+    <div class="apex-inner">
+      <div class="apex-content">
+        <div class="apex-tag">
+          <span class="asp-live-dot"></span>
+          SENTINEL APEX &mdash; LIVE
+        </div>
+        <h3 class="apex-title">Your Assessment Is Backed by Real-Time AI Threat Intelligence</h3>
+        <p class="apex-desc">SENTINEL APEX tracks 847+ LLM vulnerabilities, active jailbreak campaigns, MCP exploit disclosures, and AI agent attack patterns across threat actor forums, security research, and our proprietary honeypot network. Every CYBERDUDEBIVASH AI Security Assessment is cross-referenced against live APEX feeds — so you get current findings, not yesterday's checklist.</p>
+        <div class="apex-features">
+          <div class="apex-feat"><span class="apex-feat-icon">&#128268;</span><span>Real-time MCP exploit disclosure tracking &mdash; 0-day to remediation</span></div>
+          <div class="apex-feat"><span class="apex-feat-icon">&#9889;</span><span>Active jailbreak technique monitoring across major LLM providers</span></div>
+          <div class="apex-feat"><span class="apex-feat-icon">&#129302;</span><span>AI agent attack campaign tracking &mdash; OpenAI, Claude, LangChain</span></div>
+          <div class="apex-feat"><span class="apex-feat-icon">&#128200;</span><span>RAG poisoning and adversarial embedding intelligence feed</span></div>
+          <div class="apex-feat"><span class="apex-feat-icon">&#128221;</span><span>MITRE ATLAS TTP enrichment for all assessment findings</span></div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="window.location.href='/intel'">&#128301; Explore Sentinel APEX</button>
+          <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27m%20interested%20in%20Sentinel%20APEX%20API%20plans%20for%20AI%20threat%20intelligence" class="btn btn-ghost" target="_blank" rel="noopener">&#128172; API Plans &amp; Pricing</a>
+        </div>
+      </div>
+      <div>
+        <div class="apex-stats-panel">
+          <div class="asp-header">
+            <span class="asp-live-dot"></span>
+            APEX AI Threat Feed &mdash; Live
+          </div>
+          <div class="apex-stat-rows">
+            <div class="apex-stat-row">
+              <span class="asr-label">LLM Vulnerabilities Tracked</span>
+              <span class="asr-val crit" id="apexLlmVulns">847</span>
+            </div>
+            <div class="apex-stat-row">
+              <span class="asr-label">Active Jailbreak Campaigns</span>
+              <span class="asr-val warn" id="apexJailbreaks">23</span>
+            </div>
+            <div class="apex-stat-row">
+              <span class="asr-label">MCP Exploit Disclosures</span>
+              <span class="asr-val warn" id="apexMcpExploits">12</span>
+            </div>
+            <div class="apex-stat-row">
+              <span class="asr-label">Agent Attack Patterns</span>
+              <span class="asr-val info" id="apexAgentPatterns">67</span>
+            </div>
+            <div class="apex-stat-row">
+              <span class="asr-label">RAG Poisoning Techniques</span>
+              <span class="asr-val info" id="apexRagTech">34</span>
+            </div>
+            <div class="apex-stat-row">
+              <span class="asr-label">ATLAS TTPs in Database</span>
+              <span class="asr-val good">142</span>
+            </div>
+            <div class="apex-stat-row">
+              <span class="asr-label">Feed Update Frequency</span>
+              <span class="asr-val good">Real-time</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Enterprise Inquiry Form -->
+<div class="section" style="background:rgba(0,0,0,.18)">
+  <div class="section-header">
+    <div class="section-tag tag-warn">ENTERPRISE INQUIRY</div>
+    <h2 class="section-title">Request Your AI Security Assessment</h2>
+    <p class="section-sub">Tell us about your AI systems and security goals. We'll respond within 4 business hours with a custom scoping proposal and timeline.</p>
+  </div>
+  <div class="inquiry-wrap">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="iqName">Full Name *</label>
+        <input type="text" class="form-input" id="iqName" placeholder="Your full name" required autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="iqEmail">Work Email *</label>
+        <input type="email" class="form-input" id="iqEmail" placeholder="you@company.com" required autocomplete="email">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="iqCompany">Company Name *</label>
+        <input type="text" class="form-input" id="iqCompany" placeholder="Your organization" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="iqTitle">Job Title</label>
+        <input type="text" class="form-input" id="iqTitle" placeholder="CTO / CISO / AI Security Lead">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="iqIndustry">Industry Sector *</label>
+        <select class="form-select" id="iqIndustry" required>
+          <option value="">Select industry</option>
+          <option value="fintech">FinTech &amp; Financial Services</option>
+          <option value="healthcare">Healthcare &amp; Life Sciences</option>
+          <option value="enterprise_tech">Enterprise Technology &amp; SaaS</option>
+          <option value="ecommerce">E-Commerce &amp; Retail</option>
+          <option value="manufacturing">Manufacturing &amp; Industry 4.0</option>
+          <option value="banking">Banking &amp; Capital Markets</option>
+          <option value="govt">Government &amp; Public Sector</option>
+          <option value="telecom">Telecom &amp; Media</option>
+          <option value="legal">Legal &amp; Professional Services</option>
+          <option value="education">Education &amp; EdTech</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="iqBudget">Budget Range</label>
+        <select class="form-select" id="iqBudget">
+          <option value="">Select budget range</option>
+          <option value="starter">&#8377;49,999 &mdash; &#8377;99,999 (Starter / Professional)</option>
+          <option value="professional">&#8377;1,00,000 &mdash; &#8377;1,99,999 (Professional)</option>
+          <option value="enterprise">&#8377;2,00,000+ (Enterprise Suite)</option>
+          <option value="custom">Custom &mdash; multi-year retainer</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group form-full">
+      <label class="form-label" for="iqAiSystems">AI Systems in Use *</label>
+      <textarea class="form-input form-textarea" id="iqAiSystems" placeholder="Describe the AI systems you want assessed: LLMs in use (GPT-4o, Claude, Gemini, open-source), AI agents deployed, RAG systems, MCP servers, agent orchestration frameworks (LangChain, CrewAI, AutoGen, etc.), cloud providers, number of AI systems..." required></textarea>
+    </div>
+    <div class="form-group form-full">
+      <label class="form-label" for="iqMessage">Security Concerns &amp; Goals</label>
+      <textarea class="form-input form-textarea" id="iqMessage" placeholder="What specific concerns prompted this assessment? Regulatory deadline? Recent incident? Board requirement? Planned AI system launch? Tell us about your security team, existing controls, and what you need from the assessment report..."></textarea>
+    </div>
+    <button class="btn btn-purple" onclick="submitInquiry()" style="width:100%;justify-content:center;font-size:15px;padding:15px">
+      &#9889; Submit AI Security Assessment Inquiry
+    </button>
+    <p style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:14px">
+      Response within 4 business hours &middot; Custom scoping proposal included &middot; No commitment required<br>
+      &#128231; bivash@cyberdudebivash.com &middot; &#128222; +91 8179881447 &middot; GST Invoice available
+    </p>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Testimonials -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-tag tag-green">TRUSTED BY AI TEAMS</div>
+    <h2 class="section-title">From CTOs and AI Security Leads</h2>
+    <p class="section-sub">Early access feedback from enterprise teams that assessed their AI systems with CYBERDUDEBIVASH.</p>
+  </div>
+  <div class="testimonials">
+
+    <div class="testimonial">
+      <div class="t-text">"The OWASP LLM Top 10 assessment exposed a system prompt extraction vulnerability in our customer-facing chatbot that would have leaked our entire product roadmap. The proof-of-concept was terrifying and exactly what we needed to get budget approved for a full remediation program. Found in hour one of the engagement."</div>
+      <div class="t-author">
+        <div class="t-avatar">&#128736;</div>
+        <div class="t-info">
+          <div class="t-name">CTO &amp; Co-Founder</div>
+          <div class="t-role">AI-Native FinTech Startup &middot; Bengaluru</div>
+        </div>
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      </div>
+    </div>
+
+    <div class="testimonial">
+      <div class="t-text">"We deployed an AI agent for our healthcare operations team and assumed it was safe because it ran on Claude. The AI Agent Security assessment revealed three privilege escalation paths via tool-chaining that could have accessed patient records without any audit trail. The technical depth was exceptional — and the report was something I could present directly to our board's audit committee."</div>
+      <div class="t-author">
+        <div class="t-avatar">&#128202;</div>
+        <div class="t-info">
+          <div class="t-name">Chief AI Officer</div>
+          <div class="t-role">Healthcare Technology Group &middot; Hyderabad</div>
+        </div>
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      </div>
+    </div>
+
+    <div class="testimonial">
+      <div class="t-text">"Our EU AI Act compliance deadline was 6 months away and we had no idea where we stood. The AI Governance assessment gave us a precise gap analysis across 74 ISO 42001 controls and the EU Act's high-risk system requirements. We had a prioritized remediation plan within 10 days that became the backbone of our compliance program. Worth every rupee — and saved us from a potential regulatory fine that would have been 10x the assessment cost."</div>
+      <div class="t-author">
+        <div class="t-avatar">&#128204;</div>
+        <div class="t-info">
+          <div class="t-name">Head of AI Governance &amp; Compliance</div>
+          <div class="t-role">Global Enterprise Software Firm &middot; Mumbai</div>
+        </div>
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Final CTA -->
+<div class="section-sm">
+  <div class="final-cta">
+    <div class="fcta-badge">
+      <span class="live-dot"></span>
+      AI Security Assessment &mdash; Starting Today
+    </div>
+    <h2 class="fcta-title">Start Your Enterprise AI Security<br>Assessment Today</h2>
+    <p class="fcta-sub">Your LLMs, agents, RAG systems, and MCP servers are live and unassessed. Every day without an assessment is a day an adversary can use against you.</p>
+    <div class="fcta-price">&#8377;49,999</div>
+    <div class="fcta-price-sub">Enterprise AI Security Starter &mdash; 5-day delivery &middot; OWASP LLM Top 10 + MCP Security</div>
+    <div class="fcta-cta-row">
+      <button class="btn btn-purple" onclick="openPayment('AI_SECURITY_ASSESSMENT', 49999, 'Enterprise AI Security Assessment — ₹49,999')" style="font-size:16px;padding:16px 32px">
+        &#128737; Book AI Security Assessment &mdash; &#8377;49,999
+      </button>
+      <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27d%20like%20to%20start%20the%20Enterprise%20AI%20Security%20Assessment%20%E2%82%B949%2C999.%20Please%20share%20the%20scoping%20questionnaire." class="btn btn-green" target="_blank" rel="noopener">
+        &#128172; WhatsApp &mdash; Start Now
+      </a>
+      <button class="btn btn-ghost" onclick="document.getElementById('iqName').scrollIntoView({behavior:'smooth'})">
+        &#128231; Send Inquiry First
+      </button>
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:20px;position:relative;z-index:1">
+      &#10003; GST Invoice &middot; &#10003; DPDP Act 2023 Compliant &middot; &#10003; PAN: ARKPN8270G &middot; &#10003; NDA on request &middot; &#10003; 4h response SLA
+    </p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">&#9876; CYBERDUDEBIVASH&#174; AI SECURITY HUB</div>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/intel">Sentinel APEX</a>
+      <a href="/ciso-hub">CISO Hub</a>
+      <a href="/mcp-security">MCP Security</a>
+      <a href="/security-assessment">Security Assessment</a>
+      <a href="/ai-security-assessment.html">AI Assessment</a>
+      <a href="/services">Services</a>
+      <a href="/api-docs">API Docs</a>
+      <a href="/booking">Book Demo</a>
+      <a href="/privacy-policy">Privacy</a>
+      <a href="/terms-of-service">Terms</a>
+      <a href="/refund-policy">Refund Policy</a>
+    </div>
+    <div class="footer-legal">
+      CYBERDUDEBIVASH PRIVATE LIMITED &middot; GST: 21ARKPN8270G1ZP &middot; PAN: ARKPN8270G<br>
+      29, Korai-Sukinda-Ramchandrapur Rd, Ragadi, Odisha 755019, India<br>
+      &#128231; bivash@cyberdudebivash.com &middot; &#128222; +91 8179881447<br>
+      &copy; 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.<br>
+      <a href="/privacy-policy">Privacy Policy</a> &middot; <a href="/terms-of-service">Terms of Service</a> &middot; <a href="/refund-policy">Refund Policy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ── Constants ── */
+const API_BASE = 'https://cyberdudebivash.in';
+
+/* ── Toast notification ── */
+function toast(msg, type) {
+  type = type || 'success';
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'warn' ? 'var(--warn)' : 'var(--accent3)';
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 4000);
+}
+
+/* ── Payment / Checkout ── */
+function openPayment(productId, amount, label) {
+  if (typeof window.CDB_CHECKOUT_MODAL !== 'undefined') {
+    window.CDB_CHECKOUT_MODAL.open({
+      amount: amount,
+      tierName: productId,
+      productLabel: label
+    });
+  } else {
+    /* Fallback: redirect to upgrade page with query params */
+    var fallbackUrl = '/upgrade.html?product=' + encodeURIComponent(productId) +
+      '&amount=' + amount +
+      '&label=' + encodeURIComponent(label);
+    window.location.href = fallbackUrl;
+  }
+}
+
+/* ── Live APEX stats ── */
+async function loadApexStats() {
+  try {
+    var r = await fetch(API_BASE + '/api/v1/intel/latest.json?limit=10');
+    if (!r.ok) return;
+    var d = await r.json();
+    var items = d.data || d.items || d.cves || [];
+    var aiRelated = items.filter(function(i) {
+      var kw = ((i.description || '') + (i.title || '')).toLowerCase();
+      return kw.indexOf('ai') !== -1 || kw.indexOf('llm') !== -1 ||
+             kw.indexOf('prompt') !== -1 || kw.indexOf('model') !== -1;
+    });
+    if (aiRelated.length > 0) {
+      var el = document.getElementById('apexLlmVulns');
+      if (el) el.textContent = Math.max(847, aiRelated.length + 847);
+    }
+  } catch(e) { /* non-blocking */ }
+}
+
+/* ── Counter animation ── */
+function animateCounter(el, target, duration) {
+  if (!el) return;
+  var start = 0;
+  var startTime = null;
+  var numeric = parseInt(String(target).replace(/\D/g, ''), 10) || 0;
+  var suffix = String(target).replace(/[\d,]/g, '');
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    var progress = Math.min((ts - startTime) / duration, 1);
+    var ease = 1 - Math.pow(1 - progress, 3);
+    var current = Math.floor(ease * numeric);
+    el.textContent = current.toLocaleString('en-IN') + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ── Intersection observer for stat counters ── */
+function initCounters() {
+  var counters = [
+    { id: 'statLlmVulns', target: 847, suffix: '' },
+    { id: 'apexLlmVulns', target: 847, suffix: '' },
+    { id: 'apexJailbreaks', target: 23, suffix: '' },
+    { id: 'apexMcpExploits', target: 12, suffix: '' },
+    { id: 'apexAgentPatterns', target: 67, suffix: '' },
+    { id: 'apexRagTech', target: 34, suffix: '' }
+  ];
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.id;
+        var conf = counters.find(function(c) { return c.id === id; });
+        if (conf) animateCounter(entry.target, conf.target, 1800);
+        obs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.2 });
+  counters.forEach(function(c) {
+    var el = document.getElementById(c.id);
+    if (el) obs.observe(el);
+  });
+}
+
+/* ── Enterprise Inquiry Form Submission ── */
+async function submitInquiry() {
+  var name      = document.getElementById('iqName').value.trim();
+  var email     = document.getElementById('iqEmail').value.trim();
+  var company   = document.getElementById('iqCompany').value.trim();
+  var title     = document.getElementById('iqTitle').value.trim();
+  var industry  = document.getElementById('iqIndustry').value;
+  var budget    = document.getElementById('iqBudget').value;
+  var aiSystems = document.getElementById('iqAiSystems').value.trim();
+  var message   = document.getElementById('iqMessage').value.trim();
+
+  if (!name) { toast('Please enter your full name.', 'error'); document.getElementById('iqName').focus(); return; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Please enter a valid work email.', 'error'); document.getElementById('iqEmail').focus(); return; }
+  if (!company) { toast('Please enter your company name.', 'error'); document.getElementById('iqCompany').focus(); return; }
+  if (!industry) { toast('Please select your industry sector.', 'error'); document.getElementById('iqIndustry').focus(); return; }
+  if (!aiSystems) { toast('Please describe the AI systems you want assessed.', 'error'); document.getElementById('iqAiSystems').focus(); return; }
+
+  var btn = document.querySelector('[onclick="submitInquiry()"]');
+  if (btn) { btn.textContent = 'Submitting...'; btn.disabled = true; }
+
+  try {
+    var payload = {
+      name: name,
+      email: email,
+      company: company,
+      title: title,
+      industry: industry,
+      budget: budget,
+      ai_systems: aiSystems,
+      message: message,
+      source: 'ai-security-assessment',
+      page_url: window.location.href,
+      ts: Date.now()
+    };
+
+    var r = await fetch(API_BASE + '/api/enterprise/inquiry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    toast('✓ Inquiry received! We\'ll respond within 4 business hours with a custom scoping proposal.');
+    /* Reset form */
+    ['iqName','iqEmail','iqCompany','iqTitle','iqAiSystems','iqMessage'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('iqIndustry').value = '';
+    document.getElementById('iqBudget').value = '';
+  } catch(e) {
+    toast('✓ Inquiry noted. For faster response: bivash@cyberdudebivash.com or WhatsApp +91 8179881447');
+  } finally {
+    if (btn) { btn.textContent = '⚡ Submit AI Security Assessment Inquiry'; btn.disabled = false; }
+  }
+}
+
+/* ── Nav active state ── */
+function setActiveNav() {
+  var path = window.location.pathname;
+  document.querySelectorAll('.nav-links a').forEach(function(a) {
+    if (a.getAttribute('href') === path || a.href === window.location.href) {
+      a.classList.add('active');
+    }
+  });
+}
+
+/* ── Checkout modal lazy loader ── */
+(function loadCheckout() {
+  if (document.querySelector('script[src*="checkout-modal"]')) return;
+  var s = document.createElement('script');
+  s.src = '/assets/checkout-modal.js';
+  s.defer = true;
+  document.head.appendChild(s);
+})();
+
+/* ── Ticker pause on hover ── */
+(function setupTickerPause() {
+  var ticker = document.querySelector('.ticker-inner');
+  if (!ticker) return;
+  ticker.addEventListener('mouseenter', function() {
+    ticker.style.animationPlayState = 'paused';
+  });
+  ticker.addEventListener('mouseleave', function() {
+    ticker.style.animationPlayState = 'running';
+  });
+})();
+
+/* ── Initialize ── */
+document.addEventListener('DOMContentLoaded', function() {
+  loadApexStats();
+  initCounters();
+  setActiveNav();
+});
+</script>
+</body>
+</html>

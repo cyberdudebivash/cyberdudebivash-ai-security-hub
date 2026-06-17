@@ -15,7 +15,9 @@ Allow: /academy
 Allow: /about
 Allow: /booking
 Allow: /contact
+Allow: /cve/
 Allow: /sitemap.xml
+Allow: /sitemap-cve.xml
 Allow: /og-image.png
 Allow: /assets/
 
@@ -23,6 +25,9 @@ Allow: /assets/
 Disallow: /api/
 Disallow: /admin-payments
 Disallow: /user-dashboard
+Disallow: /revenue-command-center
+Disallow: /mssp-command-center
+Disallow: /proposal-generator
 Disallow: /.env
 Disallow: /.git/
 Disallow: /workers/
@@ -74,3 +79,4 @@ Allow: /og-image.png
 
 # ── Sitemaps ──────────────────────────────────────────────────────────────────
 Sitemap: https://cyberdudebivash.in/sitemap.xml
+Sitemap: https://cyberdudebivash.in/sitemap-cve.xml
