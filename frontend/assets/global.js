@@ -10,7 +10,7 @@
 
 /* ── Config ──────────────────────────────────────────────────── */
 const CFG = {
-  api:      'https://cyberdudebivash-security-hub.workers.dev',
+  api:      '',  // same-origin: all /api/* routes are served by the Worker on cyberdudebivash.in
   site:     'https://cyberdudebivash.in',
   tools:    'https://tools.cyberdudebivash.com',
   intel:    'https://intel.cyberdudebivash.com',

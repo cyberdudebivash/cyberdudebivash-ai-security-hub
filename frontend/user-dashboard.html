@@ -1808,7 +1808,7 @@
 ═══════════════════════════════════════════════ -->
 <script>
   // ── Config ──────────────────────────────────────────────────────────────────
-  const API_BASE = 'https://cyberdudebivash-security-hub.workers.dev';
+  const API_BASE = '';  // same-origin — all /api/* served by the Worker on cyberdudebivash.in
 
   // ── State ───────────────────────────────────────────────────────────────────
   let _token = null;
@@ -2399,7 +2399,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
     try {
       // Use API_BASE from config (not hardcoded URL) — v31 fix
-      const _apiEndpoint = (window.CONFIG?.API_BASE || API_BASE || 'https://cyberdudebivash-security-hub.workers.dev') + '/api/ai/analyze';
+      const _apiEndpoint = (window.CONFIG?.API_BASE || API_BASE || '') + '/api/ai/analyze';
       const res = await fetch(_apiEndpoint, {
         method: 'POST',
         headers: {
@@ -3868,29 +3868,66 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 <script src="/assets/payment-modal.js"></script>
 
 <script>
-/* CDB_PAY -> CDB_PAYMENT bridge (payment-modal.js is the real engine) */
-(function() {
-  function mkBridge() {
-    window.CDB_PAY = {
-      open: function(productId, priceInr, label) {
-        if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
-          CDB_PAYMENT.open({
-            product: productId,
-            productLabel: label || productId,
-            amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
-            amount: priceInr ? String(priceInr) : "",
-          });
-        } else { window.location.href = "/#pricing"; }
+/* Instant Razorpay checkout for user-dashboard upgrade CTAs */
+(function () {
+  var _rzpLoaded = false;
+  function loadRzp() {
+    if (_rzpLoaded && window.RazorpayNative) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = function () { window.RazorpayNative = window.Razorpay; _rzpLoaded = true; resolve(); };
+      s.onerror = function () { reject(new Error('Razorpay SDK load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function cdbDashBuy(productId, priceInr, label) {
+    var email = '';
+    try { email = (typeof _user !== 'undefined' && _user && _user.email) || localStorage.getItem('cdb_email') || ''; } catch (e) {}
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      email = (window.prompt('Enter your email to continue:') || '').trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { alert('Valid email required.'); return; }
+      try { localStorage.setItem('cdb_email', email); } catch (e) {}
+    }
+    var manualFallback = function () {
+      if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+        CDB_PAYMENT.open({ product: productId, productLabel: label || productId,
+          amountLabel: priceInr ? '\u20B9' + Number(priceInr).toLocaleString('en-IN') : '', amount: priceInr ? String(priceInr) : '' });
       }
     };
-    /* Also expose openPayment alias */
-    window.openPayment = window.openPayment || function(id, price, label) {
-      window.CDB_PAY.open(id, price, label);
-    };
+    try {
+      var oRes = await fetch('/api/tools/purchase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, email: email }),
+      });
+      var oData = await oRes.json().catch(function () { return {}; });
+      var order = oData && oData.order;
+      if (!oRes.ok || !order || !order.razorpay_key || String(order.razorpay_order_id || '').indexOf('order_') !== 0) {
+        manualFallback(); return;
+      }
+      await loadRzp();
+      if (!window.RazorpayNative) { manualFallback(); return; }
+      new window.RazorpayNative({
+        key: order.razorpay_key, amount: order.amount, currency: 'INR',
+        name: 'CYBERDUDEBIVASH AI Security Hub',
+        description: label || productId,
+        order_id: order.razorpay_order_id, prefill: { email: email },
+        theme: { color: '#7c3aed' },
+        handler: async function (rp) {
+          try {
+            await fetch('/api/tools/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ razorpay_order_id: rp.razorpay_order_id, razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature: rp.razorpay_signature, product_id: productId, email: email }) });
+          } catch (e) {}
+          alert('\u2705 Purchase Confirmed! ' + (label || productId) + ' will be delivered to ' + email + ' within 24 hours. Payment ID: ' + rp.razorpay_payment_id);
+        },
+      }).open();
+    } catch (err) { manualFallback(); }
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mkBridge);
-  } else { mkBridge(); }
+
+  window.CDB_PAY = { open: cdbDashBuy };
+  window.openPayment = function (id, price, label) { cdbDashBuy(id, price, label); };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -3898,7 +3935,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 //  Intel Reports · Subscriptions · API Usage
 // ═══════════════════════════════════════════════════════════
 (function() {
-  const APEX_API = 'https://cyberdudebivash-security-hub.cyberdudebivash.workers.dev';
+  const APEX_API = '';
 
   function apexFetch(path, opts = {}) {
     const token = localStorage.getItem('cdb_token') || localStorage.getItem('apex_token');

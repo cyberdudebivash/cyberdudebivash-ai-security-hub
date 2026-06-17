@@ -558,12 +558,12 @@
         <li style="font-size:0.78rem;padding:3px 0;color:var(--text)">✓ GST invoice included</li>
       </ul>
     </div>
-    <a id="modal-cta" href="#" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px 0;font-size:1rem" target="_blank">
+    <button id="modal-cta" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px 0;font-size:1rem;cursor:pointer;border:none" onclick="cdbSentinelBuy()">
       ⚡ Proceed to Payment
-    </a>
+    </button>
     <p style="font-size:0.72rem;color:var(--text3);text-align:center;margin-top:12px">
       🔒 Secure payment via Razorpay · UPI · Cards · NetBanking<br>
-      📧 Access delivered to your email within 2–4 hours
+      📧 Report delivered to your email within 4 hours
     </p>
   </div>
 </div>
@@ -583,11 +583,20 @@ function toast(msg, type = 'success') {
   setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-function openModal(title, desc, price, ctaUrl) {
+// Current modal purchase context (set by openModal, consumed by cdbSentinelBuy)
+var _smCurrentType  = 'cve_report';
+var _smCurrentTitle = '';
+var _smCurrentPrice = 3999;
+
+function openModal(title, desc, price, _unused, productType) {
   document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-desc').textContent = desc;
+  document.getElementById('modal-desc').textContent  = desc;
   document.getElementById('modal-price').textContent = price;
-  document.getElementById('modal-cta').href = ctaUrl;
+  // Extract INR price from strings like "$49 / ₹3,999" or "₹6,499"
+  var inrMatch = price.match(/₹([0-9,]+)/);
+  _smCurrentPrice = inrMatch ? parseInt(inrMatch[1].replace(/,/g, ''), 10) : 3999;
+  _smCurrentTitle = title;
+  _smCurrentType  = productType || 'cve_report';
   document.getElementById('purchase-modal').classList.add('open');
 }
 
@@ -598,8 +607,103 @@ function openTrialModal() {
     '🛰 Start with the FREE Threat-Intel API',
     'The FREE tier needs no API key — IP-based access to recent CVEs (25 items/request, 100 requests/day). Upgrade any time to unlock EPSS scores, the full CISA KEV catalog, and STIX 2.1 export.',
     '₹0 — no key required',
-    `https://cyberdudebivash.in/#intel-api`
+    null, 'free_trial'
   );
+}
+
+// ── Instant Razorpay checkout for Sentinel APEX intel products ──────────────
+var _smRzpLoaded = false;
+function _smLoadRzp() {
+  if (_smRzpLoaded && window.RazorpayNative) return Promise.resolve();
+  return new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = function() { window.RazorpayNative = window.Razorpay; _smRzpLoaded = true; resolve(); };
+    s.onerror = function() { reject(new Error('Razorpay SDK load failed')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function cdbSentinelBuy() {
+  if (_smCurrentType === 'free_trial') { closeModal(); window.location.href = '#intel-api'; return; }
+
+  var email = '';
+  try { email = localStorage.getItem('cdb_email') || ''; } catch(e) {}
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    email = (window.prompt('Enter your email to receive the report after purchase:') || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      alert('A valid email address is required to purchase and receive your report.');
+      return;
+    }
+    try { localStorage.setItem('cdb_email', email); } catch(e) {}
+  }
+
+  var title     = _smCurrentTitle;
+  var priceInr  = _smCurrentPrice;
+  var prodType  = _smCurrentType;
+
+  var btn = document.getElementById('modal-cta');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing…'; }
+
+  var manualFallback = function() {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Proceed to Payment'; }
+    var msg = encodeURIComponent('Hi! I want to purchase: ' + title + ' (₹' + priceInr + '). Please share payment details.');
+    window.open('https://wa.me/918179881447?text=' + msg, '_blank');
+  };
+
+  try {
+    var oRes = await fetch('/api/sentinel/purchase', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_type: prodType, product_title: title, email: email }),
+    });
+    var oData = await oRes.json().catch(function() { return {}; });
+    var order = oData && oData.order;
+
+    if (!oRes.ok || !order || !order.razorpay_key || !order.razorpay_order_id ||
+        String(order.razorpay_order_id).indexOf('order_') !== 0) {
+      manualFallback(); return;
+    }
+
+    await _smLoadRzp();
+    if (!window.RazorpayNative) { manualFallback(); return; }
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Proceed to Payment'; }
+    closeModal();
+
+    var rzp = new window.RazorpayNative({
+      key: order.razorpay_key, amount: order.amount, currency: 'INR',
+      name: 'Sentinel APEX — CYBERDUDEBIVASH',
+      description: title,
+      order_id: order.razorpay_order_id,
+      prefill: { email: email },
+      theme: { color: '#7c3aed' },
+      handler: async function(rp) {
+        try {
+          var vRes = await fetch('/api/sentinel/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: rp.razorpay_order_id,
+              razorpay_payment_id: rp.razorpay_payment_id,
+              razorpay_signature: rp.razorpay_signature,
+              product_type: prodType, product_title: title, email: email,
+            }),
+          });
+          var vData = await vRes.json().catch(function() { return {}; });
+          if (vRes.ok && vData.success) {
+            alert('✅ Purchase Confirmed!\n\n' + title +
+              '\n\nYour report will be delivered to ' + email + ' within 4 hours.\n\nPayment ID: ' + rp.razorpay_payment_id +
+              '\n\nFor urgent support: bivash@cyberdudebivash.com');
+          } else {
+            alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Delivery to ' + email + ' within 4 hours. Contact bivash@cyberdudebivash.com');
+          }
+        } catch(e) {
+          alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Report will be sent to ' + email + ' within 4 hours.');
+        }
+      },
+    });
+    rzp.open();
+  } catch(err) {
+    manualFallback();
+  }
 }
 
 document.getElementById('purchase-modal').addEventListener('click', function(e) {
@@ -669,7 +773,7 @@ async function loadCVECards(container) {
           <div class="card-preview-bar">
             <span class="preview-text">🔒 Full analysis, IOCs, SIGMA rules, patch info locked</span>
             <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-              onclick="openModal('CVE Intelligence Report','Full IOC analysis, SIGMA rules, patch info, affected systems, and exploitation timeline.','$49 / ₹3,999','https://cyberdudebivash.in/#pricing')">
+              onclick="openModal('CVE Intelligence Report','Full IOC analysis, SIGMA rules, patch info, affected systems, and exploitation timeline.','$49 / ₹3,999',null,'cve_report')">
               Buy Full Report
             </button>
           </div>
@@ -707,7 +811,7 @@ function renderFallbackCVEs() {
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full analysis locked — IOCs, SIGMA, patch info</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${c.id} Intelligence Report','Full IOC analysis, SIGMA rules, affected products, and exploitation timeline.','$49 / ₹3,999','https://cyberdudebivash.in/#pricing')">
+          onclick="openModal('${c.id} Intelligence Report','Full IOC analysis, SIGMA rules, affected products, and exploitation timeline.','$49 / ₹3,999',null,'cve_report')">
           Buy Full Report
         </button>
       </div>
@@ -741,7 +845,7 @@ async function loadThreatActorCards(container) {
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full dossier, IOC feeds, MITRE TTPs locked</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${a.name} Threat Actor Dossier','Full TTP analysis, IOC feeds, MITRE ATT&CK mappings, campaign timeline, and sector targeting.','$79 / ₹6,499','https://cyberdudebivash.in/#pricing')">
+          onclick="openModal('${a.name} Threat Actor Dossier','Full TTP analysis, IOC feeds, MITRE ATT&CK mappings, campaign timeline, and sector targeting.','$79 / ₹6,499',null,'threat_actor_dossier')">
           Buy Dossier
         </button>
       </div>
@@ -774,7 +878,7 @@ async function loadMalwareCards(container) {
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full analysis, YARA rules, IOCs, kill chain locked</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${m.name} Malware Intelligence Report','Full behavioral analysis, YARA detection rules, IOC feeds, C2 infrastructure, and defensive countermeasures.','$79 / ₹6,499','https://cyberdudebivash.in/#pricing')">
+          onclick="openModal('${m.name} Malware Intelligence Report','Full behavioral analysis, YARA detection rules, IOC feeds, C2 infrastructure, and defensive countermeasures.','$79 / ₹6,499',null,'malware_intel')">
           Buy Report
         </button>
       </div>
@@ -829,7 +933,7 @@ function renderProductCard(p) {
         <li>GST invoice included</li>
       </ul>
       <button class="btn btn-primary" style="width:100%;justify-content:center"
-        onclick="openModal('${escHtml(p.name || p.title)}','${escHtml((p.description||'').substring(0,80))}','$${p.price || 49} / ₹${p.price_inr || 3999}','https://cyberdudebivash.in/#pricing')">
+        onclick="openModal('${escHtml(p.name || p.title)}','${escHtml((p.description||'').substring(0,80))}','$${p.price || 49} / ₹${p.price_inr || 3999}',null,'cve_report')">
         ⚡ Buy Report
       </button>
     </div>`;
@@ -863,7 +967,7 @@ function renderFallbackReports(container) {
         <li>1-year dashboard access</li>
       </ul>
       <button class="btn btn-primary" style="width:100%;justify-content:center"
-        onclick="openModal('${r.title}','SENTINEL APEX™ analyst-authored intelligence report with IOC feeds, SIGMA rules, and MITRE mappings.','${r.price} / ${r.inr}','https://cyberdudebivash.in/#pricing')">
+        onclick="openModal('${r.title}','SENTINEL APEX™ analyst-authored intelligence report with IOC feeds, SIGMA rules, and MITRE mappings.','${r.price} / ${r.inr}',null,'cve_report')">
         ⚡ Buy Report
       </button>
     </div>`).join('');

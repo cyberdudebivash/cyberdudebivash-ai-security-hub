@@ -1520,7 +1520,7 @@
     <script>
         // ===== STATE & CONFIG =====
         const CONFIG = {
-            API_URL: 'https://cyberdudebivash-security-hub.workers.dev/api/threat-intel?limit=20',
+            API_URL: '/api/threat-intel?limit=20',
             REFRESH_INTERVAL: 3 * 60 * 1000, // 3 minutes
             API_TIMEOUT: 5000,
         };
@@ -2099,7 +2099,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
     </div>
     <div class="risk-cta-row-v14">
       <a href="/#scanner" class="risk-cta-red-v14">🔴 Scan Your Domain Now — FREE</a>
-      <a href="#" class="risk-cta-green-v14" onclick="event.preventDefault();if(window.CDB_PAYMENT){CDB_PAYMENT.open({product:'domain-report',productLabel:'Domain Security Full Report',amountLabel:'₹999'});}else{window.location.href='/#pricing';}return false;">💰 Unlock Full Report ₹999</a>
+      <a href="#" class="risk-cta-green-v14" onclick="event.preventDefault();window.CDB_PAY&&CDB_PAY.open('domain-report',999,'Domain Security Full Report');return false;">💰 Unlock Full Report ₹999</a>
     </div>
     <div class="risk-ticker-v14">
       <div class="risk-ticker-dot-v14"></div>
@@ -2382,29 +2382,71 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 <script src="/assets/payment-modal.js"></script>
 
 <script>
-/* CDB_PAY -> CDB_PAYMENT bridge (payment-modal.js is the real engine) */
-(function() {
-  function mkBridge() {
-    window.CDB_PAY = {
-      open: function(productId, priceInr, label) {
-        if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
-          CDB_PAYMENT.open({
-            product: productId,
-            productLabel: label || productId,
-            amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
-            amount: priceInr ? String(priceInr) : "",
-          });
-        } else { window.location.href = "/#pricing"; }
+/* Instant Razorpay checkout for intel.html report CTAs */
+(function () {
+  var _rzpLoaded = false;
+  function loadRzp() {
+    if (_rzpLoaded && window.RazorpayNative) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = function () { window.RazorpayNative = window.Razorpay; _rzpLoaded = true; resolve(); };
+      s.onerror = function () { reject(new Error('Razorpay SDK load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function cdbBuy(productId, priceInr, label) {
+    var email = '';
+    try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      email = (window.prompt('Enter your email to receive the report:') || '').trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        alert('A valid email address is required to complete purchase.');
+        return;
+      }
+      try { localStorage.setItem('cdb_email', email); } catch (e) {}
+    }
+    var manualFallback = function () {
+      if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+        CDB_PAYMENT.open({ product: productId, productLabel: label || productId,
+          amountLabel: priceInr ? '\u20B9' + Number(priceInr).toLocaleString('en-IN') : '', amount: priceInr ? String(priceInr) : '', email: email });
+      } else {
+        window.location.href = '/tools';
       }
     };
-    /* Also expose openPayment alias */
-    window.openPayment = window.openPayment || function(id, price, label) {
-      window.CDB_PAY.open(id, price, label);
-    };
+    try {
+      var oRes = await fetch('/api/tools/purchase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, email: email }),
+      });
+      var oData = await oRes.json().catch(function () { return {}; });
+      var order = oData && oData.order;
+      if (!oRes.ok || !order || !order.razorpay_key || String(order.razorpay_order_id || '').indexOf('order_') !== 0) {
+        manualFallback(); return;
+      }
+      await loadRzp();
+      if (!window.RazorpayNative) { manualFallback(); return; }
+      new window.RazorpayNative({
+        key: order.razorpay_key, amount: order.amount, currency: 'INR',
+        name: 'CYBERDUDEBIVASH AI Security Hub',
+        description: label || productId,
+        order_id: order.razorpay_order_id, prefill: { email: email },
+        theme: { color: '#10b981' },
+        handler: async function (rp) {
+          try {
+            await fetch('/api/tools/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ razorpay_order_id: rp.razorpay_order_id, razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature: rp.razorpay_signature, product_id: productId, email: email }) });
+          } catch (e) {}
+          alert('\u2705 Purchase Confirmed! ' + (label || productId) + ' will be delivered to ' + email + ' within 24 hours.\n\nPayment ID: ' + rp.razorpay_payment_id);
+        },
+      }).open();
+    } catch (err) { manualFallback(); }
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mkBridge);
-  } else { mkBridge(); }
+
+  window.CDB_PAY = { open: cdbBuy };
+  window.openPayment = function (id, price, label) { cdbBuy(id, price, label); };
 })();
 </script>
 </body>
