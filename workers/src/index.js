@@ -435,7 +435,7 @@ import {
 // ─── PHASE 4: Proposal Generator ─────────────────────────────────────────────
 import {
   handleGenerateProposal, handleListProposals, handleGetProposal,
-  handleMarkProposalSent, handleAcceptProposal, handleGetPackages,
+  handleMarkProposalSent, handleAcceptProposal, handleRejectProposal, handleGetPackages,
 } from './handlers/proposalGenerator.js';
 
 // ─── Manual Payment System ───────────────────────────────────────────────────
@@ -4244,6 +4244,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path.startsWith('/api/proposals/') && path.endsWith('/accept') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleAcceptProposal(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/proposals/') && path.endsWith('/reject') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleRejectProposal(request, env, authCtx), request));
     }
     if (path.startsWith('/api/proposals/') && !path.endsWith('/generate') && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));

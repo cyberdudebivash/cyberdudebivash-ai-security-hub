@@ -361,7 +361,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         const vRes = await fetch('/api/payments/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ razorpay_order_id: rp.razorpay_order_id, razorpay_payment_id: rp.razorpay_payment_id, razorpay_signature: rp.razorpay_signature, module, target, email }),
+          body: JSON.stringify({ razorpay_order_id: rp.razorpay_order_id, razorpay_payment_id: rp.razorpay_payment_id, razorpay_signature: rp.razorpay_signature, module, target, email, ...getPageUTM() }),
         });
         if (vRes.ok) {
           const vd = await vRes.json();
@@ -5694,7 +5694,7 @@ window.cdbBookAssessment = async function() {
       order_id: order.order_id, prefill: { email },
       theme: { color: '#f59e0b' },
       handler: async function(rp) {
-        await fetch('/api/payments/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...rp, module:'assessment', target:'assessment', email}) });
+        await fetch('/api/payments/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...rp, module:'assessment', target:'assessment', email, ...getPageUTM()}) });
         if (typeof TOAST !== 'undefined') TOAST.success('Assessment booked! We\'ll contact you within 4 hours at ' + email, 'Assessment Confirmed');
         CDB_FUNNEL?.track('assessment_booked', { email });
       },
@@ -7723,6 +7723,22 @@ window.addEventListener('unhandledrejection', function(evt) {
     if (typeof TOAST !== 'undefined') TOAST.error('Payment setup failed. Please try again.');
   }
 });
+
+// ─── UTM Attribution — capture on page load, persist across payment flows ─────
+(function() {
+  const p = new URLSearchParams(location.search);
+  const src = p.get('utm_source'), med = p.get('utm_medium'), cam = p.get('utm_campaign');
+  if (src) sessionStorage.setItem('cdb_utm_source', src);
+  if (med) sessionStorage.setItem('cdb_utm_medium', med);
+  if (cam) sessionStorage.setItem('cdb_utm_campaign', cam);
+})();
+function getPageUTM() {
+  return {
+    utm_source:   sessionStorage.getItem('cdb_utm_source')   || new URLSearchParams(location.search).get('utm_source')   || '',
+    utm_medium:   sessionStorage.getItem('cdb_utm_medium')   || new URLSearchParams(location.search).get('utm_medium')   || '',
+    utm_campaign: sessionStorage.getItem('cdb_utm_campaign') || new URLSearchParams(location.search).get('utm_campaign') || '',
+  };
+}
 
 // ─── Conversion + Revenue Tracking ───────────────────────────────────────────
 const CDB_TRACK = {
@@ -10531,6 +10547,7 @@ async function cdbStartSubscriptionAuto(planKey) {
               target: planKey.toLowerCase(),
               plan: planKey,
               email,
+              ...getPageUTM(),
             }),
           });
           if (verifyRes.ok) {
