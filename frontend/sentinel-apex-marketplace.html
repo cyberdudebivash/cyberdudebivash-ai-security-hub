@@ -558,9 +558,9 @@
         <li style="font-size:0.78rem;padding:3px 0;color:var(--text)">✓ GST invoice included</li>
       </ul>
     </div>
-    <a id="modal-cta" href="#" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px 0;font-size:1rem" target="_blank">
+    <button id="modal-cta" onclick="triggerModalPayment()" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px 0;font-size:1rem">
       ⚡ Proceed to Payment
-    </a>
+    </button>
     <p style="font-size:0.72rem;color:var(--text3);text-align:center;margin-top:12px">
       🔒 Secure payment via Razorpay · UPI · Cards · NetBanking<br>
       📧 Access delivered to your email within 2–4 hours
@@ -583,12 +583,27 @@ function toast(msg, type = 'success') {
   setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-function openModal(title, desc, price, ctaUrl) {
+// Parse INR price from display string (e.g. "$49 / ₹3,999" → 3999)
+function parseInrPrice(priceStr) {
+  const m = String(priceStr).match(/₹([\d,]+)/);
+  return m ? parseInt(m[1].replace(/,/g,'')) : 3999;
+}
+
+let _modalPayPrice = 3999;
+let _modalPayTitle = '';
+
+function openModal(title, desc, price) {
+  _modalPayTitle = title;
+  _modalPayPrice = parseInrPrice(price);
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-desc').textContent = desc;
-  document.getElementById('modal-price').textContent = price;
-  document.getElementById('modal-cta').href = ctaUrl;
+  document.getElementById('modal-price').textContent = `₹${_modalPayPrice.toLocaleString('en-IN')}`;
   document.getElementById('purchase-modal').classList.add('open');
+}
+
+function triggerModalPayment() {
+  closeModal();
+  openReportCheckout(_modalPayTitle, _modalPayPrice);
 }
 
 function closeModal() { document.getElementById('purchase-modal').classList.remove('open'); }
@@ -669,7 +684,7 @@ async function loadCVECards(container) {
           <div class="card-preview-bar">
             <span class="preview-text">🔒 Full analysis, IOCs, SIGMA rules, patch info locked</span>
             <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-              onclick="openModal('CVE Intelligence Report','Full IOC analysis, SIGMA rules, patch info, affected systems, and exploitation timeline.','$49 / ₹3,999','https://cyberdudebivash.in/#pricing')">
+              onclick="openModal('CVE Intelligence Report','Full IOC analysis, SIGMA rules, patch info, affected systems, and exploitation timeline.','$49 / ₹3,999')">
               Buy Full Report
             </button>
           </div>
@@ -707,7 +722,7 @@ function renderFallbackCVEs() {
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full analysis locked — IOCs, SIGMA, patch info</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${c.id} Intelligence Report','Full IOC analysis, SIGMA rules, affected products, and exploitation timeline.','$49 / ₹3,999','https://cyberdudebivash.in/#pricing')">
+          onclick="openModal('${c.id} Intelligence Report','Full IOC analysis, SIGMA rules, affected products, and exploitation timeline.','$49 / ₹3,999')">
           Buy Full Report
         </button>
       </div>
@@ -741,7 +756,7 @@ async function loadThreatActorCards(container) {
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full dossier, IOC feeds, MITRE TTPs locked</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${a.name} Threat Actor Dossier','Full TTP analysis, IOC feeds, MITRE ATT&CK mappings, campaign timeline, and sector targeting.','$79 / ₹6,499','https://cyberdudebivash.in/#pricing')">
+          onclick="openModal('${a.name} Threat Actor Dossier','Full TTP analysis, IOC feeds, MITRE ATT&CK mappings, campaign timeline, and sector targeting.','$79 / ₹6,499')">
           Buy Dossier
         </button>
       </div>
@@ -774,7 +789,7 @@ async function loadMalwareCards(container) {
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full analysis, YARA rules, IOCs, kill chain locked</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${m.name} Malware Intelligence Report','Full behavioral analysis, YARA detection rules, IOC feeds, C2 infrastructure, and defensive countermeasures.','$79 / ₹6,499','https://cyberdudebivash.in/#pricing')">
+          onclick="openModal('${m.name} Malware Intelligence Report','Full behavioral analysis, YARA detection rules, IOC feeds, C2 infrastructure, and defensive countermeasures.','$79 / ₹6,499')">
           Buy Report
         </button>
       </div>
@@ -829,7 +844,7 @@ function renderProductCard(p) {
         <li>GST invoice included</li>
       </ul>
       <button class="btn btn-primary" style="width:100%;justify-content:center"
-        onclick="openModal('${escHtml(p.name || p.title)}','${escHtml((p.description||'').substring(0,80))}','$${p.price || 49} / ₹${p.price_inr || 3999}','https://cyberdudebivash.in/#pricing')">
+        onclick="openModal('${escHtml(p.name || p.title)}','${escHtml((p.description||'').substring(0,80))}','$${p.price || 49} / ₹${p.price_inr || 3999}')">
         ⚡ Buy Report
       </button>
     </div>`;
@@ -863,7 +878,7 @@ function renderFallbackReports(container) {
         <li>1-year dashboard access</li>
       </ul>
       <button class="btn btn-primary" style="width:100%;justify-content:center"
-        onclick="openModal('${r.title}','SENTINEL APEX™ analyst-authored intelligence report with IOC feeds, SIGMA rules, and MITRE mappings.','${r.price} / ${r.inr}','https://cyberdudebivash.in/#pricing')">
+        onclick="openModal('${r.title}','SENTINEL APEX™ analyst-authored intelligence report with IOC feeds, SIGMA rules, and MITRE mappings.','${r.price} / ${r.inr}')">
         ⚡ Buy Report
       </button>
     </div>`).join('');
@@ -942,11 +957,38 @@ function renderFallbackPlans(grid) {
   paintPlans(grid, plans);
 }
 
+// Plan name → INR price (single source of truth, mirrors FEED_TIERS in intelMonetization.js)
+const PLAN_PRICES = { FREE: 0, STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
+
+function openPlanCheckout(tier, price) {
+  if (tier === 'FREE') { window.location.href = '/api-docs.html'; return; }
+  const label = `SENTINEL APEX ${tier} API — ₹${price.toLocaleString('en-IN')}/month`;
+  if (typeof window.CDB_CHECKOUT_MODAL !== 'undefined') {
+    window.CDB_CHECKOUT_MODAL.open({ amount: price, tierName: tier + '_PLAN', productLabel: label });
+  } else if (typeof window.openPayment === 'function') {
+    window.openPayment(tier + '_PLAN', price, label);
+  } else {
+    window.location.href = '/upgrade.html?plan=' + tier.toLowerCase();
+  }
+}
+
+// Trigger Razorpay for report purchases instead of redirecting to pricing page
+function openReportCheckout(title, priceInr) {
+  if (typeof window.CDB_CHECKOUT_MODAL !== 'undefined') {
+    window.CDB_CHECKOUT_MODAL.open({ amount: priceInr, tierName: 'INTEL_REPORT', productLabel: title });
+  } else if (typeof window.openPayment === 'function') {
+    window.openPayment('INTEL_REPORT', priceInr, title);
+  } else {
+    window.location.href = '/upgrade.html';
+  }
+}
+
 function paintPlans(grid, plans) {
   grid.innerHTML = plans.map(p => {
-    const cta = p.name === 'FREE'
-      ? { href: `${INTEL_API_HOME}/api-docs`, label: 'Read API Docs', ghost: true }
-      : { href: `${INTEL_API_HOME}/#intel-api`, label: `Get ${p.name}`, ghost: !p.popular };
+    const isFree = p.name === 'FREE';
+    const price  = PLAN_PRICES[p.name] || 0;
+    const btnLabel = isFree ? '⚡ Try Free API' : `⚡ Get ${p.name} — ₹${price.toLocaleString('en-IN')}/mo`;
+    const btnClass = p.popular ? 'btn-primary' : (isFree ? 'btn-ghost' : 'btn-ghost');
     return `
     <div class="plan-card ${p.popular ? 'popular' : ''}">
       <div class="plan-name">${p.name}</div>
@@ -955,8 +997,8 @@ function paintPlans(grid, plans) {
       <ul class="plan-features">
         ${p.features.map(f => `<li><span class="feat-check">✓</span>${escHtml(f)}</li>`).join('')}
       </ul>
-      <a href="${cta.href}" class="btn ${cta.ghost ? 'btn-ghost' : 'btn-primary'}"
-         style="width:100%;justify-content:center" target="_blank" rel="noopener">${cta.label}</a>
+      <button onclick="openPlanCheckout('${p.name}', ${price})" class="btn ${btnClass}"
+         style="width:100%;justify-content:center">${btnLabel}</button>
     </div>`;
   }).join('');
 }
@@ -1001,6 +1043,24 @@ function renderPlans(grid, plans) {
          style="width:100%;justify-content:center" target="_blank">${escHtml(p.cta || 'Get Started')}</a>
     </div>`).join('');
 }
+
+// ── Checkout modal lazy loader ──────────────────────────────────────────────
+(function loadCheckout() {
+  if (document.querySelector('script[src*="checkout-modal"]')) return;
+  const s = document.createElement('script');
+  s.src = '/assets/checkout-modal.js';
+  s.defer = true;
+  document.head.appendChild(s);
+})();
+
+// ── openPayment global (used by checkout-modal.js and other helpers) ────────
+window.openPayment = function(productId, amount, label) {
+  if (typeof window.CDB_CHECKOUT_MODAL !== 'undefined') {
+    window.CDB_CHECKOUT_MODAL.open({ amount, tierName: productId, productLabel: label });
+  } else {
+    window.location.href = '/upgrade.html';
+  }
+};
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
