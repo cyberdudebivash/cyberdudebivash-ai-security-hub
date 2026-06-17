@@ -3030,10 +3030,10 @@ document.addEventListener('cdb:scan:complete', function(e) {
           <button id="pur-btn" onclick="initiatePayment('${solutionId}','${title?.replace(/'/g,"\\'")}',${priceInr})" style="background:linear-gradient(135deg,#00d4ff,#0099cc);border:none;color:#000;padding:14px;border-radius:8px;font-weight:900;font-size:15px;cursor:pointer">
             💳 Secure Checkout
           </button>
-          <div style="font-size:11px;color:rgba(255,255,255,.72)">🔒 UPI · Bank Transfer · PayPal · Crypto · Instant Activation</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.72)">🔒 Secured by Razorpay · UPI · Cards · NetBanking · Wallets</div>
         </div>
         <div style="margin-top:20px;padding:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:12px;color:rgba(255,255,255,.72)">
-          ✅ Instant download after payment · 📧 Email delivery · 🔄 365-day access
+          ✅ Instant download after payment · 🔄 365-day access · GST invoice
         </div>
       </div>`;
     modal.style.display = 'block';
@@ -3042,6 +3042,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
   window.initiatePayment = async function(solutionId, title, priceInr) {
     const emailEl = document.getElementById('pur-email');
     const email   = (emailEl?.value || '').trim();
+    const btn     = document.getElementById('pur-btn');
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       if (emailEl) {
@@ -3052,18 +3053,157 @@ document.addEventListener('cdb:scan:complete', function(e) {
       return;
     }
     if (emailEl) emailEl.style.borderColor = '';
+    try { localStorage.setItem('cdb_email', email); } catch (e) {}
 
-    // Close the defense modal and open unified payment
-    const dsModal = document.getElementById('ds-modal');
-    if (dsModal) dsModal.style.display = 'none';
+    // Manual-payment fallback — ONLY used if the instant gateway is unreachable
+    // (Razorpay keys missing / order creation fails / SDK blocked). Preserves the
+    // prior behaviour so we never strand a buyer who can't reach the live gateway.
+    const manualFallback = function() {
+      const dsModal = document.getElementById('ds-modal');
+      if (dsModal) dsModal.style.display = 'none';
+      CDB_PAYMENT.open({
+        product: 'defense-' + solutionId,
+        productLabel: title || ('Defense Solution: ' + solutionId),
+        amountLabel: priceInr ? '₹' + Number(priceInr).toLocaleString('en-IN') : '',
+        amount: priceInr ? String(priceInr) : '',
+        email: email,
+      });
+    };
 
-    CDB_PAYMENT.open({
-      product: 'defense-' + solutionId,
-      productLabel: title || ('Defense Solution: ' + solutionId),
-      amountLabel: priceInr ? '₹' + Number(priceInr).toLocaleString('en-IN') : '',
-      amount: priceInr ? String(priceInr) : '',
-      email: email,
-    });
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting secure checkout…'; }
+    const resetBtn = function() { if (btn) { btn.disabled = false; btn.textContent = '💳 Secure Checkout'; } };
+
+    try {
+      // 1. Create a REAL Razorpay order server-side (records a pending purchase).
+      const oRes  = await fetch('/api/defense/purchase/' + encodeURIComponent(solutionId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, currency: 'INR' }),
+      });
+      const oData = await oRes.json().catch(() => ({}));
+      const order = oData && oData.order;
+
+      // A genuine live order id is "order_XXXX". If the backend couldn't create a
+      // real Razorpay order (no keys / gateway down), it echoes the receipt id —
+      // in that case fall back to the manual flow rather than a broken checkout.
+      if (!oRes.ok || !order || !order.razorpay_key || !order.order_id ||
+          String(order.order_id).indexOf('order_') !== 0) {
+        manualFallback();
+        return;
+      }
+
+      // 2. Load the Razorpay SDK and open the instant checkout.
+      await cdbLoadRazorpay();
+      if (!window.RazorpayNative) { manualFallback(); return; }
+
+      const rzp = new window.RazorpayNative({
+        key:         order.razorpay_key,
+        amount:      order.amount,
+        currency:    order.currency || 'INR',
+        name:        'CYBERDUDEBIVASH AI Security Hub',
+        description: title || 'Defense Solution',
+        order_id:    order.order_id,
+        prefill:     { email: (order.prefill && order.prefill.email) || email },
+        theme:       { color: '#00d4ff' },
+        handler: async function(rp) {
+          // 3. Verify signature server-side → grants 365-day access + returns the
+          //    deliverable (full_content) for instant delivery.
+          try {
+            const vRes  = await fetch('/api/defense/verify/' + encodeURIComponent(solutionId), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id:   rp.razorpay_order_id,
+                razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature:  rp.razorpay_signature,
+                email,
+              }),
+            });
+            const vData = await vRes.json().catch(() => ({}));
+            if (vRes.ok && vData.success && vData.access_granted) {
+              dsShowPurchaseSuccess(title, vData.full_content, vData.access_expires, email);
+            } else {
+              dsShowVerifyPending(title, rp.razorpay_payment_id, email, vData.error);
+            }
+          } catch (e) {
+            dsShowVerifyPending(title, rp.razorpay_payment_id, email);
+          }
+        },
+        modal: { ondismiss: resetBtn },
+      });
+      if (typeof rzp.on === 'function') rzp.on('payment.failed', resetBtn);
+      rzp.open();
+      resetBtn();
+    } catch (err) {
+      // Network / unexpected error before the gateway opened → manual fallback.
+      manualFallback();
+    }
+  };
+
+  // ── Instant-delivery success state (renders inside the defense modal) ─────────
+  window.dsShowPurchaseSuccess = function(title, fullContent, expires, email) {
+    const modal = document.getElementById('ds-modal');
+    const body  = document.getElementById('ds-modal-body');
+    if (modal) modal.style.display = 'block';
+    if (!body) return;
+    const hasContent = typeof fullContent === 'string' && fullContent.trim().length > 0;
+    let downloadBtn = '';
+    if (hasContent) {
+      // Build a client-side blob download so the buyer gets the files immediately.
+      const safeName = (title || 'cyberdudebivash-solution').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      window._dsLastContent = fullContent;
+      window._dsDownload = function() {
+        try {
+          const blob = new Blob([window._dsLastContent || ''], { type: 'text/plain;charset=utf-8' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url; a.download = safeName + '.txt';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        } catch (e) {}
+      };
+      downloadBtn =
+        '<button onclick="window._dsDownload()" style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;padding:12px 24px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:14px">⬇️ Download Your Files</button>' +
+        '<pre style="text-align:left;max-height:240px;overflow:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:14px;font-size:11px;color:rgba(255,255,255,.8);white-space:pre-wrap;word-break:break-word">' +
+          String(fullContent).replace(/[&<>]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}).slice(0, 6000) +
+        '</pre>';
+    } else {
+      downloadBtn =
+        '<div style="font-size:13px;color:rgba(255,255,255,.72);line-height:1.7;margin-bottom:8px">Your access is active. We\'re emailing your files to <strong style="color:#00d4ff">' + (email || 'your inbox') + '</strong> now — if they don\'t arrive within a few minutes, contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a>.</div>';
+    }
+    body.innerHTML =
+      '<div style="text-align:center;padding:32px 24px">' +
+        '<div style="font-size:52px;margin-bottom:12px">✅</div>' +
+        '<h3 style="margin:0 0 6px;color:#22c55e">Payment Successful — Access Granted</h3>' +
+        '<p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 20px">' + (title || 'Your solution') +
+          (expires ? ' · access until ' + new Date(expires).toLocaleDateString('en-IN') : '') + '</p>' +
+        downloadBtn +
+        '<div style="margin-top:18px"><button onclick="document.getElementById(\'ds-modal\').style.display=\'none\'" style="background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.35);color:#00d4ff;padding:10px 26px;border-radius:8px;font-weight:800;cursor:pointer">✓ Done</button></div>' +
+      '</div>';
+    try {
+      if (typeof window.MCPControl?.trackPurchase === 'function') {
+        window.MCPControl.trackPurchase('defense', title || 'Defense Solution', 0, 'defense');
+      }
+    } catch (e) {}
+  };
+
+  // ── Payment captured but verification couldn't auto-grant (rare edge) ─────────
+  window.dsShowVerifyPending = function(title, paymentId, email, errMsg) {
+    const modal = document.getElementById('ds-modal');
+    const body  = document.getElementById('ds-modal-body');
+    if (modal) modal.style.display = 'block';
+    if (!body) return;
+    body.innerHTML =
+      '<div style="text-align:center;padding:32px 24px">' +
+        '<div style="font-size:52px;margin-bottom:12px">🟡</div>' +
+        '<h3 style="margin:0 0 6px;color:#f59e0b">Payment Received — Finalising Access</h3>' +
+        '<p style="color:rgba(255,255,255,.7);font-size:13px;line-height:1.7;max-width:360px;margin:0 auto 8px">' +
+          'Your payment for <strong style="color:#fff">' + (title || 'your solution') + '</strong> went through' +
+          (paymentId ? ' (ID: <code style="color:#00d4ff">' + paymentId + '</code>)' : '') +
+          '. We\'re activating your access — you\'ll get your files at <strong style="color:#00d4ff">' + (email || 'your email') + '</strong> within minutes.</p>' +
+        '<p style="color:rgba(255,255,255,.45);font-size:12px;margin:8px 0 0">Need it now? Email <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a> with your payment ID.</p>' +
+        '<div style="margin-top:18px"><button onclick="document.getElementById(\'ds-modal\').style.display=\'none\'" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 26px;border-radius:8px;font-weight:800;cursor:pointer">Close</button></div>' +
+      '</div>';
   };
 
   /* ── Solution detail modal ─────────────────────────────────────── */
