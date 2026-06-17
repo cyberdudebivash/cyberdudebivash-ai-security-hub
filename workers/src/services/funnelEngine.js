@@ -82,21 +82,39 @@ export async function captureEmail(env, leadData = {}) {
   const now = new Date().toISOString();
 
   try {
-    // Upsert lead
-    await env.DB.prepare(`
-      INSERT INTO leads (id, email, name, domain, source, is_enterprise, plan, lead_score, funnel_stage, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'free', 0, 'email_captured', ?, ?)
-      ON CONFLICT(email) DO UPDATE SET
-        name         = COALESCE(excluded.name, leads.name),
-        domain       = COALESCE(excluded.domain, leads.domain),
-        updated_at   = excluded.updated_at
-    `).bind(
-      crypto.randomUUID(), email, name, leadDomain, source,
-      isEnterprise ? 1 : 0, now, now
-    ).run();
+    // Live leads schema has NO UNIQUE constraint on email (only a plain index)
+    // and no name/source/funnel_stage columns → manual upsert against real
+    // columns; name/source/fingerprint are preserved inside metadata.
+    const meta = JSON.stringify({ name, source, fingerprint });
+    const existing = await env.DB
+      .prepare(`SELECT id FROM leads WHERE email = ? LIMIT 1`)
+      .bind(email).first().catch(() => null);
 
-    // Record funnel event
-    await recordFunnelEvent(env, email, FUNNEL_STAGES.email_cap, { source });
+    if (existing?.id) {
+      await env.DB.prepare(`
+        UPDATE leads
+        SET domain        = COALESCE(?, domain),
+            company       = COALESCE(?, company),
+            is_enterprise = ?,
+            last_activity = ?,
+            updated_at    = ?
+        WHERE id = ?
+      `).bind(leadDomain || null, name || null, isEnterprise ? 1 : 0, now, now, existing.id).run();
+    } else {
+      await env.DB.prepare(`
+        INSERT INTO leads
+          (id, email, domain, plan, created_at, lead_score, is_enterprise,
+           stage, last_activity, company, metadata, updated_at)
+        VALUES (?, ?, ?, 'free', ?, ?, ?, 'email_captured', ?, ?, ?, ?)
+      `).bind(
+        crypto.randomUUID(), email, leadDomain || null, now,
+        isEnterprise ? 15 : 5, isEnterprise ? 1 : 0, now, name || null, meta, now,
+      ).run();
+    }
+
+    // Record funnel event (recordFunnelEvent targets live columns; use the
+    // canonical 'email_capture' funnel stage to match the GTM beacon path).
+    await recordFunnelEvent(env, email, 'email_capture', { source }, 'email_capture');
 
     // Fetch updated lead
     const lead = await getLead(env, email);

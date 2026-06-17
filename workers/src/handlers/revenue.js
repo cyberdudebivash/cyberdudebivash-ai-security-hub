@@ -279,16 +279,25 @@ export async function handleFunnelEvent(request, env, authCtx) {
     const userId = authCtx?.userId || null;
     const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
     const id     = crypto.randomUUID();
+    const email  = (typeof body.email === 'string' && body.email.includes('@')) ? body.email : 'anonymous';
+
+    // Live funnel_events columns: (id, email, event_type, stage, metadata, created_at).
+    // No user_id/ip_hash columns exist → fold those signals into metadata.
+    const meta = {
+      ...(metadata && typeof metadata === 'object' ? metadata : {}),
+      user_id: userId,
+      ip_hash: await hashIP(ip),
+    };
 
     await env.DB.prepare(`
-      INSERT INTO funnel_events (id, stage, user_id, ip_hash, metadata, created_at)
+      INSERT INTO funnel_events (id, email, event_type, stage, metadata, created_at)
       VALUES (?, ?, ?, ?, ?, datetime('now'))
     `).bind(
       id,
+      email,
       stage,
-      userId,
-      await hashIP(ip),
-      metadata ? JSON.stringify(metadata) : null,
+      stage,
+      JSON.stringify(meta),
     ).run().catch(() => {});
 
     return json({ success: true, stage, id });
