@@ -5020,6 +5020,42 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleVerifyCompliancePack(request, env), request));
     }
 
+    // GET  /api/tools/catalog  — tools & AI marketplace catalog (public)
+    if (path === '/api/tools/catalog' && method === 'GET') {
+      const { handleListTools } = await import('./handlers/toolsMarketplace.js');
+      return withSecurityHeaders(withCors(await handleListTools(request, env), request));
+    }
+
+    // POST /api/tools/purchase — create Razorpay order for tool purchase (public)
+    if (path === '/api/tools/purchase' && method === 'POST') {
+      const { handlePurchaseTool } = await import('./handlers/toolsMarketplace.js');
+      return withSecurityHeaders(withCors(await handlePurchaseTool(request, env), request));
+    }
+
+    // POST /api/tools/verify — verify payment + grant access + notify founder (public)
+    if (path === '/api/tools/verify' && method === 'POST') {
+      const { handleVerifyTool } = await import('./handlers/toolsMarketplace.js');
+      return withSecurityHeaders(withCors(await handleVerifyTool(request, env), request));
+    }
+
+    // GET  /api/academy/catalog  — academy course catalog (public)
+    if (path === '/api/academy/catalog' && method === 'GET') {
+      const { handleListAcademy } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleListAcademy(request, env), request));
+    }
+
+    // POST /api/academy/purchase — create Razorpay order for academy course (public)
+    if (path === '/api/academy/purchase' && method === 'POST') {
+      const { handlePurchaseAcademy } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handlePurchaseAcademy(request, env), request));
+    }
+
+    // POST /api/academy/verify — verify payment + grant access + notify founder (public)
+    if (path === '/api/academy/verify' && method === 'POST') {
+      const { handleVerifyAcademy } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleVerifyAcademy(request, env), request));
+    }
+
     // GET /api/global/mssp — MSSP tier info + pricing (public)
     if (path === '/api/global/mssp' && method === 'GET') {
       const { handleGetMSSPInfo } = await import('./services/globalScale.js');

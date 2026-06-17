@@ -856,20 +856,92 @@ nav{position:sticky;top:0;z-index:1000;background:rgba(3,3,8,.92);backdrop-filte
 // ACADEMY PAGE LOGIC v1.0
 // ═══════════════════════════════════════════════════════════════
 
-// ── COURSE PURCHASE HANDLER ──────────────────────────────────────
-function academyBuy(productId, amountInr, label) {
-  if (window.CDB_PAY && typeof CDB_PAY.open === 'function') {
-    CDB_PAY.open(productId, amountInr, label);
-    // Track purchase intent
-    try {
-      const intent = { product: productId, amount: amountInr, label, ts: Date.now(), source: 'academy' };
-      sessionStorage.setItem('cdb_academy_intent', JSON.stringify(intent));
-      if (window.CDB_TRACK) CDB_TRACK.event('academy_buy_click', { productId, amountInr });
-    } catch(e) {}
-  } else {
-    // Fallback: direct WhatsApp + email
-    const msg = encodeURIComponent(`Hi! I want to purchase: ${label} (₹${amountInr}). Please share payment details.`);
-    window.open(`https://wa.me/918179881447?text=${msg}`, '_blank');
+// ── COURSE PURCHASE HANDLER — instant Razorpay checkout ─────────
+var _aryRzpLoaded = false;
+function _aryLoadRzp() {
+  if (_aryRzpLoaded && window.RazorpayNative) return Promise.resolve();
+  return new Promise(function (resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = function () { window.RazorpayNative = window.Razorpay; _aryRzpLoaded = true; resolve(); };
+    s.onerror = function () { reject(new Error('Razorpay SDK load failed')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function academyBuy(productId, amountInr, label) {
+  try {
+    var intent = { product: productId, amount: amountInr, label, ts: Date.now(), source: 'academy' };
+    sessionStorage.setItem('cdb_academy_intent', JSON.stringify(intent));
+    if (window.CDB_TRACK) CDB_TRACK.event('academy_buy_click', { productId, amountInr });
+  } catch(e) {}
+
+  var email = '';
+  try { email = localStorage.getItem('cdb_email') || ''; } catch(e) {}
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    email = (window.prompt('Enter your email to receive course materials after purchase:') || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      alert('A valid email address is required to enroll and receive your course materials.');
+      return;
+    }
+    try { localStorage.setItem('cdb_email', email); } catch(e) {}
+  }
+
+  var manualFallback = function () {
+    var msg = encodeURIComponent('Hi! I want to purchase: ' + (label || productId) + ' (₹' + amountInr + '). Please share payment details.');
+    window.open('https://wa.me/918179881447?text=' + msg, '_blank');
+  };
+
+  try {
+    var oRes = await fetch('/api/academy/purchase', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId, email: email }),
+    });
+    var oData = await oRes.json().catch(function () { return {}; });
+    var order = oData && oData.order;
+
+    if (!oRes.ok || !order || !order.razorpay_key || !order.razorpay_order_id ||
+        String(order.razorpay_order_id).indexOf('order_') !== 0) {
+      manualFallback(); return;
+    }
+
+    await _aryLoadRzp();
+    if (!window.RazorpayNative) { manualFallback(); return; }
+
+    var rzp = new window.RazorpayNative({
+      key: order.razorpay_key, amount: order.amount, currency: 'INR',
+      name: 'CYBERDUDEBIVASH Academy',
+      description: label || productId,
+      order_id: order.razorpay_order_id,
+      prefill: { email: email },
+      theme: { color: '#f59e0b' },
+      handler: async function (rp) {
+        try {
+          var vRes = await fetch('/api/academy/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: rp.razorpay_order_id,
+              razorpay_payment_id: rp.razorpay_payment_id,
+              razorpay_signature: rp.razorpay_signature,
+              product_id: productId, email: email,
+            }),
+          });
+          var vData = await vRes.json().catch(function () { return {}; });
+          if (vRes.ok && vData.success) {
+            alert('🎓 Enrollment Confirmed!\n\n' + (label || productId) +
+              '\n\nYour course materials will be sent to ' + email + ' within 24 hours.\n\nPayment ID: ' + rp.razorpay_payment_id +
+              '\n\nCheck your inbox (including spam). Questions? bivash@cyberdudebivash.com');
+          } else {
+            alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Materials delivered to ' + email + ' within 24 hours. Contact bivash@cyberdudebivash.com for support.');
+          }
+        } catch (e) {
+          alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Our team will send materials to ' + email + ' within 24 hours.');
+        }
+      },
+    });
+    rzp.open();
+  } catch (err) {
+    manualFallback();
   }
 }
 
@@ -961,30 +1033,9 @@ function showAcademyDelivery(label, amount) {
 <script src="/assets/payment-modal.js"></script>
 
 <script>
-/* CDB_PAY -> CDB_PAYMENT bridge (payment-modal.js is the real engine) */
-(function() {
-  function mkBridge() {
-    window.CDB_PAY = {
-      open: function(productId, priceInr, label) {
-        if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
-          CDB_PAYMENT.open({
-            product: productId,
-            productLabel: label || productId,
-            amountLabel: priceInr ? "\u20B9" + Number(priceInr).toLocaleString("en-IN") : "",
-            amount: priceInr ? String(priceInr) : "",
-          });
-        } else { window.location.href = "/#pricing"; }
-      }
-    };
-    /* Also expose openPayment alias */
-    window.openPayment = window.openPayment || function(id, price, label) {
-      window.CDB_PAY.open(id, price, label);
-    };
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mkBridge);
-  } else { mkBridge(); }
-})();
+/* CDB_PAY bridge \u2014 routes to instant Razorpay academyBuy() */
+window.CDB_PAY = { open: function(id, price, label) { academyBuy(id, price, label); } };
+window.openPayment = function(id, price, label) { academyBuy(id, price, label); };
 </script>
 </body>
 </html>
