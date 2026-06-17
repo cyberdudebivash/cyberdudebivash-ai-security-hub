@@ -82,6 +82,19 @@ import {
   handleCreateIncident as handleCreateReliabilityIncident,
 } from './handlers/reliabilityEngineering.js';
 
+// ── v35.0 PHASE 3 P0 REVENUE OPERATING SYSTEM IMPORTS ─────────────────────
+import {
+  handleRevenueBreakdown, handleRevenueLeads, handleRevenueFunnelOps,
+  handleRevenueTransactions, handleRevenueForecastOps,
+  handleGetEnterprisePipeline, handleAddEnterpriseDeal,
+  handleEnterpriseInquiryAlias, handleAttributionTrack,
+} from './handlers/revenueOps.js';
+import {
+  handleMsspMetrics, handleListMsspPartners, handleAddMsspPartner,
+  handleMsspWlStatus, handleMsspUsage, handleMsspRevenueTrend,
+  handleMsspExpansionOpps,
+} from './handlers/msspOps.js';
+
 // ── v34.0 PHASE 4 GOD MODE IMPORTS ───────────────────────────────────────────
 import { handleGetMetrics, handleRefreshMetrics, handleMetricsHistory, handlePlatformStatus } from './handlers/platformMetricsAuthority.js';
 import { handleGetTimeline, handleListEvidence, handleAddEvidence, handleListNotes, handleAddNote, handleEscalateCase, handleInvestigationSummary, handleResolveCase } from './handlers/socInvestigations.js';
@@ -5621,6 +5634,121 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           'X-Currency':                  currency,
         },
       });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // PHASE 3 P0 — REVENUE OPERATING SYSTEM ROUTES
+    // All routes are owner-gated (internal dashboards only)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // GET /api/revenue/breakdown — Revenue by product type
+    if (path === '/api/revenue/breakdown' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleRevenueBreakdown(request, env), request));
+    }
+
+    // GET /api/revenue/leads — Lead source breakdown
+    if (path === '/api/revenue/leads' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleRevenueLeads(request, env), request));
+    }
+
+    // GET /api/revenue/funnel — Conversion funnel rates
+    if (path === '/api/revenue/funnel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleRevenueFunnelOps(request, env), request));
+    }
+
+    // GET /api/revenue/transactions — Recent payment transactions
+    if (path === '/api/revenue/transactions' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleRevenueTransactions(request, env), request));
+    }
+
+    // GET /api/revenue/forecast — Sales forecast
+    if (path === '/api/revenue/forecast' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleRevenueForecastOps(request, env), request));
+    }
+
+    // GET /api/enterprise/pipeline — Enterprise deal pipeline board
+    if (path === '/api/enterprise/pipeline' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleGetEnterprisePipeline(request, env), request));
+    }
+
+    // POST /api/enterprise/pipeline — Add new enterprise deal
+    if (path === '/api/enterprise/pipeline' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleAddEnterpriseDeal(request, env), request));
+    }
+
+    // POST /api/enterprise/inquiry — Alias for /api/enterprise/inquire (spelling fix)
+    if (path === '/api/enterprise/inquiry' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleEnterpriseInquiryAlias(request, env), request));
+    }
+
+    // POST /api/attribution/track — Track visitor→lead→customer attribution
+    if (path === '/api/attribution/track' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleAttributionTrack(request, env), request));
+    }
+
+    // ── MSSP Command Center Routes ────────────────────────────────────────────
+
+    // GET /api/mssp/metrics — Partner count, MRR, active clients, alerts
+    if (path === '/api/mssp/metrics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleMsspMetrics(request, env), request));
+    }
+
+    // GET /api/mssp/partners — List all MSSP partners
+    if (path === '/api/mssp/partners' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleListMsspPartners(request, env), request));
+    }
+
+    // POST /api/mssp/partners — Onboard a new MSSP partner
+    if (path === '/api/mssp/partners' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleAddMsspPartner(request, env), request));
+    }
+
+    // GET /api/mssp/wl-status — White-label configuration status
+    if (path === '/api/mssp/wl-status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleMsspWlStatus(request, env), request));
+    }
+
+    // GET /api/mssp/usage — Usage metrics across all partners
+    if (path === '/api/mssp/usage' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleMsspUsage(request, env), request));
+    }
+
+    // GET /api/mssp/revenue-trend — Monthly MRR trend (6 months)
+    if (path === '/api/mssp/revenue-trend' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleMsspRevenueTrend(request, env), request));
+    }
+
+    // GET /api/mssp/expansion-opps — Partners eligible for tier upgrade
+    if (path === '/api/mssp/expansion-opps' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleMsspExpansionOpps(request, env), request));
     }
 
     return withSecurityHeaders(withCors(Response.json({
