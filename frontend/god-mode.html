@@ -198,7 +198,7 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:20px;text-alig
 </main>
 
 <footer>
-  <p>CYBERDUDEBIVASH AI Security Hub — MYTHOS God Mode v4.0. Read-only intelligence dashboard. Triggering a run requires an administrator key.</p>
+  <p>CYBERDUDEBIVASH AI Security Hub — MYTHOS God Mode v4.0 · ENTERPRISE subscribers can trigger autonomous runs · <a href="/#pricing">Upgrade to ENTERPRISE →</a></p>
 </footer>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -210,7 +210,7 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:20px;text-alig
 // or localStorage('cdb_api_base') for staging / *.workers.dev testing.
 const API_BASE = (typeof window.API_BASE === 'string' ? window.API_BASE : null)
   ?? localStorage.getItem('cdb_api_base')
-  ?? (location.hostname.endsWith('cyberdudebivash.in') ? '' : 'https://cyberdudebivash-security-hub.workers.dev');
+  ?? '';
 
 const GM = '/api/mythos/god-mode';
 const REFRESH_IDLE_MS = 60000;   // full refresh cadence when idle
@@ -511,7 +511,13 @@ function scheduleNext(running) {
   }
 }
 
-// ── Admin trigger ──────────────────────────────────────────────────────────
+// ── Auth helpers ──────────────────────────────────────────────────────────
+function getUserTier() {
+  try { return (localStorage.getItem('cdb_tier') || 'FREE').toUpperCase(); } catch(e) { return 'FREE'; }
+}
+function getUserToken() {
+  try { return localStorage.getItem('cdb_token') || ''; } catch(e) { return ''; }
+}
 function getAdminKey() {
   let key = localStorage.getItem('cdb_admin_key') || '';
   if (!key) {
@@ -521,21 +527,54 @@ function getAdminKey() {
   return key;
 }
 
+// Build request headers: prefer user JWT (ENTERPRISE), fall back to admin key
+function buildTriggerHeaders(adminKey) {
+  const tier  = getUserTier();
+  const token = getUserToken();
+  const h     = { 'Content-Type': 'application/json' };
+  if (token && (tier === 'ENTERPRISE' || tier === 'MSSP')) {
+    h['Authorization'] = 'Bearer ' + token;
+  } else if (adminKey) {
+    h['x-api-key'] = adminKey;
+  }
+  return h;
+}
+
 async function triggerRun() {
-  const btn = $('triggerBtn');
-  const key = getAdminKey();
-  if (!key) { toast('Admin key required to trigger a run', 'bad'); return; }
+  const btn  = $('triggerBtn');
+  const tier = getUserTier();
+
+  // Non-enterprise users: show upgrade prompt
+  if (!['ENTERPRISE', 'MSSP'].includes(tier) && !localStorage.getItem('cdb_admin_key')) {
+    const goUpgrade = window.confirm(
+      'MYTHOS God Mode requires ENTERPRISE plan (₹4,999/month).\n\nClick OK to upgrade, or Cancel to enter an admin key.'
+    );
+    if (goUpgrade) { window.location.href = '/#pricing'; return; }
+  }
+
+  const adminKey = ['ENTERPRISE', 'MSSP'].includes(tier) ? '' : getAdminKey();
+  if (!['ENTERPRISE', 'MSSP'].includes(tier) && !adminKey) {
+    toast('ENTERPRISE plan or admin key required.', 'bad'); return;
+  }
+
   btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Starting…';
   try {
     const res = await fetch(API_BASE + GM + '/run', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
-      body: JSON.stringify({ max_items: 10 }),
+      headers: buildTriggerHeaders(adminKey),
+      body: JSON.stringify({ max_items: ['ENTERPRISE', 'MSSP'].includes(tier) ? 5 : 10 }),
     });
     const body = await res.json().catch(() => ({}));
     if (res.status === 403) {
       localStorage.removeItem('cdb_admin_key');
-      toast('Admin access denied — key cleared. Try again.', 'bad');
+      if (body.upgrade_url) {
+        toast('ENTERPRISE plan required. Redirecting to upgrade…', 'bad');
+        setTimeout(() => { window.location.href = '/#pricing'; }, 1800);
+      } else {
+        toast('Access denied — key cleared. Try again.', 'bad');
+      }
+    } else if (res.status === 429) {
+      toast((body.error || 'Rate limit reached.') + ' ' + (body.next_reset || ''), 'bad');
     } else if (res.status === 409) {
       toast('A God Mode run is already in progress.', 'bad');
     } else if (res.ok && body.success) {

@@ -21,7 +21,34 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 
 // ── POST /api/mythos/run ──────────────────────────────────────────────────────
 export async function handleMythosRun(request, env, authCtx) {
-  if (authCtx?.role !== 'admin') return json({ success: false, error: 'Admin access required' }, 403);
+  // Auth: admin (full access) | ENTERPRISE/MSSP (up to 5 items/day) | others → 403
+  const apiKey  = request.headers.get('x-api-key') || request.headers.get('X-Api-Key') || '';
+  const isAdmin = (env.ADMIN_KEY && apiKey === env.ADMIN_KEY) || authCtx?.role === 'admin';
+  const tier    = (authCtx?.tier || '').toUpperCase();
+  const isPaidEnterprise = isAdmin || tier === 'ENTERPRISE' || tier === 'MSSP';
+
+  if (!isPaidEnterprise) {
+    return json({
+      success: false,
+      error: 'MYTHOS AI Orchestration requires ENTERPRISE plan (₹4,999/month) or higher.',
+      upgrade_url: '/#pricing',
+      current_tier: tier || 'FREE',
+    }, 403);
+  }
+
+  // Daily rate limit for non-admin enterprise users (1 run/day per email)
+  if (!isAdmin && authCtx?.email) {
+    const dateKey = `mythos:ratelimit:${authCtx.email}:${new Date().toISOString().slice(0,10)}`;
+    const used = await env.SECURITY_HUB_KV?.get(dateKey).catch(() => null);
+    if (used) {
+      return json({
+        success: false,
+        error: 'MYTHOS orchestration limit reached (1 run/day on ENTERPRISE). Contact support to increase.',
+        next_reset: 'Tomorrow 00:00 UTC',
+      }, 429);
+    }
+    await env.SECURITY_HUB_KV?.put(dateKey, '1', { expirationTtl: 86400 }).catch(() => {});
+  }
 
   const live = await env.SECURITY_HUB_KV?.get('mythos:status', 'json').catch(() => null);
   if (live?.running) return json({
@@ -30,7 +57,10 @@ export async function handleMythosRun(request, env, authCtx) {
   }, 409);
 
   const body       = await request.json().catch(() => ({}));
-  const maxItems   = Math.min(parseInt(body.max_items || '5'), 20);
+  // Admin: up to 20 items; Enterprise: up to 5 items
+  const maxItems   = isAdmin
+    ? Math.min(parseInt(body.max_items || '5'), 20)
+    : Math.min(parseInt(body.max_items || '3'), 5);
   const filterCve  = body.cve_id || null;
 
   // Fire-and-forget — orchestration runs asynchronously

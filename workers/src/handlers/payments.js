@@ -223,6 +223,119 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       error: 'razorpay_order_id, razorpay_payment_id, and razorpay_signature are required',
     }, { status: 400 });
   }
+  // ── Subscription plan activation ─────────────────────────────────────────────
+  if (module === 'subscription') {
+    const sigValid = await verifyPaymentSignature(env, razorpay_order_id, razorpay_payment_id, razorpay_signature);
+    if (!sigValid) {
+      return Response.json({ error: 'Payment signature invalid. Contact support.' }, { status: 400 });
+    }
+
+    const planKey = ((body.plan || target || 'STARTER')).toUpperCase();
+    const validPlans = ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'];
+    if (!validPlans.includes(planKey)) {
+      return Response.json({ error: 'Invalid plan. Valid: STARTER, PRO, ENTERPRISE, MSSP' }, { status: 400 });
+    }
+
+    const confirmedEmail = email || authCtx.email || null;
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+    // Idempotency: return existing activation if already processed
+    if (env.DB) {
+      const existing = await env.DB.prepare(
+        `SELECT id FROM payments WHERE razorpay_order_id = ? AND status = 'paid' LIMIT 1`
+      ).bind(razorpay_order_id).first().catch(() => null);
+
+      if (existing) {
+        const kvToken = confirmedEmail
+          ? await env.SECURITY_HUB_KV?.get(`sub:token:${confirmedEmail}`).catch(() => null)
+          : null;
+        return Response.json({
+          success:   true,
+          token:     kvToken || existing.id,
+          tier:      planKey,
+          duplicate: true,
+          message:   `${planKey} plan already activated.`,
+        });
+      }
+    }
+
+    // Find or create user record
+    const userId = `user_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+    if (env.DB && confirmedEmail) {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO users (id, email, tier, created_at) VALUES (?, ?, ?, datetime('now'))`
+      ).bind(userId, confirmedEmail, planKey).run().catch(() => {});
+      await env.DB.prepare(
+        `UPDATE users SET tier = ?, updated_at = datetime('now') WHERE email = ?`
+      ).bind(planKey, confirmedEmail).run().catch(() => {});
+    }
+
+    // Record payment in D1
+    const subPaymentId = `sub_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+    const planPrice    = SUBSCRIPTION_PRICES[planKey]?.amount || 49900;
+    if (env.DB) {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO payments
+         (id, user_id, module, target, amount, currency, razorpay_order_id,
+          razorpay_payment_id, razorpay_signature, status, email, ip, paid_at, created_at)
+         VALUES (?, ?, ?, ?, ?, 'INR', ?, ?, ?, 'paid', ?, ?, datetime('now'), datetime('now'))`
+      ).bind(
+        subPaymentId, userId, 'subscription', planKey, planPrice,
+        razorpay_order_id, razorpay_payment_id, razorpay_signature,
+        confirmedEmail || null, ip,
+      ).run().catch(e => console.warn('[Payments] sub D1 insert:', e.message));
+    }
+
+    // Grant KV access token — 365-day TTL
+    const accessToken = generateAccessToken();
+    const expiresAt   = new Date(Date.now() + 365 * 86400000).toISOString();
+    if (env.SECURITY_HUB_KV && confirmedEmail) {
+      await Promise.all([
+        env.SECURITY_HUB_KV.put(`sub:token:${confirmedEmail}`, accessToken,  { expirationTtl: 365 * 86400 }),
+        env.SECURITY_HUB_KV.put(`sub:tier:${confirmedEmail}`,  planKey,      { expirationTtl: 365 * 86400 }),
+        env.SECURITY_HUB_KV.put(`sub:active:${accessToken}`,   JSON.stringify({
+          email: confirmedEmail, tier: planKey, activated_at: new Date().toISOString(),
+        }),                                                                     { expirationTtl: 365 * 86400 }),
+      ]).catch(() => {});
+    }
+
+    // Fire-and-forget: purchase email + GST invoice
+    const subPriceInr = Math.round(planPrice / 100);
+    Promise.all([
+      confirmedEmail
+        ? sendPurchaseConfirmation(env, {
+            to:            confirmedEmail,
+            productName:   SUBSCRIPTION_PRICES[planKey]?.name || `${planKey} Plan`,
+            amountInr:     subPriceInr,
+            paymentId:     razorpay_payment_id,
+            downloadUrl:   '/dashboard',
+            accessExpires: expiresAt,
+          }).catch(() => {})
+        : Promise.resolve(),
+      (env.DB && subPriceInr)
+        ? createInvoice(env.DB, {
+            userId:        userId,
+            email:         confirmedEmail || 'noreply@buyer',
+            lineItems:     [{ description: SUBSCRIPTION_PRICES[planKey]?.name || `${planKey} Plan`, amount_inr: subPriceInr, quantity: 1 }],
+            paymentId:     razorpay_payment_id,
+            paymentMethod: 'razorpay',
+          }).catch(() => {})
+        : Promise.resolve(),
+    ]).catch(() => {});
+
+    await trackEvent(env, 'subscription_activated', 'subscription', userId, ip, {
+      plan: planKey, razorpay_order_id, razorpay_payment_id, email: confirmedEmail,
+    });
+
+    return Response.json({
+      success:    true,
+      token:      accessToken,
+      tier:       planKey,
+      expires_at: expiresAt,
+      message:    `${planKey} plan activated. Welcome to CYBERDUDEBIVASH AI Security Hub.`,
+    });
+  }
+
   if (!module || !SCAN_HANDLERS[module]) {
     return Response.json({ error: 'Invalid scan module', valid: Object.keys(SCAN_HANDLERS) }, { status: 400 });
   }
