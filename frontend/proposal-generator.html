@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Enterprise Proposal Generator | CYBERDUDEBIVASH®</title>
+<meta name="description" content="Generate executive-ready enterprise security proposals for clients — Security Assessment, AI Security, MSSP, Threat Intelligence, and Enterprise Retainer proposals.">
+<style>
+:root{
+  --bg:#060614;--surface:#0c0c24;--surface2:#10102a;
+  --border:#1a1a3e;--border2:#252550;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;
+  --warn:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#0d0d28;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:300;background:rgba(6,6,20,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 24px}
+.nav-inner{max-width:1400px;width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.nav-logo{font-size:13px;font-weight:900;color:var(--accent);letter-spacing:.04em;white-space:nowrap}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-links a{color:var(--text-muted);font-size:12px;font-weight:600;padding:6px 12px;border-radius:7px;transition:all .2s;white-space:nowrap;text-decoration:none}
+.nav-links a:hover{color:var(--accent);background:rgba(0,212,255,.06)}
+.nav-links a.active{color:var(--accent);background:rgba(0,212,255,.08)}
+.nav-cta{background:linear-gradient(135deg,var(--accent2),#4f46e5) !important;color:#fff !important;font-weight:800 !important}
+@media(max-width:900px){.nav-links .hide-mob{display:none}}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(180deg,#08080e 0%,#0a0a1a 100%);border-bottom:1px solid var(--border);padding:56px 24px 40px;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);color:#a78bfa;font-size:11px;font-weight:800;letter-spacing:.12em;padding:5px 16px;border-radius:20px;margin-bottom:20px;text-transform:uppercase}
+.hero h1{font-size:clamp(24px,4vw,38px);font-weight:900;color:#fff;margin-bottom:10px;letter-spacing:-.5px}
+.hero p{font-size:15px;color:var(--text-muted);max-width:560px;margin:0 auto}
+
+/* ── LAYOUT ── */
+.main{max-width:1300px;margin:0 auto;padding:40px 24px;display:grid;grid-template-columns:380px 1fr;gap:32px;align-items:start}
+@media(max-width:900px){.main{grid-template-columns:1fr;padding:24px 16px}}
+
+/* ── FORM PANEL ── */
+.form-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;position:sticky;top:80px}
+.form-panel h2{font-size:15px;font-weight:800;color:#fff;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;padding:9px 12px;outline:none;transition:border-color .2s;font-family:inherit}
+.form-group input:focus,.form-group select,.form-group textarea:focus{border-color:var(--accent2);background:rgba(124,58,237,.04)}
+.form-group select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.form-group select option{background:#0c0c24;color:#e2e8f0}
+.form-group textarea{resize:vertical;min-height:80px}
+.services-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.service-check{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s}
+.service-check:hover{border-color:var(--accent2);background:rgba(124,58,237,.06)}
+.service-check input[type=checkbox]{accent-color:var(--accent2);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+.service-check span{font-size:11px;color:var(--text-muted);font-weight:600}
+.section-divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.btn-generate{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent2),#4f46e5);border:none;color:#fff;font-size:14px;font-weight:900;border-radius:10px;cursor:pointer;transition:all .2s;letter-spacing:.02em}
+.btn-generate:hover{opacity:.9;transform:translateY(-1px)}
+.btn-pdf{width:100%;padding:12px;background:var(--accent3);border:none;color:#000;font-size:13px;font-weight:900;border-radius:10px;cursor:pointer;margin-top:10px;transition:all .2s}
+.btn-pdf:hover{opacity:.9}
+.btn-reset{width:100%;padding:10px;background:transparent;border:1px solid var(--border2);color:var(--text-muted);font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;margin-top:8px;transition:all .2s}
+.btn-reset:hover{border-color:var(--danger);color:var(--danger)}
+
+/* ── PROPOSAL PREVIEW ── */
+.preview-panel{min-height:600px}
+.preview-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:500px;background:var(--surface);border:2px dashed var(--border2);border-radius:var(--radius);text-align:center;gap:16px;color:var(--text-dim)}
+.preview-empty svg{opacity:.3}
+.preview-doc{background:#fff;color:#1a1a2e;border-radius:var(--radius);overflow:hidden;box-shadow:0 8px 48px rgba(0,0,0,.6)}
+
+/* ── PROPOSAL DOCUMENT STYLES (light bg) ── */
+.prop-cover{background:linear-gradient(135deg,#060614 0%,#0c0c24 60%,#1a0a3e 100%);color:#fff;padding:60px 48px;min-height:280px;position:relative;overflow:hidden}
+.prop-cover::before{content:'';position:absolute;top:-40px;right:-40px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.3) 0%,transparent 70%)}
+.prop-cover-badge{display:inline-block;background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.3);color:#00d4ff;font-size:10px;font-weight:800;letter-spacing:.15em;padding:4px 12px;border-radius:16px;text-transform:uppercase;margin-bottom:20px}
+.prop-cover h1{font-size:clamp(22px,3vw,32px);font-weight:900;margin-bottom:8px;position:relative;z-index:1;letter-spacing:-.3px}
+.prop-cover .subtitle{font-size:14px;color:#94a3b8;margin-bottom:32px;position:relative;z-index:1}
+.prop-cover .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;position:relative;z-index:1}
+.prop-meta-item{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px 16px}
+.prop-meta-item .ml{font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.prop-meta-item .mv{font-size:13px;color:#e2e8f0;font-weight:700}
+
+.prop-body{padding:40px 48px;background:#fff;color:#1e293b}
+@media(max-width:768px){.prop-cover,.prop-body{padding:32px 24px}}
+
+.prop-section{margin-bottom:36px}
+.prop-section h2{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+.prop-section h2 .num{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.prop-section p{font-size:13px;line-height:1.7;color:#334155;margin-bottom:12px}
+
+.prop-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.prop-table th{background:#f8fafc;color:#475569;font-weight:700;text-align:left;padding:10px 12px;border:1px solid #e2e8f0;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.prop-table td{padding:10px 12px;border:1px solid #e2e8f0;color:#1e293b;vertical-align:top}
+.prop-table tr:nth-child(even) td{background:#f8fafc}
+.prop-table .price-cell{font-weight:800;color:#7c3aed}
+.prop-table .total-row td{background:#f3f0ff;font-weight:800}
+
+.prop-highlight{background:linear-gradient(135deg,#f0f4ff,#f5f0ff);border:1px solid #c4b5fd;border-radius:10px;padding:20px 24px;margin:16px 0}
+.prop-highlight .hl-label{font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.prop-highlight .hl-value{font-size:24px;font-weight:900;color:#4c1d95}
+.prop-highlight .hl-sub{font-size:12px;color:#64748b;margin-top:4px}
+
+.prop-checklist{list-style:none;margin:12px 0}
+.prop-checklist li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#334155;padding:6px 0;border-bottom:1px solid #f1f5f9}
+.prop-checklist li:last-child{border:none}
+.prop-checklist .ck{color:#10b981;font-size:16px;flex-shrink:0;margin-top:1px}
+
+.prop-footer{background:#0f172a;color:#94a3b8;padding:24px 48px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.prop-footer a{color:#00d4ff}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent3);color:#000;padding:12px 24px;border-radius:10px;font-weight:700;font-size:13px;z-index:9999;animation:tfade 3s forwards}
+.toast.error{background:var(--danger);color:#fff}
+@keyframes tfade{0%{opacity:0;transform:translateX(-50%) translateY(10px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0}}
+
+/* ── OWNER GATE ── */
+.gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.gate-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:40px;max-width:400px;width:100%;text-align:center}
+.gate-box h2{color:#fff;font-size:20px;font-weight:900;margin-bottom:8px}
+.gate-box p{color:var(--text-muted);font-size:13px;margin-bottom:24px}
+.gate-input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;padding:12px 16px;outline:none;text-align:center;letter-spacing:.1em;font-family:inherit}
+.gate-input:focus{border-color:var(--accent)}
+.gate-btn{width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,var(--accent2),#4f46e5);border:none;color:#fff;font-size:14px;font-weight:900;border-radius:10px;cursor:pointer}
+.gate-error{color:var(--danger);font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<!-- ── OWNER GATE ── -->
+<div id="gateOverlay" class="gate-overlay">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:12px">🔐</div>
+    <h2>Internal Access Only</h2>
+    <p>This tool is restricted to CYBERDUDEBIVASH® team members. Enter your access code to continue.</p>
+    <input id="gateInput" class="gate-input" type="password" placeholder="Enter access code" onkeydown="if(event.key==='Enter')checkGate()">
+    <button class="gate-btn" onclick="checkGate()">Unlock →</button>
+    <div id="gateError" class="gate-error" style="display:none">Incorrect code. Contact bivash@cyberdudebivash.com</div>
+  </div>
+</div>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">⚔️ CYBERDUDEBIVASH® AI SECURITY HUB</a>
+    <div class="nav-links">
+      <a href="/" class="hide-mob">Home</a>
+      <a href="/ciso-hub" class="hide-mob">CISO Hub</a>
+      <a href="/revenue-command-center" class="hide-mob">Revenue</a>
+      <a href="/mssp-command-center" class="hide-mob">MSSP Center</a>
+      <a href="/proposal-generator" class="active">Proposals</a>
+      <a href="/admin-payments.html" class="nav-cta btn hide-mob">Payments</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-badge">🔒 Internal Tool · Team Only</div>
+  <h1>Enterprise Proposal Generator</h1>
+  <p>Generate executive-ready PDF proposals for Security Assessment, AI Security, MSSP, Threat Intelligence, and Enterprise Retainer engagements.</p>
+</section>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- FORM PANEL -->
+  <aside class="form-panel">
+    <h2>📋 Proposal Details</h2>
+
+    <div class="form-group">
+      <label>Proposal Type</label>
+      <select id="propType" onchange="updateServices()">
+        <option value="security_assessment">Full Security Assessment</option>
+        <option value="ai_security">AI Security Assessment</option>
+        <option value="mssp">MSSP Partnership</option>
+        <option value="threat_intelligence">Threat Intelligence API</option>
+        <option value="enterprise_retainer">Enterprise Retainer</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Client Company Name</label>
+      <input id="clientCompany" type="text" placeholder="Acme Corp Pvt. Ltd.">
+    </div>
+
+    <div class="form-group">
+      <label>Contact Name</label>
+      <input id="contactName" type="text" placeholder="Mr. Rajesh Kumar">
+    </div>
+
+    <div class="form-group">
+      <label>Contact Title</label>
+      <input id="contactTitle" type="text" placeholder="CISO / CTO / IT Director">
+    </div>
+
+    <div class="form-group">
+      <label>Contact Email</label>
+      <input id="contactEmail" type="email" placeholder="ciso@acmecorp.com">
+    </div>
+
+    <div class="form-group">
+      <label>Industry</label>
+      <select id="clientIndustry">
+        <option value="FinTech / Banking">FinTech / Banking</option>
+        <option value="Healthcare">Healthcare</option>
+        <option value="Enterprise Technology">Enterprise Technology</option>
+        <option value="E-Commerce / Retail">E-Commerce / Retail</option>
+        <option value="Manufacturing">Manufacturing</option>
+        <option value="Government / PSU">Government / PSU</option>
+        <option value="Education">Education</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Logistics">Logistics</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Company Size</label>
+      <select id="clientSize">
+        <option value="1-50 employees">1–50 employees</option>
+        <option value="51-200 employees">51–200 employees</option>
+        <option value="201-500 employees">201–500 employees</option>
+        <option value="501-1000 employees">501–1,000 employees</option>
+        <option value="1000+ employees">1,000+ employees</option>
+      </select>
+    </div>
+
+    <hr class="section-divider">
+    <div class="form-group">
+      <label>Services Included</label>
+      <div class="services-grid" id="servicesGrid"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Engagement Duration</label>
+      <select id="duration">
+        <option value="72 hours">72 Hours</option>
+        <option value="5 business days">5 Business Days</option>
+        <option value="7 business days">7 Business Days</option>
+        <option value="2 weeks">2 Weeks</option>
+        <option value="1 month">1 Month</option>
+        <option value="Ongoing (Monthly)">Ongoing (Monthly)</option>
+        <option value="Ongoing (Annual)">Ongoing (Annual)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Engagement Value (₹)</label>
+      <input id="engValue" type="number" placeholder="9999" min="0">
+    </div>
+
+    <div class="form-group">
+      <label>Payment Terms</label>
+      <select id="payTerms">
+        <option value="100% upfront via Razorpay">100% upfront via Razorpay</option>
+        <option value="50% upfront, 50% on delivery">50% upfront, 50% on delivery</option>
+        <option value="Monthly subscription (auto-debit)">Monthly subscription (auto-debit)</option>
+        <option value="Net-15 (invoice)">Net-15 (invoice)</option>
+        <option value="Net-30 (invoice)">Net-30 (invoice)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Special Notes / Scope</label>
+      <textarea id="specialNotes" placeholder="Any specific domains, applications, compliance requirements, or client context..."></textarea>
+    </div>
+
+    <button class="btn-generate" onclick="generateProposal()">⚡ Generate Proposal</button>
+    <button class="btn-pdf" onclick="printProposal()" id="pdfBtn" style="display:none">📄 Download as PDF</button>
+    <button class="btn-reset" onclick="resetForm()">↺ Reset Form</button>
+  </aside>
+
+  <!-- PREVIEW PANEL -->
+  <main class="preview-panel">
+    <div class="preview-empty" id="previewEmpty">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text-muted);margin-bottom:6px">No Proposal Generated</div>
+        <div style="font-size:13px">Fill in the form and click "Generate Proposal" to preview the executive-ready document.</div>
+      </div>
+    </div>
+    <div id="proposalDoc" style="display:none"></div>
+  </main>
+
+</div>
+
+<script>
+/* ── OWNER GATE ── */
+(function() {
+  if (localStorage.getItem('cdb_owner') === 'true') {
+    document.getElementById('gateOverlay').style.display = 'none';
+  }
+})();
+
+function checkGate() {
+  const val = document.getElementById('gateInput').value;
+  if (val === 'cyberdudebivash2024admin') {
+    localStorage.setItem('cdb_owner', 'true');
+    document.getElementById('gateOverlay').style.display = 'none';
+  } else {
+    document.getElementById('gateError').style.display = 'block';
+    document.getElementById('gateInput').value = '';
+  }
+}
+
+/* ── SERVICES CONFIG ── */
+const SERVICE_SETS = {
+  security_assessment: [
+    {id:'vapt',label:'VAPT',price:9999},
+    {id:'web_app',label:'Web App Security',price:0},
+    {id:'api_sec',label:'API Security',price:0},
+    {id:'cloud_review',label:'Cloud Review',price:3000},
+    {id:'network',label:'Network Security',price:0},
+    {id:'report',label:'Executive Report',price:0},
+  ],
+  ai_security: [
+    {id:'owasp_llm',label:'OWASP LLM Top 10',price:24999},
+    {id:'ai_governance',label:'AI Governance',price:49999},
+    {id:'ai_red_team',label:'AI Red Team',price:99999},
+    {id:'mcp_security',label:'MCP Security',price:24999},
+    {id:'agent_security',label:'Agent Security',price:34999},
+    {id:'rag_security',label:'RAG Security',price:19999},
+  ],
+  mssp: [
+    {id:'api_access',label:'Sentinel APEX API',price:9999},
+    {id:'white_label',label:'White Label Portal',price:0},
+    {id:'threat_intel',label:'Threat Intelligence',price:0},
+    {id:'soc_support',label:'SOC Support',price:0},
+    {id:'monthly_reports',label:'Monthly Reports',price:0},
+    {id:'dedicated_csm',label:'Dedicated CSM',price:0},
+  ],
+  threat_intelligence: [
+    {id:'sentinel_api',label:'Sentinel APEX API',price:1499},
+    {id:'cve_feed',label:'CVE Feed',price:0},
+    {id:'ioc_feed',label:'IOC Feed',price:0},
+    {id:'siem_enrichment',label:'SIEM Enrichment',price:0},
+    {id:'custom_intel',label:'Custom Intel Reports',price:4999},
+    {id:'dark_web',label:'Dark Web Monitoring',price:0},
+  ],
+  enterprise_retainer: [
+    {id:'monthly_vapt',label:'Monthly VAPT',price:0},
+    {id:'threat_brief',label:'Weekly Threat Brief',price:0},
+    {id:'incident_response',label:'Incident Response',price:0},
+    {id:'vciso',label:'vCISO Advisory',price:0},
+    {id:'compliance_mgmt',label:'Compliance Mgmt',price:0},
+    {id:'api_unlimited',label:'Unlimited API Access',price:0},
+  ],
+};
+
+const PROPOSAL_META = {
+  security_assessment:{title:'Full Security Assessment',subtitle:'Comprehensive Vulnerability & Risk Assessment',defaultValue:9999,duration:'72 hours'},
+  ai_security:{title:'Enterprise AI Security Assessment',subtitle:'OWASP LLM Top 10 · AI Governance · AI Red Team · MCP Security',defaultValue:49999,duration:'7 business days'},
+  mssp:{title:'MSSP Partnership Agreement',subtitle:'Managed Security Service Provider White-Label Platform',defaultValue:9999,duration:'Ongoing (Monthly)'},
+  threat_intelligence:{title:'Sentinel APEX Threat Intelligence',subtitle:'Real-Time CVE · IOC · Threat Actor Intelligence API',defaultValue:1499,duration:'Ongoing (Monthly)'},
+  enterprise_retainer:{title:'Enterprise Security Retainer',subtitle:'Ongoing Security Operations & Advisory Partnership',defaultValue:49999,duration:'Ongoing (Annual)'},
+};
+
+function updateServices() {
+  const type = document.getElementById('propType').value;
+  const grid = document.getElementById('servicesGrid');
+  const meta = PROPOSAL_META[type];
+  document.getElementById('engValue').value = meta.defaultValue;
+  document.getElementById('duration').value = meta.duration;
+
+  const services = SERVICE_SETS[type] || [];
+  grid.innerHTML = services.map(s => `
+    <label class="service-check">
+      <input type="checkbox" value="${s.id}" ${s.price === 0 ? 'checked' : ''} data-price="${s.price}">
+      <span>${s.label}</span>
+    </label>
+  `).join('');
+}
+
+/* ── GENERATE PROPOSAL ── */
+function generateProposal() {
+  const type     = document.getElementById('propType').value;
+  const company  = document.getElementById('clientCompany').value.trim() || 'Client Organization';
+  const contact  = document.getElementById('contactName').value.trim() || 'Decision Maker';
+  const title    = document.getElementById('contactTitle').value.trim() || 'Security Lead';
+  const email    = document.getElementById('contactEmail').value.trim() || '—';
+  const industry = document.getElementById('clientIndustry').value;
+  const size     = document.getElementById('clientSize').value;
+  const duration = document.getElementById('duration').value;
+  const value    = parseInt(document.getElementById('engValue').value) || 0;
+  const terms    = document.getElementById('payTerms').value;
+  const notes    = document.getElementById('specialNotes').value.trim();
+  const meta     = PROPOSAL_META[type];
+
+  const today   = new Date();
+  const validTo = new Date(today.getTime() + 14*24*60*60*1000);
+  const fmtDate = d => d.toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+  const propRef = 'CDB-' + today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(Math.floor(Math.random()*9000)+1000);
+
+  const services = Array.from(document.querySelectorAll('#servicesGrid input[type=checkbox]:checked')).map(cb => cb.closest('label').querySelector('span').textContent);
+
+  const deliverables = getDeliverables(type);
+  const valueStr = '₹' + value.toLocaleString('en-IN');
+
+  const html = `
+<div class="proposal-doc">
+  <!-- COVER -->
+  <div class="prop-cover">
+    <div class="prop-cover-badge">CONFIDENTIAL PROPOSAL</div>
+    <h1>${meta.title}</h1>
+    <div class="subtitle">${meta.subtitle}</div>
+    <div class="meta-grid">
+      <div class="prop-meta-item"><div class="ml">Prepared For</div><div class="mv">${company}</div></div>
+      <div class="prop-meta-item"><div class="ml">Contact</div><div class="mv">${contact}, ${title}</div></div>
+      <div class="prop-meta-item"><div class="ml">Proposal Ref</div><div class="mv">${propRef}</div></div>
+      <div class="prop-meta-item"><div class="ml">Date</div><div class="mv">${fmtDate(today)}</div></div>
+      <div class="prop-meta-item"><div class="ml">Valid Until</div><div class="mv">${fmtDate(validTo)}</div></div>
+      <div class="prop-meta-item"><div class="ml">Investment</div><div class="mv" style="color:#f59e0b">${valueStr}</div></div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="prop-body">
+
+    <!-- 1. EXECUTIVE SUMMARY -->
+    <div class="prop-section">
+      <h2><span class="num">1</span>Executive Summary</h2>
+      <p>CYBERDUDEBIVASH® AI Security Hub is pleased to present this proposal to <strong>${company}</strong> for <strong>${meta.title}</strong>. This engagement is designed to strengthen ${company}'s security posture, reduce risk exposure, and ensure alignment with industry best practices and regulatory requirements relevant to the <strong>${industry}</strong> sector.</p>
+      <p>Given ${company}'s profile as a <strong>${size}</strong> organization in <strong>${industry}</strong>, this engagement addresses the most critical security concerns specific to your industry vertical, delivering actionable intelligence your team can act on immediately.</p>
+      ${notes ? `<p><strong>Scope Note:</strong> ${notes}</p>` : ''}
+    </div>
+
+    <!-- 2. SCOPE OF WORK -->
+    <div class="prop-section">
+      <h2><span class="num">2</span>Scope of Work</h2>
+      <p>This engagement includes the following services:</p>
+      <table class="prop-table">
+        <thead><tr><th>#</th><th>Service</th><th>Description</th></tr></thead>
+        <tbody>
+          ${services.map((s,i) => `<tr><td>${i+1}</td><td><strong>${s}</strong></td><td>${getServiceDesc(s,type)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. DELIVERABLES -->
+    <div class="prop-section">
+      <h2><span class="num">3</span>Deliverables</h2>
+      <ul class="prop-checklist">
+        ${deliverables.map(d => `<li><span class="ck">✓</span><span>${d}</span></li>`).join('')}
+      </ul>
+    </div>
+
+    <!-- 4. ENGAGEMENT TIMELINE -->
+    <div class="prop-section">
+      <h2><span class="num">4</span>Engagement Timeline</h2>
+      <table class="prop-table">
+        <thead><tr><th>Phase</th><th>Activity</th><th>Timeline</th></tr></thead>
+        <tbody>
+          ${getTimeline(type).map(t => `<tr><td><strong>${t[0]}</strong></td><td>${t[1]}</td><td>${t[2]}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <p style="margin-top:12px;font-size:12px;color:#64748b">Total Duration: <strong>${duration}</strong> from engagement start date.</p>
+    </div>
+
+    <!-- 5. INVESTMENT -->
+    <div class="prop-section">
+      <h2><span class="num">5</span>Investment & Commercials</h2>
+      <div class="prop-highlight">
+        <div class="hl-label">Total Engagement Investment</div>
+        <div class="hl-value">${valueStr}</div>
+        <div class="hl-sub">Exclusive of GST (18%) · GST Invoice Provided · PAN: ARKPN8270G</div>
+      </div>
+      <table class="prop-table" style="margin-top:16px">
+        <thead><tr><th>Description</th><th>Amount (₹)</th></tr></thead>
+        <tbody>
+          <tr><td>${meta.title} — Full Engagement</td><td class="price-cell">${valueStr}</td></tr>
+          <tr><td>GST (18%)</td><td class="price-cell">₹${Math.round(value*0.18).toLocaleString('en-IN')}</td></tr>
+          <tr class="total-row"><td><strong>Total Payable</strong></td><td class="price-cell"><strong>₹${Math.round(value*1.18).toLocaleString('en-IN')}</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;font-size:12px;color:#64748b">Payment Terms: <strong>${terms}</strong></p>
+    </div>
+
+    <!-- 6. WHY CYBERDUDEBIVASH -->
+    <div class="prop-section">
+      <h2><span class="num">6</span>Why CYBERDUDEBIVASH®</h2>
+      <ul class="prop-checklist">
+        <li><span class="ck">✓</span><span>India's first AI-native cybersecurity platform with real-time Sentinel APEX threat intelligence</span></li>
+        <li><span class="ck">✓</span><span>Expert team: Principal Security Architects with MITRE ATT&amp;CK, OWASP, NIST CSF, ISO 27001 expertise</span></li>
+        <li><span class="ck">✓</span><span>DPDP Act 2023 compliant engagement — all data handled under strict NDA and data processing agreement</span></li>
+        <li><span class="ck">✓</span><span>CISO-ready executive reports — written for board-level communication, not just technical teams</span></li>
+        <li><span class="ck">✓</span><span>Production-safe methodology — zero-downtime testing approach, no business disruption</span></li>
+        <li><span class="ck">✓</span><span>Post-engagement support — 30-day remediation guidance included at no extra cost</span></li>
+      </ul>
+    </div>
+
+    <!-- 7. TERMS -->
+    <div class="prop-section">
+      <h2><span class="num">7</span>Terms & Conditions</h2>
+      <ul class="prop-checklist">
+        <li><span class="ck">→</span><span>This proposal is valid until <strong>${fmtDate(validTo)}</strong>. After this date, pricing may be revised.</span></li>
+        <li><span class="ck">→</span><span>A mutual NDA will be executed prior to engagement commencement.</span></li>
+        <li><span class="ck">→</span><span>Client is responsible for providing required access credentials and testing authorization.</span></li>
+        <li><span class="ck">→</span><span>All findings remain strictly confidential and are disclosed only to authorized client personnel.</span></li>
+        <li><span class="ck">→</span><span>Governed by Indian law. Disputes subject to jurisdiction of courts in Kolkata, West Bengal.</span></li>
+        <li><span class="ck">→</span><span>Refund policy: Full refund within 48 hours of purchase if engagement has not commenced.</span></li>
+      </ul>
+    </div>
+
+    <!-- 8. NEXT STEPS -->
+    <div class="prop-section">
+      <h2><span class="num">8</span>Next Steps</h2>
+      <table class="prop-table">
+        <thead><tr><th>Step</th><th>Action</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Review and approve this proposal</td><td>${contact} (${company})</td></tr>
+          <tr><td>2</td><td>Execute NDA and engagement letter</td><td>Both parties</td></tr>
+          <tr><td>3</td><td>Complete payment via Razorpay secure checkout or bank transfer</td><td>${contact}</td></tr>
+          <tr><td>4</td><td>Kickoff call — scope finalization and access setup</td><td>CYBERDUDEBIVASH® Team</td></tr>
+          <tr><td>5</td><td>Engagement execution begins</td><td>CYBERDUDEBIVASH® Team</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:20px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px 20px">
+        <div style="font-size:12px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">To Accept This Proposal</div>
+        <div style="font-size:13px;color:#166534">Email <strong>bivash@cyberdudebivash.com</strong> or WhatsApp <strong>+91 81798 81447</strong> with your acceptance reference: <strong>${propRef}</strong></div>
+      </div>
+    </div>
+
+  </div><!-- end prop-body -->
+
+  <!-- FOOTER -->
+  <div class="prop-footer">
+    <div>
+      <div style="color:#e2e8f0;font-weight:800;margin-bottom:4px">CYBERDUDEBIVASH® AI SECURITY HUB</div>
+      <div>Proposal Ref: ${propRef} · Valid Until: ${fmtDate(validTo)}</div>
+    </div>
+    <div style="text-align:right">
+      <div><a href="https://cyberdudebivash.in">cyberdudebivash.in</a> · bivash@cyberdudebivash.com</div>
+      <div>+91 81798 81447 · GSTIN: 19ARKPN8270G1Z9</div>
+    </div>
+  </div>
+
+</div>
+`;
+
+  document.getElementById('previewEmpty').style.display = 'none';
+  document.getElementById('proposalDoc').style.display = 'block';
+  document.getElementById('proposalDoc').innerHTML = html;
+  document.getElementById('pdfBtn').style.display = 'block';
+  document.getElementById('proposalDoc').scrollIntoView({behavior:'smooth',block:'start'});
+  toast('Proposal generated — review and download as PDF');
+}
+
+/* ── DELIVERABLES BY TYPE ── */
+function getDeliverables(type) {
+  const map = {
+    security_assessment:[
+      'Executive Risk Summary (board-ready PDF, max 10 pages)',
+      'Full Technical Vulnerability Report (CVSS-scored findings)',
+      'Attack Surface Map (external + internal exposure)',
+      'Compliance Gap Analysis (ISO 27001, OWASP, DPDP 2023)',
+      'Prioritized Remediation Roadmap (by business risk)',
+      '30-minute expert debrief call with Lead Security Analyst',
+      'Re-test voucher (critical findings, within 30 days)',
+    ],
+    ai_security:[
+      'OWASP LLM Top 10 Assessment Report with evidence',
+      'AI Governance Gap Analysis (ISO 42001, EU AI Act, NIST AI RMF)',
+      'AI Red Team Test Results with attack narrative',
+      'MCP Security Review with protocol-level findings',
+      'AI Agent Security Map with privilege boundary analysis',
+      'RAG Security Assessment with retrieval attack scenarios',
+      'Board-ready AI Risk Dashboard (PowerPoint + PDF)',
+      '60-minute executive briefing with CISO-level summary',
+    ],
+    mssp:[
+      'MSSP Partnership Agreement (signed)',
+      'Sentinel APEX API credentials and white-label configuration',
+      'Co-branded threat intelligence portal setup',
+      'Onboarding guide for your security team',
+      'Monthly intelligence briefing (PDF format)',
+      'Dedicated Partner Success Manager assignment',
+      'Revenue share agreement documentation',
+    ],
+    threat_intelligence:[
+      'Sentinel APEX API keys (production)',
+      'API documentation and integration guide',
+      'CVE feed (real-time, CVSS-scored)',
+      'IOC feed (IPs, domains, hashes)',
+      'SIEM integration guide (Splunk, QRadar, Microsoft Sentinel)',
+      'Monthly threat landscape briefing',
+    ],
+    enterprise_retainer:[
+      'Monthly VAPT scan of agreed scope',
+      'Weekly threat intelligence briefing (sector-specific)',
+      'Incident response support (4-hour SLA)',
+      'vCISO advisory (monthly strategy session)',
+      'Compliance monitoring and reporting (ISO/DPDP/SOC2)',
+      'Quarterly executive security review',
+      'Unlimited Sentinel APEX API access',
+      'Priority 24/7 WhatsApp/email support',
+    ],
+  };
+  return map[type] || [];
+}
+
+/* ── TIMELINE BY TYPE ── */
+function getTimeline(type) {
+  const map = {
+    security_assessment:[
+      ['Phase 1','Scope confirmation, NDA execution, access setup','Day 1'],
+      ['Phase 2','Automated reconnaissance and asset discovery','Day 1–2'],
+      ['Phase 3','Manual expert security testing','Day 2–3'],
+      ['Phase 4','Report generation and QA review','Day 3'],
+      ['Phase 5','Executive briefing and debrief call','Day 3+'],
+    ],
+    ai_security:[
+      ['Phase 1','AI system inventory, NDA, access credentials','Day 1–2'],
+      ['Phase 2','OWASP LLM Top 10 & MCP security testing','Day 2–5'],
+      ['Phase 3','AI Governance gap analysis and compliance mapping','Day 5–8'],
+      ['Phase 4','AI Red Team adversarial testing','Day 8–12'],
+      ['Phase 5','Report generation and board-level summary','Day 12–14'],
+      ['Phase 6','Executive AI security briefing','Day 14+'],
+    ],
+    mssp:[
+      ['Phase 1','Partnership agreement and NDA execution','Week 1'],
+      ['Phase 2','API key provisioning and white-label setup','Week 1–2'],
+      ['Phase 3','Team onboarding and integration testing','Week 2'],
+      ['Phase 4','First client onboarding under MSSP model','Week 3–4'],
+      ['Ongoing','Monthly performance reviews and QBRs','Monthly'],
+    ],
+    threat_intelligence:[
+      ['Phase 1','Agreement execution and API credential issuance','Day 1'],
+      ['Phase 2','SIEM/tool integration and testing','Day 1–3'],
+      ['Phase 3','Team onboarding and API documentation walkthrough','Day 3–5'],
+      ['Ongoing','24/7 real-time threat intelligence API access','Continuous'],
+    ],
+    enterprise_retainer:[
+      ['Month 1','Baseline security assessment and asset inventory','Weeks 1–4'],
+      ['Ongoing','Monthly VAPT scans of agreed scope','Monthly'],
+      ['Ongoing','Weekly threat intelligence briefings','Weekly'],
+      ['Ongoing','vCISO advisory sessions','Monthly'],
+      ['Quarterly','Executive security review and roadmap update','Quarterly'],
+    ],
+  };
+  return map[type] || [];
+}
+
+/* ── SERVICE DESCRIPTIONS ── */
+function getServiceDesc(name, type) {
+  const descs = {
+    'VAPT':'Vulnerability Assessment and Penetration Testing covering web, API, and infrastructure',
+    'Web App Security':'OWASP Top 10 testing of all web application endpoints and authentication flows',
+    'API Security':'REST/GraphQL API security testing, auth bypass, injection, and data exposure checks',
+    'Cloud Review':'AWS/Azure/GCP configuration review, IAM analysis, and exposed bucket detection',
+    'Network Security':'External perimeter scan, firewall rule review, and lateral movement paths',
+    'Executive Report':'CISO-ready PDF report with CVSS scores, risk matrix, and remediation roadmap',
+    'OWASP LLM Top 10':'Complete assessment covering LLM01–LLM10 with evidence and remediation',
+    'AI Governance':'ISO 42001, EU AI Act, and NIST AI RMF readiness gap analysis',
+    'AI Red Team':'Adversarial prompt attacks, jailbreak resistance, and task manipulation testing',
+    'MCP Security':'MCP server authentication, tool invocation boundary, and privilege escalation testing',
+    'Agent Security':'Autonomous agent privilege audit and agent-to-agent trust boundary testing',
+    'RAG Security':'Vector DB poisoning, context injection, and retrieval manipulation testing',
+    'Sentinel APEX API':'Real-time CVE, IOC, and threat intelligence API with SIEM integration',
+    'White Label Portal':'Co-branded threat intelligence portal with your company branding',
+    'Threat Intelligence':'Curated threat feeds relevant to your sector and technology stack',
+    'SOC Support':'Tier-1 alert triage and escalation support via Sentinel APEX platform',
+    'Monthly Reports':'Executive threat landscape briefing tailored to your industry',
+    'Dedicated CSM':'Named customer success manager for strategic guidance and support',
+    'CVE Feed':'Real-time CVE database with CVSS scoring and CISA KEV integration',
+    'IOC Feed':'Threat indicators: malicious IPs, domains, file hashes updated hourly',
+    'SIEM Enrichment':'Structured feeds for Splunk, QRadar, Sentinel, and Elastic SIEM',
+    'Custom Intel Reports':'Sector-specific threat intelligence reports on demand',
+    'Dark Web Monitoring':'Brand monitoring, credential leak detection on dark web forums',
+    'Monthly VAPT':'Continuous security testing of agreed scope on a monthly schedule',
+    'Weekly Threat Brief':'Curated weekly security briefing for your sector and technology stack',
+    'Incident Response':'On-call incident response support with 4-hour response SLA',
+    'vCISO Advisory':'Monthly strategic security advisory session with Principal Security Architect',
+    'Compliance Mgmt':'Ongoing compliance posture tracking for ISO 27001, DPDP 2023, SOC 2',
+    'Unlimited API Access':'Unlimited Sentinel APEX API calls with no rate limiting',
+  };
+  return descs[name] || 'Professional security service as scoped in the engagement agreement';
+}
+
+/* ── PRINT/PDF ── */
+function printProposal() {
+  const doc = document.getElementById('proposalDoc').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CYBERDUDEBIVASH® Proposal</title><style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#fff}
+    .prop-cover{background:linear-gradient(135deg,#060614 0%,#0c0c24 60%,#1a0a3e 100%);color:#fff;padding:48px;min-height:240px}
+    .prop-cover-badge{display:inline-block;background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.3);color:#00d4ff;font-size:10px;font-weight:800;letter-spacing:.15em;padding:4px 12px;border-radius:16px;text-transform:uppercase;margin-bottom:16px}
+    .prop-cover h1{font-size:26px;font-weight:900;margin-bottom:6px}
+    .prop-cover .subtitle{font-size:13px;color:#94a3b8;margin-bottom:24px}
+    .prop-cover .meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .prop-meta-item{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 14px}
+    .prop-meta-item .ml{font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .prop-meta-item .mv{font-size:12px;color:#e2e8f0;font-weight:700}
+    .prop-body{padding:32px 48px;background:#fff}
+    .prop-section{margin-bottom:28px}
+    .prop-section h2{font-size:14px;font-weight:800;color:#0f172a;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+    .prop-section h2 .num{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:9px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+    .prop-section p{font-size:12px;line-height:1.65;color:#334155;margin-bottom:10px}
+    .prop-table{width:100%;border-collapse:collapse;font-size:11px;margin:10px 0}
+    .prop-table th{background:#f8fafc;color:#475569;font-weight:700;text-align:left;padding:8px 10px;border:1px solid #e2e8f0;font-size:10px;text-transform:uppercase}
+    .prop-table td{padding:8px 10px;border:1px solid #e2e8f0;color:#1e293b;vertical-align:top}
+    .prop-table tr:nth-child(even) td{background:#f8fafc}
+    .prop-table .price-cell{font-weight:800;color:#7c3aed}
+    .prop-table .total-row td{background:#f3f0ff;font-weight:800}
+    .prop-highlight{background:#f3f0ff;border:1px solid #c4b5fd;border-radius:8px;padding:16px 20px;margin:12px 0}
+    .prop-highlight .hl-label{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+    .prop-highlight .hl-value{font-size:22px;font-weight:900;color:#4c1d95}
+    .prop-highlight .hl-sub{font-size:11px;color:#64748b;margin-top:3px}
+    .prop-checklist{list-style:none;margin:10px 0}
+    .prop-checklist li{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:#334155;padding:5px 0;border-bottom:1px solid #f1f5f9}
+    .prop-checklist li:last-child{border:none}
+    .prop-checklist .ck{color:#10b981;font-size:14px;flex-shrink:0}
+    .prop-footer{background:#0f172a;color:#94a3b8;padding:20px 48px;font-size:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .prop-footer a{color:#00d4ff}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>${doc}</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
+}
+
+/* ── RESET ── */
+function resetForm() {
+  ['clientCompany','contactName','contactTitle','contactEmail','specialNotes','engValue'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('proposalDoc').style.display='none';
+  document.getElementById('previewEmpty').style.display='flex';
+  document.getElementById('pdfBtn').style.display='none';
+  updateServices();
+}
+
+/* ── TOAST ── */
+function toast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type === 'error' ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ── INIT ── */
+updateServices();
+</script>
+</body>
+</html>

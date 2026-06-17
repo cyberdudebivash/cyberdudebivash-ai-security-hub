@@ -25,6 +25,9 @@ Allow: /assets/
 Disallow: /api/
 Disallow: /admin-payments
 Disallow: /user-dashboard
+Disallow: /revenue-command-center
+Disallow: /mssp-command-center
+Disallow: /proposal-generator
 Disallow: /.env
 Disallow: /.git/
 Disallow: /workers/
