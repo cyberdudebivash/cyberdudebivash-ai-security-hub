@@ -344,19 +344,72 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
     await env.SECURITY_HUB_KV.put(KV_PROPOSALS_INDEX, JSON.stringify(index.slice(0, 500)), { expirationTtl: 86400 * 365 });
   }
 
+  // Persist to D1 for durable storage and revenue intelligence
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(`
+        INSERT INTO proposals
+          (id, opportunity_id, company, contact_email, sector, org_size,
+           package, type, status, total_inr, gst_inr, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'enterprise', 'draft', ?, ?, ?)
+      `).bind(
+        propId,
+        lead_id,
+        lead.company || '',
+        lead.email || '',
+        lead.sector || '',
+        lead.company_size || '',
+        package_id,
+        proposal.pricing?.final_price_inr || 0,
+        proposal.pricing?.gst_amount_inr || 0,
+        JSON.stringify({
+          proposal_number: doc.proposal_number,
+          valid_until:     doc.valid_until,
+          version:         doc.version,
+          viewed_count:    0,
+          close_probability: 0,
+          notes,
+          lead_id,
+        }),
+      ).run();
+    } catch { /* non-blocking — DB write failure does not block API response */ }
+  }
+
   return ok(request, { generated: true, proposal_id: propId, proposal });
 }
 
 // ── GET /api/proposals ────────────────────────────────────────────────────────
 export async function handleListProposals(request, env, authCtx = {}) {
   if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  const url   = new URL(request.url);
+  const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '20', 10));
+
+  // D1 is the durable source of truth
+  if (env?.DB) {
+    try {
+      const result = await env.DB.prepare(
+        `SELECT id, opportunity_id as lead_id, company, contact_email, sector, org_size,
+                package as package_id, status, total_inr as value_inr, gst_inr,
+                sent_at, viewed_at, accepted_at, created_at, metadata
+         FROM proposals
+         ORDER BY created_at DESC LIMIT ?`
+      ).bind(limit).all();
+      const rows = (result?.results || []).map(r => ({
+        ...r,
+        metadata: (() => { try { return JSON.parse(r.metadata || '{}'); } catch { return {}; } })(),
+      }));
+      if (rows.length > 0) {
+        return ok(request, { total: rows.length, proposals: rows, source: 'd1' });
+      }
+    } catch { /* fall through to KV */ }
+  }
+
+  // Fall back to KV index (legacy / migration period)
   let index = [];
   if (env?.SECURITY_HUB_KV) {
     try { index = (await env.SECURITY_HUB_KV.get(KV_PROPOSALS_INDEX, { type: 'json' })) || []; } catch {}
   }
-  const url   = new URL(request.url);
-  const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '20', 10));
-  return ok(request, { total: index.length, proposals: index.slice(0, limit) });
+  return ok(request, { total: index.length, proposals: index.slice(0, limit), source: 'kv' });
 }
 
 // ── GET /api/proposals/:id ────────────────────────────────────────────────────
@@ -367,6 +420,23 @@ export async function handleGetProposal(request, env, authCtx = {}) {
     try { proposal = await env.SECURITY_HUB_KV.get(`${KV_PROPOSAL_PREFIX}${propId}`, { type: 'json' }); } catch {}
   }
   if (!proposal) return fail(request, 'Proposal not found', 404, 'NOT_FOUND');
+
+  // Track view in D1 (update viewed_at on first view, increment viewed_count in metadata)
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(`
+        UPDATE proposals SET
+          viewed_at = CASE WHEN viewed_at IS NULL THEN unixepoch() ELSE viewed_at END,
+          metadata  = json_set(
+            COALESCE(metadata,'{}'),
+            '$.viewed_count',
+            COALESCE(CAST(json_extract(metadata,'$.viewed_count') AS INTEGER), 0) + 1
+          )
+        WHERE id = ?
+      `).bind(propId).run();
+    } catch { /* non-blocking */ }
+  }
+
   return ok(request, proposal);
 }
 
@@ -383,6 +453,14 @@ export async function handleMarkProposalSent(request, env, authCtx = {}) {
 
   proposal.status    = 'SENT';
   proposal.sent_at   = new Date().toISOString();
+
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(
+        `UPDATE proposals SET status='sent', sent_at=unixepoch() WHERE id=?`
+      ).bind(propId).run();
+    } catch { /* non-blocking */ }
+  }
 
   if (env?.SECURITY_HUB_KV) {
     await env.SECURITY_HUB_KV.put(`${KV_PROPOSAL_PREFIX}${propId}`, JSON.stringify(proposal), { expirationTtl: 86400 * 365 });
@@ -415,6 +493,14 @@ export async function handleAcceptProposal(request, env, authCtx = {}) {
 
   proposal.status      = 'ACCEPTED';
   proposal.accepted_at = new Date().toISOString();
+
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(
+        `UPDATE proposals SET status='accepted', accepted_at=unixepoch() WHERE id=?`
+      ).bind(propId).run();
+    } catch { /* non-blocking */ }
+  }
 
   if (env?.SECURITY_HUB_KV) {
     await env.SECURITY_HUB_KV.put(`${KV_PROPOSAL_PREFIX}${propId}`, JSON.stringify(proposal), { expirationTtl: 86400 * 365 });
