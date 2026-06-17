@@ -336,16 +336,41 @@ window.CDB_PAY = {
     const statusEl = document.getElementById('cgpm-status');
     if (!email || !email.includes('@')) { statusEl.textContent = '⚠️ Valid email required'; statusEl.style.color = '#ef4444'; return; }
     if (!txn) { statusEl.textContent = '⚠️ Transaction ID required'; statusEl.style.color = '#ef4444'; return; }
+    // Client-side sanity (mirrors server validateManualTxnRef) — reject obvious junk
+    // like "0xw7rwerrwer" so we never show a false "submitted" state.
+    const txnTrim = txn.trim();
+    const txnBad = txnTrim.length < 6 || txnTrim.length > 80 ||
+      !/^[A-Za-z0-9._:\-]+$/.test(txnTrim) ||
+      (/^0x/i.test(txnTrim) && !/^0x[0-9a-fA-F]{64}$/.test(txnTrim)) ||
+      (new Set(txnTrim.toLowerCase().replace(/[^a-z0-9]/g, '')).size < 4);
+    if (txnBad) {
+      statusEl.textContent = '⚠️ Enter the exact transaction reference from your payment app';
+      statusEl.style.color = '#ef4444';
+      return;
+    }
     statusEl.textContent = '⏳ Submitting...'; statusEl.style.color = 'rgba(255,255,255,.6)';
+    // Gate on the server response — only show the pending state if it was accepted.
+    let accepted = false;
     try {
-      await fetch(`${CFG.api}/api/payment/confirm`, {
+      const resp = await fetch(`${CFG.api}/api/payment/confirm`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ txnId: txn, user: email, product: this._current.product,
           amount: this._current.amountInr, method: 'MANUAL', currency: 'INR',
           notes: `Global pay: ${this._current.label}` }),
       });
-    } catch {}
-    // Dispatch payment submitted event for academy delivery modal
+      const d = await resp.json().catch(() => ({}));
+      accepted = resp.ok && d && d.success !== false;
+      if (!accepted) {
+        statusEl.textContent = '⚠️ ' + ((d && d.error) || 'Could not record payment — please check your transaction ID.');
+        statusEl.style.color = '#ef4444';
+        return;
+      }
+    } catch {
+      statusEl.textContent = '⚠️ Network error — please try again or email bivash@cyberdudebivash.com';
+      statusEl.style.color = '#ef4444';
+      return;
+    }
+    // Dispatch payment submitted event for academy delivery modal (only once accepted)
     document.dispatchEvent(new CustomEvent('cdb:paymentSubmitted', { detail: { ...this._current, txnId: txn, email } }));
 
     // Determine if this was an academy purchase or a scan purchase
@@ -366,11 +391,11 @@ window.CDB_PAY = {
     if (body) body.innerHTML = `
       <div style="padding:20px 16px">
         <div style="text-align:center;margin-bottom:20px">
-          <div style="font-size:48px;margin-bottom:12px">✅</div>
-          <div style="font-size:20px;font-weight:900;color:#00ffcc;margin-bottom:6px">Payment Submitted!</div>
+          <div style="font-size:48px;margin-bottom:12px">🟡</div>
+          <div style="font-size:20px;font-weight:900;color:#f59e0b;margin-bottom:6px">Payment Details Received — Pending Verification</div>
           <div style="font-size:13px;color:rgba(255,255,255,.55);line-height:1.6">
-            Txn ID: <code style="color:#00ffcc">${txn}</code><br>
-            Access activated within <strong style="color:#fff">2–4 hours</strong>.<br>
+            Ref: <code style="color:#00ffcc">${txn}</code><br>
+            <strong style="color:#f59e0b">Access is NOT active yet.</strong> We verify the transfer and activate within <strong style="color:#fff">2–4 hours</strong>.<br>
             Confirmation to <strong style="color:#00ffcc">${email}</strong>
           </div>
         </div>

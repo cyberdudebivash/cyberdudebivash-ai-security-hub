@@ -84,6 +84,30 @@ export const PRODUCT_CATALOG = {
   API_PROFESSIONAL:     { name: 'API Access — Professional',  price_inr: 9999,  plan_key: 'API_PRO' },
 };
 
+// Reject obviously-fake / malformed transaction references while staying lenient
+// enough never to block a genuine UPI UTR, bank ref, PayPal txn id, or crypto
+// hash. Returns an error string, or null if plausible. A human still verifies the
+// real transfer — this only stops junk like "0xw7rwerrwer" being recorded as paid.
+function validateManualTxnRef(raw, method) {
+  const txn = String(raw || '').trim();
+  if (txn.length < 6 || txn.length > 80) {
+    return 'Enter the exact transaction reference from your payment app (6–80 characters).';
+  }
+  if (!/^[A-Za-z0-9._:\-]+$/.test(txn)) {
+    return 'Transaction reference contains invalid characters — paste the exact ID from your receipt.';
+  }
+  if (/^0x/i.test(txn) && !/^0x[0-9a-fA-F]{64}$/.test(txn)) {
+    return 'That is not a valid crypto transaction hash (expected 0x followed by 64 hex characters).';
+  }
+  if ((method || '').toLowerCase() === 'crypto' && !/^0x[0-9a-fA-F]{64}$/.test(txn)) {
+    return 'Enter your on-chain transaction hash (0x followed by 64 hex characters).';
+  }
+  if (new Set(txn.toLowerCase().replace(/[^a-z0-9]/g, '')).size < 4) {
+    return 'Transaction reference looks invalid — please paste the exact ID from your payment app.';
+  }
+  return null;
+}
+
 // ── Submit payment ────────────────────────────────────────────────────────── */
 export async function handleSubmitPayment(request, env) {
   try {
@@ -99,6 +123,10 @@ export async function handleSubmitPayment(request, env) {
     }
     if (!['upi','bank','paypal','crypto'].includes(payment_method)) {
       return jsonErr('Invalid payment_method. Must be: upi | bank | paypal | crypto', 400);
+    }
+    const txnRefErr = validateManualTxnRef(transaction_id, payment_method);
+    if (txnRefErr) {
+      return jsonErr(txnRefErr, 422);
     }
 
     const payment_id = 'pay_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8).toUpperCase();

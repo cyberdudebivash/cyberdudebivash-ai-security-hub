@@ -564,6 +564,34 @@ function buildPayload(module, target, scan_id) {
 // ─── POST /api/payment/confirm ────────────────────────────────────────────────
 // Manual payment confirmation — customer submits txn ID after paying via UPI/Bank/Crypto/PayPal
 // Sends admin notification email + customer confirmation email
+// Reject obviously-fake / malformed transaction references while staying lenient
+// enough never to block a genuine UPI UTR, bank ref, PayPal txn id, Razorpay
+// payment id, or crypto tx hash. Returns an error string, or null if plausible.
+// (A human still verifies the real transfer — this only stops junk like
+// "0xw7rwerrwer" being recorded as a confirmed payment.)
+export function validateManualTxnRef(raw, method) {
+  const txn = String(raw || '').trim();
+  if (txn.length < 6 || txn.length > 80) {
+    return 'Enter the exact transaction reference from your payment app (6–80 characters).';
+  }
+  if (!/^[A-Za-z0-9._:\-]+$/.test(txn)) {
+    return 'Transaction reference contains invalid characters — paste the exact ID from your receipt.';
+  }
+  // Anything that looks like a crypto hash (starts 0x) must be a full 0x + 64-hex
+  // tx hash. Catches the classic "0x…junk" fake.
+  if (/^0x/i.test(txn) && !/^0x[0-9a-fA-F]{64}$/.test(txn)) {
+    return 'That is not a valid crypto transaction hash (expected 0x followed by 64 hex characters).';
+  }
+  if ((method || '').toLowerCase() === 'crypto' && !/^0x[0-9a-fA-F]{64}$/.test(txn)) {
+    return 'Enter your on-chain transaction hash (0x followed by 64 hex characters).';
+  }
+  // Reject low-entropy junk (e.g. "aaaaaa", "121212") — real refs have ≥4 distinct chars.
+  if (new Set(txn.toLowerCase().replace(/[^a-z0-9]/g, '')).size < 4) {
+    return 'Transaction reference looks invalid — please paste the exact ID from your payment app.';
+  }
+  return null;
+}
+
 export async function handlePaymentConfirm(request, env) {
   let body;
   try { body = await request.json(); }
@@ -571,8 +599,9 @@ export async function handlePaymentConfirm(request, env) {
 
   const { txnId, method, product, user: customerEmail, amount, notes, currency = 'INR' } = body;
 
-  if (!txnId || typeof txnId !== 'string' || txnId.trim().length < 4) {
-    return Response.json({ error: 'Transaction ID is required (min 4 chars)' }, { status: 422 });
+  const txnRefErr = validateManualTxnRef(txnId, method);
+  if (txnRefErr) {
+    return Response.json({ error: txnRefErr, code: 'INVALID_TXN_REF' }, { status: 422 });
   }
   if (!customerEmail || !customerEmail.includes('@')) {
     return Response.json({ error: 'Valid customer email required' }, { status: 422 });

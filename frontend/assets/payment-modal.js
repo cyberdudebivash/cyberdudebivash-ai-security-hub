@@ -391,11 +391,11 @@
             if (body) {
               body.innerHTML =
                 '<div style="padding:48px 28px;text-align:center">' +
-                  '<div style="font-size:56px;margin-bottom:20px">&#x2705;</div>' +
-                  '<div style="font-size:22px;font-weight:900;color:#22c55e;margin-bottom:12px">Payment Submitted!</div>' +
+                  '<div style="font-size:56px;margin-bottom:20px">&#x1F7E1;</div>' +
+                  '<div style="font-size:22px;font-weight:900;color:#f59e0b;margin-bottom:12px">Payment Details Received &mdash; Pending Verification</div>' +
                   '<div style="font-size:14px;color:rgba(255,255,255,.55);line-height:1.8;max-width:340px;margin:0 auto">' +
-                    'We received your confirmation.<br>Access will be activated within <strong style="color:#fff">2&ndash;4 hours</strong>.<br>' +
-                    'Check your email <strong style="color:#00d4ff">' + email + '</strong> for the access details.' +
+                    '<strong style="color:#f59e0b">Your access is NOT active yet.</strong><br>We manually verify the transfer and activate access within <strong style="color:#fff">2&ndash;4 hours</strong>.<br>' +
+                    'A confirmation will be sent to <strong style="color:#00d4ff">' + email + '</strong>.' +
                   '</div>' +
                   '<div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.3)">Ref: ' + (d.data?.payment_id || txn) + '</div>' +
                   '<button onclick="CDB_PAYMENT.close()" style="margin-top:28px;background:rgba(0,212,255,.15);' +
