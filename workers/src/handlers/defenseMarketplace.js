@@ -19,11 +19,15 @@ const CATEGORY_META = {
   api_module:         { label: 'API Security Module',  icon: '⚡', badge: 'PRODUCTION API',   difficulty: 'ADVANCED'    },
 };
 
+// Truthful severity descriptors. (Previously asserted "actively exploited in the
+// wild" / fixed patch-window deadlines for EVERY item regardless of facts — that
+// is fabrication and was removed. Real exploitation status, when known, comes
+// from the per-CVE KEV flag, not a blanket severity label.)
 const SEVERITY_FOMO = {
-  CRITICAL: { label: 'CRITICAL', css: 'critical', msg: '🚨 Actively exploited in the wild', urgency: '⏱️ Patch window: 24 hours' },
-  HIGH:     { label: 'HIGH',     css: 'high',     msg: '⚠️ Active exploitation detected',   urgency: '⏱️ Patch window: 72 hours' },
-  MEDIUM:   { label: 'MEDIUM',   css: 'medium',   msg: '🔍 Threat actors scanning targets', urgency: '⏱️ Patch window: 7 days'   },
-  LOW:      { label: 'LOW',      css: 'low',      msg: '📡 PoC code publicly available',    urgency: '⏱️ Patch window: 30 days'  },
+  CRITICAL: { label: 'CRITICAL', css: 'critical', msg: '🔴 Critical severity', urgency: 'Top remediation priority' },
+  HIGH:     { label: 'HIGH',     css: 'high',     msg: '🟠 High severity',     urgency: 'Remediate promptly'       },
+  MEDIUM:   { label: 'MEDIUM',   css: 'medium',   msg: '🟡 Medium severity',   urgency: 'Plan remediation'         },
+  LOW:      { label: 'LOW',      css: 'low',      msg: '⚪ Low severity',      urgency: 'Monitor'                  },
 };
 
 // ─── GET /api/defense/solutions ──────────────────────────────────────────────
@@ -476,16 +480,13 @@ function enrichSolution(s) {
 }
 
 function buildSocialProof(s) {
-  const count  = s.purchase_count || 0;
-  const views  = s.view_count     || 0;
-  // Deterministic seed from id to avoid hydration mismatches on re-render
-  if (count === 0) {
-    const seed = views > 0 ? views : (s.id?.charCodeAt(4) || 7) + 3;
-    const teamsCount = (seed % 13) + 3; // 3-15, stable per solution
-    return `${teamsCount} security teams viewed this`;
-  }
-  if (count < 5)  return `${count} team${count > 1 ? 's' : ''} deployed this today`;
-  return `${count} enterprise teams using this`;
+  // REAL engagement only. No fabricated "N teams viewed/deployed" for items with
+  // zero real activity — return empty so the UI simply shows nothing.
+  const count = s.purchase_count || 0;
+  const views = s.view_count     || 0;
+  if (count > 0) return `${count} ${count === 1 ? 'team has' : 'teams have'} purchased this`;
+  if (views > 0) return `${views} ${views === 1 ? 'view' : 'views'}`;
+  return '';
 }
 
 function buildTags(s) {

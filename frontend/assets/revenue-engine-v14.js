@@ -624,47 +624,13 @@ const MARKETPLACE_URGENCY = {
   },
 
   injectIntoCards() {
-    const cards = document.querySelectorAll('.ds-card');
-    if (!cards.length) {
-      // Retry after marketplace loads
-      setTimeout(() => this.injectIntoCards(), 2000);
-      return;
-    }
-    cards.forEach((card, i) => {
-      if (card.dataset.v14Badge) return; // already done
-      card.dataset.v14Badge = '1';
-
-      // Urgency badge top-right
-      const badge = this._getRandomBadge();
-      const badgeEl = document.createElement('div');
-      badgeEl.style.cssText = `
-        position:absolute;top:12px;right:12px;
-        background:${badge.bg};color:${badge.color};
-        border:1px solid ${badge.color}40;border-radius:6px;
-        padding:3px 8px;font-size:10px;font-weight:800;
-        z-index:2;pointer-events:none;
-      `;
-      badgeEl.textContent = badge.text;
-      if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
-      card.appendChild(badgeEl);
-
-      // Sales proof text
-      const salesText = this._getRandomSales();
-      const proof = document.createElement('div');
-      proof.style.cssText = `
-        font-size:10px;color:rgba(255,255,255,.45);margin-top:6px;
-        display:flex;align-items:center;gap:4px;
-      `;
-      proof.textContent = salesText;
-
-      // Find the card's CTA button area and insert before it
-      const btnArea = card.querySelector('button') || card.querySelector('.ds-btn');
-      if (btnArea && btnArea.parentNode) {
-        btnArea.parentNode.insertBefore(proof, btnArea);
-      } else {
-        card.appendChild(proof);
-      }
-    });
+    // DISABLED (trust policy): previously injected RANDOM "trending/best-seller"
+    // badges and fabricated sales proof ("9 teams bought this today", "47 orgs
+    // deployed this week", etc.) onto every card — none of it real. Real badges
+    // (category) and real social proof now come from the backend
+    // (defenseMarketplace.enrichSolution: meta.badge + social_proof from actual
+    // purchase_count/view_count). No client-side fabrication.
+    return;
   },
 
   // Observe for new cards added dynamically

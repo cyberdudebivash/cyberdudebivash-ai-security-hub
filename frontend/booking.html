@@ -1011,15 +1011,15 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
     <p class="risk-sub-v14">Critical vulnerabilities are being actively exploited globally. Our AI scanner detects misconfigurations, exposed services, CVEs, and breach indicators in under 60 seconds — free.</p>
     <div class="risk-stats-v14">
       <div class="risk-stat-v14">
-        <div class="risk-stat-num-v14" id="rb-scans-today">1,247</div>
+        <div class="risk-stat-num-v14" id="rb-scans-today">…</div>
         <div class="risk-stat-lbl-v14">Scans today</div>
       </div>
       <div class="risk-stat-v14">
-        <div class="risk-stat-num-v14" id="rb-cve-active">847</div>
+        <div class="risk-stat-num-v14" id="rb-cve-active">…</div>
         <div class="risk-stat-lbl-v14">Active CVEs tracked</div>
       </div>
       <div class="risk-stat-v14">
-        <div class="risk-stat-num-v14" id="rb-threats-hour">12</div>
+        <div class="risk-stat-num-v14" id="rb-threats-hour">…</div>
         <div class="risk-stat-lbl-v14">Threats found this hour</div>
       </div>
       <div class="risk-stat-v14">
@@ -1301,8 +1301,8 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
     if(el("rb-last-cve")) el("rb-last-cve").textContent = cveNow;
     if(el("rb-time-ago")) el("rb-time-ago").textContent = timeAgo;
   }
-  tick();
-  setInterval(tick, 8000);
+  /* fake ticker disabled — real data now from global.js CDB_LIVE_STATS */
+  /* (no synthetic refresh) */
 })();
 </script>
 
@@ -1332,9 +1332,10 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 
                 let slotsHTML = `<div class="day-date">${dayName}, ${dateStr}</div><div class="time-slots">`;
 
-                timeSlots.forEach((time, index) => {
-                    const isBooked = Math.random() > 0.6;
-                    slotsHTML += `<div class="time-slot ${isBooked ? 'booked' : ''}">${time}</div>`;
+                // All published slots are bookable. (Previously ~40% were marked
+                // "booked" via Math.random() to fake scarcity — removed.)
+                timeSlots.forEach((time) => {
+                    slotsHTML += `<div class="time-slot">${time}</div>`;
                 });
 
                 slotsHTML += '</div>';

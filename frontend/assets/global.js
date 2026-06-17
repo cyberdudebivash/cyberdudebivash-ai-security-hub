@@ -630,39 +630,48 @@ function boot() {
 })();
 
 /* ═══════════════════════════════════════════════════════════════
-   ATTENTION ENGINE v1.0 — Live scan counter · CVE ticker
-   Shared across all pages via global.js
-   Targets IDs: ae-scan-live, ae-cve-count, ae-update-time,
-                rb-scans-today, rb-cve-active, rb-threats-hour,
-                rb-last-cve, rb-time-ago
+   LIVE INTELLIGENCE STATS — REAL DATA ONLY (no fabrication)
+   Shared across all pages via global.js. Populates the risk-block /
+   attention-bar stats from the public stats APIs. Metrics with no
+   honest data source are HIDDEN, never faked.
+   Targets IDs: ae-cve-count, ae-update-time, rb-scans-today,
+                rb-cve-active, rb-threats-hour (+ hides ae-scan-live, rb-time-ago)
    ═══════════════════════════════════════════════════════════════ */
-(function CDB_ATTENTION_ENGINE(){
-  var CVES=[
-    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)",
-    "CVE-2024-55591 (Fortinet Auth Bypass)","CVE-2025-21333 (Windows Hyper-V ESC)",
-    "CVE-2024-53104 (Linux USB Video Class)","CVE-2025-22457 (Ivanti Pulse Secure)",
-    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)",
-    "CVE-2025-29824 (CLFS Zero-Day)","CVE-2025-21335 (Windows Hyper-V PE)",
-    "CVE-2025-30065 (Apache Parquet RCE)","CVE-2024-49113 (Windows LDAP DoS)",
-    "CVE-2025-24054 (NTLM Hash Leak)","CVE-2025-27363 (FreeType Heap OOB)",
-    "CVE-2025-2783 (Chrome Sandbox Bypass)"
-  ];
-  var TIME_AGO=["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","7 min ago","11 min ago","15 min ago"];
-  var BASE_SCANS=1247, start=Date.now();
-  function r(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-  function minElapsed(){return Math.floor((Date.now()-start)/60000);}
-  function upd(id,val){var e=document.getElementById(id);if(e)e.textContent=val;}
-  function tick(){
-    var elapsed=minElapsed();
-    upd("ae-scan-live", r(11,38));
-    upd("ae-cve-count", r(2,7));
-    upd("ae-update-time", elapsed<=0?"just now":elapsed+"m ago");
-    upd("rb-scans-today", (BASE_SCANS+r(0,80)+elapsed*r(1,4)).toLocaleString());
-    upd("rb-cve-active", r(843,861));
-    upd("rb-threats-hour", r(7,27));
-    upd("rb-last-cve", CVES[r(0,CVES.length-1)]);
-    upd("rb-time-ago", TIME_AGO[r(0,TIME_AGO.length-1)]);
+(function CDB_LIVE_STATS(){
+  function fmt(n){ try { return Number(n).toLocaleString('en-IN'); } catch(_) { return String(n); } }
+  function setText(id,val){ var e=document.getElementById(id); if(e&&val!=null) e.textContent=fmt(val); }
+  function relabel(id,text){
+    var e=document.getElementById(id); if(!e) return;
+    var stat=e.closest('.risk-stat-v14'); var lbl=stat&&stat.querySelector('.risk-stat-lbl-v14');
+    if(lbl) lbl.textContent=text;
   }
-  // Delay first tick slightly to avoid double-running with inline scripts
-  setTimeout(function(){tick();setInterval(tick,9000);}, 1200);
+  function hideStat(id,sel){
+    var e=document.getElementById(id); if(!e) return;
+    var w=sel?e.closest(sel):e; if(w) w.style.display='none';
+  }
+
+  async function load(){
+    var ti=null, sc=null;
+    try { var r=await fetch('/api/threat-intel/stats'); if(r.ok){ var j=await r.json(); ti=(j.data&&j.data.stats)||j.stats||j; } } catch(_){}
+    try { var r2=await fetch('/api/scan/stats'); if(r2.ok){ sc=await r2.json(); } } catch(_){}
+
+    if(ti){
+      if(ti.total_advisories!=null){ setText('rb-cve-active', ti.total_advisories); relabel('rb-cve-active','CVEs tracked'); }
+      if(ti.critical!=null) setText('ae-cve-count', ti.critical);
+      // Repurpose the (previously fabricated) "threats this hour" stat to a real,
+      // meaningful number: confirmed actively-exploited CVEs in the catalog.
+      if(ti.confirmed_exploited!=null){ setText('rb-threats-hour', ti.confirmed_exploited); relabel('rb-threats-hour','Confirmed exploited'); }
+      else { hideStat('rb-threats-hour','.risk-stat-v14'); }
+    }
+    if(sc && sc.total_scans!=null){ setText('rb-scans-today', sc.total_scans); relabel('rb-scans-today','Scans run'); }
+
+    var up=document.getElementById('ae-update-time'); if(up) up.textContent='live';
+
+    // Drop widgets with no honest data source.
+    hideStat('ae-scan-live','.attn-item-v14');        // no real concurrent-scan metric
+    hideStat('rb-last-cve','.risk-ticker-txt-v14');   // fabricated "last detection … flagged N min ago" line
+  }
+
+  load();
+  setInterval(load, 60000); // refresh from REAL API; no synthetic mutation
 })();
