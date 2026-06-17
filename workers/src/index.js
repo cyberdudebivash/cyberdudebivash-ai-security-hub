@@ -1104,6 +1104,21 @@ export default {
       return withSecurityHeaders(withCors(await handlePublicFeeds(request, env, path), request));
     }
 
+    // ── Owner-only internal tooling gate ───────────────────────────────────────
+    // These subsystems (auto-SOC automation, integration deploy config/logs, org
+    // memory, workflow automation, white-label theming) are operator/back-office
+    // tools — not customer-facing products. They were returning internal data
+    // (e.g. auto-soc/log, integrations/deploy-log) to anonymous callers. Gate the
+    // whole prefixes to owner-only here. (MSSP workspace & SOC cases are
+    // intentionally NOT gated here — they are paid-customer features with their
+    // own per-tenant / role scoping.)
+    if (/^\/api\/(auto-soc|integrations|org-memory|workflows|white-label)(\/|$)/.test(path)) {
+      const _ownerCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isOwner(_ownerCtx, env)) {
+        return withSecurityHeaders(withCors(forbidden(), request));
+      }
+    }
+
     if (path === '/api/health' && method === 'GET') {
       // KV OPTIMIZATION: wrap health in 60-second Cloudflare CDN edge cache.
       // This means 1 D1 probe per 60s instead of 1 per 30s per browser session.
