@@ -5020,6 +5020,18 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleVerifyCompliancePack(request, env), request));
     }
 
+    // POST /api/sentinel/purchase — create Razorpay order for Sentinel APEX intel product (public)
+    if (path === '/api/sentinel/purchase' && method === 'POST') {
+      const { handleSentinelPurchase } = await import('./handlers/sentinelMarketplace.js');
+      return withSecurityHeaders(withCors(await handleSentinelPurchase(request, env), request));
+    }
+
+    // POST /api/sentinel/verify — verify payment + grant access + notify founder (public)
+    if (path === '/api/sentinel/verify' && method === 'POST') {
+      const { handleSentinelVerify } = await import('./handlers/sentinelMarketplace.js');
+      return withSecurityHeaders(withCors(await handleSentinelVerify(request, env), request));
+    }
+
     // GET  /api/tools/catalog  — tools & AI marketplace catalog (public)
     if (path === '/api/tools/catalog' && method === 'GET') {
       const { handleListTools } = await import('./handlers/toolsMarketplace.js');

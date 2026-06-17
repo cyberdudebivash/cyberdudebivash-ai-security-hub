@@ -563,7 +563,7 @@
     </button>
     <p style="font-size:0.72rem;color:var(--text3);text-align:center;margin-top:12px">
       🔒 Secure payment via Razorpay · UPI · Cards · NetBanking<br>
-      📧 Access delivered to your email within 2–4 hours
+      📧 Report delivered to your email within 4 hours
     </p>
   </div>
 </div>
@@ -613,8 +613,103 @@ function openTrialModal() {
     '🛰 Start with the FREE Threat-Intel API',
     'The FREE tier needs no API key — IP-based access to recent CVEs (25 items/request, 100 requests/day). Upgrade any time to unlock EPSS scores, the full CISA KEV catalog, and STIX 2.1 export.',
     '₹0 — no key required',
-    `https://cyberdudebivash.in/#intel-api`
+    null, 'free_trial'
   );
+}
+
+// ── Instant Razorpay checkout for Sentinel APEX intel products ──────────────
+var _smRzpLoaded = false;
+function _smLoadRzp() {
+  if (_smRzpLoaded && window.RazorpayNative) return Promise.resolve();
+  return new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = function() { window.RazorpayNative = window.Razorpay; _smRzpLoaded = true; resolve(); };
+    s.onerror = function() { reject(new Error('Razorpay SDK load failed')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function cdbSentinelBuy() {
+  if (_smCurrentType === 'free_trial') { closeModal(); window.location.href = '#intel-api'; return; }
+
+  var email = '';
+  try { email = localStorage.getItem('cdb_email') || ''; } catch(e) {}
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    email = (window.prompt('Enter your email to receive the report after purchase:') || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      alert('A valid email address is required to purchase and receive your report.');
+      return;
+    }
+    try { localStorage.setItem('cdb_email', email); } catch(e) {}
+  }
+
+  var title     = _smCurrentTitle;
+  var priceInr  = _smCurrentPrice;
+  var prodType  = _smCurrentType;
+
+  var btn = document.getElementById('modal-cta');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing…'; }
+
+  var manualFallback = function() {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Proceed to Payment'; }
+    var msg = encodeURIComponent('Hi! I want to purchase: ' + title + ' (₹' + priceInr + '). Please share payment details.');
+    window.open('https://wa.me/918179881447?text=' + msg, '_blank');
+  };
+
+  try {
+    var oRes = await fetch('/api/sentinel/purchase', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_type: prodType, product_title: title, email: email }),
+    });
+    var oData = await oRes.json().catch(function() { return {}; });
+    var order = oData && oData.order;
+
+    if (!oRes.ok || !order || !order.razorpay_key || !order.razorpay_order_id ||
+        String(order.razorpay_order_id).indexOf('order_') !== 0) {
+      manualFallback(); return;
+    }
+
+    await _smLoadRzp();
+    if (!window.RazorpayNative) { manualFallback(); return; }
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Proceed to Payment'; }
+    closeModal();
+
+    var rzp = new window.RazorpayNative({
+      key: order.razorpay_key, amount: order.amount, currency: 'INR',
+      name: 'Sentinel APEX — CYBERDUDEBIVASH',
+      description: title,
+      order_id: order.razorpay_order_id,
+      prefill: { email: email },
+      theme: { color: '#7c3aed' },
+      handler: async function(rp) {
+        try {
+          var vRes = await fetch('/api/sentinel/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: rp.razorpay_order_id,
+              razorpay_payment_id: rp.razorpay_payment_id,
+              razorpay_signature: rp.razorpay_signature,
+              product_type: prodType, product_title: title, email: email,
+            }),
+          });
+          var vData = await vRes.json().catch(function() { return {}; });
+          if (vRes.ok && vData.success) {
+            alert('✅ Purchase Confirmed!\n\n' + title +
+              '\n\nYour report will be delivered to ' + email + ' within 4 hours.\n\nPayment ID: ' + rp.razorpay_payment_id +
+              '\n\nFor urgent support: bivash@cyberdudebivash.com');
+          } else {
+            alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Delivery to ' + email + ' within 4 hours. Contact bivash@cyberdudebivash.com');
+          }
+        } catch(e) {
+          alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Report will be sent to ' + email + ' within 4 hours.');
+        }
+      },
+    });
+    rzp.open();
+  } catch(err) {
+    manualFallback();
+  }
 }
 
 document.getElementById('purchase-modal').addEventListener('click', function(e) {

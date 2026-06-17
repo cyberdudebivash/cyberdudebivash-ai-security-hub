@@ -1427,7 +1427,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 
             // Attempt to send to API
             try {
-                const response = await fetch('https://cyberdudebivash-security-hub.workers.dev/api/leads/capture', {
+                const response = await fetch('/api/leads/capture', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
