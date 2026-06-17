@@ -57,13 +57,19 @@ export async function createApiKey(db, userId, userTier, label = 'Default Key') 
   const prefix = getKeyPrefix(rawKey);
   const limits = TIER_LIMITS[userTier] || TIER_LIMITS.FREE;
 
+  // api_keys.id is a TEXT PRIMARY KEY (no default) and created_at is
+  // INTEGER NOT NULL (no default) — both MUST be supplied or the INSERT throws
+  // (was a silent NOT NULL/PK violation → 500 on POST /api/keys and on signup
+  // auto-key creation, blocking the entire self-serve API-key flow).
+  const id = (crypto.randomUUID && crypto.randomUUID()) || (Date.now().toString(36) + Math.random().toString(36).slice(2));
+
   await db.prepare(
-    `INSERT INTO api_keys (user_id, key_hash, key_prefix, label, tier, daily_limit, monthly_limit)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(userId, hash, prefix, label, userTier, limits.daily_limit, limits.monthly_limit).run();
+    `INSERT INTO api_keys (id, user_id, key_hash, key_prefix, label, tier, daily_limit, monthly_limit, active, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`
+  ).bind(id, userId, hash, prefix, label, userTier, limits.daily_limit, limits.monthly_limit, Date.now()).run();
 
   // Return raw key ONCE — never retrievable again
-  return { raw_key: rawKey, prefix, tier: userTier, label };
+  return { id, raw_key: rawKey, prefix, tier: userTier, label };
 }
 
 // ─── Resolve API key from D1 ─────────────────────────────────────────────────
