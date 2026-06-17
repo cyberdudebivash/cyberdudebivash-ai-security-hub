@@ -328,12 +328,21 @@ function buildUpgradeCTA(plan, trigger) {
 /**
  * Record a funnel event in D1
  */
-export async function recordFunnelEvent(env, email, stage, meta = {}) {
+export async function recordFunnelEvent(env, email, stage, meta = {}, eventType = null) {
   try {
+    // Live funnel_events columns: (id, email, event_type, metadata, created_at, stage).
+    // event_type preserves the granular client event name; stage is the canonical
+    // rollup bucket the dashboards aggregate on. Default event_type to stage.
     await env.DB.prepare(`
-      INSERT INTO funnel_events (id, email, stage, meta, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
-    `).bind(crypto.randomUUID(), email || 'anonymous', stage, JSON.stringify(meta)).run();
+      INSERT INTO funnel_events (id, email, event_type, stage, metadata, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).bind(
+      crypto.randomUUID(),
+      email || 'anonymous',
+      eventType || stage,
+      stage,
+      JSON.stringify(meta || {}),
+    ).run();
   } catch {
     // Non-blocking
   }

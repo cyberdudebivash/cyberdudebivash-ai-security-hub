@@ -5373,6 +5373,34 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleFunnelDashboard(request, env), request));
     }
 
+    // ── GTM telemetry beacons (public, fire-and-forget — never 5xx) ──────────
+    // POST /api/gtm/funnel-event — single conversion-funnel event (CDB_FUNNEL)
+    if (path === '/api/gtm/funnel-event' && method === 'POST') {
+      const { handleGtmFunnelEvent } = await import('./handlers/gtm.js');
+      const gtmAuth = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGtmFunnelEvent(request, env, gtmAuth), request));
+    }
+
+    // POST /api/gtm/events/batch — batched product events (CDB_TRACK)
+    if (path === '/api/gtm/events/batch' && method === 'POST') {
+      const { handleGtmEventsBatch } = await import('./handlers/gtm.js');
+      const gtmAuth = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGtmEventsBatch(request, env, gtmAuth), request));
+    }
+
+    // POST /api/gtm/email-capture — scan-gate email capture → lead
+    if (path === '/api/gtm/email-capture' && method === 'POST') {
+      const { handleGtmEmailCapture } = await import('./handlers/gtm.js');
+      const gtmAuth = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGtmEmailCapture(request, env, gtmAuth), request));
+    }
+
+    // POST /api/csp-report — browser CSP violation reports (report-uri target)
+    if (path === '/api/csp-report' && method === 'POST') {
+      const { handleCspReport } = await import('./handlers/gtm.js');
+      return withSecurityHeaders(withCors(await handleCspReport(request, env), request));
+    }
+
     // GET /api/auth/plans → alias → /api/subscription/plans
     if (path === '/api/auth/plans' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleGetPlans(request, env), request));
