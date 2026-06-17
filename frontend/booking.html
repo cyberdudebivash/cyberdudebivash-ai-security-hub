@@ -1422,7 +1422,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 
             // Try to send to API endpoint
             try {
-                const response = await fetch('https://cyberdudebivash-security-hub.workers.dev/api/leads/capture', {
+                const response = await fetch('/api/leads/capture', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)

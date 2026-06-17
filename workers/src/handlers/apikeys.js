@@ -39,7 +39,7 @@ export async function handleCreateKey(request, env, authCtx) {
     return Response.json({
       error: `Key limit reached (${maxKeys} keys for ${authCtx.tier} tier)`,
       hint:  'Revoke an existing key first, or upgrade your plan',
-      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+      upgrade_url: '/#pricing',
     }, { status: 409 });
   }
 
