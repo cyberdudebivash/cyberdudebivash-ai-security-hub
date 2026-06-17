@@ -52,6 +52,16 @@ export async function handleLeadCapture(request, env) {
     } catch { /* non-blocking */ }
   }
 
+  // Sync lead to D1 so it appears in GET /api/growth/leads (fire-and-forget)
+  if (env?.DB) {
+    (async () => {
+      try {
+        const { captureEmail } = await import('../services/funnelEngine.js');
+        await captureEmail(env, { email, source, domain: email.split('@')[1] || null });
+      } catch (e) { console.warn('[leads] D1 sync error:', e.message); }
+    })();
+  }
+
   // Auto-enroll in welcome email drip (fire-and-forget)
   if (env?.SECURITY_HUB_KV || env?.DB) {
     (async () => {
