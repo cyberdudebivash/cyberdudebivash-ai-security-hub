@@ -25,6 +25,7 @@ import { buildReport }        from '../lib/reportEngine.js';
 import { trackEvent }         from './analytics.js';
 import { sendPurchaseConfirmation } from '../services/emailEngine.js';
 import { createInvoice }            from '../services/v24/billingEngine.js';
+import { triggerPostPurchase }      from '../services/lifecycleEngine.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -215,6 +216,9 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     target,
     scan_id,
     email,
+    utm_source   = '',
+    utm_medium   = '',
+    utm_campaign = '',
   } = body;
 
   // Validate required fields
@@ -379,7 +383,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     });
   }
 
-  // Fire-and-forget: GST invoice + purchase confirmation email
+  // Fire-and-forget: GST invoice + purchase confirmation email + lifecycle enrollment
   const confirmedEmail = email || authCtx.email || null;
   const priceInr       = Math.round((MODULE_PRICES[module]?.amount || 0) / 100);
   Promise.all([
@@ -401,6 +405,19 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
           downloadUrl: `/api/reports/download/${accessToken}`,
           accessExpires: expiresAt,
         }).catch(e => console.warn('[Payments] email error:', e.message))
+      : Promise.resolve(),
+    confirmedEmail
+      ? triggerPostPurchase(env, {
+          email:        confirmedEmail,
+          product:      module.toUpperCase(),
+          product_name: MODULE_PRICES[module]?.name || `${module} Report`,
+          amount_inr:   priceInr,
+          event_type:   'delivery_activated',
+          source:       utm_source || 'direct',
+          payment_id:   razorpay_payment_id,
+          plan:         body.plan || '',
+          meta:         { utm_medium, utm_campaign, report_id: reportId, module, target },
+        }).catch(e => console.warn('[Payments] lifecycle error:', e.message))
       : Promise.resolve(),
   ]).catch(() => {});
 

@@ -363,8 +363,16 @@ function templateDay3(lead, scanData = {}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function templateSubscriptionDay0(lead, meta = {}) {
-  const tier = meta.plan || meta.product || 'PRO';
-  const subject = `✅ Your ${tier} Plan is Active — Here's Your API Key`;
+  const tier   = meta.plan || meta.product || 'PRO';
+  const apiKey = meta.api_key || '';
+  const subject = `✅ Your ${tier} Plan is Active — Your API Key Inside`;
+  const apiKeyBlock = apiKey
+    ? `<div style="background:#0d1117;border-radius:8px;padding:16px 20px;margin:16px 0;border:1px solid #10b981">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">YOUR API KEY</div>
+        <code style="font-size:13px;color:#34d399;word-break:break-all;font-family:monospace">${apiKey}</code>
+        <div style="font-size:12px;color:#6b7280;margin-top:8px">Use in header: <code style="color:#94a3b8">Authorization: Bearer ${apiKey}</code></div>
+       </div>`
+    : `<p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">1. <strong>Get your API key</strong> from your dashboard at <a href="${BASE_URL}/user-dashboard" style="color:#34d399">user-dashboard</a></p>`;
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
@@ -375,20 +383,20 @@ function templateSubscriptionDay0(lead, meta = {}) {
 </td></tr>
 <tr><td style="padding:36px 40px">
   <h2 style="margin:0 0 16px;color:#f1f5f9;font-size:20px">Welcome to Sentinel APEX ${tier}</h2>
-  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your subscription is active and your API key has been generated. Here's how to get started:</p>
+  <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your subscription is active. Here's everything you need to get started:</p>
   <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0;border-left:4px solid #10b981">
-    <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">NEXT STEPS</div>
-    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">1. <strong>Access your API key</strong> from your dashboard at <a href="${BASE_URL}/user-dashboard" style="color:#34d399">cyberdudebivash.in/user-dashboard</a></p>
-    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">2. <strong>Run your first scan:</strong> POST /api/scan/domain with your API key in the Authorization header</p>
-    <p style="margin:0;color:#e2e8f0;font-size:14px">3. <strong>Need help?</strong> WhatsApp us at <strong>+91 81798 81447</strong> or email bivash@cyberdudebivash.com</p>
+    <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">GETTING STARTED</div>
+    ${apiKeyBlock}
+    <p style="margin:8px 0;color:#e2e8f0;font-size:14px">2. <strong>Run your first scan:</strong> POST /api/scan/domain with your API key in the Authorization header</p>
+    <p style="margin:0;color:#e2e8f0;font-size:14px">3. <strong>Need help?</strong> WhatsApp <strong>+91 81798 81447</strong> or email bivash@cyberdudebivash.com</p>
   </div>
   <div style="text-align:center;margin:28px 0">
-    <a href="${BASE_URL}/user-dashboard" style="display:inline-block;background:linear-gradient(135deg,#065f46,#047857);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Access Dashboard →</a>
+    <a href="${BASE_URL}/user-dashboard" style="display:inline-block;background:linear-gradient(135deg,#065f46,#047857);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Open Dashboard →</a>
   </div>
   <p style="color:#6b7280;font-size:13px">— Bivash, Founder · CYBERDUDEBIVASH PRIVATE LIMITED</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
-  return { subject, html, text: `Your ${tier} API subscription is active. Access your dashboard at ${BASE_URL}/user-dashboard.\n\nNeed help? WhatsApp +91 81798 81447` };
+  return { subject, html, text: `Your ${tier} plan is active.${apiKey ? '\n\nYour API key: ' + apiKey : ''}\n\nDashboard: ${BASE_URL}/user-dashboard\n\nNeed help? WhatsApp +91 81798 81447` };
 }
 
 function templateSubscriptionDay2(lead, meta = {}) {

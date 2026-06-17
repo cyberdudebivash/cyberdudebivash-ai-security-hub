@@ -327,7 +327,7 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
   doc.notes      = notes;
   doc.lead_id    = lead_id;
 
-  const proposal = { id: propId, lead_id, package_id, status: 'DRAFT', ...doc };
+  const proposal = { id: propId, lead_id, package_id, status: 'draft', ...doc };
 
   if (env?.SECURITY_HUB_KV) {
     await env.SECURITY_HUB_KV.put(`${KV_PROPOSAL_PREFIX}${propId}`, JSON.stringify(proposal), { expirationTtl: 86400 * 365 });
@@ -337,7 +337,7 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
       id: propId, lead_id, package_id,
       company:        lead.company,
       value_inr:      proposal.pricing?.final_price_inr,
-      status:         'DRAFT',
+      status:         'draft',
       generated_at:   doc.generated_at,
       valid_until:    doc.valid_until,
     });
@@ -451,7 +451,7 @@ export async function handleMarkProposalSent(request, env, authCtx = {}) {
   }
   if (!proposal) return fail(request, 'Proposal not found', 404, 'NOT_FOUND');
 
-  proposal.status    = 'SENT';
+  proposal.status    = 'sent';
   proposal.sent_at   = new Date().toISOString();
 
   if (env?.DB) {
@@ -491,7 +491,7 @@ export async function handleAcceptProposal(request, env, authCtx = {}) {
   }
   if (!proposal) return fail(request, 'Proposal not found', 404, 'NOT_FOUND');
 
-  proposal.status      = 'ACCEPTED';
+  proposal.status      = 'accepted';
   proposal.accepted_at = new Date().toISOString();
 
   if (env?.DB) {
@@ -518,6 +518,51 @@ export async function handleAcceptProposal(request, env, authCtx = {}) {
   }
 
   return ok(request, { accepted: true, proposal_id: propId, next_step: 'Complete payment to begin onboarding' });
+}
+
+// ── POST /api/proposals/:id/reject ───────────────────────────────────────────
+export async function handleRejectProposal(request, env, authCtx = {}) {
+  const propId = new URL(request.url).pathname.split('/').slice(-2, -1)[0];
+
+  let body = {};
+  try { body = await request.json(); } catch {}
+  const { reason = '' } = body;
+
+  let proposal = null;
+  if (env?.SECURITY_HUB_KV) {
+    try { proposal = await env.SECURITY_HUB_KV.get(`${KV_PROPOSAL_PREFIX}${propId}`, { type: 'json' }); } catch {}
+  }
+  if (!proposal) return fail(request, 'Proposal not found', 404, 'NOT_FOUND');
+
+  proposal.status      = 'rejected';
+  proposal.rejected_at = new Date().toISOString();
+  proposal.reject_reason = reason || '';
+
+  if (env?.DB) {
+    try {
+      await env.DB.prepare(
+        `UPDATE proposals SET status='rejected', metadata=json_set(COALESCE(metadata,'{}'),'$.rejected_at',datetime('now'),'$.reject_reason',?) WHERE id=?`
+      ).bind(reason || '', propId).run();
+    } catch { /* non-blocking */ }
+  }
+
+  if (env?.SECURITY_HUB_KV) {
+    await env.SECURITY_HUB_KV.put(`${KV_PROPOSAL_PREFIX}${propId}`, JSON.stringify(proposal), { expirationTtl: 86400 * 365 });
+    if (proposal.lead_id) {
+      try {
+        const lead = await env.SECURITY_HUB_KV.get(`crm:lead:${proposal.lead_id}`, { type: 'json' });
+        if (lead) {
+          lead.stage = 'CLOSED_LOST';
+          lead.timeline = lead.timeline || [];
+          lead.timeline.push({ stage: 'CLOSED_LOST', ts: proposal.rejected_at, actor: 'client', note: `Proposal ${propId} rejected${reason ? ': ' + reason : ''}` });
+          lead.updated_at = proposal.rejected_at;
+          await env.SECURITY_HUB_KV.put(`crm:lead:${proposal.lead_id}`, JSON.stringify(lead), { expirationTtl: 86400 * 365 * 2 });
+        }
+      } catch {}
+    }
+  }
+
+  return ok(request, { rejected: true, proposal_id: propId, reason });
 }
 
 // ── GET /api/proposals/packages ──────────────────────────────────────────────

@@ -189,7 +189,10 @@ export async function handleActivateSubscription(request, env) {
   const headers = corsHeaders(request);
   try {
     const body = await request.json().catch(() => ({}));
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, email } = body;
+    const {
+      razorpay_order_id, razorpay_payment_id, razorpay_signature, email,
+      utm_source = '', utm_medium = '', utm_campaign = '',
+    } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return new Response(JSON.stringify({ success: false, error: 'Missing payment verification fields.' }), {
@@ -251,7 +254,7 @@ export async function handleActivateSubscription(request, env) {
       ).run().catch(() => {}); // Non-fatal — KV is source of truth
     }
 
-    // Fire-and-forget: GST invoice + plan activation email
+    // Fire-and-forget: GST invoice + plan activation email + lifecycle enrollment
     const planDef = SUBSCRIPTION_PLANS[plan];
     Promise.all([
       (async () => {
@@ -280,6 +283,23 @@ export async function handleActivateSubscription(request, env) {
             accessExpires: new Date(expiresAt).toISOString(),
           });
         } catch (e) { console.warn('[Subscription] email error:', e.message); }
+      })(),
+      (async () => {
+        try {
+          if (!userEmail) return;
+          const { triggerPostPurchase } = await import('../services/lifecycleEngine.js');
+          await triggerPostPurchase(env, {
+            email:        userEmail,
+            product:      `SUBSCRIPTION_${plan}`,
+            product_name: `${planDef?.name || plan} Plan`,
+            amount_inr:   planDef?.price_inr || 0,
+            event_type:   'subscription_activated',
+            source:       utm_source || 'direct',
+            payment_id:   razorpay_payment_id,
+            plan,
+            meta:         { utm_medium, utm_campaign, session_token: sessionToken },
+          });
+        } catch (e) { console.warn('[Subscription] lifecycle error:', e.message); }
       })(),
     ]).catch(() => {});
 
