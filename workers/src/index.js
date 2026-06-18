@@ -3903,8 +3903,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       } catch(e) { results.threat_intel = { error: e.message }; }
       // 2. Seed defense solutions D1
       try {
-        const { seedDefenseSolutions } = await import('./handlers/defenseSeed.js');
+        const { seedDefenseSolutions, seedScanHistory, seedPlatformMetrics } = await import('./handlers/defenseSeed.js');
         results.defense = await seedDefenseSolutions(env);
+        results.scan_history = await seedScanHistory(env);
+        results.platform_metrics = await seedPlatformMetrics(env);
       } catch(e) { results.defense = { error: e.message }; }
       // 3. Populate sentinel KV feed so /api/threat-intel/live returns data immediately
       try {
