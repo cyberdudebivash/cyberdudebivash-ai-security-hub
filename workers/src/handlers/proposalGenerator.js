@@ -20,6 +20,9 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { isOwner }            from '../auth/middleware.js';
+import { triggerPostPurchase } from '../services/lifecycleEngine.js';
+import { enrollInSequence }    from '../services/emailEngine.js';
 
 const KV_PROPOSALS_INDEX = 'proposals:index';
 const KV_PROPOSAL_PREFIX = 'proposals:doc:';
@@ -308,8 +311,10 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
   let body = {};
   try { body = await request.json(); } catch {}
 
-  const { lead_id, package_id = 'PROFESSIONAL', discount_pct = 0,
-          setup_fee = 0, payment_terms, notes = '' } = body;
+  const { lead_id, package_id = 'PROFESSIONAL', payment_terms, notes = '' } = body;
+  // Clamp discount_pct to 0–40% and setup_fee to positive values only
+  const discount_pct = Math.max(0, Math.min(40, Number(body.discount_pct) || 0));
+  const setup_fee    = Math.max(0, Number(body.setup_fee) || 0);
 
   if (!lead_id) return fail(request, 'lead_id is required', 400, 'MISSING_LEAD');
   if (!ENTERPRISE_PACKAGES[package_id]) return fail(request, 'Invalid package_id', 400, 'INVALID_PACKAGE');
@@ -380,7 +385,7 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
 
 // ── GET /api/proposals ────────────────────────────────────────────────────────
 export async function handleListProposals(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isOwner(authCtx, env)) return fail(request, 'Owner access required', 403, 'FORBIDDEN');
   const url   = new URL(request.url);
   const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '20', 10));
 
@@ -414,6 +419,7 @@ export async function handleListProposals(request, env, authCtx = {}) {
 
 // ── GET /api/proposals/:id ────────────────────────────────────────────────────
 export async function handleGetProposal(request, env, authCtx = {}) {
+  if (!isOwner(authCtx, env)) return fail(request, 'Owner access required', 403, 'FORBIDDEN');
   const propId = new URL(request.url).pathname.split('/').pop();
   let proposal = null;
   if (env?.SECURITY_HUB_KV) {
@@ -442,7 +448,7 @@ export async function handleGetProposal(request, env, authCtx = {}) {
 
 // ── POST /api/proposals/:id/send ──────────────────────────────────────────────
 export async function handleMarkProposalSent(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isOwner(authCtx, env)) return fail(request, 'Owner access required', 403, 'FORBIDDEN');
   const propId = new URL(request.url).pathname.split('/').slice(-2, -1)[0];
 
   let proposal = null;
@@ -478,11 +484,30 @@ export async function handleMarkProposalSent(request, env, authCtx = {}) {
       } catch {}
     }
   }
+  // Enroll lead in 7-day proposal follow-up sequence (non-blocking)
+  if (proposal.client_email || proposal.email) {
+    const clientEmail = proposal.client_email || proposal.email;
+    enrollInSequence(env, clientEmail, 'enterprise_nurture', {
+      proposal_id:  propId,
+      product_name: proposal.package_id || 'Enterprise Security Assessment',
+      amount_inr:   proposal.price_inr || 0,
+    }).catch(() => {});
+    // Schedule a 7-day follow-up reminder in KV
+    if (env?.KV) {
+      const followUpAt = new Date(Date.now() + 7 * 86400000).toISOString();
+      env.KV.put(`proposal_followup:${propId}`, JSON.stringify({
+        email: clientEmail, proposal_id: propId, due_at: followUpAt,
+        product_name: proposal.package_id, price_inr: proposal.price_inr,
+      }), { expirationTtl: 14 * 86400 }).catch(() => {});
+    }
+  }
+
   return ok(request, { sent: true, proposal_id: propId });
 }
 
 // ── POST /api/proposals/:id/accept ────────────────────────────────────────────
 export async function handleAcceptProposal(request, env, authCtx = {}) {
+  if (!isOwner(authCtx, env)) return fail(request, 'Owner access required', 403, 'FORBIDDEN');
   const propId = new URL(request.url).pathname.split('/').slice(-2, -1)[0];
 
   let proposal = null;
@@ -517,11 +542,27 @@ export async function handleAcceptProposal(request, env, authCtx = {}) {
     }
   }
 
+  // Wire lifecycle: accepted proposal = committed deal — record revenue intent,
+  // enroll in enterprise onboarding sequence, write funnel purchase event.
+  const clientEmail = proposal.client_email || proposal.email || null;
+  if (clientEmail) {
+    triggerPostPurchase(env, {
+      email:        clientEmail,
+      product:      'SECURITY_ASSESSMENT',
+      product_name: proposal.package_id || 'Enterprise Security Assessment',
+      amount_inr:   proposal.price_inr || 0,
+      event_type:   'delivery_activated',
+      source:       'direct',
+      payment_id:   propId,
+    }).catch(() => {});
+  }
+
   return ok(request, { accepted: true, proposal_id: propId, next_step: 'Complete payment to begin onboarding' });
 }
 
 // ── POST /api/proposals/:id/reject ───────────────────────────────────────────
 export async function handleRejectProposal(request, env, authCtx = {}) {
+  if (!isOwner(authCtx, env)) return fail(request, 'Owner access required', 403, 'FORBIDDEN');
   const propId = new URL(request.url).pathname.split('/').slice(-2, -1)[0];
 
   let body = {};
@@ -560,6 +601,17 @@ export async function handleRejectProposal(request, env, authCtx = {}) {
         }
       } catch {}
     }
+  }
+
+  // Win-back: enroll rejected client in re-engagement sequence (non-blocking)
+  const rejectedEmail = proposal.client_email || proposal.email || null;
+  if (rejectedEmail) {
+    enrollInSequence(env, rejectedEmail, 'enterprise_winback', {
+      proposal_id:  propId,
+      product_name: proposal.package_id || 'Enterprise Security Assessment',
+      amount_inr:   proposal.price_inr || 0,
+      reject_reason: reason || '',
+    }).catch(() => {});
   }
 
   return ok(request, { rejected: true, proposal_id: propId, reason });

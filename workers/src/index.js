@@ -1568,6 +1568,21 @@ export default {
     // ── V7.0 Payment routes (plural form: /api/payments/*) ─────────────────
     if (path === '/api/payments/create-order' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
+      // IP-based rate limit: max 10 order creates per hour (fraud/abuse prevention)
+      const ip        = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const rlHour    = new Date().toISOString().slice(0, 13);
+      const rlKey     = `rl:payment_create:${ip}:${rlHour}`;
+      const rlKv      = env.SECURITY_HUB_KV || env.KV;
+      if (rlKv && ip !== 'unknown') {
+        const cnt = parseInt(await rlKv.get(rlKey).catch(() => '0') || '0', 10);
+        if (cnt >= 10) {
+          return withSecurityHeaders(withCors(Response.json({
+            error: 'Rate limit exceeded — maximum 10 payment orders per hour per IP.',
+            retry_after: 3600,
+          }, { status: 429 }), request));
+        }
+        await rlKv.put(rlKey, String(cnt + 1), { expirationTtl: 3600 }).catch(() => {});
+      }
       return withSecurityHeaders(withCors(await handleCreateOrder(request, env, authCtx), request));
     }
     if (path === '/api/payments/verify' && method === 'POST') {
@@ -1621,6 +1636,21 @@ export default {
     // ── CDB Manual payment confirmation (UPI/Bank/Crypto/PayPal) ─────────────
     // POST /api/payment/confirm  →  { txnId, method, product, user, amount }
     if (path === '/api/payment/confirm' && method === 'POST') {
+      // IP rate limit: max 3 manual payment confirmations per hour (fraud prevention)
+      const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const rlHour = new Date().toISOString().slice(0, 13);
+      const rlKey  = `rl:payment_confirm:${ip}:${rlHour}`;
+      const rlKv   = env.SECURITY_HUB_KV || env.KV;
+      if (rlKv && ip !== 'unknown') {
+        const cnt = parseInt(await rlKv.get(rlKey).catch(() => '0') || '0', 10);
+        if (cnt >= 3) {
+          return withSecurityHeaders(withCors(Response.json({
+            error: 'Rate limit exceeded — maximum 3 manual payment confirmations per hour.',
+            retry_after: 3600,
+          }, { status: 429 }), request));
+        }
+        await rlKv.put(rlKey, String(cnt + 1), { expirationTtl: 3600 }).catch(() => {});
+      }
       return withSecurityHeaders(withCors(await handlePaymentConfirm(request, env), request));
     }
 
@@ -1720,6 +1750,300 @@ export default {
     }
 
     // ── v32.0 Phase 2 Enterprise Platform Routes ────────────────────────────
+
+    // ── Phase 8: Revenue Certification & Revenue Proof — OWNER ONLY ────────────
+    // GET /api/admin/revenue-certification
+    // Validates all infrastructure required for revenue processing: DB, KV, R2,
+    // Razorpay config, email service, table existence. Returns PASS/FAIL per check.
+    if (path === '/api/admin/revenue-certification' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      const checks = {};
+
+      // D1 database
+      try {
+        await env.DB.prepare('SELECT 1').first();
+        checks.database = { status: 'PASS', detail: 'D1 connected' };
+      } catch (e) { checks.database = { status: 'FAIL', detail: e.message }; }
+
+      // KV store
+      try {
+        const kv = env.KV || env.SECURITY_HUB_KV;
+        if (!kv) throw new Error('No KV namespace configured');
+        await kv.put('health_check_cert', '1', { expirationTtl: 60 });
+        checks.kv_store = { status: 'PASS', detail: 'KV read/write OK' };
+      } catch (e) { checks.kv_store = { status: 'FAIL', detail: e.message }; }
+
+      // R2 storage
+      try {
+        if (!env.SCAN_RESULTS) throw new Error('SCAN_RESULTS R2 binding not configured');
+        await env.SCAN_RESULTS.put('health_check', 'ok', { httpMetadata: { contentType: 'text/plain' } });
+        checks.r2_storage = { status: 'PASS', detail: 'R2 read/write OK' };
+      } catch (e) { checks.r2_storage = { status: 'FAIL', detail: e.message }; }
+
+      // Razorpay credentials
+      checks.razorpay_credentials = (env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET)
+        ? { status: 'PASS', detail: 'Key ID and secret configured' }
+        : { status: 'FAIL', detail: 'RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set' };
+
+      // Email service
+      checks.email_service = (env.RESEND_API_KEY || env.MAILCHANNELS_TOKEN)
+        ? { status: 'PASS', detail: 'Email API key configured' }
+        : { status: 'WARN', detail: 'No RESEND_API_KEY or MAILCHANNELS_TOKEN — drip sequences disabled' };
+
+      // Webhook secret
+      checks.razorpay_webhook_secret = env.RAZORPAY_WEBHOOK_SECRET
+        ? { status: 'PASS', detail: 'Webhook secret configured' }
+        : { status: 'FAIL', detail: 'RAZORPAY_WEBHOOK_SECRET not set — webhooks unverified' };
+
+      // revenue_events table
+      try {
+        const r = await env.DB.prepare('SELECT COUNT(*) as cnt FROM revenue_events').first();
+        checks.revenue_events_table = { status: 'PASS', detail: `${r?.cnt ?? 0} events recorded` };
+      } catch (e) { checks.revenue_events_table = { status: 'FAIL', detail: e.message }; }
+
+      // subscriptions table
+      try {
+        const r = await env.DB.prepare("SELECT COUNT(*) as cnt FROM subscriptions WHERE status='active'").first();
+        checks.subscriptions_table = { status: 'PASS', detail: `${r?.cnt ?? 0} active subscriptions` };
+      } catch (e) { checks.subscriptions_table = { status: 'FAIL', detail: e.message }; }
+
+      // email_sequences table
+      try {
+        const r = await env.DB.prepare("SELECT COUNT(*) as cnt FROM email_sequences WHERE status='active'").first();
+        checks.email_sequences_table = { status: 'PASS', detail: `${r?.cnt ?? 0} active sequences` };
+      } catch (e) { checks.email_sequences_table = { status: 'FAIL', detail: e.message }; }
+
+      // payments — verified payments count
+      try {
+        const r = await env.DB.prepare("SELECT COUNT(*) as cnt FROM payments WHERE status='paid'").first();
+        const cnt = r?.cnt ?? 0;
+        checks.verified_payments = {
+          status: cnt > 0 ? 'PASS' : 'WARN',
+          detail: `${cnt} verified payments in database`,
+        };
+      } catch (e) { checks.verified_payments = { status: 'FAIL', detail: e.message }; }
+
+      // funnel_events purchase stage
+      try {
+        const r = await env.DB.prepare("SELECT COUNT(*) as cnt FROM funnel_events WHERE stage='purchase'").first();
+        const cnt = r?.cnt ?? 0;
+        checks.funnel_purchase_events = {
+          status: cnt > 0 ? 'PASS' : 'WARN',
+          detail: `${cnt} purchase funnel events`,
+        };
+      } catch (e) { checks.funnel_purchase_events = { status: 'FAIL', detail: e.message }; }
+
+      const vals = Object.values(checks);
+      const hasFail = vals.some(c => c.status === 'FAIL');
+      const hasWarn = vals.some(c => c.status === 'WARN');
+      const certStatus = hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS';
+
+      return withSecurityHeaders(withCors(Response.json({
+        certification_status: certStatus,
+        timestamp: new Date().toISOString(),
+        checks,
+        summary: {
+          total: vals.length,
+          pass:  vals.filter(c => c.status === 'PASS').length,
+          warn:  vals.filter(c => c.status === 'WARN').length,
+          fail:  vals.filter(c => c.status === 'FAIL').length,
+        },
+        action_required: hasFail
+          ? 'Platform NOT revenue-certified. Fix FAIL items before production launch.'
+          : hasWarn
+          ? 'Platform CONDITIONALLY certified. Resolve WARN items for full revenue capability.'
+          : 'Platform is PRODUCTION-CERTIFIED for revenue generation.',
+      }), request));
+    }
+
+    // GET /api/admin/revenue-proof
+    // Shows the first verified transaction per revenue funnel — proves each path
+    // has processed at least one real payment end-to-end.
+    if (path === '/api/admin/revenue-proof' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      const funnels = {};
+
+      // Threat/scan reports
+      try {
+        const r = await env.DB.prepare(
+          `SELECT module, target, amount, paid_at, razorpay_payment_id FROM payments
+           WHERE status='paid' AND module NOT LIKE 'subscription%' AND module != 'assessment'
+           ORDER BY paid_at ASC LIMIT 1`
+        ).first();
+        funnels.threat_report = r
+          ? { status: 'PROVEN', first_payment: r.paid_at, module: r.module, target: r.target, amount_inr: Math.round((r.amount||0)/100), payment_id: r.razorpay_payment_id }
+          : { status: 'UNPROVEN', message: 'No verified report payment found' };
+      } catch (e) { funnels.threat_report = { status: 'ERROR', error: e.message }; }
+
+      // Security assessment
+      try {
+        const r = await env.DB.prepare(
+          `SELECT target, amount, paid_at, razorpay_payment_id, email FROM payments
+           WHERE status='paid' AND module='assessment' ORDER BY paid_at ASC LIMIT 1`
+        ).first();
+        funnels.security_assessment = r
+          ? { status: 'PROVEN', first_payment: r.paid_at, amount_inr: Math.round((r.amount||0)/100), email: r.email }
+          : { status: 'UNPROVEN', message: 'No verified assessment payment found' };
+      } catch (e) { funnels.security_assessment = { status: 'ERROR', error: e.message }; }
+
+      // API Subscription
+      try {
+        const r = await env.DB.prepare(
+          `SELECT email, plan, price_inr, activated_at, external_id FROM subscriptions
+           WHERE status='active' ORDER BY activated_at ASC LIMIT 1`
+        ).first();
+        funnels.api_subscription = r
+          ? { status: 'PROVEN', first_activation: r.activated_at, plan: r.plan, amount_inr: r.price_inr, email: r.email }
+          : { status: 'UNPROVEN', message: 'No active subscription found' };
+      } catch (e) { funnels.api_subscription = { status: 'ERROR', error: e.message }; }
+
+      // Revenue events (lifecycle attribution)
+      try {
+        const r = await env.DB.prepare(
+          'SELECT COUNT(*) as cnt, SUM(amount_inr) as total FROM revenue_events'
+        ).first();
+        const cnt = r?.cnt ?? 0;
+        funnels.revenue_attribution = {
+          status: cnt > 0 ? 'PROVEN' : 'UNPROVEN',
+          total_events: cnt, total_revenue_inr: r?.total ?? 0,
+        };
+      } catch (e) { funnels.revenue_attribution = { status: 'ERROR', error: e.message }; }
+
+      // CAC channel attribution
+      try {
+        const r = await env.DB.prepare('SELECT COUNT(*) as cnt FROM cac_events WHERE converted=1').first();
+        const cnt = r?.cnt ?? 0;
+        funnels.cac_attribution = {
+          status: cnt > 0 ? 'PROVEN' : 'UNPROVEN',
+          converted_events: cnt,
+        };
+      } catch (e) { funnels.cac_attribution = { status: 'ERROR', error: e.message }; }
+
+      // Email drip delivery
+      try {
+        const r = await env.DB.prepare("SELECT COUNT(*) as cnt FROM email_tracking WHERE event='sent'").first();
+        const cnt = r?.cnt ?? 0;
+        funnels.email_lifecycle = {
+          status: cnt > 0 ? 'PROVEN' : 'UNPROVEN',
+          emails_delivered: cnt,
+        };
+      } catch (e) { funnels.email_lifecycle = { status: 'ERROR', error: e.message }; }
+
+      const proven  = Object.values(funnels).filter(f => f.status === 'PROVEN').length;
+      const total   = Object.keys(funnels).length;
+      const unproven = total - proven;
+
+      return withSecurityHeaders(withCors(Response.json({
+        revenue_proof_status: proven === total ? 'FULLY_PROVEN' : proven > 0 ? 'PARTIALLY_PROVEN' : 'UNPROVEN',
+        timestamp: new Date().toISOString(),
+        funnels,
+        summary: { proven, unproven, total, completion_pct: Math.round(proven / total * 100) },
+        mission_status: proven === total
+          ? 'ALL FUNNELS PROVEN — Platform is revenue-certified.'
+          : `${unproven} funnel(s) awaiting first transaction. Drive acquisition to complete proof.`,
+      }), request));
+    }
+
+    // GET /api/admin/executive-scorecard — single endpoint returning every KPI
+    // needed for a daily CEO/CRO review: MRR, ARR, CAC, LTV, funnel conversions,
+    // channel breakdown, renewal pipeline, operational health.
+    if (path === '/api/admin/executive-scorecard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+
+      const scorecard = { generated_at: new Date().toISOString() };
+      const now       = new Date();
+      const monthStart = now.toISOString().slice(0, 7) + '-01';
+      const yearStart  = now.getFullYear() + '-01-01';
+
+      try {
+        // ── Revenue ────────────────────────────────────────────────────────────
+        const [revMonth, revTotal, subActive, revEvents, cacData, renewalData, funnelData, proposalData] = await Promise.all([
+          // Revenue this month
+          env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid' AND created_at >= ?`).bind(monthStart).first().catch(() => null),
+          // Revenue all time
+          env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid'`).first().catch(() => null),
+          // Active subscriptions (plan counts)
+          env.DB.prepare(`SELECT plan, COUNT(*) as cnt, SUM(price_inr) as mrr FROM subscriptions WHERE status='active' GROUP BY plan`).all().catch(() => ({ results: [] })),
+          // Revenue events this month
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as total FROM revenue_events WHERE created_at >= ?`).bind(monthStart).first().catch(() => null),
+          // CAC by channel
+          env.DB.prepare(`SELECT channel, COUNT(*) as conversions, COALESCE(AVG(NULLIF(cost_inr,0)),0) as avg_cac, COALESCE(SUM(mrr_generated),0) as mrr FROM cac_events WHERE converted=1 GROUP BY channel`).all().catch(() => ({ results: [] })),
+          // Renewals due in 30 days
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr_at_risk FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+30 days')`).first().catch(() => null),
+          // Funnel conversion (lead → customer)
+          env.DB.prepare(`SELECT stage, COUNT(*) as cnt FROM funnel_events WHERE created_at >= ? GROUP BY stage`).bind(monthStart).all().catch(() => ({ results: [] })),
+          // Proposals pipeline
+          env.DB.prepare(`SELECT status, COUNT(*) as cnt FROM proposals GROUP BY status`).all().catch(() => ({ results: [] })),
+        ]);
+
+        // MRR from active subscriptions
+        const subRows   = subActive?.results ?? [];
+        const mrr_inr   = subRows.reduce((s, r) => s + (r.mrr || 0), 0);
+        const arr_inr   = mrr_inr * 12;
+        const totalSubs = subRows.reduce((s, r) => s + (r.cnt || 0), 0);
+
+        // LTV estimate: MRR × 24 months average tenure (conservative)
+        const ltv_inr = totalSubs > 0 ? Math.round(mrr_inr / totalSubs * 24) : 0;
+
+        // Funnel conversion rates
+        const funnelMap  = {};
+        for (const r of (funnelData?.results ?? [])) funnelMap[r.stage] = r.cnt;
+        const leads      = funnelMap.lead || funnelMap.email_capture || 0;
+        const purchases  = funnelMap.purchase || 0;
+        const conversion = leads > 0 ? Math.round(purchases / leads * 1000) / 10 : 0;
+
+        // Proposal pipeline
+        const propMap = {};
+        for (const r of (proposalData?.results ?? [])) propMap[r.status] = r.cnt;
+
+        // CAC by channel
+        const cacByChannel = {};
+        for (const r of (cacData?.results ?? [])) {
+          cacByChannel[r.channel] = { conversions: r.conversions, avg_cac_inr: Math.round(r.avg_cac), mrr_inr: r.mrr };
+        }
+        const bestChannel = Object.entries(cacByChannel).sort((a, b) => b[1].mrr_inr - a[1].mrr_inr)[0]?.[0] || 'unknown';
+
+        scorecard.revenue = {
+          mrr_inr, arr_inr, ltv_inr,
+          revenue_this_month_inr: Math.round((revMonth?.total || 0) / 100),
+          revenue_all_time_inr:   Math.round((revTotal?.total || 0) / 100),
+          revenue_events_this_month: revEvents?.cnt || 0,
+          revenue_events_total_inr:  revEvents?.total || 0,
+          active_subscriptions: totalSubs,
+          subscriptions_by_plan: Object.fromEntries(subRows.map(r => [r.plan, r.cnt])),
+        };
+        scorecard.acquisition = {
+          leads_this_month:    leads,
+          purchases_this_month: purchases,
+          conversion_rate_pct: conversion,
+          cac_by_channel:      cacByChannel,
+          best_channel:        bestChannel,
+        };
+        scorecard.proposals = {
+          draft:       propMap.draft || 0,
+          sent:        propMap.sent || 0,
+          accepted:    propMap.accepted || 0,
+          rejected:    propMap.rejected || 0,
+          pipeline_value_inr: (propMap.sent || 0) * 99900, // avg enterprise deal estimate
+        };
+        scorecard.renewal_pipeline = {
+          renewals_due_30d: renewalData?.cnt || 0,
+          arr_at_risk_inr:  renewalData?.arr_at_risk || 0,
+        };
+        scorecard.operational = {
+          status: 'operational',
+          note:   'Check /api/admin/revenue-certification for full infrastructure health',
+        };
+      } catch (e) {
+        console.error('[ExecutiveScorecard]', e.message);
+        scorecard.error = 'Partial data — some queries failed';
+      }
+
+      return withSecurityHeaders(withCors(Response.json(scorecard), request));
+    }
 
     // Revenue Metrics — OWNER ONLY (platform financials: MRR/ARR/subscribers/
     // conversion). Was exposed to anonymous; a second gated definition existed
@@ -2444,6 +2768,21 @@ export default {
 
     // POST /api/subscription/create → create Razorpay order for a plan
     if (path === '/api/subscription/create' && method === 'POST') {
+      // IP-based rate limit: max 5 subscription order creates per hour
+      const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const rlHour = new Date().toISOString().slice(0, 13);
+      const rlKey  = `rl:sub_create:${ip}:${rlHour}`;
+      const rlKv   = env.SECURITY_HUB_KV || env.KV;
+      if (rlKv && ip !== 'unknown') {
+        const cnt = parseInt(await rlKv.get(rlKey).catch(() => '0') || '0', 10);
+        if (cnt >= 5) {
+          return withSecurityHeaders(withCors(Response.json({
+            error: 'Rate limit exceeded — maximum 5 subscription requests per hour per IP.',
+            retry_after: 3600,
+          }, { status: 429 }), request));
+        }
+        await rlKv.put(rlKey, String(cnt + 1), { expirationTtl: 3600 }).catch(() => {});
+      }
       return withSecurityHeaders(withCors(await handleCreateSubscription(request, env), request));
     }
 

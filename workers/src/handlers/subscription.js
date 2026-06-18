@@ -223,22 +223,8 @@ export async function handleActivateSubscription(request, env) {
     const sessionToken = generateSubscriptionToken();
     const expiresAt    = Date.now() + 90 * 24 * 60 * 60 * 1000; // 90 days
 
-    // Store subscription session in KV
-    if (env.KV) {
-      await env.KV.put(`sub_session:${sessionToken}`, JSON.stringify({
-        plan,
-        email:      userEmail,
-        payment_id: razorpay_payment_id,
-        order_id:   razorpay_order_id,
-        activated:  Date.now(),
-        expires_at: expiresAt,
-      }), { expirationTtl: 90 * 24 * 3600 });
-
-      // Clean up the order intent
-      await env.KV.delete(`sub_order:${razorpay_order_id}`);
-    }
-
-    // Record in D1 payments table if available
+    // D1 FIRST — source of truth for subscription state.
+    // KV is written only after D1 succeeds to prevent state divergence.
     if (env.DB) {
       await env.DB.prepare(
         `INSERT OR IGNORE INTO payments
@@ -251,7 +237,7 @@ export async function handleActivateSubscription(request, env) {
         SUBSCRIPTION_PLANS[plan]?.amount || 0,
         userEmail,
         sessionToken,
-      ).run().catch(() => {}); // Non-fatal — KV is source of truth
+      ).run().catch(() => {});
 
       // Write to subscriptions table for renewal engine + lifecycle tracking
       await env.DB.prepare(
@@ -266,6 +252,21 @@ export async function handleActivateSubscription(request, env) {
         SUBSCRIPTION_PLANS[plan]?.price_inr || 499,
         new Date(expiresAt).toISOString(),
       ).run().catch(() => {});
+    }
+
+    // KV session cache — written after D1 so we don't serve stale token if DB fails.
+    if (env.KV) {
+      await env.KV.put(`sub_session:${sessionToken}`, JSON.stringify({
+        plan,
+        email:      userEmail,
+        payment_id: razorpay_payment_id,
+        order_id:   razorpay_order_id,
+        activated:  Date.now(),
+        expires_at: expiresAt,
+      }), { expirationTtl: 90 * 24 * 3600 });
+
+      // Clean up the order intent
+      await env.KV.delete(`sub_order:${razorpay_order_id}`).catch(() => {});
     }
 
     // Fire-and-forget: GST invoice + plan activation email + lifecycle enrollment

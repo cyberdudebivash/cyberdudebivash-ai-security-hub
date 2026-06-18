@@ -2,8 +2,9 @@
  * CYBERDUDEBIVASH AI Security Hub — Analytics Engine v1.0
  * Tracks platform events: scans, payments, conversions, downloads
  * Stores to D1 analytics_events table
- * Admin read endpoint: GET /api/admin/analytics (admin-tier only)
+ * Admin read endpoint: GET /api/admin/analytics (owner-only)
  */
+import { isOwner } from '../auth/middleware.js';
 
 // ─── Track a platform event (non-blocking, call with ctx.waitUntil) ──────────
 export async function trackEvent(env, eventType, module = null, userId = null, ip = null, metadata = {}) {
@@ -29,9 +30,9 @@ export async function trackEvent(env, eventType, module = null, userId = null, i
 
 // ─── GET /api/admin/analytics ────────────────────────────────────────────────
 export async function handleGetAnalytics(request, env, authCtx = {}) {
-  // Admin-only — require ENTERPRISE tier with admin identity
-  if (authCtx.tier !== 'ENTERPRISE' && authCtx.identity !== 'system') {
-    return Response.json({ error: 'Admin access required' }, { status: 403 });
+  // Owner-only — platform financials must never be visible to paying ENTERPRISE customers
+  if (!isOwner(authCtx, env)) {
+    return Response.json({ error: 'Owner access required' }, { status: 403 });
   }
   if (!env.DB) {
     return Response.json({ error: 'Database not available' }, { status: 503 });
@@ -129,14 +130,15 @@ export async function handleGetAnalytics(request, env, authCtx = {}) {
       recent_payments:   recentPayments?.results    ?? [],
     });
   } catch (e) {
-    return Response.json({ error: 'Analytics query failed', details: e.message }, { status: 500 });
+    console.error('[Analytics] query failed:', e.message);
+    return Response.json({ error: 'Analytics query failed' }, { status: 500 });
   }
 }
 
 // ─── GET /api/admin/analytics/scans ──────────────────────────────────────────
 export async function handleScanStats(request, env, authCtx = {}) {
-  if (authCtx.tier !== 'ENTERPRISE') {
-    return Response.json({ error: 'Admin access required' }, { status: 403 });
+  if (!isOwner(authCtx, env)) {
+    return Response.json({ error: 'Owner access required' }, { status: 403 });
   }
   if (!env.DB) return Response.json({ error: 'Database not available' }, { status: 503 });
 
@@ -201,7 +203,7 @@ export async function meterApiRequest(env, {
 // ─── GET /api/admin/api-usage ────────────────────────────────────────────────
 // Returns API usage breakdown by endpoint, user, and key for the last N days.
 export async function handleApiUsage(request, env, authCtx = {}) {
-  if (authCtx.tier !== 'ENTERPRISE' && authCtx.identity !== 'system') {
+  if (!isOwner(authCtx, env) && authCtx.identity !== 'system') {
     return Response.json({ error: 'Admin access required' }, { status: 403 });
   }
   if (!env.DB) return Response.json({ error: 'Database not available' }, { status: 503 });

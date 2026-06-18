@@ -158,8 +158,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     trackEvent(env, 'payment_order_failed', module, authCtx?.user_id || null,
       request.headers?.get?.('CF-Connecting-IP'), { error: err.message, target }).catch(() => {});
     return Response.json({
-      error:   'Payment gateway error. Please try again.',
-      details: err.message,
+      error:    'Payment gateway error. Please try again.',
       fallback: `Contact bivash@cyberdudebivash.com to complete purchase.`,
     }, { status: 502 });
   }
@@ -226,6 +225,16 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     return Response.json({
       error: 'razorpay_order_id, razorpay_payment_id, and razorpay_signature are required',
     }, { status: 400 });
+  }
+  // Format validation — prevents oversized or malformed values from reaching D1
+  if (!/^order_[A-Za-z0-9]{6,32}$/.test(razorpay_order_id)) {
+    return Response.json({ error: 'Invalid razorpay_order_id format' }, { status: 400 });
+  }
+  if (!/^pay_[A-Za-z0-9]{6,32}$/.test(razorpay_payment_id)) {
+    return Response.json({ error: 'Invalid razorpay_payment_id format' }, { status: 400 });
+  }
+  if (!/^[a-fA-F0-9]{64}$/.test(razorpay_signature)) {
+    return Response.json({ error: 'Invalid razorpay_signature format' }, { status: 400 });
   }
   // Non-scan fulfillment modules (assessment and subscription) are handled separately below
   const NON_SCAN_MODULES = ['assessment', 'subscription'];
@@ -602,29 +611,28 @@ export async function handleReportDownload(request, env, authCtx = {}) {
 }
 
 // ─── GET /api/payments/status/:orderId ───────────────────────────────────────
+// Public status poll — intentionally omits amount and report_token to prevent
+// BOLA (API1): any caller knowing an order_id must not gain download access.
+// The report download URL is only delivered at verify time to the paying user.
 export async function handlePaymentStatus(request, env, authCtx = {}) {
   const orderId = new URL(request.url).pathname.split('/').pop();
   if (!orderId) return Response.json({ error: 'orderId required' }, { status: 400 });
 
   if (env.DB) {
     const row = await env.DB.prepare(
-      `SELECT id, module, target, amount, status, report_token, paid_at, created_at
+      `SELECT module, target, status, paid_at, created_at
        FROM payments WHERE razorpay_order_id = ? LIMIT 1`
     ).bind(orderId).first().catch(() => null);
 
     if (!row) return Response.json({ error: 'Order not found' }, { status: 404 });
 
     return Response.json({
-      order_id:    orderId,
-      status:      row.status,
-      module:      row.module,
-      target:      row.target,
-      amount_paise: row.amount,
-      paid_at:     row.paid_at,
-      created_at:  row.created_at,
-      ...(row.status === 'paid' && row.report_token ? {
-        download_url: `/api/reports/download/${row.report_token}`,
-      } : {}),
+      order_id:   orderId,
+      status:     row.status,
+      module:     row.module,
+      target:     row.target,
+      paid_at:    row.paid_at,
+      created_at: row.created_at,
     });
   }
 
@@ -646,6 +654,21 @@ export async function handleRazorpayWebhook(request, env) {
   let event;
   try { event = JSON.parse(rawBody); }
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  // Webhook replay protection: deduplicate by Razorpay event ID (24-hour window)
+  const eventId   = event.id || (event.account_id + ':' + event.created_at + ':' + (event.payload?.payment?.entity?.id || ''));
+  const dedupKey  = `webhook_processed:${eventId}`;
+  const kvStore   = env.KV || env.SECURITY_HUB_KV;
+  if (kvStore && eventId) {
+    try {
+      const already = await kvStore.get(dedupKey);
+      if (already) {
+        console.log('[Webhook] Duplicate event ignored:', eventId);
+        return Response.json({ received: true, duplicate: true });
+      }
+      await kvStore.put(dedupKey, '1', { expirationTtl: 86400 });
+    } catch { /* KV unavailable — fail open to avoid blocking legitimate webhooks */ }
+  }
 
   const type    = event.event;
   const payload = event.payload?.payment?.entity || {};
