@@ -1041,18 +1041,6 @@ export async function runDripAutomation(env) {
     // Send
     const result = await sendEmail(env, { to: email, subject: template.subject, html, text });
 
-    if (result.success) {
-      results.sent++;
-      // Track in DB
-      await env.DB.prepare(`
-        INSERT INTO email_tracking (id, email, sequence_id, step, event, created_at)
-        VALUES (?, ?, ?, ?, 'sent', datetime('now'))
-      `).bind(crypto.randomUUID(), email, row.sequence_id, step).run().catch(() => {});
-    } else {
-      results.errors++;
-    }
-
-    // Advance sequence — delay depends on sequence type and step
     const DELAY_MAP = {
       welcome:                [0, 1, 1, 1],
       enterprise:             [0, 1, 2, 2, 2],
@@ -1062,10 +1050,37 @@ export async function runDripAutomation(env) {
       enterprise_nurture:     [0, 1, 2, 2, 2],
       mssp_onboarded:         [0, 3, 4],
     };
-    const seqId = row.sequence_id || 'welcome';
+    const seqId  = row.sequence_id || 'welcome';
     const delays = DELAY_MAP[seqId] || [0, 1, 1, 1];
-    const delay = delays[step] ?? 1;
-    await advanceSequence(env, row.id, step + 1, delay);
+    const delay  = delays[step] ?? 1;
+
+    if (result.success) {
+      results.sent++;
+      await env.DB.prepare(`
+        INSERT INTO email_tracking (id, email, sequence_id, step, event, created_at)
+        VALUES (?, ?, ?, ?, 'sent', datetime('now'))
+      `).bind(crypto.randomUUID(), email, row.sequence_id, step).run().catch(() => {});
+      await advanceSequence(env, row.id, step + 1, delay);
+    } else {
+      results.errors++;
+      // Retry with backoff — do NOT advance step. Track retries in meta.
+      const currentMeta  = JSON.parse(row.meta || '{}');
+      const retryCount   = (currentMeta._retry_count || 0) + 1;
+      if (retryCount >= 3) {
+        // 3 consecutive failures — mark sequence step as permanently failed, advance past it
+        await advanceSequence(env, row.id, step + 1, delay);
+        await env.DB.prepare(`
+          INSERT INTO email_tracking (id, email, sequence_id, step, event, created_at)
+          VALUES (?, ?, ?, ?, 'failed_permanent', datetime('now'))
+        `).bind(crypto.randomUUID(), email, row.sequence_id, step).run().catch(() => {});
+      } else {
+        // Exponential backoff retry: 1h, 2h (next cron pickup)
+        const nextRetry = new Date(Date.now() + retryCount * 3600000).toISOString();
+        await env.DB.prepare(`
+          UPDATE email_sequences SET next_send_at = ?, meta = ? WHERE id = ?
+        `).bind(nextRetry, JSON.stringify({ ...currentMeta, _retry_count: retryCount }), row.id).run().catch(() => {});
+      }
+    }
   }
 
   return results;

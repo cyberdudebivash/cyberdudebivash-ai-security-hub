@@ -227,6 +227,16 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       error: 'razorpay_order_id, razorpay_payment_id, and razorpay_signature are required',
     }, { status: 400 });
   }
+  // Format validation — prevents oversized or malformed values from reaching D1
+  if (!/^order_[A-Za-z0-9]{6,32}$/.test(razorpay_order_id)) {
+    return Response.json({ error: 'Invalid razorpay_order_id format' }, { status: 400 });
+  }
+  if (!/^pay_[A-Za-z0-9]{6,32}$/.test(razorpay_payment_id)) {
+    return Response.json({ error: 'Invalid razorpay_payment_id format' }, { status: 400 });
+  }
+  if (!/^[a-fA-F0-9]{64}$/.test(razorpay_signature)) {
+    return Response.json({ error: 'Invalid razorpay_signature format' }, { status: 400 });
+  }
   // Non-scan fulfillment modules (assessment and subscription) are handled separately below
   const NON_SCAN_MODULES = ['assessment', 'subscription'];
   if (!module || (!SCAN_HANDLERS[module] && !NON_SCAN_MODULES.includes(module))) {
@@ -646,6 +656,21 @@ export async function handleRazorpayWebhook(request, env) {
   let event;
   try { event = JSON.parse(rawBody); }
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  // Webhook replay protection: deduplicate by Razorpay event ID (24-hour window)
+  const eventId   = event.id || (event.account_id + ':' + event.created_at + ':' + (event.payload?.payment?.entity?.id || ''));
+  const dedupKey  = `webhook_processed:${eventId}`;
+  const kvStore   = env.KV || env.SECURITY_HUB_KV;
+  if (kvStore && eventId) {
+    try {
+      const already = await kvStore.get(dedupKey);
+      if (already) {
+        console.log('[Webhook] Duplicate event ignored:', eventId);
+        return Response.json({ received: true, duplicate: true });
+      }
+      await kvStore.put(dedupKey, '1', { expirationTtl: 86400 });
+    } catch { /* KV unavailable — fail open to avoid blocking legitimate webhooks */ }
+  }
 
   const type    = event.event;
   const payload = event.payload?.payment?.entity || {};
