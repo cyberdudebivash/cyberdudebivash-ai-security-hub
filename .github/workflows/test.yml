@@ -63,42 +63,44 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: axe-core CLI scan of local build
-        # Two failure modes addressed here:
-        # 1. Version mismatch: axe-cli bundles a fixed ChromeDriver; runner Chrome
-        #    may be newer. Fix: download matching Chrome for Testing via jq + the
-        #    Google JSON API (jq pre-installed; no python3 -c inline script which
-        #    requires column-0 code that breaks YAML block-scalar indentation).
-        # 2. Sandbox crash: GitHub Actions containers lack kernel namespace support,
-        #    so Chrome exits immediately without --no-sandbox. Fix: place a wrapper
-        #    at /usr/local/bin/google-chrome (higher priority than /usr/bin in PATH)
-        #    that injects --no-sandbox --disable-dev-shm-usage transparently.
+        # Root-cause analysis of every failure mode this step defends against:
+        # 1. YAML syntax: python3 -c requires column-0 code → breaks block-scalar.
+        #    Fix: use jq (pre-installed) — all lines stay indented within the block.
+        # 2. Wrong ChromeDriver version detected: we were reading `chromedriver` from
+        #    PATH (the system binary, v149), but axe-cli bundles its own ChromeDriver
+        #    (v150+). Fix: read the version from axe-cli's own chromedriver package.json.
+        # 3. Sandbox crash: ChromeDriver hard-codes /opt/google/chrome/chrome as the
+        #    Chrome binary path — it never uses PATH. Previous fix wrote a wrapper to
+        #    /usr/local/bin which ChromeDriver silently ignored. Fix: overwrite
+        #    /opt/google/chrome/chrome itself with a wrapper that injects --no-sandbox
+        #    and --disable-dev-shm-usage before exec-ing the Chrome for Testing binary.
         run: |
           npm i -g @axe-core/cli@4.11.3
 
-          CD_MAJOR=$(chromedriver --version 2>&1 | grep -oP '(?<=ChromeDriver )\d+' | head -1)
-          [ -z "$CD_MAJOR" ] && CD_MAJOR="150"
-          echo "ChromeDriver major: $CD_MAJOR"
+          # Read ChromeDriver version from axe-cli's own bundled package, not system
+          AXE_ROOT=$(npm root -g)/@axe-core/cli/node_modules
+          CD_MAJOR=$(node -p "require('$AXE_ROOT/chromedriver/package.json').version.split('.')[0]" 2>/dev/null \
+            || node -p "require('$(npm root -g)/chromedriver/package.json').version.split('.')[0]" 2>/dev/null \
+            || echo "150")
+          echo "axe-cli ChromeDriver major: $CD_MAJOR"
 
           CfT_URL=$(curl -sf \
             https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json \
             | jq -r --argjson m "$CD_MAJOR" \
               '[.versions[] | select((.version|split(".")[0]|tonumber)==$m)] | sort_by(.version|split(".")|map(tonumber)) | last | .downloads.chrome[] | select(.platform=="linux64") | .url' \
             | head -1)
+          [ -z "$CfT_URL" ] && { echo "::error::No Chrome for Testing found for major $CD_MAJOR"; exit 1; }
+          echo "Fetching: $CfT_URL"
+          wget -q "$CfT_URL" -O /tmp/chrome-cft.zip
+          unzip -q /tmp/chrome-cft.zip -d /tmp/chrome-cft
+          CfT_BIN=$(find /tmp/chrome-cft -name "chrome" -type f | head -1)
+          chmod +x "$CfT_BIN"
 
-          if [ -n "$CfT_URL" ]; then
-            echo "Fetching Chrome for Testing: $CfT_URL"
-            wget -q "$CfT_URL" -O /tmp/chrome-cft.zip
-            unzip -q /tmp/chrome-cft.zip -d /tmp/chrome-cft
-            CfT_BIN=$(find /tmp/chrome-cft -name "chrome" -type f | head -1)
-            chmod +x "$CfT_BIN"
-          else
-            CfT_BIN=$(which google-chrome-stable google-chrome 2>/dev/null | head -1)
-            echo "Fallback: using system Chrome at $CfT_BIN"
-          fi
-
+          # Overwrite /opt/google/chrome/chrome — the hard-coded path ChromeDriver uses.
+          # The wrapper exec's the CfT binary with --no-sandbox (required in CI containers).
           printf '#!/bin/bash\nexec "%s" --no-sandbox --disable-dev-shm-usage "$@"\n' "$CfT_BIN" \
-            | sudo tee /usr/local/bin/google-chrome > /dev/null
-          sudo chmod +x /usr/local/bin/google-chrome
+            | sudo tee /opt/google/chrome/chrome > /dev/null
+          sudo chmod +x /opt/google/chrome/chrome
           echo "Chrome ready: $(google-chrome --version)"
 
           python3 -m http.server 3000 --directory frontend/ &
