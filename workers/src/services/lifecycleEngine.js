@@ -37,7 +37,7 @@ function seqForProduct(product = '') {
 
 // Map raw utm_source/source to valid revenue_events.source CHECK constraint values
 function normalizeRevenueSource(raw) {
-  const VALID = new Set(['razorpay', 'gumroad', 'affiliate', 'subscription', 'api_credits']);
+  const VALID = new Set(['razorpay', 'gumroad', 'affiliate', 'subscription', 'api_credits', 'expansion']);
   if (VALID.has(raw)) return raw;
   if ((raw || '').startsWith('subscription')) return 'subscription';
   return 'razorpay'; // payment-gateway default for all verified purchases
@@ -95,6 +95,30 @@ export async function triggerPostPurchase(env, {
         VALUES (?, ?, ?, 0, NULL, ?, ?, ?, '{}', ?)
       `).bind(evId, revSource, amount_inr, email, product || event_type, payment_id, now).run();
     } catch { /* non-blocking */ }
+
+    // 1b — Expansion revenue detection: if email already has a subscription at a lower plan,
+    //      write an additional expansion event for the revenue delta (upgrade attribution).
+    if ((product || '').toUpperCase().startsWith('SUBSCRIPTION_')) {
+      try {
+        const PLAN_RANK = { STARTER: 1, PRO: 2, ENTERPRISE: 3 };
+        const newPlanKey = (product || '').toUpperCase().replace('SUBSCRIPTION_', '');
+        const newRank    = PLAN_RANK[newPlanKey] || 0;
+        const existing   = await db.prepare(
+          `SELECT plan, price_inr FROM subscriptions WHERE email = ? AND status = 'active' ORDER BY activated_at DESC LIMIT 1`
+        ).bind(email).first().catch(() => null);
+        const existRank = existing ? (PLAN_RANK[existing.plan?.toUpperCase()] || 0) : 0;
+        if (existRank > 0 && newRank > existRank) {
+          const delta = Math.max(0, amount_inr - (existing?.price_inr || 0));
+          if (delta > 0) {
+            await db.prepare(`
+              INSERT INTO revenue_events
+                (id, source, amount_inr, amount_usd, user_id, email, product, reference, metadata, created_at)
+              VALUES (?, 'expansion', ?, 0, NULL, ?, ?, ?, '{}', ?)
+            `).bind('exp_' + evId, delta, email, product || event_type, payment_id, now).run().catch(() => {});
+          }
+        }
+      } catch { /* non-blocking */ }
+    }
 
     // 2 — Write funnel 'purchase' stage event for conversion analytics
     try {
