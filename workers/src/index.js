@@ -1931,6 +1931,26 @@ export default {
         };
       } catch (e) { funnels.email_lifecycle = { status: 'ERROR', error: e.message }; }
 
+      // Enterprise contracts proof
+      try {
+        const r = await env.DB.prepare(
+          `SELECT id, email, company, price_inr, accepted_at FROM proposals WHERE status='accepted' ORDER BY accepted_at ASC LIMIT 1`
+        ).first();
+        funnels.enterprise_contracts = r
+          ? { status: 'PROVEN', first_accepted: r.accepted_at, company: r.company, amount_inr: r.price_inr, proposal_id: r.id }
+          : { status: 'UNPROVEN', message: 'No accepted enterprise proposal found' };
+      } catch (e) { funnels.enterprise_contracts = { status: 'ERROR', error: e.message }; }
+
+      // MSSP partnerships proof
+      try {
+        const r = await env.DB.prepare(
+          `SELECT id, company_name, status, tier, created_at FROM mssp_partners WHERE status IN ('certified','active') ORDER BY created_at ASC LIMIT 1`
+        ).first();
+        funnels.mssp_partnerships = r
+          ? { status: 'PROVEN', first_partner: r.created_at, company: r.company_name, tier: r.tier, partner_status: r.status }
+          : { status: 'UNPROVEN', message: 'No certified or active MSSP partner found' };
+      } catch (e) { funnels.mssp_partnerships = { status: 'ERROR', error: e.message }; }
+
       const proven  = Object.values(funnels).filter(f => f.status === 'PROVEN').length;
       const total   = Object.keys(funnels).length;
       const unproven = total - proven;
@@ -6364,6 +6384,202 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleFunnelAnalytics(request, env), request));
+    }
+
+    // GET /api/admin/pipeline-forecast — combined 30/60/90-day forward revenue forecast
+    // Combines weighted proposal pipeline + upcoming subscription renewals into
+    // a single forward-looking view for board-level pipeline reporting.
+    if (path === '/api/admin/pipeline-forecast' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      if (!env.DB) return withSecurityHeaders(withCors(Response.json({ error: 'DB unavailable' }, { status: 503 }), request));
+
+      try {
+        const WIN_WEIGHTS = { draft: 0.1, sent: 0.3, accepted: 0.95, rejected: 0 };
+        const [proposals, renewals30, renewals60, renewals90] = await Promise.all([
+          env.DB.prepare(`SELECT status, COALESCE(SUM(price_inr),0) as value FROM proposals WHERE status IN ('draft','sent','accepted') GROUP BY status`).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+30 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+60 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+90 days')`).first().catch(() => null),
+        ]);
+
+        const propMap = {};
+        for (const r of (proposals?.results ?? [])) propMap[r.status] = r.value;
+        const weightedPipeline = Object.entries(propMap).reduce(
+          (s, [status, v]) => s + Math.round(v * (WIN_WEIGHTS[status] || 0)), 0
+        );
+
+        const mkWindow = (days, renewal) => ({
+          days,
+          weighted_proposals_inr: weightedPipeline,
+          renewals_count:         renewal?.cnt || 0,
+          renewals_arr_inr:       renewal?.arr || 0,
+          combined_forecast_inr:  weightedPipeline + (renewal?.arr || 0),
+        });
+
+        return withSecurityHeaders(withCors(Response.json({
+          generated_at: new Date().toISOString(),
+          proposal_pipeline: {
+            draft:    { value_inr: propMap.draft    || 0, weighted: Math.round((propMap.draft    || 0) * WIN_WEIGHTS.draft)    },
+            sent:     { value_inr: propMap.sent     || 0, weighted: Math.round((propMap.sent     || 0) * WIN_WEIGHTS.sent)     },
+            accepted: { value_inr: propMap.accepted || 0, weighted: Math.round((propMap.accepted || 0) * WIN_WEIGHTS.accepted) },
+            total_weighted_inr: weightedPipeline,
+            win_rates_used: WIN_WEIGHTS,
+          },
+          forecast: {
+            d30: mkWindow(30, renewals30),
+            d60: mkWindow(60, renewals60),
+            d90: mkWindow(90, renewals90),
+          },
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // GET /api/admin/monthly-review — executive monthly revenue review
+    // MoM MRR growth, ARR, new vs renewal vs expansion breakdown, churn, NRR.
+    if (path === '/api/admin/monthly-review' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      if (!env.DB) return withSecurityHeaders(withCors(Response.json({ error: 'DB unavailable' }, { status: 503 }), request));
+
+      try {
+        const now      = new Date();
+        const thisMonthStart = now.toISOString().slice(0, 7) + '-01';
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+        const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+        const yearStart      = now.getFullYear() + '-01-01';
+
+        const [
+          revThis, revPrev,
+          revBySource, revBySourcePrev,
+          subActive, subChurned,
+          mrrSnap, channelThis,
+        ] = await Promise.all([
+          env.DB.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total, COUNT(*) as cnt FROM revenue_events WHERE created_at >= ?`).bind(thisMonthStart).first().catch(() => null),
+          env.DB.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total FROM revenue_events WHERE created_at >= ? AND created_at < ?`).bind(prevMonthStart, thisMonthStart).first().catch(() => null),
+          env.DB.prepare(`SELECT source, COALESCE(SUM(amount_inr),0) as total FROM revenue_events WHERE created_at >= ? GROUP BY source`).bind(thisMonthStart).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT source, COALESCE(SUM(amount_inr),0) as total FROM revenue_events WHERE created_at >= ? AND created_at < ? GROUP BY source`).bind(prevMonthStart, thisMonthStart).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT plan, COUNT(*) as cnt, COALESCE(SUM(price_inr),0) as mrr FROM subscriptions WHERE status='active' GROUP BY plan`).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE funnel_stage='churned' AND updated_at >= ?`).bind(thisMonthStart).first().catch(() => null),
+          env.DB.prepare(`SELECT mrr_inr, arr_inr, snapshot_date FROM mrr_snapshots ORDER BY snapshot_date DESC LIMIT 2`).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT channel, COUNT(*) as cnt, COALESCE(SUM(mrr_generated),0) as mrr FROM cac_events WHERE converted=1 AND event_date >= ? GROUP BY channel ORDER BY mrr DESC LIMIT 5`).bind(thisMonthStart).all().catch(() => ({ results: [] })),
+        ]);
+
+        const totalMrr = (subActive?.results ?? []).reduce((s, r) => s + (r.mrr || 0), 0);
+        const revN  = revThis?.total  || 0;
+        const revP  = revPrev?.total  || 0;
+        const momGrowthPct = revP > 0 ? Math.round((revN - revP) / revP * 1000) / 10 : null;
+
+        const srcMapThis = {}, srcMapPrev = {};
+        for (const r of (revBySource?.results ?? [])) srcMapThis[r.source] = r.total;
+        for (const r of (revBySourcePrev?.results ?? [])) srcMapPrev[r.source] = r.total;
+
+        const newRevenue       = srcMapThis.razorpay || 0;
+        const renewalRevenue   = srcMapThis.subscription || 0;
+        const expansionRevenue = srcMapThis.expansion || 0;
+        const otherRevenue     = revN - newRevenue - renewalRevenue - expansionRevenue;
+
+        const snapRows   = mrrSnap?.results ?? [];
+        const mrrCurrent = snapRows[0]?.mrr_inr || totalMrr;
+        const mrrPrev    = snapRows[1]?.mrr_inr || 0;
+        const nrr = mrrPrev > 0 ? Math.round((mrrCurrent / mrrPrev) * 1000) / 10 : null;
+
+        return withSecurityHeaders(withCors(Response.json({
+          generated_at: new Date().toISOString(),
+          period: { month: thisMonthStart.slice(0, 7), prev_month: prevMonthStart.slice(0, 7) },
+          revenue: {
+            this_month_inr:  revN,
+            prev_month_inr:  revP,
+            mom_growth_pct:  momGrowthPct,
+            transactions:    revThis?.cnt || 0,
+          },
+          breakdown: {
+            new_revenue_inr:       newRevenue,
+            renewal_revenue_inr:   renewalRevenue,
+            expansion_revenue_inr: expansionRevenue,
+            other_inr:             Math.max(0, otherRevenue),
+            new_pct:       revN > 0 ? Math.round(newRevenue / revN * 1000) / 10       : 0,
+            renewal_pct:   revN > 0 ? Math.round(renewalRevenue / revN * 1000) / 10   : 0,
+            expansion_pct: revN > 0 ? Math.round(expansionRevenue / revN * 1000) / 10 : 0,
+          },
+          subscriptions: {
+            mrr_inr: mrrCurrent,
+            arr_inr: mrrCurrent * 12,
+            by_plan: (subActive?.results ?? []).map(r => ({ plan: r.plan, count: r.cnt, mrr: r.mrr })),
+          },
+          nrr_pct:     nrr,
+          churn: { leads_churned_this_month: subChurned?.cnt || 0 },
+          top_channels: (channelThis?.results ?? []).map(r => ({ channel: r.channel, conversions: r.cnt, mrr_inr: r.mrr })),
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+
+    // GET /api/content/threat-brief-weekly — public SEO threat intelligence brief
+    // Formatted for authority content publishing: SEO title, meta, top 5 CVEs,
+    // executive summary, remediation steps, and marketing CTA for organic lead gen.
+    if (path === '/api/content/threat-brief-weekly' && method === 'GET') {
+      if (!env.DB) return withSecurityHeaders(withCors(Response.json({ error: 'DB unavailable' }, { status: 503 }), request));
+
+      try {
+        const [topCves, stats] = await Promise.all([
+          env.DB.prepare(`
+            SELECT id, title, description, cvss, severity, published_at, source_url, cve_id
+            FROM threat_intel
+            WHERE cvss IS NOT NULL AND cvss > 0
+            ORDER BY cvss DESC, published_at DESC LIMIT 5
+          `).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`
+            SELECT COUNT(*) as total,
+              SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical,
+              SUM(CASE WHEN severity='HIGH' THEN 1 ELSE 0 END) as high,
+              MAX(cvss) as max_cvss
+            FROM threat_intel WHERE published_at >= date('now','-7 days')
+          `).first().catch(() => null),
+        ]);
+
+        const cves = (topCves?.results ?? []).map((c, i) => ({
+          rank:         i + 1,
+          cve_id:       c.cve_id || c.id,
+          title:        c.title,
+          cvss_score:   c.cvss,
+          severity:     c.severity,
+          published:    c.published_at,
+          summary:      (c.description || '').slice(0, 200) + ((c.description || '').length > 200 ? '…' : ''),
+          remediation:  `Immediately patch ${c.cve_id || c.id}. Apply vendor security updates and review exposure in your environment.`,
+          source_url:   c.source_url || null,
+        }));
+
+        const weekLabel = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const title     = `Top ${cves.length} Critical Vulnerabilities — Week of ${weekLabel}`;
+        const meta      = `CYBERDUDEBIVASH AI Security Hub weekly threat brief: ${stats?.critical || 0} critical, ${stats?.high || 0} high-severity CVEs tracked this week. Protect your infrastructure now.`;
+
+        return withSecurityHeaders(withCors(Response.json({
+          seo: {
+            title,
+            meta_description:  meta,
+            slug:              `threat-brief-${new Date().toISOString().slice(0,10)}`,
+            publish_date:      new Date().toISOString().slice(0,10),
+            canonical_url:     `https://cyberdudebivash.in/threat-briefs/${new Date().toISOString().slice(0,10)}`,
+          },
+          executive_summary: `This week, CYBERDUDEBIVASH AI Security Hub tracked ${stats?.total || 0} new vulnerabilities, including ${stats?.critical || 0} critical (CVSS ≥ 9.0) and ${stats?.high || 0} high-severity threats. The highest CVSS score this week is ${stats?.max_cvss || 'N/A'}. Immediate patching is required for the vulnerabilities listed below.`,
+          threats:       cves,
+          week_stats:    { total_cves: stats?.total || 0, critical: stats?.critical || 0, high: stats?.high || 0, max_cvss: stats?.max_cvss || 0 },
+          cta: {
+            headline:    'Is your infrastructure exposed to these vulnerabilities?',
+            body:        'Get an instant AI-powered security assessment tailored to your domain — free, no credit card required.',
+            action:      'Start Free Security Scan',
+            url:         'https://cyberdudebivash.in/#scan',
+            lead_capture: true,
+          },
+          generated_at: new Date().toISOString(),
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
     }
 
     return withSecurityHeaders(withCors(Response.json({
