@@ -92,7 +92,7 @@ import {
 import {
   handleMsspMetrics, handleListMsspPartners, handleAddMsspPartner,
   handleMsspWlStatus, handleMsspUsage, handleMsspRevenueTrend,
-  handleMsspExpansionOpps,
+  handleMsspExpansionOpps, handleMsspPartnerStatusUpdate,
 } from './handlers/msspOps.js';
 
 // ── v35.1 PHASE 5 P0 REVENUE INTELLIGENCE IMPORTS ──────────────────────────
@@ -6175,6 +6175,92 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMsspExpansionOpps(request, env), request));
     }
 
+    // PATCH /api/mssp/partners/:id/status — Certification status machine
+    // Advances: pending → qualified → certified → active with criteria checks
+    if (path.startsWith('/api/mssp/partners/') && path.endsWith('/status') && method === 'PATCH') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      const partnerId = path.split('/')[4]; // /api/mssp/partners/:id/status
+      return withSecurityHeaders(withCors(await handleMsspPartnerStatusUpdate(request, env, partnerId), request));
+    }
+
+    // GET /api/admin/acquisition-scorecard — Full acquisition funnel KPIs
+    // CAC, LTV, close rate, sales velocity, pipeline value, lead qualification funnel
+    if (path === '/api/admin/acquisition-scorecard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      if (!env.DB) return withSecurityHeaders(withCors(Response.json({ error: 'DB unavailable' }, { status: 503 }), request));
+
+      try {
+        const [leadStages, sqlLeads, proposalStats, dealSize, salesVelocity, mrrBySource, partnerStats] = await Promise.all([
+          // Lead funnel by qualification stage
+          env.DB.prepare(`SELECT funnel_stage, COUNT(*) as cnt, COALESCE(AVG(lead_score),0) as avg_score FROM leads GROUP BY funnel_stage`).all().catch(() => ({ results: [] })),
+          // SQL-qualified leads
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE funnel_stage = 'sql'`).first().catch(() => null),
+          // Proposal pipeline stats
+          env.DB.prepare(`SELECT status, COUNT(*) as cnt, COALESCE(SUM(price_inr),0) as value FROM proposals GROUP BY status`).all().catch(() => ({ results: [] })),
+          // Avg accepted deal size
+          env.DB.prepare(`SELECT COALESCE(AVG(price_inr),0) as avg, COALESCE(SUM(price_inr),0) as total FROM proposals WHERE status='accepted'`).first().catch(() => null),
+          // Sales velocity: avg days from lead creation to payment
+          env.DB.prepare(`SELECT AVG(JULIANDAY(p.created_at) - JULIANDAY(l.created_at)) as velocity_days FROM payments p LEFT JOIN leads l ON l.email = p.email WHERE p.status='paid' AND l.created_at IS NOT NULL`).first().catch(() => null),
+          // MRR attribution by revenue source
+          env.DB.prepare(`SELECT source, COUNT(*) as events, COALESCE(SUM(amount_inr),0) as total_inr FROM revenue_events WHERE created_at >= date('now','-30 days') GROUP BY source`).all().catch(() => ({ results: [] })),
+          // MSSP pipeline by status
+          env.DB.prepare(`SELECT status, COUNT(*) as cnt FROM mssp_partners GROUP BY status`).all().catch(() => ({ results: [] })),
+        ]);
+
+        const stageMap = {};
+        for (const r of (leadStages?.results ?? [])) stageMap[r.funnel_stage] = { cnt: r.cnt, avg_score: Math.round(r.avg_score) };
+        const totalLeads = Object.values(stageMap).reduce((s, v) => s + v.cnt, 0);
+
+        const propMap = {};
+        for (const r of (proposalStats?.results ?? [])) propMap[r.status] = { cnt: r.cnt, value: r.value };
+        const sent     = propMap.sent?.cnt || 0;
+        const accepted = propMap.accepted?.cnt || 0;
+        const rejected = propMap.rejected?.cnt || 0;
+        const closeable = sent + accepted + rejected;
+        const closeRate = closeable > 0 ? Math.round(accepted / closeable * 1000) / 10 : 0;
+
+        const mrrMap = {};
+        for (const r of (mrrBySource?.results ?? [])) mrrMap[r.source] = { events: r.events, total_inr: r.total_inr };
+
+        const msspMap = {};
+        for (const r of (partnerStats?.results ?? [])) msspMap[r.status] = r.cnt;
+
+        return withSecurityHeaders(withCors(Response.json({
+          generated_at: new Date().toISOString(),
+          leads: {
+            total:            totalLeads,
+            new_30d:          (stageMap.lead?.cnt || 0) + (stageMap.warm_lead?.cnt || 0),
+            by_stage:         stageMap,
+            sql_count:        sqlLeads?.cnt || 0,
+            sql_rate_pct:     totalLeads > 0 ? Math.round((sqlLeads?.cnt || 0) / totalLeads * 1000) / 10 : 0,
+          },
+          pipeline: {
+            proposals_draft:    propMap.draft?.cnt || 0,
+            proposals_sent:     sent,
+            proposals_accepted: accepted,
+            proposals_rejected: rejected,
+            close_rate_pct:     closeRate,
+            avg_deal_size_inr:  Math.round(dealSize?.avg || 0),
+            total_won_inr:      dealSize?.total || 0,
+            pipeline_value_inr: propMap.sent?.value || 0,
+            sales_velocity_days: salesVelocity?.velocity_days ? Math.round(salesVelocity.velocity_days) : null,
+          },
+          revenue_attribution: mrrMap,
+          mssp: {
+            pending:   msspMap.pending || 0,
+            qualified: msspMap.qualified || 0,
+            certified: msspMap.certified || 0,
+            active:    msspMap.active || 0,
+            total:     Object.values(msspMap).reduce((s, v) => s + v, 0),
+          },
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+
     // PHASE 5 P0 — REVENUE INTELLIGENCE & RECURRING REVENUE
     // GET /api/revenue/kpi — Full KPI: Visitors, Leads, Proposals, Customers, MRR, ARR, CAC, LTV
     if (path === '/api/revenue/kpi' && method === 'GET') {
@@ -6453,6 +6539,33 @@ ctx.waitUntil(
           const renewalResult = await runRenewalAutomation(env);
           console.log('[CRON] Phase5 Renewals:', JSON.stringify(renewalResult));
         } catch (e) { console.error('[CRON] Phase5 Renewals error:', e?.message); }
+      })());
+
+      // Phase 11 P0: Quota nudge — enroll users at 80%+ usage in upgrade_nudge sequence
+      ctx.waitUntil((async () => {
+        try {
+          if (!env.DB) return;
+          const monthStart = new Date().toISOString().slice(0, 7) + '-01';
+          const PLAN_LIMITS = { FREE: 3, STARTER: 10 };
+          const rows = await env.DB.prepare(`
+            SELECT ak.email, ak.tier, COALESCE(SUM(aku.request_count), 0) as used
+            FROM api_keys ak
+            LEFT JOIN api_key_usage aku ON aku.key_id = ak.id AND aku.date_bucket >= ?
+            WHERE ak.email IS NOT NULL AND ak.tier IN ('FREE','STARTER')
+            GROUP BY ak.id, ak.email, ak.tier
+          `).bind(monthStart).all().catch(() => ({ results: [] }));
+          const { enrollInSequence } = await import('./services/emailEngine.js');
+          for (const row of (rows?.results ?? [])) {
+            const limit = PLAN_LIMITS[row.tier] ?? 3;
+            if (limit > 0 && row.used / limit >= 0.8 && row.email) {
+              enrollInSequence(env, row.email, 'upgrade_nudge', {
+                plan: row.tier.toLowerCase(), scans_used: row.used, scans_limit: limit,
+                upgrade_plan: row.tier === 'FREE' ? 'STARTER' : 'PRO',
+              }).catch(() => {});
+            }
+          }
+          console.log('[CRON] Phase11 QuotaNudge: evaluated', rows?.results?.length ?? 0, 'keys');
+        } catch (e) { console.error('[CRON] Phase11 QuotaNudge error:', e?.message); }
       })());
 
       // v23.0 RevOS: AI CS Analysis

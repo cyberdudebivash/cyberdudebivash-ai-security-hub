@@ -69,13 +69,16 @@ export async function handleLeadCapture(request, env) {
     } catch { /* non-blocking */ }
   }
 
-  // Auto-enroll in welcome email drip (fire-and-forget)
+  // Auto-enroll in welcome email drip and compute initial lead score (fire-and-forget)
   if (env?.SECURITY_HUB_KV || env?.DB) {
     (async () => {
       try {
         const { enrollInSequence } = await import('../services/emailEngine.js');
         await enrollInSequence(env, email, 'welcome', { scan_id: scanId || null, module, source });
       } catch (e) { console.warn('[leads] drip enroll error:', e.message); }
+      try {
+        await computeAndUpdateLeadScore(env, email);
+      } catch { /* non-blocking */ }
     })();
   }
 
@@ -86,4 +89,63 @@ export async function handleLeadCapture(request, env) {
     next_step: 'Your scan report is ready. Check the results panel.',
     scan_id: scanId || null,
   }, { status: 201 });
+}
+
+// ─── Lead Qualification Scoring ───────────────────────────────────────────────
+// Computes a 0–100 score from domain quality, scan activity, funnel depth,
+// API usage, and acquisition source. Writes lead_score + qualified funnel_stage.
+// Call fire-and-forget; safe to re-run — uses non-downgrading UPDATE guard.
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com',
+  'protonmail.com','yopmail.com','temp-mail.org','guerrillamail.com','mailinator.com',
+]);
+
+export async function computeAndUpdateLeadScore(env, email) {
+  if (!env?.DB || !email) return;
+  const db = env.DB;
+
+  const [leadRow, funnelRow, apiRow] = await Promise.all([
+    db.prepare(`SELECT source, domain, scan_count, funnel_stage, lead_score
+                FROM leads WHERE email = ? LIMIT 1`)
+      .bind(email).first().catch(() => null),
+    db.prepare(`SELECT MAX(CASE WHEN stage='purchase' THEN 4
+                               WHEN stage='sql'      THEN 3
+                               WHEN stage='lead'     THEN 2
+                               WHEN stage='email_capture' THEN 1 ELSE 0 END) as depth
+                FROM funnel_events WHERE email = ?`)
+      .bind(email).first().catch(() => null),
+    db.prepare(`SELECT COALESCE(SUM(request_count), 0) as api_calls
+                FROM api_key_usage
+                WHERE key_id IN (SELECT id FROM api_keys WHERE email = ? LIMIT 5)
+                  AND date_bucket >= date('now','-30 days')`)
+      .bind(email).first().catch(() => null),
+  ]);
+
+  if (!leadRow) return;
+  // Never downgrade a converted or churned lead
+  if (['customer', 'churned'].includes(leadRow.funnel_stage)) return;
+
+  const domain = (leadRow.domain || email.split('@')[1] || '').toLowerCase();
+  const domainScore  = FREE_EMAIL_DOMAINS.has(domain) ? 0 : 25;
+  const scanScore    = Math.min(25, (leadRow.scan_count || 0) * 5);
+  const apiScore     = Math.min(20, Math.floor((apiRow?.api_calls || 0) / 10) * 2);
+  const funnelScore  = Math.min(20, (funnelRow?.depth || 0) * 5);
+  const SOURCE_MAP   = {
+    enterprise_inquiry: 10, mssp_inquiry: 10, assessment: 8,
+    api: 7, referral: 6, platform: 5, organic: 4, social: 3,
+  };
+  const sourceScore  = SOURCE_MAP[leadRow.source] || 3;
+
+  const score = Math.min(100, domainScore + scanScore + apiScore + funnelScore + sourceScore);
+
+  let qualStage;
+  if (score >= 75)      qualStage = 'sql';
+  else if (score >= 55) qualStage = 'hot_lead';
+  else if (score >= 35) qualStage = 'warm_lead';
+  else                  qualStage = 'lead';
+
+  await db.prepare(`
+    UPDATE leads SET lead_score = ?, funnel_stage = ?, updated_at = datetime('now')
+    WHERE email = ? AND funnel_stage NOT IN ('customer','churned')
+  `).bind(score, qualStage, email).run().catch(() => {});
 }
