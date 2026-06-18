@@ -68,6 +68,7 @@ jobs:
         # before axe runs — eliminates the sleep-4 race condition.
         run: |
           npm i -g @axe-core/cli@4.11.3
+          npx browser-driver-manager install chrome
           python3 -m http.server 3000 --directory frontend/ &
           SERVER_PID=$!
           echo "Waiting for server on :3000 ..."
