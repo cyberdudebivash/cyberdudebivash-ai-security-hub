@@ -37,6 +37,7 @@ on:
       - "fix/**"
       - "hotfix/**"
       - "release/**"
+      - "claude/**"
   pull_request:
     branches: [main]
 
