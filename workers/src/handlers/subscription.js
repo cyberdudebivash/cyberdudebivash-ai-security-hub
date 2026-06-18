@@ -252,6 +252,20 @@ export async function handleActivateSubscription(request, env) {
         userEmail,
         sessionToken,
       ).run().catch(() => {}); // Non-fatal — KV is source of truth
+
+      // Write to subscriptions table for renewal engine + lifecycle tracking
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO subscriptions
+         (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at)
+         VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
+      ).bind(
+        'sub_' + Date.now().toString(36),
+        userEmail || '',
+        plan,
+        razorpay_payment_id,
+        SUBSCRIPTION_PLANS[plan]?.price_inr || 499,
+        new Date(expiresAt).toISOString(),
+      ).run().catch(() => {});
     }
 
     // Fire-and-forget: GST invoice + plan activation email + lifecycle enrollment

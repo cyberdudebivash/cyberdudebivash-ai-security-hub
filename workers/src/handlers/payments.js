@@ -227,8 +227,13 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       error: 'razorpay_order_id, razorpay_payment_id, and razorpay_signature are required',
     }, { status: 400 });
   }
-  if (!module || !SCAN_HANDLERS[module]) {
-    return Response.json({ error: 'Invalid scan module', valid: Object.keys(SCAN_HANDLERS) }, { status: 400 });
+  // Non-scan fulfillment modules (assessment and subscription) are handled separately below
+  const NON_SCAN_MODULES = ['assessment', 'subscription'];
+  if (!module || (!SCAN_HANDLERS[module] && !NON_SCAN_MODULES.includes(module))) {
+    return Response.json({
+      error: 'Invalid module',
+      valid: [...Object.keys(SCAN_HANDLERS), ...NON_SCAN_MODULES],
+    }, { status: 400 });
   }
   if (!target || typeof target !== 'string') {
     return Response.json({ error: 'target is required' }, { status: 400 });
@@ -265,6 +270,97 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       download_url: `/api/reports/download/${existingToken}`,
       message:      'Payment already verified — report available for download',
       duplicate:    true,
+    });
+  }
+
+  // ─── Assessment: confirm payment + trigger lifecycle — no scan step needed ───
+  if (module === 'assessment') {
+    const accessToken    = generateAccessToken();
+    const confirmedEmail = email || authCtx.email || null;
+    const priceInr       = Math.round((MODULE_PRICES['assessment']?.amount || 0) / 100);
+    const expiresAt      = new Date(Date.now() + 90 * 86400000).toISOString();
+
+    if (env.DB) {
+      await env.DB.prepare(
+        `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
+      ).bind(razorpay_payment_id, razorpay_signature, accessToken, razorpay_order_id).run().catch(() => {});
+    }
+    if (env.SECURITY_HUB_KV) {
+      await env.SECURITY_HUB_KV.put(`assessment_access:${accessToken}`, JSON.stringify({
+        order_id: razorpay_order_id, email: confirmedEmail, target, activated: Date.now(),
+      }), { expirationTtl: 90 * 86400 }).catch(() => {});
+    }
+    Promise.all([
+      confirmedEmail
+        ? sendPurchaseConfirmation(env, {
+            to: confirmedEmail, productName: MODULE_PRICES['assessment']?.name || 'Full Security Assessment',
+            amountInr: priceInr, paymentId: razorpay_payment_id, accessExpires: expiresAt,
+          }).catch(() => {})
+        : Promise.resolve(),
+      confirmedEmail
+        ? triggerPostPurchase(env, {
+            email: confirmedEmail, product: 'SECURITY_ASSESSMENT',
+            product_name: MODULE_PRICES['assessment']?.name || 'Full Security Assessment',
+            amount_inr: priceInr, event_type: 'delivery_activated',
+            source: utm_source || 'direct', payment_id: razorpay_payment_id,
+            meta: { utm_medium, utm_campaign, target },
+          }).catch(() => {})
+        : Promise.resolve(),
+    ]).catch(() => {});
+    return Response.json({
+      success: true, token: accessToken,
+      message: '✅ Assessment payment confirmed. Our team will contact you within 24 hours to schedule your assessment.',
+      payment_id: razorpay_payment_id,
+    });
+  }
+
+  // ─── Subscription: activate plan, write subscriptions row, return session token ─
+  if (module === 'subscription') {
+    const plan         = (body.plan || target || 'STARTER').toUpperCase();
+    const subPlan      = SUBSCRIPTION_PRICES?.[plan] || { amount: 49900, name: `${plan} Plan`, price_inr: 499 };
+    const priceInr     = Math.round((subPlan.amount || 49900) / 100);
+    const sessionToken = generateAccessToken();
+    const expiresAt    = Date.now() + 90 * 24 * 60 * 60 * 1000;
+    const confirmedEmail = email || authCtx.email || null;
+
+    if (env.KV) {
+      await env.KV.put(`sub_session:${sessionToken}`, JSON.stringify({
+        plan, email: confirmedEmail, payment_id: razorpay_payment_id,
+        order_id: razorpay_order_id, activated: Date.now(), expires_at: expiresAt,
+      }), { expirationTtl: 90 * 24 * 3600 }).catch(() => {});
+    }
+    if (env.DB) {
+      await env.DB.prepare(
+        `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
+      ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id).run().catch(() => {});
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO subscriptions (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at) VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
+      ).bind(
+        'sub_' + Date.now().toString(36), confirmedEmail || '', plan,
+        razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
+      ).run().catch(() => {});
+    }
+    Promise.all([
+      confirmedEmail
+        ? sendPurchaseConfirmation(env, {
+            to: confirmedEmail, productName: `${subPlan.name} (Monthly Subscription)`,
+            amountInr: priceInr, paymentId: razorpay_payment_id,
+            accessExpires: new Date(expiresAt).toISOString(),
+          }).catch(() => {})
+        : Promise.resolve(),
+      confirmedEmail
+        ? triggerPostPurchase(env, {
+            email: confirmedEmail, product: `SUBSCRIPTION_${plan}`,
+            product_name: subPlan.name, amount_inr: priceInr,
+            event_type: 'subscription_activated', source: utm_source || 'direct',
+            payment_id: razorpay_payment_id, plan,
+            meta: { utm_medium, utm_campaign, session_token: sessionToken },
+          }).catch(() => {})
+        : Promise.resolve(),
+    ]).catch(() => {});
+    return Response.json({
+      success: true, plan, session_token: sessionToken, expires_at: expiresAt,
+      message: `✅ ${subPlan.name} activated. Your subscription token is valid for 90 days.`,
     });
   }
 
@@ -561,13 +657,12 @@ export async function handleRazorpayWebhook(request, env) {
     const paymentId = payload.id;
 
     if (env.DB && orderId) {
-      // Check if already verified via frontend
+      // Fetch payment record including email/module for lifecycle trigger
       const existing = await env.DB.prepare(
-        `SELECT status FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+        `SELECT status, email, module, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
       ).bind(orderId).first().catch(() => null);
 
       if (existing?.status !== 'paid') {
-        // Mark as paid — report generation will happen when user accesses download
         await env.DB.prepare(
           `UPDATE payments SET
              status = 'paid',
@@ -577,6 +672,33 @@ export async function handleRazorpayWebhook(request, env) {
         ).bind(paymentId, orderId).run().catch(e =>
           console.error('[Webhook] D1 update failed:', e.message)
         );
+
+        // Trigger lifecycle + email when frontend verify never completed
+        const webhookEmail  = existing?.email || payload.email || payload.contact || null;
+        const webhookModule = existing?.module || payload.notes?.module || 'report';
+        const webhookAmount = Math.round((existing?.amount || payload.amount || 0) / 100);
+        Promise.all([
+          webhookEmail
+            ? sendPurchaseConfirmation(env, {
+                to: webhookEmail,
+                productName: MODULE_PRICES[webhookModule]?.name || 'Security Report',
+                amountInr: webhookAmount,
+                paymentId,
+                accessExpires: new Date(Date.now() + 30 * 86400000).toISOString(),
+              }).catch(() => {})
+            : Promise.resolve(),
+          webhookEmail
+            ? triggerPostPurchase(env, {
+                email: webhookEmail,
+                product: webhookModule.toUpperCase(),
+                product_name: MODULE_PRICES[webhookModule]?.name || 'Security Report',
+                amount_inr: webhookAmount,
+                event_type: 'delivery_activated',
+                source: 'razorpay',
+                payment_id: paymentId,
+              }).catch(() => {})
+            : Promise.resolve(),
+        ]).catch(() => {});
       }
     }
   }

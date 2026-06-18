@@ -35,6 +35,28 @@ function seqForProduct(product = '') {
   return SEQUENCE_MAP[product] || null;
 }
 
+// Map raw utm_source/source to valid revenue_events.source CHECK constraint values
+function normalizeRevenueSource(raw) {
+  const VALID = new Set(['razorpay', 'gumroad', 'affiliate', 'subscription', 'api_credits']);
+  if (VALID.has(raw)) return raw;
+  if ((raw || '').startsWith('subscription')) return 'subscription';
+  return 'razorpay'; // payment-gateway default for all verified purchases
+}
+
+// Map raw utm_source to valid cac_events.channel CHECK constraint values
+function normalizeChannel(utmSource) {
+  const s = (utmSource || '').toLowerCase();
+  if (['google', 'bing', 'duckduckgo', 'yahoo', 'adwords', 'ppc'].includes(s)) return 'paid_search';
+  if (['facebook', 'instagram', 'linkedin', 'twitter', 'x', 'youtube', 'social'].includes(s)) return 'social';
+  if (s === 'telegram') return 'telegram';
+  if (s === 'affiliate') return 'affiliate';
+  if (s === 'partner') return 'partner';
+  if (['referral', 'ref'].includes(s)) return 'referral';
+  if (s === 'organic') return 'organic';
+  if (s === 'cold_outreach') return 'cold_outreach';
+  return 'direct';
+}
+
 /**
  * Trigger post-purchase lifecycle events.
  * Call fire-and-forget from payment confirmation handlers.
@@ -62,15 +84,17 @@ export async function triggerPostPurchase(env, {
   const now = new Date().toISOString();
   const evId = 'rev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
+  const revSource = normalizeRevenueSource(source);
+
   // 1 — Write confirmed revenue event (correct attribution timing)
   if (db) {
     try {
       await db.prepare(`
         INSERT INTO revenue_events
-          (id, source, amount_inr, email, event_type, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(evId, source, amount_inr, email, product || event_type, now).run();
-    } catch { /* non-blocking — table schema variations across deploys */ }
+          (id, source, amount_inr, amount_usd, user_id, email, product, reference, metadata, created_at)
+        VALUES (?, ?, ?, 0, NULL, ?, ?, ?, '{}', ?)
+      `).bind(evId, revSource, amount_inr, email, product || event_type, payment_id, now).run();
+    } catch { /* non-blocking */ }
 
     // 2 — Write funnel 'purchase' stage event for conversion analytics
     try {
@@ -78,7 +102,7 @@ export async function triggerPostPurchase(env, {
         INSERT INTO funnel_events
           (id, email, stage, meta, created_at)
         VALUES (?, ?, 'purchase', ?, ?)
-      `).bind('fe_' + evId, email, JSON.stringify({ source }), now).run();
+      `).bind('fe_' + evId, email, JSON.stringify({ source: revSource }), now).run();
     } catch { /* non-blocking */ }
 
     // 3 — Update lead record: mark as converted
@@ -95,11 +119,12 @@ export async function triggerPostPurchase(env, {
     // 4 — CAC event for channel attribution analytics
     if (amount_inr > 0) {
       try {
+        const cacChannel = normalizeChannel(source);
         await db.prepare(`
           INSERT INTO cac_events
             (id, channel, campaign, email, cost_inr, converted, plan_converted, mrr_generated, event_date)
-          VALUES (?, ?, '', ?, 0, 1, ?, ?, date('now'))
-        `).bind('cac_' + evId, source, email, plan || product, amount_inr).run();
+          VALUES (?, ?, ?, ?, 0, 1, ?, ?, date('now'))
+        `).bind('cac_' + evId, cacChannel, meta?.utm_campaign || '', email, plan || product, amount_inr).run();
       } catch { /* non-blocking */ }
     }
   }
