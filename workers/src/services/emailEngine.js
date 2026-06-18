@@ -853,7 +853,7 @@ export async function getDueEmails(env, limit = 50) {
     const result = await env.DB.prepare(`
       SELECT es.*, l.name, l.domain, l.plan, l.lead_score
       FROM email_sequences es
-      JOIN leads l ON l.email = es.email
+      LEFT JOIN leads l ON l.email = es.email
       WHERE es.status = 'active'
         AND es.next_send_at <= datetime('now')
       LIMIT ?
