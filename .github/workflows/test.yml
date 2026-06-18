@@ -63,11 +63,15 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: axe-core CLI scan of local build
-        # Syncs Chrome to the ChromeDriver version bundled with axe-cli to prevent
-        # "session not created" failures when ubuntu-latest ships a newer Chrome.
-        # Uses jq (pre-installed on ubuntu-latest) — never python3 -c "..." because
-        # Python inline scripts require column-0 code that breaks YAML block-scalar
-        # indentation and causes "Invalid workflow file" parse errors.
+        # Two failure modes addressed here:
+        # 1. Version mismatch: axe-cli bundles a fixed ChromeDriver; runner Chrome
+        #    may be newer. Fix: download matching Chrome for Testing via jq + the
+        #    Google JSON API (jq pre-installed; no python3 -c inline script which
+        #    requires column-0 code that breaks YAML block-scalar indentation).
+        # 2. Sandbox crash: GitHub Actions containers lack kernel namespace support,
+        #    so Chrome exits immediately without --no-sandbox. Fix: place a wrapper
+        #    at /usr/local/bin/google-chrome (higher priority than /usr/bin in PATH)
+        #    that injects --no-sandbox --disable-dev-shm-usage transparently.
         run: |
           npm i -g @axe-core/cli@4.11.3
 
@@ -82,16 +86,20 @@ jobs:
             | head -1)
 
           if [ -n "$CfT_URL" ]; then
-            echo "Installing Chrome for Testing: $CfT_URL"
+            echo "Fetching Chrome for Testing: $CfT_URL"
             wget -q "$CfT_URL" -O /tmp/chrome-cft.zip
             unzip -q /tmp/chrome-cft.zip -d /tmp/chrome-cft
             CfT_BIN=$(find /tmp/chrome-cft -name "chrome" -type f | head -1)
             chmod +x "$CfT_BIN"
-            sudo ln -sf "$CfT_BIN" /opt/google/chrome/chrome
-            echo "Chrome after sync: $(google-chrome --version)"
           else
-            echo "No Chrome for Testing URL found for major $CD_MAJOR — using system Chrome"
+            CfT_BIN=$(which google-chrome-stable google-chrome 2>/dev/null | head -1)
+            echo "Fallback: using system Chrome at $CfT_BIN"
           fi
+
+          printf '#!/bin/bash\nexec "%s" --no-sandbox --disable-dev-shm-usage "$@"\n' "$CfT_BIN" \
+            | sudo tee /usr/local/bin/google-chrome > /dev/null
+          sudo chmod +x /usr/local/bin/google-chrome
+          echo "Chrome ready: $(google-chrome --version)"
 
           python3 -m http.server 3000 --directory frontend/ &
           SERVER_PID=$!
