@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Unit tests (required) ────────────────────────────────────────────────
+  # -- Unit tests (required) ------------------------------------------------
   unit-tests:
     name: Unit Tests (Vitest)
     runs-on: ubuntu-latest
@@ -35,7 +35,7 @@ jobs:
       - name: Run unit tests
         run: npx vitest run --reporter=dot
 
-  # ── Security header assertions (required) ────────────────────────────────
+  # -- Security header assertions (required) --------------------------------
   header-assert:
     name: Security Header Assertions
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
           done
           echo "All critical security headers present."
 
-  # ── Accessibility (required) ─────────────────────────────────────────────
+  # -- Accessibility (required) ---------------------------------------------
   a11y:
     name: Accessibility (axe)
     runs-on: ubuntu-latest
@@ -63,12 +63,56 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: axe-core CLI scan of local build
-        # Uses Python's built-in HTTP server (always available, no npm install,
-        # no version drift). Curl health-check loop guarantees server is up
-        # before axe runs — eliminates the sleep-4 race condition.
+        # Uses Python's built-in HTTP server -- no serve package, no version drift.
+        # Curl health-check loop guarantees server is up before axe runs.
+        #
+        # Chrome/ChromeDriver sync strategy:
+        #   @axe-core/cli bundles a fixed ChromeDriver version. The ubuntu-latest
+        #   runner may ship an older Chrome, causing "session not created" failures.
+        #   browser-driver-manager installs Chrome to its own directory and sets
+        #   GOOGLE_CHROME_BIN only inside its own subprocess -- the env var never
+        #   propagates back to the parent shell, so ChromeDriver still finds the
+        #   old system Chrome at /opt/google/chrome/chrome.
+        #
+        #   Fix: detect the ChromeDriver major version bundled with axe-cli, then
+        #   download the matching Chrome binary from Google's Chrome for Testing
+        #   API and symlink it over the system Chrome path that ChromeDriver already
+        #   knows.  No env-var propagation issues; no undocumented package internals.
         run: |
           npm i -g @axe-core/cli@4.11.3
-          npx browser-driver-manager install chrome
+
+          # -- Chrome for Testing: install Chrome matching bundled ChromeDriver --
+          CD_MAJOR=$(chromedriver --version 2>&1 | grep -oP '(?<=ChromeDriver )\d+' | head -1)
+          [ -z "$CD_MAJOR" ] && CD_MAJOR="150"
+          export CD_MAJOR
+          echo "ChromeDriver major: $CD_MAJOR -- fetching matching Chrome for Testing..."
+
+          CfT_URL=$(curl -sf \
+            https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json \
+            | python3 -c "
+import sys, json, os
+major = int(os.environ['CD_MAJOR'])
+data = json.load(sys.stdin)
+versions = sorted(
+    [v for v in data['versions'] if int(v['version'].split('.')[0]) == major],
+    key=lambda v: [int(x) for x in v['version'].split('.')])
+for v in reversed(versions):
+    for dl in v.get('downloads', {}).get('chrome', []):
+        if dl['platform'] == 'linux64':
+            print(dl['url'])
+            sys.exit(0)
+sys.exit(1)
+")
+
+          echo "Chrome for Testing URL: $CfT_URL"
+          wget -q "$CfT_URL" -O /tmp/chrome-cft.zip
+          unzip -q /tmp/chrome-cft.zip -d /tmp/chrome-cft
+          CfT_BIN=$(find /tmp/chrome-cft -name "chrome" -type f | head -1)
+          chmod +x "$CfT_BIN"
+          sudo ln -sf "$CfT_BIN" /opt/google/chrome/chrome
+          echo "Chrome after sync: $(google-chrome --version)"
+          # ---------------------------------------------------------------------
+
           python3 -m http.server 3000 --directory frontend/ &
           SERVER_PID=$!
           echo "Waiting for server on :3000 ..."
@@ -79,9 +123,9 @@ jobs:
           npx @axe-core/cli http://localhost:3000/ --exit || \
             { kill $SERVER_PID 2>/dev/null; echo "::error::Accessibility violations found"; exit 1; }
           kill $SERVER_PID 2>/dev/null
-          echo "✅ Accessibility check passed"
+          echo "Accessibility check passed"
 
-  # ── Lighthouse performance gate (required) ───────────────────────────────
+  # -- Lighthouse performance gate (required) --------------------------------
   lighthouse:
     name: Lighthouse CI (mobile)
     runs-on: ubuntu-latest
@@ -91,7 +135,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: Run Lighthouse CI against local build
-        # Uses Python's built-in HTTP server — no serve package, no version drift.
+        # Uses Python's built-in HTTP server -- no serve package, no version drift.
         # Curl health-check loop guarantees server is up before lhci runs.
         # lighthouserc.json: 3 runs / median / no-upload for stable results.
         run: |
@@ -106,9 +150,9 @@ jobs:
           lhci autorun --config=lighthouserc.json || \
             { kill $SERVER_PID 2>/dev/null; echo "::error::Lighthouse budget not met"; exit 1; }
           kill $SERVER_PID 2>/dev/null
-          echo "✅ Lighthouse CI passed"
+          echo "Lighthouse CI passed"
 
-  # ── E2E smoke (required) ─────────────────────────────────────────────────
+  # -- E2E smoke (required) -------------------------------------------------
   e2e:
     name: E2E Smoke (Playwright)
     runs-on: ubuntu-latest
