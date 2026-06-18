@@ -17,7 +17,10 @@ export async function handleLeadCapture(request, env) {
   const email  = (body?.email || '').trim().toLowerCase();
   const scanId = (body?.scan_id || '').trim();
   const module = (body?.module  || 'general').trim();
-  const source = (body?.source  || 'platform').trim();
+  const source      = (body?.source       || 'platform').trim();
+  const utmSource   = (body?.utm_source   || '').trim();
+  const utmMedium   = (body?.utm_medium   || '').trim();
+  const utmCampaign = (body?.utm_campaign || '').trim();
 
   if (!email || !EMAIL_RE.test(email)) {
     return Response.json({
@@ -54,6 +57,32 @@ export async function handleLeadCapture(request, env) {
         request.headers.get('CF-IPCountry') || 'unknown',
       ).run();
     } catch { /* non-blocking — table may not have all columns on older schema */ }
+
+    // Write funnel_events entry with full UTM attribution — enables channel-level conversion analysis
+    const now = new Date().toISOString();
+    const effectiveSource = utmSource || source;
+    await env.DB.prepare(`
+      INSERT INTO funnel_events (id, email, stage, meta, created_at)
+      VALUES (?, ?, 'email_capture', ?, ?)
+    `).bind(
+      'fe_' + leadId, email,
+      JSON.stringify({ source: effectiveSource, utm_source: utmSource, utm_medium: utmMedium, utm_campaign: utmCampaign }),
+      now,
+    ).run().catch(() => {});
+
+    // Write cac_events lead entry for channel attribution — cost_inr=0 at capture, converted=0 until payment
+    const CAC_CHANNEL_MAP = {
+      google: 'paid_search', bing: 'paid_search', adwords: 'paid_search', ppc: 'paid_search',
+      facebook: 'social', instagram: 'social', linkedin: 'social', twitter: 'social', youtube: 'social',
+      telegram: 'telegram', affiliate: 'affiliate', partner: 'partner',
+      referral: 'referral', ref: 'referral', organic: 'organic', cold_outreach: 'cold_outreach',
+    };
+    const channel = CAC_CHANNEL_MAP[effectiveSource.toLowerCase()] || 'direct';
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO cac_events
+        (id, channel, campaign, email, cost_inr, converted, plan_converted, mrr_generated, event_date)
+      VALUES (?, ?, ?, ?, 0, 0, 'free', 0, date('now'))
+    `).bind('cac_lead_' + leadId, channel, utmCampaign || '', email).run().catch(() => {});
   }
 
   // Store in KV: lead:{leadId} and index by email (cache layer)
@@ -144,8 +173,21 @@ export async function computeAndUpdateLeadScore(env, email) {
   else if (score >= 35) qualStage = 'warm_lead';
   else                  qualStage = 'lead';
 
+  const wasAlreadySql = leadRow.funnel_stage === 'sql';
   await db.prepare(`
     UPDATE leads SET lead_score = ?, funnel_stage = ?, updated_at = datetime('now')
     WHERE email = ? AND funnel_stage NOT IN ('customer','churned')
   `).bind(score, qualStage, email).run().catch(() => {});
+
+  // Smart routing: newly SQL-qualified leads auto-enroll in enterprise_nurture.
+  // The atomic enrollInSequence insert ensures this fires exactly once per lead.
+  if (qualStage === 'sql' && !wasAlreadySql) {
+    const { enrollInSequence } = await import('../services/emailEngine.js');
+    enrollInSequence(env, email, 'enterprise_nurture', {
+      lead_score: score,
+      source:     leadRow.source,
+      domain,
+      qualified_at: new Date().toISOString(),
+    }).catch(() => {});
+  }
 }
