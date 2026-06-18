@@ -441,8 +441,9 @@ import {
 // ─── Manual Payment System ───────────────────────────────────────────────────
 import {
   handleSubmitPayment, handleGetPaymentStatus,
-  handleListPayments, handleVerifyPayment as handleVerifyManualPayment,
+  handleListPayments,
   handleGetPaymentConfig,
+  handleAdminPaymentList, handleAdminPaymentStats, handleAdminPaymentAction,
 } from './handlers/manualPayments.js';
 
 // ─── Threat Intelligence Graph ───────────────────────────────────────────────
@@ -4791,17 +4792,37 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/payments/status' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleGetPaymentStatus(request, env), request));
     }
-    // GET /api/payments/admin — list all payments (admin only)
+    // GET /api/payments/admin — list all payments (owner only)
     if (path === '/api/payments/admin' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleListPayments(request, env), request));
     }
-    // POST /api/payments/verify — approve or reject manual payment (admin only)
-    if (path === '/api/payments/verify' && method === 'POST') {
+    // GET /api/payment/admin/list — admin-payments.html dashboard (owner only)
+    if (path === '/api/payment/admin/list' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
-      return withSecurityHeaders(withCors(await handleVerifyManualPayment(request, env), request));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleAdminPaymentList(request, env), request));
+    }
+    // GET /api/payment/admin/stats — admin-payments.html stats row (owner only)
+    if (path === '/api/payment/admin/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      return withSecurityHeaders(withCors(await handleAdminPaymentStats(request, env), request));
+    }
+    // POST /api/payment/admin/approve/:record_id — admin-payments.html approve action (owner only)
+    if (path.startsWith('/api/payment/admin/approve/') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      const recordId = decodeURIComponent(path.slice('/api/payment/admin/approve/'.length));
+      return withSecurityHeaders(withCors(await handleAdminPaymentAction(request, env, recordId, 'approve'), request));
+    }
+    // POST /api/payment/admin/reject/:record_id — admin-payments.html reject action (owner only)
+    if (path.startsWith('/api/payment/admin/reject/') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      const recordId = decodeURIComponent(path.slice('/api/payment/admin/reject/'.length));
+      return withSecurityHeaders(withCors(await handleAdminPaymentAction(request, env, recordId, 'reject'), request));
     }
 
     // ── Content Pipeline ──────────────────────────────────────────────────────
