@@ -125,6 +125,7 @@ export async function resolveAuthV5(request, env) {
   // 0. Admin key — env.ADMIN_KEY bypass (ENTERPRISE tier, all features unlocked)
   if (env.ADMIN_KEY) {
     const rawKey = request.headers.get('x-api-key') ||
+                   request.headers.get('x-admin-secret') ||
                    request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '';
     if (rawKey === env.ADMIN_KEY) {
       return withAuthAliases({

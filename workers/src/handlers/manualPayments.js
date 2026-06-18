@@ -233,7 +233,43 @@ export async function handleListPayments(request, env) {
   }
 }
 
-// ── Admin: Approve / Reject payment ──────────────────────────────────────── */
+// ── Admin: Approve / Reject payment — shared core (KV mutation + plan activation) ──
+async function verifyManualPaymentCore(env, payment_id, action, admin_note) {
+  const KV = env.SECURITY_HUB_KV;
+  const record = JSON.parse(await KV.get(`payment:record:${payment_id}`) || 'null');
+  if (!record) return { error: 'Payment not found', status: 404 };
+
+  record.status      = action === 'approve' ? 'verified' : 'rejected';
+  record.verified_at = new Date().toISOString();
+  record.admin_note  = admin_note || '';
+
+  await KV.put(`payment:record:${payment_id}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 180 });
+
+  // Update index entry status
+  let index = JSON.parse(await KV.get('payment:index') || '[]');
+  index = index.map(p => p.payment_id === payment_id ? { ...p, status: record.status } : p);
+  await KV.put('payment:index', JSON.stringify(index));
+
+  // Update user index status
+  let userIndex = JSON.parse(await KV.get(`payment:user:${record.payer_email}`) || '[]');
+  userIndex = userIndex.map(p => p.payment_id === payment_id ? { ...p, status: record.status } : p);
+  await KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
+
+  // If approved — activate plan for user
+  if (action === 'approve' && record.user_id && record.user_id !== 'anonymous') {
+    const product = PRODUCT_CATALOG[record.product_id];
+    if (product && product.plan_key) {
+      await KV.put(
+        `user:plan:${record.user_id}`,
+        JSON.stringify({ plan: product.plan_key, activated_at: new Date().toISOString(), payment_id }),
+        { expirationTtl: 60 * 60 * 24 * 400 }
+      );
+    }
+  }
+
+  return { record };
+}
+
 export async function handleVerifyPayment(request, env) {
   try {
     const body = await request.json();
@@ -243,41 +279,118 @@ export async function handleVerifyPayment(request, env) {
       return jsonErr('Provide payment_id and action (approve|reject)', 400);
     }
 
-    const KV = env.SECURITY_HUB_KV;
-    const record = JSON.parse(await KV.get(`payment:record:${payment_id}`) || 'null');
-    if (!record) return jsonErr('Payment not found', 404);
+    const result = await verifyManualPaymentCore(env, payment_id, action, admin_note);
+    if (result.error) return jsonErr(result.error, result.status);
 
-    record.status      = action === 'approve' ? 'verified' : 'rejected';
-    record.verified_at = new Date().toISOString();
-    record.admin_note  = admin_note || '';
-
-    await KV.put(`payment:record:${payment_id}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 180 });
-
-    // Update index entry status
-    let index = JSON.parse(await KV.get('payment:index') || '[]');
-    index = index.map(p => p.payment_id === payment_id ? { ...p, status: record.status } : p);
-    await KV.put('payment:index', JSON.stringify(index));
-
-    // Update user index status
-    let userIndex = JSON.parse(await KV.get(`payment:user:${record.payer_email}`) || '[]');
-    userIndex = userIndex.map(p => p.payment_id === payment_id ? { ...p, status: record.status } : p);
-    await KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
-
-    // If approved — activate plan for user
-    if (action === 'approve' && record.user_id && record.user_id !== 'anonymous') {
-      const product = PRODUCT_CATALOG[record.product_id];
-      if (product && product.plan_key) {
-        await KV.put(
-          `user:plan:${record.user_id}`,
-          JSON.stringify({ plan: product.plan_key, activated_at: new Date().toISOString(), payment_id }),
-          { expirationTtl: 60 * 60 * 24 * 400 }
-        );
-      }
-    }
-
-    return jsonOk({ payment_id, status: record.status, message: `Payment ${record.status}.` });
+    return jsonOk({ payment_id, status: result.record.status, message: `Payment ${result.record.status}.` });
   } catch (e) {
     return jsonErr('Failed to verify payment: ' + e.message, 500);
+  }
+}
+
+// ── Admin Payments Dashboard (admin-payments.html) ─────────────────────────
+// This UI was built against a flat `{ payments: [...] }` / `{ total, pending, ... }`
+// contract (record_id/user/txnId/method/product field names, 'approved' not
+// 'verified') rather than the jsonOk-wrapped shape above. These adapters
+// translate the same underlying KV data into that contract instead of
+// duplicating the read/enrich logic.
+const STATUS_TO_PANEL = { pending: 'pending', verified: 'approved', rejected: 'rejected' };
+const ADMIN_LIST_ENRICH_CAP = 200;
+
+function toAdminPanelShape(record) {
+  return {
+    record_id:   record.payment_id,
+    status:      STATUS_TO_PANEL[record.status] || record.status,
+    method:      String(record.payment_method || '').toUpperCase(),
+    product:     PRODUCT_CATALOG[record.product_id]?.name || record.product_id,
+    user:        record.payer_email,
+    txnId:       record.transaction_id,
+    amount:      record.amount_inr,
+    currency:    'INR',
+    created_at:  record.created_at,
+    admin_notes: record.admin_note || '',
+  };
+}
+
+// GET /api/payment/admin/list
+export async function handleAdminPaymentList(request, env) {
+  try {
+    const url    = new URL(request.url);
+    const status = url.searchParams.get('status') || 'all';
+    const limit  = parseInt(url.searchParams.get('limit') || String(ADMIN_LIST_ENRICH_CAP));
+
+    const KV = env.SECURITY_HUB_KV;
+    let index = JSON.parse(await KV.get('payment:index') || '[]');
+    if (status !== 'all') index = index.filter(p => p.status === status);
+
+    const payments = [];
+    for (const entry of index.slice(0, Math.min(limit, ADMIN_LIST_ENRICH_CAP))) {
+      try {
+        const record = JSON.parse(await KV.get(`payment:record:${entry.payment_id}`) || 'null');
+        payments.push(toAdminPanelShape(record || entry));
+      } catch (_) { payments.push(toAdminPanelShape(entry)); }
+    }
+
+    return Response.json({ payments });
+  } catch (e) {
+    return Response.json({ payments: [], detail: 'Failed to list payments: ' + e.message }, { status: 500 });
+  }
+}
+
+// GET /api/payment/admin/stats
+export async function handleAdminPaymentStats(request, env) {
+  try {
+    const KV    = env.SECURITY_HUB_KV;
+    const index = JSON.parse(await KV.get('payment:index') || '[]');
+
+    const stats = {
+      total:    index.length,
+      pending:  index.filter(p => p.status === 'pending').length,
+      approved: index.filter(p => p.status === 'verified').length,
+      rejected: index.filter(p => p.status === 'rejected').length,
+      by_method: { UPI: 0, BANK: 0, PAYPAL: 0, CRYPTO: 0 },
+    };
+
+    // by_method needs payment_method, which isn't in the lightweight index entry —
+    // enrich the most recent records only (matches the list endpoint's cap).
+    for (const entry of index.slice(0, ADMIN_LIST_ENRICH_CAP)) {
+      try {
+        const record = JSON.parse(await KV.get(`payment:record:${entry.payment_id}`) || 'null');
+        const m = String(record?.payment_method || '').toUpperCase();
+        if (m && stats.by_method[m] !== undefined) stats.by_method[m]++;
+      } catch (_) {}
+    }
+
+    return Response.json(stats);
+  } catch (e) {
+    return Response.json({
+      total: 0, pending: 0, approved: 0, rejected: 0, by_method: {},
+      detail: 'Failed to load stats: ' + e.message,
+    }, { status: 500 });
+  }
+}
+
+// POST /api/payment/admin/approve/:record_id or /api/payment/admin/reject/:record_id
+export async function handleAdminPaymentAction(request, env, recordId, action) {
+  try {
+    if (!recordId) return Response.json({ detail: 'record_id required' }, { status: 400 });
+    if (!['approve', 'reject'].includes(action)) {
+      return Response.json({ detail: 'Invalid action' }, { status: 400 });
+    }
+
+    let notes = null;
+    try { ({ notes } = await request.json()); } catch (_) {}
+
+    const result = await verifyManualPaymentCore(env, recordId, action, notes);
+    if (result.error) return Response.json({ detail: result.error }, { status: result.status });
+
+    return Response.json({
+      success: true,
+      record_id: recordId,
+      status: STATUS_TO_PANEL[result.record.status] || result.record.status,
+    });
+  } catch (e) {
+    return Response.json({ detail: `Failed to ${action} payment: ` + e.message }, { status: 500 });
   }
 }
 
