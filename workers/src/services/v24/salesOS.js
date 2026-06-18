@@ -245,7 +245,7 @@ function buildBusinessRisk(deal) {
 function buildThreatLandscape() {
   return {
     active_apt_groups:    ['APT29 (Russia)', 'Lazarus (DPRK)', 'APT41 (China)', 'SideWinder (India focus)'],
-    top_cves_2026:        ['CVE-2026-1340 (Ivanti EPMM RCE)', 'CVE-2026-20131 (Cisco FMC RCE)', 'CVE-2024-3400 (PAN-OS)'],
+    top_active_cves:      ['CVE-2024-3400 (PAN-OS GlobalProtect RCE)', 'CVE-2024-21762 (FortiOS SSL-VPN RCE)', 'CVE-2024-27198 (TeamCity Auth Bypass)'],
     attack_vectors:       ['Phishing (+340% YoY)', 'Ransomware-as-a-Service', 'Supply Chain', 'AI-assisted attacks'],
     india_specific:       'India #3 globally for cyberattacks; BFSI and healthcare top targets',
   };

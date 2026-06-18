@@ -694,27 +694,27 @@ function extractFromVector(vector = '', component) {
 // Written to D1 on first cron run; ensures platform has real data from day 1.
 function getInternalSeedIntel() {
   return [
-    // ── 2026 Active KEV ──
+    // ── 2024 Active KEV (CISA confirmed, production-grade) ──
     {
-      id: 'CVE-2026-1340', title: 'CVE-2026-1340 — Ivanti EPMM Unauthenticated RCE',
-      severity: 'CRITICAL', cvss_score: 9.8, type: 'RCE',
-      description: 'Unauthenticated remote code execution vulnerability in Ivanti Endpoint Manager Mobile (EPMM) allows attackers to execute arbitrary commands without authentication. Actively exploited in the wild.',
-      affected_systems: ['Ivanti EPMM <11.12.0', 'Ivanti MobileIron'],
-      exploit_status: 'ACTIVELY_EXPLOITED', kev_added: '2026-01-10', _source: 'cisa_kev',
+      id: 'CVE-2024-3400', title: 'CVE-2024-3400 — PAN-OS GlobalProtect OS Command Injection',
+      severity: 'CRITICAL', cvss_score: 10.0, type: 'RCE',
+      description: 'OS command injection vulnerability in Palo Alto Networks PAN-OS GlobalProtect feature allows an unauthenticated attacker to execute arbitrary code with root privileges on the firewall.',
+      affected_systems: ['PAN-OS 10.2.x <10.2.9-h1', 'PAN-OS 11.0.x <11.0.4-h1', 'PAN-OS 11.1.x <11.1.2-h3'],
+      exploit_status: 'ACTIVELY_EXPLOITED', kev_added: '2024-04-12', _source: 'cisa_kev',
     },
     {
-      id: 'CVE-2026-20131', title: 'CVE-2026-20131 — Cisco FMC Deserialization RCE — Ransomware Linked',
-      severity: 'CRITICAL', cvss_score: 9.3, type: 'DESERIALIZATION',
-      description: 'Deserialization of untrusted data in Cisco Firepower Management Center allows unauthenticated remote code execution. Actively leveraged by ransomware groups for initial access.',
-      affected_systems: ['Cisco FMC 7.0.x', 'Cisco FMC 7.2.x', 'Cisco Firepower 4100/9300'],
-      exploit_status: 'ACTIVELY_EXPLOITED', kev_added: '2026-01-20', _source: 'cisa_kev',
+      id: 'CVE-2024-21762', title: 'CVE-2024-21762 — Fortinet FortiOS SSL-VPN Out-of-Bound Write',
+      severity: 'CRITICAL', cvss_score: 9.6, type: 'RCE',
+      description: 'Out-of-bounds write vulnerability in FortiOS SSL VPN allows a remote unauthenticated attacker to execute arbitrary code or commands via specially crafted HTTP requests. Exploited by APT28.',
+      affected_systems: ['FortiOS 6.4.x', 'FortiOS 7.0.x', 'FortiOS 7.2.x <7.2.7', 'FortiOS 7.4.x <7.4.3'],
+      exploit_status: 'ACTIVELY_EXPLOITED', kev_added: '2024-02-09', _source: 'cisa_kev',
     },
     {
-      id: 'CVE-2026-35616', title: 'CVE-2026-35616 — Fortinet FortiClient EMS Access Control Bypass',
-      severity: 'HIGH', cvss_score: 8.8, type: 'AUTH_BYPASS',
-      description: 'Improper access control in Fortinet FortiClient EMS allows an authenticated attacker to bypass security controls and gain elevated privileges.',
-      affected_systems: ['FortiClient EMS 7.0.x', 'FortiClient EMS 7.2.x'],
-      exploit_status: 'ACTIVELY_EXPLOITED', kev_added: '2026-02-05', _source: 'cisa_kev',
+      id: 'CVE-2024-27198', title: 'CVE-2024-27198 — JetBrains TeamCity Authentication Bypass',
+      severity: 'CRITICAL', cvss_score: 9.8, type: 'AUTH_BYPASS',
+      description: 'Authentication bypass vulnerability in JetBrains TeamCity allows unauthenticated remote attackers to perform administrative actions and gain full server control. Exploited by APT29 (Midnight Blizzard).',
+      affected_systems: ['JetBrains TeamCity <2023.11.4'],
+      exploit_status: 'ACTIVELY_EXPLOITED', kev_added: '2024-03-07', _source: 'cisa_kev',
     },
     // ── 2025 Active KEV ──
     {

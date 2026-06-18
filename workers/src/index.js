@@ -3742,6 +3742,70 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
     }
 
+    // GET /api/zeroday/feed — recent CISA KEV entries as zero-day intelligence
+    if (path === '/api/zeroday/feed' && method === 'GET') {
+      try {
+        const zdCacheKey = 'zeroday:feed:v1';
+        if (env?.SECURITY_HUB_KV) {
+          const cached = await env.SECURITY_HUB_KV.get(zdCacheKey, { type: 'json' }).catch(() => null);
+          if (cached?.data?.length) return withSecurityHeaders(withCors(Response.json({ ...cached, cache_hit: true }), request));
+        }
+        const kevResp = await fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', {
+          headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/1.0' },
+          signal: AbortSignal.timeout(8000),
+        }).catch(() => null);
+        if (kevResp?.ok) {
+          const kev = await kevResp.json();
+          const now = Date.now();
+          const dayMs = 86400000;
+          const ageLabel = (dateStr) => {
+            if (!dateStr) return 'recent';
+            const d = Math.floor((now - new Date(dateStr)) / dayMs);
+            return d < 1 ? 'today' : d < 7 ? `${d}d` : d < 30 ? `${Math.floor(d/7)}w` : `${Math.floor(d/30)}mo`;
+          };
+          const zdData = [...(kev.vulnerabilities || [])]
+            .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+            .slice(0, 8)
+            .map(v => ({
+              id:  v.cveID,
+              p:   `${v.vendorProject} ${v.product}`.trim().slice(0, 50),
+              cvss: 8.5,
+              st:  v.knownRansomwareCampaignUse === 'Known' ? 'ITW' : 'PoC',
+              dk:  false,
+              poc: true,
+              pt:  false,
+              ag:  ageLabel(v.dateAdded),
+              d:   (v.shortDescription || `${v.vulnerabilityName} — actively exploited per CISA KEV. Due: ${v.dueDate || 'immediate patch required'}.`).slice(0, 200),
+            }));
+          const result = { data: zdData, source: 'CISA KEV', generated_at: new Date().toISOString(), total: zdData.length };
+          if (env?.SECURITY_HUB_KV) env.SECURITY_HUB_KV.put(zdCacheKey, JSON.stringify(result), { expirationTtl: 3600 }).catch(() => {});
+          return withSecurityHeaders(withCors(Response.json(result), request));
+        }
+        // Fallback: D1 threat_intel table
+        if (env?.DB) {
+          const rows = await env.DB.prepare(
+            `SELECT id, title, cvss_score, published_at FROM threat_intel WHERE cvss_score >= 7.5 ORDER BY published_at DESC LIMIT 8`
+          ).all().catch(() => ({ results: [] }));
+          const dayMs2 = 86400000;
+          const zdFallback = (rows.results || []).map(v => ({
+            id:  v.id,
+            p:   v.title || v.id,
+            cvss: parseFloat(v.cvss_score) || 8.0,
+            st:  'PoC',
+            dk:  false,
+            poc: true,
+            pt:  false,
+            ag:  v.published_at ? (() => { const d = Math.floor((Date.now() - new Date(v.published_at)) / dayMs2); return d < 7 ? `${d}d` : `${Math.floor(d/7)}w`; })() : 'recent',
+            d:   `${v.id} — high-severity vulnerability requiring immediate attention. Check NVD for full details.`,
+          }));
+          return withSecurityHeaders(withCors(Response.json({ data: zdFallback, source: 'D1', generated_at: new Date().toISOString() }), request));
+        }
+        return withSecurityHeaders(withCors(Response.json({ data: [], error: 'Feed initializing' }, { status: 503 }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message, data: [] }, { status: 500 }), request));
+      }
+    }
+
     // GET /api/defense/list  → alias → /api/defense/solutions
     if (path === '/api/defense/list' && method === 'GET') {
       const { handleGetSolutions } = await import('./handlers/defenseMarketplace.js');

@@ -59,11 +59,11 @@ async function generateReportContent(env, reportId, orderId) {
   // Fallback intelligence data
   if (!cves.length) {
     cves = [
-      { title: 'CVE-2026-0001 — Critical RCE in Enterprise VPN', severity: 'CRITICAL', cvss_score: 9.8, description: 'Unauthenticated remote code execution affecting enterprise VPN appliances. Active exploitation confirmed by CISA KEV. Patch immediately.', is_kev: 1, published_at: new Date().toISOString() },
-      { title: 'CVE-2026-0247 — SQL Injection in Healthcare Portals', severity: 'CRITICAL', cvss_score: 9.1, description: 'SQL injection vulnerability in widely-deployed healthcare portal software enabling patient data exfiltration.', is_kev: 0, published_at: new Date().toISOString() },
-      { title: 'CVE-2026-1203 — Linux Kernel Privilege Escalation', severity: 'HIGH', cvss_score: 7.8, description: 'Local privilege escalation via memory corruption in Linux kernel enabling container escape.', is_kev: 0, published_at: new Date().toISOString() },
-      { title: 'CVE-2026-2891 — Authentication Bypass in Cloud SSO', severity: 'CRITICAL', cvss_score: 9.4, description: 'Authentication bypass enabling MFA circumvention in enterprise cloud SSO providers.', is_kev: 1, published_at: new Date().toISOString() },
-      { title: 'CVE-2026-0818 — AI Agent Framework Zero-Day', severity: 'CRITICAL', cvss_score: 9.6, description: 'Prompt injection to remote code execution via vulnerable AI agent framework. First AI-weaponized CVE in CISA KEV.', is_kev: 1, published_at: new Date().toISOString() },
+      { title: 'CVE-2024-3400 — PAN-OS GlobalProtect OS Command Injection', severity: 'CRITICAL', cvss_score: 10.0, description: 'Unauthenticated OS command injection in Palo Alto PAN-OS GlobalProtect. Root-level RCE on firewall. Active exploitation confirmed by CISA KEV. Patch immediately.', is_kev: 1, published_at: '2024-04-12T00:00:00.000Z' },
+      { title: 'CVE-2023-34362 — MOVEit Transfer SQL Injection (Cl0p)', severity: 'CRITICAL', cvss_score: 9.8, description: 'SQL injection in Progress MOVEit Transfer web application enabling unauthenticated access and data exfiltration. Exploited by Cl0p ransomware at scale.', is_kev: 1, published_at: '2023-06-01T00:00:00.000Z' },
+      { title: 'CVE-2024-21893 — Ivanti Connect Secure SSRF Auth Bypass', severity: 'HIGH', cvss_score: 8.2, description: 'Server-side request forgery in Ivanti Connect Secure and Policy Secure allows authentication bypass. Exploited by UNC5221 threat actor in targeted campaigns.', is_kev: 1, published_at: '2024-01-31T00:00:00.000Z' },
+      { title: 'CVE-2024-1709 — ConnectWise ScreenConnect Authentication Bypass', severity: 'CRITICAL', cvss_score: 10.0, description: 'Authentication bypass in ConnectWise ScreenConnect allows unauthenticated attackers to create admin accounts and achieve remote code execution. Mass exploitation observed.', is_kev: 1, published_at: '2024-02-21T00:00:00.000Z' },
+      { title: 'CVE-2021-44228 — Log4Shell Apache Log4j JNDI Injection', severity: 'CRITICAL', cvss_score: 10.0, description: 'JNDI injection in Apache Log4j 2 enables unauthenticated remote code execution via logged user-controlled data. Exploited by multiple nation-state APTs and ransomware groups.', is_kev: 1, published_at: '2021-12-10T00:00:00.000Z' },
     ];
   }
 
