@@ -281,7 +281,7 @@ function renderStatus(b) {
   $('t-grade').textContent = 'grade ' + (s.posture_grade || '—');
   $('t-intel').textContent = s.intel_processed != null ? num(s.intel_processed) : '—';
   $('t-tools').textContent = s.tools_generated != null ? num(s.tools_generated) : '—';
-  $('t-runs').textContent = num(lm.total_runs);
+  $('t-runs').textContent = lm.total_runs != null ? num(lm.total_runs) : '—';
   $('t-lastrun').textContent = s.completed_at ? timeAgo(s.completed_at) : 'no runs yet';
 
   const tl = String(s.threat_level || 'MODERATE');
@@ -474,7 +474,11 @@ async function loadStatus() {
   }
 }
 async function loadCiso() {
-  try { const r = await fetchJson(GM + '/ciso'); renderCiso(r.status, r.body); }
+  try {
+    const r = await fetchJson(GM + '/ciso');
+    if (r.body?.success === false && r.status !== 404) throw new Error(r.body.error || ('HTTP ' + r.status));
+    renderCiso(r.status, r.body);
+  }
   catch (e) { setHTML('cisoBody', '<div class="err">CISO endpoint error: ' + esc(e.message) + '</div>'); }
 }
 async function loadAspm() {

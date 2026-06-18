@@ -11342,9 +11342,19 @@ function localEngine(module, payload) {
         if (sRuns) sRuns.textContent = lm.total_runs != null ? lm.total_runs : '—';
         if (lastRun) {
           if (s.completed_at) {
-            const secs = Math.floor((Date.now() - Date.parse(s.completed_at)) / 1000);
-            const ago = secs < 60 ? secs + 's ago' : secs < 3600 ? Math.floor(secs/60) + 'm ago' : Math.floor(secs/3600) + 'h ago';
-            lastRun.textContent = 'Last run: ' + ago;
+            const ts = (s.completed_at + '').replace(' ', 'T');
+            const withTz = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z';
+            const t = Date.parse(withTz);
+            if (Number.isNaN(t)) {
+              lastRun.textContent = 'Run complete';
+            } else {
+              const secs = Math.floor((Date.now() - t) / 1000);
+              const ago = secs < 60 ? secs + 's ago'
+                : secs < 3600 ? Math.floor(secs/60) + 'm ago'
+                : secs < 86400 ? Math.floor(secs/3600) + 'h ago'
+                : Math.floor(secs/86400) + 'd ago';
+              lastRun.textContent = 'Last run: ' + ago;
+            }
           } else {
             lastRun.textContent = 'No runs yet — click to trigger';
           }
