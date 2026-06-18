@@ -5,7 +5,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    root: '.',
     include: ['test/**/*.test.mjs', 'test/**/*.test.js'],
+    exclude: ['**/*.spec.mjs', '**/*.spec.js', '**/node_modules/**'],
     environment: 'node',
     reporters: ['dot'],
     coverage: {

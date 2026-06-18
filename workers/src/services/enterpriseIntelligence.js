@@ -129,11 +129,11 @@ export const THREAT_ACTORS = {
 export function computeEPSS(cvss, finding, threatScore = 0) {
   // Base EPSS from CVSS (empirically derived approximation)
   let epss = 0;
-  if (cvss >= 9.0)      epss = 0.48 + Math.random() * 0.15;
-  else if (cvss >= 7.0) epss = 0.18 + Math.random() * 0.18;
-  else if (cvss >= 5.0) epss = 0.06 + Math.random() * 0.10;
-  else if (cvss >= 3.0) epss = 0.01 + Math.random() * 0.05;
-  else                  epss = 0.002 + Math.random() * 0.008;
+  if (cvss >= 9.0)      epss = 0.55;
+  else if (cvss >= 7.0) epss = 0.27;
+  else if (cvss >= 5.0) epss = 0.11;
+  else if (cvss >= 3.0) epss = 0.035;
+  else                  epss = 0.006;
 
   // Adjust for finding context
   const findingId = finding?.id || '';
