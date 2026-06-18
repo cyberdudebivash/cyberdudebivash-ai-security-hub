@@ -611,29 +611,28 @@ export async function handleReportDownload(request, env, authCtx = {}) {
 }
 
 // ─── GET /api/payments/status/:orderId ───────────────────────────────────────
+// Public status poll — intentionally omits amount and report_token to prevent
+// BOLA (API1): any caller knowing an order_id must not gain download access.
+// The report download URL is only delivered at verify time to the paying user.
 export async function handlePaymentStatus(request, env, authCtx = {}) {
   const orderId = new URL(request.url).pathname.split('/').pop();
   if (!orderId) return Response.json({ error: 'orderId required' }, { status: 400 });
 
   if (env.DB) {
     const row = await env.DB.prepare(
-      `SELECT id, module, target, amount, status, report_token, paid_at, created_at
+      `SELECT module, target, status, paid_at, created_at
        FROM payments WHERE razorpay_order_id = ? LIMIT 1`
     ).bind(orderId).first().catch(() => null);
 
     if (!row) return Response.json({ error: 'Order not found' }, { status: 404 });
 
     return Response.json({
-      order_id:    orderId,
-      status:      row.status,
-      module:      row.module,
-      target:      row.target,
-      amount_paise: row.amount,
-      paid_at:     row.paid_at,
-      created_at:  row.created_at,
-      ...(row.status === 'paid' && row.report_token ? {
-        download_url: `/api/reports/download/${row.report_token}`,
-      } : {}),
+      order_id:   orderId,
+      status:     row.status,
+      module:     row.module,
+      target:     row.target,
+      paid_at:    row.paid_at,
+      created_at: row.created_at,
     });
   }
 
