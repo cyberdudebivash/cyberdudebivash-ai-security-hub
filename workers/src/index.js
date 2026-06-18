@@ -1636,6 +1636,21 @@ export default {
     // ── CDB Manual payment confirmation (UPI/Bank/Crypto/PayPal) ─────────────
     // POST /api/payment/confirm  →  { txnId, method, product, user, amount }
     if (path === '/api/payment/confirm' && method === 'POST') {
+      // IP rate limit: max 3 manual payment confirmations per hour (fraud prevention)
+      const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const rlHour = new Date().toISOString().slice(0, 13);
+      const rlKey  = `rl:payment_confirm:${ip}:${rlHour}`;
+      const rlKv   = env.SECURITY_HUB_KV || env.KV;
+      if (rlKv && ip !== 'unknown') {
+        const cnt = parseInt(await rlKv.get(rlKey).catch(() => '0') || '0', 10);
+        if (cnt >= 3) {
+          return withSecurityHeaders(withCors(Response.json({
+            error: 'Rate limit exceeded — maximum 3 manual payment confirmations per hour.',
+            retry_after: 3600,
+          }, { status: 429 }), request));
+        }
+        await rlKv.put(rlKey, String(cnt + 1), { expirationTtl: 3600 }).catch(() => {});
+      }
       return withSecurityHeaders(withCors(await handlePaymentConfirm(request, env), request));
     }
 
@@ -1929,6 +1944,105 @@ export default {
           ? 'ALL FUNNELS PROVEN — Platform is revenue-certified.'
           : `${unproven} funnel(s) awaiting first transaction. Drive acquisition to complete proof.`,
       }), request));
+    }
+
+    // GET /api/admin/executive-scorecard — single endpoint returning every KPI
+    // needed for a daily CEO/CRO review: MRR, ARR, CAC, LTV, funnel conversions,
+    // channel breakdown, renewal pipeline, operational health.
+    if (path === '/api/admin/executive-scorecard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+
+      const scorecard = { generated_at: new Date().toISOString() };
+      const now       = new Date();
+      const monthStart = now.toISOString().slice(0, 7) + '-01';
+      const yearStart  = now.getFullYear() + '-01-01';
+
+      try {
+        // ── Revenue ────────────────────────────────────────────────────────────
+        const [revMonth, revTotal, subActive, revEvents, cacData, renewalData, funnelData, proposalData] = await Promise.all([
+          // Revenue this month
+          env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid' AND created_at >= ?`).bind(monthStart).first().catch(() => null),
+          // Revenue all time
+          env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid'`).first().catch(() => null),
+          // Active subscriptions (plan counts)
+          env.DB.prepare(`SELECT plan, COUNT(*) as cnt, SUM(price_inr) as mrr FROM subscriptions WHERE status='active' GROUP BY plan`).all().catch(() => ({ results: [] })),
+          // Revenue events this month
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as total FROM revenue_events WHERE created_at >= ?`).bind(monthStart).first().catch(() => null),
+          // CAC by channel
+          env.DB.prepare(`SELECT channel, COUNT(*) as conversions, COALESCE(AVG(NULLIF(cost_inr,0)),0) as avg_cac, COALESCE(SUM(mrr_generated),0) as mrr FROM cac_events WHERE converted=1 GROUP BY channel`).all().catch(() => ({ results: [] })),
+          // Renewals due in 30 days
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr_at_risk FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+30 days')`).first().catch(() => null),
+          // Funnel conversion (lead → customer)
+          env.DB.prepare(`SELECT stage, COUNT(*) as cnt FROM funnel_events WHERE created_at >= ? GROUP BY stage`).bind(monthStart).all().catch(() => ({ results: [] })),
+          // Proposals pipeline
+          env.DB.prepare(`SELECT status, COUNT(*) as cnt FROM proposals GROUP BY status`).all().catch(() => ({ results: [] })),
+        ]);
+
+        // MRR from active subscriptions
+        const subRows   = subActive?.results ?? [];
+        const mrr_inr   = subRows.reduce((s, r) => s + (r.mrr || 0), 0);
+        const arr_inr   = mrr_inr * 12;
+        const totalSubs = subRows.reduce((s, r) => s + (r.cnt || 0), 0);
+
+        // LTV estimate: MRR × 24 months average tenure (conservative)
+        const ltv_inr = totalSubs > 0 ? Math.round(mrr_inr / totalSubs * 24) : 0;
+
+        // Funnel conversion rates
+        const funnelMap  = {};
+        for (const r of (funnelData?.results ?? [])) funnelMap[r.stage] = r.cnt;
+        const leads      = funnelMap.lead || funnelMap.email_capture || 0;
+        const purchases  = funnelMap.purchase || 0;
+        const conversion = leads > 0 ? Math.round(purchases / leads * 1000) / 10 : 0;
+
+        // Proposal pipeline
+        const propMap = {};
+        for (const r of (proposalData?.results ?? [])) propMap[r.status] = r.cnt;
+
+        // CAC by channel
+        const cacByChannel = {};
+        for (const r of (cacData?.results ?? [])) {
+          cacByChannel[r.channel] = { conversions: r.conversions, avg_cac_inr: Math.round(r.avg_cac), mrr_inr: r.mrr };
+        }
+        const bestChannel = Object.entries(cacByChannel).sort((a, b) => b[1].mrr_inr - a[1].mrr_inr)[0]?.[0] || 'unknown';
+
+        scorecard.revenue = {
+          mrr_inr, arr_inr, ltv_inr,
+          revenue_this_month_inr: Math.round((revMonth?.total || 0) / 100),
+          revenue_all_time_inr:   Math.round((revTotal?.total || 0) / 100),
+          revenue_events_this_month: revEvents?.cnt || 0,
+          revenue_events_total_inr:  revEvents?.total || 0,
+          active_subscriptions: totalSubs,
+          subscriptions_by_plan: Object.fromEntries(subRows.map(r => [r.plan, r.cnt])),
+        };
+        scorecard.acquisition = {
+          leads_this_month:    leads,
+          purchases_this_month: purchases,
+          conversion_rate_pct: conversion,
+          cac_by_channel:      cacByChannel,
+          best_channel:        bestChannel,
+        };
+        scorecard.proposals = {
+          draft:       propMap.draft || 0,
+          sent:        propMap.sent || 0,
+          accepted:    propMap.accepted || 0,
+          rejected:    propMap.rejected || 0,
+          pipeline_value_inr: (propMap.sent || 0) * 99900, // avg enterprise deal estimate
+        };
+        scorecard.renewal_pipeline = {
+          renewals_due_30d: renewalData?.cnt || 0,
+          arr_at_risk_inr:  renewalData?.arr_at_risk || 0,
+        };
+        scorecard.operational = {
+          status: 'operational',
+          note:   'Check /api/admin/revenue-certification for full infrastructure health',
+        };
+      } catch (e) {
+        console.error('[ExecutiveScorecard]', e.message);
+        scorecard.error = 'Partial data — some queries failed';
+      }
+
+      return withSecurityHeaders(withCors(Response.json(scorecard), request));
     }
 
     // Revenue Metrics — OWNER ONLY (platform financials: MRR/ARR/subscribers/

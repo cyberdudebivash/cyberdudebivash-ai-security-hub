@@ -158,8 +158,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     trackEvent(env, 'payment_order_failed', module, authCtx?.user_id || null,
       request.headers?.get?.('CF-Connecting-IP'), { error: err.message, target }).catch(() => {});
     return Response.json({
-      error:   'Payment gateway error. Please try again.',
-      details: err.message,
+      error:    'Payment gateway error. Please try again.',
       fallback: `Contact bivash@cyberdudebivash.com to complete purchase.`,
     }, { status: 502 });
   }
