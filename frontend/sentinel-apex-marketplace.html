@@ -697,12 +697,12 @@ async function loadCVECards(container) {
 
 function renderFallbackCVEs() {
   const fallback = [
-    { id: 'CVE-2026-0001', title: 'Critical RCE in enterprise VPN appliances — active exploitation confirmed', sev: 'CRITICAL', cvss: '9.8', epss: '0.94', kev: true },
-    { id: 'CVE-2026-0247', title: 'SQL injection in healthcare portal software — patient data at risk', sev: 'CRITICAL', cvss: '9.1', epss: '0.87', kev: false },
-    { id: 'CVE-2026-1203', title: 'Privilege escalation in Linux kernel — container escape vectors confirmed', sev: 'HIGH', cvss: '7.8', epss: '0.61', kev: false },
-    { id: 'CVE-2026-2891', title: 'Authentication bypass in cloud SSO provider — MFA circumvention observed', sev: 'CRITICAL', cvss: '9.4', epss: '0.91', kev: true },
-    { id: 'CVE-2026-3301', title: 'Memory corruption in widely-deployed industrial control system firmware', sev: 'HIGH', cvss: '8.2', epss: '0.55', kev: false },
-    { id: 'CVE-2026-0818', title: 'Zero-day in AI agent framework — prompt injection → code execution', sev: 'CRITICAL', cvss: '9.6', epss: '0.96', kev: true },
+    { id: 'CVE-2024-3400', title: 'PAN-OS GlobalProtect OS command injection — CISA KEV, actively exploited', sev: 'CRITICAL', cvss: '10.0', epss: '0.94', kev: true },
+    { id: 'CVE-2024-21762', title: 'Fortinet FortiOS SSL-VPN out-of-bounds write RCE — CISA KEV listed', sev: 'CRITICAL', cvss: '9.6', epss: '0.89', kev: true },
+    { id: 'CVE-2024-27198', title: 'JetBrains TeamCity authentication bypass — full CI/CD takeover vector', sev: 'CRITICAL', cvss: '9.8', epss: '0.95', kev: true },
+    { id: 'CVE-2024-1709', title: 'ConnectWise ScreenConnect authentication bypass — ransomware exploitation confirmed', sev: 'CRITICAL', cvss: '10.0', epss: '0.98', kev: true },
+    { id: 'CVE-2024-21893', title: 'Ivanti Connect Secure SSRF — nation-state exploitation by UNC5221', sev: 'HIGH', cvss: '8.2', epss: '0.87', kev: true },
+    { id: 'CVE-2023-4966', title: 'Citrix Bleed NetScaler session token disclosure — LockBit campaign', sev: 'CRITICAL', cvss: '9.4', epss: '0.97', kev: true },
   ];
   return fallback.map(c => `
     <div class="intel-card ${c.sev.toLowerCase()}">
