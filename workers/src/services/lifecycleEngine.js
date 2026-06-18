@@ -161,20 +161,35 @@ export async function triggerPostPurchase(env, {
 
     // 5 — Credit the referring affiliate, if this email was first-touch attributed
     //     to a ref_code at lead capture and hasn't already converted.
+    //     Claim-then-credit: the UPDATE...WHERE converted=0 atomically claims the
+    //     conversion before any commission is credited, so two concurrent or
+    //     retried payment-confirmation calls for the same email can't both observe
+    //     "not yet converted" and double-credit the affiliate. If crediting then
+    //     fails, the claim is released so a later retry can still earn the
+    //     commission instead of being stuck permanently "converted" with nothing
+    //     ever recorded. Email is normalized to match the lowercase form lead
+    //     capture always writes (gateways/order metadata don't reliably preserve it).
     if (amount_inr > 0) {
       try {
+        const refEmail = String(email).trim().toLowerCase();
         const attribution = await db.prepare(
-          `SELECT ref_code, converted FROM referral_attribution WHERE email = ? LIMIT 1`
-        ).bind(email).first().catch(() => null);
-        if (attribution?.ref_code && !attribution.converted) {
-          const { recordReferralConversion } = await import('../handlers/affiliateSystem.js');
-          const result = await recordReferralConversion(env, {
-            ref_code: attribution.ref_code, amount_inr, referred_email: email, plan_id: product,
-          });
-          if (result?.tracked) {
-            await db.prepare(
-              `UPDATE referral_attribution SET converted = 1, converted_at = ? WHERE email = ?`
-            ).bind(now, email).run().catch(() => {});
+          `SELECT ref_code FROM referral_attribution WHERE email = ? AND converted = 0 LIMIT 1`
+        ).bind(refEmail).first().catch(() => null);
+        if (attribution?.ref_code) {
+          const claim = await db.prepare(
+            `UPDATE referral_attribution SET converted = 1, converted_at = ? WHERE email = ? AND converted = 0`
+          ).bind(now, refEmail).run().catch(() => null);
+          const claimed = (claim?.meta?.changes ?? claim?.changes ?? 0) > 0;
+          if (claimed) {
+            const { recordReferralConversion } = await import('../handlers/affiliateSystem.js');
+            const result = await recordReferralConversion(env, {
+              ref_code: attribution.ref_code, amount_inr, referred_email: refEmail, plan_id: product,
+            });
+            if (!result?.tracked) {
+              await db.prepare(
+                `UPDATE referral_attribution SET converted = 0, converted_at = NULL WHERE email = ?`
+              ).bind(refEmail).run().catch(() => {});
+            }
           }
         }
       } catch { /* non-blocking */ }

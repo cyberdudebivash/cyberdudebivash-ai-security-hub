@@ -15,7 +15,7 @@
  *   POST /api/affiliate/join               → apply for affiliate program
  *   GET  /api/affiliate/status             → check own affiliate status
  *   GET  /api/affiliate/dashboard          → full affiliate dashboard
- *   POST /api/affiliate/track              → track referral click/conversion
+ *   POST /api/affiliate/track              → track referral click/signup (public; conversions are server-credited only, see recordReferralConversion)
  *   GET  /api/affiliate/referrals          → list referrals + commissions
  *   GET  /api/affiliate/leaderboard        → top affiliates (public)
  *   GET  /api/affiliate/tiers              → tier info (public)
@@ -254,7 +254,14 @@ export async function handleGetDashboard(request, env, authCtx = {}) {
 // confirmed payment — not only via the HTTP endpoint below. Returns a plain
 // object (no Response), so callers decide how to surface failures.
 export async function recordReferralConversion(env, { ref_code, plan_id, amount_inr, referred_email }) {
-  if (!ref_code || !amount_inr) return { tracked: false, reason: 'missing_fields' };
+  if (!ref_code || amount_inr === undefined || amount_inr === null || amount_inr === '') {
+    return { tracked: false, reason: 'missing_fields' };
+  }
+  // Validate as a real positive number — parseInt on a non-numeric value (e.g. a
+  // malformed/forged amount) yields NaN, and since stats are accumulated with +=,
+  // a single bad value would permanently corrupt that affiliate's totals with NaN.
+  const amount = Number(amount_inr);
+  if (!Number.isFinite(amount) || amount <= 0) return { tracked: false, reason: 'invalid_amount' };
 
   let aff = null;
   if (env?.SECURITY_HUB_KV) {
@@ -267,11 +274,12 @@ export async function recordReferralConversion(env, { ref_code, plan_id, amount_
   if (!aff) return { tracked: false, reason: 'invalid_ref_code' };
 
   const now        = new Date().toISOString();
-  const commission = calculateCommission(parseInt(amount_inr), aff.tier);
+  const amountInr   = Math.round(amount);
+  const commission = calculateCommission(amountInr, aff.tier);
 
   aff.stats.conversions++;
   aff.stats.total_referrals++;
-  aff.stats.total_revenue_inr           += parseInt(amount_inr);
+  aff.stats.total_revenue_inr           += amountInr;
   aff.stats.total_commission_earned_inr += commission;
   aff.stats.pending_payout_inr          += commission;
 
@@ -285,7 +293,7 @@ export async function recordReferralConversion(env, { ref_code, plan_id, amount_
     affiliate_id:   aff.id,
     referred_email: referred_email || null,
     plan_id:        plan_id || null,
-    amount_inr:     parseInt(amount_inr),
+    amount_inr:     amountInr,
     commission_inr: commission,
     commission_pct: TIERS[aff.tier]?.commission_pct || 10,
     status:         'PENDING_PAYOUT',
@@ -312,15 +320,26 @@ export async function recordReferralConversion(env, { ref_code, plan_id, amount_
 // existing attribution row for the same email (first touch is the one that counts).
 export async function attributeReferral(env, { email, ref_code, source = 'lead_capture' }) {
   if (!env?.DB || !email || !ref_code) return { attributed: false, reason: 'missing_fields' };
+  if (ref_code.length > 64) return { attributed: false, reason: 'invalid_ref_code' };
 
-  let valid = false;
+  // Normalize so attribution always keys on the same casing the purchase-confirmation
+  // lookup uses (lifecycleEngine.js triggerPostPurchase) — gateways/order metadata
+  // don't reliably preserve the lowercase form lead capture writes.
+  const normalizedEmail = String(email).trim().toLowerCase();
+
+  let entry = null;
   if (env?.SECURITY_HUB_KV) {
     try {
       const index = (await env.SECURITY_HUB_KV.get(KV_AFF_INDEX, { type: 'json' })) || [];
-      valid = index.some(a => a.ref_code === ref_code);
+      entry = index.find(a => a.ref_code === ref_code) || null;
     } catch { /* non-blocking */ }
   }
-  if (!valid) return { attributed: false, reason: 'invalid_ref_code' };
+  if (!entry) return { attributed: false, reason: 'invalid_ref_code' };
+
+  // An affiliate cannot earn a commission by referring themselves.
+  if (entry.email && String(entry.email).trim().toLowerCase() === normalizedEmail) {
+    return { attributed: false, reason: 'self_referral' };
+  }
 
   const now = new Date().toISOString();
   try {
@@ -328,7 +347,7 @@ export async function attributeReferral(env, { email, ref_code, source = 'lead_c
       INSERT OR IGNORE INTO referral_attribution
         (email, ref_code, source, attributed_at, converted, converted_at)
       VALUES (?, ?, ?, ?, 0, NULL)
-    `).bind(email, ref_code, source, now).run();
+    `).bind(normalizedEmail, ref_code, source, now).run();
     return { attributed: true };
   } catch {
     return { attributed: false, reason: 'db_error' };
@@ -340,16 +359,17 @@ export async function handleTrackReferral(request, env) {
   let body = {};
   try { body = await request.json(); } catch {}
 
-  const { ref_code, event_type = 'click', plan_id, amount_inr, referred_email } = body;
+  const { ref_code, event_type = 'click' } = body;
   if (!ref_code) return fail(request, 'ref_code required', 400, 'MISSING_REF');
 
+  // This endpoint is public and unauthenticated by design — click/signup tracking
+  // carries no financial weight. Conversions DO (they credit real commission via
+  // recordReferralConversion), so they are accepted exclusively from the
+  // server-side payment-confirmation pipeline (triggerPostPurchase in
+  // lifecycleEngine.js), never from an arbitrary public request. Rejecting before
+  // any ref_code lookup also avoids leaking ref_code validity through this path.
   if (event_type === 'conversion') {
-    const result = await recordReferralConversion(env, { ref_code, plan_id, amount_inr, referred_email });
-    if (!result.tracked) {
-      if (result.reason === 'invalid_ref_code') return fail(request, 'Invalid ref_code', 404, 'INVALID_REF');
-      return fail(request, 'amount_inr required for conversion', 400, 'MISSING_FIELDS');
-    }
-    return ok(request, result);
+    return fail(request, 'Conversions are credited automatically on confirmed payment', 403, 'FORBIDDEN');
   }
 
   // Find affiliate by ref_code (click/signup tracking)

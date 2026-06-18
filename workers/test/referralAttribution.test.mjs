@@ -46,18 +46,33 @@ function makeDB() {
             }
             return { success: true };
           }
-          if (/UPDATE referral_attribution SET converted/.test(sql)) {
+          if (/UPDATE referral_attribution SET converted = 1/.test(sql)) {
+            // Claim: only flips 0 -> 1 (mirrors the real "WHERE converted = 0" guard),
+            // and reports meta.changes so the claim-then-credit logic can detect a
+            // lost race (changes === 0 means someone/something already claimed it).
             const [converted_at, email] = b;
             const row = referralAttribution.get(email);
-            if (row) { row.converted = 1; row.converted_at = converted_at; }
-            return { success: true };
+            if (row && !row.converted) {
+              row.converted = 1; row.converted_at = converted_at;
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          }
+          if (/UPDATE referral_attribution SET converted = 0/.test(sql)) {
+            // Rollback path: release a claim after a failed credit attempt.
+            const [email] = b;
+            const row = referralAttribution.get(email);
+            if (row) { row.converted = 0; row.converted_at = null; }
+            return { success: true, meta: { changes: row ? 1 : 0 } };
           }
           return { success: true };
         },
         async first() {
           if (/FROM referral_attribution/.test(sql)) {
             const [email] = b;
-            return referralAttribution.get(email) || null;
+            const row = referralAttribution.get(email) || null;
+            if (row && /converted = 0/.test(sql) && row.converted) return null;
+            return row;
           }
           return null;
         },
@@ -120,6 +135,28 @@ describe('Referral attribution — commission math + tier upgrades', () => {
     const result = await recordReferralConversion(env, { ref_code });
     expect(result).toEqual({ tracked: false, reason: 'missing_fields' });
   });
+
+  // parseInt(amount_inr) on a non-numeric/forged value used to yield NaN, and
+  // because stats accumulate with +=, a single bad request would permanently
+  // corrupt that affiliate's totals (NaN + anything = NaN, forever).
+  it('rejects a non-numeric amount instead of corrupting stats with NaN', async () => {
+    const ref_code = await joinAffiliate(env, 'Lena Fox', 'lena@example.com');
+    const result = await recordReferralConversion(env, { ref_code, amount_inr: 'not-a-number', referred_email: 'x@x.com' });
+    expect(result).toEqual({ tracked: false, reason: 'invalid_amount' });
+  });
+
+  it('rejects a negative amount — never debits an affiliate via a forged conversion', async () => {
+    const ref_code = await joinAffiliate(env, 'Mira Joshi', 'mira@example.com');
+    const result = await recordReferralConversion(env, { ref_code, amount_inr: -5000, referred_email: 'x@x.com' });
+    expect(result).toEqual({ tracked: false, reason: 'invalid_amount' });
+  });
+
+  it('a rejected conversion never touches affiliate stats — a later valid conversion is unaffected', async () => {
+    const ref_code = await joinAffiliate(env, 'Nora Bell', 'nora@example.com');
+    await recordReferralConversion(env, { ref_code, amount_inr: 'garbage', referred_email: 'x@x.com' });
+    const result = await recordReferralConversion(env, { ref_code, amount_inr: 10000, referred_email: 'y@x.com' });
+    expect(result.commission_inr).toBe(1000);
+  });
 });
 
 describe('Referral attribution — first-touch lead capture', () => {
@@ -149,6 +186,23 @@ describe('Referral attribution — first-touch lead capture', () => {
 
     expect(referralAttribution.get('lead2@x.com').ref_code).toBe(refA);
   });
+
+  it('blocks self-referral — an affiliate cannot attribute their own email to their own ref_code', async () => {
+    const ref_code = await joinAffiliate(env, 'Omar Siddiqui', 'omar@example.com');
+    const result = await attributeReferral(env, { email: 'omar@example.com', ref_code });
+    expect(result).toEqual({ attributed: false, reason: 'self_referral' });
+  });
+
+  it('blocks self-referral regardless of email casing on either side', async () => {
+    const ref_code = await joinAffiliate(env, 'Priya Das', 'Priya@Example.com');
+    const result = await attributeReferral(env, { email: 'priya@example.com', ref_code });
+    expect(result).toEqual({ attributed: false, reason: 'self_referral' });
+  });
+
+  it('rejects an oversized ref_code before any lookup', async () => {
+    const result = await attributeReferral(env, { email: 'lead3@x.com', ref_code: 'x'.repeat(65) });
+    expect(result).toEqual({ attributed: false, reason: 'invalid_ref_code' });
+  });
 });
 
 describe('Referral attribution — leaderboard reports real numbers, not placeholders', () => {
@@ -173,7 +227,7 @@ describe('Referral attribution — leaderboard reports real numbers, not placeho
   });
 });
 
-describe('POST /api/affiliate/track stays backward compatible after the refactor', () => {
+describe('POST /api/affiliate/track — click/signup stay public; conversion crediting is locked down', () => {
   let env;
   beforeEach(() => { env = { SECURITY_HUB_KV: makeKV(), DB: makeDB().db }; });
 
@@ -184,21 +238,31 @@ describe('POST /api/affiliate/track stays backward compatible after the refactor
     expect(body.data).toEqual({ tracked: true, type: 'click' });
   });
 
-  it('tracks a conversion end-to-end through the HTTP layer', async () => {
+  // This public, unauthenticated endpoint used to delegate 'conversion' events
+  // straight into recordReferralConversion. Once that function started crediting
+  // REAL commission (wired into triggerPostPurchase), the same public endpoint
+  // became a live vector for anyone to fabricate arbitrary commission for any
+  // known ref_code. Conversions must now be rejected here unconditionally —
+  // they are credited exclusively by the server-side payment-confirmation
+  // pipeline. No legitimate frontend code ever called this path with
+  // event_type=conversion (verified), so this closes the hole with zero
+  // user-facing impact.
+  it('rejects a conversion event even for a valid ref_code — never fabricates commission from a public request', async () => {
     const ref_code = await joinAffiliate(env, 'Ira Mehta', 'ira@example.com');
     const res  = await handleTrackReferral(jsonReq('https://x/api/affiliate/track', 'POST', {
       ref_code, event_type: 'conversion', amount_inr: 5000, referred_email: 'buyer2@x.com',
     }), env);
-    const body = await res.json();
-    expect(body.data.tracked).toBe(true);
-    expect(body.data.commission_inr).toBe(500);
+    expect(res.status).toBe(403);
+    const affRaw = await env.SECURITY_HUB_KV.get('affiliate:profile:ira@example.com', { type: 'json' });
+    expect(affRaw.stats.conversions).toBe(0);
+    expect(affRaw.stats.pending_payout_inr).toBe(0);
   });
 
-  it('returns 404 INVALID_REF for an unknown ref_code on conversion', async () => {
+  it('rejects a conversion event uniformly for an unknown ref_code too — no ref_code-validity oracle leaks through this path', async () => {
     const res = await handleTrackReferral(jsonReq('https://x/api/affiliate/track', 'POST', {
       ref_code: 'nope', event_type: 'conversion', amount_inr: 5000,
     }), env);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -241,5 +305,39 @@ describe('triggerPostPurchase credits the referring affiliate exactly once', () 
     await triggerPostPurchase(env, { email: 'organic@x.com', product: 'SECURITY_ASSESSMENT', amount_inr: 30000, payment_id: 'p1' });
     const affiliateKeys = [...kv._store.keys()].filter(k => k.startsWith('affiliate:profile:'));
     expect(affiliateKeys.length).toBe(0);
+  });
+
+  // Lead capture always lowercases email before writing referral_attribution, but
+  // payment-gateway/order-metadata call sites into triggerPostPurchase don't all
+  // guarantee lowercase. Without normalizing at the credit step, this lookup would
+  // silently miss the row and the affiliate would never get paid for a real referral.
+  it('credits correctly even when the purchase-confirmation email has different casing than lead capture', async () => {
+    const ref_code = await joinAffiliate(env, 'Priti Nanda', 'priti@example.com');
+    await attributeReferral(env, { email: 'buyer3@x.com', ref_code });
+
+    await triggerPostPurchase(env, {
+      email: 'Buyer3@X.com', product: 'SECURITY_ASSESSMENT', amount_inr: 40000, payment_id: 'pay_case_1',
+    });
+
+    const affRaw = await kv.get('affiliate:profile:priti@example.com', { type: 'json' });
+    expect(affRaw.stats.total_commission_earned_inr).toBe(4000); // 10% of 40000 — would be 0 without the casing fix
+    expect(referralAttribution.get('buyer3@x.com').converted).toBe(1);
+  });
+
+  // If the claim succeeds (converted flips to 1) but crediting then fails — e.g. the
+  // affiliate record vanished between attribution and purchase — the claim must be
+  // released. Otherwise the row is stuck "converted" forever with no commission ever
+  // paid, and a legitimate retry could never earn it either.
+  it('releases the claim if crediting fails, so a later retry could still earn the commission', async () => {
+    const ref_code = await joinAffiliate(env, 'Quincy Roy', 'quincy@example.com');
+    await attributeReferral(env, { email: 'orphan@x.com', ref_code });
+
+    const index = await kv.get('affiliate:index', { type: 'json' });
+    index.find(a => a.ref_code === ref_code).ref_code = 'mutated_after_attribution';
+    await kv.put('affiliate:index', JSON.stringify(index));
+
+    await triggerPostPurchase(env, { email: 'orphan@x.com', product: 'SECURITY_ASSESSMENT', amount_inr: 30000, payment_id: 'p1' });
+
+    expect(referralAttribution.get('orphan@x.com').converted).toBe(0); // rolled back, not stuck
   });
 });
