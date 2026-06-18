@@ -292,9 +292,9 @@ async function handleThreatActorPreview(request, env, authCtx) {
       exfiltration: ['T1048 Exfiltration Over Alternative Protocol', 'T1041 Exfiltration Over C2 Channel'],
     },
     ioc_feed: {
-      ip_count: null,
-      domain_count: null,
-      hash_count: null,
+      ip_count: 0,
+      domain_count: 0,
+      hash_count: 0,
       last_updated: new Date().toISOString(),
       feed_url: '/api/threat-intel?actor=' + actorId,
       sample_iocs: [
@@ -308,7 +308,7 @@ async function handleThreatActorPreview(request, env, authCtx) {
     ],
     yara_signatures: {
       available: true,
-      count: null,
+      count: 0,
       download_url: '/api/marketplace/download/apt-yara-pack',
       purchase_required: false,
     },
@@ -349,8 +349,8 @@ async function handleMalwarePreview(request, env, authCtx) {
     active_in_wild: known.active,
     first_seen: '2021-2024',
     last_sample_date: new Date(Date.now() - 86400000 * 2).toISOString(),
-    sentinel_yara_count: null,
-    variants_tracked: null,
+    sentinel_yara_count: 0,
+    variants_tracked: 0,
     summary: `${known.name} is a ${known.type.replace(/_/g, ' ')} tracked across SENTINEL APEX malware feeds. Active samples confirmed within the last 7 days.`,
     detection_coverage_preview: 'Partial coverage — full YARA library requires PRO access',
     affected_sectors_preview: ['Healthcare', 'Financial', '+ 5 more sectors locked'],
@@ -425,14 +425,22 @@ async function handleIOCSample(request, env, authCtx) {
   const type = url.searchParams.get('type') || null;
 
   let iocs = [];
+  let totalAvailable = 0;
   try {
-    const typeFilter = type ? `AND type = ?` : '';
-    const params = type ? [limit, type] : [limit];
     const query = type
-      ? `SELECT * FROM cti_iocs WHERE tlp != 'RED' ORDER BY created_at DESC LIMIT ? `
+      ? `SELECT * FROM cti_iocs WHERE tlp != 'RED' AND type = ? ORDER BY created_at DESC LIMIT ?`
       : `SELECT * FROM cti_iocs WHERE tlp != 'RED' ORDER BY created_at DESC LIMIT ?`;
-    const result = await env.DB.prepare(query).bind(...params).all();
-    iocs = result.results || [];
+    const params = type ? [type, limit] : [limit];
+    const countQ = type
+      ? `SELECT COUNT(*) AS c FROM cti_iocs WHERE tlp != 'RED' AND type = ?`
+      : `SELECT COUNT(*) AS c FROM cti_iocs WHERE tlp != 'RED'`;
+    const countP = type ? [type] : [];
+    const [listResult, countResult] = await env.DB.batch([
+      env.DB.prepare(query).bind(...params),
+      env.DB.prepare(countQ).bind(...countP),
+    ]);
+    iocs = listResult.results || [];
+    totalAvailable = countResult.results?.[0]?.c ?? 0;
   } catch {}
 
   // If DB empty, indicate feed is pending ingestion (no synthetic fabrication)
@@ -443,7 +451,7 @@ async function handleIOCSample(request, env, authCtx) {
   const response = {
     type: 'ioc_feed_sample',
     preview_tier: premium ? 'FULL' : 'FREE_TEASER',
-    total_available: 794,
+    total_available: totalAvailable,
     returned: iocs.length,
     limit_applied: !premium,
     iocs: iocs.slice(0, limit),

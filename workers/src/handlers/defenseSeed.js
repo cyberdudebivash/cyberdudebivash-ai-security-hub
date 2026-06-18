@@ -666,46 +666,49 @@ export async function seedDefenseSolutions(env) {
 }
 
 // ── Demo scan history rows (realistic, deterministic) ────────────────────────
-const SCAN_HISTORY_ROWS = [
-  { id:'demo_scan_001', target:'example.com',         module:'domain',     risk_score:72, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(0,  9) },
-  { id:'demo_scan_002', target:'api.acme-corp.net',   module:'ai',         risk_score:45, risk_level:'MEDIUM',   grade:'B', data_source:'demo', scanned_at: daysAgo(0, 14) },
-  { id:'demo_scan_003', target:'login.samplebank.in', module:'identity',   risk_score:88, risk_level:'CRITICAL', grade:'D', data_source:'demo', scanned_at: daysAgo(1,  3) },
-  { id:'demo_scan_004', target:'vpn.bigcompany.com',  module:'redteam',    risk_score:61, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(1, 11) },
-  { id:'demo_scan_005', target:'mail.enterprise.org', module:'compliance', risk_score:34, risk_level:'LOW',      grade:'A', data_source:'demo', scanned_at: daysAgo(2,  7) },
-  { id:'demo_scan_006', target:'store.retailchain.co',module:'domain',     risk_score:55, risk_level:'MEDIUM',   grade:'B', data_source:'demo', scanned_at: daysAgo(2, 16) },
-  { id:'demo_scan_007', target:'dev.startup.io',      module:'ai',         risk_score:80, risk_level:'CRITICAL', grade:'D', data_source:'demo', scanned_at: daysAgo(3,  5) },
-  { id:'demo_scan_008', target:'admin.portal.net',    module:'redteam',    risk_score:93, risk_level:'CRITICAL', grade:'F', data_source:'demo', scanned_at: daysAgo(4,  2) },
-  { id:'demo_scan_009', target:'crm.saas-app.in',     module:'compliance', risk_score:47, risk_level:'MEDIUM',   grade:'B', data_source:'demo', scanned_at: daysAgo(5, 10) },
-  { id:'demo_scan_010', target:'ci.devops-hub.com',   module:'identity',   risk_score:29, risk_level:'LOW',      grade:'A', data_source:'demo', scanned_at: daysAgo(6,  8) },
-  { id:'demo_scan_011', target:'prod.webapp.io',      module:'domain',     risk_score:66, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(7,  4) },
-  { id:'demo_scan_012', target:'auth.fintech.co.in',  module:'ai',         risk_score:78, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(8, 12) },
-];
-
 function daysAgo(days, hoursOffset = 0) {
   return new Date(Date.now() - (days * 86400 + hoursOffset * 3600) * 1000).toISOString().replace('T', ' ').slice(0, 19);
+}
+
+function getScanHistoryRows() {
+  return [
+    { id:'demo_scan_001', target:'example.com',         module:'domain',     risk_score:72, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(0,  9) },
+    { id:'demo_scan_002', target:'api.acme-corp.net',   module:'ai',         risk_score:45, risk_level:'MEDIUM',   grade:'B', data_source:'demo', scanned_at: daysAgo(0, 14) },
+    { id:'demo_scan_003', target:'login.samplebank.in', module:'identity',   risk_score:88, risk_level:'CRITICAL', grade:'D', data_source:'demo', scanned_at: daysAgo(1,  3) },
+    { id:'demo_scan_004', target:'vpn.bigcompany.com',  module:'redteam',    risk_score:61, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(1, 11) },
+    { id:'demo_scan_005', target:'mail.enterprise.org', module:'compliance', risk_score:34, risk_level:'LOW',      grade:'A', data_source:'demo', scanned_at: daysAgo(2,  7) },
+    { id:'demo_scan_006', target:'store.retailchain.co',module:'domain',     risk_score:55, risk_level:'MEDIUM',   grade:'B', data_source:'demo', scanned_at: daysAgo(2, 16) },
+    { id:'demo_scan_007', target:'dev.startup.io',      module:'ai',         risk_score:80, risk_level:'CRITICAL', grade:'D', data_source:'demo', scanned_at: daysAgo(3,  5) },
+    { id:'demo_scan_008', target:'admin.portal.net',    module:'redteam',    risk_score:93, risk_level:'CRITICAL', grade:'F', data_source:'demo', scanned_at: daysAgo(4,  2) },
+    { id:'demo_scan_009', target:'crm.saas-app.in',     module:'compliance', risk_score:47, risk_level:'MEDIUM',   grade:'B', data_source:'demo', scanned_at: daysAgo(5, 10) },
+    { id:'demo_scan_010', target:'ci.devops-hub.com',   module:'identity',   risk_score:29, risk_level:'LOW',      grade:'A', data_source:'demo', scanned_at: daysAgo(6,  8) },
+    { id:'demo_scan_011', target:'prod.webapp.io',      module:'domain',     risk_score:66, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(7,  4) },
+    { id:'demo_scan_012', target:'auth.fintech.co.in',  module:'ai',         risk_score:78, risk_level:'HIGH',     grade:'C', data_source:'demo', scanned_at: daysAgo(8, 12) },
+  ];
 }
 
 export async function seedScanHistory(env) {
   const db = env.DB || env.SECURITY_HUB_DB;
   if (!db) return { error: 'D1 not available', seeded: 0 };
 
-  let seeded = 0, skipped = 0, errors = [];
-  for (const row of SCAN_HISTORY_ROWS) {
-    try {
-      const r = await db.prepare(`
-        INSERT OR IGNORE INTO scan_history
-          (id, user_id, scan_id, target, module, risk_score, risk_level, grade,
-           data_source, status, scanned_at, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-      `).bind(
-        row.id, 'demo', row.id, row.target, row.module,
-        row.risk_score, row.risk_level, row.grade,
-        row.data_source, 'completed', row.scanned_at, row.scanned_at,
-      ).run();
-      if (r.meta?.changes > 0) seeded++; else skipped++;
-    } catch(e) { errors.push({ id: row.id, error: e.message }); }
+  const rows = getScanHistoryRows();
+  const stmts = rows.map(row => db.prepare(`
+    INSERT OR IGNORE INTO scan_history
+      (id, user_id, scan_id, target, module, risk_score, risk_level, grade,
+       data_source, status, scanned_at, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+  `).bind(
+    row.id, 'demo', row.id, row.target, row.module,
+    row.risk_score, row.risk_level, row.grade,
+    row.data_source, 'completed', row.scanned_at, row.scanned_at,
+  ));
+  try {
+    const results = await db.batch(stmts);
+    const seeded = results.filter(r => r.meta?.changes > 0).length;
+    return { total: rows.length, seeded, skipped: rows.length - seeded, errors: [] };
+  } catch(e) {
+    return { total: rows.length, seeded: 0, skipped: 0, errors: [{ error: e.message }] };
   }
-  return { total: SCAN_HISTORY_ROWS.length, seeded, skipped, errors };
 }
 
 // ── Platform metric keys with realistic seed values ───────────────────────────
@@ -718,7 +721,6 @@ const PLATFORM_METRIC_SEEDS = [
   { key: 'critical_threats',    value_int: 0   },
   { key: 'revenue_today',       value_int: 0   },
   { key: 'revenue_month',       value_int: 0   },
-  { key: 'god_mode_runs',       value_int: 1   },
   { key: 'threat_intel_feeds',  value_int: 4   },
   { key: 'sigma_rules',         value_int: 18  },
   { key: 'kql_rules',           value_int: 14  },
@@ -729,15 +731,15 @@ export async function seedPlatformMetrics(env) {
   const db = env.DB || env.SECURITY_HUB_DB;
   if (!db) return { error: 'D1 not available', seeded: 0 };
 
-  let seeded = 0, skipped = 0, errors = [];
-  for (const m of PLATFORM_METRIC_SEEDS) {
-    try {
-      const r = await db.prepare(`
-        INSERT OR IGNORE INTO platform_metrics (key, value_int, updated_at)
-        VALUES (?, ?, datetime('now'))
-      `).bind(m.key, m.value_int).run();
-      if (r.meta?.changes > 0) seeded++; else skipped++;
-    } catch(e) { errors.push({ key: m.key, error: e.message }); }
+  const stmts = PLATFORM_METRIC_SEEDS.map(m => db.prepare(`
+    INSERT OR IGNORE INTO platform_metrics (key, value_int, updated_at)
+    VALUES (?, ?, datetime('now'))
+  `).bind(m.key, m.value_int));
+  try {
+    const results = await db.batch(stmts);
+    const seeded = results.filter(r => r.meta?.changes > 0).length;
+    return { total: PLATFORM_METRIC_SEEDS.length, seeded, skipped: PLATFORM_METRIC_SEEDS.length - seeded, errors: [] };
+  } catch(e) {
+    return { total: PLATFORM_METRIC_SEEDS.length, seeded: 0, skipped: 0, errors: [{ error: e.message }] };
   }
-  return { total: PLATFORM_METRIC_SEEDS.length, seeded, skipped, errors };
 }
