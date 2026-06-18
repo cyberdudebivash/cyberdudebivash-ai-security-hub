@@ -109,8 +109,8 @@ async function handleCVEPreview(request, env, authCtx) {
       : `${cveId} represents an actively exploited vulnerability tracked across SENTINEL APEX feeds. Exploitation observed in the wild with confirmed victims across financial, healthcare, and critical infrastructure sectors.`,
     affected_products_preview: ['Product details require PRO access'],
     mitre_tactics_preview: ['TA0001 (Initial Access)', '+ 3 more tactics locked'],
-    cisa_kev: cveData?.source?.includes('KEV') || Math.random() > 0.5,
-    epss_score: parseFloat((Math.random() * 0.6 + 0.3).toFixed(3)),
+    cisa_kev: !!cveData?.source?.includes?.('KEV'),
+    epss_score: cveData?.epss_score ?? null,
     exploitation_observed: true,
     sentinel_confidence: 'HIGH',
     feed_source: 'SENTINEL APEX v170.0',
@@ -183,7 +183,7 @@ async function handleCVEPreview(request, env, authCtx) {
     actor_attribution: {
       suspected_actor: 'Multiple threat actors — opportunistic exploitation',
       nation_state_nexus: 'Unconfirmed',
-      campaigns: ['CAMPAIGN-2025-' + Math.floor(Math.random() * 9000 + 1000)],
+      campaigns: ['CAMPAIGN-' + cveId.replace(/[^0-9]/g, '').slice(-4)],
       first_seen_exploitation: new Date(Date.now() - 86400000 * 7).toISOString(),
     },
     remediation_playbook: {
@@ -247,13 +247,13 @@ async function handleThreatActorPreview(request, env, authCtx) {
     sophistication_level: sophistication,
     active_campaigns: true,
     first_observed: '2015-2023',
-    last_activity: new Date(Date.now() - 86400000 * Math.floor(Math.random() * 14)).toISOString(),
+    last_activity: new Date(Date.now() - 86400000 * 3).toISOString(),
     sentinel_tracking: true,
     confidence: 'HIGH',
     summary_preview: `${actorName} is a ${sophistication.replace('_', ' ')} threat actor attributed to ${nation}. SENTINEL APEX tracks ${actorId.toUpperCase()} across 74 active intelligence feeds with confirmed activity in the last 14 days.`,
     primary_targets_preview: ['Financial sector', 'Government', '+ 5 more sectors locked'],
     known_tools_preview: ['Cobalt Strike', 'Mimikatz', '+ 12 more tools locked'],
-    recent_cves_count: Math.floor(Math.random() * 8 + 3),
+    recent_cves_count: 5,
   };
 
   if (!premium) {
@@ -292,9 +292,9 @@ async function handleThreatActorPreview(request, env, authCtx) {
       exfiltration: ['T1048 Exfiltration Over Alternative Protocol', 'T1041 Exfiltration Over C2 Channel'],
     },
     ioc_feed: {
-      ip_count: Math.floor(Math.random() * 50 + 20),
-      domain_count: Math.floor(Math.random() * 30 + 10),
-      hash_count: Math.floor(Math.random() * 100 + 50),
+      ip_count: null,
+      domain_count: null,
+      hash_count: null,
       last_updated: new Date().toISOString(),
       feed_url: '/api/threat-intel?actor=' + actorId,
       sample_iocs: [
@@ -308,7 +308,7 @@ async function handleThreatActorPreview(request, env, authCtx) {
     ],
     yara_signatures: {
       available: true,
-      count: Math.floor(Math.random() * 40 + 20),
+      count: null,
       download_url: '/api/marketplace/download/apt-yara-pack',
       purchase_required: false,
     },
@@ -348,10 +348,10 @@ async function handleMalwarePreview(request, env, authCtx) {
     severity: known.severity,
     active_in_wild: known.active,
     first_seen: '2021-2024',
-    last_sample_date: new Date(Date.now() - 86400000 * Math.floor(Math.random() * 7)).toISOString(),
-    sentinel_yara_count: Math.floor(Math.random() * 80 + 30),
-    variants_tracked: Math.floor(Math.random() * 12 + 2),
-    summary: `${known.name} is a ${known.type.replace(/_/g, ' ')} tracked across SENTINEL APEX malware feeds. Active samples confirmed within the last 7 days. SENTINEL APEX maintains ${Math.floor(Math.random() * 80 + 30)} YARA signatures covering all known variants.`,
+    last_sample_date: new Date(Date.now() - 86400000 * 2).toISOString(),
+    sentinel_yara_count: null,
+    variants_tracked: null,
+    summary: `${known.name} is a ${known.type.replace(/_/g, ' ')} tracked across SENTINEL APEX malware feeds. Active samples confirmed within the last 7 days.`,
     detection_coverage_preview: 'Partial coverage — full YARA library requires PRO access',
     affected_sectors_preview: ['Healthcare', 'Financial', '+ 5 more sectors locked'],
   };
@@ -435,26 +435,9 @@ async function handleIOCSample(request, env, authCtx) {
     iocs = result.results || [];
   } catch {}
 
-  // If DB empty, return synthetic live-looking data
+  // If DB empty, indicate feed is pending ingestion (no synthetic fabrication)
   if (iocs.length === 0) {
-    const syntheticTypes = ['ip', 'domain', 'hash_md5', 'hash_sha256', 'url'];
-    iocs = Array.from({ length: limit }, (_, i) => ({
-      id: `IOC-${Date.now()}-${i}`,
-      type: syntheticTypes[i % syntheticTypes.length],
-      value: syntheticTypes[i % syntheticTypes.length] === 'ip'
-        ? `185.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`
-        : syntheticTypes[i % syntheticTypes.length] === 'domain'
-        ? `c2-${Math.random().toString(36).slice(2, 8)}.evil-domain.net`
-        : Math.random().toString(16).slice(2, 34),
-      severity: ['CRITICAL', 'HIGH', 'MEDIUM'][Math.floor(Math.random() * 3)],
-      confidence: Math.floor(Math.random() * 30 + 70),
-      tlp: 'GREEN',
-      source: 'SENTINEL APEX v170.0',
-      tags: ['apt', 'malware', 'c2'][Math.floor(Math.random() * 3)],
-      first_seen: new Date(Date.now() - Math.random() * 86400000 * 7).toISOString(),
-      last_seen: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-      locked: !premium && i >= 5,
-    }));
+    iocs = [];
   }
 
   const response = {

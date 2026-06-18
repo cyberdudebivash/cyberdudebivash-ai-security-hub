@@ -66,11 +66,11 @@ async function buildClientPosture(env, mssp_id, client) {
   // Here we use the stored posture_snapshot or default estimates
   const snap = client.posture_snapshot || {};
   return {
-    threats_detected:   snap.threats_detected   ?? Math.floor(Math.random() * 50),
-    rules_deployed:     snap.rules_deployed     ?? Math.floor(Math.random() * 20),
-    critical_open:      snap.critical_open      ?? Math.floor(Math.random() * 5),
-    compliance_score:   snap.compliance_score   ?? Math.floor(50 + Math.random() * 50),
-    siem_integrations:  snap.siem_integrations  ?? Math.floor(Math.random() * 4),
+    threats_detected:   snap.threats_detected   ?? 0,
+    rules_deployed:     snap.rules_deployed     ?? 0,
+    critical_open:      snap.critical_open      ?? 0,
+    compliance_score:   snap.compliance_score   ?? 50,
+    siem_integrations:  snap.siem_integrations  ?? 0,
     last_scan_at:       snap.last_scan_at       ?? null,
     attack_trend:       snap.attack_trend       ?? 'STABLE',
     mttd_minutes:       snap.mttd_minutes       ?? 45,

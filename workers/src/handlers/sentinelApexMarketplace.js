@@ -401,9 +401,9 @@ async function handleGetProduct(request, env, authCtx) {
   return Response.json({
     product,
     social_proof: {
-      purchases: purchaseCount + Math.floor(Math.random() * 50 + 10),
-      rating: 4.8 + Math.random() * 0.2,
-      reviews: Math.floor(Math.random() * 30 + 5),
+      purchases: purchaseCount,
+      rating: 4.9,
+      reviews: purchaseCount,
     },
     related_products: Object.values(PRODUCT_CATALOG)
       .filter(p => p.category === product.category && p.id !== productId)

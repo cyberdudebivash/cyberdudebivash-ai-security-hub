@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "wrangler": "^4.80.0",
-    "vitest": "^2.0.0"
+    "vitest": "^2.1.9",
+    "wrangler": "^4.101.0"
   },
   "engines": {
     "node": ">=18.0.0"

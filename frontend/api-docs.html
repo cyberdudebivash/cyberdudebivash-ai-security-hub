@@ -195,6 +195,9 @@ footer a{color:var(--accent);margin:0 8px}
     <a class="sidebar-link" onclick="scrollTo('vibescan')">Vibe Code Scanner <span class="sidebar-badge post">POST</span></a>
     <a class="sidebar-link" onclick="scrollTo('mcpscan')">MCP Security Scanner <span class="sidebar-badge post">POST</span></a>
 
+    <div class="sidebar-section">MYTHOS Engine</div>
+    <a class="sidebar-link" onclick="scrollTo('godmode')">God Mode API <span class="sidebar-badge">6</span></a>
+
     <div class="sidebar-section">Platform</div>
     <a class="sidebar-link" onclick="scrollTo('auth-api')">Auth & Identity</a>
     <a class="sidebar-link" onclick="scrollTo('payments-api')">Payments & Plans</a>
@@ -652,6 +655,94 @@ footer a{color:var(--accent);margin:0 8px}
       </div>
     </div>
 
+    <!-- GOD MODE API -->
+    <div class="section" id="godmode">
+      <div class="section-title">MYTHOS God Mode API — Autonomous 12-Phase Orchestrator</div>
+      <p style="color:var(--text-muted);margin-bottom:20px;font-size:14px">MYTHOS GOD MODE v4.0 runs a 12-phase autonomous security orchestration pipeline. All read endpoints are public (no auth required); the run trigger requires an <code>x-api-key</code> admin key.</p>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/api/mythos/god-mode/status</span>
+          <span class="endpoint-summary">Live pipeline status — is a run in progress, last run summary, lifetime metrics</span>
+          <span class="endpoint-chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-desc">Returns the current execution state of the God Mode pipeline, last completed run summary, and lifetime run statistics. No authentication required.</div>
+          <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl https://cyberdudebivash.in/api/mythos/god-mode/status</pre></div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/api/mythos/god-mode/ciso</span>
+          <span class="endpoint-summary">CISO executive intel pack — posture gauge, threat highlights, recommendations</span>
+          <span class="endpoint-chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-desc">Returns the full CISO intelligence package: executive summary with posture grade (A–F), critical CVE counts, CISA KEV entries, MITRE TTPs detected, and prioritized remediation recommendations.</div>
+          <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl https://cyberdudebivash.in/api/mythos/god-mode/ciso</pre></div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/api/mythos/god-mode/aspm</span>
+          <span class="endpoint-summary">AI Security Posture Management snapshot — ASPM score, findings, zero-trust anomalies</span>
+          <span class="endpoint-chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-desc">Returns the ASPM snapshot: assets scanned, overall posture, critical findings, open risks, and zero-trust anomalies including API abuse detections.</div>
+          <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl https://cyberdudebivash.in/api/mythos/god-mode/aspm</pre></div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/api/mythos/god-mode/compliance</span>
+          <span class="endpoint-summary">Compliance posture — ISO 27001, SOC 2, NIST CSF, GDPR, DPDP 2023, OWASP LLM</span>
+          <span class="endpoint-chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-desc">Returns compliance posture mapping active CVEs to control gaps across six frameworks.</div>
+          <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl https://cyberdudebivash.in/api/mythos/god-mode/compliance</pre></div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/api/mythos/god-mode/hunt-pack</span>
+          <span class="endpoint-summary">SOAR hunt pack — auto-generated Sigma, KQL, YARA detection rules</span>
+          <span class="endpoint-chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-desc">Returns Sigma rules, KQL hunt queries, and YARA signatures auto-generated for each active CVE.</div>
+          <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl https://cyberdudebivash.in/api/mythos/god-mode/hunt-pack</pre></div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/api/mythos/god-mode/run</span>
+          <span class="endpoint-summary">Trigger a full 12-phase God Mode run — admin only</span>
+          <span class="endpoint-chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-desc">Triggers an asynchronous 12-phase autonomous security orchestration run. Returns immediately with a job ID. Requires an <code>x-api-key</code> admin header.</div>
+          <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl -X POST https://cyberdudebivash.in/api/mythos/god-mode/run \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: &lt;YOUR_ADMIN_KEY&gt;" \
+  -d '{"max_items": 20}'</pre></div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- ERRORS -->
     <div class="section" id="errors">
       <div class="section-title">Error Codes</div>
@@ -709,7 +800,7 @@ function showToast(msg){
 }
 // Highlight active sidebar on scroll
 window.addEventListener('scroll',()=>{
-  const sections=['auth','rate-limits','aspm','governance','redteam','agents','threatintel','vibescan','mcpscan','errors'];
+  const sections=['auth','rate-limits','aspm','governance','redteam','agents','threatintel','vibescan','mcpscan','godmode','errors'];
   let current='';
   sections.forEach(id=>{
     const el=document.getElementById(id);

@@ -1072,6 +1072,7 @@ a{color:var(--accent);text-decoration:none}
 <a href="#ai-platform" onclick="document.getElementById('ai-platform')?.scrollIntoView({behavior:'smooth'});return false">AI Security</a>
 <a href="https://intel.cyberdudebivash.com" rel="noopener" style="display:inline-flex;align-items:center;gap:4px" target="_blank">🛰 Threat Intel ↗</a>
 <a data-section="trust-center" href="#trust-center" onclick="cdbNavigate('trust-center');return false">Trust</a>
+<a href="/god-mode.html" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(0,212,255,.1));border:1px solid rgba(124,58,237,.35);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:#c4b5fd;letter-spacing:.03em">⚡ GOD MODE</a>
 <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
 <a class="nav-cta" data-section="enterprise" href="#enterprise" onclick="cdbNavigate('enterprise');return false" style="background:linear-gradient(135deg,#00d4ff,#6366f1)!important;color:#000!important;font-weight:800!important;box-shadow:0 0 20px rgba(0,212,255,.3)!important">⚡ Book Demo</a>
 </div>
@@ -1117,6 +1118,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="nav-mob-sep"></div>
 <a data-section="compliance-global" href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false" tabindex="-1">🌐 Global Compliance</a>
 <a href="https://tools.cyberdudebivash.com" onclick="cdbCloseMobileNav()" rel="noopener" tabindex="-1" target="_blank">🛠 Tools Suite ↗</a>
+<a href="/god-mode.html" onclick="cdbCloseMobileNav()" tabindex="-1" style="background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(99,102,241,.1));border-color:rgba(124,58,237,.35);color:#c4b5fd;font-weight:800">⚡ GOD MODE — Autonomous Orchestrator</a>
 </div>
 </nav>
 <main aria-label="Main content" id="main-content">
@@ -1900,6 +1902,44 @@ a{color:var(--accent);text-decoration:none}
 <a href="#scanner">
 <button class="cta-btn">🔍 Scan Now →</button>
 </a>
+</div>
+<!-- ── MYTHOS GOD MODE v4.0 Status Widget ── -->
+<div id="gm-widget" style="margin-top:28px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(0,212,255,.05));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:20px;position:relative;overflow:hidden">
+<div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(124,58,237,.12) 0%,transparent 70%);pointer-events:none"></div>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;z-index:1">
+<div style="flex:1;min-width:200px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<span style="font-size:16px">⚡</span>
+<span style="font-size:12px;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,#c4b5fd,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">MYTHOS GOD MODE v4.0</span>
+<span id="gm-state-pill" style="font-size:10px;font-weight:800;border-radius:20px;padding:2px 10px;background:rgba(100,116,139,.15);border:1px solid rgba(100,116,139,.3);color:#94a3b8">—</span>
+</div>
+<div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">Autonomous 12-phase AI security orchestrator — CISO intel · Compliance posture · ASPM · SOAR hunt packs</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="gm-stat-row">
+<div style="text-align:center;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 4px">
+<div style="font-size:18px;font-weight:900;color:#c4b5fd" id="gm-s-posture">—</div>
+<div style="font-size:9px;color:var(--text-dim);margin-top:2px">Posture</div>
+</div>
+<div style="text-align:center;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 4px">
+<div style="font-size:18px;font-weight:900;color:#00d4ff" id="gm-s-intel">—</div>
+<div style="font-size:9px;color:var(--text-dim);margin-top:2px">Intel</div>
+</div>
+<div style="text-align:center;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 4px">
+<div style="font-size:18px;font-weight:900;color:#10b981" id="gm-s-tools">—</div>
+<div style="font-size:9px;color:var(--text-dim);margin-top:2px">Tools</div>
+</div>
+<div style="text-align:center;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 4px">
+<div style="font-size:18px;font-weight:900;color:#f59e0b" id="gm-s-runs">—</div>
+<div style="font-size:9px;color:var(--text-dim);margin-top:2px">Runs</div>
+</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:160px">
+<a href="/god-mode.html" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:800;padding:10px 20px;border-radius:10px;text-decoration:none;border:none;white-space:nowrap;box-shadow:0 4px 20px rgba(124,58,237,.3)">
+⚡ Open God Mode Dashboard →
+</a>
+<div style="font-size:10px;color:var(--text-dim);text-align:right" id="gm-last-run">Loading status…</div>
+</div>
+</div>
 </div>
 <!-- CTA Row v11 -->
 <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px;flex-wrap:wrap">
@@ -7369,6 +7409,15 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
+<a class="v14-page-card" href="/god-mode.html" style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(0,212,255,.06));border-color:rgba(124,58,237,.3)">
+<div class="v14-new-badge" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">⚡ NEW</div>
+<div class="v14-page-icon">🔮</div>
+<div class="v14-page-info">
+<div class="v14-page-name" style="color:#c4b5fd">God Mode</div>
+<div class="v14-page-desc">MYTHOS v4.0 · 12-Phase AI Orchestrator · CISO Intel</div>
+</div>
+<div class="v14-page-arrow" style="color:#c4b5fd">›</div>
+</a>
 <a class="v14-page-card" href="/privacy-policy.html">
 <div class="v14-page-icon">🔒</div>
 <div class="v14-page-info">
@@ -11236,6 +11285,48 @@ function localEngine(module, payload) {
   if (typeof renderRecentActivity === 'function') {
     setTimeout(renderRecentActivity, 1200);
   }
+
+  // God Mode status widget (non-blocking, best-effort)
+  setTimeout(function initGodModeWidget() {
+    const pill = document.getElementById('gm-state-pill');
+    const lastRun = document.getElementById('gm-last-run');
+    const sPosture = document.getElementById('gm-s-posture');
+    const sIntel = document.getElementById('gm-s-intel');
+    const sTools = document.getElementById('gm-s-tools');
+    const sRuns = document.getElementById('gm-s-runs');
+    if (!pill) return;
+    const apiBase = (typeof window.API_BASE === 'string' ? window.API_BASE : null)
+      || localStorage.getItem('cdb_api_base')
+      || (location.hostname.endsWith('cyberdudebivash.in') ? '' : 'https://cyberdudebivash-security-hub.workers.dev');
+    fetch(apiBase + '/api/mythos/god-mode/status', { headers: { Accept: 'application/json' } })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(b) {
+        const running = !!b.is_running;
+        pill.textContent = running ? 'RUNNING' : 'IDLE';
+        pill.style.background = running ? 'rgba(0,212,255,.12)' : 'rgba(16,185,129,.1)';
+        pill.style.borderColor = running ? 'rgba(0,212,255,.35)' : 'rgba(16,185,129,.3)';
+        pill.style.color = running ? '#00d4ff' : '#34d399';
+        const s = b.last_report_summary || {};
+        const lm = b.lifetime_metrics || {};
+        if (sPosture) sPosture.textContent = s.posture_score != null ? s.posture_score + '/100' : '—';
+        if (sIntel) sIntel.textContent = s.intel_processed != null ? s.intel_processed : '—';
+        if (sTools) sTools.textContent = s.tools_generated != null ? s.tools_generated : '—';
+        if (sRuns) sRuns.textContent = lm.total_runs != null ? lm.total_runs : '—';
+        if (lastRun) {
+          if (s.completed_at) {
+            const secs = Math.floor((Date.now() - Date.parse(s.completed_at)) / 1000);
+            const ago = secs < 60 ? secs + 's ago' : secs < 3600 ? Math.floor(secs/60) + 'm ago' : Math.floor(secs/3600) + 'h ago';
+            lastRun.textContent = 'Last run: ' + ago;
+          } else {
+            lastRun.textContent = 'No runs yet — click to trigger';
+          }
+        }
+      })
+      .catch(function() {
+        if (pill) { pill.textContent = 'OFFLINE'; pill.style.color = '#64748b'; }
+        if (lastRun) lastRun.textContent = 'Status unavailable';
+      });
+  }, 1800);
 })();
 
 // ─── Hero Quick Scan ────────────────────────────────────────────────────
