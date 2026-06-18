@@ -50,6 +50,19 @@ export const DRIP_SEQUENCES = {
     steps: [0, 3, 7],       // Day 0, Day 3, Day 7
     trigger:'mssp_partner_created',
   },
+  // ── Phase 11 acquisition sequences ──────────────────────────────────────────
+  upgrade_nudge: {
+    id:    'upgrade_nudge',
+    name:  'Quota Upgrade Nudge',
+    steps: [0, 3],           // Day 0 (immediate), Day 3 (follow-up close)
+    trigger:'quota_threshold_80pct',
+  },
+  enterprise_winback: {
+    id:    'enterprise_winback',
+    name:  'Enterprise Win-Back',
+    steps: [0, 7, 14, 30],  // Day 0, 7, 14, 30
+    trigger:'proposal_rejected',
+  },
 };
 
 // ── Email sender defaults ────────────────────────────────────────────────────
@@ -776,6 +789,116 @@ function templateMsspDay7(lead, meta = {}) {
   return { subject, html, text: `Upgrade to SILVER MSSP tier — 25 client seats + 25% margin.\nWhatsApp Bivash: https://wa.me/918179881447` };
 }
 
+// ── upgrade_nudge templates ──────────────────────────────────────────────────
+
+function templateUpgradeNudgeDay0(lead, meta) {
+  const firstName = (lead?.name || 'Security Pro').split(' ')[0];
+  const plan = (meta?.plan || 'free').toUpperCase();
+  const used = meta?.scans_used ?? '?';
+  const limit = meta?.scans_limit ?? '?';
+  const upgradePlan = meta?.upgrade_plan || 'PRO';
+  const subject = `⚡ You're at ${Math.round((used / limit) * 100)}% of your monthly scan quota`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<h2 style="color:#dc2626">⚡ Heads up, ${firstName}</h2>
+<p>You've used <strong>${used} of ${limit} scans</strong> on your ${plan} plan this month.</p>
+<p>When you hit the limit, all scans are blocked until next month — including critical threat re-checks.</p>
+<h3>Upgrade to ${upgradePlan} and get:</h3>
+<ul>
+  <li>${upgradePlan === 'PRO' ? 'Unlimited scans every month' : '10 scans per month (3× more)'}</li>
+  <li>AI Threat Brain — deeper CVE and IOC analysis</li>
+  <li>PDF reports for every scan</li>
+  <li>Priority email support</li>
+</ul>
+<a href="${UPGRADE_URL}?plan=${upgradePlan.toLowerCase()}&utm_source=email&utm_medium=upgrade_nudge&utm_campaign=quota_80pct" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;margin-top:12px">Upgrade to ${upgradePlan} — Starting ₹${upgradePlan === 'PRO' ? '1499' : '499'}/mo →</a>
+<p style="margin-top:24px;font-size:13px;color:#64748b">Your quota resets on the 1st of next month. Upgrade anytime — your remaining scans this month carry forward.</p>
+</body></html>`;
+  return { subject, html, text: `You've used ${used}/${limit} scans on your ${plan} plan. Upgrade to ${upgradePlan} to avoid interruption: ${UPGRADE_URL}` };
+}
+
+function templateUpgradeNudgeDay3(lead, meta) {
+  const firstName = (lead?.name || 'Security Pro').split(' ')[0];
+  const upgradePlan = meta?.upgrade_plan || 'PRO';
+  const subject = `🔒 3 days left — don't let threats go unchecked`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<h2 style="color:#7c3aed">Still thinking, ${firstName}?</h2>
+<p>Your scan quota is almost exhausted. Every day without monitoring is a day attackers have the advantage.</p>
+<p><strong>New CVEs are published daily.</strong> PRO plan runs continuous monitoring so you're always current.</p>
+<blockquote style="border-left:4px solid #7c3aed;padding:12px;background:#f5f3ff;margin:16px 0">"We caught a CVSS 9.3 vulnerability in our payment API on day 4 of the monitoring trial. It had been there for 6 months." — CTO, SaaS startup</blockquote>
+<a href="${UPGRADE_URL}?plan=${upgradePlan.toLowerCase()}&utm_source=email&utm_medium=upgrade_nudge&utm_campaign=quota_followup" style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">Upgrade Now — Cancel Anytime →</a>
+</body></html>`;
+  return { subject, html, text: `Your scan quota is almost exhausted, ${firstName}. Upgrade to ${upgradePlan} to keep monitoring: ${UPGRADE_URL}` };
+}
+
+// ── enterprise_winback templates ─────────────────────────────────────────────
+
+function templateWinbackDay0(lead, meta) {
+  const firstName = (lead?.name || 'there').split(' ')[0];
+  const productName = meta?.product_name || 'Enterprise Security Assessment';
+  const subject = `A quick follow-up on your ${productName} proposal`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<p>Hi ${firstName},</p>
+<p>I noticed the proposal for <strong>${productName}</strong> didn't move forward — no pressure, completely understand.</p>
+<p>I wanted to briefly check: was it timing, budget, or something we could address?</p>
+<p>If it was timing, I can hold the exact pricing for 30 days. If it was scope, we can restructure the engagement.</p>
+<p>Even a 2-line reply helps us improve. And if circumstances have changed, I'm happy to revisit.</p>
+<p>Either way, our free threat scan is always available at <a href="${BASE_URL}">${BASE_URL}</a> — no commitment.</p>
+<p>— Bivash, Cyberdudebivash Security</p>
+</body></html>`;
+  return { subject, html, text: `Hi ${firstName}, following up on the ${productName} proposal. Was it timing or budget? Happy to revisit. — Bivash` };
+}
+
+function templateWinbackDay7(lead, meta) {
+  const firstName = (lead?.name || 'there').split(' ')[0];
+  const subject = `New: AI Security capabilities added since your last review`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<h2>What's new since your proposal, ${firstName}</h2>
+<p>We've shipped significant capabilities in the past few weeks that may be relevant to your security posture:</p>
+<ul>
+  <li><strong>MCP Security Analysis</strong> — AI tool chain threat modelling (new attack surface for LLM-driven apps)</li>
+  <li><strong>Vibe Coding Risk Scoring</strong> — Assess AI-generated code for injection and logic flaws</li>
+  <li><strong>OWASP LLM Top 10 Compliance</strong> — Automated check against all 10 LLM risk categories</li>
+  <li><strong>Real-Time KEV Alerts</strong> — Notified within 2h of any CISA KEV match on your stack</li>
+</ul>
+<p>These are available on the Enterprise plan and can be added to your original scope at no extra cost.</p>
+<a href="${BASE_URL}/pricing?utm_source=email&utm_medium=winback&utm_campaign=day7" style="display:inline-block;background:#f59e0b;color:#000;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">See Full Enterprise Capabilities →</a>
+</body></html>`;
+  return { subject, html, text: `Hi ${firstName}, we've added MCP security, vibe coding risk scoring, and real-time KEV alerts since your last review. See what's new: ${BASE_URL}/pricing` };
+}
+
+function templateWinbackDay14(lead, meta) {
+  const firstName = (lead?.name || 'there').split(' ')[0];
+  const subject = `Special offer: 3-month enterprise engagement (limited availability)`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<h2 style="color:#059669">${firstName} — a limited offer for past prospects</h2>
+<p>For prospects who reviewed our Enterprise assessment this quarter, we're offering a <strong>3-month engagement at 20% below our standard rate</strong> — no contract lock-in, cancel after month 1 if you're not satisfied.</p>
+<p>This covers:</p>
+<ul>
+  <li>Full infrastructure and application security assessment</li>
+  <li>AI/LLM security posture review</li>
+  <li>Monthly executive threat briefing</li>
+  <li>Dedicated Slack channel with our security team</li>
+  <li>Remediation verification for all critical findings</li>
+</ul>
+<p><strong>Available to 3 companies this month.</strong> Spots fill based on start date, not sign-date.</p>
+<a href="mailto:bivash@cyberdudebivash.in?subject=Re: Enterprise Security Engagement&body=Hi Bivash, I'm interested in the 3-month engagement offer." style="display:inline-block;background:#059669;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">Reply to Claim Your Spot →</a>
+</body></html>`;
+  return { subject, html, text: `${firstName}, we're offering a 3-month enterprise engagement at 20% below standard rate for past prospects. Limited to 3 spots this month. Reply to claim yours.` };
+}
+
+function templateWinbackDay30(lead, meta) {
+  const firstName = (lead?.name || 'there').split(' ')[0];
+  const subject = `Complimentary quarterly security assessment — for ${firstName}`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<p>Hi ${firstName},</p>
+<p>It's been about a month since we last connected. The threat landscape has shifted — CISA issued 47 new KEV advisories this quarter, and AI-driven attacks on SaaS infrastructure are up 340% YoY.</p>
+<p>We'd like to offer you a <strong>complimentary 30-minute security posture review</strong> — no pitch, no obligation. Just an honest look at where your current exposure stands vs. industry peers.</p>
+<p>If anything's changed on your end — new products, new team members, new cloud infra — this is a fast way to understand your current risk profile.</p>
+<a href="https://calendly.com/bivash-cyberdudebivash?utm_source=email&utm_medium=winback&utm_campaign=day30" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">Book 30-Min Security Review (Free) →</a>
+<p style="margin-top:24px;font-size:13px;color:#64748b">If you'd prefer not to receive these, just reply "unsubscribe" and I'll remove you immediately.</p>
+</body></html>`;
+  return { subject, html, text: `Hi ${firstName}, complimentary 30-min security posture review — no pitch, no obligation. Book here: https://calendly.com/bivash-cyberdudebivash` };
+}
+
 // ─── Template dispatcher for all sequences ────────────────────────────────────
 function getSequenceTemplate(sequenceId, step, lead, meta) {
   switch (sequenceId) {
@@ -803,6 +926,18 @@ function getSequenceTemplate(sequenceId, step, lead, meta) {
       if (step === 0) return templateMsspDay0(lead, meta);
       if (step === 1) return templateMsspDay3(lead, meta);
       if (step === 2) return templateMsspDay7(lead, meta);
+      return null;
+
+    case 'upgrade_nudge':
+      if (step === 0) return templateUpgradeNudgeDay0(lead, meta);
+      if (step === 1) return templateUpgradeNudgeDay3(lead, meta);
+      return null;
+
+    case 'enterprise_winback':
+      if (step === 0) return templateWinbackDay0(lead, meta);
+      if (step === 1) return templateWinbackDay7(lead, meta);
+      if (step === 2) return templateWinbackDay14(lead, meta);
+      if (step === 3) return templateWinbackDay30(lead, meta);
       return null;
 
     default:
@@ -1050,6 +1185,8 @@ export async function runDripAutomation(env) {
       assessment_delivered:   [0, 3, 4],
       enterprise_nurture:     [0, 1, 2, 2, 2],
       mssp_onboarded:         [0, 3, 4],
+      upgrade_nudge:          [0, 3],
+      enterprise_winback:     [0, 7, 7, 16],
     };
     const seqId  = row.sequence_id || 'welcome';
     const delays = DELAY_MAP[seqId] || [0, 1, 1, 1];

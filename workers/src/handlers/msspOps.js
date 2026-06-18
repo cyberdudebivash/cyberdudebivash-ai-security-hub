@@ -350,3 +350,76 @@ export async function handleMsspExpansionOpps(request, env) {
     return ok({ opportunities: [], total: 0, error: e.message });
   }
 }
+
+/* ── PATCH /api/mssp/partners/:id/status ────────────────────────────────────── */
+// Advances a partner through the certification lifecycle:
+//   pending → qualified → certified → active
+// Each transition requires specific criteria to be met.
+const CERT_TRANSITIONS = {
+  pending:   'qualified',
+  qualified: 'certified',
+  certified: 'active',
+};
+
+export async function handleMsspPartnerStatusUpdate(request, env, partnerId) {
+  const db = env.DB;
+  if (!db) return ok({ error: 'Database unavailable' }, 503);
+  if (!partnerId) return ok({ error: 'Partner ID required' }, 400);
+
+  const body = await request.json().catch(() => ({}));
+  const { status } = body;
+
+  const partner = await db.prepare(
+    `SELECT id, status, client_count, brand_name, custom_domain FROM mssp_partners WHERE id = ? LIMIT 1`
+  ).bind(partnerId).first().catch(() => null);
+
+  if (!partner) return ok({ error: 'Partner not found' }, 404);
+
+  const expectedNext = CERT_TRANSITIONS[partner.status];
+  if (!expectedNext) {
+    return ok({ error: `Partner is already in terminal state: ${partner.status}` }, 409);
+  }
+  if (status !== expectedNext) {
+    return ok({
+      error: `Invalid transition: ${partner.status} → ${status}. Next valid status is: ${expectedNext}`,
+    }, 400);
+  }
+
+  // Qualification criteria: at least 1 client OR brand configured
+  if (status === 'qualified') {
+    const hasClients = (partner.client_count || 0) >= 1;
+    const hasBrand   = (partner.brand_name || '').trim() !== '';
+    if (!hasClients && !hasBrand) {
+      return ok({
+        error: 'Qualification criteria not met: requires 1+ active client OR brand name configured',
+        criteria: { client_count: partner.client_count, has_brand: hasBrand },
+      }, 422);
+    }
+  }
+
+  // Certification criteria: 3+ clients AND custom domain
+  if (status === 'certified') {
+    const hasClients = (partner.client_count || 0) >= 3;
+    const hasDomain  = (partner.custom_domain || '').trim() !== '';
+    if (!hasClients) return ok({ error: 'Certification requires 3+ active clients', client_count: partner.client_count }, 422);
+    if (!hasDomain)  return ok({ error: 'Certification requires custom domain configured' }, 422);
+  }
+
+  await db.prepare(`UPDATE mssp_partners SET status = ?, updated_at = unixepoch() WHERE id = ?`)
+    .bind(status, partnerId).run();
+
+  // Activation syncs subscription record to active state
+  if (status === 'active') {
+    await db.prepare(`UPDATE subscriptions SET status = 'active' WHERE external_id = ?`)
+      .bind(partnerId).run().catch(() => {});
+  }
+
+  return ok({
+    success:   true,
+    partner_id: partnerId,
+    previous:  partner.status,
+    status,
+    message:   `Partner advanced to ${status}`,
+  });
+}
+
