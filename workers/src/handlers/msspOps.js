@@ -125,6 +125,13 @@ export async function handleAddMsspPartner(request, env) {
         id, company, contact_email, tier.toUpperCase(), plan,
         brand_name, custom_domain, primary_color, apiKey, parseFloat(margin_pct) || 20,
       ).run();
+
+      // Write to subscriptions table for revenue tracking and renewal engine
+      await db.prepare(`
+        INSERT OR IGNORE INTO subscriptions
+          (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at)
+        VALUES (?, ?, ?, 'active', 'mssp', ?, 0, datetime('now'), datetime('now', '+1 year'), datetime('now'))
+      `).bind('sub_mssp_' + id, contact_email, tier.toUpperCase(), id).run().catch(() => {});
     } catch (e) {
       if (e.message?.includes('UNIQUE')) {
         return ok({ error: 'A partner with this email already exists' }, 409);
@@ -133,7 +140,7 @@ export async function handleAddMsspPartner(request, env) {
     }
   }
 
-  // Trigger MSSP onboarding lifecycle: welcome email sequence (fire-and-forget)
+  // Trigger MSSP onboarding lifecycle: revenue attribution + email sequence (fire-and-forget)
   triggerMsspOnboarding(env, {
     email: contact_email, company, tier: tier.toUpperCase(), partner_id: id,
   }).catch(() => {});

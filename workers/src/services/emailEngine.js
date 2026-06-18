@@ -825,18 +825,19 @@ export async function enrollInSequence(env, email, sequenceId = 'welcome', meta 
 
   try {
     // Check if already enrolled
-    const existing = await env.DB.prepare(
-      `SELECT id FROM email_sequences WHERE email = ? AND sequence_id = ? AND status = 'active' LIMIT 1`
-    ).bind(email, sequenceId).first();
-
-    if (existing) return { success: true, already_enrolled: true };
-
-    await env.DB.prepare(`
+    // Atomic conditional insert — eliminates the SELECT-then-INSERT TOCTOU race
+    const result = await env.DB.prepare(`
       INSERT INTO email_sequences (id, email, sequence_id, current_step, status, meta, enrolled_at, next_send_at)
-      VALUES (?, ?, ?, 0, 'active', ?, ?, ?)
+      SELECT ?, ?, ?, 0, 'active', ?, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM email_sequences WHERE email = ? AND sequence_id = ? AND status = 'active'
+      )
     `).bind(
-      crypto.randomUUID(), email, sequenceId, JSON.stringify(meta), now, now
+      crypto.randomUUID(), email, sequenceId, JSON.stringify(meta), now, now,
+      email, sequenceId,
     ).run();
+
+    if ((result.meta?.changes ?? 1) === 0) return { success: true, already_enrolled: true };
 
     return { success: true, sequence: sequenceId };
   } catch (err) {
@@ -1079,6 +1080,11 @@ export async function runDripAutomation(env) {
         await env.DB.prepare(`
           UPDATE email_sequences SET next_send_at = ?, meta = ? WHERE id = ?
         `).bind(nextRetry, JSON.stringify({ ...currentMeta, _retry_count: retryCount }), row.id).run().catch(() => {});
+        // Track transient failures for email health monitoring
+        await env.DB.prepare(`
+          INSERT INTO email_tracking (id, email, sequence_id, step, event, created_at)
+          VALUES (?, ?, ?, ?, 'failed_retry', datetime('now'))
+        `).bind(crypto.randomUUID(), email, row.sequence_id, step).run().catch(() => {});
       }
     }
   }

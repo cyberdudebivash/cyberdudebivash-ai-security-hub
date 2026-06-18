@@ -105,16 +105,23 @@ export async function triggerPostPurchase(env, {
       `).bind('fe_' + evId, email, JSON.stringify({ source: revSource }), now).run();
     } catch { /* non-blocking */ }
 
-    // 3 — Update lead record: mark as converted
+    // 3 — Upsert lead record: mark as converted (INSERT if first purchase with no prior lead)
     try {
-      await db.prepare(`
+      const updated = await db.prepare(`
         UPDATE leads SET
           funnel_stage = 'customer',
           converted_at = ?,
           updated_at   = ?
         WHERE email = ?
       `).bind(now, now, email).run();
-    } catch { /* non-blocking — lead may not exist */ }
+      if ((updated?.meta?.changes ?? updated?.changes ?? 0) === 0) {
+        await db.prepare(`
+          INSERT OR IGNORE INTO leads
+            (id, email, funnel_stage, converted_at, source, created_at, updated_at)
+          VALUES (?, ?, 'customer', ?, 'payment', ?, ?)
+        `).bind('lead_' + evId, email, now, now, now).run();
+      }
+    } catch { /* non-blocking */ }
 
     // 4 — CAC event for channel attribution analytics
     if (amount_inr > 0) {
@@ -169,16 +176,24 @@ export async function triggerEnterpriseInquiry(env, {
 
 /**
  * Trigger MSSP partner onboarding lifecycle.
- * Enrolls partner in mssp_onboarded sequence.
+ * Writes revenue_events, funnel_events, cac_events, lead upsert, and enrolls in mssp_onboarded sequence.
+ * Delegates to triggerPostPurchase which handles all attribution writes — seqForProduct('MSSP_PARTNER')
+ * correctly resolves to 'mssp_onboarded' via the MSSP branch in seqForProduct.
  */
 export async function triggerMsspOnboarding(env, {
   email, company = '', tier = 'RESELLER', partner_id = '',
+  amount_inr = 0, source = 'partner',
 }) {
   if (!email || !env?.DB) return;
 
-  try {
-    await enrollInSequence(env, email, 'mssp_onboarded', {
-      company, tier, partner_id,
-    });
-  } catch { /* non-blocking */ }
+  await triggerPostPurchase(env, {
+    email,
+    product:      'MSSP_PARTNER',
+    product_name: `MSSP Partner — ${tier}`,
+    amount_inr,
+    event_type:   'mssp_activated',
+    source:       source || 'partner',
+    plan:         tier,
+    meta:         { company, partner_id },
+  });
 }

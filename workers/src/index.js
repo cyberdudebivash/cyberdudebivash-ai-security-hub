@@ -1960,7 +1960,7 @@ export default {
 
       try {
         // ── Revenue ────────────────────────────────────────────────────────────
-        const [revMonth, revTotal, subActive, revEvents, cacData, renewalData, funnelData, proposalData] = await Promise.all([
+        const [revMonth, revTotal, subActive, revEvents, cacData, renewalData, renewalData60, renewalData90, funnelData, proposalData] = await Promise.all([
           // Revenue this month
           env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE status='paid' AND created_at >= ?`).bind(monthStart).first().catch(() => null),
           // Revenue all time
@@ -1973,6 +1973,10 @@ export default {
           env.DB.prepare(`SELECT channel, COUNT(*) as conversions, COALESCE(AVG(NULLIF(cost_inr,0)),0) as avg_cac, COALESCE(SUM(mrr_generated),0) as mrr FROM cac_events WHERE converted=1 GROUP BY channel`).all().catch(() => ({ results: [] })),
           // Renewals due in 30 days
           env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr_at_risk FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+30 days')`).first().catch(() => null),
+          // Renewals due in 60 days
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr_at_risk FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+60 days')`).first().catch(() => null),
+          // Renewals due in 90 days
+          env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_inr),0) as arr_at_risk FROM renewal_queue WHERE status='upcoming' AND renewal_date <= date('now','+90 days')`).first().catch(() => null),
           // Funnel conversion (lead → customer)
           env.DB.prepare(`SELECT stage, COUNT(*) as cnt FROM funnel_events WHERE created_at >= ? GROUP BY stage`).bind(monthStart).all().catch(() => ({ results: [] })),
           // Proposals pipeline
@@ -2030,8 +2034,13 @@ export default {
           pipeline_value_inr: (propMap.sent || 0) * 99900, // avg enterprise deal estimate
         };
         scorecard.renewal_pipeline = {
-          renewals_due_30d: renewalData?.cnt || 0,
-          arr_at_risk_inr:  renewalData?.arr_at_risk || 0,
+          renewals_due_30d:    renewalData?.cnt || 0,
+          arr_at_risk_30d_inr: renewalData?.arr_at_risk || 0,
+          renewals_due_60d:    renewalData60?.cnt || 0,
+          arr_at_risk_60d_inr: renewalData60?.arr_at_risk || 0,
+          renewals_due_90d:    renewalData90?.cnt || 0,
+          arr_at_risk_90d_inr: renewalData90?.arr_at_risk || 0,
+          arr_at_risk_inr:     renewalData?.arr_at_risk || 0,
         };
         scorecard.operational = {
           status: 'operational',
@@ -2043,6 +2052,74 @@ export default {
       }
 
       return withSecurityHeaders(withCors(Response.json(scorecard), request));
+    }
+
+    // GET /api/admin/email-health — owner-only view of email delivery health
+    // Shows transient failure rate, permanent failures, and per-sequence stats.
+    if (path === '/api/admin/email-health' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+
+      if (!env.DB) return withSecurityHeaders(withCors(
+        Response.json({ error: 'DB unavailable' }, { status: 503 }), request,
+      ));
+
+      try {
+        const [eventCounts, recentFailures, sequenceHealth] = await Promise.all([
+          // Aggregate event counts for the last 7 days
+          env.DB.prepare(`
+            SELECT event, COUNT(*) as cnt
+            FROM email_tracking
+            WHERE created_at >= datetime('now', '-7 days')
+            GROUP BY event
+          `).all().catch(() => ({ results: [] })),
+          // Last 20 permanent failures for triage
+          env.DB.prepare(`
+            SELECT email, sequence_id, step, created_at
+            FROM email_tracking
+            WHERE event = 'failed_permanent'
+            ORDER BY created_at DESC LIMIT 20
+          `).all().catch(() => ({ results: [] })),
+          // Per-sequence delivery success rate (last 30 days)
+          env.DB.prepare(`
+            SELECT sequence_id,
+              COUNT(*) as total,
+              SUM(CASE WHEN event = 'sent' THEN 1 ELSE 0 END) as sent,
+              SUM(CASE WHEN event = 'failed_permanent' THEN 1 ELSE 0 END) as failed_permanent,
+              SUM(CASE WHEN event = 'failed_retry' THEN 1 ELSE 0 END) as failed_retry
+            FROM email_tracking
+            WHERE created_at >= datetime('now', '-30 days')
+            GROUP BY sequence_id
+          `).all().catch(() => ({ results: [] })),
+        ]);
+
+        const counts = {};
+        for (const r of (eventCounts?.results ?? [])) counts[r.event] = r.cnt;
+        const totalSent     = counts.sent || 0;
+        const totalRetry    = counts.failed_retry || 0;
+        const totalFailed   = counts.failed_permanent || 0;
+        const totalEvents   = totalSent + totalRetry + totalFailed;
+        const deliveryRate  = totalEvents > 0 ? Math.round(totalSent / totalEvents * 1000) / 10 : null;
+
+        return withSecurityHeaders(withCors(Response.json({
+          window:           '7d',
+          delivery_rate_pct: deliveryRate,
+          events_7d:        counts,
+          recent_permanent_failures: recentFailures?.results ?? [],
+          sequences_30d:    (sequenceHealth?.results ?? []).map(r => ({
+            sequence_id:      r.sequence_id,
+            total:            r.total,
+            sent:             r.sent,
+            failed_permanent: r.failed_permanent,
+            failed_retry:     r.failed_retry,
+            success_rate_pct: r.total > 0 ? Math.round(r.sent / r.total * 1000) / 10 : null,
+          })),
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(
+          Response.json({ error: e.message }, { status: 500 }), request,
+        ));
+      }
     }
 
     // Revenue Metrics — OWNER ONLY (platform financials: MRR/ARR/subscribers/
