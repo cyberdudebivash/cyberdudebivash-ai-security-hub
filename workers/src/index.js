@@ -6261,6 +6261,96 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       }
     }
 
+    // GET /api/admin/weekly-report — structured 7-day acquisition + revenue summary
+    // Designed for daily CRO review: WoW growth, SQLs, pipeline, revenue, email delivery
+    if (path === '/api/admin/weekly-report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
+      if (!env.DB) return withSecurityHeaders(withCors(Response.json({ error: 'DB unavailable' }, { status: 503 }), request));
+
+      try {
+        const [
+          leadsThis, leadsPrev, sqlsThis, sqlsPrev,
+          propThis, propPrev,
+          revThis, revPrev,
+          emailSent, emailFailed, seqEnrolled,
+          channelThis, msspThis,
+        ] = await Promise.all([
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE created_at >= datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE created_at BETWEEN datetime('now','-14 days') AND datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE funnel_stage='sql' AND updated_at >= datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE funnel_stage='sql' AND updated_at BETWEEN datetime('now','-14 days') AND datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT status, COUNT(*) as cnt, COALESCE(SUM(price_inr),0) as value FROM proposals WHERE updated_at >= datetime('now','-7 days') GROUP BY status`).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT status, COUNT(*) as cnt FROM proposals WHERE updated_at BETWEEN datetime('now','-14 days') AND datetime('now','-7 days') GROUP BY status`).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total, COUNT(*) as cnt FROM revenue_events WHERE created_at >= datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total FROM revenue_events WHERE created_at BETWEEN datetime('now','-14 days') AND datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM email_tracking WHERE event='sent' AND created_at >= datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM email_tracking WHERE event IN ('failed_permanent','failed_retry') AND created_at >= datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM email_sequences WHERE enrolled_at >= datetime('now','-7 days')`).first().catch(() => null),
+          env.DB.prepare(`SELECT COALESCE(json_extract(meta,'$.utm_source'), 'direct') as src, COUNT(*) as cnt FROM funnel_events WHERE stage='email_capture' AND created_at >= datetime('now','-7 days') GROUP BY src ORDER BY cnt DESC LIMIT 5`).all().catch(() => ({ results: [] })),
+          env.DB.prepare(`SELECT COUNT(*) as cnt FROM mssp_partners WHERE created_at >= datetime('now','-7 days')`).first().catch(() => null),
+        ]);
+
+        const propMapThis  = {}, propMapPrev = {};
+        for (const r of (propThis?.results  ?? [])) propMapThis[r.status]  = { cnt: r.cnt, value: r.value };
+        for (const r of (propPrev?.results  ?? [])) propMapPrev[r.status]  = r.cnt;
+
+        const leadsN    = leadsThis?.cnt  || 0;
+        const leadsP    = leadsPrev?.cnt  || 0;
+        const sqlsN     = sqlsThis?.cnt   || 0;
+        const sqlsP     = sqlsPrev?.cnt   || 0;
+        const revN      = revThis?.total  || 0;
+        const revP      = revPrev?.total  || 0;
+        const sentN     = emailSent?.cnt  || 0;
+        const failN     = emailFailed?.cnt || 0;
+
+        const wow = (curr, prev) => prev > 0 ? Math.round((curr - prev) / prev * 1000) / 10 : null;
+        const deliveryRate = (sentN + failN) > 0 ? Math.round(sentN / (sentN + failN) * 1000) / 10 : null;
+
+        return withSecurityHeaders(withCors(Response.json({
+          generated_at: new Date().toISOString(),
+          period:  { days: 7, start: new Date(Date.now() - 7 * 86400000).toISOString().slice(0,10), end: new Date().toISOString().slice(0,10) },
+          leads: {
+            new_this_week:  leadsN,
+            new_prev_week:  leadsP,
+            wow_growth_pct: wow(leadsN, leadsP),
+          },
+          qualification: {
+            sqls_this_week:  sqlsN,
+            sqls_prev_week:  sqlsP,
+            sql_wow_pct:     wow(sqlsN, sqlsP),
+            sql_rate_pct:    leadsN > 0 ? Math.round(sqlsN / leadsN * 1000) / 10 : 0,
+          },
+          pipeline: {
+            proposals_sent:     propMapThis.sent?.cnt     || 0,
+            proposals_accepted: propMapThis.accepted?.cnt || 0,
+            proposals_rejected: propMapThis.rejected?.cnt || 0,
+            pipeline_value_inr: propMapThis.sent?.value   || 0,
+            close_rate_pct: (() => {
+              const c = (propMapThis.sent?.cnt||0) + (propMapThis.accepted?.cnt||0) + (propMapThis.rejected?.cnt||0);
+              return c > 0 ? Math.round((propMapThis.accepted?.cnt||0) / c * 1000) / 10 : 0;
+            })(),
+          },
+          revenue: {
+            this_week_inr: revN,
+            prev_week_inr: revP,
+            wow_growth_pct: wow(revN, revP),
+            transactions:  revThis?.cnt || 0,
+          },
+          email: {
+            sequences_enrolled: seqEnrolled?.cnt || 0,
+            emails_sent:        sentN,
+            emails_failed:      failN,
+            delivery_rate_pct:  deliveryRate,
+          },
+          acquisition_channels: (channelThis?.results ?? []).map(r => ({ source: r.src, leads: r.cnt })),
+          mssp: { new_partners_this_week: msspThis?.cnt || 0 },
+        }), request));
+      } catch (e) {
+        return withSecurityHeaders(withCors(Response.json({ error: e.message }, { status: 500 }), request));
+      }
+    }
+
     // PHASE 5 P0 — REVENUE INTELLIGENCE & RECURRING REVENUE
     // GET /api/revenue/kpi — Full KPI: Visitors, Leads, Proposals, Customers, MRR, ARR, CAC, LTV
     if (path === '/api/revenue/kpi' && method === 'GET') {
@@ -6566,6 +6656,26 @@ ctx.waitUntil(
           }
           console.log('[CRON] Phase11 QuotaNudge: evaluated', rows?.results?.length ?? 0, 'keys');
         } catch (e) { console.error('[CRON] Phase11 QuotaNudge error:', e?.message); }
+      })());
+
+      // Phase 12: Daily batch lead score recomputation — upgrades scores as usage accumulates
+      // and triggers smart routing (SQL → enterprise_nurture) for newly qualified leads
+      ctx.waitUntil((async () => {
+        try {
+          if (!env.DB) return;
+          const { computeAndUpdateLeadScore } = await import('./handlers/leads.js');
+          const activeLeads = await env.DB.prepare(`
+            SELECT email FROM leads
+            WHERE scan_count > 0 AND funnel_stage NOT IN ('customer','churned')
+            ORDER BY updated_at ASC LIMIT 200
+          `).all().catch(() => ({ results: [] }));
+          let recomputed = 0;
+          for (const lead of (activeLeads?.results ?? [])) {
+            await computeAndUpdateLeadScore(env, lead.email).catch(() => {});
+            recomputed++;
+          }
+          console.log('[CRON] Phase12 LeadScoring: recomputed', recomputed, 'leads');
+        } catch (e) { console.error('[CRON] Phase12 LeadScoring error:', e?.message); }
       })());
 
       // v23.0 RevOS: AI CS Analysis
