@@ -5,6 +5,7 @@
  * POST /api/leads/capture  → { email, scan_id?, module? }
  */
 import { parseBody, validateString } from '../middleware/validation.js';
+import { attributeReferral } from './affiliateSystem.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -21,6 +22,7 @@ export async function handleLeadCapture(request, env) {
   const utmSource   = (body?.utm_source   || '').trim();
   const utmMedium   = (body?.utm_medium   || '').trim();
   const utmCampaign = (body?.utm_campaign || '').trim();
+  const refCode     = (body?.ref_code     || '').trim();
 
   if (!email || !EMAIL_RE.test(email)) {
     return Response.json({
@@ -83,6 +85,11 @@ export async function handleLeadCapture(request, env) {
         (id, channel, campaign, email, cost_inr, converted, plan_converted, mrr_generated, event_date)
       VALUES (?, ?, ?, ?, 0, 0, 'free', 0, date('now'))
     `).bind('cac_lead_' + leadId, channel, utmCampaign || '', email).run().catch(() => {});
+
+    // Attribute to a referring affiliate (first-touch wins) — credited on conversion via triggerPostPurchase
+    if (refCode) {
+      await attributeReferral(env, { email, ref_code: refCode, source: effectiveSource }).catch(() => {});
+    }
   }
 
   // Store in KV: lead:{leadId} and index by email (cache layer)

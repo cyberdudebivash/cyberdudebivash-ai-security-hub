@@ -158,9 +158,30 @@ export async function triggerPostPurchase(env, {
         `).bind('cac_' + evId, cacChannel, meta?.utm_campaign || '', email, plan || product, amount_inr).run();
       } catch { /* non-blocking */ }
     }
+
+    // 5 — Credit the referring affiliate, if this email was first-touch attributed
+    //     to a ref_code at lead capture and hasn't already converted.
+    if (amount_inr > 0) {
+      try {
+        const attribution = await db.prepare(
+          `SELECT ref_code, converted FROM referral_attribution WHERE email = ? LIMIT 1`
+        ).bind(email).first().catch(() => null);
+        if (attribution?.ref_code && !attribution.converted) {
+          const { recordReferralConversion } = await import('../handlers/affiliateSystem.js');
+          const result = await recordReferralConversion(env, {
+            ref_code: attribution.ref_code, amount_inr, referred_email: email, plan_id: product,
+          });
+          if (result?.tracked) {
+            await db.prepare(
+              `UPDATE referral_attribution SET converted = 1, converted_at = ? WHERE email = ?`
+            ).bind(now, email).run().catch(() => {});
+          }
+        }
+      } catch { /* non-blocking */ }
+    }
   }
 
-  // 5 — Enroll in post-purchase email sequence
+  // 6 — Enroll in post-purchase email sequence
   const sequenceId = seqForProduct(product) || seqForProduct(event_type);
   if (sequenceId && env.DB) {
     try {

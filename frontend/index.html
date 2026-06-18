@@ -7740,6 +7740,17 @@ function getPageUTM() {
   };
 }
 
+// ─── Referral attribution — first-touch ?ref= code, persisted across sessions ─
+(function() {
+  const ref = new URLSearchParams(location.search).get('ref');
+  if (ref && !localStorage.getItem('cdb_ref_code')) {
+    localStorage.setItem('cdb_ref_code', ref);
+  }
+})();
+function getStoredRefCode() {
+  return localStorage.getItem('cdb_ref_code') || '';
+}
+
 // ─── Conversion + Revenue Tracking ───────────────────────────────────────────
 const CDB_TRACK = {
   // Fire-and-forget event tracker → D1 via /api/gtm/event
@@ -9630,7 +9641,7 @@ async function submitLead() {
     await safeFetch('/api/leads/capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, module: pendingScanModule, source: 'homepage' }),
+      body: JSON.stringify({ email, module: pendingScanModule, source: 'homepage', ref_code: getStoredRefCode() }),
     });
   } catch(e) { /* non-blocking */ }
 
@@ -14666,7 +14677,7 @@ window.p13SubmitLead=async function(){
   var ts=new Date().toISOString();
   try{
     await fetch('/api/leads/capture',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email:email,source:'p13-exit-intent',timestamp:ts})});
+      body:JSON.stringify({email:email,source:'p13-exit-intent',timestamp:ts,ref_code:getStoredRefCode()})});
   }catch(e){}
   // Admin notification via payment confirm pipeline
   try{

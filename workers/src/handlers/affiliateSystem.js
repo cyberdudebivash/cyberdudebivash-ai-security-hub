@@ -26,11 +26,12 @@
 
 import { ok, fail } from '../lib/response.js';
 
-const KV_AFF_PREFIX    = 'affiliate:profile:';
-const KV_AFF_INDEX     = 'affiliate:index';
-const KV_REF_PREFIX    = 'affiliate:referral:';
-const KV_CLICK_PREFIX  = 'affiliate:click:';
-const KV_PAYOUT_PREFIX = 'affiliate:payout:';
+const KV_AFF_PREFIX     = 'affiliate:profile:';
+const KV_AFF_INDEX      = 'affiliate:index';
+const KV_REF_PREFIX     = 'affiliate:referral:';
+const KV_CLICK_PREFIX   = 'affiliate:click:';
+const KV_PAYOUT_PREFIX  = 'affiliate:payout:';
+const KV_PROGRAM_STATS  = 'affiliate:program_stats';
 
 // ── Tier definitions ──────────────────────────────────────────────────────────
 const TIERS = {
@@ -103,6 +104,21 @@ async function loadAffiliate(env, userId) {
 async function saveAffiliate(env, aff) {
   if (!env?.SECURITY_HUB_KV) return;
   await env.SECURITY_HUB_KV.put(`${KV_AFF_PREFIX}${aff.id}`, JSON.stringify(aff), { expirationTtl: 86400 * 365 * 2 });
+}
+
+// Real, incrementally-maintained program aggregate (replaces hardcoded leaderboard stats).
+// top_earner_inr tracks the highest cumulative commission any single affiliate has reached.
+async function updateProgramStats(env, commissionInr, affiliateTotalInr) {
+  if (!env?.SECURITY_HUB_KV) return;
+  try {
+    const stats = (await env.SECURITY_HUB_KV.get(KV_PROGRAM_STATS, { type: 'json' })) || {
+      total_conversions: 0, total_commission_inr: 0, top_earner_inr: 0,
+    };
+    stats.total_conversions   += 1;
+    stats.total_commission_inr += commissionInr;
+    stats.top_earner_inr = Math.max(stats.top_earner_inr || 0, affiliateTotalInr || 0);
+    await env.SECURITY_HUB_KV.put(KV_PROGRAM_STATS, JSON.stringify(stats));
+  } catch { /* non-blocking */ }
 }
 
 // ── POST /api/affiliate/join ──────────────────────────────────────────────────
@@ -232,6 +248,93 @@ export async function handleGetDashboard(request, env, authCtx = {}) {
   });
 }
 
+// ── Core commission-crediting logic ───────────────────────────────────────────
+// Extracted from handleTrackReferral so it can be called in-process from
+// triggerPostPurchase (workers/src/services/lifecycleEngine.js) right after a
+// confirmed payment — not only via the HTTP endpoint below. Returns a plain
+// object (no Response), so callers decide how to surface failures.
+export async function recordReferralConversion(env, { ref_code, plan_id, amount_inr, referred_email }) {
+  if (!ref_code || !amount_inr) return { tracked: false, reason: 'missing_fields' };
+
+  let aff = null;
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const index = (await env.SECURITY_HUB_KV.get(KV_AFF_INDEX, { type: 'json' })) || [];
+      const entry = index.find(a => a.ref_code === ref_code);
+      if (entry) aff = await loadAffiliate(env, entry.id);
+    } catch { /* non-blocking */ }
+  }
+  if (!aff) return { tracked: false, reason: 'invalid_ref_code' };
+
+  const now        = new Date().toISOString();
+  const commission = calculateCommission(parseInt(amount_inr), aff.tier);
+
+  aff.stats.conversions++;
+  aff.stats.total_referrals++;
+  aff.stats.total_revenue_inr           += parseInt(amount_inr);
+  aff.stats.total_commission_earned_inr += commission;
+  aff.stats.pending_payout_inr          += commission;
+
+  // Re-evaluate tier
+  const newTier = determineTier(aff.stats);
+  if (newTier !== aff.tier) aff.tier = newTier;
+
+  // Record referral
+  const referral = {
+    id:             'ref_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    affiliate_id:   aff.id,
+    referred_email: referred_email || null,
+    plan_id:        plan_id || null,
+    amount_inr:     parseInt(amount_inr),
+    commission_inr: commission,
+    commission_pct: TIERS[aff.tier]?.commission_pct || 10,
+    status:         'PENDING_PAYOUT',
+    converted_at:   now,
+  };
+
+  if (env?.SECURITY_HUB_KV) {
+    await env.SECURITY_HUB_KV.put(`${KV_REF_PREFIX}${referral.id}`, JSON.stringify(referral), { expirationTtl: 86400 * 365 * 2 });
+    let refIndex = [];
+    try { refIndex = (await env.SECURITY_HUB_KV.get(`${KV_REF_PREFIX}index:${aff.id}`, { type: 'json' })) || []; } catch {}
+    refIndex.unshift({ id: referral.id, amount_inr: referral.amount_inr, commission_inr: commission, converted_at: now, status: 'PENDING_PAYOUT' });
+    await env.SECURITY_HUB_KV.put(`${KV_REF_PREFIX}index:${aff.id}`, JSON.stringify(refIndex.slice(0, 500)), { expirationTtl: 86400 * 365 * 2 });
+  }
+
+  await saveAffiliate(env, aff);
+  await updateProgramStats(env, commission, aff.stats.total_commission_earned_inr);
+
+  return { tracked: true, type: 'conversion', commission_inr: commission, new_tier: aff.tier, affiliate_id: aff.id };
+}
+
+// ── In-process: attribute a lead to a referral code (first-touch wins) ────────
+// Called from handleLeadCapture when a ref_code is present. Validates the
+// ref_code against a real affiliate before writing, and never overwrites an
+// existing attribution row for the same email (first touch is the one that counts).
+export async function attributeReferral(env, { email, ref_code, source = 'lead_capture' }) {
+  if (!env?.DB || !email || !ref_code) return { attributed: false, reason: 'missing_fields' };
+
+  let valid = false;
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const index = (await env.SECURITY_HUB_KV.get(KV_AFF_INDEX, { type: 'json' })) || [];
+      valid = index.some(a => a.ref_code === ref_code);
+    } catch { /* non-blocking */ }
+  }
+  if (!valid) return { attributed: false, reason: 'invalid_ref_code' };
+
+  const now = new Date().toISOString();
+  try {
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO referral_attribution
+        (email, ref_code, source, attributed_at, converted, converted_at)
+      VALUES (?, ?, ?, ?, 0, NULL)
+    `).bind(email, ref_code, source, now).run();
+    return { attributed: true };
+  } catch {
+    return { attributed: false, reason: 'db_error' };
+  }
+}
+
 // ── POST /api/affiliate/track ─────────────────────────────────────────────────
 export async function handleTrackReferral(request, env) {
   let body = {};
@@ -240,7 +343,16 @@ export async function handleTrackReferral(request, env) {
   const { ref_code, event_type = 'click', plan_id, amount_inr, referred_email } = body;
   if (!ref_code) return fail(request, 'ref_code required', 400, 'MISSING_REF');
 
-  // Find affiliate by ref_code
+  if (event_type === 'conversion') {
+    const result = await recordReferralConversion(env, { ref_code, plan_id, amount_inr, referred_email });
+    if (!result.tracked) {
+      if (result.reason === 'invalid_ref_code') return fail(request, 'Invalid ref_code', 404, 'INVALID_REF');
+      return fail(request, 'amount_inr required for conversion', 400, 'MISSING_FIELDS');
+    }
+    return ok(request, result);
+  }
+
+  // Find affiliate by ref_code (click/signup tracking)
   let aff = null;
   if (env?.SECURITY_HUB_KV) {
     try {
@@ -250,8 +362,6 @@ export async function handleTrackReferral(request, env) {
     } catch {}
   }
   if (!aff) return fail(request, 'Invalid ref_code', 404, 'INVALID_REF');
-
-  const now = new Date().toISOString();
 
   if (event_type === 'click') {
     aff.stats.total_clicks++;
@@ -263,43 +373,6 @@ export async function handleTrackReferral(request, env) {
     aff.stats.signups++;
     await saveAffiliate(env, aff);
     return ok(request, { tracked: true, type: 'signup' });
-  }
-
-  if (event_type === 'conversion' && amount_inr) {
-    const commission = calculateCommission(parseInt(amount_inr), aff.tier);
-    aff.stats.conversions++;
-    aff.stats.total_referrals++;
-    aff.stats.total_revenue_inr            += parseInt(amount_inr);
-    aff.stats.total_commission_earned_inr  += commission;
-    aff.stats.pending_payout_inr           += commission;
-
-    // Re-evaluate tier
-    const newTier = determineTier(aff.stats);
-    if (newTier !== aff.tier) aff.tier = newTier;
-
-    // Record referral
-    const referral = {
-      id:             'ref_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      affiliate_id:   aff.id,
-      referred_email: referred_email || null,
-      plan_id:        plan_id || null,
-      amount_inr:     parseInt(amount_inr),
-      commission_inr: commission,
-      commission_pct: TIERS[aff.tier]?.commission_pct || 10,
-      status:         'PENDING_PAYOUT',
-      converted_at:   now,
-    };
-
-    if (env?.SECURITY_HUB_KV) {
-      await env.SECURITY_HUB_KV.put(`${KV_REF_PREFIX}${referral.id}`, JSON.stringify(referral), { expirationTtl: 86400 * 365 * 2 });
-      let refIndex = [];
-      try { refIndex = (await env.SECURITY_HUB_KV.get(`${KV_REF_PREFIX}index:${aff.id}`, { type: 'json' })) || []; } catch {}
-      refIndex.unshift({ id: referral.id, amount_inr: referral.amount_inr, commission_inr: commission, converted_at: now, status: 'PENDING_PAYOUT' });
-      await env.SECURITY_HUB_KV.put(`${KV_REF_PREFIX}index:${aff.id}`, JSON.stringify(refIndex.slice(0, 500)), { expirationTtl: 86400 * 365 * 2 });
-    }
-
-    await saveAffiliate(env, aff);
-    return ok(request, { tracked: true, type: 'conversion', commission_inr: commission, new_tier: aff.tier });
   }
 
   return ok(request, { tracked: false, reason: 'Unknown event_type' });
@@ -320,13 +393,20 @@ export async function handleGetLeaderboard(request, env) {
     ref_code:   entry.ref_code ? entry.ref_code.slice(0, 4) + '***' : '***',
   }));
 
+  // Real, incrementally-maintained aggregate (see updateProgramStats) — reports
+  // honest zeros until actual conversions occur, instead of placeholder figures.
+  let stats = { total_conversions: 0, total_commission_inr: 0, top_earner_inr: 0 };
+  if (env?.SECURITY_HUB_KV) {
+    try { stats = (await env.SECURITY_HUB_KV.get(KV_PROGRAM_STATS, { type: 'json' })) || stats; } catch {}
+  }
+
   return ok(request, {
     leaderboard: top,
     total_affiliates: index.length,
     program_stats: {
-      avg_commission_inr: 15000,
-      top_earner_inr:     250000,
-      total_paid_out_inr: 850000,
+      avg_commission_inr:   stats.total_conversions > 0 ? Math.round(stats.total_commission_inr / stats.total_conversions) : 0,
+      top_earner_inr:       stats.top_earner_inr || 0,
+      total_commission_inr: stats.total_commission_inr || 0,
     },
   });
 }
