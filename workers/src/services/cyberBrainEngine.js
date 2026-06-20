@@ -238,7 +238,6 @@ export function correlateThretActors(findings = [], sector = 'technology') {
     nation_state: actor.nation,
     motivation:   actor.motivation,
     threat_level: actor.risk_elevation >= 1.4 ? 'HIGH' : 'MEDIUM',
-    active_campaigns: actor.ttps?.length ?? 1,
     relevant_ttps: actor.ttps,
   }));
 }

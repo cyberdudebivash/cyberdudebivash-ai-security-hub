@@ -549,9 +549,9 @@ async function getPlatformUsagePanel(env) {
 }
 
 // ── Risk trend (30-day score history) ────────────────────────────────────────
+// D1-backed daily snapshots via KV. Days without a real snapshot are marked
+// has_data:false and excluded from the aggregates below — no fabricated curve.
 async function getRiskTrendPanel(env, orgId) {
-  // In production this is D1-backed daily snapshots
-  // Here we build a realistic trend from KV snapshots if available
   const trend = [];
   const today = new Date();
 
@@ -563,22 +563,30 @@ async function getRiskTrendPanel(env, orgId) {
     if (env?.SECURITY_HUB_KV) {
       try {
         const raw = await env.SECURITY_HUB_KV.get(key).catch(() => null);
-        if (raw) score = parseInt(raw, 10);
+        if (raw !== null && raw !== undefined) {
+          const parsed = parseInt(raw, 10);
+          if (!Number.isNaN(parsed)) score = parsed;
+        }
       } catch {}
     }
 
-    // Seeded curve if no real data
-    if (score === null) {
-      score = Math.round(45 + Math.sin((29 - i) / 5) * 15 + Math.random() * 10);
-    }
-
-    trend.push({ date: d.toISOString().slice(0, 10), risk_score: Math.min(100, Math.max(0, score)) });
+    trend.push({
+      date:       d.toISOString().slice(0, 10),
+      risk_score: score === null ? null : Math.min(100, Math.max(0, score)),
+      has_data:   score !== null,
+    });
   }
 
-  const scores = trend.map(t => t.risk_score);
+  const real = trend.filter(t => t.has_data);
+  if (real.length === 0) {
+    return { trend, current_score: null, avg_30d: null, delta_7d: null, direction: 'INSUFFICIENT_DATA' };
+  }
+
+  const scores = real.map(t => t.risk_score);
   const avg    = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-  const latest = scores[scores.length - 1];
-  const prev   = scores[scores.length - 8] || scores[0];
+  const latest = real[real.length - 1].risk_score;
+  const weekAgoIdx = real.length - 8;
+  const prev   = weekAgoIdx >= 0 ? real[weekAgoIdx].risk_score : real[0].risk_score;
   const delta  = latest - prev;
 
   return {
