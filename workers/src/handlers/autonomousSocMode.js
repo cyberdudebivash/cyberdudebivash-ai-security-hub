@@ -123,6 +123,18 @@ async function appendLog(env, entry) {
   } catch {}
 }
 
+// ── AI analysis stage: score + classify a single detected threat ────────────
+// CVSS-derived and deterministic — same threat always yields the same score.
+export function analyzeThreat(t) {
+  return {
+    ...t,
+    ai_score:       Math.min(10, parseFloat(t.cvss || 7)),
+    exploitability: t.cvss >= 9.5 ? 'ACTIVE_EXPLOITATION' : t.cvss >= 8 ? 'LIKELY' : 'POSSIBLE',
+    priority:       t.cvss >= 9 ? 1 : t.cvss >= 7 ? 2 : 3,
+    mitre_ttps:     ['T1190', 'T1059', 'T1055'],
+  };
+}
+
 // ── Core pipeline executor ────────────────────────────────────────────────────
 async function executePipeline(env, triggeredBy = 'auto') {
   const pipeState = defaultPipelineState();
@@ -173,13 +185,7 @@ async function executePipeline(env, triggeredBy = 'auto') {
 
     // Stage 2: AI Analysis
     await updateStage('analysis', 'running', 'Running AI severity + exploitability scoring…', 0);
-    const analyzedThreats = threats.map(t => ({
-      ...t,
-      ai_score:       Math.min(10, parseFloat(t.cvss || 7) + (Math.random() * 0.5 - 0.25)),
-      exploitability: t.cvss >= 9.5 ? 'ACTIVE_EXPLOITATION' : t.cvss >= 8 ? 'LIKELY' : 'POSSIBLE',
-      priority:       t.cvss >= 9 ? 1 : t.cvss >= 7 ? 2 : 3,
-      mitre_ttps:     ['T1190', 'T1059', 'T1055'].slice(0, Math.ceil(Math.random() * 3)),
-    }));
+    const analyzedThreats = threats.map(analyzeThreat);
     const criticalCount = analyzedThreats.filter(t => t.exploitability === 'ACTIVE_EXPLOITATION').length;
     await updateStage('analysis', 'done', `${criticalCount} actively exploited; ${analyzedThreats.length} scored`, analyzedThreats.length);
 

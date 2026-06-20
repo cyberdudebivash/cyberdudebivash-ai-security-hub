@@ -127,13 +127,15 @@ export const THREAT_ACTORS = {
 // ── EPSS-equivalent scoring model ────────────────────────────────────────────
 // Based on CVSS base score + exploitation context (deterministic, no API needed)
 export function computeEPSS(cvss, finding, threatScore = 0) {
-  // Base EPSS from CVSS (empirically derived approximation)
-  let epss = 0;
-  if (cvss >= 9.0)      epss = 0.48 + Math.random() * 0.15;
-  else if (cvss >= 7.0) epss = 0.18 + Math.random() * 0.18;
-  else if (cvss >= 5.0) epss = 0.06 + Math.random() * 0.10;
-  else if (cvss >= 3.0) epss = 0.01 + Math.random() * 0.05;
-  else                  epss = 0.002 + Math.random() * 0.008;
+  // Base EPSS from CVSS (empirically derived approximation).
+  // Scales linearly within each CVSS band so identical input is reproducible.
+  const v = Math.max(0, Math.min(10, parseFloat(cvss) || 0));
+  let epss;
+  if (v >= 9.0)      epss = 0.48  + ((v - 9.0) / 1.0) * 0.15;
+  else if (v >= 7.0) epss = 0.18  + ((v - 7.0) / 2.0) * 0.18;
+  else if (v >= 5.0) epss = 0.06  + ((v - 5.0) / 2.0) * 0.10;
+  else if (v >= 3.0) epss = 0.01  + ((v - 3.0) / 2.0) * 0.05;
+  else               epss = 0.002 + (v / 3.0) * 0.008;
 
   // Adjust for finding context
   const findingId = finding?.id || '';
