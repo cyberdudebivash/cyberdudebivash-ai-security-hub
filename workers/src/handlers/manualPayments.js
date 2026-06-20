@@ -278,24 +278,6 @@ async function verifyManualPaymentCore(env, payment_id, action, admin_note) {
   return { record };
 }
 
-export async function handleVerifyPayment(request, env) {
-  try {
-    const body = await request.json();
-    const { payment_id, action, admin_note } = body; // action: 'approve' | 'reject'
-
-    if (!payment_id || !['approve', 'reject'].includes(action)) {
-      return jsonErr('Provide payment_id and action (approve|reject)', 400);
-    }
-
-    const result = await verifyManualPaymentCore(env, payment_id, action, admin_note);
-    if (result.error) return jsonErr(result.error, result.status);
-
-    return jsonOk({ payment_id, status: result.record.status, message: `Payment ${result.record.status}.` });
-  } catch (e) {
-    return jsonErr('Failed to verify payment: ' + e.message, 500);
-  }
-}
-
 // ── Admin Payments Dashboard (admin-payments.html) ─────────────────────────
 // This UI was built against a flat `{ payments: [...] }` / `{ total, pending, ... }`
 // contract (record_id/user/txnId/method/product field names, 'approved' not
