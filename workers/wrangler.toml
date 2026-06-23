@@ -81,14 +81,9 @@ dead_letter_queue  = "scan-jobs-dlq"
 #                                 FREE       → claude-haiku-4-5-20251001
 #
 # ── PAYMENTS (REQUIRED for revenue) ──────────────────────────────────────────
-#   STRIPE_SECRET_KEY         — Stripe API key (sk_live_... or sk_test_...)
-#                               Get: https://dashboard.stripe.com → Developers → API Keys
-#                               Run: npx wrangler secret put STRIPE_SECRET_KEY
-#   STRIPE_WEBHOOK_SECRET     — Stripe webhook signing secret (whsec_...)
-#                               Webhook URL: https://cyberdudebivash.in/api/webhooks/stripe
-#                               Events: checkout.session.completed, payment_intent.succeeded,
-#                                       customer.subscription.created, customer.subscription.deleted
-#                               Run: npx wrangler secret put STRIPE_WEBHOOK_SECRET
+# Payment method mandate: UPI / Razorpay only across the SENTINEL APEX
+# ecosystem. Stripe is NOT an authorized processor (see api/billing.py in
+# the Threat Intel Platform repo) — do not reintroduce Stripe secrets here.
 #   RAZORPAY_KEY_ID           — Razorpay API key ID (rzp_live_... or rzp_test_...)
 #                               Run: npx wrangler secret put RAZORPAY_KEY_ID
 #   RAZORPAY_KEY_SECRET       — Razorpay API key secret
