@@ -1,7 +1,7 @@
 /**
  * CYBERDUDEBIVASH AI Security Hub — Subscription Paywall Engine v30.0
  * P1 REMEDIATION: Product-Led Growth (PLG) conversion paywall, 5-tier system,
- * multi-currency checkout (Razorpay + Stripe), and gateway-layer request ceilings.
+ * Razorpay checkout, and gateway-layer request ceilings.
  *
  * Tiers (per spec):
  *   COMMUNITY     —  100 req/day    (FREE, IP-based, 2 findings preview)
@@ -15,9 +15,11 @@
  *   gatewayRequestCeiling()     — called before every API handler
  *   applyFreemiumPaywall()      — truncates scan results + injects upgrade CTA
  *   handleSubscriptionCheckout()— POST /api/subscription/checkout
- *   handleWebhookStripe()       — POST /api/webhooks/stripe
- *   handleWebhookRazorpay()     — POST /api/webhooks/razorpay (extended)
  *   handleGetMyPlan()           — GET  /api/subscription/plan
+ *
+ * Payment processor: Razorpay only (UPI/India). Stripe is not an authorized
+ * processor anywhere in the SENTINEL APEX ecosystem — see api/billing.py
+ * PAYMENT METHOD MANDATE (Threat Intel Platform repo).
  */
 
 // ─── Tier Definitions (single source of truth, imported by auth middleware) ───
@@ -240,8 +242,8 @@ export function applyFreemiumPaywall(scanResult, tier, target) {
 
 // ─── Checkout Handler (POST /api/subscription/checkout) ─────────────────────
 /**
- * Abstracts Razorpay (INR, India) and Stripe (USD, global).
- * Processor selection: currency param, or geo from CF-IPCountry header.
+ * Razorpay checkout (INR). Stripe is not an authorized processor — see
+ * api/billing.py PAYMENT METHOD MANDATE (Threat Intel Platform repo).
  */
 export async function handleSubscriptionCheckout(request, env, authCtx = {}) {
   const cors = {
@@ -256,7 +258,7 @@ export async function handleSubscriptionCheckout(request, env, authCtx = {}) {
   try { body = await request.json(); }
   catch { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: cors }); }
 
-  const { plan, currency = 'auto', email, coupon } = body;
+  const { plan, email, coupon } = body;
   const tierKey = normalizeTier(plan);
   const def     = getTierDef(tierKey);
 
@@ -264,33 +266,18 @@ export async function handleSubscriptionCheckout(request, env, authCtx = {}) {
     return new Response(JSON.stringify({ error: 'Invalid plan or plan is free' }), { status: 400, headers: cors });
   }
 
-  // Determine processor
-  const country    = request.headers.get('CF-IPCountry') || '';
-  const useRazorpay = currency === 'INR' || (currency === 'auto' && country === 'IN');
-
   try {
-    if (useRazorpay) {
-      const order = await createRazorpaySubscription(env, tierKey, def, email);
-      return new Response(JSON.stringify({
-        processor:  'razorpay',
-        order_id:   order.id,
-        amount:     order.amount,
-        currency:   'INR',
-        key_id:     env.RAZORPAY_KEY_ID,
-        plan:       tierKey,
-        name:       `CYBERDUDEBIVASH ${def.label} Plan`,
-        prefill:    { email: email || '' },
-      }), { status: 200, headers: cors });
-    }
-
-    const session = await createStripeCheckoutSession(env, tierKey, def, email);
+    const order = await createRazorpaySubscription(env, tierKey, def, email);
     return new Response(JSON.stringify({
-      processor:  'stripe',
-      checkout_url: session.url,
-      session_id:   session.id,
-      plan:         tierKey,
+      processor:  'razorpay',
+      order_id:   order.id,
+      amount:     order.amount,
+      currency:   'INR',
+      key_id:     env.RAZORPAY_KEY_ID,
+      plan:       tierKey,
+      name:       `CYBERDUDEBIVASH ${def.label} Plan`,
+      prefill:    { email: email || '' },
     }), { status: 200, headers: cors });
-
   } catch (err) {
     console.error('[Checkout] error:', err.message);
     return new Response(JSON.stringify({ error: 'Payment processor unavailable', detail: err.message }),
@@ -326,163 +313,6 @@ async function createRazorpaySubscription(env, tierKey, def, email) {
     throw new Error(`Razorpay order failed: ${err?.error?.description || res.status}`);
   }
   return res.json();
-}
-
-// ─── Stripe Checkout Session ─────────────────────────────────────────────────
-async function createStripeCheckoutSession(env, tierKey, def, email) {
-  const sk = env.STRIPE_SECRET_KEY;
-  if (!sk) throw new Error('Stripe secret key not configured');
-
-  const params = new URLSearchParams({
-    'payment_method_types[]':            'card',
-    'mode':                              'subscription',
-    'success_url':                       `https://cyberdudebivash.in/dashboard?plan=${tierKey}&session_id={CHECKOUT_SESSION_ID}`,
-    'cancel_url':                        'https://cyberdudebivash.in/#pricing',
-    'customer_email':                    email || '',
-    'subscription_data[metadata][plan]': tierKey,
-    'line_items[0][price_data][currency]':              'usd',
-    'line_items[0][price_data][product_data][name]':    `CYBERDUDEBIVASH ${def.label} Plan`,
-    'line_items[0][price_data][unit_amount]':           String(def.price_usd * 100),
-    'line_items[0][price_data][recurring][interval]':   'month',
-    'line_items[0][quantity]':                          '1',
-  });
-
-  const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method:  'POST',
-    headers: {
-      'Authorization': `Bearer ${sk}`,
-      'Content-Type':  'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Stripe session failed: ${err?.error?.message || res.status}`);
-  }
-  return res.json();
-}
-
-// ─── Stripe Webhook (asymmetric signature verification) ──────────────────────
-export async function handleWebhookStripe(request, env) {
-  const cors = { 'Content-Type': 'application/json' };
-  const sig  = request.headers.get('Stripe-Signature');
-  const body = await request.text();
-  const wsec = env.STRIPE_WEBHOOK_SECRET;
-
-  if (!wsec || !sig) {
-    return new Response(JSON.stringify({ error: 'Missing webhook secret or signature' }),
-      { status: 400, headers: cors });
-  }
-
-  // Stripe uses HMAC-SHA256 for webhook signatures
-  const valid = await verifyStripeSignature(body, sig, wsec);
-  if (!valid) {
-    console.warn('[StripeWebhook] Signature verification FAILED — request rejected');
-    return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 403, headers: cors });
-  }
-
-  const event = JSON.parse(body);
-
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      const plan    = session.subscription_data?.metadata?.plan ||
-                      session.metadata?.plan || 'PROFESSIONAL';
-      const email   = session.customer_email || session.customer_details?.email;
-      await activateSubscription(env, { email, plan, processor: 'stripe',
-        external_id: session.id, amount_usd: session.amount_total / 100 });
-      break;
-    }
-    case 'customer.subscription.deleted': {
-      const sub   = event.data.object;
-      const email = sub.customer_email;
-      if (email) await deactivateSubscription(env, email, 'stripe_cancellation');
-      break;
-    }
-  }
-
-  return new Response(JSON.stringify({ received: true }), { status: 200, headers: cors });
-}
-
-async function verifyStripeSignature(body, sigHeader, secret) {
-  try {
-    const parts     = sigHeader.split(',');
-    const tPart     = parts.find(p => p.startsWith('t='));
-    const v1Part    = parts.find(p => p.startsWith('v1='));
-    if (!tPart || !v1Part) return false;
-
-    const ts        = tPart.split('=')[1];
-    const sig       = v1Part.split('=')[1];
-    const payload   = `${ts}.${body}`;
-
-    const key       = await crypto.subtle.importKey(
-      'raw', new TextEncoder().encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-    );
-    const computed  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-    const hex       = Array.from(new Uint8Array(computed)).map(b => b.toString(16).padStart(2,'0')).join('');
-    return hex === sig;
-  } catch { return false; }
-}
-
-// ─── Subscription activation / deactivation (D1 writes) ─────────────────────
-async function activateSubscription(env, { email, plan, processor, external_id, amount_usd, amount_inr }) {
-  const db = env.SECURITY_HUB_DB || env.DB;
-  if (!db || !email) return;
-  const tier       = normalizeTier(plan);
-  const confirmedInr = amount_inr || Math.round((amount_usd || 0) * 83);
-  const apiKey     = `cdb_${tier.toLowerCase().slice(0,4)}_${crypto.randomUUID().replace(/-/g,'').slice(0,20)}`;
-  const now        = new Date().toISOString();
-
-  try {
-    await db.batch([
-      db.prepare(
-        `INSERT OR REPLACE INTO subscriptions
-           (email, plan, status, processor, external_id, price_inr, activated_at, expires_at)
-         VALUES (?,?,?,?,?,?,?, datetime('now','+31 days'))`
-      ).bind(email, tier, 'active', processor, external_id || null, confirmedInr, now),
-
-      db.prepare(
-        `INSERT OR REPLACE INTO api_keys
-           (key_id, email, tier, active, created_at)
-         VALUES (?,?,?,1,?)`
-      ).bind(apiKey, email, tier, now),
-    ]);
-
-    // Push API key to KV for fast auth resolution
-    const kv = env.SECURITY_HUB_KV;
-    if (kv) {
-      await kv.put(`apikey:${apiKey}`,
-        JSON.stringify({ tier, owner_email: email, created_at: now, active: true, label: tier }),
-        { expirationTtl: 86400 * 32 });
-    }
-
-    // Trigger post-purchase lifecycle: revenue attribution + onboarding email (fire-and-forget)
-    const { triggerPostPurchase } = await import('../services/lifecycleEngine.js');
-    triggerPostPurchase(env, {
-      email,
-      product:      `SUBSCRIPTION_${tier}`,
-      product_name: `${tier} Plan`,
-      amount_inr:   confirmedInr,
-      event_type:   'subscription_activated',
-      plan:         tier,
-      source:       processor || 'direct',
-      payment_id:   external_id || '',
-    }).catch(() => {});
-  } catch (err) {
-    console.error('[Subscription] activateSubscription error:', err.message);
-  }
-}
-
-async function deactivateSubscription(env, email, reason) {
-  const db = env.SECURITY_HUB_DB || env.DB;
-  if (!db || !email) return;
-  try {
-    await db.prepare(
-      `UPDATE subscriptions SET status=?, cancelled_at=datetime('now') WHERE email=? AND status='active'`
-    ).bind(`cancelled_${reason}`, email).run();
-  } catch {}
 }
 
 // ─── GET /api/subscription/plan ──────────────────────────────────────────────

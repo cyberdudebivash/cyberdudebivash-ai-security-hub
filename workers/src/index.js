@@ -126,7 +126,7 @@ import { enforceGovernanceBatch, validateIngestPayload, logP0Violation } from '.
 import { issueScanToken, verifyScanToken, scanTokenError } from './lib/scanTokenEngine.js';
 import {
   gatewayRequestCeiling, applyFreemiumPaywall, handleSubscriptionCheckout,
-  handleWebhookStripe, handleGetMyPlan, normalizeTier,
+  handleGetMyPlan, normalizeTier,
 } from './handlers/subscriptionPaywallEngine.js';
 
 // ── v29 NEW SCANNER IMPORTS ───────────────────────────────────────────────────
@@ -248,9 +248,6 @@ import { processQueueBatch }   from './lib/queue.js';
 import { handleRealtimeFeed, handleRealtimePosture, handleRealtimeStats } from './handlers/realtime.js';
 import { handleGumroadWebhook, handleLicenseActivation, handleProductCatalog } from './services/gumroadEngine.js';
 import { handleSiemInfo, handleSiemExport, handleSiemStream } from './handlers/siemExport.js';
-
-// ─── Stripe Webhook Handler (v21.0 — global payment automation) ──────────────
-import { handleStripeWebhook } from './handlers/stripeWebhook.js';
 
 // ─── P0 Mission: Agentic AI + Anomaly + Predictive Engines (v12.0) ────────────
 import { handleAgentRequest }      from './handlers/agentHandler.js';
@@ -1220,12 +1217,11 @@ export default {
             "SELECT COUNT(*) as c FROM payments WHERE status='completed' LIMIT 1"
           ).first().catch(() => null);
           // Revenue engine is OK if the table exists and razorpay key is set
-          checks.revenue = row !== null && !!(env.RAZORPAY_KEY_ID || env.STRIPE_SECRET_KEY);
+          checks.revenue = row !== null && !!(env.RAZORPAY_KEY_ID);
           details.revenue = {
             ok: checks.revenue,
             payments_table: row !== null,
             razorpay: !!(env.RAZORPAY_KEY_ID),
-            stripe: !!(env.STRIPE_SECRET_KEY),
             completed_payments: row?.c ?? 0,
           };
         } catch {
@@ -1678,16 +1674,6 @@ export default {
     // ── Razorpay webhook (V7 replaces monetization middleware stub) ──────────
     if (path === '/api/webhooks/razorpay' && method === 'POST') {
       return withSecurityHeaders(await handleRazorpayWebhook(request, env));
-    }
-
-    // ── Stripe webhook (V21.0 — global payments, HMAC-SHA256 verified) ───────
-    // REQUIRED secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
-    // Configure in Stripe Dashboard → Developers → Webhooks → Add endpoint:
-    //   URL: https://cyberdudebivash.in/api/webhooks/stripe
-    //   Events: checkout.session.completed, payment_intent.succeeded,
-    //           customer.subscription.created, customer.subscription.deleted
-    if (path === '/api/webhooks/stripe' && method === 'POST') {
-      return withSecurityHeaders(withCors(await handleStripeWebhook(request, env), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

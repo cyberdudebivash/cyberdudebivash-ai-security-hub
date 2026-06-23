@@ -308,7 +308,6 @@ async function checkRevenue(env) {
     result.checks.orders_last_7d = recent?.cnt || 0;
 
     result.checks.razorpay_configured = !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
-    result.checks.stripe_configured   = !!(env.STRIPE_SECRET_KEY);
 
     if (!result.checks.razorpay_configured) {
       result.status = 'DEGRADED';
