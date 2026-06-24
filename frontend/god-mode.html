@@ -532,16 +532,15 @@ function getAdminKey() {
 }
 
 // Build request headers: prefer user JWT (ENTERPRISE), fall back to admin key
-function buildTriggerHeaders(adminKey) {
+function buildTriggerHeaders(key) {
   const tier  = getUserTier();
   const token = getUserToken();
-  const h     = { 'Content-Type': 'application/json' };
   if (token && (tier === 'ENTERPRISE' || tier === 'MSSP')) {
-    h['Authorization'] = 'Bearer ' + token;
-  } else if (adminKey) {
-    h['x-api-key'] = adminKey;
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
   }
-  return h;
+  return key
+    ? { 'Content-Type': 'application/json', 'x-api-key': key }
+    : { 'Content-Type': 'application/json' };
 }
 
 async function triggerRun() {
