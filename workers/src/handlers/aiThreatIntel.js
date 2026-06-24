@@ -7,6 +7,7 @@
  * GET  /api/ai-security/threat-feed/agent-threats  -> agent-specific threats
  * GET  /api/ai-security/threat-feed/ai-vulns       -> AI model vulnerabilities
  * GET  /api/ai-security/threat-feed/radar-status   -> AI Threat Radar health/coverage
+ * POST /api/ai-security/threat-feed/radar-scan-now -> force an immediate radar scan (admin only)
  * POST /api/ai-security/threat-feed/submit         -> submit community threat (admin verified)
  *
  * PILLAR 4: AI AGENT SECURITY
@@ -15,7 +16,7 @@
  * POST /api/ai-security/agents/register           -> register agent in inventory
  */
 
-import { RADAR_STATUS_KV_KEY, AI_RADAR_PACKAGES } from '../services/aiThreatRadar.js';
+import { RADAR_STATUS_KV_KEY, AI_RADAR_PACKAGES, runAIThreatRadar } from '../services/aiThreatRadar.js';
 
 const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization' };
 const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}});
@@ -335,6 +336,18 @@ export async function handleAIThreatRadarStatus(request, env) {
     source_breakdown: status?.source_breakdown || null,
     last_scan_errors: status?.errors || [],
   });
+}
+
+// POST /api/ai-security/threat-feed/radar-scan-now — admin-only forced scan ──
+// The radar otherwise only runs on the hourly cron, so a fresh deploy (or an
+// operator who needs proof-of-freshness right now rather than waiting up to
+// 60 minutes) has no way to force an immediate pass. Runs the exact same
+// runAIThreatRadar() the cron calls — same sources, same upsert path, same KV
+// status snapshot — just invoked synchronously over HTTP instead of waitUntil.
+export async function handleAIThreatRadarScanNow(request, env, authCtx) {
+  if (!authCtx?.isAdmin) return err('Admin access required', 403);
+  const result = await runAIThreatRadar(env);
+  return json({ success: true, triggered_at: new Date().toISOString(), ...result });
 }
 
 // POST /api/ai-security/agents/scan ───────────────────────────────────────────
