@@ -26,7 +26,7 @@
  *   • Session compaction — summarises sessions > 15 messages to save tokens
  *   • Tool telemetry     — logs tool calls to KV for analytics
  *
- * Full Platform Coverage (49 tools):
+ * Full Platform Coverage (52 tools):
  *   Threat Intel & CVE      — feed, reports, radar, KEV, CVE lookup, threat scoring
  *   Vulnerability Mgmt      — list, stats, KEV feed, CVE detail
  *   Threat Hunting          — templates, IOC lookup, MITRE matrix, active hunts
