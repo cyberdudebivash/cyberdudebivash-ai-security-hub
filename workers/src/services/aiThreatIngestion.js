@@ -70,6 +70,50 @@ export function mapToOwaspLLM(haystack) {
   return null;
 }
 
+// ─── MITRE ATLAS — AI/ML-specific extension of ATT&CK (https://atlas.mitre.org) ─
+// Only the techniques we have high confidence are stable, published ATLAS IDs are
+// included. Heuristic keyword mapping — only applied when confident, left null
+// otherwise, same convention as OWASP_LLM_MAP. Should be re-verified against the
+// live ATLAS matrix periodically since MITRE revises technique numbering.
+const MITRE_ATLAS_MAP = [
+  { ref: 'AML.T0051', terms: ['prompt injection', 'indirect injection', 'indirect prompt injection'] },
+  { ref: 'AML.T0054', terms: ['jailbreak'] },
+  { ref: 'AML.T0057', terms: ['system prompt leak', 'system prompt disclosure', 'sensitive information disclosure', 'data leak', 'pii exposure'] },
+  { ref: 'AML.T0018', terms: ['rlhf backdoor', 'trojan model', 'backdoor', 'model poisoning'] },
+  { ref: 'AML.T0020', terms: ['training data poisoning', 'data poisoning'] },
+  { ref: 'AML.T0010', terms: ['supply chain', 'malicious model', 'third-party model'] },
+  { ref: 'AML.T0029', terms: ['denial of service', 'resource exhaustion', 'unbounded consumption'] },
+  { ref: 'AML.T0024', terms: ['model extraction', 'model theft', 'inference api'] },
+  { ref: 'AML.T0043', terms: ['adversarial example'] },
+];
+
+export function mapToMitreAtlas(haystack) {
+  for (const { ref, terms } of MITRE_ATLAS_MAP) {
+    if (terms.some(t => haystack.includes(t))) return ref;
+  }
+  return null;
+}
+
+// ─── MITRE ATT&CK Enterprise — general (non-AI-specific) tactics/techniques ───
+// (https://attack.mitre.org). Deliberately a small, conservative list: most
+// entries here are AI/LLM-specific and already covered by MITRE ATLAS above;
+// this only fires for the subset of entries that also describe general
+// infrastructure-level attack behavior alongside the AI angle.
+const MITRE_ATTACK_MAP = [
+  { ref: 'T1071', terms: ['command and control', 'botnet'] },
+  { ref: 'T1059', terms: ['arbitrary code execution', 'remote code execution', 'code execution'] },
+  { ref: 'T1190', terms: ['ssrf', 'server-side request forgery'] },
+  { ref: 'T1499', terms: ['denial of service'] },
+  { ref: 'T1078', terms: ['account takeover', 'unauthorized access'] },
+];
+
+export function mapToMitreAttack(haystack) {
+  for (const { ref, terms } of MITRE_ATTACK_MAP) {
+    if (terms.some(t => haystack.includes(t))) return ref;
+  }
+  return null;
+}
+
 // ─── feed_type classification — matches the enum documented in schema_master.sql
 // (vulnerability | attack_pattern | malware | prompt_attack | agent_threat | advisory)
 // and the public `type` query param exposed by handlers/aiThreatIntel.js, so rows
@@ -115,6 +159,10 @@ async function ensureAIThreatFeedTable(db) {
       )
     `).run();
   } catch { /* already exists */ }
+  // Additive columns for tables created before MITRE ATT&CK/ATLAS mapping shipped.
+  for (const col of ['attack_ref TEXT', 'atlas_ref TEXT']) {
+    try { await db.prepare(`ALTER TABLE ai_threat_feed ADD COLUMN ${col}`).run(); } catch { /* already exists */ }
+  }
 }
 
 // ─── Filter already-fetched CTI entries for AI relevance, upsert matches ─────
@@ -136,6 +184,8 @@ export async function runAIThreatIngestion(env, candidateEntries = []) {
     if (!check.matched || !entry.id) continue;
 
     const owaspRef = mapToOwaspLLM(check.haystack);
+    const attackRef = mapToMitreAttack(check.haystack);
+    const atlasRef = mapToMitreAtlas(check.haystack);
     const isCve = /^CVE-\d{4}-\d{4,}$/.test(entry.id);
 
     matches.push({
@@ -149,6 +199,8 @@ export async function runAIThreatIngestion(env, candidateEntries = []) {
       iocs: typeof entry.iocs === 'string' ? entry.iocs : JSON.stringify(entry.iocs || []),
       mitigations: entry.required_action ? JSON.stringify([entry.required_action]) : '[]',
       owasp_ref: owaspRef,
+      attack_ref: attackRef,
+      atlas_ref: atlasRef,
       source_url: entry.source_url || null,
       published_at: toUnixEpoch(entry.published_at),
       metadata: JSON.stringify({ ingested_from: 'cti_pipeline_filter', source: entry.source || null, matched_keywords: check.matchedKeywords }),
@@ -161,17 +213,20 @@ export async function runAIThreatIngestion(env, candidateEntries = []) {
   const upsertSql = `
     INSERT INTO ai_threat_feed
       (id, feed_type, title, description, severity, cve_id, affected_frameworks,
-       iocs, mitigations, owasp_ref, source_url, published_at, metadata)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       iocs, mitigations, owasp_ref, attack_ref, atlas_ref, source_url, published_at, metadata)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       severity    = CASE WHEN excluded.severity = 'CRITICAL' THEN 'CRITICAL' ELSE ai_threat_feed.severity END,
       owasp_ref   = COALESCE(excluded.owasp_ref, ai_threat_feed.owasp_ref),
+      attack_ref  = COALESCE(excluded.attack_ref, ai_threat_feed.attack_ref),
+      atlas_ref   = COALESCE(excluded.atlas_ref, ai_threat_feed.atlas_ref),
       source_url  = COALESCE(excluded.source_url, ai_threat_feed.source_url),
       metadata    = excluded.metadata
   `;
   const bindArgs = (m) => [
     m.id, m.feed_type, m.title, m.description, m.severity, m.cve_id,
-    m.affected_frameworks, m.iocs, m.mitigations, m.owasp_ref, m.source_url, m.published_at, m.metadata,
+    m.affected_frameworks, m.iocs, m.mitigations, m.owasp_ref, m.attack_ref, m.atlas_ref,
+    m.source_url, m.published_at, m.metadata,
   ];
 
   const BATCH = 25;

@@ -39,7 +39,8 @@ const LIVE_VULN_ROW = {
   id: 'ai_CVE-2024-5184', feed_type: 'vulnerability', title: 'Embedchain RAG Framework SSRF',
   description: 'SSRF via RAG pipeline.', severity: 'CRITICAL', cve_id: 'CVE-2024-5184',
   affected_models: '[]', affected_frameworks: '["embedchain"]', mitigations: '[]',
-  owasp_ref: null, source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-5184', published_at: 1700000001,
+  owasp_ref: null, attack_ref: 'T1190', atlas_ref: 'AML.T0051',
+  source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-5184', published_at: 1700000001,
 };
 
 const LIVE_ADVISORY_ROW = {
@@ -71,6 +72,8 @@ describe('handleAIThreatFeed type normalization', () => {
     const live = body.ai_vulnerabilities.find(t => t.id === 'ai_CVE-2024-5184');
     expect(live).toBeDefined();
     expect(live.cve_id).toBe('CVE-2024-5184');
+    expect(live.attack_ref).toBe('T1190');
+    expect(live.atlas_ref).toBe('AML.T0051');
     expect(body.agent_threats).toHaveLength(0);
   });
 

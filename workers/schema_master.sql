@@ -397,6 +397,8 @@ CREATE TABLE IF NOT EXISTS ai_threat_feed (
   iocs            TEXT DEFAULT '[]',
   mitigations     TEXT DEFAULT '[]',
   owasp_ref       TEXT,
+  attack_ref      TEXT,  -- MITRE ATT&CK Enterprise technique ID (e.g. T1190)
+  atlas_ref       TEXT,  -- MITRE ATLAS technique ID (e.g. AML.T0051)
   source_url      TEXT,
   published_at    INTEGER NOT NULL DEFAULT (unixepoch()),
   created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
