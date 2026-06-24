@@ -1,5 +1,5 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — APEX AI Security Copilot v3.0 (God Mode)
+ * CYBERDUDEBIVASH AI Security Hub — APEX AI Security Copilot v4.0 (God Mode — Full Platform)
  *
  * Provider mesh: Groq → DeepSeek → OpenRouter → Cloudflare Workers AI
  * Anthropic is NOT used — platform operates 100% on open-weight models.
@@ -11,11 +11,13 @@
  *   Governance / compliance  → Groq llama-3.3-70b-versatile (structured prose)
  *   Executive summaries      → Groq llama-3.3-70b-versatile (eloquent, fast)
  *   Complex multi-step       → DeepSeek deepseek-reasoner (extended CoT)
+ *   CTI / actor intelligence → DeepSeek V3 → Groq 70B
+ *   AI/ML Security (ASPM)    → DeepSeek V3 → OpenRouter Mistral
  *   Fallback                 → OpenRouter meta-llama/llama-3.3-70b-instruct
  *   Last resort              → Cloudflare Workers AI text mode
  *
  * Architecture:
- *   • Query classifier   — detects task_type + complexity from user message
+ *   • Query classifier   — detects 9 task types + complexity from user message
  *   • Routing matrix     — maps task × complexity → ordered provider + model list
  *   • Reasoning pre-pass — runs R1/reasoner before tool loop for complex queries
  *   • Agentic tool loop  — OpenAI-compat function calling (up to 5 rounds)
@@ -23,6 +25,21 @@
  *   • Session management — KV-backed 24h sessions, 20-msg sliding window
  *   • Session compaction — summarises sessions > 15 messages to save tokens
  *   • Tool telemetry     — logs tool calls to KV for analytics
+ *
+ * Full Platform Coverage (49 tools):
+ *   Threat Intel & CVE      — feed, reports, radar, KEV, CVE lookup, threat scoring
+ *   Vulnerability Mgmt      — list, stats, KEV feed, CVE detail
+ *   Threat Hunting          — templates, IOC lookup, MITRE matrix, active hunts
+ *   CTI Workbench           — actor profiles, IOC search, enrichment, watchlists
+ *   Autonomous SOC          — pipeline, cases, investigation timeline, escalation
+ *   SIEM Operations         — integrations, rule deploy, export, integration test
+ *   AI/ML Security (ASPM)   — ASPM dashboard, asset scan, OWASP LLM, SPM report
+ *   Red Team                — MITRE ATLAS simulation (standard + advanced God Mode)
+ *   AI Governance           — EU AI Act, NIST AI RMF, ISO 42001, OWASP LLM
+ *   CISO/Executive          — CISO dashboard, CISO report, risk brief, board report
+ *   Identity & Compliance   — Zero Trust scan, trust metrics
+ *   Platform Ops            — health, deep health, metrics, audit log, anomalies
+ *   MSSP Operations         — client list, partner metrics (MSSP tier)
  *
  * Endpoints:
  *   POST   /api/copilot/chat          — multi-turn conversational AI
@@ -203,6 +220,40 @@ const ROUTING_MATRIX = {
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
     ],
   },
+
+  // CTI / threat actor intelligence — DeepSeek excels at APT profiling
+  cti: {
+    complex:  [
+      { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.OPENROUTER, m: MODELS.OR_DEEPSEEK_V3, tools: true  },
+    ],
+    standard: [
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
+    ],
+    simple: [
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+    ],
+  },
+
+  // AI/ML Security (ASPM) — structured precision required
+  aspm: {
+    complex:  [
+      { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.OPENROUTER, m: MODELS.OR_MISTRAL,     tools: true  },
+    ],
+    standard: [
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
+    ],
+    simple: [
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+    ],
+  },
 };
 
 // ─── Query intelligence ────────────────────────────────────────────────────────
@@ -214,6 +265,8 @@ const TASK_KEYWORDS = {
   soc_siem:     /soc|siem|splunk|elastic|kibana|sentinel|aws security|detection rule|sigma|kql|yara|alert|incident|pipeline|deploy rule/i,
   red_team:     /red team|penetrat|attack|exploit|simulation|mitre atlas|prompt inject|adversar|payload|bypass|jailbreak/i,
   executive:    /executive|ciso|ceo|board|report|summary|briefing|posture|risk score|roi|business impact|financial/i,
+  cti:          /threat actor|apt group|watchlist|ioc.*search|stix|taxii|intel workbench|actor profile|threat hunt|hunt template|threat graph/i,
+  aspm:         /ai asset|aspm|ai.*spm|model security.*posture|ai supply chain|owasp llm|llm security|model inventory/i,
 };
 
 function classifyQuery(message) {
@@ -449,6 +502,372 @@ const TOOL_REGISTRY = [
     },
     tiers: null, readOnly: true,
   },
+
+  // ── Vulnerability Management ───────────────────────────────────────────────────
+  {
+    name: 'get_vuln_intelligence',
+    description: 'Vulnerability intelligence dashboard — total vuln count by severity/stage, CVSS/EPSS score distribution, KEV (CISA Known Exploited Vulnerabilities) summary, remediation SLA compliance, and trend over the last 30 days.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: null, readOnly: true,
+  },
+  {
+    name: 'list_vulnerabilities',
+    description: 'List active vulnerabilities with filters — by severity (CRITICAL/HIGH/MEDIUM/LOW), stage (open/in_progress/resolved), KEV status, or keyword search. Returns CVSS scores, affected packages, and remediation timeline.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        severity: { type: 'string', enum: ['CRITICAL','HIGH','MEDIUM','LOW'], description: 'Severity filter' },
+        stage:    { type: 'string', enum: ['open','in_progress','resolved','accepted'], description: 'Lifecycle stage' },
+        kev:      { type: 'boolean', description: 'Filter to CISA KEV entries only' },
+        search:   { type: 'string', description: 'Keyword search (CVE ID, package, description)' },
+        limit:    { type: 'number', description: 'Results (1-50, default 20)' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'lookup_cve_detail',
+    description: 'Deep CVE lookup via NVD API — real-time CVSS v3.1 base score, vector string, severity, affected CPEs, CWE category, EPSS exploitation probability, KEV status, and vendor advisories.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        cve_id: { type: 'string', description: 'CVE ID in format CVE-YYYY-NNNNN (e.g. CVE-2024-12345)' },
+      },
+      required: ['cve_id'],
+    },
+    tiers: null, readOnly: true,
+  },
+  {
+    name: 'get_kev_feed',
+    description: 'CISA Known Exploited Vulnerabilities (KEV) feed — all actively exploited CVEs with required remediation dates, affected vendors, and CVSS scores. Sorted by severity/date. Essential for patch prioritization.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: null, readOnly: true,
+  },
+
+  // ── Threat Hunting ────────────────────────────────────────────────────────────
+  {
+    name: 'get_hunt_templates',
+    description: 'Library of MITRE ATT&CK-aligned threat hunt templates — KQL, Sigma, and YARA queries for lateral movement, privilege escalation, credential dumping, persistence, and AI-specific attacks. Ready to deploy.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: null, readOnly: true,
+  },
+  {
+    name: 'run_threat_hunt',
+    description: 'Execute a live threat hunt query against the platform telemetry. Supports KQL, Sigma, and YARA. Returns matches, matched hosts, severity, and recommended follow-up actions mapped to MITRE ATT&CK.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query:  { type: 'string', description: 'Hunt query (KQL expression, Sigma rule, or YARA pattern)' },
+        lang:   { type: 'string', enum: ['kql','sigma','yara'], description: 'Query language (default kql)' },
+        target: { type: 'string', description: 'Target scope (domain, IP range, or system name)' },
+        scope:  { type: 'string', enum: ['all','endpoints','network','cloud','ai'], description: 'Detection scope' },
+      },
+      required: ['query'],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: false,
+  },
+  {
+    name: 'lookup_ioc',
+    description: 'IOC (Indicator of Compromise) lookup — check an IP, domain, URL, file hash, or email against threat intelligence feeds. Returns threat score, malware families, APT associations, and recommended blocking action.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ioc:   { type: 'string', description: 'Indicator to look up (IP, domain, hash, URL, email)' },
+        type:  { type: 'string', enum: ['ip','domain','url','hash','email'], description: 'IOC type' },
+      },
+      required: ['ioc'],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'get_mitre_matrix',
+    description: 'Full MITRE ATT&CK v15 matrix — all tactics (TA####), techniques (T####), and sub-techniques. Optionally filtered by platform (Windows/Linux/Cloud/AI). Use for mapping detections or red team scenarios.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tactic:   { type: 'string', description: 'Filter by tactic (TA####) or tactic name' },
+        platform: { type: 'string', description: 'Filter by platform (windows/linux/cloud/ai/all)' },
+      },
+      required: [],
+    },
+    tiers: null, readOnly: true,
+  },
+
+  // ── CTI Workbench ─────────────────────────────────────────────────────────────
+  {
+    name: 'get_cti_actors',
+    description: 'CTI workbench threat actor profiles — APT groups, criminal syndicates, nation-state actors. Shows motivation, TTPs (MITRE ATT&CK mapped), targeted sectors, known malware families, and recent campaigns.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sector: { type: 'string', description: 'Filter by targeted sector (finance/healthcare/tech/gov/critical-infra)' },
+        origin: { type: 'string', description: 'Filter by origin country/region' },
+        limit:  { type: 'number', description: 'Results (1-50)' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'search_cti_ioc',
+    description: 'Search the CTI IOC database by value (IP, domain, hash), type (IP/DOMAIN/URL/HASH/EMAIL), or severity. Returns threat score, associated campaigns, first/last seen dates, and MITRE ATT&CK mapping.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query:    { type: 'string', description: 'Search term (partial match on IOC value)' },
+        ioc_type: { type: 'string', enum: ['IP','DOMAIN','URL','HASH','EMAIL'], description: 'IOC type filter' },
+        severity: { type: 'string', enum: ['CRITICAL','HIGH','MEDIUM','LOW'], description: 'Severity filter' },
+        limit:    { type: 'number', description: 'Results (1-50)' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'enrich_ioc',
+    description: 'Deep IOC enrichment — real-time lookup across threat intelligence feeds for an IP, domain, URL, or hash. Returns WHOIS, geolocation, ASN, malware families, passive DNS, certificate data, and risk score.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ioc:      { type: 'string', description: 'IOC value to enrich (IP, domain, URL, or file hash)' },
+        ioc_type: { type: 'string', enum: ['ip','domain','url','hash'], description: 'IOC type' },
+      },
+      required: ['ioc'],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'manage_cti_watchlists',
+    description: 'CTI watchlist management — list all watchlists, view entries, and check if an IOC is on any active watchlist. Watchlists track high-priority threat actors, malicious IPs, and suspicious domains for continuous monitoring.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['list','check_match'], description: 'Action to perform (list watchlists or check an IOC)' },
+        ioc:    { type: 'string', description: 'IOC value to check against watchlists (for check_match action)' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+
+  // ── SOC Investigations ────────────────────────────────────────────────────────
+  {
+    name: 'get_soc_investigation',
+    description: 'Full SOC case investigation summary — case details (title, severity, status, assignee), complete timeline of events, evidence count, analyst notes, MITRE ATT&CK techniques mapped, and SLA remaining hours.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        case_id: { type: 'string', description: 'SOC case ID to investigate (UUID format)' },
+      },
+      required: ['case_id'],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'escalate_soc_case',
+    description: 'Escalate a SOC case to higher-severity tier — updates status to ESCALATED, optionally reassigns to a senior analyst, and logs the escalation reason to the case timeline for audit trail.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        case_id:     { type: 'string', description: 'SOC case ID to escalate' },
+        reason:      { type: 'string', description: 'Escalation reason / justification' },
+        assignee_id: { type: 'string', description: 'Optional target analyst ID to reassign to' },
+      },
+      required: ['case_id', 'reason'],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: false,
+  },
+
+  // ── AI/ML Security — ASPM ─────────────────────────────────────────────────────
+  {
+    name: 'get_aspm_dashboard',
+    description: 'AI Security Posture Management (ASPM) dashboard — inventory of all registered AI assets (models, endpoints, pipelines), vulnerability counts per asset, OWASP LLM Top 10 coverage, and overall AI risk score.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'scan_ai_asset',
+    description: 'Run a security scan on an AI model or endpoint — checks for prompt injection vulnerabilities (AML.T0051), data poisoning risks (AML.T0020), model inversion, supply chain risks, and OWASP LLM Top 10 compliance.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        asset_name: { type: 'string', description: 'Name of the AI model or system to scan' },
+        asset_type: { type: 'string', enum: ['llm','embedding','pipeline','api','agent'], description: 'Asset type' },
+        endpoint:   { type: 'string', description: 'API endpoint URL (optional, for connectivity tests)' },
+      },
+      required: ['asset_name'],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: false,
+  },
+  {
+    name: 'check_owasp_llm_compliance',
+    description: 'OWASP LLM Top 10 2023 compliance check — assesses exposure to all 10 risks: Prompt Injection, Insecure Output Handling, Training Data Poisoning, Model Denial of Service, Supply Chain Vulnerabilities, Sensitive Information Disclosure, Insecure Plugin Design, Excessive Agency, Overreliance, and Model Theft.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        system_name: { type: 'string', description: 'AI system or product to assess' },
+        context:     { type: 'string', description: 'Additional context about the system architecture' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'get_ai_spm_report',
+    description: 'Full AI Security Posture Management report — AI model inventory, OWASP LLM Top 10 gap analysis, governance compliance score (EU AI Act/NIST AI RMF), detected vulnerabilities, and prioritised remediation roadmap.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        org: { type: 'string', description: 'Organization name (optional, defaults to current org)' },
+      },
+      required: [],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+
+  // ── CISO / Executive Reporting ────────────────────────────────────────────────
+  {
+    name: 'get_ciso_dashboard',
+    description: 'CISO security dashboard — real-time security posture score (0-100), active critical threats, compliance status across frameworks, SOC metrics, vulnerability backlog, detection coverage, and mean time to detect/respond (MTTD/MTTR).',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: ['TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'generate_ciso_report',
+    description: 'Generate a board-ready CISO security report — executive summary, risk heat map, top threats this period, compliance status, SOC performance metrics, vulnerability trends, and 3 strategic recommendations. Suitable for board of directors presentation.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        period: { type: 'string', enum: ['weekly','monthly','quarterly'], description: 'Reporting period (default monthly)' },
+        format: { type: 'string', enum: ['summary','detailed'], description: 'Report depth (default summary)' },
+      },
+      required: [],
+    },
+    tiers: ['TEAM','ENTERPRISE','MSSP'], readOnly: false,
+  },
+  {
+    name: 'get_executive_risk_brief',
+    description: 'Executive risk briefing — board-ready security overview with top 5 risks, financial exposure estimates (USD), regulatory compliance status, critical CVEs requiring C-suite awareness, and 3 immediate action items.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: ['TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'get_board_report',
+    description: 'Board of directors security report — governance summary, cyber risk register with financial impact, insurance adequacy review, peer benchmarking, regulatory exposure, and strategic investment priorities. Language calibrated for non-technical board members.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: ['TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'get_executive_forecast',
+    description: 'AI-driven executive security forecast — 30/60/90-day risk trajectory, predicted breach probability by attack vector, financial impact projections, emerging threat themes, and recommended security investments with ROI estimates.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        horizon: { type: 'string', enum: ['30d','60d','90d'], description: 'Forecast horizon (default 30d)' },
+      },
+      required: [],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+
+  // ── SIEM Extension ────────────────────────────────────────────────────────────
+  {
+    name: 'export_siem_rules',
+    description: 'Bulk export detection rules in multiple formats simultaneously — Sigma YAML, Splunk SPL, Microsoft KQL, and YARA. Filter by severity, platform, or MITRE ATT&CK technique. Returns a ZIP-compatible structured export.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        format:   { type: 'string', enum: ['sigma','splunk','kql','yara','all'], description: 'Export format (default all)' },
+        severity: { type: 'string', enum: ['CRITICAL','HIGH','MEDIUM','LOW','ALL'], description: 'Severity filter' },
+        platform: { type: 'string', description: 'Target platform (windows/linux/cloud/all)' },
+        limit:    { type: 'number', description: 'Max rules to export (1-100)' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'test_siem_integration',
+    description: 'Test a SIEM integration connection — validates API credentials, connectivity, write permissions, and sends a test alert. Confirms the integration is operational before deploying production rules.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', description: 'SIEM platform to test (splunk|elastic|sentinel|aws_security_hub|pagerduty)' },
+      },
+      required: ['platform'],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: false,
+  },
+
+  // ── Identity & Compliance ─────────────────────────────────────────────────────
+  {
+    name: 'scan_identity_posture',
+    description: 'Zero Trust identity security assessment — evaluates MFA coverage, privileged access management (PAM), credential hygiene, service account risks, federation/SSO security, and identity governance. Returns score (0-100) and remediation priorities.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', description: 'Target domain or organization to assess' },
+      },
+      required: [],
+    },
+    tiers: ['STARTER','PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'get_trust_metrics',
+    description: 'Platform trust & compliance metrics — uptime SLA, security certifications, data residency, privacy compliance (GDPR/CCPA), penetration test status, bug bounty program, and transparency report summary.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: null, readOnly: true,
+  },
+
+  // ── Platform Ops Extensions ───────────────────────────────────────────────────
+  {
+    name: 'get_deep_health',
+    description: 'Comprehensive deep health check — tests every platform subsystem including D1 database, KV store, AI providers, queue processors, cron jobs, SIEM integrations, and external feed connectivity. Returns latency and error diagnostics per subsystem.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: null, readOnly: true,
+  },
+  {
+    name: 'get_audit_log',
+    description: 'Security audit log — chronological record of all platform actions: logins, API calls, config changes, rule deployments, data exports, and administrative actions. Supports filtering by user, action type, and time range.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        action:     { type: 'string', description: 'Filter by action type (login/config_change/deploy/export/admin)' },
+        user_id:    { type: 'string', description: 'Filter by specific user ID' },
+        limit:      { type: 'number', description: 'Results (1-100, default 50)' },
+      },
+      required: [],
+    },
+    tiers: ['TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+  {
+    name: 'trigger_anomaly_scan',
+    description: 'Trigger a batch behavioral anomaly detection scan across all monitored user sessions. Runs the full anomaly engine pipeline — user behavior analysis, peer group comparison, risk scoring, and automatic response (block/alert) for high-risk scores.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: false,
+  },
+
+  // ── MSSP Operations ───────────────────────────────────────────────────────────
+  {
+    name: 'get_mssp_overview',
+    description: 'MSSP operations overview — total client count, active subscriptions, revenue metrics, partner pipeline, white-label deployment status, and top clients by threat activity. Includes expansion opportunities and at-risk accounts.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+    tiers: ['MSSP'], readOnly: true,
+  },
+  {
+    name: 'list_mssp_clients',
+    description: 'List all MSSP-managed client accounts — client name, tier, threat activity score, active incidents, compliance status, renewal date, and revenue contribution. Supports filtering by status (active/at-risk/churned).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['active','at_risk','churned','all'], description: 'Client status filter' },
+        limit:  { type: 'number', description: 'Results (1-100)' },
+      },
+      required: [],
+    },
+    tiers: ['MSSP'], readOnly: true,
+  },
 ];
 
 // ─── System prompt builder ─────────────────────────────────────────────────────
@@ -471,26 +890,35 @@ function buildSystemPrompt(tier, authCtx, provider, model, taskType) {
     soc_siem:     '\nGenerate production-ready detection logic. All rules must include field mappings, condition logic, and false-positive reduction notes.',
     red_team:     '\nMap every attack to MITRE ATLAS technique IDs (AML.T####). Include kill chain stage, detection opportunity, and defender countermeasure.',
     executive:    '\nDeliver board-ready language. Lead with business risk, quantify financial exposure, end with a clear 3-action priority list.',
+    cti:          '\nProfile threat actors with precision: attribution confidence %, MITRE ATT&CK TTPs, targeted sectors, recent campaigns, and IOC signatures. Cross-reference all indicators.',
+    aspm:         '\nAssess AI systems against OWASP LLM Top 10 2023 and MITRE ATLAS v2.1. Map every finding to a specific risk ID, severity, and concrete remediation step.',
     general:      '',
   }[taskType] || '';
 
-  return `You are APEX — the AI Security Copilot for CYBERDUDEBIVASH AI Security Hub, operating in GOD MODE with full orchestration authority.
+  return `You are APEX — the AI Security Copilot for CYBERDUDEBIVASH AI Security Hub, operating in GOD MODE with full orchestration authority over all 49 platform capabilities.
 
 ## Identity & Authority
 - Name: APEX (Autonomous Platform EXecution Intelligence)
-- Authority: ${isAdmin ? 'SUPER ADMIN — unrestricted access' : isPro ? 'GOD MODE — complete tool suite' : 'STANDARD — threat intelligence and analysis'}
+- Authority: ${isAdmin ? 'SUPER ADMIN — unrestricted access to all 49 tools' : isPro ? 'GOD MODE — complete tool suite' : 'STANDARD — threat intelligence and analysis'}
 - Tier: ${tier} | Engine: ${providerDisplay}
 - Classification: ENTERPRISE SECURITY INTELLIGENCE SYSTEM
 
 ## Core Mission
-You orchestrate the CYBERDUDEBIVASH AI Security Hub through natural language. You have real-time access to:
-1. **Threat Intelligence** — AI/LLM CVEs, emerging attacks, OSV/NVD/GitHub Advisory feeds
-2. **Autonomous SOC** — 5-stage pipeline: Detection → AI Analysis → Rule Gen → SIEM Deploy → Monitoring
-3. **Detection Engineering** — Sigma YAML, Splunk SPL, Microsoft KQL, YARA production rules
-4. **Red Team Operations** — MITRE ATLAS v2.1 + ATT&CK v15 adversarial simulations (PRO+)
-5. **AI Governance** — EU AI Act, NIST AI RMF, ISO 42001, OWASP LLM Top 10 compliance
-6. **Risk Intelligence** — Breach probability, time-to-exploit, financial impact projection
-7. **Platform Ops** — Health checks, metrics, provider status, session management
+You orchestrate the CYBERDUDEBIVASH AI Security Hub through natural language. You have real-time access to ALL platform capabilities:
+1. **Threat Intelligence** — AI/LLM CVEs, KEV feed, emerging attacks, OSV/NVD/GitHub Advisory feeds
+2. **Vulnerability Management** — Full vuln lifecycle, CVSS/EPSS scoring, KEV prioritisation, remediation SLAs
+3. **Threat Hunting** — MITRE ATT&CK templates, IOC lookup, KQL/Sigma/YARA execution, actor profiling
+4. **CTI Workbench** — APT actor profiles, IOC enrichment, watchlists, STIX/TAXII intelligence
+5. **Autonomous SOC** — 5-stage pipeline + case management, investigations, escalation workflow
+6. **SIEM Operations** — Integrations, rule deploy, bulk export, integration testing
+7. **AI/ML Security (ASPM)** — AI asset inventory, OWASP LLM Top 10, model security scans, SPM reports
+8. **Red Team Operations** — MITRE ATLAS v2.1 + ATT&CK v15 adversarial simulations (PRO+)
+9. **AI Governance** — EU AI Act, NIST AI RMF, ISO 42001, OWASP LLM Top 10 compliance
+10. **CISO/Executive** — CISO dashboard, board reports, executive risk briefs, financial forecasts
+11. **Identity & Compliance** — Zero Trust posture scan, trust metrics, compliance status
+12. **Risk Intelligence** — Breach probability, time-to-exploit, financial impact, anomaly detection
+13. **Platform Ops** — Health checks, deep diagnostics, audit log, anomaly scanning
+14. **MSSP Operations** — Client management, partner metrics (MSSP tier)
 
 ## Operating Standards — NON-NEGOTIABLE
 - Zero hallucination on CVE IDs, CVSS scores, and MITRE technique IDs — use only verified data
@@ -826,6 +1254,299 @@ async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId)
         const { handleSentinelFeed } = await import('../lib/sentinelApex.js');
         const req = new Request(`https://internal/api/sentinel/feed?limit=${Math.min(toolInput.limit || 20, 100)}`, { method: 'GET' });
         return (await handleSentinelFeed(req, env)).json();
+      }
+
+      // ── Vulnerability Management ─────────────────────────────────────────────
+      case 'get_vuln_intelligence': {
+        const { handleVulnStats } = await import('./vulnManagement.js');
+        const req = new Request('https://internal/api/vulns/stats', { method: 'GET' });
+        return (await handleVulnStats(req, env, authCtx)).json();
+      }
+
+      case 'list_vulnerabilities': {
+        const { handleListVulns } = await import('./vulnManagement.js');
+        const { severity, stage, kev, search, limit = 20 } = toolInput;
+        const params = new URLSearchParams();
+        if (severity) params.set('severity', severity);
+        if (stage)    params.set('stage', stage);
+        if (kev)      params.set('kev', 'true');
+        if (search)   params.set('q', search);
+        params.set('limit', String(Math.min(limit, 50)));
+        const req = new Request(`https://internal/api/vulns?${params}`, { method: 'GET' });
+        return (await handleListVulns(req, env, authCtx)).json();
+      }
+
+      case 'lookup_cve_detail': {
+        const { handleCVELookup } = await import('./vulnManagement.js');
+        const cveId = (toolInput.cve_id || '').trim();
+        const req = new Request(`https://internal/api/vulns/cve/${cveId}`, { method: 'GET' });
+        return (await handleCVELookup(req, env, authCtx, cveId)).json();
+      }
+
+      case 'get_kev_feed': {
+        const { handleKEVFeed } = await import('./vulnManagement.js');
+        const req = new Request('https://internal/api/vulns/kev', { method: 'GET' });
+        return (await handleKEVFeed(req, env, authCtx)).json();
+      }
+
+      // ── Threat Hunting ───────────────────────────────────────────────────────
+      case 'get_hunt_templates': {
+        const { handleHuntTemplates } = await import('./threatHunting.js');
+        const req = new Request('https://internal/api/threat-hunting/templates', { method: 'GET' });
+        return (await handleHuntTemplates(req, env, authCtx)).json();
+      }
+
+      case 'run_threat_hunt': {
+        const { handleRunHunt } = await import('./threatHunting.js');
+        const req = new Request('https://internal/api/threat-hunting/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query:  toolInput.query,
+            lang:   toolInput.lang || 'kql',
+            target: toolInput.target || '',
+            scope:  toolInput.scope || 'all',
+          }),
+        });
+        return (await handleRunHunt(req, env, authCtx)).json();
+      }
+
+      case 'lookup_ioc': {
+        const { handleIOCLookup } = await import('./threatHunting.js');
+        const req = new Request('https://internal/api/threat-hunting/ioc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ioc: toolInput.ioc, type: toolInput.type }),
+        });
+        return (await handleIOCLookup(req, env, authCtx)).json();
+      }
+
+      case 'get_mitre_matrix': {
+        const { handleMITREMatrix } = await import('./threatHunting.js');
+        const params = new URLSearchParams();
+        if (toolInput.tactic)   params.set('tactic', toolInput.tactic);
+        if (toolInput.platform) params.set('platform', toolInput.platform);
+        const req = new Request(`https://internal/api/threat-hunting/mitre?${params}`, { method: 'GET' });
+        return (await handleMITREMatrix(req, env, authCtx)).json();
+      }
+
+      // ── CTI Workbench ────────────────────────────────────────────────────────
+      case 'get_cti_actors': {
+        const { handleListActors } = await import('./ctiWorkbench.js');
+        const params = new URLSearchParams();
+        if (toolInput.sector) params.set('sector', toolInput.sector);
+        if (toolInput.origin) params.set('origin', toolInput.origin);
+        if (toolInput.limit)  params.set('limit', String(Math.min(toolInput.limit, 50)));
+        const req = new Request(`https://internal/api/cti/actors?${params}`, { method: 'GET' });
+        return (await handleListActors(req, env, authCtx)).json();
+      }
+
+      case 'search_cti_ioc': {
+        const { handleIOCSearch } = await import('./ctiWorkbench.js');
+        const params = new URLSearchParams();
+        if (toolInput.query)    params.set('q', toolInput.query);
+        if (toolInput.ioc_type) params.set('type', toolInput.ioc_type);
+        if (toolInput.severity) params.set('severity', toolInput.severity);
+        if (toolInput.limit)    params.set('limit', String(Math.min(toolInput.limit, 50)));
+        const req = new Request(`https://internal/api/cti/ioc/search?${params}`, { method: 'GET' });
+        return (await handleIOCSearch(req, env, authCtx)).json();
+      }
+
+      case 'enrich_ioc': {
+        const { handleEnrichIOC } = await import('./ctiPlatformV2.js');
+        const req = new Request('https://internal/api/cti/enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ioc: toolInput.ioc, type: toolInput.ioc_type || 'domain' }),
+        });
+        return (await handleEnrichIOC(req, env)).json();
+      }
+
+      case 'manage_cti_watchlists': {
+        if (toolInput.action === 'check_match' && toolInput.ioc) {
+          const { handleWatchlistMatch } = await import('./ctiPlatformV2.js');
+          const req = new Request('https://internal/api/cti/watchlist/match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: toolInput.ioc }),
+          });
+          return (await handleWatchlistMatch(req, env)).json();
+        } else {
+          const { handleListWatchlists } = await import('./ctiPlatformV2.js');
+          const req = new Request('https://internal/api/cti/watchlist', { method: 'GET' });
+          return (await handleListWatchlists(req, env)).json();
+        }
+      }
+
+      // ── SOC Investigations ───────────────────────────────────────────────────
+      case 'get_soc_investigation': {
+        const { handleInvestigationSummary } = await import('./socInvestigations.js');
+        const caseId = toolInput.case_id || '';
+        const req = new Request(`https://internal/api/soc/inv/${caseId}/summary`, { method: 'GET' });
+        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user', org_id: authCtx?.orgId || 'default' };
+        return (await handleInvestigationSummary(req, env)).json();
+      }
+
+      case 'escalate_soc_case': {
+        const { handleEscalateCase } = await import('./socInvestigations.js');
+        const caseId = toolInput.case_id || '';
+        const req = new Request(`https://internal/api/soc/inv/${caseId}/escalate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: toolInput.reason, assignee_id: toolInput.assignee_id }),
+        });
+        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user', org_id: authCtx?.orgId || 'default' };
+        return (await handleEscalateCase(req, env)).json();
+      }
+
+      // ── AI/ML Security — ASPM ────────────────────────────────────────────────
+      case 'get_aspm_dashboard': {
+        const { handleASPMDashboard } = await import('./aiSecurityASPM.js');
+        const req = new Request('https://internal/api/aspm/dashboard', { method: 'GET' });
+        return (await handleASPMDashboard(req, env, authCtx)).json();
+      }
+
+      case 'scan_ai_asset': {
+        const { handleScanAIAsset } = await import('./aiSecurityASPM.js');
+        const req = new Request('https://internal/api/aspm/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset_name: toolInput.asset_name,
+            asset_type: toolInput.asset_type || 'llm',
+            endpoint:   toolInput.endpoint || '',
+          }),
+        });
+        return (await handleScanAIAsset(req, env, authCtx)).json();
+      }
+
+      case 'check_owasp_llm_compliance': {
+        const { handleAISPMOWASP } = await import('./aiSPMHandlers.js');
+        const req = new Request('https://internal/api/ai-spm/owasp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system_name: toolInput.system_name || 'AI System', context: toolInput.context || '' }),
+        });
+        return (await handleAISPMOWASP(req, env, authCtx)).json();
+      }
+
+      case 'get_ai_spm_report': {
+        const { handleAISPMReport } = await import('./aiSPMHandlers.js');
+        const req = new Request('https://internal/api/ai-spm/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ organization: toolInput.org || 'Default Org', models: [], integrations: [] }),
+        });
+        return (await handleAISPMReport(req, env, authCtx)).json();
+      }
+
+      // ── CISO / Executive Reporting ────────────────────────────────────────────
+      case 'get_ciso_dashboard': {
+        const { handleGetCISOMetrics } = await import('./cisoMetrics.js');
+        const req = new Request('https://internal/api/ciso/metrics', { method: 'GET' });
+        return (await handleGetCISOMetrics(req, env, authCtx)).json();
+      }
+
+      case 'generate_ciso_report': {
+        const { handleGetCISOReport } = await import('./cisoMetrics.js');
+        const req = new Request(`https://internal/api/ciso/report?period=${toolInput.period || 'monthly'}&format=${toolInput.format || 'summary'}`, { method: 'GET' });
+        return (await handleGetCISOReport(req, env, authCtx)).json();
+      }
+
+      case 'get_executive_risk_brief': {
+        const { handleExecutiveRiskBrief } = await import('./executiveRiskHandlers.js');
+        const req = new Request('https://internal/api/executive/risk-brief', { method: 'GET' });
+        return (await handleExecutiveRiskBrief(req, env, authCtx)).json();
+      }
+
+      case 'get_board_report': {
+        const { handleBoardReport } = await import('./executiveRiskHandlers.js');
+        const req = new Request('https://internal/api/executive/board-report', { method: 'GET' });
+        return (await handleBoardReport(req, env, authCtx)).json();
+      }
+
+      case 'get_executive_forecast': {
+        const { handleExecutiveForecast } = await import('./executiveRiskHandlers.js');
+        const req = new Request(`https://internal/api/executive/forecast?horizon=${toolInput.horizon || '30d'}`, { method: 'GET' });
+        return (await handleExecutiveForecast(req, env, authCtx)).json();
+      }
+
+      // ── SIEM Extension ───────────────────────────────────────────────────────
+      case 'export_siem_rules': {
+        const { handleSiemExport } = await import('./siemExport.js');
+        const params = new URLSearchParams();
+        if (toolInput.format && toolInput.format !== 'all') params.set('format', toolInput.format);
+        if (toolInput.severity && toolInput.severity !== 'ALL') params.set('severity', toolInput.severity);
+        if (toolInput.platform) params.set('platform', toolInput.platform);
+        if (toolInput.limit)    params.set('limit', String(Math.min(toolInput.limit, 100)));
+        const req = new Request(`https://internal/api/siem/export?${params}`, { method: 'GET' });
+        return (await handleSiemExport(req, env, authCtx)).json();
+      }
+
+      case 'test_siem_integration': {
+        const { handleTestIntegration } = await import('./siemDeploy.js');
+        const req = new Request('https://internal/api/integrations/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform: toolInput.platform }),
+        });
+        return (await handleTestIntegration(req, env, { ...authCtx, isAdmin: true })).json();
+      }
+
+      // ── Identity & Compliance ────────────────────────────────────────────────
+      case 'scan_identity_posture': {
+        const { handleIdentityScan } = await import('./identity.js');
+        const req = new Request('https://internal/api/security/identity/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: toolInput.target || authCtx?.domain || 'organization' }),
+        });
+        return (await handleIdentityScan(req, env, authCtx)).json();
+      }
+
+      case 'get_trust_metrics': {
+        const { handleTrustMetrics } = await import('./trustCenter.js');
+        const req = new Request('https://internal/api/trust/metrics', { method: 'GET' });
+        return (await handleTrustMetrics(req, env)).json();
+      }
+
+      // ── Platform Ops Extensions ──────────────────────────────────────────────
+      case 'get_deep_health': {
+        const { handleDeepHealth } = await import('./deepHealth.js');
+        const req = new Request('https://internal/api/health/deep', { method: 'GET' });
+        return (await handleDeepHealth(req, env, authCtx)).json();
+      }
+
+      case 'get_audit_log': {
+        const { handleGetAuditLog } = await import('./auditLog.js');
+        const params = new URLSearchParams();
+        if (toolInput.action)  params.set('action', toolInput.action);
+        if (toolInput.user_id) params.set('user_id', toolInput.user_id);
+        params.set('limit', String(Math.min(toolInput.limit || 50, 100)));
+        const req = new Request(`https://internal/api/audit?${params}`, { method: 'GET' });
+        return (await handleGetAuditLog(req, env, authCtx)).json();
+      }
+
+      case 'trigger_anomaly_scan': {
+        const { handleAnomalyRequest } = await import('./anomalyHandler.js');
+        const req = new Request('https://internal/api/anomaly/batch', { method: 'POST' });
+        return (await handleAnomalyRequest(req, env, authCtx, 'batch')).json();
+      }
+
+      // ── MSSP Operations ──────────────────────────────────────────────────────
+      case 'get_mssp_overview': {
+        const { handleMsspMetrics } = await import('./msspOps.js');
+        const req = new Request('https://internal/api/mssp/metrics', { method: 'GET' });
+        return (await handleMsspMetrics(req, env)).json();
+      }
+
+      case 'list_mssp_clients': {
+        const { handleListClients } = await import('./msspPanel.js');
+        const params = new URLSearchParams();
+        if (toolInput.status && toolInput.status !== 'all') params.set('status', toolInput.status);
+        if (toolInput.limit) params.set('limit', String(Math.min(toolInput.limit, 100)));
+        const req = new Request(`https://internal/api/mssp/clients?${params}`, { method: 'GET' });
+        return (await handleListClients(req, env, authCtx)).json();
       }
 
       default:
@@ -1252,8 +1973,8 @@ export async function handleCopilotCapabilities(request, env, authCtx) {
   }));
 
   return ok({
-    copilot:             'APEX — AI Security Copilot v3.0 (God Mode)',
-    version:             '3.0.0',
+    copilot:             'APEX — AI Security Copilot v4.0 (God Mode — Full Platform)',
+    version:             '4.0.0',
     tier,
     daily_quota:         DAILY_QUOTA[tier] || 'unlimited',
     session_ttl_hours:   SESSION_TTL / 3600,
@@ -1265,11 +1986,27 @@ export async function handleCopilotCapabilities(request, env, authCtx) {
     capabilities,
     providers,
     routing: {
-      strategy:    'Task-type × complexity → optimal provider + model, auto-failover through chain',
-      task_types:  Object.keys(ROUTING_MATRIX),
-      complexity:  ['simple', 'standard', 'complex'],
-      reasoning_prepass: 'Enabled for complex queries — R1-class models run chain-of-thought before tool loop',
+      strategy:           'Task-type × complexity → optimal provider + model, auto-failover through chain',
+      task_types:         Object.keys(ROUTING_MATRIX),
+      complexity:         ['simple', 'standard', 'complex'],
+      reasoning_prepass:  'Enabled for complex queries — R1-class models run chain-of-thought before tool loop',
       session_compaction: `Auto-compacts sessions > ${COMPACT_THRESHOLD} messages via summarisation`,
+    },
+    platform_coverage: {
+      threat_intel:      ['get_threat_intel_feed','get_latest_threat_report','trigger_threat_radar_scan','generate_threat_report','get_sentinel_feed'],
+      vulnerability_mgmt:['get_vuln_intelligence','list_vulnerabilities','lookup_cve_detail','get_kev_feed','get_cve_intelligence'],
+      threat_hunting:    ['get_hunt_templates','run_threat_hunt','lookup_ioc','get_mitre_matrix'],
+      cti_workbench:     ['get_cti_actors','search_cti_ioc','enrich_ioc','manage_cti_watchlists'],
+      soc_operations:    ['get_autonomous_soc_status','trigger_soc_pipeline','get_soc_cases','get_soc_investigation','escalate_soc_case'],
+      siem_operations:   ['get_siem_integrations','deploy_detection_rules','generate_detection_rules','export_siem_rules','test_siem_integration'],
+      ai_ml_security:    ['get_aspm_dashboard','scan_ai_asset','check_owasp_llm_compliance','get_ai_spm_report'],
+      red_team:          ['run_red_team','analyze_threat'],
+      governance:        ['check_ai_governance'],
+      ciso_executive:    ['get_ciso_dashboard','generate_ciso_report','get_executive_risk_brief','get_board_report','get_executive_forecast'],
+      identity_compliance:['scan_identity_posture','get_trust_metrics'],
+      risk_intelligence: ['risk_forecast','get_anomalies','trigger_anomaly_scan'],
+      platform_ops:      ['get_platform_health','get_deep_health','get_platform_metrics','get_ai_providers_status','get_audit_log'],
+      mssp_operations:   ['get_mssp_overview','list_mssp_clients'],
     },
     endpoints: {
       chat:          'POST   /api/copilot/chat',
@@ -1280,15 +2017,29 @@ export async function handleCopilotCapabilities(request, env, authCtx) {
     },
     example_prompts: [
       'What are the top CRITICAL CVEs in the AI/LLM ecosystem right now?',
+      'Show me all CISA KEV entries — which are most urgent to patch?',
+      'Look up CVE-2024-12345 and tell me the CVSS score, exploit status, and remediation',
+      'Run a KQL threat hunt for lateral movement indicators across all endpoints',
+      'Who are the top APT actors targeting the financial sector right now?',
+      'Search our IOC database for any indicators matching 198.51.100.x',
+      'Enrich this domain for me: suspicious-domain.example.com',
       'Trigger a full threat radar scan and generate a premium intelligence report',
       'Deploy detection rules for the latest critical CVE to all configured SIEMs',
       'Run the Autonomous SOC pipeline and show me the results',
-      'Generate Sigma YAML, Splunk SPL, and KQL rules for CVE-2024-12345',
+      'Show me the full investigation timeline for SOC case <case_id>',
+      'Escalate SOC case <case_id> — it has reached critical severity',
+      'Run an ASPM scan on our GPT-4 integration endpoint',
+      'Check our AI systems for all OWASP LLM Top 10 2023 vulnerabilities',
+      'Generate our monthly CISO report for the board',
+      'Give me the executive risk brief and top 5 financial exposure areas',
+      'Run a board of directors security report — non-technical language',
       'Run a comprehensive EU AI Act and NIST AI RMF governance assessment',
       'Red team our LLM endpoint for prompt injection and MITRE ATLAS mapping',
-      'What is the current status of all AI providers and platform subsystems?',
-      'Forecast the breach probability and financial impact for api.example.com',
-      'What anomalies have been detected in the last 24 hours?',
+      'Scan our identity posture for Zero Trust gaps and MFA coverage',
+      'Trigger a batch anomaly detection scan across all user sessions',
+      'Show me the security audit log for the last 24 hours',
+      'What is the 90-day financial risk forecast for our current security posture?',
+      'List all MSSP clients and highlight at-risk accounts',
     ],
   });
 }
