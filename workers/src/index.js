@@ -110,7 +110,7 @@ import { handleGetExpansionScore, handleListSegments, handleLogUpsellEvent, hand
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
 import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
-import { handleAIThreatFeed, handleAIThreatReport, handleAIThreatRadarStatus, handleAIThreatRadarScanNow, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+import { handleAIThreatFeed, handleAIThreatReport, handleAIThreatRadarStatus, handleAIThreatRadarScanNow, handleLatestPublishedReport, generateAndPublishAIThreatReport, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
 import { runAIThreatRadar } from './services/aiThreatRadar.js';
 
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
@@ -1128,7 +1128,21 @@ export default {
     // whole prefixes to owner-only here. (MSSP workspace & SOC cases are
     // intentionally NOT gated here — they are paid-customer features with their
     // own per-tenant / role scoping.)
-    if (/^\/api\/(auto-soc|integrations|org-memory|workflows|white-label)(\/|$)/.test(path)) {
+    // ── ADMIN/OWNER GATE ─────────────────────────────────────────────────────
+    // The following path prefixes are internal back-office surfaces — not
+    // customer-facing products. Revenue engine, monetization engine, funnel
+    // analytics, revenue analytics command center, SIEM integration deploy,
+    // autonomous SOC control plane, org memory, workflow automation, and
+    // white-label theming are all restricted to the platform owner/admin.
+    // Affiliate stats (/api/affiliate/stats) are also internal; the public
+    // affiliate programme endpoints (/api/affiliate/join, /status, etc.)
+    // do NOT match this regex and remain accessible to participants.
+    if (
+      /^\/api\/(auto-soc|integrations|org-memory|workflows|white-label|revenue|monetize)(\/|$)/.test(path) ||
+      path === '/api/funnel/metrics' ||
+      path === '/api/funnel/event' ||
+      path === '/api/affiliate/stats'
+    ) {
       const _ownerCtx = await resolveAuthV5(request, env).catch(() => ({}));
       if (!isOwner(_ownerCtx, env)) {
         return withSecurityHeaders(withCors(forbidden(), request));
@@ -6014,6 +6028,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   if (path === '/api/ai-security/threat-feed/report' && method === 'GET') {
     return handleAIThreatReport(request, env, authCtx);
   }
+  // Continuously-published live report — always reflects the latest radar scan
+  if (path === '/api/ai-security/threat-feed/latest-report' && method === 'GET') {
+    return handleLatestPublishedReport(request, env, authCtx);
+  }
   if (path === '/api/ai-security/threat-feed/radar-status' && method === 'GET') {
     return handleAIThreatRadarStatus(request, env);
   }
@@ -6706,13 +6724,24 @@ ctx.waitUntil(
 
     // ── HOURLY: AI Threat Radar — dedicated, targeted AI/LLM ecosystem scan
     //    (OSV.dev watchlist + rotated NVD keyword search + GitHub Advisory API),
-    //    independent of the generic CTI pipeline above. ──
+    //    independent of the generic CTI pipeline above.
+    //    After each scan, auto-generates and publishes the premium AI threat
+    //    intelligence report to KV so it is always current and immediately
+    //    available via GET /api/ai-security/threat-feed/latest-report. ──
     ctx.waitUntil(
       runAIThreatRadar(env)
-        .then(r => console.log('[CRON] AI Threat Radar:', JSON.stringify({
-          sources: r.sources, matched: r.matched, inserted: r.inserted,
-          errors: r.errors, duration_ms: r.duration_ms,
-        })))
+        .then(async r => {
+          console.log('[CRON] AI Threat Radar:', JSON.stringify({
+            sources: r.sources, matched: r.matched, inserted: r.inserted,
+            errors: r.errors, duration_ms: r.duration_ms,
+          }));
+          // Continuously publish the premium report after every radar run
+          const published = await generateAndPublishAIThreatReport(env).catch(() => null);
+          if (published) {
+            console.log('[CRON] AI Threat Report published:', published.report_id,
+              `| risk=${published.risk_level} | threats=${published.total_threats}`);
+          }
+        })
         .catch(e => console.error('[CRON] AI Threat Radar error:', e?.message))
     );
 

@@ -211,8 +211,9 @@ async function executePipeline(env, triggeredBy = 'auto') {
     }
     await updateStage('rule_gen', 'done', `${generatedRules.length} rules generated (Sigma + YARA + KQL + SPL)`, generatedRules.length);
 
-    // Stage 4: Deploy & Publish
-    await updateStage('deployment', 'running', 'Publishing rules to Defense Marketplace…', 0);
+    // Stage 4: Deploy & Publish — persist to marketplace + auto-deploy to all
+    // configured SIEM integrations (Splunk, Elastic, Sentinel, etc.)
+    await updateStage('deployment', 'running', 'Publishing rules to Defense Marketplace + SIEM integrations…', 0);
     let deployed = 0;
     if (env?.DB) {
       try {
@@ -230,8 +231,36 @@ async function executePipeline(env, triggeredBy = 'auto') {
     } else {
       deployed = generatedRules.length;
     }
+
+    // Auto-deploy generated rules to all configured SIEM integrations
+    let siemDeployed = 0;
+    if (env?.SECURITY_HUB_KV && generatedRules.length > 0) {
+      try {
+        const { handleDeploy } = await import('./siemDeploy.js');
+        const topRule = generatedRules[0];
+        const siemReq = new Request('https://internal/api/integrations/deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deploy_all: true,
+            rule: { sigma: topRule.sigma, splunk: topRule.splunk, kql: topRule.kql, yara: topRule.yara },
+            cve_id: topRule.cve_id,
+            severity: analyzedThreats[0]?.exploitability === 'ACTIVE_EXPLOITATION' ? 'CRITICAL' : 'HIGH',
+            cvss: analyzedThreats[0]?.ai_score || 8.0,
+          }),
+        });
+        const siemResult = await handleDeploy(siemReq, env, { email: 'auto-soc@system', isAdmin: true });
+        const siemData = await siemResult.json().catch(() => ({}));
+        siemDeployed = siemData?.successful || 0;
+        if (siemDeployed > 0) {
+          await appendLog(env, { run_id: runId, stage: 'siem_deploy', status: 'done',
+            output: `Auto-deployed to ${siemDeployed} SIEM integration(s)`, triggered_by: triggeredBy });
+        }
+      } catch { /* SIEM deploy is non-blocking */ }
+    }
+
     metrics.deployed = deployed;
-    await updateStage('deployment', 'done', `${deployed} rule sets published to marketplace`, deployed);
+    await updateStage('deployment', 'done', `${deployed} rule sets published; ${siemDeployed} SIEM integrations updated`, deployed);
 
     // Stage 5: Monitoring
     await updateStage('monitoring', 'running', 'Sending alerts to subscribed users…', 0);
@@ -394,10 +423,25 @@ export async function handleGetLatestRules(request, env, authCtx = {}) {
 
 // ── Cron hook — called from scheduled() in index.js ──────────────────────────
 export async function runAutoSocCron(env) {
-  // Check if auto mode is enabled
+  // Auto-activate on first run (when KV key was never set — null means never
+  // configured; 'false' means an operator explicitly disabled it).
   let modeEnabled = false;
   if (env?.SECURITY_HUB_KV) {
-    try { modeEnabled = (await env.SECURITY_HUB_KV.get(KV_MODE_KEY)) === 'true'; } catch {}
+    try {
+      const raw = await env.SECURITY_HUB_KV.get(KV_MODE_KEY);
+      if (raw === null) {
+        // First invocation — auto-enable the autonomous SOC
+        await env.SECURITY_HUB_KV.put(KV_MODE_KEY, 'true', { expirationTtl: 86400 * 30 });
+        modeEnabled = true;
+        await appendLog(env, {
+          stage: 'system', status: 'enabled',
+          output: 'Autonomous SOC Mode AUTO-ACTIVATED on first production cron invocation',
+          triggered_by: 'system:auto-activate',
+        });
+      } else {
+        modeEnabled = raw === 'true';
+      }
+    } catch {}
   }
   if (!modeEnabled) return;
 
