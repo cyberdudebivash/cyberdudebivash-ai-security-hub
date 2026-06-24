@@ -22,8 +22,13 @@
 
 name: Deploy to Cloudflare
 
+# Gated on the "Test & Quality Gate" workflow (test.yml): deploy only runs
+# after that workflow completes successfully on main. workflow_dispatch is
+# kept as an explicit manual/emergency bypass (e.g. hotfix while CI is down).
 on:
-  push:
+  workflow_run:
+    workflows: ["Test & Quality Gate"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -56,7 +61,13 @@ concurrency:
 env:
   NODE_VERSION: "24"
   WRANGLER_VERSION: "4"
-  PLATFORM_VERSION: "21.0.0"
+  # Keep in sync with PLATFORM_VERSION in workers/wrangler.toml — this value
+  # is compared against the live /api/version response during smoke-test.
+  PLATFORM_VERSION: "40.0.0"
+  # The exact commit to check out and deploy. For workflow_run triggers this
+  # must be the upstream run's head_sha (not github.sha, which resolves to
+  # the default branch tip and can drift if another push lands mid-run).
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
   # ── Endpoint hierarchy (smoke test tries these in order) ─────────────────
   PRIMARY_URL:   "https://cyberdudebivash.in"
   WORKERS_URL:   "https://cyberdudebivash-security-hub.workers.dev"
@@ -75,10 +86,18 @@ jobs:
     name: Pre-flight Checks
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    # Hard gate: skip entirely unless triggered manually, or the upstream
+    # "Test & Quality Gate" run concluded successfully. Downstream jobs key
+    # off this job's result (directly via `needs`, or transitively since a
+    # skipped preflight makes deploy-workers skip via the implicit success()
+    # check on `needs`).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Validate required secrets
         run: |
@@ -116,7 +135,7 @@ jobs:
         run: |
           echo "━━━ Pre-flight Passed ━━━"
           echo "Platform : v${{ env.PLATFORM_VERSION }}"
-          echo "Commit   : ${{ github.sha }}"
+          echo "Commit   : ${{ env.DEPLOY_SHA }}"
           echo "Branch   : ${{ github.ref_name }}"
           echo "Actor    : ${{ github.actor }}"
           echo "Primary  : ${{ env.PRIMARY_URL }}"
@@ -128,7 +147,7 @@ jobs:
           echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Version | \`${{ env.PLATFORM_VERSION }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${{ env.DEPLOY_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Branch | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Actor | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Primary endpoint | ${{ env.PRIMARY_URL }} |" >> "$GITHUB_STEP_SUMMARY"
@@ -146,6 +165,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Setup Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -187,7 +208,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           echo "━━━ Deploying Cloudflare Workers v${{ env.PLATFORM_VERSION }} ━━━"
-          echo "Commit: ${{ github.sha }}"
+          echo "Commit: ${{ env.DEPLOY_SHA }}"
 
           BACKOFF=(10 20 30)
           for attempt in 1 2 3; do
@@ -208,7 +229,7 @@ jobs:
           echo "### Cloudflare Workers Deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "- Workers endpoint: \`${{ env.WORKERS_URL }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Custom domain API: \`${{ env.PRIMARY_URL }}${{ env.HEALTH_PATH }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ env.DEPLOY_SHA }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
 
 # =============================================================================
@@ -218,15 +239,22 @@ jobs:
     name: Deploy Frontend to Cloudflare Pages
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: deploy-workers
+    needs: [preflight, deploy-workers]
+    # always() bypasses the implicit success()-on-needs check, so the
+    # preflight gate (CI must have passed, or this is a manual dispatch)
+    # has to be re-asserted explicitly here too — otherwise a skipped
+    # preflight/deploy-workers would still let the frontend deploy.
     if: |
       always() &&
+      needs.preflight.result == 'success' &&
       needs.deploy-workers.result != 'failure' &&
       github.event.inputs.skip_frontend != 'true'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Setup Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -238,7 +266,7 @@ jobs:
 
       - name: Inject build version into frontend assets
         run: |
-          COMMIT_FULL="${{ github.sha }}"
+          COMMIT_FULL="${{ env.DEPLOY_SHA }}"
           COMMIT_SHORT="${COMMIT_FULL:0:8}"
           BUILD_TIME="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
           VERSION="${{ env.PLATFORM_VERSION }}"
@@ -290,7 +318,7 @@ jobs:
             if wrangler pages deploy frontend \
                 --project-name cyberdudebivash-security-hub \
                 --branch "${{ github.ref_name }}" \
-                --commit-hash "${{ github.sha }}" \
+                --commit-hash "${{ env.DEPLOY_SHA }}" \
                 --commit-message "${SAFE_MSG}" \
                 --commit-dirty=true; then
               echo "✅ Frontend deployed on attempt ${attempt}"
@@ -308,7 +336,7 @@ jobs:
           echo "### Cloudflare Pages Deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "- Pages URL: \`${{ env.FRONTEND_URL }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Custom domain: \`${{ env.PRIMARY_URL }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- version.json commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- version.json commit: \`${{ env.DEPLOY_SHA }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
 
 # =============================================================================
@@ -445,7 +473,7 @@ jobs:
                 --max-time ${{ env.SMOKE_TIMEOUT }} \
                 --connect-timeout 5 \
                 -H "Accept: application/json" \
-                -H "X-Smoke-Test: github-actions-${{ github.sha }}" \
+                -H "X-Smoke-Test: github-actions-${{ env.DEPLOY_SHA }}" \
                 "${URL}" 2>/dev/null || echo "000")
 
               echo "   HTTP status: ${HTTP}"
@@ -583,7 +611,7 @@ jobs:
           VJ_OK=false
           VJ_VERSION=""
           VJ_COMMIT=""
-          EXPECTED_SHORT="${{ github.sha }}"
+          EXPECTED_SHORT="${{ env.DEPLOY_SHA }}"
           EXPECTED_SHORT="${EXPECTED_SHORT:0:8}"
 
           for ep_idx in 0 1; do
@@ -784,7 +812,7 @@ jobs:
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️ ";; failure) echo "❌";; *) echo "⚠️ ";; esac; }
 
           echo "╔══════════════════════════════════════════════════════════════════╗"
-          echo "║    CYBERDUDEBIVASH AI Security Hub v19.0 -- DEPLOYMENT REPORT   ║"
+          echo "║    CYBERDUDEBIVASH AI Security Hub v${{ env.PLATFORM_VERSION }} -- DEPLOYMENT REPORT   ║"
           echo "╠══════════════════════════════════════════════════════════════════╣"
           echo "║  $(icon "$W") Workers API    : ${{ env.PRIMARY_URL }}${{ env.HEALTH_PATH }}"
           echo "║  $(icon "$W") Workers.dev    : ${{ env.WORKERS_URL }}"
@@ -793,7 +821,7 @@ jobs:
           echo "║  🌐  Live Site     : ${{ env.PRIMARY_URL }}"
           echo "╠══════════════════════════════════════════════════════════════════╣"
           echo "║  Version     : ${{ env.PLATFORM_VERSION }}"
-          echo "║  Commit      : ${{ github.sha }}"
+          echo "║  Commit      : ${{ env.DEPLOY_SHA }}"
           echo "║  Branch      : ${{ github.ref_name }}"
           echo "║  Actor       : ${{ github.actor }}"
           echo "║  Deployed at : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
@@ -840,7 +868,7 @@ jobs:
           echo "| Smoke Test | ${s_icon} ${S} | All validations |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Platform Version:** \`${{ env.PLATFORM_VERSION }}\`  " >> "$GITHUB_STEP_SUMMARY"
-          echo "**Commit:** \`${{ github.sha }}\`  " >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`${{ env.DEPLOY_SHA }}\`  " >> "$GITHUB_STEP_SUMMARY"
           echo "**Deployed:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Validation Checklist" >> "$GITHUB_STEP_SUMMARY"
@@ -849,7 +877,7 @@ jobs:
           echo "- [x] Exponential backoff: up to 5 attempts per endpoint (5/10/20/40/60s)" >> "$GITHUB_STEP_SUMMARY"
           echo "- [x] Worker route bound to custom domain (header verification)" >> "$GITHUB_STEP_SUMMARY"
           echo "- [x] API health: HTTP 200 + JSON status=ok|degraded enforced" >> "$GITHUB_STEP_SUMMARY"
-          echo "- [x] version.json injected with \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] version.json injected with \`${{ env.DEPLOY_SHA }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- [x] Frontend ↔ backend version sync validated" >> "$GITHUB_STEP_SUMMARY"
           echo "- [x] data-build-id stamped on index.html for self-healing" >> "$GITHUB_STEP_SUMMARY"
           echo "- [x] index.html: Cache-Control: no-store (no stale HTML)" >> "$GITHUB_STEP_SUMMARY"
