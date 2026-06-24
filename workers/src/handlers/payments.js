@@ -90,33 +90,38 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     }, { status: 400 });
   }
 
-  // Subscription: resolve plan-specific pricing
-  if (module === 'subscription') {
-    const planKey = (body.plan || target || 'STARTER').toUpperCase();
-    const subPlan = SUBSCRIPTION_PRICES?.[planKey] || { amount: 49900, label: '₹499', name: planKey + ' Plan' };
-    // Override price for this request
-    Object.assign(MODULE_PRICES['subscription'], subPlan);
-  }
-
-  // Assessment/threat-intel/red-team: one-time products with fixed pricing
-  if (['assessment', 'threat_intel', 'red_team'].includes(module)) {
-    // Pricing already set in MODULE_PRICES — no override needed
-    if (body.price_inr) {
-      MODULE_PRICES[module].amount = Math.round(Number(body.price_inr) * 100);
-    }
-  }
-
-  // Defense: use price_inr from request body
-  if (module === 'defense' && body.price_inr) {
-    MODULE_PRICES['defense'].amount = Math.round(Number(body.price_inr) * 100);
-    MODULE_PRICES['defense'].label  = '₹' + Number(body.price_inr).toLocaleString('en-IN');
-    MODULE_PRICES['defense'].name   = body.solution_title || 'Defense Solution';
-  }
   if (!target || typeof target !== 'string' || target.length < 2 || target.length > 253) {
     return Response.json({ error: 'target is required (domain name or org name)' }, { status: 400 });
   }
 
-  const price   = MODULE_PRICES[module];
+  // ── Compute request-scoped price — MODULE_PRICES is a read-only constant.
+  // Never mutate the shared module-level object: that would let one request's
+  // user-supplied price bleed into concurrent or subsequent requests.
+  let price;
+
+  if (module === 'subscription') {
+    // Subscription: look up plan from server-side SUBSCRIPTION_PRICES table only.
+    // body.plan is used as a key lookup — the price value comes from the table, not the client.
+    const planKey = (body.plan || target || 'STARTER').toUpperCase();
+    price = SUBSCRIPTION_PRICES[planKey] || SUBSCRIPTION_PRICES['STARTER'];
+  } else if (module === 'defense') {
+    // Defense marketplace: items have catalog-defined prices sent by the platform
+    // checkout UI. Validate the minimum to reject obviously manipulated values.
+    const rawInr = Number(body.price_inr) || 0;
+    if (!body.price_inr || rawInr <= 0) {
+      return Response.json({ error: 'price_inr is required for defense solutions' }, { status: 400 });
+    }
+    price = {
+      amount: Math.round(rawInr * 100),
+      label:  '₹' + rawInr.toLocaleString('en-IN'),
+      name:   body.solution_title || 'Defense Solution',
+    };
+  } else {
+    // All fixed-price modules (domain, ai, redteam, identity, compliance,
+    // assessment, threat_intel, red_team): server-side price only.
+    // body.price_inr is intentionally ignored — prevents price manipulation.
+    price = MODULE_PRICES[module];
+  }
   const receipt = generateReceiptId();
   const ip      = request.headers.get('CF-Connecting-IP') || 'unknown';
 
