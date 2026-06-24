@@ -6,8 +6,8 @@ compatibility_date = "2024-01-01"
 [vars]
 ENVIRONMENT = "production"
 APP_NAME    = "CYBERDUDEBIVASH AI Security Hub"
-VERSION     = "30.0.0"
-PLATFORM_VERSION = "30.0.0"
+VERSION     = "40.0.0"
+PLATFORM_VERSION = "40.0.0"
 COMMIT          = "INJECT_AT_BUILD"
 WEBSITE     = "https://cyberdudebivash.in"
 TOOLS_URL   = "https://tools.cyberdudebivash.com"
@@ -71,14 +71,22 @@ dead_letter_queue  = "scan-jobs-dlq"
 #                               Generate: openssl rand -hex 32 | npx wrangler secret put ADMIN_KEY
 #   SCAN_TOKEN_SECRET         — Scan token signing key (scanTokenEngine)
 #                               Generate: openssl rand -hex 32 | npx wrangler secret put SCAN_TOKEN_SECRET
-#   ANTHROPIC_API_KEY         — Anthropic API key (sk-ant-...)
-#                               Get: https://console.anthropic.com → API Keys → Create
-#                               Run: npx wrangler secret put ANTHROPIC_API_KEY
-#                               Without this key: falls back to Cloudflare Workers AI (llama-3-8b)
-#                               Model routing:
-#                                 ENTERPRISE → claude-opus-4-8
-#                                 PRO        → claude-sonnet-4-6
-#                                 FREE       → claude-haiku-4-5-20251001
+#
+# ── APEX AI SECURITY COPILOT v4.0 — GOD MODE PROVIDERS (REQUIRED for full copilot) ──
+#   GROQ_API_KEY              — Groq inference API key (llama-3.1-70b, llama-3.1-8b, deepseek-r1-distill)
+#                               Get: https://console.groq.com → API Keys → Create
+#                               Run: npx wrangler secret put GROQ_API_KEY
+#   DEEPSEEK_API_KEY          — DeepSeek API key (deepseek-chat V3, deepseek-reasoner R1)
+#                               Get: https://platform.deepseek.com → API Keys → Create
+#                               Run: npx wrangler secret put DEEPSEEK_API_KEY
+#   OPENROUTER_API_KEY        — OpenRouter meta-provider key (50+ model access via single API)
+#                               Get: https://openrouter.ai → Keys → Create
+#                               Run: npx wrangler secret put OPENROUTER_API_KEY
+#                               Without any of the above: APEX falls back to Cloudflare Workers AI (llama text-only)
+#                               Priority routing: Groq (speed) → DeepSeek (reasoning) → OpenRouter (breadth) → CF AI (fallback)
+#
+#   NOTE: ANTHROPIC_API_KEY is NOT used — APEX Copilot v4.0 operates 100% on
+#         open-weight models (Groq / DeepSeek / OpenRouter). No Anthropic dependency.
 #
 # ── PAYMENTS (REQUIRED for revenue) ──────────────────────────────────────────
 # Payment method mandate: UPI / Razorpay only across the SENTINEL APEX
