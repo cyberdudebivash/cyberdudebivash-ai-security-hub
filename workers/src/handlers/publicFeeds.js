@@ -82,6 +82,10 @@ function seedItems(severities) {
   return items;
 }
 
+// Returns { items, source } — source is 'd1' for genuinely live database rows
+// or 'seed' for the curated fallback, so every public feed can honestly flag
+// whether a given response is live intel or the reference baseline, instead
+// of silently substituting stale data with no signal to the consumer.
 async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
   const sevBind   = severities && severities.length ? severities.map(s => s.toUpperCase()) : [];
   const sevClause = sevBind.length ? ` WHERE UPPER(severity) IN (${sevBind.map(() => '?').join(',')})` : '';
@@ -93,7 +97,7 @@ async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
         `SELECT * FROM threat_intel${sevClause} ORDER BY published_at DESC LIMIT ?`
       ).bind(...sevBind, limit).all();
       const items = (rows?.results || []).map(normalizeItem);
-      if (items.length) return items;
+      if (items.length) return { items, source: 'd1' };
     } catch { /* fall through */ }
 
     // Tier 2 — no ORDER BY / no WHERE; filter + cap in JS. Never 500s.
@@ -101,12 +105,14 @@ async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
       const rows = await env.DB.prepare(`SELECT * FROM threat_intel LIMIT 500`).all();
       let items = (rows?.results || []).map(normalizeItem);
       if (sevBind.length) items = items.filter(i => sevBind.includes(i.severity));
-      if (items.length) return items.slice(0, limit);
+      if (items.length) return { items: items.slice(0, limit), source: 'd1' };
     } catch { /* fall through to seed */ }
   }
 
-  // Tier 3 — curated seed fallback (platform-consistent, never empty).
-  return seedItems(severities).slice(0, limit);
+  // Tier 3 — curated seed fallback (platform-consistent, never empty, NEVER
+  // to be presented to the consumer as live data — callers must surface
+  // `source` so the customer can tell live intel from the reference baseline).
+  return { items: seedItems(severities).slice(0, limit), source: 'seed' };
 }
 
 function tally(items) {
@@ -124,11 +130,11 @@ async function severityCounts(env) {
       const m = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
       for (const row of (rows?.results || [])) if (row.sev in m) m[row.sev] = row.c;
       const total = m.CRITICAL + m.HIGH + m.MEDIUM + m.LOW;
-      if (total > 0) return { ...m, total };
+      if (total > 0) return { ...m, total, source: 'd1' };
     } catch { /* fall through to seed */ }
   }
   // Seed fallback — consistent with the platform's other intel surfaces.
-  return tally(seedItems(null));
+  return { ...tally(seedItems(null)), source: 'seed' };
 }
 
 // ─── Edge-cached JSON responder ───────────────────────────────────────────────
@@ -164,7 +170,7 @@ function jsonResponse(obj, ttl, extraHeaders = {}) {
 
 // ─── Feed builders (tier-aware) ───────────────────────────────────────────────
 async function buildFeed(env, ent, reqLimit) {
-  const raw = await fetchRecentIntel(env, { limit: ent.max_results });
+  const { items: raw, source } = await fetchRecentIntel(env, { limit: ent.max_results });
   const items = gateItems(raw, ent, reqLimit);
   return {
     feed:        'CYBERDUDEBIVASH Public Threat Feed',
@@ -172,6 +178,8 @@ async function buildFeed(env, ent, reqLimit) {
     tier:        ent.tier,
     license:     ent.tier === 'FREE' ? 'Free tier — attribution required. Full API: ' + UPGRADE_URL : 'Licensed API access',
     generated_at: new Date().toISOString(),
+    data_source: source,
+    live:        source !== 'seed',
     count:       items.length,
     items,
     upgrade:     upgradeMeta(ent),
@@ -179,22 +187,24 @@ async function buildFeed(env, ent, reqLimit) {
 }
 
 async function buildLatest(env, ent, reqLimit) {
-  const raw = await fetchRecentIntel(env, { limit: ent.max_results });
+  const { items: raw, source } = await fetchRecentIntel(env, { limit: ent.max_results });
   const items = gateItems(raw, ent, reqLimit);
   return {
     version: 'v1', feed: 'latest', publisher: PUBLISHER, tier: ent.tier,
-    generated_at: new Date().toISOString(), count: items.length, items,
+    generated_at: new Date().toISOString(), data_source: source, live: source !== 'seed',
+    count: items.length, items,
     upgrade: upgradeMeta(ent),
   };
 }
 
 async function buildApex(env, ent, reqLimit) {
-  const raw = await fetchRecentIntel(env, { limit: ent.max_results, severities: ['CRITICAL', 'HIGH'] });
+  const { items: raw, source } = await fetchRecentIntel(env, { limit: ent.max_results, severities: ['CRITICAL', 'HIGH'] });
   const items = gateItems(raw, ent, reqLimit);
   return {
     version: 'v1', feed: 'sentinel-apex', publisher: PUBLISHER, tier: ent.tier,
     description: 'Curated critical & high-severity advisories from Sentinel APEX',
-    generated_at: new Date().toISOString(), count: items.length, items,
+    generated_at: new Date().toISOString(), data_source: source, live: source !== 'seed',
+    count: items.length, items,
     upgrade: upgradeMeta(ent),
   };
 }
@@ -208,20 +218,24 @@ async function fetchKEV(env, limit) {
         `SELECT * FROM threat_intel WHERE exploit_status='confirmed' ORDER BY published_at DESC LIMIT ?`
       ).bind(limit).all();
       const items = (rows?.results || []).map(normalizeItem);
-      if (items.length) return items;
+      if (items.length) return { items, source: 'd1' };
     } catch { /* fall through */ }
   }
-  return seedItems(null).filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').slice(0, limit);
+  return {
+    items: seedItems(null).filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').slice(0, limit),
+    source: 'seed',
+  };
 }
 
 async function buildKev(env, ent, reqLimit) {
-  const raw = await fetchKEV(env, ent.kev_full ? ent.max_results : 25);
+  const { items: raw, source } = await fetchKEV(env, ent.kev_full ? ent.max_results : 25);
   const items = gateItems(raw, ent, reqLimit);
   return {
     version: 'v1', feed: 'cisa-kev', publisher: PUBLISHER, tier: ent.tier,
     description: 'CISA Known Exploited Vulnerabilities — confirmed in-the-wild exploitation',
     full_catalog: ent.kev_full,
-    generated_at: new Date().toISOString(), count: items.length, items,
+    generated_at: new Date().toISOString(), data_source: source, live: source !== 'seed',
+    count: items.length, items,
     upgrade: upgradeMeta(ent),
   };
 }
@@ -238,6 +252,8 @@ async function buildAiSummary(env) {
     feed:         'ai-summary',
     publisher:    PUBLISHER,
     generated_at: new Date().toISOString(),
+    data_source:  c.source,
+    live:         c.source !== 'seed',
     threat_level: level,
     headline,
     counts:       c,
@@ -253,8 +269,8 @@ async function buildAiSummary(env) {
 
 async function buildReports(env, ent) {
   const cap = Math.min(ent?.max_results ?? 10, 25);
-  const items = await fetchRecentIntel(env, { limit: cap, severities: ['CRITICAL', 'HIGH'] });
-  const reports = items.map((it, i) => ({
+  const { items: raw, source } = await fetchRecentIntel(env, { limit: cap, severities: ['CRITICAL', 'HIGH'] });
+  const reports = raw.map((it, i) => ({
     id:        it.cve || `BRIEF-${i + 1}`,
     type:      'threat-brief',
     title:     it.title,
@@ -266,6 +282,8 @@ async function buildReports(env, ent) {
     feed:         'latest-reports',
     publisher:    PUBLISHER,
     generated_at: new Date().toISOString(),
+    data_source:  source,
+    live:         source !== 'seed',
     count:        reports.length,
     reports,
     premium_reports: {
@@ -277,7 +295,7 @@ async function buildReports(env, ent) {
 
 // ─── STIX 2.1 export (premium) ────────────────────────────────────────────────
 async function buildStix(env, ent, reqLimit) {
-  const raw   = await fetchKEV(env, ent.max_results);
+  const { items: raw } = await fetchKEV(env, ent.max_results);
   const items = raw.slice(0, Math.min(ent.max_results, reqLimit || ent.max_results));
   return toStixBundle(items, { tlp: 'clear' });
 }

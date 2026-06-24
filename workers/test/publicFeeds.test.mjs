@@ -74,6 +74,8 @@ describe('public threat-intel feeds', () => {
     expect(body.count).toBe(3);
     expect(body.items[0].cve).toBe('CVE-2026-1');
     expect(body.items[0].severity).toBe('CRITICAL');
+    expect(body.data_source).toBe('d1');
+    expect(body.live).toBe(true);
   });
 
   it('apex feed returns only CRITICAL/HIGH', async () => {
@@ -96,12 +98,36 @@ describe('public threat-intel feeds', () => {
     expect(body.items[0].title).toBe('Critical RCE'); // real data still served
   });
 
-  it('with no DB, serves the curated seed fallback (never empty, never 500)', async () => {
+  it('with no DB, serves the curated seed fallback (never empty, never 500) and flags it as not live', async () => {
     const res = await call({}, '/api/feed.json');
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.count).toBeGreaterThan(0);          // seed fallback, platform-consistent
     expect(body.items.every(i => i.severity)).toBe(true);
+    // Customer mandate: a fallback/reference baseline must never be reported
+    // as live data — every public feed must honestly flag its provenance.
+    expect(body.data_source).toBe('seed');
+    expect(body.live).toBe(false);
+  });
+
+  it('flags data_source/live consistently across latest, apex, kev and reports feeds', async () => {
+    for (const p of ['/api/v1/intel/latest.json', '/api/v1/intel/apex.json', '/api/v1/intel/kev.json']) {
+      const live = await (await call(mockEnv(), p)).json();
+      expect(live.data_source).toBe('d1');
+      expect(live.live).toBe(true);
+
+      const fallback = await (await call({}, p)).json();
+      expect(fallback.data_source).toBe('seed');
+      expect(fallback.live).toBe(false);
+    }
+
+    const liveReports = await (await call(mockEnv(), '/api/reports/latest.json')).json();
+    expect(liveReports.data_source).toBe('d1');
+    expect(liveReports.live).toBe(true);
+
+    const fallbackReports = await (await call({}, '/api/reports/latest.json')).json();
+    expect(fallbackReports.data_source).toBe('seed');
+    expect(fallbackReports.live).toBe(false);
   });
 
   it('ai_summary falls back to seed counts when DB is empty', async () => {
@@ -109,5 +135,13 @@ describe('public threat-intel feeds', () => {
     const body = await res.json();
     expect(body.counts.total).toBeGreaterThan(0);
     expect(body.threat_level).not.toBe('LOW');      // seed has CRITICAL/HIGH CVEs
+    expect(body.data_source).toBe('seed');
+    expect(body.live).toBe(false);
+  });
+
+  it('ai_summary reports live=true and data_source=d1 when DB has real rows', async () => {
+    const body = await (await call(mockEnv(), '/api/v1/intel/ai_summary.json')).json();
+    expect(body.data_source).toBe('d1');
+    expect(body.live).toBe(true);
   });
 });

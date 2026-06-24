@@ -8438,9 +8438,24 @@ async function loadThreatIntel(filter = {}) {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  // dataSource === 'seed' means D1 + KV both missed and we're showing the
+  // built-in reference baseline (real but potentially old CVEs) — never label
+  // that "LIVE" with a current timestamp, since customers must be able to
+  // trust that a green LIVE badge means freshly-fetched data, not a fallback.
   if (liveEl) {
-    liveEl.style.opacity  = '1';
-    liveEl.innerHTML = `🟢 LIVE <span style="font-size:9px;opacity:.7">${new Date().toLocaleTimeString()}</span>`;
+    liveEl.style.opacity = '1';
+    const isLive = dataSource !== 'seed';
+    if (isLive) {
+      liveEl.style.background = 'rgba(34,197,94,.15)';
+      liveEl.style.borderColor = 'rgba(34,197,94,.3)';
+      liveEl.style.color = '#4ade80';
+      liveEl.innerHTML = `🟢 LIVE <span style="font-size:9px;opacity:.7">${new Date().toLocaleTimeString()}</span>`;
+    } else {
+      liveEl.style.background = 'rgba(245,158,11,.15)';
+      liveEl.style.borderColor = 'rgba(245,158,11,.3)';
+      liveEl.style.color = '#fbbf24';
+      liveEl.innerHTML = `🟡 REFERENCE BASELINE <span style="font-size:9px;opacity:.7">live sync in progress…</span>`;
+    }
   }
 
   // Summary stat cards
