@@ -14,6 +14,7 @@ import { enforceGovernanceBatch } from '../middleware/severityGovernanceGate.js'
 import { extractIOCs, extractIOCsFromText }   from './iocExtractor.js';
 import { enrichEntry, enrichBatch }           from './enrichment.js';
 import { triggerIntelAlerts }                 from '../lib/alerts.js';
+import { runAIThreatIngestion }               from './aiThreatIngestion.js';
 
 const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
@@ -751,6 +752,16 @@ export async function runIngestion(env) {
   if (env?.DB) {
     stored = await storeInD1(env.DB, deduped);
     errors.push(...stored.errors);
+  }
+
+  // 8a. Filter the same batch for AI/LLM-ecosystem relevance and feed the
+  //     AI-specific threat feed (handlers/aiThreatIntel.js) — no extra fetches.
+  try {
+    const aiResult = await runAIThreatIngestion(env, deduped);
+    if (aiResult.matched > 0) sources.push(`ai_feed(${aiResult.inserted}/${aiResult.matched})`);
+    errors.push(...aiResult.errors);
+  } catch (e) {
+    errors.push(`AI feed filter: ${e.message}`);
   }
 
   // 8b. Phase 6: Broadcast threat alerts for newly ingested high-risk entries
