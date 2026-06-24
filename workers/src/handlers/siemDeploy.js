@@ -253,6 +253,17 @@ async function deployToEndpoint(platformId, config, payload) {
   };
 }
 
+// ── Auth guard ────────────────────────────────────────────────────────────────
+// SIEM integration management is restricted to admin/owner. The outer router
+// gate at /api/integrations already enforces this via isOwner(); these checks
+// are a second layer of defense so the handlers are safe if called directly.
+function requireAdmin(request, authCtx) {
+  if (!authCtx?.isAdmin && !authCtx?.authenticated) {
+    return fail(request, 'Admin access required for SIEM integration management', 403, 'ADMIN_ONLY');
+  }
+  return null;
+}
+
 // ── GET /api/integrations ─────────────────────────────────────────────────────
 export async function handleListIntegrations(request, env, authCtx = {}) {
   const integrations = [];
@@ -270,9 +281,19 @@ export async function handleListIntegrations(request, env, authCtx = {}) {
       enabled:     config?.enabled !== false && !!config?.webhook_url,
       last_deploy: config?.last_deploy || null,
       deploy_count: config?.deploy_count || 0,
+      configured_by: config?.configured_by || null,
+      configured_at: config?.configured_at || null,
     });
   }
-  return ok(request, { integrations, total: integrations.length });
+  const configured = integrations.filter(i => i.configured).length;
+  const active     = integrations.filter(i => i.enabled).length;
+  return ok(request, {
+    integrations,
+    total: integrations.length,
+    configured,
+    active,
+    one_click_deploy_ready: active > 0,
+  });
 }
 
 // ── POST /api/integrations/configure ─────────────────────────────────────────
