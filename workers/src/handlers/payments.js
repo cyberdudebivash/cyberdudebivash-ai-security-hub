@@ -500,7 +500,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
           lineItems:   [{ description: MODULE_PRICES[module]?.name || module, amount_inr: priceInr, quantity: 1 }],
           paymentId:   razorpay_payment_id,
           paymentMethod: 'razorpay',
-        }).catch(e => console.warn('[Payments] invoice error:', e.message))
+        }, env).catch(e => console.warn('[Payments] invoice error:', e.message))
       : Promise.resolve(),
     confirmedEmail
       ? sendPurchaseConfirmation(env, {

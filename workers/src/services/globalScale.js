@@ -440,7 +440,7 @@ export async function handleVerifyCompliancePack(request, env) {
               lineItems:   [{ description: pack.name, amount_inr: pack.price_inr, quantity: 1 }],
               paymentId:   razorpay_payment_id,
               paymentMethod: 'razorpay',
-            });
+            }, env);
           }
         } catch (e) { console.warn('[CompliancePack] invoice error:', e.message); }
       })(),

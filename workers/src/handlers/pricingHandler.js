@@ -3,7 +3,7 @@
 // Serves canonical pricing from pricingConfig — never hardcoded
 // ═══════════════════════════════════════════════════════════════
 import { PRICING_CONFIG, getPlansArray } from '../config/pricingConfig.js';
-import { PAYMENT_CONFIG } from '../config/paymentConfig.js';
+import { getPaymentConfig } from '../config/paymentConfig.js';
 
 export async function handlePricing(request, env) {
   const url    = new URL(request.url);
@@ -51,6 +51,7 @@ export async function handlePricing(request, env) {
   }
 
   // ── Full pricing manifest ────────────────────────────────────
+  const PAYMENT_CONFIG = getPaymentConfig(env);
   return new Response(JSON.stringify({
     plans:    Object.values(PRICING_CONFIG.plans),
     packages: Object.values(PRICING_CONFIG.packages),
@@ -72,7 +73,10 @@ export async function handlePaymentConfig(request, env) {
     'Cache-Control':               'public, max-age=3600',
   };
 
-  // Return safe subset — no sensitive account data in public API
+  // Bank account number / IFSC are intentionally included — customers
+  // need them to complete a manual bank-transfer payment. The values
+  // themselves live in Worker secrets, never in source.
+  const PAYMENT_CONFIG = getPaymentConfig(env);
   return new Response(JSON.stringify({
     upi: {
       primary:   PAYMENT_CONFIG.upi.primary,

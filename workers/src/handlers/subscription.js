@@ -282,7 +282,7 @@ export async function handleActivateSubscription(request, env) {
               lineItems:   [{ description: `${planDef.name} Subscription (Monthly)`, amount_inr: planDef.price_inr, quantity: 1 }],
               paymentId:   razorpay_payment_id,
               paymentMethod: 'razorpay',
-            });
+            }, env);
           }
         } catch (e) { console.warn('[Subscription] invoice error:', e.message); }
       })(),

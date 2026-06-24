@@ -16,6 +16,8 @@
  *   POST /api/v24/billing/recovery/retry    — retry failed payment (cron)
  */
 
+import { getPaymentConfig } from '../../config/paymentConfig.js';
+
 const GST_RATE = 0.18; // 18% GST
 const INVOICE_PREFIX = 'CBD';
 
@@ -27,7 +29,7 @@ function generateInvoiceNumber(seq) {
 }
 
 // ─── Generate GST invoice ─────────────────────────────────────────────────────
-export async function createInvoice(db, params) {
+export async function createInvoice(db, params, env = {}) {
   if (!db) return { ok: false, error: 'No DB' };
   const {
     userId, email, company, gstin, billingAddress,
@@ -91,15 +93,16 @@ export async function createInvoice(db, params) {
       total_inr:      total,
       gst_amount_inr: gstAmount,
       subtotal_inr:   subtotal,
-      html:           generateInvoiceHTML({ invId, invoiceNumber, email, company, gstin, lineItems, subtotal, gstAmount, total, periodStart, periodEnd }),
+      html:           generateInvoiceHTML({ invId, invoiceNumber, email, company, gstin, lineItems, subtotal, gstAmount, total, periodStart, periodEnd }, env),
     };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
 // ─── Generate invoice HTML (printable / PDF-ready) ────────────────────────────
-function generateInvoiceHTML(inv) {
+function generateInvoiceHTML(inv, env = {}) {
   const { invoiceNumber, email, company, gstin, lineItems, subtotal, gstAmount, total, periodStart, periodEnd } = inv;
   const now = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const pay = getPaymentConfig(env);
 
   const rows = lineItems.map(item => `
     <tr>
@@ -159,8 +162,8 @@ function generateInvoiceHTML(inv) {
 </table>
 
 <div class="footer">
-  <p>Payment terms: Due on receipt | Bank: Axis Bank | A/C: 915010024617260 | IFSC: UTIB0000052</p>
-  <p>UPI: iambivash.bn-5@okaxis | Email: bivash@cyberdudebivash.com | +91 8179881447</p>
+  <p>Payment terms: Due on receipt | Bank: ${pay.bank.bank_name} | A/C: ${pay.bank.account_number} | IFSC: ${pay.bank.ifsc}</p>
+  <p>UPI: ${pay.upi.primary} | Email: ${pay.business.email} | ${pay.business.phone}</p>
   <p>This is a computer-generated invoice and does not require a physical signature.</p>
 </div>
 </body></html>`;

@@ -297,7 +297,7 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
             lineItems:   [{ description: row.title, amount_inr: row.price_inr, quantity: 1 }],
             paymentId:   razorpay_payment_id,
             paymentMethod: 'razorpay',
-          }).catch(e => console.warn('[defenseMarketplace] invoice error:', e.message))
+          }, env).catch(e => console.warn('[defenseMarketplace] invoice error:', e.message))
         : Promise.resolve(),
       // Confirmation email
       customerEmail
@@ -422,9 +422,9 @@ export async function handleGetFOMO(request, env) {
       country:    e.ip_country || '🌍',
     }));
 
-    return json({ success: true, events: events.length ? events : getMockFOMOEvents() });
+    return json({ success: true, events });
   } catch {
-    return json({ success: true, events: getMockFOMOEvents() });
+    return json({ success: true, events: [] });
   }
 }
 
@@ -533,17 +533,6 @@ function buildFOMOMessage(e) {
     upgrade:  `⬆️ Team upgraded to Pro`,
   };
   return msgs[e.event_type] || `Activity on "${e.display_name}"`;
-}
-
-function getMockFOMOEvents() {
-  const events = [
-    { type: 'purchase', message: '🛡️ Enterprise team purchased Firewall Script', time_ago: '2 min ago', country: '🇺🇸' },
-    { type: 'view',     message: '👀 MSSP viewing YARA Rule pack',               time_ago: '5 min ago', country: '🇬🇧' },
-    { type: 'purchase', message: '🛡️ SOC team purchased IR Playbook',            time_ago: '8 min ago', country: '🇮🇳' },
-    { type: 'signup',   message: '🆕 Security researcher joined Sentinel APEX',  time_ago: '12 min ago',country: '🇸🇬' },
-    { type: 'purchase', message: '🛡️ Red team purchased Sigma Rule bundle',      time_ago: '18 min ago',country: '🇩🇪' },
-  ];
-  return events;
 }
 
 function getMockFeatured() {

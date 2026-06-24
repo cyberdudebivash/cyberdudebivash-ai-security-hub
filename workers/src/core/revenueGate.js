@@ -18,6 +18,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { getPaymentConfig } from '../config/paymentConfig.js';
 
 // ─── Plan Definitions ─────────────────────────────────────────────────────────
 export const SUBSCRIPTION_PLANS = {
@@ -213,14 +214,17 @@ export async function handleGetPlansV20(request, env, authCtx) {
     current_plan: userTier,
     currency,
     billing_info: 'All plans billed monthly. Cancel anytime.',
-    payment_methods: {
-      upi:     'iambivash.bn-5@okaxis',
-      paypal:  'https://www.paypal.com/paypalme/iambivash',
-      bank:    'Axis Bank IFSC UTIB0000052 · AC 915010024617260',
-      crypto:  '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796 (BNB Smart Chain)',
-      support: 'bivash@cyberdudebivash.com · +91 8179881447',
-      sla:     '2–4 hour activation',
-    },
+    payment_methods: (() => {
+      const pay = getPaymentConfig(env);
+      return {
+        upi:     pay.upi.primary,
+        paypal:  pay.paypal.link,
+        bank:    `${pay.bank.bank_name} IFSC ${pay.bank.ifsc} · AC ${pay.bank.account_number}`,
+        crypto:  `${pay.crypto.bnb_smart_chain} (BNB Smart Chain)`,
+        support: `${pay.business.support} · ${pay.business.phone}`,
+        sla:     '2–4 hour activation',
+      };
+    })(),
     platform:   'CYBERDUDEBIVASH AI Security Hub v20.0',
     timestamp:  new Date().toISOString(),
   });
@@ -292,12 +296,15 @@ export async function handleSubscribeV20(request, env, authCtx) {
     coupon:            couponApplied,
     payment_method,
     next_step:         'POST /api/payments/create-order with subscription_id to create payment order',
-    payment_info: {
-      upi:     'iambivash.bn-5@okaxis',
-      paypal:  'https://www.paypal.com/paypalme/iambivash',
-      support: 'bivash@cyberdudebivash.com',
-      sla:     '2–4 hour activation after payment',
-    },
+    payment_info: (() => {
+      const pay = getPaymentConfig(env);
+      return {
+        upi:     pay.upi.primary,
+        paypal:  pay.paypal.link,
+        support: pay.business.support,
+        sla:     '2–4 hour activation after payment',
+      };
+    })(),
     features_unlocked: Object.entries(selectedPlan.limits)
       .filter(([, v]) => v === true)
       .map(([k]) => k),
