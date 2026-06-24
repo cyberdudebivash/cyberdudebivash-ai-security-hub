@@ -18,56 +18,63 @@ function jsonErr(message, status = 500) {
   });
 }
 
-// ── Payment method config — LIVE production details ──────────────────────────
-export const PAYMENT_CONFIG = {
-  company_name:    'CYBERDUDEBIVASH AI Security Hub',
-  owner_name:      'Bivash Kumar Nayak',
-  support_email:   'bivash@cyberdudebivash.com',
-  billing_email:   'bivash@cyberdudebivash.com',
-  whatsapp:        '+918179881447',
-  verification_sla: '2–4 hours',
+// ── Payment method config — sourced from Worker secrets at request time ──────
+// No bank/UPI/crypto/personal details are hardcoded here. Set them with:
+//   npx wrangler secret put <NAME>   (see wrangler.toml "PAYMENT DISPLAY DETAILS")
+function getManualPaymentConfig(env) {
+  const bnbAddress = env.CRYPTO_BNB_ADDRESS || '';
+  return {
+    company_name:    env.BUSINESS_NAME || 'CYBERDUDEBIVASH AI Security Hub',
+    owner_name:       env.PAYEE_NAME || '',
+    support_email:    env.BUSINESS_SUPPORT_EMAIL || env.BUSINESS_EMAIL || '',
+    billing_email:    env.BUSINESS_EMAIL || '',
+    whatsapp:         env.BUSINESS_PHONE || '',
+    verification_sla: '2–4 hours',
 
-  // Primary UPI — works with PhonePe, GPay, Paytm, BHIM, any UPI app
-  upi: [
-    { label: 'Axis (Primary)',  id: 'iambivash.bn-5@okaxis',  type: 'upi' },
-    { label: 'Axis Bank',       id: '6302177246@axisbank',    type: 'upi' },
-  ],
-  upi_deep_link: 'upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR',
-  upi_qr_url:    '/assets/payment/upi-qr.png',
+    // Primary UPI — works with PhonePe, GPay, Paytm, BHIM, any UPI app
+    upi: [
+      { label: 'Axis (Primary)', id: env.UPI_PRIMARY_ID || '',   type: 'upi' },
+      { label: 'Axis Bank',      id: env.UPI_SECONDARY_ID || '', type: 'upi' },
+    ].filter(u => u.id),
+    upi_deep_link: env.UPI_PRIMARY_ID
+      ? `upi://pay?pa=${env.UPI_PRIMARY_ID}&pn=CYBERDUDEBIVASH&cu=INR`
+      : '',
+    upi_qr_url:    '/assets/payment/upi-qr.png',
 
-  // Bank transfer — NEFT / IMPS / RTGS (24x7 via IMPS)
-  bank: {
-    account_name:   'Bivash Kumar Nayak',
-    account_number: '915010024617260',
-    ifsc:           'UTIB0000052',
-    bank_name:      'Axis Bank',
-    account_type:   'Savings Account',
-    swift:          'AXISINBB',   // for international wire
-  },
-
-  // PayPal — for international customers
-  paypal: {
-    email:   'iambivash.bn@gmail.com',
-    paypalme: 'https://www.paypal.com/paypalme/iambivash',
-    note:    'Use "Friends & Family" to avoid fees. Add product name + email in the note.',
-  },
-
-  // Crypto — BNB Smart Chain + Ethereum (same address, BEP20/ERC20)
-  crypto: [
-    {
-      coin:    'USDT / BNB / ETH (BEP20)',
-      address: '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796',
-      network: 'BNB Smart Chain (BEP20)',
-      note:    'Send ONLY on BNB Smart Chain or Ethereum. Wrong network = lost funds.',
+    // Bank transfer — NEFT / IMPS / RTGS (24x7 via IMPS)
+    bank: {
+      account_name:   env.BANK_ACCOUNT_NAME || '',
+      account_number: env.BANK_ACCOUNT_NUMBER || '',
+      ifsc:           env.BANK_IFSC || '',
+      bank_name:      env.BANK_NAME || '',
+      account_type:   env.BANK_ACCOUNT_TYPE || 'Savings Account',
+      swift:          env.BANK_SWIFT || '',
     },
-    {
-      coin:    'USDT / ETH (ERC20)',
-      address: '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796',
-      network: 'Ethereum Mainnet (ERC20)',
-      note:    'TX Hash is your Transaction ID after sending.',
+
+    // PayPal — for international customers
+    paypal: {
+      email:    env.PAYPAL_EMAIL || '',
+      paypalme: env.PAYPAL_ME_LINK || '',
+      note:     'Use "Friends & Family" to avoid fees. Add product name + email in the note.',
     },
-  ],
-};
+
+    // Crypto — BNB Smart Chain + Ethereum (same address, BEP20/ERC20)
+    crypto: bnbAddress ? [
+      {
+        coin:    'USDT / BNB / ETH (BEP20)',
+        address: bnbAddress,
+        network: 'BNB Smart Chain (BEP20)',
+        note:    'Send ONLY on BNB Smart Chain or Ethereum. Wrong network = lost funds.',
+      },
+      {
+        coin:    'USDT / ETH (ERC20)',
+        address: bnbAddress,
+        network: 'Ethereum Mainnet (ERC20)',
+        note:    'TX Hash is your Transaction ID after sending.',
+      },
+    ] : [],
+  };
+}
 
 // ── Product catalog ──────────────────────────────────────────────────────────
 export const PRODUCT_CATALOG = {
@@ -163,6 +170,7 @@ export async function handleSubmitPayment(request, env) {
     userIndex.unshift({ payment_id, status: 'pending', amount_inr: record.amount_inr, product_id, created_at: record.created_at });
     await KV.put(`payment:user:${record.payer_email}`, JSON.stringify(userIndex), { expirationTtl: 60 * 60 * 24 * 365 });
 
+    const PAYMENT_CONFIG = getManualPaymentConfig(env);
     return jsonOk({
       payment_id,
       status: 'pending',
@@ -397,11 +405,13 @@ export async function handleAdminPaymentAction(request, env, recordId, action) {
 // ── Get payment config (for frontend modal) ───────────────────────────────── */
 export async function handleGetPaymentConfig(request, env) {
   try {
-    // Return config without sensitive details
+    // Bank/UPI/crypto details are intentionally returned — customers need
+    // them to complete a manual payment. Values come from Worker secrets.
+    const PAYMENT_CONFIG = getManualPaymentConfig(env);
     return jsonOk({
       config: {
         company_name:    PAYMENT_CONFIG.company_name,
-        gst_number:      PAYMENT_CONFIG.gst_number,
+        gst_number:      env.BUSINESS_GST || '',
         support_email:   PAYMENT_CONFIG.support_email,
         verification_sla: PAYMENT_CONFIG.verification_sla,
         upi:    PAYMENT_CONFIG.upi,

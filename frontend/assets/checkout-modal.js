@@ -8,7 +8,7 @@
  *   B. Bank Wire (NEFT/IMPS/RTGS corporate details)
  *   C. Razorpay Gateway (webhook-verified)
  *   D. PayPal REST Link
- *   E. Web3 Crypto (ETH/BNB/TRC-20 USDT)
+ *   E. Web3 Crypto (ETH/BNB)
  *
  * Geo-aware: shows INR rails for IN, USD rails for non-IN.
  * Zero external dependencies at mount-time (qrcode loaded on demand).
@@ -18,26 +18,52 @@
   'use strict';
 
   /* ── CONSTANTS ────────────────────────────────────────────────────── */
-  const MERCHANT = Object.freeze({
-    UPI_ID:       'iambivash.bn-5@okaxis',
-    UPI_ID_ALT:   '6302177246@axisbank',
+  // UPI/bank/PayPal/crypto values are loaded at runtime from
+  // /api/payment-config — never hardcode account/wallet details in source.
+  // GSTIN is public business-registration info (same disclosure as on
+  // terms-of-service.html / privacy-policy.html) and is fine to keep here.
+  const MERCHANT = {
+    UPI_ID:       '',
+    UPI_ID_ALT:   '',
     PAYEE_NAME:   'CYBERDUDEBIVASH%20PVT%20LTD',
     PAYEE_DISPLAY:'CYBERDUDEBIVASH PRIVATE LIMITED',
-    BANK_NAME:    'Axis Bank',
-    BANK_ACCOUNT: '926020049697391',          // Axis corporate account
-    IFSC:         'UTIB0000052',
-    BANK_BRANCH:  'Bhubaneswar Corporate Branch',
+    BANK_NAME:    '',
+    BANK_ACCOUNT: '',
+    IFSC:         '',
     GSTIN:        '21ARKPN8270G1ZP',
-    PAN:          'ARKPN8270G',
-    PAYPAL_LINK:  'https://paypal.me/iambivash',
-    CRYPTO: Object.freeze({
-      ETH:  '0x742d35Cc6634C0532925a3b8D4E3bC4b5B7e88FA',
-      BNB:  '0x742d35Cc6634C0532925a3b8D4E3bC4b5B7e88FA',
-      USDT_TRC20: 'TJvEi7k3G1c9reSmpqXaAbNVj7Xq7ygVSD',
-    }),
+    PAYPAL_LINK:  '',
+    CRYPTO: {
+      ETH: '',
+      BNB: '',
+    },
     API_BASE: (window.CONFIG && window.CONFIG.API_BASE)
               || 'https://cyberdudebivash-security-hub.workers.dev',
-  });
+  };
+
+  let _merchantLoaded = false;
+  let _merchantLoadingPromise = null;
+  function loadMerchantConfig() {
+    if (_merchantLoaded) return Promise.resolve();
+    if (_merchantLoadingPromise) return _merchantLoadingPromise;
+    _merchantLoadingPromise = fetch('/api/payment-config', { signal: AbortSignal.timeout(6000) })
+      .then(r => r.ok ? r.json() : null)
+      .then(cfg => {
+        if (!cfg) return;
+        MERCHANT.UPI_ID       = (cfg.upi && cfg.upi.primary) || '';
+        MERCHANT.UPI_ID_ALT   = (cfg.upi && cfg.upi.secondary) || '';
+        MERCHANT.PAYEE_DISPLAY= (cfg.bank && cfg.bank.account_name) || MERCHANT.PAYEE_DISPLAY;
+        MERCHANT.BANK_NAME    = (cfg.bank && cfg.bank.bank_name) || '';
+        MERCHANT.BANK_ACCOUNT = (cfg.bank && cfg.bank.account_number) || '';
+        MERCHANT.IFSC         = (cfg.bank && cfg.bank.ifsc) || '';
+        MERCHANT.GSTIN        = (cfg.business && cfg.business.gst) || MERCHANT.GSTIN;
+        MERCHANT.PAYPAL_LINK  = (cfg.paypal && cfg.paypal.link) || '';
+        MERCHANT.CRYPTO.ETH   = (cfg.crypto && cfg.crypto.bnb_smart_chain) || '';
+        MERCHANT.CRYPTO.BNB   = (cfg.crypto && cfg.crypto.bnb_smart_chain) || '';
+        _merchantLoaded = true;
+      })
+      .catch(e => console.warn('[CDB_CHECKOUT] Failed to load payment config:', e.message));
+    return _merchantLoadingPromise;
+  }
 
   /* ── GENERATE TRANSACTION ID ──────────────────────────────────────── */
   function genTxnId() {
@@ -207,7 +233,6 @@
           ['Bank Name', MERCHANT.BANK_NAME],
           ['Account Number', MERCHANT.BANK_ACCOUNT],
           ['IFSC Code', MERCHANT.IFSC],
-          ['Branch', MERCHANT.BANK_BRANCH],
           ['GSTIN', MERCHANT.GSTIN],
           ['Amount', `₹${amount}`],
           ['Reference / Narration', txnId],
@@ -268,7 +293,6 @@
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button onclick="CDB_CHECKOUT_MODAL.selectChain('eth',this)" style="font-size:12px;padding:8px 14px;border-radius:8px;border:1px solid rgba(99,102,241,.5);background:rgba(99,102,241,.15);color:#818cf8;cursor:pointer;font-weight:700" id="cdb-chain-eth">Ξ ETH</button>
           <button onclick="CDB_CHECKOUT_MODAL.selectChain('bnb',this)" style="font-size:12px;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.4);cursor:pointer" id="cdb-chain-bnb">⬡ BNB</button>
-          <button onclick="CDB_CHECKOUT_MODAL.selectChain('usdt',this)" style="font-size:12px;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.4);cursor:pointer" id="cdb-chain-usdt">₮ USDT TRC-20</button>
         </div>
 
         <div id="cdb-crypto-addr-display">
@@ -332,6 +356,10 @@
     open(opts) {
       // opts: { amount, tierName, productLabel }
       this.close();
+      loadMerchantConfig().then(() => this._mount(opts));
+    },
+
+    _mount(opts) {
       const geo       = getGeo();
       const isIndia   = geo.countryCode === 'IN';
       const container = document.createElement('div');
@@ -391,7 +419,7 @@
     selectChain(chain, btn) {
       this._activeChain = chain;
       // Reset all chain buttons
-      ['eth','bnb','usdt'].forEach(c => {
+      ['eth','bnb'].forEach(c => {
         const b = document.getElementById(`cdb-chain-${c}`);
         if (b) {
           b.style.background = 'transparent';
@@ -405,9 +433,8 @@
         btn.style.color = '#818cf8';
       }
       const addrMap = {
-        eth:  { label: 'Ethereum (ERC-20)', addr: MERCHANT.CRYPTO.ETH,         color: '#818cf8' },
-        bnb:  { label: 'BNB Smart Chain',   addr: MERCHANT.CRYPTO.BNB,         color: '#f59e0b' },
-        usdt: { label: 'USDT TRC-20 (Tron)',addr: MERCHANT.CRYPTO.USDT_TRC20,  color: '#22c55e' },
+        eth:  { label: 'Ethereum (ERC-20)', addr: MERCHANT.CRYPTO.ETH, color: '#818cf8' },
+        bnb:  { label: 'BNB Smart Chain',   addr: MERCHANT.CRYPTO.BNB, color: '#f59e0b' },
       };
       const d = addrMap[chain];
       const el = document.getElementById('cdb-crypto-addr-display');

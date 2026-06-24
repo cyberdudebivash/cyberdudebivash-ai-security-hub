@@ -64,7 +64,7 @@ export async function handleV24(request, env, authCtx, path, method) {
       paymentMethod:  body.payment_method || 'razorpay',
       periodStart:    body.period_start,
       periodEnd:      body.period_end,
-    });
+    }, env);
     return json(result);
   }
 

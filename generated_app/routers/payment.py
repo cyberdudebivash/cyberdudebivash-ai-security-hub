@@ -29,27 +29,32 @@ router = APIRouter(prefix="/payment", tags=["Payment"])
 # ── Data storage ──────────────────────────────────────────────────────────────
 DATA_DIR = Path(os.getenv("PAYMENT_DATA_DIR", "/data"))
 PAYMENTS_FILE = DATA_DIR / "payments.json"
-ADMIN_SECRET = os.getenv("PAYMENT_ADMIN_SECRET", "cdb-admin-2024-secure")
+ADMIN_SECRET = os.getenv("PAYMENT_ADMIN_SECRET")
+if not ADMIN_SECRET:
+    raise RuntimeError(
+        "PAYMENT_ADMIN_SECRET env var is required — no insecure default. "
+        "Set it before starting this service."
+    )
 
 VALID_METHODS = {"UPI", "BANK", "PAYPAL", "CRYPTO_BNB", "CRYPTO_ETH"}
 VALID_STATUSES = {"pending", "approved", "rejected"}
 
 # ── Payment Details (canonical) ───────────────────────────────────────────────
+# All values come from env vars / secrets at runtime — never hardcode
+# bank/UPI/crypto/personal details in this file. Mirrors
+# workers/src/config/paymentConfig.js, the equivalent config for the
+# deployed Cloudflare Worker.
 PAYMENT_DETAILS = {
-    "upi": [
-        "iambivash.bn-5@okaxis",
-        "iambivash.bn-5@okicici",
-        "6302177246@axisbank",
-    ],
+    "upi": [v for v in os.getenv("PAYMENT_UPI_IDS", "").split(",") if v],
     "bank": {
-        "name": "Bivash Kumar Nayak",
-        "account_number": "915010024617260",
-        "ifsc": "UTIB0000052",
-        "bank": "Axis Bank",
+        "name": os.getenv("BANK_ACCOUNT_NAME", ""),
+        "account_number": os.getenv("BANK_ACCOUNT_NUMBER", ""),
+        "ifsc": os.getenv("BANK_IFSC", ""),
+        "bank": os.getenv("BANK_NAME", ""),
     },
-    "paypal": "iambivash.bn@gmail.com",
+    "paypal": os.getenv("PAYPAL_EMAIL", ""),
     "crypto": {
-        "address": "0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796",
+        "address": os.getenv("CRYPTO_BNB_ADDRESS", ""),
         "networks": ["BNB Smart Chain (BEP20)", "Ethereum (ERC20)"],
     },
 }

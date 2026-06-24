@@ -972,7 +972,7 @@ a{color:var(--accent);text-decoration:none}
 <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px">⚔️</div>
 </div>
 <div style="font-size:16px;font-weight:900;color:#e2e8f0;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">CYBERDUDEBIVASH AI</div>
-<div style="font-size:11px;color:#00d4ff;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px">Security Hub <span style="font-size:9px;padding:2px 8px;vertical-align:middle;background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.4);border-radius:4px;color:#00d4ff">v30.0 ✓ LIVE</span></div>
+<div style="font-size:11px;color:#00d4ff;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px">Security Hub <span style="font-size:9px;padding:2px 8px;vertical-align:middle;background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.4);border-radius:4px;color:#00d4ff">v40.0 ✓ LIVE</span></div>
 <div style="font-size:10px;color:#64748b;letter-spacing:.1em">Initializing threat intelligence...</div>
 <div style="margin-top:20px;width:180px;height:2px;background:rgba(255,255,255,.06);border-radius:1px;overflow:hidden">
 <div style="height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);animation:cdb-progress 1.2s ease-in-out infinite"></div>
@@ -1006,7 +1006,7 @@ a{color:var(--accent);text-decoration:none}
 <div aria-label="Site Announcement" class="ann-bar" role="region" style="overflow:hidden;padding:7px 0">
 <span class="ann-marquee">
     🔴 LIVE: Sentinel APEX monitoring <strong>CVEs in real-time</strong>  | 
-    ⚡ CYBERDUDEBIVASH AI Security Hub <span <="" id="platform-version-badge" span="" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v30.0</span> — Enterprise AI Security Platform  | 
+    ⚡ CYBERDUDEBIVASH AI Security Hub <span id="platform-version-badge" style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px">v40.0</span> — Enterprise AI Security Platform  | 
     🛡️ Defense products auto-generated from every critical CVE  | 
     📡 <a href="https://t.me/cyberdudebivashSentinelApex" style="color:#fff;font-weight:800" target="_blank">Join Sentinel APEX on Telegram →</a>  | 
     🚀 Enterprise packages from ₹9,999  | 
@@ -1039,7 +1039,7 @@ a{color:var(--accent);text-decoration:none}
 <span class="soc-sep">|</span>
 <div class="soc-indicator" title="Live version from /api/version">
 <span style="color:var(--accent);font-weight:800">⬡</span>
-<span id="soc-version">v30.0</span>
+<span id="soc-version">v40.0</span>
 </div>
 <span class="soc-sep" style="margin-left:auto">|</span>
 <div class="soc-indicator" id="soc-threat-level" title="Global threat level">
@@ -1146,7 +1146,7 @@ a{color:var(--accent);text-decoration:none}
 <a class="cdb-bsp-tab" data-owner-tab="1" href="#growth-analytics" onclick="cdbNavigate('growth-analytics');return false" style="display:none">📈 Growth</a>
 </div>
 <div class="cdb-bsp-divider"></div>
-<span class="cdb-bsp-v">v30.0</span>
+<span class="cdb-bsp-v">v40.0</span>
 </div>
 </div>
 <!-- ── v21.0 Platform Status Bar ─────────────────────────── -->
@@ -1161,7 +1161,7 @@ a{color:var(--accent);text-decoration:none}
   backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
 ">
 <span style="color:#22c55e;font-weight:800">● LIVE</span>
-<span>⚡ Platform <span id="sb-version" style="color:#00ff88;font-weight:900">v30.0</span></span>
+<span>⚡ Platform <span id="sb-version" style="color:#00ff88;font-weight:900">v40.0</span></span>
 <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
 <span>🧠 Adaptive Brain <span style="color:#00d4ff">ACTIVE</span></span>
 <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
@@ -1170,18 +1170,13 @@ a{color:var(--accent);text-decoration:none}
 <span>🤖 MYTHOS v3 <span style="color:#a855f7">RUNNING</span></span>
 <span aria-hidden="true" style="color:rgba(255,255,255,0.72)">|</span>
 <span>👥 <span id="sb-online" style="color:#f59e0b">...</span> online now</span>
-<span style="margin-left:auto;color:#00ff88;font-weight:700;letter-spacing:.04em">cyberdudebivash.in · production · v30.0.0 · MCP Scanner · Vibe Code Scanner</span>
+<span style="margin-left:auto;color:#00ff88;font-weight:700;letter-spacing:.04em">cyberdudebivash.in · production · v40.0.0 · MCP Scanner · Vibe Code Scanner</span>
 </div>
 <script>
 (function CDB_STATUS_BAR(){
-  var BASE_MIN=4,BASE_MAX=12;
-  var _simCount=BASE_MIN+Math.floor(Math.random()*(BASE_MAX-BASE_MIN+1));
-  var _lastReal=null;
   function setOnline(n){var els=[document.getElementById('sb-online'),document.getElementById('vi-online-count')];els.forEach(function(el){if(el)el.textContent=n;});}
-  function fluctuate(base){var delta=Math.random()<0.4?(Math.random()<0.5?1:-1):0;return Math.max(BASE_MIN,Math.min(BASE_MAX+8,base+delta));}
-  async function fetchOnline(){try{var res=await fetch('/api/visitor/live',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);var data=await res.json();var n=Math.max(BASE_MIN,(data.online_users||data.onlineUsers||0));_lastReal=n;_simCount=n;setOnline(n);}catch(_){_simCount=fluctuate(_simCount);setOnline(_simCount);}}
-  setOnline(_simCount);
-  document.addEventListener('DOMContentLoaded',function(){fetchOnline();setInterval(fetchOnline,30000);setInterval(function(){if(_lastReal===null){_simCount=fluctuate(_simCount);setOnline(_simCount);}},7000);});
+  async function fetchOnline(){try{var res=await fetch('/api/visitor/live',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);var data=await res.json();var n=data.online_users||data.onlineUsers||0;setOnline(n);}catch(_){/* keep last known-good value on failure */}}
+  document.addEventListener('DOMContentLoaded',function(){fetchOnline();setInterval(fetchOnline,30000);});
 })();
 </script>
 <!-- Breadcrumb — shows when not at hero -->
@@ -1481,7 +1476,7 @@ a{color:var(--accent);text-decoration:none}
 <span style="font-size:13px;animation:cdbShieldPulse 2s ease-in-out infinite">⚔️</span>
 <span style="font-size:9px;font-weight:900;letter-spacing:.16em;background:linear-gradient(90deg,#00d4ff,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CYBERDUDEBIVASH® AI SECURITY HUB</span>
 <span style="width:1px;height:14px;background:rgba(0,212,255,.3)"></span>
-<span style="font-size:8px;font-weight:800;color:rgba(0,212,255,.72);letter-spacing:.08em">v30.0</span>
+<span style="font-size:8px;font-weight:800;color:rgba(0,212,255,.72);letter-spacing:.08em">v40.0</span>
 </div>
 <div class="section-label-v11" style="justify-content:center;margin-bottom:10px">
 <span style="width:auto;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(99,102,241,.1));border-color:rgba(0,212,255,0.72);color:#00d4ff">Live Intelligence</span>
@@ -1847,7 +1842,7 @@ a{color:var(--accent);text-decoration:none}
 <button class="soc-refresh-btn" onclick="socClearLog()" style="margin-left:auto">CLR</button>
 </div>
 <div class="soc-log-feed" id="socLogFeed">
-<div class="soc-log-line soc-log-info"><span class="soc-log-ts" id="soc-log-init-ts">--:--:--</span><span class="soc-log-tag soc-tag-info">SYS</span><span>CYBERDUDEBIVASH SOC Platform v30.0 — Adaptive Cyber Brain ONLINE · Sentinel APEX v5.0 · MYTHOS v3.0 · MCP Scanner LIVE · Vibe Code Scanner LIVE</span></div>
+<div class="soc-log-line soc-log-info"><span class="soc-log-ts" id="soc-log-init-ts">--:--:--</span><span class="soc-log-tag soc-tag-info">SYS</span><span>CYBERDUDEBIVASH SOC Platform v40.0 — Adaptive Cyber Brain ONLINE · Sentinel APEX v5.0 · MYTHOS v3.0 · MCP Scanner LIVE · Vibe Code Scanner LIVE</span></div>
 <div class="soc-log-line soc-log-ok"><span class="soc-log-ts">--:--:--</span><span class="soc-log-tag soc-tag-ok">OK</span><span>All engines online - Sentinel APEX, MYTHOS, AI CyberBrain active</span></div>
 </div>
 </div>
@@ -2795,11 +2790,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
       </p>
 <!-- FOMO counter bar -->
 <div id="ds-fomo-bar" style="display:inline-flex;align-items:center;gap:20px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 24px;font-size:13px;flex-wrap:wrap;justify-content:center">
-<span style="color:#00d4ff;font-weight:700">🔥 <span id="ds-purchases-today">47</span> solutions sold today</span>
+<span style="color:#00d4ff;font-weight:700">🔥 <span id="ds-purchases-today">—</span> solutions sold</span>
 <span style="color:rgba(255,255,255,0.72)">|</span>
-<span style="color:#a78bfa">⚡ <span id="ds-teams-active">12</span> enterprise teams active now</span>
-<span style="color:rgba(255,255,255,0.72)">|</span>
-<span style="color:#f59e0b">🚨 <span id="ds-critical-count">3</span> CRITICAL threats live</span>
+<span style="color:#f59e0b">🚨 <span id="ds-critical-count">—</span> CRITICAL threat solutions</span>
 </div>
 <!-- Live activity ticker -->
 <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.72);
@@ -2970,22 +2963,13 @@ document.addEventListener('cdb:scan:complete', function(e) {
       const r = await fetch('/api/defense/fomo');
       if (r.ok) { const d = await r.json(); if (d.events?.length) dsFOMOEvents = d.events; }
     } catch {}
-    if (!dsFOMOEvents.length) {
-      dsFOMOEvents = [
-        {message:'🛡️ Enterprise team purchased Firewall Script pack',       time_ago:'2 min ago'},
-        {message:'👀 SOC team viewing APT29 Sigma Detection Rules',          time_ago:'4 min ago'},
-        {message:'🛡️ MSSP purchased IR Playbook bundle (₹1,499)',          time_ago:'9 min ago'},
-        {message:'🆕 Security researcher activated Sentinel APEX',          time_ago:'11 min ago'},
-        {message:'🛡️ Red team purchased YARA rule + Python Scanner combo', time_ago:'17 min ago'},
-        {message:'⚡ Threat Hunt Pack deployed in enterprise SOC',          time_ago:'23 min ago'},
-      ];
-    }
     cycleFOMO();
   }
 
   function cycleFOMO() {
     const el = document.getElementById('ds-live-msg');
-    if (!el || !dsFOMOEvents.length) return;
+    if (!el) return;
+    if (!dsFOMOEvents.length) { el.textContent = ''; return; }
     const evt = dsFOMOEvents[dsFOMOIdx % dsFOMOEvents.length];
     el.style.opacity = '0';
     setTimeout(() => {
@@ -3418,9 +3402,9 @@ document.addEventListener('cdb:scan:complete', function(e) {
     loadSolutions(1, 'all');
     // Update stats from API
     fetch('/api/defense/stats').then(r => r.ok ? r.json() : {}).then(d => {
-      if (d.total_purchases) {
+      if (d.total_sales != null) {
         const el = document.getElementById('ds-purchases-today');
-        if (el) el.textContent = d.total_purchases;
+        if (el) el.textContent = d.total_sales;
       }
       if (d.total_solutions) {
         const el = document.getElementById('mc-products-cnt');
@@ -7232,15 +7216,13 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <div style="max-width:1200px;margin:0 auto">
 <div style="text-align:center;margin-bottom:40px">
 <span style="background:rgba(0,212,255,.1);color:#00d4ff;font-size:11px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.12em;border:1px solid rgba(0,212,255,.25)">🗺 GLOBAL THREAT INTELLIGENCE MAP</span>
-<h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Live <span style="color:#00d4ff">Cyberattack</span> World Map</h2>
-<p style="color:rgba(255,255,255,.72);font-size:15px;max-width:600px;margin:0 auto">Real-time visualization of active attack campaigns, threat actor locations and global incident heatmap.</p>
+<h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;color:#fff;margin:16px 0 10px">Global <span style="color:#00d4ff">Cyberattack</span> World Map</h2>
+<p style="color:rgba(255,255,255,.72);font-size:15px;max-width:600px;margin:0 auto">Illustrative visualization of global threat-actor activity patterns, built from aggregated threat intelligence — not live network telemetry.</p>
 </div>
-<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px">
-<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-attacks" style="color:#ef4444;font-size:22px;font-weight:900">47,293</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Attacks/Hour</div></div>
-<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-campaigns" style="color:#f59e0b;font-size:22px;font-weight:900">218</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Active Campaigns</div></div>
-<div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-countries" style="color:#00d4ff;font-size:22px;font-weight:900">94</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Countries Hit</div></div>
-<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-apts" style="color:#a855f7;font-size:22px;font-weight:900">37</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">APT Groups Active</div></div>
-<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-blocked" style="color:#22c55e;font-size:22px;font-weight:900">—</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Blocked Today</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-attacks" style="color:#ef4444;font-size:22px;font-weight:900">—</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Tracked Advisories</div></div>
+<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-campaigns" style="color:#f59e0b;font-size:22px;font-weight:900">—</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Critical Advisories</div></div>
+<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px;text-align:center"><div id="gtm-blocked" style="color:#22c55e;font-size:22px;font-weight:900">—</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">Confirmed Exploited</div></div>
 </div>
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:20px;position:relative;overflow:hidden">
 <canvas height="460" id="gtm-canvas" style="width:100%;border-radius:12px;display:block;background:#030310" width="1100"></canvas>
@@ -7253,7 +7235,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.12);border-radius:14px;padding:20px">
-<span style="color:#00d4ff;font-size:12px;font-weight:800">⚡ LIVE ATTACK STREAM</span>
+<span style="color:#00d4ff;font-size:12px;font-weight:800">⚡ SAMPLE THREAT ACTIVITY <span style="color:rgba(255,255,255,0.45);font-weight:600;text-transform:none;letter-spacing:0">(illustrative)</span></span>
 <div id="gtm-live-log" style="margin-top:10px;font-family:monospace;font-size:11px;line-height:2;height:180px;overflow:hidden;color:rgba(255,255,255,.72)"></div>
 </div>
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
@@ -7615,7 +7597,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div style="text-align:right">
 <div style="font-size:11px;color:#64748b;line-height:2">
-            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v28.0</span><br/>
+            Platform <span id="platform-version-footer" style="color:#00ff88;font-weight:800">v40.0</span><br/>
 <a href="mailto:bivash@cyberdudebivash.com" style="color:#94a3b8">bivash@cyberdudebivash.com</a><br/>
 <a href="https://wa.me/918179881447" style="color:#94a3b8" target="_blank">+91 8179881447</a> ·
             <a href="https://discord.gg/cyberdudebivash" style="color:#94a3b8" target="_blank">Discord: cybercoder127001</a>
@@ -7756,7 +7738,7 @@ const CONFIG = {
   TELEGRAM_URL:    'https://t.me/cyberdudebivashSentinelApex',
   CONTACT_EMAIL:   'bivash@cyberdudebivash.com',
   PLATFORM_NAME:   'CYBERDUDEBIVASH AI Security Hub',
-  VERSION:         '30.0.0',    // v30.0 — All trust killers eliminated, real API data only
+  VERSION:         '40.0.0',    // synced with workers/wrangler.toml PLATFORM_VERSION
   RAZORPAY_KEY_ID: '',          // DEPRECATED — removed; manual payment system active
   ADSENSE_CLIENT:  'ca-pub-8343951291888650',
   // ── DEPRECATED: Lemon Squeezy config (replaced by CDB_PAYMENT manual system) ──
@@ -8098,7 +8080,7 @@ function trackAffiliate(program, linkId) {
 // Priority order:
 //   1. /version.json  — static, no-store, injected at CI/CD build time
 //   2. /api/version   — live backend, used if version.json unavailable
-//   3. CONFIG.VERSION — hardcoded '9.0.0' default (never 'loading…')
+//   3. CONFIG.VERSION — hardcoded '40.0.0' default (never 'loading…')
 //
 // Self-healing: if the HTML page's data-build-id (stamped by CI/CD) does not
 // match the commit in version.json, the page was served stale from cache.
@@ -8178,7 +8160,7 @@ async function initVersion() {
     console.info(`[CYBERDUDEBIVASH] v${ver} (from API) | env: ${data.environment}`);
   } catch (err) {
     // Step 3: keep hardcoded default '9.0.0'
-    console.warn('[CYBERDUDEBIVASH] Version fetch failed, using default 9.0.0:', err.message);
+    console.warn('[CYBERDUDEBIVASH] Version fetch failed, using default 40.0.0:', err.message);
   }
 }
 // Convenience aliases (all existing references continue to work)
@@ -9871,6 +9853,59 @@ function loadRazorpay() { return Promise.resolve(); } // kept for compatibility
 
 const CDB_PAYMENT = {
   _current: {},
+  // Loaded at runtime from /api/payment-config — never hardcode these in source.
+  _pay: { upi1: '', upi2: '', bankName: '', bankAcc: '', bankIfsc: '', bankLabel: '', paypalEmail: '', paypalUrl: '', cryptoAddr: '' },
+  _cfgLoaded: false,
+
+  loadConfig() {
+    if (this._cfgLoaded) return Promise.resolve(this._pay);
+    return fetch('/api/payment-config', { signal: AbortSignal.timeout(6000) })
+      .then(r => r.ok ? r.json() : null)
+      .then(cfg => {
+        if (cfg) {
+          this._pay.upi1 = (cfg.upi && cfg.upi.primary) || '';
+          this._pay.upi2 = (cfg.upi && cfg.upi.secondary) || '';
+          this._pay.bankName = (cfg.bank && cfg.bank.account_name) || '';
+          this._pay.bankAcc = (cfg.bank && cfg.bank.account_number) || '';
+          this._pay.bankIfsc = (cfg.bank && cfg.bank.ifsc) || '';
+          this._pay.bankLabel = (cfg.bank && cfg.bank.bank_name) || '';
+          this._pay.paypalEmail = (cfg.paypal && cfg.paypal.email) || '';
+          this._pay.paypalUrl = (cfg.paypal && cfg.paypal.link) || '';
+          this._pay.cryptoAddr = (cfg.crypto && cfg.crypto.bnb_smart_chain) || '';
+          this._cfgLoaded = true;
+          this._render();
+        }
+        return this._pay;
+      })
+      .catch(e => { console.warn('[CDB_PAYMENT] Failed to load payment config:', e.message); return this._pay; });
+  },
+
+  _render() {
+    const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val || '—'; };
+    const p = this._pay;
+    set('cdb-upi1-val', p.upi1);
+    set('cdb-upi2-val', p.upi2);
+    set('cdb-upi1-fallback', p.upi1);
+    set('cdb-bank-name-val', p.bankName);
+    set('cdb-bank-acc-val', p.bankAcc);
+    set('cdb-bank-ifsc-val', p.bankIfsc);
+    set('cdb-bank-label-val', p.bankLabel);
+    set('cdb-paypal-email-val', p.paypalEmail);
+    set('cdb-crypto-addr-val', p.cryptoAddr);
+    set('cdb-howto-upi', [p.upi1, p.upi2].filter(Boolean).join(' · '));
+    set('cdb-howto-bank', [p.bankName, p.bankAcc, p.bankIfsc, p.bankLabel].filter(Boolean).join(' · '));
+    set('cdb-howto-paypal', p.paypalEmail);
+    set('cdb-howto-crypto', p.cryptoAddr);
+    const link = document.getElementById('cdb-upi-deep-link');
+    if (link && p.upi1) link.dataset.vpa = p.upi1;
+    const ppBtn = document.getElementById('cdb-paypal-link');
+    if (ppBtn && p.paypalUrl) ppBtn.href = p.paypalUrl;
+  },
+
+  copyField(key, btnId) {
+    const val = this._pay[key];
+    if (val) this.copyText(val, btnId);
+  },
 
   open(opts) {
     // opts: { product, productLabel, amount, amountLabel, email, onSuccess }
@@ -9903,6 +9938,7 @@ const CDB_PAYMENT = {
 
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    this.loadConfig();
   },
 
   close() {
@@ -10094,6 +10130,7 @@ function openLemonDefense(solId, priceInr) { CDB_PAYMENT.open({ product: 'defens
 window.showPaymentInstructions = function(){
   const m = document.getElementById('cdb-pay-howto');
   if(m) m.classList.add('open');
+  CDB_PAYMENT.loadConfig();
 };
 
 // NOTE: The real Razorpay SDK is loaded on demand by cdbLoadRazorpay() and used
@@ -12125,7 +12162,7 @@ function buildAIBrainPanel(module, data) {
       <div class="ai-brain-icon">🧠</div>
       <div>
         <div class="ai-brain-title">AI CYBER BRAIN — Security Intelligence</div>
-        <div style="font-size:11px;color:var(--text-dim)">Powered by CYBERDUDEBIVASH AI Engine v<span id="ai-engine-version">9.0</span></div>
+        <div style="font-size:11px;color:var(--text-dim)">Powered by CYBERDUDEBIVASH AI Engine v<span id="ai-engine-version">40.0</span></div>
       </div>
     </div>
     <div class="ai-brain-tabs" id="aibrain-tabs-${module}">
@@ -14811,12 +14848,8 @@ function showPurchaseSuccess(url){var t=document.createElement('div');t.style.cs
 /* MARKETPLACE TRUST BADGES */
 function enhanceMarketplace(){document.querySelectorAll('.sol-card,[class*="solution-card"],.defense-card').forEach(function(card){if(card.querySelector('.sol-trust-bar'))return;var bar=document.createElement('div');bar.className='sol-trust-bar';bar.innerHTML='<span class="sol-trust-badge stb-verified">&#10003; Verified</span><span class="sol-trust-badge stb-deploy">&#9889; Deploy-Ready</span><span class="sol-trust-badge stb-demand">&#128293; High Demand</span>';card.appendChild(bar);});}
 
-/* AUTO LOG */
-var LOG_EVENTS=[['Sentinel APEX: CVE feed synchronized - 15 new KEV entries','ok','ok'],['MYTHOS: Next defense generation in 4h - 10 solutions active','ai','ai'],['Threat Intel: CISA KEV updated - Ivanti EPMM added to watchlist','warn','warn'],['API Gateway: 100% uptime - 0ms error rate across all endpoints','ok','ok'],['D1 Database: defense_solutions table - 10 active records verified','sys','info'],['SOC Engine: Attack correlation analysis complete - 3 chains mapped','ai','ai'],['Revenue Engine: Marketplace demand scoring optimized','sys','info'],['Sentinel APEX: 8 CRITICAL threats in active exploitation','warn','crit'],['MYTHOS: 5 defense solutions published to marketplace','ok','ok'],['AI CyberBrain: Threat classification confidence avg 91%','ai','ai']];var _logIdx=0;
-function startAutoLog(){var initTs=document.getElementById('soc-log-init-ts');if(initTs)initTs.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});setInterval(function(){var ev=LOG_EVENTS[_logIdx%LOG_EVENTS.length];logSOC(ev[0],ev[1],ev[2]);_logIdx++;},9000+Math.random()*5000);}
-
 /* INIT */
-async function initP12(){logSOC('Phase 12 runtime initializing...','sys','info');startSOCClock();startAutoLog();await initFeatureGating();await window.socLoadThreatFeed();setTimeout(enhanceMarketplace,2000);setInterval(enhanceMarketplace,15000);setInterval(window.socLoadThreatFeed,5*60*1000);logSOC('Phase 12 SOC Command Center ONLINE - all systems operational','ok','ok');}
+async function initP12(){var initTs=document.getElementById('soc-log-init-ts');if(initTs)initTs.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});logSOC('Phase 12 runtime initializing...','sys','info');startSOCClock();await initFeatureGating();await window.socLoadThreatFeed();setTimeout(enhanceMarketplace,2000);setInterval(enhanceMarketplace,15000);setInterval(window.socLoadThreatFeed,5*60*1000);logSOC('Phase 12 SOC Command Center ONLINE','ok','ok');}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initP12);}else{setTimeout(initP12,300);}
 })();
 </script>
@@ -14853,12 +14886,6 @@ function patchBranding(){
   document.querySelectorAll('.plan-price,[class*="price"]').forEach(function(el){
     if(el.textContent.trim()==='Rs.0'||el.textContent.trim()==='₹0'){
       el.textContent='Freemium';
-    }
-  });
-  // Version badges
-  document.querySelectorAll('.version-badge,[class*="version"],[id*="version"]').forEach(function(el){
-    if(/v9\.0|v10\.0|v11\.0|v12\.0/.test(el.textContent)){
-      el.textContent=el.textContent.replace(/v\d+\.\d+\.?\d*/,'v13.0');
     }
   });
 }
@@ -15120,7 +15147,7 @@ function injectStatusBar(){
     '<div style="display:flex;align-items:center;gap:8px">'+
     '<span style="color:rgba(255,255,255,0.72)">MYTHOS: <span id="soc-bar-mythos" style="color:#a78bfa">10 tools ready</span></span>'+
     '<span style="color:rgba(255,255,255,0.72)">|</span>'+
-    '<span style="color:rgba(255,255,255,0.72)">v30.0.0</span>'+
+    '<span style="color:rgba(255,255,255,0.72)">v40.0.0</span>'+
     '</div>';
   document.body.appendChild(bar);
   setInterval(function(){
@@ -15229,7 +15256,7 @@ async function initP13(){
   
   if(typeof logSOC==='function'){
     setTimeout(function(){
-      logSOC('Phase 13 runtime active — Platform v13.0 WORLD-CLASS MODE ENGAGED','ok','ok');
+      logSOC('Phase 13 runtime active — Platform v40.0 WORLD-CLASS MODE ENGAGED','ok','ok');
     },1000);
   }
   console.log('%c[CDB v13] MYTHOS GOD MODE — WORLD-CLASS PLATFORM ACTIVE','color:#00d4ff;font-weight:bold;font-size:14px');
@@ -15315,24 +15342,23 @@ if(document.readyState==='loading'){
 <div style="flex:1;min-width:200px">
 <div class="cdb-pay-section-title">UPI IDs — Send to any</div>
 <div class="cdb-pay-field">
-<div><div class="cdb-pay-field-label">Axis</div><div class="cdb-pay-field-val">iambivash.bn-5@okaxis</div></div>
-<button class="cdb-copy-btn" id="cb-u1" onclick="CDB_PAYMENT.copyText('iambivash.bn-5@okaxis','cb-u1')">Copy</button>
+<div><div class="cdb-pay-field-label">Primary</div><div class="cdb-pay-field-val" id="cdb-upi1-val">Loading…</div></div>
+<button class="cdb-copy-btn" id="cb-u1" onclick="CDB_PAYMENT.copyField('upi1','cb-u1')">Copy</button>
 </div>
 <div class="cdb-pay-field">
-<div><div class="cdb-pay-field-label">Axis Bank</div><div class="cdb-pay-field-val">6302177246@axisbank</div></div>
-<button class="cdb-copy-btn" id="cb-u2" onclick="CDB_PAYMENT.copyText('6302177246@axisbank','cb-u2')">Copy</button>
+<div><div class="cdb-pay-field-label">Alternate</div><div class="cdb-pay-field-val" id="cdb-upi2-val">Loading…</div></div>
+<button class="cdb-copy-btn" id="cb-u2" onclick="CDB_PAYMENT.copyField('upi2','cb-u2')">Copy</button>
 </div>
-<a href="upi://pay?pa=iambivash.bn-5@okaxis&amp;pn=CYBERDUDEBIVASH&amp;cu=INR" id="cdb-upi-deep-link" onclick="(function(a){var am=CDB_PAYMENT&amp;&amp;CDB_PAYMENT._current&amp;&amp;CDB_PAYMENT._current.amount?CDB_PAYMENT._current.amount.replace(/[^0-9.]/g,''):'';var base='upi://pay?pa=iambivash.bn-5@okaxis&amp;pn=CYBERDUDEBIVASH&amp;cu=INR';a.href=am?base+'&amp;am='+encodeURIComponent(am):base;})(this)" style="display:block;text-align:center;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-top:8px">
+<a href="#" id="cdb-upi-deep-link" onclick="(function(a){var vpa=a.dataset.vpa;if(!vpa)return false;var am=CDB_PAYMENT&amp;&amp;CDB_PAYMENT._current&amp;&amp;CDB_PAYMENT._current.amount?CDB_PAYMENT._current.amount.replace(/[^0-9.]/g,''):'';var base='upi://pay?pa='+encodeURIComponent(vpa)+'&amp;pn=CYBERDUDEBIVASH&amp;cu=INR';a.href=am?base+'&amp;am='+encodeURIComponent(am):base;})(this)" style="display:block;text-align:center;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;margin-top:8px">
               📱 Open UPI App Directly →
             </a>
 </div>
 <div style="text-align:center;flex-shrink:0;min-width:140px">
 <div class="cdb-pay-section-title" style="text-align:center">Scan QR Code</div>
-<img alt="UPI QR Code — Bivash Kumar Nayak" class="cdb-qr-img" height="200" loading="lazy" onclick="this.classList.toggle('zoomed')" onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='block';}" src="/assets/payment/upi-qr.png" width="200"/>
+<img alt="UPI QR Code" class="cdb-qr-img" height="200" loading="lazy" onclick="this.classList.toggle('zoomed')" onerror="this.src='/public/assets/payment/upi-qr.png';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='block';}" src="/assets/payment/upi-qr.png" width="200"/>
 <div style="display:none;font-size:11px;color:rgba(255,255,255,.72);padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">
-              UPI: iambivash.bn-5@okaxis
+              UPI: <span id="cdb-upi1-fallback">Loading…</span>
             </div>
-<div style="font-size:10px;color:rgba(255,255,255,.72);margin-top:6px">Bivash Kumar Nayak</div>
 <div style="font-size:10px;color:rgba(255,255,255,.72);margin-top:2px">PhonePe · GPay · Paytm</div>
 </div>
 </div>
@@ -15341,19 +15367,19 @@ if(document.readyState==='loading'){
 <div id="cdb-pane-bank" style="display:none">
 <div class="cdb-pay-section-title">Bank Transfer — NEFT / IMPS / RTGS</div>
 <div class="cdb-pay-field">
-<div><div class="cdb-pay-field-label">Account Name</div><div class="cdb-pay-field-val">Bivash Kumar Nayak</div></div>
-<button class="cdb-copy-btn" id="cb-bn" onclick="CDB_PAYMENT.copyText('Bivash Kumar Nayak','cb-bn')">Copy</button>
+<div><div class="cdb-pay-field-label">Account Name</div><div class="cdb-pay-field-val" id="cdb-bank-name-val">Loading…</div></div>
+<button class="cdb-copy-btn" id="cb-bn" onclick="CDB_PAYMENT.copyField('bankName','cb-bn')">Copy</button>
 </div>
 <div class="cdb-pay-field">
-<div><div class="cdb-pay-field-label">Account Number</div><div class="cdb-pay-field-val" style="font-size:15px;font-weight:700;color:#fff;letter-spacing:1px">915010024617260</div></div>
-<button class="cdb-copy-btn" id="cb-ac" onclick="CDB_PAYMENT.copyText('915010024617260','cb-ac')">Copy</button>
+<div><div class="cdb-pay-field-label">Account Number</div><div class="cdb-pay-field-val" id="cdb-bank-acc-val" style="font-size:15px;font-weight:700;color:#fff;letter-spacing:1px">Loading…</div></div>
+<button class="cdb-copy-btn" id="cb-ac" onclick="CDB_PAYMENT.copyField('bankAcc','cb-ac')">Copy</button>
 </div>
 <div class="cdb-pay-field">
-<div><div class="cdb-pay-field-label">IFSC Code</div><div class="cdb-pay-field-val" style="font-size:14px;font-weight:700;color:#fff">UTIB0000052</div></div>
-<button class="cdb-copy-btn" id="cb-if" onclick="CDB_PAYMENT.copyText('UTIB0000052','cb-if')">Copy</button>
+<div><div class="cdb-pay-field-label">IFSC Code</div><div class="cdb-pay-field-val" id="cdb-bank-ifsc-val" style="font-size:14px;font-weight:700;color:#fff">Loading…</div></div>
+<button class="cdb-copy-btn" id="cb-if" onclick="CDB_PAYMENT.copyField('bankIfsc','cb-if')">Copy</button>
 </div>
 <div class="cdb-pay-field" style="border:none;background:none;padding:6px 0">
-<div><div class="cdb-pay-field-label">Bank</div><div class="cdb-pay-field-val">Axis Bank</div></div>
+<div><div class="cdb-pay-field-label">Bank</div><div class="cdb-pay-field-val" id="cdb-bank-label-val">Loading…</div></div>
 </div>
 <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,.72);line-height:1.6;margin-top:4px">
           💡 IMPS = instant 24×7 · NEFT = 2–4 hrs on banking days · Add your email in payment remarks for faster activation.
@@ -15363,10 +15389,10 @@ if(document.readyState==='loading'){
 <div id="cdb-pane-paypal" style="display:none">
 <div class="cdb-pay-section-title">PayPal Transfer</div>
 <div class="cdb-pay-field">
-<div><div class="cdb-pay-field-label">PayPal Email</div><div class="cdb-pay-field-val">iambivash.bn@gmail.com</div></div>
-<button class="cdb-copy-btn" id="cb-pp" onclick="CDB_PAYMENT.copyText('iambivash.bn@gmail.com','cb-pp')">Copy</button>
+<div><div class="cdb-pay-field-label">PayPal Email</div><div class="cdb-pay-field-val" id="cdb-paypal-email-val">Loading…</div></div>
+<button class="cdb-copy-btn" id="cb-pp" onclick="CDB_PAYMENT.copyField('paypalEmail','cb-pp')">Copy</button>
 </div>
-<a href="https://www.paypal.com/paypalme/iambivash" rel="noopener noreferrer" style="display:block;text-align:center;background:rgba(0,112,243,.12);border:1px solid rgba(0,112,243,.3);color:#60a5fa;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-top:10px" target="_blank">
+<a href="#" id="cdb-paypal-link" rel="noopener noreferrer" style="display:block;text-align:center;background:rgba(0,112,243,.12);border:1px solid rgba(0,112,243,.3);color:#60a5fa;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-top:10px" target="_blank">
           🌐 Open PayPal.me → Send Directly
         </a>
 <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.72);line-height:1.6;margin-top:10px">
@@ -15379,9 +15405,9 @@ if(document.readyState==='loading'){
 <div class="cdb-pay-field" style="align-items:flex-start">
 <div style="flex:1">
 <div class="cdb-pay-field-label">Wallet Address</div>
-<div class="cdb-pay-field-val" style="font-size:11px;line-height:1.6;margin-top:2px">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</div>
+<div class="cdb-pay-field-val" id="cdb-crypto-addr-val" style="font-size:11px;line-height:1.6;margin-top:2px">Loading…</div>
 </div>
-<button class="cdb-copy-btn" id="cb-cr" onclick="CDB_PAYMENT.copyText('0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796','cb-cr')">Copy</button>
+<button class="cdb-copy-btn" id="cb-cr" onclick="CDB_PAYMENT.copyField('cryptoAddr','cb-cr')">Copy</button>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
 <div style="background:rgba(240,185,11,.07);border:1px solid rgba(240,185,11,.2);border-radius:8px;padding:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.72)">
@@ -15468,10 +15494,10 @@ if(document.readyState==='loading'){
 <div>
 <div style="font-size:15px;font-weight:800;margin-bottom:4px">Transfer the exact amount to our details</div>
 <div style="font-size:13px;color:rgba(255,255,255,.72);line-height:1.6">
-<strong style="color:rgba(255,255,255,.72)">UPI IDs:</strong> iambivash.bn-5@okaxis · iambivash.bn-5@okicici · 6302177246@axisbank<br/>
-<strong style="color:rgba(255,255,255,.72)">Bank:</strong> Bivash Kumar Nayak · A/C 915010024617260 · IFSC UTIB0000052 · Axis Bank<br/>
-<strong style="color:rgba(255,255,255,.72)">PayPal:</strong> iambivash.bn@gmail.com (Friends &amp; Family)<br/>
-<strong style="color:rgba(255,255,255,.72)">Crypto:</strong> 0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796 (BEP20/ERC20)
+<strong style="color:rgba(255,255,255,.72)">UPI IDs:</strong> <span id="cdb-howto-upi">Loading…</span><br/>
+<strong style="color:rgba(255,255,255,.72)">Bank:</strong> <span id="cdb-howto-bank">Loading…</span><br/>
+<strong style="color:rgba(255,255,255,.72)">PayPal:</strong> <span id="cdb-howto-paypal">Loading…</span> (Friends &amp; Family)<br/>
+<strong style="color:rgba(255,255,255,.72)">Crypto:</strong> <span id="cdb-howto-crypto">Loading…</span> (BEP20/ERC20)
           </div>
 </div>
 </div>
@@ -20988,12 +21014,12 @@ p4SetupObserver();
 <div id="mpm-upi-ids">
 <div class="mpm-upi-id-row">
 <span class="mpm-upi-label">Primary UPI</span>
-<span class="mpm-upi-val" id="mpm-upi-primary">iambivash.bn-5@okaxis</span>
+<span class="mpm-upi-val" id="mpm-upi-primary">Loading…</span>
 <button class="mpm-copy-btn" onclick="mpmCopy('mpm-upi-primary',this)">📋 Copy</button>
 </div>
 <div class="mpm-upi-id-row">
-<span class="mpm-upi-label">Axis Bank</span>
-<span class="mpm-upi-val" id="mpm-upi-secondary">6302177246@axisbank</span>
+<span class="mpm-upi-label">Alternate</span>
+<span class="mpm-upi-val" id="mpm-upi-secondary">Loading…</span>
 <button class="mpm-copy-btn" onclick="mpmCopy('mpm-upi-secondary',this)">📋 Copy</button>
 </div>
 </div>
@@ -21013,10 +21039,10 @@ p4SetupObserver();
         Transfer exact amount via NEFT / RTGS / IMPS. Use your email as payment reference.
       </div>
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px">
-<div class="mpm-info-row"><span class="mpm-info-lbl">Account Name</span><span class="mpm-info-val">BIVASHA KUMAR NAYAK</span><button class="mpm-copy-btn" onclick="mpmCopyText('BIVASHA KUMAR NAYAK',this)">Copy</button></div>
-<div class="mpm-info-row"><span class="mpm-info-lbl">Account Number</span><span class="mpm-info-val" id="mpm-bank-acc">915010024617260</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-acc',this)">Copy</button></div>
-<div class="mpm-info-row"><span class="mpm-info-lbl">IFSC Code</span><span class="mpm-info-val" id="mpm-bank-ifsc">UTIB0000052</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-ifsc',this)">Copy</button></div>
-<div class="mpm-info-row"><span class="mpm-info-lbl">Bank</span><span class="mpm-info-val">Axis Bank</span></div>
+<div class="mpm-info-row"><span class="mpm-info-lbl">Account Name</span><span class="mpm-info-val" id="mpm-bank-name">Loading…</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-name',this)">Copy</button></div>
+<div class="mpm-info-row"><span class="mpm-info-lbl">Account Number</span><span class="mpm-info-val" id="mpm-bank-acc">Loading…</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-acc',this)">Copy</button></div>
+<div class="mpm-info-row"><span class="mpm-info-lbl">IFSC Code</span><span class="mpm-info-val" id="mpm-bank-ifsc">Loading…</span><button class="mpm-copy-btn" onclick="mpmCopy('mpm-bank-ifsc',this)">Copy</button></div>
+<div class="mpm-info-row"><span class="mpm-info-lbl">Bank</span><span class="mpm-info-val" id="mpm-bank-label">Loading…</span></div>
 <div class="mpm-info-row"><span class="mpm-info-lbl">Account Type</span><span class="mpm-info-val">Savings Account</span></div>
 <div class="mpm-info-row"><span class="mpm-info-lbl">Amount</span><span class="mpm-info-val" id="mpm-bank-amount" style="color:#10b981;font-weight:800">₹—</span><button class="mpm-copy-btn" id="mpm-bank-amount-copy" onclick="mpmCopyAmountInr(this)">Copy</button></div>
 <div class="mpm-info-row"><span class="mpm-info-lbl">Reference</span><span class="mpm-info-val">Your Email Address</span></div>
@@ -21030,7 +21056,7 @@ p4SetupObserver();
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px">
 <div class="mpm-info-row">
 <span class="mpm-info-lbl">PayPal Email</span>
-<span class="mpm-info-val" id="mpm-paypal-email">iambivash.bn@gmail.com</span>
+<span class="mpm-info-val" id="mpm-paypal-email">Loading…</span>
 <button class="mpm-copy-btn" onclick="mpmCopy('mpm-paypal-email',this)">Copy</button>
 </div>
 <div class="mpm-info-row">
@@ -21042,7 +21068,7 @@ p4SetupObserver();
 <span class="mpm-info-val">Use "Goods &amp; Services"</span>
 </div>
 </div>
-<a href="https://www.paypal.com/paypalme/iambivash" id="mpm-paypal-btn" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;background:rgba(0,112,243,.15);border:1px solid rgba(0,112,243,.3);border-radius:10px;padding:12px;color:#60a5fa;font-size:14px;font-weight:700;text-decoration:none;transition:background .2s" target="_blank">
+<a href="#" id="mpm-paypal-btn" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;background:rgba(0,112,243,.15);border:1px solid rgba(0,112,243,.3);border-radius:10px;padding:12px;color:#60a5fa;font-size:14px;font-weight:700;text-decoration:none;transition:background .2s" target="_blank">
         💳 Open PayPal.me →
       </a>
 </div>
@@ -21055,14 +21081,14 @@ p4SetupObserver();
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px">
 <div style="font-size:11px;color:#f59e0b;font-weight:700;margin-bottom:8px">BNB Smart Chain (BSC) — BNB / USDT (BEP-20)</div>
 <div style="display:flex;align-items:center;gap:8px">
-<code id="mpm-usdt-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</code>
+<code id="mpm-usdt-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">Loading…</code>
 <button class="mpm-copy-btn" onclick="mpmCopy('mpm-usdt-addr',this)">Copy</button>
 </div>
 </div>
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px">
 <div style="font-size:11px;color:#f97316;font-weight:700;margin-bottom:8px">BNB Smart Chain Address (same for all BEP-20)</div>
 <div style="display:flex;align-items:center;gap:8px">
-<code id="mpm-btc-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</code>
+<code id="mpm-btc-addr" style="font-size:11px;color:#e2e8f0;flex:1;word-break:break-all">Loading…</code>
 <button class="mpm-copy-btn" onclick="mpmCopy('mpm-btc-addr',this)">Copy</button>
 </div>
 </div>
@@ -21100,7 +21126,7 @@ p4SetupObserver();
 <span style="font-size:20px">⏳</span>
 <div>
 <div style="font-weight:700;margin-bottom:2px">Access activated in 2–4 hours</div>
-<div style="font-size:11px;color:#94a3b8">Mon–Sat 9AM–8PM IST · Support: iambivash.bn@gmail.com</div>
+<div style="font-size:11px;color:#94a3b8">Mon–Sat 9AM–8PM IST · Support: <span id="mpm-support-email">Loading…</span></div>
 </div>
 </div>
 </div><!-- /#mpm-box -->
@@ -21122,8 +21148,47 @@ var MPM = {
   seconds:    600, // 10 minutes
 };
 
-var UPI_PRIMARY   = 'iambivash.bn-5@okaxis';
-var UPI_SECONDARY = '6302177246@axisbank';
+// Loaded at runtime from /api/payment-config — never hardcode these in source.
+var UPI_PRIMARY   = '';
+var UPI_SECONDARY = '';
+var SUPPORT_EMAIL = 'bivash@cyberdudebivash.com';
+var _mpmCfgLoaded = false;
+
+function mpmLoadConfig() {
+  if (_mpmCfgLoaded) return Promise.resolve();
+  return fetch('/api/payment-config', { signal: AbortSignal.timeout(6000) })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(cfg) {
+      if (!cfg) return;
+      UPI_PRIMARY   = (cfg.upi && cfg.upi.primary) || '';
+      UPI_SECONDARY = (cfg.upi && cfg.upi.secondary) || '';
+      SUPPORT_EMAIL = (cfg.business && cfg.business.support) || SUPPORT_EMAIL;
+      _mpmCfgLoaded = true;
+      mpmRender(cfg);
+    })
+    .catch(function(e) { console.warn('[MPM] Failed to load payment config:', e.message); });
+}
+
+function mpmRender(cfg) {
+  var set = function(id, val) { var e = document.getElementById(id); if (e) e.textContent = val || '—'; };
+  set('mpm-upi-primary', UPI_PRIMARY);
+  set('mpm-upi-secondary', UPI_SECONDARY);
+  set('mpm-bank-name', cfg.bank && cfg.bank.account_name);
+  set('mpm-bank-acc', cfg.bank && cfg.bank.account_number);
+  set('mpm-bank-ifsc', cfg.bank && cfg.bank.ifsc);
+  set('mpm-bank-label', cfg.bank && cfg.bank.bank_name);
+  set('mpm-paypal-email', cfg.paypal && cfg.paypal.email);
+  set('mpm-usdt-addr', cfg.crypto && cfg.crypto.bnb_smart_chain);
+  set('mpm-btc-addr', cfg.crypto && cfg.crypto.bnb_smart_chain);
+  set('mpm-support-email', SUPPORT_EMAIL);
+  var ppBtn = document.getElementById('mpm-paypal-btn');
+  if (ppBtn && cfg.paypal && cfg.paypal.link) ppBtn.href = cfg.paypal.link;
+  // Refresh UPI deep link now that UPI_PRIMARY is known
+  var dlEl = document.getElementById('mpm-upi-deeplink');
+  if (dlEl && UPI_PRIMARY) {
+    dlEl.href = 'upi://pay?pa=' + UPI_PRIMARY + '&pn=CYBERDUDEBIVASH&am=' + MPM.price_inr + '&cu=INR&tn=' + encodeURIComponent(MPM.label);
+  }
+}
 
 /* ── Public API (global) ─────────────────────────────────────────────────── */
 window.openManualPayment = function(productId, priceInr, productLabel, priceUsd) {
@@ -21132,6 +21197,8 @@ window.openManualPayment = function(productId, priceInr, productLabel, priceUsd)
   MPM.price_usd  = priceUsd  || Math.round((priceInr || 0) / 83.5 * 100) / 100;
   MPM.label      = productLabel || productId || 'Premium Access';
   MPM.seconds    = 600;
+
+  mpmLoadConfig();
 
   // Populate header
   var labelEl = document.getElementById('mpm-product-label');
@@ -21300,7 +21367,7 @@ window.mpmSubmit = function() {
         '✅ Payment submitted! ID: <strong>' + d.payment_id + '</strong><br>' +
         '⏳ Access will be activated within <strong>2–4 hours</strong> after verification.<br>' +
         '📧 Confirmation sent to ' + email + '<br>' +
-        '📞 Support: iambivash.bn@gmail.com',
+        '📞 Support: ' + SUPPORT_EMAIL,
         'success'
       );
       if (submitEl) { submitEl.textContent = '✅ Submitted Successfully'; }
@@ -21308,12 +21375,12 @@ window.mpmSubmit = function() {
       // Track conversion
       if (window.P4_RECORD_EVENT) P4_RECORD_EVENT('payment_submitted', { product_id: MPM.product_id, amount: MPM.price_inr });
     } else {
-      mpmStatus('✗ ' + (d.error || 'Submission failed. Please contact iambivash.bn@gmail.com'), 'error');
+      mpmStatus('✗ ' + (d.error || ('Submission failed. Please contact ' + SUPPORT_EMAIL)), 'error');
       if (submitEl) { submitEl.disabled = false; submitEl.textContent = '✅ I Have Paid — Verify My Payment'; }
     }
   })
   .catch(function(e) {
-    mpmStatus('✗ Network error. Please email iambivash.bn@gmail.com with your transaction ID.', 'error');
+    mpmStatus('✗ Network error. Please email ' + SUPPORT_EMAIL + ' with your transaction ID.', 'error');
     if (submitEl) { submitEl.disabled = false; submitEl.textContent = '✅ I Have Paid — Verify My Payment'; }
   });
 };
@@ -21484,7 +21551,7 @@ var VMD={critical:[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS',cvss:10.0,epss:.942,
 (function fetchVMDLive(){fetch('/api/threat-intel?severity=CRITICAL&limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){if(!d||!d.data||!d.data.length)return;var mapped=d.data.slice(0,4).map(function(e){return{id:e.id,p:(e.affected_products&&e.affected_products[0])||e.title||e.id,cvss:parseFloat(e.cvss_score||e.score)||9.0,epss:parseFloat(e.epss_score||0),kev:!!(e.is_kev||e.kev),patch:!!(e.patch_available||e.patch),d:(e.description||e.title||e.id).slice(0,200)};});if(mapped.length){VMD.critical=mapped;vmFilter('critical');}}).catch(function(){});})();
 function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#fca5a5;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
 window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.72)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,0.72);font-size:11px">None</span>';};
-window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var fake={id:id,p:'Target System',cvss:8.5,epss:.612,kev:false,patch:true,d:'NVD/MITRE/CISA live lookup returns real CVSS vectors, affected versions, patch links and EPSS probability in production.'};var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=vmC(fake);};
+window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var p=document.getElementById('vm-detail-panel');if(!p)return;p.innerHTML='<div style="color:#00d4ff;text-align:center;padding:20px">Looking up '+esc(id)+' via NVD...</div>';fetch('/api/vulns/cve/'+encodeURIComponent(id)).then(function(r){return r.json();}).then(function(d){if(!d||d.error){p.innerHTML='<div style="color:#ef4444;text-align:center;padding:20px">'+esc((d&&d.error)||'CVE not found')+'</div>';return;}var entry={id:d.cve_id||id,p:(d.cwe&&d.cwe[0])||d.source||'Unknown product',cvss:parseFloat(d.cvss_score)||0,epss:parseFloat(d.epss_score)||0,kev:!!d.in_kev,patch:!!(d.remediation||d.references&&d.references.length),d:d.description||'No description available.'};p.innerHTML=vmC(entry);}).catch(function(){p.innerHTML='<div style="color:#ef4444;text-align:center;padding:20px">Lookup failed -- try again</div>';});};
 window.vmRem=function(id){var w=document.getElementById('vm-col-wip');if(w)w.innerHTML='<div style="background:rgba(245,158,11,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:#f59e0b">'+esc(id)+'</div>'+w.innerHTML;if(typeof TOAST!=='undefined')TOAST.info('Remediation started: '+id,'Remediation');};
 (function(){function i(){vmFilter('critical');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
@@ -21501,8 +21568,7 @@ var GATK=[{s:'Beijing,CN',d:'New York,US',t:'SQL Injection',sev:'HIGH'},{s:'Mosc
 var GLI=0;
 function gtmAPTs(){var el=document.getElementById('gtm-apt-list');if(!el)return;el.innerHTML=GAPT.map(function(a){return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:rgba(255,255,255,.72);font-size:11px;font-weight:700;width:20px">'+esc(a.f)+'</span><div style="flex:1"><div style="color:#fff;font-size:12px;font-weight:700">'+esc(a.n)+'</div><div style="background:rgba(255,255,255,.08);border-radius:3px;height:3px;margin-top:4px"><div style="background:'+a.c+';height:3px;border-radius:3px;width:'+Math.min(100,a.v/25*100)+'%"></div></div></div><span style="color:'+a.c+';font-size:12px;font-weight:800">'+a.v+'</span></div>';}).join('');}
 function gtmLog(){var el=document.getElementById('gtm-live-log');if(!el)return;var a=GATK[GLI%GATK.length];GLI++;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML='<div style="color:'+cc[a.sev]+'">['+new Date().toTimeString().slice(0,8)+'] <span style="color:rgba(255,255,255,.8)">'+esc(a.s)+'</span> &rarr; <span style="color:#00d4ff">'+esc(a.d)+'</span> <span style="color:rgba(255,255,255,.72)">'+esc(a.t)+'</span></div>'+el.innerHTML;var ls=el.children;if(ls.length>12)el.removeChild(ls[ls.length-1]);}
-function gtmCtr(){var el=document.getElementById('gtm-attacks');if(el)el.textContent=(parseInt(el.textContent.replace(/,/g,''))+(Math.floor(Math.random()*50)+10)).toLocaleString();}
-(function(){function s(){gtmInit();gtmAPTs();setInterval(gtmLog,2800);setInterval(gtmCtr,5000);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',s);else s();})();
+(function(){function s(){gtmInit();gtmAPTs();setInterval(gtmLog,2800);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',s);else s();})();
 
 /* === INCIDENT RESPONSE === */
 var IRPB={ransomware:'<div style="color:#ef4444;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F6A8; P1 RANSOMWARE RESPONSE &mdash; NIST 800-61 REV3</div><div style="color:#f59e0b;font-size:12px;font-weight:800;margin-bottom:8px">PHASE 1 &mdash; PREPARATION (T+0 to T+15min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate IR team bridge &mdash; alert CISO, Legal, Communications, Board</li><li>Snapshot affected VMs for forensic preservation before isolation</li><li>Notify cyber insurance carrier &mdash; preserve coverage</li><li>Open P1 incident ticket and assign IR lead</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 2 &mdash; IDENTIFICATION (T+15min to T+60min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Identify Patient Zero via EDR telemetry (CrowdStrike / Defender)</li><li>Determine ransomware family via ID-Ransomware tool</li><li>Map encrypted extensions and ransom note locations</li><li>Hunt lateral movement: SMB, PsExec, WMI, Cobalt Strike beacons</li><li>Search for data exfiltration via DLP, proxy logs, DNS queries</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 3 &mdash; CONTAINMENT (T+1h to T+4h)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Segment infected subnets &mdash; revoke network access at switch level</li><li>Reset ALL privileged credentials: AD, Azure AD, service accounts</li><li>Block C2 IOCs at NGFW, DNS sinkholes, and proxy layer</li><li>Disable VSS deletion &mdash; protect remaining shadow copies</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 4 &mdash; ERADICATION &amp; RECOVERY</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Wipe and reimage all affected systems from immutable golden image</li><li>Restore from offline/air-gapped backups with integrity validation</li><li>Deploy enhanced EDR and MFA before reconnecting to network</li><li>Conduct tabletop debrief and update IR plan</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1059 Execution','T1055 Injection','T1021 Lateral Move','T1083 Discovery','T1486 Encrypt Files','T1490 Inhibit Recovery'].map(function(t){return'<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',apt:'<div style="color:#a855f7;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F575; P1 APT INTRUSION &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate TI team + external DFIR retainer (Mandiant / CrowdStrike)</li><li>Establish out-of-band comms &mdash; assume primary channels compromised</li><li>Enable enhanced logging without alerting the adversary</li><li>Deploy deception assets: honeypots and honeytokens</li><li>Hunt LOLBins: powershell, certutil, regsvr32, wscript, mshta</li><li>Analyze DNS for DGA activity and long-TTL abnormalities</li><li>Retrieve memory dumps for offline forensic analysis</li><li>Map TTPs to MITRE ATT&amp;CK Navigator for attribution</li><li>Rotate ALL cryptographic keys, certs and API credentials</li><li>Enforce MFA and Just-In-Time privileged access everywhere</li></ul>',breach:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F513; P1 DATA BREACH &mdash; GDPR / DPDP ACT 2023</div><div style="color:#ef4444;font-size:12px;font-weight:800;margin-bottom:8px">CRITICAL: 72-HOUR REGULATORY NOTIFICATION CLOCK ACTIVE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage DPO and legal counsel immediately &mdash; preserve attorney privilege</li><li>Classify breached data: PII, PCI, PHI, trade secrets</li><li>Notify CERT-In within 6 hours (India) | DPA within 72h (GDPR)</li><li>Preserve all logs with forensic chain of custody</li><li>Enumerate affected individuals for breach notification</li><li>Prepare user notification per DPDP Act 2023 requirements</li></ul>',ddos:'<div style="color:#818cf8;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F30A; DDoS INCIDENT RESPONSE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Enable Cloudflare Under Attack mode immediately</li><li>Contact upstream ISP for BGP black-holing of attack sources</li><li>Analyze attack vector: volumetric, protocol, or application layer</li><li>Deploy geo-blocking and rate limiting at edge</li><li>Activate CDN failover and scale origin capacity</li><li>Document attack for law enforcement if warranted</li></ul>'};
@@ -21527,7 +21593,7 @@ window.zdSetAlert=function(){var t=document.getElementById('zd-alert-target'),l=
 
 /* === INTERSECTION COUNTER ANIMATIONS === */
 function cntUp(id,target){var el=document.getElementById(id);if(!el)return;var v=0,step=target/60,iv=setInterval(function(){v+=step;if(v>=target){v=target;clearInterval(iv);}el.textContent=Math.floor(v).toLocaleString();},1400/60);}
-var _obs=new IntersectionObserver(function(ents){ents.forEach(function(e){if(!e.isIntersecting)return;var id=e.target.id;if(id==='global-threat-map'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);cntUp('gtm-attacks',s&&s.total_advisories?s.total_advisories:1626);cntUp('gtm-campaigns',s&&s.critical?s.critical:42);cntUp('gtm-countries',94);cntUp('gtm-apts',37);cntUp('gtm-blocked',s&&s.confirmed_exploited?s.confirmed_exploited:285);}).catch(function(){cntUp('gtm-attacks',1626);cntUp('gtm-campaigns',42);cntUp('gtm-countries',94);cntUp('gtm-apts',37);cntUp('gtm-blocked',285);});}if(id==='vuln-management'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);cntUp('vm-critical',s&&s.critical?s.critical:4);cntUp('vm-high',s&&s.high?s.high:9);cntUp('vm-medium',s&&s.medium?s.medium:17);cntUp('vm-patched',s&&s.confirmed_exploited?Math.floor(s.confirmed_exploited/10):5);}).catch(function(){cntUp('vm-critical',4);cntUp('vm-high',9);cntUp('vm-medium',17);cntUp('vm-patched',5);});}if(id==='zero-day-intel'){fetch('/api/zeroday/feed').then(function(r){return r.ok?r.json():null;}).then(function(d){var total=d&&d.total?d.total:5;var exploited=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.st==='ITW';}).length:3;var pocs=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.poc;}).length:4;cntUp('zd-active',total);cntUp('zd-exploited',exploited);cntUp('zd-pocs',pocs);}).catch(function(){cntUp('zd-active',5);cntUp('zd-exploited',3);cntUp('zd-pocs',4);});}_obs.unobserve(e.target);});},{threshold:.1});
+var _obs=new IntersectionObserver(function(ents){ents.forEach(function(e){if(!e.isIntersecting)return;var id=e.target.id;if(id==='global-threat-map'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);cntUp('gtm-attacks',s&&s.total_advisories?s.total_advisories:1626);cntUp('gtm-campaigns',s&&s.critical?s.critical:42);cntUp('gtm-blocked',s&&s.confirmed_exploited?s.confirmed_exploited:285);}).catch(function(){cntUp('gtm-attacks',1626);cntUp('gtm-campaigns',42);cntUp('gtm-blocked',285);});}if(id==='vuln-management'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);cntUp('vm-critical',s&&s.critical?s.critical:4);cntUp('vm-high',s&&s.high?s.high:9);cntUp('vm-medium',s&&s.medium?s.medium:17);cntUp('vm-patched',s&&s.confirmed_exploited?Math.floor(s.confirmed_exploited/10):5);}).catch(function(){cntUp('vm-critical',4);cntUp('vm-high',9);cntUp('vm-medium',17);cntUp('vm-patched',5);});}if(id==='zero-day-intel'){fetch('/api/zeroday/feed').then(function(r){return r.ok?r.json():null;}).then(function(d){var total=d&&d.total?d.total:5;var exploited=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.st==='ITW';}).length:3;var pocs=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.poc;}).length:4;cntUp('zd-active',total);cntUp('zd-exploited',exploited);cntUp('zd-pocs',pocs);}).catch(function(){cntUp('zd-active',5);cntUp('zd-exploited',3);cntUp('zd-pocs',4);});}_obs.unobserve(e.target);});},{threshold:.1});
 (function(){function i(){['global-threat-map','vuln-management','zero-day-intel'].forEach(function(id){var el=document.getElementById(id);if(el)_obs.observe(el);});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === XSS-SAFE innerHTML WRAPPER === */

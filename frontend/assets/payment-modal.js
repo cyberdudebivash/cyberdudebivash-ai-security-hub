@@ -6,7 +6,11 @@
  * Exposes: window.CDB_PAYMENT.open(opts)
  *
  * Payment methods: UPI · Bank Transfer (NEFT/IMPS/RTGS) · PayPal · Crypto (BEP20/ERC20)
- * Account: Bivash Kumar Nayak · iambivash.bn-5@okaxis · UTIB0000052
+ *
+ * Account/bank/crypto details are NOT hardcoded — they are fetched at modal-open
+ * time from /api/payment-config (single source of truth: Worker secrets, see
+ * workers/src/config/paymentConfig.js). Fields show "Loading…" until that
+ * fetch resolves.
  *
  * Usage on any page:
  *   <script src="/assets/payment-modal.js"></script>
@@ -19,32 +23,19 @@
   if (window.__CDB_PAYMENT_LOADED__) return;
   window.__CDB_PAYMENT_LOADED__ = true;
 
-  // ── Payment Details — live production ──────────────────────────────────────
+  // ── Payment Details — loaded from /api/payment-config at open() time ───────
+  // Placeholder shape; populated by _loadConfig() before first render.
   var PAY = {
-    upi:    [
-      { label: 'Axis (Primary)', id: 'iambivash.bn-5@okaxis' },
-      { label: 'Axis Bank',      id: '6302177246@axisbank'   },
-    ],
-    bank: {
-      name:   'Bivash Kumar Nayak',
-      acc:    '915010024617260',
-      ifsc:   'UTIB0000052',
-      bank:   'Axis Bank',
-      type:   'Savings Account',
-    },
-    paypal: {
-      email: 'iambivash.bn@gmail.com',
-      url:   'https://www.paypal.com/paypalme/iambivash',
-    },
-    crypto: {
-      addr:  '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796',
-      nets:  'BNB Smart Chain (BEP20) / Ethereum (ERC20)',
-    },
+    upi:    [],
+    bank:   { name: '', acc: '', ifsc: '', bank: '', type: 'Savings Account' },
+    paypal: { email: '', url: '' },
+    crypto: { addr: '', nets: 'BNB Smart Chain (BEP20) / Ethereum (ERC20)' },
     email:    'bivash@cyberdudebivash.com',
     whatsapp: '+918179881447',
     tel:      'tel:+918179881447',
     submit_api: '/api/payments/submit',
   };
+  var _cfgLoaded = false;
 
   // ── Inject CSS ─────────────────────────────────────────────────────────────
   var css = [
@@ -164,26 +155,25 @@
         '<div style="flex:1;min-width:180px">' +
           '<div class="cdbpm-sec">UPI IDs &mdash; Send to any</div>' +
           '<div class="cdbpm-field">' +
-            '<div><div class="cdbpm-flabel">Axis (Primary)</div><div class="cdbpm-fval">iambivash.bn-5@okaxis</div></div>' +
-            '<button class="cdbpm-copy" id="cdbpm-cu1" onclick="CDB_PAYMENT.copy(\'iambivash.bn-5@okaxis\',\'cdbpm-cu1\')">Copy</button>' +
+            '<div><div class="cdbpm-flabel">Primary</div><div class="cdbpm-fval" id="cdbpm-upi1-val">Loading&hellip;</div></div>' +
+            '<button class="cdbpm-copy" id="cdbpm-cu1" onclick="CDB_PAYMENT.copyField(\'upi1\',\'cdbpm-cu1\')">Copy</button>' +
           '</div>' +
           '<div class="cdbpm-field">' +
-            '<div><div class="cdbpm-flabel">Axis Bank</div><div class="cdbpm-fval">6302177246@axisbank</div></div>' +
-            '<button class="cdbpm-copy" id="cdbpm-cu2" onclick="CDB_PAYMENT.copy(\'6302177246@axisbank\',\'cdbpm-cu2\')">Copy</button>' +
+            '<div><div class="cdbpm-flabel">Alternate</div><div class="cdbpm-fval" id="cdbpm-upi2-val">Loading&hellip;</div></div>' +
+            '<button class="cdbpm-copy" id="cdbpm-cu2" onclick="CDB_PAYMENT.copyField(\'upi2\',\'cdbpm-cu2\')">Copy</button>' +
           '</div>' +
-          '<a id="cdbpm-upi-link" href="upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR" ' +
+          '<a id="cdbpm-upi-link" href="#" ' +
             'onclick="CDB_PAYMENT._patchUPILink(this)" class="cdbpm-btn cdbpm-btn-upi">&#x1F4F1; Open UPI App Directly &rarr;</a>' +
         '</div>' +
         '<div style="text-align:center;flex-shrink:0;min-width:130px">' +
           '<div class="cdbpm-sec" style="text-align:center">Scan QR Code</div>' +
-          '<img src="/assets/payment/upi-qr.png" alt="UPI QR — Bivash Kumar Nayak" class="cdbpm-qr"' +
+          '<img src="/assets/payment/upi-qr.png" alt="UPI QR code" class="cdbpm-qr"' +
             ' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'">' +
           '<div style="display:none;font-size:11px;color:rgba(255,255,255,.35);padding:10px;' +
             'background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">' +
-            'UPI: iambivash.bn-5@okaxis' +
+            'UPI: <span id="cdbpm-upi1-fallback">Loading&hellip;</span>' +
           '</div>' +
-          '<div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px">Bivash Kumar Nayak</div>' +
-          '<div style="font-size:10px;color:rgba(255,255,255,.2);margin-top:2px">PhonePe &middot; GPay &middot; Paytm</div>' +
+          '<div style="font-size:10px;color:rgba(255,255,255,.2);margin-top:6px">PhonePe &middot; GPay &middot; Paytm</div>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -192,19 +182,19 @@
     '<div class="cdbpm-pane" id="cdbpm-pane-bank">' +
       '<div class="cdbpm-sec">Bank Transfer &mdash; NEFT / IMPS / RTGS</div>' +
       '<div class="cdbpm-field">' +
-        '<div><div class="cdbpm-flabel">Account Name</div><div class="cdbpm-fval">Bivash Kumar Nayak</div></div>' +
-        '<button class="cdbpm-copy" id="cdbpm-cb1" onclick="CDB_PAYMENT.copy(\'Bivash Kumar Nayak\',\'cdbpm-cb1\')">Copy</button>' +
+        '<div><div class="cdbpm-flabel">Account Name</div><div class="cdbpm-fval" id="cdbpm-bank-name-val">Loading&hellip;</div></div>' +
+        '<button class="cdbpm-copy" id="cdbpm-cb1" onclick="CDB_PAYMENT.copyField(\'bankName\',\'cdbpm-cb1\')">Copy</button>' +
       '</div>' +
       '<div class="cdbpm-field">' +
-        '<div><div class="cdbpm-flabel">Account Number</div><div class="cdbpm-fval" style="font-size:15px;font-weight:700;letter-spacing:1px">915010024617260</div></div>' +
-        '<button class="cdbpm-copy" id="cdbpm-cb2" onclick="CDB_PAYMENT.copy(\'915010024617260\',\'cdbpm-cb2\')">Copy</button>' +
+        '<div><div class="cdbpm-flabel">Account Number</div><div class="cdbpm-fval" id="cdbpm-bank-acc-val" style="font-size:15px;font-weight:700;letter-spacing:1px">Loading&hellip;</div></div>' +
+        '<button class="cdbpm-copy" id="cdbpm-cb2" onclick="CDB_PAYMENT.copyField(\'bankAcc\',\'cdbpm-cb2\')">Copy</button>' +
       '</div>' +
       '<div class="cdbpm-field">' +
-        '<div><div class="cdbpm-flabel">IFSC Code</div><div class="cdbpm-fval" style="font-size:14px;font-weight:700">UTIB0000052</div></div>' +
-        '<button class="cdbpm-copy" id="cdbpm-cb3" onclick="CDB_PAYMENT.copy(\'UTIB0000052\',\'cdbpm-cb3\')">Copy</button>' +
+        '<div><div class="cdbpm-flabel">IFSC Code</div><div class="cdbpm-fval" id="cdbpm-bank-ifsc-val" style="font-size:14px;font-weight:700">Loading&hellip;</div></div>' +
+        '<button class="cdbpm-copy" id="cdbpm-cb3" onclick="CDB_PAYMENT.copyField(\'bankIfsc\',\'cdbpm-cb3\')">Copy</button>' +
       '</div>' +
       '<div class="cdbpm-field" style="border:none;background:none;padding:4px 0">' +
-        '<div><div class="cdbpm-flabel">Bank</div><div class="cdbpm-fval">Axis Bank &middot; Savings Account</div></div>' +
+        '<div><div class="cdbpm-flabel">Bank</div><div class="cdbpm-fval" id="cdbpm-bank-name2-val">Loading&hellip;</div></div>' +
       '</div>' +
       '<div class="cdbpm-hint">&#x1F4A1; IMPS = instant 24&#x00D7;7 &middot; NEFT = 2&ndash;4 hrs on banking days &middot; Add your email in payment remarks for faster activation.</div>' +
     '</div>' +
@@ -213,10 +203,10 @@
     '<div class="cdbpm-pane" id="cdbpm-pane-paypal">' +
       '<div class="cdbpm-sec">PayPal Transfer</div>' +
       '<div class="cdbpm-field">' +
-        '<div><div class="cdbpm-flabel">PayPal Email</div><div class="cdbpm-fval">iambivash.bn@gmail.com</div></div>' +
-        '<button class="cdbpm-copy" id="cdbpm-cpp" onclick="CDB_PAYMENT.copy(\'iambivash.bn@gmail.com\',\'cdbpm-cpp\')">Copy</button>' +
+        '<div><div class="cdbpm-flabel">PayPal Email</div><div class="cdbpm-fval" id="cdbpm-paypal-email-val">Loading&hellip;</div></div>' +
+        '<button class="cdbpm-copy" id="cdbpm-cpp" onclick="CDB_PAYMENT.copyField(\'paypalEmail\',\'cdbpm-cpp\')">Copy</button>' +
       '</div>' +
-      '<a href="https://www.paypal.com/paypalme/iambivash" target="_blank" rel="noopener" class="cdbpm-btn cdbpm-btn-pp">&#x1F30E; Open PayPal.me &rarr; Send Directly</a>' +
+      '<a id="cdbpm-paypal-link" href="#" target="_blank" rel="noopener" class="cdbpm-btn cdbpm-btn-pp">&#x1F30E; Open PayPal.me &rarr; Send Directly</a>' +
       '<div class="cdbpm-hint">&#x26A0;&#xFE0F; Select <strong style="color:rgba(255,255,255,.7)">"Friends &amp; Family"</strong> to avoid fees. Add product name + your email in the note for faster activation.</div>' +
     '</div>' +
 
@@ -225,9 +215,9 @@
       '<div class="cdbpm-sec">Crypto Transfer &mdash; BEP20 / ERC20</div>' +
       '<div class="cdbpm-field">' +
         '<div><div class="cdbpm-flabel">BNB Smart Chain (BEP20) &middot; Ethereum (ERC20)</div>' +
-          '<div class="cdbpm-fval" style="font-size:11px">0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796</div>' +
+          '<div class="cdbpm-fval" id="cdbpm-crypto-addr-val" style="font-size:11px">Loading&hellip;</div>' +
         '</div>' +
-        '<button class="cdbpm-copy" id="cdbpm-ccr" onclick="CDB_PAYMENT.copy(\'0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796\',\'cdbpm-ccr\')">Copy</button>' +
+        '<button class="cdbpm-copy" id="cdbpm-ccr" onclick="CDB_PAYMENT.copyField(\'cryptoAddr\',\'cdbpm-ccr\')">Copy</button>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">' +
         '<div style="background:rgba(240,185,11,.07);border:1px solid rgba(240,185,11,.2);border-radius:8px;padding:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.6)">&#x2705; BNB Smart Chain<br><span style="color:#f0b90b;font-weight:800;font-size:12px">BEP20</span></div>' +
@@ -270,6 +260,54 @@
   window.CDB_PAYMENT = {
     _cur: {},
 
+    // Fetch live payment details once and populate the DOM. Safe to call
+    // repeatedly — only hits the network the first time.
+    _loadConfig: function () {
+      var self = this;
+      if (_cfgLoaded) return Promise.resolve(PAY);
+      return fetch('/api/payment-config', { signal: AbortSignal.timeout(6000) })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (cfg) {
+          if (cfg) {
+            PAY.upi    = (cfg.upi && [cfg.upi.primary, cfg.upi.secondary].filter(Boolean).map(function (id) { return { id: id }; })) || [];
+            PAY.bank   = {
+              name: (cfg.bank && cfg.bank.account_name) || '',
+              acc:  (cfg.bank && cfg.bank.account_number) || '',
+              ifsc: (cfg.bank && cfg.bank.ifsc) || '',
+              bank: (cfg.bank && cfg.bank.bank_name) || '',
+              type: 'Savings Account',
+            };
+            PAY.paypal = {
+              email: (cfg.paypal && cfg.paypal.email) || '',
+              url:   (cfg.paypal && cfg.paypal.link) || '',
+            };
+            PAY.crypto = {
+              addr: (cfg.crypto && cfg.crypto.bnb_smart_chain) || '',
+              nets: (cfg.crypto && cfg.crypto.network) || PAY.crypto.nets,
+            };
+            _cfgLoaded = true;
+            self._render();
+          }
+          return PAY;
+        })
+        .catch(function (e) { console.warn('[CDB_PAYMENT] Failed to load payment config:', e.message); return PAY; });
+    },
+
+    _render: function () {
+      var set = function (id, val) { var e = document.getElementById(id); if (e) e.textContent = val || '—'; };
+      set('cdbpm-upi1-val', PAY.upi[0] && PAY.upi[0].id);
+      set('cdbpm-upi2-val', PAY.upi[1] && PAY.upi[1].id);
+      set('cdbpm-upi1-fallback', PAY.upi[0] && PAY.upi[0].id);
+      set('cdbpm-bank-name-val', PAY.bank.name);
+      set('cdbpm-bank-acc-val', PAY.bank.acc);
+      set('cdbpm-bank-ifsc-val', PAY.bank.ifsc);
+      set('cdbpm-bank-name2-val', PAY.bank.bank ? (PAY.bank.bank + ' · ' + PAY.bank.type) : '');
+      set('cdbpm-paypal-email-val', PAY.paypal.email);
+      set('cdbpm-crypto-addr-val', PAY.crypto.addr);
+      var ppLink = document.getElementById('cdbpm-paypal-link');
+      if (ppLink && PAY.paypal.url) ppLink.href = PAY.paypal.url;
+    },
+
     open: function (opts) {
       this._cur = opts || {};
       var overlay = document.getElementById('cdbpm-overlay');
@@ -295,6 +333,7 @@
       this.switchTab('upi');
       overlay.classList.add('cdbpm-open');
       document.body.style.overflow = 'hidden';
+      this._loadConfig();
     },
 
     close: function () {
@@ -338,10 +377,28 @@
       }
     },
 
+    // Copies a value out of the live-loaded PAY object by logical field name
+    // (avoids inlining the literal value into the onclick attribute).
+    copyField: function (field, btnId) {
+      var map = {
+        upi1:       PAY.upi[0] && PAY.upi[0].id,
+        upi2:       PAY.upi[1] && PAY.upi[1].id,
+        bankName:   PAY.bank.name,
+        bankAcc:    PAY.bank.acc,
+        bankIfsc:   PAY.bank.ifsc,
+        paypalEmail: PAY.paypal.email,
+        cryptoAddr: PAY.crypto.addr,
+      };
+      var val = map[field];
+      if (val) this.copy(val, btnId);
+    },
+
     _patchUPILink: function (el) {
       var cur = this._cur;
+      var vpa = PAY.upi[0] && PAY.upi[0].id;
+      if (!vpa) return;
       var raw = cur.amount || (cur.amountLabel ? cur.amountLabel.replace(/[^0-9.]/g, '') : '');
-      var base = 'upi://pay?pa=iambivash.bn-5@okaxis&pn=CYBERDUDEBIVASH&cu=INR';
+      var base = 'upi://pay?pa=' + encodeURIComponent(vpa) + '&pn=CYBERDUDEBIVASH&cu=INR';
       el.href = raw ? base + '&am=' + encodeURIComponent(raw) : base;
     },
 

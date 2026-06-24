@@ -148,6 +148,54 @@ dead_letter_queue  = "scan-jobs-dlq"
 #                               Run: npx wrangler secret put WORKERS_API_KEY
 #                               Add to GitHub Secrets: Settings → Secrets → WORKERS_API_KEY
 #
+# ── PAYMENT DISPLAY DETAILS (REQUIRED for manual payment rails) ─────────────
+# These are the UPI/bank/crypto/PayPal/business details shown to customers
+# in the manual-payment modal and on invoices (see workers/src/config/
+# paymentConfig.js, workers/src/handlers/manualPayments.js). They are read
+# from env at request time — NEVER hardcode these values in source. None of
+# this is secret in the cryptographic sense (it's shown on every checkout),
+# but it must not live as a literal in git history, since rotating a bank
+# account or fixing a typo should not require a code change + redeploy.
+#   UPI_PRIMARY_ID            — Primary UPI VPA (e.g. name@bank)
+#                               Run: npx wrangler secret put UPI_PRIMARY_ID
+#   UPI_SECONDARY_ID          — Secondary/alternate UPI VPA
+#                               Run: npx wrangler secret put UPI_SECONDARY_ID
+#   PAYEE_NAME                — Name shown on UPI QR / deep links
+#                               Run: npx wrangler secret put PAYEE_NAME
+#   BANK_ACCOUNT_NAME         — Account holder name for bank transfer
+#                               Run: npx wrangler secret put BANK_ACCOUNT_NAME
+#   BANK_ACCOUNT_NUMBER       — Bank account number
+#                               Run: npx wrangler secret put BANK_ACCOUNT_NUMBER
+#   BANK_IFSC                 — Bank IFSC code
+#                               Run: npx wrangler secret put BANK_IFSC
+#   BANK_NAME                 — Bank name (e.g. "Axis Bank")
+#                               Run: npx wrangler secret put BANK_NAME
+#   BANK_ACCOUNT_TYPE         — e.g. "Savings Account" (optional, defaults if unset)
+#                               Run: npx wrangler secret put BANK_ACCOUNT_TYPE
+#   BANK_SWIFT                — SWIFT/BIC code for international wires (optional)
+#                               Run: npx wrangler secret put BANK_SWIFT
+#   CRYPTO_BNB_ADDRESS        — Wallet address for BNB Smart Chain (BEP20) / Ethereum (ERC20)
+#                               Run: npx wrangler secret put CRYPTO_BNB_ADDRESS
+#   PAYPAL_EMAIL              — PayPal account email for international customers
+#                               Run: npx wrangler secret put PAYPAL_EMAIL
+#   PAYPAL_ME_LINK            — PayPal.me link (e.g. https://www.paypal.com/paypalme/...)
+#                               Run: npx wrangler secret put PAYPAL_ME_LINK
+#   BUSINESS_NAME             — Legal/display business name
+#                               Run: npx wrangler secret put BUSINESS_NAME
+#   BUSINESS_GST              — GST registration number (shown on invoices)
+#                               Run: npx wrangler secret put BUSINESS_GST
+#   BUSINESS_EMAIL            — Primary business contact email
+#                               Run: npx wrangler secret put BUSINESS_EMAIL
+#   BUSINESS_SUPPORT_EMAIL    — Support email (falls back to BUSINESS_EMAIL if unset)
+#                               Run: npx wrangler secret put BUSINESS_SUPPORT_EMAIL
+#   BUSINESS_PHONE            — Contact phone / WhatsApp number, with country code
+#                               Run: npx wrangler secret put BUSINESS_PHONE
+#   BUSINESS_ADDRESS          — Registered business address (legally required on
+#                               invoices/terms/privacy/refund pages in India —
+#                               keep this on those pages; this secret only feeds
+#                               the backend-rendered invoice HTML)
+#                               Run: npx wrangler secret put BUSINESS_ADDRESS
+#
 # ════════════════════════════════════════════════════════════════════════════════
 # QUICK SETUP — paste into terminal to set all core secrets at once:
 #   openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
