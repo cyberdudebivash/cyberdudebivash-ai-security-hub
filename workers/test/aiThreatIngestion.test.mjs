@@ -3,7 +3,7 @@
  * AI/LLM-ecosystem detection, OWASP LLM Top 10 heuristic mapping, and that only
  * real, source-attributed entries get written to ai_threat_feed. */
 import { describe, it, expect } from 'vitest';
-import { isAIRelated, mapToOwaspLLM, classifyFeedType, runAIThreatIngestion } from '../src/services/aiThreatIngestion.js';
+import { isAIRelated, mapToOwaspLLM, mapToMitreAttack, mapToMitreAtlas, classifyFeedType, runAIThreatIngestion } from '../src/services/aiThreatIngestion.js';
 
 // ── In-memory D1 ────────────────────────────────────────────────────────────
 // failOn: optional id whose INSERT throws once per batch call (simulates a
@@ -17,9 +17,11 @@ function memDB({ failBatchOnce = false } = {}) {
     async run() {
       if (/^\s*INSERT INTO ai_threat_feed/i.test(sql)) {
         const [id, feed_type, title, description, severity, cve_id,
-          affected_frameworks, iocs, mitigations, owasp_ref, source_url, published_at, metadata] = this._b;
+          affected_frameworks, iocs, mitigations, owasp_ref, attack_ref, atlas_ref,
+          source_url, published_at, metadata] = this._b;
         rows.set(id, { id, feed_type, title, description, severity, cve_id,
-          affected_frameworks, iocs, mitigations, owasp_ref, source_url, published_at, metadata });
+          affected_frameworks, iocs, mitigations, owasp_ref, attack_ref, atlas_ref,
+          source_url, published_at, metadata });
       }
       return { success: true };
     },
@@ -97,6 +99,33 @@ describe('mapToOwaspLLM', () => {
   });
 });
 
+describe('mapToMitreAtlas', () => {
+  it('maps prompt injection language to AML.T0051', () => {
+    expect(mapToMitreAtlas('this is a prompt injection via rag pipeline')).toBe('AML.T0051');
+  });
+  it('maps jailbreak language to AML.T0054', () => {
+    expect(mapToMitreAtlas('a many-shot jailbreak technique')).toBe('AML.T0054');
+  });
+  it('maps training data poisoning language to AML.T0020', () => {
+    expect(mapToMitreAtlas('a training data poisoning attack')).toBe('AML.T0020');
+  });
+  it('returns null when no confident mapping exists', () => {
+    expect(mapToMitreAtlas('a generic buffer overflow in a network device')).toBeNull();
+  });
+});
+
+describe('mapToMitreAttack', () => {
+  it('maps remote code execution language to T1059', () => {
+    expect(mapToMitreAttack('allows remote code execution via crafted payload')).toBe('T1059');
+  });
+  it('maps SSRF language to T1190', () => {
+    expect(mapToMitreAttack('a server-side request forgery in the rag pipeline')).toBe('T1190');
+  });
+  it('returns null when no confident mapping exists', () => {
+    expect(mapToMitreAttack('a generic information disclosure issue')).toBeNull();
+  });
+});
+
 describe('classifyFeedType', () => {
   it('classifies prompt-injection language as prompt_attack, matching the schema enum', () => {
     expect(classifyFeedType('a prompt injection via tool output', false)).toBe('prompt_attack');
@@ -127,6 +156,8 @@ describe('runAIThreatIngestion', () => {
     expect(stored.cve_id).toBe('CVE-2024-5184');
     expect(stored.source_url).toBe('https://nvd.nist.gov/vuln/detail/CVE-2024-5184');
     expect(stored.owasp_ref).toBe('LLM01');
+    expect(stored.atlas_ref).toBe('AML.T0051');
+    expect(stored.attack_ref).toBe('T1190');
     expect(typeof stored.published_at).toBe('number');
   });
 
