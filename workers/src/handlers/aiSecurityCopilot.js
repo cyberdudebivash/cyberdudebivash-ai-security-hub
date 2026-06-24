@@ -772,10 +772,12 @@ async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId)
 
       case 'check_ai_governance': {
         const { handleGovernanceAssess } = await import('./aiGovernance.js');
+        // 'all' is not a valid framework ID — default to nist_ai_rmf (most comprehensive)
+        const fw = (toolInput.framework && toolInput.framework !== 'all') ? toolInput.framework : 'nist_ai_rmf';
         const req = new Request('https://internal/api/ai-security/governance/assess', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ system_name: toolInput.system_name || 'AI System', framework: toolInput.framework || 'all' }),
+          body: JSON.stringify({ system_name: toolInput.system_name || 'AI System', framework: fw }),
         });
         return (await handleGovernanceAssess(req, env, authCtx)).json();
       }
@@ -783,7 +785,9 @@ async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId)
       case 'get_platform_metrics': {
         const { handleGetMetrics } = await import('./platformMetricsAuthority.js');
         const req = new Request('https://internal/api/platform/metrics', { method: 'GET' });
-        return (await handleGetMetrics(req, env, authCtx)).json();
+        // platformMetricsAuthority reads request.user for auth — inject the live authCtx
+        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user' };
+        return (await handleGetMetrics(req, env)).json();
       }
 
       case 'get_cve_intelligence': {

@@ -1011,7 +1011,7 @@ function apiInfoResponse() {
       'GET  /api/gumroad/products':  'Public product catalog with pricing + SKUs',
       // V36.0 — AI Security Copilot (APEX — God Mode Orchestrator)
       'GET  /api/copilot/capabilities':  'List all 18+ orchestration skills + tier access map',
-      'POST /api/copilot/chat':          'Multi-turn AI security conversation — Claude-powered, tool-enabled God Mode',
+      'POST /api/copilot/chat':          'Multi-turn AI security conversation — Groq/DeepSeek/OpenRouter, 19-tool God Mode',
       'GET  /api/copilot/session':       'Retrieve conversation session history',
       'DELETE /api/copilot/session':     'Clear conversation session',
       'POST /api/copilot/quick-action':  'Direct skill invocation without conversation context',
@@ -6070,8 +6070,8 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
   // ── v36: AI SECURITY COPILOT — APEX God Mode Orchestrator ─────────────────
   // Full-spectrum AI security orchestration via natural language.
-  // Tier-routed to Anthropic claude-opus-4-8 / sonnet-4-6 / haiku-4-5.
-  // Tool registry: 18 skills covering threat intel, SOC, SIEM, red team, etc.
+  // Tier-routed across Groq / DeepSeek / OpenRouter — zero Anthropic dependency.
+  // Tool registry: 19 skills covering threat intel, SOC, SIEM, red team, etc.
   if (path === '/api/copilot/capabilities' && method === 'GET') {
     return withSecurityHeaders(withCors(await handleCopilotCapabilities(request, env, authCtx), request));
   }
