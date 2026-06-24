@@ -2,118 +2,169 @@ import { ok, fail } from '../lib/response.js';
 import { callClaude } from '../core/mythosAIProvider.js';
 
 /**
- * CYBERDUDEBIVASH AI Security Hub — CyberBrain Engine v19.0
- * Central AI Intelligence Core: aggregates vulnerabilities, threat actors, asset telemetry,
- * predicts attack paths, generates dynamic risk scores, recommends automated remediation.
+ * CYBERDUDEBIVASH AI Security Hub — CyberBrain Engine v20.0
+ * APEX NEXUS God Mode Intelligence Core — Maximum Precision, Zero Hallucination
  *
- * This is the GOD-level intelligence layer that powers:
+ * Upgrades from v19→v20:
+ * - 20+ threat actor profiles (added India-specific: APT36, SideCopy, DoNot Team)
+ * - 25 risk signals (expanded from 17)
+ * - Financial impact in ₹ INR with sector-specific ranges
+ * - 7 attack chains (added AI/LLM and cloud-native chains)
+ * - 15 remediation templates (expanded from 10)
+ * - CERT-In 6-hour reporting trigger detection
+ *
+ * Powers:
  *   - /api/scan/* (enriches scan results with AI risk scoring)
  *   - /api/vulns  (prioritizes vulnerabilities by exploitability + business impact)
  *   - /api/hunt   (recommends hunt queries based on asset profile)
  *   - /api/cyber-brain/* (direct CyberBrain API)
- *
- * Output schema:
- *   {
- *     riskScore: 0–100,
- *     riskLevel: 'CRITICAL|HIGH|MEDIUM|LOW',
- *     attackPaths: [...],
- *     exploitProbability: 0.0–1.0,
- *     threatActors: [...],
- *     recommendedActions: [...],
- *     businessImpact: {...},
- *     mitreCoverage: {...},
- *   }
  */
 
-// ─── Risk weight table ────────────────────────────────────────────────────────
-// Weights represent contribution to overall risk score
+// ─── Risk weight table (v20 — 25 signals) ─────────────────────────────────────
 const RISK_WEIGHTS = {
-  cvss_critical:     30,   // CVSS 9.0–10.0
-  cvss_high:         20,   // CVSS 7.0–8.9
-  cvss_medium:       10,   // CVSS 4.0–6.9
-  in_kev:            25,   // CISA KEV confirmed exploited
-  epss_high:         20,   // EPSS > 0.70
-  epss_medium:       10,   // EPSS 0.30–0.70
-  public_exploit:    15,   // PoC / exploit publicly available
-  ransomware_linked: 20,   // Ransomware group leverages this
-  zero_day:          35,   // No patch available
-  lateral_movement:  15,   // Can facilitate lateral movement
-  credential_access: 18,   // Enables credential theft
-  external_exposure: 20,   // Internet-facing asset
-  no_mfa:            12,   // Auth weakness
-  missing_headers:    5,   // Each missing security header
-  weak_tls:          12,   // TLS 1.0/1.1 or weak ciphers
-  dns_weakness:       8,   // Missing SPF/DKIM/DMARC
+  // Vulnerability severity
+  cvss_critical:       30,   // CVSS 9.0–10.0
+  cvss_high:           20,   // CVSS 7.0–8.9
+  cvss_medium:         10,   // CVSS 4.0–6.9
+  // Exploitation intelligence
+  in_kev:              28,   // CISA KEV — confirmed active exploitation
+  epss_high:           22,   // EPSS > 0.70 — high prediction of exploitation
+  epss_medium:         11,   // EPSS 0.30–0.70
+  public_exploit:      16,   // PoC / weaponized exploit publicly available
+  ransomware_linked:   22,   // Ransomware group actively leverages this vector
+  zero_day:            38,   // No patch available — maximum urgency
+  ai_weaponized:       18,   // AI-enhanced attack tooling available
+  // Attack capability
+  lateral_movement:    16,   // Enables lateral movement across network
+  credential_access:   20,   // Enables credential theft / account takeover
+  rce_capability:      25,   // Remote code execution possible
+  data_exfil:          18,   // Data exfiltration path available
+  // Asset exposure
+  external_exposure:   22,   // Internet-facing asset
+  no_mfa:              14,   // Authentication weakness — no MFA enforced
+  high_value_data:     18,   // Critical/sensitive data accessible
+  privileged_systems:  15,   // Admin/privileged system exposure
+  // Technical weaknesses
+  missing_headers:      6,   // Each missing security header
+  weak_tls:            13,   // TLS 1.0/1.1 or weak ciphers detected
+  dns_weakness:         9,   // Missing SPF/DKIM/DMARC/DNSSEC
+  supply_chain_risk:   20,   // Third-party / supply chain exposure
+  cloud_misconfigured: 18,   // Cloud IAM / storage misconfiguration
+  // Indian regulatory risk
+  dpdp_exposure:       12,   // Personal data exposure → DPDP Act liability
+  cert_in_reportable:  15,   // Incident meets CERT-In 6-hour reporting threshold
 };
 
-// ─── MITRE ATT&CK attack patterns ────────────────────────────────────────────
+// ─── MITRE ATT&CK attack chains (v20 — 7 chains) ─────────────────────────────
 const ATTACK_CHAINS = [
   {
     id: 'chain_web_rce',
     name: 'Web Exploitation → RCE → Lateral Movement',
-    steps: ['Reconnaissance', 'Initial Access (Web)', 'Execution', 'Privilege Escalation', 'Lateral Movement', 'Data Exfiltration'],
+    steps: ['Reconnaissance', 'Initial Access (Web Exploit)', 'Execution', 'Privilege Escalation', 'Lateral Movement', 'Data Exfiltration'],
     techniques: ['T1190', 'T1059', 'T1548', 'T1021', 'T1041'],
-    probability_multiplier: 1.4,
+    probability_multiplier: 1.45,
     triggers: ['injection', 'rce', 'cve_critical', 'external'],
+    financial_impact_inr: '₹50L–₹10Cr',
   },
   {
     id: 'chain_phishing_cred',
     name: 'Spear Phishing → Credential Theft → Persistence',
-    steps: ['Reconnaissance', 'Phishing Email', 'Credential Harvest', 'Persistence', 'Internal Discovery'],
-    techniques: ['T1566', 'T1078', 'T1547', 'T1057'],
-    probability_multiplier: 1.2,
+    steps: ['OSINT Reconnaissance', 'AI-Crafted Phishing', 'Credential Harvest', 'MFA Bypass', 'Persistence', 'Discovery'],
+    techniques: ['T1566', 'T1621', 'T1078', 'T1547', 'T1057'],
+    probability_multiplier: 1.25,
     triggers: ['spf', 'dmarc', 'dkim', 'mfa', 'credential'],
+    financial_impact_inr: '₹20L–₹5Cr',
   },
   {
     id: 'chain_supply_chain',
-    name: 'Supply Chain → Backdoor → Long-Term APT',
+    name: 'Supply Chain Compromise → Backdoor → Long-Term APT',
     steps: ['Vendor Compromise', 'Trusted Update Delivery', 'Backdoor Execution', 'Covert C2', 'Long-Term Exfiltration'],
-    techniques: ['T1195', 'T1543', 'T1071', 'T1020'],
-    probability_multiplier: 0.8,
+    techniques: ['T1195', 'T1195.001', 'T1543', 'T1071', 'T1020'],
+    probability_multiplier: 0.85,
     triggers: ['supply_chain', 'third_party', 'dependency'],
+    financial_impact_inr: '₹1Cr–₹100Cr',
   },
   {
     id: 'chain_ransomware',
-    name: 'Initial Access → Ransomware Deployment',
-    steps: ['Initial Access', 'Execution', 'Defense Evasion', 'Data Staging', 'Encryption + Extortion'],
-    techniques: ['T1190', 'T1059', 'T1027', 'T1486', 'T1490'],
-    probability_multiplier: 1.3,
+    name: 'Initial Access → Ransomware Double Extortion',
+    steps: ['Initial Access', 'Execution (LOLBins)', 'Defense Evasion', 'Data Staging + Exfil', 'Encryption', 'Extortion'],
+    techniques: ['T1190', 'T1059', 'T1027', 'T1048', 'T1486', 'T1490'],
+    probability_multiplier: 1.35,
     triggers: ['ransomware', 'kev', 'public_exploit'],
+    financial_impact_inr: '₹1Cr–₹50Cr',
   },
   {
     id: 'chain_insider',
     name: 'Insider Threat → Privilege Abuse → Exfiltration',
-    steps: ['Privileged Access', 'Lateral Discovery', 'Data Collection', 'Exfiltration'],
+    steps: ['Privileged Access Abuse', 'Lateral Discovery', 'Data Collection', 'Covert Exfiltration'],
     techniques: ['T1078', 'T1087', 'T1005', 'T1048'],
-    probability_multiplier: 0.6,
+    probability_multiplier: 0.65,
     triggers: ['privilege', 'admin', 'access_control'],
+    financial_impact_inr: '₹10L–₹5Cr',
+  },
+  {
+    id: 'chain_ai_llm',
+    name: 'AI/LLM Prompt Injection → Data Exfil → System Compromise',
+    steps: ['Prompt Discovery', 'Prompt Injection', 'PII Collection', 'Sensitive Data Exfil', 'Agent Action Abuse'],
+    techniques: ['T1059', 'T1005', 'T1041', 'T1648'],
+    probability_multiplier: 1.1,
+    triggers: ['prompt', 'llm', 'ai_model', 'rag'],
+    financial_impact_inr: '₹5L–₹2Cr',
+  },
+  {
+    id: 'chain_cloud_takeover',
+    name: 'Cloud Misconfiguration → IAM Takeover → Data Breach',
+    steps: ['IMDS/Storage Discovery', 'IAM Role Assumption', 'Privilege Escalation', 'Data Access', 'Exfiltration'],
+    techniques: ['T1552.005', 'T1078.004', 'T1537', 'T1530'],
+    probability_multiplier: 1.2,
+    triggers: ['cloud', 'misconfigur', 'iam', 's3', 'storage'],
+    financial_impact_inr: '₹50L–₹20Cr',
   },
 ];
 
-// ─── Threat actor correlation table ──────────────────────────────────────────
+// ─── Threat actor database (v20 — 20 actors, India-aware) ────────────────────
 const THREAT_ACTORS_DB = [
-  { id: 'apt41',    name: 'APT41 (Winnti)',     nation: 'CN', motivation: 'Espionage+Financial', sectors: ['tech','healthcare','finance'],    ttps: ['T1190','T1059','T1027'], risk_elevation: 1.3 },
-  { id: 'apt28',    name: 'APT28 (Fancy Bear)', nation: 'RU', motivation: 'Espionage',           sectors: ['gov','defense','energy'],         ttps: ['T1566','T1078','T1547'], risk_elevation: 1.2 },
-  { id: 'apt29',    name: 'APT29 (Cozy Bear)',  nation: 'RU', motivation: 'Espionage',           sectors: ['gov','tech','finance'],           ttps: ['T1195','T1071','T1020'], risk_elevation: 1.4 },
-  { id: 'lazarus',  name: 'Lazarus Group',      nation: 'KP', motivation: 'Financial',           sectors: ['finance','crypto','defense'],     ttps: ['T1190','T1548','T1041'], risk_elevation: 1.5 },
-  { id: 'lockbit',  name: 'LockBit 3.0',        nation: 'RU', motivation: 'Ransomware-as-a-Service', sectors: ['healthcare','manufacturing'], ttps: ['T1486','T1490','T1059'], risk_elevation: 1.6 },
-  { id: 'clop',     name: 'CL0P',               nation: 'RU', motivation: 'Ransomware+Extortion',sectors: ['healthcare','education'],         ttps: ['T1190','T1486','T1048'], risk_elevation: 1.5 },
-  { id: 'fin7',     name: 'FIN7',               nation: 'RU', motivation: 'Financial',           sectors: ['retail','hospitality','finance'], ttps: ['T1566','T1078','T1005'], risk_elevation: 1.2 },
-  { id: 'blackcat', name: 'ALPHV/BlackCat',     nation: 'RU', motivation: 'RaaS',               sectors: ['healthcare','energy'],            ttps: ['T1486','T1190','T1027'], risk_elevation: 1.4 },
+  // Nation-state APTs
+  { id: 'apt41',          name: 'APT41 (Winnti / Double Dragon)',    nation: 'CN', motivation: 'Espionage+Financial',        sectors: ['tech','healthcare','finance','telecom','gaming'],             ttps: ['T1190','T1059','T1027','T1078','T1021'], risk_elevation: 1.35 },
+  { id: 'apt28',          name: 'APT28 (Fancy Bear / Sofacy)',       nation: 'RU', motivation: 'Espionage+Disruption',       sectors: ['gov','defense','energy','media'],                              ttps: ['T1566','T1078','T1547','T1021','T1040'], risk_elevation: 1.25 },
+  { id: 'apt29',          name: 'APT29 (Cozy Bear / Midnight Blizzard)', nation: 'RU', motivation: 'Intelligence Collection', sectors: ['gov','tech','finance','cloud'],                             ttps: ['T1195','T1071','T1020','T1078','T1550'], risk_elevation: 1.45 },
+  { id: 'lazarus',        name: 'Lazarus Group / APT38',             nation: 'KP', motivation: 'Financial+Espionage',        sectors: ['finance','crypto','defense','tech'],                          ttps: ['T1190','T1548','T1041','T1566','T1059'], risk_elevation: 1.55 },
+  { id: 'apt36',          name: 'APT36 (Transparent Tribe)',         nation: 'PK', motivation: 'Espionage vs India',         sectors: ['gov','defense','education','india'],                          ttps: ['T1566','T1059','T1078','T1021','T1113'], risk_elevation: 1.4  },
+  { id: 'sidewinder',     name: 'SideCopy / Rattlesnake',            nation: 'PK', motivation: 'Espionage vs India',         sectors: ['gov','defense','india'],                                      ttps: ['T1566.001','T1059','T1547','T1021'],      risk_elevation: 1.35 },
+  { id: 'donot',          name: 'DoNot Team (APT-C-35)',             nation: 'IN', motivation: 'Regional Espionage',          sectors: ['gov','military','ngo'],                                       ttps: ['T1566','T1059','T1078'],                  risk_elevation: 1.2  },
+  { id: 'volt_typhoon',   name: 'Volt Typhoon / Bronze Silhouette',  nation: 'CN', motivation: 'Critical Infra Pre-position', sectors: ['critical_infra','telecom','energy','water','defense'],       ttps: ['T1190','T1078','T1021','T1083','T1070'], risk_elevation: 1.6  },
+  { id: 'salt_typhoon',   name: 'Salt Typhoon',                      nation: 'CN', motivation: 'Telecom Espionage',           sectors: ['telecom','isp','gov'],                                        ttps: ['T1190','T1078','T1040','T1041'],          risk_elevation: 1.5  },
+  { id: 'dragonbridge',   name: 'DRAGONBRIDGE (IO)',                 nation: 'CN', motivation: 'Information Operations',     sectors: ['media','gov','tech'],                                         ttps: ['T1566','T1585','T1491'],                  risk_elevation: 1.1  },
+  // Ransomware & Financial
+  { id: 'lockbit',        name: 'LockBit 3.0',                       nation: 'RU', motivation: 'Ransomware-as-a-Service',    sectors: ['healthcare','manufacturing','finance','gov'],                 ttps: ['T1486','T1490','T1059','T1021'],          risk_elevation: 1.65 },
+  { id: 'clop',           name: 'CL0P',                              nation: 'RU', motivation: 'Ransomware+Zero-Day Extortion', sectors: ['healthcare','education','finance'],                        ttps: ['T1190','T1486','T1048','T1567'],          risk_elevation: 1.55 },
+  { id: 'blackcat',       name: 'ALPHV / BlackCat',                  nation: 'RU', motivation: 'RaaS+Double Extortion',       sectors: ['healthcare','energy','finance'],                              ttps: ['T1486','T1190','T1027','T1041'],          risk_elevation: 1.5  },
+  { id: 'black_basta',    name: 'Black Basta',                       nation: 'RU', motivation: 'Ransomware',                  sectors: ['healthcare','manufacturing','construction'],                  ttps: ['T1566','T1486','T1078','T1021'],          risk_elevation: 1.45 },
+  { id: 'ransomhub',      name: 'RansomHub',                        nation: 'RU', motivation: 'Ransomware',                  sectors: ['gov','healthcare','critical_infra'],                          ttps: ['T1190','T1486','T1078','T1041'],          risk_elevation: 1.5  },
+  { id: 'fin7',           name: 'FIN7 / Carbanak',                   nation: 'RU', motivation: 'Financial+Ransomware',        sectors: ['retail','hospitality','finance','tech'],                      ttps: ['T1566','T1078','T1005','T1486'],          risk_elevation: 1.3  },
+  { id: 'scattered_spider',name:'Scattered Spider / UNC3944',        nation: 'US', motivation: 'Financial+Data Extortion',    sectors: ['tech','gaming','finance','telecom'],                          ttps: ['T1621','T1534','T1078','T1190'],          risk_elevation: 1.45 },
+  { id: 'play',           name: 'Play Ransomware',                   nation: 'RU', motivation: 'Ransomware',                  sectors: ['gov','healthcare','manufacturing'],                            ttps: ['T1190','T1486','T1078'],                  risk_elevation: 1.35 },
+  { id: 'cl0ud_atlas',    name: 'Cloud Atlas (CloudWizard)',         nation: 'RU', motivation: 'Espionage+Cloud Attacks',     sectors: ['gov','finance','tech','cloud'],                               ttps: ['T1578','T1530','T1078.004'],              risk_elevation: 1.4  },
+  { id: 'revil',          name: 'REvil / Sodinokibi',                nation: 'RU', motivation: 'RaaS',                       sectors: ['manufacturing','finance','retail'],                           ttps: ['T1486','T1190','T1566','T1486'],          risk_elevation: 1.3  },
 ];
 
-// ─── Remediation action templates ────────────────────────────────────────────
+// ─── Remediation templates (v20 — 15 templates) ──────────────────────────────
 const REMEDIATION_TEMPLATES = {
-  tls:        { priority: 'HIGH',     action: 'Disable TLS 1.0/1.1. Enforce TLS 1.3 minimum. Rotate certificates.', effort: '2h', impact: 'Eliminates protocol downgrade attacks' },
-  dns:        { priority: 'HIGH',     action: 'Enable DNSSEC. Configure SPF/DKIM/DMARC records.', effort: '4h', impact: 'Prevents DNS hijacking and email spoofing' },
-  headers:    { priority: 'MEDIUM',   action: 'Add HSTS, CSP, X-Frame-Options, X-Content-Type-Options headers.', effort: '1h', impact: 'Mitigates XSS, clickjacking, MIME sniffing' },
-  mfa:        { priority: 'CRITICAL', action: 'Enable MFA for all accounts. Enforce FIDO2/WebAuthn for admins.', effort: '8h', impact: 'Blocks 99.9% of credential-based attacks' },
-  patch:      { priority: 'CRITICAL', action: 'Apply vendor patches within SLA. Prioritize KEV vulnerabilities.', effort: 'varies', impact: 'Eliminates known exploitable vulnerabilities' },
-  network:    { priority: 'HIGH',     action: 'Segment network. Restrict lateral movement paths. Deploy micro-segmentation.', effort: '16h', impact: 'Contains blast radius of breaches' },
-  logging:    { priority: 'MEDIUM',   action: 'Enable centralized logging. Deploy SIEM with detection rules.', effort: '8h', impact: 'Enables threat detection and forensics' },
-  access:     { priority: 'HIGH',     action: 'Implement least-privilege. Review admin accounts. Rotate credentials.', effort: '4h', impact: 'Reduces attack surface from insider threats' },
-  backup:     { priority: 'HIGH',     action: 'Implement 3-2-1 backup strategy. Test restoration. Air-gap critical backups.', effort: '8h', impact: 'Enables recovery from ransomware' },
-  edr:        { priority: 'CRITICAL', action: 'Deploy EDR on all endpoints. Enable behavioral detection.', effort: '24h', impact: 'Detects and blocks malware execution in real-time' },
+  tls:          { priority: 'HIGH',     action: 'Disable TLS 1.0/1.1. Enforce TLS 1.3 minimum. Enable HSTS. Rotate certificates annually.',     effort: '2h',    impact: 'Eliminates protocol downgrade, MITM, and cipher attacks',          cert_in_prevents: true  },
+  dns:          { priority: 'HIGH',     action: 'Enable DNSSEC signing. Configure SPF (hard fail), DKIM 2048-bit, DMARC p=reject.',               effort: '4h',    impact: 'Prevents DNS hijacking, email spoofing, brand impersonation',       cert_in_prevents: false },
+  headers:      { priority: 'MEDIUM',   action: 'Add HSTS (max-age=31536000), CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff.',     effort: '1h',    impact: 'Mitigates XSS, clickjacking, MIME sniffing',                        cert_in_prevents: false },
+  mfa:          { priority: 'CRITICAL', action: 'Enforce MFA for ALL accounts. Mandate FIDO2/WebAuthn for privileged users. Disable SMS OTP.',  effort: '8h',    impact: 'Blocks 99.9% of credential-based attacks (Microsoft Research)',    cert_in_prevents: true  },
+  patch:        { priority: 'CRITICAL', action: 'Emergency patch cycle for CISA KEV within 24h. High within 7d. Apply vendor advisories.',       effort: 'varies',impact: 'Eliminates known exploitable vulnerabilities directly',            cert_in_prevents: true  },
+  network:      { priority: 'HIGH',     action: 'Micro-segment network. Zero Trust lateral movement controls. Block SMB/RDP at perimeter.',       effort: '16h',   impact: 'Limits blast radius; contains ransomware spread',                  cert_in_prevents: true  },
+  logging:      { priority: 'HIGH',     action: 'Centralized SIEM with detection rules. Log retention 90 days minimum. Enable UEBA.',            effort: '8h',    impact: 'Enables threat detection, forensics, CERT-In compliance',          cert_in_prevents: false },
+  access:       { priority: 'HIGH',     action: 'Least-privilege enforcement. PAM for admin accounts. Review stale accounts. Rotate all keys.', effort: '4h',    impact: 'Reduces insider threat and credential theft blast radius',          cert_in_prevents: true  },
+  backup:       { priority: 'HIGH',     action: '3-2-1-1 backup strategy. Immutable backups. Air-gap critical. RTO < 4h tested quarterly.',     effort: '8h',    impact: 'Enables ransomware recovery without paying ransom',                cert_in_prevents: false },
+  edr:          { priority: 'CRITICAL', action: 'EDR on all endpoints. Enable behavioral detection + XDR integration. 24/7 SOC monitoring.',    effort: '24h',   impact: 'Detects and blocks malware in real-time; reduces dwell time 80%', cert_in_prevents: true  },
+  waf:          { priority: 'HIGH',     action: 'Deploy WAF in blocking mode. Enable OWASP CRS rules. Configure rate limiting and bot detection.', effort: '4h', impact: 'Blocks web application attacks: SQLi, XSS, SSRF, path traversal',  cert_in_prevents: true  },
+  deception:    { priority: 'MEDIUM',   action: 'Deploy honeypots / honeyfiles. Set up canary tokens for sensitive files and credentials.',       effort: '8h',    impact: 'Early attacker detection; provides TTPs for threat intelligence',  cert_in_prevents: false },
+  supply_chain: { priority: 'HIGH',     action: 'SBOM generation for all dependencies. SCA in CI/CD. Vendor security questionnaires. SLSA.',     effort: '16h',   impact: 'Eliminates supply chain compromise vector (npm, PyPI, Maven)',     cert_in_prevents: true  },
+  cloud_iam:    { priority: 'CRITICAL', action: 'Audit cloud IAM roles. Remove wildcard permissions. Enable CloudTrail/CloudWatch. CSPM tool.',  effort: '8h',    impact: 'Prevents cloud account takeover and data exfiltration',            cert_in_prevents: true  },
+  ai_security:  { priority: 'HIGH',     action: 'Input sanitization for LLM prompts. Implement OWASP LLM Top 10 controls. Red team AI assets.', effort: '12h',   impact: 'Prevents prompt injection, model theft, data exfiltration via AI', cert_in_prevents: false },
 };
 
 // ─── Core risk scoring function ───────────────────────────────────────────────
@@ -147,6 +198,12 @@ export function computeRiskScore(findings = [], vulns = [], assets = {}) {
     if (/tls 1\.[01]|ssl|weak cipher|poodle|beast/i.test(f)) score += RISK_WEIGHTS.weak_tls;
     if (/spf|dkim|dmarc|dnssec/i.test(f)) score += RISK_WEIGHTS.dns_weakness;
     if (/missing header|x-frame|csp|hsts/i.test(f)) score += RISK_WEIGHTS.missing_headers;
+    if (/rce|remote code|arbitrary code/i.test(f)) { score += RISK_WEIGHTS.rce_capability; signals.push({ type: 'rce', detail: finding.title, weight: RISK_WEIGHTS.rce_capability }); }
+    if (/exfil|data theft|upload|transfer/i.test(f)) score += RISK_WEIGHTS.data_exfil;
+    if (/supply chain|third.?party|vendor|npm|pypi|maven/i.test(f)) score += RISK_WEIGHTS.supply_chain_risk;
+    if (/cloud|s3|gcs|azure blob|iam|bucket|imds/i.test(f)) score += RISK_WEIGHTS.cloud_misconfigured;
+    if (/pii|personal data|aadhaar|pan card|health|financial record/i.test(f)) score += RISK_WEIGHTS.dpdp_exposure;
+    if (finding.severity === 'CRITICAL' || finding.in_kev) score += RISK_WEIGHTS.cert_in_reportable;
   }
 
   // Score from vulnerabilities
@@ -286,9 +343,9 @@ export function assessBusinessImpact(riskScore = 0, findings = []) {
   const criticalCount = findings.filter(f => f.severity === 'CRITICAL' || f.cvss >= 9.0).length;
   const kevCount      = findings.filter(f => f.in_kev || f.exploited).length;
 
-  const financialRisk = riskScore >= 80 ? 'HIGH ($1M+)' :
-                        riskScore >= 60 ? 'MEDIUM ($100K–$1M)' :
-                        riskScore >= 40 ? 'LOW ($10K–$100K)' : 'MINIMAL (<$10K)';
+  const financialRisk = riskScore >= 80 ? 'CRITICAL (₹10Cr–₹250Cr+ | $1M+)' :
+                        riskScore >= 60 ? 'HIGH (₹1Cr–₹10Cr | $100K–$1M)' :
+                        riskScore >= 40 ? 'MEDIUM (₹10L–₹1Cr | $10K–$100K)' : 'LOW (₹1L–₹10L | <$10K)';
 
   const breachProbability12mo = Math.min(0.95, riskScore / 100 * 0.8 + kevCount * 0.05);
   const regulatoryRisk = criticalCount > 2 ? 'GDPR/DPDP/SOC2 non-compliance likely' :
@@ -393,7 +450,7 @@ Be specific, actionable, authoritative. No fluff.`;
     analyzed_at:  new Date().toISOString(),
     findings_analyzed: findings.length,
     vulns_analyzed:    vulns.length,
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    platform: 'CYBERDUDEBIVASH APEX NEXUS AI Security Hub v20.0',
   };
 
   if (env?.SECURITY_HUB_KV) {
@@ -449,7 +506,7 @@ export async function handleRiskScore(request, env, authCtx) {
     riskScore: 0,
     riskLevel: 'UNKNOWN',
     message: 'No analysis found for this target. Run a scan first.',
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    platform: 'CYBERDUDEBIVASH APEX NEXUS AI Security Hub v20.0',
   });
 }
 
@@ -473,7 +530,7 @@ export async function handleAttackPaths(request, env, authCtx) {
     attack_paths: paths,
     chain_count:  paths.length,
     highest_probability: paths[0]?.probability || 0,
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    platform: 'CYBERDUDEBIVASH APEX NEXUS AI Security Hub v20.0',
   });
 }
 
@@ -486,7 +543,7 @@ export async function handleThreatActors(request, env, authCtx) {
     sector,
     threat_actors: actors,
     total: actors.length,
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    platform: 'CYBERDUDEBIVASH APEX NEXUS AI Security Hub v20.0',
   });
 }
 
@@ -505,6 +562,6 @@ export async function handleRemediationPlan(request, env, authCtx) {
       const h = parseInt(a.effort) || 0;
       return sum + h;
     }, 0) + 'h',
-    platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+    platform: 'CYBERDUDEBIVASH APEX NEXUS AI Security Hub v20.0',
   });
 }

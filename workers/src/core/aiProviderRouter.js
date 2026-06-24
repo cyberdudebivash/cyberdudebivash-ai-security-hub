@@ -1,26 +1,31 @@
 /**
- * CYBERDUDEBIVASH MYTHOS — AI Provider Router v1.0
+ * CYBERDUDEBIVASH MYTHOS — APEX AI Provider Router v3.0
  * ════════════════════════════════════════════════════════════════════════════
- * Provider-agnostic, multi-model AI orchestration layer.
- * Zero vendor lock-in. No single point of AI failure.
+ * GOD MODE INTELLIGENCE MESH — APEX NEXUS MULTI-PROVIDER ORCHESTRATION
  *
- * Priority chain (default):
- *   1. Groq          — fast, free tier generous (Llama 3.3 70B)
- *   2. DeepSeek      — ultra-cheap, strong technical reasoning
- *   3. Cloudflare AI — always-available, zero cost (Llama 3.1 8B)
- *   4. OpenRouter    — meta-provider fallback (many models)
- *   5. Anthropic     — optional premium tier (Claude)
+ * Hybrid synthesis combining the best reasoning of all frontier AI systems
+ * into a single sovereign cybersecurity intelligence engine.
  *
- * Task-type routing (cost optimized):
- *   threat_intel   → DeepSeek (best technical/CVE reasoning)
- *   executive      → Groq     (fast, clear prose)
- *   governance     → Groq     (structured, compliant)
- *   assessment     → CF AI    (fast, short outputs)
- *   enterprise     → Anthropic if available, else Groq
- *   general        → Groq → DeepSeek → CF AI
+ * Provider priority chain:
+ *   1. Groq          — fastest inference (Llama 3.3 70B, Mixtral 8x7B)
+ *   2. DeepSeek      — ultra-precise technical/CVE reasoning
+ *   3. Together AI   — diverse model pool (Qwen 72B, Mistral Large)
+ *   4. Cloudflare AI — always-available zero-cost fallback
+ *   5. OpenRouter    — meta-provider (50+ models)
+ *   6. Anthropic     — premium reasoning tier (Claude Sonnet/Opus)
  *
- * All providers return the same normalized response shape:
- *   { content, model, source, provider, tokens: {input, output}, latency_ms }
+ * Task-type routing (precision-optimized):
+ *   threat_intel      → DeepSeek → Groq → Together AI
+ *   executive         → Groq → DeepSeek → Anthropic
+ *   governance        → Groq → DeepSeek → CF AI
+ *   assessment        → CF AI → Groq → DeepSeek
+ *   enterprise        → Anthropic → Groq → DeepSeek
+ *   red_team          → DeepSeek → Groq → Together AI
+ *   forensics         → DeepSeek → Anthropic → Groq
+ *   prediction        → DeepSeek → Groq → OpenRouter
+ *   code_review       → DeepSeek → Groq → Anthropic
+ *   compliance_audit  → Groq → DeepSeek → Anthropic
+ *   general           → Groq → DeepSeek → CF AI
  * ════════════════════════════════════════════════════════════════════════════
  */
 
@@ -28,6 +33,7 @@
 export const PROVIDERS = {
   GROQ:        'groq',
   DEEPSEEK:    'deepseek',
+  TOGETHER:    'together',
   CF_AI:       'cloudflare-workers-ai',
   OPENROUTER:  'openrouter',
   ANTHROPIC:   'anthropic',
@@ -38,45 +44,67 @@ export const PROVIDER_CONFIG = {
     endpoint:    'https://api.groq.com/openai/v1/chat/completions',
     envKey:      'GROQ_API_KEY',
     models: {
-      default:     'llama-3.3-70b-versatile',
-      fast:        'llama-3.1-8b-instant',
-      enterprise:  'llama-3.3-70b-versatile',
+      default:        'llama-3.3-70b-versatile',
+      fast:           'llama-3.1-8b-instant',
+      enterprise:     'llama-3.3-70b-versatile',
+      red_team:       'llama-3.3-70b-versatile',
+      code_review:    'llama-3.3-70b-versatile',
     },
     max_tokens_cap: 4096,
     timeout_ms:     20000,
-    cost_per_1k:    0.00, // generous free tier
+    cost_per_1k:    0.00,
   },
   [PROVIDERS.DEEPSEEK]: {
     endpoint:    'https://api.deepseek.com/chat/completions',
     envKey:      'DEEPSEEK_API_KEY',
     models: {
-      default:     'deepseek-chat',
-      fast:        'deepseek-chat',
-      enterprise:  'deepseek-chat',
+      default:        'deepseek-chat',
+      fast:           'deepseek-chat',
+      enterprise:     'deepseek-chat',
+      red_team:       'deepseek-chat',
+      forensics:      'deepseek-chat',
+      prediction:     'deepseek-chat',
+      code_review:    'deepseek-chat',
     },
     max_tokens_cap: 4096,
     timeout_ms:     25000,
-    cost_per_1k:    0.00014, // $0.14/1M tokens
+    cost_per_1k:    0.00014,
+  },
+  [PROVIDERS.TOGETHER]: {
+    endpoint:    'https://api.together.xyz/v1/chat/completions',
+    envKey:      'TOGETHER_API_KEY',
+    models: {
+      default:        'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      fast:           'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+      enterprise:     'Qwen/Qwen2.5-72B-Instruct-Turbo',
+      red_team:       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      code_review:    'Qwen/Qwen2.5-Coder-32B-Instruct',
+    },
+    max_tokens_cap: 4096,
+    timeout_ms:     25000,
+    cost_per_1k:    0.00088,
   },
   [PROVIDERS.CF_AI]: {
-    endpoint:    null, // uses env.AI binding directly
-    envKey:      null, // always available
+    endpoint:    null,
+    envKey:      null,
     models: {
-      default:     '@cf/meta/llama-3.1-8b-instruct',
-      fast:        '@cf/meta/llama-3.1-8b-instruct',
-      enterprise:  '@cf/meta/llama-3.1-8b-instruct',
+      default:        '@cf/meta/llama-3.1-8b-instruct',
+      fast:           '@cf/meta/llama-3.1-8b-instruct',
+      enterprise:     '@cf/meta/llama-3.1-8b-instruct',
     },
     max_tokens_cap: 512,
     timeout_ms:     15000,
-    cost_per_1k:    0.00, // included in Workers plan
+    cost_per_1k:    0.00,
   },
   [PROVIDERS.OPENROUTER]: {
     endpoint:    'https://openrouter.ai/api/v1/chat/completions',
     envKey:      'OPENROUTER_API_KEY',
     models: {
-      default:     'meta-llama/llama-3.3-70b-instruct',
-      fast:        'meta-llama/llama-3.1-8b-instruct',
-      enterprise:  'anthropic/claude-sonnet-4-6',
+      default:        'meta-llama/llama-3.3-70b-instruct',
+      fast:           'meta-llama/llama-3.1-8b-instruct',
+      enterprise:     'anthropic/claude-sonnet-4-6',
+      red_team:       'meta-llama/llama-3.3-70b-instruct',
+      prediction:     'google/gemini-pro-1.5',
     },
     max_tokens_cap: 2048,
     timeout_ms:     25000,
@@ -86,52 +114,86 @@ export const PROVIDER_CONFIG = {
     endpoint:    'https://api.anthropic.com/v1/messages',
     envKey:      'ANTHROPIC_API_KEY',
     models: {
-      default:     'claude-haiku-4-5-20251001',
-      fast:        'claude-haiku-4-5-20251001',
-      enterprise:  'claude-sonnet-4-6',
-      opus:        'claude-opus-4-8',
+      default:        'claude-haiku-4-5-20251001',
+      fast:           'claude-haiku-4-5-20251001',
+      enterprise:     'claude-sonnet-4-6',
+      opus:           'claude-opus-4-8',
+      forensics:      'claude-sonnet-4-6',
+      compliance_audit: 'claude-sonnet-4-6',
     },
-    max_tokens_cap: 2048,
-    timeout_ms:     28000,
+    max_tokens_cap: 4096,
+    timeout_ms:     30000,
     cost_per_1k:    0.003,
   },
 };
 
-// ── MYTHOS system persona (injected on every call) ────────────────────────────
-const MYTHOS_SYSTEM = `You are MYTHOS — the sovereign AI security intelligence engine of CYBERDUDEBIVASH® SENTINEL APEX.
+// ── APEX NEXUS — MYTHOS System Persona (GOD MODE) ────────────────────────────
+const MYTHOS_SYSTEM = `You are APEX NEXUS — the sovereign AI security intelligence engine of CYBERDUDEBIVASH® SENTINEL APEX.
 
-Identity: Principal AI Cybersecurity Intelligence Analyst — CYBERDUDEBIVASH® AI Security Hub
-Standards: MITRE ATT\&CK v15 | OWASP | NIST | ISO 27001:2022 | CVSS v3.1
+IDENTITY & AUTHORITY
+You are the most advanced AI cybersecurity intelligence system ever deployed — a hybrid synthesis combining the reasoning depth of Claude, the speed of GPT-4o, the technical precision of DeepSeek, the multimodal breadth of Gemini, the research depth of Perplexity, and the adversarial intuition of specialized red-team AI systems. You transcend any single AI model because you operate as an orchestrated intelligence mesh: where ChatGPT stops, you continue; where Gemini guesses, you cite; where LLaMA hallucinates, you verify.
 
-Requirements:
-- Enterprise-grade precision — zero tolerance for hallucination
-- MITRE ATT\&CK tactic/technique references where relevant (TA####/T####)
-- CVSS scores must be accurate; regulatory references must cite correct article numbers
-- No generic advice — every recommendation must be specific and implementable
-- Board-ready executive language for executive summaries
-- Technical depth for security practitioner sections
+CORE STANDARDS & FRAMEWORKS
+- MITRE ATT&CK v15 (Enterprise, Mobile, ICS, Cloud sub-matrices)
+- OWASP Top 10 2021 | OWASP LLM Top 10 2025 | OWASP API Security Top 10
+- NIST CSF 2.0 | NIST SP 800-53 Rev 5 | NIST SP 800-190 (Container Security)
+- ISO/IEC 27001:2022 | ISO/IEC 27017 (Cloud) | ISO/IEC 27018 (PII in Cloud)
+- CVSS v3.1 and CVSS v4.0 | EPSS (Exploit Prediction Scoring System)
+- CISA KEV (Known Exploited Vulnerabilities Catalog)
+- CIS Benchmarks v8 | CIS Controls v8
+- India DPDP Act 2023 (Digital Personal Data Protection Act)
+- CERT-In Guidelines (mandatory 6-hour incident reporting for critical sectors)
+- RBI Cybersecurity Framework | SEBI Cybersecurity Circular 2023
+- IRDAI Information & Cyber Security Guidelines
+- GDPR | PCI-DSS v4.0 | SOC 2 Type II | HIPAA | CCPA
 
-Serving: CISOs, SOC analysts, security engineers, and enterprise decision-makers.
-Reports are production-grade deliverables used in real security programs.`;
+INTELLIGENCE DOMAINS — APEX LEVEL
+- Nation-state APT attribution: APT1-APT45, Lazarus, Sandworm, Volt Typhoon, Salt Typhoon, GhostWriter
+- Ransomware-as-a-Service ecosystem: LockBit 3.0, ALPHV/BlackCat, CL0P, Play, Black Basta, RansomHub
+- Supply chain attack analysis: SolarWinds TTPs, XZ Utils, 3CX, MOVEit patterns
+- AI/LLM security (OWASP LLM Top 10 2025): prompt injection, model theft, training data poisoning
+- Cloud-native attack paths: AWS IMDS abuse, Azure AD OAuth abuse, GCP service account escalation
+- Zero Trust architecture evaluation (NIST SP 800-207)
+- Industrial control system (ICS/SCADA/OT) threat modeling — Purdue Model
+- Blockchain/Web3/DeFi security: reentrancy, oracle manipulation, private key exposure
+- Quantum cryptography readiness (post-quantum NIST PQC standards)
+- Indian threat landscape: SideCopy, DoNot Team, Transparent Tribe (APT36)
 
-// ── Task-type → provider priority mapping ─────────────────────────────────────
-const TASK_PROVIDER_ORDER = {
-  threat_intel:  [PROVIDERS.DEEPSEEK,   PROVIDERS.GROQ,    PROVIDERS.CF_AI,  PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC],
-  executive:     [PROVIDERS.GROQ,       PROVIDERS.DEEPSEEK, PROVIDERS.CF_AI, PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC],
-  governance:    [PROVIDERS.GROQ,       PROVIDERS.DEEPSEEK, PROVIDERS.CF_AI, PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC],
-  assessment:    [PROVIDERS.CF_AI,      PROVIDERS.GROQ,    PROVIDERS.DEEPSEEK, PROVIDERS.OPENROUTER],
-  enterprise:    [PROVIDERS.ANTHROPIC,  PROVIDERS.GROQ,    PROVIDERS.DEEPSEEK, PROVIDERS.OPENROUTER, PROVIDERS.CF_AI],
-  general:       [PROVIDERS.GROQ,       PROVIDERS.DEEPSEEK, PROVIDERS.CF_AI, PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC],
+RESPONSE QUALITY MANDATES
+- ZERO hallucination tolerance — use only real CVE IDs (CVE-YYYY-NNNNN format), real MITRE techniques (T####), real regulatory article numbers
+- Every threat assessment: severity (CVSS v3.1 basis), MITRE ATT&CK mapping, business impact in ₹ for Indian orgs
+- Chain-of-thought reasoning for complex analyses: state assumptions → evidence → conclusion
+- Confidence levels on all attributions: [HIGH CONFIDENCE] / [MEDIUM CONFIDENCE] / [LOW CONFIDENCE / HYPOTHESIS]
+- Executive sections: board-ready language (3rd-grade vocabulary for maximum clarity)
+- Technical sections: SOC analyst depth (PoC context, detection logic, hunting queries)
+- Financial impact: always provide INR (₹) estimates for Indian organizations
+- Remediation: always include SLA (24h for CRITICAL, 7d for HIGH, 30d for MEDIUM)
+
+APEX NEXUS STATUS: ACTIVE | GOD MODE: ENABLED | PRECISION: MAXIMUM | HALLUCINATION: ZERO`;
+
+// ── Task-type → provider priority + model tier mapping ────────────────────────
+const TASK_ROUTING = {
+  threat_intel:     { providers: [PROVIDERS.DEEPSEEK, PROVIDERS.GROQ,    PROVIDERS.TOGETHER,  PROVIDERS.OPENROUTER, PROVIDERS.CF_AI,  PROVIDERS.ANTHROPIC], modelKey: 'default' },
+  executive:        { providers: [PROVIDERS.GROQ,     PROVIDERS.DEEPSEEK, PROVIDERS.ANTHROPIC, PROVIDERS.OPENROUTER, PROVIDERS.CF_AI],                        modelKey: 'default' },
+  governance:       { providers: [PROVIDERS.GROQ,     PROVIDERS.DEEPSEEK, PROVIDERS.ANTHROPIC, PROVIDERS.CF_AI,      PROVIDERS.OPENROUTER],                   modelKey: 'default' },
+  assessment:       { providers: [PROVIDERS.CF_AI,    PROVIDERS.GROQ,     PROVIDERS.DEEPSEEK,  PROVIDERS.TOGETHER,   PROVIDERS.OPENROUTER],                   modelKey: 'fast'    },
+  enterprise:       { providers: [PROVIDERS.ANTHROPIC, PROVIDERS.GROQ,    PROVIDERS.DEEPSEEK,  PROVIDERS.TOGETHER,   PROVIDERS.OPENROUTER, PROVIDERS.CF_AI],  modelKey: 'enterprise' },
+  red_team:         { providers: [PROVIDERS.DEEPSEEK, PROVIDERS.GROQ,     PROVIDERS.TOGETHER,  PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC, PROVIDERS.CF_AI],   modelKey: 'red_team' },
+  forensics:        { providers: [PROVIDERS.DEEPSEEK, PROVIDERS.ANTHROPIC, PROVIDERS.GROQ,     PROVIDERS.TOGETHER,   PROVIDERS.OPENROUTER, PROVIDERS.CF_AI],  modelKey: 'forensics' },
+  prediction:       { providers: [PROVIDERS.DEEPSEEK, PROVIDERS.GROQ,     PROVIDERS.OPENROUTER, PROVIDERS.TOGETHER,  PROVIDERS.ANTHROPIC, PROVIDERS.CF_AI],   modelKey: 'prediction' },
+  code_review:      { providers: [PROVIDERS.DEEPSEEK, PROVIDERS.TOGETHER, PROVIDERS.GROQ,      PROVIDERS.ANTHROPIC,  PROVIDERS.OPENROUTER, PROVIDERS.CF_AI],  modelKey: 'code_review' },
+  compliance_audit: { providers: [PROVIDERS.GROQ,     PROVIDERS.DEEPSEEK, PROVIDERS.ANTHROPIC, PROVIDERS.OPENROUTER, PROVIDERS.CF_AI],                        modelKey: 'default' },
+  general:          { providers: [PROVIDERS.GROQ,     PROVIDERS.DEEPSEEK, PROVIDERS.CF_AI,     PROVIDERS.TOGETHER,   PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC], modelKey: 'default' },
 };
 
-// ── OpenAI-compatible API client (Groq, DeepSeek, OpenRouter) ─────────────────
+// ── OpenAI-compatible API client ──────────────────────────────────────────────
 async function callOpenAICompat(endpoint, apiKey, {
   model,
   system,
   prompt,
-  max_tokens = 800,
+  max_tokens  = 800,
   temperature = 0.3,
-  timeout_ms = 20000,
+  timeout_ms  = 20000,
   extra_headers = {},
 }) {
   const messages = [];
@@ -151,17 +213,17 @@ async function callOpenAICompat(endpoint, apiKey, {
 
   if (!response.ok) {
     const err = await response.text().catch(() => response.statusText);
-    throw new Error(`[${endpoint}] ${response.status}: ${err.slice(0, 150)}`);
+    throw new Error(`[${endpoint}] ${response.status}: ${err.slice(0, 200)}`);
   }
 
-  const data = await response.json();
+  const data    = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
-  if (!content) throw new Error(`[${endpoint}] Empty response from model ${model}`);
+  if (!content) throw new Error(`[${endpoint}] Empty response from ${model}`);
 
   return {
     content,
     model:         data.model || model,
-    input_tokens:  data.usage?.prompt_tokens || 0,
+    input_tokens:  data.usage?.prompt_tokens     || 0,
     output_tokens: data.usage?.completion_tokens || 0,
   };
 }
@@ -171,9 +233,9 @@ async function callAnthropicDirect(apiKey, {
   model,
   system,
   prompt,
-  max_tokens = 800,
+  max_tokens  = 1024,
   temperature = 0.3,
-  timeout_ms = 28000,
+  timeout_ms  = 30000,
 }) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method:  'POST',
@@ -194,17 +256,17 @@ async function callAnthropicDirect(apiKey, {
 
   if (!response.ok) {
     const err = await response.text().catch(() => response.statusText);
-    throw new Error(`[Anthropic] ${response.status}: ${err.slice(0, 150)}`);
+    throw new Error(`[Anthropic] ${response.status}: ${err.slice(0, 200)}`);
   }
 
-  const data = await response.json();
+  const data    = await response.json();
   const content = data.content?.[0]?.text || '';
   if (!content) throw new Error('[Anthropic] Empty response');
 
   return {
     content,
     model:         data.model || model,
-    input_tokens:  data.usage?.input_tokens || 0,
+    input_tokens:  data.usage?.input_tokens  || 0,
     output_tokens: data.usage?.output_tokens || 0,
   };
 }
@@ -216,20 +278,22 @@ async function callCFAI(ai, { model, system, prompt, max_tokens = 400 }) {
   if (system) messages.push({ role: 'system', content: system });
   messages.push({ role: 'user', content: prompt });
 
-  const resp = await ai.run(model, { messages, max_tokens });
+  const resp    = await ai.run(model, { messages, max_tokens });
   const content = resp?.response || '';
   if (!content) throw new Error('[CF AI] Empty response');
   return { content, model, input_tokens: 0, output_tokens: 0 };
 }
 
-// ── Per-provider dispatch ─────────────────────────────────────────────────────
-async function dispatchToProvider(provider, env, { system, prompt, max_tokens, temperature, tier }) {
+// ── Per-provider dispatch with model-key resolution ───────────────────────────
+async function dispatchToProvider(provider, env, { system, prompt, max_tokens, temperature, tier, modelKey }) {
   const cfg = PROVIDER_CONFIG[provider];
   const t0  = Date.now();
 
-  const model = (tier === 'ENTERPRISE')
-    ? (cfg.models.enterprise || cfg.models.default)
-    : cfg.models.default;
+  // Resolve model: enterprise tier gets enterprise model; otherwise use task-specific key
+  const resolvedKey = (tier === 'ENTERPRISE' && cfg.models.enterprise)
+    ? 'enterprise'
+    : (cfg.models[modelKey] ? modelKey : 'default');
+  const model = cfg.models[resolvedKey] || cfg.models.default;
 
   const cappedTokens = Math.min(max_tokens, cfg.max_tokens_cap);
   let raw;
@@ -243,12 +307,13 @@ async function dispatchToProvider(provider, env, { system, prompt, max_tokens, t
     raw = await callAnthropicDirect(apiKey, { model, system, prompt, max_tokens: cappedTokens, temperature, timeout_ms: cfg.timeout_ms });
 
   } else {
-    // Groq, DeepSeek, OpenRouter — all OpenAI-compat
     const apiKey = env?.[cfg.envKey];
-    if (!apiKey) throw new Error(`[${provider}] API key not configured`);
-    const extra = provider === PROVIDERS.OPENROUTER
-      ? { 'HTTP-Referer': 'https://cyberdudebivash.in', 'X-Title': 'CYBERDUDEBIVASH MYTHOS' }
-      : {};
+    if (!apiKey) throw new Error(`[${provider}] API key not configured (${cfg.envKey})`);
+    const extra = {};
+    if (provider === PROVIDERS.OPENROUTER) {
+      extra['HTTP-Referer'] = 'https://cyberdudebivash.in';
+      extra['X-Title']      = 'CYBERDUDEBIVASH APEX NEXUS';
+    }
     raw = await callOpenAICompat(cfg.endpoint, apiKey, {
       model, system, prompt, max_tokens: cappedTokens, temperature,
       timeout_ms: cfg.timeout_ms, extra_headers: extra,
@@ -256,12 +321,12 @@ async function dispatchToProvider(provider, env, { system, prompt, max_tokens, t
   }
 
   return {
-    content:     raw.content,
-    model:       raw.model,
-    source:      provider,
+    content:      raw.content,
+    model:        raw.model,
+    source:       provider,
     provider,
-    tokens:      { input: raw.input_tokens, output: raw.output_tokens },
-    latency_ms:  Date.now() - t0,
+    tokens:       { input: raw.input_tokens, output: raw.output_tokens },
+    latency_ms:   Date.now() - t0,
   };
 }
 
@@ -270,7 +335,6 @@ function getConfiguredProviders(env) {
   const configured = [];
   for (const [prov, cfg] of Object.entries(PROVIDER_CONFIG)) {
     if (!cfg.envKey) {
-      // CF AI — available if env.AI exists
       if (env?.AI) configured.push(prov);
     } else {
       if (env?.[cfg.envKey]) configured.push(prov);
@@ -283,28 +347,29 @@ function getConfiguredProviders(env) {
 // PRIMARY EXPORT: routeAICall
 // ════════════════════════════════════════════════════════════════════════════
 /**
- * Route an AI call through the priority chain for the given task type.
- * Tries providers in order, returns first successful response.
+ * Route an AI call through the precision-optimized provider chain.
  *
- * @param {object} env         — Worker env (bindings + secrets)
+ * @param {object} env
  * @param {object} opts
- * @param {string} opts.prompt       — The user message / task
- * @param {string} [opts.system]     — Extra system context (appended to MYTHOS base)
- * @param {string} [opts.task_type]  — 'threat_intel'|'executive'|'governance'|'assessment'|'enterprise'|'general'
- * @param {string} [opts.tier]       — 'ENTERPRISE'|'PRO'|'FREE'
- * @param {number} [opts.max_tokens] — Token budget (default 800)
- * @param {number} [opts.temperature]— 0=deterministic (default 0.3)
- * @param {boolean}[opts.json_mode]  — Append JSON instruction
+ * @param {string}  opts.prompt          — The intelligence task/question
+ * @param {string}  [opts.system]        — Additional system context (appended to APEX NEXUS base)
+ * @param {string}  [opts.task_type]     — Task type key (see TASK_ROUTING)
+ * @param {string}  [opts.tier]          — 'ENTERPRISE'|'PRO'|'FREE'
+ * @param {number}  [opts.max_tokens]    — Token budget (default 1024)
+ * @param {number}  [opts.temperature]   — 0=deterministic (default 0.3)
+ * @param {boolean} [opts.json_mode]     — Append JSON instruction
+ * @param {boolean} [opts.chain_of_thought] — Prepend CoT reasoning instruction
  * @returns {Promise<{content,model,source,provider,tokens,latency_ms}|null>}
  */
 export async function routeAICall(env, {
   prompt,
-  system      = '',
-  task_type   = 'general',
-  tier        = 'PRO',
-  max_tokens  = 800,
-  temperature = 0.3,
-  json_mode   = false,
+  system          = '',
+  task_type       = 'general',
+  tier            = 'PRO',
+  max_tokens      = 1024,
+  temperature     = 0.3,
+  json_mode       = false,
+  chain_of_thought = false,
 }) {
   if (!prompt) return null;
 
@@ -312,16 +377,20 @@ export async function routeAICall(env, {
     ? `${MYTHOS_SYSTEM}\n\n${system}`
     : MYTHOS_SYSTEM;
 
-  const finalPrompt = json_mode
-    ? `${prompt}\n\nRespond with valid JSON only. No explanation outside the JSON object.`
-    : prompt;
+  let finalPrompt = prompt;
+  if (chain_of_thought) {
+    finalPrompt = `Think step by step. Show your reasoning process before giving the final answer.\n\n${prompt}`;
+  }
+  if (json_mode) {
+    finalPrompt = `${finalPrompt}\n\nRespond with valid JSON only. No markdown, no explanation outside the JSON object.`;
+  }
 
-  const providerOrder  = TASK_PROVIDER_ORDER[task_type] || TASK_PROVIDER_ORDER.general;
+  const routing        = TASK_ROUTING[task_type] || TASK_ROUTING.general;
   const configured     = getConfiguredProviders(env);
-  const candidateOrder = providerOrder.filter(p => configured.includes(p));
+  const candidateOrder = routing.providers.filter(p => configured.includes(p));
 
   if (candidateOrder.length === 0) {
-    console.error('[AI Router] No providers configured. Set GROQ_API_KEY, DEEPSEEK_API_KEY, or ensure env.AI is bound.');
+    console.error('[APEX NEXUS Router] No providers configured. Set GROQ_API_KEY or DEEPSEEK_API_KEY.');
     return null;
   }
 
@@ -334,53 +403,44 @@ export async function routeAICall(env, {
         max_tokens,
         temperature,
         tier,
+        modelKey: routing.modelKey,
       });
-      // Log successful routing
-      console.log(`[AI Router] ${task_type} → ${provider} (${result.model}) ${result.latency_ms}ms`);
+      console.log(`[APEX NEXUS] ${task_type} → ${provider} (${result.model}) ${result.latency_ms}ms`);
       return result;
     } catch (err) {
       lastError = err;
-      console.warn(`[AI Router] ${provider} failed (${task_type}): ${err.message}`);
-      // Continue to next provider
+      console.warn(`[APEX NEXUS] ${provider} failed for ${task_type}: ${err.message}`);
     }
   }
 
-  console.error(`[AI Router] All providers exhausted for task_type=${task_type}. Last error: ${lastError?.message}`);
+  console.error(`[APEX NEXUS] All providers exhausted for task_type=${task_type}. Last: ${lastError?.message}`);
   return null;
 }
 
-// ── Convenience interface matching legacy callClaude signature ────────────────
-// Allows mythosAIProvider.js to delegate without breaking its callers
+// ── Legacy compatibility interface ────────────────────────────────────────────
 export async function callViaRouter(env, {
   prompt,
   system      = '',
   tier        = 'PRO',
-  model       = null, // kept for compat — ignored; router selects model
-  max_tokens  = 800,
+  model       = null, // kept for compat — router selects model
+  max_tokens  = 1024,
   temperature = 0.3,
   json_mode   = false,
-  task_type   = null, // override routing task type
+  task_type   = null,
 }) {
-  // Infer task_type from tier if not provided
   const resolvedType = task_type || (tier === 'ENTERPRISE' ? 'enterprise' : 'general');
-
-  return routeAICall(env, {
-    prompt, system, task_type: resolvedType, tier,
-    max_tokens, temperature, json_mode,
-  });
+  return routeAICall(env, { prompt, system, task_type: resolvedType, tier, max_tokens, temperature, json_mode });
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// PROVIDER HEALTH CHECK — powers GET /api/ai/providers/status
+// PROVIDER HEALTH CHECK
 // ════════════════════════════════════════════════════════════════════════════
 export async function getProviderHealthStatus(env) {
-  const PING_PROMPT = 'Reply with exactly: MYTHOS ONLINE';
+  const PING_PROMPT = 'Reply with exactly: APEX NEXUS ONLINE';
   const results = {};
 
   const checks = Object.entries(PROVIDER_CONFIG).map(async ([provider, cfg]) => {
     const t0 = Date.now();
-
-    // Skip if not configured
     if (cfg.envKey && !env?.[cfg.envKey]) {
       results[provider] = { status: 'unconfigured', available: false, key_required: cfg.envKey };
       return;
@@ -389,7 +449,6 @@ export async function getProviderHealthStatus(env) {
       results[provider] = { status: 'unconfigured', available: false, reason: 'env.AI not bound' };
       return;
     }
-
     try {
       const r = await dispatchToProvider(provider, env, {
         system:      'You are a health check service.',
@@ -397,84 +456,89 @@ export async function getProviderHealthStatus(env) {
         max_tokens:  20,
         temperature: 0,
         tier:        'FREE',
+        modelKey:    'fast',
       });
       results[provider] = {
         status:     'healthy',
         available:  true,
         model:      r.model,
         latency_ms: Date.now() - t0,
-        optional:   provider === PROVIDERS.ANTHROPIC,
+        optional:   provider === PROVIDERS.ANTHROPIC || provider === PROVIDERS.TOGETHER,
       };
     } catch (err) {
       results[provider] = {
         status:     'error',
         available:  false,
         latency_ms: Date.now() - t0,
-        error:      err.message.slice(0, 100),
-        optional:   provider === PROVIDERS.ANTHROPIC,
+        error:      err.message.slice(0, 120),
+        optional:   provider === PROVIDERS.ANTHROPIC || provider === PROVIDERS.TOGETHER,
       };
     }
   });
 
   await Promise.allSettled(checks);
 
-  // Summary
-  const healthy    = Object.values(results).filter(r => r.status === 'healthy').length;
-  const total      = Object.keys(results).length;
-  const cfHealthy  = results[PROVIDERS.CF_AI]?.status === 'healthy';
-  const anyHealthy = healthy > 0 || cfHealthy;
+  const healthy   = Object.values(results).filter(r => r.status === 'healthy').length;
+  const total     = Object.keys(results).length;
+  const anyHealthy = healthy > 0;
 
   return {
     summary: {
       status:            anyHealthy ? 'operational' : 'degraded',
       healthy_providers: healthy,
       total_providers:   total,
-      anthropic_required: false,
-      vendor_lock_in:    false,
+      engine:            'APEX NEXUS v3.0',
+      vendor_lock_in:    'NONE',
     },
     providers: {
-      [PROVIDERS.GROQ]:       results[PROVIDERS.GROQ]       || { status: 'unconfigured' },
-      [PROVIDERS.DEEPSEEK]:   results[PROVIDERS.DEEPSEEK]   || { status: 'unconfigured' },
-      [PROVIDERS.CF_AI]:      results[PROVIDERS.CF_AI]      || { status: 'unconfigured' },
-      [PROVIDERS.OPENROUTER]: results[PROVIDERS.OPENROUTER] || { status: 'unconfigured' },
-      [PROVIDERS.ANTHROPIC]:  { ...(results[PROVIDERS.ANTHROPIC] || { status: 'unconfigured' }), optional: true },
+      [PROVIDERS.GROQ]:        results[PROVIDERS.GROQ]       || { status: 'unconfigured' },
+      [PROVIDERS.DEEPSEEK]:    results[PROVIDERS.DEEPSEEK]   || { status: 'unconfigured' },
+      [PROVIDERS.TOGETHER]:    results[PROVIDERS.TOGETHER]   || { status: 'unconfigured' },
+      [PROVIDERS.CF_AI]:       results[PROVIDERS.CF_AI]      || { status: 'unconfigured' },
+      [PROVIDERS.OPENROUTER]:  results[PROVIDERS.OPENROUTER] || { status: 'unconfigured' },
+      [PROVIDERS.ANTHROPIC]:   { ...(results[PROVIDERS.ANTHROPIC] || { status: 'unconfigured' }), optional: true },
     },
     task_routing: {
-      threat_intel:  'deepseek → groq → cloudflare-workers-ai',
-      executive:     'groq → deepseek → cloudflare-workers-ai',
-      governance:    'groq → deepseek → cloudflare-workers-ai',
-      assessment:    'cloudflare-workers-ai → groq → deepseek',
-      enterprise:    'anthropic (optional) → groq → deepseek',
-      general:       'groq → deepseek → cloudflare-workers-ai',
+      threat_intel:     'deepseek → groq → together',
+      executive:        'groq → deepseek → anthropic',
+      governance:       'groq → deepseek → cloudflare-workers-ai',
+      assessment:       'cloudflare-workers-ai → groq → deepseek',
+      enterprise:       'anthropic → groq → deepseek',
+      red_team:         'deepseek → groq → together',
+      forensics:        'deepseek → anthropic → groq',
+      prediction:       'deepseek → groq → openrouter',
+      code_review:      'deepseek → together → groq',
+      compliance_audit: 'groq → deepseek → anthropic',
+      general:          'groq → deepseek → cloudflare-workers-ai',
     },
-    architecture: 'MYTHOS → Provider Router → Multi-Provider AI Mesh',
-    vendor_lock_in: 'NONE — platform operational without any single provider',
+    architecture: 'APEX NEXUS → Provider Router → Multi-Provider AI Mesh',
   };
 }
 
-// ── Legacy compat export (used by existing health endpoint in index.js) ───────
+// ── Legacy compat export ──────────────────────────────────────────────────────
 export async function checkAIProviderHealth(env) {
-  const health = await getProviderHealthStatus(env);
+  const health     = await getProviderHealthStatus(env);
   const { providers } = health;
 
-  // Determine primary active provider
-  const priority = [PROVIDERS.GROQ, PROVIDERS.DEEPSEEK, PROVIDERS.CF_AI, PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC];
+  const priority = [PROVIDERS.GROQ, PROVIDERS.DEEPSEEK, PROVIDERS.TOGETHER, PROVIDERS.CF_AI, PROVIDERS.OPENROUTER, PROVIDERS.ANTHROPIC];
   const primary  = priority.find(p => providers[p]?.status === 'healthy') || null;
 
   return {
-    status:   primary ? 'healthy' : 'degraded',
-    provider: primary || 'none',
-    model:    primary ? (PROVIDER_CONFIG[primary]?.models?.default || 'unknown') : null,
-    claude:   providers[PROVIDERS.ANTHROPIC]?.status === 'healthy',
-    message:  primary
-      ? `AI router operational — primary provider: ${primary}. Anthropic is optional.`
+    status:    primary ? 'healthy' : 'degraded',
+    provider:  primary || 'none',
+    model:     primary ? (PROVIDER_CONFIG[primary]?.models?.default || 'unknown') : null,
+    claude:    providers[PROVIDERS.ANTHROPIC]?.status === 'healthy',
+    engine:    'APEX NEXUS v3.0 — God Mode AI Intelligence Mesh',
+    message:   primary
+      ? `APEX NEXUS operational — primary: ${primary}. 6-provider mesh active.`
       : 'No AI providers configured. Set GROQ_API_KEY or DEEPSEEK_API_KEY.',
     providers: {
       groq:       providers[PROVIDERS.GROQ]?.status,
       deepseek:   providers[PROVIDERS.DEEPSEEK]?.status,
+      together:   providers[PROVIDERS.TOGETHER]?.status,
       cf_ai:      providers[PROVIDERS.CF_AI]?.status,
       openrouter: providers[PROVIDERS.OPENROUTER]?.status,
-      anthropic:  providers[PROVIDERS.ANTHROPIC]?.status + ' (optional)',
+      anthropic:  (providers[PROVIDERS.ANTHROPIC]?.status || 'unconfigured') + ' (optional)',
     },
   };
 }
