@@ -113,6 +113,15 @@ import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGe
 import { handleAIThreatFeed, handleAIThreatReport, handleAIThreatRadarStatus, handleAIThreatRadarScanNow, handleLatestPublishedReport, generateAndPublishAIThreatReport, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
 import { runAIThreatRadar } from './services/aiThreatRadar.js';
 
+// ── v36.0 AI SECURITY COPILOT (APEX — God Mode Orchestrator) ─────────────────
+import {
+  handleCopilotChat,
+  handleGetCopilotSession,
+  handleDeleteCopilotSession,
+  handleCopilotQuickAction,
+  handleCopilotCapabilities,
+} from './handlers/aiSecurityCopilot.js';
+
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
 import { handleAIRedTeamPro } from './handlers/aiRedTeamPro.js';
@@ -1000,6 +1009,12 @@ function apiInfoResponse() {
       'POST /api/webhooks/gumroad':  'Gumroad purchase webhook (HMAC verified)',
       'POST /api/gumroad/verify':    'Activate Gumroad license key → provision tier',
       'GET  /api/gumroad/products':  'Public product catalog with pricing + SKUs',
+      // V36.0 — AI Security Copilot (APEX — God Mode Orchestrator)
+      'GET  /api/copilot/capabilities':  'List all 18+ orchestration skills + tier access map',
+      'POST /api/copilot/chat':          'Multi-turn AI security conversation — Claude-powered, tool-enabled God Mode',
+      'GET  /api/copilot/session':       'Retrieve conversation session history',
+      'DELETE /api/copilot/session':     'Clear conversation session',
+      'POST /api/copilot/quick-action':  'Direct skill invocation without conversation context',
       // Other
       'GET  /api/health':            'Service health',
       'POST /api/webhooks/razorpay': 'Razorpay payment webhook',
@@ -6051,6 +6066,26 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path.startsWith('/api/ai-security/services/') && method === 'GET') {
     return handleGetAIServiceEngagement(request, env, authCtx);
+  }
+
+  // ── v36: AI SECURITY COPILOT — APEX God Mode Orchestrator ─────────────────
+  // Full-spectrum AI security orchestration via natural language.
+  // Tier-routed to Anthropic claude-opus-4-8 / sonnet-4-6 / haiku-4-5.
+  // Tool registry: 18 skills covering threat intel, SOC, SIEM, red team, etc.
+  if (path === '/api/copilot/capabilities' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleCopilotCapabilities(request, env, authCtx), request));
+  }
+  if (path === '/api/copilot/chat' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handleCopilotChat(request, env, authCtx), request));
+  }
+  if (path === '/api/copilot/session' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleGetCopilotSession(request, env, authCtx), request));
+  }
+  if (path === '/api/copilot/session' && method === 'DELETE') {
+    return withSecurityHeaders(withCors(await handleDeleteCopilotSession(request, env, authCtx), request));
+  }
+  if (path === '/api/copilot/quick-action' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handleCopilotQuickAction(request, env, authCtx), request));
   }
 
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
