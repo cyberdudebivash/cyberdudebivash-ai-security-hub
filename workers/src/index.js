@@ -801,7 +801,7 @@ async function healthResponseAsync(env) {
   return Response.json({
     status,
     service:   'CYBERDUDEBIVASH AI Security Hub',
-    version:   env.VERSION || env.PLATFORM_VERSION || '29.0.0',
+    version:   env.VERSION || env.PLATFORM_VERSION || '40.0.0',
     company:   'CyberDudeBivash Pvt. Ltd.',
     website:   'https://cyberdudebivash.in',
     tools:     'https://tools.cyberdudebivash.com',
@@ -868,14 +868,35 @@ async function handleIntelligenceSummary(env) {
   // Try to enrich with real D1 data
   if (env?.DB) {
     try {
-      const [todayScans, critToday, cveFeed] = await Promise.all([
+      const [todayScans, critToday, cveFeed, recentIntel] = await Promise.all([
         env.DB.prepare("SELECT COUNT(*) as c FROM scan_jobs WHERE created_at > datetime('now','-1 day')").first(),
         env.DB.prepare("SELECT COUNT(*) as c FROM scan_jobs WHERE risk_level='CRITICAL' AND created_at > datetime('now','-1 day')").first(),
         env.DB.prepare("SELECT COUNT(*) as c FROM threat_intel_cache WHERE severity='CRITICAL' AND expires_at > datetime('now')").first().catch(() => null),
+        env.DB.prepare(`
+          SELECT id, title, severity, source, apt_groups, published_at, ingested_at
+          FROM threat_intel
+          WHERE severity IN ('CRITICAL','HIGH')
+          ORDER BY ingested_at DESC LIMIT 6
+        `).all().catch(() => ({ results: [] })),
       ]);
       if (todayScans?.c)  summary.total_scans_today    = todayScans.c;
       if (critToday?.c)   summary.critical_scans_today  = critToday.c;
       if (cveFeed?.c)     summary.critical_cve_count    = cveFeed.c;
+
+      const intelRows = recentIntel?.results || [];
+      if (intelRows.length) {
+        summary.intelligence_feed = intelRows.slice(0, 4).map(r => ({
+          id: r.id, severity: r.severity, title: r.title,
+          source: r.source || 'CYBERDUDEBIVASH Threat Intel',
+          ts: r.published_at || r.ingested_at,
+        }));
+        const apts = new Set();
+        for (const r of intelRows) {
+          try { (JSON.parse(r.apt_groups || '[]') || []).forEach(g => apts.add(g)); } catch {}
+        }
+        if (apts.size) summary.active_apt_groups = [...apts].slice(0, 5);
+      }
+
       // Adjust threat level based on real data
       if (summary.critical_scans_today >= 5) summary.platform_threat_level = 'CRITICAL';
       else if (summary.critical_scans_today >= 2) summary.platform_threat_level = 'HIGH';
@@ -1283,7 +1304,7 @@ export default {
         db:        checks.db,
         intel:     checks.intel,
         revenue:   checks.revenue,
-        version:   env.VERSION || env.PLATFORM_VERSION || '29.0.0',
+        version:   env.VERSION || env.PLATFORM_VERSION || '40.0.0',
         details,
         response_ms: Date.now() - start,
         timestamp: new Date().toISOString(),
@@ -1386,7 +1407,7 @@ export default {
         razorpay_key_id:  env.RAZORPAY_KEY_ID  || '',
         razorpay_mode:    (env.RAZORPAY_KEY_ID  || '').startsWith('rzp_live') ? 'live' : 'test',
         platform:         env.APP_NAME         || 'CYBERDUDEBIVASH AI Security Hub',
-        version:          env.VERSION           || '11.0.0',
+        version:          env.VERSION           || '40.0.0',
         contact_email:    env.CONTACT           || 'bivash@cyberdudebivash.com',
         features: {
           subscriptions: true,
@@ -1420,8 +1441,8 @@ export default {
     }
     if (path === '/api/version' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
-        version:          env.VERSION || env.PLATFORM_VERSION || '29.0.0',
-        platform_version: env.PLATFORM_VERSION || '29.0.0',
+        version:          env.VERSION || env.PLATFORM_VERSION || '40.0.0',
+        platform_version: env.PLATFORM_VERSION || '40.0.0',
         commit:           env.COMMIT || (env.CF_VERSION_METADATA?.id) || 'unknown',
         timestamp:        new Date().toISOString(),
         environment:      env.ENVIRONMENT || 'production',
@@ -1461,7 +1482,7 @@ export default {
       ]);
       return withSecurityHeaders(withCors(Response.json({
         ok: true,
-        version: env.PLATFORM_VERSION || '29.0.0',
+        version: env.PLATFORM_VERSION || '40.0.0',
         timestamp: new Date().toISOString(),
         engines: {
           database:    dbStatus.status==='fulfilled' && dbStatus.value ? 'online' : 'degraded',
