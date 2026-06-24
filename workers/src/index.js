@@ -110,7 +110,8 @@ import { handleGetExpansionScore, handleListSegments, handleLogUpsellEvent, hand
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
 import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
-import { handleAIThreatFeed, handleAIThreatReport, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+import { handleAIThreatFeed, handleAIThreatReport, handleAIThreatRadarStatus, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+import { runAIThreatRadar } from './services/aiThreatRadar.js';
 
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
@@ -6009,9 +6010,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
 
   // ── v28: AI THREAT INTELLIGENCE FEED (PILLAR 5) ───────────────────────────
-  // Report route must be checked before the startsWith() feed route below.
+  // Specific sub-routes must be checked before the startsWith() feed route below.
   if (path === '/api/ai-security/threat-feed/report' && method === 'GET') {
     return handleAIThreatReport(request, env, authCtx);
+  }
+  if (path === '/api/ai-security/threat-feed/radar-status' && method === 'GET') {
+    return handleAIThreatRadarStatus(request, env);
   }
   if (path.startsWith('/api/ai-security/threat-feed')) {
     return handleAIThreatFeed(request, env, authCtx);
@@ -6695,6 +6699,18 @@ ctx.waitUntil(
           duration_ms: r.duration_ms,
         })))
         .catch(e => console.error('[CRON] Threat Ingestion error:', e?.message))
+    );
+
+    // ── HOURLY: AI Threat Radar — dedicated, targeted AI/LLM ecosystem scan
+    //    (OSV.dev watchlist + rotated NVD keyword search + GitHub Advisory API),
+    //    independent of the generic CTI pipeline above. ──
+    ctx.waitUntil(
+      runAIThreatRadar(env)
+        .then(r => console.log('[CRON] AI Threat Radar:', JSON.stringify({
+          sources: r.sources, matched: r.matched, inserted: r.inserted,
+          errors: r.errors, duration_ms: r.duration_ms,
+        })))
+        .catch(e => console.error('[CRON] AI Threat Radar error:', e?.message))
     );
 
     // ── DAILY (6 AM): Bulk backfill — refresh the FULL CISA KEV catalog and
