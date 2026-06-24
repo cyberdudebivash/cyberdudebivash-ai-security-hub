@@ -33,7 +33,7 @@ export const PROVIDERS = {
   ANTHROPIC:   'anthropic',
 };
 
-const PROVIDER_CONFIG = {
+export const PROVIDER_CONFIG = {
   [PROVIDERS.GROQ]: {
     endpoint:    'https://api.groq.com/openai/v1/chat/completions',
     envKey:      'GROQ_API_KEY',
