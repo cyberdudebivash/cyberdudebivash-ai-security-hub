@@ -76,7 +76,7 @@ export async function handleGenerateContent(request, env, authCtx) {
       excerpt = `Telegram post for ${module.toUpperCase()} scan`;
       break;
     case 'executive_brief': {
-      const brief = buildExecutiveBrief(scan_result, module, target, findings, scan_result.risk_score, scan_result.risk_level);
+      const brief = buildExecutiveBrief(scan_result, module, target, findings, scan_result.risk_score, scan_result.risk_level, scan_result.sector || 'technology');
       title   = `Executive Brief: ${brief.headline}`;
       bodyMd  = `# ${brief.headline}\n\n**Date:** ${brief.date}\n**Module:** ${brief.module}\n**Risk Level:** ${brief.level}\n\n${brief.paragraph}\n\n## Board Summary\n${brief.board_summary}`;
       excerpt = brief.board_summary;
