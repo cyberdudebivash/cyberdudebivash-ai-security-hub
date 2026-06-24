@@ -48,26 +48,65 @@ const AI_THREAT_LIBRARY = {
   ],
 };
 
+// Public `type` query param (documented in frontend/api-docs.html) -> the real
+// feed_type enum stored in ai_threat_feed (schema_master.sql). `ai_vulns` is kept
+// as a legacy alias since this handler's own original comment used that name.
+const TYPE_TO_FEED_TYPE = {
+  prompt_attacks:    'prompt_attack',
+  agent_threats:     'agent_threat',
+  ai_cves:           'vulnerability',
+  ai_vulns:          'vulnerability',
+  model_advisories:  'advisory',
+};
+
+// Map a live ai_threat_feed row onto the same card shape the curated library
+// entries already use (name/mitigation singular), so it renders through the
+// exact same frontend code paths as curated entries — no frontend changes needed.
+function dbRowToCard(r) {
+  return {
+    id: r.id,
+    name: r.title,
+    severity: r.severity,
+    description: r.description,
+    cve_id: r.cve_id || undefined,
+    affected_models: r.affected_models,
+    affected_frameworks: (() => { try { return JSON.parse(r.affected_frameworks || '[]'); } catch { return []; } })(),
+    mitigation: (r.mitigations||[])[0] || '',
+    owasp_ref: r.owasp_ref || undefined,
+    source_url: r.source_url || undefined,
+    live: true,
+  };
+}
+
 // GET /api/ai-security/threat-feed ────────────────────────────────────────────
 export async function handleAIThreatFeed(request, env) {
   const url = new URL(request.url);
-  const type  = url.searchParams.get('type');   // prompt_attacks | agent_threats | ai_vulns | all
+  const type  = url.searchParams.get('type');   // prompt_attacks | agent_threats | ai_cves | model_advisories | all
   const limit = Math.min(parseInt(url.searchParams.get('limit')||'20'), 50);
+  const feedTypeFilter = type && type !== 'all' ? (TYPE_TO_FEED_TYPE[type] || null) : null;
 
-  // First try D1 for community-submitted + verified threats
+  // First try D1 for source-attributed live threats (ai_threat_feed, populated by
+  // services/aiThreatIngestion.js from the same NVD/CISA-KEV/GitHub CTI pipeline).
   let dbItems = [];
   try {
-    const rows = type && type !== 'all'
-      ? await env.DB.prepare('SELECT * FROM ai_threat_feed WHERE feed_type=? ORDER BY published_at DESC LIMIT ?').bind(type, limit).all()
-      : await env.DB.prepare('SELECT * FROM ai_threat_feed ORDER BY published_at DESC LIMIT ?').bind(limit).all();
+    const rows = feedTypeFilter
+      ? await env.DB.prepare('SELECT * FROM ai_threat_feed WHERE feed_type=? ORDER BY published_at DESC LIMIT ?').bind(feedTypeFilter, limit).all()
+      : (type && type !== 'all')
+        ? { results: [] } // recognized `type` shape but unmapped value — no live rows, fall through to curated only
+        : await env.DB.prepare('SELECT * FROM ai_threat_feed ORDER BY published_at DESC LIMIT ?').bind(limit).all();
     dbItems = (rows.results||[]).map(r => ({ ...r, affected_models:JSON.parse(r.affected_models||'[]'), mitigations:JSON.parse(r.mitigations||'[]') }));
   } catch { /* fallback to static library */ }
 
-  // Merge with curated library
+  const liveByFeedType = { prompt_attack: [], agent_threat: [], vulnerability: [], advisory: [], attack_pattern: [], malware: [] };
+  for (const r of dbItems) (liveByFeedType[r.feed_type] || liveByFeedType.advisory).push(dbRowToCard(r));
+
+  // Merge live rows into the curated library so existing frontend pages (which
+  // already read prompt_attack_patterns / agent_threats / ai_vulnerabilities)
+  // pick up real, source-attributed data automatically.
   const curated = {
-    prompt_attack_patterns: AI_THREAT_LIBRARY.prompt_attack_patterns,
-    agent_threats:          AI_THREAT_LIBRARY.agent_threats,
-    ai_vulnerabilities:     AI_THREAT_LIBRARY.ai_vulnerabilities,
+    prompt_attack_patterns: [...AI_THREAT_LIBRARY.prompt_attack_patterns, ...liveByFeedType.prompt_attack],
+    agent_threats:          [...AI_THREAT_LIBRARY.agent_threats, ...liveByFeedType.agent_threat],
+    ai_vulnerabilities:     [...AI_THREAT_LIBRARY.ai_vulnerabilities, ...liveByFeedType.vulnerability, ...liveByFeedType.advisory],
   };
 
   return json({
@@ -75,14 +114,14 @@ export async function handleAIThreatFeed(request, env) {
     feed_generated: new Date().toISOString(),
     source: 'CYBERDUDEBIVASH Sentinel APEX AI Threat Intelligence',
     summary: {
-      total_prompt_attacks: AI_THREAT_LIBRARY.prompt_attack_patterns.length,
-      total_agent_threats:  AI_THREAT_LIBRARY.agent_threats.length,
-      total_ai_cves:        AI_THREAT_LIBRARY.ai_vulnerabilities.length,
-      critical_count:       [...AI_THREAT_LIBRARY.prompt_attack_patterns,...AI_THREAT_LIBRARY.agent_threats].filter(t=>t.severity==='CRITICAL').length,
+      total_prompt_attacks: curated.prompt_attack_patterns.length,
+      total_agent_threats:  curated.agent_threats.length,
+      total_ai_cves:        curated.ai_vulnerabilities.length,
+      critical_count:       [...curated.prompt_attack_patterns,...curated.agent_threats].filter(t=>t.severity==='CRITICAL').length,
     },
     prompt_attack_patterns: type&&type!=='all' ? (type==='prompt_attacks'?curated.prompt_attack_patterns:[]) : curated.prompt_attack_patterns,
     agent_threats:          type&&type!=='all' ? (type==='agent_threats'?curated.agent_threats:[])          : curated.agent_threats,
-    ai_vulnerabilities:     type&&type!=='all' ? (type==='ai_vulns'?curated.ai_vulnerabilities:[])          : curated.ai_vulnerabilities,
+    ai_vulnerabilities:     type&&type!=='all' ? (['ai_cves','ai_vulns','model_advisories'].includes(type)?curated.ai_vulnerabilities:[]) : curated.ai_vulnerabilities,
     community_submissions:  dbItems,
   });
 }
