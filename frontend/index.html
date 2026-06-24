@@ -1070,6 +1070,7 @@ a{color:var(--accent);text-decoration:none}
 <a data-section="pricing" href="#pricing" onclick="cdbNavigate('pricing');return false">Pricing</a>
 <a data-section="intel-api" href="#intel-api" onclick="cdbNavigate('intel-api');return false" style="display:inline-flex;align-items:center;gap:4px">🛰 API</a>
 <a href="#ai-platform" onclick="document.getElementById('ai-platform')?.scrollIntoView({behavior:'smooth'});return false">AI Security</a>
+<a href="/agent-threats" style="display:inline-flex;align-items:center;gap:4px">🤖 AI Threat Intel</a>
 <a href="https://intel.cyberdudebivash.com" rel="noopener" style="display:inline-flex;align-items:center;gap:4px" target="_blank">🛰 Threat Intel ↗</a>
 <a data-section="trust-center" href="#trust-center" onclick="cdbNavigate('trust-center');return false">Trust</a>
 <a href="/god-mode.html" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(0,212,255,.1));border:1px solid rgba(124,58,237,.35);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:#c4b5fd;letter-spacing:.03em">⚡ GOD MODE</a>
@@ -1109,6 +1110,7 @@ a{color:var(--accent);text-decoration:none}
 <div aria-hidden="true" class="nav-mobile-drawer" id="nav-mobile-drawer">
 <a data-section="hero" href="#home" onclick="cdbNavigate('hero');cdbCloseMobileNav();return false" tabindex="-1">🏠 Home</a>
 <a data-section="dashboard" href="#dashboard" onclick="cdbNavigate('dashboard');cdbCloseMobileNav();return false" tabindex="-1">📊 Dashboard</a>
+<a href="/agent-threats" onclick="cdbCloseMobileNav()" tabindex="-1">🤖 AI Threat Intel</a>
 <a data-section="scanner" href="#scanner" onclick="cdbNavigate('scanner');cdbCloseMobileNav();return false" tabindex="-1">🔍 Scanner</a>
 <div class="nav-mob-sep"></div>
 <a data-section="defense-solutions" href="#defense-solutions" onclick="cdbNavigate('defense-solutions');cdbCloseMobileNav();return false" tabindex="-1">🛡 Defense Marketplace</a>
@@ -1850,6 +1852,70 @@ a{color:var(--accent);text-decoration:none}
 </div>
 </div>
 </div><!-- /cdb-soc-v12 -->
+<!-- ════════════════════════════════════════════════════ -->
+<!-- AI THREAT INTELLIGENCE — FLAGSHIP DASHBOARD SECTION   -->
+<!-- Dedicated, permanent section for the AI/LLM-specific  -->
+<!-- threat feed (OWASP LLM Top 10 + MITRE ATT&CK/ATLAS).  -->
+<!-- Full detail + report export lives at /agent-threats.  -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="ai-threat-intel-flagship" style="margin:28px 0;background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(0,212,255,.04) 55%,rgba(124,58,237,.03));border:1px solid rgba(16,185,129,.3);border-radius:18px;padding:26px;position:relative;overflow:hidden;box-shadow:0 0 40px rgba(16,185,129,.05)">
+<div style="position:absolute;top:-50px;right:-30px;font-size:140px;opacity:.05;pointer-events:none;line-height:1">🛰</div>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;z-index:1;margin-bottom:18px">
+<div>
+<div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:8px">
+<span style="font-size:9px;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,#10b981,#00d4ff);color:#04140f;padding:3px 10px;border-radius:20px;text-transform:uppercase">Flagship</span>
+<span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,0.72);font-size:8px">LIVE</span>
+<span id="atiTierBadge" style="font-size:9px;font-weight:800;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:3px 10px">FREE PLAN</span>
+</div>
+<h3 style="font-size:clamp(18px,2.6vw,24px);font-weight:900;color:#fff;margin:0 0 6px;display:flex;align-items:center;gap:8px">🛰 AI Threat Intelligence</h3>
+<p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:560px;line-height:1.55">
+  Live, source-attributed AI/LLM threat feed — prompt-injection patterns, agentic-framework exploits, and AI model CVEs —
+  mapped to <strong style="color:#6ee7b7">OWASP LLM Top 10</strong> and <strong style="color:#c4b5fd">MITRE ATT&amp;CK / ATLAS</strong>.
+  Sourced from NVD, CISA KEV &amp; GitHub Advisory Database.
+</p>
+</div>
+<div style="display:flex;gap:8px;flex-shrink:0">
+<button onclick="renderAIThreatIntelFlagship()" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#10b981;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">↻ Refresh</button>
+<a href="/agent-threats" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap">Open Full Center →</a>
+</div>
+</div>
+<!-- Stat strip -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;position:relative;z-index:1">
+<div style="background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px">
+<div id="atiStatPrompt" class="cyber-mono" style="font-size:22px;font-weight:900;color:#00d4ff">—</div>
+<div style="font-size:10px;color:var(--text-dim);margin-top:2px">Prompt Attack Patterns</div>
+</div>
+<div style="background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px">
+<div id="atiStatAgent" class="cyber-mono" style="font-size:22px;font-weight:900;color:#f59e0b">—</div>
+<div style="font-size:10px;color:var(--text-dim);margin-top:2px">Agent Threats</div>
+</div>
+<div style="background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px">
+<div id="atiStatCves" class="cyber-mono" style="font-size:22px;font-weight:900;color:#7c3aed">—</div>
+<div style="font-size:10px;color:var(--text-dim);margin-top:2px">AI Model CVEs</div>
+</div>
+<div style="background:rgba(0,0,0,.22);border:1px solid rgba(239,68,68,.18);border-radius:10px;padding:12px">
+<div id="atiStatCritical" class="cyber-mono" style="font-size:22px;font-weight:900;color:#ef4444">—</div>
+<div style="font-size:10px;color:var(--text-dim);margin-top:2px">Critical Severity</div>
+</div>
+</div>
+<!-- Live feed -->
+<div id="atiFeedList" style="position:relative;z-index:1;margin-bottom:14px">
+<div class="skel-v11" style="height:48px;border-radius:8px;margin-bottom:8px"></div>
+<div class="skel-v11" style="height:48px;border-radius:8px;margin-bottom:8px;opacity:.7"></div>
+<div class="skel-v11" style="height:48px;border-radius:8px;opacity:.5"></div>
+</div>
+<!-- Upgrade gate (shown only when the live feed is tier-locked) -->
+<div id="atiUpgradeGate" style="display:none;margin-bottom:14px;background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(0,0,0,0));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:14px 16px;position:relative;z-index:1">
+<div style="font-size:12.5px;font-weight:800;color:#fff;margin-bottom:4px">🔒 More live threats available</div>
+<div id="atiUpgradeMsg" style="font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:10px">Upgrade your plan to unlock the full live AI threat feed.</div>
+<a href="#pricing" onclick="cdbNavigate('pricing');return false" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#0a0a1a;font-size:12px;font-weight:800;padding:8px 16px;border-radius:8px;text-decoration:none">🚀 Upgrade Plan</a>
+</div>
+<!-- Footer: export + attribution -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:relative;z-index:1">
+<button id="atiExportBtn" onclick="exportAIThreatReport()" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">📥 Export Full Report</button>
+<span style="font-size:10px;color:var(--text-dim)">Sources: NVD · CISA KEV · GitHub Advisory Database — independent research, not an official feed of those organizations.</span>
+</div>
+</div>
 <!-- V9.0 Intelligence Command Panel -->
 <div class="sentinel-panel" style="border-color:rgba(124,58,237,0.72);margin-bottom:16px">
 <div class="dash-panel-title" style="display:flex;align-items:center;justify-content:space-between">
@@ -5411,7 +5477,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <span style="font-size:11px;background:rgba(16,185,129,.08);color:#10b981;padding:3px 10px;border-radius:20px">Model Advisories</span>
 </div>
 <div style="display:flex;gap:10px">
-<a href="/intel-hub" style="flex:1;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#10b981;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none">Live Feed ↗</a>
+<a href="/agent-threats" style="flex:1;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#10b981;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none">Live Feed ↗</a>
 <a href="https://intel.cyberdudebivash.com" rel="noopener" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none" target="_blank">Intel Hub ↗</a>
 </div>
 </div>
@@ -11287,6 +11353,8 @@ function localEngine(module, payload) {
         setTimeout(() => animateProgressBars(78, 62, 85, 55), 200);
         // Trigger Sentinel feed when dashboard first comes into view
         initSentinelFeed();
+        // Trigger the AI Threat Intelligence flagship section
+        renderAIThreatIntelFlagship();
         // Load live posture from API
         safeFetch('/api/realtime/posture')
           .then(r => r.ok ? r.json() : null)
@@ -11682,6 +11750,143 @@ async function initSentinelFeed() {
       <a href="${TELEGRAM_URL}" target="_blank" rel="noopener">Sentinel APEX on Telegram</a>
       for real-time CVE alerts.
     </div>`;
+  }
+}
+
+// ─── AI Threat Intelligence — Flagship Dashboard Section ────────────────
+// Live-wired to /api/ai-security/threat-feed (OWASP LLM Top 10 + MITRE
+// ATT&CK/ATLAS mapped, tier-gated). Distinct data source from the generic
+// Sentinel APEX CVE/KEV feed above — this is the AI/LLM-specific feed.
+async function renderAIThreatIntelFlagship() {
+  const root = document.getElementById('ai-threat-intel-flagship');
+  if (!root) return;
+  const feedEl   = document.getElementById('atiFeedList');
+  const tierBadge = document.getElementById('atiTierBadge');
+  const gateEl    = document.getElementById('atiUpgradeGate');
+  const gateMsgEl = document.getElementById('atiUpgradeMsg');
+
+  const token = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || '';
+  const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+
+  try {
+    const resp = await safeFetch('/api/ai-security/threat-feed?type=all&limit=12', {
+      headers, signal: AbortSignal.timeout(7000),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    // Tier badge
+    if (tierBadge) {
+      const tier = (data.tier || 'COMMUNITY').toUpperCase();
+      const paid = tier !== 'COMMUNITY' && tier !== 'FREE';
+      tierBadge.textContent = paid ? `${tier} PLAN` : 'FREE PLAN — PREVIEW';
+      tierBadge.style.background = paid ? 'rgba(16,185,129,.12)' : 'rgba(255,255,255,.06)';
+      tierBadge.style.color = paid ? '#6ee7b7' : 'var(--text-muted)';
+      tierBadge.style.borderColor = paid ? 'rgba(16,185,129,.35)' : 'rgba(255,255,255,.12)';
+    }
+
+    // Stat strip
+    const s = data.summary || {};
+    animateCounterTo(document.getElementById('atiStatPrompt'),   s.total_prompt_attacks || 0);
+    animateCounterTo(document.getElementById('atiStatAgent'),    s.total_agent_threats  || 0);
+    animateCounterTo(document.getElementById('atiStatCves'),     s.total_ai_cves        || 0);
+    animateCounterTo(document.getElementById('atiStatCritical'), s.critical_count       || 0);
+
+    // Merge the three categories into one severity-sorted live feed
+    const SEV_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    const items = [
+      ...(data.prompt_attack_patterns || []).map(t => ({ ...t, _cat: 'Prompt Attack' })),
+      ...(data.agent_threats          || []).map(t => ({ ...t, _cat: 'Agent Threat'  })),
+      ...(data.ai_vulnerabilities     || []).map(t => ({ ...t, _cat: 'AI/LLM CVE'    })),
+    ].sort((a, b) => (SEV_RANK[a.severity] ?? 4) - (SEV_RANK[b.severity] ?? 4)).slice(0, 6);
+
+    const SEV_COLORS = {
+      CRITICAL: { bar:'#ef4444', bg:'rgba(239,68,68,.08)',  border:'rgba(239,68,68,.22)',  text:'#fca5a5' },
+      HIGH:     { bar:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)',  text:'#fcd34d' },
+      MEDIUM:   { bar:'#3b82f6', bg:'rgba(59,130,246,.07)', border:'rgba(59,130,246,.18)', text:'#93c5fd' },
+      LOW:      { bar:'#10b981', bg:'rgba(16,185,129,.07)', border:'rgba(16,185,129,.18)', text:'#6ee7b7' },
+    };
+
+    if (feedEl) {
+      if (items.length === 0) {
+        feedEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:14px;text-align:center">No threats matched — try again shortly.</div>`;
+      } else {
+        feedEl.innerHTML = items.map(item => {
+          const sc = SEV_COLORS[item.severity] || SEV_COLORS.MEDIUM;
+          const chips = [
+            item.owasp_ref  ? `<span style="font-size:9.5px;font-weight:800;background:rgba(110,231,183,.12);color:#6ee7b7;border:1px solid rgba(110,231,183,.25);border-radius:5px;padding:2px 6px">OWASP ${item.owasp_ref}</span>` : '',
+            item.attack_ref ? `<span style="font-size:9.5px;font-weight:800;background:rgba(196,181,253,.12);color:#c4b5fd;border:1px solid rgba(196,181,253,.25);border-radius:5px;padding:2px 6px">ATT&amp;CK ${item.attack_ref}</span>` : '',
+            item.atlas_ref  ? `<span style="font-size:9.5px;font-weight:800;background:rgba(0,212,255,.12);color:#00d4ff;border:1px solid rgba(0,212,255,.25);border-radius:5px;padding:2px 6px">ATLAS ${item.atlas_ref}</span>` : '',
+            item.cve_id     ? `<span style="font-size:9.5px;font-weight:800;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid rgba(255,255,255,.12);border-radius:5px;padding:2px 6px">${item.cve_id}</span>` : '',
+          ].filter(Boolean).join(' ');
+          return `<div style="display:flex;gap:10px;align-items:flex-start;background:${sc.bg};border:1px solid ${sc.border};border-radius:10px;padding:10px 12px;margin-bottom:7px">
+            <div style="flex-shrink:0;margin-top:3px;width:8px;height:8px;border-radius:50%;background:${sc.bar};box-shadow:0 0 6px ${sc.bar}60"></div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+                <span style="font-size:9px;font-weight:900;letter-spacing:.04em;color:${sc.text}">${item.severity || 'MEDIUM'}</span>
+                <span style="font-size:9.5px;color:var(--text-dim)">· ${item._cat}</span>
+                ${item.live ? '<span style="font-size:8.5px;font-weight:800;color:#fca5a5">● LIVE</span>' : ''}
+              </div>
+              <div style="font-size:12.5px;font-weight:700;color:#fff;margin-bottom:4px">${item.name || 'Untitled threat'}</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">${chips}</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // Upgrade gate
+    if (gateEl) {
+      if (data.gated && data.live_locked_count > 0) {
+        gateEl.style.display = 'block';
+        if (gateMsgEl) gateMsgEl.textContent = data.upgrade?.message || 'Upgrade your plan to unlock the full live AI threat feed.';
+      } else {
+        gateEl.style.display = 'none';
+      }
+    }
+  } catch (e) {
+    if (feedEl) {
+      feedEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:14px;text-align:center">
+        Live feed temporarily unavailable — view the full center at <a href="/agent-threats" style="color:#00d4ff">/agent-threats</a>.
+      </div>`;
+    }
+  }
+}
+
+// Export full AI Threat Intelligence report (markdown). Paid tiers get the
+// real downloadable file; free/anonymous callers are routed to the upgrade
+// flow on the full AI Threat Center instead of a partial/gated download.
+async function exportAIThreatReport() {
+  const btn = document.getElementById('atiExportBtn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Preparing report…'; btn.disabled = true; }
+
+  const token = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || '';
+  const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+
+  try {
+    const resp = await safeFetch('/api/ai-security/threat-feed/report?download=1', {
+      headers, signal: AbortSignal.timeout(10000),
+    });
+    const contentType = resp.headers.get('content-type') || '';
+
+    if (resp.ok && contentType.includes('text/markdown')) {
+      const text = await resp.text();
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `cyberdudebivash-ai-threat-report-${Date.now()}.md`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 300);
+    } else {
+      // Gated (free tier) or unauthenticated — route to the full center upgrade flow.
+      window.location.href = '/agent-threats#pricing';
+      return;
+    }
+  } catch (e) {
+    window.location.href = '/agent-threats';
+  } finally {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
   }
 }
 
