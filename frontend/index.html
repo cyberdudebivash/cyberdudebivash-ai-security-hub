@@ -11807,6 +11807,12 @@ async function renderAIThreatIntelFlagship() {
       LOW:      { bar:'#10b981', bg:'rgba(16,185,129,.07)', border:'rgba(16,185,129,.18)', text:'#6ee7b7' },
     };
 
+    // Live entries are ingested from external feeds (NVD/CISA/GitHub) — escape
+    // before innerHTML insertion so malformed/adversarial feed content can't
+    // break the DOM or inject markup.
+    const ae = (typeof window.escHTML === 'function') ? window.escHTML
+      : (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;' }[c]));
+
     if (feedEl) {
       if (items.length === 0) {
         feedEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:14px;text-align:center">No threats matched — try again shortly.</div>`;
@@ -11814,20 +11820,20 @@ async function renderAIThreatIntelFlagship() {
         feedEl.innerHTML = items.map(item => {
           const sc = SEV_COLORS[item.severity] || SEV_COLORS.MEDIUM;
           const chips = [
-            item.owasp_ref  ? `<span style="font-size:9.5px;font-weight:800;background:rgba(110,231,183,.12);color:#6ee7b7;border:1px solid rgba(110,231,183,.25);border-radius:5px;padding:2px 6px">OWASP ${item.owasp_ref}</span>` : '',
-            item.attack_ref ? `<span style="font-size:9.5px;font-weight:800;background:rgba(196,181,253,.12);color:#c4b5fd;border:1px solid rgba(196,181,253,.25);border-radius:5px;padding:2px 6px">ATT&amp;CK ${item.attack_ref}</span>` : '',
-            item.atlas_ref  ? `<span style="font-size:9.5px;font-weight:800;background:rgba(0,212,255,.12);color:#00d4ff;border:1px solid rgba(0,212,255,.25);border-radius:5px;padding:2px 6px">ATLAS ${item.atlas_ref}</span>` : '',
-            item.cve_id     ? `<span style="font-size:9.5px;font-weight:800;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid rgba(255,255,255,.12);border-radius:5px;padding:2px 6px">${item.cve_id}</span>` : '',
+            item.owasp_ref  ? `<span style="font-size:9.5px;font-weight:800;background:rgba(110,231,183,.12);color:#6ee7b7;border:1px solid rgba(110,231,183,.25);border-radius:5px;padding:2px 6px">OWASP ${ae(item.owasp_ref)}</span>` : '',
+            item.attack_ref ? `<span style="font-size:9.5px;font-weight:800;background:rgba(196,181,253,.12);color:#c4b5fd;border:1px solid rgba(196,181,253,.25);border-radius:5px;padding:2px 6px">ATT&amp;CK ${ae(item.attack_ref)}</span>` : '',
+            item.atlas_ref  ? `<span style="font-size:9.5px;font-weight:800;background:rgba(0,212,255,.12);color:#00d4ff;border:1px solid rgba(0,212,255,.25);border-radius:5px;padding:2px 6px">ATLAS ${ae(item.atlas_ref)}</span>` : '',
+            item.cve_id     ? `<span style="font-size:9.5px;font-weight:800;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid rgba(255,255,255,.12);border-radius:5px;padding:2px 6px">${ae(item.cve_id)}</span>` : '',
           ].filter(Boolean).join(' ');
           return `<div style="display:flex;gap:10px;align-items:flex-start;background:${sc.bg};border:1px solid ${sc.border};border-radius:10px;padding:10px 12px;margin-bottom:7px">
             <div style="flex-shrink:0;margin-top:3px;width:8px;height:8px;border-radius:50%;background:${sc.bar};box-shadow:0 0 6px ${sc.bar}60"></div>
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
-                <span style="font-size:9px;font-weight:900;letter-spacing:.04em;color:${sc.text}">${item.severity || 'MEDIUM'}</span>
-                <span style="font-size:9.5px;color:var(--text-dim)">· ${item._cat}</span>
+                <span style="font-size:9px;font-weight:900;letter-spacing:.04em;color:${sc.text}">${ae(item.severity || 'MEDIUM')}</span>
+                <span style="font-size:9.5px;color:var(--text-dim)">· ${ae(item._cat)}</span>
                 ${item.live ? '<span style="font-size:8.5px;font-weight:800;color:#fca5a5">● LIVE</span>' : ''}
               </div>
-              <div style="font-size:12.5px;font-weight:700;color:#fff;margin-bottom:4px">${item.name || 'Untitled threat'}</div>
+              <div style="font-size:12.5px;font-weight:700;color:#fff;margin-bottom:4px">${ae(item.name || 'Untitled threat')}</div>
               <div style="display:flex;gap:5px;flex-wrap:wrap">${chips}</div>
             </div>
           </div>`;
