@@ -181,11 +181,14 @@ export function domainScanEngine(domain) {
     findings,
     note: 'Risk score based on domain characteristics only. TLS, DNSSEC, port, header, and email findings require live verification.',
     scan_metadata: {
-      engine_version: '3.0.0',
-      scan_timestamp: new Date().toISOString(),
-      scan_modules: ['domain_structure', 'tls_guidance', 'dnssec_guidance', 'http_headers_guidance', 'subdomain_patterns', 'port_exposure_guidance', 'email_security_guidance', 'threat_intel_pattern'],
+      engine_version:    '3.0.0',
+      scan_timestamp:    new Date().toISOString(),
+      scan_modules:      ['domain_structure', 'tls_guidance', 'dnssec_guidance', 'http_headers_guidance', 'subdomain_patterns', 'port_exposure_guidance', 'email_security_guidance', 'threat_intel_pattern'],
       assessment_method: 'domain_characteristic_analysis',
-      powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+      assessment_mode:   'STATIC',
+      data_source:       'domain_string_analysis',
+      live_verification: false,
+      powered_by:        'CYBERDUDEBIVASH AI Security Hub',
     },
   };
 }
@@ -283,7 +286,10 @@ export function aiScanEngine(modelName, useCase) {
       scan_timestamp: new Date().toISOString(),
       frameworks: ['OWASP LLM Top 10 v1.1','MITRE ATLAS','NIST AI RMF'],
       powered_by: 'CYBERDUDEBIVASH AI Security Hub',
-      note: 'Framework screening — all vectors require validation against your specific model deployment.',
+      note:              'Framework screening — all vectors require validation against your specific model deployment.',
+      assessment_mode:   'STATIC',
+      data_source:       'owasp_llm_framework_screening',
+      live_verification: false,
     },
   };
 }
@@ -331,7 +337,14 @@ export function redteamEngine(targetOrg, scope) {
     note: 'All scenarios are applicable attack vectors for this target profile. Run a live red team engagement to validate detection and prevention effectiveness.',
     findings,
     mitre_tactics: [...new Set(RT_SCENARIOS.map(s=>s.tactic))],
-    scan_metadata: { engine_version:'3.0.0', scan_timestamp:new Date().toISOString(), assessment_method:'attack_surface_mapping' },
+    scan_metadata: {
+      engine_version:    '3.0.0',
+      scan_timestamp:    new Date().toISOString(),
+      assessment_method: 'attack_surface_mapping',
+      assessment_mode:   'STATIC',
+      data_source:       'mitre_attack_scenario_mapping',
+      live_verification: false,
+    },
   };
 }
 
@@ -433,7 +446,15 @@ export function identityScanEngine(orgName, identityProvider) {
     recommended_tools: tools,
     benchmark_source: 'Verizon DBIR 2024, Microsoft Entra Report 2024, Okta State of Zero Trust 2024, BeyondTrust PAM Benchmark 2024',
     note: 'Figures represent industry benchmarks for this IDP. Actual values require directory API integration.',
-    scan_metadata:{ engine_version:'4.0.0', scan_timestamp:new Date().toISOString(), identity_provider:identityProvider, assessment_method:'benchmark_analysis' },
+    scan_metadata: {
+      engine_version:    '4.0.0',
+      scan_timestamp:    new Date().toISOString(),
+      identity_provider: identityProvider,
+      assessment_method: 'benchmark_analysis',
+      assessment_mode:   'STATIC',
+      data_source:       'industry_benchmark',
+      live_verification: false,
+    },
   };
 }
 
@@ -668,6 +689,14 @@ export function complianceEngine(orgName, framework) {
     ],
     full_report_price: fw.price,
     payment_url: `https://rzp.io/l/cyberdudebivash-${framework}`,
-    scan_metadata: { engine_version:'4.0.0', scan_timestamp:new Date().toISOString(), framework_edition:fw.name, assessment_method:'framework_gap_analysis' },
+    scan_metadata: {
+      engine_version:    '4.0.0',
+      scan_timestamp:    new Date().toISOString(),
+      framework_edition: fw.name,
+      assessment_method: 'framework_gap_analysis',
+      assessment_mode:   'STATIC',
+      data_source:       'industry_benchmark',
+      live_verification: false,
+    },
   };
 }

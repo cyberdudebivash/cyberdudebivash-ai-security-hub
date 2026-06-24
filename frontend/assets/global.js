@@ -10,23 +10,14 @@
 
 /* ── Config ──────────────────────────────────────────────────── */
 const CFG = {
-  api:      'https://cyberdudebivash-security-hub.workers.dev',
-  site:     'https://cyberdudebivash.in',
-  tools:    'https://tools.cyberdudebivash.com',
-  intel:    'https://intel.cyberdudebivash.com',
-  email:    'bivash@cyberdudebivash.com',
-  phone:    '+918179881447',
-  upi1:     'iambivash.bn-5@okaxis',
-  upi2:     '6302177246@axisbank',
-  upiName:  'Bivash Kumar Nayak',
-  bankAcc:  '915010024617260',
-  bankIFSC: 'UTIB0000052',
-  bankName: 'Axis Bank',
-  bankAccName: 'BIVASHA KUMAR NAYAK',
-  paypal:   'https://www.paypal.com/paypalme/iambivash',
-  paypalEmail: 'iambivash.bn@gmail.com',
-  crypto:   '0xa824c20158a4bfe2f3d8e80351b1906bd0ac0796',
-  cryptoNet:'BNB Smart Chain (BSC)',
+  api:   '',  // same-origin: Worker serves both pages and API
+  site:  'https://cyberdudebivash.in',
+  tools: 'https://tools.cyberdudebivash.com',
+  intel: 'https://intel.cyberdudebivash.com',
+  email: 'bivash@cyberdudebivash.com',
+  phone: '+918179881447',
+  // Payment credentials are loaded at modal open time from /api/payment-config
+  // They are NOT hardcoded here — single source of truth is paymentConfig.js (backend)
 };
 
 window.CDB_CFG = CFG;
@@ -132,8 +123,8 @@ function injectPaymentModal() {
                     border-radius:10px;padding:12px;margin-bottom:10px">
           <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:.5px;margin-bottom:4px">PRIMARY UPI ID</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <code style="font-size:15px;font-weight:800;color:#00ffcc">${CFG.upi1}</code>
-            <button onclick="CDB_PAY.copy('${CFG.upi1}','cgpm-copy-upi1')" id="cgpm-copy-upi1"
+            <code id="cgpm-upi1-val" style="font-size:15px;font-weight:800;color:#00ffcc">Loading…</code>
+            <button onclick="CDB_PAY._copyById('cgpm-upi1-val','cgpm-copy-upi1')" id="cgpm-copy-upi1"
               style="background:rgba(0,255,204,.1);border:1px solid rgba(0,255,204,.3);color:#00ffcc;
                      border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap">Copy</button>
           </div>
@@ -142,8 +133,8 @@ function injectPaymentModal() {
                     border-radius:10px;padding:12px;margin-bottom:10px">
           <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:.5px;margin-bottom:4px">ALTERNATE UPI ID</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <code style="font-size:14px;font-weight:700;color:rgba(255,255,255,.7)">${CFG.upi2}</code>
-            <button onclick="CDB_PAY.copy('${CFG.upi2}','cgpm-copy-upi2')" id="cgpm-copy-upi2"
+            <code id="cgpm-upi2-val" style="font-size:14px;font-weight:700;color:rgba(255,255,255,.7)">Loading…</code>
+            <button onclick="CDB_PAY._copyById('cgpm-upi2-val','cgpm-copy-upi2')" id="cgpm-copy-upi2"
               style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);
                      border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">Copy</button>
           </div>
@@ -153,33 +144,25 @@ function injectPaymentModal() {
         </div>
       </div>
 
-      <!-- Bank Pane -->
+      <!-- Bank Pane — populated dynamically from /api/payment-config -->
       <div id="cgpm-pane-bank" style="display:none">
-        ${[['Account Name',CFG.bankAccName],['Account Number',CFG.bankAcc],['IFSC Code',CFG.bankIFSC],['Bank',CFG.bankName],['Account Type','Savings']].map(([k,v])=>`
-        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-                    border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div>
-            <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:.5px">${k.toUpperCase()}</div>
-            <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px">${v}</div>
-          </div>
-          <button onclick="CDB_PAY.copy('${v}','cgpm-copy-${k.replace(/ /g,'')}');this.textContent='✅'"
-            style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);
-                   border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">Copy</button>
-        </div>`).join('')}
+        <div id="cgpm-bank-details">
+          <div style="text-align:center;padding:24px;color:rgba(255,255,255,.4);font-size:13px">Loading payment details…</div>
+        </div>
         <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px;text-align:center">
           Add email in transfer remarks for faster activation
         </div>
       </div>
 
-      <!-- PayPal Pane -->
+      <!-- PayPal Pane — populated dynamically from /api/payment-config -->
       <div id="cgpm-pane-paypal" style="display:none;text-align:center">
         <div style="font-size:40px;margin-bottom:12px">🌐</div>
         <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:6px">Pay via PayPal</div>
         <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">
-          Email: <strong style="color:#fff">${CFG.paypalEmail}</strong><br>
+          Email: <strong id="cgpm-paypal-email" style="color:#fff">Loading…</strong><br>
           <em style="font-size:11px">Select "Friends &amp; Family" to avoid fees</em>
         </div>
-        <a href="${CFG.paypal}" target="_blank"
+        <a id="cgpm-paypal-link" href="#" target="_blank"
           style="display:inline-block;background:linear-gradient(135deg,#003087,#009cde);color:#fff;
                  padding:14px 32px;border-radius:12px;font-weight:800;font-size:15px;text-decoration:none;
                  box-shadow:0 4px 20px rgba(0,156,222,.3)">
@@ -190,7 +173,7 @@ function injectPaymentModal() {
         </div>
       </div>
 
-      <!-- Crypto Pane -->
+      <!-- Crypto Pane — populated dynamically from /api/payment-config -->
       <div id="cgpm-pane-crypto" style="display:none">
         <div style="background:rgba(255,165,0,.06);border:1px solid rgba(255,165,0,.2);
                     border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:rgba(255,200,0,.8)">
@@ -199,15 +182,15 @@ function injectPaymentModal() {
         <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
                     border-radius:10px;padding:14px;margin-bottom:10px">
           <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:.5px;margin-bottom:6px">WALLET ADDRESS (BNB SMART CHAIN)</div>
-          <div style="font-size:12px;font-family:monospace;color:#00ffcc;word-break:break-all;margin-bottom:8px">${CFG.crypto}</div>
-          <button onclick="CDB_PAY.copy('${CFG.crypto}','cgpm-copy-crypto')" id="cgpm-copy-crypto"
+          <div id="cgpm-crypto-addr" style="font-size:12px;font-family:monospace;color:#00ffcc;word-break:break-all;margin-bottom:8px">Loading…</div>
+          <button onclick="CDB_PAY._copyById('cgpm-crypto-addr','cgpm-copy-crypto')" id="cgpm-copy-crypto"
             style="width:100%;background:rgba(0,255,204,.1);border:1px solid rgba(0,255,204,.3);color:#00ffcc;
                    border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">
             Copy Wallet Address
           </button>
         </div>
         <div style="font-size:11px;color:rgba(255,255,255,.35)">
-          Network: <strong style="color:#fff">${CFG.cryptoNet}</strong> · Token: BNB / USDT (BEP-20)
+          Network: <strong id="cgpm-crypto-net" style="color:#fff">BNB Smart Chain</strong> · Token: BNB / USDT (BEP-20)
         </div>
       </div>
 
@@ -241,8 +224,65 @@ function injectPaymentModal() {
 }
 
 window.CDB_PAY = {
-  _current: {},
-  open(product, amountInr, label) {
+  _current:     {},
+  _paymentCfg:  null,   // cached from /api/payment-config
+
+  async _loadPaymentConfig() {
+    if (this._paymentCfg) return this._paymentCfg;
+    try {
+      const r = await fetch('/api/payment-config', { signal: AbortSignal.timeout(6000) });
+      if (r.ok) {
+        const d = await r.json();
+        this._paymentCfg = d;
+        return d;
+      }
+    } catch(e) { console.warn('[CDB_PAY] Failed to load payment config:', e.message); }
+    return null;
+  },
+
+  _populateModal(cfg) {
+    if (!cfg) return;
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text || '—'; };
+    const setHref = (id, href) => { const el = document.getElementById(id); if (el && href) el.href = href; };
+
+    // UPI
+    set('cgpm-upi1-val', cfg.upi?.primary);
+    set('cgpm-upi2-val', cfg.upi?.secondary);
+
+    // Bank details
+    const bankEl = document.getElementById('cgpm-bank-details');
+    if (bankEl && cfg.bank) {
+      const b = cfg.bank;
+      const rows = [
+        ['Account Name',   b.account_name],
+        ['Account Number', b.account_number],
+        ['IFSC Code',      b.ifsc],
+        ['Bank',           b.bank_name],
+        ['Account Type',   'Savings'],
+      ];
+      bankEl.innerHTML = rows.map(([k, v], i) => `
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+                    border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:.5px">${k.toUpperCase()}</div>
+            <div id="cgpm-bank-row-${i}" style="font-size:14px;font-weight:700;color:#fff;margin-top:2px">${v || '—'}</div>
+          </div>
+          <button onclick="CDB_PAY._copyById('cgpm-bank-row-${i}','cgpm-bank-copy-${i}');this.textContent='✅'" id="cgpm-bank-copy-${i}"
+            style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);
+                   border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">Copy</button>
+        </div>`).join('');
+    }
+
+    // PayPal
+    set('cgpm-paypal-email', cfg.paypal?.email);
+    setHref('cgpm-paypal-link', cfg.paypal?.link);
+
+    // Crypto
+    set('cgpm-crypto-addr', cfg.crypto?.bnb_smart_chain);
+    set('cgpm-crypto-net', cfg.crypto?.network);
+  },
+
+  async open(product, amountInr, label) {
     this._current = { product, amountInr, label };
     injectPaymentModal();
     const m = document.getElementById('cdb-global-pay-modal');
@@ -254,18 +294,21 @@ window.CDB_PAY = {
     document.body.style.overflow = 'hidden';
     this.tab('upi');
     sessionStorage.setItem('cdb_pay_intent', JSON.stringify({ product, amountInr, label, ts: Date.now() }));
+    // Load payment config from backend and populate modal
+    const cfg = await this._loadPaymentConfig();
+    this._populateModal(cfg);
     // P0-2: Wire UPI deep-links with exact amount and generate dynamic QR
-    if (amountInr) {
-      try { this._setupUPIRails(label || product || 'Security Service', amountInr); }
+    if (amountInr && cfg?.upi?.primary) {
+      try { this._setupUPIRails(label || product || 'Security Service', amountInr, cfg); }
       catch(e) { console.warn('[CDB_PAY] UPI setup failed:', e.message); }
     }
   },
 
   // ── P0-2: UPI Deep-Link + Dynamic QR Rail ─────────────────────────────────
-  _buildUPIDeepLink(vpa, amountInr, note) {
+  _buildUPIDeepLink(vpa, amountInr, note, payerName) {
     const params = new URLSearchParams({
       pa: vpa,
-      pn: CFG.upiName || 'Bivash Kumar Nayak',
+      pn: payerName || 'CYBERDUDEBIVASH',
       am: String(Number(amountInr || 0).toFixed(2)),
       cu: 'INR',
       tn: (note || 'CYBERDUDEBIVASH').slice(0, 50),
@@ -278,15 +321,17 @@ window.CDB_PAY = {
     return `https://api.qrserver.com/v1/create-qr-code/?size=${size||180}x${size||180}&data=${encodeURIComponent(upiUri)}&color=00ffcc&bgcolor=0d0d1a&margin=8`;
   },
 
-  _setupUPIRails(productLabel, amountInr) {
+  _setupUPIRails(productLabel, amountInr, cfg) {
+    const upi1 = cfg?.upi?.primary || '';
+    const upiName = cfg?.upi?.name || 'CYBERDUDEBIVASH';
     const note = `${(productLabel||'CDB').slice(0,30)} ${new Date().toISOString().slice(0,10)}`;
-    const upiUri = this._buildUPIDeepLink(CFG.upi1, amountInr, note);
+    const upiUri = this._buildUPIDeepLink(upi1, amountInr, note, upiName);
 
     // Standard UPI intent: works with any NPCI-registered app
     const set = (id, href) => { const el = document.getElementById(id); if (el) el.href = href; };
 
     // Build query string for each app's proprietary scheme
-    const q = new URLSearchParams({ pa: CFG.upi1, pn: CFG.upiName||'Bivash Kumar Nayak',
+    const q = new URLSearchParams({ pa: upi1, pn: upiName,
       am: String(Number(amountInr||0).toFixed(2)), cu: 'INR', tn: note });
 
     set('cgpm-gpay-link',    `tez://upi/pay?${q}`);     // Google Pay (Tez)
@@ -330,6 +375,10 @@ window.CDB_PAY = {
     const btn = document.getElementById(btnId);
     if (btn) { const orig = btn.textContent; btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = orig, 2000); }
   },
+  _copyById(srcId, btnId) {
+    const src = document.getElementById(srcId);
+    if (src) this.copy(src.textContent.trim(), btnId);
+  },
   async submit() {
     const email = document.getElementById('cgpm-email')?.value?.trim();
     const txn   = document.getElementById('cgpm-txn')?.value?.trim();
@@ -352,7 +401,7 @@ window.CDB_PAY = {
     // Gate on the server response — only show the pending state if it was accepted.
     let accepted = false;
     try {
-      const resp = await fetch(`${CFG.api}/api/payment/confirm`, {
+      const resp = await fetch('/api/payment/confirm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ txnId: txn, user: email, product: this._current.product,
           amount: this._current.amountInr, method: 'MANUAL', currency: 'INR',

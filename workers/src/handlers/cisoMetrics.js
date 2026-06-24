@@ -272,31 +272,36 @@ function buildRiskRegister(scanHistory, incidents) {
   return risks.sort((a, b) => b.risk_score - a.risk_score).slice(0, 20);
 }
 
-// ─── Compliance posture from available scan data ──────────────────────────────
-function buildComplianceStatus(scanHistory) {
-  // Deterministic scoring based on available scan signals
-  const frameworks = {
-    'ISO 27001': { controls_met: 78, controls_total: 114, last_audit: '2025-11-15', next_audit: '2026-11-15', status: 'ACTIVE',  trend: '+3', gaps: ['A.12.6 Technical Vulnerability Management', 'A.14.2 Security in Development'] },
-    'NIST CSF':  { controls_met: 84, controls_total: 108, last_audit: '2025-12-01', next_audit: '2026-12-01', status: 'ACTIVE',  trend: '+5', gaps: ['PR.IP-12 Vulnerability plan', 'DE.CM-8 Vulnerability scans'] },
-    'SOC 2':     { controls_met: 49, controls_total: 61,  last_audit: '2025-09-30', next_audit: '2026-09-30', status: 'ACTIVE',  trend: '+2', gaps: ['CC7.2 Anomaly detection', 'CC9.1 Vendor risk'] },
-    'PCI DSS':   { controls_met: 221, controls_total: 288, last_audit: '2025-10-20', next_audit: '2026-10-20', status: 'PARTIAL', trend: '+8', gaps: ['Req 11.3 Penetration testing', 'Req 6.3 Vulnerability management'] },
-    'GDPR':      { controls_met: 81, controls_total: 99,  last_audit: '2025-08-14', next_audit: '2026-08-14', status: 'ACTIVE',  trend: '+1', gaps: ['Art 25 Data protection by design', 'Art 35 DPIA requirements'] },
-    'CIS CSC':   { controls_met: 15, controls_total: 18,  last_audit: '2026-01-10', next_audit: '2027-01-10', status: 'ACTIVE',  trend: '+2', gaps: ['CIS Control 17 Incident Response', 'CIS Control 18 Pen Testing'] },
-  };
-
-  return Object.entries(frameworks).map(([name, f]) => ({
-    framework: name,
-    controls_met:   f.controls_met,
-    controls_total: f.controls_total,
-    compliance_pct: parseFloat(((f.controls_met / f.controls_total) * 100).toFixed(1)),
-    grade:          scoreToGrade((f.controls_met / f.controls_total) * 100).grade,
-    status:         f.status,
-    trend:          f.trend,
-    last_audit:     f.last_audit,
-    next_audit:     f.next_audit,
-    open_gaps:      f.gaps.length,
-    gap_details:    f.gaps,
-  }));
+// ─── Compliance posture from D1 compliance scan data ─────────────────────────
+async function buildComplianceStatus(env) {
+  if (!env?.DB) return [];
+  try {
+    const rows = await env.DB.prepare(`
+      SELECT framework, controls_met, controls_total, last_audit_date, next_audit_date, status, trend, gap_details
+      FROM compliance_results
+      ORDER BY framework ASC
+    `).all();
+    if (!rows?.results?.length) return [];
+    return rows.results.map(f => ({
+      framework:      f.framework,
+      controls_met:   f.controls_met || 0,
+      controls_total: f.controls_total || 0,
+      compliance_pct: f.controls_total
+        ? parseFloat(((f.controls_met / f.controls_total) * 100).toFixed(1))
+        : 0,
+      grade:          f.controls_total
+        ? scoreToGrade((f.controls_met / f.controls_total) * 100).grade
+        : 'N/A',
+      status:         f.status || 'UNKNOWN',
+      trend:          f.trend || '0',
+      last_audit:     f.last_audit_date || null,
+      next_audit:     f.next_audit_date || null,
+      open_gaps:      f.gap_details ? JSON.parse(f.gap_details).length : 0,
+      gap_details:    f.gap_details ? JSON.parse(f.gap_details) : [],
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // ─── Load incidents from KV ───────────────────────────────────────────────────
@@ -317,51 +322,9 @@ function generateIncidentId() {
   return 'INC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
 }
 
-// ─── Seed incidents (realistic activity log for fresh environments) ───────────
+// ─── Seed incidents — returns empty; no synthetic data in production ──────────
 function getSeedIncidents() {
-  const now   = new Date();
-  const ago   = (h) => new Date(now - h * 3600000).toISOString();
-
-  return [
-    {
-      id: 'INC-2026-0042', title: 'Suspected credential stuffing on login API',
-      severity: 'HIGH', status: 'RESOLVED', category: 'Identity',
-      created_at:  ago(72), detected_at: ago(70), resolved_at: ago(48),
-      description: 'Automated attacker attempting logins from 312 distinct IPs in 4h window.',
-      affected_systems: ['auth-api', 'user-db'], mitigations: ['Rate limiting enforced', 'Temp IP block', 'Password resets triggered'],
-      owner: 'SOC', timeline: [
-        { ts: ago(72), event: 'Alert fired: >500 failed logins/hour', actor: 'SIEM' },
-        { ts: ago(70), event: 'Analyst confirmed credential stuffing pattern', actor: 'SOC L1' },
-        { ts: ago(60), event: 'Rate limiting deployed on login endpoint', actor: 'DevOps' },
-        { ts: ago(48), event: 'Incident resolved — attack traffic ceased', actor: 'SOC L2' },
-      ],
-    },
-    {
-      id: 'INC-2026-0041', title: 'CVE-2024-3400 exploitation attempt on perimeter',
-      severity: 'CRITICAL', status: 'RESOLVED', category: 'Vulnerability',
-      created_at:  ago(168), detected_at: ago(165), resolved_at: ago(120),
-      description: 'Palo Alto PAN-OS CVE-2024-3400 exploitation attempt detected by IDS signature.',
-      affected_systems: ['palo-alto-fw-prod'], mitigations: ['Emergency patch applied', 'IOCs blocked', 'Full forensic investigation'],
-      owner: 'Security Engineering', timeline: [
-        { ts: ago(168), event: 'IDS alert: PAN-OS exploit signature match', actor: 'SIEM' },
-        { ts: ago(165), event: 'Escalated to Security Engineering (P0)', actor: 'SOC L2' },
-        { ts: ago(150), event: 'Emergency patch PANOS-10.2.9-h1 applied', actor: 'NetOps' },
-        { ts: ago(120), event: 'Confirmed no lateral movement. Incident closed.', actor: 'CISO' },
-      ],
-    },
-    {
-      id: 'INC-2026-0043', title: 'Anomalous API data export — 14k records',
-      severity: 'MEDIUM', status: 'INVESTIGATING', category: 'Data',
-      created_at:  ago(6), detected_at: ago(4), resolved_at: null,
-      description: 'API key triggered unusual bulk export pattern — 14,230 user records over 20 minutes.',
-      affected_systems: ['data-api', 'user-export'], mitigations: ['API key suspended', 'Export logs preserved for forensics'],
-      owner: 'SOC', timeline: [
-        { ts: ago(6),  event: 'DLP alert: bulk export threshold exceeded', actor: 'SIEM' },
-        { ts: ago(4),  event: 'API key suspended, alert escalated', actor: 'SOC L1' },
-        { ts: ago(2),  event: 'Forensic review initiated', actor: 'SOC L2' },
-      ],
-    },
-  ];
+  return [];
 }
 
 // ─── GET /api/ciso/metrics ────────────────────────────────────────────────────
@@ -389,11 +352,11 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
 
   const mttx            = calculateMTTX(incidents);
   const riskRegister    = buildRiskRegister(scanHistory, incidents);
-  const complianceStatus = buildComplianceStatus(scanHistory);
+  const complianceStatus = await buildComplianceStatus(env);
   const securityROI     = calculateSecurityROI(d1Metrics, incidents, complianceStatus);
 
-  // Platform-wide scan stats — prefer D1 data, fall back to KV, then hardcoded baseline
-  let platformStats = { total_scans: 1247, threats_detected: 8934, critical_findings: 234, users: 892 };
+  // Platform-wide scan stats — D1-authoritative, KV-cached; no synthetic fallback
+  let platformStats = { total_scans: 0, threats_detected: 0, critical_findings: 0, users: 0 };
   if (env?.SECURITY_HUB_KV) {
     try {
       const ps = await env.SECURITY_HUB_KV.get('platform:stats', { type: 'json' });
@@ -456,15 +419,15 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
 
     // ── Platform stats (D1-authoritative where available) ─────────────────────
     platform: {
-      total_scans:          d1Metrics?.scan_stats?.total_scans || platformStats.total_scans  || 1247,
+      total_scans:          d1Metrics?.scan_stats?.total_scans || platformStats.total_scans  || 0,
       scans_last_30d:       d1Metrics?.scan_stats?.scans_30d  || 0,
       scans_last_7d:        d1Metrics?.scan_stats?.scans_7d   || 0,
-      threats_detected:     platformStats.threats_detected || 8934,
-      critical_findings:    d1Metrics?.scan_stats?.critical_count || platformStats.critical_findings || 234,
+      threats_detected:     platformStats.threats_detected || 0,
+      critical_findings:    d1Metrics?.scan_stats?.critical_count || platformStats.critical_findings || 0,
       avg_risk_score:       d1Metrics?.scan_stats?.avg_risk_score != null
                               ? parseFloat(Number(d1Metrics.scan_stats.avg_risk_score).toFixed(1)) : null,
-      total_users:          platformStats.users || 892,
-      api_calls_today:      Math.floor(Date.now() / 60000) % 3000 + 2000, // deterministic per-minute
+      total_users:          platformStats.users || 0,
+      api_calls_today:      null,
       uptime_pct:           '99.97',
       mythos_tools_published: d1Metrics?.mythos?.total_published || 0,
       mythos_runs_total:      d1Metrics?.mythos?.total_runs || 0,
@@ -515,16 +478,39 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
 
 // ─── GET /api/ciso/posture ────────────────────────────────────────────────────
 export async function handleGetCISOPosture(request, env, authCtx = {}) {
-  // Detailed posture scorecard
-  const dimensions = [
-    { name: 'Network Security',       score: 72, weight: 0.20, trend: '+3', controls: ['Firewall policy', 'Segmentation', 'IDS/IPS', 'DDoS protection'] },
-    { name: 'Identity & Access Mgmt', score: 68, weight: 0.20, trend: '+5', controls: ['MFA enforcement', 'PAM', 'JIT access', 'SSO coverage'] },
-    { name: 'Endpoint Security',      score: 81, weight: 0.15, trend: '+2', controls: ['EDR coverage', 'Patch compliance', 'DLP agents'] },
-    { name: 'Data Protection',        score: 75, weight: 0.15, trend: '+1', controls: ['Encryption at rest/transit', 'DLP rules', 'Key management'] },
-    { name: 'Application Security',   score: 65, weight: 0.15, trend: '+6', controls: ['SAST/DAST in CI/CD', 'OWASP coverage', 'Sec code review'] },
-    { name: 'Security Operations',    score: 79, weight: 0.10, trend: '+4', controls: ['SIEM coverage', 'SOC operating hours', 'Playbook coverage'] },
-    { name: 'Incident Response',      score: 83, weight: 0.05, trend: '+2', controls: ['IR plan tested', 'Runbooks current', 'Tabletop exercises'] },
-  ];
+  // Pull posture dimensions from D1 posture_assessments if available
+  let dimensions = [];
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(`
+        SELECT name, score, weight, trend, controls_json
+        FROM posture_assessments
+        ORDER BY weight DESC
+      `).all();
+      if (rows?.results?.length) {
+        dimensions = rows.results.map(r => ({
+          name:     r.name,
+          score:    r.score,
+          weight:   r.weight,
+          trend:    r.trend || '0',
+          controls: r.controls_json ? JSON.parse(r.controls_json) : [],
+        }));
+      }
+    } catch {}
+  }
+
+  if (!dimensions.length) {
+    return ok(request, {
+      composite_score:  null,
+      grade:            null,
+      dimensions:       [],
+      data_available:   false,
+      message:          'No posture assessment data yet. Run compliance and identity scans to populate.',
+      peer_comparison:  { industry_avg: 62, top_quartile: 82, your_position: 'UNKNOWN' },
+      recommendations:  [],
+      generated_at:     new Date().toISOString(),
+    });
+  }
 
   const composite = dimensions.reduce((acc, d) => acc + d.score * d.weight, 0);
 
@@ -532,6 +518,7 @@ export async function handleGetCISOPosture(request, env, authCtx = {}) {
     composite_score: parseFloat(composite.toFixed(1)),
     grade:           scoreToGrade(composite),
     dimensions,
+    data_available:  true,
     peer_comparison: {
       industry_avg:   62,
       top_quartile:   82,
