@@ -3,20 +3,23 @@
  * AI/LLM-ecosystem detection, OWASP LLM Top 10 heuristic mapping, and that only
  * real, source-attributed entries get written to ai_threat_feed. */
 import { describe, it, expect } from 'vitest';
-import { isAIRelated, mapToOwaspLLM, runAIThreatIngestion } from '../src/services/aiThreatIngestion.js';
+import { isAIRelated, mapToOwaspLLM, classifyFeedType, runAIThreatIngestion } from '../src/services/aiThreatIngestion.js';
 
 // ── In-memory D1 ────────────────────────────────────────────────────────────
-function memDB() {
+// failOn: optional id whose INSERT throws once per batch call (simulates a
+// single bad row so the per-row fallback path can be exercised).
+function memDB({ failBatchOnce = false } = {}) {
   const rows = new Map();
+  let batchCalls = 0;
   const mk = (sql) => ({
     _sql: sql, _b: [],
     bind(...a) { this._b = a; return this; },
     async run() {
       if (/^\s*INSERT INTO ai_threat_feed/i.test(sql)) {
         const [id, feed_type, title, description, severity, cve_id,
-          affected_frameworks, iocs, mitigations, owasp_ref, source_url, published_at] = this._b;
+          affected_frameworks, iocs, mitigations, owasp_ref, source_url, published_at, metadata] = this._b;
         rows.set(id, { id, feed_type, title, description, severity, cve_id,
-          affected_frameworks, iocs, mitigations, owasp_ref, source_url, published_at });
+          affected_frameworks, iocs, mitigations, owasp_ref, source_url, published_at, metadata });
       }
       return { success: true };
     },
@@ -24,7 +27,12 @@ function memDB() {
   return {
     rows,
     prepare(sql) { return mk(sql); },
-    async batch(stmts) { for (const s of stmts) await s.run(); return stmts.map(() => ({ success: true })); },
+    async batch(stmts) {
+      batchCalls += 1;
+      if (failBatchOnce && batchCalls === 1) throw new Error('simulated batch failure');
+      for (const s of stmts) await s.run();
+      return stmts.map(() => ({ success: true }));
+    },
   };
 }
 
@@ -89,6 +97,21 @@ describe('mapToOwaspLLM', () => {
   });
 });
 
+describe('classifyFeedType', () => {
+  it('classifies prompt-injection language as prompt_attack, matching the schema enum', () => {
+    expect(classifyFeedType('a prompt injection via tool output', false)).toBe('prompt_attack');
+  });
+  it('classifies agent-framework/MCP language as agent_threat', () => {
+    expect(classifyFeedType('a flaw in an mcp server implementation', false)).toBe('agent_threat');
+  });
+  it('falls back to vulnerability for CVE entries with no other signal', () => {
+    expect(classifyFeedType('a buffer overflow in embedchain', true)).toBe('vulnerability');
+  });
+  it('falls back to advisory for non-CVE entries with no other signal', () => {
+    expect(classifyFeedType('a buffer overflow in embedchain', false)).toBe('advisory');
+  });
+});
+
 describe('runAIThreatIngestion', () => {
   it('filters a mixed batch and only stores AI-relevant, source-attributed rows', async () => {
     const env = { DB: memDB() };
@@ -117,5 +140,29 @@ describe('runAIThreatIngestion', () => {
   it('is a no-op with no DB binding or empty input', async () => {
     expect(await runAIThreatIngestion({}, [AI_CVE])).toEqual({ matched: 0, inserted: 0, errors: [] });
     expect(await runAIThreatIngestion({ DB: memDB() }, [])).toEqual({ matched: 0, inserted: 0, errors: [] });
+  });
+
+  it('stores matched_keywords provenance in metadata', async () => {
+    const env = { DB: memDB() };
+    await runAIThreatIngestion(env, [AI_CVE]);
+    const stored = env.DB.rows.get('ai_CVE-2024-5184');
+    const meta = JSON.parse(stored.metadata);
+    expect(meta.ingested_from).toBe('cti_pipeline_filter');
+    expect(meta.matched_keywords).toContain('embedchain');
+  });
+
+  it('skips entries with no id rather than writing a malformed row', async () => {
+    const env = { DB: memDB() };
+    const result = await runAIThreatIngestion(env, [{ ...AI_CVE, id: undefined }]);
+    expect(result.matched).toBe(0);
+    expect(env.DB.rows.size).toBe(0);
+  });
+
+  it('falls back to per-row inserts when a batch write fails, so one bad row does not drop the rest', async () => {
+    const env = { DB: memDB({ failBatchOnce: true }) };
+    const result = await runAIThreatIngestion(env, [AI_CVE, GHSA_PROMPT_INJECTION]);
+    expect(result.inserted).toBe(2);
+    expect(env.DB.rows.has('ai_CVE-2024-5184')).toBe(true);
+    expect(env.DB.rows.has('ai_GHSA-test-0001')).toBe(true);
   });
 });

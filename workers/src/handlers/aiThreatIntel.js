@@ -18,6 +18,24 @@ const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':
 const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}});
 const err  = (m,s=400) => json({success:false,error:m},s);
 
+// ─── Tier gating — same normalize/free-vs-paid convention as vibeCodeScanner.js
+// (kept local rather than imported: each handler module here is self-contained).
+// Plan comes from authCtx ONLY, resolved upstream by resolveAuthV5() — never
+// from the request itself, so a caller cannot self-upgrade.
+function normalizeTier(tier) {
+  const t = String(tier || 'free').toLowerCase();
+  if (t.includes('enterprise') || t.includes('mssp')) return 'enterprise';
+  if (t.includes('pro')) return 'pro';
+  if (t.includes('starter')) return 'starter';
+  return 'free';
+}
+const isPaidTier = (tier) => normalizeTier(tier) !== 'free';
+function tierFromAuth(authCtx) {
+  if (authCtx && typeof authCtx === 'object' && authCtx.tier) return normalizeTier(authCtx.tier);
+  return 'free';
+}
+const FREE_LIVE_PREVIEW = 3; // free/anon callers see this many live, source-attributed entries per bucket
+
 // Curated AI threat intelligence — updated by Sentinel APEX
 const AI_THREAT_LIBRARY = {
 
@@ -48,42 +66,226 @@ const AI_THREAT_LIBRARY = {
   ],
 };
 
-// GET /api/ai-security/threat-feed ────────────────────────────────────────────
-export async function handleAIThreatFeed(request, env) {
-  const url = new URL(request.url);
-  const type  = url.searchParams.get('type');   // prompt_attacks | agent_threats | ai_vulns | all
-  const limit = Math.min(parseInt(url.searchParams.get('limit')||'20'), 50);
+// Public `type` query param (documented in frontend/api-docs.html) -> the real
+// feed_type enum stored in ai_threat_feed (schema_master.sql). `ai_vulns` is kept
+// as a legacy alias since this handler's own original comment used that name.
+const TYPE_TO_FEED_TYPE = {
+  prompt_attacks:    'prompt_attack',
+  agent_threats:     'agent_threat',
+  ai_cves:           'vulnerability',
+  ai_vulns:          'vulnerability',
+  model_advisories:  'advisory',
+};
 
-  // First try D1 for community-submitted + verified threats
+// Map a live ai_threat_feed row onto the same card shape the curated library
+// entries already use (name/mitigation singular), so it renders through the
+// exact same frontend code paths as curated entries — no frontend changes needed.
+function dbRowToCard(r) {
+  return {
+    id: r.id,
+    name: r.title,
+    severity: r.severity,
+    description: r.description,
+    cve_id: r.cve_id || undefined,
+    affected_models: r.affected_models,
+    affected_frameworks: (() => { try { return JSON.parse(r.affected_frameworks || '[]'); } catch { return []; } })(),
+    mitigation: (r.mitigations||[])[0] || '',
+    owasp_ref: r.owasp_ref || undefined,
+    source_url: r.source_url || undefined,
+    live: true,
+  };
+}
+
+// Fetch + classify the live ai_threat_feed rows shared by both the feed and
+// report endpoints. Returns the rows bucketed by feed_type plus the raw list.
+async function fetchLiveThreatBuckets(env, { feedTypeFilter = null, limit = 50 } = {}) {
   let dbItems = [];
   try {
-    const rows = type && type !== 'all'
-      ? await env.DB.prepare('SELECT * FROM ai_threat_feed WHERE feed_type=? ORDER BY published_at DESC LIMIT ?').bind(type, limit).all()
+    const rows = feedTypeFilter
+      ? await env.DB.prepare('SELECT * FROM ai_threat_feed WHERE feed_type=? ORDER BY published_at DESC LIMIT ?').bind(feedTypeFilter, limit).all()
       : await env.DB.prepare('SELECT * FROM ai_threat_feed ORDER BY published_at DESC LIMIT ?').bind(limit).all();
     dbItems = (rows.results||[]).map(r => ({ ...r, affected_models:JSON.parse(r.affected_models||'[]'), mitigations:JSON.parse(r.mitigations||'[]') }));
   } catch { /* fallback to static library */ }
 
-  // Merge with curated library
+  const liveByFeedType = { prompt_attack: [], agent_threat: [], vulnerability: [], advisory: [], attack_pattern: [], malware: [] };
+  for (const r of dbItems) (liveByFeedType[r.feed_type] || liveByFeedType.advisory).push(dbRowToCard(r));
+  return { dbItems, liveByFeedType };
+}
+
+// GET /api/ai-security/threat-feed ────────────────────────────────────────────
+export async function handleAIThreatFeed(request, env, authCtx) {
+  const url = new URL(request.url);
+  const type  = url.searchParams.get('type');   // prompt_attacks | agent_threats | ai_cves | model_advisories | all
+  const limit = Math.min(parseInt(url.searchParams.get('limit')||'20'), 50);
+  const feedTypeFilter = type && type !== 'all' ? (TYPE_TO_FEED_TYPE[type] || null) : null;
+  // Recognized `type` shape but unmapped value — no live rows, curated-only fallthrough.
+  const unmappedType = type && type !== 'all' && !feedTypeFilter;
+
+  // First try D1 for source-attributed live threats (ai_threat_feed, populated by
+  // services/aiThreatIngestion.js from the same NVD/CISA-KEV/GitHub CTI pipeline).
+  const { dbItems, liveByFeedType } = unmappedType
+    ? { dbItems: [], liveByFeedType: { prompt_attack: [], agent_threat: [], vulnerability: [], advisory: [], attack_pattern: [], malware: [] } }
+    : await fetchLiveThreatBuckets(env, { feedTypeFilter, limit });
+
+  // The live, source-attributed feed is the paid value-add. Free/anonymous
+  // callers see a capped preview per bucket (curated static library stays
+  // fully visible either way) plus an upgrade CTA — same freemium convention
+  // as vibeCodeScanner's applyTierGate.
+  const tier = tierFromAuth(authCtx);
+  const paid = isPaidTier(tier);
+  let liveLockedCount = 0;
+  if (!paid) {
+    for (const k of Object.keys(liveByFeedType)) {
+      const arr = liveByFeedType[k];
+      if (arr.length > FREE_LIVE_PREVIEW) {
+        liveLockedCount += arr.length - FREE_LIVE_PREVIEW;
+        liveByFeedType[k] = arr.slice(0, FREE_LIVE_PREVIEW);
+      }
+    }
+  }
+
+  // Merge live rows into the curated library so existing frontend pages (which
+  // already read prompt_attack_patterns / agent_threats / ai_vulnerabilities)
+  // pick up real, source-attributed data automatically.
   const curated = {
-    prompt_attack_patterns: AI_THREAT_LIBRARY.prompt_attack_patterns,
-    agent_threats:          AI_THREAT_LIBRARY.agent_threats,
-    ai_vulnerabilities:     AI_THREAT_LIBRARY.ai_vulnerabilities,
+    prompt_attack_patterns: [...AI_THREAT_LIBRARY.prompt_attack_patterns, ...liveByFeedType.prompt_attack],
+    agent_threats:          [...AI_THREAT_LIBRARY.agent_threats, ...liveByFeedType.agent_threat],
+    ai_vulnerabilities:     [...AI_THREAT_LIBRARY.ai_vulnerabilities, ...liveByFeedType.vulnerability, ...liveByFeedType.advisory],
   };
 
   return json({
     success:true,
     feed_generated: new Date().toISOString(),
     source: 'CYBERDUDEBIVASH Sentinel APEX AI Threat Intelligence',
+    data_sources: ['NVD', 'CISA KEV', 'GitHub Advisory Database'],
+    tier: normalizeTier(tier),
+    gated: !paid,
     summary: {
-      total_prompt_attacks: AI_THREAT_LIBRARY.prompt_attack_patterns.length,
-      total_agent_threats:  AI_THREAT_LIBRARY.agent_threats.length,
-      total_ai_cves:        AI_THREAT_LIBRARY.ai_vulnerabilities.length,
-      critical_count:       [...AI_THREAT_LIBRARY.prompt_attack_patterns,...AI_THREAT_LIBRARY.agent_threats].filter(t=>t.severity==='CRITICAL').length,
+      total_prompt_attacks: curated.prompt_attack_patterns.length,
+      total_agent_threats:  curated.agent_threats.length,
+      total_ai_cves:        curated.ai_vulnerabilities.length,
+      critical_count:       [...curated.prompt_attack_patterns,...curated.agent_threats].filter(t=>t.severity==='CRITICAL').length,
     },
     prompt_attack_patterns: type&&type!=='all' ? (type==='prompt_attacks'?curated.prompt_attack_patterns:[]) : curated.prompt_attack_patterns,
     agent_threats:          type&&type!=='all' ? (type==='agent_threats'?curated.agent_threats:[])          : curated.agent_threats,
-    ai_vulnerabilities:     type&&type!=='all' ? (type==='ai_vulns'?curated.ai_vulnerabilities:[])          : curated.ai_vulnerabilities,
+    ai_vulnerabilities:     type&&type!=='all' ? (['ai_cves','ai_vulns','model_advisories'].includes(type)?curated.ai_vulnerabilities:[]) : curated.ai_vulnerabilities,
     community_submissions:  dbItems,
+    ...(liveLockedCount > 0 ? {
+      live_locked_count: liveLockedCount,
+      upgrade: {
+        message: `${liveLockedCount} more live, source-attributed threat ${liveLockedCount===1?'entry':'entries'} (full feed + downloadable report) ${liveLockedCount===1?'is':'are'} available on Starter plan and above.`,
+        cta: 'Upgrade to unlock the full live feed',
+      },
+    } : {}),
+  });
+}
+
+// ─── Report deliverable ───────────────────────────────────────────────────────
+// Source-attribution disclaimer included in every generated report — see also
+// frontend/terms-of-service.html "Third-Party Threat Intelligence Data" section.
+const DATA_SOURCE_DISCLAIMER =
+  'Live entries in this report are derived from public records in the National ' +
+  'Vulnerability Database (NVD), the CISA Known Exploited Vulnerabilities (KEV) ' +
+  'catalog, and the GitHub Advisory Database, filtered for relevance to the AI/LLM ' +
+  'ecosystem. Each live entry links to its original public source record below. ' +
+  'CYBERDUDEBIVASH is not affiliated with NIST, CISA, or GitHub, and this report is ' +
+  'not an official product of those organizations. Curated threat-pattern entries ' +
+  '(no CVE/source link) are independent research by CYBERDUDEBIVASH Sentinel APEX.';
+
+function renderAIThreatReportMarkdown({ curated, liveByFeedType, generatedAt }) {
+  const liveAll = Object.values(liveByFeedType).flat();
+  const curatedAll = [...curated.prompt_attack_patterns, ...curated.agent_threats, ...curated.ai_vulnerabilities];
+  const lines = [];
+  lines.push('# CYBERDUDEBIVASH AI Threat Intelligence Report');
+  lines.push(`*Generated ${generatedAt} — CYBERDUDEBIVASH Sentinel APEX AI Threat Intelligence*`);
+  lines.push('');
+  lines.push('## Data Sources & Attribution');
+  lines.push(DATA_SOURCE_DISCLAIMER);
+  lines.push('');
+  lines.push('## Summary');
+  lines.push(`- Live source-attributed entries: ${liveAll.length}`);
+  lines.push(`- Curated threat-pattern entries: ${curatedAll.length}`);
+  lines.push(`- Critical severity (all entries): ${[...liveAll, ...curatedAll].filter(t=>t.severity==='CRITICAL').length}`);
+  lines.push('');
+  lines.push('## Live AI/LLM Threat Intelligence (source-attributed)');
+  if (!liveAll.length) lines.push('_No live entries currently match the AI/LLM ecosystem filter._');
+  liveAll.forEach((t, i) => {
+    lines.push(`### ${i + 1}. ${t.name}  \`${t.severity}\``);
+    if (t.cve_id) lines.push(`**CVE:** ${t.cve_id}`);
+    if (t.owasp_ref) lines.push(`**OWASP LLM Top 10:** ${t.owasp_ref}`);
+    if (t.source_url) lines.push(`**Source:** ${t.source_url}`);
+    lines.push('');
+    if (t.description) lines.push(t.description);
+    if (t.mitigation) lines.push(`**Mitigation:** ${t.mitigation}`);
+    lines.push('');
+  });
+  lines.push('## Curated Threat Pattern Library');
+  curatedAll.forEach((t, i) => {
+    lines.push(`### ${i + 1}. ${t.name}  \`${t.severity}\``);
+    if (t.cve_id) lines.push(`**CVE:** ${t.cve_id}`);
+    if (t.owasp_ref) lines.push(`**OWASP LLM Top 10:** ${t.owasp_ref}`);
+    lines.push('');
+    if (t.description) lines.push(t.description);
+    if (t.mitigation) lines.push(`**Mitigation:** ${t.mitigation}`);
+    lines.push('');
+  });
+  lines.push('---');
+  lines.push('_This report blends curated threat-pattern research with live, source-attributed vulnerability data. It does not replace a dedicated penetration test or red-team engagement._');
+  return lines.join('\n');
+}
+
+// GET /api/ai-security/threat-feed/report — downloadable digest report ────────
+export async function handleAIThreatReport(request, env, authCtx) {
+  const tier = tierFromAuth(authCtx);
+  const paid = isPaidTier(tier);
+  const generatedAt = new Date().toISOString();
+
+  const { liveByFeedType } = await fetchLiveThreatBuckets(env, { limit: 200 });
+  const curated = {
+    prompt_attack_patterns: AI_THREAT_LIBRARY.prompt_attack_patterns,
+    agent_threats:          AI_THREAT_LIBRARY.agent_threats,
+    ai_vulnerabilities:     AI_THREAT_LIBRARY.ai_vulnerabilities,
+  };
+
+  if (!paid) {
+    const liveAll = Object.values(liveByFeedType).flat();
+    return json({
+      success: true,
+      gated: true,
+      tier: normalizeTier(tier),
+      preview: {
+        generated_at: generatedAt,
+        live_entries_available: liveAll.length,
+        curated_entries_available: curated.prompt_attack_patterns.length + curated.agent_threats.length + curated.ai_vulnerabilities.length,
+        critical_count: liveAll.filter(t => t.severity === 'CRITICAL').length,
+        sample: liveAll.slice(0, 2),
+      },
+      upgrade: {
+        message: 'The full downloadable AI Threat Intelligence Report (all live, source-attributed entries plus the curated pattern library) is available on Starter plan and above.',
+        cta: 'Upgrade to unlock the full report',
+      },
+    });
+  }
+
+  const markdown = renderAIThreatReportMarkdown({ curated, liveByFeedType, generatedAt });
+  const reportId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `r_${Date.now()}`;
+
+  if (new URL(request.url).searchParams.get('download') === '1') {
+    return new Response(markdown, {
+      status: 200,
+      headers: {
+        ...CORS,
+        'Content-Type': 'text/markdown; charset=utf-8',
+        'Content-Disposition': `attachment; filename="cyberdudebivash-ai-threat-report-${reportId}.md"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }
+
+  return json({
+    success: true, gated: false, tier: normalizeTier(tier),
+    report_id: reportId, generated_at: generatedAt, format: 'markdown',
+    report: markdown,
   });
 }
 

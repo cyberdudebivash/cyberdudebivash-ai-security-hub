@@ -966,7 +966,7 @@ a{color:var(--accent);text-decoration:none}
      PRELOADER — hides raw HTML until JS initializes (prevents
      flash of unstyled SOC status bar / nav drawer / v9.0 text)
      ══════════════════════════════════════════════════════════ -->
-<div aria-hidden="true" id="cdb-preloader" role="presentation" style="position:fixed;inset:0;z-index:2147483647;background:#0a0a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease,visibility .5s ease">
+<div aria-hidden="true" id="cdb-preloader" role="presentation" style="position:fixed;inset:0;z-index:2147483647;background:#0a0a1a;display:flex;flex-direction:column;align-items:center;justify-content:center">
 <div style="position:relative;margin-bottom:24px">
 <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(0,212,255,.15);border-top-color:#00d4ff;animation:cdb-spin .8s linear infinite"></div>
 <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px">⚔️</div>
@@ -988,7 +988,7 @@ a{color:var(--accent);text-decoration:none}
 (function(){
   function _removePreloader(){
     var p=document.getElementById('cdb-preloader');
-    if(p){p.classList.add('cdb-preloader-hidden');setTimeout(function(){if(p.parentNode)p.parentNode.removeChild(p);},520);}
+    if(p){p.classList.add('cdb-preloader-hidden');if(p.parentNode)p.parentNode.removeChild(p);}
   }
   // Fire on DOMContentLoaded or 1500ms, whichever is first
   if(document.readyState==='loading'){

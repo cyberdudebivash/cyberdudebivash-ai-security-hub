@@ -70,6 +70,22 @@ export function mapToOwaspLLM(haystack) {
   return null;
 }
 
+// ─── feed_type classification — matches the enum documented in schema_master.sql
+// (vulnerability | attack_pattern | malware | prompt_attack | agent_threat | advisory)
+// and the public `type` query param exposed by handlers/aiThreatIntel.js, so rows
+// land in the bucket the API/frontend actually filter by.
+const PROMPT_ATTACK_TERMS = ['prompt injection', 'jailbreak', 'indirect injection'];
+const AGENT_THREAT_TERMS = [
+  'llm agent', 'llm application', 'mcp server', 'model context protocol',
+  'autogen', 'crewai', 'semantic kernel', 'langgraph', 'excessive agency', 'tool permission',
+];
+
+export function classifyFeedType(haystack, isCve) {
+  if (PROMPT_ATTACK_TERMS.some(t => haystack.includes(t))) return 'prompt_attack';
+  if (AGENT_THREAT_TERMS.some(t => haystack.includes(t))) return 'agent_threat';
+  return isCve ? 'vulnerability' : 'advisory';
+}
+
 function toUnixEpoch(dateStr) {
   if (!dateStr) return Math.floor(Date.now() / 1000);
   const t = Date.parse(dateStr);
@@ -117,14 +133,14 @@ export async function runAIThreatIngestion(env, candidateEntries = []) {
     } catch {
       continue;
     }
-    if (!check.matched) continue;
+    if (!check.matched || !entry.id) continue;
 
     const owaspRef = mapToOwaspLLM(check.haystack);
     const isCve = /^CVE-\d{4}-\d{4,}$/.test(entry.id);
 
     matches.push({
       id: `ai_${entry.id}`,
-      feed_type: 'vulnerability',
+      feed_type: classifyFeedType(check.haystack, isCve),
       title: (entry.title || entry.id || '').slice(0, 200),
       description: (entry.description || '').slice(0, 500),
       severity: entry.severity || 'MEDIUM',
@@ -135,34 +151,48 @@ export async function runAIThreatIngestion(env, candidateEntries = []) {
       owasp_ref: owaspRef,
       source_url: entry.source_url || null,
       published_at: toUnixEpoch(entry.published_at),
-      metadata: JSON.stringify({ ingested_from: 'cti_pipeline_filter', source: entry.source || null }),
+      metadata: JSON.stringify({ ingested_from: 'cti_pipeline_filter', source: entry.source || null, matched_keywords: check.matchedKeywords }),
     });
   }
 
   result.matched = matches.length;
   if (!matches.length) return result;
 
+  const upsertSql = `
+    INSERT INTO ai_threat_feed
+      (id, feed_type, title, description, severity, cve_id, affected_frameworks,
+       iocs, mitigations, owasp_ref, source_url, published_at, metadata)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      severity    = CASE WHEN excluded.severity = 'CRITICAL' THEN 'CRITICAL' ELSE ai_threat_feed.severity END,
+      owasp_ref   = COALESCE(excluded.owasp_ref, ai_threat_feed.owasp_ref),
+      source_url  = COALESCE(excluded.source_url, ai_threat_feed.source_url),
+      metadata    = excluded.metadata
+  `;
+  const bindArgs = (m) => [
+    m.id, m.feed_type, m.title, m.description, m.severity, m.cve_id,
+    m.affected_frameworks, m.iocs, m.mitigations, m.owasp_ref, m.source_url, m.published_at, m.metadata,
+  ];
+
   const BATCH = 25;
   for (let i = 0; i < matches.length; i += BATCH) {
     const batch = matches.slice(i, i + BATCH);
-    const stmts = batch.map(m => db.prepare(`
-      INSERT INTO ai_threat_feed
-        (id, feed_type, title, description, severity, cve_id, affected_frameworks,
-         iocs, mitigations, owasp_ref, source_url, published_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        severity    = CASE WHEN excluded.severity = 'CRITICAL' THEN 'CRITICAL' ELSE ai_threat_feed.severity END,
-        owasp_ref   = COALESCE(excluded.owasp_ref, ai_threat_feed.owasp_ref),
-        source_url  = COALESCE(excluded.source_url, ai_threat_feed.source_url)
-    `).bind(
-      m.id, m.feed_type, m.title, m.description, m.severity, m.cve_id,
-      m.affected_frameworks, m.iocs, m.mitigations, m.owasp_ref, m.source_url, m.published_at,
-    ));
+    const stmts = batch.map(m => db.prepare(upsertSql).bind(...bindArgs(m)));
     try {
       await db.batch(stmts);
       result.inserted += batch.length;
     } catch (e) {
       result.errors.push(`Batch ${i / BATCH}: ${e.message}`);
+      // Fallback: same data, one row at a time, so one bad row doesn't drop
+      // the other 24 — mirrors the resilience tier already used in storeInD1.
+      for (const m of batch) {
+        try {
+          await db.prepare(upsertSql).bind(...bindArgs(m)).run();
+          result.inserted += 1;
+        } catch (e2) {
+          result.errors.push(`Entry ${m.id}: ${e2.message}`);
+        }
+      }
     }
   }
 

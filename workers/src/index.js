@@ -110,7 +110,7 @@ import { handleGetExpansionScore, handleListSegments, handleLogUpsellEvent, hand
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
 import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
-import { handleAIThreatFeed, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+import { handleAIThreatFeed, handleAIThreatReport, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
 
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
@@ -6009,8 +6009,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
 
   // ── v28: AI THREAT INTELLIGENCE FEED (PILLAR 5) ───────────────────────────
+  // Report route must be checked before the startsWith() feed route below.
+  if (path === '/api/ai-security/threat-feed/report' && method === 'GET') {
+    return handleAIThreatReport(request, env, authCtx);
+  }
   if (path.startsWith('/api/ai-security/threat-feed')) {
-    return handleAIThreatFeed(request, env);
+    return handleAIThreatFeed(request, env, authCtx);
   }
 
   // ── v28: AI SECURITY SERVICES (PILLAR 6) ──────────────────────────────────
