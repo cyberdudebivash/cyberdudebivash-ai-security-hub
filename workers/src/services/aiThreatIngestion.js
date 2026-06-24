@@ -137,7 +137,7 @@ function toUnixEpoch(dateStr) {
 }
 
 // ─── Self-healing table guard — converges schema if schema_v28 wasn't applied ─
-async function ensureAIThreatFeedTable(db) {
+export async function ensureAIThreatFeedTable(db) {
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS ai_threat_feed (
@@ -209,6 +209,19 @@ export async function runAIThreatIngestion(env, candidateEntries = []) {
 
   result.matched = matches.length;
   if (!matches.length) return result;
+
+  const upsertResult = await upsertAIThreatFeedRows(db, matches);
+  result.inserted = upsertResult.inserted;
+  result.errors.push(...upsertResult.errors);
+  return result;
+}
+
+// ─── Shared batch upsert — used by the passive CTI-filter pipeline above AND
+// by the dedicated AI Threat Radar (services/aiThreatRadar.js), so both
+// ingestion paths converge on one write path/schema/conflict-resolution rule. ─
+export async function upsertAIThreatFeedRows(db, matches = []) {
+  const result = { inserted: 0, errors: [] };
+  if (!db || !matches.length) return result;
 
   const upsertSql = `
     INSERT INTO ai_threat_feed

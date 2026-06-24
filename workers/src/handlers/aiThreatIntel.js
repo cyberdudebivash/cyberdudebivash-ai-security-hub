@@ -6,6 +6,7 @@
  * GET  /api/ai-security/threat-feed/prompt-attacks -> prompt attack patterns
  * GET  /api/ai-security/threat-feed/agent-threats  -> agent-specific threats
  * GET  /api/ai-security/threat-feed/ai-vulns       -> AI model vulnerabilities
+ * GET  /api/ai-security/threat-feed/radar-status   -> AI Threat Radar health/coverage
  * POST /api/ai-security/threat-feed/submit         -> submit community threat (admin verified)
  *
  * PILLAR 4: AI AGENT SECURITY
@@ -13,6 +14,8 @@
  * GET  /api/ai-security/agents                    -> list registered agents
  * POST /api/ai-security/agents/register           -> register agent in inventory
  */
+
+import { RADAR_STATUS_KV_KEY, AI_RADAR_PACKAGES } from '../services/aiThreatRadar.js';
 
 const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization' };
 const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}});
@@ -155,13 +158,26 @@ export async function handleAIThreatFeed(request, env, authCtx) {
     ai_vulnerabilities:     [...AI_THREAT_LIBRARY.ai_vulnerabilities, ...liveByFeedType.vulnerability, ...liveByFeedType.advisory],
   };
 
+  // Best-effort radar status — single KV read, never blocks/fails the feed response.
+  let radarStatus = null;
+  try {
+    const raw = await env.SECURITY_HUB_KV?.get(RADAR_STATUS_KV_KEY);
+    if (raw) radarStatus = JSON.parse(raw);
+  } catch { /* radar field stays inactive below */ }
+
   return json({
     success:true,
     feed_generated: new Date().toISOString(),
     source: 'CYBERDUDEBIVASH Sentinel APEX AI Threat Intelligence',
-    data_sources: ['NVD', 'CISA KEV', 'GitHub Advisory Database'],
+    data_sources: ['NVD', 'CISA KEV', 'GitHub Advisory Database', 'OSV.dev', 'GitHub Security Advisories API'],
     tier: normalizeTier(tier),
     gated: !paid,
+    radar: {
+      active: !!radarStatus,
+      packages_watched: AI_RADAR_PACKAGES.length,
+      last_scan_at: radarStatus?.last_scan_at || null,
+      signals_found_last_scan: radarStatus?.signals_found ?? 0,
+    },
     summary: {
       total_prompt_attacks: curated.prompt_attack_patterns.length,
       total_agent_threats:  curated.agent_threats.length,
@@ -292,6 +308,32 @@ export async function handleAIThreatReport(request, env, authCtx) {
     success: true, gated: false, tier: normalizeTier(tier),
     report_id: reportId, generated_at: generatedAt, format: 'markdown',
     report: markdown,
+  });
+}
+
+// GET /api/ai-security/threat-feed/radar-status — radar health/coverage ──────
+// Reads the snapshot services/aiThreatRadar.js writes to KV after every run.
+// TTL'd at 6h server-side, so a stalled cron naturally reports `active:false`
+// here instead of serving a stale "last scan" timestamp forever.
+export async function handleAIThreatRadarStatus(request, env) {
+  let status = null;
+  try {
+    const raw = await env.SECURITY_HUB_KV?.get(RADAR_STATUS_KV_KEY);
+    if (raw) status = JSON.parse(raw);
+  } catch { /* fall through to inactive state below */ }
+
+  return json({
+    success: true,
+    radar_active: !!status,
+    sources: ['OSV.dev', 'NVD (targeted keyword search)', 'GitHub Security Advisories API'],
+    packages_watched: AI_RADAR_PACKAGES.length,
+    scan_interval_minutes: 60,
+    last_scan_at: status?.last_scan_at || null,
+    last_scan_duration_ms: status?.duration_ms ?? null,
+    last_scan_signals_found: status?.signals_found ?? 0,
+    last_scan_signals_inserted: status?.signals_inserted ?? 0,
+    source_breakdown: status?.source_breakdown || null,
+    last_scan_errors: status?.errors || [],
   });
 }
 
