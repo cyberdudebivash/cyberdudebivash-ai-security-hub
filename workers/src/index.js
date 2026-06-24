@@ -6768,25 +6768,26 @@ ctx.waitUntil(
 
     // ── HOURLY: AI Threat Radar — dedicated, targeted AI/LLM ecosystem scan
     //    (OSV.dev watchlist + rotated NVD keyword search + GitHub Advisory API),
-    //    independent of the generic CTI pipeline above.
-    //    After each scan, auto-generates and publishes the premium AI threat
-    //    intelligence report to KV so it is always current and immediately
-    //    available via GET /api/ai-security/threat-feed/latest-report. ──
+    //    independent of the generic CTI pipeline above. ──
     ctx.waitUntil(
       runAIThreatRadar(env)
-        .then(async r => {
-          console.log('[CRON] AI Threat Radar:', JSON.stringify({
-            sources: r.sources, matched: r.matched, inserted: r.inserted,
-            errors: r.errors, duration_ms: r.duration_ms,
-          }));
-          // Continuously publish the premium report after every radar run
-          const published = await generateAndPublishAIThreatReport(env).catch(() => null);
-          if (published) {
-            console.log('[CRON] AI Threat Report published:', published.report_id,
-              `| risk=${published.risk_level} | threats=${published.total_threats}`);
-          }
-        })
+        .then(r => console.log('[CRON] AI Threat Radar:', JSON.stringify({
+          sources: r.sources, matched: r.matched, inserted: r.inserted,
+          errors: r.errors, duration_ms: r.duration_ms,
+        })))
         .catch(e => console.error('[CRON] AI Threat Radar error:', e?.message))
+    );
+
+    // ── HOURLY: AI Threat Report — runs INDEPENDENTLY of radar scan so the
+    //    report always publishes to KV even when external APIs are down.
+    //    Uses curated library as baseline + any live rows already in D1. ──
+    ctx.waitUntil(
+      generateAndPublishAIThreatReport(env)
+        .then(r => {
+          if (r) console.log('[CRON] AI Threat Report published:', r.report_id,
+            `| risk=${r.risk_level} | threats=${r.total_threats} | live=${r.live_entries}`);
+        })
+        .catch(e => console.error('[CRON] AI Threat Report error:', e?.message))
     );
 
     // ── DAILY (6 AM): Bulk backfill — refresh the FULL CISA KEV catalog and

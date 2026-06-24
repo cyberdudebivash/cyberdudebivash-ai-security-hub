@@ -17,6 +17,7 @@
  */
 
 import { RADAR_STATUS_KV_KEY, AI_RADAR_PACKAGES, runAIThreatRadar } from '../services/aiThreatRadar.js';
+import { ensureAIThreatFeedTable } from '../services/aiThreatIngestion.js';
 
 const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization' };
 const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}});
@@ -107,6 +108,7 @@ function dbRowToCard(r) {
 async function fetchLiveThreatBuckets(env, { feedTypeFilter = null, limit = 50 } = {}) {
   let dbItems = [];
   try {
+    if (env?.DB) await ensureAIThreatFeedTable(env.DB);
     const rows = feedTypeFilter
       ? await env.DB.prepare('SELECT * FROM ai_threat_feed WHERE feed_type=? ORDER BY published_at DESC LIMIT ?').bind(feedTypeFilter, limit).all()
       : await env.DB.prepare('SELECT * FROM ai_threat_feed ORDER BY published_at DESC LIMIT ?').bind(limit).all();
@@ -165,6 +167,15 @@ export async function handleAIThreatFeed(request, env, authCtx) {
     const raw = await env.SECURITY_HUB_KV?.get(RADAR_STATUS_KV_KEY);
     if (raw) radarStatus = JSON.parse(raw);
   } catch { /* radar field stays inactive below */ }
+
+  // Background bootstrap: if no published report exists yet (e.g. before first cron),
+  // generate one immediately from the curated library so the report endpoint is
+  // always available to paying customers. Fire-and-forget — never blocks the feed.
+  if (env.SECURITY_HUB_KV) {
+    env.SECURITY_HUB_KV.get(LATEST_REPORT_KV_KEY)
+      .then(existing => { if (!existing) generateAndPublishAIThreatReport(env).catch(() => {}); })
+      .catch(() => {});
+  }
 
   return json({
     success:true,
@@ -683,18 +694,25 @@ function renderAIThreatReportMarkdown({ curated, liveByFeedType, generatedAt, re
 }
 
 // Generate and publish the latest premium report to KV for real-time access.
-// Called after each radar scan from the cron handler so the report is always fresh.
+// Always succeeds — curated library is the baseline, live D1 rows augment it.
+// Called from cron (independently of radar scan) AND on-demand on first page hit.
 export async function generateAndPublishAIThreatReport(env) {
   if (!env?.SECURITY_HUB_KV) return null;
+  const generatedAt = new Date().toISOString();
+  const reportId = `RPT-${Date.now().toString(36).toUpperCase()}-APEX`;
+  // Always use curated library as baseline — safe even with no D1 data
+  const curated = {
+    prompt_attack_patterns: AI_THREAT_LIBRARY.prompt_attack_patterns,
+    agent_threats:          AI_THREAT_LIBRARY.agent_threats,
+    ai_vulnerabilities:     AI_THREAT_LIBRARY.ai_vulnerabilities,
+  };
+  // Augment with live D1 rows (best-effort — failure is non-fatal)
+  let liveByFeedType = { prompt_attack: [], agent_threat: [], vulnerability: [], advisory: [], attack_pattern: [], malware: [] };
   try {
-    const generatedAt = new Date().toISOString();
-    const reportId = `RPT-${Date.now().toString(36).toUpperCase()}-APEX`;
-    const { liveByFeedType } = await fetchLiveThreatBuckets(env, { limit: 200 });
-    const curated = {
-      prompt_attack_patterns: AI_THREAT_LIBRARY.prompt_attack_patterns,
-      agent_threats:          AI_THREAT_LIBRARY.agent_threats,
-      ai_vulnerabilities:     AI_THREAT_LIBRARY.ai_vulnerabilities,
-    };
+    const buckets = await fetchLiveThreatBuckets(env, { limit: 200 });
+    liveByFeedType = buckets.liveByFeedType;
+  } catch { /* live rows unavailable — curated baseline still produces valid report */ }
+  try {
     const markdown = renderAIThreatReportMarkdown({ curated, liveByFeedType, generatedAt, reportId });
     const liveAll = Object.values(liveByFeedType).flat();
     const allThreats = [...liveAll, ...curated.prompt_attack_patterns, ...curated.agent_threats, ...curated.ai_vulnerabilities];
@@ -711,7 +729,10 @@ export async function generateAndPublishAIThreatReport(env) {
     };
     await env.SECURITY_HUB_KV.put(LATEST_REPORT_KV_KEY, JSON.stringify(meta), { expirationTtl: 86400 * 2 });
     return meta;
-  } catch { return null; }
+  } catch (e) {
+    console.error('[AIThreatReport] publish failed:', e?.message);
+    return null;
+  }
 }
 
 // GET /api/ai-security/threat-feed/report — premium downloadable report ───────
@@ -822,10 +843,34 @@ export async function handleLatestPublishedReport(request, env, authCtx) {
   }
 
   if (!cached) {
-    // No cached report yet — generate one on-demand
+    // No cached report yet (pre-cron or fresh deployment) — generate on-demand.
+    // generateAndPublishAIThreatReport always succeeds with curated baseline data.
     cached = await generateAndPublishAIThreatReport(env);
   }
-  if (!cached) return err('Report generation temporarily unavailable', 503);
+  // Ultimate fallback: build an in-memory report from curated library alone
+  // so paid customers are never served a 503 error.
+  if (!cached) {
+    const generatedAt = new Date().toISOString();
+    const reportId = `RPT-${Date.now().toString(36).toUpperCase()}-APEX-FALLBACK`;
+    const curated = {
+      prompt_attack_patterns: AI_THREAT_LIBRARY.prompt_attack_patterns,
+      agent_threats:          AI_THREAT_LIBRARY.agent_threats,
+      ai_vulnerabilities:     AI_THREAT_LIBRARY.ai_vulnerabilities,
+    };
+    const emptyLive = { prompt_attack: [], agent_threat: [], vulnerability: [], advisory: [], attack_pattern: [], malware: [] };
+    const allThreats = [...curated.prompt_attack_patterns, ...curated.agent_threats, ...curated.ai_vulnerabilities];
+    cached = {
+      report_id:     reportId,
+      generated_at:  generatedAt,
+      risk_level:    computeRiskLevel(allThreats),
+      total_threats: allThreats.length,
+      critical_count: allThreats.filter(t => t.severity === 'CRITICAL').length,
+      high_count:    allThreats.filter(t => t.severity === 'HIGH').length,
+      live_entries:  0,
+      format:        'markdown',
+      report:        renderAIThreatReportMarkdown({ curated, liveByFeedType: emptyLive, generatedAt, reportId }),
+    };
+  }
 
   const url = new URL(request.url);
   if (url.searchParams.get('download') === '1') {
@@ -879,8 +924,19 @@ export async function handleAIThreatRadarStatus(request, env) {
 // status snapshot — just invoked synchronously over HTTP instead of waitUntil.
 export async function handleAIThreatRadarScanNow(request, env, authCtx) {
   if (!authCtx?.isAdmin) return err('Admin access required', 403);
+  const triggeredAt = new Date().toISOString();
   const result = await runAIThreatRadar(env);
-  return json({ success: true, triggered_at: new Date().toISOString(), ...result });
+  // Always publish a fresh report immediately after the forced scan
+  const published = await generateAndPublishAIThreatReport(env).catch(() => null);
+  return json({
+    success: true,
+    triggered_at: triggeredAt,
+    // Spread radar result fields at top level for backward compat
+    ...result,
+    report_published: !!published,
+    report_id: published?.report_id || null,
+    report_risk_level: published?.risk_level || null,
+  });
 }
 
 // POST /api/ai-security/agents/scan ───────────────────────────────────────────
