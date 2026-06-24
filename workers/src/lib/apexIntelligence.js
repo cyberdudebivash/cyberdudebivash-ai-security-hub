@@ -280,12 +280,13 @@ export function analyzeAttackerROI(findings = [], sector = 'technology') {
   const hasKev = findings.some(f => f.in_kev || f.cisa_kev);
   const profile = SECTOR_RISK_MULTIPLIERS[sector.toLowerCase()] || SECTOR_RISK_MULTIPLIERS.technology;
 
+  const findingText = f => (f.title || '') + ' ' + (f.description || '');
   // Select most likely attack type based on findings
   let primaryAttackType = 'credential_stuffing';
-  if (/ransomware|rce|backdoor/i.test(JSON.stringify(findings))) primaryAttackType = 'ransomware_enterprise';
+  if (findings.some(f => /ransomware|rce|backdoor/i.test(findingText(f)))) primaryAttackType = 'ransomware_enterprise';
   else if (crits > 1 || hasKev) primaryAttackType = 'ransomware_enterprise';
-  else if (/exfil|data|pii/i.test(JSON.stringify(findings))) primaryAttackType = 'data_exfiltration_pii';
-  else if (/phish|spf|dmarc/i.test(JSON.stringify(findings))) primaryAttackType = 'bec_fraud';
+  else if (findings.some(f => /exfil|data|pii/i.test(findingText(f)))) primaryAttackType = 'data_exfiltration_pii';
+  else if (findings.some(f => /phish|spf|dmarc/i.test(findingText(f)))) primaryAttackType = 'bec_fraud';
 
   const roi = ATTACKER_ROI_DB[primaryAttackType];
   const amplifiedReturn = Math.round(roi.expected_return_usd * profile.multiplier);
@@ -311,14 +312,15 @@ export function assessQuantumReadiness(cryptoFindings = [], tlsVersion = null) {
   const risks    = [];
   const actions  = [];
 
+  const cryptoText = f => (f.title || '') + ' ' + (f.description || '');
   // Check for weak crypto in findings
-  if (/rsa.2048|rsa-2048/i.test(JSON.stringify(cryptoFindings))) {
+  if (cryptoFindings.some(f => /rsa.2048|rsa-2048/i.test(cryptoText(f)))) {
     const r = QUANTUM_RISK_INDICATORS.rsa_2048;
     riskScore += 35;
     risks.push({ algorithm: 'RSA-2048', ...r });
     actions.push(r.recommendation);
   }
-  if (/ecdsa|ecdh|elliptic/i.test(JSON.stringify(cryptoFindings))) {
+  if (cryptoFindings.some(f => /ecdsa|ecdh|elliptic/i.test(cryptoText(f)))) {
     const r = QUANTUM_RISK_INDICATORS.ecdsa_256;
     riskScore += 25;
     risks.push({ algorithm: 'ECDSA/ECDH P-256', ...r });
@@ -349,12 +351,16 @@ export function assessQuantumReadiness(cryptoFindings = [], tlsVersion = null) {
 
 // ─── Predictive threat campaign detection ─────────────────────────────────────
 export function detectThreatCampaignPatterns(findings = [], sector = 'technology', recentEvents = []) {
-  const text         = (JSON.stringify(findings) + ' ' + JSON.stringify(recentEvents)).toLowerCase();
+  // Build a searchable text from structured fields only (not full JSON serialization)
+  const findingText = findings.map(f => ((f.title || '') + ' ' + (f.description || '') + ' ' + (f.id || '')).toLowerCase()).join(' ');
+  const eventText   = recentEvents.map(e => (typeof e === 'string' ? e : (e.title || '')).toLowerCase()).join(' ');
+  const text        = findingText + ' ' + eventText;
   const detectedThreats = [];
 
   EMERGING_THREATS_2025.forEach(threat => {
-    const ttpMatch  = threat.ttps.some(t => text.includes(t.toLowerCase().replace('t','')));
-    const keyMatch  = threat.description.split(' ').slice(0, 5).some(w => text.includes(w.toLowerCase()));
+    // Match TTP IDs exactly (e.g. T1566 → look for literal 't1566')
+    const ttpMatch  = threat.ttps.some(t => text.includes(t.toLowerCase()));
+    const keyMatch  = threat.description.split(' ').slice(0, 5).some(w => w.length > 4 && text.includes(w.toLowerCase()));
     if (ttpMatch || keyMatch) {
       detectedThreats.push({
         threat_id:    threat.id,

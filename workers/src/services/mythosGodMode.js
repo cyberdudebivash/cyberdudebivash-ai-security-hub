@@ -190,10 +190,10 @@ async function phase2_cyberBrain(env, intelItems) {
       const brainResult = await runCyberBrainAnalysis(env, {
         findings,
         vulns:  [{ id: intel.cve_id, cvss: parseFloat(intel.cvss_score) || 7.5,
-                   severity: intel.severity, kev: !!intel.cisa_kev }],
+                   severity: intel.severity, in_kev: !!intel.cisa_kev }],
         assets: { type: 'web_app', exposed: true },
         sector: 'technology',
-        domain: intel.affected_products || 'platform',
+        target: intel.affected_products || 'platform',
       });
 
       // Collect MITRE techniques
@@ -208,9 +208,9 @@ async function phase2_cyberBrain(env, intelItems) {
       const entry = {
         cve_id:          intel.cve_id || intel.id,
         severity:        intel.severity,
-        risk_score:      brainResult?.risk_score ?? 8.5,
-        attack_paths:    brainResult?.attack_paths?.paths?.length ?? 0,
-        threat_actors:   brainResult?.threat_actors?.actors?.length ?? 0,
+        risk_score:      brainResult?.riskScore ?? 8.5,
+        attack_paths:    brainResult?.attackPaths?.length ?? 0,
+        threat_actors:   brainResult?.threatActors?.length ?? 0,
         mitre_techniques: techniques.length,
         urgency:         brainResult?.urgency || 'HIGH',
       };
@@ -1290,10 +1290,6 @@ export async function runGodMode(env, opts = {}) {
     soar_rules:       phaseResults.phase9.result?.rules_deployed || 0,
   };
 
-  // ── Phase 12 ──────────────────────────────────────────────────────────────
-  phaseResults.phase12 = await safePhase('FINALIZE',
-    () => phase12_finalize(env, jobId, summary, phaseResults, startedAt));
-
   // ── Phases 13–16 run in parallel (v5.0 God Mode extensions) ──────────────
   const [p13, p14, p15, p16] = await Promise.all([
     safePhase('ADVERSARIAL_AI_RED_TEAM', () => phase13_adversarialAIRedTeam(env, opts)),
@@ -1306,11 +1302,16 @@ export async function runGodMode(env, opts = {}) {
   phaseResults.phase15 = p15;
   phaseResults.phase16 = p16;
 
+  // ── Phase 12 finalizes after all 16 phases complete so the KV report is complete ──
+  phaseResults.phase12 = await safePhase('FINALIZE',
+    () => phase12_finalize(env, jobId, summary, phaseResults, startedAt));
+
   summary.duration_ms  = Date.now() - new Date(startedAt).getTime();
   const totalErrored   = Object.values(phaseResults).filter(p => p.status === 'ERROR').length;
   summary.phases_complete = Object.values(phaseResults).filter(p => p.status === 'COMPLETE').length;
   summary.phases_errored  = totalErrored;
-  summary.status           = totalErrored < 8 ? 'COMPLETE' : 'PARTIAL';
+  // PARTIAL if more than 25% of phases (>4 of 16) errored
+  summary.status           = totalErrored <= 4 ? 'COMPLETE' : 'PARTIAL';
 
   return {
     job_id: jobId,

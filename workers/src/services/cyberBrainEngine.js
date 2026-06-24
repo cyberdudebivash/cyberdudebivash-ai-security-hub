@@ -1,5 +1,5 @@
 import { ok, fail } from '../lib/response.js';
-import { callClaude } from '../core/mythosAIProvider.js';
+import { routeAICall } from '../core/aiProviderRouter.js';
 
 /**
  * CYBERDUDEBIVASH AI Security Hub — CyberBrain Engine v20.0
@@ -237,15 +237,15 @@ export function predictAttackPaths(findings = [], vulns = [], riskScore = 0) {
   // Build trigger set from findings
   for (const f of findings) {
     const text = (f.title + ' ' + (f.description || '')).toLowerCase();
-    if (/inject|rce|exec/i.test(text))           triggers.add('injection');
-    if (/spf|dkim|dmarc/i.test(text))            triggers.add('spf'); triggers.add('dmarc'); triggers.add('dkim');
-    if (/mfa|multi.?factor/i.test(text))         triggers.add('mfa');
-    if (/cred|password|credential/i.test(text))  triggers.add('credential');
-    if (/privilege|admin|root/i.test(text))      triggers.add('privilege');
-    if (/external|internet|public/i.test(text))  triggers.add('external');
-    if (/ransomware/i.test(text))                triggers.add('ransomware');
-    if (/kev|exploit/i.test(text))               triggers.add('kev'); triggers.add('public_exploit');
-    if (/supply|third.?party|vendor/i.test(text))triggers.add('supply_chain');
+    if (/inject|rce|exec/i.test(text))            triggers.add('injection');
+    if (/spf|dkim|dmarc/i.test(text))            { triggers.add('spf'); triggers.add('dmarc'); triggers.add('dkim'); }
+    if (/mfa|multi.?factor/i.test(text))          triggers.add('mfa');
+    if (/cred|password|credential/i.test(text))   triggers.add('credential');
+    if (/privilege|admin|root/i.test(text))       triggers.add('privilege');
+    if (/external|internet|public/i.test(text))   triggers.add('external');
+    if (/ransomware/i.test(text))                 triggers.add('ransomware');
+    if (/kev|exploit/i.test(text))               { triggers.add('kev'); triggers.add('public_exploit'); }
+    if (/supply|third.?party|vendor/i.test(text)) triggers.add('supply_chain');
     if (f.severity === 'CRITICAL')               triggers.add('cve_critical');
   }
   for (const v of vulns) {
@@ -428,7 +428,7 @@ Risk score: ${riskScore}/100 (${riskLevel})
 Write a 2-paragraph executive briefing: (1) current threat posture, (2) top 3 immediate actions.
 Be specific, actionable, authoritative. No fluff.`;
 
-      const result = await callClaude(env, { prompt, tier: tier || 'PRO', max_tokens: 300, temperature: 0.2 });
+      const result = await routeAICall(env, { prompt, task_type: 'executive', tier: tier || 'PRO', max_tokens: 300, temperature: 0.2 });
       aiNarrative = result?.content || null;
     } catch {}
   }
