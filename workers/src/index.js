@@ -110,7 +110,7 @@ import { handleGetExpansionScore, handleListSegments, handleLogUpsellEvent, hand
 import { handleRegisterAIAsset, handleScanAIAsset, handleASPMDashboard, handleListAIAssets } from './handlers/aiSecurityASPM.js';
 import { handleGovernanceAssess, handleGovernanceAnswer, handleGetGovernanceAssessment, handleListFrameworks } from './handlers/aiGovernance.js';
 import { handleRedTeamEngage, handleRedTeamAttack, handleRedTeamReport, handleGetRedTeamEngagement } from './handlers/aiRedTeam.js';
-import { handleAIThreatFeed, handleAIThreatReport, handleAIThreatRadarStatus, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
+import { handleAIThreatFeed, handleAIThreatReport, handleAIThreatRadarStatus, handleAIThreatRadarScanNow, handleScanAgent, handleRegisterAgent, handleListAgents } from './handlers/aiThreatIntel.js';
 import { runAIThreatRadar } from './services/aiThreatRadar.js';
 
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
@@ -6016,6 +6016,9 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path === '/api/ai-security/threat-feed/radar-status' && method === 'GET') {
     return handleAIThreatRadarStatus(request, env);
+  }
+  if (path === '/api/ai-security/threat-feed/radar-scan-now' && method === 'POST') {
+    return handleAIThreatRadarScanNow(request, env, authCtx);
   }
   if (path.startsWith('/api/ai-security/threat-feed')) {
     return handleAIThreatFeed(request, env, authCtx);

@@ -5,8 +5,9 @@
  * model_advisories) must map onto the real feed_type enum stored in D1
  * (prompt_attack | agent_threat | vulnerability | advisory), and matching rows
  * must actually appear in the response arrays the frontend reads from. */
-import { describe, it, expect } from 'vitest';
-import { handleAIThreatFeed } from '../src/handlers/aiThreatIntel.js';
+import { describe, it, expect, vi } from 'vitest';
+import { handleAIThreatFeed, handleAIThreatRadarScanNow } from '../src/handlers/aiThreatIntel.js';
+import * as aiThreatRadar from '../src/services/aiThreatRadar.js';
 
 function memDB(seedRows = []) {
   const rows = seedRows;
@@ -98,5 +99,40 @@ describe('handleAIThreatFeed type normalization', () => {
     expect(body.agent_threats.some(t => t.id === 'ai_GHSA-test-0001')).toBe(true);
     expect(body.ai_vulnerabilities.some(t => t.id === 'ai_CVE-2024-5184')).toBe(true);
     expect(body.ai_vulnerabilities.some(t => t.id === 'ai_GHSA-test-0002')).toBe(true);
+  });
+});
+
+describe('handleAIThreatRadarScanNow', () => {
+  it('rejects a non-admin caller with 403 and does not run the radar', async () => {
+    const spy = vi.spyOn(aiThreatRadar, 'runAIThreatRadar').mockResolvedValue({ matched: 0, inserted: 0, sources: {}, errors: [] });
+    const env = { DB: {}, SECURITY_HUB_KV: {} };
+    const res = await handleAIThreatRadarScanNow({}, env, { isAdmin: false });
+    expect(res.status).toBe(403);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('rejects an anonymous caller (no authCtx) with 403', async () => {
+    const spy = vi.spyOn(aiThreatRadar, 'runAIThreatRadar').mockResolvedValue({ matched: 0, inserted: 0, sources: {}, errors: [] });
+    const res = await handleAIThreatRadarScanNow({}, {}, null);
+    expect(res.status).toBe(403);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('runs the radar for an admin caller and returns its result merged with success/triggered_at', async () => {
+    const fakeResult = { matched: 3, inserted: 3, sources: { osv: 1, nvd_radar: 1, github_advisory_api: 1 }, errors: [] };
+    const spy = vi.spyOn(aiThreatRadar, 'runAIThreatRadar').mockResolvedValue(fakeResult);
+    const env = { DB: {}, SECURITY_HUB_KV: {} };
+    const res = await handleAIThreatRadarScanNow({}, env, { isAdmin: true });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(spy).toHaveBeenCalledWith(env);
+    expect(body.success).toBe(true);
+    expect(typeof body.triggered_at).toBe('string');
+    expect(body.matched).toBe(3);
+    expect(body.inserted).toBe(3);
+    expect(body.sources).toEqual(fakeResult.sources);
+    spy.mockRestore();
   });
 });
