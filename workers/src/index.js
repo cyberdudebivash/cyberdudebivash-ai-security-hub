@@ -1033,16 +1033,23 @@ function isAdminAuthorized(request, env) {
   return diff === 0;
 }
 
+// ── Binding alias normalisation ──────────────────────────────────────────────
+// wrangler.toml binds D1 as SECURITY_HUB_DB and KV as SECURITY_HUB_KV.
+// All handlers reference env.DB and env.KV (shorter aliases). Must run at the
+// top of EVERY exported entry point (fetch, scheduled, queue) — Cloudflare
+// invokes scheduled()/queue() directly with the raw env, they never pass
+// through fetch() first, so without this every cron-triggered job (ingestion,
+// AI Threat Radar, etc.) silently no-ops on a falsy env.DB.
+export function normalizeBindings(env) {
+  if (env.SECURITY_HUB_DB && !env.DB) env.DB = env.SECURITY_HUB_DB;
+  if (env.SECURITY_HUB_KV && !env.KV) env.KV = env.SECURITY_HUB_KV;
+  if (env.SECURITY_HUB_KV && !env.CDB_KV) env.CDB_KV = env.SECURITY_HUB_KV; // alias for manualPayments.js
+}
+
 // ─── Main fetch handler ───────────────────────────────────────────────────────
 export default {
   async fetch(request, env, ctx) {
-    // ── Binding alias normalisation ──────────────────────────────────────────
-    // wrangler.toml binds D1 as SECURITY_HUB_DB and KV as SECURITY_HUB_KV.
-    // All handlers reference env.DB and env.KV (shorter aliases).
-    // Normalise here so every downstream handler works without change.
-    if (env.SECURITY_HUB_DB && !env.DB) env.DB = env.SECURITY_HUB_DB;
-    if (env.SECURITY_HUB_KV && !env.KV) env.KV = env.SECURITY_HUB_KV;
-    if (env.SECURITY_HUB_KV && !env.CDB_KV) env.CDB_KV = env.SECURITY_HUB_KV; // alias for manualPayments.js
+    normalizeBindings(env);
 
     // ── P0 FIX: Binding validation — fail fast before any handler runs ──────
     // Prevents cryptic "Cannot read properties of undefined (reading 'prepare')"
@@ -6675,11 +6682,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
   // ── Cloudflare Queue consumer ─────────────────────────────────────────────
   async queue(batch, env) {
+    normalizeBindings(env);
     await processQueueBatch(batch, env);
   },
 
   // ── Cron scheduler ───────────────────────────────────────────────────────
   async scheduled(event, env, ctx) {
+    normalizeBindings(env);
     const cron = event.cron;
     console.log('[CRON] Trigger:', cron, event.scheduledTime);
 
