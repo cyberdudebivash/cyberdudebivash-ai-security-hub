@@ -224,11 +224,16 @@ def test_container_app_boots_and_health_ok(monkeypatch):
     pytest.importorskip("sqlalchemy")
     monkeypatch.setenv("SECRET_KEY", secrets.token_hex(32))
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("PAYMENT_ADMIN_SECRET", secrets.token_hex(32))
     for p in (REPO_ROOT, AI_CORE):
         if p not in sys.path:
             sys.path.insert(0, p)
-    for mod in [m for m in list(sys.modules) if m == "core" or m.startswith("core.")]:
-        del sys.modules[mod]
+    # Clear any cached core.* and generated_app.* modules so monkeypatched
+    # env vars are visible on the fresh import.
+    for mod in list(sys.modules):
+        if mod == "core" or mod.startswith("core.") or \
+                mod == "generated_app" or mod.startswith("generated_app."):
+            del sys.modules[mod]
 
     import importlib
 

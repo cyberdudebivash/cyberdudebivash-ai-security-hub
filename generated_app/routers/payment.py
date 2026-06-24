@@ -29,12 +29,6 @@ router = APIRouter(prefix="/payment", tags=["Payment"])
 # ── Data storage ──────────────────────────────────────────────────────────────
 DATA_DIR = Path(os.getenv("PAYMENT_DATA_DIR", "/data"))
 PAYMENTS_FILE = DATA_DIR / "payments.json"
-ADMIN_SECRET = os.getenv("PAYMENT_ADMIN_SECRET")
-if not ADMIN_SECRET:
-    raise RuntimeError(
-        "PAYMENT_ADMIN_SECRET env var is required — no insecure default. "
-        "Set it before starting this service."
-    )
 
 VALID_METHODS = {"UPI", "BANK", "PAYPAL", "CRYPTO_BNB", "CRYPTO_ETH"}
 VALID_STATUSES = {"pending", "approved", "rejected"}
@@ -94,7 +88,15 @@ def _generate_record_id(txn_id: str, email: str) -> str:
 
 
 def _verify_admin(x_admin_secret: str = Header(default="")):
-    if x_admin_secret != ADMIN_SECRET:
+    # Lazy check — fail at request time so the module is importable in CI/test;
+    # the endpoint still refuses all requests if the secret is unconfigured.
+    admin_secret = os.getenv("PAYMENT_ADMIN_SECRET")
+    if not admin_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="PAYMENT_ADMIN_SECRET not configured — admin endpoints disabled.",
+        )
+    if x_admin_secret != admin_secret:
         raise HTTPException(status_code=403, detail="Invalid admin secret")
     return True
 
