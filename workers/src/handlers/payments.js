@@ -26,6 +26,7 @@ import { trackEvent }         from './analytics.js';
 import { sendPurchaseConfirmation } from '../services/emailEngine.js';
 import { createInvoice }            from '../services/v24/billingEngine.js';
 import { triggerPostPurchase }      from '../services/lifecycleEngine.js';
+import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -722,6 +723,23 @@ export async function handleRazorpayWebhook(request, env) {
               }).catch(() => {})
             : Promise.resolve(),
         ]).catch(() => {});
+      }
+    }
+
+    // Subscription checkout (/api/subscription/checkout) carries tenant_id+plan
+    // in the order notes — apply the tier upgrade here. Independent of the
+    // per-report `payments` row above (subscription checkout never writes one).
+    const subTenantId = payload.notes?.tenant_id;
+    const subPlanRaw  = payload.notes?.plan;
+    if (env.DB && subTenantId && subPlanRaw) {
+      const tierKey = normalizeTier(subPlanRaw);
+      const def     = getTierDef(tierKey);
+      if (def && !def.free) {
+        await env.DB.prepare(
+          `UPDATE users SET tier = ?, updated_at = datetime('now') WHERE id = ?`
+        ).bind(tierKey, subTenantId).run().catch(e =>
+          console.error('[Webhook] Tier upgrade failed:', e.message)
+        );
       }
     }
   }

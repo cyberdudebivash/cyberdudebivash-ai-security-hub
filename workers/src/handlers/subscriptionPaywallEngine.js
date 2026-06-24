@@ -259,15 +259,26 @@ export async function handleSubscriptionCheckout(request, env, authCtx = {}) {
   catch { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: cors }); }
 
   const { plan, email, coupon } = body;
-  const tierKey = normalizeTier(plan);
-  const def     = getTierDef(tierKey);
+  const tierKey  = normalizeTier(plan);
+  const def      = getTierDef(tierKey);
+  const tenantId = authCtx?.userId;
 
   if (!def || def.free) {
     return new Response(JSON.stringify({ error: 'Invalid plan or plan is free' }), { status: 400, headers: cors });
   }
 
+  // A paid tier must land on a real account row (UPDATE users SET tier WHERE id = ?
+  // in the webhook needs a concrete id) — anonymous checkout would silently take
+  // payment with nowhere to apply the upgrade.
+  if (!tenantId) {
+    return new Response(JSON.stringify({
+      error: 'Login required before checkout',
+      hint:  'Sign in, then retry — the subscription tier is applied to your account on payment confirmation.',
+    }), { status: 401, headers: cors });
+  }
+
   try {
-    const order = await createRazorpaySubscription(env, tierKey, def, email);
+    const order = await createRazorpaySubscription(env, tierKey, def, email, tenantId);
     return new Response(JSON.stringify({
       processor:  'razorpay',
       order_id:   order.id,
@@ -286,7 +297,7 @@ export async function handleSubscriptionCheckout(request, env, authCtx = {}) {
 }
 
 // ─── Razorpay order creation ─────────────────────────────────────────────────
-async function createRazorpaySubscription(env, tierKey, def, email) {
+async function createRazorpaySubscription(env, tierKey, def, email, tenantId) {
   const keyId     = env.RAZORPAY_KEY_ID;
   const keySecret = env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) throw new Error('Razorpay credentials not configured');
@@ -304,7 +315,9 @@ async function createRazorpaySubscription(env, tierKey, def, email) {
       amount:   amountPaise,
       currency: 'INR',
       receipt:  receiptId,
-      notes:    { plan: tierKey, email: email || '', platform: 'cyberdudebivash.in' },
+      // tenant_id is read back by the /api/webhooks/razorpay payment.captured
+      // handler to apply the tier upgrade to the right account.
+      notes:    { plan: tierKey, email: email || '', tenant_id: tenantId, platform: 'cyberdudebivash.in' },
     }),
   });
 
