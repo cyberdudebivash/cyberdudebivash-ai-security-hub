@@ -5033,6 +5033,36 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleEnterpriseStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
+    // ── P4.0-006 Enterprise Intelligence API ─────────────────────────────────
+
+    // GET /api/enterprise/intelligence — risk-scored signals (min tier: PRO)
+    if (path === '/api/enterprise/intelligence' && method === 'GET') {
+      const { handleEnterpriseIntelligence } = await import('./handlers/enterpriseIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleEnterpriseIntelligence(request, env, authCtx), request));
+    }
+
+    // GET /api/enterprise/risk — risk-ranked signals with distribution
+    if (path === '/api/enterprise/risk' && method === 'GET') {
+      const { handleEnterpriseRisk } = await import('./handlers/enterpriseIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleEnterpriseRisk(request, env, authCtx), request));
+    }
+
+    // GET /api/enterprise/campaigns — campaign intelligence with sector targeting
+    if (path === '/api/enterprise/campaigns' && method === 'GET') {
+      const { handleEnterpriseCampaigns } = await import('./handlers/enterpriseIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleEnterpriseCampaigns(request, env, authCtx), request));
+    }
+
+    // GET /api/enterprise/actors — actor intelligence with MITRE ATT&CK correlation
+    if (path === '/api/enterprise/actors' && method === 'GET') {
+      const { handleEnterpriseActors } = await import('./handlers/enterpriseIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleEnterpriseActors(request, env, authCtx), request));
+    }
+
     // ── Global Scale Engine (Phase 6) ─────────────────────────────────────
 
     // GET /api/global/pricing — geo-detected multi-currency pricing (public)
