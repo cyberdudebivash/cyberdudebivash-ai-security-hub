@@ -143,7 +143,7 @@ export function scoreCVE(entry, epssScore = null, activeActors = []) {
   const breakdown = {
     cvss_contribution:      Math.min(35, cvss >= 9 ? 35 : cvss >= 8 ? 28 : cvss >= 7 ? 20 : cvss >= 6 ? 12 : cvss > 0 ? 5 : 0),
     epss_contribution:      epssScore !== null ? Math.round(epssScore * 20) : 0,
-    exploit_contribution:   exploitStatus === 'confirmed' ? 25 : exploitStatus === 'available' ? 15 : exploitStatus === 'poc' ? 8 : 0,
+    exploit_contribution:   (exploitStatus === 'confirmed' || !!entry.in_kev) ? 25 : (exploitStatus === 'available' || !!entry.exploit_available) ? 15 : exploitStatus === 'poc' ? 8 : 0,
     ransomware_contribution: (entry.known_ransomware || entry.ransomware_used) ? 10 : 0,
     actor_contribution:     activeActors.length > 0 ? Math.round((Math.max(...activeActors.map(a => a.risk_score || 0)) / 100) * 10) : 0,
   };
@@ -211,7 +211,7 @@ export function analyzeRiskDistribution(scoredEntries) {
     average_score:    averageScore,
     environment_risk: environmentRisk,
     environment_score: environmentScore,
-    top_priority:     scoredEntries
+    top_priority:     [...scoredEntries]
                         .sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0))
                         .slice(0, 10)
                         .map(e => ({ id: e.id, title: e.title, priority_score: e.priority_score, risk_tier: e.risk_tier })),

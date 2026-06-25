@@ -301,19 +301,25 @@ export function buildSTIXBundle(data = {}) {
 
 // ─── Build bundle from D1 data ────────────────────────────────────────────────
 export async function buildBundleFromD1(env, options = {}) {
-  const { limit = 50, severity = null, includeActors = true, includeIOCs = true } = options;
+  const { limit = 50, severity = null, includeActors = true, includeIOCs = true, kev_only = false } = options;
 
   const results = { entries: [], actors: [], iocData: [] };
 
   if (env?.DB) {
     try {
-      const where = severity ? `WHERE severity = '${severity.toUpperCase()}'` : '';
+      const where  = severity ? 'WHERE severity = ?' : '';
+      const params = severity ? [severity.toUpperCase(), limit] : [limit];
       const rows = await env.DB.prepare(
         `SELECT * FROM threat_intel ${where}
          ORDER BY CASE severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 ELSE 1 END DESC, cvss DESC
          LIMIT ?`
-      ).bind(limit).all();
+      ).bind(...params).all();
       results.entries = rows?.results || [];
+      if (kev_only) {
+        results.entries = results.entries.filter(e =>
+          e.exploit_status === 'confirmed' || !!e.in_kev
+        );
+      }
     } catch {}
 
     if (includeIOCs) {

@@ -1378,7 +1378,7 @@ function appendChatMsg(role, text, isTemp = false, opts = {}) {
   const formatted = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br/>')
-    .replace(/`([^`]+)`/g, '<code style="background:var(--bg-base);padding:1px 4px;border-radius:3px;font-family:var(--font-mono)">`$1`</code>');
+    .replace(/`([^`]+)`/g, '<code style="background:var(--bg-base);padding:1px 4px;border-radius:3px;font-family:var(--font-mono)">$1</code>');
   div.innerHTML = formatted;
   if (opts.meta) {
     const meta = document.createElement('div');

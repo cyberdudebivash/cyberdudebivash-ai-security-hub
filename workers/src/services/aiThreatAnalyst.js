@@ -341,11 +341,12 @@ Description: ${(entry.description || '').slice(0, 300)}
 ${actorContext}${attackContext}
 Provide: impact assessment, attack chain, who is at risk, and specific remediation steps.`;
 
-  return analyzeQuery(query, env, { tier: options.tier });
+  return analyzeQuery(query, env, { tier: options.tier, session_id: options.session_id || null });
 }
 
 // ─── Sector threat brief ───────────────────────────────────────────────────────
 export async function generateSectorBrief(sector, env) {
-  const query = `What are the current top threats and vulnerabilities for the ${sector} sector? Focus on actively exploited CVEs, relevant APT groups targeting this sector, and key remediation priorities for ${sector} security teams.`;
+  const safeSector = sector.replace(/[^\w\s-]/g, '').slice(0, 50);
+  const query = `What are the current top threats and vulnerabilities for the ${safeSector} sector? Focus on actively exploited CVEs, relevant APT groups targeting this sector, and key remediation priorities for ${safeSector} security teams.`;
   return analyzeQuery(query, env, { tier: 'ENTERPRISE' });
 }

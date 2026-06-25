@@ -155,8 +155,16 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
     const tactic  = url.searchParams.get('tactic') || '';
 
     let techs = Object.values(TECHNIQUES);
-    if (search)  techs = searchTechniques(search);
-    if (tactic)  techs = techs.filter(t => t.tactic === tactic || t.tactic_name?.toLowerCase().includes(tactic.toLowerCase()));
+    if (search) techs = searchTechniques(search);
+    if (tactic) {
+      const tl = tactic.toLowerCase();
+      techs = techs.filter(t => {
+        const tacticObj = TACTICS[t.tactic];
+        return t.tactic === tactic ||
+          tacticObj?.shortname === tl ||
+          tacticObj?.name?.toLowerCase().includes(tl);
+      });
+    }
 
     return jsonResponse({
       techniques: techs.map(t => ({
@@ -184,9 +192,8 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
 
   // ── GET /api/intel/heatmap ────────────────────────────────────────────────
   if (path === '/api/intel/heatmap' && method === 'GET') {
-    const cacheKey = 'intel:heatmap:v1';
+    const cacheKey = 'intel:heatmap:v2';
 
-    // Try KV cache (15 min)
     if (env?.SECURITY_HUB_KV) {
       try {
         const cached = await env.SECURITY_HUB_KV.get(cacheKey, { type: 'json' });
@@ -196,13 +203,44 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
 
     const entries = await loadEntries(env, 200);
     const mapped  = mapBatchToAttack(entries);
-    const heatmap = buildAttackHeatmap(mapped);
+    const raw     = buildAttackHeatmap(mapped);
 
-    if (env?.SECURITY_HUB_KV) {
-      env.SECURITY_HUB_KV.put(cacheKey, JSON.stringify(heatmap), { expirationTtl: 900 }).catch(() => {});
+    // Transform into the shapes the workbench frontend expects:
+    //   heatmap   — dict keyed by technique ID
+    //   by_tactic — dict keyed by tactic name, each with { total, techniques[] }
+    const heatmapByTech = {};
+    for (const t of raw.techniques) {
+      heatmapByTech[t.technique_id] = {
+        count:          t.count,
+        name:           t.technique_name,
+        cve_ids:        t.cve_ids,
+        tactic_id:      t.tactic_id,
+        tactic_name:    t.tactic_name,
+        critical_count: t.critical_count,
+        url:            t.url,
+      };
+    }
+    const byTactic = {};
+    for (const t of raw.techniques) {
+      const key = t.tactic_name;
+      if (!byTactic[key]) byTactic[key] = { total: 0, techniques: [] };
+      byTactic[key].total += t.count;
+      byTactic[key].techniques.push(t);
     }
 
-    return jsonResponse({ ...heatmap, cache: 'miss' });
+    const result = {
+      heatmap:              heatmapByTech,
+      by_tactic:            byTactic,
+      total_techniques:     raw.techniques.length,
+      total_entries_mapped: raw.total_entries_mapped,
+      generated_at:         raw.generated_at,
+    };
+
+    if (env?.SECURITY_HUB_KV) {
+      env.SECURITY_HUB_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 900 }).catch(() => {});
+    }
+
+    return jsonResponse({ ...result, cache: 'miss' });
   }
 
   // ── GET /api/intel/risk-score/:id ─────────────────────────────────────────
@@ -272,7 +310,20 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
     }));
 
     const analysis = analyzeRiskDistribution(scored);
-    const result = { queue, analysis, total: scored.length, generated_at: new Date().toISOString() };
+
+    // Hoist distribution fields to top level so frontend reads data.distribution / data.total_assessed directly
+    const result = {
+      queue,
+      entries:          queue,              // alias — frontend reads data.entries || data.queue
+      distribution:     analysis.distribution,
+      total_assessed:   analysis.total_assessed,
+      average_score:    analysis.average_score,
+      environment_risk: analysis.environment_risk,
+      environment_score: analysis.environment_score,
+      top_priority:     analysis.top_priority,
+      total:            scored.length,
+      generated_at:     new Date().toISOString(),
+    };
 
     if (env?.SECURITY_HUB_KV) {
       env.SECURITY_HUB_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 300 }).catch(() => {});
@@ -347,8 +398,7 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
         bundle = await buildBundleFromD1(env, { limit, includeActors: false, includeIOCs: false });
         break;
       case 'kev-feed':
-        bundle = await buildBundleFromD1(env, { limit, severity: null, includeActors: false, includeIOCs: false });
-        // Filter to KEV only post-build
+        bundle = await buildBundleFromD1(env, { limit, kev_only: true, includeActors: false, includeIOCs: false });
         break;
       case 'ioc-feed':
         if (!tierAtLeast(authCtx, 'PRO')) {
@@ -398,20 +448,22 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
       return sectorKeywords.some(k => text.includes(k));
     }).slice(0, 20);
 
-    let aibrief = null;
+    let briefResult = null;
     try {
-      const brief = await generateSectorBrief(sector, env);
-      aibrief = brief.response;
+      briefResult = await generateSectorBrief(sector, env);
     } catch {}
 
     return jsonResponse({
       sector,
-      threat_actors:  actors,
-      relevant_cves:  sectorEntries,
-      total_actors:   actors.length,
-      total_cves:     sectorEntries.length,
-      ai_brief:       aibrief,
-      generated_at:   new Date().toISOString(),
+      relevant_actors: actors,
+      relevant_cves:   sectorEntries,
+      total_actors:    actors.length,
+      total_cves:      sectorEntries.length,
+      response:        briefResult?.response || null,
+      model:           briefResult?.model    || null,
+      provider:        briefResult?.provider || null,
+      latency_ms:      briefResult?.latency_ms || null,
+      generated_at:    new Date().toISOString(),
     });
   }
 
@@ -438,20 +490,22 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
     const attackMapping = mapToAttack(entry);
     const scoring       = scoreCVE(entry, epssScores[cveId] ?? null, aptActors);
 
-    let aibrief = null;
+    let briefResult = null;
     try {
-      const brief = await generateCVEBrief(entry, env, { aptActors, attackMapping, tier: authCtx?.tier });
-      aibrief = brief.response;
+      briefResult = await generateCVEBrief(entry, env, { aptActors, attackMapping, tier: authCtx?.tier });
     } catch {}
 
     return jsonResponse({
-      cve_id:          cveId,
+      cve_id:            cveId,
       entry,
       scoring,
-      attack_mapping:  attackMapping,
+      attack_mapping:    attackMapping,
       attributed_actors: aptActors,
-      ai_brief:        aibrief,
-      generated_at:    new Date().toISOString(),
+      response:          briefResult?.response  || null,
+      model:             briefResult?.model     || null,
+      provider:          briefResult?.provider  || null,
+      latency_ms:        briefResult?.latency_ms || null,
+      generated_at:      new Date().toISOString(),
     });
   }
 
@@ -467,6 +521,8 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
         session_id = body.session_id || session_id;
       } catch {}
     }
+
+    if (query.length > 2000) query = query.slice(0, 2000);
 
     if (!query.trim()) {
       return jsonResponse({
