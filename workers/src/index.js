@@ -125,7 +125,7 @@ import {
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
 import { handleAIRedTeamPro } from './handlers/aiRedTeamPro.js';
-import { handleDeveloperPortal } from './handlers/developerPortal.js';
+import { handleDeveloperPortal, getOpenAPISpec } from './handlers/developerPortal.js';
 import { handleExecutiveCommandCenter } from './handlers/executiveCommandCenter.js';
 import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement } from './handlers/aiServices.js';
 
@@ -5128,6 +5128,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       if (result) return withSecurityHeaders(withCors(result, request));
     }
 
+    // P8.0-005: webhook event catalog — public documentation endpoint (no auth),
+    // same convention as /api/openapi.json. Lives in enterpriseAutomation.js
+    // next to the dispatch/retry logic it documents.
+    if (path === '/api/webhooks/catalog' && method === 'GET') {
+      const { handleWebhookCatalog } = await import('./handlers/enterpriseAutomation.js');
+      return withSecurityHeaders(withCors(await handleWebhookCatalog(request, env), request));
+    }
+
     // ── P6.0 Operations Engine ────────────────────────────────────────────────
     // Usage analytics, subscription enforcement, feature flags, admin APIs,
     // observability, notifications. OWNER/ADMIN required for /api/admin/*.
@@ -6326,6 +6334,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   // v20.0 GOD MODE: DEVELOPER PORTAL / API ECONOMY
   if (path.startsWith('/api/developer/')) {
     return handleDeveloperPortal(request, env);
+  }
+
+  // P8.0-001: /api/openapi.json — top-level alias for /api/developer/openapi.json (same generator, zero duplication)
+  if (path === '/api/openapi.json' && method === 'GET') {
+    return withSecurityHeaders(withCors(await getOpenAPISpec(request, env), request));
   }
 
   // v20.0 GOD MODE: EXECUTIVE COMMAND CENTER PRO (FAIR, Board, ROI)

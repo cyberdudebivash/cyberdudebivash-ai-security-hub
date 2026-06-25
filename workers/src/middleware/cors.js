@@ -4,6 +4,8 @@
  * ENVIRONMENT !== 'production', preventing dev origins leaking to prod.
  */
 
+import { getLifecycleHeaders } from '../handlers/enterpriseAutomation.js';
+
 const PROD_ORIGINS = [
   'https://cyberdudebivash.in',
   'https://www.cyberdudebivash.in',
@@ -46,7 +48,7 @@ export function corsHeaders(request, env) {
     'Access-Control-Allow-Origin':      allowedOrigin,
     'Access-Control-Allow-Methods':     'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers':     'Content-Type, Authorization, X-API-Key, X-Session-Token, X-Request-ID',
-    'Access-Control-Expose-Headers':    'X-Request-ID, X-RateLimit-Remaining, X-RateLimit-Reset',
+    'Access-Control-Expose-Headers':    'X-Request-ID, X-RateLimit-Remaining, X-RateLimit-Reset, Deprecation, Sunset, Link, API-Version',
     'Access-Control-Max-Age':           '86400',
     'Access-Control-Allow-Credentials': 'true',
   };
@@ -62,5 +64,15 @@ export function withCors(response, request, env) {
   const headers = new Headers(response.headers);
   const ch = corsHeaders(request, env);
   Object.entries(ch).forEach(([k, v]) => headers.set(k, v));
+
+  // P8.0-002: API lifecycle headers (Deprecation/Sunset/Link/API-Version).
+  // Single source of truth = API_MANIFEST in enterpriseAutomation.js — applied
+  // here so every existing route gains lifecycle metadata with zero routing changes.
+  try {
+    const path = new URL(request.url).pathname;
+    const lifecycle = getLifecycleHeaders(path);
+    Object.entries(lifecycle).forEach(([k, v]) => headers.set(k, v));
+  } catch {}
+
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }

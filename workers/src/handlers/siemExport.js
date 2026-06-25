@@ -1,12 +1,15 @@
 /**
- * SIEM Export Handler — CYBERDUDEBIVASH AI Security Hub v8.1
+ * SIEM Export Handler — CYBERDUDEBIVASH AI Security Hub v8.1 / P8.0-003
  *
  * Exports threat intel, scan findings, IOCs, and SOC alerts in multiple formats:
- *   - JSON         (native — always available)
- *   - CEF          (ArcSight Common Event Format — Splunk/QRadar/ArcSight)
- *   - STIX 2.1     (Structured Threat Information Expression — MISP/OpenCTI)
- *   - Sigma        (Detection rule format — Elastic/Splunk/Chronicle)
- *   - CSV          (spreadsheet-friendly)
+ *   - JSON          (native — always available)
+ *   - CEF           (ArcSight Common Event Format — Splunk/QRadar/ArcSight)
+ *   - STIX 2.1      (Structured Threat Information Expression — MISP/OpenCTI)
+ *   - Sigma         (Detection rule format — Elastic/Splunk/Chronicle)
+ *   - CSV           (spreadsheet-friendly)
+ *   - NDJSON        (newline-delimited JSON, also available via streaming)
+ *   - IOC Bundle    (deduplicated, typed indicator manifest for TIP/firewall ingestion)
+ *   - Executive PDF (print-ready HTML board/leadership summary — reuses reportingEngine.js shell)
  *
  * Endpoints:
  *   GET /api/export/siem          — list export options (public)
@@ -16,13 +19,15 @@
  * Plan gating:
  *   FREE    — not available
  *   STARTER — not available
- *   PRO     — JSON + CSV + STIX (last 24h, max 500 records)
- *   ENTERPRISE — all formats, full history, streaming
+ *   PRO     — JSON + CSV + STIX + IOC Bundle (last 24h, max 500 records)
+ *   ENTERPRISE — all formats incl. CEF/Sigma/NDJSON/Executive PDF, full history, streaming
  */
 
-const SUPPORTED_FORMATS = ['json', 'cef', 'stix', 'sigma', 'csv', 'ndjson'];
+import { buildReportShell } from './reportingEngine.js';
+
+const SUPPORTED_FORMATS = ['json', 'cef', 'stix', 'sigma', 'csv', 'ndjson', 'ioc_bundle', 'executive_pdf'];
 const PLAN_LIMITS = {
-  PRO:        { formats: ['json', 'csv', 'stix'], max_records: 500,   hours: 24 },
+  PRO:        { formats: ['json', 'csv', 'stix', 'ioc_bundle'], max_records: 500,   hours: 24 },
   ENTERPRISE: { formats: SUPPORTED_FORMATS,        max_records: 10000, hours: 720 }, // 30d
 };
 
@@ -34,12 +39,14 @@ export function handleSiemInfo() {
     version: '8.1',
     description: 'Export threat intel, scan findings, IOCs, and alerts in SIEM-compatible formats.',
     formats: {
-      json:   { description: 'Native JSON array', plan: 'PRO+' },
-      csv:    { description: 'Spreadsheet-compatible CSV', plan: 'PRO+' },
-      stix:   { description: 'STIX 2.1 Bundle (MISP/OpenCTI/CrowdStrike compatible)', plan: 'PRO+' },
-      cef:    { description: 'ArcSight CEF — syslog-ready for Splunk/QRadar/ArcSight', plan: 'ENTERPRISE' },
-      sigma:  { description: 'Sigma detection rules for Elastic/Splunk/Chronicle', plan: 'ENTERPRISE' },
-      ndjson: { description: 'Newline-delimited JSON stream for Logstash/Fluentd', plan: 'ENTERPRISE' },
+      json:          { description: 'Native JSON array', plan: 'PRO+' },
+      csv:           { description: 'Spreadsheet-compatible CSV', plan: 'PRO+' },
+      stix:          { description: 'STIX 2.1 Bundle (MISP/OpenCTI/CrowdStrike compatible)', plan: 'PRO+' },
+      ioc_bundle:    { description: 'Deduplicated, typed indicator manifest for TIP/firewall ingestion', plan: 'PRO+' },
+      cef:           { description: 'ArcSight CEF — syslog-ready for Splunk/QRadar/ArcSight', plan: 'ENTERPRISE' },
+      sigma:         { description: 'Sigma detection rules for Elastic/Splunk/Chronicle', plan: 'ENTERPRISE' },
+      ndjson:        { description: 'Newline-delimited JSON stream for Logstash/Fluentd', plan: 'ENTERPRISE' },
+      executive_pdf: { description: 'Print-ready HTML board/leadership summary (save-as-PDF)', plan: 'ENTERPRISE' },
     },
     sources:  ['threat_intel', 'scan_findings', 'iocs', 'soc_alerts'],
     endpoints: {
@@ -131,6 +138,19 @@ export async function handleSiemExport(request, env, authCtx) {
       filename = `cyberdudebivash-${source}-${ts.slice(0,10)}.ndjson`;
       break;
     }
+    case 'ioc_bundle': {
+      const bundle = buildIOCBundle(records, source, ts);
+      output = JSON.stringify(bundle, null, 2);
+      contentType = 'application/json';
+      filename = `cyberdudebivash-ioc-bundle-${ts.slice(0,10)}.json`;
+      break;
+    }
+    case 'executive_pdf': {
+      output = buildExecutivePDF(records, source, ts);
+      contentType = 'text/html';
+      filename = `cyberdudebivash-executive-report-${ts.slice(0,10)}.html`;
+      break;
+    }
     default: { // json
       output = JSON.stringify({
         generated_at: ts,
@@ -145,11 +165,15 @@ export async function handleSiemExport(request, env, authCtx) {
     }
   }
 
+  // Executive PDF renders inline (viewable/printable in-browser), matching
+  // the existing convention in reportingEngine.js's handleDownloadReport.
+  const disposition = format === 'executive_pdf' ? 'inline' : 'attachment';
+
   return new Response(output, {
     status: 200,
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `${disposition}; filename="${filename}"`,
       'X-Export-Count': String(records.length),
       'X-Export-Format': format,
       'X-Export-Source': source,
@@ -693,6 +717,108 @@ function buildCSV(records, source) {
   });
 
   return [header, ...rows].join('\n');
+}
+
+// ─── IOC Bundle Builder (P8.0-003) ─────────────────────────────────────────────
+// Deduplicated, typed indicator manifest for direct ingestion into firewalls,
+// proxies, and TIP platforms. Reuses the same detectIOCType() classifier as the
+// STIX builder above — no new extraction logic.
+function buildIOCBundle(records, source, ts) {
+  const seen = new Map();
+
+  const add = (value, meta) => {
+    const type = detectIOCType(value);
+    if (!type || !value || seen.has(value)) return;
+    seen.set(value, {
+      ioc_type:    type,
+      ioc_value:   value,
+      severity:    meta.severity || 'UNKNOWN',
+      confidence:  meta.cvss != null ? Math.min(100, Math.round(meta.cvss * 10)) : 50,
+      source_cve:  meta.cve_id || meta.source_cve || null,
+      first_seen:  meta.created_at || meta.observed_at || ts,
+    });
+  };
+
+  if (source === 'iocs') {
+    for (const rec of records) add(rec.ioc_value, rec);
+  } else {
+    for (const rec of records) {
+      for (const ioc of (rec.iocs || [])) add(ioc, rec);
+    }
+  }
+
+  const indicators = [...seen.values()];
+  const by_type = indicators.reduce((acc, i) => {
+    acc[i.ioc_type] = (acc[i.ioc_type] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    bundle_type:   'ioc_bundle',
+    version:       '1.0',
+    generated_at:  ts,
+    platform:      'CYBERDUDEBIVASH AI Security Hub',
+    tlp:           'AMBER',
+    source,
+    count:         indicators.length,
+    by_type,
+    indicators,
+  };
+}
+
+// ─── Executive PDF Builder (P8.0-003) ──────────────────────────────────────────
+// Print-ready HTML board/leadership summary. Reuses buildReportShell() from
+// reportingEngine.js — the platform's single HTML "PDF engine" — rather than
+// introducing a second template/CSS engine.
+function buildExecutivePDF(records, source, ts) {
+  // Records originate from external/third-party feeds (CVE descriptions, IOC
+  // values, etc.) — escape before interpolating into HTML to prevent XSS.
+  const escHTML = s => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const bySeverity = records.reduce((acc, r) => {
+    const sev = String(r.severity || mapSigmaLevel(r.risk_score) || 'UNKNOWN').toUpperCase();
+    acc[sev] = (acc[sev] || 0) + 1;
+    return acc;
+  }, {});
+  const critical = bySeverity.CRITICAL || 0;
+  const high     = bySeverity.HIGH || 0;
+  const top10    = records.slice(0, 10);
+  const sourceLabel = escHTML(source.replace(/_/g,' '));
+
+  const badgeClass = sev => ({ CRITICAL: 'critical', HIGH: 'high', MEDIUM: 'medium', LOW: 'low' }[String(sev).toUpperCase()] || 'medium');
+
+  const bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">Total Records</div><div class="kpi-value">${records.length}</div><div class="kpi-sub">${sourceLabel}</div></div>
+  <div class="kpi"><div class="kpi-label">Critical</div><div class="kpi-value" style="color:#ef4444">${critical}</div><div class="kpi-sub">Immediate action</div></div>
+  <div class="kpi"><div class="kpi-label">High</div><div class="kpi-value" style="color:#f97316">${high}</div><div class="kpi-sub">24h SLA</div></div>
+  <div class="kpi"><div class="kpi-label">Window</div><div class="kpi-value" style="font-size:18px;">${escHTML(ts.slice(0,10))}</div><div class="kpi-sub">Generated</div></div>
+</div>
+<div class="section">
+  <h2>Executive Summary</h2>
+  <p style="font-size:13px;color:#94a3b8;line-height:1.6;">
+    This report summarizes <strong>${records.length}</strong> ${sourceLabel} record${records.length === 1 ? '' : 's'} captured by the
+    CYBERDUDEBIVASH AI Security Hub. ${critical > 0 ? `<strong style="color:#ef4444">${critical} critical-severity item${critical === 1 ? '' : 's'}</strong> require immediate executive attention.` : 'No critical-severity items were observed in this period.'}
+    ${high > 0 ? `An additional <strong style="color:#f97316">${high} high-severity item${high === 1 ? '' : 's'}</strong> should be remediated within 24 hours.` : ''}
+  </p>
+</div>
+<div class="section">
+  <h2>Top Findings</h2>
+  <table><thead><tr><th>#</th><th>Identifier</th><th>Severity</th><th>Detail</th></tr></thead><tbody>
+    ${top10.map((r, i) => `<tr><td>${i + 1}</td><td>${escHTML(r.cve_id || r.id || r.ioc_value || '—')}</td><td><span class="badge ${badgeClass(r.severity || 'medium')}">${escHTML(r.severity || 'N/A')}</span></td><td>${escHTML((r.title || r.description || r.module || '').toString().slice(0, 120))}</td></tr>`).join('')}
+  </tbody></table>
+</div>`;
+
+  return buildReportShell({
+    brandName: 'CYBERDUDEBIVASH® AI Security Hub',
+    primaryColor: '#6366f1',
+    title: `CYBERDUDEBIVASH® AI Security Hub — Executive Report (${source})`,
+    metaLine: `Source: ${source.replace(/_/g,' ')} · Generated: ${ts} · Records: ${records.length}`,
+    bodyHTML,
+    footerNote: `CYBERDUDEBIVASH® AI Security Hub · Confidential · Generated ${ts}`,
+  });
 }
 
 // ─── STIX pattern builder ─────────────────────────────────────────────────────

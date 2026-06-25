@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Automation & Self-Service — CYBERDUDEBIVASH® SENTINEL APEX</title>
+<title>Automation &amp; Self-Service — CYBERDUDEBIVASH® SENTINEL APEX</title>
 <meta name="robots" content="noindex,nofollow">
 <style>
   :root{
@@ -25,7 +25,8 @@
   /* Layout */
   #app{display:none;flex-direction:column;min-height:100vh}
   header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
-  .logo{font-size:15px;font-weight:800}<br>  .logo span{color:var(--accent)}
+  .logo{font-size:15px;font-weight:800}
+  .logo span{color:var(--accent)}
   .header-right{display:flex;align-items:center;gap:12px}
   .badge{background:linear-gradient(135deg,#00c2ff22,#7c3aed22);border:1px solid var(--accent2);color:var(--accent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
   .btn-sm{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);cursor:pointer;font-size:13px}
@@ -118,25 +119,25 @@
 
 <div id="app">
   <header>
-    <div class="logo"><span>CYBERDUDEBIVASH®</span> SENTINEL APEX — Automation</div>
+    <div class="logo"><span>CYBERDUDEBIVASH&reg;</span> SENTINEL APEX &mdash; Automation</div>
     <div class="header-right">
       <span class="badge">SELF-SERVICE</span>
-      <button class="btn-sm" onclick="refreshAll()">↻ Refresh</button>
+      <button class="btn-sm" onclick="refreshAll()">&#8635; Refresh</button>
       <button class="btn-sm" onclick="doLogout()">Logout</button>
     </div>
   </header>
   <main>
-    <div class="refresh-line"><span class="dot-live"></span><span id="last-refresh">Loading…</span></div>
+    <div class="refresh-line"><span class="dot-live"></span><span id="last-refresh">Loading&hellip;</span></div>
 
     <!-- KPIs -->
     <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">API Keys</div><div class="kpi-value accent" id="k-keys">—</div><div class="kpi-sub" id="k-keys-sub">of — allowed</div></div>
-      <div class="kpi"><div class="kpi-label">Webhooks</div><div class="kpi-value accent" id="k-wh">—</div><div class="kpi-sub">Configured</div></div>
-      <div class="kpi"><div class="kpi-label">Schedules</div><div class="kpi-value accent" id="k-sched">—</div><div class="kpi-sub">Active reports</div></div>
-      <div class="kpi"><div class="kpi-label">Team Size</div><div class="kpi-value accent" id="k-team">—</div><div class="kpi-sub">Members</div></div>
-      <div class="kpi"><div class="kpi-label">API Calls (7d)</div><div class="kpi-value green" id="k-calls">—</div><div class="kpi-sub">Total requests</div></div>
-      <div class="kpi"><div class="kpi-label">Cache Ratio</div><div class="kpi-value green" id="k-cache">—</div><div class="kpi-sub">KV hit rate</div></div>
-      <div class="kpi"><div class="kpi-label">Quota Used</div><div class="kpi-value" id="k-quota">—</div><div class="kpi-sub" id="k-quota-sub">This month</div></div>
+      <div class="kpi"><div class="kpi-label">API Keys</div><div class="kpi-value accent" id="k-keys">&mdash;</div><div class="kpi-sub" id="k-keys-sub">of &mdash; allowed</div></div>
+      <div class="kpi"><div class="kpi-label">Webhooks</div><div class="kpi-value accent" id="k-wh">&mdash;</div><div class="kpi-sub">Configured</div></div>
+      <div class="kpi"><div class="kpi-label">Schedules</div><div class="kpi-value accent" id="k-sched">&mdash;</div><div class="kpi-sub">Active reports</div></div>
+      <div class="kpi"><div class="kpi-label">Team Size</div><div class="kpi-value accent" id="k-team">&mdash;</div><div class="kpi-sub">Members</div></div>
+      <div class="kpi"><div class="kpi-label">API Calls (7d)</div><div class="kpi-value green" id="k-calls">&mdash;</div><div class="kpi-sub">Total requests</div></div>
+      <div class="kpi"><div class="kpi-label">Cache Ratio</div><div class="kpi-value green" id="k-cache">&mdash;</div><div class="kpi-sub">KV hit rate</div></div>
+      <div class="kpi"><div class="kpi-label">Quota Used</div><div class="kpi-value" id="k-quota">&mdash;</div><div class="kpi-sub" id="k-quota-sub">This month</div></div>
     </div>
 
     <!-- Tabs -->
@@ -148,6 +149,10 @@
       <div class="tab" onclick="showTab('usage')">API Usage</div>
       <div class="tab" onclick="showTab('governance')">Governance</div>
       <div class="tab" onclick="showTab('activity')">Automation Status</div>
+      <div class="tab" onclick="showTab('connectors')">Connectors</div>
+      <div class="tab" onclick="showTab('sdk-downloads')">SDK Downloads</div>
+      <div class="tab" onclick="showTab('export-jobs')">Export Jobs</div>
+      <div class="tab" onclick="showTab('integration-status')">Integration Status</div>
     </div>
 
     <!-- API Keys Tab -->
@@ -159,7 +164,7 @@
           <button class="btn btn-primary" onclick="createKey()">Generate Key</button>
         </div>
         <div id="new-key-display" style="display:none">
-          <div class="key-warning">⚠ Copy this key now — it will never be shown again.</div>
+          <div class="key-warning">&#9888; Copy this key now &mdash; it will never be shown again.</div>
           <div class="key-raw" id="new-key-value"></div>
           <button class="btn btn-ghost" onclick="copyKey()">Copy to Clipboard</button>
         </div>
@@ -302,6 +307,113 @@
         </div>
       </div>
     </div>
+
+    <!-- P8.0-008: Connector Health Tab -->
+    <div id="tab-connectors" class="tab-panel">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>SIEM / SOAR Connector Health</div>
+          <div id="connector-health-grid"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--yellow)"></span>Recent Connector Events</div>
+          <div id="connector-events"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Test SIEM Connection</div>
+        <div class="form-row">
+          <div class="form-group"><label>SIEM Platform</label>
+            <select id="conn-type">
+              <option value="splunk">Splunk HEC</option>
+              <option value="sentinel">Microsoft Sentinel</option>
+              <option value="qradar">IBM QRadar</option>
+              <option value="elastic">Elastic SIEM</option>
+              <option value="sumo">Sumo Logic</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Endpoint URL</label><input type="url" id="conn-url" placeholder="https://splunk.company.com:8088/services/collector" style="width:320px"></div>
+          <div class="form-group"><label>Token</label><input type="password" id="conn-token" placeholder="HEC token or API key" style="width:200px"></div>
+          <button class="btn btn-primary" onclick="testConnector()">Test Connection</button>
+        </div>
+        <div id="connector-test-result"></div>
+      </div>
+    </div>
+
+    <!-- P8.0-008: SDK Downloads Tab -->
+    <div id="tab-sdk-downloads" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>SDK Client Libraries</div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Auto-generated clients for all 4 languages. Authenticate once, access all 100+ API endpoints.</div>
+        <div id="sdk-download-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Quick Integration</div>
+        <div id="sdk-quick-start"></div>
+      </div>
+    </div>
+
+    <!-- P8.0-008: Export Jobs Tab -->
+    <div id="tab-export-jobs" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Trigger SIEM Export</div>
+        <div class="form-row">
+          <div class="form-group"><label>Format</label>
+            <select id="exp-format">
+              <option value="splunk">Splunk JSON</option>
+              <option value="cef">CEF</option>
+              <option value="leef">LEEF</option>
+              <option value="stix">STIX 2.1</option>
+              <option value="json">Generic JSON</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Lookback</label>
+            <select id="exp-hours">
+              <option value="1">1 hour</option>
+              <option value="6">6 hours</option>
+              <option value="24" selected>24 hours</option>
+              <option value="72">3 days</option>
+              <option value="168">7 days</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Intelligence Type</label>
+            <select id="exp-type">
+              <option value="all">All Intel</option>
+              <option value="cve">CVEs Only</option>
+              <option value="actor">Threat Actors</option>
+              <option value="ransomware">Ransomware</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="triggerExport()">Export Now</button>
+        </div>
+        <div id="export-trigger-result"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Recent Export Jobs</div>
+        <table class="tbl" id="export-jobs-table">
+          <thead><tr><th>Job ID</th><th>Format</th><th>Type</th><th>Records</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- P8.0-008: Integration Status Tab -->
+    <div id="tab-integration-status" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Platform Integration Health</div>
+        <div id="integration-health-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:4px"></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>API Manifest</div>
+          <div id="api-manifest-info"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>P8.0 Features</div>
+          <div id="p80-features"></div>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -349,20 +461,25 @@ if(_key){
 }
 
 function showTab(name){
-  const names=['keys','webhooks','reports','team','usage','governance','activity'];
+  const names=['keys','webhooks','reports','team','usage','governance','activity','connectors','sdk-downloads','export-jobs','integration-status'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='usage') loadUsage();
+  if(name==='connectors') loadConnectors();
+  if(name==='sdk-downloads') loadSDKDownloads();
+  if(name==='export-jobs') loadExportJobs();
+  if(name==='integration-status') loadIntegrationStatus();
 }
 
 async function refreshAll(){
   document.getElementById('last-refresh').textContent='Refreshing…';
-  await Promise.allSettled([loadKeys(),loadWebhooks(),loadSchedules(),loadTeam(),loadUsage(),loadGovernance(),loadActivity()]);
+  await Promise.allSettled([loadKeys(),loadWebhooks(),loadSchedules(),loadTeam(),loadUsage(),loadGovernance(),loadActivity(),loadConnectors(),loadSDKDownloads(),loadExportJobs()]);
   document.getElementById('last-refresh').textContent='Refreshed: '+new Date().toLocaleTimeString();
 }
 
-// ── API Keys ──────────────────────────────────────────────────────────────────
+// ── API Keys ───────────────────────────────────────────────────────────────────────────────────
+function loadKeys_placeholder(){} // see below
 async function loadKeys(){
   try{
     const d=await apiFetch('/api/self/keys');
@@ -416,7 +533,7 @@ async function rotateKey(id){
   }catch(e){toast(e.message,false);}
 }
 
-// ── Webhooks ──────────────────────────────────────────────────────────────────
+// ── Webhooks ──────────────────────────────────────────────────────────────────────────────────────
 const EVENTS=['cve.critical','kev.added','ransomware.campaign','actor.update','org.risk_change'];
 document.getElementById('event-checkboxes').innerHTML=EVENTS.map(e=>
   `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px">
@@ -476,19 +593,12 @@ async function toggleWebhook(id,active){
 async function viewWebhookLogs(id){
   try{
     const d=await apiFetch(`/api/auto/webhooks/${id}/logs`);
-    const rows=(d.logs||[]).map(l=>`<tr>
-      <td style="font-size:11px;color:var(--muted)">${(l.created_at||'').slice(0,16)}</td>
-      <td><span class="chip chip-blue">${escHtml(l.event_type)}</span></td>
-      <td><span class="${l.status==='delivered'?'chip chip-green':l.status==='dead_lettered'?'chip chip-red':'chip chip-yellow'}">${escHtml(l.status)}</span></td>
-      <td style="font-size:11px">${l.response_code||'—'}</td>
-      <td style="font-size:11px;color:var(--red)">${escHtml(l.error_msg||'')}</td>
-    </tr>`).join('')||`<tr><td colspan="5" class="empty">No logs</td></tr>`;
     alert(`Webhook Logs:\n\n(Open browser console for structured data)\n\nTotal entries: ${d.logs?.length||0}`);
     console.table(d.logs);
   }catch(e){toast(e.message,false);}
 }
 
-// ── Scheduled Reports ─────────────────────────────────────────────────────────
+// ── Scheduled Reports ──────────────────────────────────────────────────────────────────────────
 async function loadSchedules(){
   try{
     const d=await apiFetch('/api/auto/reports');
@@ -533,7 +643,7 @@ async function toggleSchedule(id,active){
   catch(e){toast(e.message,false);}
 }
 
-// ── Team ──────────────────────────────────────────────────────────────────────
+// ── Team ────────────────────────────────────────────────────────────────────────────────────────
 async function loadTeam(){
   try{
     const d=await apiFetch('/api/auto/team');
@@ -582,7 +692,7 @@ async function changeRole(id,role){
   catch(e){toast(e.message,false);}
 }
 
-// ── Usage ─────────────────────────────────────────────────────────────────────
+// ── Usage ───────────────────────────────────────────────────────────────────────────────────────
 async function loadUsage(){
   const days=document.getElementById('usage-days')?.value||7;
   try{
@@ -619,7 +729,7 @@ async function loadUsage(){
   }catch(e){console.warn(e);}
 }
 
-// ── Governance ────────────────────────────────────────────────────────────────
+// ── Governance ───────────────────────────────────────────────────────────────────────────────────────
 async function loadGovernance(){
   try{
     const d=await apiFetch('/api/auto/governance');
@@ -650,7 +760,7 @@ async function loadGovernance(){
   }catch(e){console.warn(e);}
 }
 
-// ── Activity ──────────────────────────────────────────────────────────────────
+// ── Activity ─────────────────────────────────────────────────────────────────────────────────────────
 async function loadActivity(){
   try{
     const d=await apiFetch('/api/auto/metrics');
@@ -678,8 +788,225 @@ async function loadActivity(){
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="color:var(--muted);font-size:11px">API CALLS (24h)</div><div style="font-size:22px;font-weight:800">${(d.api_health?.calls_24h||0).toLocaleString()}</div></div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="color:var(--muted);font-size:11px">AS OF</div><div style="font-size:13px;color:var(--muted)">${(d.ts||'').slice(0,16).replace('T',' ')}</div></div>`;
   }catch(e){
-    // Non-admin users won't have access to /api/auto/metrics — show placeholder
     document.getElementById('auto-health').innerHTML='<div class="empty">Admin access required for detailed metrics</div>';
+  }
+}
+
+// ── P8.0-008: Connector Health ────────────────────────────────────────────────────────────────
+async function loadConnectors(){
+  const grid=document.getElementById('connector-health-grid');
+  const evDiv=document.getElementById('connector-events');
+  if(!grid)return;
+  try{
+    const d=await apiFetch('/api/integrations/connectors');
+    const connectors=d.connectors||[];
+    grid.innerHTML=connectors.length?connectors.map(c=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-weight:600;font-size:13px">${escHtml(c.name||c.type)}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:monospace">${escHtml(c.endpoint||'—')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Last check: ${escHtml((c.last_checked||'—').slice(0,16))}</div>
+        </div>
+        <span class="${c.healthy?'chip chip-green':'chip chip-red'}">${c.healthy?'HEALTHY':'ERROR'}</span>
+      </div>`).join(''):'<div class="empty">No connectors configured</div>';
+    if(evDiv){
+      evDiv.innerHTML=(d.events&&d.events.length)?d.events.map(e=>`
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,42,58,.4);font-size:12px">
+          <span class="${e.level==='error'?'chip chip-red':e.level==='warn'?'chip chip-yellow':'chip chip-green'}" style="font-size:10px;white-space:nowrap">${escHtml((e.level||'info').toUpperCase())}</span>
+          <div>
+            <div style="color:var(--muted);font-size:10px">${escHtml((e.ts||'').slice(0,16))}</div>
+            <div>${escHtml(e.msg||'')}</div>
+          </div>
+        </div>`).join(''):'<div class="empty">No recent events</div>';
+    }
+  }catch(e){
+    if(grid)grid.innerHTML='<div class="empty">Connector data unavailable</div>';
+    if(evDiv)evDiv.innerHTML='<div class="empty">—</div>';
+  }
+}
+
+async function testConnector(){
+  const type=document.getElementById('conn-type').value;
+  const url=document.getElementById('conn-url').value.trim();
+  const token=document.getElementById('conn-token').value.trim();
+  const res=document.getElementById('connector-test-result');
+  if(!url){toast('Endpoint URL required',false);return;}
+  res.innerHTML='<div style="color:var(--muted);font-size:12px;margin-top:10px">Testing connection…</div>';
+  try{
+    const d=await apiPost('/api/integrations/test',{type,url,token});
+    res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#064e3b22;border:1px solid var(--green);border-radius:6px;font-size:12px;color:var(--green)">Connection successful — ${escHtml(d.message||'OK')}</div>`;
+  }catch(e){
+    res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#7f1d1d22;border:1px solid var(--red);border-radius:6px;font-size:12px;color:var(--red)">Connection failed — ${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── P8.0-008: SDK Downloads ───────────────────────────────────────────────────────────────────
+const SDK_LANGS=[
+  {lang:'python',  label:'Python',     tag:'PY',install:'pip install cyberdudebivash-sentinel',     color:'var(--yellow)'},
+  {lang:'javascript',label:'JavaScript',tag:'JS',install:'npm install @cyberdudebivash/sentinel',   color:'#60a5fa'},
+  {lang:'typescript',label:'TypeScript',tag:'TS',install:'npm install @cyberdudebivash/sentinel-ts',color:'#818cf8'},
+  {lang:'go',      label:'Go',         tag:'GO',install:'go get github.com/cyberdudebivash/sentinel-go',color:'var(--accent)'},
+];
+
+function loadSDKDownloads(){
+  const grid=document.getElementById('sdk-download-grid');
+  if(!grid)return;
+  grid.innerHTML=SDK_LANGS.map(s=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px">
+      <div style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:800;background:var(--border);color:${s.color};margin-bottom:8px;font-family:monospace">${escHtml(s.tag)}</div>
+      <div style="font-size:15px;font-weight:700;color:${s.color};margin-bottom:4px">${escHtml(s.label)} SDK</div>
+      <div style="font-family:monospace;font-size:11px;background:#000;border:1px solid var(--border);padding:8px 10px;border-radius:5px;color:var(--muted);margin-bottom:12px">${escHtml(s.install)}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="font-size:12px" onclick="downloadSDK('${s.lang}')">Download</button>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="previewSDK('${s.lang}')">Preview</button>
+      </div>
+    </div>`).join('');
+  const qs=document.getElementById('sdk-quick-start');
+  if(qs)qs.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px">Python</div>
+        <pre style="font-family:monospace;font-size:11px;background:#000;border:1px solid var(--border);padding:12px;border-radius:6px;color:var(--green);overflow-x:auto;white-space:pre-wrap">from sentinel import SentinelAPEX
+client = SentinelAPEX(api_key="sk-...")
+threats = client.threats.list(severity="CRITICAL")
+for t in threats:
+    print(t.cve_id, t.cvss_score)</pre>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px">JavaScript</div>
+        <pre style="font-family:monospace;font-size:11px;background:#000;border:1px solid var(--border);padding:12px;border-radius:6px;color:var(--accent);overflow-x:auto;white-space:pre-wrap">import { SentinelAPEX } from '@cyberdudebivash/sentinel';
+const client = new SentinelAPEX({ apiKey: 'sk-...' });
+const threats = await client.threats.list({ severity: 'CRITICAL' });
+threats.forEach(t => console.log(t.cveId, t.cvssScore));</pre>
+      </div>
+    </div>`;
+}
+
+async function downloadSDK(lang){
+  window.open(`${API}/api/developer/sdk/download/${encodeURIComponent(lang)}?raw=1`,'_blank');
+  toast(`Downloading ${lang} SDK…`);
+}
+
+async function previewSDK(lang){
+  try{
+    const d=await apiFetch(`/api/developer/sdk/download/${encodeURIComponent(lang)}`);
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center';
+    overlay.onclick=ev=>{if(ev.target===overlay)overlay.remove();};
+    const box=document.createElement('div');
+    box.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:90vw;max-width:860px;max-height:80vh;overflow:auto;display:flex;flex-direction:column;gap:12px';
+    const hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;justify-content:space-between;align-items:center';
+    hdr.innerHTML=`<strong style="color:var(--accent)">${escHtml(lang.toUpperCase())} SDK — ${escHtml(d.filename||'')} (${d.total_methods||0} methods)</strong><button onclick="this.closest('div[style]').parentElement.remove()" class="btn btn-ghost" style="font-size:12px">Close</button>`;
+    const pre=document.createElement('pre');
+    pre.style.cssText='font-family:monospace;font-size:11px;background:#000;border:1px solid var(--border);padding:14px;border-radius:6px;color:var(--green);overflow:auto;white-space:pre-wrap;flex:1';
+    const code=d.code||'';
+    pre.textContent=code.slice(0,4000)+(code.length>4000?'\n\n// … (preview truncated — download for full source)':'');
+    box.appendChild(hdr);box.appendChild(pre);overlay.appendChild(box);document.body.appendChild(overlay);
+  }catch(e){toast(e.message,false);}
+}
+
+// ── P8.0-008: Export Jobs ───────────────────────────────────────────────────────────────────────
+async function loadExportJobs(){
+  try{
+    const d=await apiFetch('/api/auto/siem-export');
+    const tbody=document.querySelector('#export-jobs-table tbody');
+    if(!tbody)return;
+    tbody.innerHTML=(d.exports||[]).map(j=>`<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${escHtml((j.job_id||j.id||'').slice(0,12))}…</td>
+      <td><span class="chip chip-blue">${escHtml(j.format||'—')}</span></td>
+      <td style="font-size:12px">${escHtml(j.intel_type||'all')}</td>
+      <td style="font-size:12px">${(j.record_count||0).toLocaleString()}</td>
+      <td><span class="${j.status==='completed'?'chip chip-green':j.status==='failed'?'chip chip-red':'chip chip-yellow'}">${escHtml(j.status||'pending')}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${escHtml((j.created_at||'').slice(0,16))}</td>
+      <td>${j.status==='completed'&&j.download_url?`<a href="${escHtml(j.download_url)}" download class="btn btn-ghost" style="font-size:11px;padding:4px 8px">Download</a>`:'—'}</td>
+    </tr>`).join('')||'<tr><td colspan="7" class="empty">No export jobs yet</td></tr>';
+  }catch(e){
+    const tbody=document.querySelector('#export-jobs-table tbody');
+    if(tbody)tbody.innerHTML='<tr><td colspan="7" class="empty">Export history unavailable</td></tr>';
+  }
+}
+
+async function triggerExport(){
+  const format=document.getElementById('exp-format').value;
+  const hours=parseInt(document.getElementById('exp-hours').value);
+  const intel_type=document.getElementById('exp-type').value;
+  const res=document.getElementById('export-trigger-result');
+  res.innerHTML='<div style="color:var(--muted);font-size:12px;margin-top:10px">Triggering export…</div>';
+  try{
+    const d=await apiPost('/api/auto/siem-export',{format,lookback_hours:hours,intel_type});
+    res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#064e3b22;border:1px solid var(--green);border-radius:6px;font-size:12px;color:var(--green)">Export queued — Job ID: <span style="font-family:monospace">${escHtml(d.job_id||d.id||'—')}</span>. Est. ${escHtml(String(d.estimated_records||'—'))} records.</div>`;
+    await loadExportJobs();
+    toast('Export job created');
+  }catch(e){
+    res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#7f1d1d22;border:1px solid var(--red);border-radius:6px;font-size:12px;color:var(--red)">${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── P8.0-008: Integration Status ──────────────────────────────────────────────────────────────
+async function loadIntegrationStatus(){
+  const grid=document.getElementById('integration-health-grid');
+  const manifestDiv=document.getElementById('api-manifest-info');
+  const featDiv=document.getElementById('p80-features');
+  if(!grid)return;
+  const CHECKS=[
+    {name:'SENTINEL APEX API',     ep:'/api/health'},
+    {name:'Developer Portal',      ep:'/api/developer/quickstart'},
+    {name:'Webhook Engine',        ep:'/api/auto/webhooks'},
+    {name:'Report Engine',         ep:'/api/auto/reports'},
+    {name:'SIEM Export',           ep:'/api/auto/siem-export'},
+    {name:'OpenAPI 3.1 Spec',      ep:'/api/developer/openapi.json'},
+    {name:'SDK Generator',         ep:'/api/developer/sdk/download/python'},
+    {name:'Postman Collection',    ep:'/api/developer/postman.json'},
+  ];
+  const results=await Promise.allSettled(CHECKS.map(c=>apiFetch(c.ep)));
+  const healthy=results.filter(r=>r.status==='fulfilled').length;
+  grid.innerHTML=CHECKS.map((c,i)=>{
+    const ok=results[i].status==='fulfilled';
+    return `<div style="background:var(--surface);border:1px solid ${ok?'var(--green)':'var(--red)'};border-radius:8px;padding:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">${escHtml(c.name)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-family:monospace">${escHtml(c.ep)}</div>
+      <span class="${ok?'chip chip-green':'chip chip-red'}">${ok?'OPERATIONAL':'UNAVAILABLE'}</span>
+    </div>`;
+  }).join('');
+  if(manifestDiv){
+    try{
+      const d=await apiFetch('/api/auto/governance');
+      manifestDiv.innerHTML=`
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+          <div><span style="color:var(--muted)">API Version:</span> <strong style="color:var(--accent)">${escHtml(d.version||'v1')}</strong></div>
+          <div><span style="color:var(--muted)">Total Endpoints:</span> <strong>${(d.endpoints||[]).length}</strong></div>
+          <div><span style="color:var(--muted)">Stable:</span> <strong style="color:var(--green)">${(d.endpoints||[]).filter(e=>e.status==='stable').length}</strong></div>
+          <div><span style="color:var(--muted)">Deprecated:</span> <strong style="color:var(--yellow)">${(d.deprecations||[]).length}</strong></div>
+          <div><span style="color:var(--muted)">Integration Health:</span> <strong style="color:${healthy===CHECKS.length?'var(--green)':'var(--yellow)'}">${healthy}/${CHECKS.length} operational</strong></div>
+          <div><span style="color:var(--muted)">Your Tier:</span> <span class="chip chip-purple">${escHtml(d.user_tier||'')}</span></div>
+        </div>`;
+    }catch(e){
+      manifestDiv.innerHTML='<div class="empty">Manifest unavailable</div>';
+    }
+  }
+  if(featDiv){
+    const P80=[
+      {name:'SIEM Export API',          ep:'/api/auto/siem-export'},
+      {name:'SDK Generator (Python)',   ep:'/api/developer/sdk/download/python'},
+      {name:'SDK Generator (JS)',       ep:'/api/developer/sdk/download/javascript'},
+      {name:'SDK Generator (TS)',       ep:'/api/developer/sdk/download/typescript'},
+      {name:'SDK Generator (Go)',       ep:'/api/developer/sdk/download/go'},
+      {name:'Postman Collection',       ep:'/api/developer/postman.json'},
+      {name:'OpenAPI 3.1 Spec',         ep:'/api/developer/openapi.json'},
+      {name:'Quickstart Guide',         ep:'/api/developer/quickstart'},
+      {name:'Auth Guide',               ep:'/api/developer/auth-guide'},
+      {name:'Migration Guide',          ep:'/api/developer/migration-guide'},
+      {name:'Version Policy',           ep:'/api/developer/version-policy'},
+      {name:'Enterprise Examples',      ep:'/api/developer/examples'},
+    ];
+    const fr=await Promise.allSettled(P80.map(f=>apiFetch(f.ep)));
+    featDiv.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px">
+      ${P80.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(30,42,58,.4);font-size:12px">
+        <span>${escHtml(f.name)}</span>
+        <span class="${fr[i].status==='fulfilled'?'chip chip-green':'chip chip-yellow'}" style="font-size:10px">${fr[i].status==='fulfilled'?'ACTIVE':'PENDING'}</span>
+      </div>`).join('')}
+    </div>`;
   }
 }
 

@@ -90,37 +90,19 @@ function canAccessReportType(type, req) {
 }
 
 /**
- * Generate in-memory HTML report content from existing D1 data.
+ * Shared print-ready HTML report shell (CSS + header/footer chrome).
+ * This is the platform's single "PDF engine" — Workers has no binary PDF
+ * library, so reports render as styled, @media-print-ready HTML that browsers
+ * print/save-as-PDF. Reused by SIEM Export's `executive_pdf` format — do not
+ * fork another copy of this template elsewhere.
  */
-async function generateReportHTML(type, orgId, config, env) {
-  const db = env.DB;
-  const ts = new Date().toLocaleString();
-
-  // Common data gathering
-  let riskScore = 50, criticalCount = 0, highCount = 0, totalScans = 0;
-  try {
-    const scanStats = await db.prepare(
-      `SELECT COUNT(*) as total,
-              SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) as critical_ct,
-              SUM(CASE WHEN risk_score >= 60 AND risk_score < 80 THEN 1 ELSE 0 END) as high_ct,
-              AVG(risk_score) as avg_risk
-       FROM scan_results WHERE org_id = ? AND created_at >= datetime('now','-30 days')`
-    ).bind(orgId).first();
-    totalScans = scanStats?.total ?? 0;
-    criticalCount = scanStats?.critical_ct ?? 0;
-    highCount = scanStats?.high_ct ?? 0;
-    riskScore = Math.round(scanStats?.avg_risk ?? 50);
-  } catch (_) {}
-
-  const brandName = config?.brand_name || 'CYBERDUDEBIVASH® AI Security Hub';
-  const primaryColor = config?.primary_color || '#6366f1';
-
-  const baseHTML = `<!DOCTYPE html>
+export function buildReportShell({ brandName, primaryColor, title, metaLine, bodyHTML, footerNote }) {
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${brandName} — ${type} Report</title>
+<title>${title}</title>
 <style>
   :root { --primary: ${primaryColor}; --dark: #0a0e1a; --surface: #0f1729; --border: #1e293b; --text: #e2e8f0; --muted: #64748b; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -150,9 +132,40 @@ async function generateReportHTML(type, orgId, config, env) {
 <body>
 <div class="header">
   <h1>${brandName}</h1>
-  <div class="meta">Report Type: ${type.replace(/_/g,' ')} · Generated: ${ts} · Org: ${orgId}</div>
+  <div class="meta">${metaLine}</div>
 </div>
-`;
+${bodyHTML}
+<div class="footer">
+  ${footerNote || `${brandName} · Confidential · CYBERDUDEBIVASH® Platform v33.0`}
+</div>
+</body></html>`;
+}
+
+/**
+ * Generate in-memory HTML report content from existing D1 data.
+ */
+async function generateReportHTML(type, orgId, config, env) {
+  const db = env.DB;
+  const ts = new Date().toLocaleString();
+
+  // Common data gathering
+  let riskScore = 50, criticalCount = 0, highCount = 0, totalScans = 0;
+  try {
+    const scanStats = await db.prepare(
+      `SELECT COUNT(*) as total,
+              SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) as critical_ct,
+              SUM(CASE WHEN risk_score >= 60 AND risk_score < 80 THEN 1 ELSE 0 END) as high_ct,
+              AVG(risk_score) as avg_risk
+       FROM scan_results WHERE org_id = ? AND created_at >= datetime('now','-30 days')`
+    ).bind(orgId).first();
+    totalScans = scanStats?.total ?? 0;
+    criticalCount = scanStats?.critical_ct ?? 0;
+    highCount = scanStats?.high_ct ?? 0;
+    riskScore = Math.round(scanStats?.avg_risk ?? 50);
+  } catch (_) {}
+
+  const brandName = config?.brand_name || 'CYBERDUDEBIVASH® AI Security Hub';
+  const primaryColor = config?.primary_color || '#6366f1';
 
   let bodyHTML = '';
 
@@ -211,13 +224,14 @@ async function generateReportHTML(type, orgId, config, env) {
 </div>`;
   }
 
-  const footerHTML = `
-<div class="footer">
-  ${brandName} · Confidential · Generated ${ts} · CYBERDUDEBIVASH® Platform v33.0
-</div>
-</body></html>`;
-
-  return baseHTML + bodyHTML + footerHTML;
+  return buildReportShell({
+    brandName,
+    primaryColor,
+    title: `${brandName} — ${type} Report`,
+    metaLine: `Report Type: ${type.replace(/_/g,' ')} · Generated: ${ts} · Org: ${orgId}`,
+    bodyHTML,
+    footerNote: `${brandName} · Confidential · Generated ${ts} · CYBERDUDEBIVASH® Platform v33.0`,
+  });
 }
 
 export async function handleListReports(req, env) {
