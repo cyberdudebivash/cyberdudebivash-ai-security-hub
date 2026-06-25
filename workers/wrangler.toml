@@ -237,12 +237,10 @@ crons = [
   "0 23 * * *"         # Slot 5 — 11 PM:     v10 Daily revenue snapshot
 ]
 
-# ── Custom domain routes ──────────────────────────────────────────────────────
-# Production canonical API: https://cyberdudebivash.in/api/
-[[routes]]
-pattern   = "cyberdudebivash.in/api/*"
-zone_name = "cyberdudebivash.in"
-
-# [[routes]]
-# pattern   = "api.tools.cyberdudebivash.com/*"
-# zone_name = "tools.cyberdudebivash.com"
+# ── Custom domain route ───────────────────────────────────────────────────────
+# IMPORTANT: Route cyberdudebivash.in/api/* is managed via the Cloudflare
+# dashboard (Workers & Pages → cyberdudebivash-security-hub → Routes).
+# DO NOT add a [[routes]] block here — the CLOUDFLARE_API_TOKEN used in CI
+# does not have Zone:Workers Routes:Edit permission, and Wrangler will fail
+# trying to call /zones/{id}/workers/routes after a successful worker upload.
+# The dashboard-configured route is permanent and does not need re-registration.
