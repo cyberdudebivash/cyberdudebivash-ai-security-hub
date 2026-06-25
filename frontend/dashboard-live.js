@@ -210,20 +210,58 @@
   // Command Center Data Loaders
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Normalize a threat entry from any API format to a common shape for rendering.
+  // Handles two formats:
+  //   D1 format  (/api/threat-intel)           → { id, title, severity, cvss, published_at, exploit_status, in_kev, description }
+  //   Sentinel   (/api/threat-intel/live feed) → { id/cve_id, score, severity, published/date_added, description/short_description }
+  function normalizeFeedItem(item) {
+    const id    = item.id || item.cve_id || 'N/A';
+    const title = item.title || item.vulnerability_name || item.description
+                              || item.short_description || id;
+    const sev   = (item.severity || 'MEDIUM').toUpperCase();
+    const cvss  = item.cvss_score ?? item.cvss ?? item.score ?? null;
+    const kev   = !!(item.kev || item.in_kev || item.known_ransomware
+                     || item.exploit_status === 'confirmed');
+    const ts    = item.published_at || item.published || item.date_added
+                  || item.created_at || item.timestamp || '';
+    const desc  = item.description || item.short_description || item.summary || '';
+    return { id, title, sev, cvss, kev, ts, desc };
+  }
+
+  // Extract a flat list of items from any known feed response shape.
+  function extractFeedItems(feed) {
+    if (!feed) return [];
+    if (Array.isArray(feed)) return feed;
+    // D1 paginated format: { entries: [...] }
+    if (Array.isArray(feed.entries) && feed.entries.length) return feed.entries;
+    // Sentinel APEX format: { critical_cves, high_cves, actively_exploited, ... }
+    const sentinel = [
+      ...(Array.isArray(feed.critical_cves)     ? feed.critical_cves     : []),
+      ...(Array.isArray(feed.high_cves)         ? feed.high_cves         : []),
+      ...(Array.isArray(feed.actively_exploited)? feed.actively_exploited.map(v => ({
+            ...v, id: v.cve_id || v.id, severity: 'HIGH', kev: true,
+            title: v.vulnerability_name || v.cve_id,
+            description: v.short_description || '',
+            published_at: v.date_added,
+          })) : []),
+    ];
+    if (sentinel.length) return sentinel;
+    // Legacy / other formats
+    return feed.data || feed.items || feed.threats || [];
+  }
+
   // SOC — threat feed
   async function loadSOCFeed() {
     const feed = await Bus.fetch('/api/threat-intel/live');
     const list = $('cdb-soc-alert-feed');
     if (!list || !feed) return;
-    const items = Array.isArray(feed) ? feed : (feed.data || feed.items || feed.threats || []);
+    const items = extractFeedItems(feed);
     if (!items.length) return;
 
     list.innerHTML = items.slice(0, 8).map(item => {
-      const sev   = (item.severity || item.cvss_severity || 'MEDIUM').toUpperCase();
-      const sevCls= sev === 'CRITICAL' ? 'cdb-sev-crit' : sev === 'HIGH' ? 'cdb-sev-high' : 'cdb-sev-med';
-      const title = item.title || item.cve_id || item.id || 'Threat Event';
-      const ts    = item.published_at || item.created_at || item.timestamp || '';
-      const when  = ts ? new Date(ts).toLocaleTimeString() : '';
+      const { id, title, sev, ts } = normalizeFeedItem(item);
+      const sevCls = sev === 'CRITICAL' ? 'cdb-sev-crit' : sev === 'HIGH' ? 'cdb-sev-high' : 'cdb-sev-med';
+      const when   = ts ? new Date(ts).toLocaleTimeString() : '';
       return `<div class="cdb-feed-item">
         <span class="cdb-sev-badge ${sevCls}">${sev}</span>
         <span class="cdb-feed-title">${title}</span>
@@ -237,26 +275,24 @@
     const feed = await Bus.fetch('/api/threat-intel/live');
     const grid = $('cdb-sentinel-cve-grid');
     if (!grid || !feed) return;
-    const items = Array.isArray(feed) ? feed : (feed.data || feed.items || feed.threats || []);
+    const items = extractFeedItems(feed);
     if (!items.length) return;
 
     grid.innerHTML = items.slice(0, 6).map(item => {
-      const cveId   = item.cve_id || item.id || 'N/A';
-      const cvss    = item.cvss_score ?? item.score ?? '—';
-      const sev     = (item.severity || item.cvss_severity || 'MEDIUM').toUpperCase();
-      const sevCls  = sev === 'CRITICAL' ? 'cdb-sev-crit' : sev === 'HIGH' ? 'cdb-sev-high' : 'cdb-sev-med';
-      const title   = item.title || item.description || 'Vulnerability';
-      const kev     = item.kev || item.in_kev ? '<span class="cdb-kev-badge">KEV</span>' : '';
-      const desc    = (item.description || item.summary || '').substring(0, 90);
+      const { id, title, sev, cvss, kev, desc } = normalizeFeedItem(item);
+      const sevCls = sev === 'CRITICAL' ? 'cdb-sev-crit' : sev === 'HIGH' ? 'cdb-sev-high' : 'cdb-sev-med';
+      const kevBadge = kev ? '<span class="cdb-kev-badge">KEV</span>' : '';
+      const cvssStr  = cvss !== null ? cvss : '—';
+      const descPart = desc ? `<div class="cdb-cve-desc">${desc.substring(0, 90)}…</div>` : '';
       return `<div class="cdb-cve-card">
         <div class="cdb-cve-header">
-          <span class="cdb-cve-id">${cveId}</span>
+          <span class="cdb-cve-id">${id}</span>
           <span class="cdb-sev-badge ${sevCls}">${sev}</span>
-          ${kev}
-          <span class="cdb-cvss-score">CVSS ${cvss}</span>
+          ${kevBadge}
+          <span class="cdb-cvss-score">CVSS ${cvssStr}</span>
         </div>
         <div class="cdb-cve-title">${title}</div>
-        ${desc ? `<div class="cdb-cve-desc">${desc}…</div>` : ''}
+        ${descPart}
       </div>`;
     }).join('');
   }
