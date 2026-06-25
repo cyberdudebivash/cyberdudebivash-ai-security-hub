@@ -1,4 +1,4 @@
-[Resource from github at repo://cyberdudebivash/cyberdudebivash-ai-security-hub/sha/3ab84a9706644095e7e6039470f3b6535c369ae4/contents/workers/src/index.js] /**
+/**
  * CYBERDUDEBIVASH AI Security Hub — Main Router v20.0
  * Global Cyber Intelligence Dominance System
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
@@ -2237,7 +2237,6 @@ export default {
       const customerId = path.split('/')[4];
       return withSecurityHeaders(withCors(await handleUpdateCustomer(request, env, authCtx, customerId), request));
     }
-
     // ── P9.0: Enterprise Multi-Tenancy & MSSP Platform ────────────────────────────
     if (path.match(/^\/api\/mssp\/customers\/[^/]+$/) && (method === 'GET' || method === 'DELETE')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
