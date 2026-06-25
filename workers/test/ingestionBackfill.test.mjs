@@ -7,7 +7,7 @@ import {
   fetchCISAKEV, fetchNVDPage, runBulkBackfill, enrichUnscoredEPSS,
 } from '../src/services/threatIngestion.js';
 
-// ── Fixtures ────────────────────────────────────────────────────────────────
+// ── Fixtures ────────────────────────────────────────────────────────────────────────────
 const KEV_JSON = {
   count: 2,
   vulnerabilities: [
@@ -37,7 +37,7 @@ const NVD_JSON = {
 
 const EPSS_JSON = { data: [{ cve: 'CVE-2026-0001', epss: '0.92', percentile: '0.99', date: '2026-06-16' }] };
 
-// ── In-memory D1 / KV ───────────────────────────────────────────────────────
+// ── In-memory D1 / KV ─────────────────────────────────────────────────────────────────────────
 function memDB() {
   const rows = new Map();
   const mk = (sql) => ({
@@ -82,7 +82,7 @@ function memKV() {
   return { m, async get(k) { return m.has(k) ? m.get(k) : null; }, async put(k, v) { m.set(k, v); } };
 }
 
-// ── fetch stub ──────────────────────────────────────────────────────────────
+// ── fetch stub ────────────────────────────────────────────────────────────────────────────
 function stubFetch() {
   return vi.fn(async (url) => {
     const u = String(url);
@@ -121,16 +121,16 @@ describe('Phase-2 ingestion expansion', () => {
   });
 
   it('runBulkBackfill stores the KEV catalog and reports a real total', async () => {
-    const env = { DB: memDB(), SECURITY_HUB_KV: memKV() };
+    const env = { SECURITY_HUB_DB: memDB(), SECURITY_HUB_KV: memKV() };
     const r = await runBulkBackfill(env, { nvdBackfill: false });
     expect(r.success).toBe(true);
     expect(r.kev_inserted).toBe(2);
     expect(r.total_now).toBe(2);
-    expect(env.DB.rows.has('CVE-2026-0001')).toBe(true);
+    expect(env.SECURITY_HUB_DB.rows.has('CVE-2026-0001')).toBe(true);
   });
 
   it('runBulkBackfill advances the NVD cursor when nvdBackfill is on', async () => {
-    const env = { DB: memDB(), SECURITY_HUB_KV: memKV() };
+    const env = { SECURITY_HUB_DB: memDB(), SECURITY_HUB_KV: memKV() };
     const r = await runBulkBackfill(env, { nvdBackfill: true, nvdPerPage: 2 });
     expect(r.nvd_inserted).toBeGreaterThan(0);
     // cursor advanced (nextIndex 2, not done) for at least one severity
@@ -139,10 +139,10 @@ describe('Phase-2 ingestion expansion', () => {
   }, 20000);
 
   it('enrichUnscoredEPSS scores rows lacking an EPSS value', async () => {
-    const env = { DB: memDB(), SECURITY_HUB_KV: memKV() };
+    const env = { SECURITY_HUB_DB: memDB(), SECURITY_HUB_KV: memKV() };
     await runBulkBackfill(env, { nvdBackfill: false });
     const e = await enrichUnscoredEPSS(env, 50);
     expect(e.enriched).toBeGreaterThanOrEqual(1);
-    expect(env.DB.rows.get('CVE-2026-0001').epss_score).toBe(0.92);
+    expect(env.SECURITY_HUB_DB.rows.get('CVE-2026-0001').epss_score).toBe(0.92);
   });
 });
