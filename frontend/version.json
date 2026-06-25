@@ -1,10 +1,10 @@
 {
-  "version": "24.0.0",
-  "platform_version": "24.0.0",
-  "commit": "a772963a273fe648e4acbdb45fa592d4617240ef",
-  "commit_short": "a772963",
-  "build_time": "2026-06-06T21:21:41Z",
+  "version": "40.0.0",
+  "platform_version": "40.0.0",
+  "commit": "f702a110fcc1d4daa7f054dc98d5223169e45efe",
+  "commit_short": "f702a110",
+  "build_time": "2026-06-25T04:00:00Z",
   "branch": "main",
   "platform": "CYBERDUDEBIVASH AI Security Hub",
-  "changelog": "v24.0.0: Revenue Dominance — Billing Engine, Sales OS, Proposal Factory, Scanner Revenue, Trust Center, CEO Command Center"
+  "changelog": "v40.0.0: P3.0 Cyber Signal Radar — AI-powered multi-source threat signal aggregation with live enterprise radar dashboard at /cyber-signal-radar"
 }
