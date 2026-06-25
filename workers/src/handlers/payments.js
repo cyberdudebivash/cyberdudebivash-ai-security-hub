@@ -338,8 +338,9 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     const expiresAt    = Date.now() + 90 * 24 * 60 * 60 * 1000;
     const confirmedEmail = email || authCtx.email || null;
 
-    if (env.KV) {
-      await env.KV.put(`sub_session:${sessionToken}`, JSON.stringify({
+    // FIX P2.8-003: use SECURITY_HUB_KV (env.KV is not a bound namespace)
+    if (env.SECURITY_HUB_KV) {
+      await env.SECURITY_HUB_KV.put(`sub_session:${sessionToken}`, JSON.stringify({
         plan, email: confirmedEmail, payment_id: razorpay_payment_id,
         order_id: razorpay_order_id, activated: Date.now(), expires_at: expiresAt,
       }), { expirationTtl: 90 * 24 * 3600 }).catch(() => {});
@@ -355,6 +356,9 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
       ).run().catch(() => {});
     }
+    // FIX P2.8-004: Telegram admin alert on subscription verify
+    const _tgToken  = env.TELEGRAM_BOT_TOKEN;
+    const _tgChatId = env.ADMIN_TELEGRAM_CHAT_ID || env.TELEGRAM_CHANNEL_ID;
     Promise.all([
       confirmedEmail
         ? sendPurchaseConfirmation(env, {
@@ -370,6 +374,17 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
             event_type: 'subscription_activated', source: utm_source || 'direct',
             payment_id: razorpay_payment_id, plan,
             meta: { utm_medium, utm_campaign, session_token: sessionToken },
+          }).catch(() => {})
+        : Promise.resolve(),
+      (_tgToken && _tgChatId)
+        ? fetch(`https://api.telegram.org/bot${_tgToken}/sendMessage`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              chat_id:    _tgChatId,
+              text:       `💰 *PAYMENT VERIFIED — SUBSCRIPTION*\n\nOrder: \`${razorpay_order_id}\`\nPayment: \`${razorpay_payment_id}\`\nPlan: ${plan}\nAmount: ₹${priceInr}\nEmail: ${confirmedEmail || 'N/A'}\n\n✅ KV + D1 updated. Activation email triggered.`,
+              parse_mode: 'Markdown',
+            }),
           }).catch(() => {})
         : Promise.resolve(),
     ]).catch(() => {});
@@ -494,9 +509,11 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     });
   }
 
-  // Fire-and-forget: GST invoice + purchase confirmation email + lifecycle enrollment
+  // Fire-and-forget: GST invoice + purchase confirmation email + lifecycle + Telegram admin alert
   const confirmedEmail = email || authCtx.email || null;
   const priceInr       = Math.round((MODULE_PRICES[module]?.amount || 0) / 100);
+  const _tgToken  = env.TELEGRAM_BOT_TOKEN;
+  const _tgChatId = env.ADMIN_TELEGRAM_CHAT_ID || env.TELEGRAM_CHANNEL_ID;
   Promise.all([
     (env.DB && priceInr)
       ? createInvoice(env.DB, {
@@ -529,6 +546,18 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
           plan:         body.plan || '',
           meta:         { utm_medium, utm_campaign, report_id: reportId, module, target },
         }).catch(e => console.warn('[Payments] lifecycle error:', e.message))
+      : Promise.resolve(),
+    // FIX P2.8-004: Telegram admin alert on payment verify
+    (_tgToken && _tgChatId)
+      ? fetch(`https://api.telegram.org/bot${_tgToken}/sendMessage`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            chat_id:    _tgChatId,
+            text:       `💰 *PAYMENT VERIFIED*\n\nOrder: \`${razorpay_order_id}\`\nPayment: \`${razorpay_payment_id}\`\nAmount: ₹${priceInr}\nProduct: ${MODULE_PRICES[module]?.name || module}\nEmail: ${confirmedEmail || 'N/A'}\nReport: ${reportId}\n\n✅ KV + D1 updated. Email triggered.`,
+            parse_mode: 'Markdown',
+          }),
+        }).catch(() => {})
       : Promise.resolve(),
   ]).catch(() => {});
 
@@ -664,7 +693,7 @@ export async function handleRazorpayWebhook(request, env) {
   // Webhook replay protection: deduplicate by Razorpay event ID (24-hour window)
   const eventId   = event.id || (event.account_id + ':' + event.created_at + ':' + (event.payload?.payment?.entity?.id || ''));
   const dedupKey  = `webhook_processed:${eventId}`;
-  const kvStore   = env.KV || env.SECURITY_HUB_KV;
+  const kvStore   = env.SECURITY_HUB_KV;
   if (kvStore && eventId) {
     try {
       const already = await kvStore.get(dedupKey);
@@ -727,6 +756,21 @@ export async function handleRazorpayWebhook(request, env) {
                 payment_id: paymentId,
               }).catch(() => {})
             : Promise.resolve(),
+          // FIX P2.8-004: Telegram admin alert on payment.captured (webhook path)
+          (() => {
+            const _tgToken  = env.TELEGRAM_BOT_TOKEN;
+            const _tgChatId = env.ADMIN_TELEGRAM_CHAT_ID || env.TELEGRAM_CHANNEL_ID;
+            if (!_tgToken || !_tgChatId) return Promise.resolve();
+            return fetch(`https://api.telegram.org/bot${_tgToken}/sendMessage`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({
+                chat_id:    _tgChatId,
+                text:       `💰 *PAYMENT CAPTURED (WEBHOOK)*\n\nOrder: \`${orderId}\`\nPayment: \`${paymentId}\`\nAmount: ₹${webhookAmount}\nProduct: ${webhookModule}\nEmail: ${webhookEmail || 'N/A'}\n\n✅ D1 updated. Activation email triggered.`,
+                parse_mode: 'Markdown',
+              }),
+            }).catch(() => {});
+          })(),
         ]).catch(() => {});
       }
     }
