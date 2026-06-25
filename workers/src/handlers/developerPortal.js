@@ -297,6 +297,22 @@ const response = await fetch(\`\${BASE_URL}${endpoint.path}\`, {
 const result = await response.json();
 console.log(result);
 `,
+  typescript: (endpoint, baseUrl, apiKey) => `const API_KEY: string = "${apiKey || 'your-api-key'}";
+const BASE_URL: string = "${baseUrl || 'https://your-worker.workers.dev'}";
+
+// ${endpoint.summary}
+const response = await fetch(\`\${BASE_URL}${endpoint.path}\`, {
+  method: "${endpoint.method}",
+  headers: {
+    "Authorization": \`Bearer \${API_KEY}\`,
+    "Content-Type": "application/json"
+  }${endpoint.method !== 'GET' ? `,
+  body: JSON.stringify(${JSON.stringify(Object.fromEntries(Object.entries(endpoint.request_schema || {}).map(([k, v]) => [k, `<${v}>`])), null, 2)})` : ''}
+});
+
+const result: Record<string, any> = await response.json();
+console.log(result);
+`,
   go: (endpoint, baseUrl, apiKey) => `package main
 
 import (
@@ -339,6 +355,295 @@ curl -X ${endpoint.method} \\
   -d '${JSON.stringify(Object.fromEntries(Object.entries(endpoint.request_schema || {}).map(([k, v]) => [k, `<${v}>`])))}' ` : ' '}
 `
 };
+
+// ─── Full Multi-Endpoint SDK Client Generator (P8.0-006) ─────────────────────
+// Builds one complete, installable client library per language — every
+// method below is derived mechanically from API_CATALOG (method + path),
+// never hand-authored per endpoint. API_CATALOG remains the single source
+// of truth shared with getOpenAPISpec(); this adds zero new registries.
+
+function sdkOperations() {
+  const seen = new Map();
+  const ops = [];
+  for (const group of API_CATALOG) {
+    for (const ep of group.endpoints) {
+      const fullPath = group.prefix + ep.path;
+      const pathParams = [];
+      const segments = fullPath.replace(/^\/api\//, '').split('/').filter(Boolean);
+      const tokens = [];
+      for (const seg of segments) {
+        if (seg.startsWith('{')) {
+          const name = seg.slice(1, -1);
+          pathParams.push(name);
+          tokens.push('by');
+          for (const t of name.split(/[^a-zA-Z0-9]+/).filter(Boolean)) tokens.push(t);
+        } else {
+          for (const t of seg.split(/[^a-zA-Z0-9]+/).filter(Boolean)) tokens.push(t);
+        }
+      }
+      const baseTokens = [ep.method.toLowerCase(), ...tokens];
+      const key = baseTokens.join('_').toLowerCase();
+      const dupes = seen.get(key) || 0;
+      seen.set(key, dupes + 1);
+      const nameTokens = dupes === 0 ? baseTokens : baseTokens.concat(String(dupes + 1));
+      ops.push({ groupName: group.group, fullPath, pathParams, nameTokens, ep });
+    }
+  }
+  return ops;
+}
+
+const sdkCamelName = tokens => tokens.map((t, i) => i === 0 ? t.toLowerCase() : t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join('');
+const sdkPascalName = tokens => tokens.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join('');
+const sdkSnakeName = tokens => tokens.map(t => t.toLowerCase()).join('_');
+const sdkPyArg = name => name.replace(/[^a-zA-Z0-9]+/g, '_');
+const sdkJsArg = name => sdkCamelName(name.split(/[^a-zA-Z0-9]+/).filter(Boolean));
+
+function buildPythonClient() {
+  const lines = [
+    '"""CyberDudeBivash AI Security Hub — Python SDK',
+    'Auto-generated from the platform API registry. Do not hand-edit."""',
+    'import requests',
+    '',
+    '',
+    'class CyberDudeBivashClient:',
+    '    def __init__(self, api_key, base_url="https://your-worker.workers.dev"):',
+    '        self.api_key = api_key',
+    '        self.base_url = base_url.rstrip("/")',
+    '        self.session = requests.Session()',
+    '        self.session.headers.update({',
+    '            "Authorization": "Bearer " + api_key,',
+    '            "Content-Type": "application/json",',
+    '        })',
+    '',
+    '    def _request(self, method, path, params=None, body=None):',
+    '        resp = self.session.request(method, self.base_url + path, params=params, json=body)',
+    '        resp.raise_for_status()',
+    '        return resp.json()',
+  ];
+  for (const op of sdkOperations()) {
+    const name = sdkSnakeName(op.nameTokens);
+    const args = ['self', ...op.pathParams.map(sdkPyArg), 'params=None', 'body=None'];
+    let pathExpr = '"' + op.fullPath + '"';
+    for (const pn of op.pathParams) {
+      pathExpr = pathExpr.replace('{' + pn + '}', '" + str(' + sdkPyArg(pn) + ') + "');
+    }
+    lines.push('');
+    lines.push('    # ' + op.groupName + ': ' + (op.ep.summary || ''));
+    lines.push('    def ' + name + '(' + args.join(', ') + '):');
+    lines.push('        path = ' + pathExpr);
+    lines.push('        return self._request("' + op.ep.method + '", path, params=params, body=body)');
+  }
+  return lines.join('\n') + '\n';
+}
+
+function buildJavaScriptClient() {
+  const lines = [
+    '// CyberDudeBivash AI Security Hub — JavaScript SDK',
+    '// Auto-generated from the platform API registry. Do not hand-edit.',
+    '',
+    'export class CyberDudeBivashClient {',
+    '  constructor(apiKey, baseUrl = "https://your-worker.workers.dev") {',
+    '    this.apiKey = apiKey;',
+    '    this.baseUrl = baseUrl.replace(/\\/$/, "");',
+    '  }',
+    '',
+    '  async _request(method, path, options = {}) {',
+    '    const url = new URL(this.baseUrl + path);',
+    '    if (options.params) for (const [k, v] of Object.entries(options.params)) url.searchParams.set(k, v);',
+    '    const resp = await fetch(url, {',
+    '      method,',
+    '      headers: { Authorization: "Bearer " + this.apiKey, "Content-Type": "application/json" },',
+    '      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,',
+    '    });',
+    '    if (!resp.ok) throw new Error("API error " + resp.status + ": " + (await resp.text()));',
+    '    return resp.json();',
+    '  }',
+  ];
+  for (const op of sdkOperations()) {
+    const name = sdkCamelName(op.nameTokens);
+    const args = [...op.pathParams.map(sdkJsArg), 'options = {}'];
+    let pathExpr = '"' + op.fullPath + '"';
+    for (const pn of op.pathParams) {
+      pathExpr = pathExpr.replace('{' + pn + '}', '" + ' + sdkJsArg(pn) + ' + "');
+    }
+    lines.push('');
+    lines.push('  // ' + op.groupName + ': ' + (op.ep.summary || ''));
+    lines.push('  ' + name + '(' + args.join(', ') + ') {');
+    lines.push('    return this._request("' + op.ep.method + '", ' + pathExpr + ', options);');
+    lines.push('  }');
+  }
+  lines.push('}');
+  return lines.join('\n') + '\n';
+}
+
+function buildTypeScriptClient() {
+  const lines = [
+    '// CyberDudeBivash AI Security Hub — TypeScript SDK',
+    '// Auto-generated from the platform API registry. Do not hand-edit.',
+    '',
+    'export type ApiRequestOptions = { params?: Record<string, string | number | boolean>; body?: unknown };',
+    'export type ApiResponse = Record<string, any>;',
+    '',
+    'export class CyberDudeBivashClient {',
+    '  private apiKey: string;',
+    '  private baseUrl: string;',
+    '',
+    '  constructor(apiKey: string, baseUrl: string = "https://your-worker.workers.dev") {',
+    '    this.apiKey = apiKey;',
+    '    this.baseUrl = baseUrl.replace(/\\/$/, "");',
+    '  }',
+    '',
+    '  private async request(method: string, path: string, options: ApiRequestOptions = {}): Promise<ApiResponse> {',
+    '    const url = new URL(this.baseUrl + path);',
+    '    if (options.params) for (const [k, v] of Object.entries(options.params)) url.searchParams.set(k, String(v));',
+    '    const resp = await fetch(url, {',
+    '      method,',
+    '      headers: { Authorization: "Bearer " + this.apiKey, "Content-Type": "application/json" },',
+    '      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,',
+    '    });',
+    '    if (!resp.ok) throw new Error("API error " + resp.status + ": " + (await resp.text()));',
+    '    return resp.json();',
+    '  }',
+  ];
+  for (const op of sdkOperations()) {
+    const name = sdkCamelName(op.nameTokens);
+    const args = [...op.pathParams.map(p => sdkJsArg(p) + ': string'), 'options: ApiRequestOptions = {}'];
+    let pathExpr = '"' + op.fullPath + '"';
+    for (const pn of op.pathParams) {
+      pathExpr = pathExpr.replace('{' + pn + '}', '" + ' + sdkJsArg(pn) + ' + "');
+    }
+    lines.push('');
+    lines.push('  // ' + op.groupName + ': ' + (op.ep.summary || ''));
+    lines.push('  ' + name + '(' + args.join(', ') + '): Promise<ApiResponse> {');
+    lines.push('    return this.request("' + op.ep.method + '", ' + pathExpr + ', options);');
+    lines.push('  }');
+  }
+  lines.push('}');
+  return lines.join('\n') + '\n';
+}
+
+function buildGoClient() {
+  const lines = [
+    '// Package cyberdudebivash provides a generated Go client for the',
+    '// CyberDudeBivash AI Security Hub API. Do not hand-edit.',
+    'package cyberdudebivash',
+    '',
+    'import (',
+    '\t"bytes"',
+    '\t"encoding/json"',
+    '\t"fmt"',
+    '\t"net/http"',
+    '\t"net/url"',
+    ')',
+    '',
+    'type Client struct {',
+    '\tAPIKey  string',
+    '\tBaseURL string',
+    '\tHTTP    *http.Client',
+    '}',
+    '',
+    'func NewClient(apiKey string) *Client {',
+    '\treturn &Client{APIKey: apiKey, BaseURL: "https://your-worker.workers.dev", HTTP: &http.Client{}}',
+    '}',
+    '',
+    'func (c *Client) request(method, path string, query map[string]string, body interface{}) (map[string]interface{}, error) {',
+    '\treqURL := c.BaseURL + path',
+    '\tif len(query) > 0 {',
+    '\t\tv := url.Values{}',
+    '\t\tfor k, val := range query {',
+    '\t\t\tv.Set(k, val)',
+    '\t\t}',
+    '\t\treqURL += "?" + v.Encode()',
+    '\t}',
+    '\tvar reqBody *bytes.Buffer',
+    '\tif body != nil {',
+    '\t\tb, err := json.Marshal(body)',
+    '\t\tif err != nil {',
+    '\t\t\treturn nil, err',
+    '\t\t}',
+    '\t\treqBody = bytes.NewBuffer(b)',
+    '\t} else {',
+    '\t\treqBody = bytes.NewBuffer(nil)',
+    '\t}',
+    '\treq, err := http.NewRequest(method, reqURL, reqBody)',
+    '\tif err != nil {',
+    '\t\treturn nil, err',
+    '\t}',
+    '\treq.Header.Set("Authorization", "Bearer "+c.APIKey)',
+    '\treq.Header.Set("Content-Type", "application/json")',
+    '\tresp, err := c.HTTP.Do(req)',
+    '\tif err != nil {',
+    '\t\treturn nil, err',
+    '\t}',
+    '\tdefer resp.Body.Close()',
+    '\tif resp.StatusCode >= 400 {',
+    '\t\treturn nil, fmt.Errorf("api error: status %d", resp.StatusCode)',
+    '\t}',
+    '\tvar result map[string]interface{}',
+    '\tif err := json.NewDecoder(resp.Body).Decode(&result); err != nil {',
+    '\t\treturn nil, err',
+    '\t}',
+    '\treturn result, nil',
+    '}',
+  ];
+  for (const op of sdkOperations()) {
+    const name = sdkPascalName(op.nameTokens);
+    const goArgs = [...op.pathParams.map(p => sdkJsArg(p) + ' string'), 'query map[string]string', 'body interface{}'];
+    let pathExpr;
+    if (op.pathParams.length) {
+      let fmtPath = op.fullPath;
+      for (const pn of op.pathParams) fmtPath = fmtPath.replace('{' + pn + '}', '%s');
+      const fmtArgs = op.pathParams.map(sdkJsArg).join(', ');
+      pathExpr = 'fmt.Sprintf("' + fmtPath + '", ' + fmtArgs + ')';
+    } else {
+      pathExpr = '"' + op.fullPath + '"';
+    }
+    lines.push('');
+    lines.push('// ' + name + ' — ' + op.groupName + ': ' + (op.ep.summary || ''));
+    lines.push('func (c *Client) ' + name + '(' + goArgs.join(', ') + ') (map[string]interface{}, error) {');
+    lines.push('\tpath := ' + pathExpr);
+    lines.push('\treturn c.request("' + op.ep.method + '", path, query, body)');
+    lines.push('}');
+  }
+  return lines.join('\n') + '\n';
+}
+
+const SDK_CLIENT_BUILDERS = {
+  python:     { build: buildPythonClient,     filename: 'cyberdudebivash_client.py', install: 'pip install requests' },
+  javascript: { build: buildJavaScriptClient, filename: 'cyberdudebivash-client.js', install: 'N/A — uses native fetch (Node 18+)' },
+  typescript: { build: buildTypeScriptClient, filename: 'cyberdudebivash-client.ts', install: 'N/A — uses native fetch (Node 18+ / TS 4.7+)' },
+  go:         { build: buildGoClient,         filename: 'cyberdudebivash_client.go', install: 'go get (standard library only)' },
+};
+
+function buildFullClient(language) {
+  const entry = SDK_CLIENT_BUILDERS[language];
+  if (!entry) return null;
+  return {
+    language, filename: entry.filename, install: entry.install,
+    code: entry.build(),
+    total_methods: sdkOperations().length,
+    total_groups: API_CATALOG.length,
+  };
+}
+
+async function downloadFullSDK(request, env) {
+  const url = new URL(request.url);
+  const language = url.pathname.split('/').pop();
+  const result = buildFullClient(language);
+  if (!result) return jsonResp({ error: `Unsupported language. Supported: ${Object.keys(SDK_CLIENT_BUILDERS).join(', ')}` }, 400);
+  if (url.searchParams.get('raw') === '1') {
+    return new Response(result.code, { status: 200, headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${result.filename}"`,
+    }});
+  }
+  return jsonResp({
+    language: result.language, filename: result.filename, install: result.install,
+    total_methods: result.total_methods, total_groups: result.total_groups,
+    code: result.code,
+    download: `${url.pathname}?raw=1`,
+  });
+}
 
 // ─── Webhook Event Catalog ────────────────────────────────────────────────────
 const WEBHOOK_EVENTS = [
@@ -386,6 +691,7 @@ export async function handleDeveloperPortal(request, env) {
   // SDK Code Generator
   if (path === '/api/developer/sdk/generate' && method === 'POST') return generateSDK(request, env);
   if (path === '/api/developer/sdk/languages' && method === 'GET') return listSDKLanguages(request, env);
+  if (path.match(/^\/api\/developer\/sdk\/download\/[\w-]+$/) && method === 'GET') return downloadFullSDK(request, env);
 
   // Webhook Catalog
   if (path === '/api/developer/webhooks/events' && method === 'GET') return listWebhookEvents(request, env);
@@ -497,7 +803,7 @@ async function generateSDK(request, env) {
 
     const code = SDK_TEMPLATES[language](targetEndpoint, base_url, api_key);
     return jsonResp({ language, endpoint: (targetEndpoint.prefix || '') + targetEndpoint.path, method: targetEndpoint.method, code,
-      dependencies: { python: ['requests'], javascript: ['(built-in fetch)'], go: ['(standard library)'], curl: ['curl'] }[language] || []
+      dependencies: { python: ['requests'], javascript: ['(built-in fetch)'], typescript: ['(built-in fetch)'], go: ['(standard library)'], curl: ['curl'] }[language] || []
     });
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
@@ -507,10 +813,11 @@ async function listSDKLanguages(request, env) {
     languages: [
       { id:'python', name:'Python', version:'3.8+', package:'requests', install:'pip install requests' },
       { id:'javascript', name:'JavaScript / Node.js', version:'18+', package:'(built-in fetch)', install:'N/A — uses native fetch' },
+      { id:'typescript', name:'TypeScript', version:'4.7+', package:'(built-in fetch)', install:'N/A — uses native fetch, typed client' },
       { id:'go', name:'Go', version:'1.18+', package:'standard library', install:'N/A — standard library' },
       { id:'curl', name:'cURL', version:'7.0+', package:'curl', install:'brew install curl / apt install curl' }
     ],
-    note: 'POST /api/developer/sdk/generate with {language, endpoint_path, endpoint_method, base_url, api_key} for production-ready code snippets.'
+    note: 'POST /api/developer/sdk/generate with {language, endpoint_path, endpoint_method, base_url, api_key} for a single-endpoint snippet. GET /api/developer/sdk/download/{language} (python, javascript, typescript, go) returns a complete multi-endpoint client library generated from the full API catalog — add ?raw=1 to download the source file directly.'
   });
 }
 
