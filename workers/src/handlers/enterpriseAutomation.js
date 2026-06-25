@@ -542,7 +542,7 @@ async function handleApiUsageDashboard(req, env, authCtx) {
 
 // ─── P7.0-006: API Governance ────────────────────────────────────────────────
 
-const API_MANIFEST = {
+export const API_MANIFEST = {
   version: 'v1',
   released: '2025-01-01',
   endpoints: [
@@ -565,7 +565,21 @@ const API_MANIFEST = {
     { path: '/api/auto/usage',          status: 'stable',     since: 'v1' },
     { path: '/api/self/keys',           status: 'stable',     since: 'v1' },
   ],
-  deprecations: [],
+  // P8.0-002: real legacy/duplicate routes on a sunset timeline. `path` = exact match,
+  // `pattern` = regex match for parameterised paths. Add new entries here only —
+  // never remove a route's handler without first sunsetting it from here.
+  deprecations: [
+    { path: '/api/payments/create-order',        since: '2025-06-01', sunset: '2026-12-31', replacement: '/api/payment/create-order', reason: 'Plural namespace retained for backward compatibility only.' },
+    { path: '/api/payments/verify',               since: '2025-06-01', sunset: '2026-12-31', replacement: '/api/payment/verify',       reason: 'Plural namespace retained for backward compatibility only.' },
+    { pattern: '^/api/payments/status/',          since: '2025-06-01', sunset: '2026-12-31', replacement: '/api/payment/status/{id}',  reason: 'Plural namespace retained for backward compatibility only.' },
+    { path: '/api/v13/status',                    since: '2025-09-01', sunset: '2026-12-31', replacement: '/api/status',               reason: 'Superseded by the Phase D live status page.' },
+  ],
+  compatibility: {
+    current_version: 'v1',
+    supported_versions: ['v1'],
+    minimum_supported_version: 'v1',
+    breaking_changes: [],
+  },
   throttling: {
     FREE:       { requests_per_minute: 10,  requests_per_day: 100 },
     PRO:        { requests_per_minute: 60,  requests_per_day: 5000 },
@@ -573,6 +587,27 @@ const API_MANIFEST = {
     MSSP:       { requests_per_minute: 600, requests_per_day: -1 },
   },
 };
+
+// ─── P8.0-002: Deprecation / Sunset / Version response headers ──────────────
+// Single source of truth = API_MANIFEST.deprecations above. Consumed centrally
+// by middleware/cors.js so every existing route gains lifecycle headers with
+// zero changes to routing/dispatch logic.
+function matchDeprecation(path) {
+  return API_MANIFEST.deprecations.find(d =>
+    (d.path && d.path === path) || (d.pattern && new RegExp(d.pattern).test(path))
+  ) || null;
+}
+
+export function getLifecycleHeaders(path) {
+  const headers = { 'API-Version': API_MANIFEST.version };
+  const dep = matchDeprecation(path);
+  if (dep) {
+    headers['Deprecation'] = 'true';
+    if (dep.sunset) headers['Sunset'] = new Date(`${dep.sunset}T23:59:59Z`).toUTCString();
+    if (dep.replacement) headers['Link'] = `<${dep.replacement}>; rel="successor-version"`;
+  }
+  return headers;
+}
 
 async function handleGovernance(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
