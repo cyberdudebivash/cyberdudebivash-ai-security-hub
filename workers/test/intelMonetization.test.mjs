@@ -72,7 +72,7 @@ describe('feed tier entitlements', () => {
 
 describe('public feeds — FREE gating', () => {
   it('FREE /api/feed.json is capped at 25 and strips EPSS, with an upgrade CTA', async () => {
-    const env = { DB: mockDB() };
+    const env = { SECURITY_HUB_DB: mockDB() };
     const body = await (await call(env, '/api/feed.json')).json();
     expect(body.tier).toBe('FREE');
     expect(body.count).toBe(25);
@@ -82,14 +82,14 @@ describe('public feeds — FREE gating', () => {
   });
 
   it('FREE KEV feed is a limited slice (not the full catalog)', async () => {
-    const env = { DB: mockDB() };
+    const env = { SECURITY_HUB_DB: mockDB() };
     const body = await (await call(env, '/api/v1/intel/kev.json')).json();
     expect(body.full_catalog).toBe(false);
     expect(body.count).toBeLessThanOrEqual(25);
   });
 
   it('STIX export is blocked for FREE with 402 + upgrade', async () => {
-    const env = { DB: mockDB() };
+    const env = { SECURITY_HUB_DB: mockDB() };
     const res = await call(env, '/api/v1/intel/stix.json');
     expect(res.status).toBe(402);
     const body = await res.json();
@@ -97,7 +97,7 @@ describe('public feeds — FREE gating', () => {
   });
 
   it('pricing endpoint lists every tier with prices', async () => {
-    const env = { DB: mockDB() };
+    const env = { SECURITY_HUB_DB: mockDB() };
     const body = await (await call(env, '/api/v1/intel/pricing.json')).json();
     expect(body.tiers.find(t => t.tier === 'PRO').stix_export).toBe(true);
     expect(body.tiers.find(t => t.tier === 'FREE').price_inr).toBe(0);
@@ -106,7 +106,7 @@ describe('public feeds — FREE gating', () => {
 
 describe('public feeds — paid (keyed) access', () => {
   it('a PRO key unlocks full detail (EPSS) and rate-limit headers', async () => {
-    const env = { DB: mockDB(), SECURITY_HUB_KV: mockKV({ cdb_prokey: 'PRO' }) };
+    const env = { SECURITY_HUB_DB: mockDB(), SECURITY_HUB_KV: mockKV({ cdb_prokey: 'PRO' }) };
     const res = await call(env, '/api/feed.json', { 'x-api-key': 'cdb_prokey' });
     expect(res.status).toBe(200);
     expect(res.headers.get('X-RateLimit-Tier')).toBe('PRO');
@@ -117,7 +117,7 @@ describe('public feeds — paid (keyed) access', () => {
   });
 
   it('a PRO key can export a valid STIX 2.1 bundle', async () => {
-    const env = { DB: mockDB(), SECURITY_HUB_KV: mockKV({ cdb_prokey: 'PRO' }) };
+    const env = { SECURITY_HUB_DB: mockDB(), SECURITY_HUB_KV: mockKV({ cdb_prokey: 'PRO' }) };
     const res = await call(env, '/api/v1/intel/stix.json', { 'x-api-key': 'cdb_prokey' });
     expect(res.status).toBe(200);
     const bundle = await res.json();
@@ -127,7 +127,7 @@ describe('public feeds — paid (keyed) access', () => {
   });
 
   it('an invalid key is rejected with 401', async () => {
-    const env = { DB: mockDB(), SECURITY_HUB_KV: mockKV({ cdb_prokey: 'PRO' }) };
+    const env = { SECURITY_HUB_DB: mockDB(), SECURITY_HUB_KV: mockKV({ cdb_prokey: 'PRO' }) };
     const res = await call(env, '/api/feed.json', { 'x-api-key': 'cdb_wrong' });
     expect(res.status).toBe(401);
   });
