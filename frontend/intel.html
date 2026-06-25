@@ -1734,6 +1734,57 @@
             navLinks.classList.toggle('active');
         });
 
+        // ===== NORMALIZE API ENTRY TO RENDER FORMAT =====
+        // /api/threat-intel returns { entries: [...] } with D1 field names.
+        // The render function expects { id, severity, cvss, title, product, description, apt, kev, date }.
+        function normalizeEntry(e) {
+            let products = [];
+            try {
+                products = typeof e.affected_products === 'string'
+                    ? JSON.parse(e.affected_products)
+                    : (Array.isArray(e.affected_products) ? e.affected_products : []);
+            } catch {}
+            // Strip CPE prefix: cpe:2.3:a:vendor:product:... → vendor product
+            const rawProduct = products[0] || '';
+            const product = rawProduct.startsWith('cpe:')
+                ? rawProduct.split(':').slice(3, 5).filter(Boolean).join(' ').replace(/_/g, ' ')
+                : (rawProduct || e.product || 'Unknown');
+
+            const kev = !!(e.kev || e.in_kev || e.exploit_status === 'confirmed' || e.known_ransomware);
+            const cvss = parseFloat(e.cvss) || parseFloat(e.cvss_score) || parseFloat(e.score) || 0;
+
+            return {
+                id:          e.id || e.cve_id || 'Unknown',
+                severity:    (e.severity || 'MEDIUM').toUpperCase(),
+                cvss,
+                title:       e.title || e.vulnerability_name || e.id || 'Unknown Vulnerability',
+                product:     product || 'Unknown',
+                description: e.description || e.short_description || '',
+                apt:         Array.isArray(e.apt) ? e.apt : [],
+                kev,
+                date:        e.date || e.published_at || e.published || e.date_added || new Date().toISOString(),
+            };
+        }
+
+        // ===== FETCH REAL STATS FOR HERO COUNTERS =====
+        async function fetchStats() {
+            try {
+                const r = await fetch('/api/threat-intel/stats', { signal: AbortSignal.timeout(5000) });
+                if (!r.ok) return;
+                const data = await r.json();
+                const s = data.stats || data;
+                const total    = s.total_advisories ?? s.total_cves ?? s.total ?? 0;
+                const critical = s.critical ?? s.critical_cves ?? 0;
+                const kev      = s.confirmed_exploited ?? s.kev_count ?? 0;
+                const totalEl  = document.querySelector('[data-stat="total-cves"]');
+                const critEl   = document.querySelector('[data-stat="critical"]');
+                const kevEl    = document.querySelector('[data-stat="kev"]');
+                if (totalEl && total > 0) animateCounter(totalEl, total);
+                if (critEl  && critical > 0) animateCounter(critEl, critical);
+                if (kevEl   && kev > 0) animateCounter(kevEl, kev);
+            } catch {}
+        }
+
         // ===== FETCH THREAT DATA =====
         async function fetchThreats() {
             try {
@@ -1749,7 +1800,14 @@
                 if (!response.ok) throw new Error('API Error');
 
                 const data = await response.json();
-                threatData = Array.isArray(data) ? data : data.threats || FALLBACK_CVES;
+                // API returns { entries: [...] } — normalize field names for the renderer
+                const raw = Array.isArray(data) ? data
+                          : (data.entries || data.threats || null);
+                if (raw && raw.length > 0) {
+                    threatData = raw.map(normalizeEntry);
+                } else {
+                    threatData = [...FALLBACK_CVES];
+                }
             } catch (error) {
                 console.warn('Threat fetch failed, using fallback:', error);
                 threatData = [...FALLBACK_CVES];
@@ -1966,11 +2024,13 @@
         // ===== INITIALIZATION =====
         function init() {
             fetchThreats();
+            fetchStats();
             renderAPTGroups();
             updateStats();
 
-            // Auto-refresh every 3 minutes
+            // Auto-refresh every 3 minutes; refresh stats every 10 minutes
             setInterval(fetchThreats, CONFIG.REFRESH_INTERVAL);
+            setInterval(fetchStats, 10 * 60 * 1000);
         }
 
         document.addEventListener('DOMContentLoaded', init);
