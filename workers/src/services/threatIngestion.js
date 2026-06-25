@@ -1,5 +1,5 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Threat Ingestion Engine v2.0
+ * CYBERDUDEBIVASH AI Security Hub — Threat Ingestion Engine v2.1
  * Autonomous pipeline: Fetch → Normalize → Deduplicate → Store in D1
  *
  * Sources:
@@ -8,6 +8,9 @@
  *   3. CERT-In advisories   — India-specific security bulletins
  *   4. GitHub Security RSS  — GitHub advisory feed (Atom XML)
  *   5. Built-in seed        — curated high-value entries for cold-start
+ *
+ * BINDING NOTE: D1 binding name is SECURITY_HUB_DB (not DB).
+ * All env.DB references here use env.SECURITY_HUB_DB — do not change.
  */
 
 import { enforceGovernanceBatch } from '../middleware/severityGovernanceGate.js';
@@ -23,8 +26,10 @@ const EPSS_API_BASE  = 'https://api.first.org/data/v1/epss';
 const FETCH_TIMEOUT  = 10000; // 10s per source
 
 // ─── Built-in seed data — REAL current CVEs, never empty feed ─────────────────
-// These are real published CVEs as of April 2026. Refresh periodically.
+// Real published CVEs as of June 2026. Refresh periodically.
+// These cover 2024–2025 high-severity exploited vulnerabilities.
 const SEED_ENTRIES = [
+  // ── 2024 high-profile CVEs ────────────────────────────────────────────────
   {
     id: 'CVE-2024-3400', title: 'PAN-OS Command Injection (CRITICAL 0-day)', severity: 'CRITICAL',
     cvss: 10.0, description: 'A command injection vulnerability in the GlobalProtect feature of Palo Alto Networks PAN-OS software allows an unauthenticated attacker to execute arbitrary code with root privileges on the firewall.',
@@ -124,23 +129,15 @@ const SEED_ENTRIES = [
     affected_products: '["cpe:2.3:a:jenkins:jenkins:*:*:*:*:*:*:*:*"]',
     weakness_types: '["CWE-22"]',
   },
+  // ── 2025 CVEs — active threat landscape ──────────────────────────────────
   {
-    id: 'CVE-2025-21444', title: 'Windows Kernel Privilege Escalation (2025)', severity: 'HIGH',
-    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows kernel allows a local attacker to escalate privileges to SYSTEM level, bypassing security boundaries.',
-    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-21444',
-    published_at: '2025-01-14', exploit_status: 'unconfirmed', known_ransomware: 0,
-    tags: '["PrivEsc","Windows","Kernel","LocalExploit"]',
-    affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-416"]',
-  },
-  {
-    id: 'CVE-2025-24085', title: 'Apple CoreMedia Use-After-Free (0-day)', severity: 'HIGH',
-    cvss: 7.8, description: 'A use-after-free issue in Apple CoreMedia was exploited in the wild against targeted individuals. Successfully exploiting this vulnerability may allow an attacker to elevate privileges.',
-    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24085',
-    published_at: '2025-01-27', exploit_status: 'confirmed', known_ransomware: 0,
-    tags: '["PrivEsc","Apple","iOS","macOS","ZeroDay","ActiveExploitation"]',
-    affected_products: '["cpe:2.3:o:apple:ios:*:*:*:*:*:*:*:*"]',
-    weakness_types: '["CWE-416"]',
+    id: 'CVE-2025-0282', title: 'Ivanti Connect Secure Stack-Based Buffer Overflow (0-day)', severity: 'CRITICAL',
+    cvss: 9.0, description: 'A stack-based buffer overflow in Ivanti Connect Secure before 22.7R2.5, Policy Secure, and ZTA Gateways allows a remote unauthenticated attacker to achieve code execution. Actively exploited by China-nexus threat actors (UNC5221) since December 2024.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-0282',
+    published_at: '2025-01-08', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","ZeroDay","VPN","Ivanti","APT","China","ActiveExploitation","BufferOverflow"]',
+    affected_products: '["cpe:2.3:a:ivanti:connect_secure:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-121"]',
   },
   {
     id: 'CVE-2025-22457', title: 'Ivanti Connect Secure Stack Overflow RCE', severity: 'CRITICAL',
@@ -152,11 +149,110 @@ const SEED_ENTRIES = [
     weakness_types: '["CWE-121"]',
   },
   {
-    id: 'CVE-2025-29824', title: 'Windows CLFS Driver Privilege Escalation (0-day)', severity: 'HIGH',
-    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows Common Log File System Driver allows a local attacker to gain SYSTEM privileges. Exploited in the wild by ransomware operators (RansomEXX).',
+    id: 'CVE-2025-24085', title: 'Apple CoreMedia Use-After-Free (0-day)', severity: 'HIGH',
+    cvss: 7.8, description: 'A use-after-free issue in Apple CoreMedia was exploited in the wild against targeted individuals. Successfully exploiting this vulnerability may allow an attacker to elevate privileges.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24085',
+    published_at: '2025-01-27', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["PrivEsc","Apple","iOS","macOS","ZeroDay","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:o:apple:ios:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-416"]',
+  },
+  {
+    id: 'CVE-2025-24200', title: 'Apple iOS USB Restricted Mode Authorization Bypass (0-day)', severity: 'HIGH',
+    cvss: 7.1, description: 'An authorization issue in Apple iOS allows a physical attacker to disable USB Restricted Mode on a locked device, potentially exposing it to forensic extraction tools. Exploited in sophisticated targeted attacks against specific individuals. Fixed in iOS 18.3.2.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-24200',
+    published_at: '2025-02-05', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["ZeroDay","Apple","iOS","AuthBypass","Physical","USBRestriction","TargetedAttack"]',
+    affected_products: '["cpe:2.3:o:apple:iphone_os:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-285"]',
+  },
+  {
+    id: 'CVE-2025-27363', title: 'FreeType Out-of-Bounds Write 0-day (Exploited in Wild)', severity: 'HIGH',
+    cvss: 8.1, description: 'An out-of-bounds write in FreeType font rendering library when processing OTF/TrueType fonts with certain malformed table entries. Exploited in targeted attacks. Affects FreeType versions up to 2.13.0.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-27363',
+    published_at: '2025-03-11', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","ZeroDay","FontRendering","FreeType","Linux","Android","TargetedAttack"]',
+    affected_products: '["cpe:2.3:a:freetype:freetype:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-787"]',
+  },
+  {
+    id: 'CVE-2025-26633', title: 'Microsoft Management Console Spoofing 0-day (TA569)', severity: 'HIGH',
+    cvss: 7.0, description: 'A spoofing vulnerability in Microsoft Management Console (MMC) allows attackers to bypass the Mark-of-the-Web (MotW) security mechanism via crafted .msc files. Actively exploited by threat actor TA569 in phishing campaigns distributing malware.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-26633',
+    published_at: '2025-03-11', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["ZeroDay","Windows","MMC","MotW","Phishing","TA569","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:microsoft:management_console:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-345"]',
+  },
+  {
+    id: 'CVE-2025-29824', title: 'Windows CLFS Driver Privilege Escalation (0-day, RansomEXX)', severity: 'HIGH',
+    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows Common Log File System Driver allows a local attacker to gain SYSTEM privileges. Exploited in the wild by ransomware operators (RansomEXX) as a post-compromise privilege escalation step.',
     source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-29824',
     published_at: '2025-04-08', exploit_status: 'confirmed', known_ransomware: 1,
-    tags: '["PrivEsc","Windows","ZeroDay","Ransomware","CLFS"]',
+    tags: '["PrivEsc","Windows","ZeroDay","Ransomware","CLFS","RansomEXX"]',
+    affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-416"]',
+  },
+  {
+    id: 'CVE-2025-30406', title: 'Gladinet CentreStack Hardcoded Cryptographic Key RCE', severity: 'CRITICAL',
+    cvss: 9.0, description: 'Gladinet CentreStack uses a hardcoded machineKey value for ASP.NET cryptographic operations, allowing unauthenticated attackers to forge ViewState data and achieve remote code execution via deserialization. Actively exploited since March 2025.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-30406',
+    published_at: '2025-04-03', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","HardcodedKey","ViewState","Deserialization","FileSharing","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:gladinet:centrestack:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-321","CWE-502"]',
+  },
+  {
+    id: 'CVE-2025-30065', title: 'Apache Parquet Java Deserialization Remote Code Execution', severity: 'CRITICAL',
+    cvss: 10.0, description: 'A critical deserialization vulnerability in Apache Parquet Java (parquet-avro module) allows a remote attacker to execute arbitrary code when a system reads a specially crafted Parquet file from an untrusted source. Affects all versions up to 1.15.0.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-30065',
+    published_at: '2025-04-01', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["RCE","Deserialization","Apache","BigData","DataPipeline","SupplyChain","CVSS10"]',
+    affected_products: '["cpe:2.3:a:apache:parquet:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-502"]',
+  },
+  {
+    id: 'CVE-2025-31200', title: 'Apple CoreAudio Heap Buffer Overflow 0-day (Targeted)', severity: 'HIGH',
+    cvss: 7.5, description: 'A heap buffer overflow in Apple CoreAudio allows attackers to achieve code execution when processing a maliciously crafted audio stream. Actively exploited in sophisticated targeted attacks against specific high-value individuals. Fixed in iOS 18.4.1 and macOS Sequoia 15.4.1.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-31200',
+    published_at: '2025-04-16', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","ZeroDay","Apple","iOS","macOS","TargetedAttack","CoreAudio","BufferOverflow"]',
+    affected_products: '["cpe:2.3:o:apple:iphone_os:*:*:*:*:*:*:*:*","cpe:2.3:o:apple:macos:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-122"]',
+  },
+  {
+    id: 'CVE-2025-32433', title: 'Erlang/OTP SSH Pre-Authentication Remote Code Execution', severity: 'CRITICAL',
+    cvss: 10.0, description: 'A critical vulnerability in the Erlang/OTP SSH server implementation allows a remote unauthenticated attacker to execute arbitrary code on the target system. Any service using Erlang SSH (including RabbitMQ, CouchDB, and Ejabberd) is affected. Patch immediately — OTP 27.3.3, 26.2.5.11, 25.3.2.20 fix it.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-32433',
+    published_at: '2025-04-16', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["RCE","SSH","Erlang","PreAuth","CloudNative","RabbitMQ","CVSS10"]',
+    affected_products: '["cpe:2.3:a:erlang:otp:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-306"]',
+  },
+  {
+    id: 'CVE-2025-34028', title: 'Commvault Command Center Path Traversal RCE', severity: 'CRITICAL',
+    cvss: 10.0, description: 'A path traversal vulnerability in Commvault Command Center allows unauthenticated remote attackers to upload and execute arbitrary files, achieving remote code execution. Affects Command Center versions 11.38.0 through 11.38.25. CISA added to KEV catalog.',
+    source: 'cisa_kev', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-34028',
+    published_at: '2025-05-01', exploit_status: 'confirmed', known_ransomware: 0,
+    tags: '["RCE","PathTraversal","Backup","Enterprise","PreAuth","CVSS10","ActiveExploitation"]',
+    affected_products: '["cpe:2.3:a:commvault:commvault:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-22"]',
+  },
+  {
+    id: 'CVE-2025-20188', title: 'Cisco IOS XE Wireless Controller Pre-Auth RCE (CVSS 10)', severity: 'CRITICAL',
+    cvss: 10.0, description: 'A vulnerability in the Out-of-Band Access Point (OOBAP) image download feature of Cisco IOS XE Software for Wireless LAN Controllers allows an unauthenticated remote attacker to upload arbitrary files and execute commands with root-level privileges on the underlying OS.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-20188',
+    published_at: '2025-05-07', exploit_status: 'poc_available', known_ransomware: 0,
+    tags: '["RCE","Cisco","Network","Wireless","PreAuth","CVSS10","IOS-XE"]',
+    affected_products: '["cpe:2.3:o:cisco:ios_xe:*:*:*:*:*:*:*:*"]',
+    weakness_types: '["CWE-321"]',
+  },
+  {
+    id: 'CVE-2025-21444', title: 'Windows Kernel Use-After-Free Privilege Escalation', severity: 'HIGH',
+    cvss: 7.8, description: 'A use-after-free vulnerability in the Windows kernel allows a local attacker to escalate privileges to SYSTEM level, bypassing security boundaries. Part of January 2025 Patch Tuesday.',
+    source: 'nvd', source_url: 'https://nvd.nist.gov/vuln/detail/CVE-2025-21444',
+    published_at: '2025-01-14', exploit_status: 'unconfirmed', known_ransomware: 0,
+    tags: '["PrivEsc","Windows","Kernel","LocalExploit","UseAfterFree"]',
     affected_products: '["cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*"]',
     weakness_types: '["CWE-416"]',
   },
@@ -227,7 +323,6 @@ function buildTags(desc = '', cpes = [], weaknesses = []) {
 export async function fetchNVDCVEs(daysBack = 7) {
   const now   = new Date();
   const start = new Date(now.getTime() - daysBack * 86400 * 1000);
-  // NVD date format: 2024-01-01T00:00:00.000 UTC%2B00:00
   const fmt = (d) => d.toISOString().replace(/\.\d+Z$/, '.000 UTC+00:00');
   const pubStart = encodeURIComponent(fmt(start));
   const pubEnd   = encodeURIComponent(fmt(now));
@@ -279,7 +374,6 @@ export async function fetchNVDCVEs(daysBack = 7) {
       });
     }
 
-    // NVD rate limit: max 5 req/30s without API key — wait 1s between calls
     await new Promise(r => setTimeout(r, 1500));
   }
 
@@ -287,9 +381,6 @@ export async function fetchNVDCVEs(daysBack = 7) {
 }
 
 // ─── Paginated NVD fetch (for bulk backfill) ──────────────────────────────────
-// NVD allows resultsPerPage up to 2000 + startIndex paging. Without an API key
-// the limit is 5 req/30s, so the bulk runner fetches ONE page per severity per
-// run and advances a KV cursor — accumulating breadth across successive runs.
 export async function fetchNVDPage({ severity = 'CRITICAL', startIndex = 0, resultsPerPage = 500, daysBack = 120 } = {}) {
   const now   = new Date();
   const start = new Date(now.getTime() - daysBack * 86400 * 1000);
@@ -345,15 +436,12 @@ export async function fetchNVDPage({ severity = 'CRITICAL', startIndex = 0, resu
 }
 
 // ─── MODULE 2: Fetch CISA KEV ─────────────────────────────────────────────────
-// Default cap stays small for the fast 6h pipeline; the bulk backfill passes a
-// high cap to ingest the FULL catalog (~1,600 actively-exploited CVEs).
 export async function fetchCISAKEV(maxEntries = 25) {
   const data = await safeFetch(CISA_KEV_URL, {
     headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/2.0' },
   }, 20000);
   if (!data?.vulnerabilities) return [];
 
-  // Sort by dateAdded DESC, take most recent N
   const recent = [...data.vulnerabilities]
     .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
     .slice(0, maxEntries);
@@ -367,14 +455,14 @@ export async function fetchCISAKEV(maxEntries = 25) {
     return {
       id:               v.cveID,
       title:            v.vulnerabilityName || v.cveID,
-      severity:         'HIGH', // KEV entries are at minimum HIGH by definition
-      cvss:             null,   // enriched later (KEV feed carries no CVSS)
+      severity:         'HIGH',
+      cvss:             null,
       cvss_vector:      null,
       description:      desc.length > 400 ? desc.slice(0, 397) + '...' : desc,
       source:           'cisa_kev',
       source_url:       `https://nvd.nist.gov/vuln/detail/${v.cveID}`,
       published_at:     v.dateAdded || null,
-      exploit_status:   'confirmed', // KEV = confirmed exploitation
+      exploit_status:   'confirmed',
       known_ransomware: v.knownRansomwareCampaignUse === 'Known' ? 1 : 0,
       tags:             JSON.stringify([...new Set(tags)]),
       affected_products: JSON.stringify([`${v.vendorProject}: ${v.product}`]),
@@ -397,7 +485,6 @@ export async function fetchGitHubAdvisories() {
   if (!xml || typeof xml !== 'string') return [];
 
   const entries = [];
-  // Simple XML parsing — extract <entry> blocks
   const entryBlocks = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
 
   for (const block of entryBlocks.slice(0, 15)) {
@@ -407,7 +494,6 @@ export async function fetchGitHubAdvisories() {
     const summary = (block.match(/<summary[^>]*>([\s\S]*?)<\/summary>/) || [])[1] || '';
     const link    = (block.match(/<link[^>]*href="([^"]+)"/) || [])[1] || '';
 
-    // Extract CVE ID from content if present
     const cveMatch = (title + summary).match(/CVE-\d{4}-\d{4,}/);
     const cveId    = cveMatch ? cveMatch[0] : null;
     const entryId  = cveId || `GHSA-${id.split('/').pop()?.slice(-8) || Date.now()}`;
@@ -419,7 +505,7 @@ export async function fetchGitHubAdvisories() {
     entries.push({
       id:               entryId,
       title:            title.slice(0, 150),
-      severity:         'HIGH', // will be enriched
+      severity:         'HIGH',
       cvss:             null,
       cvss_vector:      null,
       description:      cleanSummary.slice(0, 400),
@@ -440,13 +526,11 @@ export async function fetchGitHubAdvisories() {
 }
 
 // ─── MODULE 4: Fetch EPSS Scores from FIRST.org ──────────────────────────────
-// EPSS = Exploit Prediction Scoring System (0–1, higher = more likely exploited)
 export async function fetchEPSSScores(cveIds = []) {
   if (!cveIds.length) return {};
 
   const epssMap = {};
 
-  // Batch in groups of 30 to stay within URL length limits
   for (let i = 0; i < cveIds.length; i += 30) {
     const batch = cveIds.slice(i, i + 30);
     const url   = `${EPSS_API_BASE}?cve=${batch.join(',')}`;
@@ -464,7 +548,6 @@ export async function fetchEPSSScores(cveIds = []) {
       }
     }
 
-    // Polite delay between EPSS batches
     if (i + 30 < cveIds.length) {
       await new Promise(r => setTimeout(r, 500));
     }
@@ -482,11 +565,9 @@ export function applyEPSSScores(entries, epssMap) {
       entry.epss_percentile = epss.epss_percentile;
       entry.epss_date       = epss.epss_date;
 
-      // If EPSS ≥ 0.5 and not already confirmed, mark as high-risk
       if (epss.epss_score >= 0.5 && entry.exploit_status !== 'confirmed') {
-        entry.exploit_status = 'poc_available'; // Likely being tested/exploited
+        entry.exploit_status = 'poc_available';
       }
-      // Synthesize exploit_available flag
       entry.exploit_available = epss.epss_score >= 0.3 || entry.exploit_status !== 'unconfirmed';
     } else {
       entry.epss_score        = null;
@@ -494,7 +575,6 @@ export function applyEPSSScores(entries, epssMap) {
       entry.exploit_available = entry.exploit_status !== 'unconfirmed';
     }
 
-    // actively_exploited flag: confirmed OR KEV-listed
     entry.actively_exploited = entry.exploit_status === 'confirmed' || !!entry.known_ransomware;
   }
   return entries;
@@ -507,7 +587,6 @@ function deduplicateEntries(entries) {
     if (!seen.has(e.id)) {
       seen.set(e.id, e);
     } else {
-      // Merge: prefer higher severity and confirmed exploit status
       const existing = seen.get(e.id);
       const sevRank  = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
       if ((sevRank[e.severity] || 0) > (sevRank[existing.severity] || 0)) {
@@ -516,7 +595,6 @@ function deduplicateEntries(entries) {
       if (e.exploit_status === 'confirmed') {
         seen.get(e.id).exploit_status = 'confirmed';
       }
-      // Merge tags
       try {
         const t1 = JSON.parse(existing.tags || '[]');
         const t2 = JSON.parse(e.tags || '[]');
@@ -528,10 +606,6 @@ function deduplicateEntries(entries) {
 }
 
 // ─── Self-healing schema: ensure every column the upsert writes exists ────────
-// The live threat_intel table drifted (e.g. it had cvss_score but no `cvss`),
-// which made every INSERT fail and left the table empty. Running idempotent
-// ADD COLUMNs here makes ingestion converge the schema on its own — no migration
-// dispatch required. Each ALTER is independently guarded; duplicates are no-ops.
 const THREAT_INTEL_COLUMNS = [
   ['title', 'TEXT'], ['severity', 'TEXT'], ['cvss', 'REAL'], ['cvss_vector', 'TEXT'],
   ['description', 'TEXT'], ['source', 'TEXT'], ['source_url', 'TEXT'], ['published_at', 'TEXT'],
@@ -543,7 +617,6 @@ const THREAT_INTEL_COLUMNS = [
   ['updated_at', 'TEXT'], ['created_at', 'TEXT'],
 ];
 async function ensureThreatIntelColumns(db) {
-  // Create the table on a truly fresh DB (no-op if it already exists).
   try {
     await db.prepare(
       `CREATE TABLE IF NOT EXISTS threat_intel (id TEXT PRIMARY KEY, title TEXT, severity TEXT)`
@@ -561,11 +634,8 @@ export async function storeInD1(db, entries) {
   let inserted = 0, updated = 0;
   const errors = [];
 
-  // Converge the schema before inserting — resilient to any historical drift.
   await ensureThreatIntelColumns(db);
 
-  // Process in batches of 25 (well within D1 statement/param limits) — keeps the
-  // round-trip count low when bulk-loading the full KEV catalog (~1,600 rows).
   const BATCH = 25;
   for (let i = 0; i < entries.length; i += BATCH) {
     const batch = entries.slice(i, i + BATCH);
@@ -609,7 +679,6 @@ export async function storeInD1(db, entries) {
       inserted += batch.length;
     } catch (err) {
       errors.push(`Batch ${i / BATCH}: ${err.message}`);
-      // Fallback: insert one at a time to identify bad entries
       for (const e of batch) {
         try {
           await db.prepare(`
@@ -629,9 +698,6 @@ export async function storeInD1(db, entries) {
           ).run();
           inserted++;
         } catch (e2) {
-          // Tier 3 — minimal guaranteed columns only. These have existed since
-          // threat_intel was created, so this insert is resilient to ANY drift
-          // in the richer columns and guarantees core CVE data is persisted.
           try {
             await db.prepare(`
               INSERT OR REPLACE INTO threat_intel
@@ -666,6 +732,7 @@ export async function seedD1(db) {
 }
 
 // ─── Main ingestion runner ────────────────────────────────────────────────────
+// BINDING: uses env.SECURITY_HUB_DB (D1 binding name in wrangler.toml)
 export async function runIngestion(env) {
   const startTime = Date.now();
   const sources   = [];
@@ -713,7 +780,7 @@ export async function runIngestion(env) {
   // 5. Deduplicate all entries
   const deduped = deduplicateEntries(allEntries);
 
-  // 6. Extract IOCs (run on descriptions)
+  // 6. Extract IOCs
   for (const entry of deduped) {
     try {
       const iocList = extractIOCsFromText(entry.description || '');
@@ -723,7 +790,7 @@ export async function runIngestion(env) {
     } catch {}
   }
 
-  // 7. Enrich entries (CVSS lookup, exploit status)
+  // 7. Enrich entries
   for (const entry of deduped) {
     try {
       const enriched = enrichEntry(entry);
@@ -731,7 +798,7 @@ export async function runIngestion(env) {
     } catch {}
   }
 
-  // 7b. Fetch EPSS scores for all CVE IDs
+  // 7b. Fetch EPSS scores
   try {
     const cveIds  = deduped.filter(e => /^CVE-\d{4}-\d{4,}$/.test(e.id)).map(e => e.id);
     const epssMap = await fetchEPSSScores(cveIds);
@@ -739,7 +806,6 @@ export async function runIngestion(env) {
     sources.push(`epss(${Object.keys(epssMap).length})`);
   } catch (e) {
     errors.push(`EPSS: ${e.message}`);
-    // Fallback: set exploit_available from existing fields
     for (const entry of deduped) {
       entry.actively_exploited = entry.exploit_status === 'confirmed' || !!entry.known_ransomware;
       entry.exploit_available  = entry.exploit_status !== 'unconfirmed';
@@ -747,15 +813,14 @@ export async function runIngestion(env) {
     }
   }
 
-  // 8. Store in D1 (if available)
+  // 8. Store in D1 — uses SECURITY_HUB_DB binding (not DB)
   let stored = { inserted: 0, updated: 0, errors: [] };
-  if (env?.DB) {
-    stored = await storeInD1(env.DB, deduped);
+  if (env?.SECURITY_HUB_DB) {
+    stored = await storeInD1(env.SECURITY_HUB_DB, deduped);
     errors.push(...stored.errors);
   }
 
-  // 8a. Filter the same batch for AI/LLM-ecosystem relevance and feed the
-  //     AI-specific threat feed (handlers/aiThreatIntel.js) — no extra fetches.
+  // 8a. AI threat feed filter
   try {
     const aiResult = await runAIThreatIngestion(env, deduped);
     if (aiResult.matched > 0) sources.push(`ai_feed(${aiResult.inserted}/${aiResult.matched})`);
@@ -764,8 +829,7 @@ export async function runIngestion(env) {
     errors.push(`AI feed filter: ${e.message}`);
   }
 
-  // 8b. Phase 6: Broadcast threat alerts for newly ingested high-risk entries
-  // Runs asynchronously — does not block ingestion result
+  // 8b. Broadcast alerts for high-risk entries
   const alertCandidates = deduped.filter(e =>
     (parseFloat(e.cvss || 0) >= 9.0 || e.exploit_status === 'confirmed' || (e.epss_score || 0) >= 0.8)
   );
@@ -773,11 +837,11 @@ export async function runIngestion(env) {
     triggerIntelAlerts(env, alertCandidates).catch(() => {});
   }
 
-  // 9. Log ingestion run
+  // 9. Log ingestion run — uses SECURITY_HUB_DB binding
   const runId = `run_${Date.now()}`;
-  if (env?.DB) {
+  if (env?.SECURITY_HUB_DB) {
     try {
-      await env.DB.prepare(`
+      await env.SECURITY_HUB_DB.prepare(`
         INSERT INTO ingestion_runs (id, sources, inserted, updated, errors, duration_ms, success)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).bind(
@@ -810,10 +874,9 @@ export async function runIngestion(env) {
 }
 
 // ─── Bounded incremental EPSS enrichment ─────────────────────────────────────
-// Enriches up to `limit` rows that still lack an EPSS score so a large catalog
-// converges over successive runs without blowing the per-invocation time budget.
+// BINDING: uses env.SECURITY_HUB_DB
 export async function enrichUnscoredEPSS(env, limit = 120) {
-  const db = env?.DB;
+  const db = env?.SECURITY_HUB_DB;
   if (!db) return { enriched: 0 };
 
   let rows = [];
@@ -849,21 +912,18 @@ export async function enrichUnscoredEPSS(env, limit = 120) {
 }
 
 // ─── BULK BACKFILL — grow the catalog from dozens to thousands ───────────────
-// Ingests the FULL CISA KEV catalog in one pass (no rate limits → ~1,600 real,
-// actively-exploited CVEs) and optionally advances a KV-cursored NVD page per
-// severity. Skips the heavy per-entry EPSS/IOC work (enrichUnscoredEPSS handles
-// that incrementally) so it stays within the Workers time budget at scale.
+// BINDING: uses env.SECURITY_HUB_DB
 export async function runBulkBackfill(env, opts = {}) {
   const startTime = Date.now();
   const {
-    kevLimit        = 5000,   // effectively the full catalog
-    nvdBackfill     = false,  // off for the synchronous admin call; cron turns it on
+    kevLimit        = 5000,
+    nvdBackfill     = false,
     nvdPerPage      = 500,
     nvdDaysBack     = 120,
     epssEnrichLimit = 120,
   } = opts;
 
-  const db = env?.DB;
+  const db = env?.SECURITY_HUB_DB;
   if (!db) return { success: false, error: 'no_db' };
 
   const result = {
@@ -871,7 +931,7 @@ export async function runBulkBackfill(env, opts = {}) {
     epss_enriched: 0, errors: [], sources: [],
   };
 
-  // 1. Full CISA KEV (one fetch, no rate limit — the big jump)
+  // 1. Full CISA KEV
   try {
     const kev = await fetchCISAKEV(kevLimit);
     if (kev.length) {
@@ -882,7 +942,7 @@ export async function runBulkBackfill(env, opts = {}) {
     }
   } catch (e) { result.errors.push(`KEV: ${e.message}`); }
 
-  // 2. NVD paginated backfill — one page per severity per run, KV cursor
+  // 2. NVD paginated backfill
   if (nvdBackfill) {
     for (const sev of ['CRITICAL', 'HIGH']) {
       const cursorKey = `nvd:backfill:cursor:${sev}`;
@@ -898,10 +958,10 @@ export async function runBulkBackfill(env, opts = {}) {
           result.nvd_inserted += r.inserted;
           result.sources.push(`nvd_${sev.toLowerCase()}(${page.entries.length}@${startIndex})`);
         }
-        const nextCursor = page.done ? 0 : page.nextIndex; // wrap when exhausted
+        const nextCursor = page.done ? 0 : page.nextIndex;
         await env.SECURITY_HUB_KV?.put(cursorKey, String(nextCursor), { expirationTtl: 86400 * 30 }).catch(() => {});
       } catch (e) { result.errors.push(`NVD ${sev}: ${e.message}`); }
-      await new Promise(r => setTimeout(r, 6500)); // NVD rate limit: 5 req/30s
+      await new Promise(r => setTimeout(r, 6500));
     }
   }
 
@@ -911,7 +971,7 @@ export async function runBulkBackfill(env, opts = {}) {
     result.epss_enriched = e.enriched || 0;
   } catch (e) { result.errors.push(`EPSS: ${e.message}`); }
 
-  // 4. Current total + observability
+  // 4. Current total
   try { result.total_now = (await db.prepare('SELECT COUNT(*) AS n FROM threat_intel').first())?.n || 0; }
   catch { result.total_now = null; }
   result.duration_ms = Date.now() - startTime;
@@ -937,5 +997,5 @@ export async function runBulkBackfill(env, opts = {}) {
   return result;
 }
 
-// Export seed data for inline fallback
+// Export seed data for inline fallback in publicFeeds.js
 export { SEED_ENTRIES };
