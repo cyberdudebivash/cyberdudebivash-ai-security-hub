@@ -5,9 +5,18 @@
  * Uses mssp_customers table (schema_phase2.sql).
  * Requires: mssp_admin role for cross-customer views,
  *           enterprise/admin for own-org views.
+ *
+ * P9.1 / P9.2 extensions:
+ *  - ensureMsspCustomersExtended(): migrates suspended_at, archived_at,
+ *    deleted_at, suspension_reason, parent_customer_id columns
+ *  - handleGetCustomer:      GET  /api/mssp/customers/:id
+ *  - handleDeleteCustomer:   DELETE /api/mssp/customers/:id  (soft delete)
+ *  - handleSuspendCustomer:  POST /api/mssp/customers/:id/suspend
+ *  - handleArchiveCustomer:  POST /api/mssp/customers/:id/archive
+ *  - handleRestoreCustomer:  POST /api/mssp/customers/:id/restore
+ *  - handleListCustomers:    extended with ?q= ?tier= ?label= ?status=all
  */
 
-// Use native CF Workers crypto — no external package needed
 const nanoid = (n = 21) => crypto.randomUUID().replace(/-/g, '').slice(0, n);
 
 function requireMSSPAdmin(authCtx) {
@@ -18,18 +27,32 @@ function requireAuth(authCtx) {
   return authCtx?.authenticated === true;
 }
 
-// ─── Per-partner isolation scope ──────────────────────────────────────────────
-// Every mssp_customers query is scoped to the calling partner's id. Fail-closed:
-// without a scope id (or before the additive partner_id migration lands), the
-// scoped query simply yields no rows — never a cross-partner leak. (schema_v41)
+// ─── Per-partner isolation scope ──────────────────────────────────────────────────────
 function partnerScope(authCtx) {
   return authCtx?.userId ?? authCtx?.user_id ?? null;
 }
 
-// Empty, fail-closed list payload (used when there is no partner scope or the
-// scoped query cannot run yet).
 function emptyList(limit, offset) {
   return { success: true, customers: [], total: 0, limit, offset };
+}
+
+// P9.1: Migrate extended columns onto mssp_customers if not yet present.
+async function ensureMsspCustomersExtended(db) {
+  const cols = ['suspended_at', 'archived_at', 'deleted_at', 'suspension_reason', 'parent_customer_id'];
+  for (const col of cols) {
+    try { await db.prepare(`ALTER TABLE mssp_customers ADD COLUMN ${col} TEXT`).run(); } catch (_) {}
+  }
+}
+
+// Ensure label table exists so label-filter in handleListCustomers doesn't throw.
+async function ensureLabelTable(db) {
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS mssp_customer_labels (
+      id TEXT PRIMARY KEY, partner_id TEXT NOT NULL, customer_id TEXT NOT NULL,
+      label TEXT NOT NULL, created_at TEXT NOT NULL,
+      UNIQUE(partner_id, customer_id, label)
+    )`).run();
+  } catch (_) {}
 }
 
 // GET /api/mssp/customers
@@ -40,26 +63,52 @@ export async function handleListCustomers(request, env, authCtx) {
 
   const url    = new URL(request.url);
   const status = url.searchParams.get('status') || 'active';
-  const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+  const tier   = url.searchParams.get('tier')   || null;
+  const q      = url.searchParams.get('q')      || null;
+  const label  = url.searchParams.get('label')  || null;
+  const limit  = Math.min(parseInt(url.searchParams.get('limit')  || '50'),  200);
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
   const scope = partnerScope(authCtx);
-  if (!scope) return Response.json(emptyList(limit, offset)); // fail-closed
+  if (!scope) return Response.json(emptyList(limit, offset));
+
+  if (label) await ensureLabelTable(env.SECURITY_HUB_DB);
 
   try {
+    const whereBinds = [scope];
+    let   where      = `WHERE partner_id = ?`;
+
+    if (status !== 'all') {
+      where += ` AND status = ?`;
+      whereBinds.push(status);
+    }
+    if (tier) {
+      where += ` AND tier = ?`;
+      whereBinds.push(tier);
+    }
+    if (q) {
+      where += ` AND (org_name LIKE ? OR contact_name LIKE ? OR contact_email LIKE ?)`;
+      const p = `%${q}%`;
+      whereBinds.push(p, p, p);
+    }
+    if (label) {
+      where += ` AND id IN (SELECT customer_id FROM mssp_customer_labels WHERE partner_id = ? AND label = ?)`;
+      whereBinds.push(scope, label);
+    }
+
     const rows = await env.SECURITY_HUB_DB.prepare(`
       SELECT id, org_name, org_slug, contact_name, contact_email,
              tier, status, risk_score, compliance_score,
              mrr_cents, created_at, updated_at, last_activity_at
       FROM mssp_customers
-      WHERE status = ? AND partner_id = ?
+      ${where}
       ORDER BY risk_score DESC
       LIMIT ? OFFSET ?
-    `).bind(status, scope, limit, offset).all();
+    `).bind(...whereBinds, limit, offset).all();
 
     const totalQ = await env.SECURITY_HUB_DB.prepare(
-      `SELECT COUNT(*) as total FROM mssp_customers WHERE status = ? AND partner_id = ?`
-    ).bind(status, scope).first();
+      `SELECT COUNT(*) as total FROM mssp_customers ${where}`
+    ).bind(...whereBinds).first();
 
     return Response.json({
       success:   true,
@@ -67,9 +116,9 @@ export async function handleListCustomers(request, env, authCtx) {
       total:     totalQ?.total || 0,
       limit,
       offset,
+      filters: { status, tier, q, label },
     });
   } catch (e) {
-    // Fail-closed: if partner_id is not present yet, show nothing — never leak.
     return Response.json({ ...emptyList(limit, offset), degraded: true });
   }
 }
@@ -88,7 +137,7 @@ export async function handleCreateCustomer(request, env, authCtx) {
   if (!org_name) return Response.json({ error: 'org_name required' }, { status: 400 });
 
   const scope = partnerScope(authCtx);
-  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 }); // fail-closed
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 });
 
   const id       = `cust_${nanoid(12)}`;
   const org_slug = org_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -110,6 +159,34 @@ export async function handleCreateCustomer(request, env, authCtx) {
   }
 }
 
+// GET /api/mssp/customers/:id
+export async function handleGetCustomer(request, env, authCtx, customerId) {
+  if (!requireMSSPAdmin(authCtx)) {
+    return Response.json({ error: 'MSSP admin role required' }, { status: 403 });
+  }
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'Customer not found' }, { status: 404 });
+
+  const db = env.SECURITY_HUB_DB;
+  await ensureMsspCustomersExtended(db);
+
+  try {
+    const customer = await db.prepare(`
+      SELECT id, org_name, org_slug, contact_name, contact_email, tier, status,
+             risk_score, compliance_score, mrr_cents, notes,
+             parent_customer_id, suspended_at, archived_at, suspension_reason,
+             created_at, updated_at, last_activity_at
+      FROM mssp_customers
+      WHERE (id = ? OR org_slug = ?) AND partner_id = ? AND status != 'deleted'
+    `).bind(customerId, customerId, scope).first();
+
+    if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
+    return Response.json({ success: true, customer });
+  } catch (e) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+}
+
 // GET /api/mssp/customers/:id/metrics
 export async function handleCustomerMetrics(request, env, authCtx, customerId) {
   if (!requireMSSPAdmin(authCtx)) {
@@ -117,11 +194,9 @@ export async function handleCustomerMetrics(request, env, authCtx, customerId) {
   }
 
   const db = env.SECURITY_HUB_DB;
-
   const scope = partnerScope(authCtx);
-  if (!scope) return Response.json({ error: 'Customer not found' }, { status: 404 }); // fail-closed
+  if (!scope) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
-  // Get customer record — scoped to the calling partner
   let customer;
   try {
     customer = await db.prepare(
@@ -133,12 +208,10 @@ export async function handleCustomerMetrics(request, env, authCtx, customerId) {
     return Response.json({ error: 'Customer not found' }, { status: 404 });
   }
 
-  // Aggregate scan metrics for this customer's assigned users
   let scanMetrics = { total_scans: 0, scans_today: 0, critical_findings: 0, avg_risk: 0 };
   let caseMetrics = { open: 0, in_progress: 0, resolved: 0, critical_open: 0 };
 
   try {
-    // Scans: attempt to query by org_id if column exists
     const scansQ = await db.prepare(
       `SELECT COUNT(*) as total,
               SUM(CASE WHEN risk_level = 'critical' THEN 1 ELSE 0 END) as critical,
@@ -162,29 +235,29 @@ export async function handleCustomerMetrics(request, env, authCtx, customerId) {
        FROM soc_cases WHERE org_id = ?`
     ).bind(customerId).first();
     if (casesQ) {
-      caseMetrics.open       = casesQ.open_count   || 0;
-      caseMetrics.in_progress= casesQ.inprog_count || 0;
-      caseMetrics.resolved   = casesQ.resolved_count || 0;
-      caseMetrics.critical_open = casesQ.crit_open || 0;
+      caseMetrics.open          = casesQ.open_count    || 0;
+      caseMetrics.in_progress   = casesQ.inprog_count  || 0;
+      caseMetrics.resolved      = casesQ.resolved_count || 0;
+      caseMetrics.critical_open = casesQ.crit_open      || 0;
     }
   } catch (_) {}
 
   return Response.json({
     success:  true,
     customer: {
-      id:           customer.id,
-      org_name:     customer.org_name,
-      org_slug:     customer.org_slug,
-      tier:         customer.tier,
-      status:       customer.status,
-      risk_score:   customer.risk_score,
+      id:               customer.id,
+      org_name:         customer.org_name,
+      org_slug:         customer.org_slug,
+      tier:             customer.tier,
+      status:           customer.status,
+      risk_score:       customer.risk_score,
       compliance_score: customer.compliance_score,
-      mrr_cents:    customer.mrr_cents,
+      mrr_cents:        customer.mrr_cents,
       last_activity_at: customer.last_activity_at,
     },
-    scans:    scanMetrics,
-    cases:    caseMetrics,
-    as_of:    new Date().toISOString(),
+    scans:  scanMetrics,
+    cases:  caseMetrics,
+    as_of:  new Date().toISOString(),
   });
 }
 
@@ -198,17 +271,17 @@ export async function handleUpdateCustomer(request, env, authCtx, customerId) {
   try { body = await request.json(); }
   catch (_) { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
-  const allowed = ['org_name','contact_name','contact_email','tier','status','risk_score','compliance_score','notes','mrr_cents'];
+  const allowed = ['org_name','contact_name','contact_email','tier','risk_score','compliance_score','notes','mrr_cents'];
   const updates = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
   if (!Object.keys(updates).length) {
     return Response.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 
   const scope = partnerScope(authCtx);
-  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 }); // fail-closed
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 });
 
   updates.updated_at = new Date().toISOString();
-  const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+  const fields    = Object.keys(updates).map(k => `${k} = ?`).join(', ');
   const setValues = Object.values(updates);
 
   try {
@@ -216,6 +289,132 @@ export async function handleUpdateCustomer(request, env, authCtx, customerId) {
       `UPDATE mssp_customers SET ${fields} WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
     ).bind(...setValues, customerId, customerId, scope).run();
     return Response.json({ success: true });
+  } catch (e) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+}
+
+// DELETE /api/mssp/customers/:id  (soft delete — sets status='deleted')
+export async function handleDeleteCustomer(request, env, authCtx, customerId) {
+  if (!requireMSSPAdmin(authCtx)) {
+    return Response.json({ error: 'MSSP admin role required' }, { status: 403 });
+  }
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 });
+
+  const db  = env.SECURITY_HUB_DB;
+  await ensureMsspCustomersExtended(db);
+  const now = new Date().toISOString();
+
+  try {
+    const r = await db.prepare(`
+      UPDATE mssp_customers
+      SET status = 'deleted', deleted_at = ?, updated_at = ?
+      WHERE (id = ? OR org_slug = ?) AND partner_id = ? AND status != 'deleted'
+    `).bind(now, now, customerId, customerId, scope).run();
+    if (!r?.meta?.changes) return Response.json({ error: 'Customer not found or already deleted' }, { status: 404 });
+    return Response.json({ success: true, deleted_at: now });
+  } catch (e) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+}
+
+// POST /api/mssp/customers/:id/suspend
+export async function handleSuspendCustomer(request, env, authCtx, customerId) {
+  if (!requireMSSPAdmin(authCtx)) {
+    return Response.json({ error: 'MSSP admin role required' }, { status: 403 });
+  }
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 });
+
+  let body = {};
+  try { body = await request.json(); } catch (_) {}
+  const reason = (body.reason || 'Suspended by MSSP admin').toString().slice(0, 500);
+
+  const db  = env.SECURITY_HUB_DB;
+  await ensureMsspCustomersExtended(db);
+  const now = new Date().toISOString();
+
+  try {
+    const current = await db.prepare(
+      `SELECT status FROM mssp_customers WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
+    ).bind(customerId, customerId, scope).first();
+    if (!current)                       return Response.json({ error: 'Customer not found' }, { status: 404 });
+    if (current.status === 'suspended') return Response.json({ error: 'Customer is already suspended' }, { status: 409 });
+    if (current.status === 'deleted')   return Response.json({ error: 'Cannot suspend a deleted customer' }, { status: 409 });
+
+    await db.prepare(`
+      UPDATE mssp_customers
+      SET status = 'suspended', suspended_at = ?, suspension_reason = ?, updated_at = ?
+      WHERE (id = ? OR org_slug = ?) AND partner_id = ?
+    `).bind(now, reason, now, customerId, customerId, scope).run();
+
+    return Response.json({ success: true, status: 'suspended', suspended_at: now, reason });
+  } catch (e) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+}
+
+// POST /api/mssp/customers/:id/archive
+export async function handleArchiveCustomer(request, env, authCtx, customerId) {
+  if (!requireMSSPAdmin(authCtx)) {
+    return Response.json({ error: 'MSSP admin role required' }, { status: 403 });
+  }
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 });
+
+  const db  = env.SECURITY_HUB_DB;
+  await ensureMsspCustomersExtended(db);
+  const now = new Date().toISOString();
+
+  try {
+    const current = await db.prepare(
+      `SELECT status FROM mssp_customers WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
+    ).bind(customerId, customerId, scope).first();
+    if (!current)                      return Response.json({ error: 'Customer not found' }, { status: 404 });
+    if (current.status === 'archived') return Response.json({ error: 'Customer is already archived' }, { status: 409 });
+    if (current.status === 'deleted')  return Response.json({ error: 'Cannot archive a deleted customer' }, { status: 409 });
+
+    await db.prepare(`
+      UPDATE mssp_customers
+      SET status = 'archived', archived_at = ?, updated_at = ?
+      WHERE (id = ? OR org_slug = ?) AND partner_id = ?
+    `).bind(now, now, customerId, customerId, scope).run();
+
+    return Response.json({ success: true, status: 'archived', archived_at: now });
+  } catch (e) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+}
+
+// POST /api/mssp/customers/:id/restore
+export async function handleRestoreCustomer(request, env, authCtx, customerId) {
+  if (!requireMSSPAdmin(authCtx)) {
+    return Response.json({ error: 'MSSP admin role required' }, { status: 403 });
+  }
+  const scope = partnerScope(authCtx);
+  if (!scope) return Response.json({ error: 'No partner scope' }, { status: 403 });
+
+  const db  = env.SECURITY_HUB_DB;
+  await ensureMsspCustomersExtended(db);
+  const now = new Date().toISOString();
+
+  try {
+    const current = await db.prepare(
+      `SELECT status FROM mssp_customers WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
+    ).bind(customerId, customerId, scope).first();
+    if (!current)                    return Response.json({ error: 'Customer not found' }, { status: 404 });
+    if (current.status === 'active') return Response.json({ error: 'Customer is already active' }, { status: 409 });
+    if (current.status === 'deleted') return Response.json({ error: 'Cannot restore a deleted customer' }, { status: 409 });
+
+    await db.prepare(`
+      UPDATE mssp_customers
+      SET status = 'active', suspended_at = NULL, archived_at = NULL,
+          suspension_reason = NULL, updated_at = ?
+      WHERE (id = ? OR org_slug = ?) AND partner_id = ?
+    `).bind(now, customerId, customerId, scope).run();
+
+    return Response.json({ success: true, status: 'active', restored_at: now });
   } catch (e) {
     return Response.json({ success: false, error: e.message }, { status: 500 });
   }
@@ -233,7 +432,7 @@ export async function handleMSSPOverview(request, env, authCtx) {
     high_risk_count: 0, total_mrr: 0, avg_risk_score: 0, avg_compliance: 0,
     high_risk_customers: [], as_of: new Date().toISOString(),
   };
-  if (!scope) return Response.json(emptyOverview); // fail-closed
+  if (!scope) return Response.json(emptyOverview);
 
   try {
     const summary = await env.SECURITY_HUB_DB.prepare(`
@@ -259,18 +458,17 @@ export async function handleMSSPOverview(request, env, authCtx) {
 
     return Response.json({
       success: true,
-      total_customers:    summary?.total_customers || 0,
-      active_customers:   summary?.active          || 0,
-      onboarding:         summary?.onboarding      || 0,
-      high_risk_count:    summary?.high_risk        || 0,
-      total_mrr:          Math.round((summary?.total_mrr_cents || 0) / 100),
-      avg_risk_score:     Math.round(summary?.avg_risk || 0),
-      avg_compliance:     Math.round(summary?.avg_compliance || 0),
+      total_customers:     summary?.total_customers || 0,
+      active_customers:    summary?.active          || 0,
+      onboarding:          summary?.onboarding      || 0,
+      high_risk_count:     summary?.high_risk        || 0,
+      total_mrr:           Math.round((summary?.total_mrr_cents || 0) / 100),
+      avg_risk_score:      Math.round(summary?.avg_risk || 0),
+      avg_compliance:      Math.round(summary?.avg_compliance || 0),
       high_risk_customers: recentQ?.results || [],
       as_of: new Date().toISOString(),
     });
   } catch (e) {
-    // Fail-closed: degrade to an empty overview rather than leak or 500.
     return Response.json({ ...emptyOverview, degraded: true });
   }
 }
