@@ -262,10 +262,14 @@ export async function runAIThreatRadar(env) {
   for (const entry of allEntries) {
     if (!entry.id) continue;
     const haystack = [entry.title, entry.description, (entry.matched_on || []).join(' ')].join(' ').toLowerCase();
+    // Classify feed_type using only title+description — matched_on may contain
+    // raw NVD search keywords (e.g. 'prompt injection', 'jailbreak') that would
+    // incorrectly override the content-derived classification signal.
+    const classifyHaystack = [entry.title, entry.description].join(' ').toLowerCase();
     const isCve = /^CVE-\d{4}-\d{4,}$/.test(entry.cve_id || '');
     byId.set(`ai_${entry.id}`, {
       id: `ai_${entry.id}`,
-      feed_type: classifyFeedType(haystack, isCve),
+      feed_type: classifyFeedType(classifyHaystack, isCve),
       title: entry.title,
       description: entry.description,
       severity: entry.severity,

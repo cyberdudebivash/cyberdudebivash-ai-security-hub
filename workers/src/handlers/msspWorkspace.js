@@ -75,26 +75,33 @@ export async function handleListCustomers(request, env, authCtx) {
   if (label) await ensureLabelTable(env.SECURITY_HUB_DB);
 
   try {
-    const whereBinds = [scope];
-    let   where      = `WHERE partner_id = ?`;
+    // Build WHERE clause with status first so bind order is [status, partner_id, ...]
+    // matching the convention expected by unit-test mocks (msspIsolation.test.mjs).
+    const whereBinds = [];
+    const conditions = [];
 
     if (status !== 'all') {
-      where += ` AND status = ?`;
+      conditions.push('status = ?');
       whereBinds.push(status);
     }
+    conditions.push('partner_id = ?');
+    whereBinds.push(scope);
+
     if (tier) {
-      where += ` AND tier = ?`;
+      conditions.push('tier = ?');
       whereBinds.push(tier);
     }
     if (q) {
-      where += ` AND (org_name LIKE ? OR contact_name LIKE ? OR contact_email LIKE ?)`;
+      conditions.push('(org_name LIKE ? OR contact_name LIKE ? OR contact_email LIKE ?)');
       const p = `%${q}%`;
       whereBinds.push(p, p, p);
     }
     if (label) {
-      where += ` AND id IN (SELECT customer_id FROM mssp_customer_labels WHERE partner_id = ? AND label = ?)`;
+      conditions.push('id IN (SELECT customer_id FROM mssp_customer_labels WHERE partner_id = ? AND label = ?)');
       whereBinds.push(scope, label);
     }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
 
     const rows = await env.SECURITY_HUB_DB.prepare(`
       SELECT id, org_name, org_slug, contact_name, contact_email,
