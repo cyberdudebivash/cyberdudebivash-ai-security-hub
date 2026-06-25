@@ -1166,6 +1166,17 @@ export default {
       return withSecurityHeaders(withCors(await handlePublicFeeds(request, env, path), request));
     }
 
+    // ── Cyber Signal Radar — public + enterprise endpoints (P3.0) ────────────
+    if (path.startsWith('/api/radar/')) {
+      const { handleRadar } = await import('./handlers/radar.js');
+      // Public routes serve without auth; enterprise handler resolves auth internally
+      let radarAuth = null;
+      if (path.startsWith('/api/radar/enterprise')) {
+        try { radarAuth = await resolveAuthV5(request, env); } catch {}
+      }
+      return withSecurityHeaders(withCors(await handleRadar(request, env, radarAuth, path), request));
+    }
+
     // ── Owner-only internal tooling gate ───────────────────────────────────────
     // These subsystems (auto-SOC automation, integration deploy config/logs, org
     // memory, workflow automation, white-label theming) are operator/back-office
