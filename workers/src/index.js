@@ -346,6 +346,20 @@ import {
   handleDecisionExecutive,
 } from './handlers/decisionHandler.js';
 
+// ─── P12.0: Enterprise AI SOC Command Platform ───────────────────────────────
+import {
+  handleSOCCommandState,
+  handleSOCCopilot,
+  handleSOCWorkflowQueue,
+  handleSOCObservability,
+  handleSOCEventStream,
+} from './handlers/socCommandHandler.js';
+import {
+  handleKnowledgeGraph,
+  handleKnowledgeGraphQuery,
+} from './handlers/knowledgeGraphHandler.js';
+import { handleAIInvestigation } from './handlers/aiInvestigationHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4373,6 +4387,40 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/decision/executive' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleDecisionExecutive(request, env, authCtx || {}), request));
+    }
+
+    // ── P12.0: Enterprise AI SOC Command Platform ─────────────────────────────
+    if (path === '/api/soc/command/state' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSOCCommandState(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/soc/command/copilot' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSOCCopilot(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/soc/command/workflow' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSOCWorkflowQueue(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/soc/command/observability' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleSOCObservability(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/soc/stream' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return handleSOCEventStream(request, env, authCtx || {});
+    }
+    if (path === '/api/knowledge-graph' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleKnowledgeGraph(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/knowledge-graph/query' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleKnowledgeGraphQuery(request, env, authCtx || {}), request));
+    }
+    if (path.match(/^\/api\/soc\/investigate\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAIInvestigation(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
