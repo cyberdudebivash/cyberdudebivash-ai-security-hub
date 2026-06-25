@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Operations Dashboard — CYBERDUDEBIVASH® SENTINEL APEX</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root{
+    --bg:#0a0d11;--surface:#111620;--card:#161d2a;--border:#1e2a3a;
+    --accent:#00c2ff;--accent2:#7c3aed;--green:#10b981;--red:#ef4444;
+    --yellow:#f59e0b;--text:#e2e8f0;--muted:#64748b;--font:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+  a{color:var(--accent);text-decoration:none}
+  /* Auth gate */
+  #auth-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999}
+  .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:420px;max-width:95vw}
+  .auth-box h2{font-size:20px;margin-bottom:6px;color:var(--accent)}
+  .auth-box p{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .auth-box input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:14px;outline:none;margin-bottom:14px}
+  .auth-box input:focus{border-color:var(--accent)}
+  .auth-box button{width:100%;background:var(--accent);color:#000;border:none;border-radius:8px;padding:12px;font-weight:700;cursor:pointer;font-size:15px}
+  .auth-box button:hover{opacity:.9}
+  .auth-error{color:var(--red);font-size:13px;margin-bottom:12px;display:none}
+  /* Layout */
+  #app{display:none;flex-direction:column;min-height:100vh}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:15px;font-weight:800;letter-spacing:.5px}
+  .logo span{color:var(--accent)}
+  .header-right{display:flex;align-items:center;gap:16px}
+  .badge-ops{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.5px}
+  .btn-sm{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 14px;color:var(--text);cursor:pointer;font-size:13px}
+  .btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+  main{flex:1;padding:24px;max-width:1400px;width:100%;margin:0 auto}
+  /* KPI row */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .kpi-label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .kpi-value{font-size:28px;font-weight:800;line-height:1}
+  .kpi-value.green{color:var(--green)}
+  .kpi-value.red{color:var(--red)}
+  .kpi-value.yellow{color:var(--yellow)}
+  .kpi-value.accent{color:var(--accent)}
+  .kpi-sub{font-size:12px;color:var(--muted);margin-top:6px}
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content}
+  .tab{padding:8px 20px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s}
+  .tab.active{background:var(--accent2);color:#fff}
+  .tab:hover:not(.active){color:var(--text)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px}
+  .card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  /* Tables */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;border-bottom:1px solid var(--border)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid rgba(30,42,58,.5);font-size:13px}
+  .tbl tr:last-child td{border:none}
+  .tbl tr:hover td{background:rgba(255,255,255,.02)}
+  /* Tier chips */
+  .tier-chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.3px}
+  .tier-FREE{background:#374151;color:#9ca3af}
+  .tier-PRO{background:#1e3a5f;color:#60a5fa}
+  .tier-ENTERPRISE{background:#3b1d6b;color:#c084fc}
+  .tier-MSSP{background:#1c3d33;color:#34d399}
+  .tier-ADMIN,.tier-OWNER{background:#7c1d1d;color:#fca5a5}
+  /* Health bar */
+  .health-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:6px}
+  .health-fill{height:100%;border-radius:3px;transition:width .4s ease}
+  /* Grid 2col */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:768px){.grid2{grid-template-columns:1fr}}
+  /* Refresh */
+  .refresh-line{display:flex;align-items:center;gap:12px;margin-bottom:20px;color:var(--muted);font-size:12px}
+  .dot-live{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  /* Empty */
+  .empty{color:var(--muted);font-size:13px;padding:20px;text-align:center}
+  /* Notification type chips */
+  .ntype{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+  .ntype-high_risk_cve,.ntype-security_alert{background:#7c1d1d;color:#fca5a5}
+  .ntype-campaign_targeting{background:#431407;color:#fb923c}
+  .ntype-subscription_expiry{background:#3b1d1d;color:#f87171}
+  .ntype-product_alert,.ntype-maintenance,.ntype-welcome{background:#1e3a5f;color:#60a5fa}
+  /* Feature flag toggle */
+  .flag-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+  .flag-row:last-child{border:none}
+  .flag-name{font-size:13px;font-weight:600}
+  .flag-meta{font-size:11px;color:var(--muted)}
+  .toggle{position:relative;width:40px;height:22px;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:var(--border);border-radius:22px;transition:.2s}
+  .slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+  .toggle input:checked+.slider{background:var(--green)}
+  .toggle input:checked+.slider:before{transform:translateX(18px)}
+</style>
+</head>
+<body>
+
+<!-- Auth gate -->
+<div id="auth-gate">
+  <div class="auth-box">
+    <h2>Operations Dashboard</h2>
+    <p>OWNER / ADMIN access only. Enter your API key.</p>
+    <div class="auth-error" id="auth-err">Invalid API key or insufficient permissions.</div>
+    <input type="password" id="api-key-input" placeholder="sk-..." autocomplete="off">
+    <button id="auth-btn" onclick="doAuth()">Access Operations Center</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <header>
+    <div class="logo"><span>CYBERDUDEBIVASH®</span> SENTINEL APEX — Operations</div>
+    <div class="header-right">
+      <span class="badge-ops">OPS CENTER</span>
+      <button class="btn-sm" onclick="refreshAll()">↻ Refresh</button>
+      <button class="btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="refresh-line">
+      <span class="dot-live"></span>
+      <span id="last-refresh">Loading…</span>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpi-row" id="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-value accent" id="k-customers">—</div><div class="kpi-sub">Active profiles</div></div>
+      <div class="kpi"><div class="kpi-label">API Calls (24h)</div><div class="kpi-value accent" id="k-calls">—</div><div class="kpi-sub" id="k-calls-sub">—</div></div>
+      <div class="kpi"><div class="kpi-label">KV Hit Ratio</div><div class="kpi-value green" id="k-hit">—</div><div class="kpi-sub" id="k-hit-sub">Cache efficiency</div></div>
+      <div class="kpi"><div class="kpi-label">Avg Latency</div><div class="kpi-value" id="k-latency">—</div><div class="kpi-sub">P50 last 1h</div></div>
+      <div class="kpi"><div class="kpi-label">P99 Latency</div><div class="kpi-value yellow" id="k-p99">—</div><div class="kpi-sub">Last 1h</div></div>
+      <div class="kpi"><div class="kpi-label">Worker Status</div><div class="kpi-value green" id="k-worker">—</div><div class="kpi-sub">Cloudflare edge</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('overview')">Overview</div>
+      <div class="tab" onclick="showTab('customers')">Customers</div>
+      <div class="tab" onclick="showTab('usage')">Usage</div>
+      <div class="tab" onclick="showTab('subscriptions')">Subscriptions</div>
+      <div class="tab" onclick="showTab('audit')">Audit</div>
+      <div class="tab" onclick="showTab('notifications')">Notifications</div>
+      <div class="tab" onclick="showTab('flags')">Feature Flags</div>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-panel active">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Top Endpoints (24h)</div>
+          <table class="tbl" id="top-endpoints"><thead><tr><th>Endpoint</th><th>Calls</th><th>Avg ms</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Event Type Breakdown</div>
+          <table class="tbl" id="event-types"><thead><tr><th>Event Type</th><th>Calls</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Worker Health</div>
+        <div id="worker-health-block" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+          <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px">PLATFORM</div><div id="wh-platform" style="font-weight:700">—</div></div>
+          <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px">REGION</div><div id="wh-region" style="font-weight:700">—</div></div>
+          <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px">RADAR CACHE HITS TODAY</div><div id="wh-radar" style="font-weight:700;color:var(--green)">—</div></div>
+          <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px">INGEST CRONS TODAY</div><div id="wh-ingest" style="font-weight:700;color:var(--accent)">—</div></div>
+          <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px">KV HIT RATIO</div>
+            <div id="wh-kv-ratio" style="font-weight:700">—</div>
+            <div class="health-bar"><div class="health-fill" id="wh-kv-bar" style="background:var(--green);width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers Tab -->
+    <div id="tab-customers" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Customer Profiles <span style="color:var(--muted);font-size:12px;font-weight:400;margin-left:8px" id="cust-count"></span></div>
+        <table class="tbl" id="cust-table">
+          <thead><tr><th>ID</th><th>Org Name</th><th>Industry</th><th>Country</th><th>Size</th><th>Tech</th><th>Assets</th><th>Updated</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Industry Distribution</div>
+        <div id="industry-dist" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+      </div>
+    </div>
+
+    <!-- Usage Tab -->
+    <div id="tab-usage" class="tab-panel">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Top Endpoints</div>
+          <table class="tbl" id="usage-endpoints"><thead><tr><th>Endpoint</th><th>Method</th><th>Calls</th><th>Avg ms</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Top Users</div>
+          <table class="tbl" id="usage-users"><thead><tr><th>User ID</th><th>Calls</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Cache Performance (24h)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:10px" id="cache-stats"></div>
+      </div>
+    </div>
+
+    <!-- Subscriptions Tab -->
+    <div id="tab-subscriptions" class="tab-panel">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Tier Distribution</div>
+          <div id="tier-dist"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Subscription Health</div>
+          <div id="sub-health"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--yellow)"></span>Expiring Soon (14 days)</div>
+        <table class="tbl" id="expiring-table"><thead><tr><th>User ID</th><th>Tier</th><th>Expires</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <!-- Audit Tab -->
+    <div id="tab-audit" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Audit Log <span style="color:var(--muted);font-size:12px;font-weight:400;margin-left:8px">Today</span></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <input type="date" id="audit-date" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px" onchange="loadAudit()">
+          <select id="audit-type" onchange="loadAudit()" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px">
+            <option value="">All types</option>
+            <option value="auth">auth</option>
+            <option value="api_key">api_key</option>
+            <option value="report">report</option>
+            <option value="config">config</option>
+            <option value="admin">admin</option>
+            <option value="payment">payment</option>
+          </select>
+        </div>
+        <table class="tbl" id="audit-table">
+          <thead><tr><th>Time</th><th>Type</th><th>Actor</th><th>Resource</th><th>Action</th><th>Outcome</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Notifications Tab -->
+    <div id="tab-notifications" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Notification Stats by Type</div>
+        <div id="notif-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Recent Notifications</div>
+        <table class="tbl" id="notif-table">
+          <thead><tr><th>User</th><th>Type</th><th>Subject</th><th>Delivered</th><th>Created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Feature Flags Tab -->
+    <div id="tab-flags" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Feature Flags</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <input id="ff-user" placeholder="User ID (blank=global)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px;width:200px">
+          <input id="ff-name" placeholder="flag_name" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px;width:180px">
+          <select id="ff-enabled" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px">
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+          <input id="ff-tier" placeholder="Tier required (FREE)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px;width:160px">
+          <button onclick="setFlag()" style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:7px 16px;font-weight:700;cursor:pointer;font-size:13px">Set Flag</button>
+        </div>
+        <div id="flags-list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API_BASE = '';
+let _key = sessionStorage.getItem('ops_api_key') || '';
+let _data = {};
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function apiGet(path) {
+  const r = await fetch(API_BASE + path, { headers: { 'X-API-Key': _key } });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+async function apiPut(path, body) {
+  const r = await fetch(API_BASE + path, { method: 'PUT', headers: { 'X-API-Key': _key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function doAuth() {
+  const k = document.getElementById('api-key-input').value.trim();
+  if (!k) return;
+  document.getElementById('auth-btn').textContent = 'Verifying…';
+  try {
+    const r = await fetch(API_BASE + '/api/admin/customers?limit=1', { headers: { 'X-API-Key': k } });
+    if (r.status === 401 || r.status === 403) throw new Error('denied');
+    _key = k;
+    sessionStorage.setItem('ops_api_key', k);
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    refreshAll();
+  } catch {
+    document.getElementById('auth-err').style.display = 'block';
+    document.getElementById('auth-btn').textContent = 'Access Operations Center';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('ops_api_key');
+  location.reload();
+}
+
+document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
+
+// Auto-login if key stored
+if (_key) {
+  fetch(API_BASE + '/api/admin/customers?limit=1', { headers: { 'X-API-Key': _key } })
+    .then(r => { if (!r.ok) throw 0; return r.json(); })
+    .then(() => {
+      document.getElementById('auth-gate').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      refreshAll();
+    }).catch(() => {});
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['overview','customers','usage','subscriptions','audit','notifications','flags'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function refreshAll() {
+  document.getElementById('last-refresh').textContent = 'Refreshing…';
+  await Promise.allSettled([loadMetrics(), loadCustomers(), loadUsage(), loadSubscriptions(), loadAudit(), loadNotifications(), loadFlags()]);
+  document.getElementById('last-refresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
+}
+
+async function loadMetrics() {
+  try {
+    const d = await apiGet('/api/ops/metrics');
+    _data.metrics = d;
+    document.getElementById('k-latency').textContent = d.api_latency.p50_ms + 'ms';
+    document.getElementById('k-latency').className = 'kpi-value ' + (d.api_latency.p50_ms < 100 ? 'green' : d.api_latency.p50_ms < 300 ? 'yellow' : 'red');
+    document.getElementById('k-p99').textContent = d.api_latency.p99_ms + 'ms';
+    document.getElementById('k-hit').textContent = (d.kv.hit_ratio * 100).toFixed(1) + '%';
+    document.getElementById('k-calls').textContent = d.d1.usage_events_24h.toLocaleString();
+    document.getElementById('k-calls-sub').textContent = 'Usage events in D1';
+    document.getElementById('k-worker').textContent = d.worker.status.toUpperCase();
+    document.getElementById('wh-platform').textContent = d.worker.platform;
+    document.getElementById('wh-region').textContent = d.worker.region;
+    document.getElementById('wh-radar').textContent = d.kv.radar_cache_hits_today;
+    document.getElementById('wh-ingest').textContent = d.cron.ingest_success_today;
+    const ratio = (d.kv.hit_ratio * 100).toFixed(1);
+    document.getElementById('wh-kv-ratio').textContent = ratio + '%';
+    document.getElementById('wh-bar').style.width = ratio + '%';
+    // Top endpoints overview
+    const tbody = document.querySelector('#top-endpoints tbody');
+    tbody.innerHTML = (d.d1.top_endpoints || []).map(e =>
+      `<tr><td>${escHtml(e.endpoint||'—')}</td><td>${e.calls}</td><td>${Math.round(e.avg_ms||0)}</td></tr>`
+    ).join('') || `<tr><td colspan="3" class="empty">No data</td></tr>`;
+  } catch {}
+}
+
+async function loadCustomers() {
+  try {
+    const d = await apiGet('/api/admin/customers?limit=100');
+    _data.customers = d;
+    document.getElementById('k-customers').textContent = (d.customers||[]).length;
+    document.getElementById('cust-count').textContent = `(${(d.customers||[]).length})`;
+    const tbody = document.querySelector('#cust-table tbody');
+    tbody.innerHTML = (d.customers||[]).map(c =>
+      `<tr><td style="font-family:monospace;font-size:11px;color:var(--muted)">${escHtml(c.id.slice(0,12))}…</td>
+       <td><strong>${escHtml(c.org_name||'—')}</strong></td>
+       <td>${escHtml(c.industry||'—')}</td>
+       <td>${escHtml(c.country||'—')}</td>
+       <td>${escHtml(c.org_size||'—')}</td>
+       <td>${c.tech_count||0}</td>
+       <td>${c.asset_count||0}</td>
+       <td style="color:var(--muted);font-size:11px">${(c.updated_at||'').slice(0,10)}</td></tr>`
+    ).join('') || `<tr><td colspan="8" class="empty">No customers yet</td></tr>`;
+    // Industry dist
+    const ind = document.getElementById('industry-dist');
+    ind.innerHTML = (d.industry_distribution||[]).map(r =>
+      `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--accent)">${r.cnt}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${escHtml(r.industry||'Unknown')}</div>
+       </div>`
+    ).join('') || '<span style="color:var(--muted)">No data</span>';
+  } catch {}
+}
+
+async function loadUsage() {
+  try {
+    const d = await apiGet('/api/admin/usage?days=7');
+    _data.usage = d;
+    const tbody1 = document.querySelector('#usage-endpoints tbody');
+    tbody1.innerHTML = (d.top_endpoints||[]).map(e =>
+      `<tr><td>${escHtml(e.endpoint||'—')}</td><td style="color:var(--muted)">${escHtml(e.method||'')}</td><td>${e.calls}</td><td>${Math.round(e.avg_latency||0)}</td></tr>`
+    ).join('') || `<tr><td colspan="4" class="empty">No usage data</td></tr>`;
+    const tbody2 = document.querySelector('#usage-users tbody');
+    tbody2.innerHTML = (d.top_users||[]).map(u =>
+      `<tr><td style="font-family:monospace;font-size:12px">${escHtml(u.user_id||'—')}</td><td>${u.calls}</td></tr>`
+    ).join('') || `<tr><td colspan="2" class="empty">No user data</td></tr>`;
+    const cs = document.getElementById('cache-stats');
+    const s = d.summary || {};
+    cs.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="color:var(--muted);font-size:11px">TOTAL CALLS</div>
+        <div style="font-size:24px;font-weight:800;color:var(--accent)">${(s.total_calls||0).toLocaleString()}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="color:var(--muted);font-size:11px">CACHE HITS</div>
+        <div style="font-size:24px;font-weight:800;color:var(--green)">${(s.cache_hits||0).toLocaleString()}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="color:var(--muted);font-size:11px">HIT RATIO</div>
+        <div style="font-size:24px;font-weight:800;color:var(--green)">${((s.cache_hit_ratio||0)*100).toFixed(1)}%</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="color:var(--muted);font-size:11px">AVG LATENCY</div>
+        <div style="font-size:24px;font-weight:800">${s.avg_latency_ms||0}ms</div>
+      </div>`;
+    // Event types in overview tab
+    const etbody = document.querySelector('#event-types tbody');
+    etbody.innerHTML = (d.by_event_type||[]).map(e =>
+      `<tr><td>${escHtml(e.event_type)}</td><td>${e.calls}</td></tr>`
+    ).join('') || `<tr><td colspan="2" class="empty">No data</td></tr>`;
+  } catch {}
+}
+
+async function loadSubscriptions() {
+  try {
+    const d = await apiGet('/api/admin/subscriptions');
+    _data.subs = d;
+    const tierDiv = document.getElementById('tier-dist');
+    tierDiv.innerHTML = (d.tier_distribution||[]).map(t =>
+      `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span class="tier-chip tier-${escHtml(t.tier)}">${escHtml(t.tier)}</span>
+        <div style="flex:1;background:var(--border);border-radius:3px;height:6px;overflow:hidden">
+          <div style="height:100%;background:var(--accent);width:${Math.min(100, (t.count / Math.max(...(d.tier_distribution||[{count:1}]).map(x=>x.count)))*100)}%;border-radius:3px"></div>
+        </div>
+        <span style="font-weight:700">${t.count}</span>
+       </div>`
+    ).join('') || '<div class="empty">No data</div>';
+    const sh = document.getElementById('sub-health');
+    sh.innerHTML = `
+      <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+        <span style="color:var(--muted)">Active users (30d)</span>
+        <strong style="color:var(--green)">${d.active_users_30d||0}</strong>
+      </div>
+      <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+        <span style="color:var(--muted)">Expiring in 14 days</span>
+        <strong style="color:${(d.expiring_soon||[]).length>0?'var(--yellow)':'var(--green)'}">
+          ${(d.expiring_soon||[]).length}
+        </strong>
+      </div>
+      <div style="padding:12px 0;display:flex;justify-content:space-between">
+        <span style="color:var(--muted)">FREE tier limit (radar)</span>
+        <strong>${d.plans?.FREE?.limits?.radar_calls||0}/mo</strong>
+      </div>`;
+    const tbody = document.querySelector('#expiring-table tbody');
+    tbody.innerHTML = (d.expiring_soon||[]).map(e =>
+      `<tr><td style="font-family:monospace;font-size:12px">${escHtml(e.user_id)}</td>
+       <td><span class="tier-chip tier-${escHtml(e.tier)}">${escHtml(e.tier)}</span></td>
+       <td style="color:var(--yellow)">${(e.expires_at||'').slice(0,10)}</td></tr>`
+    ).join('') || `<tr><td colspan="3" class="empty">None expiring soon</td></tr>`;
+  } catch {}
+}
+
+async function loadAudit() {
+  const date = document.getElementById('audit-date').value || new Date().toISOString().slice(0,10);
+  const type = document.getElementById('audit-type').value;
+  if (!document.getElementById('audit-date').value) {
+    document.getElementById('audit-date').value = new Date().toISOString().slice(0,10);
+  }
+  try {
+    const d = await apiGet(`/api/admin/audit?date=${date}&limit=100${type?'&type='+encodeURIComponent(type):''}`);
+    const tbody = document.querySelector('#audit-table tbody');
+    tbody.innerHTML = (d.entries||[]).map(e => {
+      const outcome = e.outcome || 'unknown';
+      const color = outcome === 'success' ? 'var(--green)' : outcome === 'failure' ? 'var(--red)' : 'var(--muted)';
+      return `<tr>
+        <td style="color:var(--muted);font-size:11px">${(e.timestamp||'').slice(11,19)}</td>
+        <td><code style="font-size:11px;color:var(--accent)">${escHtml(e.type||'')}</code></td>
+        <td style="font-size:12px;font-family:monospace">${escHtml(e.actor||'')}</td>
+        <td style="color:var(--muted);font-size:12px">${escHtml(e.resource||'')}</td>
+        <td style="font-size:12px">${escHtml(e.action||'')}</td>
+        <td style="color:${color};font-size:12px;font-weight:700">${escHtml(outcome)}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="6" class="empty">No audit entries for ${date}</td></tr>`;
+  } catch {}
+}
+
+async function loadNotifications() {
+  try {
+    const d = await apiGet('/api/admin/notifications?limit=50');
+    const statsDiv = document.getElementById('notif-stats');
+    statsDiv.innerHTML = (d.stats||[]).map(s =>
+      `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px">
+        <div><span class="ntype ntype-${escHtml(s.type)}">${escHtml(s.type)}</span></div>
+        <div style="font-size:20px;font-weight:800;margin-top:8px">${s.total}</div>
+        <div style="font-size:11px;color:var(--green);margin-top:2px">${s.delivered_count} delivered</div>
+       </div>`
+    ).join('') || '<div class="empty">No notification stats</div>';
+    const tbody = document.querySelector('#notif-table tbody');
+    tbody.innerHTML = (d.notifications||[]).map(n =>
+      `<tr>
+        <td style="font-size:12px;font-family:monospace">${escHtml((n.user_id||'').slice(0,16))}…</td>
+        <td><span class="ntype ntype-${escHtml(n.type)}">${escHtml(n.type)}</span></td>
+        <td>${escHtml(n.subject||'—')}</td>
+        <td style="color:${n.delivered?'var(--green)':'var(--red)'};">${n.delivered?'✓ Yes':'✗ No'}</td>
+        <td style="color:var(--muted);font-size:11px">${(n.created_at||'').slice(0,16)}</td>
+       </tr>`
+    ).join('') || `<tr><td colspan="5" class="empty">No notifications</td></tr>`;
+  } catch {}
+}
+
+async function loadFlags() {
+  try {
+    const d = await apiGet('/api/ops/flags');
+    const list = document.getElementById('flags-list');
+    list.innerHTML = (d.flags||[]).length
+      ? (d.flags||[]).map(f =>
+          `<div class="flag-row">
+            <div>
+              <div class="flag-name">${escHtml(f.flag_name)}</div>
+              <div class="flag-meta">Tier: ${escHtml(f.tier_required)} | User: ${escHtml(f.user_id||'global')} | Expires: ${escHtml(f.expires_at||'never')}</div>
+              ${f.note?`<div class="flag-meta">${escHtml(f.note)}</div>`:''}
+            </div>
+            <label class="toggle"><input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFlag('${escHtml(f.flag_name)}','${escHtml(f.user_id||'')}',this.checked)"><span class="slider"></span></label>
+           </div>`
+        ).join('')
+      : `<div class="empty">No feature flags configured</div>`;
+  } catch {}
+}
+
+async function setFlag() {
+  const flagName = document.getElementById('ff-name').value.trim();
+  if (!flagName) return alert('flag_name required');
+  const body = {
+    flag_name: flagName,
+    user_id: document.getElementById('ff-user').value.trim() || null,
+    enabled: document.getElementById('ff-enabled').value === 'true',
+    tier_required: document.getElementById('ff-tier').value.trim() || 'FREE',
+  };
+  try {
+    await apiPut('/api/ops/flags', body);
+    await loadFlags();
+    document.getElementById('ff-name').value = '';
+    document.getElementById('ff-user').value = '';
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function toggleFlag(name, userId, enabled) {
+  try {
+    await apiPut('/api/ops/flags', { flag_name: name, user_id: userId || null, enabled });
+  } catch {}
+}
+
+// Auto-refresh every 5 minutes
+setInterval(refreshAll, 300000);
+</script>
+</body>
+</html>

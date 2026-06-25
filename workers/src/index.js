@@ -5117,6 +5117,19 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleGetReport(request, env, authCtx), request));
     }
 
+    // ── P6.0 Operations Engine ────────────────────────────────────────────────
+    // Usage analytics, subscription enforcement, feature flags, admin APIs,
+    // observability, notifications. OWNER/ADMIN required for /api/admin/*.
+
+    if (path.startsWith('/api/ops/') || path.startsWith('/api/admin/customers') ||
+        path.startsWith('/api/admin/usage') || path.startsWith('/api/admin/subscriptions') ||
+        path === '/api/admin/audit' || path === '/api/admin/notifications') {
+      const { handleOpsRoute } = await import('./handlers/opsEngine.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const result = await handleOpsRoute(request, env, authCtx, path, method);
+      if (result) return withSecurityHeaders(withCors(result, request));
+    }
+
     // ── Global Scale Engine (Phase 6) ─────────────────────────────────────
 
     // GET /api/global/pricing — geo-detected multi-currency pricing (public)
@@ -7423,6 +7436,19 @@ ctx.waitUntil(
         console.error('[CRON] AutoSOC error:', e?.message);
       }
     })());
+
+    // ── P6.0-009 Ops Lifecycle — daily 3am UTC ─────────────────────────────
+    if (cron === '0 3 * * *' || cron === '0 0 * * *') {
+      ctx.waitUntil((async () => {
+        try {
+          const { runOpsLifecycleCron } = await import('./handlers/opsEngine.js');
+          const report = await runOpsLifecycleCron(env);
+          console.log(`[CRON] OPS LIFECYCLE: -${report.deleted_usage_events} usage_events, -${report.deleted_notifications} notifications, ${report.aggregated_days} days aggregated`);
+        } catch (e) {
+          console.error('[CRON] OPS LIFECYCLE error:', e?.message);
+        }
+      })());
+    }
 
   },
 };
