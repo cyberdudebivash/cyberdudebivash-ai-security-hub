@@ -153,7 +153,18 @@ async function handleKeyUsageSelf(req, env, authCtx, keyId) {
 
 // ─── P7.0-002: Webhook Automation ────────────────────────────────────────────
 
-const WEBHOOK_EVENTS = ['cve.critical','kev.added','ransomware.campaign','actor.update','org.risk_change'];
+const WEBHOOK_EVENTS = [
+  // Threat events
+  'cve.critical', 'kev.added', 'ransomware.campaign', 'actor.update',
+  // Risk events
+  'org.risk_change', 'risk.threshold_exceeded',
+  // P8.0-005: API key lifecycle events
+  'apikey.created', 'apikey.revoked', 'apikey.rotated',
+  // P8.0-005: Customer lifecycle events
+  'customer.onboarded', 'customer.tier_changed',
+  // P8.0-005: Subscription/billing events
+  'subscription.created', 'subscription.cancelled', 'subscription.payment_failed',
+];
 
 async function handleListWebhooks(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
@@ -310,6 +321,150 @@ async function processWebhookRetryQueue(env) {
     }
   } catch {}
   return { retried, dead_lettered: deadLettered };
+}
+
+// ─── P8.0-005: Webhook Event Catalog ─────────────────────────────────────────
+// Documents every entry in WEBHOOK_EVENTS. Retry policy, auth/signature, and
+// envelope fields below are descriptions of the real dispatchWebhookEvent() /
+// processWebhookRetryQueue() mechanics above — not aspirational.
+
+const WEBHOOK_EVENT_CATALOG = {
+  'cve.critical': {
+    category: 'threat', since: 'v1',
+    description: 'A newly ingested CVE crosses the critical-severity threshold (CVSS >= 9.0).',
+    schema: { cve_id: 'string', cvss: 'number', severity: 'string', summary: 'string', is_kev: 'boolean' },
+    sample:  { cve_id: 'CVE-2026-41200', cvss: 9.8, severity: 'CRITICAL', summary: 'Remote code execution in widely deployed VPN appliance', is_kev: false },
+  },
+  'kev.added': {
+    category: 'threat', since: 'v1',
+    description: 'CISA adds a vulnerability to the Known Exploited Vulnerabilities (KEV) catalog.',
+    schema: { cve_id: 'string', vendor: 'string', product: 'string', date_added: 'string', due_date: 'string' },
+    sample:  { cve_id: 'CVE-2026-41200', vendor: 'Acme Networks', product: 'SecureVPN Gateway', date_added: '2026-06-20', due_date: '2026-07-11' },
+  },
+  'ransomware.campaign': {
+    category: 'threat', since: 'v1',
+    description: 'A tracked ransomware actor launches or escalates a campaign.',
+    schema: { campaign_name: 'string', actor: 'string', victims_count: 'number', sectors: 'string[]' },
+    sample:  { campaign_name: 'LOCKBLACK 4.0', actor: 'LOCKBLACK', victims_count: 12, sectors: ['Healthcare', 'Manufacturing'] },
+  },
+  'actor.update': {
+    category: 'threat', since: 'v1',
+    description: 'A tracked threat actor profile receives a material update (new TTP, infrastructure, or attribution).',
+    schema: { actor_id: 'string', actor_name: 'string', update_type: 'string', details: 'string' },
+    sample:  { actor_id: 'apt-29', actor_name: 'APT29', update_type: 'new_infrastructure', details: 'New C2 domain cluster identified' },
+  },
+  'org.risk_change': {
+    category: 'risk', since: 'v1',
+    description: "An organization's aggregate risk score changes by a material delta.",
+    schema: { org_id: 'string', previous_score: 'number', new_score: 'number', delta: 'number' },
+    sample:  { org_id: 'org_8f2a', previous_score: 42, new_score: 67, delta: 25 },
+  },
+  'risk.threshold_exceeded': {
+    category: 'risk', since: 'v2',
+    description: 'An organization-defined risk metric crosses its configured alert threshold.',
+    schema: { org_id: 'string', metric: 'string', threshold: 'number', current_value: 'number' },
+    sample:  { org_id: 'org_8f2a', metric: 'exposed_critical_assets', threshold: 5, current_value: 8 },
+  },
+  'apikey.created': {
+    category: 'apikey', since: 'v2',
+    description: 'A new API key is created via self-service or admin invite.',
+    schema: { key_id: 'string', label: 'string', prefix: 'string', tier: 'string', created_by: 'string' },
+    sample:  { key_id: 'key_8f2a91', label: 'Production Ingest', prefix: 'cdb_live_8f2a', tier: 'ENTERPRISE', created_by: 'user_4471' },
+  },
+  'apikey.revoked': {
+    category: 'apikey', since: 'v2',
+    description: 'An API key is revoked and immediately stops authenticating requests.',
+    schema: { key_id: 'string', label: 'string', revoked_by: 'string' },
+    sample:  { key_id: 'key_8f2a91', label: 'Production Ingest', revoked_by: 'user_4471' },
+  },
+  'apikey.rotated': {
+    category: 'apikey', since: 'v2',
+    description: 'An API key is rotated — the old key is revoked and a new key issued with the same label.',
+    schema: { old_key_id: 'string', new_key_id: 'string', label: 'string' },
+    sample:  { old_key_id: 'key_8f2a91', new_key_id: 'key_c01d4e', label: 'Production Ingest' },
+  },
+  'customer.onboarded': {
+    category: 'customer', since: 'v2',
+    description: 'A new customer organization completes onboarding.',
+    schema: { org_id: 'string', plan: 'string', onboarded_at: 'string' },
+    sample:  { org_id: 'org_8f2a', plan: 'PRO', onboarded_at: '2026-06-25T09:00:00.000Z' },
+  },
+  'customer.tier_changed': {
+    category: 'customer', since: 'v2',
+    description: "A customer's subscription tier changes (upgrade or downgrade).",
+    schema: { org_id: 'string', previous_tier: 'string', new_tier: 'string' },
+    sample:  { org_id: 'org_8f2a', previous_tier: 'PRO', new_tier: 'ENTERPRISE' },
+  },
+  'subscription.created': {
+    category: 'subscription', since: 'v2',
+    description: 'A new paid subscription is activated.',
+    schema: { org_id: 'string', plan: 'string', amount: 'number', currency: 'string' },
+    sample:  { org_id: 'org_8f2a', plan: 'ENTERPRISE', amount: 49900, currency: 'INR' },
+  },
+  'subscription.cancelled': {
+    category: 'subscription', since: 'v2',
+    description: 'A subscription is cancelled and will not renew.',
+    schema: { org_id: 'string', plan: 'string', cancelled_at: 'string' },
+    sample:  { org_id: 'org_8f2a', plan: 'PRO', cancelled_at: '2026-06-25T09:00:00.000Z' },
+  },
+  'subscription.payment_failed': {
+    category: 'subscription', since: 'v2',
+    description: 'A recurring subscription payment attempt fails.',
+    schema: { org_id: 'string', plan: 'string', reason: 'string' },
+    sample:  { org_id: 'org_8f2a', plan: 'PRO', reason: 'card_declined' },
+  },
+};
+
+// GET /api/webhooks/catalog — public developer-documentation endpoint (no auth
+// required), same convention as /api/openapi.json. Describes every supported
+// webhook event plus the real auth/retry/delivery contract implemented above.
+export async function handleWebhookCatalog(_req, _env) {
+  const events = WEBHOOK_EVENTS.map(name => {
+    const meta = WEBHOOK_EVENT_CATALOG[name] || {};
+    return {
+      event:          name,
+      category:       meta.category || 'general',
+      since:          meta.since || API_MANIFEST.version,
+      description:    meta.description || '',
+      schema:         meta.schema || {},
+      sample_payload: { event: name, payload: meta.sample || {}, ts: new Date().toISOString() },
+    };
+  });
+  return Response.json({
+    version:      API_MANIFEST.version,
+    total_events: events.length,
+    categories:   [...new Set(events.map(e => e.category))].sort(),
+    events,
+    delivery: {
+      method:       'POST',
+      content_type: 'application/json',
+      envelope: {
+        event:   'string — event type name (see events[].event)',
+        payload: 'object — event-specific schema (see events[].schema)',
+        ts:      'string — ISO-8601 dispatch timestamp',
+      },
+    },
+    auth: {
+      type:               'hmac_sha256',
+      header:             'X-SBHUB-Signature',
+      format:             'sha256=<hex-digest>',
+      description:        'When a webhook is configured with a secret, every delivery is signed with HMAC-SHA256 over the raw JSON request body. Verify by recomputing the HMAC with your stored secret and comparing in constant time.',
+      event_type_header:  'X-SBHUB-Event',
+    },
+    retry_policy: {
+      max_attempts:         5,
+      backoff:               'exponential',
+      backoff_base_seconds:  3600,
+      backoff_formula:       '3600 * 2^attempt seconds between retries',
+      dead_letter:           'Deliveries failing after 5 attempts are moved to a dead-letter queue and logged with status=dead_lettered.',
+    },
+    delivery_guarantees: {
+      ordering:  'not_guaranteed',
+      semantics: 'at_least_once_best_effort',
+      note:      'Deliveries are retried up to max_attempts with exponential backoff. Consumers should de-duplicate using event type + payload identifiers; no idempotency key is currently issued.',
+    },
+    version_support: API_MANIFEST.compatibility,
+  });
 }
 
 // ─── P7.0-003: Scheduled Reports ─────────────────────────────────────────────

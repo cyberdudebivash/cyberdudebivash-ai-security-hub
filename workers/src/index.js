@@ -5128,6 +5128,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       if (result) return withSecurityHeaders(withCors(result, request));
     }
 
+    // P8.0-005: webhook event catalog — public documentation endpoint (no auth),
+    // same convention as /api/openapi.json. Lives in enterpriseAutomation.js
+    // next to the dispatch/retry logic it documents.
+    if (path === '/api/webhooks/catalog' && method === 'GET') {
+      const { handleWebhookCatalog } = await import('./handlers/enterpriseAutomation.js');
+      return withSecurityHeaders(withCors(await handleWebhookCatalog(request, env), request));
+    }
+
     // ── P6.0 Operations Engine ────────────────────────────────────────────────
     // Usage analytics, subscription enforcement, feature flags, admin APIs,
     // observability, notifications. OWNER/ADMIN required for /api/admin/*.
