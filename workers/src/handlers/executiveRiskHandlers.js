@@ -14,6 +14,8 @@
 
 import { callClaude } from '../core/mythosAIProvider.js';
 import { buildReportShell } from './reportingEngine.js';
+import { generateAdaptiveRecommendations } from '../core/adaptiveCyberBrain.js';
+import { RadarService } from '../services/radarService.js';
 
 function ok(data, status = 200) { return Response.json(data, { status }); }
 
@@ -515,5 +517,273 @@ Structure: (1) Executive Summary (2-3 sentences), (2) Risk Posture heading with 
     pdf_note:   'Self-service — POST with {"format":"html"} or append ?format=html for a print-ready board pack (Ctrl+P -> Save as PDF)',
     powered_by: 'CYBERDUDEBIVASH SENTINEL APEX',
     timestamp:  new Date().toISOString(),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENDPOINT 5: POST /api/executive/playbook-recommendations — P10.6
+// Aggregates threat intel, radar, customer assets, and ASM into enriched
+// playbook recommendations. Read-only — never executes any action.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Minimal MITRE ATT&CK technique lookup — only IDs already used in this codebase
+const MITRE_TECHNIQUES = {
+  T1190: { technique_id: 'T1190', technique_name: 'Exploit Public-Facing Application', tactic: 'Initial Access' },
+  T1133: { technique_id: 'T1133', technique_name: 'External Remote Services', tactic: 'Initial Access' },
+  T1059: { technique_id: 'T1059', technique_name: 'Command and Scripting Interpreter', tactic: 'Execution' },
+  T1078: { technique_id: 'T1078', technique_name: 'Valid Accounts', tactic: 'Defense Evasion' },
+  T1486: { technique_id: 'T1486', technique_name: 'Data Encrypted for Impact', tactic: 'Impact' },
+  T1566: { technique_id: 'T1566', technique_name: 'Phishing', tactic: 'Initial Access' },
+  T1055: { technique_id: 'T1055', technique_name: 'Process Injection', tactic: 'Privilege Escalation' },
+  T1027: { technique_id: 'T1027', technique_name: 'Obfuscated Files or Information', tactic: 'Defense Evasion' },
+  T1548: { technique_id: 'T1548', technique_name: 'Abuse Elevation Control Mechanism', tactic: 'Privilege Escalation' },
+  T1562: { technique_id: 'T1562', technique_name: 'Impair Defenses', tactic: 'Defense Evasion' },
+};
+
+function resolveMitreMapping(techniqueId) {
+  if (!techniqueId) return [];
+  const entry = MITRE_TECHNIQUES[techniqueId];
+  return entry
+    ? [entry]
+    : [{ technique_id: techniqueId, technique_name: 'See MITRE ATT&CK catalog', tactic: 'Unknown' }];
+}
+
+function riskReductionEstimate(impact, isKev) {
+  if (impact === 'CRITICAL' && isKev) return '15–25%';
+  if (impact === 'CRITICAL')          return '10–20%';
+  if (impact === 'HIGH')              return '5–12%';
+  if (impact === 'MEDIUM')            return '3–8%';
+  return '1–5%';
+}
+
+function deriveBusinessImpact(impact, category, sector) {
+  const base = {
+    CRITICAL: 'Severe — potential data breach, regulatory violation, or service outage',
+    HIGH:     'Significant — elevated breach risk, compliance exposure, or customer trust damage',
+    MEDIUM:   'Moderate — exploitable under active threat conditions; address within sprint cycle',
+    LOW:      'Low — limited direct exposure; address in next security review cycle',
+  };
+  const sectorSuffix = sector && sector !== 'technology' ? ` (${sector} sector)` : '';
+  return (base[impact] || 'Unknown business impact') + sectorSuffix;
+}
+
+function buildEvidenceList(action, allVulns) {
+  const ev = [];
+  const matchedVuln = action.cve
+    ? allVulns.find(v => v.cve_id === action.cve)
+    : null;
+  if (matchedVuln?.in_kev)     ev.push('Listed in CISA Known Exploited Vulnerabilities (KEV) catalog');
+  if (matchedVuln?.cvss >= 9)  ev.push(`CVSS ${matchedVuln.cvss.toFixed(1)} — Critical severity score`);
+  else if (matchedVuln?.cvss >= 7) ev.push(`CVSS ${matchedVuln.cvss.toFixed(1)} — High severity score`);
+  if (matchedVuln?.epss > 0.5) ev.push(`EPSS ${(matchedVuln.epss * 100).toFixed(1)}% exploitation probability in next 30 days`);
+  if (matchedVuln?.ransomware)  ev.push('Known ransomware group association');
+  if (action.mitre_ref)         ev.push(`MITRE ATT&CK technique: ${action.mitre_ref}`);
+  return ev.length > 0 ? ev : ['No evidence available'];
+}
+
+export async function handlePlaybookRecommendations(request, env, authCtx) {
+  const gate = enterpriseOnly(authCtx);
+  if (gate) return gate;
+
+  const body   = await request.json().catch(() => ({}));
+  const sector = (body.sector || 'technology').toLowerCase();
+  const limit  = Math.min(parseInt(body.limit || '15', 10) || 15, 25);
+  const userId = authCtx?.userId ?? authCtx?.user_id ?? null;
+  const tier   = authCtx?.tier || 'ENTERPRISE';
+
+  // ── 1. Fetch threat intel, customer assets, and ASM targets from D1 ────────
+  let vulns          = [];
+  let customerAssets = [];
+  let asmTargets     = [];
+
+  if (env.DB) {
+    const [tiRows, assetRows, asmRows] = await Promise.all([
+      env.DB.prepare(`
+        SELECT cve_id, title, description, cvss_score, epss_score,
+               actively_exploited, known_ransomware, mitre_technique, severity
+        FROM threat_intel
+        WHERE severity IN ('CRITICAL','HIGH')
+        ORDER BY cvss_score DESC LIMIT 25
+      `).all().catch(() => ({ results: [] })),
+      userId
+        ? env.DB.prepare(`
+            SELECT asset_value, asset_type
+            FROM customer_assets
+            WHERE owner_id = ? AND asset_type IN ('cve_watchlist','technology')
+            LIMIT 50
+          `).bind(userId).all().catch(() => ({ results: [] }))
+        : Promise.resolve({ results: [] }),
+      userId
+        ? env.DB.prepare(`
+            SELECT id, target, asm_score
+            FROM asm_targets
+            WHERE user_id = ? ORDER BY asm_score DESC LIMIT 10
+          `).bind(userId).all().catch(() => ({ results: [] }))
+        : Promise.resolve({ results: [] }),
+    ]);
+
+    vulns = (tiRows.results || []).map(r => ({
+      cve_id:     r.cve_id  || null,
+      title:      r.title   || r.cve_id || 'Unknown vulnerability',
+      cvss:       r.cvss_score  || 0,
+      epss:       r.epss_score  || 0,
+      in_kev:     !!(r.actively_exploited),
+      ransomware: !!(r.known_ransomware),
+      severity:   r.severity || 'HIGH',
+      mitre:      r.mitre_technique || null,
+      description: r.description   || null,
+    }));
+
+    customerAssets = assetRows.results || [];
+    asmTargets     = asmRows.results   || [];
+  }
+
+  // ── 2. Radar trending threats ──────────────────────────────────────────────
+  let radarSignals = [];
+  try {
+    const svc = new RadarService(env);
+    radarSignals = (await svc.getTrending({ limit: 10 })) || [];
+  } catch {}
+
+  // ── 3. Build findings for adaptiveCyberBrain from real data ───────────────
+  const watchedCveIds = customerAssets
+    .filter(a => a.asset_type === 'cve_watchlist')
+    .map(a => a.asset_value)
+    .filter(Boolean);
+
+  const watchlistFindings = watchedCveIds.length > 0
+    ? vulns
+        .filter(v => watchedCveIds.includes(v.cve_id))
+        .map(v => ({
+          severity:    v.cvss >= 9 ? 'CRITICAL' : 'HIGH',
+          title:       v.title,
+          description: v.description || `${v.cve_id} — CVSS ${v.cvss}`,
+          remediation: `Apply vendor patch for ${v.cve_id}. Verify CISA KEV exploitation status.`,
+          category:    v.in_kev ? 'kev_exploit' : 'vulnerability',
+        }))
+    : [];
+
+  // Fall back to top KEV/critical vulns if no watchlist is registered
+  const effectiveFindings = watchlistFindings.length > 0
+    ? watchlistFindings
+    : vulns
+        .filter(v => v.in_kev || v.cvss >= 9)
+        .slice(0, 5)
+        .map(v => ({
+          severity:    'CRITICAL',
+          title:       v.title,
+          description: v.description || `${v.cve_id} — CVSS ${v.cvss}`,
+          remediation: `Apply vendor patch for ${v.cve_id}. Monitor CISA KEV for exploitation updates.`,
+          category:    'vulnerability',
+        }));
+
+  const adaptiveScore = vulns.length > 0
+    ? Math.min(100, Math.round(
+        35 +
+        vulns.filter(v => v.in_kev).length * 20 +
+        vulns.filter(v => v.cvss >= 9).length * 8
+      ))
+    : 35;
+
+  // ── 4. Call the existing recommendation engine — REUSE, not replace ───────
+  const adaptive = await generateAdaptiveRecommendations(env, {
+    findings:      effectiveFindings.slice(0, 10),
+    vulns:         vulns.slice(0, 15),
+    adaptiveScore,
+    attackChains:  [],
+    sector,
+    tier,
+    userId,
+  });
+
+  // ── 5. Enrich with full P10.6 schema (read-only enrichment only) ───────────
+  const asmAssetNames = asmTargets.map(t => t.target).filter(Boolean);
+  const techStack     = customerAssets
+    .filter(a => a.asset_type === 'technology')
+    .map(a => a.asset_value)
+    .filter(Boolean);
+
+  const recommendations = (adaptive.actions || []).slice(0, limit).map((action, idx) => {
+    const matchedVuln = action.cve
+      ? vulns.find(v => v.cve_id === action.cve)
+      : (action.priority === 1 ? vulns.find(v => v.in_kev) : null);
+
+    const mitreRef = action.mitre_ref || matchedVuln?.mitre || null;
+    const isKev    = !!(matchedVuln?.in_kev);
+    const cvss     = matchedVuln?.cvss ?? null;
+    const epss     = matchedVuln?.epss ?? null;
+
+    const evidence   = buildEvidenceList(action, vulns);
+    const confidence =
+      (isKev && cvss !== null && cvss >= 9) ? 'HIGH'   :
+      (cvss !== null && cvss >= 7 || isKev) ? 'MEDIUM' : 'LOW';
+
+    const affectedAssets =
+      asmAssetNames.length > 0 ? asmAssetNames.slice(0, 3) :
+      techStack.length   > 0 ? techStack.slice(0, 3)     :
+      ['No assets registered — add via POST /api/customer/assets'];
+
+    const refs = [];
+    if (action.cve) refs.push(`https://nvd.nist.gov/vuln/detail/${action.cve}`);
+    if (isKev)      refs.push('https://www.cisa.gov/known-exploited-vulnerabilities-catalog');
+    if (mitreRef)   refs.push(`https://attack.mitre.org/techniques/${mitreRef}/`);
+
+    return {
+      id:                       `rec_${Date.now().toString(36)}_${idx}`,
+      title:                    action.title,
+      priority:                 action.priority,
+      urgency:                  action.urgency,
+      category:                 action.category,
+      evidence,
+      confidence,
+      affected_assets:          affectedAssets,
+      recommended_action:       action.detail || action.title,
+      mitre_mapping:            resolveMitreMapping(mitreRef),
+      kev_status:               isKev,
+      epss:                     epss !== null ? +epss.toFixed(4) : null,
+      cvss:                     cvss !== null ? +cvss.toFixed(1) : null,
+      business_impact:          deriveBusinessImpact(action.impact, action.category, sector),
+      estimated_effort:         action.effort || 'Unknown',
+      estimated_risk_reduction: riskReductionEstimate(action.impact, isKev),
+      references:               refs,
+    };
+  });
+
+  const kevCount  = recommendations.filter(r => r.kev_status).length;
+  const highCount = recommendations.filter(r => r.cvss !== null && r.cvss >= 9).length;
+  const aggregateRR = Math.min(60, kevCount * 12 + highCount * 6);
+
+  return ok({
+    success:                  true,
+    service:                  'CDB-EXEC-P106',
+    playbook_id:              `pb_${Date.now().toString(36)}`,
+    generated_at:             new Date().toISOString(),
+    scope: {
+      sector,
+      threat_intel_signals:    vulns.length,
+      radar_signals:           radarSignals.length,
+      customer_assets:         customerAssets.length,
+      asm_targets:             asmTargets.length,
+    },
+    adaptive_risk_score:      adaptiveScore,
+    recommendations,
+    total_recommendations:    recommendations.length,
+    soc_playbook:             adaptive.soc_playbook,
+    quick_wins:               adaptive.quick_wins,
+    estimated_total_effort:   adaptive.estimated_total_effort,
+    aggregate_risk_reduction: aggregateRR > 0
+      ? `Up to ${aggregateRR}% risk reduction if all recommendations implemented`
+      : 'Risk reduction estimate unavailable — insufficient threat intelligence data',
+    note: recommendations.length === 0
+      ? 'No threat intelligence data available. Ensure threat_intel table is populated and assets are registered at POST /api/customer/assets.'
+      : (adaptive.personalization_note || null),
+    data_sources: [
+      'CYBERDUDEBIVASH Sentinel APEX Threat Intelligence',
+      'CISA Known Exploited Vulnerabilities (KEV)',
+      'NVD / CVSS',
+      'Cyber Signal Radar',
+      'Customer Asset Registry',
+    ],
+    powered_by: 'CYBERDUDEBIVASH SENTINEL APEX AI — P10.6 Playbook Recommendation Engine',
   });
 }

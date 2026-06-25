@@ -334,6 +334,7 @@ import {
   handleExecutiveDashboard,
   handleExecutiveForecast,
   handleBoardReport,
+  handlePlaybookRecommendations,
 } from './handlers/executiveRiskHandlers.js';
 
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
@@ -4336,6 +4337,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/executive/board-report' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleBoardReport(request, env, authCtx || {}), request));
+    }
+    // P10.6 — Playbook Recommendation Engine (read-only; aggregates existing engines)
+    if (path === '/api/executive/playbook-recommendations' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handlePlaybookRecommendations(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
