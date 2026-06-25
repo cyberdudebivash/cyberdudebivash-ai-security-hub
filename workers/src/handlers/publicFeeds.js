@@ -90,10 +90,10 @@ async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
   const sevBind   = severities && severities.length ? severities.map(s => s.toUpperCase()) : [];
   const sevClause = sevBind.length ? ` WHERE UPPER(severity) IN (${sevBind.map(() => '?').join(',')})` : '';
 
-  if (env?.DB) {
+  if (env?.SECURITY_HUB_DB) {
     // Tier 1 — SELECT * avoids SELECT-column drift; order by published_at.
     try {
-      const rows = await env.DB.prepare(
+      const rows = await env.SECURITY_HUB_DB.prepare(
         `SELECT * FROM threat_intel${sevClause} ORDER BY published_at DESC LIMIT ?`
       ).bind(...sevBind, limit).all();
       const items = (rows?.results || []).map(normalizeItem);
@@ -102,7 +102,7 @@ async function fetchRecentIntel(env, { limit = 50, severities = null } = {}) {
 
     // Tier 2 — no ORDER BY / no WHERE; filter + cap in JS. Never 500s.
     try {
-      const rows = await env.DB.prepare(`SELECT * FROM threat_intel LIMIT 500`).all();
+      const rows = await env.SECURITY_HUB_DB.prepare(`SELECT * FROM threat_intel LIMIT 500`).all();
       let items = (rows?.results || []).map(normalizeItem);
       if (sevBind.length) items = items.filter(i => sevBind.includes(i.severity));
       if (items.length) return { items: items.slice(0, limit), source: 'd1' };
@@ -122,9 +122,9 @@ function tally(items) {
 }
 
 async function severityCounts(env) {
-  if (env?.DB) {
+  if (env?.SECURITY_HUB_DB) {
     try {
-      const rows = await env.DB.prepare(
+      const rows = await env.SECURITY_HUB_DB.prepare(
         `SELECT UPPER(severity) as sev, COUNT(*) as c FROM threat_intel GROUP BY UPPER(severity)`
       ).all();
       const m = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
@@ -212,9 +212,9 @@ async function buildApex(env, ent, reqLimit) {
 // KEV feed — the actively-exploited catalog (the crown jewel). FREE gets a
 // recent slice; paid tiers get the full ~1,600-entry catalog.
 async function fetchKEV(env, limit) {
-  if (env?.DB) {
+  if (env?.SECURITY_HUB_DB) {
     try {
-      const rows = await env.DB.prepare(
+      const rows = await env.SECURITY_HUB_DB.prepare(
         `SELECT * FROM threat_intel WHERE exploit_status='confirmed' ORDER BY published_at DESC LIMIT ?`
       ).bind(limit).all();
       const items = (rows?.results || []).map(normalizeItem);
