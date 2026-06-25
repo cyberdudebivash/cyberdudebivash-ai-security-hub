@@ -290,7 +290,7 @@ async function handleDeleteScheduledReport(req, env, authCtx, rpId) {
 }
 
 // ─── P7.0-004: Team Management ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-const ROLES = ['OWNER', 'ADMIN', 'MSSP', 'ANALYST', 'VIEWER'];
+const ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'MSSP', 'ANALYST', 'VIEWER', 'CUSTOMER', 'SUB_TENANT'];
 
 async function handleAddTeamMember(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
@@ -537,7 +537,7 @@ function safeParseJSON(raw, fallback) {
   try { return JSON.parse(raw); } catch { return fallback; }
 }
 
-// ─── P8.0-009: SIEM Export ─────────────────────────────────────────────────────────────────────────────────
+// ─── P8.0-009: SIEM Export ─────────────────────────────────────────────────────────────────────────────────────
 
 async function handleSiemExport(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
@@ -591,7 +591,7 @@ async function handleSiemExport(req, env, authCtx) {
   return Response.json({ error: 'Method not allowed' }, { status: 405 });
 }
 
-// ─── P8.0-009: Endpoint Ownership Registry ───────────────────────────────────────────────────────────────────────────────
+// ─── P8.0-009: Endpoint Ownership Registry ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 const ENDPOINT_OWNERSHIP = [
   { path: '/api/radar/*',          team: 'threat-intel',  contact: 'ti@cyberdudebivash.com',          sla_ms: 500, tier: 'FREE' },
@@ -693,7 +693,7 @@ async function handleSchemaValidate(req, env, authCtx) {
   return Response.json({ valid: errors.length === 0, schema_found: true, endpoint, method, errors, schema: { required: schema.required, properties: schema.properties } });
 }
 
-// ─── P8.0-009: Request Tracing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─── P8.0-009: Request Tracing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 async function handleRequestTrace(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
@@ -719,7 +719,7 @@ async function handleRequestTrace(req, env, authCtx) {
   } catch { return Response.json({ user_id: userId(authCtx), count: 0, limit, traces: [] }); }
 }
 
-// ─── P8.0-009: Integration Connectors ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ─── P8.0-009: Integration Connectors ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 async function handleIntegrationConnectors(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;

@@ -1,4 +1,4 @@
-/**
+[Resource from github at repo://cyberdudebivash/cyberdudebivash-ai-security-hub/sha/3ab84a9706644095e7e6039470f3b6535c369ae4/contents/workers/src/index.js] /**
  * CYBERDUDEBIVASH AI Security Hub — Main Router v20.0
  * Global Cyber Intelligence Dominance System
  * World-class AI Cybersecurity SaaS: AI Brain, Attack Graphs, Threat Correlation,
@@ -54,7 +54,7 @@ import { handleDashboardStream } from './handlers/dashboardStream.js';
 
 // ── v32.0 PHASE 2 ENTERPRISE PLATFORM IMPORTS ─────────────────────────────
 import { handleRevenueMetrics, handleRevenueSnapshot }                              from './handlers/revenueMetrics.js';
-import { handleListCustomers, handleCreateCustomer, handleCustomerMetrics, handleUpdateCustomer, handleMSSPOverview } from './handlers/msspWorkspace.js';
+import { handleListCustomers, handleCreateCustomer, handleGetCustomer, handleCustomerMetrics, handleUpdateCustomer, handleMSSPOverview, handleDeleteCustomer, handleSuspendCustomer, handleArchiveCustomer, handleRestoreCustomer } from './handlers/msspWorkspace.js';
 import { handleListCases, handleGetCase, handleCreateCase, handleUpdateCase, handleAddCaseComment, handleCaseMetrics } from './handlers/socCases.js';
 import { handleListActors, handleGetActor, handleIOCSearch, handleAddIOC, handleCTIStats }                             from './handlers/ctiWorkbench.js';
 import { handleDeepHealth, handleServicesList }                                     from './handlers/deepHealth.js';
@@ -2236,6 +2236,31 @@ export default {
       const authCtx = await resolveAuthV5(request, env);
       const customerId = path.split('/')[4];
       return withSecurityHeaders(withCors(await handleUpdateCustomer(request, env, authCtx, customerId), request));
+    }
+
+    // ── P9.0: Enterprise Multi-Tenancy & MSSP Platform ────────────────────────────
+    if (path.match(/^\/api\/mssp\/customers\/[^/]+$/) && (method === 'GET' || method === 'DELETE')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const customerId = path.split('/')[4];
+      if (method === 'GET')    return withSecurityHeaders(withCors(await handleGetCustomer(request, env, authCtx, customerId), request));
+      if (method === 'DELETE') return withSecurityHeaders(withCors(await handleDeleteCustomer(request, env, authCtx, customerId), request));
+    }
+    if (path.match(/^\/api\/mssp\/customers\/[^/]+\/(suspend|archive|restore)$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      const parts = path.split('/');
+      const customerId = parts[4];
+      const action = parts[5];
+      if (action === 'suspend') return withSecurityHeaders(withCors(await handleSuspendCustomer(request, env, authCtx, customerId), request));
+      if (action === 'archive') return withSecurityHeaders(withCors(await handleArchiveCustomer(request, env, authCtx, customerId), request));
+      if (action === 'restore') return withSecurityHeaders(withCors(await handleRestoreCustomer(request, env, authCtx, customerId), request));
+    }
+    if (
+      path.match(/^\/api\/mssp\/customers\/[^/]+\/(dashboard|labels|hierarchy|sub-tenants|notifications|api-keys|billing|usage)/) ||
+      path.match(/^\/api\/mssp\/ticket-rules/)
+    ) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const { handleMsspTenantRoute } = await import('./handlers/msspTenantPlatform.js');
+      return withSecurityHeaders(withCors(await handleMsspTenantRoute(request, env, authCtx, path, method), request));
     }
 
     // SOC Cases
