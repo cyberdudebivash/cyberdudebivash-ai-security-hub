@@ -152,6 +152,7 @@ footer a{color:#10b981;margin:0 8px}
     <a href="/">Platform</a>
     <a href="/agent-threats">Agent Threats</a>
     <a href="/attack-library">Attack Library</a>
+    <a href="/threat-intel-workbench.html" style="color:#10b981;border:1px solid rgba(16,185,129,.3);padding:4px 12px;border-radius:6px;font-size:12px">🛰 Workbench</a>
     <span class="nav-time" id="nav-time">--:--:-- UTC</span>
   </div>
 </nav>
@@ -196,6 +197,41 @@ footer a{color:#10b981;margin:0 8px}
     <div class="stat-item"><div class="stat-val" style="color:#10b981">LIVE</div><div class="stat-label">Feed Status</div></div>
   </div>
 </div>
+
+
+<!-- ── CYBER SIGNAL RADAR WIDGET (P3.0-005) ───────────────────────────────── -->
+<div style="max-width:1300px;margin:0 auto;padding:20px 24px 0">
+  <div style="background:rgba(16,185,129,.03);border:1px solid rgba(16,185,129,.1);border-radius:12px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="csr-dot" style="width:8px;height:8px;background:#10b981;border-radius:50%;animation:npulse 2s ease-in-out infinite;flex-shrink:0"></div>
+        <span style="font-size:12px;font-weight:800;color:#10b981;letter-spacing:.06em">CYBER SIGNAL RADAR</span>
+      </div>
+      <div style="font-size:12px;color:#64748b;font-family:monospace" id="csr-health">Loading…</div>
+      <div style="display:flex;gap:16px;font-family:monospace;font-size:11px">
+        <span>CRIT: <strong id="csr-crit" style="color:#ef4444">—</strong></span>
+        <span>HIGH: <strong id="csr-high" style="color:#f59e0b">—</strong></span>
+        <span>MED: <strong id="csr-med" style="color:#00d4ff">—</strong></span>
+        <span>TOTAL: <strong id="csr-total" style="color:#10b981">—</strong></span>
+      </div>
+    </div>
+    <a href="/cyber-signal-radar" style="font-size:11px;font-weight:700;color:#10b981;border:1px solid rgba(16,185,129,.25);padding:5px 14px;border-radius:6px;white-space:nowrap">View Full Radar →</a>
+  </div>
+</div>
+<script>
+(function(){
+  const API=window.API_BASE||'https://cyberdudebivash.in';
+  fetch(API+'/api/radar/summary').then(r=>r.json()).then(d=>{
+    const dist=d.severity_distribution||{};
+    document.getElementById('csr-crit').textContent=dist.CRITICAL??0;
+    document.getElementById('csr-high').textContent=dist.HIGH??0;
+    document.getElementById('csr-med').textContent=dist.MEDIUM??0;
+    document.getElementById('csr-total').textContent=d.total_signals??0;
+    document.getElementById('csr-health').textContent=d.radar_health+' — '+d.source_count+' sources';
+  }).catch(()=>{document.getElementById('csr-health').textContent='Radar connecting…';});
+})();
+</script>
+<!-- ── END CYBER SIGNAL RADAR WIDGET ─────────────────────────────────────── -->
 
 <!-- MAIN GRID -->
 <div class="main">
