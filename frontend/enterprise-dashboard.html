@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>Enterprise Intelligence Dashboard | CYBERDUDEBIVASH® Sentinel APEX</title>
+<meta name="description" content="Sentinel APEX Enterprise Intelligence Dashboard — real-time risk scores, threat actor tracking, campaign monitoring, and industry sector exposure analysis.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://cyberdudebivash.in/enterprise-dashboard">
+
+<style>
+:root{
+  --bg:#060614;--surface:#0c0c24;--surface2:#10102a;
+  --border:#1a1a3e;--border2:#252550;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;
+  --warn:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#0d0d28;--radius:12px;
+  --risk-critical:#ef4444;--risk-high:#f59e0b;--risk-medium:#3b82f6;--risk-low:#10b981;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+
+/* ── LAYOUT ── */
+.header{background:linear-gradient(135deg,#080820 0%,#0c0c30 100%);border-bottom:1px solid var(--border2);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-brand{display:flex;align-items:center;gap:12px}
+.header-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;letter-spacing:-0.5px}
+.header-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.header-subtitle{font-size:11px;color:var(--text-dim);margin-top:1px}
+.header-status{display:flex;align-items:center;gap:8px}
+.status-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:20px;font-size:11px;color:var(--accent3);font-weight:600}
+.status-dot{width:7px;height:7px;background:var(--accent3);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+
+/* ── AUTH GATE ── */
+#auth-gate{max-width:520px;margin:80px auto;padding:40px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);text-align:center}
+#auth-gate h2{font-size:22px;font-weight:700;margin-bottom:8px;color:var(--text)}
+#auth-gate p{color:var(--text-muted);margin-bottom:24px;font-size:13px}
+.input-row{display:flex;gap:10px;margin-bottom:12px}
+.input-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+.input-row input:focus{border-color:var(--accent)}
+.btn{padding:10px 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.auth-error{color:var(--danger);font-size:12px;margin-top:8px;display:none}
+
+/* ── MAIN DASHBOARD ── */
+#dashboard{display:none;padding:24px;max-width:1400px;margin:0 auto}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tier-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa;letter-spacing:.5px;text-transform:uppercase}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.critical::before{background:var(--risk-critical)}
+.kpi-card.high::before{background:var(--risk-high)}
+.kpi-card.medium::before{background:var(--risk-medium)}
+.kpi-card.ok::before{background:var(--accent3)}
+.kpi-card.purple::before{background:var(--accent2)}
+.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:8px}
+.kpi-value{font-size:32px;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-card.critical .kpi-value{color:var(--risk-critical)}
+.kpi-card.high .kpi-value{color:var(--risk-high)}
+.kpi-card.medium .kpi-value{color:var(--risk-medium)}
+.kpi-card.ok .kpi-value{color:var(--accent3)}
+.kpi-card.purple .kpi-value{color:#a78bfa}
+.kpi-sub{font-size:11px;color:var(--text-dim)}
+
+/* ── GRID LAYOUT ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px}
+@media(max-width:1100px){.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid-3{grid-template-columns:1fr}}
+
+/* ── SECTION ── */
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.section-title .icon{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.icon-red{background:rgba(239,68,68,.15);color:var(--risk-critical)}
+.icon-amber{background:rgba(245,158,11,.15);color:var(--risk-high)}
+.icon-blue{background:rgba(59,130,246,.15);color:var(--info)}
+.icon-green{background:rgba(16,185,129,.15);color:var(--accent3)}
+.icon-purple{background:rgba(124,58,237,.15);color:#a78bfa}
+.section-meta{font-size:11px;color:var(--text-dim)}
+.refresh-btn{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:background .2s}
+.refresh-btn:hover{background:rgba(0,212,255,.15)}
+
+/* ── TABLE ── */
+.intel-table{width:100%;border-collapse:collapse}
+.intel-table th{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;font-weight:600}
+.intel-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;vertical-align:middle}
+.intel-table tr:last-child td{border-bottom:none}
+.intel-table tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── RISK SCORE ── */
+.risk-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700}
+.risk-pill.r-critical{background:rgba(239,68,68,.15);color:var(--risk-critical);border:1px solid rgba(239,68,68,.3)}
+.risk-pill.r-high{background:rgba(245,158,11,.15);color:var(--risk-high);border:1px solid rgba(245,158,11,.3)}
+.risk-pill.r-medium{background:rgba(59,130,246,.15);color:var(--info);border:1px solid rgba(59,130,246,.3)}
+.risk-pill.r-low{background:rgba(16,185,129,.15);color:var(--accent3);border:1px solid rgba(16,185,129,.3)}
+.sev-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.sev-critical{background:rgba(239,68,68,.15);color:var(--risk-critical)}
+.sev-high{background:rgba(245,158,11,.15);color:var(--risk-high)}
+.sev-medium{background:rgba(59,130,246,.15);color:var(--info)}
+.sev-low{background:rgba(16,185,129,.15);color:var(--accent3)}
+.cve-tag{display:inline-block;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);color:var(--accent);padding:1px 6px;border-radius:4px;font-size:10px;margin:1px}
+
+/* ── SECTOR BAR ── */
+.sector-bar-wrap{display:flex;flex-direction:column;gap:8px}
+.sector-row{display:flex;align-items:center;gap:10px}
+.sector-name{font-size:12px;color:var(--text);width:120px;flex-shrink:0}
+.sector-bar-bg{flex:1;background:rgba(255,255,255,.05);border-radius:4px;height:8px;overflow:hidden}
+.sector-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.sector-count{font-size:11px;color:var(--text-dim);width:40px;text-align:right}
+
+/* ── MITRE TAGS ── */
+.technique-tag{display:inline-block;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:1px 6px;border-radius:4px;font-size:10px;margin:1px;font-family:monospace}
+
+/* ── LOADING / EMPTY ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text-dim);gap:8px;font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:32px;color:var(--text-dim);font-size:13px}
+.empty-icon{font-size:28px;margin-bottom:8px;opacity:.4}
+
+/* ── TIMESTAMP ── */
+.ts-bar{background:rgba(255,255,255,.02);border-top:1px solid var(--border);padding:12px 24px;font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center}
+.ts-bar span{color:var(--accent)}
+
+/* ── CTA STRIP ── */
+.cta-strip{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(0,212,255,.08));border:1px solid rgba(124,58,237,.2);border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.cta-strip-text h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.cta-strip-text p{font-size:12px;color:var(--text-muted)}
+.cta-actions{display:flex;gap:10px;flex-shrink:0}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .header{padding:12px 16px}
+  #dashboard{padding:14px}
+  .page-header h1{font-size:18px}
+  .kpi-value{font-size:24px}
+  .cta-strip{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">SA</div>
+    <div>
+      <div class="header-title">CYBERDUDEBIVASH® Sentinel APEX</div>
+      <div class="header-subtitle">Enterprise Intelligence Dashboard — P4.0</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-badge" id="radar-status">
+      <span class="status-dot"></span>
+      <span id="radar-health">Connecting...</span>
+    </div>
+  </div>
+</header>
+
+<!-- Auth gate -->
+<div id="auth-gate">
+  <h2>Enterprise Access Required</h2>
+  <p>This dashboard requires a PRO, ENTERPRISE, or MSSP API key. Visit <a href="https://cyberdudebivash.in/#pricing">cyberdudebivash.in</a> to upgrade.</p>
+  <div class="input-row">
+    <input type="password" id="api-key-input" placeholder="Enter your API key (x-api-key)" autocomplete="off" />
+    <button class="btn" onclick="authenticate()">Unlock</button>
+  </div>
+  <div class="auth-error" id="auth-error">Invalid or unauthorized API key. PRO tier or above required.</div>
+  <p style="font-size:11px;color:var(--text-dim);margin-top:16px">API key is stored in session only and never leaves your browser.</p>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+
+  <div style="padding:0 0 20px">
+    <div class="page-header">
+      <div>
+        <h1>Enterprise Intelligence Dashboard</h1>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:4px">Real-time threat actor tracking, campaign monitoring, risk scoring &amp; sector exposure</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="tier-badge" id="tier-label">–</span>
+        <button class="btn btn-sm btn-outline" onclick="refreshAll()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="cta-strip">
+      <div class="cta-strip-text">
+        <h3>Upgrade to ENTERPRISE SOC for Full Threat Intelligence</h3>
+        <p>Unlock STIX 2.1 export, custom detection packs, MSSP white-label feeds, and dedicated SOC support.</p>
+      </div>
+      <div class="cta-actions">
+        <a href="https://cyberdudebivash.in/#pricing" target="_blank" class="btn btn-sm">View Plans</a>
+        <a href="https://cyberdudebivash.in/contact" target="_blank" class="btn btn-sm btn-outline">Book Demo</a>
+      </div>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card critical"><div class="kpi-label">Total Signals</div><div class="kpi-value" id="kpi-total">–</div><div class="kpi-sub">Active in pipeline</div></div>
+      <div class="kpi-card critical"><div class="kpi-label">Critical Severity</div><div class="kpi-value" id="kpi-crit">–</div><div class="kpi-sub">Requiring immediate action</div></div>
+      <div class="kpi-card high"><div class="kpi-label">High Severity</div><div class="kpi-value" id="kpi-high">–</div><div class="kpi-sub">Elevated risk signals</div></div>
+      <div class="kpi-card purple"><div class="kpi-label">Avg Risk Score</div><div class="kpi-value" id="kpi-avg-risk">–</div><div class="kpi-sub">0–100 composite</div></div>
+      <div class="kpi-card medium"><div class="kpi-label">Active Actors</div><div class="kpi-value" id="kpi-actors">–</div><div class="kpi-sub">Tracked threat groups</div></div>
+      <div class="kpi-card ok"><div class="kpi-label">Campaigns</div><div class="kpi-value" id="kpi-campaigns">–</div><div class="kpi-sub">Active operations</div></div>
+    </div>
+
+    <!-- Risk signals + Sectors -->
+    <div class="grid-2">
+      <!-- Top risk signals -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title"><span class="icon icon-red">⚡</span>Top Risk Signals</div>
+          <span class="section-meta" id="risk-ts">–</span>
+        </div>
+        <div id="risk-table-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+
+      <!-- Sector exposure -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title"><span class="icon icon-blue">◉</span>Industry Sector Exposure</div>
+          <span class="section-meta" id="sector-ts">–</span>
+        </div>
+        <div id="sector-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- Threat actors + Campaigns -->
+    <div class="grid-2">
+      <!-- Threat actors -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title"><span class="icon icon-red">⚠</span>Active Threat Actors</div>
+          <span class="section-meta" id="actors-ts">–</span>
+        </div>
+        <div id="actors-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+
+      <!-- Campaigns -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title"><span class="icon icon-amber">◈</span>Active Campaigns</div>
+          <span class="section-meta" id="campaigns-ts">–</span>
+        </div>
+        <div id="campaigns-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ts-bar" id="ts-bar" style="display:none">
+  <span>Last updated: <span id="last-updated">–</span></span>
+  <span>CYBERDUDEBIVASH® Sentinel APEX · <a href="https://cyberdudebivash.in/#pricing">Upgrade Plan</a></span>
+</div>
+
+<script>
+const API = 'https://cyberdudebivash.in';
+let apiKey = '';
+
+function riskClass(score) {
+  if (score >= 80) return 'r-critical';
+  if (score >= 60) return 'r-high';
+  if (score >= 40) return 'r-medium';
+  return 'r-low';
+}
+
+function sevClass(sev) {
+  return `sev-${(sev||'').toLowerCase()}`;
+}
+
+function riskLabel(score) {
+  if (score >= 80) return 'CRITICAL';
+  if (score >= 60) return 'HIGH';
+  if (score >= 40) return 'MEDIUM';
+  return 'LOW';
+}
+
+function fmtDate(d) {
+  if (!d) return '–';
+  return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function fmtTs(ts) {
+  if (!ts) return '–';
+  return new Date(ts).toLocaleString('en-US', { hour12: false });
+}
+
+async function apiFetch(path) {
+  const r = await fetch(`${API}${path}`, {
+    headers: { 'X-API-Key': apiKey }
+  });
+  if (r.status === 401 || r.status === 403) throw new Error('auth');
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function authenticate() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return;
+  apiKey = key;
+  document.getElementById('auth-error').style.display = 'none';
+  try {
+    const data = await apiFetch('/api/enterprise/risk?limit=1&min_risk=0');
+    if (!data.tier) throw new Error('auth');
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('ts-bar').style.display = 'flex';
+    document.getElementById('tier-label').textContent = data.tier;
+    await refreshAll();
+  } catch(e) {
+    apiKey = '';
+    document.getElementById('auth-error').style.display = 'block';
+  }
+}
+
+document.getElementById('api-key-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') authenticate();
+});
+
+async function refreshAll() {
+  await Promise.allSettled([loadRisk(), loadSectors(), loadActors(), loadCampaigns()]);
+  document.getElementById('last-updated').textContent = fmtTs(new Date().toISOString());
+}
+
+async function loadRisk() {
+  try {
+    const data = await apiFetch('/api/enterprise/risk?min_risk=0&limit=15');
+    document.getElementById('kpi-total').textContent   = data.total_signals ?? '–';
+    document.getElementById('kpi-crit').textContent    = data.risk_distribution?.CRITICAL ?? '–';
+    document.getElementById('kpi-high').textContent    = data.risk_distribution?.HIGH ?? '–';
+    document.getElementById('kpi-avg-risk').textContent= data.avg_risk_score ?? '–';
+    document.getElementById('risk-ts').textContent     = fmtDate(data.timestamp);
+    document.getElementById('risk-table-wrap').innerHTML = renderRiskTable(data.risk_signals || []);
+    checkRadarHealth(data.timestamp);
+  } catch(e) {
+    document.getElementById('risk-table-wrap').innerHTML = '<div class="empty"><div class="empty-icon">⚠</div>Unavailable</div>';
+  }
+}
+
+function renderRiskTable(signals) {
+  if (!signals.length) return '<div class="empty"><div class="empty-icon">✓</div>No high-risk signals detected</div>';
+  const rows = signals.slice(0, 15).map(s => `
+    <tr>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.title||''}">${s.id||'–'}</td>
+      <td><span class="sev-badge ${sevClass(s.severity)}">${s.severity||'–'}</span></td>
+      <td>${(s.cvss||0).toFixed(1)}</td>
+      <td><span class="risk-pill ${riskClass(s.risk_score)}">${s.risk_score}</span></td>
+      <td>${s.actively_exploited ? '<span style="color:var(--danger)">KEV</span>' : '–'}</td>
+    </tr>`).join('');
+  return `<table class="intel-table">
+    <thead><tr><th>CVE / ID</th><th>Sev</th><th>CVSS</th><th>Risk</th><th>KEV</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+async function loadSectors() {
+  try {
+    const data = await apiFetch('/api/radar/sectors');
+    document.getElementById('sector-ts').textContent = fmtDate(data.timestamp);
+    document.getElementById('sector-wrap').innerHTML = renderSectors(data.sectors || []);
+  } catch(e) {
+    document.getElementById('sector-wrap').innerHTML = '<div class="empty"><div class="empty-icon">◉</div>Unavailable</div>';
+  }
+}
+
+function renderSectors(sectors) {
+  if (!sectors.length) return '<div class="empty"><div class="empty-icon">◉</div>No sector data yet</div>';
+  const max = Math.max(...sectors.map(s => s.signal_count), 1);
+  return `<div class="sector-bar-wrap">${sectors.map(s => {
+    const pct = Math.round((s.signal_count / max) * 100);
+    const color = s.max_risk >= 80 ? 'var(--risk-critical)' : s.max_risk >= 60 ? 'var(--risk-high)' : s.max_risk >= 40 ? 'var(--info)' : 'var(--accent3)';
+    return `<div class="sector-row">
+      <div class="sector-name">${s.name}</div>
+      <div class="sector-bar-bg"><div class="sector-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="sector-count">${s.signal_count}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function loadActors() {
+  try {
+    const data = await apiFetch('/api/enterprise/actors?limit=10');
+    document.getElementById('kpi-actors').textContent = data.count ?? '–';
+    document.getElementById('actors-ts').textContent  = fmtDate(data.timestamp);
+    document.getElementById('actors-wrap').innerHTML  = renderActors(data.threat_actors || []);
+  } catch(e) {
+    document.getElementById('actors-wrap').innerHTML = '<div class="empty"><div class="empty-icon">⚠</div>Unavailable</div>';
+  }
+}
+
+function renderActors(actors) {
+  if (!actors.length) return '<div class="empty"><div class="empty-icon">⚠</div>No tracked actors in current signals</div>';
+  return `<table class="intel-table">
+    <thead><tr><th>Actor</th><th>Country</th><th>Signals</th><th>Max Risk</th><th>ATT&CK</th></tr></thead>
+    <tbody>${actors.slice(0, 10).map(a => `
+      <tr>
+        <td>
+          <div style="font-weight:600;font-size:12px">${a.name}</div>
+          ${a.mitre_group_id ? `<div style="font-size:10px;color:var(--text-dim)">${a.mitre_group_id}</div>` : ''}
+        </td>
+        <td style="font-size:11px;color:var(--text-muted)">${a.country}</td>
+        <td>${a.signal_count}</td>
+        <td><span class="risk-pill ${riskClass(a.max_risk_score)}">${a.max_risk_score}</span></td>
+        <td>${(a.att_ck_techniques||[]).slice(0,2).map(t=>`<span class="technique-tag">${t}</span>`).join('')}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+async function loadCampaigns() {
+  try {
+    const data = await apiFetch('/api/enterprise/campaigns');
+    document.getElementById('kpi-campaigns').textContent = data.count ?? '–';
+    document.getElementById('campaigns-ts').textContent  = fmtDate(data.timestamp);
+    document.getElementById('campaigns-wrap').innerHTML  = renderCampaigns(data.campaigns || []);
+  } catch(e) {
+    document.getElementById('campaigns-wrap').innerHTML = '<div class="empty"><div class="empty-icon">◈</div>Unavailable</div>';
+  }
+}
+
+function renderCampaigns(campaigns) {
+  if (!campaigns.length) return '<div class="empty"><div class="empty-icon">◈</div>No campaign data in current signals</div>';
+  return `<table class="intel-table">
+    <thead><tr><th>Campaign</th><th>Signals</th><th>Max Risk</th><th>Sectors</th><th>CVEs</th></tr></thead>
+    <tbody>${campaigns.slice(0, 10).map(c => `
+      <tr>
+        <td>
+          <div style="font-weight:600;font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.name}">${c.name}</div>
+          <div style="font-size:10px;color:var(--text-dim)">${fmtDate(c.last_seen)}</div>
+        </td>
+        <td>${c.signal_count}</td>
+        <td><span class="risk-pill ${riskClass(c.max_risk_score)}">${c.max_risk_score}</span></td>
+        <td style="font-size:11px;color:var(--text-muted)">${(c.targeted_sectors||[]).slice(0,2).join(', ')||'–'}</td>
+        <td>${(c.cves||[]).slice(0,2).map(v=>`<span class="cve-tag">${v}</span>`).join('')||'–'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+async function checkRadarHealth(ts) {
+  const el = document.getElementById('radar-health');
+  if (ts) {
+    const age = (Date.now() - new Date(ts).getTime()) / 60000;
+    el.textContent = age < 10 ? 'OPERATIONAL' : 'CACHED';
+    document.getElementById('radar-status').style.borderColor = age < 10 ? 'rgba(16,185,129,.3)' : 'rgba(245,158,11,.3)';
+  }
+}
+
+// Auto-refresh every 5 minutes when dashboard is active
+let autoRefreshTimer;
+function startAutoRefresh() {
+  clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(() => {
+    if (document.getElementById('dashboard').style.display !== 'none') refreshAll();
+  }, 300000);
+}
+
+// Check if API key in sessionStorage
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('sentinel_api_key');
+  if (saved) {
+    document.getElementById('api-key-input').value = saved;
+  }
+});
+
+// Store key for session convenience
+document.getElementById('api-key-input').addEventListener('input', e => {
+  sessionStorage.setItem('sentinel_api_key', e.target.value);
+});
+</script>
+</body>
+</html>
