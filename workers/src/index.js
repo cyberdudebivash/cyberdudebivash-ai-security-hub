@@ -317,6 +317,9 @@ import {
   handleIntelRisk,
 } from './handlers/intelAPIHandlers.js';
 
+// ─── Threat Intel Pro v1.0 — MITRE ATT&CK, APT Actors, Composite Risk, STIX 2.1, AI Analyst ──
+import { handleThreatIntelPro } from './handlers/threatIntelPro.js';
+
 // ─── Phase B: AI Security Posture Management (AI SPM) ────────────────────────
 import {
   handleAISPMInventory,
@@ -4198,6 +4201,32 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/intel/risk' && (method === 'GET' || method === 'POST')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleIntelRisk(request, env, authCtx || {}), request));
+    }
+
+    // ── Threat Intel Pro v1.0: MITRE ATT&CK, APT, Composite Risk, STIX 2.1, AI Analyst ──
+    if (
+      (path.startsWith('/api/intel/actors') ||
+       path.startsWith('/api/intel/actor/') ||
+       path === '/api/intel/tactics' ||
+       path === '/api/intel/techniques' ||
+       path === '/api/intel/attack-map' ||
+       path === '/api/intel/heatmap' ||
+       path.startsWith('/api/intel/risk-score/') ||
+       path === '/api/intel/risk-queue' ||
+       path.startsWith('/api/intel/epss/') ||
+       path === '/api/intel/stix' ||
+       path.startsWith('/api/intel/sector/') ||
+       path.startsWith('/api/intel/cve-brief/') ||
+       path === '/api/intel/analyst' ||
+       path === '/api/intel/analyst/query' ||
+       path.startsWith('/api/intel/attribute/') ||
+       path === '/api/taxii/discovery' ||
+       path === '/api/taxii/collections' ||
+       path.startsWith('/api/taxii/collections/')) &&
+      (method === 'GET' || method === 'POST' || method === 'OPTIONS')
+    ) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleThreatIntelPro(request, env, authCtx || {}), request));
     }
 
     // ── Phase C: MYTHOS Platform Governor API ────────────────────────────────
