@@ -238,10 +238,10 @@ crons = [
 ]
 
 # ── Custom domain routes ──────────────────────────────────────────────────────
-# Uncomment after configuring DNS:
-# [[routes]]
-# pattern   = "api.cyberdudebivash.in/*"
-# zone_name = "cyberdudebivash.in"
+# custom_domain = true: Cloudflare auto-provisions DNS + SSL (no manual DNS record needed)
+[[routes]]
+pattern       = "api.cyberdudebivash.in"
+custom_domain = true
 
 # [[routes]]
 # pattern   = "api.tools.cyberdudebivash.com/*"
