@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>Cyber Signal Radar™ | Real-Time Threat Intelligence | CYBERDUDEBIVASH®</title>
+<meta name="description" content="CYBERDUDEBIVASH® Cyber Signal Radar — live threat intelligence dashboard. Real-time critical CVEs, AI/LLM threat signals, ransomware activity, MITRE ATT&CK campaigns, and enterprise threat actor intelligence. Powered by Sentinel APEX.">
+<meta name="keywords" content="cyber signal radar, real-time threat intelligence, CVE tracker, ransomware monitoring, AI threat intelligence, MITRE ATT&CK, threat actor intelligence, enterprise cybersecurity, CYBERDUDEBIVASH">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cyberdudebivash.in/cyber-signal-radar">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Cyber Signal Radar™ | CYBERDUDEBIVASH® AI Security Hub">
+<meta property="og:description" content="Real-time threat intelligence radar. Critical CVEs, AI threats, ransomware signals, and threat actor intelligence — live from Sentinel APEX.">
+<meta property="og:url" content="https://cyberdudebivash.in/cyber-signal-radar">
+<meta property="og:site_name" content="CYBERDUDEBIVASH® AI Security Hub">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cyber Signal Radar™ | Live Threat Intelligence">
+<meta name="twitter:description" content="Real-time CVE, ransomware, AI threat, and threat actor signals — CYBERDUDEBIVASH® Sentinel APEX.">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebPage",
+  "name":"Cyber Signal Radar™",
+  "description":"Real-time cybersecurity threat intelligence radar powered by CYBERDUDEBIVASH® Sentinel APEX. Live CVE tracking, AI threat signals, ransomware activity monitoring.",
+  "url":"https://cyberdudebivash.in/cyber-signal-radar",
+  "publisher":{"@type":"Organization","name":"CYBERDUDEBIVASH® AI Security Hub","url":"https://cyberdudebivash.in"},
+  "breadcrumb":{"@type":"BreadcrumbList","itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Home","item":"https://cyberdudebivash.in"},
+    {"@type":"ListItem","position":2,"name":"Cyber Signal Radar","item":"https://cyberdudebivash.in/cyber-signal-radar"}
+  ]}
+}
+</script>
+<style>
+:root{
+  --bg:#040d14;--surface:#060f1a;--border:#0d2035;
+  --accent:#00d4ff;--accent2:#0099cc;--accent3:#33e0ff;
+  --accent-glow:rgba(0,212,255,.08);
+  --warn:#f59e0b;--danger:#ef4444;--ok:#10b981;--purple:#818cf8;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:rgba(0,212,255,.03);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.006) 2px,rgba(0,212,255,.006) 4px);pointer-events:none;z-index:0}
+a{color:var(--accent);text-decoration:none}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:100;background:rgba(4,13,20,.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,212,255,.12);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:13px;font-weight:900;color:var(--accent);letter-spacing:.08em;display:flex;align-items:center;gap:8px}
+.nav-pulse{width:7px;height:7px;background:var(--ok);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4)}50%{box-shadow:0 0 0 6px rgba(16,185,129,0)}}
+.nav-links{display:flex;align-items:center;gap:24px}
+.nav-links a{color:var(--text-muted);font-size:13px;font-weight:600;transition:color .2s}
+.nav-links a:hover{color:var(--accent)}
+.nav-cta{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000!important;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:800}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(180deg,#020b14 0%,var(--bg) 100%);border-bottom:1px solid rgba(0,212,255,.08);padding:64px 24px 52px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 20% 50%,rgba(0,212,255,.05) 0%,transparent 70%)}
+.hero-inner{max-width:1300px;margin:0 auto;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.18);padding:6px 14px;border-radius:20px;font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px}
+.hero-badge span{width:6px;height:6px;background:var(--ok);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+h1{font-size:clamp(28px,4.5vw,52px);font-weight:900;color:#fff;margin-bottom:12px;line-height:1.1}
+h1 .hl{color:var(--accent)}
+.hero p{font-size:16px;color:var(--text-muted);max-width:640px;margin-bottom:28px}
+.hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:40px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:800;border:none;cursor:pointer;transition:opacity .2s}
+.btn-primary:hover{opacity:.9}
+.btn-outline{background:transparent;color:var(--accent);padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;border:1px solid rgba(0,212,255,.3);cursor:pointer;transition:all .2s}
+.btn-outline:hover{background:rgba(0,212,255,.07)}
+
+/* ── STAT STRIP ── */
+.stat-strip{background:rgba(0,212,255,.03);border-bottom:1px solid rgba(0,212,255,.07);padding:0}
+.stat-strip-inner{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.stat-item{padding:20px 16px;text-align:center;border-right:1px solid rgba(0,212,255,.07);position:relative}
+.stat-item:last-child{border-right:none}
+.stat-val{font-size:28px;font-weight:900;color:var(--accent);font-family:monospace;transition:all .4s}
+.stat-val.critical{color:var(--danger)}
+.stat-val.high{color:var(--warn)}
+.stat-val.ok{color:var(--ok)}
+.stat-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.stat-sub{font-size:10px;color:var(--text-dim);margin-top:2px;font-family:monospace}
+
+/* ── MAIN GRID ── */
+.main-grid{max-width:1300px;margin:0 auto;padding:36px 24px;display:grid;grid-template-columns:1fr 340px;gap:28px}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+
+/* ── PANEL ── */
+.panel{background:var(--card);border:1px solid rgba(0,212,255,.08);border-radius:14px;overflow:hidden}
+.panel-head{padding:16px 20px;border-bottom:1px solid rgba(0,212,255,.08);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:14px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px}
+.live-chip{font-size:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--ok);padding:2px 10px;border-radius:10px;font-weight:700;display:flex;align-items:center;gap:5px}
+.live-chip::before{content:'';width:5px;height:5px;background:var(--ok);border-radius:50%;animation:pulse 1s step-end infinite}
+.panel-body{padding:16px}
+
+/* ── SEVERITY DIST ── */
+.sev-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.sev-card{padding:14px;border-radius:10px;text-align:center}
+.sev-card.crit{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15)}
+.sev-card.high{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.15)}
+.sev-card.med{background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.12)}
+.sev-card.low{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.12)}
+.sev-num{font-size:32px;font-weight:900;font-family:monospace}
+.sev-card.crit .sev-num{color:#ef4444}
+.sev-card.high .sev-num{color:#f59e0b}
+.sev-card.med .sev-num{color:var(--accent)}
+.sev-card.low .sev-num{color:var(--ok)}
+.sev-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-top:2px}
+
+/* ── SIGNAL LIST ── */
+.signal-list{display:flex;flex-direction:column;gap:10px}
+.signal-item{background:rgba(0,212,255,.02);border:1px solid rgba(0,212,255,.06);border-radius:10px;padding:14px 16px;transition:border-color .2s}
+.signal-item:hover{border-color:rgba(0,212,255,.16)}
+.signal-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.signal-id{font-size:11px;font-family:monospace;color:var(--accent);font-weight:700}
+.severity-badge{font-size:9px;font-weight:800;letter-spacing:.08em;padding:3px 9px;border-radius:6px;white-space:nowrap}
+.sev-CRITICAL{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.sev-HIGH{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.sev-MEDIUM{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.15)}
+.sev-LOW{background:rgba(16,185,129,.1);color:var(--ok);border:1px solid rgba(16,185,129,.15)}
+.signal-title{font-size:13px;color:var(--text);margin-top:6px;line-height:1.45}
+.signal-meta{display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--text-dim);font-family:monospace}
+.cvss-val{color:var(--warn);font-weight:700}
+
+/* ── RADAR HEALTH ── */
+.radar-health{display:flex;align-items:center;gap:8px;padding:12px 16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.12);border-radius:10px;margin-bottom:16px;font-size:13px}
+.health-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;animation:pulse 2s ease-in-out infinite}
+.health-OPERATIONAL{background:var(--ok)}
+.health-NOMINAL{background:var(--warn)}
+.health-DEGRADED{background:var(--danger)}
+.health-label{font-weight:700;color:var(--ok)}
+.health-ts{font-size:11px;color:var(--text-dim);font-family:monospace;margin-left:auto}
+
+/* ── AI SUMMARY ── */
+.ai-summary{background:rgba(129,140,248,.05);border:1px solid rgba(129,140,248,.12);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);line-height:1.6}
+.ai-summary strong{color:var(--purple);display:block;margin-bottom:6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+
+/* ── SIDEBAR ── */
+.sidebar .panel{margin-bottom:20px}
+.actor-list,.campaign-list{display:flex;flex-direction:column;gap:8px}
+.actor-item,.campaign-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.05);border-radius:8px}
+.actor-name,.campaign-name{font-size:12px;color:var(--text);font-weight:600}
+.actor-count,.campaign-count{font-size:11px;font-family:monospace;color:var(--text-dim);background:rgba(0,212,255,.07);padding:2px 8px;border-radius:6px}
+
+/* ── ENTERPRISE CTA ── */
+.cta-panel{background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,153,204,.04));border:1px solid rgba(0,212,255,.2);border-radius:14px;padding:28px;text-align:center}
+.cta-panel h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:8px}
+.cta-panel p{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6}
+.cta-btn{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;padding:12px 28px;border-radius:10px;font-size:13px;font-weight:800;margin:5px;transition:opacity .2s}
+.cta-btn:hover{opacity:.9;color:#000}
+.cta-btn.sec{background:transparent;color:var(--accent);border:1px solid rgba(0,212,255,.3);color:var(--accent)}
+
+/* ── NEWSLETTER ── */
+.newsletter{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:14px;padding:24px;margin-top:20px;text-align:center}
+.newsletter h4{font-size:15px;font-weight:800;color:#fff;margin-bottom:6px}
+.newsletter p{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+.nl-form{display:flex;gap:8px;max-width:440px;margin:0 auto}
+.nl-input{flex:1;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px}
+.nl-input::placeholder{color:var(--text-dim)}
+.nl-btn{background:var(--accent);color:#000;padding:10px 20px;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer}
+
+/* ── UPDATE FOOTER ── */
+.update-bar{background:rgba(0,212,255,.03);border-top:1px solid rgba(0,212,255,.07);padding:10px 24px;text-align:center;font-size:11px;color:var(--text-dim);font-family:monospace}
+.update-bar span{color:var(--accent)}
+
+/* ── LOADING ── */
+.skeleton{background:linear-gradient(90deg,rgba(0,212,255,.05) 25%,rgba(0,212,255,.1) 50%,rgba(0,212,255,.05) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;height:16px;margin-bottom:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .stat-strip-inner{grid-template-columns:repeat(3,1fr)}
+  .stat-item:nth-child(4),.stat-item:nth-child(5){grid-column:span 1}
+  .nl-form{flex-direction:column}
+  .hero-ctas{flex-direction:column}
+  .btn-primary,.btn-outline{text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <span class="nav-pulse"></span>
+    CYBERDUDEBIVASH®
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/intel-hub">Threat Intel</a>
+    <a href="/soc-dashboard">SOC</a>
+    <a href="/api-docs">API</a>
+    <a class="nav-cta" href="/#pricing">Get Access</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><span></span> LIVE THREAT INTELLIGENCE</div>
+    <h1>Cyber Signal <span class="hl">Radar™</span></h1>
+    <p>Real-time aggregation of critical CVEs, AI/LLM threats, ransomware activity, and threat actor intelligence — powered by <strong>CYBERDUDEBIVASH® Sentinel APEX</strong>. Monitoring NVD, OSV, GitHub Advisories, and curated AI/ML package ecosystems.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary" onclick="location.href='/upgrade'">Enterprise Access →</button>
+      <button class="btn-outline" onclick="location.href='/api-docs'">Explore API</button>
+    </div>
+  </div>
+</section>
+
+<!-- STAT STRIP -->
+<div class="stat-strip">
+  <div class="stat-strip-inner">
+    <div class="stat-item"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Total Signals</div></div>
+    <div class="stat-item"><div class="stat-val critical" id="stat-critical">—</div><div class="stat-label">Critical</div></div>
+    <div class="stat-item"><div class="stat-val high" id="stat-high">—</div><div class="stat-label">High</div></div>
+    <div class="stat-item"><div class="stat-val ok" id="stat-sources">—</div><div class="stat-label">Sources</div></div>
+    <div class="stat-item"><div class="stat-val ok" id="stat-health">—</div><div class="stat-label">Radar Status</div></div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+  <!-- LEFT — Live signals -->
+  <div class="feed-col">
+    <!-- Radar health + AI summary -->
+    <div id="radar-health-bar" class="radar-health" style="display:none">
+      <div class="health-dot" id="health-dot"></div>
+      <div><span class="health-label" id="health-label">—</span> &mdash; <span id="health-desc" style="font-size:12px;color:var(--text-muted)"></span></div>
+      <div class="health-ts" id="health-ts"></div>
+    </div>
+
+    <div id="ai-summary-box" class="ai-summary" style="display:none">
+      <strong>&#x1F916; AI Threat Summary</strong>
+      <span id="ai-summary-text"></span>
+    </div>
+
+    <!-- Severity Distribution -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head">
+        <div class="panel-title">&#x26A0; Severity Distribution <div class="live-chip">LIVE</div></div>
+      </div>
+      <div class="panel-body">
+        <div class="sev-grid">
+          <div class="sev-card crit"><div class="sev-num" id="d-critical">—</div><div class="sev-lbl">Critical</div></div>
+          <div class="sev-card high"><div class="sev-num" id="d-high">—</div><div class="sev-lbl">High</div></div>
+          <div class="sev-card med"><div class="sev-num" id="d-medium">—</div><div class="sev-lbl">Medium</div></div>
+          <div class="sev-card low"><div class="sev-num" id="d-low">—</div><div class="sev-lbl">Low</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trending Threats -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head">
+        <div class="panel-title">&#x1F525; Trending Threats</div>
+        <div class="live-chip">LIVE</div>
+      </div>
+      <div class="panel-body">
+        <div id="trending-list" class="signal-list">
+          <div class="skeleton"></div><div class="skeleton" style="height:12px;width:70%"></div>
+          <div class="skeleton"></div><div class="skeleton" style="height:12px;width:60%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Latest CVEs -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">&#x1F50D; Latest CVEs</div>
+        <div class="live-chip">LIVE</div>
+      </div>
+      <div class="panel-body">
+        <div id="cve-list" class="signal-list">
+          <div class="skeleton"></div><div class="skeleton" style="height:12px;width:65%"></div>
+          <div class="skeleton"></div><div class="skeleton" style="height:12px;width:55%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT — Sidebar -->
+  <aside class="sidebar">
+    <!-- Top Campaigns -->
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">&#x1F3AF; Top Campaigns</div></div>
+      <div class="panel-body">
+        <div id="campaigns-list" class="campaign-list">
+          <div class="skeleton"></div><div class="skeleton" style="width:80%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat Actors -->
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-head"><div class="panel-title">&#x1F575; Active Threat Actors</div></div>
+      <div class="panel-body">
+        <div id="actors-list" class="actor-list">
+          <div class="skeleton"></div><div class="skeleton" style="width:75%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enterprise CTA -->
+    <div class="cta-panel" style="margin-top:20px">
+      <h3>Enterprise Radar Access</h3>
+      <p>Unlock full signal history, confidence scores, industry filtering, threat actor intelligence, and API access for your SOC.</p>
+      <a class="cta-btn" href="/upgrade">Get Enterprise Access</a>
+      <a class="cta-btn sec" href="/booking">Book Demo</a>
+    </div>
+
+    <!-- API CTA -->
+    <div class="cta-panel" style="margin-top:16px;background:linear-gradient(135deg,rgba(129,140,248,.07),rgba(99,102,241,.04))">
+      <h3>Radar API</h3>
+      <p>Integrate Cyber Signal Radar into your SIEM, SOAR, or security stack. REST API with public and enterprise tiers.</p>
+      <a class="cta-btn" href="/api-docs" style="background:var(--purple);color:#fff">View API Docs</a>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="newsletter">
+      <h4>&#x1F4E8; Threat Intel Digest</h4>
+      <p>Weekly AI/LLM threat alerts, critical CVEs, and SOC intelligence — directly to your inbox.</p>
+      <div class="nl-form">
+        <input class="nl-input" id="nl-email" placeholder="your@email.com" type="email">
+        <button class="nl-btn" onclick="newsletterSubscribe()">Subscribe</button>
+      </div>
+      <div id="nl-msg" style="margin-top:8px;font-size:12px;color:var(--ok);display:none"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- UPDATE BAR -->
+<div class="update-bar" id="update-bar">Radar — Loading…</div>
+
+<script>
+const API = window.API_BASE || 'https://cyberdudebivash.in';
+
+function sev(s){
+  return `<span class="severity-badge sev-${s}">${s}</span>`;
+}
+
+function renderSignalItem(sig){
+  const cvss = sig.cvss ? `<span class="cvss-val">CVSS ${sig.cvss.toFixed(1)}</span>` : '';
+  const epss = sig.epss ? `<span>EPSS ${(sig.epss*100).toFixed(1)}%</span>` : '';
+  const exp  = sig.actively_exploited ? `<span style="color:var(--danger)">&#x26A1; Exploited</span>` : '';
+  return `
+    <div class="signal-item">
+      <div class="signal-top">
+        <div class="signal-id">${sig.id||'—'}</div>
+        ${sev(sig.severity||'MEDIUM')}
+      </div>
+      <div class="signal-title">${sig.title||'Security Advisory'}</div>
+      <div class="signal-meta">${cvss}${epss}${exp}</div>
+    </div>`;
+}
+
+function renderEmpty(msg){
+  return `<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px">${msg}</div>`;
+}
+
+function renderCampaignItem(c){
+  return `<div class="campaign-item"><span class="campaign-name">${c.name}</span><span class="campaign-count">${c.count}</span></div>`;
+}
+
+async function loadRadar(){
+  try {
+    const res  = await fetch(`${API}/api/radar/snapshot`,{cache:'no-store'});
+    if(!res.ok) throw new Error('API error');
+    const data = await res.json();
+
+    // Stats
+    document.getElementById('stat-total').textContent    = data.total_signals ?? '—';
+    document.getElementById('stat-critical').textContent = data.severity_distribution?.CRITICAL ?? '—';
+    document.getElementById('stat-high').textContent     = data.severity_distribution?.HIGH ?? '—';
+    document.getElementById('stat-sources').textContent  = data.source_count ?? '—';
+    document.getElementById('stat-health').textContent   = data.radar_health || '—';
+
+    // Severity dist
+    const d = data.severity_distribution || {};
+    document.getElementById('d-critical').textContent = d.CRITICAL ?? 0;
+    document.getElementById('d-high').textContent     = d.HIGH ?? 0;
+    document.getElementById('d-medium').textContent   = d.MEDIUM ?? 0;
+    document.getElementById('d-low').textContent      = d.LOW ?? 0;
+
+    // Health bar
+    const hBar = document.getElementById('radar-health-bar');
+    hBar.style.display = 'flex';
+    const hDot = document.getElementById('health-dot');
+    hDot.className = `health-dot health-${data.radar_health||'NOMINAL'}`;
+    document.getElementById('health-label').textContent = data.radar_health||'NOMINAL';
+    document.getElementById('health-desc').textContent  = `${data.total_signals||0} signals from ${data.source_count||0} sources`;
+    document.getElementById('health-ts').textContent    = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
+
+    // AI summary
+    if(data.ai_threat_summary){
+      document.getElementById('ai-summary-box').style.display='block';
+      document.getElementById('ai-summary-text').textContent = data.ai_threat_summary;
+    }
+
+    // Trending threats
+    const tl = document.getElementById('trending-list');
+    if(data.trending_threats?.length){
+      tl.innerHTML = data.trending_threats.map(renderSignalItem).join('');
+    } else {
+      tl.innerHTML = renderEmpty('No trending signals at this time');
+    }
+
+    // Latest CVEs
+    const cl = document.getElementById('cve-list');
+    if(data.latest_cves?.length){
+      cl.innerHTML = data.latest_cves.map(renderSignalItem).join('');
+    } else {
+      cl.innerHTML = renderEmpty('No CVEs currently tracked');
+    }
+
+    // Campaigns
+    const camp = document.getElementById('campaigns-list');
+    if(data.top_campaigns?.length){
+      camp.innerHTML = data.top_campaigns.map(renderCampaignItem).join('');
+    } else {
+      camp.innerHTML = `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">No active campaigns detected</div>`;
+    }
+
+    // Actors
+    const act = document.getElementById('actors-list');
+    if(data.active_threat_actors?.length){
+      act.innerHTML = data.active_threat_actors.map(a=>`<div class="actor-item"><span class="actor-name">${a.name}</span><span class="actor-count">${a.count}</span></div>`).join('');
+    } else {
+      act.innerHTML = `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">No active threat actors</div>`;
+    }
+
+    // Update bar
+    const ts = data.timestamp ? new Date(data.timestamp).toLocaleString() : new Date().toLocaleString();
+    document.getElementById('update-bar').innerHTML = `Last updated: <span>${ts}</span> &bull; Cache TTL: <span>${data.cache_ttl||300}s</span> &bull; Powered by <span>CYBERDUDEBIVASH® Sentinel APEX</span>`;
+
+  } catch(e){
+    document.getElementById('stat-total').textContent = 'ERR';
+    document.getElementById('update-bar').textContent = 'Radar temporarily unavailable — retrying…';
+    setTimeout(loadRadar, 15000);
+  }
+}
+
+async function newsletterSubscribe(){
+  const email = document.getElementById('nl-email').value.trim();
+  if(!email || !email.includes('@')) return;
+  const msg = document.getElementById('nl-msg');
+  try {
+    await fetch(`${API}/api/newsletter/subscribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+  } catch {}
+  msg.textContent = '✓ Subscribed! First digest arrives within 7 days.';
+  msg.style.display = 'block';
+  document.getElementById('nl-email').value = '';
+}
+
+// Load on init, refresh every 5 minutes
+loadRadar();
+setInterval(loadRadar, 300000);
+</script>
+</body>
+</html>
