@@ -5063,6 +5063,60 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleEnterpriseActors(request, env, authCtx), request));
     }
 
+    // ── P5.0-007 Customer Intelligence API ───────────────────────────────────
+    // All routes require auth; MSSP tier may pass ?customer_id= for multi-tenant
+
+    if (path === '/api/customer/profile') {
+      if (method === 'GET') {
+        const { handleGetProfile } = await import('./handlers/customerIntel.js');
+        const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+        return withSecurityHeaders(withCors(await handleGetProfile(request, env, authCtx), request));
+      }
+      if (method === 'PUT') {
+        const { handleUpdateProfile } = await import('./handlers/customerIntel.js');
+        const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+        return withSecurityHeaders(withCors(await handleUpdateProfile(request, env, authCtx), request));
+      }
+    }
+
+    if (path === '/api/customer/radar' && method === 'GET') {
+      const { handleGetPersonalizedRadar } = await import('./handlers/customerIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGetPersonalizedRadar(request, env, authCtx), request));
+    }
+
+    if (path === '/api/customer/risk' && method === 'GET') {
+      const { handleGetOrgRisk } = await import('./handlers/customerIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGetOrgRisk(request, env, authCtx), request));
+    }
+
+    if (path === '/api/customer/assets') {
+      if (method === 'GET') {
+        const { handleGetAssets } = await import('./handlers/customerIntel.js');
+        const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+        return withSecurityHeaders(withCors(await handleGetAssets(request, env, authCtx), request));
+      }
+      if (method === 'POST') {
+        const { handleRegisterAsset } = await import('./handlers/customerIntel.js');
+        const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+        return withSecurityHeaders(withCors(await handleRegisterAsset(request, env, authCtx), request));
+      }
+    }
+
+    if (path.startsWith('/api/customer/assets/') && method === 'DELETE') {
+      const assetId = path.slice('/api/customer/assets/'.length).split('/')[0];
+      const { handleDeleteAsset } = await import('./handlers/customerIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleDeleteAsset(request, env, authCtx, assetId), request));
+    }
+
+    if (path === '/api/customer/report' && method === 'GET') {
+      const { handleGetReport } = await import('./handlers/customerIntel.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGetReport(request, env, authCtx), request));
+    }
+
     // ── Global Scale Engine (Phase 6) ─────────────────────────────────────
 
     // GET /api/global/pricing — geo-detected multi-currency pricing (public)
