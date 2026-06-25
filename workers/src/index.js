@@ -337,6 +337,15 @@ import {
   handlePlaybookRecommendations,
 } from './handlers/executiveRiskHandlers.js';
 
+// ─── P11.0: AI Security Decision Platform ────────────────────────────────────
+import {
+  handleDecisionSummary,
+  handleDecisionActions,
+  handleDecisionBusinessImpact,
+  handleDecisionPriorities,
+  handleDecisionExecutive,
+} from './handlers/decisionHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4342,6 +4351,28 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/executive/playbook-recommendations' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handlePlaybookRecommendations(request, env, authCtx || {}), request));
+    }
+
+    // ── P11.0: AI Security Decision Platform ─────────────────────────────────
+    if (path === '/api/decision/summary' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDecisionSummary(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/decision/actions' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDecisionActions(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/decision/business-impact' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDecisionBusinessImpact(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/decision/priorities' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDecisionPriorities(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/decision/executive' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDecisionExecutive(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
