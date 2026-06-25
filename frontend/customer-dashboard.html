@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>Customer Intelligence Dashboard | CYBERDUDEBIVASH® Sentinel APEX</title>
+<meta name="description" content="Sentinel APEX personalized threat radar — organization risk score, asset intelligence, and executive reporting for your specific technology stack and industry.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://cyberdudebivash.in/customer-dashboard">
+<style>
+:root{
+  --bg:#060614;--surface:#0c0c24;--surface2:#10102a;
+  --border:#1a1a3e;--border2:#252550;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;
+  --warn:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#0d0d28;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+
+.header{background:linear-gradient(135deg,#080820,#0c0c30);border-bottom:1px solid var(--border2);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-brand{display:flex;align-items:center;gap:10px}
+.header-logo{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff}
+.header-title{font-size:15px;font-weight:700;color:var(--text)}
+.header-sub{font-size:11px;color:var(--text-dim);margin-top:1px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.status-badge{display:flex;align-items:center;gap:5px;padding:4px 11px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:20px;font-size:11px;color:var(--accent3);font-weight:600}
+.dot{width:6px;height:6px;background:var(--accent3);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* Auth gate */
+#gate{max-width:500px;margin:80px auto;padding:40px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);text-align:center}
+#gate h2{font-size:20px;font-weight:700;margin-bottom:8px}
+#gate p{color:var(--text-muted);font-size:13px;margin-bottom:20px}
+.input-row{display:flex;gap:8px;margin-bottom:10px}
+.input-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 13px;color:var(--text);font-size:13px;outline:none;transition:border .2s}
+.input-row input:focus{border-color:var(--accent)}
+.btn{padding:10px 18px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-sm{padding:6px 13px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.btn-ghost{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text-muted)}
+.err{color:var(--danger);font-size:12px;margin-top:6px;display:none}
+
+/* Dashboard */
+#dash{display:none;padding:20px 24px;max-width:1400px;margin:0 auto}
+.pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.pg-hdr h1{font-size:22px;font-weight:800;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tier-chip{padding:3px 11px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.28);color:#a78bfa;letter-spacing:.5px;text-transform:uppercase}
+.action-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-dim);transition:all .2s;background:transparent;border:none}
+.tab.active{background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(124,58,237,.08));color:var(--text);border:1px solid var(--border2)}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.kpi.crit::before{background:var(--danger)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--accent3)}
+.kpi.pur::before{background:var(--accent2)}
+.kpi-l{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px}
+.kpi-v{font-size:30px;font-weight:800;line-height:1;margin-bottom:3px}
+.kpi.crit .kpi-v{color:var(--danger)}
+.kpi.warn .kpi-v{color:var(--warn)}
+.kpi.ok .kpi-v{color:var(--accent3)}
+.kpi.pur .kpi-v{color:#a78bfa}
+.kpi-sub{font-size:11px;color:var(--text-dim)}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px}
+@media(max-width:1050px){.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* Section card */
+.sec{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.icon-chip{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px}
+.ic-red{background:rgba(239,68,68,.15);color:var(--danger)}
+.ic-amber{background:rgba(245,158,11,.15);color:var(--warn)}
+.ic-blue{background:rgba(59,130,246,.15);color:var(--info)}
+.ic-green{background:rgba(16,185,129,.15);color:var(--accent3)}
+.ic-purple{background:rgba(124,58,237,.15);color:#a78bfa}
+.sec-meta{font-size:11px;color:var(--text-dim)}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);padding:6px 9px;border-bottom:1px solid var(--border);text-align:left;font-weight:600}
+.tbl td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+.ellip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Badges */
+.risk-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.rp-crit{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+.rp-high{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.25)}
+.rp-med{background:rgba(59,130,246,.15);color:var(--info);border:1px solid rgba(59,130,246,.25)}
+.rp-low{background:rgba(16,185,129,.15);color:var(--accent3);border:1px solid rgba(16,185,129,.25)}
+.sev{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700}
+.sv-critical{background:rgba(239,68,68,.15);color:var(--danger)}
+.sv-high{background:rgba(245,158,11,.15);color:var(--warn)}
+.sv-medium{background:rgba(59,130,246,.15);color:var(--info)}
+.sv-low{background:rgba(16,185,129,.15);color:var(--accent3)}
+.hit-chip{display:inline-block;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--danger);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-left:4px}
+.ind-chip{display:inline-block;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--info);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-left:4px}
+
+/* Risk gauge */
+.risk-gauge{margin-bottom:16px}
+.gauge-row{display:flex;align-items:center;gap:14px}
+.gauge-num{font-size:56px;font-weight:900;line-height:1}
+.gauge-info{}
+.gauge-label{font-size:13px;font-weight:700;margin-bottom:6px}
+.gauge-bar-bg{background:rgba(255,255,255,.06);border-radius:6px;height:10px;width:200px;margin-bottom:4px}
+.gauge-bar-fill{height:10px;border-radius:6px;transition:width .5s ease}
+.gauge-sub{font-size:11px;color:var(--text-dim)}
+
+/* Factors */
+.factor{padding:10px;background:rgba(255,255,255,.03);border-radius:8px;margin-top:8px;border-left:2px solid var(--danger)}
+.factor.ok{border-left-color:var(--accent3)}
+.factor-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--danger);margin-bottom:3px}
+.factor.ok .factor-type{color:var(--accent3)}
+.factor-detail{font-size:12px;color:var(--text-muted)}
+
+/* Actions */
+.rec-row{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);align-items:flex-start}
+.rec-row:last-child{border-bottom:none}
+.rec-p{font-size:9px;font-weight:700;min-width:62px;padding:3px 6px;border-radius:4px;text-align:center;flex-shrink:0}
+.rec-t{font-size:12px;color:var(--text-muted)}
+
+/* Profile form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-hint{font-size:10px;color:var(--text-dim);margin-top:2px}
+.form-full{grid-column:1/-1}
+.form-actions{display:flex;gap:10px;margin-top:14px}
+
+/* Asset list */
+.asset-type-group{margin-bottom:14px}
+.asset-type-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.asset-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.asset-row:last-child{border-bottom:none}
+.asset-val{font-size:12px;font-weight:500;max-width:280px}
+.asset-label{font-size:11px;color:var(--text-dim);margin-left:8px}
+.del-btn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--danger);padding:3px 9px;border-radius:5px;font-size:11px;cursor:pointer;transition:background .2s}
+.del-btn:hover{background:rgba(239,68,68,.2)}
+
+/* Add asset form */
+.asset-form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.asset-form select,.asset-form input{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text);font-size:12px;outline:none}
+.asset-form select:focus,.asset-form input:focus{border-color:var(--accent)}
+
+/* Loading / empty */
+.loading{display:flex;align-items:center;justify-content:center;padding:36px;color:var(--text-dim);gap:8px;font-size:13px}
+.spinner{width:16px;height:16px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:28px;color:var(--text-dim);font-size:12px}
+.empty-i{font-size:24px;margin-bottom:6px;opacity:.4}
+
+/* Bottom bar */
+.ts-bar{background:rgba(0,0,0,.3);border-top:1px solid var(--border);padding:10px 24px;font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center}
+
+/* CTA */
+.cta{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(0,212,255,.06));border:1px solid rgba(124,58,237,.18);border-radius:var(--radius);padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.cta h3{font-size:14px;font-weight:700;margin-bottom:3px}
+.cta p{font-size:12px;color:var(--text-muted)}
+
+@media(max-width:640px){
+  #dash{padding:14px 16px}
+  .form-grid{grid-template-columns:1fr}
+  .pg-hdr h1{font-size:18px}
+  .gauge-num{font-size:38px}
+  .cta{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">SA</div>
+    <div>
+      <div class="header-title">Sentinel APEX — Customer Intelligence</div>
+      <div class="header-sub">Personalized threat radar &amp; organization risk</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="status-badge" id="radar-status"><span class="dot"></span><span id="radar-health">Connecting...</span></div>
+  </div>
+</header>
+
+<!-- Auth gate -->
+<div id="gate">
+  <h2>Intelligence Dashboard Access</h2>
+  <p>Enter your Sentinel APEX API key to access your personalized threat radar, organization risk score, and executive reports.</p>
+  <div class="input-row">
+    <input type="password" id="api-key" placeholder="Your API key" autocomplete="off">
+    <button class="btn" onclick="authenticate()">Unlock</button>
+  </div>
+  <div class="err" id="auth-err">Invalid API key or authentication failed.</div>
+  <p style="font-size:11px;color:var(--text-dim);margin-top:14px">Don't have an API key? <a href="https://cyberdudebivash.in/#pricing">Get Sentinel APEX access →</a></p>
+</div>
+
+<!-- Dashboard -->
+<div id="dash">
+  <div class="pg-hdr">
+    <div>
+      <h1>Customer Intelligence Dashboard</h1>
+      <p style="font-size:12px;color:var(--text-dim);margin-top:3px">Personalized threat radar, organization risk &amp; asset intelligence</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="tier-chip" id="tier-chip">–</span>
+      <button class="btn btn-sm btn-outline" onclick="refreshAll()">↻ Refresh</button>
+      <a href="javascript:void(0)" onclick="downloadReport()" class="btn btn-sm">⬇ Report</a>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div>
+      <h3>Complete your profile for accurate personalized intelligence</h3>
+      <p>Add your industry, technology stack, and CVE watchlist to get threat signals tailored to your organization.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="showTab('profile')">Edit Profile</button>
+      <a href="https://cyberdudebivash.in/#pricing" target="_blank" class="btn btn-sm btn-outline">Upgrade Plan</a>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi crit"><div class="kpi-l">Org Risk Score</div><div class="kpi-v" id="kpi-risk">–</div><div class="kpi-sub" id="kpi-risk-label">Loading...</div></div>
+    <div class="kpi warn"><div class="kpi-l">Active Exploits</div><div class="kpi-v" id="kpi-exploited">–</div><div class="kpi-sub">KEV confirmed</div></div>
+    <div class="kpi crit"><div class="kpi-l">CVE Watchlist Hits</div><div class="kpi-v" id="kpi-hits">–</div><div class="kpi-sub">Direct matches</div></div>
+    <div class="kpi pur"><div class="kpi-l">Total Signals</div><div class="kpi-v" id="kpi-signals">–</div><div class="kpi-sub">In threat profile</div></div>
+    <div class="kpi ok"><div class="kpi-l">Registered Assets</div><div class="kpi-v" id="kpi-assets">–</div><div class="kpi-sub">Domains, IPs, CVEs...</div></div>
+    <div class="kpi"><div class="kpi-l">Industry Match</div><div class="kpi-v" id="kpi-ind" style="color:var(--accent)">–</div><div class="kpi-sub">Signals for your sector</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('radar')" id="tab-radar">📡 Radar</button>
+    <button class="tab" onclick="showTab('risk')" id="tab-risk">⚡ Risk</button>
+    <button class="tab" onclick="showTab('assets')" id="tab-assets">🛡 Assets</button>
+    <button class="tab" onclick="showTab('profile')" id="tab-profile">⚙ Profile</button>
+  </div>
+
+  <!-- Radar tab -->
+  <div id="view-radar">
+    <div class="grid-2">
+      <div class="sec">
+        <div class="sec-hdr">
+          <div class="sec-title"><span class="icon-chip ic-red">⚡</span>Personalized Threat Signals</div>
+          <span class="sec-meta" id="radar-ts">–</span>
+        </div>
+        <div id="radar-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr">
+          <div class="sec-title"><span class="icon-chip ic-amber">◈</span>Risk Score</div>
+          <span class="sec-meta" id="risk-ts-2">–</span>
+        </div>
+        <div id="risk-gauge-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk tab -->
+  <div id="view-risk" style="display:none">
+    <div class="grid-2">
+      <div class="sec">
+        <div class="sec-hdr">
+          <div class="sec-title"><span class="icon-chip ic-red">⚠</span>Organization Risk Assessment</div>
+        </div>
+        <div id="risk-detail-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr">
+          <div class="sec-title"><span class="icon-chip ic-amber">★</span>Recommended Actions</div>
+        </div>
+        <div id="recs-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assets tab -->
+  <div id="view-assets" style="display:none">
+    <div class="sec">
+      <div class="sec-hdr">
+        <div class="sec-title"><span class="icon-chip ic-blue">◎</span>Register Asset or CVE Watchlist Entry</div>
+      </div>
+      <div class="asset-form">
+        <select id="asset-type">
+          <option value="domain">Domain</option>
+          <option value="ip_range">IP Range</option>
+          <option value="asn">ASN</option>
+          <option value="cloud_account">Cloud Account</option>
+          <option value="technology">Technology</option>
+          <option value="cve_watchlist">CVE Watchlist</option>
+        </select>
+        <input type="text" id="asset-value" placeholder="e.g. example.com / CVE-2024-12345 / apache" style="flex:1;min-width:200px">
+        <input type="text" id="asset-label" placeholder="Label (optional)" style="width:140px">
+        <button class="btn btn-sm" onclick="registerAsset()">+ Register</button>
+      </div>
+      <div id="assets-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- Profile tab -->
+  <div id="view-profile" style="display:none">
+    <div class="sec">
+      <div class="sec-hdr">
+        <div class="sec-title"><span class="icon-chip ic-purple">⚙</span>Intelligence Profile</div>
+        <span class="sec-meta">Personalizes your radar, risk score &amp; reports</span>
+      </div>
+      <div class="form-grid" id="profile-form">
+        <div class="form-group">
+          <label>Organization Name</label>
+          <input type="text" id="p-org-name" placeholder="Acme Corp">
+        </div>
+        <div class="form-group">
+          <label>Industry</label>
+          <select id="p-industry">
+            <option value="">Select industry...</option>
+            <option value="Finance">Finance &amp; Banking</option>
+            <option value="Healthcare">Healthcare &amp; Pharma</option>
+            <option value="Government">Government &amp; Defense</option>
+            <option value="Manufacturing">Manufacturing &amp; ICS</option>
+            <option value="Education">Education &amp; Research</option>
+            <option value="Retail">Retail &amp; eCommerce</option>
+            <option value="Energy">Energy &amp; Utilities</option>
+            <option value="Technology">Technology &amp; SaaS</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Country</label>
+          <input type="text" id="p-country" placeholder="e.g. United States">
+        </div>
+        <div class="form-group">
+          <label>Organization Size</label>
+          <select id="p-org-size">
+            <option value="">Select size...</option>
+            <option value="SMB">SMB (1–500 employees)</option>
+            <option value="MID">Mid-Market (500–5000)</option>
+            <option value="ENTERPRISE">Enterprise (5000+)</option>
+            <option value="GOVERNMENT">Government / Public Sector</option>
+            <option value="CRITICAL_INFRA">Critical Infrastructure</option>
+          </select>
+        </div>
+        <div class="form-group form-full">
+          <label>Technology Stack</label>
+          <input type="text" id="p-tech-stack" placeholder="e.g. Apache, nginx, Windows Server, VMware, Cisco IOS, OpenSSL">
+          <div class="form-hint">Comma-separated. Used to match vulnerabilities affecting your stack.</div>
+        </div>
+        <div class="form-group form-full">
+          <label>Cloud Providers</label>
+          <input type="text" id="p-cloud" placeholder="e.g. AWS, Azure, GCP, Cloudflare">
+          <div class="form-hint">Comma-separated. Used for cloud-targeted threat correlation.</div>
+        </div>
+        <div class="form-group form-full">
+          <label>Business Critical Assets</label>
+          <input type="text" id="p-bca" placeholder="e.g. customer database, payment system, EHR platform">
+          <div class="form-hint">Comma-separated. Helps prioritize alerts for your most critical systems.</div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="saveProfile()">Save Profile</button>
+        <span id="profile-saved" style="font-size:12px;color:var(--accent3);display:none">✓ Profile saved</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ts-bar" id="ts-bar" style="display:none">
+  <span>Last updated: <span id="last-ts">–</span></span>
+  <span>CYBERDUDEBIVASH® Sentinel APEX · <a href="https://cyberdudebivash.in/#pricing">Upgrade →</a></span>
+</div>
+
+<script>
+const API = 'https://cyberdudebivash.in';
+let apiKey = '', riskData = null, radarData = null;
+
+function rc(score) {
+  return score >= 80 ? 'var(--danger)' : score >= 60 ? 'var(--warn)' : score >= 40 ? 'var(--info)' : 'var(--accent3)';
+}
+function rpClass(score) {
+  return score >= 80 ? 'rp-crit' : score >= 60 ? 'rp-high' : score >= 40 ? 'rp-med' : 'rp-low';
+}
+function scClass(sev) {
+  return `sv-${(sev||'').toLowerCase()}`;
+}
+function pcColor(p) {
+  return p==='CRITICAL'?'var(--danger)':p==='HIGH'?'var(--warn)':p==='MEDIUM'?'var(--info)':'var(--accent3)';
+}
+function fmtDate(d) {
+  if (!d) return '–';
+  return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function apiFetch(path, opts) {
+  const r = await fetch(`${API}${path}`, { ...opts, headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json', ...(opts?.headers||{}) } });
+  if (r.status === 401 || r.status === 403) throw Object.assign(new Error('auth'), { status: r.status });
+  return r;
+}
+
+async function authenticate() {
+  const key = document.getElementById('api-key').value.trim();
+  if (!key) return;
+  apiKey = key;
+  document.getElementById('auth-err').style.display = 'none';
+  try {
+    const r = await apiFetch('/api/customer/risk');
+    if (!r.ok) throw new Error('auth');
+    const d = await r.json();
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('dash').style.display = 'block';
+    document.getElementById('ts-bar').style.display = 'flex';
+    document.getElementById('tier-chip').textContent = d.publisher?.includes('Customer') ? 'CUSTOMER' : 'AUTHENTICATED';
+    sessionStorage.setItem('sa_key', key);
+    await refreshAll();
+  } catch {
+    apiKey = '';
+    document.getElementById('auth-err').style.display = 'block';
+  }
+}
+
+document.getElementById('api-key').addEventListener('keydown', e => { if (e.key === 'Enter') authenticate(); });
+
+async function refreshAll() {
+  document.getElementById('last-ts').textContent = new Date().toLocaleTimeString();
+  await Promise.allSettled([loadRisk(), loadRadar(), loadAssets(), loadProfile()]);
+}
+
+// ── Risk ──────────────────────────────────────────────────────────────────────
+async function loadRisk() {
+  try {
+    const r = await (await apiFetch('/api/customer/risk')).json();
+    riskData = r;
+    const s = r.org_risk?.score ?? 0;
+    document.getElementById('kpi-risk').textContent         = s;
+    document.getElementById('kpi-risk').style.color         = rc(s);
+    document.getElementById('kpi-risk-label').textContent   = r.org_risk?.label || '–';
+    document.getElementById('kpi-exploited').textContent    = r.active_signals ?? '–';
+    document.getElementById('kpi-hits').textContent         = r.watchlist_alerts ?? '–';
+    document.getElementById('kpi-signals').textContent      = r.total_personalized ?? '–';
+    document.getElementById('risk-ts-2').textContent        = fmtDate(r.timestamp);
+    document.getElementById('risk-gauge-wrap').innerHTML    = renderGauge(r);
+    document.getElementById('risk-detail-wrap').innerHTML   = renderRiskDetail(r);
+    document.getElementById('recs-wrap').innerHTML          = renderRecs(r.recommendations || []);
+    checkHealth(r.timestamp);
+  } catch(e) {
+    ['risk-gauge-wrap','risk-detail-wrap','recs-wrap'].forEach(id =>
+      document.getElementById(id).innerHTML = '<div class="empty"><div class="empty-i">⚠</div>Unavailable</div>');
+  }
+}
+
+function renderGauge(r) {
+  const s = r.org_risk?.score ?? 0;
+  const label = r.org_risk?.label || 'UNKNOWN';
+  const color = rc(s);
+  return `
+    <div class="risk-gauge">
+      <div class="gauge-row">
+        <div class="gauge-num" style="color:${color}">${s}</div>
+        <div class="gauge-info">
+          <div class="gauge-label" style="color:${color}">${label} RISK</div>
+          <div class="gauge-bar-bg"><div class="gauge-bar-fill" style="width:${s}%;background:${color}"></div></div>
+          <div class="gauge-sub">Composite score 0–100 · CVSS×5+EPSS×20+KEV+Ransomware</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:4px;display:flex;gap:14px;flex-wrap:wrap">
+      <div><span style="font-size:18px;font-weight:800;color:var(--danger)">${r.watchlist_alerts||0}</span><span style="font-size:11px;color:var(--text-dim);margin-left:5px">CVE Hits</span></div>
+      <div><span style="font-size:18px;font-weight:800;color:var(--warn)">${r.active_signals||0}</span><span style="font-size:11px;color:var(--text-dim);margin-left:5px">Exploited</span></div>
+      <div><span style="font-size:18px;font-weight:800;color:var(--accent)">${r.total_personalized||0}</span><span style="font-size:11px;color:var(--text-dim);margin-left:5px">Signals</span></div>
+    </div>`;
+}
+
+function renderRiskDetail(r) {
+  const s = r.org_risk?.score ?? 0;
+  const color = rc(s);
+  const factors = r.org_risk?.factors || [];
+  if (!factors.length) return '<div class="empty"><div class="empty-i">✓</div>No risk amplifying factors detected</div>';
+  return factors.map(f => `
+    <div class="factor">
+      <div class="factor-type">${escHtml(f.type.replace(/_/g,' '))}${f.impact ? ` · +${f.impact} pts` : ''}</div>
+      <div class="factor-detail">${escHtml(f.detail)}</div>
+    </div>`).join('');
+}
+
+function renderRecs(recs) {
+  if (!recs.length) return '<div class="empty"><div class="empty-i">✓</div>No recommendations</div>';
+  return recs.map(r => `
+    <div class="rec-row">
+      <span class="rec-p" style="background:${pcColor(r.priority)}22;color:${pcColor(r.priority)};border:1px solid ${pcColor(r.priority)}44">${r.priority}</span>
+      <span class="rec-t">${escHtml(r.action)}</span>
+    </div>`).join('');
+}
+
+// ── Radar ─────────────────────────────────────────────────────────────────────
+async function loadRadar() {
+  try {
+    const r = await (await apiFetch('/api/customer/radar?limit=25')).json();
+    radarData = r;
+    document.getElementById('kpi-ind').textContent   = r.industry_matches ?? '–';
+    document.getElementById('radar-ts').textContent  = fmtDate(r.timestamp);
+    document.getElementById('radar-wrap').innerHTML  = renderRadar(r.signals || []);
+  } catch {
+    document.getElementById('radar-wrap').innerHTML = '<div class="empty"><div class="empty-i">📡</div>Unavailable</div>';
+  }
+}
+
+function renderRadar(sigs) {
+  if (!sigs.length) return '<div class="empty"><div class="empty-i">📡</div>No signals in threat profile yet. Complete your profile to personalize.</div>';
+  const rows = sigs.slice(0, 20).map(s => `
+    <tr>
+      <td class="ellip" style="max-width:160px" title="${escHtml(s.title||'')}">
+        ${escHtml(s.id||'–')}
+        ${s.direct_hit ? '<span class="hit-chip">WATCHLIST</span>' : ''}
+        ${s.industry_match ? '<span class="ind-chip">SECTOR</span>' : ''}
+      </td>
+      <td><span class="sev ${scClass(s.severity)}">${s.severity||'–'}</span></td>
+      <td>${(s.cvss||0).toFixed(1)}</td>
+      <td><span class="risk-pill ${rpClass(s.risk_score)}">${s.risk_score}</span></td>
+      <td style="color:${s.actively_exploited?'var(--danger)':'var(--text-dim)'}">
+        ${s.actively_exploited ? '⚡ KEV' : '–'}
+      </td>
+    </tr>`).join('');
+  return `<table class="tbl">
+    <thead><tr><th>CVE / Signal</th><th>Sev</th><th>CVSS</th><th>Risk</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── Assets ────────────────────────────────────────────────────────────────────
+async function loadAssets() {
+  try {
+    const r = await (await apiFetch('/api/customer/assets')).json();
+    document.getElementById('kpi-assets').textContent = r.count ?? '–';
+    document.getElementById('assets-wrap').innerHTML  = renderAssets(r.by_type || {});
+  } catch {
+    document.getElementById('assets-wrap').innerHTML = '<div class="empty"><div class="empty-i">🛡</div>Unavailable</div>';
+  }
+}
+
+function renderAssets(byType) {
+  const types = Object.keys(byType);
+  if (!types.length) return '<div class="empty"><div class="empty-i">🛡</div>No assets registered yet. Add domains, IPs, or CVE watchlist entries above.</div>';
+  return types.map(t => `
+    <div class="asset-type-group">
+      <div class="asset-type-label">${t.replace(/_/g,' ').toUpperCase()} (${byType[t].length})</div>
+      ${byType[t].map(a => `
+        <div class="asset-row">
+          <div><span class="asset-val">${escHtml(a.asset_value)}</span>${a.label ? `<span class="asset-label">${escHtml(a.label)}</span>` : ''}</div>
+          <button class="del-btn" onclick="deleteAsset('${a.id}')">Remove</button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+async function registerAsset() {
+  const type  = document.getElementById('asset-type').value;
+  const value = document.getElementById('asset-value').value.trim();
+  const label = document.getElementById('asset-label').value.trim();
+  if (!value) return;
+  try {
+    await apiFetch('/api/customer/assets', { method: 'POST', body: JSON.stringify({ asset_type: type, asset_value: value, label: label || undefined }) });
+    document.getElementById('asset-value').value = '';
+    document.getElementById('asset-label').value = '';
+    await loadAssets();
+    await loadRisk();
+    await loadRadar();
+  } catch(e) { alert('Failed to register asset.'); }
+}
+
+async function deleteAsset(id) {
+  if (!confirm('Remove this asset?')) return;
+  try {
+    await apiFetch(`/api/customer/assets/${id}`, { method: 'DELETE' });
+    await loadAssets();
+    await loadRisk();
+  } catch { alert('Failed to remove asset.'); }
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+async function loadProfile() {
+  try {
+    const r = await (await apiFetch('/api/customer/profile')).json();
+    const p = r.profile || {};
+    document.getElementById('p-org-name').value  = p.org_name  || '';
+    document.getElementById('p-industry').value  = p.industry  || '';
+    document.getElementById('p-country').value   = p.country   || '';
+    document.getElementById('p-org-size').value  = p.org_size  || '';
+    document.getElementById('p-tech-stack').value = (p.technology_stack || []).join(', ');
+    document.getElementById('p-cloud').value     = (p.cloud_providers || []).join(', ');
+    document.getElementById('p-bca').value       = (p.business_critical_assets || []).join(', ');
+  } catch {}
+}
+
+async function saveProfile() {
+  const toArr = v => v.split(',').map(s=>s.trim()).filter(Boolean);
+  const body = {
+    org_name:   document.getElementById('p-org-name').value.trim() || undefined,
+    industry:   document.getElementById('p-industry').value || undefined,
+    country:    document.getElementById('p-country').value.trim() || undefined,
+    org_size:   document.getElementById('p-org-size').value || undefined,
+    technology_stack:         toArr(document.getElementById('p-tech-stack').value),
+    cloud_providers:          toArr(document.getElementById('p-cloud').value),
+    business_critical_assets: toArr(document.getElementById('p-bca').value),
+  };
+  try {
+    await apiFetch('/api/customer/profile', { method: 'PUT', body: JSON.stringify(body) });
+    document.getElementById('profile-saved').style.display = 'inline';
+    setTimeout(() => { document.getElementById('profile-saved').style.display = 'none'; }, 3000);
+    await refreshAll();
+  } catch { alert('Failed to save profile.'); }
+}
+
+// ── Report download ───────────────────────────────────────────────────────────
+async function downloadReport() {
+  try {
+    const r = await apiFetch('/api/customer/report?format=html');
+    const html = await r.text();
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sentinel-apex-report-${Date.now()}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch { alert('Report generation failed. Try again shortly.'); }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  ['radar','risk','assets','profile'].forEach(t => {
+    document.getElementById(`view-${t}`).style.display = t === name ? 'block' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+  });
+}
+
+// ── Health check ──────────────────────────────────────────────────────────────
+function checkHealth(ts) {
+  const el = document.getElementById('radar-health');
+  if (ts) {
+    const age = (Date.now() - new Date(ts).getTime()) / 60000;
+    el.textContent = age < 10 ? 'OPERATIONAL' : 'CACHED';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('sa_key');
+  if (saved) document.getElementById('api-key').value = saved;
+});
+
+document.getElementById('api-key').addEventListener('input', e => {
+  sessionStorage.setItem('sa_key', e.target.value);
+});
+
+// Auto-refresh every 5 minutes
+setInterval(() => {
+  if (document.getElementById('dash').style.display !== 'none') refreshAll();
+}, 300000);
+</script>
+</body>
+</html>
