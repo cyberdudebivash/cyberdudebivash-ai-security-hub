@@ -13,8 +13,31 @@
  */
 
 import { callClaude } from '../core/mythosAIProvider.js';
+import { buildReportShell } from './reportingEngine.js';
 
 function ok(data, status = 200) { return Response.json(data, { status }); }
+
+// Reports below interpolate org/sector/AI-generated narrative into HTML —
+// escape to prevent XSS (mirrors siemExport.js's buildExecutivePDF convention).
+function escHTML(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function wantsHTML(request, body) {
+  const fmt = (body?.format || new URL(request.url).searchParams.get('format') || '').toLowerCase();
+  return fmt === 'html' || fmt === 'pdf';
+}
+
+function htmlReportResponse(html, filename) {
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html;charset=UTF-8',
+      'Content-Disposition': `inline; filename="${filename}"`,
+    },
+  });
+}
 
 function enterpriseOnly(authCtx) {
   if (authCtx?.isAdmin) return null;
@@ -122,6 +145,49 @@ Write 3-4 paragraphs covering: (1) Current risk posture and trending, (2) Top 3 
     executiveSummary = result?.content?.trim() || null;
   } catch {}
 
+  const boardActions = compositeRisk >= 70
+    ? ['Authorize emergency security investment', 'Brief audit committee', 'Initiate cyber insurance review']
+    : compositeRisk >= 50
+    ? ['Review security budget allocation', 'Approve CISO 90-day remediation plan', 'Schedule next board update']
+    : ['Maintain current program', 'Continue quarterly reporting', 'Benchmark against industry peers'];
+
+  if (wantsHTML(request, body)) {
+    const riskColor = compositeRisk >= 70 ? '#ef4444' : compositeRisk >= 50 ? '#f97316' : '#22c55e';
+    const bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">Composite Risk</div><div class="kpi-value" style="color:${riskColor}">${compositeRisk}/100</div><div class="kpi-sub">${escHTML(riskRating)}</div></div>
+  <div class="kpi"><div class="kpi-label">Active APT Actors</div><div class="kpi-value">${kpis.active_actors || 0}</div><div class="kpi-sub">Tracked in sector</div></div>
+  <div class="kpi"><div class="kpi-label">Critical CVEs</div><div class="kpi-value" style="color:#ef4444">${cveKpis.critical || 0}</div><div class="kpi-sub">CVSS &ge; 9</div></div>
+  <div class="kpi"><div class="kpi-label">KEV-Listed</div><div class="kpi-value" style="color:#f97316">${cveKpis.kev || 0}</div><div class="kpi-sub">Actively exploited</div></div>
+</div>
+<div class="section">
+  <h2>Executive Summary</h2>
+  <p style="font-size:13px;color:#94a3b8;line-height:1.6;">${escHTML(executiveSummary) || 'No narrative available for this period.'}</p>
+</div>
+<div class="section">
+  <h2>Risk Drivers</h2>
+  <table><thead><tr><th>Driver</th><th>Score</th></tr></thead><tbody>
+    ${Object.entries(riskDrivers).map(([k, v]) => `<tr><td>${escHTML(k.replace(/_/g, ' '))}</td><td>${v}/100</td></tr>`).join('')}
+  </tbody></table>
+</div>
+<div class="section">
+  <h2>Recommended Board Actions</h2>
+  <table><thead><tr><th>#</th><th>Action</th></tr></thead><tbody>
+    ${boardActions.map((a, i) => `<tr><td>${i + 1}</td><td>${escHTML(a)}</td></tr>`).join('')}
+  </tbody></table>
+</div>`;
+
+    const html = buildReportShell({
+      brandName: 'CYBERDUDEBIVASH SENTINEL APEX',
+      primaryColor: '#6366f1',
+      title: `Executive Risk Brief — ${org}`,
+      metaLine: `Organization: ${escHTML(org)} &middot; Sector: ${escHTML(sector)} &middot; Period: ${escHTML(period)} &middot; CONFIDENTIAL — BOARD USE ONLY`,
+      bodyHTML,
+      footerNote: `CYBERDUDEBIVASH SENTINEL APEX &middot; Confidential &middot; Generated ${new Date().toISOString()}`,
+    });
+    return htmlReportResponse(html, `executive-risk-brief-${org.replace(/\W+/g, '-').toLowerCase()}.html`);
+  }
+
   return ok({
     success:      true,
     service:      'CDB-EXEC-001',
@@ -151,13 +217,9 @@ Write 3-4 paragraphs covering: (1) Current risk posture and trending, (2) Top 3 
       scans_completed:     kpis.total_orders   || 0,
     },
     executive_summary: executiveSummary,
-    board_actions: compositeRisk >= 70
-      ? ['Authorize emergency security investment', 'Brief audit committee', 'Initiate cyber insurance review']
-      : compositeRisk >= 50
-      ? ['Review security budget allocation', 'Approve CISO 90-day remediation plan', 'Schedule next board update']
-      : ['Maintain current program', 'Continue quarterly reporting', 'Benchmark against industry peers'],
+    board_actions: boardActions,
     next_brief:    'Schedule: POST /api/executive/risk-brief (recommended monthly)',
-    pdf_export:    'Available via ENTERPRISE plan — contact sales@cyberdudebivash.com',
+    pdf_export:    'Self-service — POST with {"format":"html"} or append ?format=html for a print-ready board report (Ctrl+P -> Save as PDF)',
     powered_by:    'CYBERDUDEBIVASH SENTINEL APEX',
     timestamp:     new Date().toISOString(),
   });
@@ -366,6 +428,63 @@ Structure: (1) Executive Summary (2-3 sentences), (2) Risk Posture heading with 
     boardNarrative = result?.content?.trim() || null;
   } catch {}
 
+  const rating = compositeRisk >= 70 ? 'HIGH' : compositeRisk >= 50 ? 'MEDIUM' : 'LOW';
+  const boardResolutions = compositeRisk >= 70
+    ? ['Authorize $X emergency security budget', 'Mandate CISO 30-day remediation plan', 'Initiate cyber insurance review', 'Brief audit committee on risk posture']
+    : ['Approve annual security roadmap', 'Allocate budget for continuous monitoring platform', 'Schedule next board briefing in 90 days'];
+  const appendices = [
+    { title: 'Threat Actor Landscape', source: '/api/intel/actor' },
+    { title: 'CVE Exposure Report',    source: '/api/intel/cve' },
+    { title: 'Attack Surface Summary', source: '/api/asm/targets' },
+    { title: '90-Day Risk Forecast',   source: '/api/executive/forecast' },
+  ];
+
+  if (wantsHTML(request, body)) {
+    const riskColor = compositeRisk >= 70 ? '#ef4444' : compositeRisk >= 50 ? '#f97316' : '#22c55e';
+    const bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">Composite Risk</div><div class="kpi-value" style="color:${riskColor}">${compositeRisk}/100</div><div class="kpi-sub">${escHTML(rating)}</div></div>
+  <div class="kpi"><div class="kpi-label">Active Threats</div><div class="kpi-value">${kpis.active_actors || 0}</div><div class="kpi-sub">APT actors tracked</div></div>
+  <div class="kpi"><div class="kpi-label">Critical Vulns</div><div class="kpi-value" style="color:#ef4444">${cveKpis.critical || 0}</div><div class="kpi-sub">CVSS &ge; 9</div></div>
+  <div class="kpi"><div class="kpi-label">KEV Vulns</div><div class="kpi-value" style="color:#f97316">${cveKpis.kev || 0}</div><div class="kpi-sub">Actively exploited</div></div>
+</div>
+<div class="section">
+  <h2>Executive Summary</h2>
+  <p style="font-size:13px;color:#94a3b8;line-height:1.6;">${escHTML(boardNarrative) || 'No narrative available for this period.'}</p>
+</div>
+<div class="section">
+  <h2>Program Metrics</h2>
+  <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Users Protected</td><td>${kpis.total_users || 0}</td></tr>
+    <tr><td>Assessments Completed</td><td>${kpis.total_orders || 0}</td></tr>
+    <tr><td>AI Defense Tools</td><td>${kpis.mythos_published || 0}</td></tr>
+    <tr><td>ASM Targets Monitored</td><td>${kpis.asm_targets || 0}</td></tr>
+  </tbody></table>
+</div>
+<div class="section">
+  <h2>Board Resolutions Requested</h2>
+  <table><thead><tr><th>#</th><th>Resolution</th></tr></thead><tbody>
+    ${boardResolutions.map((r, i) => `<tr><td>${i + 1}</td><td>${escHTML(r)}</td></tr>`).join('')}
+  </tbody></table>
+</div>
+<div class="section">
+  <h2>Appendices</h2>
+  <table><thead><tr><th>Title</th><th>Source</th></tr></thead><tbody>
+    ${appendices.map(a => `<tr><td>${escHTML(a.title)}</td><td>${escHTML(a.source)}</td></tr>`).join('')}
+  </tbody></table>
+</div>`;
+
+    const html = buildReportShell({
+      brandName: 'CYBERDUDEBIVASH SENTINEL APEX',
+      primaryColor: '#6366f1',
+      title: `Board Cybersecurity Report — ${org}`,
+      metaLine: `Organization: ${escHTML(org)} &middot; Sector: ${escHTML(sector)} &middot; ${escHTML(quarter)} &middot; BOARD CONFIDENTIAL`,
+      bodyHTML,
+      footerNote: `CYBERDUDEBIVASH SENTINEL APEX &middot; Confidential &middot; Generated ${new Date().toISOString()}`,
+    });
+    return htmlReportResponse(html, `board-report-${org.replace(/\W+/g, '-').toLowerCase()}.html`);
+  }
+
   return ok({
     success:      true,
     service:      'CDB-EXEC-004',
@@ -379,7 +498,7 @@ Structure: (1) Executive Summary (2-3 sentences), (2) Risk Posture heading with 
       executive_summary: boardNarrative,
       risk_posture: {
         composite_score:   compositeRisk,
-        rating:            compositeRisk >= 70 ? 'HIGH' : compositeRisk >= 50 ? 'MEDIUM' : 'LOW',
+        rating,
         active_threats:    kpis.active_actors || 0,
         critical_vulns:    cveKpis.critical   || 0,
         kev_vulns:         cveKpis.kev        || 0,
@@ -390,17 +509,10 @@ Structure: (1) Executive Summary (2-3 sentences), (2) Risk Posture heading with 
         ai_defense_tools:      kpis.mythos_published || 0,
         asm_targets_monitored: kpis.asm_targets    || 0,
       },
-      board_resolutions: compositeRisk >= 70
-        ? ['Authorize $X emergency security budget', 'Mandate CISO 30-day remediation plan', 'Initiate cyber insurance review', 'Brief audit committee on risk posture']
-        : ['Approve annual security roadmap', 'Allocate budget for continuous monitoring platform', 'Schedule next board briefing in 90 days'],
+      board_resolutions: boardResolutions,
     },
-    appendices: [
-      { title: 'Threat Actor Landscape', source: '/api/intel/actor' },
-      { title: 'CVE Exposure Report',    source: '/api/intel/cve' },
-      { title: 'Attack Surface Summary', source: '/api/asm/targets' },
-      { title: '90-Day Risk Forecast',   source: '/api/executive/forecast' },
-    ],
-    pdf_note:   'PDF board pack available via ENTERPRISE API — contact sales@cyberdudebivash.com',
+    appendices,
+    pdf_note:   'Self-service — POST with {"format":"html"} or append ?format=html for a print-ready board pack (Ctrl+P -> Save as PDF)',
     powered_by: 'CYBERDUDEBIVASH SENTINEL APEX',
     timestamp:  new Date().toISOString(),
   });
