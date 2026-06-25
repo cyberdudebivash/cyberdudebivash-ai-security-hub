@@ -238,10 +238,10 @@ crons = [
 ]
 
 # ── Custom domain routes ──────────────────────────────────────────────────────
-# Uncomment after configuring DNS:
-# [[routes]]
-# pattern   = "api.cyberdudebivash.in/*"
-# zone_name = "cyberdudebivash.in"
+# Production canonical API: https://cyberdudebivash.in/api/
+[[routes]]
+pattern   = "cyberdudebivash.in/api/*"
+zone_name = "cyberdudebivash.in"
 
 # [[routes]]
 # pattern   = "api.tools.cyberdudebivash.com/*"

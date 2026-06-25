@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b)[Resource from github at repo://cyberdudebivash/cyberdudebivash-ai-security-hub/sha/4b07ecde3da892f8e2c484af687cbf288e9d07ca/contents/frontend/user-dashboard.html] <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -3041,8 +3041,8 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const url = token
-        ? `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases`
-        : `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
+        ? `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases`
+        : `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
 
       const res  = await fetch(url, { headers }).catch(() => null);
       const data = res?.ok ? await res.json().catch(() => null) : null;
@@ -3149,7 +3149,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     }
     resultEl.innerHTML = `<div style="color:var(--muted)"><span class="spinner"></span> Verifying…</div>`;
     try {
-      const res  = await fetch(`${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/access?token=${encodeURIComponent(token)}`);
+      const res  = await fetch(`${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/access?token=${encodeURIComponent(token)}`);
       const data = await res.json();
       if (res.ok) {
         resultEl.innerHTML = `
@@ -3185,8 +3185,8 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const url = token
-        ? `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases`
-        : `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
+        ? `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases`
+        : `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
 
       const res  = await fetch(url, { headers }).catch(() => null);
       const data = res?.ok ? await res.json().catch(() => null) : null;
@@ -3234,7 +3234,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     result.innerHTML = `<div style="color:var(--muted)"><span class="spinner"></span> Searching…</div>`;
     try {
       const res  = await fetch(
-        `${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/resend`,
+        `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/resend`,
         { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ payer_email: query, payment_id: query }) }
       );
       const data = await res.json();
@@ -3252,7 +3252,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   function accessDelivery(deliveryId) {
     showToast('Opening access details…');
-    window.open(`${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/delivery/access?delivery_id=${deliveryId}`, '_blank');
+    window.open(`${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/access?delivery_id=${deliveryId}`, '_blank');
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -3289,7 +3289,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     // Try to get real usage counts
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res  = await fetch(`${window.API_BASE || 'https://api.cyberdudebivash.in'}/api/usage`, { headers }).catch(() => null);
+      const res  = await fetch(`${window.API_BASE || 'https://cyberdudebivash.in'}/api/usage`, { headers }).catch(() => null);
       const data = res?.ok ? await res.json().catch(() => null) : null;
       if (data) {
         document.getElementById('mt-scans-today').textContent = data.scans_today ?? '—';
@@ -3357,7 +3357,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       <span class="spinner"></span> Loading reports…</td></tr>`;
 
     try {
-      const base = window.API_BASE || 'https://api.cyberdudebivash.in';
+      const base = window.API_BASE || 'https://cyberdudebivash.in';
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
       // Primary: dedicated reports endpoint
