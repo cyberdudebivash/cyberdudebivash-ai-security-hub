@@ -196,7 +196,14 @@ const API_CATALOG = [
       { method:'GET', path:'/keys', summary:'List developer API keys', response_schema:{ keys:'array' } },
       { method:'DELETE', path:'/keys/{id}', summary:'Revoke developer API key', response_schema:{ success:'boolean' } },
       { method:'POST', path:'/keys/{id}/rotate', summary:'Rotate developer API key', response_schema:{ success:'boolean', newKey:'string' } },
-      { method:'GET', path:'/openapi.json', summary:'OpenAPI 3.1 specification', description:'Full machine-readable spec for every documented endpoint in this catalog. Also aliased at /api/openapi.json.', response_schema:{} }
+      { method:'GET', path:'/openapi.json', summary:'OpenAPI 3.1 specification', description:'Full machine-readable spec for every documented endpoint in this catalog. Also aliased at /api/openapi.json.', response_schema:{} },
+      { method:'GET', path:'/sdk/download/{language}', summary:'Download full SDK client', description:'Download a complete auto-generated multi-endpoint client library. Supported: python, javascript, typescript, go. Add ?raw=1 to get the raw source file.', response_schema:{ language:'string', filename:'string', install:'string', total_methods:'integer', total_groups:'integer', code:'string', download:'string' } },
+      { method:'GET', path:'/postman.json', summary:'Postman Collection v2.1', description:'Download an importable Postman Collection containing every documented API endpoint with pre-filled authentication and example requests.', response_schema:{} },
+      { method:'GET', path:'/quickstart', summary:'Quick start guide', description:'Getting started guide covering authentication, first API call, and key concepts.', response_schema:{ title:'string', steps:'array', authentication:'object', sdks:'object' } },
+      { method:'GET', path:'/auth-guide', summary:'Authentication guide', description:'Complete authentication reference — Bearer tokens, API key scopes, rate limiting, and error codes.', response_schema:{ methods:'array', scopes:'array', rate_limiting:'object', errors:'object' } },
+      { method:'GET', path:'/migration-guide', summary:'API migration guide', description:'Migration guidance for version-to-version API changes, deprecated endpoints, and breaking-change timelines.', response_schema:{ currentVersion:'string', guides:'array', deprecations:'array' } },
+      { method:'GET', path:'/version-policy', summary:'API version policy', description:'Versioning strategy, stability guarantees, deprecation timelines, and sunset schedules.', response_schema:{ policy:'object', stability:'object', sunset_schedule:'array' } },
+      { method:'GET', path:'/examples', summary:'Enterprise integration examples', description:'Production-ready integration examples for SIEM, SOAR, and enterprise security workflows.', response_schema:{ examples:'array', categories:'array', sdk_downloads:'object' } }
     ]
   },
   {
@@ -719,6 +726,14 @@ export async function handleDeveloperPortal(request, env) {
   // OpenAPI Spec
   if (path === '/api/developer/openapi.json' && method === 'GET') return getOpenAPISpec(request, env);
 
+  // Developer Guides & Resources (P8.0-007)
+  if (path === '/api/developer/postman.json' && method === 'GET') return getPostmanCollection(request, env);
+  if (path === '/api/developer/quickstart' && method === 'GET') return getQuickStart(request, env);
+  if (path === '/api/developer/auth-guide' && method === 'GET') return getAuthGuide(request, env);
+  if (path === '/api/developer/migration-guide' && method === 'GET') return getMigrationGuide(request, env);
+  if (path === '/api/developer/version-policy' && method === 'GET') return getVersionPolicy(request, env);
+  if (path === '/api/developer/examples' && method === 'GET') return getEnterpriseExamples(request, env);
+
   return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 }
 
@@ -1003,6 +1018,234 @@ async function rotateAPIKey(request, env) {
     await env.DB.prepare('UPDATE api_keys SET key_hash=?,updated_at=? WHERE id=?').bind(await hashAPIKey(newKey),now,id).run();
     return jsonResp({ success:true, id, newKey, rotatedAt:now, warning:'Old key is now invalid. Store new key securely.' });
   } catch (e) { return jsonResp({ error: e.message }, 500); }
+}
+
+
+// ─── P8.0-007: Postman Collection Builder ────────────────────────────────────
+async function getPostmanCollection(request, env) {
+  const collection = {
+    info: {
+      _postman_id: 'cyberdudebivash-ai-security-hub-v20',
+      name: 'CYBERDUDEBIVASH AI Security Hub API',
+      description: 'Enterprise AI Security Platform — AI Governance, Red Team, SOC, CTI, Threat Hunting, CTEM, MSSP. Auto-generated from live API catalog v20.0.0.',
+      schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
+      version: '20.0.0',
+    },
+    auth: { type: 'bearer', bearer: [{ key: 'token', value: '{{API_KEY}}', type: 'string' }] },
+    variable: [
+      { key: 'BASE_URL', value: 'https://your-worker.workers.dev', type: 'string' },
+      { key: 'API_KEY', value: 'your-api-key-here', type: 'string' },
+    ],
+    item: API_CATALOG.map(group => ({
+      name: group.group,
+      description: group.description,
+      item: group.endpoints.map(ep => {
+        const fullPath = group.prefix + ep.path;
+        const urlObj = {
+          raw: '{{BASE_URL}}' + fullPath,
+          host: ['{{BASE_URL}}'],
+          path: fullPath.replace(/^\//, '').split('/'),
+        };
+        if (ep.query_params) {
+          urlObj.query = Object.entries(ep.query_params).map(([key, desc]) => ({ key, value: '', description: desc, disabled: true }));
+        }
+        const hasBody = ep.method !== 'GET' && ep.request_schema && Object.keys(ep.request_schema).length > 0;
+        return {
+          name: ep.summary,
+          request: {
+            method: ep.method,
+            header: [
+              { key: 'Content-Type', value: 'application/json' },
+              { key: 'Authorization', value: 'Bearer {{API_KEY}}' },
+            ],
+            url: urlObj,
+            description: ep.description || ep.summary,
+            ...(hasBody ? {
+              body: {
+                mode: 'raw',
+                raw: JSON.stringify(Object.fromEntries(Object.entries(ep.request_schema).map(([k, v]) => [k, `<${v}>`])), null, 2),
+                options: { raw: { language: 'json' } },
+              },
+            } : {}),
+          },
+          response: [],
+        };
+      }),
+    })),
+  };
+  const url = new URL(request.url);
+  if (url.searchParams.get('raw') === '1') {
+    return new Response(JSON.stringify(collection, null, 2), { headers: {
+      'Content-Type': 'application/json',
+      'Content-Disposition': 'attachment; filename="cyberdudebivash-api.postman_collection.json"',
+    }});
+  }
+  return jsonResp({
+    collection_name: 'CYBERDUDEBIVASH AI Security Hub API',
+    version: '20.0.0',
+    postman_schema: 'v2.1.0',
+    total_groups: API_CATALOG.length,
+    total_endpoints: API_CATALOG.reduce((s, g) => s + g.endpoints.length, 0),
+    download: '/api/developer/postman.json?raw=1',
+    instructions: 'Import into Postman via File > Import > Raw Text or Collection File. Set BASE_URL and API_KEY variables after import.',
+    collection,
+  });
+}
+
+// ─── P8.0-007: Quick Start Guide ────────────────────────────────────────────
+async function getQuickStart(request, env) {
+  return jsonResp({
+    title: 'CYBERDUDEBIVASH AI Security Hub — Quick Start Guide',
+    version: '20.0.0',
+    baseUrl: 'https://your-worker.workers.dev',
+    steps: [
+      { step: 1, title: 'Get your API key', description: 'Create an API key via the self-service portal.', endpoint: 'POST /api/developer/keys', example: { name: 'My App', scopes: ['read', 'write'] }, note: 'Store your key securely — it will not be shown again.' },
+      { step: 2, title: 'Make your first request', description: 'Fetch the latest threat signals from the radar.', endpoint: 'GET /api/radar/latest', curl: 'curl -H "Authorization: Bearer <YOUR_API_KEY>" https://your-worker.workers.dev/api/radar/latest' },
+      { step: 3, title: 'Explore the API catalog', description: 'Browse all available endpoints by group and tier.', endpoint: 'GET /api/developer/endpoints' },
+      { step: 4, title: 'Download an SDK', description: 'Get a complete client library for your language.', endpoint: 'GET /api/developer/sdk/download/{language}', supported: ['python', 'javascript', 'typescript', 'go'] },
+      { step: 5, title: 'Register a webhook', description: 'Receive real-time event notifications.', endpoint: 'POST /api/developer/webhooks/register', example: { url: 'https://your-server.com/webhook', events: ['threat.intelligence.new_ioc', 'vuln.critical_found'] } },
+    ],
+    authentication: { methods: ['Bearer token (Authorization: Bearer <key>)', 'API key header (X-API-Key: <key>)'], example_header: 'Authorization: Bearer cdb_your_api_key_here', docs: '/api/developer/auth-guide' },
+    sdks: { download: '/api/developer/sdk/download/{language}', generate: 'POST /api/developer/sdk/generate', languages: ['python', 'javascript', 'typescript', 'go', 'curl'] },
+    resources: { openapi: '/api/developer/openapi.json', postman: '/api/developer/postman.json?raw=1', changelog: '/api/developer/changelog', rate_limits: '/api/developer/rate-limits', auth_guide: '/api/developer/auth-guide', examples: '/api/developer/examples' },
+  });
+}
+
+// ─── P8.0-007: Authentication Guide ─────────────────────────────────────────
+async function getAuthGuide(request, env) {
+  return jsonResp({
+    title: 'Authentication Guide — CYBERDUDEBIVASH AI Security Hub',
+    version: '20.0.0',
+    methods: [
+      { name: 'Bearer Token', header: 'Authorization: Bearer <your-api-key>', description: 'Recommended. Pass your API key as a Bearer token in the Authorization header.', example_curl: 'curl -H "Authorization: Bearer cdb_your_key" https://your-worker.workers.dev/api/radar/latest' },
+      { name: 'API Key Header', header: 'X-API-Key: <your-api-key>', description: 'Alternative method. Pass your API key in the X-API-Key header.', example_curl: 'curl -H "X-API-Key: cdb_your_key" https://your-worker.workers.dev/api/radar/latest' },
+    ],
+    key_management: { create: 'POST /api/developer/keys', list: 'GET /api/developer/keys', revoke: 'DELETE /api/developer/keys/{id}', rotate: 'POST /api/developer/keys/{id}/rotate', format: 'cdb_ prefix followed by 48 hex characters' },
+    scopes: [
+      { scope: 'read', description: 'Read access to all GET endpoints for your tier' },
+      { scope: 'write', description: 'Read + write access (POST, PUT, PATCH, DELETE)' },
+      { scope: 'admin', description: 'Full access including team management and configuration' },
+      { scope: 'webhooks', description: 'Webhook registration and management' },
+      { scope: 'billing', description: 'Billing and subscription management' },
+    ],
+    rate_limiting: {
+      headers: { 'X-RateLimit-Limit': 'Requests allowed per minute for your tier', 'X-RateLimit-Remaining': 'Requests remaining in current window', 'X-RateLimit-Reset': 'Unix timestamp when the window resets', 'Retry-After': 'Seconds to wait after a 429 response' },
+      tiers: { FREE: '60/min', STARTER: '300/min', PRO: '1000/min', ENTERPRISE: '10000/min' },
+      details: '/api/developer/rate-limits',
+    },
+    errors: { '401': { code: 'UNAUTHORIZED', description: 'Missing or invalid API key' }, '403': { code: 'FORBIDDEN', description: 'Valid key but insufficient tier or scope for this endpoint' }, '429': { code: 'RATE_LIMITED', description: 'Too many requests — see Retry-After header' }, '400': { code: 'BAD_REQUEST', description: 'Missing or invalid request parameters' } },
+    security: { storage: 'Store API keys in environment variables or a secrets manager. Never commit to source control.', rotation: 'Rotate keys regularly using POST /api/developer/keys/{id}/rotate', expiry: 'Set expires_in_days when creating keys for automatic expiration' },
+  });
+}
+
+// ─── P8.0-007: Migration Guide ───────────────────────────────────────────────
+async function getMigrationGuide(request, env) {
+  return jsonResp({
+    title: 'API Migration Guide — CYBERDUDEBIVASH AI Security Hub',
+    currentVersion: '20.0.0',
+    apiVersionHeader: 'API-Version',
+    guides: [
+      {
+        from: 'v19.x', to: 'v20.0',
+        breaking_changes: [
+          'AI Governance endpoints moved: /api/governance/* → /api/ai-governance/*',
+          'Red Team campaign results include MITRE ATLAS v2.1 technique IDs',
+          'Export format enum expanded: ioc_bundle and executive_pdf added to /api/export/siem',
+        ],
+        new_endpoints: [
+          'GET /api/export/siem?format=ioc_bundle', 'GET /api/export/siem?format=executive_pdf',
+          'POST /api/integrations/configure (QRadar, Google SecOps, Cortex XSOAR)',
+          'GET /api/developer/sdk/download/{language}', 'GET /api/developer/postman.json',
+          'GET /api/webhooks/catalog', 'GET /api/developer/openapi.json',
+          'GET /api/developer/quickstart', 'GET /api/developer/auth-guide',
+          'GET /api/developer/migration-guide', 'GET /api/developer/version-policy',
+          'GET /api/developer/examples',
+        ],
+        migration_steps: [
+          'Update AI Governance endpoint base path from /api/governance/* to /api/ai-governance/*',
+          'Update ATLAS technique ID references to v2.1 format (AML.T0051 etc.)',
+          'Test SDK download endpoints: GET /api/developer/sdk/download/python',
+          'Import Postman collection: GET /api/developer/postman.json?raw=1',
+          'Register webhook catalog events: GET /api/webhooks/catalog',
+        ],
+      },
+    ],
+    deprecations: [
+      { endpoint: 'GET /api/v1/signals', sunset: '2027-01-01', replacement: 'GET /api/radar/latest', reason: 'Unified radar API provides richer signal data with EPSS scoring' },
+      { endpoint: 'POST /api/v1/redteam/test', sunset: '2027-01-01', replacement: 'POST /api/ai-redteam/campaigns', reason: 'Campaign-based red teaming provides full MITRE ATLAS coverage' },
+    ],
+    deprecation_policy: '/api/developer/version-policy',
+    support: 'Contact support before migrating major versions for enterprise accounts.',
+  });
+}
+
+// ─── P8.0-007: Version Policy ────────────────────────────────────────────────
+async function getVersionPolicy(request, env) {
+  return jsonResp({
+    title: 'API Version Policy — CYBERDUDEBIVASH AI Security Hub',
+    currentVersion: '20.0.0',
+    policy: {
+      versioning_strategy: 'Semantic versioning (MAJOR.MINOR.PATCH). Breaking changes increment MAJOR only.',
+      stability_levels: { stable: 'No breaking changes without 12-month deprecation notice and Sunset header', beta: 'May change with 90-day notice', preview: 'No stability guarantees — experimental endpoints only' },
+      deprecation_window: '12 months minimum for stable endpoints',
+      sunset_headers: 'Deprecated endpoints return Deprecation and Sunset HTTP response headers per RFC 8594',
+      api_version_header: 'Include API-Version: 20.0.0 in requests to pin to current version',
+    },
+    stability: {
+      stable_endpoints: ['/api/radar/*', '/api/customer/*', '/api/enterprise/*', '/api/developer/*', '/api/auth/*', '/api/subscription/*', '/api/export/*', '/api/integrations/*'],
+      beta_endpoints: ['/api/ai-redteam/probe/*'],
+      preview_endpoints: [],
+    },
+    sunset_schedule: [
+      { endpoint: 'GET /api/v1/signals', sunset_date: '2027-01-01', replacement: 'GET /api/radar/latest' },
+      { endpoint: 'POST /api/v1/redteam/test', sunset_date: '2027-01-01', replacement: 'POST /api/ai-redteam/campaigns' },
+    ],
+    notification: { channels: ['Deprecation response header (RFC 8594)', 'Sunset response header (RFC 8594)', 'Changelog: /api/developer/changelog'], advance_notice: '12 months for stable endpoints, 90 days for beta endpoints' },
+    change_log: '/api/developer/changelog',
+    migration_guide: '/api/developer/migration-guide',
+  });
+}
+
+// ─── P8.0-007: Enterprise Integration Examples ───────────────────────────────
+async function getEnterpriseExamples(request, env) {
+  return jsonResp({
+    title: 'Enterprise Integration Examples — CYBERDUDEBIVASH AI Security Hub',
+    categories: ['siem_integration', 'soar_automation', 'ai_governance', 'threat_hunting', 'soc_operations'],
+    examples: [
+      {
+        id: 'splunk-threat-export', title: 'Export threat intelligence to Splunk', category: 'siem_integration',
+        description: 'Continuously export CVE signals and IOC data into Splunk for SIEM correlation.',
+        steps: ['Configure Splunk connector: POST /api/integrations/configure (platform: splunk)', 'Test connection: POST /api/integrations/test', 'Export signals: GET /api/export/siem?format=cef&hours=24', 'Schedule via webhook: POST /api/developer/webhooks/register (event: threat.intelligence.new_ioc)'],
+        code_curl: 'curl -X POST https://your-worker.workers.dev/api/integrations/configure -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -d \'{"platform":"splunk","config":{"host":"splunk.company.com","token":"HEC_TOKEN","index":"security"}}\'',
+      },
+      {
+        id: 'ai-governance-workflow', title: 'Automate AI model risk governance', category: 'ai_governance',
+        description: 'Register new AI models and automatically gate deployment based on EU AI Act risk score.',
+        steps: ['Register model: POST /api/ai-governance/models', 'Get risk score: POST /api/ai-governance/risk-score', 'Check EU AI Act compliance: POST /api/ai-governance/compliance/eu-ai-act', 'Register critical risk webhook: POST /api/developer/webhooks/register (event: model.risk.critical)'],
+        code_python: 'import requests\nAPI_KEY = "cdb_your_key"\nBASE = "https://your-worker.workers.dev"\nheaders = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}\nmodel = requests.post(f"{BASE}/api/ai-governance/models", headers=headers, json={"name": "ProdEngine-v3", "version": "3.2.1", "model_type": "recommendation", "data_classification": "pii", "deployment_context": "production_customer_facing", "autonomy_level": "fully_autonomous", "impact_domain": "financial"}).json()\nprint(f"Risk Level: {model[\'riskAssessment\'][\'riskLevel\']}")'
+      },
+      {
+        id: 'soc-case-automation', title: 'Automated SOC case creation on critical CVEs', category: 'soc_operations',
+        description: 'Automatically create SOC investigation cases when CRITICAL CVEs are detected via webhook.',
+        steps: ['Register webhook: POST /api/developer/webhooks/register (event: vuln.critical_found)', 'Handle event payload in your service', 'Create SOC case: POST /api/soc/cases with cve reference in description'],
+        webhook_payload_example: { event: 'vuln.critical_found', vulnId: 'uuid', cve: 'CVE-2026-XXXXX', cvss: 9.8, affected: 'vendor/product', timestamp: '2026-06-25T00:00:00Z' },
+      },
+      {
+        id: 'threat-hunting-mitre', title: 'MITRE ATT&CK-aligned threat hunt campaign', category: 'threat_hunting',
+        description: 'Launch a structured threat hunt based on the latest MITRE ATT&CK techniques observed in radar signals.',
+        steps: ['Fetch trending threats: GET /api/radar/trending', 'Identify MITRE techniques: GET /api/threat-hunting/techniques', 'Create hunt: POST /api/threat-hunting/hunts', 'Register completion webhook: POST /api/auto/webhooks (event: redteam.campaign.completed)'],
+      },
+      {
+        id: 'enterprise-pdf-report', title: 'Generate executive PDF threat report', category: 'soc_operations',
+        description: 'Generate a board-ready executive PDF summarising the threat landscape for CISO reporting.',
+        steps: ['Ensure ENTERPRISE tier subscription', 'Call: GET /api/export/siem?format=executive_pdf', 'Save response binary as .pdf'],
+        code_curl: 'curl "https://your-worker.workers.dev/api/export/siem?format=executive_pdf" -H "Authorization: Bearer $API_KEY" -o threat-report.pdf',
+      },
+    ],
+    sdk_downloads: { python: '/api/developer/sdk/download/python?raw=1', javascript: '/api/developer/sdk/download/javascript?raw=1', typescript: '/api/developer/sdk/download/typescript?raw=1', go: '/api/developer/sdk/download/go?raw=1' },
+    postman_collection: '/api/developer/postman.json?raw=1',
+    openapi_spec: '/api/developer/openapi.json',
+  });
 }
 
 export async function getOpenAPISpec(request, env) {
