@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Automation & Self-Service — CYBERDUDEBIVASH® SENTINEL APEX</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root{
+    --bg:#0a0d11;--surface:#111620;--card:#161d2a;--border:#1e2a3a;
+    --accent:#00c2ff;--accent2:#7c3aed;--green:#10b981;--red:#ef4444;
+    --yellow:#f59e0b;--text:#e2e8f0;--muted:#64748b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh}
+  /* Auth */
+  #auth-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999}
+  .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:420px;max-width:95vw}
+  .auth-box h2{font-size:20px;margin-bottom:6px;color:var(--accent)}
+  .auth-box p{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .auth-box input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:14px;margin-bottom:12px;outline:none}
+  .auth-box input:focus{border-color:var(--accent)}
+  .auth-box button{width:100%;background:var(--accent);color:#000;border:none;border-radius:8px;padding:12px;font-weight:700;cursor:pointer}
+  .auth-error{color:var(--red);font-size:12px;margin-bottom:10px;display:none}
+  /* Layout */
+  #app{display:none;flex-direction:column;min-height:100vh}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:15px;font-weight:800}<br>  .logo span{color:var(--accent)}
+  .header-right{display:flex;align-items:center;gap:12px}
+  .badge{background:linear-gradient(135deg,#00c2ff22,#7c3aed22);border:1px solid var(--accent2);color:var(--accent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+  .btn-sm{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);cursor:pointer;font-size:13px}
+  .btn-sm:hover{border-color:var(--accent)}
+  main{flex:1;padding:24px;max-width:1400px;width:100%;margin:0 auto}
+  /* KPI */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .kpi-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .kpi-value{font-size:26px;font-weight:800;line-height:1}
+  .accent{color:var(--accent)}.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--yellow)}
+  .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+  /* Tabs */
+  .tabs{display:flex;gap:3px;margin-bottom:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;flex-wrap:wrap}
+  .tab{padding:7px 16px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s}
+  .tab.active{background:var(--accent2);color:#fff}
+  .tab:hover:not(.active){color:var(--text)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:18px}
+  .card-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted)}
+  .card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  /* Tables */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--border)}
+  .tbl td{padding:9px 10px;border-bottom:1px solid rgba(30,42,58,.4);font-size:13px}
+  .tbl tr:last-child td{border:none}
+  .tbl tr:hover td{background:rgba(255,255,255,.02)}
+  /* Form elements */
+  .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-group label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+  input[type=text],input[type=email],input[type=url],input[type=password],select,textarea{
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    padding:8px 12px;color:var(--text);font-size:13px;outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  .btn{border:none;border-radius:6px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:13px}
+  .btn-primary{background:var(--accent);color:#000}
+  .btn-primary:hover{opacity:.9}
+  .btn-danger{background:var(--red);color:#fff}
+  .btn-danger:hover{opacity:.9}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--accent)}
+  /* Chips */
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+  .chip-green{background:#064e3b;color:#34d399}
+  .chip-red{background:#7f1d1d;color:#fca5a5}
+  .chip-yellow{background:#78350f;color:#fcd34d}
+  .chip-blue{background:#1e3a5f;color:#60a5fa}
+  .chip-purple{background:#3b0764;color:#c084fc}
+  /* Role chips */
+  .role-OWNER{background:#7c1d1d;color:#fca5a5}
+  .role-ADMIN{background:#3b1d6b;color:#c084fc}
+  .role-ANALYST{background:#1e3a5f;color:#60a5fa}
+  .role-VIEWER{background:#1f2937;color:#9ca3af}
+  /* Grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:768px){.grid2{grid-template-columns:1fr}}
+  /* Status dot */
+  .dot-live{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .refresh-line{display:flex;align-items:center;gap:10px;margin-bottom:18px;color:var(--muted);font-size:12px}
+  /* Key display */
+  .key-raw{font-family:monospace;font-size:12px;background:#000;border:1px solid var(--green);color:var(--green);padding:10px 14px;border-radius:6px;word-break:break-all;margin:10px 0}
+  .key-warning{color:var(--yellow);font-size:12px;margin-bottom:8px}
+  /* Usage bar */
+  .usage-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:4px}
+  .usage-fill{height:100%;border-radius:3px;transition:width .4s}
+  /* Empty */
+  .empty{color:var(--muted);font-size:13px;padding:16px;text-align:center}
+  /* Toast */
+  #toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;display:none;z-index:9999}
+</style>
+</head>
+<body>
+
+<div id="auth-gate">
+  <div class="auth-box">
+    <h2>Customer Automation</h2>
+    <p>SENTINEL APEX self-service portal. Enter your API key to continue.</p>
+    <div class="auth-error" id="auth-err">Invalid API key or insufficient permissions.</div>
+    <input type="password" id="api-key-input" placeholder="sk-...">
+    <button onclick="doAuth()">Access Dashboard</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="app">
+  <header>
+    <div class="logo"><span>CYBERDUDEBIVASH®</span> SENTINEL APEX — Automation</div>
+    <div class="header-right">
+      <span class="badge">SELF-SERVICE</span>
+      <button class="btn-sm" onclick="refreshAll()">↻ Refresh</button>
+      <button class="btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+  <main>
+    <div class="refresh-line"><span class="dot-live"></span><span id="last-refresh">Loading…</span></div>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">API Keys</div><div class="kpi-value accent" id="k-keys">—</div><div class="kpi-sub" id="k-keys-sub">of — allowed</div></div>
+      <div class="kpi"><div class="kpi-label">Webhooks</div><div class="kpi-value accent" id="k-wh">—</div><div class="kpi-sub">Configured</div></div>
+      <div class="kpi"><div class="kpi-label">Schedules</div><div class="kpi-value accent" id="k-sched">—</div><div class="kpi-sub">Active reports</div></div>
+      <div class="kpi"><div class="kpi-label">Team Size</div><div class="kpi-value accent" id="k-team">—</div><div class="kpi-sub">Members</div></div>
+      <div class="kpi"><div class="kpi-label">API Calls (7d)</div><div class="kpi-value green" id="k-calls">—</div><div class="kpi-sub">Total requests</div></div>
+      <div class="kpi"><div class="kpi-label">Cache Ratio</div><div class="kpi-value green" id="k-cache">—</div><div class="kpi-sub">KV hit rate</div></div>
+      <div class="kpi"><div class="kpi-label">Quota Used</div><div class="kpi-value" id="k-quota">—</div><div class="kpi-sub" id="k-quota-sub">This month</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('keys')">API Keys</div>
+      <div class="tab" onclick="showTab('webhooks')">Webhooks</div>
+      <div class="tab" onclick="showTab('reports')">Scheduled Reports</div>
+      <div class="tab" onclick="showTab('team')">Team</div>
+      <div class="tab" onclick="showTab('usage')">API Usage</div>
+      <div class="tab" onclick="showTab('governance')">Governance</div>
+      <div class="tab" onclick="showTab('activity')">Automation Status</div>
+    </div>
+
+    <!-- API Keys Tab -->
+    <div id="tab-keys" class="tab-panel active">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Create API Key</div>
+        <div class="form-row">
+          <div class="form-group"><label>Key Label</label><input type="text" id="key-label" placeholder="My Production Key" style="width:240px"></div>
+          <button class="btn btn-primary" onclick="createKey()">Generate Key</button>
+        </div>
+        <div id="new-key-display" style="display:none">
+          <div class="key-warning">⚠ Copy this key now — it will never be shown again.</div>
+          <div class="key-raw" id="new-key-value"></div>
+          <button class="btn btn-ghost" onclick="copyKey()">Copy to Clipboard</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Your API Keys</div>
+        <table class="tbl" id="keys-table">
+          <thead><tr><th>Label</th><th>Prefix</th><th>Tier</th><th>Created</th><th>Last Used</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Webhooks Tab -->
+    <div id="tab-webhooks" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Add Webhook</div>
+        <div class="form-row">
+          <div class="form-group"><label>HTTPS URL</label><input type="url" id="wh-url" placeholder="https://your-siem.example.com/webhook" style="width:320px"></div>
+          <div class="form-group"><label>Secret (optional)</label><input type="text" id="wh-secret" placeholder="hmac-secret" style="width:180px"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Events to subscribe</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="event-checkboxes"></div>
+        </div>
+        <button class="btn btn-primary" onclick="createWebhook()">Create Webhook</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Configured Webhooks</div>
+        <div id="webhooks-list"></div>
+      </div>
+    </div>
+
+    <!-- Scheduled Reports Tab -->
+    <div id="tab-reports" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Schedule Report</div>
+        <div class="form-row">
+          <div class="form-group"><label>Delivery Email</label><input type="email" id="sr-email" placeholder="ciso@company.com" style="width:240px"></div>
+          <div class="form-group"><label>Frequency</label>
+            <select id="sr-freq"><option value="daily">Daily</option><option value="weekly" selected>Weekly</option><option value="monthly">Monthly</option></select>
+          </div>
+          <div class="form-group"><label>Format</label>
+            <select id="sr-format"><option value="html">HTML Email</option><option value="json">JSON</option></select>
+          </div>
+          <button class="btn btn-primary" onclick="createSchedule()">Schedule</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Active Schedules</div>
+        <table class="tbl" id="reports-table">
+          <thead><tr><th>Email</th><th>Frequency</th><th>Format</th><th>Last Sent</th><th>Next Send</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Team Tab -->
+    <div id="tab-team" class="tab-panel">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Invite Team Member</div>
+        <div class="form-row">
+          <div class="form-group"><label>User ID</label><input type="text" id="tm-uid" placeholder="user_xxx" style="width:200px"></div>
+          <div class="form-group"><label>Email (optional)</label><input type="email" id="tm-email" placeholder="analyst@company.com" style="width:220px"></div>
+          <div class="form-group"><label>Role</label>
+            <select id="tm-role"><option value="VIEWER">VIEWER</option><option value="ANALYST">ANALYST</option><option value="ADMIN">ADMIN</option></select>
+          </div>
+          <button class="btn btn-primary" onclick="inviteMember()">Invite</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Team Members</div>
+        <table class="tbl" id="team-table">
+          <thead><tr><th>User ID</th><th>Email</th><th>Role</th><th>Invited By</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- API Usage Tab -->
+    <div id="tab-usage" class="tab-panel">
+      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+        <select id="usage-days" onchange="loadUsage()" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px">
+          <option value="1">Last 24h</option><option value="7" selected>Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option>
+        </select>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Top Endpoints</div>
+          <table class="tbl" id="usage-endpoints"><thead><tr><th>Endpoint</th><th>Calls</th><th>Avg ms</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Daily Trend</div>
+          <div id="usage-trend"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Quota Consumption</div>
+        <div id="quota-detail"></div>
+      </div>
+    </div>
+
+    <!-- Governance Tab -->
+    <div id="tab-governance" class="tab-panel">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>API Version &amp; Status</div>
+          <div id="gov-version"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--yellow)"></span>Rate Limits &amp; Throttling</div>
+          <div id="gov-throttle"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Endpoint Catalog</div>
+        <table class="tbl" id="gov-endpoints">
+          <thead><tr><th>Endpoint</th><th>Status</th><th>Since</th><th>Min Tier</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Automation Status Tab -->
+    <div id="tab-activity" class="tab-panel">
+      <div id="metrics-block">
+        <div class="grid2">
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>Automation Health</div>
+            <div id="auto-health"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>Webhook Delivery (24h)</div>
+            <div id="wh-health"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Platform Metrics</div>
+          <div id="platform-metrics" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = '';
+let _key = sessionStorage.getItem('auto_api_key') || '';
+let _gov = null;
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg, ok=true){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=ok?'var(--green)':'var(--red)'; t.style.color=ok?'#000':'#fff';
+  t.style.display='block'; setTimeout(()=>t.style.display='none',3000);
+}
+
+async function apiFetch(path, opts={}){
+  const r = await fetch(API+path, { ...opts, headers: { 'X-API-Key': _key, 'Content-Type':'application/json', ...(opts.headers||{}) } });
+  if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error||r.status); }
+  return r.json();
+}
+async function apiDel(path){ return apiFetch(path,{method:'DELETE'}); }
+async function apiPost(path,body){ return apiFetch(path,{method:'POST',body:JSON.stringify(body)}); }
+async function apiPatch(path,body){ return apiFetch(path,{method:'PATCH',body:JSON.stringify(body)}); }
+
+async function doAuth(){
+  const k=document.getElementById('api-key-input').value.trim(); if(!k)return;
+  try{
+    await fetch(API+'/api/self/keys',{headers:{'X-API-Key':k}}).then(r=>{if(!r.ok)throw 0;});
+    _key=k; sessionStorage.setItem('auto_api_key',k);
+    document.getElementById('auth-gate').style.display='none';
+    document.getElementById('app').style.display='flex';
+    refreshAll();
+  } catch{ document.getElementById('auth-err').style.display='block'; }
+}
+function doLogout(){ sessionStorage.removeItem('auto_api_key'); location.reload(); }
+document.getElementById('api-key-input').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
+
+if(_key){
+  fetch(API+'/api/self/keys',{headers:{'X-API-Key':_key}}).then(r=>{if(!r.ok)throw 0;return r.json();})
+    .then(()=>{
+      document.getElementById('auth-gate').style.display='none';
+      document.getElementById('app').style.display='flex';
+      refreshAll();
+    }).catch(()=>{});
+}
+
+function showTab(name){
+  const names=['keys','webhooks','reports','team','usage','governance','activity'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='usage') loadUsage();
+}
+
+async function refreshAll(){
+  document.getElementById('last-refresh').textContent='Refreshing…';
+  await Promise.allSettled([loadKeys(),loadWebhooks(),loadSchedules(),loadTeam(),loadUsage(),loadGovernance(),loadActivity()]);
+  document.getElementById('last-refresh').textContent='Refreshed: '+new Date().toLocaleTimeString();
+}
+
+// ── API Keys ──────────────────────────────────────────────────────────────────
+async function loadKeys(){
+  try{
+    const d=await apiFetch('/api/self/keys');
+    document.getElementById('k-keys').textContent=d.count;
+    document.getElementById('k-keys-sub').textContent=`of ${d.max_keys} allowed`;
+    const tbody=document.querySelector('#keys-table tbody');
+    tbody.innerHTML=(d.keys||[]).map(k=>`<tr>
+      <td><strong>${escHtml(k.label||'—')}</strong></td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${escHtml(k.prefix||'—')}…</td>
+      <td><span class="chip chip-blue">${escHtml(k.tier||'')}</span></td>
+      <td style="color:var(--muted);font-size:11px">${(k.created_at||'').slice(0,10)}</td>
+      <td style="color:var(--muted);font-size:11px">${(k.last_used_at||'Never').toString().slice(0,16)}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="rotateKey('${escHtml(k.id)}')">Rotate</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="revokeKey('${escHtml(k.id)}','${escHtml(k.label||'')}')">Revoke</button>
+      </td>
+    </tr>`).join('')||`<tr><td colspan="6" class="empty">No API keys yet</td></tr>`;
+  }catch(e){console.warn(e);}
+}
+
+async function createKey(){
+  const label=document.getElementById('key-label').value.trim()||'New Key';
+  try{
+    const d=await apiPost('/api/self/keys',{label});
+    document.getElementById('new-key-value').textContent=d.key;
+    document.getElementById('new-key-display').style.display='block';
+    document.getElementById('key-label').value='';
+    await loadKeys();
+    toast('Key created — copy it now!');
+  }catch(e){toast(e.message,false);}
+}
+
+function copyKey(){
+  const val=document.getElementById('new-key-value').textContent;
+  navigator.clipboard.writeText(val).then(()=>toast('Copied!')).catch(()=>toast('Copy failed',false));
+}
+
+async function revokeKey(id,label){
+  if(!confirm(`Revoke key "${label}"? This cannot be undone.`))return;
+  try{ await apiDel(`/api/self/keys/${id}`); await loadKeys(); toast('Key revoked'); }
+  catch(e){toast(e.message,false);}
+}
+
+async function rotateKey(id){
+  if(!confirm('Rotate this key? The old key will be revoked immediately.'))return;
+  try{
+    const d=await apiPost(`/api/self/keys/${id}/rotate`,{});
+    document.getElementById('new-key-value').textContent=d.new_key;
+    document.getElementById('new-key-display').style.display='block';
+    await loadKeys(); toast('Key rotated — copy new key!');
+  }catch(e){toast(e.message,false);}
+}
+
+// ── Webhooks ──────────────────────────────────────────────────────────────────
+const EVENTS=['cve.critical','kev.added','ransomware.campaign','actor.update','org.risk_change'];
+document.getElementById('event-checkboxes').innerHTML=EVENTS.map(e=>
+  `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px">
+    <input type="checkbox" value="${e}" style="accent-color:var(--accent)"> ${e}
+   </label>`
+).join('');
+
+async function loadWebhooks(){
+  try{
+    const d=await apiFetch('/api/auto/webhooks');
+    document.getElementById('k-wh').textContent=d.webhooks?.length||0;
+    const list=document.getElementById('webhooks-list');
+    list.innerHTML=(d.webhooks||[]).map(w=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">${escHtml(w.url)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${(JSON.parse(w.events||'[]')||[]).map(e=>`<span class="chip chip-blue">${escHtml(e)}</span>`).join('')}</div>
+          <div style="color:var(--muted);font-size:11px;margin-top:4px">Last triggered: ${w.last_triggered?w.last_triggered.slice(0,16):'Never'} | Retries: ${w.retry_count||0}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="${w.active?'chip chip-green':'chip chip-red'}">${w.active?'Active':'Paused'}</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="viewWebhookLogs('${escHtml(w.id)}')">Logs</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="toggleWebhook('${escHtml(w.id)}',${w.active?0:1})">${w.active?'Pause':'Resume'}</button>
+          <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="deleteWebhook('${escHtml(w.id)}')">Delete</button>
+        </div>
+      </div>`
+    ).join('')||`<div class="empty">No webhooks configured</div>`;
+  }catch(e){console.warn(e);}
+}
+
+async function createWebhook(){
+  const url=document.getElementById('wh-url').value.trim();
+  const secret=document.getElementById('wh-secret').value.trim();
+  const events=[...document.querySelectorAll('#event-checkboxes input:checked')].map(c=>c.value);
+  if(!url){toast('URL required',false);return;}
+  if(!events.length){toast('Select at least one event',false);return;}
+  try{
+    await apiPost('/api/auto/webhooks',{url,events,secret:secret||undefined});
+    document.getElementById('wh-url').value='';
+    document.getElementById('wh-secret').value='';
+    document.querySelectorAll('#event-checkboxes input').forEach(c=>c.checked=false);
+    await loadWebhooks(); toast('Webhook created');
+  }catch(e){toast(e.message,false);}
+}
+
+async function deleteWebhook(id){
+  if(!confirm('Delete this webhook?'))return;
+  try{ await apiDel(`/api/auto/webhooks/${id}`); await loadWebhooks(); toast('Deleted'); }
+  catch(e){toast(e.message,false);}
+}
+
+async function toggleWebhook(id,active){
+  try{ await apiPatch(`/api/auto/webhooks/${id}`,{active:!!active}); await loadWebhooks(); toast(active?'Resumed':'Paused'); }
+  catch(e){toast(e.message,false);}
+}
+
+async function viewWebhookLogs(id){
+  try{
+    const d=await apiFetch(`/api/auto/webhooks/${id}/logs`);
+    const rows=(d.logs||[]).map(l=>`<tr>
+      <td style="font-size:11px;color:var(--muted)">${(l.created_at||'').slice(0,16)}</td>
+      <td><span class="chip chip-blue">${escHtml(l.event_type)}</span></td>
+      <td><span class="${l.status==='delivered'?'chip chip-green':l.status==='dead_lettered'?'chip chip-red':'chip chip-yellow'}">${escHtml(l.status)}</span></td>
+      <td style="font-size:11px">${l.response_code||'—'}</td>
+      <td style="font-size:11px;color:var(--red)">${escHtml(l.error_msg||'')}</td>
+    </tr>`).join('')||`<tr><td colspan="5" class="empty">No logs</td></tr>`;
+    alert(`Webhook Logs:\n\n(Open browser console for structured data)\n\nTotal entries: ${d.logs?.length||0}`);
+    console.table(d.logs);
+  }catch(e){toast(e.message,false);}
+}
+
+// ── Scheduled Reports ─────────────────────────────────────────────────────────
+async function loadSchedules(){
+  try{
+    const d=await apiFetch('/api/auto/reports');
+    const active=(d.schedules||[]).filter(s=>s.active).length;
+    document.getElementById('k-sched').textContent=active;
+    const tbody=document.querySelector('#reports-table tbody');
+    tbody.innerHTML=(d.schedules||[]).map(s=>`<tr>
+      <td>${escHtml(s.email)}</td>
+      <td><span class="chip chip-purple">${escHtml(s.frequency)}</span></td>
+      <td style="color:var(--muted)">${escHtml(s.format)}</td>
+      <td style="color:var(--muted);font-size:11px">${(s.last_sent||'Never').slice(0,10)}</td>
+      <td style="color:var(--accent);font-size:11px">${(s.next_send||'—').slice(0,10)}</td>
+      <td><span class="${s.active?'chip chip-green':'chip chip-red'}">${s.active?'Active':'Paused'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="toggleSchedule('${escHtml(s.id)}',${s.active?0:1})">${s.active?'Pause':'Resume'}</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="deleteSchedule('${escHtml(s.id)}')">Delete</button>
+      </td>
+    </tr>`).join('')||`<tr><td colspan="7" class="empty">No schedules configured</td></tr>`;
+  }catch(e){console.warn(e);}
+}
+
+async function createSchedule(){
+  const email=document.getElementById('sr-email').value.trim();
+  const frequency=document.getElementById('sr-freq').value;
+  const format=document.getElementById('sr-format').value;
+  if(!email){toast('Email required',false);return;}
+  try{
+    await apiPost('/api/auto/reports',{email,frequency,format});
+    document.getElementById('sr-email').value='';
+    await loadSchedules(); toast('Schedule created');
+  }catch(e){toast(e.message,false);}
+}
+
+async function deleteSchedule(id){
+  if(!confirm('Delete this schedule?'))return;
+  try{ await apiDel(`/api/auto/reports/${id}`); await loadSchedules(); toast('Deleted'); }
+  catch(e){toast(e.message,false);}
+}
+
+async function toggleSchedule(id,active){
+  try{ await apiPatch(`/api/auto/reports/${id}`,{active:!!active}); await loadSchedules(); toast(active?'Resumed':'Paused'); }
+  catch(e){toast(e.message,false);}
+}
+
+// ── Team ──────────────────────────────────────────────────────────────────────
+async function loadTeam(){
+  try{
+    const d=await apiFetch('/api/auto/team');
+    document.getElementById('k-team').textContent=(d.members||[]).length;
+    const tbody=document.querySelector('#team-table tbody');
+    tbody.innerHTML=(d.members||[]).map(m=>`<tr>
+      <td style="font-family:monospace;font-size:12px">${escHtml(m.user_id)}</td>
+      <td style="color:var(--muted);font-size:12px">${escHtml(m.email||'—')}</td>
+      <td><span class="chip role-${escHtml(m.role)}">${escHtml(m.role)}</span></td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${escHtml(m.invited_by||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${(m.created_at||'').slice(0,10)}</td>
+      <td style="display:flex;gap:6px">
+        ${m.role!=='OWNER'?`
+        <select onchange="changeRole('${escHtml(m.id)}',this.value)" style="font-size:11px;padding:3px 6px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+          <option ${m.role==='ADMIN'?'selected':''} value="ADMIN">ADMIN</option>
+          <option ${m.role==='ANALYST'?'selected':''} value="ANALYST">ANALYST</option>
+          <option ${m.role==='VIEWER'?'selected':''} value="VIEWER">VIEWER</option>
+        </select>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="removeMember('${escHtml(m.id)}')">Remove</button>`
+        :'<span style="color:var(--muted);font-size:11px">Owner</span>'}
+      </td>
+    </tr>`).join('')||`<tr><td colspan="6" class="empty">No team members yet</td></tr>`;
+  }catch(e){console.warn(e);}
+}
+
+async function inviteMember(){
+  const uid=document.getElementById('tm-uid').value.trim();
+  const email=document.getElementById('tm-email').value.trim();
+  const role=document.getElementById('tm-role').value;
+  if(!uid){toast('User ID required',false);return;}
+  try{
+    await apiPost('/api/auto/team',{user_id:uid,email:email||undefined,role});
+    document.getElementById('tm-uid').value=''; document.getElementById('tm-email').value='';
+    await loadTeam(); toast('Member added');
+  }catch(e){toast(e.message,false);}
+}
+
+async function removeMember(id){
+  if(!confirm('Remove this team member?'))return;
+  try{ await apiDel(`/api/auto/team/${id}`); await loadTeam(); toast('Member removed'); }
+  catch(e){toast(e.message,false);}
+}
+
+async function changeRole(id,role){
+  try{ await apiPatch(`/api/auto/team/${id}`,{role}); await loadTeam(); toast(`Role updated to ${role}`); }
+  catch(e){toast(e.message,false);}
+}
+
+// ── Usage ─────────────────────────────────────────────────────────────────────
+async function loadUsage(){
+  const days=document.getElementById('usage-days')?.value||7;
+  try{
+    const d=await apiFetch(`/api/auto/usage?days=${days}`);
+    document.getElementById('k-calls').textContent=(d.summary?.total_calls||0).toLocaleString();
+    const hr=(d.summary?.cache_hit_ratio||0)*100;
+    document.getElementById('k-cache').textContent=hr.toFixed(1)+'%';
+    document.getElementById('k-cache').className='kpi-value '+(hr>50?'green':hr>20?'yellow':'red');
+    const qpct=d.quota?.quota_pct||0;
+    document.getElementById('k-quota').textContent=qpct>0?qpct.toFixed(1)+'%':'∞';
+    document.getElementById('k-quota').className='kpi-value '+(qpct>90?'red':qpct>70?'yellow':'green');
+    document.getElementById('k-quota-sub').textContent=d.quota?.radar_limit?`${d.quota.month_calls}/${d.quota.radar_limit}`:'Unlimited';
+    const tbody=document.querySelector('#usage-endpoints tbody');
+    tbody.innerHTML=(d.by_endpoint||[]).map(e=>`<tr>
+      <td style="font-size:12px">${escHtml(e.endpoint||'—')}</td>
+      <td>${e.calls}</td><td>${Math.round(e.avg_ms||0)}ms</td>
+    </tr>`).join('')||`<tr><td colspan="3" class="empty">No usage data</td></tr>`;
+    const trend=document.getElementById('usage-trend');
+    const maxCalls=Math.max(...(d.daily_trend||[{calls:1}]).map(x=>x.calls),1);
+    trend.innerHTML=(d.daily_trend||[]).map(t=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--muted);width:60px">${(t.day||'').slice(5)}</span>
+        <div style="flex:1;background:var(--border);border-radius:3px;height:16px;overflow:hidden">
+          <div style="height:100%;background:var(--accent);width:${(t.calls/maxCalls*100).toFixed(1)}%;border-radius:3px"></div>
+        </div>
+        <span style="font-size:11px;width:36px;text-align:right">${t.calls}</span>
+      </div>`).join('')||'<div class="empty">No trend data</div>';
+    const qd=document.getElementById('quota-detail');
+    qd.innerHTML=d.quota?.radar_limit?`
+      <div style="margin-bottom:8px;font-size:13px">Month calls: <strong>${d.quota.month_calls}</strong> / <strong>${d.quota.radar_limit}</strong></div>
+      <div class="usage-bar"><div class="usage-fill" style="width:${Math.min(100,qpct)}%;background:${qpct>90?'var(--red)':qpct>70?'var(--yellow)':'var(--green)'}"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">${qpct.toFixed(1)}% of monthly quota used</div>`
+    :'<div style="color:var(--green);font-size:14px;font-weight:700">∞ Unlimited quota on your plan</div>';
+  }catch(e){console.warn(e);}
+}
+
+// ── Governance ────────────────────────────────────────────────────────────────
+async function loadGovernance(){
+  try{
+    const d=await apiFetch('/api/auto/governance');
+    _gov=d;
+    const gv=document.getElementById('gov-version');
+    gv.innerHTML=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><div style="color:var(--muted);font-size:11px">VERSION</div><div style="font-size:22px;font-weight:800;color:var(--accent)">${escHtml(d.version||'v1')}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">RELEASED</div><div>${escHtml(d.released||'—')}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">YOUR TIER</div><div><span class="chip chip-purple">${escHtml(d.user_tier||'')}</span></div></div>
+        ${d.quota_warning?`<div style="background:#78350f22;border:1px solid var(--yellow);border-radius:6px;padding:10px;font-size:12px;color:var(--yellow)">⚠ ${escHtml(d.quota_warning.message)} — ${d.quota_warning.pct}% used (${d.quota_warning.used}/${d.quota_warning.limit})</div>`:''}
+        <div><div style="color:var(--muted);font-size:11px">DEPRECATIONS</div><div style="color:var(--green);font-size:12px">${(d.deprecations||[]).length===0?'None — all endpoints stable':d.deprecations.length+' pending'}</div></div>
+      </div>`;
+    const gt=document.getElementById('gov-throttle');
+    const lim=d.throttle_limits||{};
+    gt.innerHTML=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><div style="color:var(--muted);font-size:11px">REQUESTS / MINUTE</div><div style="font-size:22px;font-weight:800;color:var(--yellow)">${lim.requests_per_minute||'—'}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">REQUESTS / DAY</div><div style="font-size:22px;font-weight:800;color:var(--yellow)">${lim.requests_per_day===-1?'∞ Unlimited':(lim.requests_per_day||'—')}</div></div>
+      </div>`;
+    const tbody=document.querySelector('#gov-endpoints tbody');
+    tbody.innerHTML=(d.endpoints||[]).map(e=>`<tr>
+      <td style="font-size:12px;font-family:monospace">${escHtml(e.path)}</td>
+      <td><span class="${e.status==='stable'?'chip chip-green':'chip chip-yellow'}">${escHtml(e.status)}</span></td>
+      <td style="color:var(--muted);font-size:11px">${escHtml(e.since||'v1')}</td>
+      <td>${e.min_tier?`<span class="chip chip-purple">${escHtml(e.min_tier)}</span>`:'<span style="color:var(--muted);font-size:11px">Any</span>'}</td>
+    </tr>`).join('')||'<tr><td colspan="4" class="empty">—</td></tr>';
+  }catch(e){console.warn(e);}
+}
+
+// ── Activity ──────────────────────────────────────────────────────────────────
+async function loadActivity(){
+  try{
+    const d=await apiFetch('/api/auto/metrics');
+    const ah=document.getElementById('auto-health');
+    ah.innerHTML=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><div style="color:var(--muted);font-size:11px">STATUS</div><div style="font-size:18px;font-weight:800;color:var(--green)">● ${escHtml(d.automation_health||'operational').toUpperCase()}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">ACTIVE ORGANIZATIONS</div><div style="font-size:22px;font-weight:800;color:var(--accent)">${d.active_organizations||0}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">ACTIVE API KEYS</div><div style="font-size:22px;font-weight:800">${d.active_api_keys||0}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">API SUCCESS RATE</div><div style="font-size:18px;font-weight:800;color:${(d.api_health?.success_rate_pct||100)>95?'var(--green)':'var(--yellow)'}">${d.api_health?.success_rate_pct||100}%</div></div>
+      </div>`;
+    const wh=d.webhooks||{};
+    const whDiv=document.getElementById('wh-health');
+    whDiv.innerHTML=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><div style="color:var(--muted);font-size:11px">DELIVERIES (24h)</div><div style="font-size:22px;font-weight:800">${wh.deliveries_24h||0}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">SUCCESS RATE</div><div style="font-size:22px;font-weight:800;color:${(wh.success_rate_pct||100)>=95?'var(--green)':'var(--red)'}">${wh.success_rate_pct||100}%</div></div>
+        <div><div style="color:var(--muted);font-size:11px">DELIVERED</div><div style="font-size:18px;font-weight:700;color:var(--green)">${wh.delivered||0}</div></div>
+        <div><div style="color:var(--muted);font-size:11px">ACTIVE SCHEDULES</div><div style="font-size:18px;font-weight:700">${d.scheduled_reports?.active_schedules||0}</div></div>
+      </div>`;
+    const pm=document.getElementById('platform-metrics');
+    const rp=d.scheduled_reports||{};
+    pm.innerHTML=`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="color:var(--muted);font-size:11px">REPORTS SENT (7d)</div><div style="font-size:22px;font-weight:800;color:var(--accent)">${rp.sent_7d||0}</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="color:var(--muted);font-size:11px">API CALLS (24h)</div><div style="font-size:22px;font-weight:800">${(d.api_health?.calls_24h||0).toLocaleString()}</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="color:var(--muted);font-size:11px">AS OF</div><div style="font-size:13px;color:var(--muted)">${(d.ts||'').slice(0,16).replace('T',' ')}</div></div>`;
+  }catch(e){
+    // Non-admin users won't have access to /api/auto/metrics — show placeholder
+    document.getElementById('auto-health').innerHTML='<div class="empty">Admin access required for detailed metrics</div>';
+  }
+}
+
+setInterval(refreshAll, 300000);
+</script>
+</body>
+</html>

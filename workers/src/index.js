@@ -5117,6 +5117,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleGetReport(request, env, authCtx), request));
     }
 
+    // ── P7.0 Enterprise Automation Engine ────────────────────────────────────
+    // API key self-service, webhooks, scheduled reports, team management,
+    // API usage dashboard, governance, reliability, enterprise metrics.
+
+    if (path.startsWith('/api/self/') || path.startsWith('/api/auto/')) {
+      const { handleAutoRoute } = await import('./handlers/enterpriseAutomation.js');
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const result = await handleAutoRoute(request, env, authCtx, path, method);
+      if (result) return withSecurityHeaders(withCors(result, request));
+    }
+
     // ── P6.0 Operations Engine ────────────────────────────────────────────────
     // Usage analytics, subscription enforcement, feature flags, admin APIs,
     // observability, notifications. OWNER/ADMIN required for /api/admin/*.
@@ -7435,6 +7446,17 @@ ctx.waitUntil(
       } catch (e) {
         console.error('[CRON] AutoSOC error:', e?.message);
       }
+    })());
+
+    // ── P7.0 Automation crons — webhook retries every 30 min, reports daily ─
+    ctx.waitUntil((async () => {
+      try {
+        const { runAutomationCrons } = await import('./handlers/enterpriseAutomation.js');
+        const r = await runAutomationCrons(env);
+        if (r.webhook_retries.retried > 0 || r.webhook_retries.dead_lettered > 0 || r.scheduled_reports.sent > 0) {
+          console.log(`[CRON] AUTOMATION: wh_retried=${r.webhook_retries.retried} dead=${r.webhook_retries.dead_lettered} reports_sent=${r.scheduled_reports.sent}`);
+        }
+      } catch (e) { console.error('[CRON] AUTOMATION error:', e?.message); }
     })());
 
     // ── P6.0-009 Ops Lifecycle — daily 3am UTC ─────────────────────────────
