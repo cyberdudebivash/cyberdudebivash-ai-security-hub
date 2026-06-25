@@ -360,6 +360,16 @@ import {
 } from './handlers/knowledgeGraphHandler.js';
 import { handleAIInvestigation } from './handlers/aiInvestigationHandler.js';
 
+// ─── P13.0: Autonomous Security Operations Platform ──────────────────────────
+import {
+  handleAutonomousOrchestratorPlan,
+  handleAutonomousIncidentResponse,
+  handleAutonomousPredictiveRisk,
+  handleAutonomousWorkflowStatus,
+  handleAutonomousExecutiveBrief,
+  handleAutonomousObservability,
+} from './handlers/autonomousOpsHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4421,6 +4431,32 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path.match(/^\/api\/soc\/investigate\/[^/]+$/) && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleAIInvestigation(request, env, authCtx || {}), request));
+    }
+
+    // ── P13.0: Autonomous Security Operations Platform ────────────────────────
+    if (path === '/api/autonomous/orchestrator/plan' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAutonomousOrchestratorPlan(request, env, authCtx || {}), request));
+    }
+    if (path.match(/^\/api\/autonomous\/incident-response\/[^/]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAutonomousIncidentResponse(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/autonomous/risk/predict' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAutonomousPredictiveRisk(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/autonomous/workflow/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAutonomousWorkflowStatus(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/autonomous/executive/brief' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAutonomousExecutiveBrief(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/autonomous/observability' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAutonomousObservability(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────

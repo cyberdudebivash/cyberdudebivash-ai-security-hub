@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00d4ff">
+<title>Autonomous SOC | CYBERDUDEBIVASH® Sentinel APEX</title>
+<meta name="description" content="Sentinel APEX P13.0 — Autonomous Security Operations Platform: orchestrator execution plan, predictive risk, AI incident response, executive briefs, workflow SLA dashboard.">
+<meta name="robots" content="noindex,nofollow">
+
+<style>
+/* ── CSS design system — identical to soc-command-dashboard.html ── */
+:root{
+  --bg:#060614;--surface:#0c0c24;--surface2:#10102a;
+  --border:#1a1a3e;--border2:#252550;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;
+  --warn:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;
+  --card:#0d0d28;--radius:12px;
+  --risk-critical:#ef4444;--risk-high:#f59e0b;--risk-medium:#3b82f6;--risk-low:#10b981;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+
+.header{background:linear-gradient(135deg,#080820 0%,#0c0c30 100%);border-bottom:1px solid var(--border2);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-brand{display:flex;align-items:center;gap:12px}
+.header-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff}
+.header-title{font-size:16px;font-weight:700;color:var(--text)}
+.header-subtitle{font-size:11px;color:var(--text-dim);margin-top:1px}
+.header-status{display:flex;align-items:center;gap:8px}
+.status-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:20px;font-size:11px;color:var(--accent3);font-weight:600}
+.status-dot{width:7px;height:7px;background:var(--accent3);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+
+#auth-gate{max-width:520px;margin:80px auto;padding:40px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);text-align:center}
+#auth-gate h2{font-size:22px;font-weight:700;margin-bottom:8px;color:var(--text)}
+#auth-gate p{color:var(--text-muted);margin-bottom:24px;font-size:13px}
+.input-row{display:flex;gap:10px;margin-bottom:12px}
+.input-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+.input-row input:focus{border-color:var(--accent)}
+.btn{padding:10px 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.auth-error{color:var(--danger);font-size:12px;margin-top:8px;display:none}
+
+#dashboard{display:none;padding:24px;max-width:1400px;margin:0 auto}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tier-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa;letter-spacing:.5px;text-transform:uppercase}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.critical::before{background:var(--risk-critical)}
+.kpi-card.high::before{background:var(--risk-high)}
+.kpi-card.medium::before{background:var(--risk-medium)}
+.kpi-card.ok::before{background:var(--accent3)}
+.kpi-card.purple::before{background:var(--accent2)}
+.kpi-card.blue::before{background:var(--info)}
+.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:8px}
+.kpi-value{font-size:32px;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-card.critical .kpi-value{color:var(--risk-critical)}
+.kpi-card.high .kpi-value{color:var(--risk-high)}
+.kpi-card.medium .kpi-value{color:var(--risk-medium)}
+.kpi-card.ok .kpi-value{color:var(--accent3)}
+.kpi-card.purple .kpi-value{color:#a78bfa}
+.kpi-card.blue .kpi-value{color:var(--info)}
+.kpi-sub{font-size:11px;color:var(--text-dim)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px}
+@media(max-width:1100px){.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid-3{grid-template-columns:1fr}}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.panel-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.panel-meta{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+.cache-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(0,212,255,.08);color:var(--accent);border:1px solid rgba(0,212,255,.15)}
+
+.phase-list{display:flex;flex-direction:column;gap:10px}
+.phase-item{display:flex;align-items:flex-start;gap:12px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px}
+.phase-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.phase-num.active{background:rgba(16,185,129,.2);color:var(--accent3);border:1px solid rgba(16,185,129,.3)}
+.phase-num.idle{background:rgba(100,116,139,.1);color:var(--text-dim);border:1px solid var(--border)}
+.phase-num.pending{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+.phase-num.ready{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2)}
+.phase-body{flex:1;min-width:0}
+.phase-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.phase-status-badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.phase-status-badge.ACTIVE{background:rgba(16,185,129,.15);color:var(--accent3)}
+.phase-status-badge.COMPLETE{background:rgba(0,212,255,.1);color:var(--accent)}
+.phase-status-badge.READY{background:rgba(124,58,237,.15);color:#a78bfa}
+.phase-status-badge.PENDING{background:rgba(245,158,11,.1);color:var(--warn)}
+.phase-status-badge.MONITORING,.phase-status-badge.IDLE,.phase-status-badge.CLEAR{background:rgba(100,116,139,.1);color:var(--text-dim)}
+.phase-detail{font-size:11px;color:var(--text-muted)}
+
+.risk-table{width:100%;border-collapse:collapse}
+.risk-table th{font-size:10px;text-transform:uppercase;color:var(--text-dim);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.risk-table td{padding:8px;border-bottom:1px solid var(--border);font-size:12px}
+.risk-table tr:last-child td{border-bottom:none}
+.risk-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700}
+.risk-badge.CRITICAL{background:rgba(239,68,68,.15);color:var(--risk-critical)}
+.risk-badge.HIGH{background:rgba(245,158,11,.15);color:var(--warn)}
+.risk-badge.MEDIUM{background:rgba(59,130,246,.15);color:var(--info)}
+.risk-badge.LOW{background:rgba(16,185,129,.15);color:var(--accent3)}
+.impact-bar{display:flex;gap:4px;align-items:center}
+.impact-icon{font-size:10px}
+
+.exec-role-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.role-pill{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
+.role-pill.active{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:var(--accent)}
+.role-pill:hover{border-color:var(--accent);color:var(--accent)}
+.exec-brief-body{font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:14px}
+.exec-metric-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.exec-metric{padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted)}
+.exec-metric strong{color:var(--text);display:block;font-size:16px;font-weight:800}
+.action-item{display:flex;align-items:flex-start;gap:8px;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px}
+.action-pri{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;flex-shrink:0;text-transform:uppercase}
+.action-pri.CRITICAL{background:rgba(239,68,68,.15);color:var(--danger)}
+.action-pri.HIGH{background:rgba(245,158,11,.15);color:var(--warn)}
+.action-pri.MEDIUM{background:rgba(59,130,246,.15);color:var(--info)}
+.action-text{font-size:12px;color:var(--text-muted)}
+
+.sla-bar-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px}
+.sla-bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;color:var(--text-muted)}
+.sla-bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden}
+.sla-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.sla-bar-fill.breached{background:var(--risk-critical)}
+.sla-bar-fill.at_risk{background:var(--warn)}
+.sla-bar-fill.healthy{background:var(--accent3)}
+.wf-case{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.wf-case:last-child{border-bottom:none}
+.sev-tag{padding:1px 7px;border-radius:6px;font-size:10px;font-weight:700}
+.sev-tag.CRITICAL{background:rgba(239,68,68,.15);color:var(--danger)}
+.sev-tag.HIGH{background:rgba(245,158,11,.15);color:var(--warn)}
+.sev-tag.MEDIUM{background:rgba(59,130,246,.15);color:var(--info)}
+.sev-tag.LOW{background:rgba(16,185,129,.15);color:var(--accent3)}
+
+.obs-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.obs-row:last-child{border-bottom:none}
+.obs-label{color:var(--text-dim)}
+.obs-val{font-weight:700}
+.obs-val.good{color:var(--accent3)}
+.obs-val.warn{color:var(--warn)}
+.obs-val.bad{color:var(--danger)}
+
+.ir-form{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.ir-input{flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none}
+.ir-input:focus{border-color:var(--accent)}
+
+.plan-step{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.plan-step:last-child{border-bottom:none}
+.plan-step-num{background:rgba(0,212,255,.1);color:var(--accent);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.plan-step-text{color:var(--text-muted);flex:1}
+.plan-step-meta{font-size:10px;color:var(--text-dim)}
+
+.subsystem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
+.subsystem-item{padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;display:flex;align-items:center;gap:6px}
+.sys-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sys-dot.active{background:var(--accent3)}
+.sys-dot.inactive{background:var(--danger)}
+.sys-name{color:var(--text-muted)}
+
+.notif{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:8px;padding:12px 18px;font-size:13px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;pointer-events:none}
+.notif.show{transform:translateY(0);opacity:1}
+
+.threat-level{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.threat-level.CRITICAL{background:rgba(239,68,68,.2);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.threat-level.HIGH{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+.threat-level.ELEVATED{background:rgba(59,130,246,.1);color:var(--info);border:1px solid rgba(59,130,246,.2)}
+.threat-level.GUARDED{background:rgba(16,185,129,.1);color:var(--accent3);border:1px solid rgba(16,185,129,.2)}
+.threat-level.NOMINAL{background:rgba(100,116,139,.1);color:var(--text-dim);border:1px solid var(--border)}
+
+.empty{color:var(--text-dim);font-size:12px;text-align:center;padding:20px 0}
+
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px}
+.tag-kev{background:rgba(239,68,68,.15);color:var(--danger)}
+.tag-new{background:rgba(0,212,255,.1);color:var(--accent)}
+
+.section-title{font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">CDB</div>
+    <div>
+      <div class="header-title">CYBERDUDEBIVASH® Autonomous SOC</div>
+      <div class="header-subtitle">P13.0 — Autonomous Security Operations Platform</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      <span>AUTONOMOUS</span>
+    </div>
+    <button class="btn btn-sm btn-outline" onclick="refreshAll()">↻ Refresh</button>
+    <button class="btn btn-sm btn-outline" onclick="logout()" style="margin-left:4px">Sign Out</button>
+  </div>
+</header>
+
+<!-- Auth Gate -->
+<div id="auth-gate">
+  <h2>Autonomous SOC Platform</h2>
+  <p>Enter your API key to access the P13.0 Autonomous Security Operations Platform. PRO plan or above required.</p>
+  <div class="input-row">
+    <input id="api-key-input" type="password" placeholder="sk-…" autocomplete="off">
+    <button class="btn" onclick="authenticate()">Access</button>
+  </div>
+  <div class="auth-error" id="auth-error">Authentication failed — check your API key and plan tier.</div>
+</div>
+
+<!-- Main Dashboard -->
+<div id="dashboard">
+  <div class="page-header">
+    <h1>Autonomous Security Operations</h1>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="tier-badge" id="tier-badge">PRO</span>
+      <span id="last-refresh" style="font-size:11px;color:var(--text-dim)"></span>
+    </div>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-grid">
+    <div class="kpi-card ok" id="kpi-threat-card">
+      <div class="kpi-label">Threat Level</div>
+      <div class="kpi-value" id="kpi-threat" style="font-size:18px;margin-top:4px">—</div>
+      <div class="kpi-sub" id="kpi-threat-sub">loading…</div>
+    </div>
+    <div class="kpi-card critical" id="kpi-emerging-card">
+      <div class="kpi-label">Emerging Risks</div>
+      <div class="kpi-value" id="kpi-emerging">—</div>
+      <div class="kpi-sub">predicted today</div>
+    </div>
+    <div class="kpi-card high">
+      <div class="kpi-label">Open Cases</div>
+      <div class="kpi-value" id="kpi-open-cases">—</div>
+      <div class="kpi-sub" id="kpi-cases-sub">in workflow</div>
+    </div>
+    <div class="kpi-card medium">
+      <div class="kpi-label">SLA Breached</div>
+      <div class="kpi-value" id="kpi-sla-breached">—</div>
+      <div class="kpi-sub">need escalation</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Automation Health</div>
+      <div class="kpi-value" id="kpi-auto-health">—</div>
+      <div class="kpi-sub">success rate</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Cache Efficiency</div>
+      <div class="kpi-value" id="kpi-cache">—</div>
+      <div class="kpi-sub">of probed keys warm</div>
+    </div>
+    <div class="kpi-card ok">
+      <div class="kpi-label">Queue Depth</div>
+      <div class="kpi-value" id="kpi-queue">—</div>
+      <div class="kpi-sub">open incidents</div>
+    </div>
+    <div class="kpi-card high">
+      <div class="kpi-label">KEV Exposure</div>
+      <div class="kpi-value" id="kpi-kev">—</div>
+      <div class="kpi-sub">actively exploited</div>
+    </div>
+  </div>
+
+  <!-- Row 1: Execution Plan + Predictive Risks -->
+  <div class="grid-2">
+    <!-- P13.1 Orchestrator Execution Plan -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Autonomous Execution Plan</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="cache-tag" id="orch-cache">◉ LIVE</span>
+        </div>
+      </div>
+      <div id="orch-threat-level" style="margin-bottom:12px"></div>
+      <div class="phase-list" id="phase-list">
+        <div class="empty">Loading execution plan…</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="section-title">Subsystem Health</div>
+        <div class="subsystem-grid" id="subsystem-grid"></div>
+      </div>
+    </div>
+
+    <!-- P13.3 Predictive Risk -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Predictive Risk Intelligence</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="cache-tag" id="pred-cache">◉ LIVE</span>
+        </div>
+      </div>
+      <div id="risk-trend-row" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
+      <div style="overflow-x:auto">
+        <table class="risk-table">
+          <thead><tr>
+            <th>CVE</th><th>Risk</th><th>Likelihood</th><th>Impact</th>
+          </tr></thead>
+          <tbody id="risk-table-body">
+            <tr><td colspan="4" class="empty">Loading predictions…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Executive Brief + Workflow Status -->
+  <div class="grid-2">
+    <!-- P13.5 Executive Operations Copilot -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Executive Operations Copilot</div>
+        <span class="cache-tag" id="exec-cache">◉ LIVE</span>
+      </div>
+      <div class="exec-role-pills" id="exec-role-pills">
+        <div class="role-pill active" data-role="ceo" onclick="selectExecRole(this)">CEO</div>
+        <div class="role-pill" data-role="ciso" onclick="selectExecRole(this)">CISO</div>
+        <div class="role-pill" data-role="soc_lead" onclick="selectExecRole(this)">SOC Lead</div>
+        <div class="role-pill" data-role="compliance" onclick="selectExecRole(this)">Compliance</div>
+        <div class="role-pill" data-role="operations" onclick="selectExecRole(this)">Operations</div>
+        <div class="role-pill" data-role="board" onclick="selectExecRole(this)">Board</div>
+      </div>
+      <div id="exec-brief-title" style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)"></div>
+      <div class="exec-brief-body" id="exec-brief-text">Loading executive brief…</div>
+      <div class="section-title">Key Metrics</div>
+      <div class="exec-metric-row" id="exec-metrics"></div>
+      <div class="section-title" id="exec-actions-title" style="display:none">Critical Actions</div>
+      <div id="exec-actions"></div>
+    </div>
+
+    <!-- P13.4 Workflow & SLA Dashboard -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Workflow & SLA Dashboard</div>
+        <span class="cache-tag" id="wf-cache">◉ LIVE</span>
+      </div>
+      <!-- SLA bar chart -->
+      <div id="sla-bars" style="margin-bottom:14px"></div>
+      <!-- Escalations -->
+      <div id="escalation-section" style="display:none;margin-bottom:14px">
+        <div class="section-title" style="color:var(--danger)">⚠ Escalations Required</div>
+        <div id="escalation-list"></div>
+      </div>
+      <!-- Unassigned queue -->
+      <div class="section-title">Unassigned Cases</div>
+      <div id="wf-case-list"><div class="empty">No unassigned cases.</div></div>
+      <!-- Audit trail -->
+      <div class="section-title" style="margin-top:12px">Recent Audit Trail</div>
+      <div id="audit-trail"><div class="empty">No activity.</div></div>
+    </div>
+  </div>
+
+  <!-- Row 3: Incident Response + Observability -->
+  <div class="grid-2">
+    <!-- P13.2 Automated Incident Response -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Automated Incident Response</div>
+        <span style="font-size:11px;color:var(--text-dim)">Enter Case ID to generate IR plan</span>
+      </div>
+      <div class="ir-form">
+        <input id="ir-case-input" class="ir-input" placeholder="Case ID (e.g. case_001)" onkeydown="if(event.key==='Enter') loadIR()">
+        <button class="btn btn-sm" onclick="loadIR()">Generate Plan</button>
+      </div>
+      <div id="ir-panel" style="margin-top:16px"><div class="empty">Enter a case ID above to generate the autonomous IR plan.</div></div>
+    </div>
+
+    <!-- P13.7 Extended Observability -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Platform Observability</div>
+        <span class="panel-meta">P13.7 — LIVE metrics</span>
+      </div>
+      <div class="section-title">Infrastructure</div>
+      <div id="obs-infra"></div>
+      <div class="section-title" style="margin-top:14px">Operations</div>
+      <div id="obs-ops"></div>
+      <div class="section-title" style="margin-top:14px">Active Subsystems</div>
+      <div class="subsystem-grid" id="obs-subsystems"></div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+'use strict';
+
+// ── XSS protection (identical to soc-command-dashboard.html) ────────────────
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Config ──────────────────────────────────────────────────────────────────
+const API_BASE = '';
+let apiKey = '';
+let execRole = 'ceo';
+
+// ── Notif helper ─────────────────────────────────────────────────────────────
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function authenticate() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return;
+  document.getElementById('auth-error').style.display = 'none';
+  try {
+    const res = await fetch(API_BASE + '/api/autonomous/orchestrator/plan', {
+      headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
+    });
+    if (res.status === 401 || res.status === 403) {
+      document.getElementById('auth-error').style.display = 'block';
+      return;
+    }
+    apiKey = key;
+    sessionStorage.setItem('cdb_api_key', key);
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadAll();
+  } catch {
+    document.getElementById('auth-error').style.display = 'block';
+    document.getElementById('auth-error').textContent = 'Network error — check connectivity.';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('cdb_api_key');
+  apiKey = '';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('auth-gate').style.display = 'block';
+  document.getElementById('api-key-input').value = '';
+}
+
+// ── API helpers ──────────────────────────────────────────────────────────────
+async function apiGet(path) {
+  try {
+    const res = await fetch(API_BASE + path, { headers: { 'Authorization': 'Bearer ' + apiKey, 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+function refreshAll() { loadAll(); showNotif('Dashboard refreshed'); }
+
+async function loadAll() {
+  document.getElementById('last-refresh').textContent = 'Refreshing…';
+  await Promise.all([
+    loadOrchestratorPlan(),
+    loadPredictiveRisk(),
+    loadExecutiveBrief(),
+    loadWorkflowStatus(),
+    loadObservability(),
+  ]);
+  document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── P13.1 — Autonomous Orchestrator Plan ────────────────────────────────────
+async function loadOrchestratorPlan() {
+  const data = await apiGet('/api/autonomous/orchestrator/plan');
+  if (!data?.success) { document.getElementById('phase-list').innerHTML = '<div class="empty">Orchestrator unavailable.</div>'; return; }
+
+  document.getElementById('orch-cache').textContent = data._cache === 'HIT' ? '⚡ CACHED' : '◉ LIVE';
+  document.getElementById('tier-badge').textContent = 'P13.0 AUTONOMOUS';
+
+  const plan = data.execution_plan;
+  const tl   = plan?.threat_level || 'NOMINAL';
+
+  document.getElementById('orch-threat-level').innerHTML =
+    `<span class="threat-level ${esc(tl)}">${esc(tl)}</span> <span style="font-size:11px;color:var(--text-dim)">Overall platform threat level</span>`;
+
+  // Update KPI cards from orchestrator
+  const det = plan?.phases?.find(p => p.phase === 1)?.findings || {};
+  document.getElementById('kpi-open-cases').textContent = det.open_cases ?? '—';
+  document.getElementById('kpi-kev').textContent = det.kev_exploits ?? '—';
+
+  const kpiThreat = document.getElementById('kpi-threat');
+  kpiThreat.textContent = tl;
+  kpiThreat.closest('.kpi-card').className = 'kpi-card ' + (tl === 'CRITICAL' || tl === 'HIGH' ? 'critical' : tl === 'ELEVATED' ? 'high' : 'ok');
+  document.getElementById('kpi-threat-sub').textContent = `score: ${plan?.phases?.find(p => p.phase === 2)?.findings?.adaptive_risk_score ?? '—'}`;
+
+  // Phase list
+  let html = '';
+  for (const phase of (plan?.phases || [])) {
+    const st = phase.status;
+    const cls = st === 'ACTIVE' || st === 'MONITORING' ? 'active' : st === 'READY' || st === 'COMPLETE' ? 'ready' : st === 'PENDING' ? 'pending' : 'idle';
+    html += `<div class="phase-item">
+      <div class="phase-num ${cls}">${phase.phase}</div>
+      <div class="phase-body">
+        <div class="phase-name">${esc(phase.name)}</div>
+        <span class="phase-status-badge ${esc(st)}">${esc(st)}</span>
+        <div class="phase-detail">${buildPhaseDetail(phase)}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('phase-list').innerHTML = html || '<div class="empty">No phases.</div>';
+
+  // Subsystem grid
+  const subs = plan?.subsystems || {};
+  let subHtml = '';
+  for (const [name, status] of Object.entries(subs)) {
+    const active = status === 'ACTIVE';
+    subHtml += `<div class="subsystem-item">
+      <div class="sys-dot ${active ? 'active' : 'inactive'}"></div>
+      <div class="sys-name">${esc(name.replace(/_/g, ' '))}</div>
+    </div>`;
+  }
+  document.getElementById('subsystem-grid').innerHTML = subHtml;
+}
+
+function buildPhaseDetail(phase) {
+  const f = phase.findings || {};
+  if (phase.phase === 1) return `${esc(String(f.open_cases ?? 0))} open · ${esc(String(f.critical_cases ?? 0))} critical · ${esc(String(f.kev_exploits ?? 0))} KEV · ${esc(String(f.active_actors ?? 0))} actors`;
+  if (phase.phase === 2) return `Risk score ${esc(String(f.adaptive_risk_score ?? '—'))}/100 · ${esc(String(f.critical_cves ?? 0))} critical CVEs`;
+  if (phase.phase === 3) return `${(phase.actions || []).length} response actions ready`;
+  if (phase.phase === 4) return `${(phase.pending_decisions || []).length} decisions pending review`;
+  return '';
+}
+
+// ── P13.3 — Predictive Risk ──────────────────────────────────────────────────
+async function loadPredictiveRisk() {
+  const data = await apiGet('/api/autonomous/risk/predict');
+  if (!data?.success) { document.getElementById('risk-table-body').innerHTML = '<tr><td colspan="4" class="empty">Predictions unavailable.</td></tr>'; return; }
+
+  document.getElementById('pred-cache').textContent = data._cache === 'HIT' ? '⚡ CACHED' : '◉ LIVE';
+  document.getElementById('kpi-emerging').textContent = (data.emerging_risks || []).length;
+
+  // Trend row
+  const trend = data.priority_trend || {};
+  const trendColor = trend.direction === 'INCREASING' ? 'var(--danger)' : trend.direction === 'DECREASING' ? 'var(--accent3)' : 'var(--warn)';
+  document.getElementById('risk-trend-row').innerHTML = `
+    <div class="exec-metric"><strong style="color:${trendColor}">${esc(trend.direction || '—')}</strong>7d Trend</div>
+    <div class="exec-metric"><strong>${esc(String(trend.recent_7d_critical_cases ?? 0))}</strong>Critical (this wk)</div>
+    <div class="exec-metric"><strong>${esc(String(trend.open_cases ?? 0))}</strong>Open Cases</div>
+    <div class="exec-metric"><strong>${esc(String(data.operational_impact?.kev_active ?? 0))}</strong>KEV Active</div>
+  `;
+
+  // Risk table
+  let rows = '';
+  for (const r of (data.emerging_risks || []).slice(0, 12)) {
+    const level = r.risk_level || 'LOW';
+    const impactColor = r.operational_impact === 'HIGH' ? 'var(--danger)' : r.operational_impact === 'MEDIUM' ? 'var(--warn)' : 'var(--accent3)';
+    rows += `<tr>
+      <td style="font-family:monospace;color:var(--accent)">${esc(r.cve_id)}</td>
+      <td><span class="risk-badge ${esc(level)}">${esc(level)}</span> <span style="color:var(--text-dim);font-size:10px">${esc(String(r.risk_score ?? 0))}/100</span></td>
+      <td style="color:var(--text-muted)">${esc(String(r.likelihood ?? 0))}%</td>
+      <td style="color:${impactColor};font-weight:700;font-size:11px">${esc(r.operational_impact || '—')}</td>
+    </tr>`;
+  }
+  document.getElementById('risk-table-body').innerHTML = rows || '<tr><td colspan="4" class="empty">No predictions in last 24h. Run /api/predict/batch to generate.</td></tr>';
+}
+
+// ── P13.5 — Executive Brief ──────────────────────────────────────────────────
+function selectExecRole(el) {
+  document.querySelectorAll('.role-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  execRole = el.dataset.role;
+  loadExecutiveBrief();
+}
+
+async function loadExecutiveBrief() {
+  document.getElementById('exec-brief-text').textContent = 'Generating executive brief…';
+  document.getElementById('exec-metrics').innerHTML = '';
+  const data = await apiGet(`/api/autonomous/executive/brief?role=${encodeURIComponent(execRole)}`);
+  if (!data?.success) { document.getElementById('exec-brief-text').textContent = 'Brief unavailable.'; return; }
+
+  document.getElementById('exec-cache').textContent = data._cache === 'HIT' ? '⚡ CACHED' : '◉ LIVE';
+  document.getElementById('exec-brief-title').textContent = data.brief_title || '';
+  document.getElementById('exec-brief-text').textContent = data.executive_summary || '';
+
+  // Risk posture badge
+  const rp = data.risk_posture || {};
+  document.getElementById('exec-brief-title').innerHTML = `${esc(data.brief_title || '')} <span class="threat-level ${esc(rp.label)}" style="font-size:10px;margin-left:6px">${esc(rp.label || '')} ${esc(String(rp.score ?? ''))}/100</span>`;
+
+  // Metrics
+  const km = data.key_metrics || {};
+  let metHtml = '';
+  for (const [key, val] of Object.entries(km)) {
+    metHtml += `<div class="exec-metric"><strong>${esc(String(val))}</strong>${esc(key.replace(/_/g, ' '))}</div>`;
+  }
+  document.getElementById('exec-metrics').innerHTML = metHtml;
+
+  // Critical actions
+  const actions = data.critical_actions || [];
+  if (actions.length > 0) {
+    document.getElementById('exec-actions-title').style.display = 'block';
+    let aHtml = '';
+    for (const a of actions) {
+      aHtml += `<div class="action-item">
+        <span class="action-pri ${esc(a.priority || 'HIGH')}">${esc(a.priority || 'HIGH')}</span>
+        <div>
+          <div class="action-text">${esc(a.action)}</div>
+          ${a.effort ? `<div style="font-size:10px;color:var(--text-dim)">Effort: ${esc(a.effort)}</div>` : ''}
+        </div>
+      </div>`;
+    }
+    document.getElementById('exec-actions').innerHTML = aHtml;
+  } else {
+    document.getElementById('exec-actions-title').style.display = 'none';
+    document.getElementById('exec-actions').innerHTML = '';
+  }
+}
+
+// ── P13.4 — Workflow & SLA Status ────────────────────────────────────────────
+async function loadWorkflowStatus() {
+  const data = await apiGet('/api/autonomous/workflow/status');
+  if (!data?.success) { document.getElementById('sla-bars').innerHTML = '<div class="empty">Workflow data unavailable.</div>'; return; }
+
+  document.getElementById('wf-cache').textContent = data._cache === 'HIT' ? '⚡ CACHED' : '◉ LIVE';
+
+  const counts = data.sla_dashboard?.counts || {};
+  const total  = Object.values(counts).reduce((s, v) => s + v, 0) || 1;
+
+  document.getElementById('kpi-sla-breached').textContent = counts.breached ?? 0;
+
+  let barsHtml = '';
+  for (const [label, cls, count] of [
+    ['Breached', 'breached', counts.breached || 0],
+    ['At Risk',  'at_risk',  counts.at_risk  || 0],
+    ['Healthy',  'healthy',  counts.healthy  || 0],
+  ]) {
+    const pct = Math.round((count / total) * 100);
+    barsHtml += `<div class="sla-bar-wrap">
+      <div class="sla-bar-label"><span>${esc(label)}</span><span>${count}</span></div>
+      <div class="sla-bar"><div class="sla-bar-fill ${esc(cls)}" style="width:${pct}%"></div></div>
+    </div>`;
+  }
+  document.getElementById('sla-bars').innerHTML = barsHtml;
+
+  // Escalations
+  const escs = data.escalations || [];
+  if (escs.length > 0) {
+    document.getElementById('escalation-section').style.display = 'block';
+    let eHtml = '';
+    for (const e of escs.slice(0, 4)) {
+      eHtml += `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;font-size:11px;border-bottom:1px solid var(--border)">
+        <span class="sev-tag ${esc(e.severity || 'HIGH')}">${esc(e.severity || '?')}</span>
+        <span style="font-family:monospace;color:var(--accent)">${esc(e.case_number || e.case_id)}</span>
+        <span style="color:var(--danger);font-weight:600">${esc(e.reason || '')}</span>
+      </div>`;
+    }
+    document.getElementById('escalation-list').innerHTML = eHtml;
+  } else {
+    document.getElementById('escalation-section').style.display = 'none';
+  }
+
+  // Unassigned cases
+  const queue = data.assignments?.queue || [];
+  let caseHtml = '';
+  for (const c of queue.slice(0, 6)) {
+    caseHtml += `<div class="wf-case">
+      <span class="sev-tag ${esc(c.severity || 'MEDIUM')}">${esc(c.severity || '?')}</span>
+      <span style="font-family:monospace;color:var(--accent);font-size:11px">${esc(c.case_number || c.id)}</span>
+      <span style="color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title || '')}</span>
+    </div>`;
+  }
+  document.getElementById('wf-case-list').innerHTML = caseHtml || '<div class="empty">All cases assigned.</div>';
+
+  // Automation KPIs
+  document.getElementById('kpi-auto-health').textContent = (data.workflow_executions?.success_rate_pct ?? data.automation_health?.success_rate_pct ?? '—') + '%';
+  document.getElementById('kpi-queue').textContent = data.automation_health?.queue_depth ?? '—';
+
+  // Audit trail
+  const trail = data.audit_trail || [];
+  let tHtml = '';
+  for (const t of trail.slice(0, 6)) {
+    tHtml += `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
+      <span style="color:var(--accent);font-size:10px;font-family:monospace">${esc(t.event_type || '?')}</span>
+      <span style="color:var(--text-dim);flex:1">${esc(t.actor || 'system')}</span>
+      <span style="color:var(--text-dim);font-size:10px">${esc(t.occurred_at ? new Date(t.occurred_at).toLocaleTimeString() : '')}</span>
+    </div>`;
+  }
+  document.getElementById('audit-trail').innerHTML = tHtml || '<div class="empty">No recent activity.</div>';
+}
+
+// ── P13.2 — Automated Incident Response ─────────────────────────────────────
+async function loadIR() {
+  const caseId = document.getElementById('ir-case-input').value.trim();
+  if (!caseId) { showNotif('Enter a case ID'); return; }
+  document.getElementById('ir-panel').innerHTML = '<div class="empty">Generating IR plan…</div>';
+  const data = await apiGet(`/api/autonomous/incident-response/${encodeURIComponent(caseId)}`);
+  if (!data?.success) {
+    document.getElementById('ir-panel').innerHTML = `<div class="empty" style="color:var(--danger)">${data?.error ? esc(data.error) : 'Case not found or access denied.'}</div>`;
+    return;
+  }
+
+  const c = data.case || {};
+  let html = `<div style="margin-bottom:12px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="sev-tag ${esc(c.severity || 'MEDIUM')}">${esc(c.severity)}</span>
+      <span style="font-family:monospace;color:var(--accent)">${esc(c.case_number)}</span>
+      <span style="color:var(--text-muted);font-size:12px">${esc(c.title)}</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim)">Status: ${esc(c.status)} · IOCs: ${esc(String(data.ioc_count ?? 0))} · Timeline: ${esc(String(data.timeline_events ?? 0))} events</div>
+  </div>`;
+
+  const renderPlan = (title, items, keyField = 'action') => {
+    if (!items?.length) return '';
+    let s = `<div class="section-title" style="margin-bottom:6px">${esc(title)}</div>`;
+    for (const item of items.slice(0, 4)) {
+      const pri = item.priority || 'MEDIUM';
+      const priColor = pri === 'IMMEDIATE' || pri === 'HIGH' ? 'var(--danger)' : pri === 'MEDIUM' ? 'var(--warn)' : 'var(--accent3)';
+      s += `<div class="plan-step">
+        <div class="plan-step-num">${item.step ?? '•'}</div>
+        <div style="flex:1">
+          <div class="plan-step-text">${esc(item[keyField] || item.action || '')}</div>
+          <div class="plan-step-meta" style="color:${priColor}">${esc(pri)}${item.effort ? ' · ' + esc(item.effort) : ''}${item.timeline ? ' · ' + esc(item.timeline) : ''}</div>
+        </div>
+      </div>`;
+    }
+    return s;
+  };
+
+  html += renderPlan('Containment Plan', data.containment_plan);
+  html += renderPlan('Remediation Plan', data.remediation_plan);
+  html += renderPlan('Recovery Plan',    data.recovery_plan);
+
+  const checks = (data.validation_checklist || []).filter(c => c.required);
+  if (checks.length > 0) {
+    html += `<div class="section-title" style="margin-bottom:6px">Validation Checklist</div>`;
+    for (const ch of checks.slice(0, 5)) {
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-dim);width:16px">☐</span>
+        <span style="color:var(--text-muted)">${esc(ch.check)}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--text-dim)">${esc(ch.category)}</span>
+      </div>`;
+    }
+  }
+
+  document.getElementById('ir-panel').innerHTML = html;
+  showNotif(`IR plan generated for ${c.case_number || caseId}`);
+}
+
+// ── P13.7 — Observability ─────────────────────────────────────────────────────
+async function loadObservability() {
+  const data = await apiGet('/api/autonomous/observability');
+  if (!data?.success) {
+    document.getElementById('obs-infra').innerHTML = '<div class="empty">Observability unavailable.</div>';
+    return;
+  }
+
+  const inf = data.infrastructure || {};
+  const perf = data.performance || {};
+  const ops  = data.operations  || {};
+
+  document.getElementById('kpi-cache').textContent = (perf.cache_hit_ratio_pct ?? '—') + '%';
+
+  const d1ms = inf.d1_latency_ms;
+  const kvms = inf.kv_latency_ms;
+  const d1cls = d1ms < 0 ? '' : d1ms < 50 ? 'good' : d1ms < 200 ? 'warn' : 'bad';
+  const kvcls = kvms < 0 ? '' : kvms < 10 ? 'good' : kvms < 50  ? 'warn' : 'bad';
+
+  document.getElementById('obs-infra').innerHTML = `
+    <div class="obs-row"><div class="obs-label">D1 Latency</div><div class="obs-val ${d1cls}">${d1ms >= 0 ? d1ms + ' ms' : 'N/A'}</div></div>
+    <div class="obs-row"><div class="obs-label">KV Latency</div><div class="obs-val ${kvcls}">${kvms >= 0 ? kvms + ' ms' : 'N/A'}</div></div>
+    <div class="obs-row"><div class="obs-label">D1 Health</div><div class="obs-val ${inf.d1_healthy ? 'good' : 'bad'}">${inf.d1_healthy ? 'Healthy' : 'Degraded'}</div></div>
+    <div class="obs-row"><div class="obs-label">KV Health</div><div class="obs-val ${inf.kv_healthy ? 'good' : 'bad'}">${inf.kv_healthy ? 'Healthy' : 'Degraded'}</div></div>
+    <div class="obs-row"><div class="obs-label">Worker</div><div class="obs-val good">Operational</div></div>
+  `;
+
+  const sr = ops.automation_success_rate_pct ?? 100;
+  const fr = ops.failure_rate_pct ?? 0;
+  document.getElementById('obs-ops').innerHTML = `
+    <div class="obs-row"><div class="obs-label">Cache Hit Ratio</div><div class="obs-val ${perf.cache_hit_ratio_pct >= 66 ? 'good' : perf.cache_hit_ratio_pct >= 33 ? 'warn' : 'bad'}">${perf.cache_hit_ratio_pct ?? '—'}%</div></div>
+    <div class="obs-row"><div class="obs-label">Cache Keys Warm</div><div class="obs-val">${perf.cache_keys_warm ?? 0} / ${perf.cache_keys_probed ?? 0}</div></div>
+    <div class="obs-row"><div class="obs-label">Automation Success</div><div class="obs-val ${sr >= 80 ? 'good' : sr >= 50 ? 'warn' : 'bad'}">${sr}%</div></div>
+    <div class="obs-row"><div class="obs-label">Failure Rate</div><div class="obs-val ${fr <= 5 ? 'good' : fr <= 20 ? 'warn' : 'bad'}">${fr}%</div></div>
+    <div class="obs-row"><div class="obs-label">Queue Depth</div><div class="obs-val">${ops.queue_depth ?? '—'} open</div></div>
+    <div class="obs-row"><div class="obs-label">Worker Utilization</div><div class="obs-val good">${esc(String(ops.worker_utilization || 'nominal'))}</div></div>
+  `;
+
+  // Subsystems
+  const subs = data.subsystems || {};
+  let subHtml = '';
+  for (const [name, status] of Object.entries(subs)) {
+    const active = status === 'ACTIVE';
+    subHtml += `<div class="subsystem-item">
+      <div class="sys-dot ${active ? 'active' : 'inactive'}"></div>
+      <div class="sys-name" style="font-size:10px">${esc(name.replace(/_/g, ' '))}</div>
+    </div>`;
+  }
+  document.getElementById('obs-subsystems').innerHTML = subHtml;
+}
+
+// ── Session restore ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('cdb_api_key');
+  if (saved) {
+    apiKey = saved;
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadAll();
+  }
+  document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') authenticate(); });
+});
+</script>
+</body>
+</html>
