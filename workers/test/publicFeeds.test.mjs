@@ -13,7 +13,7 @@ const ROWS = [
 
 function mockEnv({ tier1Throws = false } = {}) {
   return {
-    DB: {
+    SECURITY_HUB_DB: {
       prepare(sql) {
         let b = [];
         return {
