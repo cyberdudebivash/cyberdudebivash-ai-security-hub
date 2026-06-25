@@ -136,3 +136,28 @@ describe('reportingEngine — COMPLIANCE report type', () => {
     expect(html).toContain('Gap Analysis');
   });
 });
+
+describe('reportingEngine — PPTX (slide-deck) format', () => {
+  it('renders a navigable slide deck instead of the single-page report shell', async () => {
+    const env = { DB: makeDB(), KV: makeKV() };
+    const html = await createAndDownloadHTML(
+      env, { role: 'enterprise', tier: 'enterprise', userId: 'u1', org_id: 'org-A' },
+      { type: 'SECURITY_POSTURE', format: 'PPTX', config: {} },
+    );
+    expect(html).toContain('class="slide title-slide active"');
+    expect(html).toContain('class="slide closing-slide"');
+    expect(html).toContain('page-break-after: always');
+    // Same KPI/section content, just re-wrapped into slides — no duplicate data logic.
+    expect(html).toContain('Executive Summary');
+    expect(html).toContain('Recommendations');
+  });
+
+  it('still renders the single-page shell (no slide markup) for the default HTML format', async () => {
+    const env = { DB: makeDB(), KV: makeKV() };
+    const html = await createAndDownloadHTML(
+      env, { role: 'enterprise', tier: 'enterprise', userId: 'u1', org_id: 'org-A' },
+      { type: 'SECURITY_POSTURE', config: {} },
+    );
+    expect(html).not.toContain('class="slide');
+  });
+});

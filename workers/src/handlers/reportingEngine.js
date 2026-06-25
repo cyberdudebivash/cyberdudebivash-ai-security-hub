@@ -152,9 +152,112 @@ ${bodyHTML}
 }
 
 /**
+ * Slide-deck-style HTML export ("PowerPoint" format). Shares the same
+ * print-to-PDF mechanism as buildReportShell — Workers has no binary
+ * PDF/PPTX library, so the deck renders as styled HTML with one element per
+ * slide: navigable on-screen (buttons / arrow keys) and paginated via
+ * @media print for a "print → Save as PDF" export. Consumes the SAME
+ * bodyHTML produced by generateReportHTML's existing report-type branches —
+ * split into slides by its top-level .kpi-grid/.section blocks — so it adds
+ * zero duplicate report-type logic.
+ */
+export function buildSlideDeckShell({ brandName, primaryColor, title, metaLine, bodyHTML, footerNote }) {
+  const slides = bodyHTML
+    .split(/(?=<div class="(?:kpi-grid|section)">)/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => `<section class="slide">${s}</section>`)
+    .join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<style>
+  :root { --primary: ${primaryColor}; --dark: #0a0e1a; --surface: #0f1729; --border: #1e293b; --text: #e2e8f0; --muted: #64748b; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--dark); color: var(--text); font-family: system-ui, sans-serif; }
+  .deck { position: relative; }
+  .slide { display: none; flex-direction: column; justify-content: center; min-height: 100vh; padding: 56px 64px; }
+  .slide.active { display: flex; }
+  .slide.title-slide, .slide.closing-slide { align-items: center; text-align: center; }
+  .slide h1 { font-size: 36px; font-weight: 800; color: var(--primary); margin-bottom: 12px; }
+  .slide .meta { font-size: 13px; color: var(--muted); }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 32px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .kpi-value { font-size: 28px; font-weight: 800; margin: 4px 0; }
+  .kpi-sub { font-size: 11px; color: var(--muted); }
+  .section h2 { font-size: 22px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--surface); padding: 8px 12px; text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; }
+  .critical { background: #ef444433; color: #ef4444; }
+  .high { background: #f9731633; color: #f97316; }
+  .medium { background: #eab30833; color: #eab308; }
+  .low { background: #22c55e33; color: #22c55e; }
+  .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 14px; background: var(--surface); border-top: 1px solid var(--border); font-size: 13px; }
+  .nav-bar button { background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 6px 16px; font-size: 13px; cursor: pointer; }
+  .nav-bar button:disabled { opacity: .4; cursor: default; }
+  .slide-counter { color: var(--muted); }
+  .footer-note { font-size: 11px; color: var(--muted); margin-top: 24px; }
+  @media print {
+    body { background: white; color: black; }
+    .nav-bar { display: none; }
+    .slide { display: flex !important; page-break-after: always; }
+    .slide h1 { color: var(--primary); }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+  <section class="slide title-slide active">
+    <h1>${brandName}</h1>
+    <div class="meta">${metaLine}</div>
+  </section>
+  ${slides}
+  <section class="slide closing-slide">
+    <h1>${brandName}</h1>
+    <div class="footer-note">${footerNote || `${brandName} · Confidential · CYBERDUDEBIVASH® Platform v33.0`}</div>
+  </section>
+</div>
+<div class="nav-bar">
+  <button id="rdPrev" onclick="rdNav(-1)">&larr; Prev</button>
+  <span class="slide-counter"><span id="rdNum">1</span> / <span id="rdTotal"></span></span>
+  <button id="rdNext" onclick="rdNav(1)">Next &rarr;</button>
+</div>
+<script>
+(function () {
+  var slides = document.querySelectorAll('.slide');
+  var i = 0;
+  document.getElementById('rdTotal').textContent = slides.length;
+  function render() {
+    slides.forEach(function (s, idx) { s.classList.toggle('active', idx === i); });
+    document.getElementById('rdNum').textContent = i + 1;
+    document.getElementById('rdPrev').disabled = i === 0;
+    document.getElementById('rdNext').disabled = i === slides.length - 1;
+  }
+  window.rdNav = function (delta) {
+    i = Math.max(0, Math.min(slides.length - 1, i + delta));
+    render();
+  };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') rdNav(1);
+    if (e.key === 'ArrowLeft') rdNav(-1);
+  });
+  render();
+})();
+</script>
+</body></html>`;
+}
+
+/**
  * Generate in-memory HTML report content from existing D1 data.
  */
-async function generateReportHTML(type, orgId, config, env, actorUserId) {
+async function generateReportHTML(type, orgId, config, env, actorUserId, format) {
   const db = env.DB;
   const ts = new Date().toLocaleString();
 
@@ -343,7 +446,10 @@ ${assessments.map(({ label, result }) => `
 </div>`;
   }
 
-  return buildReportShell({
+  const isSlideDeck = /^(pptx|ppt|slides?|deck)$/i.test(format || '');
+  const shell = isSlideDeck ? buildSlideDeckShell : buildReportShell;
+
+  return shell({
     brandName,
     primaryColor,
     title: `${brandName} — ${type} Report`,
@@ -389,7 +495,7 @@ export async function handleCreateReport(req, env) {
     // Partner scoping for per-tenant (MSSP) reports — same resolution rule as
     // msspTenantPlatform.js's partnerScope(): userId/user_id, never client-supplied.
     const actorUserId = req.user.userId ?? req.user.user_id ?? null;
-    const html = await generateReportHTML(type, orgId, config, env, actorUserId);
+    const html = await generateReportHTML(type, orgId, config, env, actorUserId, format);
     const token = genToken();
     const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
 
