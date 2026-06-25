@@ -125,7 +125,7 @@ import {
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
 import { handleAIRedTeamPro } from './handlers/aiRedTeamPro.js';
-import { handleDeveloperPortal } from './handlers/developerPortal.js';
+import { handleDeveloperPortal, getOpenAPISpec } from './handlers/developerPortal.js';
 import { handleExecutiveCommandCenter } from './handlers/executiveCommandCenter.js';
 import { handleServiceCatalog, handleBookAIService, handleGetAIServiceEngagement } from './handlers/aiServices.js';
 
@@ -6326,6 +6326,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   // v20.0 GOD MODE: DEVELOPER PORTAL / API ECONOMY
   if (path.startsWith('/api/developer/')) {
     return handleDeveloperPortal(request, env);
+  }
+
+  // P8.0-001: /api/openapi.json — top-level alias for /api/developer/openapi.json (same generator, zero duplication)
+  if (path === '/api/openapi.json' && method === 'GET') {
+    return withSecurityHeaders(withCors(await getOpenAPISpec(request, env), request));
   }
 
   // v20.0 GOD MODE: EXECUTIVE COMMAND CENTER PRO (FAIR, Board, ROI)

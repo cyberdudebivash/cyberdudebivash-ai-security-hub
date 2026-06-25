@@ -90,6 +90,166 @@ const API_CATALOG = [
       { method:'GET', path:'/findings', summary:'List findings', query_params:{ severity:'string', status:'string' }, response_schema:{ findings:'array', total:'integer' } },
       { method:'POST', path:'/scan', summary:'Trigger scan', request_schema:{ target:'string', scan_type:'string' }, response_schema:{ scanId:'uuid', status:'string' } }
     ]
+  },
+  {
+    group: 'Radar', prefix: '/api/radar',
+    description: 'Real-time global threat radar — CVE signals, trending threats, actor and campaign intelligence',
+    tier: 'FREE', endpoints: [
+      { method:'GET', path:'/snapshot', summary:'Unified radar snapshot', description:'Public snapshot of all threat signals, 5-minute edge cache.', response_schema:{ signals:'array', generatedAt:'datetime' } },
+      { method:'GET', path:'/latest', summary:'Latest CVE signals', query_params:{ limit:'integer(default:50)' }, response_schema:{ signals:'array', total:'integer' } },
+      { method:'GET', path:'/summary', summary:'Severity distribution summary', response_schema:{ critical:'integer', high:'integer', medium:'integer', low:'integer' } },
+      { method:'GET', path:'/trending', summary:'Trending threats', description:'Top threats ranked by EPSS/CVSS/risk score.', response_schema:{ trending:'array' } },
+      { method:'GET', path:'/threat-actors', summary:'Threat actor intelligence', description:'MITRE ATT&CK correlated threat actor profiles (top 20).', response_schema:{ actors:'array', total:'integer' } },
+      { method:'GET', path:'/campaigns', summary:'Active campaign summaries', response_schema:{ campaigns:'array', total:'integer' } },
+      { method:'GET', path:'/sectors', summary:'Industry sector threat breakdown', response_schema:{ sectors:'array' } },
+      { method:'GET', path:'/enterprise', summary:'Full enterprise radar snapshot', description:'Authenticated, PRO+ tier. Extended risk-scored signal set.', response_schema:{ signals:'array', riskScore:'object' } },
+      { method:'GET', path:'/enterprise/signals', summary:'Extended enterprise signals', description:'Authenticated, PRO+ tier. Signal list with confidence scores.', response_schema:{ signals:'array', confidence:'object' } }
+    ]
+  },
+  {
+    group: 'Customer Intelligence', prefix: '/api/customer',
+    description: 'Personalized threat intelligence and asset risk monitoring for authenticated customer organizations',
+    tier: 'STARTER', endpoints: [
+      { method:'GET', path:'/profile', summary:'Get organization profile', response_schema:{ org:'object' } },
+      { method:'PUT', path:'/profile', summary:'Update organization profile', request_schema:{ name:'string', industry:'string', size:'string' }, response_schema:{ success:'boolean', org:'object' } },
+      { method:'GET', path:'/radar', summary:'Personalized radar', description:"Radar signals filtered by the customer's registered assets.", response_schema:{ signals:'array' } },
+      { method:'GET', path:'/risk', summary:'Organization risk assessment', response_schema:{ riskScore:'integer', distribution:'object' } },
+      { method:'GET', path:'/assets', summary:'List monitored assets', response_schema:{ assets:'array', total:'integer' } },
+      { method:'POST', path:'/assets', summary:'Register asset for monitoring', request_schema:{ domain:'string(required)', type:'string' }, response_schema:{ success:'boolean', id:'uuid' } },
+      { method:'DELETE', path:'/assets/{assetId}', summary:'Remove monitored asset', response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/report', summary:'Organization threat report', response_schema:{ report:'object' } }
+    ]
+  },
+  {
+    group: 'Enterprise Intelligence', prefix: '/api/enterprise',
+    description: 'Risk-scored intelligence, campaign tracking, and threat actor correlation for enterprise tier customers',
+    tier: 'PRO', endpoints: [
+      { method:'GET', path:'/intelligence', summary:'Enterprise risk-scored signals', response_schema:{ signals:'array', riskScore:'object' } },
+      { method:'GET', path:'/risk', summary:'Risk-ranked signals', response_schema:{ signals:'array', severityDistribution:'object' } },
+      { method:'GET', path:'/campaigns', summary:'Campaign intelligence', description:'Campaign data with sector targeting.', response_schema:{ campaigns:'array' } },
+      { method:'GET', path:'/actors', summary:'Threat actor intelligence', description:'MITRE ATT&CK correlated actor profiles. ENTERPRISE tier.', response_schema:{ actors:'array' } }
+    ]
+  },
+  {
+    group: 'Operations', prefix: '/api/ops',
+    description: 'Platform operations — feature flags, observability metrics, and notification management',
+    tier: 'ADMIN', endpoints: [
+      { method:'GET', path:'/flags', summary:'Get feature flags', response_schema:{ flags:'object' } },
+      { method:'PUT', path:'/flags', summary:'Set feature flag', description:'Admin only.', request_schema:{ key:'string(required)', enabled:'boolean(required)' }, response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/metrics', summary:'Operations metrics', response_schema:{ metrics:'object' } },
+      { method:'GET', path:'/notifications', summary:'Get personal notifications', response_schema:{ notifications:'array' } }
+    ]
+  },
+  {
+    group: 'Automation', prefix: '/api/auto',
+    description: 'Enterprise automation — webhooks, scheduled reports, team management, usage and governance',
+    tier: 'PRO', endpoints: [
+      { method:'GET', path:'/webhooks', summary:'List webhooks', response_schema:{ webhooks:'array' } },
+      { method:'POST', path:'/webhooks', summary:'Create webhook', request_schema:{ url:'string(required)', events:'array[string](required)' }, response_schema:{ success:'boolean', id:'uuid', secret:'string' } },
+      { method:'PATCH', path:'/webhooks/{whId}', summary:'Update webhook', response_schema:{ success:'boolean' } },
+      { method:'DELETE', path:'/webhooks/{whId}', summary:'Delete webhook', response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/webhooks/{whId}/logs', summary:'Get webhook delivery logs', response_schema:{ logs:'array' } },
+      { method:'GET', path:'/reports', summary:'List scheduled reports', response_schema:{ reports:'array' } },
+      { method:'POST', path:'/reports', summary:'Create scheduled report', request_schema:{ cadence:'enum[daily,weekly,monthly]', recipients:'array[string]' }, response_schema:{ success:'boolean', id:'uuid' } },
+      { method:'PATCH', path:'/reports/{rpId}', summary:'Update scheduled report', response_schema:{ success:'boolean' } },
+      { method:'DELETE', path:'/reports/{rpId}', summary:'Delete scheduled report', response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/team', summary:'List team members', response_schema:{ members:'array', roles:'array' } },
+      { method:'POST', path:'/team', summary:'Invite team member', request_schema:{ email:'string(required)', role:'enum[ADMIN,ANALYST,VIEWER]' }, response_schema:{ success:'boolean', id:'uuid' } },
+      { method:'PATCH', path:'/team/{mid}', summary:'Update member role', response_schema:{ success:'boolean' } },
+      { method:'DELETE', path:'/team/{mid}', summary:'Remove team member', response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/usage', summary:'API usage dashboard', response_schema:{ usage:'object' } },
+      { method:'GET', path:'/governance', summary:'API governance manifest', description:'Endpoint registry, deprecations, and per-tier throttle limits.', response_schema:{ version:'string', endpoints:'array', deprecations:'array', throttling:'object' } },
+      { method:'GET', path:'/metrics', summary:'Enterprise automation metrics', description:'OWNER/ADMIN only.', response_schema:{ active_organizations:'integer', active_api_keys:'integer', webhooks:'object', api_health:'object' } }
+    ]
+  },
+  {
+    group: 'API Key Self-Service', prefix: '/api/self',
+    description: 'Self-service API key lifecycle management for authenticated organizations',
+    tier: 'STARTER', endpoints: [
+      { method:'GET', path:'/keys', summary:'List API keys', response_schema:{ keys:'array' } },
+      { method:'POST', path:'/keys', summary:'Generate API key', request_schema:{ name:'string', scopes:'array[string]' }, response_schema:{ success:'boolean', id:'uuid', key:'string' } },
+      { method:'PATCH', path:'/keys/{keyId}', summary:'Update key label', response_schema:{ success:'boolean' } },
+      { method:'DELETE', path:'/keys/{keyId}', summary:'Revoke API key', response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/keys/{keyId}/usage', summary:'Get key usage metrics', response_schema:{ usage:'object' } },
+      { method:'POST', path:'/keys/{keyId}/rotate', summary:'Rotate API key', response_schema:{ success:'boolean', newKey:'string' } }
+    ]
+  },
+  {
+    group: 'Developer Platform', prefix: '/api/developer',
+    description: 'API explorer, SDK code generation, webhook tooling, rate-limit visibility, changelog and OpenAPI spec',
+    tier: 'FREE', endpoints: [
+      { method:'GET', path:'/endpoints', summary:'List API catalog', query_params:{ group:'string', tier:'string' }, response_schema:{ groups:'array', totalEndpoints:'integer' } },
+      { method:'POST', path:'/endpoints/search', summary:'Search API catalog', request_schema:{ query:'string' }, response_schema:{ results:'array' } },
+      { method:'GET', path:'/endpoints/{slug}', summary:'Get endpoint detail + SDK examples', response_schema:{ summary:'string', sdk_examples:'object' } },
+      { method:'POST', path:'/sdk/generate', summary:'Generate SDK code snippet', request_schema:{ language:'enum[python,javascript,typescript,go,curl]', endpoint_path:'string', endpoint_method:'string' }, response_schema:{ language:'string', code:'string' } },
+      { method:'GET', path:'/sdk/languages', summary:'List supported SDK languages', response_schema:{ languages:'array' } },
+      { method:'GET', path:'/webhooks/events', summary:'List developer webhook event catalog', query_params:{ category:'string' }, response_schema:{ events:'array', categories:'array' } },
+      { method:'POST', path:'/webhooks/register', summary:'Register a developer webhook', request_schema:{ url:'string(required)', events:'array[string](required)' }, response_schema:{ success:'boolean', id:'uuid', secret:'string' } },
+      { method:'GET', path:'/webhooks', summary:'List developer webhooks', response_schema:{ webhooks:'array' } },
+      { method:'DELETE', path:'/webhooks/{id}', summary:'Delete developer webhook', response_schema:{ success:'boolean' } },
+      { method:'POST', path:'/webhooks/{id}/test', summary:'Send test webhook delivery', response_schema:{ deliveryResult:'object' } },
+      { method:'GET', path:'/rate-limits', summary:'Get rate limit tiers', query_params:{ tier:'string' }, response_schema:{ tier:'string', limits:'object', allTiers:'object' } },
+      { method:'GET', path:'/rate-limits/usage', summary:'Get current usage against rate limits', response_schema:{ currentPeriod:'object' } },
+      { method:'GET', path:'/changelog', summary:'Platform changelog', query_params:{ limit:'integer', type:'string' }, response_schema:{ changelog:'array', latestVersion:'string' } },
+      { method:'POST', path:'/playground/execute', summary:'Execute request in API playground', request_schema:{ endpoint:'string(required)', method:'string', payload:'object' }, response_schema:{ latencyMs:'integer', requestEchoed:'object' } },
+      { method:'POST', path:'/keys', summary:'Create developer API key', request_schema:{ name:'string', scopes:'array[string]', expires_in_days:'integer' }, response_schema:{ success:'boolean', id:'uuid', key:'string' } },
+      { method:'GET', path:'/keys', summary:'List developer API keys', response_schema:{ keys:'array' } },
+      { method:'DELETE', path:'/keys/{id}', summary:'Revoke developer API key', response_schema:{ success:'boolean' } },
+      { method:'POST', path:'/keys/{id}/rotate', summary:'Rotate developer API key', response_schema:{ success:'boolean', newKey:'string' } },
+      { method:'GET', path:'/openapi.json', summary:'OpenAPI 3.1 specification', description:'Full machine-readable spec for every documented endpoint in this catalog. Also aliased at /api/openapi.json.', response_schema:{} }
+    ]
+  },
+  {
+    group: 'Payments & Billing', prefix: '/api',
+    description: 'Subscription plans, Razorpay payment processing, and usage-based billing',
+    tier: 'FREE', endpoints: [
+      { method:'GET', path:'/subscription/plans', summary:'List subscription plans', response_schema:{ plans:'array' } },
+      { method:'POST', path:'/subscription/create', summary:'Create subscription order', request_schema:{ plan:'enum[STARTER,PRO,ENTERPRISE](required)' }, response_schema:{ orderId:'string', amount:'integer' } },
+      { method:'POST', path:'/subscription/activate', summary:'Verify payment and activate plan', request_schema:{ razorpay_order_id:'string', razorpay_payment_id:'string', razorpay_signature:'string' }, response_schema:{ success:'boolean', plan:'string' } },
+      { method:'GET', path:'/subscription/plan', summary:'Get current active plan', response_schema:{ plan:'string', status:'string' } },
+      { method:'GET', path:'/payment-config', summary:'Get canonical payment configuration', response_schema:{ keyId:'string', currency:'string' } },
+      { method:'POST', path:'/payment/create-order', summary:'Create Razorpay order', request_schema:{ amount:'integer(required)', plan:'string' }, response_schema:{ orderId:'string' } },
+      { method:'POST', path:'/payment/verify', summary:'Verify Razorpay payment signature', request_schema:{ razorpay_order_id:'string', razorpay_payment_id:'string', razorpay_signature:'string' }, response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/payment/status/{id}', summary:'Get payment status', response_schema:{ status:'string' } },
+      { method:'GET', path:'/billing/usage', summary:'Get usage and quota status', response_schema:{ usage:'object', quota:'object' } },
+      { method:'POST', path:'/billing/upgrade', summary:'Initiate plan upgrade', request_schema:{ target_plan:'string(required)' }, response_schema:{ success:'boolean' } },
+      { method:'GET', path:'/billing/plans', summary:'Enriched plan comparison', response_schema:{ plans:'array' } },
+      { method:'POST', path:'/billing/trial/start', summary:'Activate 14-day PRO trial', response_schema:{ success:'boolean', trialEndsAt:'datetime' } },
+      { method:'GET', path:'/billing/limits', summary:'Get quota enforcement state', response_schema:{ limits:'object' } },
+      { method:'GET', path:'/billing/invoices', summary:'Get invoice history', response_schema:{ invoices:'array' } },
+      { method:'POST', path:'/billing/downgrade', summary:'Schedule plan downgrade', request_schema:{ target_plan:'string(required)' }, response_schema:{ success:'boolean', effectiveAt:'datetime' } }
+    ]
+  },
+  {
+    group: 'SIEM Export', prefix: '/api/export',
+    description: 'Export threat intelligence data to SIEM/SOAR-ready formats',
+    tier: 'PRO', endpoints: [
+      { method:'GET', path:'/siem', summary:'Export capabilities and format list', response_schema:{ formats:'array', planLimits:'object' } },
+      { method:'POST', path:'/siem', summary:'Export threat data', description:'Supports JSON, CEF, STIX 2.1, Sigma, CSV, NDJSON, IOC Bundle, and Executive PDF. Format availability gated by plan tier.', query_params:{ format:'enum[json,cef,stix,sigma,csv,ndjson,ioc_bundle,executive_pdf]', source:'string', hours:'integer' }, response_schema:{} },
+      { method:'GET', path:'/siem/stream', summary:'Streaming NDJSON export', description:'ENTERPRISE only. For Logstash/Fluentd ingestion.', response_schema:{} }
+    ]
+  },
+  {
+    group: 'SIEM/SOAR Integrations', prefix: '/api/integrations',
+    description: 'Native deployment connectors to third-party SIEM/SOAR platforms',
+    tier: 'ENTERPRISE', endpoints: [
+      { method:'GET', path:'', summary:'List available integration platforms', response_schema:{ platforms:'array' } },
+      { method:'POST', path:'/configure', summary:'Configure platform connection', request_schema:{ platform:'string(required)', config:'object(required)' }, response_schema:{ success:'boolean' } },
+      { method:'POST', path:'/deploy', summary:'Deploy a rule to a configured platform', request_schema:{ platform:'string(required)', rule:'object(required)' }, response_schema:{ success:'boolean', deployedAt:'datetime' } },
+      { method:'POST', path:'/test', summary:'Test platform connection', request_schema:{ platform:'string(required)' }, response_schema:{ success:'boolean', latencyMs:'integer' } },
+      { method:'GET', path:'/deploy-log', summary:'Get deployment history', response_schema:{ log:'array' } },
+      { method:'DELETE', path:'/{platform}', summary:'Remove platform configuration', response_schema:{ success:'boolean' } }
+    ]
+  },
+  {
+    group: 'Platform Health', prefix: '/api',
+    description: 'Service health, readiness, and dependency status — unauthenticated, used for uptime monitoring',
+    tier: 'FREE', endpoints: [
+      { method:'GET', path:'/health', summary:'Service health check', description:'60-second edge cache.', response_schema:{ status:'string', bindings:'object' } },
+      { method:'GET', path:'/platform/health', summary:'Production health check', description:'Real probes against D1, KV, and external dependencies.', response_schema:{ status:'string', checks:'object' } },
+      { method:'GET', path:'/platform/health/deep', summary:'Deep health check', description:'Extended probe across all subsystems.', response_schema:{ status:'string', subsystems:'object' } },
+      { method:'GET', path:'/platform/health/services', summary:'Per-service health status', response_schema:{ services:'array' } }
+    ]
   }
 ];
 
@@ -269,7 +429,7 @@ async function listEndpoints(request, env) {
   if (tier) catalog = catalog.filter(g => g.tier === tier.toUpperCase());
   const totalEndpoints = catalog.reduce((s, g) => s + g.endpoints.length, 0);
   return jsonResp({ groups: catalog, totalGroups: catalog.length, totalEndpoints,
-    tiers: ['FREE', 'STARTER', 'PRO', 'ENTERPRISE'],
+    tiers: ['FREE', 'STARTER', 'PRO', 'ENTERPRISE', 'ADMIN'],
     baseUrl: 'https://your-worker.workers.dev',
     authentication: 'Bearer token in Authorization header or X-API-Key header'
   });
@@ -538,7 +698,7 @@ async function rotateAPIKey(request, env) {
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function getOpenAPISpec(request, env) {
+export async function getOpenAPISpec(request, env) {
   const spec = {
     openapi:'3.1.0',
     info:{ title:'CYBERDUDEBIVASH AI Security Hub API', version:'20.0.0', description:'Enterprise AI Security Platform — AI Governance, Red Team, SOC, CTI, Threat Hunting, CTEM, MSSP', contact:{ name:'CYBERDUDEBIVASH Support', url:'https://your-worker.workers.dev/api/developer' } },
@@ -548,17 +708,18 @@ async function getOpenAPISpec(request, env) {
       BearerAuth:{ type:'http', scheme:'bearer', bearerFormat:'JWT', description:'JWT token from /api/auth/token' },
       ApiKeyAuth:{ type:'apiKey', in:'header', name:'X-API-Key', description:'API key from /api/developer/keys' }
     }},
-    paths: Object.fromEntries(API_CATALOG.flatMap(group => group.endpoints.map(ep => [
-      group.prefix + ep.path, {
-        [ep.method.toLowerCase()]: {
-          summary: ep.summary, description: ep.description || ep.summary,
-          tags: [group.group], security:[{BearerAuth:[]},{ApiKeyAuth:[]}],
-          parameters: ep.query_params ? Object.entries(ep.query_params).map(([name,schema]) => ({ name, in:'query', schema:{ type:'string' }, description:schema })) : [],
-          requestBody: ep.request_schema && ep.method !== 'GET' ? { content:{ 'application/json':{ schema:{ type:'object', properties: Object.fromEntries(Object.entries(ep.request_schema).map(([k,v])=>[k,{type:'string',description:v}])) } } } } : undefined,
-          responses:{ '200':{ description:'Success', content:{ 'application/json':{ schema:{ type:'object', properties: Object.fromEntries(Object.entries(ep.response_schema||{}).map(([k,v])=>[k,{type:'string',description:v}])) } } } }, '401':{ description:'Unauthorized' }, '429':{ description:'Rate limit exceeded' } }
-        }
-      }
-    ])))
+    paths: API_CATALOG.flatMap(group => group.endpoints.map(ep => ({ group, ep }))).reduce((paths, { group, ep }) => {
+      const key = group.prefix + ep.path;
+      paths[key] = paths[key] || {};
+      paths[key][ep.method.toLowerCase()] = {
+        summary: ep.summary, description: ep.description || ep.summary,
+        tags: [group.group], security:[{BearerAuth:[]},{ApiKeyAuth:[]}],
+        parameters: ep.query_params ? Object.entries(ep.query_params).map(([name,schema]) => ({ name, in:'query', schema:{ type:'string' }, description:schema })) : [],
+        requestBody: ep.request_schema && ep.method !== 'GET' ? { content:{ 'application/json':{ schema:{ type:'object', properties: Object.fromEntries(Object.entries(ep.request_schema).map(([k,v])=>[k,{type:'string',description:v}])) } } } } : undefined,
+        responses:{ '200':{ description:'Success', content:{ 'application/json':{ schema:{ type:'object', properties: Object.fromEntries(Object.entries(ep.response_schema||{}).map(([k,v])=>[k,{type:'string',description:v}])) } } } }, '401':{ description:'Unauthorized' }, '429':{ description:'Rate limit exceeded' } }
+      };
+      return paths;
+    }, {})
   };
   return new Response(JSON.stringify(spec, null, 2), { headers:{ 'Content-Type':'application/json' } });
 }
