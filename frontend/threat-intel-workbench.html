@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SENTINEL APEX® Threat Intelligence Workbench | CYBERDUDEBIVASH AI Security Hub</title>
+  <meta name="description" content="Enterprise AI threat intelligence workbench — live CVE risk queue, APT actor profiles, MITRE ATT&CK heatmap, AI analyst, STIX 2.1 export." />
+  <link rel="icon" href="/og-image.png" type="image/png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg-base:      #0a0e1a;
+      --bg-surface:   #0f1629;
+      --bg-card:      #141c32;
+      --bg-hover:     #1a2440;
+      --border:       #1e2d50;
+      --border-light: #243660;
+      --accent:       #3b82f6;
+      --accent-glow:  rgba(59,130,246,0.15);
+      --accent2:      #8b5cf6;
+      --success:      #10b981;
+      --warning:      #f59e0b;
+      --danger:       #ef4444;
+      --danger-glow:  rgba(239,68,68,0.15);
+      --critical:     #ff3b3b;
+      --high:         #ff7a00;
+      --medium:       #f59e0b;
+      --low:          #3b82f6;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted:   #64748b;
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-sans:    'Inter', sans-serif;
+      --radius:       8px;
+      --radius-lg:    12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,14,26,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+      height: 56px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .nav-brand .logo-dot {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .nav-sep { flex: 1; }
+    .nav-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .badge-pro    { background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+    .badge-live   { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); display: flex; align-items: center; gap: 5px; }
+    .badge-live::before { content:''; width:6px; height:6px; border-radius:50%; background:#10b981; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    .workbench {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      grid-template-rows: auto;
+      height: calc(100vh - 56px);
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      padding: 16px 12px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      margin: 1px 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .sidebar-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .sidebar-item.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-color: rgba(59,130,246,0.25);
+    }
+    .sidebar-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-count {
+      margin-left: auto;
+      background: var(--bg-base);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 8px 12px; }
+
+    /* ── Main Panel ──────────────────────────────────────────── */
+    .main { overflow-y: auto; display: flex; flex-direction: column; }
+
+    /* ── Panel Views ─────────────────────────────────────────── */
+    .panel { display: none; flex-direction: column; flex: 1; }
+    .panel.active { display: flex; }
+
+    /* ── Panel Header ────────────────────────────────────────── */
+    .panel-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .panel-title { font-size: 18px; font-weight: 700; }
+    .panel-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .panel-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+      font-family: var(--font-sans);
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-light); }
+    .btn-secondary:hover { color: var(--text-primary); border-color: var(--accent); }
+    .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .btn-success { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Grid Helpers ────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    /* ── Card ────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── Stat Card ───────────────────────────────────────────── */
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+    }
+    .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+    .stat-value { font-size: 28px; font-weight: 800; font-family: var(--font-mono); margin: 4px 0; }
+    .stat-sub { font-size: 11px; color: var(--text-muted); }
+    .stat-critical .stat-value { color: var(--critical); }
+    .stat-high .stat-value     { color: var(--high); }
+    .stat-medium .stat-value   { color: var(--medium); }
+    .stat-blue .stat-value     { color: var(--accent); }
+
+    /* ── Table ───────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      padding: 9px 14px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(30,45,80,0.5);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: var(--bg-hover); cursor: pointer; }
+    tbody td { padding: 10px 14px; }
+
+    /* ── Severity Badges ─────────────────────────────────────── */
+    .sev {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 12px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    }
+    .sev-CRITICAL { background: rgba(255,59,59,0.15); color: #ff6b6b; border: 1px solid rgba(255,59,59,0.3); }
+    .sev-HIGH     { background: rgba(255,122,0,0.15); color: #fb923c; border: 1px solid rgba(255,122,0,0.3); }
+    .sev-MEDIUM   { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .sev-LOW      { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .sev-INFO     { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+
+    /* ── CVE score bar ───────────────────────────────────────── */
+    .score-bar {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .score-bar-track {
+      flex: 1; height: 4px;
+      background: var(--bg-base);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .score-bar-fill { height: 100%; border-radius: 2px; }
+    .score-num { font-family: var(--font-mono); font-size: 12px; font-weight: 600; min-width: 28px; }
+
+    /* ── Loading ─────────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }
+
+    /* ── ATT&CK Heatmap ──────────────────────────────────────── */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+    }
+    .heatmap-cell {
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 11px;
+    }
+    .heatmap-cell:hover { border-color: var(--accent); transform: scale(1.02); }
+    .heatmap-cell-id { font-family: var(--font-mono); font-weight: 600; margin-bottom: 3px; }
+    .heatmap-cell-name { color: var(--text-secondary); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .heatmap-cell-count { font-family: var(--font-mono); font-weight: 700; font-size: 14px; margin-top: 4px; }
+    /* Heat intensity classes */
+    .heat-0 { border-color: var(--border); }
+    .heat-1 { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.3); }
+    .heat-2 { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.35); }
+    .heat-3 { background: rgba(255,122,0,0.15); border-color: rgba(255,122,0,0.4); }
+    .heat-4 { background: rgba(255,59,59,0.18); border-color: rgba(255,59,59,0.5); }
+
+    /* ── AI Analyst Chat ─────────────────────────────────────── */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .chat-msg {
+      max-width: 85%;
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg.assistant pre {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      margin-top: 8px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .chat-msg-meta { font-size: 10px; opacity: 0.6; margin-top: 6px; font-family: var(--font-mono); }
+    .chat-input-area {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+    }
+    .chat-input {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      padding: 10px 14px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      resize: none;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-input::placeholder { color: var(--text-muted); }
+    .chat-suggestions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0 20px 12px;
+    }
+    .chat-suggestion {
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-light);
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chat-suggestion:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Actor Cards ─────────────────────────────────────────── */
+    .actor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .actor-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .actor-card:hover { border-color: var(--border-light); background: var(--bg-hover); }
+    .actor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .actor-icon { font-size: 22px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+    .actor-name { font-weight: 700; font-size: 14px; }
+    .actor-origin { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .actor-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .actor-tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .actor-risk { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .actor-risk-label { font-size: 11px; color: var(--text-muted); }
+    .actor-risk-score { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+
+    /* ── IOC Lookup ──────────────────────────────────────────── */
+    .ioc-lookup-bar {
+      display: flex;
+      gap: 10px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .ioc-input {
+      flex: 1;
+      min-width: 260px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      padding: 9px 14px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+    .ioc-input:focus { border-color: var(--accent); }
+    .ioc-result-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin: 16px 24px;
+    }
+    .ioc-field { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(30,45,80,0.4); }
+    .ioc-field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); min-width: 120px; }
+    .ioc-field-val { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); word-break: break-all; }
+
+    /* ── STIX Export ─────────────────────────────────────────── */
+    .stix-preview {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      overflow: auto;
+      max-height: 400px;
+      color: #a5f3fc;
+      white-space: pre;
+    }
+
+    /* ── CVE Detail Modal ────────────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 760px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    /* ── Technique row ───────────────────────────────────────── */
+    .technique-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(30,45,80,0.4); }
+    .technique-id { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); min-width: 80px; }
+    .technique-info { flex: 1; }
+    .technique-name { font-size: 13px; font-weight: 600; }
+    .technique-tactic { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .confidence-pill {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+    }
+    .conf-high   { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .conf-medium { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .conf-low    { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+
+    /* ── Scrollbar ───────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ── Utility ─────────────────────────────────────────────── */
+    .p-content { padding: 20px 24px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-20 { margin-top: 20px; }
+    .text-mono { font-family: var(--font-mono); }
+    .text-danger  { color: var(--danger); }
+    .text-success { color: var(--success); }
+    .text-warning { color: var(--warning); }
+    .text-muted   { color: var(--text-muted); }
+    .text-sm { font-size: 12px; }
+    .flex { display: flex; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .w-full { width: 100%; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* ── Tooltip ─────────────────────────────────────────────── */
+    [data-tip] { position: relative; cursor: default; }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      color: var(--text-primary);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 50;
+    }
+    [data-tip]:hover::after { opacity: 1; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media(max-width: 768px) {
+      .workbench { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .actor-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <a href="/" class="nav-brand">
+    <div class="logo-dot">🛡</div>
+    <span>SENTINEL APEX®</span>
+  </a>
+  <span style="font-size:12px;color:var(--text-muted);padding:0 4px;">/ Threat Intelligence Workbench</span>
+  <div class="nav-sep"></div>
+  <span class="nav-badge badge-live">LIVE</span>
+  <span class="nav-badge badge-pro">PRO</span>
+  <button class="btn btn-secondary btn-sm" onclick="exportSTIX()">⬇ STIX 2.1</button>
+  <button class="btn btn-primary btn-sm" onclick="refreshAll()">↻ Refresh</button>
+</nav>
+
+<!-- ── Workbench Layout ──────────────────────────────────────────────────────── -->
+<div class="workbench">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Intelligence</div>
+    <div class="sidebar-item active" onclick="showPanel('risk-queue')">
+      <span class="icon">🔥</span> Risk Priority Queue
+      <span class="sidebar-count" id="nav-count-critical">—</span>
+    </div>
+    <div class="sidebar-item" onclick="showPanel('apt-actors')">
+      <span class="icon">🎭</span> APT Actor Profiles
+      <span class="sidebar-count" id="nav-count-actors">—</span>
+    </div>
+    <div class="sidebar-item" onclick="showPanel('attack-heatmap')">
+      <span class="icon">🗺</span> ATT&CK Heatmap
+    </div>
+    <div class="sidebar-item" onclick="showPanel('ai-analyst')">
+      <span class="icon">🤖</span> SENTINEL AI Analyst
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">Explore</div>
+    <div class="sidebar-item" onclick="showPanel('ioc-lookup')">
+      <span class="icon">🔍</span> IOC Lookup
+    </div>
+    <div class="sidebar-item" onclick="showPanel('sector-intel')">
+      <span class="icon">🏭</span> Sector Intelligence
+    </div>
+    <div class="sidebar-item" onclick="showPanel('stix-export')">
+      <span class="icon">📦</span> STIX 2.1 / TAXII
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">ATT&CK</div>
+    <div class="sidebar-item" onclick="showPanel('tactics')">
+      <span class="icon">🎯</span> Tactics & Techniques
+    </div>
+    <div class="sidebar-divider"></div>
+    <!-- Live stats mini -->
+    <div style="padding: 12px 16px; margin-top: auto;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Platform Status</div>
+      <div id="sidebar-stats" style="display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--text-secondary);">
+        <span>CVEs indexed: <span class="text-mono" id="stat-total-cves">…</span></span>
+        <span>Critical: <span class="text-mono text-danger" id="stat-critical">…</span></span>
+        <span>KEV entries: <span class="text-mono text-warning" id="stat-kev">…</span></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ─── PANEL: Risk Priority Queue ────────────────────────────────────── -->
+    <div class="panel active" id="panel-risk-queue">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🔥 Risk Priority Queue</div>
+          <div class="panel-subtitle">Composite risk scoring: CVSS + EPSS + KEV + Ransomware + APT attribution</div>
+        </div>
+        <div class="panel-actions">
+          <select id="risk-filter-sev" class="btn btn-secondary btn-sm" onchange="loadRiskQueue()" style="cursor:pointer">
+            <option value="">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="loadRiskQueue()">↻ Refresh</button>
+        </div>
+      </div>
+      <!-- Stats row -->
+      <div class="p-content" style="padding-bottom:0">
+        <div class="grid-4" id="risk-stats-row">
+          <div class="stat-card stat-critical skeleton" style="height:82px"></div>
+          <div class="stat-card stat-high skeleton" style="height:82px"></div>
+          <div class="stat-card stat-medium skeleton" style="height:82px"></div>
+          <div class="stat-card stat-blue skeleton" style="height:82px"></div>
+        </div>
+      </div>
+      <!-- Table -->
+      <div class="p-content" style="padding-top:16px; flex:1">
+        <div class="section-title">Top Threats by Composite Risk Score</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>CVE ID</th>
+                <th>Severity</th>
+                <th>Risk Score</th>
+                <th>CVSS</th>
+                <th>EPSS</th>
+                <th>KEV</th>
+                <th>Ransomware</th>
+                <th>Title</th>
+                <th>SLA</th>
+              </tr>
+            </thead>
+            <tbody id="risk-queue-tbody">
+              <tr><td colspan="10" class="empty-state"><div>Loading…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: APT Actor Profiles ─────────────────────────────────────── -->
+    <div class="panel" id="panel-apt-actors">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🎭 APT Actor Intelligence</div>
+          <div class="panel-subtitle">Nation-state groups, ransomware syndicates, and criminal actors — full attribution profiles</div>
+        </div>
+        <div class="panel-actions">
+          <input type="text" id="actor-search" class="ioc-input" style="min-width:180px;font-family:var(--font-sans)" placeholder="Search actors…" oninput="filterActors()" />
+          <select id="actor-filter-sector" class="btn btn-secondary btn-sm" onchange="filterActors()" style="cursor:pointer">
+            <option value="">All Sectors</option>
+            <option value="government">Government</option>
+            <option value="finance">Finance</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="energy">Energy</option>
+            <option value="defense">Defense</option>
+            <option value="technology">Technology</option>
+            <option value="telecommunications">Telecom</option>
+          </select>
+        </div>
+      </div>
+      <div class="p-content" style="flex:1">
+        <div class="actor-grid" id="actor-grid">
+          <!-- populated by JS -->
+          <div class="actor-card skeleton" style="height:140px"></div>
+          <div class="actor-card skeleton" style="height:140px"></div>
+          <div class="actor-card skeleton" style="height:140px"></div>
+          <div class="actor-card skeleton" style="height:140px"></div>
+          <div class="actor-card skeleton" style="height:140px"></div>
+          <div class="actor-card skeleton" style="height:140px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: ATT&CK Heatmap ─────────────────────────────────────────── -->
+    <div class="panel" id="panel-attack-heatmap">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🗺 MITRE ATT&CK Heatmap</div>
+          <div class="panel-subtitle">Technique frequency across current threat data — darker = more CVEs mapped to this technique</div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadHeatmap()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="p-content" style="flex:1">
+        <div id="heatmap-tactic-sections">
+          <div class="empty-state"><div class="icon">⏳</div><p>Loading ATT&CK heatmap…</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: AI Analyst ─────────────────────────────────────────────── -->
+    <div class="panel" id="panel-ai-analyst">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🤖 SENTINEL AI Analyst</div>
+          <div class="panel-subtitle">Natural-language threat intelligence — ask about CVEs, actors, sectors, campaigns</div>
+        </div>
+        <div class="panel-actions">
+          <span id="ai-model-badge" class="nav-badge badge-live" style="font-size:10px">AI Ready</span>
+          <button class="btn btn-secondary btn-sm" onclick="clearChat()">Clear</button>
+        </div>
+      </div>
+      <div class="chat-container" style="flex:1;min-height:0">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-msg assistant">
+            <strong>SENTINEL</strong> — AI Threat Intelligence Analyst<br/><br/>
+            I'm grounded in your live threat database. Ask me about CVE analysis, APT actor attribution, sector threats, or attack campaigns. Every response cites real data.<br/><br/>
+            <span style="color:var(--text-muted);font-size:11px">Powered by Groq llama-3.1-70b → DeepSeek → OpenRouter → CF Workers AI (cascade)</span>
+          </div>
+        </div>
+        <div class="chat-suggestions" id="chat-suggestions">
+          <span class="chat-suggestion" onclick="askSentinel('What are the top 5 CRITICAL CVEs actively exploited right now?')">Top 5 critical exploited CVEs</span>
+          <span class="chat-suggestion" onclick="askSentinel('Which APT groups are targeting healthcare and finance sectors in 2026?')">APT groups targeting healthcare</span>
+          <span class="chat-suggestion" onclick="askSentinel('Analyze current ransomware-linked vulnerabilities and give remediation steps')">Ransomware vulnerability analysis</span>
+          <span class="chat-suggestion" onclick="askSentinel('What MITRE ATT&CK techniques are most used in recent campaigns?')">Most common ATT&CK techniques</span>
+        </div>
+        <div class="chat-input-area">
+          <textarea id="chat-input" class="chat-input" rows="2" placeholder="Ask about CVEs, APT actors, sectors, campaigns…" onkeydown="chatKeyDown(event)"></textarea>
+          <button class="btn btn-primary" id="chat-send-btn" onclick="sendChat()">Send →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: IOC Lookup ──────────────────────────────────────────────── -->
+    <div class="panel" id="panel-ioc-lookup">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🔍 IOC Lookup</div>
+          <div class="panel-subtitle">Enrich IP addresses, domains, file hashes, and URLs against live threat intelligence</div>
+        </div>
+      </div>
+      <div class="ioc-lookup-bar">
+        <input type="text" id="ioc-input" class="ioc-input" placeholder="Enter IP, domain, SHA256, URL…" onkeydown="if(event.key==='Enter')lookupIOC()" />
+        <select id="ioc-type" class="btn btn-secondary" style="cursor:pointer">
+          <option value="auto">Auto-detect</option>
+          <option value="ip">IP Address</option>
+          <option value="domain">Domain</option>
+          <option value="hash">File Hash</option>
+          <option value="url">URL</option>
+        </select>
+        <button class="btn btn-primary" onclick="lookupIOC()">🔎 Enrich</button>
+      </div>
+      <div id="ioc-result-area" style="flex:1;overflow-y:auto">
+        <div class="empty-state" style="margin-top:40px">
+          <div class="icon">🔍</div>
+          <p>Enter an IP, domain, hash, or URL to enrich against threat intelligence</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: Sector Intel ────────────────────────────────────────────── -->
+    <div class="panel" id="panel-sector-intel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🏭 Sector Intelligence</div>
+          <div class="panel-subtitle">AI-generated threat briefs by industry vertical — powered by live threat data</div>
+        </div>
+      </div>
+      <div class="p-content">
+        <div class="section-title">Select Your Sector</div>
+        <div class="grid-3" id="sector-grid">
+          <!-- populated by JS -->
+        </div>
+        <div id="sector-brief-area" style="margin-top:20px"></div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: STIX Export ─────────────────────────────────────────────── -->
+    <div class="panel" id="panel-stix-export">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📦 STIX 2.1 / TAXII 2.1 Export</div>
+          <div class="panel-subtitle">Export threat intelligence bundles in STIX 2.1 format — TAXII 2.1 compliant collection feeds</div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-success" onclick="downloadSTIX()">⬇ Download Bundle</button>
+        </div>
+      </div>
+      <div class="p-content" style="flex:1">
+        <div class="grid-2" style="gap:20px">
+          <!-- STIX Config -->
+          <div>
+            <div class="section-title">Export Configuration</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:12px">
+              <div>
+                <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:5px">Severity Filter</label>
+                <select id="stix-severity" class="btn btn-secondary w-full" style="cursor:pointer">
+                  <option value="">All Severities</option>
+                  <option value="CRITICAL">Critical Only</option>
+                  <option value="HIGH">High+</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:5px">Include Actors</label>
+                <select id="stix-actors" class="btn btn-secondary w-full" style="cursor:pointer">
+                  <option value="true">Yes — include APT actor objects</option>
+                  <option value="false">No — CVE/IOC only</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:5px">Include IOCs</label>
+                <select id="stix-iocs" class="btn btn-secondary w-full" style="cursor:pointer">
+                  <option value="true">Yes — include indicator objects</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="previewSTIX()">Preview Bundle</button>
+            </div>
+            <!-- TAXII Collections -->
+            <div class="section-title mt-20">TAXII 2.1 Collections</div>
+            <div id="taxii-collections-list">
+              <div class="empty-state"><p>Loading…</p></div>
+            </div>
+          </div>
+          <!-- Preview -->
+          <div>
+            <div class="section-title">Bundle Preview</div>
+            <div id="stix-meta-bar" style="display:none;margin-bottom:10px"></div>
+            <pre class="stix-preview" id="stix-preview-area">// Click "Preview Bundle" to generate a STIX 2.1 bundle preview</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PANEL: Tactics & Techniques ───────────────────────────────────── -->
+    <div class="panel" id="panel-tactics">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🎯 MITRE ATT&CK Tactics & Techniques</div>
+          <div class="panel-subtitle">Full ATT&CK catalog — 14 tactics, 40+ techniques with CVE mappings</div>
+        </div>
+        <div class="panel-actions">
+          <input type="text" id="tech-search" class="ioc-input" style="min-width:180px;font-family:var(--font-sans)" placeholder="Search techniques…" oninput="searchTechniques()" />
+        </div>
+      </div>
+      <div class="p-content" style="flex:1">
+        <div id="tactics-list">
+          <div class="empty-state"><p>Loading…</p></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── CVE Detail Modal ────────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="cve-modal" onclick="closeModal(event)">
+  <div class="modal" id="cve-modal-content">
+    <button class="modal-close" onclick="document.getElementById('cve-modal').classList.remove('open')">✕</button>
+    <div id="cve-modal-body"><div class="empty-state"><p>Loading…</p></div></div>
+  </div>
+</div>
+
+<!-- ─── Actor Detail Modal ──────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="actor-modal" onclick="closeModal(event)">
+  <div class="modal" id="actor-modal-content">
+    <button class="modal-close" onclick="document.getElementById('actor-modal').classList.remove('open')">✕</button>
+    <div id="actor-modal-body"><div class="empty-state"><p>Loading…</p></div></div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API = '';  // relative — same origin
+let allActors = [];
+let allEntries = [];
+let chatSessionId = null;
+let chatBusy = false;
+
+// ── Panel routing ────────────────────────────────────────────────────────────
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  const panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.add('active');
+  const clickedItem = [...document.querySelectorAll('.sidebar-item')].find(
+    el => el.getAttribute('onclick')?.includes("'" + id + "'")
+  );
+  if (clickedItem) clickedItem.classList.add('active');
+
+  // Lazy-load panels
+  if (id === 'risk-queue' && allEntries.length === 0) loadRiskQueue();
+  if (id === 'apt-actors' && allActors.length === 0) loadActors();
+  if (id === 'attack-heatmap') loadHeatmap();
+  if (id === 'stix-export') loadTAXII();
+  if (id === 'tactics') loadTactics();
+  if (id === 'sector-intel') renderSectorGrid();
+}
+
+// ── Severity color helper ────────────────────────────────────────────────────
+function sevColor(s) {
+  if (s >= 85) return '#ff3b3b';
+  if (s >= 65) return '#ff7a00';
+  if (s >= 45) return '#f59e0b';
+  if (s >= 25) return '#3b82f6';
+  return '#64748b';
+}
+function heatClass(count) {
+  if (count === 0) return 'heat-0';
+  if (count <= 2)  return 'heat-1';
+  if (count <= 5)  return 'heat-2';
+  if (count <= 10) return 'heat-3';
+  return 'heat-4';
+}
+
+// ── Risk Priority Queue ──────────────────────────────────────────────────────
+async function loadRiskQueue() {
+  const sev = document.getElementById('risk-filter-sev').value;
+  const statsRow = document.getElementById('risk-stats-row');
+  const tbody = document.getElementById('risk-queue-tbody');
+  statsRow.innerHTML = '<div class="stat-card skeleton" style="height:82px"></div>'.repeat(4);
+  tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--text-muted)">Loading…</td></tr>';
+
+  try {
+    const url = `${API}/api/intel/risk-queue` + (sev ? `?severity=${sev}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    allEntries = data.entries || data.queue || data.data || [];
+
+    // Stats
+    const dist = data.distribution || {};
+    const statsHTML = [
+      { label: 'Critical', val: dist.CRITICAL ?? 0, cls: 'stat-critical', icon: '🔴' },
+      { label: 'High', val: dist.HIGH ?? 0, cls: 'stat-high', icon: '🟠' },
+      { label: 'Medium', val: dist.MEDIUM ?? 0, cls: 'stat-medium', icon: '🟡' },
+      { label: 'Total Assessed', val: data.total_assessed ?? allEntries.length, cls: 'stat-blue', icon: '📊' },
+    ].map(s => `
+      <div class="stat-card ${s.cls}">
+        <div class="stat-label">${s.icon} ${s.label}</div>
+        <div class="stat-value">${s.val}</div>
+        <div class="stat-sub">vulnerabilities</div>
+      </div>
+    `).join('');
+    statsRow.innerHTML = statsHTML;
+
+    // Update nav sidebar
+    document.getElementById('nav-count-critical').textContent = dist.CRITICAL ?? '—';
+    document.getElementById('stat-total-cves').textContent = data.total_assessed ?? allEntries.length;
+    document.getElementById('stat-critical').textContent = dist.CRITICAL ?? '—';
+    document.getElementById('stat-kev').textContent = allEntries.filter(e => e.is_kev || e.exploit_status === 'confirmed').length;
+
+    // Table
+    if (!allEntries.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--text-muted)">No data available — check D1 database</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allEntries.map((e, i) => {
+      const score = e.priority_score ?? e.cvss ?? 0;
+      const color = sevColor(score);
+      const kev = e.is_kev || e.exploit_status === 'confirmed';
+      const rw  = e.is_ransomware || e.known_ransomware;
+      return `
+        <tr onclick="showCVEDetail('${e.id}')">
+          <td style="color:var(--text-muted);font-family:var(--font-mono)">${i+1}</td>
+          <td style="font-family:var(--font-mono);font-weight:700;color:var(--accent)">${e.id}</td>
+          <td><span class="sev sev-${e.severity || 'INFO'}">${e.severity || '—'}</span></td>
+          <td>
+            <div class="score-bar">
+              <span class="score-num" style="color:${color}">${score}</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill" style="width:${score}%;background:${color}"></div>
+              </div>
+            </div>
+          </td>
+          <td style="font-family:var(--font-mono)">${e.cvss ?? '—'}</td>
+          <td style="font-family:var(--font-mono)">${e.epss_score != null ? (e.epss_score*100).toFixed(1)+'%' : '—'}</td>
+          <td>${kev ? '<span style="color:#f59e0b;font-weight:700">KEV ⚠</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${rw ? '<span style="color:#ef4444;font-weight:700">🦠 YES</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td style="color:var(--text-secondary);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.title || e.description?.slice(0,80) || '—'}</td>
+          <td style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">${e.remediation_sla || '—'}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch(err) {
+    tbody.innerHTML = `<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--danger)">Failed to load: ${err.message}</td></tr>`;
+    console.error('[risk-queue]', err);
+  }
+}
+
+// ── CVE Detail Modal ─────────────────────────────────────────────────────────
+async function showCVEDetail(cveId) {
+  const modal = document.getElementById('cve-modal');
+  const body  = document.getElementById('cve-modal-body');
+  modal.classList.add('open');
+  body.innerHTML = '<div class="empty-state"><p>Loading CVE intel…</p></div>';
+
+  try {
+    const [scoreRes, briefRes] = await Promise.allSettled([
+      fetch(`${API}/api/intel/risk-score/${cveId}`).then(r => r.json()),
+      fetch(`${API}/api/intel/cve-brief/${cveId}`).then(r => r.json()),
+    ]);
+    const score = scoreRes.status === 'fulfilled' ? scoreRes.value : null;
+    const brief = briefRes.status === 'fulfilled' ? briefRes.value : null;
+    const entry = score?.entry || {};
+
+    body.innerHTML = `
+      <h2 style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:var(--accent)">${cveId}</h2>
+      <p style="color:var(--text-secondary);margin-top:4px;font-size:13px">${entry.title || '—'}</p>
+      <div class="grid-4 mt-16" style="margin-bottom:16px">
+        <div class="stat-card ${score?.risk_tier === 'CRITICAL' ? 'stat-critical' : 'stat-blue'}">
+          <div class="stat-label">Risk Score</div>
+          <div class="stat-value">${score?.priority_score ?? '—'}</div>
+          <div class="stat-sub">${score?.risk_tier ?? ''}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">CVSS</div>
+          <div class="stat-value" style="color:var(--warning)">${score?.cvss ?? entry.cvss ?? '—'}</div>
+          <div class="stat-sub">Base score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">EPSS</div>
+          <div class="stat-value" style="color:var(--accent)">${score?.epss_score != null ? (score.epss_score*100).toFixed(2)+'%' : '—'}</div>
+          <div class="stat-sub">30-day exploit prob</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Patch SLA</div>
+          <div class="stat-value" style="font-size:14px;color:var(--success)">${score?.remediation_sla ?? '—'}</div>
+          <div class="stat-sub">${score?.urgency_label?.slice(0,30) ?? ''}</div>
+        </div>
+      </div>
+      ${score?.scoring_breakdown ? `
+        <div class="section-title">Scoring Breakdown</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          ${Object.entries(score.scoring_breakdown).map(([k,v]) => `
+            <div style="background:var(--bg-base);border:1px solid var(--border);border-radius:6px;padding:8px 12px">
+              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">${k.replace(/_/g,' ')}</div>
+              <div style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent);margin-top:2px">+${v}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      ${entry.description ? `
+        <div class="section-title">Description</div>
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px">${entry.description}</p>
+      ` : ''}
+      ${brief?.response ? `
+        <div class="section-title">🤖 AI Threat Brief</div>
+        <div style="background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap">${brief.response}</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text-muted)">Model: ${brief.model ?? '—'} · Provider: ${brief.provider ?? '—'}</div>
+      ` : ''}
+      ${score?.attack_mapping?.techniques?.length > 0 ? `
+        <div class="section-title mt-16">MITRE ATT&CK Mapping</div>
+        ${score.attack_mapping.techniques.map(t => `
+          <div class="technique-row">
+            <span class="technique-id">${t.technique_id}</span>
+            <div class="technique-info">
+              <div class="technique-name">${t.technique_name}</div>
+              <div class="technique-tactic">${t.tactic_name}</div>
+            </div>
+            <span class="confidence-pill ${t.confidence === 'HIGH' ? 'conf-high' : t.confidence === 'MEDIUM' ? 'conf-medium' : 'conf-low'}">${t.confidence}</span>
+          </div>
+        `).join('')}
+      ` : ''}
+    `;
+  } catch(err) {
+    body.innerHTML = `<div class="text-danger">Error loading CVE detail: ${err.message}</div>`;
+  }
+}
+
+// ── APT Actors ───────────────────────────────────────────────────────────────
+async function loadActors() {
+  const grid = document.getElementById('actor-grid');
+  try {
+    const res = await fetch(`${API}/api/intel/actors`);
+    const data = await res.json();
+    allActors = data.actors || data || [];
+    document.getElementById('nav-count-actors').textContent = allActors.length;
+    renderActorGrid(allActors);
+  } catch(err) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚠</div><p>Failed to load actors: ${err.message}</p></div>`;
+  }
+}
+
+function renderActorGrid(actors) {
+  const grid = document.getElementById('actor-grid');
+  if (!actors.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">🎭</div><p>No actor profiles found</p></div>';
+    return;
+  }
+  grid.innerHTML = actors.map(a => {
+    const riskColor = a.risk_score >= 90 ? '#ff3b3b' : a.risk_score >= 70 ? '#ff7a00' : '#f59e0b';
+    return `
+      <div class="actor-card" onclick="showActorDetail('${a.id}')">
+        <div class="actor-header">
+          <div class="actor-icon">${a.icon || '🎭'}</div>
+          <div>
+            <div class="actor-name">${a.id}</div>
+            <div class="actor-origin">${a.origin || '—'} ${a.suspected_sponsor ? '· ' + a.suspected_sponsor : ''}</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-family:var(--font-mono);font-weight:800;font-size:20px;color:${riskColor}">${a.risk_score}</div>
+            <div style="font-size:10px;color:var(--text-muted)">Risk</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.5">${(a.description || '').slice(0, 100)}…</div>
+        <div class="actor-tags">
+          ${(a.motivation || []).slice(0,3).map(m => `<span class="actor-tag">${m}</span>`).join('')}
+          ${(a.target_sectors || []).slice(0,2).map(s => `<span class="actor-tag" style="color:var(--accent);border-color:rgba(59,130,246,0.3)">${s}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterActors() {
+  const q = document.getElementById('actor-search').value.toLowerCase();
+  const sector = document.getElementById('actor-filter-sector').value.toLowerCase();
+  const filtered = allActors.filter(a => {
+    const matchQ = !q || a.id.toLowerCase().includes(q) || (a.description || '').toLowerCase().includes(q) || (a.aliases || []).some(al => al.toLowerCase().includes(q));
+    const matchS = !sector || (a.target_sectors || []).some(s => s.toLowerCase().includes(sector));
+    return matchQ && matchS;
+  });
+  renderActorGrid(filtered);
+}
+
+async function showActorDetail(actorId) {
+  const modal = document.getElementById('actor-modal');
+  const body  = document.getElementById('actor-modal-body');
+  modal.classList.add('open');
+  body.innerHTML = '<div class="empty-state"><p>Loading actor intel…</p></div>';
+
+  try {
+    const res = await fetch(`${API}/api/intel/actor/${encodeURIComponent(actorId)}`);
+    const data = await res.json();
+    const a = data.actor || data;
+
+    const riskColor = a.risk_score >= 90 ? '#ff3b3b' : a.risk_score >= 70 ? '#ff7a00' : '#f59e0b';
+    body.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:20px">
+        <div style="font-size:40px">${a.icon || '🎭'}</div>
+        <div style="flex:1">
+          <h2 style="font-size:20px;font-weight:800">${a.id}</h2>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${(a.aliases || []).join(' · ')}</div>
+          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="sev sev-${a.risk_score >= 85 ? 'CRITICAL' : a.risk_score >= 65 ? 'HIGH' : 'MEDIUM'}">Risk: ${a.risk_score}</span>
+            <span class="actor-tag">${a.origin || '—'}</span>
+            ${a.suspected_sponsor ? `<span class="actor-tag" style="color:var(--warning)">${a.suspected_sponsor}</span>` : ''}
+            <span class="actor-tag">Active since ${a.active_since || '?'}</span>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px">${a.description || ''}</p>
+      <div class="grid-2">
+        <div>
+          <div class="section-title">Target Sectors</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${(a.target_sectors || []).map(s => `<span class="actor-tag" style="color:var(--accent)">${s}</span>`).join('')}</div>
+        </div>
+        <div>
+          <div class="section-title">Target Geographies</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${(a.target_geographies || []).map(g => `<span class="actor-tag">${g}</span>`).join('')}</div>
+        </div>
+      </div>
+      <div class="grid-2 mt-12">
+        <div>
+          <div class="section-title">Known Tools</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${(a.known_tools || []).map(t => `<span class="actor-tag" style="color:var(--text-secondary);font-family:var(--font-mono)">${t}</span>`).join('')}</div>
+        </div>
+        <div>
+          <div class="section-title">Motivation</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${(a.motivation || []).map(m => `<span class="actor-tag" style="color:var(--accent2)">${m}</span>`).join('')}</div>
+        </div>
+      </div>
+      ${(a.known_campaigns || []).length > 0 ? `
+        <div class="section-title mt-12">Known Campaigns</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${a.known_campaigns.map(c => `<span class="actor-tag" style="color:var(--warning)">${c}</span>`).join('')}</div>
+      ` : ''}
+      ${(data.associated_cves || a.cve_associations || []).length > 0 ? `
+        <div class="section-title mt-12">Associated CVEs</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${(data.associated_cves || a.cve_associations || []).map(c => `<span class="actor-tag" style="color:var(--accent);font-family:var(--font-mono);cursor:pointer" onclick="document.getElementById('actor-modal').classList.remove('open');showCVEDetail('${typeof c === 'string' ? c : c.id}')">${typeof c === 'string' ? c : c.id}</span>`).join('')}</div>
+      ` : ''}
+      ${(a.primary_techniques || []).length > 0 ? `
+        <div class="section-title mt-12">Primary ATT&CK Techniques</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${a.primary_techniques.slice(0,10).map(t => `<span class="actor-tag" style="font-family:var(--font-mono)">${t}</span>`).join('')}</div>
+      ` : ''}
+    `;
+  } catch(err) {
+    body.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
+  }
+}
+
+// ── ATT&CK Heatmap ───────────────────────────────────────────────────────────
+async function loadHeatmap() {
+  const container = document.getElementById('heatmap-tactic-sections');
+  container.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Building ATT&CK heatmap from current threat data…</p></div>';
+  try {
+    const res = await fetch(`${API}/api/intel/heatmap`);
+    const data = await res.json();
+    const heatmap = data.heatmap || {};
+    const byTactic = data.by_tactic || {};
+
+    if (!Object.keys(heatmap).length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>No ATT&CK mappings found — ingest CVE data to populate heatmap</p></div>';
+      return;
+    }
+
+    const maxCount = Math.max(...Object.values(heatmap).map(h => h.count || 0), 1);
+
+    // Render by tactic
+    const tacticOrder = Object.entries(byTactic).sort((a,b) => (b[1]?.total || 0) - (a[1]?.total || 0));
+    if (tacticOrder.length === 0) {
+      // Flat render
+      container.innerHTML = `
+        <div class="heatmap-grid">
+          ${Object.entries(heatmap).sort((a,b) => (b[1].count||0)-(a[1].count||0)).map(([tid, h]) => `
+            <div class="heatmap-cell ${heatClass(h.count)}" data-tip="${(h.cve_ids||[]).slice(0,3).join(', ')}" onclick="showTechniqueDetail('${tid}')">
+              <div class="heatmap-cell-id">${tid}</div>
+              <div class="heatmap-cell-name">${h.name || ''}</div>
+              <div class="heatmap-cell-count" style="color:${sevColor(Math.round(h.count/maxCount*100))}">${h.count}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      container.innerHTML = tacticOrder.map(([tactic, info]) => `
+        <div style="margin-bottom:24px">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            ${tactic} <span style="font-family:var(--font-mono);color:var(--text-muted);font-weight:400">(${info.total || 0} CVEs)</span>
+          </div>
+          <div class="heatmap-grid">
+            ${(info.techniques || []).sort((a,b) => (b.count||0)-(a.count||0)).map(t => `
+              <div class="heatmap-cell ${heatClass(t.count)}" data-tip="${(t.cve_ids||[]).slice(0,3).join(', ')}" onclick="showTechniqueDetail('${t.technique_id}')">
+                <div class="heatmap-cell-id">${t.technique_id}</div>
+                <div class="heatmap-cell-name">${t.technique_name || ''}</div>
+                <div class="heatmap-cell-count" style="color:${sevColor(Math.round((t.count||0)/maxCount*100))}">${t.count || 0}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">⚠</div><p>Error loading heatmap: ${err.message}</p></div>`;
+  }
+}
+
+function showTechniqueDetail(tid) {
+  // Quick info in a toast
+}
+
+// ── AI Analyst Chat ───────────────────────────────────────────────────────────
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  if (chatBusy) return;
+  const input = document.getElementById('chat-input');
+  const query = input.value.trim();
+  if (!query) return;
+
+  input.value = '';
+  document.getElementById('chat-send-btn').disabled = true;
+  chatBusy = true;
+
+  appendChatMsg('user', query);
+  document.getElementById('chat-suggestions').style.display = 'none';
+
+  const typing = appendChatMsg('assistant', '⏳ Analyzing threat data…', true);
+  scrollChat();
+
+  try {
+    const res = await fetch(`${API}/api/intel/analyst/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, session_id: chatSessionId }),
+    });
+    const data = await res.json();
+    if (data.session_id) chatSessionId = data.session_id;
+
+    // Update model badge
+    const badge = document.getElementById('ai-model-badge');
+    badge.textContent = data.provider ? `${data.provider} · ${data.latency_ms}ms` : 'AI Ready';
+
+    typing.remove();
+    appendChatMsg('assistant', data.response || 'No response', false, {
+      meta: `${data.model || '—'} · ${data.latency_ms || 0}ms · ${data.context?.entries_retrieved || 0} CVEs in context`
+    });
+  } catch(err) {
+    typing.remove();
+    appendChatMsg('assistant', `⚠ Error: ${err.message}`);
+  } finally {
+    chatBusy = false;
+    document.getElementById('chat-send-btn').disabled = false;
+    scrollChat();
+  }
+}
+
+function askSentinel(q) {
+  document.getElementById('chat-input').value = q;
+  sendChat();
+}
+
+function appendChatMsg(role, text, isTemp = false, opts = {}) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.style.cssText = isTemp ? 'opacity:0.6' : '';
+  // Simple markdown-ish formatting
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br/>')
+    .replace(/`([^`]+)`/g, '<code style="background:var(--bg-base);padding:1px 4px;border-radius:3px;font-family:var(--font-mono)">$1</code>');
+  div.innerHTML = formatted;
+  if (opts.meta) {
+    const meta = document.createElement('div');
+    meta.className = 'chat-msg-meta';
+    meta.textContent = opts.meta;
+    div.appendChild(meta);
+  }
+  msgs.appendChild(div);
+  return div;
+}
+
+function scrollChat() {
+  const msgs = document.getElementById('chat-messages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function clearChat() {
+  document.getElementById('chat-messages').innerHTML = `
+    <div class="chat-msg assistant">
+      <strong>SENTINEL</strong> cleared. New session started.<br/>
+      <span style="color:var(--text-muted);font-size:11px">Ask me about CVEs, APT actors, sectors, or threat campaigns.</span>
+    </div>
+  `;
+  chatSessionId = null;
+  document.getElementById('chat-suggestions').style.display = 'flex';
+}
+
+// ── IOC Lookup ────────────────────────────────────────────────────────────────
+async function lookupIOC() {
+  const value  = document.getElementById('ioc-input').value.trim();
+  const type   = document.getElementById('ioc-type').value;
+  const area   = document.getElementById('ioc-result-area');
+  if (!value) return;
+
+  area.innerHTML = '<div class="empty-state"><p>⏳ Enriching IOC…</p></div>';
+
+  try {
+    const params = new URLSearchParams({ indicator: value });
+    if (type !== 'auto') params.set('type', type);
+    const res  = await fetch(`${API}/api/ioc/enrich?${params}`);
+    const data = await res.json();
+
+    const ioc = data.data || data.ioc || data;
+    const confidence = ioc.confidence_score || ioc.confidence || 0;
+    const confColor = confidence >= 80 ? '#ef4444' : confidence >= 50 ? '#f59e0b' : '#10b981';
+
+    area.innerHTML = `
+      <div class="ioc-result-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent)">${value}</div>
+          <span class="sev sev-${confidence >= 80 ? 'CRITICAL' : confidence >= 50 ? 'HIGH' : 'LOW'}">${confidence >= 80 ? 'MALICIOUS' : confidence >= 50 ? 'SUSPICIOUS' : 'CLEAN'}</span>
+          <span style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:${confColor};margin-left:auto">${confidence}% confidence</span>
+        </div>
+        ${[
+          ['Type', ioc.type || type],
+          ['Source', ioc.source || 'cyberdudebivash'],
+          ['First Seen', ioc.first_seen || '—'],
+          ['Last Seen', ioc.last_seen || '—'],
+          ['Related CVE', ioc.related_cve || ioc.intel_id || '—'],
+          ['Context', ioc.context || ioc.description || '—'],
+          ['Tags', (ioc.tags || []).join(', ') || '—'],
+          ['Abuse Score', ioc.abuse_score || '—'],
+          ['Country', ioc.country || ioc.geo?.country || '—'],
+          ['ASN', ioc.asn || ioc.geo?.asn || '—'],
+        ].map(([label, val]) => `
+          <div class="ioc-field">
+            <span class="ioc-field-label">${label}</span>
+            <span class="ioc-field-val">${val}</span>
+          </div>
+        `).join('')}
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">STIX Pattern</div>
+          <code style="font-family:var(--font-mono);font-size:11px;color:#a5f3fc;background:var(--bg-base);padding:8px;border-radius:4px;display:block">${ioc.stix_pattern || generateSTIXPattern(value, ioc.type || type)}</code>
+        </div>
+      </div>
+    `;
+  } catch(err) {
+    area.innerHTML = `<div class="empty-state"><div class="icon">⚠</div><p>Enrichment failed: ${err.message}</p></div>`;
+  }
+}
+
+function generateSTIXPattern(val, type) {
+  const map = { ip: `[ipv4-addr:value = '${val}']`, domain: `[domain-name:value = '${val}']`, hash: `[file:hashes.MD5 = '${val}']`, url: `[url:value = '${val}']` };
+  return map[type] || `[artifact:payload_bin = '${val}']`;
+}
+
+// ── Sector Intel ──────────────────────────────────────────────────────────────
+const SECTORS = [
+  { id: 'healthcare',     label: 'Healthcare',     icon: '🏥', desc: 'Hospitals, pharma, medical devices' },
+  { id: 'finance',        label: 'Finance',         icon: '🏦', desc: 'Banks, trading, fintech' },
+  { id: 'energy',         label: 'Energy',          icon: '⚡', desc: 'Power grids, oil & gas, utilities' },
+  { id: 'government',     label: 'Government',      icon: '🏛', desc: 'Federal, defense, intelligence' },
+  { id: 'technology',     label: 'Technology',      icon: '💻', desc: 'SaaS, cloud, semiconductors' },
+  { id: 'manufacturing',  label: 'Manufacturing',   icon: '🏭', desc: 'ICS/OT, supply chain' },
+  { id: 'telecommunications', label: 'Telecom',     icon: '📡', desc: 'ISPs, 5G, network providers' },
+  { id: 'education',      label: 'Education',       icon: '🎓', desc: 'Universities, research institutes' },
+  { id: 'retail',         label: 'Retail',          icon: '🛒', desc: 'E-commerce, POS systems' },
+];
+
+function renderSectorGrid() {
+  const grid = document.getElementById('sector-grid');
+  grid.innerHTML = SECTORS.map(s => `
+    <div class="card" style="cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="loadSectorBrief('${s.id}')">
+      <div style="font-size:28px;margin-bottom:8px">${s.icon}</div>
+      <div style="font-weight:700;font-size:14px">${s.label}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px">${s.desc}</div>
+    </div>
+  `).join('');
+}
+
+async function loadSectorBrief(sector) {
+  const area = document.getElementById('sector-brief-area');
+  area.innerHTML = `<div class="empty-state"><p>⏳ Generating AI threat brief for <strong>${sector}</strong> sector…</p></div>`;
+
+  try {
+    const res  = await fetch(`${API}/api/intel/sector/${sector}`);
+    const data = await res.json();
+
+    area.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:700;font-size:15px">🏭 ${sector.toUpperCase()} Sector Threat Brief</div>
+          <span style="font-size:10px;color:var(--text-muted)">${data.generated_at ? new Date(data.generated_at).toLocaleString() : ''}</span>
+        </div>
+        <div style="font-size:13px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap">${data.response || data.brief || 'No brief generated'}</div>
+        ${data.model ? `<div style="margin-top:10px;font-size:10px;color:var(--text-muted)">Model: ${data.model} · ${data.latency_ms || 0}ms</div>` : ''}
+        ${(data.relevant_actors || []).length > 0 ? `
+          <div class="section-title mt-12">Active APT Actors Targeting This Sector</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            ${data.relevant_actors.map(a => `<span class="actor-tag" style="cursor:pointer;color:var(--accent)" onclick="showActorDetail('${a.id || a}')">${a.id || a}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  } catch(err) {
+    area.innerHTML = `<div class="empty-state"><div class="icon">⚠</div><p>Failed: ${err.message}</p></div>`;
+  }
+}
+
+// ── STIX Export ───────────────────────────────────────────────────────────────
+async function previewSTIX() {
+  const sev    = document.getElementById('stix-severity').value;
+  const actors = document.getElementById('stix-actors').value;
+  const iocs   = document.getElementById('stix-iocs').value;
+  const pre    = document.getElementById('stix-preview-area');
+  const meta   = document.getElementById('stix-meta-bar');
+
+  pre.textContent = '// Generating STIX 2.1 bundle…';
+  meta.style.display = 'none';
+
+  try {
+    const params = new URLSearchParams();
+    if (sev)    params.set('severity', sev);
+    if (actors) params.set('include_actors', actors);
+    if (iocs)   params.set('include_iocs', iocs);
+    params.set('limit', '20');
+
+    const res = await fetch(`${API}/api/intel/stix?${params}`);
+    const data = await res.json();
+
+    meta.style.display = 'flex';
+    meta.innerHTML = `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:11px;margin-bottom:10px">
+        <span>📦 Objects: <strong class="text-mono">${data._meta?.object_count ?? '—'}</strong></span>
+        <span>🔴 Vulns: <strong class="text-mono">${data._meta?.vulnerability_count ?? '—'}</strong></span>
+        <span>🎭 Actors: <strong class="text-mono">${data._meta?.actor_count ?? '—'}</strong></span>
+        <span>🔍 Indicators: <strong class="text-mono">${data._meta?.indicator_count ?? '—'}</strong></span>
+        <span>⚙ Generator: <span style="color:var(--text-muted)">${data._meta?.generator ?? '—'}</span></span>
+      </div>
+    `;
+
+    pre.textContent = JSON.stringify(data, null, 2).slice(0, 8000) + (JSON.stringify(data).length > 8000 ? '\n\n// ... truncated for preview' : '');
+  } catch(err) {
+    pre.textContent = `// Error: ${err.message}`;
+  }
+}
+
+async function downloadSTIX() {
+  try {
+    const res  = await fetch(`${API}/api/intel/stix?limit=100`);
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `sentinel-apex-stix-bundle-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(err) {
+    alert('STIX export failed: ' + err.message);
+  }
+}
+
+function exportSTIX() {
+  showPanel('stix-export');
+  downloadSTIX();
+}
+
+async function loadTAXII() {
+  const list = document.getElementById('taxii-collections-list');
+  try {
+    const res  = await fetch(`${API}/api/taxii/collections`);
+    const data = await res.json();
+    const cols = data.collections || [];
+    if (!cols.length) { list.innerHTML = '<div class="text-muted text-sm">No collections available</div>'; return; }
+
+    list.innerHTML = cols.map(c => `
+      <div class="card mt-12" style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:600;font-size:13px">${c.title}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">${c.description?.slice(0, 80)}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;font-family:var(--font-mono)">${c.id}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          ${c.access_required ? `<span class="nav-badge badge-pro" style="font-size:9px">${c.access_required}</span>` : '<span class="nav-badge badge-live" style="font-size:9px">OPEN</span>'}
+          <button class="btn btn-secondary btn-sm" onclick="window.open('${c.url || '#'}','_blank')">View Feed</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(err) {
+    list.innerHTML = `<div class="text-danger text-sm">TAXII load error: ${err.message}</div>`;
+  }
+}
+
+// ── Tactics & Techniques ──────────────────────────────────────────────────────
+async function loadTactics() {
+  const container = document.getElementById('tactics-list');
+  container.innerHTML = '<div class="empty-state"><p>Loading ATT&CK catalog…</p></div>';
+  try {
+    const [tacRes, techRes] = await Promise.all([
+      fetch(`${API}/api/intel/tactics`).then(r => r.json()),
+      fetch(`${API}/api/intel/techniques`).then(r => r.json()),
+    ]);
+    const tactics    = tacRes.tactics || tacRes || [];
+    const techniques = techRes.techniques || techRes || [];
+
+    if (!tactics.length) {
+      container.innerHTML = '<div class="empty-state"><p>No tactics loaded</p></div>';
+      return;
+    }
+
+    container.innerHTML = tactics.map(tac => {
+      const tacTechs = techniques.filter(t => t.tactic_id === tac.id || t.tactic_name === tac.name);
+      return `
+        <div style="margin-bottom:20px">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer" onclick="toggleTactic('${tac.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700">${tac.id}</span>
+                <span style="font-weight:700;font-size:14px;margin-left:10px">${tac.name}</span>
+              </div>
+              <span style="font-size:11px;color:var(--text-muted)">${tacTechs.length} techniques ▾</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${tac.description || ''}</div>
+          </div>
+          <div id="tac-${tac.id}" style="display:none;padding:0 2px">
+            ${tacTechs.map(t => `
+              <div class="technique-row" style="padding-left:12px">
+                <span class="technique-id">${t.technique_id || t.id}</span>
+                <div class="technique-info">
+                  <div class="technique-name">${t.technique_name || t.name}</div>
+                  <div class="technique-tactic">${t.description || ''}</div>
+                </div>
+                <a href="${t.url || '#'}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">↗</a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><p>Error: ${err.message}</p></div>`;
+  }
+}
+
+function toggleTactic(id) {
+  const el = document.getElementById('tac-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function searchTechniques() {
+  const q = document.getElementById('tech-search').value.trim();
+  if (!q) { loadTactics(); return; }
+  const container = document.getElementById('tactics-list');
+  try {
+    const res  = await fetch(`${API}/api/intel/techniques?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const techniques = data.techniques || data || [];
+    container.innerHTML = `
+      <div class="section-title">Search results for "${q}"</div>
+      ${techniques.map(t => `
+        <div class="technique-row">
+          <span class="technique-id">${t.technique_id || t.id}</span>
+          <div class="technique-info">
+            <div class="technique-name">${t.technique_name || t.name}</div>
+            <div class="technique-tactic">${t.tactic_name || ''}</div>
+          </div>
+          <a href="${t.url || '#'}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">↗ ATT&CK</a>
+        </div>
+      `).join('')}
+    `;
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><p>Search error: ${err.message}</p></div>`;
+  }
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function closeModal(e) {
+  if (e.target.classList.contains('modal-backdrop')) {
+    e.target.classList.remove('open');
+  }
+}
+
+// ── Global refresh ────────────────────────────────────────────────────────────
+function refreshAll() {
+  allEntries = [];
+  allActors  = [];
+  const activePanel = document.querySelector('.panel.active');
+  if (activePanel) {
+    const id = activePanel.id.replace('panel-', '');
+    showPanel(id);
+  }
+  loadRiskQueue();
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(function init() {
+  loadRiskQueue();
+})();
+</script>
+</body>
+</html>
