@@ -11,6 +11,16 @@
  *   GET  /api/reports/templates    list available templates
  */
 
+import { complianceEngine } from '../engine.js';
+
+// MSSP/COMPLIANCE report bodies below interpolate DB-sourced org/customer
+// strings into HTML — escape to prevent XSS (mirrors siemExport.js convention).
+function escHTML(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 const REPORT_TEMPLATES = [
   {
     id: 'tpl-security-posture',
@@ -144,7 +154,7 @@ ${bodyHTML}
 /**
  * Generate in-memory HTML report content from existing D1 data.
  */
-async function generateReportHTML(type, orgId, config, env) {
+async function generateReportHTML(type, orgId, config, env, actorUserId) {
   const db = env.DB;
   const ts = new Date().toLocaleString();
 
@@ -212,6 +222,115 @@ async function generateReportHTML(type, orgId, config, env) {
     The platform processed ${totalScans} security scans this period, maintaining continuous threat monitoring across all registered assets.
   </p>
 </div>`;
+  } else if (type === 'MSSP') {
+    const customerId = config?.customer_id || null;
+    let customer = null;
+    if (customerId && actorUserId) {
+      customer = await db.prepare(
+        `SELECT * FROM mssp_customers WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
+      ).bind(customerId, customerId, actorUserId).first().catch(() => null);
+    }
+
+    if (!customer) {
+      bodyHTML = `
+<div class="section">
+  <h2>MSSP Customer Report</h2>
+  <p style="font-size:13px;color:#94a3b8;line-height:1.6;">
+    No managed tenant specified. Provide <code>config.customer_id</code> (an MSSP-managed
+    customer ID or org slug owned by this partner account) when creating this report to
+    generate a per-tenant customer report.
+  </p>
+</div>`;
+    } else {
+      let scanMetrics = { total: 0, critical: 0, high: 0, avg_risk: 0 };
+      try {
+        const sQ = await db.prepare(`
+          SELECT COUNT(*) as total,
+                 SUM(CASE WHEN risk_level='critical' THEN 1 ELSE 0 END) as critical,
+                 SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) as high,
+                 AVG(risk_score) as avg_risk
+          FROM scan_results WHERE org_id = ?
+        `).bind(customer.id).first();
+        if (sQ) scanMetrics = { total: sQ.total || 0, critical: sQ.critical || 0, high: sQ.high || 0, avg_risk: Math.round(sQ.avg_risk || 0) };
+      } catch (_) {}
+
+      let assetCount = 0;
+      try {
+        const aQ = await db.prepare(`SELECT COUNT(*) as cnt FROM customer_assets WHERE customer_id = ?`).bind(customer.id).first();
+        assetCount = aQ?.cnt || 0;
+      } catch (_) {}
+
+      const actionItems = scanMetrics.critical > 0
+        ? ['Open SOC cases for all critical findings', 'Notify customer security contact within SLA window', 'Schedule remediation review call']
+        : scanMetrics.high > 0
+        ? ['Assign owners to high-severity findings', 'Confirm remediation ETA with customer']
+        : ['Maintain current monitoring cadence', 'Continue scheduled quarterly review'];
+
+      bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">Risk Score</div><div class="kpi-value">${customer.risk_score || 0}/100</div><div class="kpi-sub">Current</div></div>
+  <div class="kpi"><div class="kpi-label">Compliance Score</div><div class="kpi-value">${customer.compliance_score || 0}%</div><div class="kpi-sub">Benchmark</div></div>
+  <div class="kpi"><div class="kpi-label">Assets Monitored</div><div class="kpi-value">${assetCount}</div><div class="kpi-sub">Active</div></div>
+  <div class="kpi"><div class="kpi-label">MRR</div><div class="kpi-value">$${((customer.mrr_cents || 0) / 100).toLocaleString()}</div><div class="kpi-sub">Monthly</div></div>
+</div>
+<div class="section">
+  <h2>Customer Overview</h2>
+  <table><tbody>
+    <tr><td>Organization</td><td>${escHTML(customer.org_name || customer.id)}</td></tr>
+    <tr><td>Tier</td><td>${escHTML(customer.tier || 'N/A')}</td></tr>
+    <tr><td>Status</td><td>${escHTML(customer.status || 'N/A')}</td></tr>
+    <tr><td>Customer Since</td><td>${escHTML(customer.created_at || 'N/A')}</td></tr>
+  </tbody></table>
+</div>
+<div class="section">
+  <h2>Risk Dashboard</h2>
+  <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Total Scans</td><td>${scanMetrics.total}</td></tr>
+    <tr><td>Critical Findings</td><td>${scanMetrics.critical}</td></tr>
+    <tr><td>High Findings</td><td>${scanMetrics.high}</td></tr>
+    <tr><td>Average Risk Score</td><td>${scanMetrics.avg_risk}/100</td></tr>
+  </tbody></table>
+</div>
+<div class="section">
+  <h2>Open Cases &amp; SLA Compliance</h2>
+  <p style="font-size:12px;color:#64748b;">SOC case-management integration is not yet enabled for this tenant — case and SLA metrics will appear here once ticketing is connected.</p>
+</div>
+<div class="section">
+  <h2>Action Items</h2>
+  <table><thead><tr><th>#</th><th>Action</th></tr></thead><tbody>
+    ${actionItems.map((a, i) => `<tr><td>${i + 1}</td><td>${escHTML(a)}</td></tr>`).join('')}
+  </tbody></table>
+</div>`;
+    }
+  } else if (type === 'COMPLIANCE') {
+    const frameworks = [['soc2', 'SOC 2'], ['iso27001', 'ISO 27001'], ['pcidss', 'PCI-DSS'], ['hipaa', 'HIPAA']];
+    const assessments = frameworks.map(([key, label]) => ({ label, result: complianceEngine(orgId, key) }));
+    const avgScore = Math.round(assessments.reduce((a, x) => a + (x.result.compliance_score || 0), 0) / assessments.length);
+    const totalCritical = assessments.reduce((a, x) => a + (x.result.critical_gaps_total || 0), 0);
+    const roadmap = [...new Set(assessments.flatMap(x => x.result.remediation_roadmap || []))].slice(0, 6);
+
+    bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">Compliance Score</div><div class="kpi-value">${avgScore}%</div><div class="kpi-sub">Avg across frameworks</div></div>
+  <div class="kpi"><div class="kpi-label">Frameworks Assessed</div><div class="kpi-value">${assessments.length}</div><div class="kpi-sub">SOC2, ISO27001, PCI-DSS, HIPAA</div></div>
+  <div class="kpi"><div class="kpi-label">Critical Gaps</div><div class="kpi-value" style="color:#ef4444">${totalCritical}</div><div class="kpi-sub">Across all frameworks</div></div>
+  <div class="kpi"><div class="kpi-label">Org</div><div class="kpi-value" style="font-size:16px;">${escHTML(orgId)}</div><div class="kpi-sub">Assessed entity</div></div>
+</div>
+${assessments.map(({ label, result }) => `
+<div class="section">
+  <h2>${escHTML(label)} Controls</h2>
+  <p style="font-size:12px;color:#94a3b8;margin-bottom:8px;">${escHTML(result.summary)}</p>
+  <table><thead><tr><th>Domain</th><th>Benchmark</th><th>Controls</th><th>Critical Gaps</th></tr></thead><tbody>
+    ${(result.domain_assessments || []).map(d => `<tr><td>${escHTML(d.domain)}</td><td>${d.compliance_percent}%</td><td>${d.controls_assessed}</td><td>${d.critical_gaps}</td></tr>`).join('')}
+  </tbody></table>
+</div>`).join('')}
+<div class="section">
+  <h2>Gap Analysis &amp; Remediation Roadmap</h2>
+  <table><thead><tr><th>#</th><th>Action</th></tr></thead><tbody>
+    ${roadmap.map((r, i) => `<tr><td>${i + 1}</td><td>${escHTML(r)}</td></tr>`).join('')}
+  </tbody></table>
+  <p style="font-size:11px;color:#64748b;margin-top:8px;">Compliance percentages reflect industry-benchmark readiness (Gartner/ISACA 2024 methodology) per framework and require a completed assessment questionnaire to certify actual organizational scores.</p>
+</div>`;
   } else {
     bodyHTML = `
 <div class="section">
@@ -267,7 +386,10 @@ export async function handleCreateReport(req, env) {
 
   // Generate immediately (synchronous for Workers runtime)
   try {
-    const html = await generateReportHTML(type, orgId, config, env);
+    // Partner scoping for per-tenant (MSSP) reports — same resolution rule as
+    // msspTenantPlatform.js's partnerScope(): userId/user_id, never client-supplied.
+    const actorUserId = req.user.userId ?? req.user.user_id ?? null;
+    const html = await generateReportHTML(type, orgId, config, env, actorUserId);
     const token = genToken();
     const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
 
