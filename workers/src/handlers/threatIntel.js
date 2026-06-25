@@ -37,13 +37,12 @@ function parsePagination(url) {
   const severity = (url.searchParams.get('severity') || '').toUpperCase();
   const source   = url.searchParams.get('source') || '';
   const query    = (url.searchParams.get('q') || '').trim().slice(0, 100);
-  const sortBy   = url.searchParams.get('sort') || 'severity'; // severity | date | cvss
+  const sortBy   = url.searchParams.get('sort') || 'severity';
   return { page, limit, severity, source, query, sortBy, offset: (page - 1) * limit };
 }
 
 // ─── Determine plan tier limits ───────────────────────────────────────────────
 function getPlanLimits(tier = 'FREE') {
-  // detection_rules: controls access to sigma_rule, kql_query, yara_rule, suricata_rule (P1-1)
   const limits = {
     FREE:           { max_results: 5,   ioc_access: false, export: false, full_detail: false, detection_rules: false },
     STARTER:        { max_results: 20,  ioc_access: false, export: false, full_detail: true,  detection_rules: false },
@@ -54,21 +53,14 @@ function getPlanLimits(tier = 'FREE') {
   return limits[tier] || limits.FREE;
 }
 
-// ─── Redact IOC fields for non-PRO users ─────────────────────────────────────
-// P1-1 REMEDIATION: Field-level payload sanitizer for premium detection assets
-// Per customer escalation audit — sigma_rule, kql_query, yara_rule, suricata_rule
-// must be stripped from serialized output unless JWT is bound to Pro Defense / Enterprise SOC
+// ─── Redact fields for non-PRO users ─────────────────────────────────────────
 function applyMonetizationGate(entry, planLimits) {
   const out = { ...entry };
 
-  // Parse JSON strings
   try { out.tags = typeof out.tags === 'string' ? JSON.parse(out.tags) : out.tags; } catch { out.tags = []; }
   try { out.affected_products = typeof out.affected_products === 'string' ? JSON.parse(out.affected_products) : out.affected_products; } catch { out.affected_products = []; }
   try { out.weakness_types = typeof out.weakness_types === 'string' ? JSON.parse(out.weakness_types) : out.weakness_types; } catch { out.weakness_types = []; }
 
-  // ── CRITICAL PAYWALL: Detection Rule Assets (P1-1) ─────────────────────────
-  // Sigma rules, KQL hunting scripts, YARA rules, Suricata signatures are
-  // premium enterprise assets — must NEVER appear in public serialized output
   const PREMIUM_FIELDS = ['sigma_rule', 'kql_query', 'kql_detection', 'yara_rule',
                            'suricata_rule', 'ids_signature', 'firewall_script',
                            'ir_playbook', 'hunting_query', 'detection_logic'];
@@ -84,7 +76,6 @@ function applyMonetizationGate(entry, planLimits) {
         };
       }
     }
-    // Also strip from nested defense_solutions array
     if (Array.isArray(out.defense_solutions)) {
       out.defense_solutions = out.defense_solutions.map(ds => {
         const gatedDs = { ...ds };
@@ -96,14 +87,12 @@ function applyMonetizationGate(entry, planLimits) {
     }
   }
 
-  // ── IOC Paywall ─────────────────────────────────────────────────────────────
   if (!planLimits.ioc_access) {
     out.iocs = { gated: true, upgrade_url: '/pricing#pro', hint: 'Upgrade to PRO to see IOC details' };
   } else {
     try { out.iocs = typeof out.iocs === 'string' ? JSON.parse(out.iocs) : out.iocs; } catch { out.iocs = []; }
   }
 
-  // ── FREE tier field truncation ───────────────────────────────────────────────
   if (!planLimits.full_detail) {
     if (out.description) out.description = out.description.slice(0, 150) + '… [Upgrade for full details]';
     out.cvss_vector        = null;
@@ -122,7 +111,6 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
   if (!db) return null;
 
   try {
-    // Build WHERE clause
     const conditions = [];
     const bindings   = [];
 
@@ -141,7 +129,6 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Build ORDER clause
     const orderMap = {
       severity: `CASE severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 ELSE 1 END DESC, cvss DESC`,
       date:     `published_at DESC, created_at DESC`,
@@ -149,15 +136,13 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
     };
     const order = orderMap[sortBy] || orderMap.severity;
 
-    // Count total
     const countRow = await db.prepare(
       `SELECT COUNT(*) as total FROM threat_intel ${where}`
     ).bind(...bindings).first();
     const total = countRow?.total ?? 0;
 
-    if (total === 0) return null; // trigger fallback
+    if (total === 0) return null;
 
-    // Fetch entries
     const rows = await db.prepare(
       `SELECT * FROM threat_intel ${where} ORDER BY ${order} LIMIT ? OFFSET ?`
     ).bind(...bindings, limit, offset).all();
@@ -173,7 +158,6 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
 async function getFromKVCache(env, hot = false) {
   if (!env?.SECURITY_HUB_KV) return null;
   try {
-    // Phase 8: Try hot cache first (60s TTL), then fall back to full cache
     const key    = hot ? HOT_CACHE_KEY : FEED_CACHE_KEY;
     const cached = await env.SECURITY_HUB_KV.get(key, { type: 'json' });
     return cached;
@@ -182,7 +166,7 @@ async function getFromKVCache(env, hot = false) {
   }
 }
 
-// ─── Write to KV hot cache (Phase 8) ─────────────────────────────────────────
+// ─── Write to KV hot cache ────────────────────────────────────────────────────
 async function writeHotCache(env, data) {
   if (!env?.SECURITY_HUB_KV) return;
   env.SECURITY_HUB_KV.put(HOT_CACHE_KEY, JSON.stringify(data), { expirationTtl: HOT_CACHE_TTL }).catch(() => {});
@@ -203,15 +187,13 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
   const planLimits = getPlanLimits(tier);
   const nocache    = url.searchParams.get('nocache') === '1';
 
-  // Enforce plan tier limits on result count
-  const effectiveLimit = Math.min(pagination.limit, planLimits.max_results);
+  const effectiveLimit  = Math.min(pagination.limit, planLimits.max_results);
   const effectiveOffset = pagination.offset;
 
-  let entries  = [];
-  let total    = 0;
+  let entries    = [];
+  let total      = 0;
   let dataSource = 'seed';
 
-  // ── Phase 8: Try 60s hot cache for unfiltered requests (most common) ──
   const isUnfiltered = !pagination.severity && !pagination.source && !pagination.query && !nocache;
   if (isUnfiltered) {
     const hotCached = await getFromKVCache(env, true);
@@ -234,9 +216,9 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
     }
   }
 
-  // ── 1. Try D1 database (primary) ──
-  const d1Result = await queryD1(env?.DB, {
-    limit:    effectiveLimit + 5, // fetch a few extra for dedup
+  // 1. Try D1 database (primary) — BINDING: SECURITY_HUB_DB
+  const d1Result = await queryD1(env?.SECURITY_HUB_DB, {
+    limit:    effectiveLimit + 5,
     offset:   effectiveOffset,
     severity: pagination.severity,
     source:   pagination.source,
@@ -249,17 +231,15 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
     total      = d1Result.total;
     dataSource = 'd1';
 
-    // Phase 8: Populate hot cache on cache miss (only for unfiltered, page 1)
     if (isUnfiltered && pagination.page === 1) {
       writeHotCache(env, { entries, total, cached_at: new Date().toISOString() });
     }
   } else {
-    // ── 2. Try KV cache ──
+    // 2. Try KV cache
     if (!nocache) {
       const kvFeed = await getFromKVCache(env, false);
       if (kvFeed?.entries?.length > 0) {
         let kvEntries = kvFeed.entries;
-        // Apply filters manually
         if (pagination.severity) kvEntries = kvEntries.filter(e => e.severity === pagination.severity);
         if (pagination.source)   kvEntries = kvEntries.filter(e => e.source   === pagination.source);
         if (pagination.query) {
@@ -276,7 +256,7 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
       }
     }
 
-    // ── 3. Ultimate fallback: built-in seed ──
+    // 3. Ultimate fallback: built-in seed
     if (entries.length === 0) {
       const seed = buildSeedFeed();
       let filtered = seed;
@@ -292,26 +272,22 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
       entries = filtered.slice(effectiveOffset, effectiveOffset + effectiveLimit);
       dataSource = 'seed';
 
-      // Auto-seed D1 in the background so next request hits the database
-      if (env?.DB && dataSource === 'seed') {
+      // Auto-trigger background ingestion when serving seed data — BINDING: SECURITY_HUB_DB
+      if (env?.SECURITY_HUB_DB && dataSource === 'seed') {
         runIngestion(env).catch(() => {});
       }
     }
   }
 
-  // Enrich entries that haven't been enriched yet
   const enrichedEntries = entries.map(e => ({
     ...e,
     ...( !e.enriched ? enrichBatch([e])[0] : {} ),
   }));
 
-  // Apply monetization gate
   const gatedEntries = enrichedEntries.slice(0, effectiveLimit).map(e => applyMonetizationGate(e, planLimits));
-
-  // Build summary stats from current page
   const summary = buildFeedSummary(enrichedEntries);
 
-  const data = {
+  return ok(request, {
     entries:     gatedEntries,
     total,
     page:        pagination.page,
@@ -322,7 +298,6 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
     plan:         tier,
     plan_limits:  planLimits,
     last_updated: new Date().toISOString(),
-    // Upgrade CTA for FREE users
     ...(tier === 'FREE' ? {
       upgrade_cta: {
         message:     `Showing ${gatedEntries.length} of ${total} advisories. Upgrade to see more.`,
@@ -330,41 +305,30 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
         features:    ['Full IOC details', 'Unlimited advisories', 'CVE export', 'API access'],
       }
     } : {}),
-  };
-
-  return ok(request, data);
+  });
 }
 
 // ─── GET /api/threat-intel/stats ─────────────────────────────────────────────
 export async function handleThreatIntelStats(request, env, authCtx = {}) {
   let stats = null;
 
-  // Phase 8: Try KV stats cache (2 min TTL)
   if (env?.SECURITY_HUB_KV) {
     try {
       const cached = await env.SECURITY_HUB_KV.get(STATS_CACHE_KEY, { type: 'json' });
-      if (cached?.stats) {
-        return ok(request, { ...cached, cache_hit: true });
-      }
+      if (cached?.stats) return ok(request, { ...cached, cache_hit: true });
     } catch {}
   }
 
-  // Try D1 for aggregate stats
-  if (env?.DB) {
+  // Try D1 for aggregate stats — BINDING: SECURITY_HUB_DB
+  if (env?.SECURITY_HUB_DB) {
     try {
       const [total, bySev, bySource, exploited, ransomware, lastRun] = await Promise.all([
-        env.DB.prepare('SELECT COUNT(*) as n FROM threat_intel').first(),
-        env.DB.prepare(`
-          SELECT severity, COUNT(*) as n FROM threat_intel GROUP BY severity
-        `).all(),
-        env.DB.prepare(`
-          SELECT source, COUNT(*) as n FROM threat_intel GROUP BY source
-        `).all(),
-        env.DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE exploit_status = 'confirmed'`).first(),
-        env.DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE known_ransomware = 1`).first(),
-        env.DB.prepare(`
-          SELECT ran_at, inserted, sources, success FROM ingestion_runs ORDER BY ran_at DESC LIMIT 1
-        `).first().catch(() => null),
+        env.SECURITY_HUB_DB.prepare('SELECT COUNT(*) as n FROM threat_intel').first(),
+        env.SECURITY_HUB_DB.prepare(`SELECT severity, COUNT(*) as n FROM threat_intel GROUP BY severity`).all(),
+        env.SECURITY_HUB_DB.prepare(`SELECT source, COUNT(*) as n FROM threat_intel GROUP BY source`).all(),
+        env.SECURITY_HUB_DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE exploit_status = 'confirmed'`).first(),
+        env.SECURITY_HUB_DB.prepare(`SELECT COUNT(*) as n FROM threat_intel WHERE known_ransomware = 1`).first(),
+        env.SECURITY_HUB_DB.prepare(`SELECT ran_at, inserted, sources, success FROM ingestion_runs ORDER BY ran_at DESC LIMIT 1`).first().catch(() => null),
       ]);
 
       const bySevMap = {};
@@ -391,19 +355,13 @@ export async function handleThreatIntelStats(request, env, authCtx = {}) {
     } catch {}
   }
 
-  // Fallback: stats from seed data
   if (!stats) {
     const summary = buildFeedSummary(SEED_ENTRIES);
-    stats = {
-      ...summary,
-      total_advisories: SEED_ENTRIES.length,
-      last_ingestion:   null,
-    };
+    stats = { ...summary, total_advisories: SEED_ENTRIES.length, last_ingestion: null };
   }
 
   const result = { stats, generated_at: new Date().toISOString() };
 
-  // Phase 8: Cache stats in KV
   if (env?.SECURITY_HUB_KV && stats) {
     env.SECURITY_HUB_KV.put(STATS_CACHE_KEY, JSON.stringify(result), { expirationTtl: STATS_CACHE_TTL }).catch(() => {});
   }
@@ -415,48 +373,34 @@ export async function handleThreatIntelStats(request, env, authCtx = {}) {
 export async function handleGetThreatIntelEntry(request, env, authCtx = {}, entryId) {
   const tier       = authCtx?.tier || 'FREE';
   const planLimits = getPlanLimits(tier);
-
   let entry = null;
 
-  // Try D1
-  if (env?.DB) {
+  // Try D1 — BINDING: SECURITY_HUB_DB
+  if (env?.SECURITY_HUB_DB) {
     try {
-      entry = await env.DB.prepare('SELECT * FROM threat_intel WHERE id = ?').bind(entryId).first();
+      entry = await env.SECURITY_HUB_DB.prepare('SELECT * FROM threat_intel WHERE id = ?').bind(entryId).first();
     } catch {}
   }
 
-  // Try seed
-  if (!entry) {
-    entry = SEED_ENTRIES.find(e => e.id === entryId) || null;
-  }
-
-  if (!entry) {
-    return fail(request, `Advisory ${entryId} not found`, 404, 'NOT_FOUND');
-  }
+  if (!entry) entry = SEED_ENTRIES.find(e => e.id === entryId) || null;
+  if (!entry) return fail(request, `Advisory ${entryId} not found`, 404, 'NOT_FOUND');
 
   const enriched = enrichBatch([entry])[0];
 
-  // IOC extraction on-demand for PRO+
   if (planLimits.ioc_access) {
-    const iocList = extractIOCsFromText(entry.description || '');
-    enriched.iocs = iocList;
+    enriched.iocs = extractIOCsFromText(entry.description || '');
   }
 
-  const gated = applyMonetizationGate(enriched, planLimits);
-
-  return ok(request, { entry: gated });
+  return ok(request, { entry: applyMonetizationGate(enriched, planLimits) });
 }
 
 // ─── POST /api/threat-intel/ingest ───────────────────────────────────────────
-// Manual trigger — ENTERPRISE admin only
 export async function handleManualIngest(request, env, authCtx = {}) {
   if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
     return fail(request, 'Manual ingestion requires ENTERPRISE plan', 403, 'FORBIDDEN');
   }
-
   try {
     const result = await runIngestion(env);
-    // Invalidate KV cache so next request gets fresh D1 data
     if (env?.SECURITY_HUB_KV) {
       env.SECURITY_HUB_KV.delete(FEED_CACHE_KEY).catch(() => {});
     }
@@ -467,7 +411,6 @@ export async function handleManualIngest(request, env, authCtx = {}) {
 }
 
 // ─── GET /api/v1/threat-intel ─────────────────────────────────────────────────
-// Versioned API — PRO/ENTERPRISE API key only
 export async function handleV1ThreatIntel(request, env, authCtx = {}) {
   const url    = new URL(request.url);
   const tier   = authCtx?.tier || 'FREE';
@@ -475,20 +418,20 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
   const format = url.searchParams.get('format') || 'json';
   const pag    = parsePagination(url);
 
-  const d1Result = await queryD1(env?.DB, {
-    limit:  limits.max_results,
-    offset: pag.offset,
+  // BINDING: SECURITY_HUB_DB
+  const d1Result = await queryD1(env?.SECURITY_HUB_DB, {
+    limit:    limits.max_results,
+    offset:   pag.offset,
     severity: pag.severity,
     source:   pag.source,
     query:    pag.query,
     sortBy:   pag.sortBy,
   });
 
-  const entries = d1Result?.entries || buildSeedFeed();
+  const entries  = d1Result?.entries || buildSeedFeed();
   const enriched = enrichBatch(entries.map(e => ({ ...e })));
   const gated    = enriched.map(e => applyMonetizationGate(e, limits));
 
-  // ENTERPRISE: support CSV export
   if (format === 'csv' && tier === 'ENTERPRISE') {
     const header = 'id,severity,cvss,title,source,published_at,exploit_status,known_ransomware\n';
     const rows   = gated.map(e =>
@@ -500,16 +443,15 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
   }
 
   return ok(request, {
-    entries:    gated,
-    total:      d1Result?.total || entries.length,
-    page:       pag.page,
-    limit:      limits.max_results,
-    plan:       tier,
+    entries:  gated,
+    total:    d1Result?.total || entries.length,
+    page:     pag.page,
+    limit:    limits.max_results,
+    plan:     tier,
   });
 }
 
 // ─── GET /api/v1/iocs ────────────────────────────────────────────────────────
-// IOC Registry — ENTERPRISE only
 export async function handleV1IOCs(request, env, authCtx = {}) {
   if (authCtx?.tier !== 'ENTERPRISE') {
     return fail(request, 'IOC registry API requires ENTERPRISE plan', 403, 'ENTERPRISE_REQUIRED');
@@ -519,14 +461,15 @@ export async function handleV1IOCs(request, env, authCtx = {}) {
   const type  = url.searchParams.get('type') || '';
   const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '50', 10));
 
-  if (!env?.DB) {
+  // BINDING: SECURITY_HUB_DB
+  if (!env?.SECURITY_HUB_DB) {
     return fail(request, 'Database unavailable', 503, 'DB_UNAVAILABLE');
   }
 
   try {
     const where    = type ? 'WHERE type = ?' : '';
     const bindings = type ? [type, limit] : [limit];
-    const rows     = await env.DB.prepare(
+    const rows     = await env.SECURITY_HUB_DB.prepare(
       `SELECT ir.*, ti.severity, ti.title as intel_title
        FROM ioc_registry ir
        JOIN threat_intel ti ON ti.id = ir.intel_id
@@ -535,7 +478,7 @@ export async function handleV1IOCs(request, env, authCtx = {}) {
        LIMIT ?`
     ).bind(...bindings).all();
 
-    const countRow = await env.DB.prepare(
+    const countRow = await env.SECURITY_HUB_DB.prepare(
       `SELECT COUNT(*) as n FROM ioc_registry ${where}`
     ).bind(...(type ? [type] : [])).first();
 
@@ -550,30 +493,23 @@ export async function handleV1IOCs(request, env, authCtx = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHASE 1: SERVER-SENT EVENTS — GET /api/threat-intel/stream
+// SSE — GET /api/threat-intel/stream
 // ═══════════════════════════════════════════════════════════════════════════════
-// Cloudflare Workers SSE via TransformStream + snapshot approach.
-// No Durable Objects needed — sends a one-shot snapshot then heartbeats.
-// Client uses EventSource with auto-reconnect built-in.
-// ───────────────────────────────────────────────────────────────────────────────
 export async function handleThreatIntelStream(request, env, authCtx = {}) {
   const tier       = authCtx?.tier || 'FREE';
   const planLimits = getPlanLimits(tier);
   const url        = new URL(request.url);
-  const since      = url.searchParams.get('since') || null; // ISO date watermark
-
-  // Get watermark — only send entries newer than this
+  const since      = url.searchParams.get('since') || null;
   const watermarkDate = since ? new Date(since) : null;
 
-  // ── Fetch current snapshot of feed ────────────────────────────────────────
+  // BINDING: SECURITY_HUB_DB
   async function getSnapshot() {
-    // Try D1 first
-    if (env?.DB) {
+    if (env?.SECURITY_HUB_DB) {
       try {
         const sinceFilter = watermarkDate
           ? `WHERE (updated_at > '${watermarkDate.toISOString()}' OR created_at > '${watermarkDate.toISOString()}')`
           : '';
-        const rows = await env.DB.prepare(
+        const rows = await env.SECURITY_HUB_DB.prepare(
           `SELECT id, title, severity, cvss, exploit_status, known_ransomware,
                   epss_score, actively_exploited, exploit_available,
                   source, source_url, published_at, tags, description, weakness_types
@@ -585,100 +521,57 @@ export async function handleThreatIntelStream(request, env, authCtx = {}) {
         return (rows?.results || []).map(e => applyMonetizationGate(e, planLimits));
       } catch {}
     }
-    // Fallback to seed
     return buildSeedFeed().slice(0, planLimits.max_results).map(e => applyMonetizationGate(e, planLimits));
   }
 
-  // ── Build TransformStream for SSE ─────────────────────────────────────────
   const { readable, writable } = new TransformStream();
   const writer  = writable.getWriter();
   const encoder = new TextEncoder();
 
-  function sseWrite(eventName, data) {
-    const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
-    return writer.write(encoder.encode(payload));
-  }
+  const sseWrite = (eventName, data) =>
+    writer.write(encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`));
+  const sseComment = (c) =>
+    writer.write(encoder.encode(`: ${c}\n\n`));
 
-  function sseComment(comment) {
-    return writer.write(encoder.encode(`: ${comment}\n\n`));
-  }
-
-  // ── Stream loop (async, runs concurrently with response) ──────────────────
   const streamLoop = async () => {
     try {
-      // 1. Send connection event
       await sseWrite('connected', {
-        message:    'Sentinel APEX stream connected',
-        tier,
-        plan_limits: planLimits,
-        timestamp:  new Date().toISOString(),
+        message: 'Sentinel APEX stream connected', tier, plan_limits: planLimits,
+        timestamp: new Date().toISOString(),
       });
 
-      // 2. Send initial snapshot
       const snapshot = await getSnapshot();
       await sseWrite('snapshot', {
-        entries:    snapshot,
-        count:      snapshot.length,
-        watermark:  new Date().toISOString(),
-        data_source: env?.DB ? 'd1' : 'seed',
+        entries: snapshot, count: snapshot.length, watermark: new Date().toISOString(),
+        data_source: env?.SECURITY_HUB_DB ? 'd1' : 'seed',
       });
 
-      // 3. Heartbeat loop — CF Workers timeout after ~100s of inactivity
-      //    We send a heartbeat every 25s to keep alive, then re-snapshot every 60s
       let ticks = 0;
-      const HEARTBEAT_INTERVAL_MS = 25000;
-      const REFRESH_EVERY_N_TICKS = 2; // refresh snapshot every 50s
-
-      const heartbeatFn = async () => {
+      for (let i = 0; i < 4; i++) {
+        await new Promise(r => setTimeout(r, 25000));
         ticks++;
-
-        if (ticks % REFRESH_EVERY_N_TICKS === 0) {
-          // Send a mini-refresh of critical entries
+        if (ticks % 2 === 0) {
           try {
             const refresh = await getSnapshot();
-            const newEntries = watermarkDate
-              ? refresh // already filtered by since
-              : refresh.slice(0, 5); // send top 5 as live update
-
+            const newEntries = watermarkDate ? refresh : refresh.slice(0, 5);
             if (newEntries.length > 0) {
-              await sseWrite('update', {
-                entries:   newEntries,
-                count:     newEntries.length,
-                watermark: new Date().toISOString(),
-              });
+              await sseWrite('update', { entries: newEntries, count: newEntries.length, watermark: new Date().toISOString() });
             }
           } catch {}
         } else {
           await sseComment(`heartbeat ${new Date().toISOString()}`);
         }
-      };
-
-      // Cloudflare Workers: use a series of awaited promises instead of setInterval
-      // Max 4 heartbeats (covering ~100s) before worker timeout
-      for (let i = 0; i < 4; i++) {
-        await new Promise(resolve => setTimeout(resolve, HEARTBEAT_INTERVAL_MS));
-        await heartbeatFn();
       }
-
-      // Send stream end event
       await sseWrite('end', { message: 'Stream cycle complete. Reconnect for updates.', timestamp: new Date().toISOString() });
     } catch (err) {
-      // Client disconnected or error — close gracefully
-      try {
-        await sseWrite('error', { message: 'Stream error — reconnecting automatically', code: err?.message });
-      } catch {}
+      try { await sseWrite('error', { message: 'Stream error — reconnecting automatically', code: err?.message }); } catch {}
     } finally {
       writer.close().catch(() => {});
     }
   };
 
-  // Use waitUntil to keep the stream alive past response headers send
-  if (env?.waitUntil) {
-    env.waitUntil(streamLoop());
-  } else {
-    // Fallback: fire and forget (CF Workers will keep it alive)
-    streamLoop().catch(() => {});
-  }
+  if (env?.waitUntil) env.waitUntil(streamLoop());
+  else streamLoop().catch(() => {});
 
   return new Response(readable, {
     status: 200,
@@ -695,7 +588,7 @@ export async function handleThreatIntelStream(request, env, authCtx = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHASE 7: ENTERPRISE API — GET /api/v1/correlations
+// GET /api/v1/correlations
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleV1Correlations(request, env, authCtx = {}) {
   if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
@@ -705,12 +598,12 @@ export async function handleV1Correlations(request, env, authCtx = {}) {
   const url   = new URL(request.url);
   const cveId = url.searchParams.get('cve') || '';
   const limit = Math.min(50, parseInt(url.searchParams.get('limit') || '20', 10));
-
   let entries = [];
 
-  if (env?.DB) {
+  // BINDING: SECURITY_HUB_DB
+  if (env?.SECURITY_HUB_DB) {
     try {
-      const rows = await env.DB.prepare(
+      const rows = await env.SECURITY_HUB_DB.prepare(
         `SELECT * FROM threat_intel
          ORDER BY CASE severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 ELSE 1 END DESC
          LIMIT 100`
@@ -719,28 +612,17 @@ export async function handleV1Correlations(request, env, authCtx = {}) {
     } catch {}
   }
 
-  if (entries.length === 0) {
-    entries = SEED_ENTRIES.map(e => ({ ...e }));
-  }
+  if (entries.length === 0) entries = SEED_ENTRIES.map(e => ({ ...e }));
 
-  // If specific CVE requested: correlate just that one
   if (cveId) {
     const target = entries.find(e => e.id === cveId);
-    if (!target) {
-      return fail(request, `CVE ${cveId} not found in feed`, 404, 'NOT_FOUND');
-    }
+    if (!target) return fail(request, `CVE ${cveId} not found in feed`, 404, 'NOT_FOUND');
     const correlation = await correlateEntry(target, entries, env);
     return ok(request, { correlation, entry: applyMonetizationGate(target, getPlanLimits(authCtx.tier)) });
   }
 
-  // Otherwise: return correlation summary + top correlated pairs
   const summary = buildCorrelationSummary(entries);
-
-  // Correlate top 10 CRITICAL entries
-  const topEntries = entries
-    .filter(e => e.severity === 'CRITICAL' || (e.cvss || 0) >= 9.0)
-    .slice(0, limit);
-
+  const topEntries = entries.filter(e => e.severity === 'CRITICAL' || (e.cvss || 0) >= 9.0).slice(0, limit);
   const correlations = [];
   for (const entry of topEntries) {
     const corr = await correlateEntry(entry, entries, env);
@@ -749,100 +631,75 @@ export async function handleV1Correlations(request, env, authCtx = {}) {
     }
   }
 
-  return ok(request, {
-    summary,
-    correlations,
-    total: correlations.length,
-    plan:  authCtx.tier,
-  });
+  return ok(request, { summary, correlations, total: correlations.length, plan: authCtx.tier });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHASE 4+7: ENTERPRISE API — GET /api/v1/graph
+// GET /api/v1/graph
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleV1Graph(request, env, authCtx = {}) {
   if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
     return fail(request, 'IOC graph API requires PRO or ENTERPRISE plan', 403, 'PLAN_REQUIRED');
   }
 
-  const url      = new URL(request.url);
-  const nodeId   = url.searchParams.get('node') || '';
-  const limit    = Math.min(100, parseInt(url.searchParams.get('limit') || '50', 10));
+  const url    = new URL(request.url);
+  const nodeId = url.searchParams.get('node') || '';
+  const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || '50', 10));
+  const graph  = await buildGraphFromD1(env, limit);
 
-  const graph = await buildGraphFromD1(env, limit);
-
-  // If specific node requested: return its neighborhood
   if (nodeId) {
-    const { getNeighborhood } = await Promise.resolve({ getNeighborhood: (g, id) => {
+    const getNeighborhood = (g, id) => {
       const n = g.nodes.find(nd => nd.id === id || nd.value === id);
       if (!n) return { nodes: [], edges: [] };
       const edgeList = g.edges.filter(e => e.source === n.id || e.target === n.id);
       const nodeIds  = new Set([n.id, ...edgeList.map(e => e.source), ...edgeList.map(e => e.target)]);
       return { nodes: g.nodes.filter(nd => nodeIds.has(nd.id)), edges: edgeList };
-    }});
-    const neighborhood = getNeighborhood(graph, nodeId);
-    return ok(request, { graph: neighborhood, root_node: nodeId });
+    };
+    return ok(request, { graph: getNeighborhood(graph, nodeId), root_node: nodeId });
   }
 
-  return ok(request, {
-    graph,
-    plan: authCtx.tier,
-  });
+  return ok(request, { graph, plan: authCtx.tier });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHASE 5+7: ENTERPRISE API — GET /api/v1/hunting
+// GET /api/v1/hunting
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleV1Hunting(request, env, authCtx = {}) {
   if (!['PRO', 'ENTERPRISE'].includes(authCtx?.tier)) {
     return fail(request, 'Threat hunting API requires PRO or ENTERPRISE plan', 403, 'PLAN_REQUIRED');
   }
 
-  const url       = new URL(request.url);
-  const minSev    = url.searchParams.get('min_severity') || 'medium';
-  const limit     = Math.min(100, parseInt(url.searchParams.get('limit') || '100', 10));
+  const url    = new URL(request.url);
+  const minSev = url.searchParams.get('min_severity') || 'medium';
+  const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || '100', 10));
+  let entries  = [];
 
-  let entries = [];
-
-  if (env?.DB) {
+  // BINDING: SECURITY_HUB_DB
+  if (env?.SECURITY_HUB_DB) {
     try {
-      const rows = await env.DB.prepare(
-        `SELECT * FROM threat_intel
-         WHERE severity IN ('CRITICAL', 'HIGH')
-         ORDER BY cvss DESC LIMIT ?`
+      const rows = await env.SECURITY_HUB_DB.prepare(
+        `SELECT * FROM threat_intel WHERE severity IN ('CRITICAL', 'HIGH') ORDER BY cvss DESC LIMIT ?`
       ).bind(limit).all();
       entries = rows?.results || [];
     } catch {}
   }
 
-  if (entries.length === 0) {
-    entries = SEED_ENTRIES.map(e => ({ ...e }));
-  }
+  if (entries.length === 0) entries = SEED_ENTRIES.map(e => ({ ...e }));
 
   const huntResults = runHunting(entries);
-
-  // Filter alerts by minimum severity
   const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-  const minOrder = sevOrder[minSev] ?? 2;
-  huntResults.alerts = huntResults.alerts.filter(a => (sevOrder[a.severity] ?? 4) <= minOrder);
+  huntResults.alerts = huntResults.alerts.filter(a => (sevOrder[a.severity] ?? 4) <= (sevOrder[minSev] ?? 2));
 
-  // Store critical alerts in D1 if ENTERPRISE
-  if (authCtx.tier === 'ENTERPRISE' && env?.DB && huntResults.alerts.length > 0) {
+  // BINDING: SECURITY_HUB_DB
+  if (authCtx.tier === 'ENTERPRISE' && env?.SECURITY_HUB_DB && huntResults.alerts.length > 0) {
     const critAlerts = huntResults.alerts.filter(a => a.severity === 'critical');
     for (const alert of critAlerts.slice(0, 10)) {
-      env.DB.prepare(
-        `INSERT OR IGNORE INTO hunting_alerts (id, type, severity, message, evidence)
-         VALUES (?, ?, ?, ?, ?)`
-      ).bind(
-        alert.id, alert.type, alert.severity, alert.message,
-        JSON.stringify(alert.evidence || {})
+      env.SECURITY_HUB_DB.prepare(
+        `INSERT OR IGNORE INTO hunting_alerts (id, type, severity, message, evidence) VALUES (?, ?, ?, ?, ?)`
+      ).bind(alert.id, alert.type, alert.severity, alert.message, JSON.stringify(alert.evidence || {})
       ).run().catch(() => {});
     }
   }
 
-  return ok(request, {
-    ...huntResults,
-    plan:         authCtx.tier,
-    entry_count:  entries.length,
-  });
+  return ok(request, { ...huntResults, plan: authCtx.tier, entry_count: entries.length });
 }
