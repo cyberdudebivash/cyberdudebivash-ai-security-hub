@@ -370,6 +370,20 @@ import {
   handleAutonomousObservability,
 } from './handlers/autonomousOpsHandler.js';
 
+// ─── P14.0: Enterprise AI Security Fabric ────────────────────────────────────
+import {
+  handleFabricState,
+  handleFabricAgentStatus,
+  handleFabricEvents,
+  handleFabricPublishEvent,
+  handleFabricPlugins,
+  handleFabricPluginRegister,
+  handleFabricPolicyEvaluate,
+  handleFabricMemory,
+  handleFabricMemoryRecord,
+  handleFabricObservability,
+} from './handlers/securityFabricHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4457,6 +4471,48 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/autonomous/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleAutonomousObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P14.0: Enterprise AI Security Fabric ──────────────────────────────────
+    if (path === '/api/fabric/state' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricState(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/agents/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricAgentStatus(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/events' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricEvents(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/events/publish' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricPublishEvent(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/plugins' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricPlugins(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/plugins/register' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricPluginRegister(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/policy/evaluate' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricPolicyEvaluate(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/memory' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricMemory(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/memory/record' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricMemoryRecord(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/fabric/observability' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleFabricObservability(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
