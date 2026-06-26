@@ -384,6 +384,19 @@ import {
   handleFabricObservability,
 } from './handlers/securityFabricHandler.js';
 
+// ─── P15.0: Commercial Platform & Enterprise Customer Success ─────────────────
+import {
+  handleOnboardingWizard,
+  handleCustomerLicense,
+  handleUsageAnalytics,
+  handleCustomerSuccessScore,
+  handleKeyUpdateMeta,
+  handleKeyHistory,
+  handleReportArchive,
+  handleNotificationCenter,
+  handleCommercialObservability,
+} from './handlers/commercialPlatformHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4513,6 +4526,46 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/fabric/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleFabricObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P15.0: Commercial Platform & Enterprise Customer Success ──────────────
+    if (path === '/api/customer/onboarding/wizard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleOnboardingWizard(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/license' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCustomerLicense(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/usage/analytics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleUsageAnalytics(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/success/score' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCustomerSuccessScore(request, env, authCtx || {}), request));
+    }
+    if (path.startsWith('/api/keys/') && path.endsWith('/history') && method === 'GET') {
+      const keyId   = path.split('/')[3];
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleKeyHistory(request, env, authCtx || {}, keyId), request));
+    }
+    if (path.startsWith('/api/keys/') && !path.includes('/usage') && !path.endsWith('/history') && method === 'PATCH') {
+      const keyId   = path.split('/')[3];
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleKeyUpdateMeta(request, env, authCtx || {}, keyId), request));
+    }
+    if (path === '/api/customer/reports/archive' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleReportArchive(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/notifications/center' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleNotificationCenter(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/commercial/observability' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCommercialObservability(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
