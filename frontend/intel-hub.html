@@ -565,15 +565,28 @@ async function loadLiveStats(){
     });
     if(!res.ok)throw new Error('HTTP '+res.status);
     const d=await res.json();
-    const s=d.stats||d;
-    const total=s.total_entries||s.total||s.total_items||847;
-    const crit=s.critical_count||s.severity_breakdown?.CRITICAL||34;
-    const cves=s.cve_count||s.by_type?.vulnerability||312;
-    const actors=s.actor_count||s.by_type?.threat_actor||14;
+    // Real shape: {success, data:{stats:{total_advisories, critical, confirmed_exploited, ...}}}.
+    // This used to read d.stats (one level too shallow) and d.stats.total_entries/
+    // critical_count/cve_count/actor_count (field names that never existed on the
+    // real response), so every value fell through to the hardcoded fallback —
+    // the dashboard always showed 847/34/312/14 regardless of real data. Found
+    // 2026-06-29 while the numbers looked permanently frozen ("stalled").
+    const s=d.data?.stats||d.stats||d;
+    const total=s.total_advisories??847;
+    const crit=s.critical??34;
+    const cves=s.confirmed_exploited??312; // actively-exploited CVEs — no AI-specific subset exists yet
     animateCounter('stat-total',0,total,1200);
     animateCounter('stat-crit',0,crit,1200);
     animateCounter('stat-cve',0,cves,1200);
-    animateCounter('stat-actors',0,actors,1200);
+    // Threat-actor count isn't in this endpoint's response — pull the real
+    // figure from /api/trust-center instead of leaving the hardcoded 14.
+    fetch('/api/trust-center',{signal:AbortSignal.timeout(6000)})
+      .then(r=>r.ok?r.json():null)
+      .then(t=>{
+        const actors=t?.platform_stats?.threat_actors_tracked;
+        animateCounter('stat-actors',0,(actors??14),1200);
+      })
+      .catch(()=>animateCounter('stat-actors',0,14,1000));
   }catch(e){
     // Fallback: animate static seed values
     animateCounter('stat-total',0,847,1000);
