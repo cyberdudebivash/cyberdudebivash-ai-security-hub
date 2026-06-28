@@ -1806,14 +1806,14 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
 
 /** POST /api/copilot/chat */
 export async function handleCopilotChat(request, env, authCtx) {
-  if (request.method !== 'POST') return badRequest('Use POST');
+  if (request.method !== 'POST') return badRequest(request, 'Use POST');
 
   let body;
-  try { body = await request.json(); } catch { return badRequest('Invalid JSON body'); }
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
 
   const userMessage = (body.message || '').trim();
-  if (!userMessage)             return badRequest('message is required');
-  if (userMessage.length > 5000) return badRequest('message too long (max 5000 chars)');
+  if (!userMessage)             return badRequest(request, 'message is required');
+  if (userMessage.length > 5000) return badRequest(request, 'message too long (max 5000 chars)');
 
   const userId    = authCtx?.userId || authCtx?.email || authCtx?.ip || 'anonymous';
   const tier      = (authCtx?.tier || 'FREE').toUpperCase();
@@ -1823,7 +1823,7 @@ export async function handleCopilotChat(request, env, authCtx) {
   // Quota
   const quota = await checkDailyQuota(env, userId, tier);
   if (!quota.ok) {
-    return ok({
+    return ok(request, {
       error:       'daily_quota_exceeded',
       message:     `Daily limit of ${quota.limit} messages reached for ${tier} tier. Upgrade to PRO for 200/day or ENTERPRISE for unlimited.`,
       quota,
@@ -1854,7 +1854,7 @@ export async function handleCopilotChat(request, env, authCtx) {
   session.turns = (session.turns || 0) + 1;
   await saveSession(env, userId, sessionId, session);
 
-  return ok({
+  return ok(request, {
     session_id:      sessionId,
     message:         response.content,
     model:           response.model,
@@ -1877,7 +1877,7 @@ export async function handleGetCopilotSession(request, env, authCtx) {
   const userId    = authCtx?.userId || authCtx?.email || authCtx?.ip || 'anonymous';
   const sessionId = new URL(request.url).searchParams.get('session_id') || `${userId}:default`;
   const session   = await loadSession(env, userId, sessionId);
-  return ok({
+  return ok(request, {
     session_id:    sessionId,
     message_count: session.messages.length,
     turns:         session.turns || 0,
@@ -1892,26 +1892,26 @@ export async function handleDeleteCopilotSession(request, env, authCtx) {
   const userId    = authCtx?.userId || authCtx?.email || authCtx?.ip || 'anonymous';
   const sessionId = new URL(request.url).searchParams.get('session_id') || `${userId}:default`;
   if (env.SECURITY_HUB_KV) await env.SECURITY_HUB_KV.delete(sessionKey(userId, sessionId)).catch(() => {});
-  return ok({ success: true, session_id: sessionId, message: 'Session cleared.' });
+  return ok(request, { success: true, session_id: sessionId, message: 'Session cleared.' });
 }
 
 /** POST /api/copilot/quick-action */
 export async function handleCopilotQuickAction(request, env, authCtx) {
-  if (request.method !== 'POST') return badRequest('Use POST');
+  if (request.method !== 'POST') return badRequest(request, 'Use POST');
 
   let body;
-  try { body = await request.json(); } catch { return badRequest('Invalid JSON body'); }
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
 
   const { skill, params = {} } = body;
-  if (!skill) return badRequest('skill is required');
+  if (!skill) return badRequest(request, 'skill is required');
 
   const tier = (authCtx?.tier || 'FREE').toUpperCase();
   const tool = TOOL_REGISTRY.find(t => t.name === skill);
 
-  if (!tool) return badRequest(`Unknown skill: ${skill}. See GET /api/copilot/capabilities.`);
+  if (!tool) return badRequest(request, `Unknown skill: ${skill}. See GET /api/copilot/capabilities.`);
 
   if (tool.tiers && !tool.tiers.includes(tier) && !authCtx?.isAdmin) {
-    return ok({
+    return ok(request, {
       error:          'tier_restriction',
       message:        `Skill "${skill}" requires ${tool.tiers.join(' or ')}. Your tier: ${tier}.`,
       required_tiers: tool.tiers,
@@ -1924,7 +1924,7 @@ export async function handleCopilotQuickAction(request, env, authCtx) {
   const t0        = Date.now();
   const result    = await executeTool(skill, params, env, authCtx, userId, sessionId);
 
-  return ok({ skill, params, result, latency_ms: Date.now() - t0, timestamp: new Date().toISOString() });
+  return ok(request, { skill, params, result, latency_ms: Date.now() - t0, timestamp: new Date().toISOString() });
 }
 
 /** GET /api/copilot/capabilities */
@@ -1972,7 +1972,7 @@ export async function handleCopilotCapabilities(request, env, authCtx) {
     parameters:    Object.keys(t.input_schema.properties || {}),
   }));
 
-  return ok({
+  return ok(request, {
     copilot:             'APEX — AI Security Copilot v4.0 (God Mode — Full Platform)',
     version:             '4.0.0',
     tier,
