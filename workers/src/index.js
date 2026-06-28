@@ -431,6 +431,16 @@ import {
   handleMarketplaceObservability,
 } from './handlers/marketplaceCheckoutHandler.js';
 
+// ─── P23.0: MSSP Public Onboarding & Pricing Flow ────────────────────────────
+import {
+  handleMsspTiers,
+  handleMsspCheckout,
+  handleMsspVerify,
+  handleMsspTrial,
+  handleMsspOnboardingStatus,
+  handleMsspOnboardingObservability,
+} from './handlers/msspOnboardingHandler.js';
+
 // ─── P22.0: AI Governance Compliance PDF Export Engine ───────────────────────
 import {
   handlePdfGenerate,
@@ -2336,6 +2346,26 @@ export default {
     if (path === '/api/revenue/snapshot' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleRevenueSnapshot(request, env, authCtx), request));
+    }
+
+    // ── P23.0: MSSP Public Onboarding & Pricing Flow ─────────────────────────
+    if (path === '/api/mssp/onboarding/tiers' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMsspTiers(request, env), request));
+    }
+    if (path === '/api/mssp/onboarding/checkout' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleMsspCheckout(request, env), request));
+    }
+    if (path === '/api/mssp/onboarding/verify' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleMsspVerify(request, env), request));
+    }
+    if (path === '/api/mssp/onboarding/trial' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleMsspTrial(request, env), request));
+    }
+    if (path === '/api/mssp/onboarding/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMsspOnboardingStatus(request, env), request));
+    }
+    if (path === '/api/mssp/onboarding/observability' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMsspOnboardingObservability(request, env), request));
     }
 
     // MSSP Workspace

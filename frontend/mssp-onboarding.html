@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSSP Partner Programme — CYBERDUDEBIVASH® SENTINEL APEX</title>
+<meta name="description" content="Join the CYBERDUDEBIVASH® MSSP Partner Programme. White-label AI security platform. Resell, co-brand, and deliver enterprise threat intelligence to your clients. Starting ₹14,999/month.">
+<link rel="canonical" href="https://intel.cyberdudebivash.com/mssp-onboarding.html">
+<style>
+  :root {
+    --bg: #0d0d1a; --surface: #12121f; --surface2: #1a1a2e;
+    --border: rgba(255,255,255,0.08); --accent: #00d4ff; --accent2: #7c3aed;
+    --text: #e0e0e0; --muted: #888; --success: #22c55e; --warn: #f59e0b; --danger: #ef4444;
+    --gold: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* Header */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 12pt; font-weight: 900; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
+  .logo span { color: var(--text); }
+  .nav-link { color: var(--muted); text-decoration: none; font-size: 10pt; margin-left: 24px; }
+  .nav-link:hover { color: var(--accent); }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, #0a0a15 0%, #1a0a3e 50%, #0d1a0d 100%); padding: 80px 32px 60px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(ellipse at center, rgba(124,58,237,0.08) 0%, transparent 60%); pointer-events: none; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(251,191,36,0.1); border: 1px solid var(--gold); color: var(--gold); padding: 5px 16px; border-radius: 20px; font-size: 9pt; font-weight: 700; margin-bottom: 24px; }
+  .hero h1 { font-size: 40pt; font-weight: 900; line-height: 1.1; margin-bottom: 16px; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 13pt; max-width: 600px; margin: 0 auto 32px; line-height: 1.6; }
+  .hero-stats { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .hero-stat { text-align: center; }
+  .hero-stat .val { font-size: 22pt; font-weight: 900; color: var(--accent); }
+  .hero-stat .lbl { font-size: 9pt; color: var(--muted); text-transform: uppercase; }
+  .cta-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+
+  /* Buttons */
+  .btn { padding: 13px 30px; border-radius: 8px; font-size: 11pt; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00b8d9; }
+  .btn-gold { background: var(--gold); color: #000; }
+  .btn-gold:hover { background: #f59e0b; }
+  .btn-outline { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+  .btn-outline:hover { background: rgba(0,212,255,0.1); }
+  .btn-block { width: 100%; justify-content: center; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Section */
+  .section { padding: 60px 32px; }
+  .section-title { text-align: center; font-size: 24pt; font-weight: 900; margin-bottom: 10px; }
+  .section-subtitle { text-align: center; color: var(--muted); font-size: 11pt; margin-bottom: 40px; max-width: 560px; margin-left: auto; margin-right: auto; }
+
+  /* Tier cards */
+  .tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1050px; margin: 0 auto; }
+  .tier-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; position: relative; transition: border-color 0.2s; }
+  .tier-card.popular { border-color: var(--accent); }
+  .tier-card.gold-tier { border-color: var(--gold); }
+  .popular-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; padding: 4px 16px; border-radius: 20px; font-size: 9pt; font-weight: 900; white-space: nowrap; }
+  .gold-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; padding: 4px 16px; border-radius: 20px; font-size: 9pt; font-weight: 900; white-space: nowrap; }
+  .tier-name { font-size: 14pt; font-weight: 800; margin-bottom: 6px; }
+  .tier-price { font-size: 28pt; font-weight: 900; color: var(--accent); line-height: 1; }
+  .tier-price.gold-price { color: var(--gold); }
+  .tier-price sup { font-size: 14pt; }
+  .tier-billing { font-size: 9pt; color: var(--muted); margin: 4px 0 16px; }
+  .tier-features { list-style: none; padding: 0; margin: 0 0 20px; }
+  .tier-features li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 10.5pt; display: flex; gap: 8px; align-items: center; }
+  .tier-features li:last-child { border-bottom: none; }
+  .tier-features .check { color: var(--success); font-weight: 700; }
+  .tier-meta { font-size: 9pt; color: var(--muted); margin-bottom: 6px; }
+
+  /* Process steps */
+  .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 900px; margin: 0 auto; }
+  .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+  .step-num { width: 40px; height: 40px; border-radius: 50%; background: rgba(0,212,255,0.1); border: 2px solid var(--accent); color: var(--accent); font-size: 16pt; font-weight: 900; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+  .step-title { font-size: 11pt; font-weight: 700; margin-bottom: 6px; }
+  .step-desc { font-size: 9.5pt; color: var(--muted); line-height: 1.5; }
+
+  /* Social proof */
+  .testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 950px; margin: 0 auto; }
+  .testimonial { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .testimonial-text { font-size: 10.5pt; line-height: 1.6; color: #ccc; margin-bottom: 14px; }
+  .testimonial-author { font-size: 9.5pt; font-weight: 700; }
+  .testimonial-role { font-size: 9pt; color: var(--muted); }
+
+  /* Modal / Checkout */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 32px; }
+  .modal-title { font-size: 16pt; font-weight: 800; margin-bottom: 6px; }
+  .modal-subtitle { color: var(--muted); font-size: 10pt; margin-bottom: 24px; }
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: 9pt; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  input, select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 11pt; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+  .terms-row { display: flex; gap: 8px; align-items: flex-start; font-size: 9.5pt; color: var(--muted); margin-bottom: 16px; }
+  .terms-row input { width: auto; margin-top: 2px; }
+  .terms-row a { color: var(--accent); }
+  .price-summary { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+  .price-row { display: flex; justify-content: space-between; font-size: 10.5pt; padding: 4px 0; }
+  .price-row.total { font-weight: 800; font-size: 12pt; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
+  .close-btn { background: none; border: none; color: var(--muted); font-size: 18pt; cursor: pointer; position: absolute; top: 16px; right: 20px; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a2e; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 10.5pt; display: none; z-index: 9999; }
+  #toast.show { display: block; }
+
+  /* Result */
+  .result-card { background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(0,212,255,0.05)); border: 1px solid var(--success); border-radius: 12px; padding: 24px; }
+  .result-token { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 9.5pt; word-break: break-all; margin: 10px 0; }
+
+  /* FAQ */
+  .faq-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+  .faq-q { padding: 16px 20px; font-size: 11pt; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; }
+  .faq-q:hover { background: rgba(255,255,255,0.03); }
+  .faq-a { padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s, padding 0.3s; color: var(--muted); font-size: 10.5pt; line-height: 1.6; }
+  .faq-item.open .faq-a { max-height: 200px; padding: 0 20px 16px; }
+  .faq-arrow { transition: transform 0.2s; }
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+  /* Trial section */
+  .trial-card { background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(0,212,255,0.05)); border: 1px solid rgba(124,58,237,0.3); border-radius: 16px; padding: 40px; text-align: center; max-width: 600px; margin: 0 auto; }
+
+  @media (max-width: 900px) { .tier-grid, .steps-grid, .testimonial-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .tier-grid, .steps-grid, .testimonial-grid { grid-template-columns: 1fr; } .hero h1 { font-size: 26pt; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">CYBERDUDEBIVASH® <span>SENTINEL APEX</span></div>
+  <nav>
+    <a href="/index.html" class="nav-link">Dashboard</a>
+    <a href="/developer-onboarding.html" class="nav-link">Developer API</a>
+    <a href="/marketplace-checkout.html" class="nav-link">Marketplace</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">🏆 P23.0 — MSSP Partner Programme</div>
+  <h1>White-Label<br><span>AI Security Platform</span></h1>
+  <p>Resell enterprise-grade threat intelligence and AI security under your brand. Start a 14-day free trial or subscribe today.</p>
+
+  <div class="cta-group">
+    <button class="btn btn-gold" onclick="openTrialModal()">🚀 Start 14-Day Free Trial</button>
+    <a href="#pricing" class="btn btn-outline">View Pricing Plans ↓</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="val" id="partner-count">50+</div><div class="lbl">Active Partners</div></div>
+    <div class="hero-stat"><div class="val">3</div><div class="lbl">Partner Tiers</div></div>
+    <div class="hero-stat"><div class="val">14</div><div class="lbl">Day Free Trial</div></div>
+    <div class="hero-stat"><div class="val">99.9%</div><div class="lbl">SLA Uptime</div></div>
+  </div>
+</div>
+
+<!-- PROCESS -->
+<div class="section" style="background: var(--surface); border-bottom: 1px solid var(--border);">
+  <div class="section-title">How It Works</div>
+  <div class="section-subtitle">From sign-up to first client invoice in under 30 minutes.</div>
+  <div class="steps-grid">
+    <div class="step-card"><div class="step-num">1</div><div class="step-title">Choose Your Tier</div><div class="step-desc">Select Reseller, Silver, or Gold based on your client pipeline and desired margin.</div></div>
+    <div class="step-card"><div class="step-num">2</div><div class="step-title">Instant Activation</div><div class="step-desc">Pay via Razorpay (UPI/card/netbanking). Your MSSP dashboard activates immediately.</div></div>
+    <div class="step-card"><div class="step-num">3</div><div class="step-title">Configure Branding</div><div class="step-desc">Upload your logo, set your domain, and configure white-label reports (Silver/Gold).</div></div>
+    <div class="step-card"><div class="step-num">4</div><div class="step-title">Add Clients & Bill</div><div class="step-desc">Add client accounts, generate co-branded reports, and invoice at your own margin.</div></div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<div class="section" id="pricing">
+  <div class="section-title">Partner Plans</div>
+  <div class="section-subtitle">All plans include access to SENTINEL APEX threat intelligence platform, AI-generated security reports, and MITRE ATT&CK coverage.</div>
+  <div class="tier-grid" id="tier-grid">
+    <!-- Loaded from API -->
+    <div style="grid-column: 1/-1; text-align:center; color: var(--muted); padding: 40px;">Loading plans...</div>
+  </div>
+</div>
+
+<!-- TRIAL -->
+<div class="section" style="background: var(--surface2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="trial-card">
+    <div style="font-size: 36pt; margin-bottom: 12px;">🎯</div>
+    <div style="font-size: 20pt; font-weight: 900; margin-bottom: 10px;">14-Day Free Trial</div>
+    <div style="color: var(--muted); font-size: 11pt; line-height: 1.6; margin-bottom: 24px;">No credit card required. Access up to 3 client accounts and all Reseller features. Upgrade before trial ends to keep your data and client history.</div>
+    <button class="btn btn-gold" onclick="openTrialModal()" style="font-size: 13pt; padding: 16px 40px;">Start Free Trial →</button>
+    <div style="color: var(--muted); font-size: 9pt; margin-top: 12px;">No credit card. No obligation. Cancel anytime.</div>
+  </div>
+</div>
+
+<!-- TESTIMONIALS -->
+<div class="section">
+  <div class="section-title">Trusted by Security Partners</div>
+  <div class="section-subtitle">MSSPs, SOC providers, and cybersecurity consultancies across India and Southeast Asia.</div>
+  <div class="testimonial-grid">
+    <div class="testimonial">
+      <div class="testimonial-text">"We onboarded 12 clients in our first month. The white-label reports look completely native to our brand. Our clients have no idea it's SENTINEL APEX under the hood."</div>
+      <div class="testimonial-author">Rohan Mehta</div>
+      <div class="testimonial-role">CEO, SecureFirst India</div>
+    </div>
+    <div class="testimonial">
+      <div class="testimonial-text">"The MSSP Silver plan pays for itself with just 2 client accounts. The margin structure is genuinely the best we've seen from any threat intel vendor."</div>
+      <div class="testimonial-author">Ananya Krishnan</div>
+      <div class="testimonial-role">Director, CyberShield SOC</div>
+    </div>
+    <div class="testimonial">
+      <div class="testimonial-text">"AI-generated executive reports for CISO clients. MITRE ATT&CK coverage mapping. Detection packs. Everything our enterprise clients expect — under our brand."</div>
+      <div class="testimonial-author">Vikram Nair</div>
+      <div class="testimonial-role">Head of Security, RedTeam Asia</div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="section" style="background: var(--surface); border-top: 1px solid var(--border); max-width: 760px; margin: 0 auto;">
+  <div class="section-title" style="text-align:left">Frequently Asked Questions</div>
+  <div id="faq-list">
+    <div class="faq-item open">
+      <div class="faq-q" onclick="toggleFaq(this)">What does white-label mean for my clients? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Silver and Gold partners get a custom domain, your logo on all dashboards and reports, and zero CYBERDUDEBIVASH® branding visible to your clients. It looks like your own product.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Can I upgrade from Reseller to Silver mid-month? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Yes. Upgrades are prorated and take effect immediately. Your client accounts and data carry over with no downtime.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What does the 40%/50% margin mean? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">You set your own client pricing. The margin percentage represents the revenue share structure on sub-licensing and co-branded resale arrangements. Direct clients billed by you have no margin restrictions.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Is there a minimum client commitment? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">No minimum client requirement. The Reseller plan supports up to 10 clients, Silver up to 50, Gold unlimited. You only need to maintain your monthly subscription.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What payment methods are accepted? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">All payments are processed via Razorpay. UPI, NetBanking, credit/debit cards (Visa, Mastercard, RuPay), and EMI options are available.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Is my trial data preserved if I upgrade? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Yes. All client accounts, reports, and configurations created during your 14-day trial are preserved when you upgrade to a paid plan.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal" style="position:relative">
+    <button class="close-btn" onclick="closeModal('checkout-modal')">×</button>
+    <div id="checkout-form-area">
+      <div class="modal-title">🏆 MSSP Partner Checkout</div>
+      <div class="modal-subtitle" id="modal-tier-label">Activate your MSSP partner account</div>
+
+      <div class="price-summary" id="price-summary"></div>
+
+      <div class="form-group">
+        <label>Company Name *</label>
+        <input id="co-company" type="text" placeholder="Your Security Company Pvt Ltd" />
+      </div>
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input id="co-name" type="text" placeholder="Full name" />
+      </div>
+      <div class="form-group">
+        <label>Business Email *</label>
+        <input id="co-email" type="email" placeholder="ceo@yoursecurityfirm.com" />
+      </div>
+      <div class="form-group">
+        <label>Phone (optional)</label>
+        <input id="co-phone" type="tel" placeholder="+91 98765 43210" />
+      </div>
+      <div class="form-group">
+        <label>Current client count (estimate)</label>
+        <input id="co-clients" type="number" min="0" placeholder="e.g. 15" />
+      </div>
+      <div class="form-group">
+        <label>Website (optional)</label>
+        <input id="co-website" type="url" placeholder="https://yoursecurityfirm.com" />
+      </div>
+
+      <div class="terms-row">
+        <input type="checkbox" id="co-terms">
+        <label for="co-terms" style="color:var(--muted);font-size:9.5pt;text-transform:none;letter-spacing:0">
+          I agree to the <a href="/terms.html" target="_blank">MSSP Partner Terms</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a>.
+        </label>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="co-pay-btn" onclick="initiatePayment()">
+        💳 Proceed to Payment
+      </button>
+      <div style="color:var(--muted);font-size:9pt;text-align:center;margin-top:10px">Secured by Razorpay · UPI / Cards / NetBanking</div>
+    </div>
+
+    <div id="checkout-progress" style="display:none;text-align:center;padding:40px">
+      <div style="font-size:28pt;margin-bottom:12px">⏳</div>
+      <div style="font-size:12pt;font-weight:700;margin-bottom:8px">Processing payment...</div>
+      <div style="color:var(--muted);font-size:10pt">Do not close this window</div>
+    </div>
+
+    <div id="checkout-result" style="display:none">
+      <div class="result-card">
+        <div style="font-size:24pt;margin-bottom:12px">🎉</div>
+        <div style="font-size:16pt;font-weight:900;margin-bottom:8px;color:var(--success)">Welcome to the MSSP Programme!</div>
+        <div style="color:var(--muted);font-size:10.5pt;margin-bottom:14px">Your account has been activated. Save your access token securely.</div>
+        <div><strong style="font-size:9.5pt;color:var(--muted)">PARTNER ID</strong><div class="result-token" id="r-partner-id"></div></div>
+        <div><strong style="font-size:9.5pt;color:var(--muted)">ACCESS TOKEN (save this — shown once)</strong><div class="result-token" id="r-access-token"></div></div>
+        <div id="r-next-steps" style="margin-top:14px"></div>
+        <a href="/mssp-dashboard.html" class="btn btn-primary btn-block" style="margin-top:16px">Go to MSSP Dashboard →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRIAL MODAL -->
+<div class="modal-overlay" id="trial-modal">
+  <div class="modal" style="position:relative">
+    <button class="close-btn" onclick="closeModal('trial-modal')">×</button>
+    <div id="trial-form-area">
+      <div class="modal-title">🚀 Start 14-Day Free Trial</div>
+      <div class="modal-subtitle">No credit card required. Access 3 client accounts and all Reseller features.</div>
+
+      <div class="form-group">
+        <label>Company Name *</label>
+        <input id="tr-company" type="text" placeholder="Your Security Firm Pvt Ltd" />
+      </div>
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input id="tr-name" type="text" placeholder="Full name" />
+      </div>
+      <div class="form-group">
+        <label>Business Email *</label>
+        <input id="tr-email" type="email" placeholder="you@yoursecurityfirm.com" />
+      </div>
+      <div class="form-group">
+        <label>Approximate number of clients</label>
+        <input id="tr-clients" type="number" min="0" placeholder="e.g. 8" />
+      </div>
+
+      <div class="terms-row">
+        <input type="checkbox" id="tr-terms">
+        <label for="tr-terms" style="color:var(--muted);font-size:9.5pt;text-transform:none;letter-spacing:0">
+          I agree to the <a href="/terms.html" target="_blank">Partner Terms</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a>.
+        </label>
+      </div>
+
+      <button class="btn btn-gold btn-block" id="tr-start-btn" onclick="startTrial()">Start Free Trial →</button>
+      <div style="color:var(--muted);font-size:9pt;text-align:center;margin-top:10px">No credit card · No commitment · Cancel anytime</div>
+    </div>
+
+    <div id="trial-result" style="display:none">
+      <div class="result-card">
+        <div style="font-size:24pt;margin-bottom:12px">🎯</div>
+        <div style="font-size:16pt;font-weight:900;margin-bottom:8px;color:var(--gold)">Trial Activated!</div>
+        <div style="color:var(--muted);font-size:10.5pt;margin-bottom:14px" id="trial-expires-msg"></div>
+        <div><strong style="font-size:9.5pt;color:var(--muted)">PARTNER ID</strong><div class="result-token" id="tr-r-id"></div></div>
+        <div><strong style="font-size:9.5pt;color:var(--muted)">ACCESS TOKEN (save this)</strong><div class="result-token" id="tr-r-token"></div></div>
+        <a href="/mssp-dashboard.html" class="btn btn-gold btn-block" style="margin-top:16px">Go to MSSP Dashboard →</a>
+        <a href="#pricing" onclick="closeModal('trial-modal')" class="btn btn-outline btn-block" style="margin-top:8px">Upgrade to Paid Plan</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const API = '/api/mssp/onboarding';
+let selectedTier = null;
+
+// ── Load tiers ─────────────────────────────────────────────────────────────
+async function loadTiers() {
+  try {
+    const res  = await fetch(`${API}/tiers`);
+    const data = await res.json();
+
+    if (data.partner_count) {
+      document.getElementById('partner-count').textContent = data.partner_count + '+';
+    }
+
+    const grid = document.getElementById('tier-grid');
+    grid.innerHTML = (data.tiers || []).map(t => {
+      const isGold    = t.id === 'gold';
+      const isSilver  = t.id === 'silver';
+      return `
+        <div class="tier-card ${isSilver ? 'popular' : ''} ${isGold ? 'gold-tier' : ''}">
+          ${isSilver ? '<div class="popular-badge">⭐ Most Popular</div>' : ''}
+          ${isGold ? '<div class="gold-badge">👑 Best Value</div>' : ''}
+          <div class="tier-name">${t.name}</div>
+          <div class="tier-price ${isGold ? 'gold-price' : ''}"><sup>₹</sup>${t.price_inr.toLocaleString('en-IN')}</div>
+          <div class="tier-billing">per month · ${t.billing} billing</div>
+          <div class="tier-meta">Up to <strong>${t.clients}</strong> clients · <strong>${t.margin}</strong> margin</div>
+          <ul class="tier-features">
+            ${(t.features || []).map(f => `<li><span class="check">✓</span>${f}</li>`).join('')}
+          </ul>
+          <button class="btn btn-primary btn-block ${isGold ? 'btn-gold' : ''}" onclick="openCheckout('${t.id}', '${t.name}', ${t.price_inr}, ${typeof t.clients === 'number' ? t.clients : -1}, '${t.margin}')">
+            Activate ${t.name} →
+          </button>
+          <div style="text-align:center;margin-top:10px">
+            <button onclick="openTrialModal()" style="background:none;border:none;color:var(--muted);font-size:9pt;cursor:pointer;text-decoration:underline">or start free trial</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('tier-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">Unable to load plans. <button onclick="loadTiers()" style="color:var(--accent);background:none;border:none;cursor:pointer">Retry</button></div>';
+  }
+}
+
+// ── Checkout ───────────────────────────────────────────────────────────────
+function openCheckout(tierId, tierName, priceInr, clients, margin) {
+  selectedTier = { tierId, tierName, priceInr, clients, margin };
+  document.getElementById('modal-tier-label').textContent = `${tierName} — ₹${priceInr.toLocaleString('en-IN')}/month`;
+  document.getElementById('price-summary').innerHTML = `
+    <div class="price-row"><span>${tierName} Plan</span><span>₹${priceInr.toLocaleString('en-IN')}/mo</span></div>
+    <div class="price-row"><span>Clients</span><span>${clients === -1 ? 'Unlimited' : clients}</span></div>
+    <div class="price-row"><span>Margin</span><span>${margin}</span></div>
+    <div class="price-row total"><span>Total Today</span><span style="color:var(--accent)">₹${priceInr.toLocaleString('en-IN')}</span></div>`;
+  document.getElementById('checkout-form-area').style.display = 'block';
+  document.getElementById('checkout-progress').style.display  = 'none';
+  document.getElementById('checkout-result').style.display    = 'none';
+  document.getElementById('checkout-modal').classList.add('open');
+}
+
+async function initiatePayment() {
+  if (!selectedTier) return;
+  if (!document.getElementById('co-terms').checked) { toast('Please agree to the partner terms.'); return; }
+
+  const company = document.getElementById('co-company').value.trim();
+  const name    = document.getElementById('co-name').value.trim();
+  const email   = document.getElementById('co-email').value.trim();
+  if (!company || !name || !email) { toast('Company name, your name, and email are required.'); return; }
+
+  document.getElementById('co-pay-btn').disabled = true;
+
+  try {
+    const res  = await fetch(`${API}/checkout`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tier_id: selectedTier.tierId, company_name: company,
+        contact_name: name, email,
+        phone:           document.getElementById('co-phone').value.trim() || undefined,
+        clients_estimate: parseInt(document.getElementById('co-clients').value) || 0,
+        website:         document.getElementById('co-website').value.trim() || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Checkout failed');
+
+    const rzp = new Razorpay({
+      key:         data.razorpay_key,
+      amount:      data.amount_paise,
+      currency:    data.currency,
+      order_id:    data.order_id,
+      name:        'CYBERDUDEBIVASH® SENTINEL APEX',
+      description: `MSSP ${data.tier_name} — ${data.company_name}`,
+      prefill:     { name: data.contact_name, email: data.email },
+      theme:       { color: '#00d4ff' },
+      handler:     async (response) => {
+        document.getElementById('checkout-form-area').style.display = 'none';
+        document.getElementById('checkout-progress').style.display  = 'block';
+        await verifyPayment(response, data.checkout_id);
+      },
+      modal: { ondismiss: () => { document.getElementById('co-pay-btn').disabled = false; } },
+    });
+    rzp.open();
+  } catch (err) {
+    toast(`Error: ${err.message}`);
+    document.getElementById('co-pay-btn').disabled = false;
+  }
+}
+
+async function verifyPayment(rzpResponse, checkoutId) {
+  try {
+    const res  = await fetch(`${API}/verify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        razorpay_order_id:   rzpResponse.razorpay_order_id,
+        razorpay_payment_id: rzpResponse.razorpay_payment_id,
+        razorpay_signature:  rzpResponse.razorpay_signature,
+        checkout_id: checkoutId,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Verification failed');
+
+    document.getElementById('checkout-progress').style.display = 'none';
+    document.getElementById('r-partner-id').textContent    = data.partner_id;
+    document.getElementById('r-access-token').textContent  = data.access_token;
+    document.getElementById('r-next-steps').innerHTML = `<div style="margin-top:10px"><strong>Next Steps:</strong><ol style="margin:8px 0 0 18px;line-height:1.8;font-size:10pt;color:var(--muted)">${(data.next_steps||[]).map(s=>`<li>${s}</li>`).join('')}</ol></div>`;
+    document.getElementById('checkout-result').style.display = 'block';
+  } catch (err) {
+    document.getElementById('checkout-progress').style.display = 'none';
+    document.getElementById('checkout-form-area').style.display = 'block';
+    toast(`Verification error: ${err.message}`);
+    document.getElementById('co-pay-btn').disabled = false;
+  }
+}
+
+// ── Trial ──────────────────────────────────────────────────────────────────
+function openTrialModal() {
+  document.getElementById('trial-form-area').style.display = 'block';
+  document.getElementById('trial-result').style.display    = 'none';
+  document.getElementById('trial-modal').classList.add('open');
+}
+
+async function startTrial() {
+  if (!document.getElementById('tr-terms').checked) { toast('Please agree to the partner terms.'); return; }
+  const company = document.getElementById('tr-company').value.trim();
+  const name    = document.getElementById('tr-name').value.trim();
+  const email   = document.getElementById('tr-email').value.trim();
+  if (!company || !name || !email) { toast('Company name, your name, and email are required.'); return; }
+
+  const btn = document.getElementById('tr-start-btn');
+  btn.disabled = true;
+  btn.textContent = 'Activating...';
+
+  try {
+    const res  = await fetch(`${API}/trial`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_name: company, contact_name: name, email, clients_estimate: parseInt(document.getElementById('tr-clients').value) || 0 }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Trial activation failed');
+
+    document.getElementById('tr-r-id').textContent    = data.partner_id;
+    document.getElementById('tr-r-token').textContent  = data.access_token;
+    document.getElementById('trial-expires-msg').textContent = `Trial valid for ${data.trial_days} days — expires ${new Date(data.trial_ends_at).toLocaleDateString()}.`;
+    document.getElementById('trial-form-area').style.display = 'none';
+    document.getElementById('trial-result').style.display    = 'block';
+  } catch (err) {
+    const msg = err.message.includes('trial_exists') ? 'A trial already exists for this email. Check your inbox or contact mssp@cyberdudebivash.com.' : `Error: ${err.message}`;
+    toast(msg);
+    btn.disabled = false;
+    btn.textContent = 'Start Free Trial →';
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function openTrialModal() {
+  document.getElementById('trial-form-area').style.display = 'block';
+  document.getElementById('trial-result').style.display    = 'none';
+  document.getElementById('trial-modal').classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+function toggleFaq(q) { q.closest('.faq-item').classList.toggle('open'); }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// URL param: ?tier=silver → open checkout
+const urlTier = new URLSearchParams(location.search).get('tier');
+if (urlTier) setTimeout(() => {
+  const tierBtn = document.querySelector(`[onclick*="openCheckout('${urlTier}'"]`);
+  if (tierBtn) tierBtn.click();
+}, 1000);
+
+loadTiers();
+</script>
+</body>
+</html>
