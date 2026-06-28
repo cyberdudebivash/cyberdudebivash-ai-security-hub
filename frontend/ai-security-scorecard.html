@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title id="page-title">AI Security Scorecard — CYBERDUDEBIVASH Security Hub</title>
+  <meta name="description" content="Free AI Security Score for your domain. Instant 5-dimension assessment: attack surface, AI threat posture, identity risk, CVE exposure, and operational resilience."/>
+  <meta property="og:title" content="AI Security Scorecard — How Secure Is Your Organization?"/>
+  <meta property="og:description" content="Get your free AI Security Score in 60 seconds. Powered by CYBERDUDEBIVASH® Sentinel APEX."/>
+  <meta property="og:type" content="website"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <!-- Schema.org -->
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"AI Security Scorecard","description":"Free AI Security Score — 5-dimension assessment for any domain","applicationCategory":"SecurityApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+  <style>
+    :root {
+      --bg: #070b10;
+      --surface: #0d1420;
+      --surface2: #111c2d;
+      --border: #1a2840;
+      --accent: #00c2ff;
+      --accent2: #7c3aed;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --orange: #f97316;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── NAV ─────────────────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(7,11,16,0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; font-weight: 800; font-size: 0.95rem; text-decoration: none; color: var(--text); }
+    .nav-badge { background: linear-gradient(135deg, var(--accent), var(--accent2)); padding: 0.2rem 0.5rem; border-radius: 5px; font-size: 0.65rem; font-weight: 900; letter-spacing: 0.06em; }
+    .nav-links { display: flex; align-items: center; gap: 1rem; }
+    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.8rem; transition: color 0.2s; }
+    .nav-link:hover { color: var(--text); }
+    .btn { padding: 0.45rem 1.1rem; border-radius: 7px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #00a8e0; transform: translateY(-1px); }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .btn-outline:hover { background: rgba(0,194,255,0.1); }
+    .btn-lg { padding: 0.9rem 2rem; font-size: 1rem; border-radius: 10px; }
+    .btn-xl { padding: 1rem 2.5rem; font-size: 1.05rem; border-radius: 12px; font-weight: 700; }
+
+    /* ── HERO ────────────────────────────────────────────────────────── */
+    .hero {
+      padding: 120px 2rem 60px;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,194,255,0.06) 0%, transparent 70%);
+    }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(0,194,255,0.08); border: 1px solid rgba(0,194,255,0.2); border-radius: 20px; padding: 0.35rem 1rem; font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1.5rem; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; max-width: 800px; margin: 0 auto 1rem; letter-spacing: -0.02em; }
+    .hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { font-size: 1.1rem; color: var(--text-dim); max-width: 540px; margin: 0 auto 2.5rem; line-height: 1.6; }
+
+    /* ── SCORE INPUT ─────────────────────────────────────────────────── */
+    .score-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      max-width: 620px;
+      margin: 0 auto 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .score-box::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(0,194,255,0.03), rgba(124,58,237,0.03));
+      pointer-events: none;
+    }
+    .input-row { display: flex; gap: 0.75rem; align-items: stretch; }
+    .domain-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .domain-input:focus { border-color: var(--accent); }
+    .domain-input::placeholder { color: var(--text-muted); }
+    .score-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0.85rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      min-width: 160px;
+    }
+    .score-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,194,255,0.25); }
+    .score-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .score-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem; text-align: center; }
+    .input-error { color: var(--red); font-size: 0.8rem; margin-top: 0.5rem; display: none; }
+
+    /* ── LOADING ──────────────────────────────────────────────────────── */
+    #loading-panel { display: none; text-align: center; padding: 2rem; }
+    .scan-progress { max-width: 400px; margin: 0 auto; }
+    .scan-title { font-size: 1rem; font-weight: 700; margin-bottom: 1.5rem; }
+    .scan-steps { display: flex; flex-direction: column; gap: 0.6rem; text-align: left; }
+    .scan-step { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-muted); padding: 0.6rem 0.85rem; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); transition: all 0.3s; }
+    .scan-step.active { color: var(--accent); border-color: rgba(0,194,255,0.3); background: rgba(0,194,255,0.05); }
+    .scan-step.done { color: var(--green); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); }
+    .step-icon { width: 20px; text-align: center; flex-shrink: 0; }
+    .spinner-sm { width: 16px; height: 16px; border: 2px solid rgba(0,194,255,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESULT ───────────────────────────────────────────────────────── */
+    #result-panel { display: none; }
+    .result-header { text-align: center; padding: 2rem 0 1.5rem; }
+    .score-ring-wrap { position: relative; width: 160px; height: 160px; margin: 0 auto 1.5rem; }
+    .score-ring-svg { transform: rotate(-90deg); }
+    .score-ring-bg { fill: none; stroke: var(--border); stroke-width: 10; }
+    .score-ring-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+    .score-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .score-big { font-size: 2.5rem; font-weight: 900; line-height: 1; }
+    .score-max { font-size: 0.75rem; color: var(--text-muted); }
+    .grade-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; border-radius: 20px; font-size: 1rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .result-domain { font-size: 0.9rem; color: var(--text-muted); }
+    .result-summary { font-size: 0.85rem; color: var(--text-dim); max-width: 480px; margin: 0.75rem auto 0; }
+
+    /* Dimension cards */
+    .dim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.85rem; max-width: 860px; margin: 1.5rem auto; }
+    .dim-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; text-align: center; }
+    .dim-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .dim-score { font-size: 1.5rem; font-weight: 800; }
+    .dim-max { font-size: 0.65rem; color: var(--text-muted); }
+    .dim-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 0.5rem; overflow: hidden; }
+    .dim-bar-fill { height: 100%; border-radius: 2px; }
+
+    /* Findings */
+    .findings-section { max-width: 720px; margin: 0 auto 1.5rem; }
+    .findings-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .finding-item { display: flex; gap: 0.85rem; padding: 0.85rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; align-items: flex-start; }
+    .finding-sev { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 800; flex-shrink: 0; margin-top: 0.1rem; }
+    .sev-CRITICAL { background: rgba(239,68,68,0.2); color: var(--red); }
+    .sev-HIGH { background: rgba(249,115,22,0.2); color: var(--orange); }
+    .sev-MEDIUM { background: rgba(245,158,11,0.2); color: var(--yellow); }
+    .sev-LOW { background: rgba(100,116,139,0.2); color: var(--text-muted); }
+    .sev-INFO { background: rgba(0,194,255,0.1); color: var(--accent); }
+    .finding-body { flex: 1; min-width: 0; }
+    .finding-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .finding-detail { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+    .upgrade-gate { background: linear-gradient(135deg, rgba(0,194,255,0.05), rgba(124,58,237,0.05)); border: 1px solid rgba(0,194,255,0.2); border-radius: 10px; padding: 1.25rem; text-align: center; margin-bottom: 1rem; }
+    .upgrade-gate-title { font-weight: 700; margin-bottom: 0.4rem; }
+    .upgrade-gate-sub { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+    /* CTA section */
+    .cta-section { max-width: 720px; margin: 0 auto 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+    .cta-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .cta-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+    .cta-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    /* Share section */
+    .share-section { max-width: 720px; margin: 0 auto 1.5rem; }
+    .share-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.75rem; text-align: center; }
+    .share-buttons { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }
+    .share-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim); transition: all 0.2s; text-decoration: none; }
+    .share-btn:hover { background: var(--border); color: var(--text); }
+    .share-url-box { margin-top: 0.75rem; display: flex; gap: 0.5rem; max-width: 500px; margin: 0.75rem auto 0; }
+    .share-url-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
+    .copy-btn { padding: 0.5rem 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); font-size: 0.75rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .copy-btn:hover { background: var(--border); }
+
+    /* Social proof */
+    .proof-bar { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; padding: 1.5rem 0; margin: 2rem 0 0; border-top: 1px solid var(--border); }
+    .proof-item { text-align: center; }
+    .proof-num { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .proof-label { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* Dimension color helpers */
+    .dc-0 { color: var(--accent2); } .dc-1 { color: #ec4899; } .dc-2 { color: var(--yellow); } .dc-3 { color: var(--red); } .dc-4 { color: var(--green); }
+    .db-0 { background: var(--accent2); } .db-1 { background: #ec4899; } .db-2 { background: var(--yellow); } .db-3 { background: var(--red); } .db-4 { background: var(--green); }
+
+    /* Alert */
+    .alert { padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+    .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--green); }
+
+    @media (max-width: 640px) {
+      nav { padding: 0 1rem; }
+      .score-box { padding: 1.5rem 1rem; border-radius: 14px; }
+      .input-row { flex-direction: column; }
+      .score-btn { min-width: auto; }
+      .hero { padding: 90px 1rem 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-badge">APEX</div>
+    CYBERDUDEBIVASH
+  </a>
+  <div class="nav-links">
+    <a href="/intel.html" class="nav-link">Threat Intel</a>
+    <a href="/ai-security-services.html" class="nav-link">AI Security</a>
+    <a href="/upgrade.html" class="btn btn-primary btn-sm">Start Free Trial</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero-section">
+  <div class="hero-eyebrow">⚡ Free AI Security Assessment</div>
+  <h1>What's Your <span>AI Security Score?</span></h1>
+  <p class="hero-sub">Instant 5-dimension security assessment for any domain. Powered by Sentinel APEX™ threat intelligence.</p>
+
+  <!-- Score Box -->
+  <div class="score-box">
+    <div class="input-row">
+      <input type="text" id="domain-input" class="domain-input" placeholder="yourcompany.com" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <button class="score-btn" id="score-btn" onclick="startScan()">
+        <span id="score-btn-text">Scan Now — Free</span>
+      </button>
+    </div>
+    <div class="input-error" id="input-error"></div>
+    <div class="score-hint">No signup required · Results in ~15 seconds · <strong>10 free scans per day</strong></div>
+  </div>
+
+  <!-- Loading panel -->
+  <div id="loading-panel">
+    <div class="scan-progress">
+      <div class="scan-title">Scanning <span id="scanning-domain" style="color:var(--accent)"></span>…</div>
+      <div class="scan-steps" id="scan-steps">
+        <div class="scan-step" id="step-0">
+          <div class="step-icon"><div class="spinner-sm" id="step-0-icon"></div></div>
+          <span>Discovering attack surface & subdomains</span>
+        </div>
+        <div class="scan-step" id="step-1">
+          <div class="step-icon"><div style="color:var(--text-muted);font-size:0.9rem">○</div></div>
+          <span>Analyzing AI & LLM threat posture</span>
+        </div>
+        <div class="scan-step" id="step-2">
+          <div class="step-icon"><div style="color:var(--text-muted);font-size:0.9rem">○</div></div>
+          <span>Checking credential & identity risk</span>
+        </div>
+        <div class="scan-step" id="step-3">
+          <div class="step-icon"><div style="color:var(--text-muted);font-size:0.9rem">○</div></div>
+          <span>Querying CVE & vulnerability exposure</span>
+        </div>
+        <div class="scan-step" id="step-4">
+          <div class="step-icon"><div style="color:var(--text-muted);font-size:0.9rem">○</div></div>
+          <span>Measuring operational resilience</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result panel -->
+  <div id="result-panel">
+    <div class="result-header">
+      <div class="score-ring-wrap">
+        <svg class="score-ring-svg" width="160" height="160" viewBox="0 0 160 160">
+          <circle class="score-ring-bg" cx="80" cy="80" r="70"/>
+          <circle class="score-ring-fill" id="score-ring" cx="80" cy="80" r="70"
+            stroke-dasharray="439.82" stroke-dashoffset="439.82" stroke="var(--accent)"/>
+        </svg>
+        <div class="score-ring-text">
+          <div class="score-big" id="score-display">—</div>
+          <div class="score-max">/100</div>
+        </div>
+      </div>
+      <div>
+        <div class="grade-badge" id="grade-badge">—</div>
+        <div class="result-domain" id="result-domain"></div>
+        <div class="result-summary" id="result-summary"></div>
+      </div>
+    </div>
+
+    <!-- Dimensions -->
+    <div class="dim-grid" id="dim-grid"></div>
+
+    <div id="alert-zone"></div>
+
+    <!-- Findings -->
+    <div class="findings-section">
+      <div class="findings-title">Security Findings</div>
+      <div id="findings-list"></div>
+      <div class="upgrade-gate" id="upgrade-gate" style="display:none">
+        <div class="upgrade-gate-title">🔒 Full Report Requires Free Trial</div>
+        <div class="upgrade-gate-sub">See all findings, MITRE ATT&CK mappings, CVE details, and remediation roadmap.</div>
+        <a href="/upgrade.html?ref=scorecard_gate" class="btn btn-primary">Unlock Full Report</a>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-section" id="cta-box">
+      <div class="cta-title" id="cta-title"></div>
+      <div class="cta-sub" id="cta-sub"></div>
+      <div class="cta-buttons" id="cta-buttons"></div>
+    </div>
+
+    <!-- Share -->
+    <div class="share-section">
+      <div class="share-title">Share Your Score</div>
+      <div class="share-buttons">
+        <a id="share-linkedin" href="#" target="_blank" rel="noopener" class="share-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </a>
+        <a id="share-twitter" href="#" target="_blank" rel="noopener" class="share-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          X / Twitter
+        </a>
+        <button class="share-btn" onclick="copyScore()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy Link
+        </button>
+        <button class="share-btn" onclick="scanAnother()">
+          ↩ Scan Another Domain
+        </button>
+      </div>
+      <div class="share-url-box">
+        <input type="text" id="share-url" class="share-url-input" readonly/>
+        <button class="copy-btn" onclick="copyScore()">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Social proof -->
+  <div class="proof-bar">
+    <div class="proof-item"><div class="proof-num">10K+</div><div class="proof-label">Domains Scanned</div></div>
+    <div class="proof-item"><div class="proof-num">5</div><div class="proof-label">Security Dimensions</div></div>
+    <div class="proof-item"><div class="proof-num">60s</div><div class="proof-label">Average Scan Time</div></div>
+    <div class="proof-item"><div class="proof-num">Free</div><div class="proof-label">No Credit Card</div></div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section style="max-width:900px;margin:0 auto;padding:3rem 2rem">
+  <h2 style="text-align:center;font-size:1.5rem;font-weight:800;margin-bottom:2rem">How the <span style="color:var(--accent)">AI Security Score</span> Works</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">🌐</div>
+      <div style="font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">D1: Attack Surface</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">Subdomains, HTTPS, security headers</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">🤖</div>
+      <div style="font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">D2: AI Threat Posture</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">LLM endpoints, AI API exposure</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">🔐</div>
+      <div style="font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">D3: Identity Risk</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">SPF, DMARC, email spoofing</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">🔍</div>
+      <div style="font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">D4: CVE Exposure</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">Open ports, known vulnerabilities</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">⚡</div>
+      <div style="font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">D5: Resilience</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">Uptime, TLS cert, response time</div>
+    </div>
+  </div>
+</section>
+
+<!-- Bottom CTA -->
+<section style="background:linear-gradient(135deg,rgba(0,194,255,0.06),rgba(124,58,237,0.06));border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:3rem 2rem;text-align:center">
+  <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:0.75rem">Ready to Secure Your <span style="color:var(--accent)">AI Infrastructure?</span></h2>
+  <p style="color:var(--text-muted);max-width:480px;margin:0 auto 1.75rem;font-size:0.95rem">Join enterprises using CYBERDUDEBIVASH® Sentinel APEX for continuous AI security monitoring, threat intelligence, and detection engineering.</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+    <a href="/upgrade.html?ref=scorecard_bottom" class="btn btn-primary btn-lg">Start Free Trial</a>
+    <a href="/booking.html?ref=scorecard_bottom" class="btn btn-outline btn-lg">Book CISO Demo</a>
+  </div>
+</section>
+
+<footer style="text-align:center;padding:1.5rem;font-size:0.75rem;color:var(--text-muted);border-top:1px solid var(--border)">
+  © 2025 CYBERDUDEBIVASH®. All rights reserved. · <a href="/privacy-policy.html" style="color:var(--text-muted)">Privacy</a> · <a href="/terms-of-service.html" style="color:var(--text-muted)">Terms</a>
+</footer>
+
+<script>
+const API = '';
+let currentResult = null;
+
+const DIM_LABELS = ['Attack Surface', 'AI Threat Posture', 'Identity Risk', 'CVE Exposure', 'Resilience'];
+
+// Check for token in URL (shared scorecard)
+const urlParams = new URLSearchParams(location.search);
+const sharedToken = urlParams.get('token');
+const sharedDomain = urlParams.get('domain');
+if (sharedToken) { loadSharedScore(sharedToken, sharedDomain); }
+
+async function startScan() {
+  const input = document.getElementById('domain-input');
+  const btn = document.getElementById('score-btn');
+  const errEl = document.getElementById('input-error');
+
+  let domain = input.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+  errEl.style.display = 'none';
+
+  if (!domain || !/^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?(\.[a-z]{2,})+$/.test(domain)) {
+    errEl.textContent = 'Please enter a valid domain (e.g. company.com)';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('loading-panel').style.display = 'block';
+  document.getElementById('scanning-domain').textContent = domain;
+  btn.disabled = true;
+  document.getElementById('score-btn-text').textContent = 'Scanning…';
+
+  animateSteps();
+
+  try {
+    const r = await fetch(`${API}/api/public/security-scorecard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain }),
+    });
+    const data = await r.json();
+
+    document.getElementById('loading-panel').style.display = 'none';
+    btn.disabled = false;
+    document.getElementById('score-btn-text').textContent = 'Scan Now — Free';
+
+    if (!r.ok) {
+      showAlert(data.error || 'Scan failed. Please try again.', 'error');
+      return;
+    }
+    renderResult(data);
+  } catch(e) {
+    document.getElementById('loading-panel').style.display = 'none';
+    btn.disabled = false;
+    document.getElementById('score-btn-text').textContent = 'Scan Now — Free';
+    showAlert('Network error. Please check your connection and try again.', 'error');
+  }
+}
+
+async function loadSharedScore(token, domain) {
+  document.getElementById('loading-panel').style.display = 'block';
+  document.getElementById('scanning-domain').textContent = domain || '…';
+  try {
+    const r = await fetch(`${API}/api/public/security-scorecard/${token}`);
+    const data = await r.json();
+    document.getElementById('loading-panel').style.display = 'none';
+    if (r.ok) {
+      document.title = `AI Security Score: ${data.score}/100 (${data.grade}) — ${data.domain || domain}`;
+      renderMinimalShared(data, token, domain);
+    }
+  } catch {
+    document.getElementById('loading-panel').style.display = 'none';
+  }
+}
+
+function renderMinimalShared(data, token, domain) {
+  const score = data.score || 0;
+  const grade = data.grade || '?';
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('result-domain').textContent = data.domain || domain || '';
+  document.getElementById('result-panel').style.display = 'block';
+  animateRing(score);
+  styleGrade(grade, data.grade_color);
+  document.getElementById('result-summary').textContent = `This security score was generated by CYBERDUDEBIVASH® Sentinel APEX. Scan your own domain for a fresh assessment.`;
+  document.getElementById('cta-title').textContent = 'Get Your Organization\'s AI Security Score';
+  document.getElementById('cta-sub').textContent = 'Free scan — no signup required. Full reports available on all paid plans.';
+  document.getElementById('cta-buttons').innerHTML = `<a href="#" onclick="document.getElementById('domain-input').focus();return false" class="btn btn-primary">Scan My Domain</a><a href="/upgrade.html?ref=scorecard_shared" class="btn btn-secondary">View Full Plans</a>`;
+}
+
+function renderResult(data) {
+  currentResult = data;
+
+  // Update page title and meta
+  document.title = `AI Security Score: ${data.score}/100 (${data.grade}) — ${data.domain}`;
+
+  const score = data.score || 0;
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('result-domain').textContent = data.domain;
+  document.getElementById('result-panel').style.display = 'block';
+
+  // Animate ring
+  animateRing(score);
+  styleGrade(data.grade, data.grade_color);
+
+  // Summary
+  const findSum = data.finding_summary || {};
+  const parts = [];
+  if (findSum.critical > 0) parts.push(`${findSum.critical} critical issue${findSum.critical > 1 ? 's' : ''}`);
+  if (findSum.high > 0) parts.push(`${findSum.high} high-risk finding${findSum.high > 1 ? 's' : ''}`);
+  if (findSum.medium > 0) parts.push(`${findSum.medium} medium-risk issue${findSum.medium > 1 ? 's' : ''}`);
+  document.getElementById('result-summary').textContent = parts.length
+    ? `Detected: ${parts.join(', ')}.`
+    : 'No critical issues found. Review detailed findings below.';
+
+  // Dimension cards
+  const dims = data.dimensions || [];
+  document.getElementById('dim-grid').innerHTML = dims.map((d, i) => {
+    const pct = Math.round((d.score / d.max) * 100);
+    return `<div class="dim-card">
+      <div class="dim-label">${DIM_LABELS[i] || d.label}</div>
+      <div class="dim-score dc-${i}">${d.score}<span class="dim-max">/${d.max}</span></div>
+      <div class="dim-bar"><div class="dim-bar-fill db-${i}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Findings
+  const findings = data.top_findings || [];
+  const findingsEl = document.getElementById('findings-list');
+  findingsEl.innerHTML = findings.map(f => `
+    <div class="finding-item">
+      <div class="finding-sev sev-${f.severity}">${f.severity}</div>
+      <div class="finding-body">
+        <div class="finding-title">${escHtml(f.title)}</div>
+        <div class="finding-detail">${escHtml(f.detail)}</div>
+      </div>
+    </div>`).join('');
+
+  if (data.upgrade_for_full) {
+    document.getElementById('upgrade-gate').style.display = 'block';
+  }
+
+  // CTA
+  const cta = data.cta || {};
+  document.getElementById('cta-title').textContent = cta.primary || 'Get Your Full Security Report';
+  document.getElementById('cta-sub').textContent = `Upgrade to access all ${findSum.total || 0} findings, MITRE ATT&CK mappings, CVE details, and a remediation roadmap.`;
+  document.getElementById('cta-buttons').innerHTML = `
+    <a href="${escHtml(cta.primary_url || '/booking.html')}" class="btn btn-primary">${escHtml(cta.primary || 'Book Assessment')}</a>
+    <a href="${escHtml(cta.secondary_url || '/upgrade.html')}" class="btn btn-secondary">${escHtml(cta.secondary || 'View Full Plans')}</a>`;
+
+  // Share
+  const shareUrl = `https://cyberdudebivash.in/ai-security-scorecard.html?token=${data.share_token || ''}&domain=${encodeURIComponent(data.domain)}`;
+  document.getElementById('share-url').value = shareUrl;
+  document.getElementById('share-linkedin').href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(`Our AI Security Score: ${score}/100 (${data.grade}) — powered by CYBERDUDEBIVASH Sentinel APEX`)}`;
+  document.getElementById('share-twitter').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`🔐 AI Security Score: ${score}/100 (${data.grade}) for ${data.domain} | Get yours → ${shareUrl} #CyberSecurity #AISecOps`)}`;
+
+  document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function animateRing(score) {
+  const circumference = 439.82;
+  const offset = circumference - (score / 100) * circumference;
+  const ring = document.getElementById('score-ring');
+  const color = score >= 80 ? '#10b981' : score >= 65 ? '#00c2ff' : score >= 50 ? '#f59e0b' : '#ef4444';
+  ring.style.stroke = color;
+  setTimeout(() => { ring.style.strokeDashoffset = offset; }, 100);
+}
+
+function styleGrade(grade, color) {
+  const badge = document.getElementById('grade-badge');
+  badge.textContent = grade;
+  badge.style.background = (color || '#00c2ff') + '22';
+  badge.style.color = color || '#00c2ff';
+  badge.style.border = `1px solid ${(color || '#00c2ff')}44`;
+}
+
+let stepTimer = null;
+function animateSteps() {
+  clearTimeout(stepTimer);
+  const delays = [0, 2500, 5000, 8000, 11000];
+  delays.forEach((delay, i) => {
+    setTimeout(() => {
+      document.querySelectorAll('.scan-step').forEach((s, j) => {
+        if (j < i) { s.className = 'scan-step done'; s.querySelector('.step-icon').innerHTML = '✓'; }
+        else if (j === i) { s.className = 'scan-step active'; s.querySelector('.step-icon').innerHTML = '<div class="spinner-sm"></div>'; }
+        else { s.className = 'scan-step'; s.querySelector('.step-icon').innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem">○</div>'; }
+      });
+    }, delay);
+  });
+}
+
+function showAlert(msg, type) {
+  const z = document.getElementById('alert-zone');
+  z.innerHTML = `<div class="alert alert-${type}">${escHtml(msg)}</div>`;
+}
+
+function copyScore() {
+  const url = document.getElementById('share-url').value;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000); }
+  });
+}
+
+function scanAnother() {
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('domain-input').value = '';
+  document.getElementById('domain-input').focus();
+  document.getElementById('hero-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Enter key support
+document.getElementById('domain-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startScan();
+});
+
+// Pre-fill domain from URL param
+if (sharedDomain && !sharedToken) {
+  document.getElementById('domain-input').value = sharedDomain;
+}
+</script>
+</body>
+</html>

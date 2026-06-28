@@ -397,6 +397,16 @@ import {
   handleCommercialObservability,
 } from './handlers/commercialPlatformHandler.js';
 
+// ─── P17.0: AI Security Intelligence Scorecard — Viral Acquisition Engine ──────
+import {
+  handlePublicScorecard,
+  handleScorecardByToken,
+  handleMyScore,
+  handleScorecardHistory,
+  handleScorecardShare,
+  handleScorecardObservability,
+} from './handlers/aiSecurityScorecardHandler.js';
+
 // ─── P16.0: Enterprise Transformation — KPI Command Center, Billing Portal, Overage Engine ──
 import {
   handlePlatformKPI,
@@ -4580,6 +4590,30 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/commercial/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleCommercialObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P17.0: AI Security Intelligence Scorecard — Viral Acquisition Engine ──────
+    if (path === '/api/public/security-scorecard' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handlePublicScorecard(request, env), request));
+    }
+    if (path.startsWith('/api/public/security-scorecard/') && method === 'GET') {
+      const token = path.replace('/api/public/security-scorecard/', '');
+      return withSecurityHeaders(withCors(await handleScorecardByToken(request, env, token), request));
+    }
+    if (path === '/api/scorecard/my-score' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMyScore(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scorecard/history' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleScorecardHistory(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scorecard/share' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleScorecardShare(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/platform/scorecard/observability' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleScorecardObservability(request, env), request));
     }
 
     // ── P16.0: Enterprise Transformation — KPI, Billing Portal, Overage Engine ──
