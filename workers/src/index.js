@@ -421,6 +421,15 @@ import {
   handleTransformObservability,
 } from './handlers/enterpriseTransformHandler.js';
 
+// ─── P20.0: Developer Onboarding & Self-Serve Trial Engine ───────────────────
+import {
+  handleTrialKeyRequest,
+  handleQuickstart,
+  handleOnboardingStatus,
+  handleResendWelcome,
+  handleOnboardingObservability,
+} from './handlers/developerOnboardingHandler.js';
+
 // ─── P18.0 + P19.0-B: Revenue Intelligence & Churn Prevention Engine ─────────
 import {
   handleRevenueIntelligence,
@@ -4667,6 +4676,23 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/platform/transform/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleTransformObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P20.0: Developer Onboarding & Self-Serve Trial Engine ────────────────
+    if (path === '/api/onboarding/trial-key' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleTrialKeyRequest(request, env), request));
+    }
+    if (path === '/api/onboarding/quickstart' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleQuickstart(request, env), request));
+    }
+    if (path === '/api/onboarding/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleOnboardingStatus(request, env), request));
+    }
+    if (path === '/api/onboarding/resend-welcome' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleResendWelcome(request, env), request));
+    }
+    if (path === '/api/onboarding/observability' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleOnboardingObservability(request, env), request));
     }
 
     // ── P18.0: Revenue Intelligence & Churn Prevention Engine ────────────────

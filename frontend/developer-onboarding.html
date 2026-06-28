@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Your Free API Key — CYBERDUDEBIVASH® AI Security Hub</title>
+<meta name="description" content="Get a free CYBERDUDEBIVASH® AI Security Hub trial API key in 30 seconds. Access threat intelligence, vulnerability scanning, AI security, and SOC automation APIs.">
+<meta name="keywords" content="AI security API, threat intelligence API, free API key, cybersecurity API, vulnerability scanning API">
+<meta property="og:title" content="Free AI Security API Key — CYBERDUDEBIVASH® SENTINEL APEX">
+<meta property="og:description" content="Get instant API access to threat intelligence, AI security scoring, vulnerability scanning, and SOC automation. No credit card required.">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://cyberdudebivash.in/developer-onboarding.html">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"CYBERDUDEBIVASH® AI Security Hub API","applicationCategory":"SecurityApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"Free trial API key — 100 requests/day"}}</script>
+<style>
+  :root {
+    --bg: #060b14;
+    --surface: #0c1422;
+    --surface2: #111827;
+    --border: #1a2840;
+    --accent: #00c2ff;
+    --accent2: #7c3aed;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card-radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,11,20,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .logo-badge { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #000; font-size: 0.65rem; font-weight: 800; padding: 0.3rem 0.6rem; border-radius: 6px; letter-spacing: 0.1em; }
+  .logo-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+  .header-links { display: flex; gap: 1.5rem; align-items: center; }
+  .header-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .header-links a:hover { color: var(--text); }
+  .btn-upgrade-sm { padding: 0.4rem 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #000; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: none; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 5rem 2rem 3rem;
+    text-align: center;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,194,255,0.08) 0%, transparent 70%);
+    max-width: 900px; margin: 0 auto;
+  }
+  .hero-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(0,194,255,0.1); border: 1px solid rgba(0,194,255,0.25); color: var(--accent); font-size: 0.72rem; font-weight: 600; padding: 0.3rem 0.9rem; border-radius: 9999px; margin-bottom: 1.5rem; }
+  .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+  h1 { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; line-height: 1.1; margin-bottom: 1.25rem; }
+  h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero-sub { font-size: 1.05rem; color: var(--muted); max-width: 600px; margin: 0 auto 2rem; line-height: 1.6; }
+  .hero-stats { display: flex; justify-content: center; gap: 2.5rem; margin-bottom: 3rem; flex-wrap: wrap; }
+  .hero-stat { text-align: center; }
+  .hero-stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .hero-stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* ── Main layout ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 0 2rem 4rem; display: grid; grid-template-columns: 1fr 420px; gap: 2rem; align-items: start; }
+
+  /* ── Form card ── */
+  .form-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius);
+    overflow: hidden; position: sticky; top: 80px;
+  }
+  .form-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0,194,255,0.06) 0%, rgba(124,58,237,0.06) 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .form-header h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .form-header p { font-size: 0.78rem; color: var(--muted); }
+  .form-body { padding: 1.5rem; }
+
+  /* Steps indicator */
+  .steps { display: flex; gap: 0; margin-bottom: 1.5rem; }
+  .step-item { flex: 1; text-align: center; position: relative; }
+  .step-item:not(:last-child)::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; height: 1px; background: var(--border); z-index: 0; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; margin: 0 auto 0.35rem; position: relative; z-index: 1; background: var(--surface); color: var(--muted); transition: all 0.3s; }
+  .step-num.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  .step-num.done { background: var(--green); border-color: var(--green); color: #000; }
+  .step-label { font-size: 0.62rem; color: var(--muted); }
+  .step-item.active .step-label { color: var(--accent); }
+
+  /* Form panels */
+  .form-panel { display: none; }
+  .form-panel.active { display: block; }
+
+  label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--muted); margin-bottom: 0.4rem; margin-top: 0.9rem; }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=email], select {
+    width: 100%; padding: 0.7rem 0.9rem; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.85rem; transition: border-color 0.2s;
+    appearance: none;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  input.err { border-color: var(--red); }
+
+  .use-case-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+  .use-case-btn {
+    padding: 0.6rem 0.5rem; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s;
+    font-size: 0.72rem; color: var(--muted);
+  }
+  .use-case-btn:hover { border-color: var(--accent); color: var(--text); }
+  .use-case-btn.selected { border-color: var(--accent); background: rgba(0,194,255,0.08); color: var(--accent); font-weight: 600; }
+  .use-case-icon { display: block; font-size: 1.1rem; margin-bottom: 0.25rem; }
+
+  .terms-row { display: flex; align-items: flex-start; gap: 0.6rem; margin-top: 1rem; }
+  .terms-row input[type=checkbox] { margin-top: 2px; width: auto; accent-color: var(--accent); }
+  .terms-row span { font-size: 0.72rem; color: var(--muted); }
+  .terms-row a { color: var(--accent); }
+
+  .btn-primary {
+    width: 100%; padding: 0.85rem; margin-top: 1.25rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.02em;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { width: 100%; padding: 0.7rem; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; font-size: 0.82rem; cursor: pointer; margin-top: 0.5rem; transition: all 0.2s; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+
+  .error-msg { display: none; color: var(--red); font-size: 0.75rem; margin-top: 0.4rem; }
+  .error-msg.visible { display: block; }
+
+  /* ── Key result panel ── */
+  .key-box {
+    background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .key-box-label { font-size: 0.68rem; color: var(--green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+  .key-value {
+    font-family: 'Courier New', monospace; font-size: 0.78rem; color: var(--text);
+    word-break: break-all; background: var(--surface2); padding: 0.75rem; border-radius: 6px;
+    border: 1px solid var(--border); cursor: pointer; transition: border-color 0.2s;
+  }
+  .key-value:hover { border-color: var(--accent); }
+  .key-warning { font-size: 0.7rem; color: var(--yellow); margin-top: 0.5rem; display: flex; gap: 0.3rem; }
+  .copy-hint { font-size: 0.65rem; color: var(--muted); margin-top: 0.35rem; }
+
+  /* ── Quickstart tabs ── */
+  .qs-tabs { display: flex; gap: 0.25rem; margin-bottom: 0.75rem; }
+  .qs-tab { padding: 0.35rem 0.75rem; font-size: 0.72rem; border-radius: 6px; cursor: pointer; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); transition: all 0.2s; }
+  .qs-tab.active { background: rgba(0,194,255,0.1); color: var(--accent); border-color: var(--accent); }
+  .code-block {
+    background: #0a0f1a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.72rem;
+    color: #7dd3fc; overflow-x: auto; white-space: pre; position: relative;
+  }
+  .copy-code-btn {
+    position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.6rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--muted); font-size: 0.65rem; cursor: pointer; transition: all 0.2s;
+  }
+  .copy-code-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Right panel — feature details ── */
+  .info-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 1.25rem;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-line, linear-gradient(90deg, var(--accent), var(--accent2))); }
+  .feature-card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.6rem; }
+  .feature-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+  .api-list { list-style: none; margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .api-list li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; }
+  .api-list li::before { content: '→'; color: var(--accent); font-weight: 700; }
+
+  .tier-comparison { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.75rem; }
+  .tier-comparison th { padding: 0.5rem; text-align: left; color: var(--muted); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
+  .tier-comparison td { padding: 0.5rem; border-bottom: 1px solid rgba(26,40,64,0.5); }
+  .tier-comparison tr:last-child td { border-bottom: none; }
+  .check { color: var(--green); font-weight: 700; }
+  .cross { color: var(--muted); }
+  .highlight-row td { color: var(--accent); font-weight: 600; }
+
+  .trust-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+  .trust-badge { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--muted); padding: 0.3rem 0.6rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; }
+
+  .upgrade-card {
+    background: linear-gradient(135deg, rgba(0,194,255,0.08) 0%, rgba(124,58,237,0.08) 100%);
+    border: 1px solid rgba(0,194,255,0.2); border-radius: var(--card-radius); padding: 1.5rem;
+  }
+  .upgrade-card h3 { font-size: 1rem; margin-bottom: 0.35rem; }
+  .upgrade-card p { font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.5; }
+  .price-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .price-big { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+  .price-period { font-size: 0.78rem; color: var(--muted); }
+  .price-usd { font-size: 0.78rem; color: var(--muted); }
+  .upgrade-features { list-style: none; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .upgrade-features li { font-size: 0.78rem; display: flex; gap: 0.5rem; }
+  .upgrade-features li::before { content: '✓'; color: var(--green); font-weight: 700; }
+  .btn-upgrade {
+    width: 100%; padding: 0.8rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 700;
+    cursor: pointer; text-decoration: none; display: block; text-align: center; transition: opacity 0.2s;
+  }
+  .btn-upgrade:hover { opacity: 0.9; }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface2);
+    border: 1px solid var(--green); color: var(--green); padding: 0.75rem 1.25rem;
+    border-radius: 8px; font-size: 0.82rem; font-weight: 500; z-index: 999;
+    transform: translateY(60px); opacity: 0; transition: all 0.3s;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .form-card { position: static; }
+    header { padding: 0.75rem 1rem; }
+    .hero { padding: 3rem 1rem 2rem; }
+    .hero-stats { gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo-wrap">
+    <span class="logo-badge">SENTINEL APEX</span>
+    <span class="logo-name">CYBERDUDEBIVASH®</span>
+  </a>
+  <nav class="header-links">
+    <a href="/api-docs.html">API Docs</a>
+    <a href="/upgrade.html">Pricing</a>
+    <a href="/intel-hub.html">Intelligence</a>
+    <a href="/upgrade.html" class="btn-upgrade-sm">Upgrade →</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <div class="hero-badge"><span class="dot"></span>Live Platform — 2,500+ API Endpoints</div>
+  <h1>The <span>AI Security API</span><br>built for developers</h1>
+  <p class="hero-sub">Get your free trial API key in 30 seconds. Access enterprise-grade threat intelligence, vulnerability scanning, AI security scoring, and SOC automation — no credit card required.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hero-stat-num">100</div><div class="hero-stat-label">Free requests/day</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">30s</div><div class="hero-stat-label">Time to first API call</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">136+</div><div class="hero-stat-label">Handler modules</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">0</div><div class="hero-stat-label">Credit card required</div></div>
+  </div>
+</div>
+
+<main>
+
+  <!-- LEFT: Info panel -->
+  <div class="info-panel">
+
+    <div class="feature-card" style="--accent-line: linear-gradient(90deg,#00c2ff,#7c3aed)">
+      <h3>What you can build</h3>
+      <p>Enterprise AI security products, SOC automation tools, threat intelligence feeds, vulnerability management systems, and MSSP platforms — all powered by SENTINEL APEX APIs.</p>
+      <ul class="api-list">
+        <li>IOC lookup & threat actor intelligence</li>
+        <li>Domain exposure & attack surface scan</li>
+        <li>AI Security Scorecard (shareable)</li>
+        <li>MITRE ATT&CK detection mapping</li>
+        <li>AI governance & red team simulation</li>
+        <li>Executive security reports (PDF)</li>
+        <li>SOC case management & automation</li>
+      </ul>
+    </div>
+
+    <div class="feature-card" style="--accent-line: linear-gradient(90deg,#10b981,#00c2ff)">
+      <h3>Pricing — transparent & simple</h3>
+      <table class="tier-comparison">
+        <thead><tr><th>Tier</th><th>Requests</th><th>Price</th></tr></thead>
+        <tbody>
+          <tr><td>Community (Trial)</td><td>100/day</td><td>Free</td></tr>
+          <tr class="highlight-row"><td>Professional</td><td>10,000/mo</td><td>₹1,499/mo</td></tr>
+          <tr><td>Team</td><td>100,000/mo</td><td>₹4,999/mo</td></tr>
+          <tr><td>Business</td><td>1,000,000/mo</td><td>₹14,999/mo</td></tr>
+          <tr><td>Enterprise</td><td>Unlimited</td><td>Custom</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="feature-card" style="--accent-line: linear-gradient(90deg,#7c3aed,#f59e0b)">
+      <h3>Trusted & production-ready</h3>
+      <p>Built on Cloudflare Workers — sub-50ms cold starts, global edge network, 99.9% uptime SLA on paid plans.</p>
+      <div class="trust-badges">
+        <span class="trust-badge">🔒 SHA-256 API keys</span>
+        <span class="trust-badge">⚡ Edge-native</span>
+        <span class="trust-badge">🌍 Global CDN</span>
+        <span class="trust-badge">🛡️ TLS 1.3</span>
+        <span class="trust-badge">📊 Usage metering</span>
+        <span class="trust-badge">🔑 Razorpay billing</span>
+      </div>
+    </div>
+
+    <div class="upgrade-card">
+      <h3>Upgrade to Professional</h3>
+      <p>Unlock the full platform — 10,000 API requests/month, PDF reports, SIEM integration, and priority support.</p>
+      <div class="price-row">
+        <span class="price-big">₹1,499</span>
+        <span class="price-period">/month</span>
+        <span class="price-usd">($18 USD)</span>
+      </div>
+      <ul class="upgrade-features">
+        <li>10,000 requests/month (30× more)</li>
+        <li>Full scan results — all findings</li>
+        <li>PDF executive reports</li>
+        <li>MITRE ATT&CK mapping</li>
+        <li>API access + programmatic alerts</li>
+        <li>Priority email support</li>
+      </ul>
+      <a href="/upgrade.html" class="btn-upgrade">Upgrade Now — ₹1,499/mo →</a>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Form card -->
+  <div class="form-card">
+    <div class="form-header">
+      <h2>Get your free API key</h2>
+      <p>30 seconds · No credit card · 100 req/day free</p>
+    </div>
+    <div class="form-body">
+
+      <div class="steps">
+        <div class="step-item active" id="step-ind-1">
+          <div class="step-num active" id="sn1">1</div>
+          <div class="step-label">Use case</div>
+        </div>
+        <div class="step-item" id="step-ind-2">
+          <div class="step-num" id="sn2">2</div>
+          <div class="step-label">Your details</div>
+        </div>
+        <div class="step-item" id="step-ind-3">
+          <div class="step-num" id="sn3">3</div>
+          <div class="step-label">Your key</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Use case -->
+      <div id="panel-1" class="form-panel active">
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">What will you build with the API?</p>
+        <div class="use-case-grid">
+          <div class="use-case-btn" onclick="selectUseCase('threat_intel', this)"><span class="use-case-icon">🛡️</span>Threat Intelligence</div>
+          <div class="use-case-btn" onclick="selectUseCase('vulnerability', this)"><span class="use-case-icon">🔍</span>Vulnerability Mgmt</div>
+          <div class="use-case-btn" onclick="selectUseCase('soc_automation', this)"><span class="use-case-icon">⚡</span>SOC Automation</div>
+          <div class="use-case-btn" onclick="selectUseCase('ai_security', this)"><span class="use-case-icon">🤖</span>AI Security</div>
+          <div class="use-case-btn" onclick="selectUseCase('compliance', this)"><span class="use-case-icon">📋</span>Compliance</div>
+          <div class="use-case-btn" onclick="selectUseCase('mssp', this)"><span class="use-case-icon">🏢</span>MSSP / Multi-Tenant</div>
+        </div>
+        <div id="err-1" class="error-msg">Please select a use case to continue.</div>
+        <button class="btn-primary" onclick="goStep(2)">Continue →</button>
+      </div>
+
+      <!-- Step 2: Details -->
+      <div id="panel-2" class="form-panel">
+        <label for="f-name">Full name <span style="color:var(--red)">*</span></label>
+        <input type="text" id="f-name" placeholder="Bivash Kumar" autocomplete="name">
+        <div id="err-name" class="error-msg">Name is required (min 2 characters).</div>
+
+        <label for="f-email">Work email <span style="color:var(--red)">*</span></label>
+        <input type="email" id="f-email" placeholder="you@company.com" autocomplete="email">
+        <div id="err-email" class="error-msg">Enter a valid email address.</div>
+
+        <label for="f-company">Company / Organisation</label>
+        <input type="text" id="f-company" placeholder="Acme Corp (optional)" autocomplete="organization">
+
+        <div class="terms-row">
+          <input type="checkbox" id="f-terms">
+          <span>I agree to the <a href="/terms-of-service.html" target="_blank">Terms of Service</a> and <a href="/privacy-policy.html" target="_blank">Privacy Policy</a></span>
+        </div>
+        <div id="err-terms" class="error-msg">You must accept the Terms of Service.</div>
+
+        <button class="btn-primary" onclick="submitForm()">Get My Free API Key →</button>
+        <button class="btn-secondary" onclick="goStep(1)">← Back</button>
+      </div>
+
+      <!-- Step 3: Key result -->
+      <div id="panel-3" class="form-panel">
+        <div class="key-box">
+          <div class="key-box-label">✓ Your API Key — Save it now</div>
+          <div class="key-value" id="keyDisplay" onclick="copyKey()" title="Click to copy"></div>
+          <div class="key-warning">⚠ This key is shown once only. It cannot be retrieved after you leave this page.</div>
+          <div class="copy-hint">Click the key to copy to clipboard.</div>
+        </div>
+
+        <div style="font-size:0.8rem;margin-bottom:0.75rem;color:var(--muted);">
+          Tier: <strong style="color:var(--text)">COMMUNITY</strong> &nbsp;·&nbsp;
+          Limit: <strong style="color:var(--accent)">100 req/day</strong>
+        </div>
+
+        <!-- Quickstart code samples -->
+        <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.5rem;">Quick start — <span id="useCaseLabel"></span></p>
+        <div class="qs-tabs">
+          <div class="qs-tab active" onclick="switchLang('curl', this)">cURL</div>
+          <div class="qs-tab" onclick="switchLang('js', this)">JavaScript</div>
+          <div class="qs-tab" onclick="switchLang('python', this)">Python</div>
+        </div>
+        <div style="position:relative;">
+          <div class="code-block" id="codeDisplay"></div>
+          <button class="copy-code-btn" onclick="copyCode()">Copy</button>
+        </div>
+
+        <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <a href="/api-docs.html" style="flex:1;min-width:120px;text-align:center;padding:0.55rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-size:0.78rem;color:var(--muted);text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">📖 Full API Docs</a>
+          <a href="/upgrade.html" style="flex:1;min-width:120px;text-align:center;padding:0.55rem;background:rgba(0,194,255,0.08);border:1px solid rgba(0,194,255,0.25);border-radius:7px;font-size:0.78rem;color:var(--accent);text-decoration:none;font-weight:600;">⚡ Upgrade Plan →</a>
+        </div>
+
+        <div style="margin-top:1rem;padding:0.75rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+          <p style="font-size:0.72rem;color:var(--muted);line-height:1.5;">
+            <strong style="color:var(--text)">Rate limit reached?</strong> Upgrade to Professional (₹1,499/mo) for 10,000 req/month, PDF reports, SIEM integration, and MITRE ATT&CK mapping.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+let selectedUseCase = '';
+let currentStep = 1;
+let currentLang = 'curl';
+let currentKey = '';
+let quickstartData = null;
+
+const USE_CASE_LABELS = {
+  threat_intel: 'Threat Intelligence',
+  vulnerability: 'Vulnerability Management',
+  soc_automation: 'SOC Automation',
+  ai_security: 'AI Security',
+  compliance: 'Compliance',
+  mssp: 'MSSP / Multi-Tenant',
+};
+
+function selectUseCase(val, el) {
+  selectedUseCase = val;
+  document.querySelectorAll('.use-case-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('err-1').classList.remove('visible');
+}
+
+function goStep(n) {
+  if (n === 2 && !selectedUseCase) {
+    document.getElementById('err-1').classList.add('visible');
+    return;
+  }
+  currentStep = n;
+  document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + n).classList.add('active');
+  // Update step indicators
+  for (let i = 1; i <= 3; i++) {
+    const sn = document.getElementById('sn' + i);
+    const si = document.getElementById('step-ind-' + i);
+    sn.classList.remove('active', 'done');
+    si.classList.remove('active');
+    if (i < n) { sn.classList.add('done'); sn.textContent = '✓'; }
+    else if (i === n) { sn.classList.add('active'); sn.textContent = i; si.classList.add('active'); }
+    else { sn.textContent = i; }
+  }
+}
+
+async function submitForm() {
+  const name = document.getElementById('f-name').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const company = document.getElementById('f-company').value.trim();
+  const terms = document.getElementById('f-terms').checked;
+
+  let valid = true;
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
+  document.querySelectorAll('input').forEach(i => i.classList.remove('err'));
+
+  if (!name || name.length < 2) {
+    document.getElementById('err-name').classList.add('visible');
+    document.getElementById('f-name').classList.add('err');
+    valid = false;
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    document.getElementById('err-email').classList.add('visible');
+    document.getElementById('f-email').classList.add('err');
+    valid = false;
+  }
+  if (!terms) {
+    document.getElementById('err-terms').classList.add('visible');
+    valid = false;
+  }
+  if (!valid) return;
+
+  const btn = document.querySelector('#panel-2 .btn-primary');
+  btn.disabled = true;
+  btn.textContent = 'Generating your key…';
+
+  try {
+    const resp = await fetch(`${API}/api/onboarding/trial-key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, company, use_case: selectedUseCase, agree_terms: true }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      btn.disabled = false;
+      btn.textContent = 'Get My Free API Key →';
+      showToast('❌ ' + (data.error || 'Something went wrong. Please try again.'), 'red');
+      return;
+    }
+
+    // Key result
+    currentKey = data.api_key;
+    document.getElementById('keyDisplay').textContent = currentKey;
+    document.getElementById('useCaseLabel').textContent = data.use_case?.label || USE_CASE_LABELS[selectedUseCase] || '';
+
+    // Load quickstart
+    const qsResp = await fetch(`${API}/api/onboarding/quickstart?use_case=${selectedUseCase}`);
+    quickstartData = await qsResp.json();
+    renderCode();
+
+    goStep(3);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Get My Free API Key →';
+    showToast('❌ Network error. Please check your connection.', 'red');
+  }
+}
+
+function renderCode() {
+  if (!quickstartData || !quickstartData.quickstart_steps?.length) return;
+  const step = quickstartData.quickstart_steps[0];
+  const code = (step.code?.[currentLang] || '').replace(/YOUR_KEY/g, currentKey || 'YOUR_KEY');
+  document.getElementById('codeDisplay').textContent = code;
+}
+
+function switchLang(lang, el) {
+  currentLang = lang;
+  document.querySelectorAll('.qs-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderCode();
+}
+
+function copyKey() {
+  if (!currentKey) return;
+  navigator.clipboard.writeText(currentKey).then(() => showToast('✓ API key copied to clipboard!', 'green'));
+}
+
+function copyCode() {
+  const code = document.getElementById('codeDisplay').textContent;
+  navigator.clipboard.writeText(code).then(() => showToast('✓ Code copied!', 'green'));
+}
+
+function showToast(msg, type = 'green') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'red' ? 'var(--red)' : 'var(--green)';
+  t.style.color = type === 'red' ? 'var(--red)' : 'var(--green)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Pre-select from URL param
+const urlParams = new URLSearchParams(window.location.search);
+const preUC = urlParams.get('use_case');
+if (preUC) {
+  const btn = document.querySelector(`.use-case-btn[onclick*="${preUC}"]`);
+  if (btn) selectUseCase(preUC, btn);
+}
+</script>
+</body>
+</html>
