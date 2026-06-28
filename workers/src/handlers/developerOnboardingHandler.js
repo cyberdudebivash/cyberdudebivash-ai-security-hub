@@ -20,6 +20,7 @@
 import { createApiKey, TIER_LIMITS } from '../auth/apiKeys.js';
 import { normalizeTier } from './subscriptionPaywallEngine.js';
 import { deliverNotification } from './notificationPlatform.js';
+import { hashPassword } from '../auth/password.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -154,10 +155,18 @@ export async function handleTrialKeyRequest(req, env) {
       // Create new user
       userId = genOnboardingId();
       isNewUser = true;
+      // Trial signups are API-key-only (no password login) — generate an
+      // unguessable throwaway password and hash it via the canonical hasher
+      // so users.password_hash/password_salt (NOT NULL, no default) are
+      // satisfied the same way handleSignup() in auth.js does it.
+      const { hash: trialHash, salt: trialSalt } = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
+      // users.tier has CHECK(tier IN ('FREE','PRO','ENTERPRISE')) — normalizeTier()
+      // returns the friendlier 'COMMUNITY' label used elsewhere in this flow,
+      // which violates that constraint, so the DB column gets the literal 'FREE'.
       await env.DB.prepare(
-        `INSERT INTO users (id, email, name, company, tier, status, created_at, org_id)
-         VALUES (?, ?, ?, ?, ?, 'active', datetime('now'), ?)`
-      ).bind(userId, cleanEmail, cleanName, cleanCompany, tier, userId).run();
+        `INSERT INTO users (id, email, password_hash, password_salt, full_name, company, tier, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'FREE', 'active', datetime('now'))`
+      ).bind(userId, cleanEmail, trialHash, trialSalt, cleanName, cleanCompany).run();
     }
 
     // Create trial API key using canonical createApiKey()
