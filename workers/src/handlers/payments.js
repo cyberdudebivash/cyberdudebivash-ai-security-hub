@@ -27,6 +27,8 @@ import { sendPurchaseConfirmation } from '../services/emailEngine.js';
 import { createInvoice }            from '../services/v24/billingEngine.js';
 import { triggerPostPurchase }      from '../services/lifecycleEngine.js';
 import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
+import { hashPassword } from '../auth/password.js';
+import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -356,6 +358,49 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
       ).run().catch(() => {});
     }
+
+    // ── Actually grant the purchased tier ──────────────────────────────────
+    // Writing the `subscriptions` row above does NOT, by itself, unlock any
+    // PRO/ENTERPRISE-gated endpoint — those all check authCtx.tier, which
+    // resolveAuthV5() derives only from a JWT or DB-backed API key, never
+    // from this KV session. Without this block, a customer could pay for
+    // PRO/ENTERPRISE and still get 403'd on the very feature they bought.
+    // users.tier has a CHECK(tier IN ('FREE','PRO','ENTERPRISE')) — STARTER
+    // is a real priced tier (see SUBSCRIPTION_PRICES) but cannot be persisted
+    // there today; that needs its own schema migration, tracked separately.
+    let issuedAccessToken = null;
+    let issuedUserId      = null;
+    if (env.DB && confirmedEmail && (plan === 'PRO' || plan === 'ENTERPRISE')) {
+      try {
+        const existing = await env.DB.prepare(
+          `SELECT id FROM users WHERE email = ?`
+        ).bind(confirmedEmail).first();
+
+        if (existing?.id) {
+          issuedUserId = existing.id;
+          await env.DB.prepare(
+            `UPDATE users SET tier = ?, updated_at = datetime('now') WHERE id = ?`
+          ).bind(plan, issuedUserId).run();
+        } else {
+          issuedUserId = 'usr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          const { hash, salt } = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
+          await env.DB.prepare(
+            `INSERT INTO users (id, email, password_hash, password_salt, tier, status, created_at)
+             VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))`
+          ).bind(issuedUserId, confirmedEmail, hash, salt, plan).run();
+        }
+
+        const accessToken = await createAccessToken({ id: issuedUserId, email: confirmedEmail, tier: plan }, env.JWT_SECRET);
+        const refreshData = await createRefreshToken();
+        await storeRefreshToken(env.DB, issuedUserId, refreshData,
+          request.headers.get('CF-Connecting-IP') || 'unknown',
+          request.headers.get('User-Agent') || 'unknown');
+        issuedAccessToken = accessToken;
+      } catch (e) {
+        console.error('[Payments] Tier grant failed for', confirmedEmail, e.message);
+      }
+    }
+
     // FIX P2.8-004: Telegram admin alert on subscription verify
     const _tgToken  = env.TELEGRAM_BOT_TOKEN;
     const _tgChatId = env.ADMIN_TELEGRAM_CHAT_ID || env.TELEGRAM_CHANNEL_ID;
@@ -390,7 +435,11 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     ]).catch(() => {});
     return Response.json({
       success: true, plan, session_token: sessionToken, expires_at: expiresAt,
-      message: `✅ ${subPlan.name} activated. Your subscription token is valid for 90 days.`,
+      token: issuedAccessToken,
+      user_id: issuedUserId,
+      message: issuedAccessToken
+        ? `✅ ${subPlan.name} activated. Your account is now upgraded — use the access token to call PRO/ENTERPRISE-gated endpoints immediately.`
+        : `✅ ${subPlan.name} payment confirmed, but the tier could not be attached to an account automatically. Contact bivash@cyberdudebivash.com with payment ID ${razorpay_payment_id} to finish activation.`,
     });
   }
 
