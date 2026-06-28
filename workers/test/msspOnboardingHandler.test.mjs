@@ -53,7 +53,7 @@ function makeEnv({ checkouts = [], partners = [] } = {}) {
               return { success: true };
             }
 
-            if (/INSERT INTO mssp_partners/.test(sql) && /trial_ends_at/.test(sql)) {
+            if (/INSERT INTO mssp_onboarding_partners/.test(sql) && /trial_ends_at/.test(sql)) {
               // Trial provisioning path (12 params)
               const [id, email, company_name, contact_name, tier_id, clients_limit, margin_pct, status, access_token, trial_ends_at, activated_at, created_at] = b;
               if (partnersByEmail.has(email)) return { success: true }; // ON CONFLICT DO NOTHING
@@ -62,7 +62,7 @@ function makeEnv({ checkouts = [], partners = [] } = {}) {
               return { success: true };
             }
 
-            if (/INSERT INTO mssp_partners/.test(sql)) {
+            if (/INSERT INTO mssp_onboarding_partners/.test(sql)) {
               // Verify/paid provisioning path (15 params)
               const [id, email, company_name, contact_name, phone, website, tier_id, clients_limit, margin_pct, status, access_token, razorpay_order_id, razorpay_payment_id, activated_at, created_at] = b;
               const rec = { id, email, company_name, contact_name, phone, website, tier_id, clients_limit, margin_pct, status, access_token, razorpay_order_id, razorpay_payment_id, activated_at, created_at, trial_ends_at: null };
@@ -78,7 +78,7 @@ function makeEnv({ checkouts = [], partners = [] } = {}) {
             if (/SELECT \* FROM mssp_onboarding_checkouts WHERE order_id/.test(sql)) {
               return checkoutsByOrder.get(b[0]) || null;
             }
-            if (/SELECT COUNT\(\*\) AS cnt FROM mssp_partners WHERE status/.test(sql)) {
+            if (/SELECT COUNT\(\*\) AS cnt FROM mssp_onboarding_partners WHERE status/.test(sql)) {
               const status = b[0];
               const cnt = [...partnersByEmail.values()].filter(p => p.status === status).length;
               return { cnt };
@@ -86,10 +86,10 @@ function makeEnv({ checkouts = [], partners = [] } = {}) {
             if (/SELECT COUNT\(\*\) AS cnt FROM mssp_clients/.test(sql)) {
               return { cnt: 0 };
             }
-            if (/FROM mssp_partners WHERE id=/.test(sql)) {
+            if (/FROM mssp_onboarding_partners WHERE id=/.test(sql)) {
               return partnersById.get(b[0]) || null;
             }
-            if (/FROM mssp_partners WHERE email=/.test(sql)) {
+            if (/FROM mssp_onboarding_partners WHERE email=/.test(sql)) {
               return partnersByEmail.get(b[0]) || null;
             }
             return null;

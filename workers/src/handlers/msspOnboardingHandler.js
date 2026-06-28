@@ -7,6 +7,16 @@
 // verifyPaymentSignature from lib/razorpay.js, deliverNotification from
 // notificationPlatform.js, and normalizeTier from subscriptionPaywallEngine.js.
 //
+// IMPORTANT — table naming: this file owns `mssp_onboarding_partners`, a
+// dedicated table. It does NOT use `mssp_partners` — that table belongs to
+// the P9.0 MSSP Tenant Platform (msspOps.js / revenueKPI.js / index.js
+// funnel dashboard) and has an incompatible schema (company, contact_email,
+// tier, client_count, ...). Writing this flow's rows into mssp_partners
+// previously caused every trial/checkout/verify call to fail in production
+// with "D1_ERROR: table mssp_partners has no column named email" — found
+// and fixed 2026-06-29. Do not rename back to mssp_partners without first
+// reconciling the two schemas.
+//
 // Routes:
 //   GET  /api/mssp/onboarding/tiers         → public tier catalog with Razorpay amounts
 //   POST /api/mssp/onboarding/checkout      → create Razorpay order for MSSP tier
@@ -53,7 +63,7 @@ export async function handleMsspTiers(request, env) {
   let partnerCount = null;
   try {
     const row = await env.DB.prepare(
-      'SELECT COUNT(*) AS cnt FROM mssp_partners WHERE status=?'
+      'SELECT COUNT(*) AS cnt FROM mssp_onboarding_partners WHERE status=?'
     ).bind('active').first();
     partnerCount = row?.cnt ?? null;
   } catch { /* D1 table may not exist yet — graceful */ }
@@ -212,7 +222,7 @@ export async function handleMsspVerify(request, env) {
 
     // Provision MSSP partner account in D1
     await env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS mssp_partners (
+      `CREATE TABLE IF NOT EXISTS mssp_onboarding_partners (
         id TEXT PRIMARY KEY, email TEXT UNIQUE, company_name TEXT, contact_name TEXT,
         phone TEXT, website TEXT, tier_id TEXT, clients_limit INTEGER,
         margin_pct TEXT, status TEXT DEFAULT 'active', access_token TEXT,
@@ -222,7 +232,7 @@ export async function handleMsspVerify(request, env) {
     ).run();
 
     await env.DB.prepare(
-      `INSERT INTO mssp_partners
+      `INSERT INTO mssp_onboarding_partners
         (id, email, company_name, contact_name, phone, website, tier_id, clients_limit,
          margin_pct, status, access_token, razorpay_order_id, razorpay_payment_id, activated_at, created_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -336,9 +346,9 @@ export async function handleMsspTrial(request, env) {
     const now         = new Date();
     const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
 
-    // Provision trial in D1 (reuses mssp_partners table)
+    // Provision trial in D1 (dedicated table — see header note on mssp_onboarding_partners)
     await env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS mssp_partners (
+      `CREATE TABLE IF NOT EXISTS mssp_onboarding_partners (
         id TEXT PRIMARY KEY, email TEXT UNIQUE, company_name TEXT, contact_name TEXT,
         phone TEXT, website TEXT, tier_id TEXT, clients_limit INTEGER,
         margin_pct TEXT, status TEXT DEFAULT 'active', access_token TEXT,
@@ -348,7 +358,7 @@ export async function handleMsspTrial(request, env) {
     ).run();
 
     await env.DB.prepare(
-      `INSERT INTO mssp_partners
+      `INSERT INTO mssp_onboarding_partners
         (id, email, company_name, contact_name, tier_id, clients_limit, margin_pct,
          status, access_token, trial_ends_at, activated_at, created_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
@@ -425,11 +435,11 @@ export async function handleMsspOnboardingStatus(request, env) {
     let partner = null;
     if (partnerId) {
       partner = await env.DB.prepare(
-        'SELECT id,email,company_name,contact_name,tier_id,clients_limit,margin_pct,status,trial_ends_at,activated_at FROM mssp_partners WHERE id=?'
+        'SELECT id,email,company_name,contact_name,tier_id,clients_limit,margin_pct,status,trial_ends_at,activated_at FROM mssp_onboarding_partners WHERE id=?'
       ).bind(partnerId).first().catch(() => null);
     } else {
       partner = await env.DB.prepare(
-        'SELECT id,email,company_name,contact_name,tier_id,clients_limit,margin_pct,status,trial_ends_at,activated_at FROM mssp_partners WHERE email=?'
+        'SELECT id,email,company_name,contact_name,tier_id,clients_limit,margin_pct,status,trial_ends_at,activated_at FROM mssp_onboarding_partners WHERE email=?'
       ).bind(email.toLowerCase().trim()).first().catch(() => null);
     }
 
@@ -481,8 +491,8 @@ export async function handleMsspOnboardingStatus(request, env) {
 export async function handleMsspOnboardingObservability(request, env) {
   let partnerCount = null, trialCount = null;
   try {
-    const r1 = await env.DB.prepare('SELECT COUNT(*) AS cnt FROM mssp_partners WHERE status=?').bind('active').first();
-    const r2 = await env.DB.prepare('SELECT COUNT(*) AS cnt FROM mssp_partners WHERE status=?').bind('trial').first();
+    const r1 = await env.DB.prepare('SELECT COUNT(*) AS cnt FROM mssp_onboarding_partners WHERE status=?').bind('active').first();
+    const r2 = await env.DB.prepare('SELECT COUNT(*) AS cnt FROM mssp_onboarding_partners WHERE status=?').bind('trial').first();
     partnerCount = r1?.cnt ?? 0;
     trialCount   = r2?.cnt ?? 0;
   } catch { /* table may not exist yet */ }
