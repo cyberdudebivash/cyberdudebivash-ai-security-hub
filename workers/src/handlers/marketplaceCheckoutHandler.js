@@ -499,7 +499,7 @@ export async function handleMarketplaceVerify(req, env, authCtx) {
  * GET /api/marketplace/my-purchases
  * Returns authenticated user's purchase history.
  */
-export async function handleMyPurchases(req, env, authCtx) {
+export async function handleMyMarketplacePurchases(req, env, authCtx) {
   if (!authCtx?.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   try {

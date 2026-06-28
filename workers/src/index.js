@@ -427,7 +427,7 @@ import {
   handleMarketplaceProduct,
   handleMarketplaceCheckout,
   handleMarketplaceVerify,
-  handleMyPurchases,
+  handleMyMarketplacePurchases,
   handleMarketplaceObservability,
 } from './handlers/marketplaceCheckoutHandler.js';
 
@@ -4746,7 +4746,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/marketplace/my-purchases' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleMyPurchases(request, env, authCtx || {}), request));
+      return withSecurityHeaders(withCors(await handleMyMarketplacePurchases(request, env, authCtx || {}), request));
     }
     if (path === '/api/marketplace/observability' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleMarketplaceObservability(request, env), request));
