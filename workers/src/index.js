@@ -397,6 +397,20 @@ import {
   handleCommercialObservability,
 } from './handlers/commercialPlatformHandler.js';
 
+// ─── P16.0: Enterprise Transformation — KPI Command Center, Billing Portal, Overage Engine ──
+import {
+  handlePlatformKPI,
+  handleCustomerBillingPortal,
+  handleCustomerInvoices,
+  handleCancelSubscription,
+  handleUpgradeInitiate,
+  handleLiveUsage,
+  handleOverageReport,
+  handleOverageCharge,
+  handleExecutiveKPI,
+  handleTransformObservability,
+} from './handlers/enterpriseTransformHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4566,6 +4580,48 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/commercial/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleCommercialObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P16.0: Enterprise Transformation — KPI, Billing Portal, Overage Engine ──
+    if (path === '/api/platform/kpi' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handlePlatformKPI(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/platform/kpi/executive' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleExecutiveKPI(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/billing/portal' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCustomerBillingPortal(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/billing/invoices' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCustomerInvoices(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/billing/cancel' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCancelSubscription(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/billing/upgrade' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleUpgradeInitiate(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/usage/live' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleLiveUsage(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/platform/overage/report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleOverageReport(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/platform/overage/charge' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleOverageCharge(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/platform/transform/observability' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleTransformObservability(request, env, authCtx || {}), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
