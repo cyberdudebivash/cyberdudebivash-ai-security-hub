@@ -421,6 +421,16 @@ import {
   handleTransformObservability,
 } from './handlers/enterpriseTransformHandler.js';
 
+// ─── P21.0: Marketplace Checkout Engine ──────────────────────────────────────
+import {
+  handleMarketplaceCatalog,
+  handleMarketplaceProduct,
+  handleMarketplaceCheckout,
+  handleMarketplaceVerify,
+  handleMyPurchases,
+  handleMarketplaceObservability,
+} from './handlers/marketplaceCheckoutHandler.js';
+
 // ─── P20.0: Developer Onboarding & Self-Serve Trial Engine ───────────────────
 import {
   handleTrialKeyRequest,
@@ -4676,6 +4686,31 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/platform/transform/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleTransformObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P21.0: Marketplace Checkout Engine ───────────────────────────────────
+    if (path === '/api/marketplace/catalog' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMarketplaceCatalog(request, env), request));
+    }
+    if (path.startsWith('/api/marketplace/catalog/') && method === 'GET') {
+      const productId = path.replace('/api/marketplace/catalog/', '');
+      return withSecurityHeaders(withCors(await handleMarketplaceProduct(request, env, productId), request));
+    }
+    if (path === '/api/marketplace/checkout' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMarketplaceCheckout(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/marketplace/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleMarketplaceVerify(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/marketplace/my-purchases' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleMyPurchases(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/marketplace/observability' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleMarketplaceObservability(request, env), request));
     }
 
     // ── P20.0: Developer Onboarding & Self-Serve Trial Engine ────────────────
