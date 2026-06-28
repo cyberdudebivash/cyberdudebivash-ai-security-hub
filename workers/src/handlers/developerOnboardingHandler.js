@@ -405,7 +405,9 @@ export async function handleResendWelcome(req, env) {
   if (attempts >= 3) return Response.json({ error: 'Resend limit reached. Try again tomorrow.' }, { status: 429 });
 
   try {
-    const user = await env.DB.prepare(`SELECT id, name FROM users WHERE email = ? LIMIT 1`).bind(email).first().catch(() => null);
+    // users.full_name, not name — this SELECT silently 404'd every real
+    // account because the D1 error was swallowed by .catch(() => null).
+    const user = await env.DB.prepare(`SELECT id, full_name AS name FROM users WHERE email = ? LIMIT 1`).bind(email).first().catch(() => null);
     if (!user) return Response.json({ error: 'No account found with this email.' }, { status: 404 });
 
     const key = await env.DB.prepare(
