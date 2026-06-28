@@ -431,6 +431,15 @@ import {
   handleMarketplaceObservability,
 } from './handlers/marketplaceCheckoutHandler.js';
 
+// ─── P22.0: AI Governance Compliance PDF Export Engine ───────────────────────
+import {
+  handlePdfGenerate,
+  handlePdfDownload,
+  handlePdfStatus,
+  handlePdfList,
+  handlePdfObservability,
+} from './handlers/aiGovernancePdfHandler.js';
+
 // ─── P20.0: Developer Onboarding & Self-Serve Trial Engine ───────────────────
 import {
   handleTrialKeyRequest,
@@ -6770,6 +6779,26 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path === '/api/copilot/quick-action' && method === 'POST') {
     return withSecurityHeaders(withCors(await handleCopilotQuickAction(request, env, authCtx), request));
+  }
+
+  // ── P22.0: AI Governance Compliance PDF Export Engine ────────────────────
+  // Specific routes must appear before the /api/ai-governance/* catch-all below
+  if (path === '/api/ai-governance/pdf/generate' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handlePdfGenerate(request, env, authCtx), request));
+  }
+  if (path === '/api/ai-governance/pdf/observability' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handlePdfObservability(request, env), request));
+  }
+  if (path === '/api/ai-governance/pdf/list' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handlePdfList(request, env), request));
+  }
+  if (path.startsWith('/api/ai-governance/pdf/status/') && method === 'GET') {
+    const pdfStatusToken = path.replace('/api/ai-governance/pdf/status/', '');
+    return withSecurityHeaders(withCors(await handlePdfStatus(request, env, pdfStatusToken), request));
+  }
+  if (path.startsWith('/api/ai-governance/pdf/') && method === 'GET') {
+    const pdfToken = path.replace('/api/ai-governance/pdf/', '');
+    return await handlePdfDownload(request, env, pdfToken);
   }
 
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
