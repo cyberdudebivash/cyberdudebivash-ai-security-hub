@@ -464,7 +464,21 @@
         });
         return;
       }
-      // Direct Razorpay if key available
+      // Real subscription plans (STARTER/PRO/ENTERPRISE/MSSP) go through the
+      // canonical server-side create-order → Razorpay → verify flow, the same
+      // path already used and verified live for marketplace/MSSP checkout.
+      // Previously this constructed `new Razorpay({amount: opts.amount, ...})`
+      // directly in the browser with NO order_id and NO server-side order —
+      // even when it did fire, the real webhook handler (handleRazorpayWebhook)
+      // looks up the payment by razorpay_order_id in the `payments` table and
+      // would find nothing, so the subscription could never actually activate.
+      // Found + fixed 2026-06-29.
+      const SUBSCRIPTION_PLANS = new Set(['STARTER', 'PRO', 'ENTERPRISE', 'MSSP']);
+      if (SUBSCRIPTION_PLANS.has(opts.tierName)) {
+        this._startSubscriptionCheckout(opts);
+        return;
+      }
+      // Non-subscription products (reports, etc.) — unchanged legacy path.
       const key = (window.CONFIG && window.CONFIG.RAZORPAY_KEY_ID) || '';
       if (!key || !window.Razorpay) {
         alert('Card payment not configured. Please use UPI, Bank Wire, or PayPal.');
@@ -482,20 +496,85 @@
       }).open();
     },
 
-    _onRazorpaySuccess(resp) {
-      // Notify backend webhook via fire-and-forget
-      fetch(`${MERCHANT.API_BASE}/api/webhooks/razorpay/confirm`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(resp),
-      }).catch(() => {});
+    _loadRazorpaySdk() {
+      if (window.Razorpay) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        s.onload  = () => resolve();
+        s.onerror = () => reject(new Error('Razorpay SDK load failed'));
+        document.head.appendChild(s);
+      });
+    },
+
+    async _startSubscriptionCheckout(opts) {
+      let email = '';
+      try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        email = (window.prompt('Enter your email to activate your subscription:') || '').trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+          alert('A valid email address is required to activate a subscription.');
+          return;
+        }
+        try { localStorage.setItem('cdb_email', email); } catch (e) {}
+      }
+
+      try {
+        const oRes = await fetch('/api/payment/create-order', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ module: 'subscription', plan: opts.tierName, target: email }),
+        });
+        const order = await oRes.json().catch(() => ({}));
+        if (!oRes.ok || !order.order_id || !order.key_id) {
+          alert('Could not start checkout. Please use UPI, Bank Wire, or PayPal, or contact support@cyberdudebivash.com.');
+          return;
+        }
+
+        await this._loadRazorpaySdk();
+        this.close();
+
+        new window.Razorpay({
+          key:         order.key_id,
+          amount:      order.amount,
+          currency:    order.currency || 'INR',
+          name:        'CYBERDUDEBIVASH PVT LTD',
+          description: opts.productLabel || `${opts.tierName} Plan`,
+          order_id:    order.order_id,
+          prefill:     { email },
+          handler:     async (rp) => {
+            try {
+              const vRes = await fetch('/api/payment/verify', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id:   rp.razorpay_order_id,
+                  razorpay_payment_id: rp.razorpay_payment_id,
+                  razorpay_signature:  rp.razorpay_signature,
+                  module: 'subscription', plan: opts.tierName, target: email, email,
+                }),
+              });
+              const vData = await vRes.json().catch(() => ({}));
+              this._onRazorpaySuccess(rp, vRes.ok && vData.success, vData.message);
+            } catch (e) {
+              this._onRazorpaySuccess(rp, false);
+            }
+          },
+          modal: { ondismiss: () => {} },
+        }).open();
+      } catch (e) {
+        alert('Could not start checkout. Please use UPI, Bank Wire, or PayPal, or contact support@cyberdudebivash.com.');
+      }
+    },
+
+    _onRazorpaySuccess(resp, verified, message) {
       this.close();
       // Show success toast
       const toast = document.createElement('div');
       toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#00ff88;color:#000;padding:14px 22px;border-radius:12px;font-weight:900;font-size:14px;z-index:999999;box-shadow:0 8px 30px rgba(0,255,136,.3)';
-      toast.textContent = '✅ Payment successful! Activating your account…';
+      toast.textContent = verified
+        ? (message || '✅ Payment successful! Your account is now active.')
+        : `✅ Payment received (ID: ${resp.razorpay_payment_id}). If your account isn't upgraded within a few minutes, contact support@cyberdudebivash.com with this payment ID.`;
       document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 5000);
+      setTimeout(() => toast.remove(), verified ? 5000 : 12000);
     },
   };
 
