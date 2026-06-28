@@ -9321,7 +9321,7 @@ async function executeScan(module, payload) {
     redteam:      '/api/scan/redteam',
     identity:     '/api/scan/identity',
     compliance:   '/api/generate/compliance',
-    cloudsec:     '/api/scan/cloudsec',
+    cloudsec:     '/api/scan/cloud-security',
     darkscan:     '/api/scan/darkscan',
     appsec:       '/api/scan/appsec',
     mcp_security: '/api/scan/mcp',
@@ -9333,6 +9333,15 @@ async function executeScan(module, payload) {
     module,
     target: payload.domain || payload.model_name || payload.target_org || payload.org_name || 'unknown',
   };
+
+  // No backend exists yet for these two modules (confirmed 404 — there is no
+  // dark-web-breach-feed or app-pentest engine behind them). Rather than call
+  // a dead endpoint and show a confusing "Not Found" error, say so honestly.
+  if (module === 'darkscan' || module === 'appsec') {
+    setLoading(module, false);
+    showErrorState(module, 'This scanner module is still being built and is not yet available. Contact bivash@cyberdudebivash.com if you need this capability now.');
+    return;
+  }
 
   // ── Subscription quota gate (client-side UX check before API call) ───────────
   // Real enforcement happens on the backend; this just provides instant UX feedback.
