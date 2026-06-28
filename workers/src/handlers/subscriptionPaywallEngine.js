@@ -93,11 +93,15 @@ export const SUBSCRIPTION_TIERS = {
   PRO:          null,               // resolved to PROFESSIONAL at runtime
 };
 
-// Resolve legacy tier names
+// Resolve legacy tier names — canonical normalizer for all tier strings across the platform
+// P16.0 uses: FREE / STARTER / PRO / ENTERPRISE / MSSP
+// Canonical: COMMUNITY / PROFESSIONAL / TEAM / BUSINESS / ENTERPRISE
 export function normalizeTier(raw) {
   const t = (raw || 'COMMUNITY').toUpperCase();
   if (t === 'FREE')    return 'COMMUNITY';
   if (t === 'PRO')     return 'PROFESSIONAL';
+  if (t === 'STARTER') return 'PROFESSIONAL';  // P16.0 alias
+  if (t === 'MSSP')    return 'ENTERPRISE';    // P16.0 alias — MSSP maps to Enterprise tier
   return SUBSCRIPTION_TIERS[t] ? t : 'COMMUNITY';
 }
 

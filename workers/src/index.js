@@ -421,7 +421,7 @@ import {
   handleTransformObservability,
 } from './handlers/enterpriseTransformHandler.js';
 
-// ─── P18.0: Revenue Intelligence & Churn Prevention Engine ───────────────────
+// ─── P18.0 + P19.0-B: Revenue Intelligence & Churn Prevention Engine ─────────
 import {
   handleRevenueIntelligence,
   handleChurnAlerts,
@@ -429,6 +429,7 @@ import {
   handleUpgradeSignals,
   handleNRRForecast,
   handleRevenueIntelObservability,
+  handleChurnInterventionTrigger,
 } from './handlers/revenueIntelligenceHandler.js';
 
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
@@ -4696,6 +4697,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
     if (path === '/api/platform/revenue-intelligence/observability' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleRevenueIntelObservability(request, env), request));
+    }
+    // P19.0-B — automated churn notification trigger
+    if (path === '/api/platform/revenue-intelligence/churn-trigger' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleChurnInterventionTrigger(request, env), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────

@@ -1,25 +1,33 @@
 /**
- * CYBERDUDEBIVASH® AI Security Hub — P18.0
+ * CYBERDUDEBIVASH® AI Security Hub — P18.0 + P19.0-B
  * revenueIntelligenceHandler.js — Automated Revenue Intelligence & Churn Prevention Engine
  *
  * APIs:
- *   GET  /api/platform/revenue-intelligence           full dashboard payload
- *   GET  /api/platform/revenue-intelligence/churn-alerts  HIGH churn accounts
- *   POST /api/platform/revenue-intelligence/intervention  log intervention action
- *   GET  /api/platform/revenue-intelligence/upgrade-signals  expansion-ready accounts
- *   GET  /api/platform/revenue-intelligence/nrr-forecast     90-day NRR forecast
- *   GET  /api/platform/revenue-intelligence/observability     P18.0 health gate
+ *   GET  /api/platform/revenue-intelligence                 full dashboard payload
+ *   GET  /api/platform/revenue-intelligence/churn-alerts   HIGH churn accounts
+ *   POST /api/platform/revenue-intelligence/intervention   log intervention action
+ *   GET  /api/platform/revenue-intelligence/upgrade-signals expansion-ready accounts
+ *   GET  /api/platform/revenue-intelligence/nrr-forecast   90-day NRR forecast
+ *   GET  /api/platform/revenue-intelligence/observability   health gate
+ *   POST /api/platform/revenue-intelligence/churn-trigger  P19.0-B automated notifications
  *
- * Reads: customer_health (P15.0), subscriptions, mrr_snapshots (P16.0)
- * Writes: revenue_interventions (new, schema-independent insert)
- * Reuses: customer_health D1 table populated by customerSuccess.js P15.0
+ * P19.0-A: tier normalization imported from subscriptionPaywallEngine.js (canonical source)
+ * P19.0-B: deliverNotification imported from notificationPlatform.js (canonical source)
  */
 
-const TIER_PRICE = { FREE: 0, STARTER: 29, PRO: 99, ENTERPRISE: 499, MSSP: 999,
-  COMMUNITY: 0, PROFESSIONAL: 49, TEAM: 149, BUSINESS: 299 };
+// P19.0-A — canonical tier normalizer (replaces local TIER_PRICE constants)
+import { normalizeTier, SUBSCRIPTION_TIERS } from './subscriptionPaywallEngine.js';
+// P19.0-B — canonical notification delivery (reuse, no re-implementation)
+import { deliverNotification } from './notificationPlatform.js';
 
+// Derive MRR from canonical SUBSCRIPTION_TIERS price_inr (authoritative source)
+function tierToMRR(rawTier) {
+  const tier = normalizeTier(rawTier);
+  return SUBSCRIPTION_TIERS[tier]?.price_inr ?? 0;
+}
+
+// Canonical upgrade path — uses normalized tier names only
 const UPGRADE_PATH = {
-  FREE: 'STARTER', STARTER: 'PRO', PRO: 'ENTERPRISE', ENTERPRISE: 'MSSP',
   COMMUNITY: 'PROFESSIONAL', PROFESSIONAL: 'TEAM', TEAM: 'BUSINESS', BUSINESS: 'ENTERPRISE',
 };
 
@@ -50,14 +58,6 @@ async function fetchEnrichedHealthRows(env) {
     LIMIT 500
   `).all().catch(() => ({ results: [] }));
   return rows.results || [];
-}
-
-/**
- * Compute MRR contribution for a tier string.
- */
-function tierToMRR(tier) {
-  if (!tier) return 0;
-  return TIER_PRICE[tier.toUpperCase()] || 0;
 }
 
 /**
@@ -349,6 +349,110 @@ export async function handleNRRForecast(req, env) {
     const forecast = await buildNRRForecast(env, allRows);
     await env.KV?.put(cacheKey, JSON.stringify(forecast), { expirationTtl: 600 }).catch(() => null);
     return Response.json({ forecast });
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
+}
+
+/**
+ * P19.0-B — Automated Churn Intervention Trigger
+ * POST /api/platform/revenue-intelligence/churn-trigger
+ *
+ * Reads at-risk accounts from customer_health D1, fires deliverNotification
+ * (canonical notificationPlatform.js) for each HIGH-urgency account.
+ * KV dedup key per org per day prevents repeated notifications.
+ *
+ * Dry-run mode: POST body { dry_run: true } — returns who would be notified without sending.
+ */
+export async function handleChurnInterventionTrigger(req, env) {
+  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
+
+  let body = {};
+  try { body = await req.json().catch(() => ({})); } catch {}
+  const dryRun = body.dry_run === true;
+  const today = new Date().toISOString().slice(0, 10);
+
+  try {
+    // Fetch at-risk accounts with their primary user contact
+    const rows = await env.DB.prepare(`
+      SELECT ch.org_id, ch.health_score, ch.churn_risk, ch.last_scan_days_ago,
+             ch.risk_triggers, ch.playbook_id, u.id as user_id, u.email, u.tier
+      FROM customer_health ch
+      LEFT JOIN users u ON u.org_id = ch.org_id
+      WHERE ch.churn_risk = 'HIGH'
+      GROUP BY ch.org_id
+      ORDER BY ch.health_score ASC
+      LIMIT 100
+    `).all().catch(() => ({ results: [] }));
+
+    const atRisk = rows.results || [];
+    const results = [];
+
+    for (const acct of atRisk) {
+      const dedupKey = `ri:churn_notif:${acct.org_id}:${today}`;
+
+      // Check if already notified today
+      const alreadySent = await env.KV?.get(dedupKey).catch(() => null);
+      if (alreadySent) {
+        results.push({ org_id: acct.org_id, status: 'SKIPPED_DEDUP', reason: 'already notified today' });
+        continue;
+      }
+
+      if (!acct.user_id) {
+        results.push({ org_id: acct.org_id, status: 'SKIPPED_NO_USER', reason: 'no user record found' });
+        continue;
+      }
+
+      const riskTriggers = (() => { try { return JSON.parse(acct.risk_triggers || '[]'); } catch { return []; } })();
+      const subject = `Action Required: Your ${acct.org_id} account shows churn risk signals`;
+      const notifBody = [
+        `Health score: ${acct.health_score}/100`,
+        acct.last_scan_days_ago >= 999 ? 'No scans recorded' : `Last scan: ${acct.last_scan_days_ago} days ago`,
+        riskTriggers.length ? `Risk signals: ${riskTriggers.join('; ')}` : null,
+        acct.playbook_id ? `Recommended playbook: ${acct.playbook_id}` : null,
+        'Log in to review your security posture and schedule a health check.',
+      ].filter(Boolean).join('\n');
+
+      if (!dryRun) {
+        const delivered = await deliverNotification({
+          userId: acct.user_id,
+          orgId: acct.org_id,
+          eventType: 'CHURN_RISK_ALERT',
+          subject,
+          body: notifBody,
+          channels: ['INAPP', 'SLACK'],
+        }, env).catch(() => []);
+
+        // Set 24h KV dedup — prevents same org being notified twice in one day
+        await env.KV?.put(dedupKey, '1', { expirationTtl: 86400 }).catch(() => null);
+
+        results.push({
+          org_id: acct.org_id,
+          email: acct.email,
+          status: 'NOTIFIED',
+          channels: delivered,
+        });
+      } else {
+        results.push({
+          org_id: acct.org_id,
+          email: acct.email,
+          status: 'DRY_RUN',
+          would_notify: { subject, channels: ['INAPP', 'SLACK'] },
+        });
+      }
+    }
+
+    const sent = results.filter(r => r.status === 'NOTIFIED').length;
+    const skipped = results.filter(r => r.status.startsWith('SKIPPED')).length;
+
+    return Response.json({
+      dry_run: dryRun,
+      at_risk_count: atRisk.length,
+      notifications_sent: sent,
+      notifications_skipped: skipped,
+      results,
+      triggered_at: new Date().toISOString(),
+    });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }
