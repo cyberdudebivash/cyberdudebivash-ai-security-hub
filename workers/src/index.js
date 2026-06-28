@@ -421,6 +421,16 @@ import {
   handleTransformObservability,
 } from './handlers/enterpriseTransformHandler.js';
 
+// ─── P18.0: Revenue Intelligence & Churn Prevention Engine ───────────────────
+import {
+  handleRevenueIntelligence,
+  handleChurnAlerts,
+  handleLogIntervention,
+  handleUpgradeSignals,
+  handleNRRForecast,
+  handleRevenueIntelObservability,
+} from './handlers/revenueIntelligenceHandler.js';
+
 // ─── Phase C: MYTHOS Autonomous Platform Governor ─────────────────────────────
 import { runPlatformGovernor, handleGovernorStatus, handleGovernorReport } from './services/mythosGovernor.js';
 
@@ -4656,6 +4666,36 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/platform/transform/observability' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleTransformObservability(request, env, authCtx || {}), request));
+    }
+
+    // ── P18.0: Revenue Intelligence & Churn Prevention Engine ────────────────
+    if (path === '/api/platform/revenue-intelligence' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleRevenueIntelligence(request, env), request));
+    }
+    if (path === '/api/platform/revenue-intelligence/churn-alerts' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleChurnAlerts(request, env), request));
+    }
+    if (path === '/api/platform/revenue-intelligence/intervention' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleLogIntervention(request, env), request));
+    }
+    if (path === '/api/platform/revenue-intelligence/upgrade-signals' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleUpgradeSignals(request, env), request));
+    }
+    if (path === '/api/platform/revenue-intelligence/nrr-forecast' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (authCtx) request.user = authCtx;
+      return withSecurityHeaders(withCors(await handleNRRForecast(request, env), request));
+    }
+    if (path === '/api/platform/revenue-intelligence/observability' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleRevenueIntelObservability(request, env), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
