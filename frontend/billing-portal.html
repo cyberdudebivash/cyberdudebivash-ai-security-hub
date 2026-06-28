@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Billing Portal — CYBERDUDEBIVASH AI Security Hub</title>
+  <meta name="description" content="Manage your subscription, invoices, and usage — CYBERDUDEBIVASH AI Security Hub Enterprise Billing Portal"/>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --accent: #00c2ff;
+      --accent2: #7c3aed;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .logo { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.1rem; }
+    .logo-badge { background: linear-gradient(135deg, var(--accent), var(--accent2)); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; }
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
+    .btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #00a8e0; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .page-subtitle { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 2rem; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .card-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 1rem; }
+
+    /* Plan badge */
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .plan-FREE { background: rgba(100,116,139,0.2); color: var(--text-dim); border: 1px solid var(--border); }
+    .plan-STARTER { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .plan-PRO { background: rgba(0,194,255,0.15); color: var(--accent); border: 1px solid rgba(0,194,255,0.3); }
+    .plan-ENTERPRISE { background: rgba(124,58,237,0.15); color: var(--accent2); border: 1px solid rgba(124,58,237,0.3); }
+    .plan-MSSP { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-yellow { background: var(--yellow); }
+    .dot-red { background: var(--red); }
+
+    /* Subscription card */
+    .sub-plan-name { font-size: 2rem; font-weight: 800; margin: 0.5rem 0; }
+    .sub-price { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
+    .sub-price span { color: var(--text); font-size: 1.25rem; font-weight: 700; }
+    .sub-meta { display: flex; flex-direction: column; gap: 0.5rem; }
+    .sub-meta-row { display: flex; justify-content: space-between; font-size: 0.875rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+    .sub-meta-row:last-child { border-bottom: none; }
+    .sub-meta-label { color: var(--text-muted); }
+    .sub-meta-value { font-weight: 600; }
+
+    /* Usage meters */
+    .usage-meter { margin-bottom: 1.25rem; }
+    .usage-meter:last-child { margin-bottom: 0; }
+    .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .usage-label { font-size: 0.8rem; color: var(--text-dim); }
+    .usage-value { font-size: 0.8rem; font-weight: 600; }
+    .usage-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .usage-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .fill-green { background: var(--green); }
+    .fill-yellow { background: var(--yellow); }
+    .fill-red { background: var(--red); }
+
+    /* Invoice table */
+    .inv-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .inv-table th { text-align: left; padding: 0.6rem 0.75rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+    .inv-table td { padding: 0.75rem; border-bottom: 1px solid rgba(30,45,69,0.5); }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .inv-status { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+    .inv-paid { background: rgba(16,185,129,0.15); color: var(--green); }
+    .inv-pending { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .inv-failed { background: rgba(239,68,68,0.15); color: var(--red); }
+    .inv-link { color: var(--accent); text-decoration: none; font-size: 0.8rem; }
+    .inv-link:hover { text-decoration: underline; }
+
+    /* Stat cards */
+    .stat-value { font-size: 1.75rem; font-weight: 800; margin: 0.5rem 0 0.25rem; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); }
+    .stat-trend { font-size: 0.75rem; }
+    .trend-up { color: var(--green); }
+    .trend-down { color: var(--red); }
+
+    /* Action buttons row */
+    .action-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1.25rem; font-size: 0.875rem; box-shadow: 0 8px 32px rgba(0,0,0,0.4); opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 9999; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9000; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; max-width: 440px; width: 90%; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .modal-body { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem; line-height: 1.6; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+    .alert-banner { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: var(--yellow); }
+    .alert-info { background: rgba(0,194,255,0.08); border: 1px solid rgba(0,194,255,0.2); color: var(--accent); }
+
+    .empty-state { text-align: center; padding: 2.5rem; color: var(--text-muted); font-size: 0.875rem; }
+    .loading { color: var(--text-muted); font-size: 0.875rem; text-align: center; padding: 1.5rem; }
+
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .container { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-badge">APEX</div>
+    CYBERDUDEBIVASH AI Security Hub
+  </div>
+  <div class="header-actions">
+    <a href="/dashboard.html" class="btn btn-secondary btn-sm">← Dashboard</a>
+    <button class="btn btn-primary btn-sm" onclick="refreshAll()">Refresh</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-title">Billing &amp; Subscription</div>
+  <div class="page-subtitle">Manage your plan, usage, and invoices</div>
+
+  <div id="overage-alert" style="display:none"></div>
+
+  <!-- Row 1: Subscription + Usage -->
+  <div class="grid-2" style="margin-bottom:1.5rem">
+
+    <!-- Subscription Card -->
+    <div class="card" id="sub-card">
+      <div class="card-title">Current Plan</div>
+      <div class="loading" id="sub-loading">Loading subscription…</div>
+      <div id="sub-content" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+          <div class="plan-badge plan-FREE" id="plan-badge">FREE</div>
+          <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem">
+            <div class="status-dot dot-green" id="sub-status-dot"></div>
+            <span id="sub-status-label">Active</span>
+          </div>
+        </div>
+        <div class="sub-plan-name" id="plan-name">Free</div>
+        <div class="sub-price">Billed at <span id="plan-price">$0</span>/month</div>
+        <div class="sub-meta">
+          <div class="sub-meta-row"><span class="sub-meta-label">Next renewal</span><span class="sub-meta-value" id="renewal-date">—</span></div>
+          <div class="sub-meta-row"><span class="sub-meta-label">API calls / month</span><span class="sub-meta-value" id="monthly-limit">150</span></div>
+          <div class="sub-meta-row"><span class="sub-meta-label">Member since</span><span class="sub-meta-value" id="member-since">—</span></div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()">Upgrade Plan</button>
+          <button class="btn btn-danger btn-sm" id="cancel-btn" onclick="openCancelModal()">Cancel Subscription</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Usage Card -->
+    <div class="card" id="usage-card">
+      <div class="card-title">Live Usage — This Month</div>
+      <div class="loading" id="usage-loading">Loading usage…</div>
+      <div id="usage-content" style="display:none">
+        <div class="usage-meter">
+          <div class="usage-header">
+            <span class="usage-label">API Calls</span>
+            <span class="usage-value" id="api-usage-text">0 / 150</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill fill-green" id="api-bar" style="width:0%"></div></div>
+        </div>
+        <div class="usage-meter">
+          <div class="usage-header">
+            <span class="usage-label">Today's Calls</span>
+            <span class="usage-value" id="daily-usage-text">0 / 5</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill fill-green" id="daily-bar" style="width:0%"></div></div>
+        </div>
+        <div class="usage-meter">
+          <div class="usage-header">
+            <span class="usage-label">Remaining Budget</span>
+            <span class="usage-value" id="remaining-text">150 calls left</span>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+          <div>
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.25rem">Total Requests</div>
+            <div style="font-weight:700;font-size:1.1rem" id="total-requests">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.25rem">Overage Charges</div>
+            <div style="font-weight:700;font-size:1.1rem" id="overage-charges">$0.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Stats -->
+  <div class="grid-3" style="margin-bottom:1.5rem" id="stats-row">
+    <div class="card">
+      <div class="card-title">Monthly Spend</div>
+      <div class="stat-value" id="monthly-spend">—</div>
+      <div class="stat-label">Current billing period</div>
+    </div>
+    <div class="card">
+      <div class="card-title">All-Time Invoices</div>
+      <div class="stat-value" id="invoice-count">—</div>
+      <div class="stat-label">Total paid invoices</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Account Health</div>
+      <div class="stat-value" style="font-size:1.1rem;margin-top:0.75rem" id="account-health">Loading…</div>
+      <div class="stat-label">Payment &amp; compliance status</div>
+    </div>
+  </div>
+
+  <!-- Row 3: Invoice History -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div class="card-title" style="margin-bottom:0">Invoice History</div>
+      <button class="btn btn-secondary btn-sm" onclick="loadInvoices()">Refresh</button>
+    </div>
+    <div class="loading" id="inv-loading">Loading invoices…</div>
+    <div id="inv-content" style="display:none">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Period</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>PDF</th>
+          </tr>
+        </thead>
+        <tbody id="inv-body"></tbody>
+      </table>
+      <div class="empty-state" id="inv-empty" style="display:none">No invoices found. Your first invoice will appear here after your first billing cycle.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal-overlay" id="cancel-modal">
+  <div class="modal">
+    <div class="modal-title">Cancel Subscription</div>
+    <div class="modal-body">
+      Your subscription will remain active until the end of the current billing period. You won't be charged again after that date. You can re-subscribe at any time.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('cancel-modal')">Keep Subscription</button>
+      <button class="btn btn-danger" onclick="cancelSubscription()">Confirm Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upgrade Modal -->
+<div class="modal-overlay" id="upgrade-modal">
+  <div class="modal">
+    <div class="modal-title">Upgrade Plan</div>
+    <div class="modal-body">
+      <p style="margin-bottom:1rem">Choose the plan that fits your team:</p>
+      <div style="display:flex;flex-direction:column;gap:0.5rem" id="upgrade-options"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('upgrade-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="initiateUpgrade()">Upgrade Now</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '';
+const PLAN_PRICES = { FREE: 0, STARTER: 29, PRO: 99, ENTERPRISE: 499, MSSP: 999 };
+const PLAN_LIMITS = { FREE: 150, STARTER: 3000, PRO: 15000, ENTERPRISE: 'Unlimited', MSSP: 'Unlimited' };
+let currentPlan = 'FREE';
+let selectedUpgradePlan = null;
+
+function toast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#1e2d45';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  catch { return d; }
+}
+function fmtMoney(n) { return '$' + Number(n || 0).toFixed(2); }
+function barClass(pct) { return pct >= 90 ? 'fill-red' : pct >= 70 ? 'fill-yellow' : 'fill-green'; }
+
+async function loadPortal() {
+  try {
+    const r = await fetch(`${API}/api/customer/billing/portal`, { credentials: 'include' });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById('sub-loading').textContent = d.error || 'Failed to load subscription.'; return; }
+
+    currentPlan = d.plan || 'FREE';
+    document.getElementById('sub-loading').style.display = 'none';
+    document.getElementById('sub-content').style.display = 'block';
+
+    const badge = document.getElementById('plan-badge');
+    badge.textContent = currentPlan;
+    badge.className = `plan-badge plan-${currentPlan}`;
+    document.getElementById('plan-name').textContent = currentPlan.charAt(0) + currentPlan.slice(1).toLowerCase();
+    document.getElementById('plan-price').textContent = fmtMoney(PLAN_PRICES[currentPlan] || 0);
+    document.getElementById('renewal-date').textContent = fmtDate(d.current_period_end);
+    const lim = PLAN_LIMITS[currentPlan];
+    document.getElementById('monthly-limit').textContent = typeof lim === 'number' ? lim.toLocaleString() : lim;
+    document.getElementById('member-since').textContent = fmtDate(d.created_at);
+
+    const statusDot = document.getElementById('sub-status-dot');
+    const statusLabel = document.getElementById('sub-status-label');
+    if (d.cancel_at_period_end) {
+      statusDot.className = 'status-dot dot-yellow';
+      statusLabel.textContent = 'Cancels ' + fmtDate(d.current_period_end);
+      document.getElementById('cancel-btn').style.display = 'none';
+      const alert = document.getElementById('overage-alert');
+      alert.innerHTML = `<div class="alert-banner alert-warning">⚠ Your subscription will cancel on ${fmtDate(d.current_period_end)}. Re-subscribe anytime to continue access.</div>`;
+      alert.style.display = 'block';
+    } else if (d.status === 'active') {
+      statusDot.className = 'status-dot dot-green';
+      statusLabel.textContent = 'Active';
+    } else {
+      statusDot.className = 'status-dot dot-red';
+      statusLabel.textContent = d.status || 'Unknown';
+    }
+
+    document.getElementById('monthly-spend').textContent = fmtMoney(PLAN_PRICES[currentPlan] || 0);
+    document.getElementById('account-health').textContent = d.status === 'active' ? '✓ Healthy' : '⚠ Review Required';
+    document.getElementById('account-health').style.color = d.status === 'active' ? '#10b981' : '#f59e0b';
+  } catch(e) {
+    document.getElementById('sub-loading').textContent = 'Error loading subscription.';
+  }
+}
+
+async function loadUsage() {
+  try {
+    const r = await fetch(`${API}/api/customer/usage/live`, { credentials: 'include' });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById('usage-loading').textContent = d.error || 'Failed to load usage.'; return; }
+
+    document.getElementById('usage-loading').style.display = 'none';
+    document.getElementById('usage-content').style.display = 'block';
+
+    const used = d.monthly_used || 0;
+    const limit = d.monthly_limit === -1 ? Infinity : (d.monthly_limit || 150);
+    const dailyUsed = d.daily_used || 0;
+    const dailyLimit = d.daily_limit === -1 ? Infinity : (d.daily_limit || 5);
+    const monthlyPct = limit === Infinity ? 0 : Math.min(100, Math.round((used / limit) * 100));
+    const dailyPct = dailyLimit === Infinity ? 0 : Math.min(100, Math.round((dailyUsed / dailyLimit) * 100));
+
+    document.getElementById('api-usage-text').textContent = `${used.toLocaleString()} / ${limit === Infinity ? '∞' : limit.toLocaleString()}`;
+    const apiBar = document.getElementById('api-bar');
+    apiBar.style.width = monthlyPct + '%';
+    apiBar.className = 'usage-fill ' + barClass(monthlyPct);
+
+    document.getElementById('daily-usage-text').textContent = `${dailyUsed} / ${dailyLimit === Infinity ? '∞' : dailyLimit}`;
+    const dailyBar = document.getElementById('daily-bar');
+    dailyBar.style.width = dailyPct + '%';
+    dailyBar.className = 'usage-fill ' + barClass(dailyPct);
+
+    const remaining = limit === Infinity ? '∞' : Math.max(0, limit - used).toLocaleString();
+    document.getElementById('remaining-text').textContent = remaining + ' calls left';
+    document.getElementById('total-requests').textContent = (d.total_requests || used).toLocaleString();
+    document.getElementById('overage-charges').textContent = fmtMoney(d.overage_charges || 0);
+
+    if (monthlyPct >= 90 && limit !== Infinity) {
+      const alert = document.getElementById('overage-alert');
+      if (!alert.innerHTML) {
+        alert.innerHTML = `<div class="alert-banner alert-info">⚡ You've used ${monthlyPct}% of your monthly API quota. Consider upgrading to avoid overage charges.</div>`;
+        alert.style.display = 'block';
+      }
+    }
+  } catch(e) {
+    document.getElementById('usage-loading').textContent = 'Error loading usage data.';
+  }
+}
+
+async function loadInvoices() {
+  document.getElementById('inv-loading').style.display = 'block';
+  document.getElementById('inv-content').style.display = 'none';
+  try {
+    const r = await fetch(`${API}/api/customer/billing/invoices`, { credentials: 'include' });
+    const d = await r.json();
+    document.getElementById('inv-loading').style.display = 'none';
+    document.getElementById('inv-content').style.display = 'block';
+
+    const invoices = d.invoices || [];
+    document.getElementById('invoice-count').textContent = invoices.length;
+    const tbody = document.getElementById('inv-body');
+    tbody.innerHTML = '';
+
+    if (!invoices.length) {
+      document.getElementById('inv-empty').style.display = 'block';
+      return;
+    }
+
+    invoices.forEach(inv => {
+      const statusClass = inv.status === 'paid' ? 'inv-paid' : inv.status === 'pending' ? 'inv-pending' : 'inv-failed';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-weight:600;font-family:monospace;font-size:0.8rem">${inv.id || '—'}</td>
+        <td style="color:var(--text-muted)">${fmtDate(inv.period_start)} – ${fmtDate(inv.period_end)}</td>
+        <td style="font-weight:700">${fmtMoney(inv.amount_usd)}</td>
+        <td><span class="inv-status ${statusClass}">${(inv.status || 'unknown').toUpperCase()}</span></td>
+        <td>${inv.pdf_url ? `<a href="${inv.pdf_url}" target="_blank" class="inv-link">Download</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e) {
+    document.getElementById('inv-loading').textContent = 'Error loading invoices.';
+  }
+}
+
+function openCancelModal() { document.getElementById('cancel-modal').classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function cancelSubscription() {
+  closeModal('cancel-modal');
+  try {
+    const r = await fetch(`${API}/api/customer/billing/cancel`, { method: 'POST', credentials: 'include' });
+    const d = await r.json();
+    if (!r.ok) { toast(d.error || 'Failed to cancel.', 'error'); return; }
+    toast('Subscription will cancel at period end. You retain full access until then.', 'success');
+    await loadPortal();
+  } catch(e) { toast('Network error. Please try again.', 'error'); }
+}
+
+const PLANS = [
+  { key: 'STARTER', label: 'Starter — $29/mo', desc: '3,000 API calls/month, all core features' },
+  { key: 'PRO', label: 'Pro — $99/mo', desc: '15,000 API calls/month, advanced analytics, priority support' },
+  { key: 'ENTERPRISE', label: 'Enterprise — $499/mo', desc: 'Unlimited API calls, SSO, SLA, dedicated success manager' },
+  { key: 'MSSP', label: 'MSSP — $999/mo', desc: 'Multi-tenant, white-label, partner dashboard, unlimited seats' },
+];
+
+function openUpgradeModal() {
+  const container = document.getElementById('upgrade-options');
+  container.innerHTML = '';
+  PLANS.filter(p => {
+    const ORDER = { FREE: 0, STARTER: 1, PRO: 2, ENTERPRISE: 3, MSSP: 4 };
+    return ORDER[p.key] > (ORDER[currentPlan] || 0);
+  }).forEach(p => {
+    const d = document.createElement('label');
+    d.style.cssText = 'display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.2s';
+    d.innerHTML = `<input type="radio" name="upgrade_plan" value="${p.key}" style="margin-top:0.2rem">
+      <div><div style="font-weight:700;font-size:0.9rem">${p.label}</div><div style="color:var(--text-muted);font-size:0.8rem;margin-top:0.2rem">${p.desc}</div></div>`;
+    d.addEventListener('change', () => {
+      selectedUpgradePlan = p.key;
+      document.querySelectorAll('#upgrade-options label').forEach(l => l.style.borderColor = 'var(--border)');
+      d.style.borderColor = 'var(--accent)';
+    });
+    container.appendChild(d);
+  });
+  document.getElementById('upgrade-modal').classList.add('active');
+}
+
+async function initiateUpgrade() {
+  if (!selectedUpgradePlan) { toast('Please select a plan.', 'error'); return; }
+  closeModal('upgrade-modal');
+  try {
+    const r = await fetch(`${API}/api/customer/billing/upgrade`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_plan: selectedUpgradePlan }),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.error || 'Upgrade failed.', 'error'); return; }
+    if (d.checkout_url) { window.location.href = d.checkout_url; return; }
+    toast(d.message || 'Upgrade initiated! You\'ll receive a confirmation email.', 'success');
+    await loadPortal();
+  } catch(e) { toast('Network error. Please try again.', 'error'); }
+}
+
+async function refreshAll() {
+  document.getElementById('sub-loading').style.display = 'block';
+  document.getElementById('sub-content').style.display = 'none';
+  document.getElementById('usage-loading').style.display = 'block';
+  document.getElementById('usage-content').style.display = 'none';
+  await Promise.all([loadPortal(), loadUsage(), loadInvoices()]);
+  toast('Refreshed successfully.', 'success');
+}
+
+// Init
+loadPortal();
+loadUsage();
+loadInvoices();
+</script>
+</body>
+</html>

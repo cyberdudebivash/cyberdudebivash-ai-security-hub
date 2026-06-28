@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Executive KPI Dashboard — CYBERDUDEBIVASH AI Security Hub</title>
+  <meta name="description" content="CEO, Board, and CISO Executive Intelligence Dashboard — CYBERDUDEBIVASH AI Security Hub"/>
+  <style>
+    :root {
+      --bg: #080b12;
+      --surface: #0d1420;
+      --surface2: #111c2d;
+      --border: #1a2840;
+      --accent: #00c2ff;
+      --accent2: #7c3aed;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --orange: #f97316;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; }
+    .logo-badge { background: linear-gradient(135deg, var(--accent), var(--accent2)); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+    .live-label { font-size: 0.75rem; color: var(--green); font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+    .last-updated { font-size: 0.7rem; color: var(--text-muted); }
+    .btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.75rem; }
+
+    /* Audience Tabs */
+    .audience-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex; gap: 0;
+    }
+    .audience-tab {
+      padding: 0.85rem 1.25rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .audience-tab:hover { color: var(--text-dim); }
+    .audience-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+    /* Section */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+
+    /* KPI Grid */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .kpi-green::before { background: var(--green); }
+    .kpi-blue::before { background: var(--accent); }
+    .kpi-purple::before { background: var(--accent2); }
+    .kpi-yellow::before { background: var(--yellow); }
+    .kpi-red::before { background: var(--red); }
+    .kpi-orange::before { background: var(--orange); }
+    .kpi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 1.75rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; }
+    .kpi-sub { font-size: 0.75rem; color: var(--text-muted); }
+    .kpi-trend { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.7rem; font-weight: 700; margin-top: 0.4rem; padding: 0.15rem 0.4rem; border-radius: 4px; }
+    .trend-up { background: rgba(16,185,129,0.1); color: var(--green); }
+    .trend-down { background: rgba(239,68,68,0.1); color: var(--red); }
+    .trend-flat { background: rgba(100,116,139,0.1); color: var(--text-muted); }
+
+    /* Charts */
+    .chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+    .card-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 1rem; }
+
+    /* Sparkline bars */
+    .spark-bars { display: flex; align-items: flex-end; gap: 3px; height: 60px; }
+    .spark-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 4px; transition: height 0.3s; }
+    .spark-label { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    /* Pie chart (CSS) */
+    .pie-ring { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 1rem; position: relative; }
+    .pie-center { position: absolute; inset: 20px; background: var(--surface); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .pie-center-val { font-size: 1.1rem; font-weight: 800; }
+    .pie-center-label { font-size: 0.6rem; color: var(--text-muted); }
+
+    /* Plan distribution */
+    .plan-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; font-size: 0.8rem; }
+    .plan-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .plan-row-label { flex: 1; color: var(--text-dim); }
+    .plan-bar-track { flex: 2; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .plan-bar-fill { height: 100%; border-radius: 3px; }
+    .plan-row-count { font-weight: 700; min-width: 30px; text-align: right; }
+
+    /* Health indicators */
+    .health-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.75rem; }
+    .health-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; }
+    .health-icon { font-size: 1.25rem; margin-bottom: 0.4rem; }
+    .health-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .health-val { font-weight: 700; font-size: 0.875rem; }
+
+    /* Narrative */
+    .narrative-box { background: linear-gradient(135deg, rgba(0,194,255,0.04), rgba(124,58,237,0.04)); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .narrative-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 0.75rem; }
+    .narrative-text { font-size: 0.875rem; line-height: 1.7; color: var(--text-dim); }
+    .narrative-text strong { color: var(--text); }
+
+    /* Loading */
+    .loading-overlay { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.875rem; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .data-table th { text-align: left; padding: 0.5rem 0.75rem; color: var(--text-muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+    .data-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid rgba(26,40,64,0.5); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.015); }
+
+    .badge { display: inline-flex; align-items: center; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+    .badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
+    .badge-blue { background: rgba(0,194,255,0.15); color: var(--accent); }
+    .badge-purple { background: rgba(124,58,237,0.15); color: var(--accent2); }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    @media (max-width: 900px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .health-grid { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .audience-bar { overflow-x: auto; }
+      .container { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-badge">APEX</div>
+    <span>Executive Intelligence</span>
+  </div>
+  <div class="header-right">
+    <div class="live-label"><div class="live-dot"></div>LIVE</div>
+    <span class="last-updated" id="last-updated">Loading…</span>
+    <button class="btn btn-secondary btn-sm" onclick="refreshDashboard()">Refresh</button>
+    <a href="/dashboard.html" class="btn btn-secondary btn-sm">← Back</a>
+  </div>
+</header>
+
+<nav class="audience-bar">
+  <div class="audience-tab active" onclick="setAudience('ceo')">CEO / Founder</div>
+  <div class="audience-tab" onclick="setAudience('board')">Board</div>
+  <div class="audience-tab" onclick="setAudience('ciso')">CISO</div>
+  <div class="audience-tab" onclick="setAudience('finance')">Finance</div>
+  <div class="audience-tab" onclick="setAudience('growth')">Growth</div>
+</nav>
+
+<div class="container">
+  <div class="loading-overlay" id="main-loading">
+    <div class="spinner"></div>
+    Loading executive intelligence…
+  </div>
+
+  <div id="dashboard-content" style="display:none">
+
+    <!-- Narrative Brief -->
+    <div class="narrative-box">
+      <div class="narrative-title" id="narrative-audience">CEO INTELLIGENCE BRIEF</div>
+      <div class="narrative-text" id="narrative-text">Loading executive brief…</div>
+    </div>
+
+    <!-- Primary KPIs -->
+    <div class="section-header">
+      <div class="section-title" id="kpi-section-label">Revenue KPIs</div>
+    </div>
+    <div class="kpi-grid" id="kpi-grid">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- Charts Row -->
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">MRR Trend — Last 6 Months</div>
+        <div class="spark-bars" id="mrr-chart"></div>
+        <div class="spark-label"><span id="mrr-start"></span><span id="mrr-end"></span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Plan Distribution</div>
+        <div id="plan-dist"></div>
+      </div>
+    </div>
+
+    <!-- Secondary Metrics -->
+    <div class="chart-grid" style="grid-template-columns:1fr 1fr">
+      <div class="card">
+        <div class="card-title">Platform Health</div>
+        <div class="health-grid" id="health-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top Overage Accounts</div>
+        <table class="data-table">
+          <thead><tr><th>Account</th><th>Plan</th><th>Overage ($)</th></tr></thead>
+          <tbody id="overage-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = '';
+let kpiData = null;
+let currentAudience = 'ceo';
+
+const PLAN_COLORS = { FREE: '#64748b', STARTER: '#10b981', PRO: '#00c2ff', ENTERPRISE: '#7c3aed', MSSP: '#f59e0b' };
+const PLAN_BADGE = { FREE: 'badge-yellow', STARTER: 'badge-green', PRO: 'badge-blue', ENTERPRISE: 'badge-purple', MSSP: 'badge-yellow' };
+
+function fmtMoney(n, short=false) {
+  const v = Number(n || 0);
+  if (short && v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
+  if (short && v >= 1000) return '$' + (v/1000).toFixed(1) + 'K';
+  return '$' + v.toFixed(2);
+}
+function fmtNum(n) { return Number(n || 0).toLocaleString(); }
+function fmtPct(n) { return Number(n || 0).toFixed(1) + '%'; }
+function trendHtml(v, prefix='') {
+  if (v === null || v === undefined) return '';
+  const cls = v > 0 ? 'trend-up' : v < 0 ? 'trend-down' : 'trend-flat';
+  const arrow = v > 0 ? '↑' : v < 0 ? '↓' : '→';
+  return `<div class="kpi-trend ${cls}">${arrow} ${prefix}${Math.abs(v).toFixed(1)}% MoM</div>`;
+}
+
+async function loadKPI() {
+  try {
+    const r = await fetch(`${API}/api/platform/kpi`, { credentials: 'include' });
+    kpiData = await r.json();
+    if (!r.ok || kpiData.error) {
+      document.getElementById('main-loading').innerHTML = `<div style="color:var(--red)">${kpiData?.error || 'Failed to load KPIs. Please check your permissions.'}</div>`;
+      return;
+    }
+    document.getElementById('main-loading').style.display = 'none';
+    document.getElementById('dashboard-content').style.display = 'block';
+    document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    renderAudience(currentAudience);
+  } catch(e) {
+    document.getElementById('main-loading').innerHTML = `<div style="color:var(--red)">Network error loading KPI data. Are you authenticated?</div>`;
+  }
+}
+
+function setAudience(a) {
+  currentAudience = a;
+  document.querySelectorAll('.audience-tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if (kpiData) renderAudience(a);
+}
+
+function renderAudience(a) {
+  const d = kpiData;
+  const narrativeMap = {
+    ceo: { label: 'CEO / FOUNDER INTELLIGENCE BRIEF', kpis: renderCEOKPIs(d), narrative: buildCEONarrative(d) },
+    board: { label: 'BOARD INTELLIGENCE BRIEF', kpis: renderBoardKPIs(d), narrative: buildBoardNarrative(d) },
+    ciso: { label: 'CISO SECURITY & PLATFORM BRIEF', kpis: renderCISOKPIs(d), narrative: buildCISONarrative(d) },
+    finance: { label: 'FINANCE & REVENUE BRIEF', kpis: renderFinanceKPIs(d), narrative: buildFinanceNarrative(d) },
+    growth: { label: 'GROWTH ENGINE BRIEF', kpis: renderGrowthKPIs(d), narrative: buildGrowthNarrative(d) },
+  };
+  const view = narrativeMap[a] || narrativeMap.ceo;
+  document.getElementById('narrative-audience').textContent = view.label;
+  document.getElementById('narrative-text').innerHTML = view.narrative;
+  document.getElementById('kpi-grid').innerHTML = view.kpis;
+  renderCharts(d);
+}
+
+function kpiCard(label, value, sub, trend, colorClass='kpi-blue') {
+  return `<div class="kpi-card ${colorClass}">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value">${value}</div>
+    <div class="kpi-sub">${sub}</div>
+    ${trend ? trendHtml(trend) : ''}
+  </div>`;
+}
+
+function renderCEOKPIs(d) {
+  return [
+    kpiCard('MRR', fmtMoney(d.mrr, true), 'Monthly Recurring Revenue', d.mrr_growth_pct, 'kpi-green'),
+    kpiCard('ARR', fmtMoney(d.arr, true), 'Annual Run Rate', null, 'kpi-green'),
+    kpiCard('NRR', fmtPct(d.nrr), 'Net Revenue Retention', null, 'kpi-blue'),
+    kpiCard('Churn', fmtPct(d.churn_rate), 'Monthly churn rate', null, d.churn_rate > 5 ? 'kpi-red' : 'kpi-green'),
+    kpiCard('Customers', fmtNum(d.total_customers), 'Paying accounts', d.customer_growth_pct, 'kpi-purple'),
+    kpiCard('ARPU', fmtMoney(d.arpu), 'Avg revenue per user/mo', null, 'kpi-blue'),
+    kpiCard('LTV', fmtMoney(d.ltv, true), 'Customer lifetime value', null, 'kpi-purple'),
+    kpiCard('CAC', fmtMoney(d.cac), 'Customer acquisition cost', null, 'kpi-yellow'),
+  ].join('');
+}
+
+function renderBoardKPIs(d) {
+  return [
+    kpiCard('ARR', fmtMoney(d.arr, true), 'Annual Recurring Revenue', null, 'kpi-green'),
+    kpiCard('MRR Growth', fmtPct(d.mrr_growth_pct), 'Month-over-month', null, d.mrr_growth_pct > 0 ? 'kpi-green' : 'kpi-red'),
+    kpiCard('NRR', fmtPct(d.nrr), 'Net Revenue Retention', null, 'kpi-blue'),
+    kpiCard('LTV/CAC', (d.cac > 0 ? (d.ltv / d.cac).toFixed(1) : '∞') + 'x', 'Unit economics ratio', null, 'kpi-purple'),
+    kpiCard('Total Customers', fmtNum(d.total_customers), 'Paying + trial', null, 'kpi-blue'),
+    kpiCard('Churn', fmtPct(d.churn_rate), 'Monthly customer churn', null, d.churn_rate > 5 ? 'kpi-red' : 'kpi-green'),
+    kpiCard('API Consumption', fmtNum(d.total_api_calls_month), 'Calls this month', null, 'kpi-yellow'),
+    kpiCard('Overage Rev', fmtMoney(d.overage_revenue_month, true), 'Expansion revenue', null, 'kpi-orange'),
+  ].join('');
+}
+
+function renderCISOKPIs(d) {
+  return [
+    kpiCard('Active API Keys', fmtNum(d.active_api_keys), 'Live credentials', null, 'kpi-blue'),
+    kpiCard('API Calls / Mo', fmtNum(d.total_api_calls_month), 'Platform consumption', null, 'kpi-blue'),
+    kpiCard('Paying Customers', fmtNum(d.total_customers), 'Subscribed accounts', null, 'kpi-green'),
+    kpiCard('Trial-to-Paid', fmtPct(d.trial_conversion_rate), 'Conversion rate', null, 'kpi-purple'),
+    kpiCard('ENTERPRISE Tier', fmtNum(d.plan_distribution?.ENTERPRISE || 0), 'Enterprise accounts', null, 'kpi-purple'),
+    kpiCard('MSSP Tier', fmtNum(d.plan_distribution?.MSSP || 0), 'MSSP partners', null, 'kpi-yellow'),
+    kpiCard('NRR', fmtPct(d.nrr), 'Net revenue retention', null, 'kpi-green'),
+    kpiCard('MRR', fmtMoney(d.mrr, true), 'Monthly revenue', null, 'kpi-green'),
+  ].join('');
+}
+
+function renderFinanceKPIs(d) {
+  return [
+    kpiCard('MRR', fmtMoney(d.mrr, true), 'Monthly Recurring Revenue', d.mrr_growth_pct, 'kpi-green'),
+    kpiCard('ARR', fmtMoney(d.arr, true), 'Annual Run Rate', null, 'kpi-green'),
+    kpiCard('Overage Revenue', fmtMoney(d.overage_revenue_month, true), 'Expansion billing', null, 'kpi-orange'),
+    kpiCard('Total Revenue', fmtMoney((d.mrr||0) + (d.overage_revenue_month||0), true), 'MRR + Overage', null, 'kpi-green'),
+    kpiCard('ARPU', fmtMoney(d.arpu), 'Avg revenue/user', null, 'kpi-blue'),
+    kpiCard('LTV', fmtMoney(d.ltv, true), 'Lifetime value', null, 'kpi-purple'),
+    kpiCard('CAC', fmtMoney(d.cac), 'Acquisition cost', null, 'kpi-yellow'),
+    kpiCard('LTV/CAC', (d.cac > 0 ? (d.ltv / d.cac).toFixed(1) : '∞') + 'x', 'Unit economics', null, 'kpi-purple'),
+  ].join('');
+}
+
+function renderGrowthKPIs(d) {
+  return [
+    kpiCard('New Customers', fmtNum(d.new_customers_month), 'Added this month', d.customer_growth_pct, 'kpi-green'),
+    kpiCard('Trial Conversion', fmtPct(d.trial_conversion_rate), 'Free → Paid', null, 'kpi-purple'),
+    kpiCard('Churn Rate', fmtPct(d.churn_rate), 'Monthly churn', null, d.churn_rate > 5 ? 'kpi-red' : 'kpi-green'),
+    kpiCard('NRR', fmtPct(d.nrr), 'Net Revenue Retention', null, 'kpi-blue'),
+    kpiCard('API Adoption', fmtNum(d.total_api_calls_month), 'Calls this month', null, 'kpi-blue'),
+    kpiCard('ARPU', fmtMoney(d.arpu), 'Avg revenue/user', null, 'kpi-yellow'),
+    kpiCard('Total Customers', fmtNum(d.total_customers), 'All paying tiers', null, 'kpi-blue'),
+    kpiCard('MRR Growth', fmtPct(d.mrr_growth_pct), 'MoM', null, d.mrr_growth_pct > 0 ? 'kpi-green' : 'kpi-red'),
+  ].join('');
+}
+
+function buildCEONarrative(d) {
+  const mrrGrow = d.mrr_growth_pct > 0 ? `growing at <strong>${d.mrr_growth_pct?.toFixed(1)}% MoM</strong>` : `down ${Math.abs(d.mrr_growth_pct||0).toFixed(1)}% MoM`;
+  const churnHealth = d.churn_rate < 3 ? 'excellent churn control' : d.churn_rate < 6 ? 'moderate churn' : 'elevated churn requiring attention';
+  return `Platform is generating <strong>${fmtMoney(d.mrr, true)} MRR</strong> (${fmtMoney(d.arr, true)} ARR), ${mrrGrow}.
+  <strong>${fmtNum(d.total_customers)} paying customers</strong> with an ARPU of <strong>${fmtMoney(d.arpu)}</strong> and LTV of <strong>${fmtMoney(d.ltv, true)}</strong>.
+  Unit economics: LTV/CAC ratio of <strong>${d.cac > 0 ? (d.ltv/d.cac).toFixed(1) : '∞'}x</strong>.
+  NRR stands at <strong>${fmtPct(d.nrr)}</strong> — indicating ${d.nrr >= 100 ? 'expansion revenue from existing customers' : 'contraction from existing base'}.
+  ${churnHealth.charAt(0).toUpperCase() + churnHealth.slice(1)} at <strong>${fmtPct(d.churn_rate)}</strong>.`;
+}
+
+function buildBoardNarrative(d) {
+  return `ARR stands at <strong>${fmtMoney(d.arr, true)}</strong> with NRR of <strong>${fmtPct(d.nrr)}</strong>.
+  LTV/CAC ratio of <strong>${d.cac > 0 ? (d.ltv/d.cac).toFixed(1) : '∞'}x</strong> demonstrates ${d.cac > 0 && d.ltv/d.cac > 3 ? 'strong' : 'developing'} unit economics.
+  Customer base of <strong>${fmtNum(d.total_customers)}</strong> with monthly churn of <strong>${fmtPct(d.churn_rate)}</strong>.
+  API consumption at <strong>${fmtNum(d.total_api_calls_month)} calls/month</strong> indicates active platform engagement.
+  Overage revenue of <strong>${fmtMoney(d.overage_revenue_month, true)}</strong> signals expansion opportunity from power users.`;
+}
+
+function buildCISONarrative(d) {
+  return `Platform serves <strong>${fmtNum(d.total_customers)} enterprise customers</strong> with <strong>${fmtNum(d.active_api_keys)} active API keys</strong>.
+  <strong>${fmtNum(d.plan_distribution?.ENTERPRISE || 0)} Enterprise</strong> and <strong>${fmtNum(d.plan_distribution?.MSSP || 0)} MSSP</strong> tier accounts represent highest-trust access.
+  API throughput of <strong>${fmtNum(d.total_api_calls_month)}/month</strong> across all tiers.
+  Trial-to-paid conversion at <strong>${fmtPct(d.trial_conversion_rate)}</strong>.
+  NRR of <strong>${fmtPct(d.nrr)}</strong> indicates overall account health. Revenue standing: <strong>${fmtMoney(d.mrr, true)} MRR</strong>.`;
+}
+
+function buildFinanceNarrative(d) {
+  const totalRev = (d.mrr || 0) + (d.overage_revenue_month || 0);
+  return `Total monthly revenue: <strong>${fmtMoney(totalRev, true)}</strong> (<strong>${fmtMoney(d.mrr, true)} MRR</strong> + <strong>${fmtMoney(d.overage_revenue_month, true)} overage</strong>).
+  ARR projection: <strong>${fmtMoney(d.arr, true)}</strong>.
+  ARPU of <strong>${fmtMoney(d.arpu)}</strong> with LTV of <strong>${fmtMoney(d.ltv, true)}</strong> against CAC of <strong>${fmtMoney(d.cac)}</strong>.
+  LTV/CAC ratio: <strong>${d.cac > 0 ? (d.ltv/d.cac).toFixed(1) : '∞'}x</strong>.
+  MRR growth: <strong>${fmtPct(d.mrr_growth_pct)} MoM</strong>. Customer churn: <strong>${fmtPct(d.churn_rate)}</strong>.`;
+}
+
+function buildGrowthNarrative(d) {
+  return `Added <strong>${fmtNum(d.new_customers_month)} new customers</strong> this month at a trial-to-paid conversion of <strong>${fmtPct(d.trial_conversion_rate)}</strong>.
+  Monthly churn at <strong>${fmtPct(d.churn_rate)}</strong> — NRR of <strong>${fmtPct(d.nrr)}</strong> ${d.nrr >= 100 ? 'shows expansion revenue from existing accounts' : 'shows contraction opportunity'}.
+  API adoption: <strong>${fmtNum(d.total_api_calls_month)} calls/month</strong>. ARPU of <strong>${fmtMoney(d.arpu)}</strong>.
+  Total customer base: <strong>${fmtNum(d.total_customers)}</strong>. MRR growth: <strong>${fmtPct(d.mrr_growth_pct)}</strong>.`;
+}
+
+function renderCharts(d) {
+  // MRR trend sparkline
+  const history = d.mrr_history || [];
+  const mrrChart = document.getElementById('mrr-chart');
+  if (history.length) {
+    const max = Math.max(...history.map(h => h.mrr || 0)) || 1;
+    mrrChart.innerHTML = history.map((h, i) => {
+      const pct = Math.max(5, Math.round((h.mrr / max) * 100));
+      const isLast = i === history.length - 1;
+      return `<div class="spark-bar" style="height:${pct}%;background:${isLast ? 'var(--green)' : 'var(--border)'};opacity:${0.5 + (i/history.length)*0.5}" title="${h.month}: ${fmtMoney(h.mrr, true)}"></div>`;
+    }).join('');
+    document.getElementById('mrr-start').textContent = history[0]?.month || '';
+    document.getElementById('mrr-end').textContent = history[history.length-1]?.month || '';
+  } else {
+    mrrChart.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem">No historical data yet</div>';
+  }
+
+  // Plan distribution
+  const dist = d.plan_distribution || {};
+  const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+  const planDiv = document.getElementById('plan-dist');
+  planDiv.innerHTML = Object.entries(dist).map(([plan, count]) => {
+    const pct = Math.round((count / total) * 100);
+    return `<div class="plan-row">
+      <div class="plan-dot" style="background:${PLAN_COLORS[plan] || '#64748b'}"></div>
+      <div class="plan-row-label">${plan}</div>
+      <div class="plan-bar-track"><div class="plan-bar-fill" style="width:${pct}%;background:${PLAN_COLORS[plan] || '#64748b'}"></div></div>
+      <div class="plan-row-count">${count}</div>
+    </div>`;
+  }).join('') || '<div style="color:var(--text-muted);font-size:0.8rem">No data</div>';
+
+  // Health grid
+  const health = [
+    { icon: '💰', label: 'MRR', val: fmtMoney(d.mrr, true), ok: (d.mrr||0) > 0 },
+    { icon: '📈', label: 'Growth', val: fmtPct(d.mrr_growth_pct), ok: (d.mrr_growth_pct||0) >= 0 },
+    { icon: '🔄', label: 'NRR', val: fmtPct(d.nrr), ok: (d.nrr||0) >= 100 },
+    { icon: '📉', label: 'Churn', val: fmtPct(d.churn_rate), ok: (d.churn_rate||0) < 5 },
+    { icon: '⚡', label: 'API / Mo', val: fmtNum(d.total_api_calls_month), ok: true },
+    { icon: '🏆', label: 'Conv Rate', val: fmtPct(d.trial_conversion_rate), ok: (d.trial_conversion_rate||0) > 10 },
+  ];
+  document.getElementById('health-grid').innerHTML = health.map(h => `
+    <div class="health-item">
+      <div class="health-icon">${h.icon}</div>
+      <div class="health-label">${h.label}</div>
+      <div class="health-val" style="color:${h.ok ? 'var(--green)' : 'var(--yellow)'}">${h.val}</div>
+    </div>`).join('');
+
+  // Overage table
+  const overages = d.top_overage_accounts || [];
+  const tbody = document.getElementById('overage-table');
+  tbody.innerHTML = overages.length ? overages.slice(0, 5).map(a => `
+    <tr>
+      <td style="font-family:monospace;font-size:0.75rem">${a.email || a.user_id || '—'}</td>
+      <td><span class="badge ${PLAN_BADGE[a.plan] || 'badge-blue'}">${a.plan || '—'}</span></td>
+      <td style="font-weight:700;color:var(--orange)">${fmtMoney(a.overage_charges)}</td>
+    </tr>`).join('') : '<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:1rem">No overage accounts this month</td></tr>';
+}
+
+async function refreshDashboard() {
+  document.getElementById('last-updated').textContent = 'Refreshing…';
+  await loadKPI();
+}
+
+loadKPI();
+// Auto-refresh every 5 minutes
+setInterval(loadKPI, 300000);
+</script>
+</body>
+</html>
