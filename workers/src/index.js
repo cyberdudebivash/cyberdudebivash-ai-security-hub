@@ -142,6 +142,7 @@ import {
 // ── v29 NEW SCANNER IMPORTS ───────────────────────────────────────────────────
 import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handleMCPQuickAssess } from './handlers/mcpSecurityScanner.js';
 import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibe-code/vibeCodeScanner.js';
+import { handleListAgentAdvisories, handleAgentThreatOverview, handleCreateAgentAdvisory } from './handlers/agentThreatAdvisories.js';
 
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
@@ -6915,6 +6916,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path === '/api/vibe-code/patterns' && method === 'GET') {
     return handleVibeCodePatterns(request, env);
+  }
+
+  // ── v43: AGENT THREAT ADVISORIES — live D1-backed feed for /agent-threats ──
+  if (path === '/api/agent-threats/advisories' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleListAgentAdvisories(request, env), request));
+  }
+  if (path === '/api/agent-threats/overview' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleAgentThreatOverview(request, env), request));
+  }
+  if (path === '/api/admin/agent-threats/advisories' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handleCreateAgentAdvisory(request, env), request));
   }
 
   // -- v30.0: Platform Metrics ------------------------------------------------

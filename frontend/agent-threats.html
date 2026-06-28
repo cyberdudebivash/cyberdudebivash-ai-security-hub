@@ -171,16 +171,13 @@ option{background:#0d0d22;color:var(--text)}
         <span class="live-dot">LIVE</span>
       </div>
       <div class="sp-stats">
-        <div class="sp-stat"><div class="sp-stat-val" id="adv-count">23</div><div class="sp-stat-label">Active Advisories</div></div>
-        <div class="sp-stat"><div class="sp-stat-val" id="crit-count" style="color:#ef4444">7</div><div class="sp-stat-label">Critical Severity</div></div>
-        <div class="sp-stat"><div class="sp-stat-val" id="fw-count">6</div><div class="sp-stat-label">Frameworks Tracked</div></div>
-        <div class="sp-stat"><div class="sp-stat-val" id="upd-time" style="font-size:14px">2h ago</div><div class="sp-stat-label">Last Updated</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="adv-count">—</div><div class="sp-stat-label">Active Advisories</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="crit-count" style="color:#ef4444">—</div><div class="sp-stat-label">Critical Severity</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="fw-count">—</div><div class="sp-stat-label">Frameworks Tracked</div></div>
+        <div class="sp-stat"><div class="sp-stat-val" id="upd-time" style="font-size:14px">—</div><div class="sp-stat-label">Last Updated</div></div>
       </div>
       <div class="sp-feed" id="live-feed">
-        <div class="sp-item"><span class="sp-sev crit">CRITICAL</span><span class="sp-item-text">MCP Tool Poisoning via Malicious Server</span><span class="sp-time">1h</span></div>
-        <div class="sp-item"><span class="sp-sev high-s">HIGH</span><span class="sp-item-text">LangChain Agent Tool Abuse Escalation</span><span class="sp-time">3h</span></div>
-        <div class="sp-item"><span class="sp-sev crit">CRITICAL</span><span class="sp-item-text">AutoGen Speaker Selection Injection</span><span class="sp-time">6h</span></div>
-        <div class="sp-item"><span class="sp-sev med">MEDIUM</span><span class="sp-item-text">CrewAI Memory Poisoning via Task Output</span><span class="sp-time">12h</span></div>
+        <div style="padding:14px;text-align:center;color:var(--text-dim);font-size:12px">Loading live feed…</div>
       </div>
       <div class="feed-upgrade-gate" id="feedUpgradeGate">
         <div class="fug-title">🔒 <span id="fugTitle">More live threats available</span></div>
@@ -198,49 +195,8 @@ option{background:#0d0d22;color:var(--text)}
   <div style="margin-bottom:32px">
     <div class="section-title" style="margin-bottom:6px">Agent Framework Risk Overview</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Current threat exposure by AI agent framework. Click to filter advisories.</div>
-    <div class="agent-grid">
-      <div class="agent-card" onclick="filterAdvisories('openai')">
-        <div class="agent-logo">🧠</div>
-        <div class="agent-name">OpenAI Agents</div>
-        <div class="risk-meter"><div class="risk-fill critical" style="width:72%"></div></div>
-        <div class="agent-risk-label risk-critical">HIGH RISK — 72</div>
-        <div class="advisory-count">8 active advisories</div>
-      </div>
-      <div class="agent-card" onclick="filterAdvisories('langchain')">
-        <div class="agent-logo">🔗</div>
-        <div class="agent-name">LangChain</div>
-        <div class="risk-meter"><div class="risk-fill critical" style="width:85%"></div></div>
-        <div class="agent-risk-label risk-critical">CRITICAL — 85</div>
-        <div class="advisory-count">11 active advisories</div>
-      </div>
-      <div class="agent-card" onclick="filterAdvisories('crewai')">
-        <div class="agent-logo">👥</div>
-        <div class="agent-name">CrewAI</div>
-        <div class="risk-meter"><div class="risk-fill high" style="width:61%"></div></div>
-        <div class="agent-risk-label risk-high">HIGH — 61</div>
-        <div class="advisory-count">6 active advisories</div>
-      </div>
-      <div class="agent-card" onclick="filterAdvisories('autogen')">
-        <div class="agent-logo">⚡</div>
-        <div class="agent-name">AutoGen</div>
-        <div class="risk-meter"><div class="risk-fill high" style="width:67%"></div></div>
-        <div class="agent-risk-label risk-high">HIGH — 67</div>
-        <div class="advisory-count">7 active advisories</div>
-      </div>
-      <div class="agent-card" onclick="filterAdvisories('mcp')">
-        <div class="agent-logo">🔌</div>
-        <div class="agent-name">MCP</div>
-        <div class="risk-meter"><div class="risk-fill critical" style="width:91%"></div></div>
-        <div class="agent-risk-label risk-critical">CRITICAL — 91</div>
-        <div class="advisory-count">9 active advisories</div>
-      </div>
-      <div class="agent-card" onclick="filterAdvisories('all')">
-        <div class="agent-logo">🌐</div>
-        <div class="agent-name">All Frameworks</div>
-        <div class="risk-meter"><div class="risk-fill critical" style="width:80%"></div></div>
-        <div class="agent-risk-label risk-critical">OVERALL — 80</div>
-        <div class="advisory-count">View all advisories</div>
-      </div>
+    <div class="agent-grid" id="agent-grid">
+      <div style="padding:20px;color:var(--text-dim);font-size:13px">Loading framework risk overview…</div>
     </div>
   </div>
 
@@ -255,128 +211,9 @@ option{background:#0d0d22;color:var(--text)}
     </div>
 
     <div class="advisory-list" id="advisory-list">
-
-      <div class="advisory" data-fw="mcp" data-sev="critical">
-        <div class="adv-header">
-          <span class="adv-id">CDB-AGT-2025-0019</span>
-          <span class="adv-sev adv-crit">CRITICAL <span class="new-badge">NEW</span></span>
-        </div>
-        <div class="adv-title">MCP Tool Poisoning via Malicious Server Description</div>
-        <div class="adv-affected">🔌 Affects: <strong style="color:#fff">All MCP Clients</strong> — Claude Desktop, Cursor, Copilot Studio</div>
-        <div class="adv-desc">A malicious MCP server can inject adversarial instructions into its tool descriptions that execute when an LLM reads the server's capabilities. This "tool poisoning" can override the host system prompt and hijack the connected AI assistant to exfiltrate data, access unauthorized tools, or impersonate the user.</div>
-        <div class="adv-tags">
-          <span class="adv-tag">MCP</span><span class="adv-tag">Tool Poisoning</span><span class="adv-tag">Prompt Injection</span><span class="adv-tag">LLM01</span><span class="adv-tag">AML.T0054</span>
-        </div>
-        <div class="adv-footer">
-          <div class="adv-meta">
-            <span>📅 Jun 7, 2025</span>
-            <span>⚠️ No patch available</span>
-            <span>🔍 CVSS: 9.8</span>
-          </div>
-          <div class="adv-actions">
-            <a href="/#pricing" class="btn-adv primary">Full Advisory →</a>
-            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="advisory" data-fw="langchain" data-sev="critical">
-        <div class="adv-header">
-          <span class="adv-id">CDB-AGT-2025-0017</span>
-          <span class="adv-sev adv-crit">CRITICAL</span>
-        </div>
-        <div class="adv-title">LangChain Agent Tool Abuse via Injected ReAct Instructions</div>
-        <div class="adv-affected">🔗 Affects: <strong style="color:#fff">LangChain ≤ 0.2.x</strong> — React Agent, OpenAI Tools Agent</div>
-        <div class="adv-desc">ReAct agents that process user-controlled inputs without sanitization can be manipulated through injected "Thought:" / "Action:" sequences that mimic the agent's internal reasoning format. The agent follows the injected plan, executing arbitrary tool calls with the agent's full permission scope.</div>
-        <div class="adv-tags">
-          <span class="adv-tag">LangChain</span><span class="adv-tag">ReAct</span><span class="adv-tag">Tool Abuse</span><span class="adv-tag">LLM08</span><span class="adv-tag">CWE-77</span>
-        </div>
-        <div class="adv-footer">
-          <div class="adv-meta">
-            <span>📅 Jun 3, 2025</span>
-            <span>✅ Patch: 0.3.0+</span>
-            <span>🔍 CVSS: 9.1</span>
-          </div>
-          <div class="adv-actions">
-            <a href="/#pricing" class="btn-adv primary">Full Advisory →</a>
-            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="advisory" data-fw="autogen" data-sev="critical">
-        <div class="adv-header">
-          <span class="adv-id">CDB-AGT-2025-0015</span>
-          <span class="adv-sev adv-crit">CRITICAL</span>
-        </div>
-        <div class="adv-title">AutoGen Multi-Agent Speaker Selection Injection</div>
-        <div class="adv-affected">⚡ Affects: <strong style="color:#fff">AutoGen Studio</strong> — GroupChat with LLM-based speaker selection</div>
-        <div class="adv-desc">In AutoGen GroupChat configurations using LLM-based speaker selection, an attacker can inject content that causes the orchestrator to incorrectly route messages — enabling a lower-privilege agent to impersonate a higher-privilege agent and execute unauthorized code or tool calls.</div>
-        <div class="adv-tags">
-          <span class="adv-tag">AutoGen</span><span class="adv-tag">Multi-Agent</span><span class="adv-tag">Speaker Selection</span><span class="adv-tag">Privilege Escalation</span>
-        </div>
-        <div class="adv-footer">
-          <div class="adv-meta">
-            <span>📅 May 28, 2025</span>
-            <span>⚠️ Mitigation available</span>
-            <span>🔍 CVSS: 8.9</span>
-          </div>
-          <div class="adv-actions">
-            <a href="/#pricing" class="btn-adv primary">Full Advisory →</a>
-            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="advisory" data-fw="openai" data-sev="high">
-        <div class="adv-header">
-          <span class="adv-id">CDB-AGT-2025-0014</span>
-          <span class="adv-sev adv-high">HIGH</span>
-        </div>
-        <div class="adv-title">OpenAI Agents SDK — Handoff Hijacking via Tainted Context</div>
-        <div class="adv-affected">🧠 Affects: <strong style="color:#fff">OpenAI Agents SDK</strong> — Multi-agent handoffs</div>
-        <div class="adv-desc">When using agent handoffs in the OpenAI Agents SDK, the receiving agent inherits the full conversation history including any injected content from previous turns. A compromised or tainted agent can use its handoff to propagate injection payloads to downstream agents with different permission scopes.</div>
-        <div class="adv-tags">
-          <span class="adv-tag">OpenAI Agents</span><span class="adv-tag">Handoff</span><span class="adv-tag">Context Propagation</span><span class="adv-tag">LLM08</span>
-        </div>
-        <div class="adv-footer">
-          <div class="adv-meta">
-            <span>📅 May 22, 2025</span>
-            <span>✅ Patch: v1.4.0+</span>
-            <span>🔍 CVSS: 8.2</span>
-          </div>
-          <div class="adv-actions">
-            <a href="/#pricing" class="btn-adv primary">Full Advisory →</a>
-            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="advisory" data-fw="crewai" data-sev="medium">
-        <div class="adv-header">
-          <span class="adv-id">CDB-AGT-2025-0011</span>
-          <span class="adv-sev adv-med">MEDIUM</span>
-        </div>
-        <div class="adv-title">CrewAI Memory Store Poisoning via Crafted Task Output</div>
-        <div class="adv-affected">👥 Affects: <strong style="color:#fff">CrewAI ≤ 0.30</strong> — Long-term memory with vector store</div>
-        <div class="adv-desc">Malicious content stored in CrewAI's long-term memory vector store can influence future agent decisions when retrieved. An attacker who controls any task output can inject adversarial embeddings that persistently bias the crew's behavior across sessions.</div>
-        <div class="adv-tags">
-          <span class="adv-tag">CrewAI</span><span class="adv-tag">Memory Poisoning</span><span class="adv-tag">Vector Store</span><span class="adv-tag">LLM03</span>
-        </div>
-        <div class="adv-footer">
-          <div class="adv-meta">
-            <span>📅 May 15, 2025</span>
-            <span>✅ Patch: 0.31+</span>
-            <span>🔍 CVSS: 6.5</span>
-          </div>
-          <div class="adv-actions">
-            <a href="/#pricing" class="btn-adv primary">Full Advisory →</a>
-            <a href="/attack-library" class="btn-adv ghost">Attack Details</a>
-          </div>
-        </div>
-      </div>
-
+      <div style="padding:40px;text-align:center;color:var(--text-dim);font-size:13px">Loading advisories…</div>
     </div>
+    <div id="advisory-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:20px"></div>
   </div>
 
   <!-- CTA -->
@@ -462,7 +299,6 @@ option{background:#0d0d22;color:var(--text)}
 
 <script>
 // ── CYBERDUDEBIVASH Agent Threats — Live Engine ───────────────────────────────
-const _APEX='https://tools.cyberdudebivash.com';
 
 // ── FEATURE 1 & 2: Agent Scan Modal ──────────────────────────────────────────
 function openAgentScanModal(){
@@ -610,30 +446,24 @@ async function runAgentScan(){
   document.getElementById('scan-results').style.display='block';
 }
 
-// ── Advisory filtering & sorting ──────────────────────────────────────────────
-function filterAdvisories(fw){
-  const label=document.getElementById('fw-filter-label');
-  const items=document.querySelectorAll('.advisory');
-  if(fw==='all'){if(label)label.textContent='';items.forEach(i=>i.style.display='block');return;}
-  if(label)label.textContent='— '+fw.toUpperCase();
-  items.forEach(i=>{i.style.display=i.dataset.fw===fw?'block':'none';});
-  const sec=document.getElementById('advisories');
-  if(sec)sec.scrollIntoView({behavior:'smooth'});
-}
-function sortAdvisories(mode,btn){
-  document.querySelectorAll('.feed-btn').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  const list=document.getElementById('advisory-list');
-  if(!list)return;
-  const items=[...list.querySelectorAll('.advisory')];
-  if(mode==='critical'){
-    const order={critical:0,high:1,medium:2,low:3};
-    items.sort((a,b)=>(order[a.dataset.sev]||3)-(order[b.dataset.sev]||3));
-    items.forEach(i=>list.appendChild(i));
-  }
-}
+// ── v43: Live, D1-backed advisories + framework risk overview ─────────────────
+// Replaces the static "Security Advisories" list and the hardcoded
+// fake per-framework percentages/"N active advisories" labels with real
+// data from /api/agent-threats/advisories and /api/agent-threats/overview.
+const FW_META={
+  openai:{logo:'🧠',name:'OpenAI Agents'},
+  langchain:{logo:'🔗',name:'LangChain'},
+  crewai:{logo:'👥',name:'CrewAI'},
+  autogen:{logo:'⚡',name:'AutoGen'},
+  mcp:{logo:'🔌',name:'MCP'},
+  semantic_kernel:{logo:'🧩',name:'Semantic Kernel'},
+  llama_index:{logo:'🦙',name:'LlamaIndex'},
+  custom:{logo:'⚙️',name:'Custom'},
+};
+let _currentFramework='all';
+let _currentSort='latest';
+let _allAdvisories=[];
 
-// ── FEATURE: Animate counter ──────────────────────────────────────────────────
 function animateCounter(id,start,end,duration){
   const el=document.getElementById(id);
   if(!el||isNaN(end))return;
@@ -641,53 +471,172 @@ function animateCounter(id,start,end,duration){
   let cur=start;
   const timer=setInterval(()=>{
     cur+=step;
-    if(cur>=end){cur=end;clearInterval(timer);}
+    if((step>=0&&cur>=end)||(step<0&&cur<=end)){cur=end;clearInterval(timer);}
     el.textContent=Math.round(cur);
   },16);
 }
 
-// ── FEATURE: Load live threat feed into status panel ──────────────────────────
-async function loadLiveThreats(){
-  try{
-    const res=await fetch(_APEX+'/api/ai-security/threat-feed?type=agent_threats&limit=4',{
-      signal:AbortSignal.timeout(6000)
-    });
-    if(!res.ok)return;
-    const data=await res.json();
-    const threats=data.agent_threats||[];
-    if(!threats.length)return;
-    const feed=document.getElementById('live-feed');
-    if(!feed)return;
-    const sc={CRITICAL:'crit',HIGH:'high-s',MEDIUM:'med'};
-    const ta=['1h','3h','5h','9h'];
-    feed.innerHTML=threats.slice(0,4).map((t,i)=>
-      '<div class="sp-item">'
-      +'<span class="sp-sev '+(sc[t.severity]||'med')+'">'+t.severity+'</span>'
-      +'<span class="sp-item-text">'+t.name+'</span>'
-      +'<span class="sp-time">'+ta[i%4]+'</span>'
-      +'</div>'
-    ).join('');
-    const s=data.summary||{};
-    if(s.total_agent_threats)animateCounter('adv-count',0,s.total_agent_threats,800);
-    if(s.critical_count)animateCounter('crit-count',0,s.critical_count,800);
+function _riskFillClass(level){
+  return level==='CRITICAL'?'critical':level==='HIGH'?'high':'medium';
+}
 
-    const gate=document.getElementById('feedUpgradeGate');
-    if(gate){
-      if(data.gated&&data.live_locked_count>0){
-        const titleEl=document.getElementById('fugTitle');
-        const msgEl=document.getElementById('fugMsg');
-        if(titleEl)titleEl.textContent=data.live_locked_count+' more live threat'+(data.live_locked_count===1?'':'s')+' available';
-        if(msgEl)msgEl.textContent=data.upgrade&&data.upgrade.message
-          ?data.upgrade.message
-          :'Upgrade your plan to unlock the full real-time AI agent threat feed.';
-        gate.classList.add('visible');
-      }else{
-        gate.classList.remove('visible');
-      }
+// ── Framework risk overview — real counts/scores, no fabricated numbers ──────
+async function loadOverview(){
+  const grid=document.getElementById('agent-grid');
+  if(!grid)return;
+  try{
+    const res=await fetch('/api/agent-threats/overview',{signal:AbortSignal.timeout(8000)});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const fws=data.frameworks||[];
+    if(!fws.length){
+      grid.innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:13px">No framework risk data available yet.</div>';
+      return;
+    }
+    grid.innerHTML=fws.map(f=>{
+      const meta=FW_META[f.framework]||{logo:'🤖',name:f.framework};
+      return '<div class="agent-card" onclick="filterAdvisories(\''+f.framework+'\')">'
+        +'<div class="agent-logo">'+meta.logo+'</div>'
+        +'<div class="agent-name">'+meta.name+'</div>'
+        +'<div class="risk-meter"><div class="risk-fill '+_riskFillClass(f.risk_level)+'" style="width:'+f.risk_score+'%"></div></div>'
+        +'<div class="agent-risk-label risk-'+(f.risk_level==='MEDIUM'?'medium':f.risk_level.toLowerCase())+'">'+f.risk_level+' — '+f.risk_score+'</div>'
+        +'<div class="advisory-count">'+f.advisory_count+' active advisor'+(f.advisory_count===1?'y':'ies')+'</div>'
+        +'</div>';
+    }).join('')
+    +'<div class="agent-card" onclick="filterAdvisories(\'all\')">'
+      +'<div class="agent-logo">🌐</div>'
+      +'<div class="agent-name">All Frameworks</div>'
+      +'<div class="risk-meter"><div class="risk-fill '+_riskFillClass(data.overall_risk_level)+'" style="width:'+data.overall_risk_score+'%"></div></div>'
+      +'<div class="agent-risk-label risk-'+(data.overall_risk_level==='MEDIUM'?'medium':data.overall_risk_level.toLowerCase())+'">OVERALL — '+data.overall_risk_score+'</div>'
+      +'<div class="advisory-count">View all advisories</div>'
+      +'</div>';
+    animateCounter('fw-count',0,fws.length,800);
+  }catch(e){
+    grid.innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:13px">⚠️ Framework risk overview temporarily unavailable.</div>';
+    console.warn('[Agent Threats] Overview load failed:',e.message);
+  }
+}
+
+// ── Advisory render ────────────────────────────────────────────────────────────
+function _renderAdvisory(a){
+  const sevClass={CRITICAL:'adv-crit',HIGH:'adv-high',MEDIUM:'adv-med',LOW:'adv-med'}[a.severity]||'adv-med';
+  const patchLabel={no_patch:'⚠️ No patch available',mitigation_available:'⚠️ Mitigation available',patched:'✅ Patch'+(a.patch_version?': '+a.patch_version:' available')}[a.patch_status]||'';
+  const meta=FW_META[a.framework]||{logo:'🤖'};
+  const dt=a.published_at?new Date(a.published_at):null;
+  const dateStr=dt&&!isNaN(dt)?dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):a.published_at||'';
+  const tagsHtml=(a.tags||[]).map(t=>'<span class="adv-tag">'+t+'</span>').join('');
+  const isNewBadge=a.is_new?'<span class="new-badge">NEW</span>':'';
+  const affected=[a.affected_versions,a.affected_products].filter(Boolean).join(' — ');
+  return '<div class="advisory" data-fw="'+a.framework+'" data-sev="'+a.severity.toLowerCase()+'">'
+    +'<div class="adv-header">'
+      +'<span class="adv-id">'+a.advisory_id+'</span>'
+      +'<span class="adv-sev '+sevClass+'">'+a.severity+' '+isNewBadge+'</span>'
+    +'</div>'
+    +'<div class="adv-title">'+a.title+'</div>'
+    +(affected?'<div class="adv-affected">'+meta.logo+' Affects: <strong style="color:#fff">'+affected+'</strong></div>':'')
+    +'<div class="adv-desc">'+a.description+'</div>'
+    +(tagsHtml?'<div class="adv-tags">'+tagsHtml+'</div>':'')
+    +'<div class="adv-footer">'
+      +'<div class="adv-meta">'
+        +'<span>📅 '+dateStr+'</span>'
+        +(patchLabel?'<span>'+patchLabel+'</span>':'')
+        +(a.cvss_score?'<span>🔍 CVSS: '+a.cvss_score+'</span>':'')
+      +'</div>'
+      +'<div class="adv-actions">'
+        +(a.full_advisory_url?'<a href="'+a.full_advisory_url+'" class="btn-adv primary">Full Advisory →</a>':'<a href="/#pricing" class="btn-adv primary">Full Advisory →</a>')
+        +'<a href="/attack-library" class="btn-adv ghost">Attack Details</a>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+}
+
+function _renderLiveFeedSidebar(advisories){
+  const feed=document.getElementById('live-feed');
+  if(!feed)return;
+  if(!advisories.length){
+    feed.innerHTML='<div style="padding:10px;text-align:center;color:var(--text-dim);font-size:12px">No recent advisories.</div>';
+    return;
+  }
+  const sc={CRITICAL:'crit',HIGH:'high-s',MEDIUM:'med',LOW:'med'};
+  feed.innerHTML=advisories.slice(0,4).map(a=>{
+    const dt=a.published_at?new Date(a.published_at):null;
+    const ageStr=dt&&!isNaN(dt)?_relativeAge(dt):'';
+    return '<div class="sp-item">'
+      +'<span class="sp-sev '+(sc[a.severity]||'med')+'">'+a.severity+'</span>'
+      +'<span class="sp-item-text">'+a.title+'</span>'
+      +'<span class="sp-time">'+ageStr+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+function _relativeAge(dt){
+  const days=Math.floor((Date.now()-dt.getTime())/86400000);
+  if(days<1)return'today';
+  if(days<30)return days+'d';
+  const months=Math.floor(days/30);
+  if(months<12)return months+'mo';
+  return Math.floor(months/12)+'y';
+}
+
+// ── Main advisory list load ───────────────────────────────────────────────────
+async function loadAdvisories(){
+  const list=document.getElementById('advisory-list');
+  if(!list)return;
+  list.innerHTML='<div style="padding:40px;text-align:center;color:var(--text-dim);font-size:13px">Loading advisories…</div>';
+  try{
+    const params=new URLSearchParams({sort:_currentSort,limit:'50'});
+    if(_currentFramework!=='all')params.set('framework',_currentFramework);
+    const res=await fetch('/api/agent-threats/advisories?'+params.toString(),{signal:AbortSignal.timeout(8000)});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const advisories=data.advisories||[];
+    _allAdvisories=advisories;
+
+    if(!advisories.length){
+      list.innerHTML='<div style="padding:40px;text-align:center;color:var(--text-dim)">'
+        +'<div style="font-size:32px;margin-bottom:12px">📋</div>'
+        +'<div style="font-weight:700;margin-bottom:6px">No advisories'+(_currentFramework!=='all'?' for '+_currentFramework.toUpperCase():'')+' yet</div>'
+        +'<div style="font-size:13px">Check back as new agent-security research is published.</div>'
+        +'</div>';
+    }else{
+      list.innerHTML=advisories.map(_renderAdvisory).join('');
+    }
+
+    // Hero counters — real values only, computed from the unfiltered set on first load
+    if(_currentFramework==='all'){
+      animateCounter('adv-count',0,data.total||advisories.length,800);
+      const critCount=advisories.filter(a=>a.severity==='CRITICAL').length;
+      animateCounter('crit-count',0,critCount,800);
+      const upd=advisories.reduce((max,a)=>{const t=new Date(a.updated_at||a.published_at).getTime();return isNaN(t)?max:Math.max(max,t);},0);
+      const updEl=document.getElementById('upd-time');
+      if(updEl)updEl.textContent=upd?_relativeAge(new Date(upd))+' ago':'—';
+      _renderLiveFeedSidebar([...advisories].sort((a,b)=>new Date(b.published_at)-new Date(a.published_at)));
     }
   }catch(e){
-    console.warn('[Agent Threats] Live threat feed unavailable');
+    list.innerHTML='<div style="padding:40px;text-align:center;color:var(--text-dim)">'
+      +'<div style="font-size:32px;margin-bottom:12px">⚠️</div>'
+      +'<div style="font-weight:700;margin-bottom:6px">Advisories temporarily unavailable</div>'
+      +'<div style="font-size:13px">Retrying in 30 seconds…</div>'
+      +'</div>';
+    console.warn('[Agent Threats] Advisories load failed:',e.message);
+    setTimeout(loadAdvisories,30000);
   }
+}
+
+// ── Filtering & sorting — now re-fetch from the live backend ─────────────────
+function filterAdvisories(fw){
+  _currentFramework=fw;
+  const label=document.getElementById('fw-filter-label');
+  if(label)label.textContent=fw==='all'?'':'— '+fw.toUpperCase();
+  loadAdvisories();
+  const sec=document.getElementById('advisories');
+  if(sec)sec.scrollIntoView({behavior:'smooth'});
+}
+function sortAdvisories(mode,btn){
+  document.querySelectorAll('.feed-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  _currentSort=mode;
+  loadAdvisories();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -695,11 +644,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Backdrop click to close modal
   const modal=document.getElementById('scan-modal');
   if(modal)modal.addEventListener('click',function(e){if(e.target===this)closeScanModal();});
-  // Load live data
-  loadLiveThreats();
-  // Fallback counter animation (overridden by live data if available)
-  animateCounter('adv-count',0,23,1000);
-  animateCounter('crit-count',0,7,1000);
+  // Load live data — no fabricated fallback numbers
+  loadOverview();
+  loadAdvisories();
 });
 </script>
 
