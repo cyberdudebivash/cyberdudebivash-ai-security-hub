@@ -475,7 +475,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 <!-- ── JavaScript ─────────────────────────────────────────────────────────── -->
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
-const API_BASE  = window.API_BASE || 'https://cyberdudebivash-security-hub.workers.dev';
+// Served from cyberdudebivash.in where the Worker owns the /api/* route, so a
+// same-origin relative base is correct (matches god-mode.html / soc-command-
+// dashboard.html / user-dashboard.html / intel-hub.html). The previous
+// fallback pointed at https://cyberdudebivash-security-hub.workers.dev —
+// missing the Cloudflare account subdomain segment, so that hostname never
+// resolved at all (curl: connection failure) and every fetch on this page
+// silently failed. Found 2026-06-29 — this was a 100% non-functional
+// dashboard, the worst of the "stalled data" reports.
+const API_BASE  = window.API_BASE || '';
 const API_KEY   = window.API_KEY  || localStorage.getItem('cdb_api_key') || '';
 const USER_PLAN = window.USER_PLAN || localStorage.getItem('cdb_plan') || 'FREE';
 
@@ -735,15 +743,23 @@ function buildMockDecisions() {
 }
 
 // ── Load IOCs ─────────────────────────────────────────────────────────────────
+// NOTE: /api/threat-intel/iocs never existed on the backend (404 even on the
+// correct domain) — both branches below always fell through to mockIOCs(),
+// a hardcoded list of fake IPs/domains/hashes shown to every customer as if
+// they were real detected indicators. There is no real backend endpoint for
+// a "recent global IOC feed" today (/api/ioc/enrich is a single-value lookup,
+// not a listing). Removed the fabricated fallback — shows an honest
+// unavailable state instead of fake data. Found 2026-06-29.
 async function loadIOCs() {
   const tbody = document.getElementById('ioc-body');
   try {
-    const r    = await fetch(`${API_BASE}/api/threat-intel/iocs?limit=10`, { headers: HEADERS });
+    const r = await fetch(`${API_BASE}/api/threat-intel/iocs?limit=10`, { headers: HEADERS });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    const iocs = data.iocs || mockIOCs();
+    const iocs = data.iocs || [];
     renderIOCs(iocs);
   } catch {
-    renderIOCs(mockIOCs());
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px">IOC feed temporarily unavailable</td></tr>';
   }
 }
 
@@ -765,16 +781,6 @@ function renderIOCs(iocs) {
       <td style="color:var(--text-dim)">${ioc.seen_at ? new Date(ioc.seen_at).toLocaleDateString() : 'Today'}</td>
     </tr>`;
   }).join('');
-}
-
-function mockIOCs() {
-  return [
-    { type:'ip',     indicator:'185.234.218.44',  risk_score:95, source:'CISA KEV'       },
-    { type:'domain', indicator:'malicious-c2.xyz', risk_score:88, source:'Sentinel APEX' },
-    { type:'hash',   indicator:'a3f9d2...c8e1',    risk_score:82, source:'VirusTotal'    },
-    { type:'ip',     indicator:'91.198.174.201',   risk_score:77, source:'AbuseIPDB'     },
-    { type:'url',    indicator:'hxxp://phish.ru',  risk_score:91, source:'PhishTank'     },
-  ];
 }
 
 // ── Attack Graph (SVG) ────────────────────────────────────────────────────────
