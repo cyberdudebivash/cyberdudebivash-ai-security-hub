@@ -3286,18 +3286,25 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     document.getElementById('mt-tier').textContent        = tier;
     document.getElementById('mt-quota').textContent       = `${quota.monthly}/mo`;
 
-    // Try to get real usage counts
+    // Try to get real usage counts.
+    // NOTE: this used to call /api/usage — that's an ADMIN-ONLY analytics
+    // endpoint (isOwner() gate, 403 for every real customer) with a totally
+    // different response shape (topEndpoints/topUsers/errorRate, no
+    // scans_today/api_keys fields at all). Every non-admin customer got 403
+    // forever and saw permanently frozen "—" placeholders here. Fixed to use
+    // the same per-user endpoints the Overview tab already uses correctly:
+    // /api/user/plan for today's scan count, /api/keys for the real key count.
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res  = await fetch(`${window.API_BASE || 'https://cyberdudebivash.in'}/api/usage`, { headers }).catch(() => null);
-      const data = res?.ok ? await res.json().catch(() => null) : null;
-      if (data) {
-        document.getElementById('mt-scans-today').textContent = data.scans_today ?? '—';
-        document.getElementById('mt-keys').textContent        = data.api_keys ?? '—';
-      } else {
-        document.getElementById('mt-scans-today').textContent = '—';
-        document.getElementById('mt-keys').textContent        = '—';
-      }
+      const base = window.API_BASE || 'https://cyberdudebivash.in';
+      const [planRes, keysRes] = await Promise.all([
+        fetch(`${base}/api/user/plan`, { headers }).catch(() => null),
+        fetch(`${base}/api/keys`,      { headers }).catch(() => null),
+      ]);
+      const planData = planRes?.ok ? await planRes.json().catch(() => null) : null;
+      const keysData = keysRes?.ok ? await keysRes.json().catch(() => null) : null;
+      document.getElementById('mt-scans-today').textContent = planData?.usage?.today_count ?? '—';
+      document.getElementById('mt-keys').textContent        = keysData?.count ?? '—';
     } catch {
       document.getElementById('mt-scans-today').textContent = '—';
       document.getElementById('mt-keys').textContent        = '—';
