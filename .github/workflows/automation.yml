@@ -749,13 +749,90 @@ jobs:
           fi
           exit 0
 
+      # ── P21.0: Marketplace Checkout Engine ───────────────────────────────
+      - name: Smoke Test P21.0 — Marketplace Catalog
+        id: marketplace
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/marketplace/catalog"
+
+          HTTP_CODE=$(curl -s -o /tmp/mkt_resp.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/marketplace/catalog" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "marketplace_status=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  Marketplace catalog endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/mkt_resp.json")); p=d.get("products",[]); print(f"  Products available: {len(p)}")' 2>/dev/null || true
+            echo "✅ P21.0 Marketplace Catalog: OK (200)"
+          else
+            echo "ℹ️  P21.0 Marketplace Catalog: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
+      # ── P22.0: AI Governance PDF Export Engine ────────────────────────────
+      - name: Smoke Test P22.0 — AI Governance PDF Observability
+        id: ai_gov_pdf
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/ai-governance/pdf/observability"
+
+          HTTP_CODE=$(curl -s -o /tmp/agpdf_resp.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/ai-governance/pdf/observability" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "ai_gov_pdf_status=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  AI Governance PDF endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/agpdf_resp.json")); print(f"  Engine: {d.get(\"engine\",\"N/A\")} | Status: {d.get(\"status\",\"N/A\")}") ' 2>/dev/null || true
+            echo "✅ P22.0 AI Governance PDF: OK (200)"
+          elif [ "${HTTP_CODE}" = "401" ] || [ "${HTTP_CODE}" = "403" ]; then
+            echo "✅ P22.0 AI Governance PDF: Endpoint live (auth required)"
+          else
+            echo "ℹ️  P22.0 AI Governance PDF: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
+      # ── P23.0: MSSP Public Onboarding & Pricing Flow ─────────────────────
+      - name: Smoke Test P23.0 — MSSP Onboarding Tiers
+        id: mssp_onboarding
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+          echo "🔍 Probing: ${API_URL}/api/mssp/onboarding/tiers"
+
+          HTTP_CODE=$(curl -s -o /tmp/mssp_resp.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/mssp/onboarding/tiers" 2>/dev/null)
+          CURL_EXIT=$?
+
+          echo "mssp_onboarding_status=${HTTP_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "⚠️  MSSP onboarding endpoint unreachable from CI"
+          elif [ "${HTTP_CODE}" = "200" ]; then
+            python3 -c 'import json; d=json.load(open("/tmp/mssp_resp.json")); t=d.get("tiers",[]); print(f"  MSSP Tiers available: {len(t)}")' 2>/dev/null || true
+            echo "✅ P23.0 MSSP Onboarding Tiers: OK (200)"
+          else
+            echo "ℹ️  P23.0 MSSP Onboarding: ${HTTP_CODE:-no response}"
+          fi
+          exit 0
+
       # ── Health Report Summary ─────────────────────────────────────────────
       - name: Health Report Summary
         if: always()
         run: |
           set +e
           {
-            echo "## 🛡 CYBERDUDEBIVASH Platform Health Report — v13.0"
+            echo "## 🛡 CYBERDUDEBIVASH Platform Health Report — v14.0 (P21–P23 engines)"
             echo ""
             echo "> Run: [\`${{ github.run_number }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) | **$(date -u '+%Y-%m-%d %H:%M:%S UTC')**"
             echo "> API URL: \`${{ steps.resolve.outputs.api_url }}\`"
@@ -778,6 +855,10 @@ jobs:
             echo "| \`/api/v1/agent-actions\` | \`${{ steps.agent_actions.outputs.agent_status || 'N/A' }}\` | Agentic AI actions |"
             echo "| \`/api/v1/predictive/threats\` | \`${{ steps.predictive.outputs.predictive_status || 'N/A' }}\` | Predictive threat intel |"
             echo "| \`/api/mythos/status\` | \`${{ steps.mythos_status.outputs.mythos_status_code || 'N/A' }}\` | MYTHOS Orchestrator |"
+            echo "| **P21–P23 Monetization Engines** | | |"
+            echo "| \`/api/marketplace/catalog\` | \`${{ steps.marketplace.outputs.marketplace_status || 'N/A' }}\` | P21.0 Marketplace Checkout |"
+            echo "| \`/api/ai-governance/pdf/observability\` | \`${{ steps.ai_gov_pdf.outputs.ai_gov_pdf_status || 'N/A' }}\` | P22.0 AI Governance PDF |"
+            echo "| \`/api/mssp/onboarding/tiers\` | \`${{ steps.mssp_onboarding.outputs.mssp_onboarding_status || 'N/A' }}\` | P23.0 MSSP Onboarding |"
             echo ""
             echo "**Legend:** \`200\` = OK ✅ | \`401/403\` = Auth required (reachable) ✅ | \`429\` = Rate limited (reachable) ✅ | \`000\` = CI network issue (non-fatal) ⚠️ | \`5xx\` = Server error ❌"
             echo ""

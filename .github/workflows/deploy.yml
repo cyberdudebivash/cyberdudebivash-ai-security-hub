@@ -200,6 +200,45 @@ jobs:
             echo "✅ No hardcoded account_id in wrangler.toml — CLOUDFLARE_ACCOUNT_ID env var will be used"
           fi
 
+      # ── PRE-DEPLOY BUNDLE VALIDATION ─────────────────────────────────────────
+      # Fast-fail gate: validates that the Workers bundle compiles BEFORE attempting
+      # the 3-retry deploy loop. A bundle failure here takes <15s; the same failure
+      # discovered inside the deploy loop wastes 3 attempts × 10-30s backoff each.
+      #
+      # This step was added after the P21.0 duplicate-symbol incident (handleMyPurchases)
+      # caused 3 consecutive deploy failures that CI's "node --eval" syntax check
+      # could not detect. This step and the matching ci.yml bundle check together
+      # provide defense-in-depth: CI rejects the push; deploy rejects the artifact.
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Pre-deploy bundle validation — esbuild fast-fail gate
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "━━━ Pre-Deploy Bundle Validation (esbuild fast-fail) ━━━"
+          echo "Commit: ${{ env.DEPLOY_SHA }}"
+          echo ""
+          echo "Validating Workers bundle can be compiled by esbuild BEFORE deploy..."
+          echo ""
+
+          if npx wrangler build 2>&1 | tee /tmp/predeploy-build.log; then
+            echo ""
+            echo "✅ Pre-deploy bundle validation PASSED"
+            echo "   Workers ESM bundle compiles cleanly — proceeding to deployment."
+          else
+            echo ""
+            echo "❌ PRE-DEPLOY BUNDLE VALIDATION FAILED — deploy aborted"
+            echo ""
+            echo "esbuild detected a fatal bundling error in the Workers source."
+            echo "Deploy loop skipped to avoid 3 failed attempts × backoff delays."
+            echo ""
+            echo "Root cause is in the esbuild output above."
+            echo "Fix the error and push again — CI bundle check (ci.yml) will"
+            echo "catch this class of error before it reaches the deploy stage."
+            exit 1
+          fi
+
       - name: Deploy Workers to Cloudflare
         timeout-minutes: 10
         working-directory: workers

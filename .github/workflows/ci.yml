@@ -84,6 +84,69 @@ jobs:
             console.log('✅ workers/src/engine.js — syntax OK (' + eng.length + ' chars)');
           "
 
+      # ── CRITICAL BUNDLE VALIDATION ────────────────────────────────────────
+      # ROOT CAUSE OF PRIOR DEPLOY FAILURES:
+      #   The previous "node --eval" step reads JS files as text — it validates
+      #   JS syntax but CANNOT detect esbuild bundling failures such as:
+      #     • Duplicate export symbol declarations across handler files
+      #     • Missing import references
+      #     • ESM module resolution failures
+      #   These only surface during "npx wrangler deploy" (which invokes esbuild),
+      #   causing failures AFTER 3 deploy attempts × 30s backoff = ~90s wasted.
+      #
+      # THIS STEP IS THE PERMANENT PREVENTION FIX:
+      #   "npx wrangler build" invokes the exact same esbuild pipeline as deploy.
+      #   Any error caught here = prevented deploy failure. Added once; prevents
+      #   the entire class of duplicate-symbol/missing-import errors permanently.
+      #
+      # EXAMPLE OF WHAT THIS CATCHES:
+      #   Error: The symbol 'handleMyPurchases' has already been declared
+      #   (P21.0 marketplaceCheckoutHandler.js and delivery.js both exported
+      #    handleMyPurchases — esbuild treats it as fatal; node --eval did not)
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Build Workers bundle — esbuild validation (catches duplicate symbols + missing imports)
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: "ci-dry-run-placeholder"
+          CLOUDFLARE_ACCOUNT_ID: "ci-dry-run-placeholder"
+        run: |
+          echo "━━━ Workers Bundle Compilation — esbuild via wrangler build ━━━"
+          echo ""
+          echo "Purpose: Validate that ALL handler files can be bundled by esbuild"
+          echo "         (the same bundler invoked by 'wrangler deploy' in production)."
+          echo ""
+          echo "Catches errors that 'node --eval' CANNOT detect:"
+          echo "  ✗ Duplicate export symbol names across handler files"
+          echo "  ✗ Missing import references"
+          echo "  ✗ ESM module resolution failures"
+          echo "  ✗ Any esbuild-level transformation error"
+          echo ""
+
+          if npx wrangler build 2>&1 | tee /tmp/wrangler-build.log; then
+            echo ""
+            echo "━━━ Bundle Compilation Result ━━━"
+            echo "✅ Workers bundle compiled successfully"
+            echo "   Zero duplicate symbols | Zero missing imports | ESM graph valid"
+            echo "   This commit is safe to deploy via 'wrangler deploy'."
+          else
+            echo ""
+            echo "━━━ Bundle Compilation FAILED ━━━"
+            echo "❌ esbuild detected a fatal bundling error"
+            echo ""
+            echo "Full error output (above) contains the root cause."
+            echo ""
+            echo "Common root causes:"
+            echo "  1. Duplicate export: two handler files export the same function name"
+            echo "     Fix: rename one of the conflicting exports and update the import in index.js"
+            echo "  2. Missing import: index.js imports a symbol that does not exist in the handler"
+            echo "     Fix: add the missing export to the handler or fix the import name"
+            echo "  3. Module not found: import path does not resolve to an existing file"
+            echo "     Fix: verify the file path in the import statement"
+            echo ""
+            echo "This step BLOCKS deployment — fix the esbuild error before pushing."
+            exit 1
+          fi
+
       - name: Validate wrangler.toml exists and is non-empty
         run: |
           test -f workers/wrangler.toml || (echo "❌ workers/wrangler.toml missing" && exit 1)
@@ -95,9 +158,12 @@ jobs:
         if: always()
         run: |
           echo "### Cloudflare Workers Lint" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Node.js 20 ✅" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JS syntax validated ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Node.js 24 ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JS syntax validated (node --eval) ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Workers bundle compiled (esbuild via wrangler build) ✅**" >> "$GITHUB_STEP_SUMMARY"
           echo "- wrangler.toml present ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> Bundle compilation catches duplicate symbols and missing imports that JS syntax checks cannot detect." >> "$GITHUB_STEP_SUMMARY"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 2 · Lint AI Core (Python)  [REQUIRED]
@@ -594,6 +660,7 @@ jobs:
           echo "║  CYBERDUDEBIVASH AI Security Hub — CI PASSED  ✅ ║"
           echo "╠══════════════════════════════════════════════════╣"
           echo "║  ✅ Lint Cloudflare Workers                       ║"
+          echo "║     ↳ JS syntax + esbuild bundle validated        ║"
           echo "║  ✅ Lint AI Core (Python)                         ║"
           echo "║  ✅ Verify Runtime Integrity (compile+import)     ║"
           echo "║  ✅ Validate Frontend HTML                        ║"
