@@ -519,7 +519,12 @@ async function loadLiveFeed(){
     });
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
-    const items=data.items||data.data||data.entries||[];
+    // Real shape is {success,data:{entries:[...]}} — data.data is an object,
+    // not an array, so `data.items||data.data||...` was always truthy on the
+    // object itself (never empty/falsy) and `.length` on it was undefined,
+    // which always fell through to the "Initializing" empty state even with
+    // a fully populated feed. Found 2026-06-29.
+    const items=data.data?.entries||data.items||data.entries||[];
     if(items.length>0){
       list.innerHTML=items.map(_renderIntelItem).join('');
       // Preserve active tab filter
@@ -530,10 +535,11 @@ async function loadLiveFeed(){
         if(m&&m[1]!=='all')switchTab(m[1],null);
       }
       // Update view-all link count
-      if(data.total_items){
+      const totalItems=data.data?.total||data.total_items;
+      if(totalItems){
         document.querySelectorAll('a[href*="intel.cyberdudebivash.com"]').forEach(el=>{
           if(el.textContent.includes('View Full'))
-            el.textContent='View Full Sentinel APEX Feed ↗ ('+data.total_items.toLocaleString()+' items)';
+            el.textContent='View Full Sentinel APEX Feed ↗ ('+totalItems.toLocaleString()+' items)';
         });
       }
     } else {
