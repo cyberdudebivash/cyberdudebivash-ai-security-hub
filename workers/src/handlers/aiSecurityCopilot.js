@@ -1719,7 +1719,7 @@ async function runToolLoop(env, provider, model, systemPrompt, messages, tools, 
 
 // ─── CF Workers AI text fallback (no tool calling) ────────────────────────────
 async function runCFAIFallback(env, systemPrompt, messages) {
-  if (!env.AI) throw new Error('CF Workers AI not available');
+  if (!env.AI) throw new Error('CF Workers AI binding (AI) not configured in Worker');
   const recent = messages.slice(-4);
   const result = await env.AI.run(MODELS.CF_LLAMA, {
     messages: [
@@ -1728,8 +1728,11 @@ async function runCFAIFallback(env, systemPrompt, messages) {
     ],
     max_tokens: 512,
   });
+  // Workers AI returns {response: string} for text models
+  const text = result?.response || result?.result?.response || result?.content || '';
+  if (!text) throw new Error('CF Workers AI returned empty response');
   return {
-    content:  (result?.response || 'No response.') + '\n\n> Running in fallback mode (CF Workers AI). Set GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY for full God Mode with tool orchestration.',
+    content:  text + '\n\n> Powered by Cloudflare Workers AI (Llama). Configure GROQ_API_KEY for advanced tool orchestration.',
     model:    MODELS.CF_LLAMA,
     provider: PROVIDERS.CF_AI,
     usage:    { input: 0, output: 0 },
@@ -1785,15 +1788,19 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
   }
 
   // CF AI last resort
+  let cfAiError;
   if (isProviderAvailable(env, PROVIDERS.CF_AI)) {
     try {
       const systemPmt = buildSystemPrompt(tier, authCtx, PROVIDERS.CF_AI, MODELS.CF_LLAMA, task_type);
       return await runCFAIFallback(env, systemPmt, messages);
-    } catch {}
+    } catch (e) {
+      cfAiError = e;
+      console.error('[APEX] CF Workers AI fallback failed:', e.message);
+    }
   }
 
   return {
-    content:  `All AI providers exhausted. Last error: ${lastError?.message || 'unknown'}. Please verify GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY are set as Wrangler secrets.`,
+    content:  `APEX AI is temporarily unavailable. ${cfAiError ? 'CF Workers AI: ' + cfAiError.message + '. ' : ''}Configure GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY as Wrangler secrets for full operation. Contact support@cyberdudebivash.com if this persists.`,
     model:    'none',
     provider: 'none',
     error:    true,

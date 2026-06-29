@@ -319,7 +319,8 @@ async function saveIncidents(env, incidents) {
 }
 
 function generateIncidentId() {
-  return 'INC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+  const uuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36);
+  return 'INC-' + new Date().getFullYear() + '-' + uuid.toUpperCase();
 }
 
 // ─── Seed incidents — returns empty; no synthetic data in production ──────────
