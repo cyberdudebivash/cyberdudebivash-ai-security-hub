@@ -65,13 +65,12 @@ export async function handleCreateSnapshot(request, env) {
     const customerCount = (tiers.pro || 0) + (tiers.enterprise || 0) + (tiers.mssp || 0);
     const prevMRR = prevSnapshot?.mrr || 0;
 
-    // Waterfall decomposition
-    // Without fine-grained event data, estimate from subscription changes vs prev period
+    // Waterfall decomposition — net delta only; individual buckets require subscription-event data
     const mrrDelta     = mrr - prevMRR;
-    const expansionMrr = mrrDelta > 0 ? Math.max(0, mrrDelta * 0.7) : 0;
-    const newMrr       = mrrDelta > 0 ? Math.max(0, mrrDelta * 0.3) : 0;
-    const churnedMrr   = mrrDelta < 0 ? Math.abs(mrrDelta) * 0.8 : 0;
-    const contraction  = mrrDelta < 0 ? Math.abs(mrrDelta) * 0.2 : 0;
+    const expansionMrr = 0; // requires subscription upgrade events — not yet tracked
+    const newMrr       = mrrDelta > 0 ? mrrDelta : 0;
+    const churnedMrr   = mrrDelta < 0 ? Math.abs(mrrDelta) : 0;
+    const contraction  = 0; // requires subscription downgrade events — not yet tracked
 
     const id = genId();
     await env.SECURITY_HUB_DB.prepare(
