@@ -129,7 +129,7 @@ export async function generateCISOReport(db, kv, options = {}) {
       branding: {
         platform:  'CYBERDUDEBIVASH AI Security Hub',
         version:   '23.0.0',
-        contact:   'contact@cyberdudebivash.in',
+        contact:   'bivash@cyberdudebivash.com',
         phone:     '+91 8179881447',
         company:   'CYBERDUDEBIVASH PRIVATE LIMITED',
         gst:       '21ARKPN8270G1ZP',

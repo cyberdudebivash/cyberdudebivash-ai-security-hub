@@ -115,7 +115,7 @@ export function addMonetizationFlags(result, module, authCtx = {}, scanId = '', 
     },
     contact: {
       company: 'CyberDudeBivash Pvt. Ltd.',
-      email:   'contact@cyberdudebivash.in',
+      email:   'bivash@cyberdudebivash.com',
       website: 'https://cyberdudebivash.in',
       enterprise: 'bivashnayak.ai007@gmail.com',
     },

@@ -9,7 +9,7 @@ import { verifyJWT, extractBearerToken } from './jwt.js';
 import { resolveApiKeyFromDB, trackApiKeyUsage, checkDailyQuota, TIER_LIMITS } from './apiKeys.js';
 
 export const UPGRADE_URL   = 'https://tools.cyberdudebivash.com/#pricing';
-export const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
+export const CONTACT_EMAIL = 'bivash@cyberdudebivash.com';
 
 // ─── Brute-force check for login ─────────────────────────────────────────────
 export async function checkLoginRateLimit(db, email, ip) {
@@ -199,7 +199,7 @@ export function unauthorized(reason = 'missing') {
     invalid:    { error: 'Invalid credentials', hint: 'Token expired or key invalid — re-authenticate' },
     invalid_key:{ error: 'Invalid API key', hint: 'Check your API key or generate a new one at tools.cyberdudebivash.com' },
     expired:    { error: 'Token expired', hint: 'Use /api/auth/refresh with your refresh token' },
-    suspended:  { error: 'Account suspended', hint: 'Contact contact@cyberdudebivash.in' },
+    suspended:  { error: 'Account suspended', hint: 'Contact bivash@cyberdudebivash.com' },
   };
   return Response.json({
     ...(msgs[reason] || msgs.missing),

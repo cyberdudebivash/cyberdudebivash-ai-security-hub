@@ -428,7 +428,7 @@ export async function handleVerifyCompliancePack(request, env) {
     }), { expirationTtl: 365 * 86400 }).catch(() => {});
 
     // Fire-and-forget: GST invoice + customer email + founder alert
-    const FOUNDER = 'contact@cyberdudebivash.in';
+    const FOUNDER = 'bivash@cyberdudebivash.com';
     Promise.all([
       (async () => {
         try {
@@ -475,6 +475,6 @@ export async function handleVerifyCompliancePack(request, env) {
     });
   } catch (err) {
     console.error('[CompliancePack] verify error:', err);
-    return json({ success: false, error: 'Verification failed. Contact support.', support: 'contact@cyberdudebivash.in' }, 500);
+    return json({ success: false, error: 'Verification failed. Contact support.', support: 'bivash@cyberdudebivash.com' }, 500);
   }
 }

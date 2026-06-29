@@ -179,7 +179,7 @@ export function generateProposalContent(deal, type = 'enterprise') {
     contact: {
       name:    'Bivash Kumar Nayak',
       title:   'Founder & Lead Security Architect',
-      email:   'contact@cyberdudebivash.in',
+      email:   'bivash@cyberdudebivash.com',
       phone:   '+91 8179881447',
       company: 'CYBERDUDEBIVASH PRIVATE LIMITED',
       gst:     '21ARKPN8270G1ZP',

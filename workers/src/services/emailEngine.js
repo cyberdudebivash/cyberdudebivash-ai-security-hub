@@ -401,7 +401,7 @@ function templateSubscriptionDay0(lead, meta = {}) {
     <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">GETTING STARTED</div>
     ${apiKeyBlock}
     <p style="margin:8px 0;color:#e2e8f0;font-size:14px">2. <strong>Run your first scan:</strong> POST /api/scan/domain with your API key in the Authorization header</p>
-    <p style="margin:0;color:#e2e8f0;font-size:14px">3. <strong>Need help?</strong> WhatsApp <strong>+91 81798 81447</strong> or email contact@cyberdudebivash.in</p>
+    <p style="margin:0;color:#e2e8f0;font-size:14px">3. <strong>Need help?</strong> WhatsApp <strong>+91 81798 81447</strong> or email bivash@cyberdudebivash.com</p>
   </div>
   <div style="text-align:center;margin:28px 0">
     <a href="${BASE_URL}/user-dashboard" style="display:inline-block;background:linear-gradient(135deg,#065f46,#047857);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Open Dashboard →</a>
@@ -525,10 +525,10 @@ function templateAssessmentDay3(lead, meta = {}) {
     <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px">✓ Prepare a list of your critical systems (for remediation priority)</p>
     <p style="margin:0;color:#e2e8f0;font-size:14px">✓ Block 1 hour for the executive brief we'll schedule after delivery</p>
   </div>
-  <p style="color:#94a3b8;font-size:14px">Your report will arrive within the next 24 hours. Contact <a href="mailto:contact@cyberdudebivash.in" style="color:#60a5fa">contact@cyberdudebivash.in</a> if you have questions about scope.</p>
+  <p style="color:#94a3b8;font-size:14px">Your report will arrive within the next 24 hours. Contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a> if you have questions about scope.</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
-  return { subject, html, text: `Your ${product} is in progress. Report arriving within 24 hours.\n\nWhile you wait, prepare your team:\n- Identify key stakeholders\n- List critical systems\n- Block 1 hour for the executive brief\n\nQuestions: contact@cyberdudebivash.in` };
+  return { subject, html, text: `Your ${product} is in progress. Report arriving within 24 hours.\n\nWhile you wait, prepare your team:\n- Identify key stakeholders\n- List critical systems\n- Block 1 hour for the executive brief\n\nQuestions: bivash@cyberdudebivash.com` };
 }
 
 function templateAssessmentDay7(lead, meta = {}) {
@@ -579,7 +579,7 @@ function templateEnterpriseDay0(lead, meta = {}) {
     <p style="margin:0;color:#e2e8f0;font-size:14px"><strong>Step 3:</strong> Implementation — Dedicated engineer, SLA support, quarterly reviews</p>
   </div>
   <p style="color:#94a3b8;font-size:14px">For urgent matters: <a href="https://wa.me/918179881447" style="color:#34d399">WhatsApp +91 81798 81447</a></p>
-  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · contact@cyberdudebivash.in</p>
+  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · bivash@cyberdudebivash.com</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
   return { subject, html, text: `Enterprise inquiry received for ${company}.\n\nWe'll respond within 4 business hours.\nUrgent: WhatsApp +91 81798 81447\n\n— Bivash, Founder` };
@@ -665,7 +665,7 @@ function templateEnterpriseDay5(lead, meta = {}) {
   <div style="text-align:center;margin:28px 0">
     <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20please%20send%20the%20enterprise%20proposal" style="display:inline-block;background:linear-gradient(135deg,#065f46,#047857);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Request Proposal PDF →</a>
   </div>
-  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · contact@cyberdudebivash.in</p>
+  <p style="color:#6b7280;font-size:13px">— Bivash, Founder · bivash@cyberdudebivash.com</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
   return { subject, html, text: `Custom enterprise proposal ready for ${company}.\n\nReply to receive the full PDF proposal.\nWhatsApp: https://wa.me/918179881447\n\n— Bivash, Founder` };
@@ -691,7 +691,7 @@ function templateEnterpriseDay7(lead, meta = {}) {
     <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27m%20ready%20to%20move%20forward%20with%20the%20enterprise%20plan" style="display:inline-block;background:linear-gradient(135deg,#4a1d96,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Let's Talk →</a>
     <p style="margin:12px 0 0;color:#6b7280;font-size:13px">15-minute call. No pressure. Genuine conversation.</p>
   </div>
-  <p style="color:#6b7280;font-size:13px">— Bivash · +91 81798 81447 · contact@cyberdudebivash.in</p>
+  <p style="color:#6b7280;font-size:13px">— Bivash · +91 81798 81447 · bivash@cyberdudebivash.com</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
   return { subject, html, text: `Still evaluating? I can answer any questions in 15 minutes.\nWhatsApp: https://wa.me/918179881447\n\n— Bivash, Founder` };
@@ -725,7 +725,7 @@ function templateMsspDay0(lead, meta = {}) {
     <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ White-label dashboard + custom domain</p>
     <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Partner API key for automation</p>
   </div>
-  <p style="color:#6b7280;font-size:13px">Questions? WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong> or email contact@cyberdudebivash.in</p>
+  <p style="color:#6b7280;font-size:13px">Questions? WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong> or email bivash@cyberdudebivash.com</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
   return { subject, html, text: `Welcome to CYBERDUDEBIVASH MSSP Program, ${company}!\n\nYour ${tier} account is ready.\nAccess portal: ${BASE_URL}/mssp-command-center\n\nQuestions: WhatsApp +91 81798 81447` };
@@ -1269,8 +1269,8 @@ export async function sendPurchaseConfirmation(env, {
     ? `<a href="${BASE_URL}${downloadUrl}" style="display:inline-block;margin-top:8px;padding:12px 28px;background:linear-gradient(135deg,#1e40af,#7c3aed);color:#fff;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px">⬇️ Download Your Report</a>`
     : `<p style="color:#94a3b8;font-size:14px">Your access has been activated on the platform. Log in at <a href="${BASE_URL}" style="color:#60a5fa">${BASE_URL}</a> to access your purchase.</p>`;
   const invoiceLine  = invoiceNumber
-    ? `<p style="color:#94a3b8;font-size:13px">GST Invoice: <strong style="color:#e2e8f0">${invoiceNumber}</strong> — available on request at <a href="mailto:contact@cyberdudebivash.in" style="color:#60a5fa">contact@cyberdudebivash.in</a></p>`
-    : `<p style="color:#94a3b8;font-size:13px">GST invoice will be emailed within 24 hours. Contact <a href="mailto:contact@cyberdudebivash.in" style="color:#60a5fa">contact@cyberdudebivash.in</a> for urgent requests.</p>`;
+    ? `<p style="color:#94a3b8;font-size:13px">GST Invoice: <strong style="color:#e2e8f0">${invoiceNumber}</strong> — available on request at <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a></p>`
+    : `<p style="color:#94a3b8;font-size:13px">GST invoice will be emailed within 24 hours. Contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a> for urgent requests.</p>`;
 
   const html = `<!DOCTYPE html>
 <html>

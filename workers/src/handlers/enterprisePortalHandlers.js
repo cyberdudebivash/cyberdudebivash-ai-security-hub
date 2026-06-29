@@ -393,7 +393,7 @@ export async function handleSecurityCenter(request, env, authCtx) {
 
     contact: {
       security:    'security@cyberdudebivash.com',
-      general:     'contact@cyberdudebivash.in',
+      general:     'bivash@cyberdudebivash.com',
       enterprise:  'enterprise@cyberdudebivash.com',
     },
 

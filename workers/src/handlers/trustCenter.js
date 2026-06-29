@@ -27,7 +27,7 @@ const COMPANY_INFO = {
   founded:    '2024',
   location:   'Odisha, India',
   website:    'https://cyberdudebivash.in',
-  email:      'contact@cyberdudebivash.in',
+  email:      'bivash@cyberdudebivash.com',
   whatsapp:   '+91 81798 81447',
   founder: {
     name:     'Bivash',

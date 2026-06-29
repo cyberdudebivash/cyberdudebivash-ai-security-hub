@@ -122,7 +122,7 @@ export const AI_SERVICE_CATALOG = [
 
 // GET /api/ai-security/services/catalog ───────────────────────────────────────
 export async function handleServiceCatalog(request, env) {
-  return json({ success:true, catalog:AI_SERVICE_CATALOG, contact:{ email:'contact@cyberdudebivash.in', whatsapp:'+91 81798 81447', book:'/booking.html' } });
+  return json({ success:true, catalog:AI_SERVICE_CATALOG, contact:{ email:'bivash@cyberdudebivash.com', whatsapp:'+91 81798 81447', book:'/booking.html' } });
 }
 
 // POST /api/ai-security/services/book ─────────────────────────────────────────

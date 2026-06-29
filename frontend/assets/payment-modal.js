@@ -30,7 +30,7 @@
     bank:   { name: '', acc: '', ifsc: '', bank: '', type: 'Savings Account' },
     paypal: { email: '', url: '' },
     crypto: { addr: '', nets: 'BNB Smart Chain (BEP20) / Ethereum (ERC20)' },
-    email:    'contact@cyberdudebivash.in',
+    email:    'bivash@cyberdudebivash.com',
     whatsapp: '+918179881447',
     tel:      'tel:+918179881447',
     submit_api: '/api/payments/submit',
@@ -245,7 +245,7 @@
     '<button class="cdbpm-submit" id="cdbpm-submit" onclick="CDB_PAYMENT.submit()">&#x2705; I HAVE PAID &mdash; Submit Confirmation</button>' +
     '<div class="cdbpm-footer">' +
       '&#x1F512; Verified manually by our team &middot; Access activated within 2&ndash;4 hours<br>' +
-      'Questions? <a href="mailto:contact@cyberdudebivash.in">contact@cyberdudebivash.in</a>' +
+      'Questions? <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a>' +
       ' &nbsp;|&nbsp; <a href="tel:+918179881447">+91 8179881447</a>' +
     '</div>' +
   '</div>' + // .cdbpm-body
@@ -459,7 +459,7 @@
                     'border:1px solid rgba(0,212,255,.35);color:#00d4ff;padding:12px 32px;border-radius:10px;' +
                     'font-weight:800;cursor:pointer;font-size:14px">Close</button>' +
                   '<div style="margin-top:16px;font-size:11px;color:rgba(255,255,255,.25)">' +
-                    'Questions? <a href="mailto:contact@cyberdudebivash.in" style="color:rgba(0,212,255,.5)">contact@cyberdudebivash.in</a>' +
+                    'Questions? <a href="mailto:bivash@cyberdudebivash.com" style="color:rgba(0,212,255,.5)">bivash@cyberdudebivash.com</a>' +
                   '</div>' +
                 '</div>';
             }

@@ -14,7 +14,7 @@ const CFG = {
   site:  'https://cyberdudebivash.in',
   tools: 'https://tools.cyberdudebivash.com',
   intel: 'https://intel.cyberdudebivash.com',
-  email: 'contact@cyberdudebivash.in',
+  email: 'bivash@cyberdudebivash.com',
   phone: '+918179881447',
   // Payment credentials are loaded at modal open time from /api/payment-config
   // They are NOT hardcoded here — single source of truth is paymentConfig.js (backend)
@@ -415,7 +415,7 @@ window.CDB_PAY = {
         return;
       }
     } catch {
-      statusEl.textContent = '⚠️ Network error — please try again or email contact@cyberdudebivash.in';
+      statusEl.textContent = '⚠️ Network error — please try again or email bivash@cyberdudebivash.com';
       statusEl.style.color = '#ef4444';
       return;
     }
@@ -454,13 +454,13 @@ window.CDB_PAY = {
           <div style="font-size:11px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:#00ffcc;margin-bottom:10px">📥 GET YOUR TRAINING MATERIALS</div>
           <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.9">
             <div>1️⃣ Screenshot your payment confirmation</div>
-            <div>2️⃣ Email: <strong style="color:#00ffcc">contact@cyberdudebivash.in</strong></div>
+            <div>2️⃣ Email: <strong style="color:#00ffcc">bivash@cyberdudebivash.com</strong></div>
             <div>&nbsp;&nbsp;&nbsp;&nbsp;Subject: <strong style="color:#fff">Training — ${this._current.label||'Course'}</strong></div>
             <div>3️⃣ OR WhatsApp: <a href="https://wa.me/918179881447" target="_blank" style="color:#00ffcc">+91 8179881447</a></div>
             <div>4️⃣ Receive download link in <strong style="color:#00ff88">2–4 hours</strong></div>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-            <a href="mailto:contact@cyberdudebivash.in?subject=Training — ${encodeURIComponent(this._current.label||'Course')}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:12px;font-weight:900;padding:10px;border-radius:8px;text-decoration:none;min-width:100px">📧 Email Us</a>
+            <a href="mailto:bivash@cyberdudebivash.com?subject=Training — ${encodeURIComponent(this._current.label||'Course')}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:12px;font-weight:900;padding:10px;border-radius:8px;text-decoration:none;min-width:100px">📧 Email Us</a>
             <a href="https://wa.me/918179881447?text=${encodeURIComponent('Hi! Purchased: '+(this._current.label||'Training')+'. Sending payment screenshot.')}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25d366;font-size:12px;font-weight:900;padding:10px;border-radius:8px;text-decoration:none;min-width:100px">💬 WhatsApp</a>
           </div>
         </div>` : `

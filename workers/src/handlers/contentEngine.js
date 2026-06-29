@@ -361,7 +361,7 @@ function publishToLinkedIn(post) {
     text:        post.body_md,
     character_count: post.body_md?.length || 0,
     linkedin_url:    'https://www.linkedin.com/sharing/share-offsite/?url=https://cyberdudebivash.in',
-    tip:         'For automated LinkedIn posting, contact contact@cyberdudebivash.in for Enterprise API access.',
+    tip:         'For automated LinkedIn posting, contact bivash@cyberdudebivash.com for Enterprise API access.',
   };
 }
 
@@ -399,7 +399,7 @@ function buildThreatAdvisory(scanResult, module, target, findings, generated) {
   doc += `1. Immediately remediate all CRITICAL findings\n`;
   doc += `2. Schedule HIGH findings for resolution within 7 days\n`;
   doc += `3. Re-scan after remediation to confirm resolution\n`;
-  doc += `4. Contact contact@cyberdudebivash.in for enterprise support\n\n`;
+  doc += `4. Contact bivash@cyberdudebivash.com for enterprise support\n\n`;
   doc += `---\n*CYBERDUDEBIVASH AI Security Hub | ${date} | https://cyberdudebivash.in*`;
 
   return doc;

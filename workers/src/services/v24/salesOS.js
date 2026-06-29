@@ -217,7 +217,7 @@ export function generateProposal(deal, type = 'enterprise', options = {}) {
     presenter: {
       name:    'Bivash Kumar Nayak',
       title:   'Founder & Principal Security Architect',
-      email:   'contact@cyberdudebivash.in',
+      email:   'bivash@cyberdudebivash.com',
       phone:   '+91 8179881447',
       company: 'CYBERDUDEBIVASH PRIVATE LIMITED',
       gst:     '21ARKPN8270G1ZP',
@@ -390,8 +390,8 @@ function renderProposalHTML(params) {
 <div class="cta">
   <h2>Ready to Secure Your Infrastructure?</h2>
   <p style="margin-bottom:24px;opacity:0.9">Contact us to proceed. Access activated within 2–4 hours of payment.</p>
-  <a class="btn" href="mailto:contact@cyberdudebivash.in?subject=Accept Proposal ${proposalId}">Accept Proposal</a>
-  <p style="margin-top:16px;font-size:13px;opacity:0.7">contact@cyberdudebivash.in · +91 8179881447 · CYBERDUDEBIVASH PRIVATE LIMITED · GST: 21ARKPN8270G1ZP</p>
+  <a class="btn" href="mailto:bivash@cyberdudebivash.com?subject=Accept Proposal ${proposalId}">Accept Proposal</a>
+  <p style="margin-top:16px;font-size:13px;opacity:0.7">bivash@cyberdudebivash.com · +91 8179881447 · CYBERDUDEBIVASH PRIVATE LIMITED · GST: 21ARKPN8270G1ZP</p>
 </div>
 
 </body></html>`;
