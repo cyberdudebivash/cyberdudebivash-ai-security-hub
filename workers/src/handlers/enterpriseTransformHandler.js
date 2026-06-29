@@ -162,6 +162,12 @@ export async function handlePlatformKPI(request, env, authCtx) {
     api_active_users:  apiUsers,
     churn_rate_est:   totalUsers > 0 ? Math.round(((totalUsers - activeMonthly) / Math.max(totalUsers, 1)) * 1000) / 10 : 0,
   };
+  // Aliases for the enterprise-kpi-dashboard.html frontend, which reads these
+  // flat field names directly off the response root (not nested under `kpi`).
+  kpi.nrr             = Math.round(nrr * 10000) / 100; // ratio -> percent
+  kpi.churn_rate      = kpi.churn_rate_est;
+  kpi.plan_distribution = tierDist;
+  kpi.total_customers = totalUsers;
 
   await kvSet(env, cacheKey, kpi, 300);
   return Response.json({ success: true, cached: false, kpi });

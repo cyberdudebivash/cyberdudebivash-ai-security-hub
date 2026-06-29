@@ -27,7 +27,7 @@ export async function handleMsspMetrics(request, env) {
   if (!db) return ok({ partners: 0, mrr: 0, active_clients: 0, open_alerts: 0 });
 
   try {
-    const [partnerRow, clientRow, alertRow, billingRow] = await Promise.all([
+    const [partnerRow, clientRow, alertRow, billingRow, wlRow, pipelineRow] = await Promise.all([
       db.prepare(`SELECT COUNT(*) as cnt, COUNT(CASE WHEN status='active' THEN 1 END) as active FROM mssp_partners`).first().catch(() => ({ cnt: 0, active: 0 })),
       db.prepare(`SELECT COUNT(*) as cnt FROM mssp_clients WHERE status='active'`).first().catch(() => ({ cnt: 0 })),
       db.prepare(`SELECT COALESCE(SUM(open_alerts),0) as total FROM mssp_clients WHERE status='active'`).first().catch(() => ({ total: 0 })),
@@ -36,6 +36,22 @@ export async function handleMsspMetrics(request, env) {
         FROM mssp_billing
         WHERE period = strftime('%Y-%m', 'now') AND status IN ('paid','invoiced')
       `).first().catch(() => ({ total_mrr: 0 })),
+      // White-label deployments: partners with both a brand name and a custom domain configured
+      db.prepare(`
+        SELECT COUNT(*) as cnt FROM mssp_partners
+        WHERE brand_name IS NOT NULL AND brand_name != '' AND custom_domain IS NOT NULL AND custom_domain != ''
+      `).first().catch(() => ({ cnt: 0 })),
+      // Partner pipeline value: real upgrade-eligible MRR (capacity >=80% or strong 3m billing) —
+      // same eligibility logic as /api/mssp/expansion-opps, summed instead of listed.
+      db.prepare(`
+        SELECT COALESCE(SUM(mrr_3m),0) as total FROM (
+          SELECT (SELECT COALESCE(SUM(b.mrr_inr),0) FROM mssp_billing b
+                  WHERE b.mssp_user_id = p.id AND b.status IN ('paid','invoiced')
+                    AND b.period >= strftime('%Y-%m', 'now', '-3 months')) as mrr_3m
+          FROM mssp_partners p WHERE p.status = 'active'
+            AND (CAST(p.client_count AS REAL) / NULLIF(p.max_clients, 0) >= 0.8 OR p.client_count IS NULL)
+        )
+      `).first().catch(() => ({ total: 0 })),
     ]);
 
     // Also grab MRR from mssp_customers (alternative table)
@@ -52,6 +68,11 @@ export async function handleMsspMetrics(request, env) {
       open_alerts:    alertRow?.total || 0,
       mrr_inr:        totalMrr,
       arr_inr:        totalMrr * 12,
+      // Aliases for mssp-command-center.html, which reads these flat names directly.
+      total_partners: partnerRow?.cnt || 0,
+      mssp_mrr:       totalMrr,
+      wl_deployments: wlRow?.cnt || 0,
+      pipeline_value: pipelineRow?.total || 0,
     });
   } catch (e) {
     return ok({ partners: 0, mrr: 0, active_clients: 0, open_alerts: 0, error: e.message });

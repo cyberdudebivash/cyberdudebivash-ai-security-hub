@@ -270,11 +270,14 @@ function trendHtml(v, prefix='') {
 async function loadKPI() {
   try {
     const r = await fetch(`${API}/api/platform/kpi`, { credentials: 'include' });
-    kpiData = await r.json();
-    if (!r.ok || kpiData.error) {
-      document.getElementById('main-loading').innerHTML = `<div style="color:var(--red)">${kpiData?.error || 'Failed to load KPIs. Please check your permissions.'}</div>`;
+    const raw = await r.json();
+    if (!r.ok || raw.error) {
+      document.getElementById('main-loading').innerHTML = `<div style="color:var(--red)">${raw?.error || 'Failed to load KPIs. Please check your permissions.'}</div>`;
       return;
     }
+    // Backend nests real metrics under `kpi`; flatten so the renderers below
+    // (which read d.nrr, d.mrr, d.churn_rate, etc. off the root) get real values.
+    kpiData = raw.kpi || raw;
     document.getElementById('main-loading').style.display = 'none';
     document.getElementById('dashboard-content').style.display = 'block';
     document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
