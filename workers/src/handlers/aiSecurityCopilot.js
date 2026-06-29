@@ -1749,6 +1749,8 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
 
   // Walk the candidate list, skip unavailable providers
   let lastError;
+  const triedProviders = new Set();
+
   for (const candidate of candidates) {
     const { p: provider, m: model, tools: useTools } = candidate;
 
@@ -1763,14 +1765,11 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
       if (!useTools && complexity === 'complex') {
         const reasoning = await runReasoningPrepass(env, provider, model, systemPmt, lastMsg);
         if (reasoning) {
-          // Inject reasoning as a system context message before the user message
           augmentedMessages = [
             ...messages.slice(0, -1),
             { role: 'system', content: `[Security Reasoning Analysis]\n${reasoning}` },
             messages[messages.length - 1],
           ];
-          // After reasoning pre-pass, switch to a tool-capable model from same provider
-          // for the actual response loop
           const toolCandidate = candidates.find(c => c.p === provider && c.tools);
           if (toolCandidate) {
             return await runToolLoop(env, provider, toolCandidate.m, buildSystemPrompt(tier, authCtx, provider, toolCandidate.m, task_type), augmentedMessages, availableTools, maxTokens, authCtx, userId, sessionId);
@@ -1783,7 +1782,49 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
       }
     } catch (err) {
       lastError = err;
-      console.warn(`[APEX] ${provider}/${model} failed: ${err.message}`);
+      console.warn(`[APEX] ${provider}/${model} tool-loop failed: ${err.message}`);
+
+      // Tool-calling failed — try a plain text completion to the same provider
+      // before moving on. This handles cases where tool schemas are rejected
+      // but the provider can still answer security questions without tools.
+      if (!triedProviders.has(provider)) {
+        triedProviders.add(provider);
+        try {
+          const cfg    = PROVIDER_CONFIG[provider];
+          const apiKey = env[cfg?.envKey];
+          if (!apiKey) throw new Error('no key');
+          const systemPmt2 = buildSystemPrompt(tier, authCtx, provider, model, task_type);
+          const res = await fetch(cfg.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`,
+              ...(provider === PROVIDERS.OPENROUTER ? { 'HTTP-Referer': 'https://cyberdudebivash.in', 'X-Title': 'APEX Security Copilot' } : {}) },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: systemPmt2 },
+                ...messages.slice(-6).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })),
+              ],
+              max_tokens: Math.min(maxTokens, 2048),
+              temperature: 0.3,
+              stream: false,
+            }),
+            signal: AbortSignal.timeout(20000),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content || '';
+          if (text) {
+            return {
+              content:  text + '\n\n> Responding without tool orchestration (tool-call schema rejected by provider). Core AI analysis active.',
+              model,
+              provider,
+              usage: data.usage || {},
+            };
+          }
+        } catch (textErr) {
+          console.warn(`[APEX] ${provider} text-fallback also failed: ${textErr.message}`);
+        }
+      }
     }
   }
 
