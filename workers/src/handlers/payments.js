@@ -850,6 +850,48 @@ export async function handleRazorpayWebhook(request, env) {
         );
       }
     }
+
+    // Fallback tier grant for the REAL live checkout path (/api/payment/create-
+    // order with module='subscription'). That order's Razorpay notes only ever
+    // carry {module, target: email} — never tenant_id/plan — so the branch
+    // above is dead code for it. The synchronous /api/payment/verify call is
+    // normally what grants the tier; this webhook is the only safety net if
+    // the customer's browser closes, loses network, or an ad-blocker kills the
+    // callback right after a successful Razorpay payment. Without this, that
+    // customer is charged and never upgraded, with no automatic recovery.
+    if (env.DB && orderId) {
+      try {
+        const payRow = await env.DB.prepare(
+          `SELECT module, plan, email, status FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+        ).bind(orderId).first();
+
+        if (payRow?.module === 'subscription' && payRow.email &&
+            ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(payRow.plan)) {
+          const existingUser = await env.DB.prepare(
+            `SELECT id, tier FROM users WHERE email = ?`
+          ).bind(payRow.email).first();
+
+          if (existingUser?.id) {
+            if (existingUser.tier !== payRow.plan) {
+              await env.DB.prepare(
+                `UPDATE users SET tier = ?, updated_at = datetime('now') WHERE id = ?`
+              ).bind(payRow.plan, existingUser.id).run();
+              console.log('[Webhook] Fallback tier grant applied:', payRow.email, '->', payRow.plan);
+            }
+          } else {
+            const newUserId = crypto.randomUUID();
+            const { hash, salt } = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
+            await env.DB.prepare(
+              `INSERT INTO users (id, email, password_hash, password_salt, tier, status, created_at)
+               VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))`
+            ).bind(newUserId, payRow.email, hash, salt, payRow.plan).run();
+            console.log('[Webhook] Fallback account+tier created:', payRow.email, '->', payRow.plan);
+          }
+        }
+      } catch (e) {
+        console.error('[Webhook] Fallback subscription tier grant failed:', e.message);
+      }
+    }
   }
 
   if (type === 'payment.failed') {
