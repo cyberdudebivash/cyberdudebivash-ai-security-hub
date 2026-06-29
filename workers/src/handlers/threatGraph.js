@@ -282,6 +282,36 @@ export async function handleGetThreatGraph(request, env, authCtx = {}) {
     nodes = await enrichWithLiveKEV(nodes, env);
   }
 
+  // Augment with real CVE nodes from D1 threat_intel (dynamic, customer-specific)
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT cve_id, severity, cvss_score, epss_score, is_kev, mitre_technique, description
+         FROM threat_intel WHERE cvss_score >= 8.0 ORDER BY is_kev DESC, cvss_score DESC LIMIT 50`
+      ).all().catch(() => ({ results: [] }));
+      const existingIds = new Set(nodes.map(n => n.id));
+      for (const r of (rows.results || [])) {
+        if (!existingIds.has(r.cve_id)) {
+          nodes.push({
+            id: r.cve_id, label: r.cve_id, type: NODE_TYPES.CVE,
+            properties: {
+              cvss: parseFloat(r.cvss_score) || 0, epss: parseFloat(r.epss_score) || 0,
+              severity: r.severity, is_kev: !!r.is_kev, description: (r.description || '').slice(0, 120),
+            },
+            source: 'live_d1',
+          });
+          // Link to MITRE technique if present
+          if (r.mitre_technique) {
+            const techNode = nodes.find(n => n.id === r.mitre_technique);
+            if (techNode) {
+              edges.push({ source: r.cve_id, target: r.mitre_technique, type: EDGE_TYPES.EXPLOITS, weight: parseFloat(r.cvss_score) / 10 || 0.5 });
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
   const stats = buildGraphStats(nodes, edges);
 
   // Add D3-compatible layout hints
@@ -308,10 +338,11 @@ export async function handleGetThreatGraph(request, env, authCtx = {}) {
     edges,
     stats,
     meta: {
-      generated_at:  new Date().toISOString(),
-      live_enriched: enrichLive,
-      node_types:    Object.values(NODE_TYPES),
-      edge_types:    Object.values(EDGE_TYPES),
+      generated_at:    new Date().toISOString(),
+      live_enriched:   enrichLive,
+      node_types:      Object.values(NODE_TYPES),
+      edge_types:      Object.values(EDGE_TYPES),
+      knowledge_base:  'MITRE ATT&CK curated + live D1 threat_intel CVEs',
     }
   });
 }
