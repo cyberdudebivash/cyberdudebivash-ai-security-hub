@@ -16,7 +16,7 @@ import { resolveAuth } from '../middleware/auth.js';
 
 const UPGRADE_URL  = 'https://cyberdudebivash.in/#pricing';
 const DOCS_URL     = 'https://cyberdudebivash.in/api-docs';
-const CONTACT      = 'bivash@cyberdudebivash.com';
+const CONTACT      = 'contact@cyberdudebivash.in';
 
 // ─── Feed entitlements per tier ───────────────────────────────────────────────
 // Keyed off the API-key tier (FREE | STARTER | PRO | ENTERPRISE | MSSP). Unknown

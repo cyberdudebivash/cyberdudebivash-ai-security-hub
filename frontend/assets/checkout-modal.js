@@ -218,7 +218,7 @@
         </div>
 
         <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px;font-size:12px;color:rgba(255,255,255,.7)">
-          ⚠️ After payment, email your UTR/Transaction ID to <strong style="color:#f59e0b">bivash@cyberdudebivash.com</strong> for instant activation.
+          ⚠️ After payment, email your UTR/Transaction ID to <strong style="color:#f59e0b">contact@cyberdudebivash.in</strong> for instant activation.
         </div>
       </div>
     </div>
@@ -246,7 +246,7 @@
         </div>`).join('')}
 
         <div style="margin-top:14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px;font-size:12px;color:rgba(255,255,255,.7)">
-          ⚠️ Use <strong style="color:#f59e0b">${txnId}</strong> as payment narration. Email confirmation to <strong>bivash@cyberdudebivash.com</strong> for same-day activation.
+          ⚠️ Use <strong style="color:#f59e0b">${txnId}</strong> as payment narration. Email confirmation to <strong>contact@cyberdudebivash.in</strong> for same-day activation.
         </div>
       </div>
     </div>
@@ -275,7 +275,7 @@
         </div>
 
         <div style="margin-top:14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px;font-size:12px;color:rgba(255,255,255,.7)">
-          ⚠️ Include <strong style="color:#f59e0b">${txnId}</strong> in payment note. Email confirmation to <strong>bivash@cyberdudebivash.com</strong>.
+          ⚠️ Include <strong style="color:#f59e0b">${txnId}</strong> in payment note. Email confirmation to <strong>contact@cyberdudebivash.in</strong>.
         </div>
       </div>
     </div>
@@ -307,7 +307,7 @@
         </div>
 
         <div style="margin-top:14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px;font-size:12px;color:rgba(255,255,255,.7)">
-          ⚠️ After transfer, email TX hash + <strong style="color:#f59e0b">${txnId}</strong> to <strong>bivash@cyberdudebivash.com</strong>. Activation within 2h of confirmation.
+          ⚠️ After transfer, email TX hash + <strong style="color:#f59e0b">${txnId}</strong> to <strong>contact@cyberdudebivash.in</strong>. Activation within 2h of confirmation.
         </div>
       </div>
     </div>
@@ -331,7 +331,7 @@
     <div style="margin-top:16px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:12px;padding:14px">
       <div style="font-size:11px;font-weight:700;color:#00ff88;margin-bottom:6px">✅ AFTER PAYMENT</div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.7">
-        Email your payment confirmation to <strong style="color:#fff">bivash@cyberdudebivash.com</strong><br>
+        Email your payment confirmation to <strong style="color:#fff">contact@cyberdudebivash.in</strong><br>
         Include your Transaction ID: <strong style="color:#00d4ff;font-family:monospace">${txnId}</strong><br>
         Account activation within <strong style="color:#fff">1–2 business hours</strong>.
       </div>

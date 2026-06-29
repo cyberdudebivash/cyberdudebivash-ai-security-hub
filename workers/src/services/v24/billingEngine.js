@@ -333,7 +333,7 @@ async function sendRecoveryEmail(env, rec) {
 <p>Your recent payment of ₹${(rec.amount_inr || 0).toLocaleString('en-IN')} failed.</p>
 <p>Please update your payment method to continue your subscription.</p>
 <p><a href="https://cyberdudebivash.in/billing" style="background:#7c3aed;color:white;padding:10px 20px;border-radius:6px;text-decoration:none">Update Payment Method</a></p>
-<p>If you need help, reply to this email or contact bivash@cyberdudebivash.com</p>
+<p>If you need help, reply to this email or contact contact@cyberdudebivash.in</p>
 <p>— CYBERDUDEBIVASH Team</p>`,
     }),
   });

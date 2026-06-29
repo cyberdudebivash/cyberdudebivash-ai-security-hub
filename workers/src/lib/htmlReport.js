@@ -330,7 +330,7 @@ code{font-family:'Courier New',monospace;font-size:12px;background:rgba(255,255,
     <strong>Report Ref:</strong> ${escapeHtml(reportId.slice(0,20).toUpperCase())}<br>
     <strong>Generated:</strong> ${generatedAt}<br>
     <strong>Platform:</strong> v7.0.0<br>
-    <strong>Contact:</strong> <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a>
+    <strong>Contact:</strong> <a href="mailto:contact@cyberdudebivash.in">contact@cyberdudebivash.in</a>
   </div>
 </div>
 
@@ -444,7 +444,7 @@ code{font-family:'Courier New',monospace;font-size:12px;background:rgba(255,255,
 
 <!-- ── Disclaimer ──────────────────────────────────────────────────────────── -->
 <div class="disclaimer">
-  <strong>Disclaimer:</strong> This report was generated automatically by the CYBERDUDEBIVASH AI Security Hub platform. Findings are based on passive assessment techniques and publicly observable data. This report does not constitute a penetration test and should not be used as the sole basis for compliance certification. For comprehensive security assessment, please contact our team at <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a>. All findings should be independently verified before remediation. CyberDudeBivash Pvt. Ltd. assumes no liability for actions taken based on this report.
+  <strong>Disclaimer:</strong> This report was generated automatically by the CYBERDUDEBIVASH AI Security Hub platform. Findings are based on passive assessment techniques and publicly observable data. This report does not constitute a penetration test and should not be used as the sole basis for compliance certification. For comprehensive security assessment, please contact our team at <a href="mailto:contact@cyberdudebivash.in">contact@cyberdudebivash.in</a>. All findings should be independently verified before remediation. CyberDudeBivash Pvt. Ltd. assumes no liability for actions taken based on this report.
 </div>
 
 </div><!-- /content -->
@@ -453,7 +453,7 @@ code{font-family:'Courier New',monospace;font-size:12px;background:rgba(255,255,
 <div class="report-footer">
   <div>⚔️ <strong>CYBERDUDEBIVASH AI Security Hub</strong> — CyberDudeBivash Pvt. Ltd., Hyderabad, India</div>
   <div>
-    📧 <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a> ·
+    📧 <a href="mailto:contact@cyberdudebivash.in">contact@cyberdudebivash.in</a> ·
     📞 +91 8179881447 ·
     🌐 <a href="https://cyberdudebivash.in">cyberdudebivash.in</a> ·
     Ref: ${escapeHtml(reportId.slice(0,16).toUpperCase())}

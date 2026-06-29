@@ -172,7 +172,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       request.headers?.get?.('CF-Connecting-IP'), { error: err.message, target }).catch(() => {});
     return Response.json({
       error:    'Payment gateway error. Please try again.',
-      fallback: `Contact bivash@cyberdudebivash.com to complete purchase.`,
+      fallback: `Contact contact@cyberdudebivash.in to complete purchase.`,
     }, { status: 502 });
   }
 
@@ -449,7 +449,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       user_id: issuedUserId,
       message: issuedAccessToken
         ? `✅ ${subPlan.name} activated. Your account is now upgraded — use the access token to call PRO/ENTERPRISE-gated endpoints immediately.`
-        : `✅ ${subPlan.name} payment confirmed, but the tier could not be attached to an account automatically. Contact bivash@cyberdudebivash.com with payment ID ${razorpay_payment_id} to finish activation.`,
+        : `✅ ${subPlan.name} payment confirmed, but the tier could not be attached to an account automatically. Contact contact@cyberdudebivash.in with payment ID ${razorpay_payment_id} to finish activation.`,
     });
   }
 
@@ -483,7 +483,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     console.error('[Payments] Full scan failed for', target, err.message);
     return Response.json({
       error:   'Report generation failed — payment recorded. Contact support.',
-      support: 'bivash@cyberdudebivash.com',
+      support: 'contact@cyberdudebivash.in',
       order_id: razorpay_order_id,
     }, { status: 500 });
   }
@@ -661,7 +661,7 @@ export async function handleReportDownload(request, env, authCtx = {}) {
   if (!meta) {
     return Response.json({
       error:   'Report not found or expired.',
-      message: 'Token may have expired (30 days) or is invalid. Contact bivash@cyberdudebivash.com',
+      message: 'Token may have expired (30 days) or is invalid. Contact contact@cyberdudebivash.in',
     }, { status: 404 });
   }
 
@@ -699,7 +699,7 @@ export async function handleReportDownload(request, env, authCtx = {}) {
 
   return Response.json({
     error:   'Report file not found in storage.',
-    support: 'bivash@cyberdudebivash.com',
+    support: 'contact@cyberdudebivash.in',
     token,
   }, { status: 404 });
 }
@@ -1028,7 +1028,7 @@ export async function handlePaymentConfirm(request, env) {
     <div style="font-size:18px;font-weight:700;color:#00d4ff;font-family:monospace">${txnId}</div>
   </div>
   <p style="color:#94a3b8;line-height:1.7">Our team will verify your payment and <strong style="color:#e2e8f0">activate your access within 2–4 hours</strong>. You'll receive an access confirmation at this email once verified.</p>
-  <p style="color:#94a3b8">Questions? Contact us at <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a> or WhatsApp <a href="tel:+918179881447" style="color:#00d4ff">+91 8179881447</a></p>
+  <p style="color:#94a3b8">Questions? Contact us at <a href="mailto:contact@cyberdudebivash.in" style="color:#00d4ff">contact@cyberdudebivash.in</a> or WhatsApp <a href="tel:+918179881447" style="color:#00d4ff">+91 8179881447</a></p>
   <div style="text-align:center;margin-top:24px;font-size:11px;color:#374151">CYBERDUDEBIVASH PRIVATE LIMITED · Odisha, India</div>
 </div>`;
 
@@ -1036,7 +1036,7 @@ export async function handlePaymentConfirm(request, env) {
       to:      customerEmail,
       subject: `✅ Payment Confirmed — ${product || 'Your Purchase'} | Ref: ${confirmId}`,
       html:    custHtml,
-      text:    `Payment confirmed! Transaction ID: ${txnId}\nRef: ${confirmId}\nProduct: ${product}\nOur team will activate access within 2-4 hours.\nContact: bivash@cyberdudebivash.com`,
+      text:    `Payment confirmed! Transaction ID: ${txnId}\nRef: ${confirmId}\nProduct: ${product}\nOur team will activate access within 2-4 hours.\nContact: contact@cyberdudebivash.in`,
     });
   } catch (emailErr) {
     console.error('[PaymentConfirm] Customer email failed:', emailErr.message);

@@ -337,7 +337,7 @@ function buildSTIX(records, source, ts) {
     name: 'CYBERDUDEBIVASH Sentinel APEX',
     identity_class: 'organization',
     sectors: ['technology'],
-    contact_information: 'bivash@cyberdudebivash.com',
+    contact_information: 'contact@cyberdudebivash.in',
   });
 
   for (const rec of records) {

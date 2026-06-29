@@ -353,7 +353,7 @@ export function buildTAXIIDiscovery(baseUrl) {
   return {
     title:          'CYBERDUDEBIVASH® Sentinel APEX Threat Intelligence Feed',
     description:    'Real-time AI threat intelligence — CVEs, IOCs, APT actors, ATT&CK mappings. STIX 2.1 / TAXII 2.1 compliant.',
-    contact:        'bivash@cyberdudebivash.com',
+    contact:        'contact@cyberdudebivash.in',
     default:        `${baseUrl}/api/taxii/collections`,
     api_roots:      [`${baseUrl}/api/taxii`],
     versions:       ['taxii-2.1'],

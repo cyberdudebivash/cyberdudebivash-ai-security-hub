@@ -374,7 +374,7 @@ SigninLogs
 
   <div class="footer">
     <p><strong>CYBERDUDEBIVASH PRIVATE LIMITED</strong> · SENTINEL APEX™ Threat Intelligence<br>
-    GST: 21ARKPN8270G1ZP · bivash@cyberdudebivash.com · +91 8179881447<br>
+    GST: 21ARKPN8270G1ZP · contact@cyberdudebivash.in · +91 8179881447<br>
     Classification: ${reportMeta.classification} · Order: ${orderId.slice(0,12)} · Generated: ${now}<br>
     This report is licensed for the purchasing organization only. Redistribution prohibited.<br>
     © 2026 CYBERDUDEBIVASH PRIVATE LIMITED. All rights reserved.</p>

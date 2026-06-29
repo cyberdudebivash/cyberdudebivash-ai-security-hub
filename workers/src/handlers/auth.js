@@ -18,7 +18,7 @@ import { parseBody } from '../middleware/validation.js';
 import { inspectForAttacks } from '../middleware/security.js';
 import { sendTestAlert } from '../lib/alerts.js';
 
-const CONTACT_EMAIL = 'bivash@cyberdudebivash.com';
+const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
 const PLATFORM_URL  = 'https://tools.cyberdudebivash.com';
 
 function getClientIP(request) {

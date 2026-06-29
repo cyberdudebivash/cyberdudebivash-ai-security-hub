@@ -203,7 +203,7 @@ export async function handleBookConsultation(request, env, authCtx) {
     });
   } catch (err) {
     console.error('[enterpriseLayer] booking error:', err);
-    return json({ success: false, error: 'Booking failed. Please email bivash@cyberdudebivash.com' }, 500);
+    return json({ success: false, error: 'Booking failed. Please email contact@cyberdudebivash.in' }, 500);
   }
 }
 
@@ -361,11 +361,11 @@ async function sendConfirmationEmail(env, { email, contact_name, company_name, r
           📅 You'll receive a calendar invite within 2 hours<br>
           📊 Custom proposal sent before the call
         </div>
-        <p>For urgent matters, reply to this email or contact <a href="mailto:bivash@cyberdudebivash.com" style="color:#00d4ff">bivash@cyberdudebivash.com</a> · WhatsApp +91 8179881447</p>
+        <p>For urgent matters, reply to this email or contact <a href="mailto:contact@cyberdudebivash.in" style="color:#00d4ff">contact@cyberdudebivash.in</a> · WhatsApp +91 8179881447</p>
         <hr style="border-color:#333;margin:24px 0">
         <div style="font-size:11px;color:#555">CYBERDUDEBIVASH PRIVATE LIMITED · PAN: ARKPN8270G · Odisha, India</div>
       </div>`,
-      text: `Booking Confirmed — Ref: ${id.slice(0,8).toUpperCase()}\n\nHi ${contact_name || 'there'},\n\nYour enterprise consultation request has been received.\nPackage: ${package_interest}\nRef: ${id}\n\nOur team will contact you within 4 business hours.\nbivash@cyberdudebivash.com · +91 8179881447`,
+      text: `Booking Confirmed — Ref: ${id.slice(0,8).toUpperCase()}\n\nHi ${contact_name || 'there'},\n\nYour enterprise consultation request has been received.\nPackage: ${package_interest}\nRef: ${id}\n\nOur team will contact you within 4 business hours.\ncontact@cyberdudebivash.in · +91 8179881447`,
     });
   } catch { /* non-critical */ }
 }
