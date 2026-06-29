@@ -3099,7 +3099,8 @@ export default {
 
     // GET /api/user/plan → current plan + usage for authenticated/session user
     if (path === '/api/user/plan' && method === 'GET') {
-      return withSecurityHeaders(withCors(await handleGetUserPlan(request, env), request));
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGetUserPlan(request, env, authCtx), request));
     }
 
     // POST /api/subscription/create → create Razorpay order for a plan

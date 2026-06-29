@@ -40,7 +40,7 @@ const SUBSCRIPTION_PLANS = {
 };
 
 // ─── GET /api/user/plan ───────────────────────────────────────────────────────
-export async function handleGetUserPlan(request, env) {
+export async function handleGetUserPlan(request, env, authCtx = null) {
   const headers = corsHeaders(request);
 
   try {
@@ -54,6 +54,17 @@ export async function handleGetUserPlan(request, env) {
     let userId   = null;
     let keyId    = null;
     let email    = null;
+
+    // Prefer the unified auth resolver (handles JWT bearer tokens from
+    // login/signup) — without this, every JWT-authenticated customer hit the
+    // 'Bearer cdb_' branch below (API-key format only), which silently never
+    // matched a JWT, so logged-in paying customers always saw plan: FREE,
+    // email: null here regardless of their real tier.
+    if (authCtx?.authenticated && authCtx.method === 'jwt' && authCtx.tier) {
+      userPlan = authCtx.tier;
+      userId   = authCtx.user_id || authCtx.userId || null;
+      email    = authCtx.email || null;
+    }
 
     // Try API key auth first
     if (authHeader.startsWith('Bearer cdb_')) {
