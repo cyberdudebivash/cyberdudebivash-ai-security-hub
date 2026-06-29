@@ -103,12 +103,14 @@ const ROUTING_MATRIX = {
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_R1,        tools: false }, // reasoning pre-pass
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  }, // 70B fallback
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_DEEPSEEK_V3, tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_LLAMA_70B,   tools: true  },
     ],
     standard: [
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  }, // 70B fallback
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_DEEPSEEK_V3, tools: true  },
     ],
     simple: [
@@ -124,15 +126,18 @@ const ROUTING_MATRIX = {
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_R1,   tools: false }, // R1 direct
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_DEEPSEEK_R1, tools: false },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  }, // then tool loop
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  }, // 70B fallback
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  }, // 70B fallback
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_LLAMA_70B,   tools: true  },
     ],
     simple: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
   },
@@ -141,11 +146,13 @@ const ROUTING_MATRIX = {
   governance: {
     complex:  [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_MISTRAL,     tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [
@@ -158,11 +165,13 @@ const ROUTING_MATRIX = {
   soc_siem: {
     complex:  [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_LLAMA_70B,   tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [
@@ -176,13 +185,16 @@ const ROUTING_MATRIX = {
     complex:  [
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_DEEPSEEK_V3, tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
     ],
   },
@@ -191,11 +203,13 @@ const ROUTING_MATRIX = {
   executive: {
     complex:  [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_LLAMA_70B,   tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [
@@ -208,11 +222,13 @@ const ROUTING_MATRIX = {
   general: {
     complex:  [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_LLAMA_70B,   tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [
@@ -226,10 +242,12 @@ const ROUTING_MATRIX = {
     complex:  [
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_DEEPSEEK_V3, tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [
@@ -243,10 +261,12 @@ const ROUTING_MATRIX = {
     complex:  [
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.OPENROUTER, m: MODELS.OR_MISTRAL,     tools: true  },
     ],
     standard: [
       { p: PROVIDERS.GROQ,       m: MODELS.GROQ_70B,       tools: true  },
+      { p: PROVIDERS.GROQ,       m: MODELS.GROQ_8B,        tools: true  },
       { p: PROVIDERS.DEEPSEEK,   m: MODELS.DEEPSEEK_V3,   tools: true  },
     ],
     simple: [

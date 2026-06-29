@@ -15,6 +15,8 @@ import { checkRateLimitCost, rateLimitResponse } from '../middleware/rateLimit.j
 import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js';
 // v21.0 — Adaptive hunt query recommendations
 import { recommendHuntQueries } from '../core/cyberBrain.js';
+// v22.1 — Live IOC enrichment (VirusTotal, AbuseIPDB, Shodan, D1)
+import { enrichIOC as enrichIOCLive } from '../services/iocEnrichmentEngine.js';
 
 // ─── Built-in hunt templates ──────────────────────────────────────────────────
 // ─── Signature decoder (AV/EDR false-positive mitigation) ─────────────────────
@@ -127,60 +129,27 @@ function detectIOCType(value) {
   return 'unknown';
 }
 
-// ─── IOC enrichment — queries platform D1 for CVE/threat data; returns honest
-//     "unavailable" for external-API-dependent lookups (VirusTotal etc.) that are
-//     not yet integrated rather than fabricating vendor verdicts.
-async function enrichIOC(value, type, db) {
-  // CVE type: query D1 threat_intel table directly — real data
-  if (type === 'cve' && db) {
-    try {
-      const row = await db.prepare(
-        `SELECT cve_id, severity, cvss_score, description, published_date, cisa_kev
-         FROM threat_intel WHERE cve_id = ? LIMIT 1`
-      ).bind(value.toUpperCase()).first();
-      if (row) {
-        return {
-          value,
-          type,
-          enrichment_status: 'found',
-          cve_id:      row.cve_id,
-          severity:    row.severity,
-          cvss_score:  row.cvss_score,
-          description: row.description,
-          published:   row.published_date,
-          cisa_kev:    !!row.cisa_kev,
-          sources: ['NVD NIST', ...(row.cisa_kev ? ['CISA KEV'] : [])],
-        };
-      }
-      return {
-        value, type,
-        enrichment_status: 'not_found',
-        message: `${value} not found in the platform threat intelligence database.`,
-      };
-    } catch {
-      // fall through to unavailable
-    }
+// ─── IOC enrichment — delegates to iocEnrichmentEngine (VirusTotal, AbuseIPDB,
+//     Shodan, MalwareBazaar, D1 threat_intel). Normalises result to the shape
+//     expected by handleIOCLookup (enrichment_status field).
+async function enrichIOC(value, type, env) {
+  try {
+    const result = await enrichIOCLive(env, value);
+    // Map engine verdict → enrichment_status
+    const status = result.verdict === 'clean' || result.verdict === 'low_risk'
+      ? 'found'
+      : result.verdict === 'malicious' || result.verdict === 'suspicious'
+        ? 'found'
+        : 'not_found';
+    return { ...result, enrichment_status: status };
+  } catch (err) {
+    return {
+      value,
+      type,
+      enrichment_status: 'unavailable',
+      message: `Enrichment failed: ${err.message}`,
+    };
   }
-
-  // All other IOC types — external enrichment APIs (VirusTotal, AbuseIPDB, etc.)
-  // are not yet integrated. Return an honest status rather than fabricating verdicts.
-  const integrationMap = {
-    ipv4:   ['VirusTotal', 'AbuseIPDB', 'Shodan', 'GreyNoise'],
-    domain: ['VirusTotal', 'URLhaus', 'PhishTank'],
-    md5:    ['VirusTotal', 'MalwareBazaar'],
-    sha1:   ['VirusTotal', 'MalwareBazaar'],
-    sha256: ['VirusTotal', 'MalwareBazaar'],
-    url:    ['VirusTotal', 'URLhaus'],
-    email:  ['HaveIBeenPwned', 'SpamHaus'],
-  };
-  return {
-    value,
-    type,
-    enrichment_status: 'unavailable',
-    message: 'External enrichment API integration is not yet configured for this IOC type. Contact support@cyberdudebivash.com to enable live enrichment.',
-    supported_providers: integrationMap[type] || [],
-    platform_note: 'CVE lookups are available via platform threat-intel DB. IP/domain/hash enrichment requires API key configuration (Enterprise plan).',
-  };
 }
 
 // ─── Hunt query parser: extract CVE IDs, IPs, MITRE techniques, keywords ────
@@ -520,7 +489,7 @@ export async function handleIOCLookup(request, env, authCtx) {
   const results = await Promise.all(targets.map(async v => {
     const cleaned = sanitizeString(String(v), 500);
     const type = detectIOCType(cleaned);
-    return enrichIOC(cleaned, type, env.DB);
+    return enrichIOC(cleaned, type, env);
   }));
 
   const foundCount = results.filter(r => r.enrichment_status === 'found').length;

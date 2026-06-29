@@ -1768,7 +1768,7 @@ export default {
     }
 
     // ── Scan history ────────────────────────────────────────────────────────
-    if (path === '/api/history' && (method === 'GET' || method === 'DELETE')) {
+    if ((path === '/api/history' || path === '/api/scan/history') && (method === 'GET' || method === 'DELETE')) {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleD1History(request, env, authCtx), request));
     }
