@@ -340,9 +340,31 @@ export const handleGetApiUsage = withErrorBoundary(async (request, env) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const handleBillingCallback = withErrorBoundary(async (request, env) => {
   const body = await request.json().catch(() => ({}));
+  const { email, plan, razorpay_payment_id, razorpay_order_id,
+          razorpay_signature, event } = body;
 
-  // Validate Razorpay signature in production (simplified here)
-  const { email, plan, razorpay_payment_id, razorpay_order_id, event } = body;
+  // Verify Razorpay webhook signature before acting on any payment event.
+  // Without this, any caller could POST a fake payment.captured and unlock plans for free.
+  const webhookSecret = env?.RAZORPAY_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const rawBody = await request.clone().text().catch(() => '');
+    const expectedSig = await (async () => {
+      try {
+        const enc    = new TextEncoder();
+        const key    = await crypto.subtle.importKey('raw', enc.encode(webhookSecret),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+        return Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch { return null; }
+    })();
+    if (!expectedSig || razorpay_signature !== expectedSig) {
+      console.warn('[billing] Razorpay signature mismatch — rejecting callback');
+      return Response.json({ error: 'invalid_signature' }, { status: 401 });
+    }
+  } else {
+    // No webhook secret configured — log and continue (set RAZORPAY_WEBHOOK_SECRET in Wrangler secrets)
+    console.warn('[billing] RAZORPAY_WEBHOOK_SECRET not set — signature verification skipped');
+  }
 
   if (event !== 'payment.captured') {
     return ok(request, { received: true, event });

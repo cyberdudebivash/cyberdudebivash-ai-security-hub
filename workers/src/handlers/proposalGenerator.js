@@ -190,7 +190,7 @@ function buildProposalDocument(lead, packageId, customizations = {}) {
       address:  'India',
       email:    'enterprise@cyberdudebivash.com',
       website:  'https://cyberdudebivash.in',
-      gstin:    'PENDING_REGISTRATION',
+      gstin:    env?.VENDOR_GSTIN || null,
     },
     client: {
       name:     lead.name,

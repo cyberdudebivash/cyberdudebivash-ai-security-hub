@@ -570,9 +570,10 @@ export async function handleRunPipeline(request, env, authCtx = {}) {
   // Non-blocking execution (Cloudflare Workers: use waitUntil if available)
   const resultPromise = executePipeline(env, authCtx?.email || 'manual');
 
-  // Wait max 28s for response (Workers timeout is 30s)
+  // Wait max 28s for response (Workers timeout is 30s).
+  // Timeout resolves as 'timeout' — not success — so callers get honest status.
   const timeoutPromise = new Promise(resolve =>
-    setTimeout(() => resolve({ success: true, status: 'running', message: 'Pipeline started — check /api/auto-soc/pipeline for live status' }), 27500)
+    setTimeout(() => resolve({ success: false, status: 'timeout', message: 'Pipeline is still running — check /api/auto-soc/pipeline for live status' }), 27500)
   );
 
   const result = await Promise.race([resultPromise, timeoutPromise]);

@@ -132,7 +132,7 @@ export async function handleAddMsspPartner(request, env) {
   }
 
   const id = 'mp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const apiKey = 'cdb_mssp_' + Math.random().toString(36).slice(2, 18);
+  const apiKey = 'cdb_mssp_' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
   if (db) {
     try {

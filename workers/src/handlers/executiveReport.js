@@ -395,10 +395,10 @@ async function getRevenuePanelV20(env) {
   }
 
   const starterUsers    = cfg.starter_users    || 0;
-  const proUsers        = cfg.pro_users        || 34;
-  const enterpriseUsers = cfg.enterprise_users || 7;
-  const freeUsers       = cfg.free_users       || 120;
-  const apiRevenue      = cfg.api_revenue_monthly || 820;
+  const proUsers        = cfg.pro_users        || 0;
+  const enterpriseUsers = cfg.enterprise_users || 0;
+  const freeUsers       = cfg.free_users       || 0;
+  const apiRevenue      = cfg.api_revenue_monthly || 0;
 
   const V20_PRICES = { STARTER: 199, PRO: 999, ENTERPRISE: 9999 };
 
@@ -410,11 +410,18 @@ async function getRevenuePanelV20(env) {
   const totalPaying    = starterUsers + proUsers + enterpriseUsers;
   const conversionRate = freeUsers > 0 ? parseFloat(((totalPaying / (freeUsers + totalPaying)) * 100).toFixed(1)) : 0;
 
-  // 30-day MRR trend (simulated growth curve — replace with D1 snapshots in production)
-  const mrrTrend = Array.from({ length: 30 }, (_, i) => ({
-    day:     new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10),
-    mrr_inr: Math.round(mrr * (0.85 + (i / 29) * 0.15)),
-  }));
+  // 30-day MRR trend from D1 mrr_snapshots; falls back to empty array (no synthetic data)
+  let mrrTrend = [];
+  if (env?.DB) {
+    try {
+      const snapRows = await env.DB.prepare(
+        `SELECT snapshot_date, mrr_inr FROM mrr_snapshots ORDER BY snapshot_date DESC LIMIT 30`
+      ).all().catch(() => ({ results: [] }));
+      mrrTrend = (snapRows.results || []).reverse().map(r => ({
+        day: r.snapshot_date, mrr_inr: r.mrr_inr,
+      }));
+    } catch {}
+  }
 
   return {
     mrr_inr:           mrr,
@@ -423,7 +430,7 @@ async function getRevenuePanelV20(env) {
     free_users:        freeUsers,
     total_users:       freeUsers + totalPaying,
     conversion_rate:   conversionRate,
-    churn_rate:        cfg.churn_rate || 3.2,
+    churn_rate:        cfg.churn_rate || null,
     api_revenue_inr:   apiRevenue,
     plan_breakdown: {
       starter:    { users: starterUsers,    mrr: starterUsers    * V20_PRICES.STARTER },
@@ -431,12 +438,15 @@ async function getRevenuePanelV20(env) {
       enterprise: { users: enterpriseUsers, mrr: enterpriseUsers * V20_PRICES.ENTERPRISE },
     },
     mrr_trend:         mrrTrend,
-    growth_signal:     conversionRate < 5
-      ? '⚠️ Low conversion — add in-product upgrade nudges on threat detection'
+    mrr_trend_source:  mrrTrend.length > 0 ? 'live_d1_snapshots' : 'no_data_yet',
+    growth_signal:     totalPaying === 0
+      ? 'Pre-revenue — first paying customer will light up this dashboard'
+      : conversionRate < 5
+      ? 'Low conversion — add in-product upgrade nudges on threat detection'
       : conversionRate < 15
-      ? '📈 On track — focus on enterprise upsell to boost ARR'
-      : '🚀 Strong conversion — scale acquisition channels',
-    payment_methods:   ['UPI', 'Card', 'Net Banking', 'PayPal', 'Crypto'],
+      ? 'On track — focus on enterprise upsell to boost ARR'
+      : 'Strong conversion — scale acquisition channels',
+    payment_methods:   ['UPI', 'Card', 'Net Banking'],
   };
 }
 

@@ -297,15 +297,11 @@ async function handleThreatActorPreview(request, env, authCtx) {
       hash_count: 0,
       last_updated: new Date().toISOString(),
       feed_url: '/api/threat-intel?actor=' + actorId,
-      sample_iocs: [
-        { type: 'ip', value: '185.xxx.xxx.xxx', confidence: 94, tlp: 'AMBER' },
-        { type: 'domain', value: 'update.[REDACTED].com', confidence: 88, tlp: 'AMBER' },
-      ],
+      sample_iocs: [],
+      ioc_note: 'IOC data available via /api/threat/ioc — requires PRO subscription',
     },
-    campaign_timeline: [
-      { name: 'Campaign Alpha', start: new Date(Date.now() - 86400000 * 90).toISOString(), targets: 'Financial sector EMEA', status: 'ACTIVE' },
-      { name: 'Operation Shadow', start: new Date(Date.now() - 86400000 * 180).toISOString(), targets: 'Government APAC', status: 'COMPLETED' },
-    ],
+    campaign_timeline: [],
+    campaign_timeline_note: 'Campaign tracking requires SENTINEL APEX PRO — no fabricated campaigns shown',
     yara_signatures: {
       available: true,
       count: 0,
@@ -348,10 +344,10 @@ async function handleMalwarePreview(request, env, authCtx) {
     severity: known.severity,
     active_in_wild: known.active,
     first_seen: '2021-2024',
-    last_sample_date: new Date(Date.now() - 86400000 * 2).toISOString(),
+    last_sample_date: null,
     sentinel_yara_count: 0,
     variants_tracked: 0,
-    summary: `${known.name} is a ${known.type.replace(/_/g, ' ')} tracked across SENTINEL APEX malware feeds. Active samples confirmed within the last 7 days.`,
+    summary: `${known.name} is a ${known.type.replace(/_/g, ' ')} tracked in public threat intelligence sources including MalwareBazaar and open YARA repositories.`,
     detection_coverage_preview: 'Partial coverage — full YARA library requires PRO access',
     affected_sectors_preview: ['Healthcare', 'Financial', '+ 5 more sectors locked'],
   };
@@ -365,7 +361,7 @@ async function handleMalwarePreview(request, env, authCtx) {
       decryption_resources: upgradePrompt('Decryption Tools & Keys (if available)', '$49/month'),
       ir_playbook: upgradePrompt('Incident Response Playbook', '$499 IR Kit'),
       conversion: {
-        message: `${known.name} samples detected in your sector in the last 7 days.`,
+        message: `Protect your organization against ${known.name} with SENTINEL APEX PRO detection rules.`,
         products: [
           { name: 'APT Malware YARA Pack', price: '$249', url: 'https://cyberdudebivash.gumroad.com/l/ytqra' },
           { name: 'IR Defense Kit', price: '$499', url: 'https://intel.cyberdudebivash.com/store.html#kits' },
@@ -395,8 +391,9 @@ async function handleMalwarePreview(request, env, authCtx) {
 }`,
     },
     network_iocs: {
-      c2_ips: ['185.xxx.xxx.xxx', '91.xxx.xxx.xxx', '45.xxx.xxx.xxx'],
-      c2_domains: ['update.[REDACTED].net', 'cdn.[REDACTED].com'],
+      c2_ips: [],
+      c2_domains: [],
+      ioc_note: 'Live IOC feeds from MalwareBazaar / abuse.ch — enrichment via /api/threat/ioc',
       c2_ports: [443, 8443, 4444, 80],
       beacon_interval: '60-300 seconds (jittered)',
       protocol: known.type === 'ransomware' ? 'HTTPS + Tor' : 'HTTPS',

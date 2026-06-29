@@ -233,7 +233,7 @@ export async function handleSiemStream(request, env, authCtx) {
 
 // ─── Data fetcher ─────────────────────────────────────────────────────────────
 async function fetchSource(env, source, hours, limit) {
-  if (!env?.DB) return buildSeedData(source, limit);
+  if (!env?.DB) return [];
 
   const cutoff = new Date(Date.now() - hours * 3_600_000).toISOString();
 
@@ -313,7 +313,7 @@ async function fetchSource(env, source, hours, limit) {
     }
   } catch (e) {
     console.error('[SIEM] DB fetch error:', e?.message);
-    return buildSeedData(source, Math.min(limit, 10));
+    return [];
   }
 }
 

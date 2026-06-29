@@ -69,7 +69,7 @@ export async function handleOrgDashboard(request, env, authCtx = {}) {
   if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
 
   if (!env.DB) {
-    return jsonOk({ error: 'D1 not connected', stub: true });
+    return jsonOk({ error: 'Database not connected', data_available: false });
   }
 
   const [
