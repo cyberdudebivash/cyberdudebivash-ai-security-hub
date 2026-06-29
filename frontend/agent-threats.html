@@ -340,16 +340,73 @@ async function runAgentScan(){
   document.getElementById('scan-form').style.display='none';
   document.getElementById('scan-loading').style.display='block';
 
-  const steps=['Checking OWASP LLM Top 10...','Analyzing tool permissions...','Evaluating privilege scope...','Mapping attack surfaces...','Correlating threat intelligence...','Computing risk score...'];
-  let si=0;
   const stEl=document.getElementById('scan-status');
-  if(stEl)stEl.textContent=steps[0];
-  const stInt=setInterval(()=>{si=(si+1)%steps.length;if(stEl)stEl.textContent=steps[si];},600);
+  if(stEl)stEl.textContent='Submitting configuration to security engine...';
 
-  await new Promise(r=>setTimeout(r,3000));
-  clearInterval(stInt);
+  // Try real backend endpoint first (stores result to D1, returns real agent_id)
+  let backendResult=null;
+  try{
+    const r=await fetch('/api/ai-security/agents/scan',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,framework:fw,permissions:caps,internet_access:net,tools:caps}),
+      signal:AbortSignal.timeout(10000)
+    });
+    if(r.ok){backendResult=await r.json();}
+  }catch{}
 
-  // OWASP LLM risk scoring
+  // If backend returned a result, render it and return
+  if(backendResult?.success){
+    const a=backendResult.security_assessment||{};
+    const issues_be=backendResult.issues||[];
+    const SC={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#fbbf24',LOW:'#10b981'};
+    const level=a.risk_level||'LOW';
+    const lcolor=SC[level]||'#10b981';
+    const issueHtml=issues_be.map(i=>{
+      const bg=i.severity==='CRITICAL'?'rgba(239,68,68,.12)':i.severity==='HIGH'?'rgba(245,158,11,.12)':'rgba(251,191,36,.1)';
+      return '<div class="result-issue" style="border-left:3px solid '+(SC[i.severity]||'#94a3b8')+'">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+        +'<span style="font-size:9px;font-weight:800;padding:2px 8px;border-radius:8px;background:'+bg+';color:'+(SC[i.severity]||'#94a3b8')+'">'+i.severity+'</span>'
+        +'<span style="font-size:9px;color:var(--text-dim);font-family:monospace">'+(i.owasp_ref||'')+'</span>'
+        +'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:4px">'+i.issue+'</div>'
+        +'<div style="font-size:11px;color:var(--text-muted);line-height:1.5">'+i.recommendation+'</div>'
+        +'</div>';
+    }).join('');
+    const fwDisplay=document.getElementById('scan-fw').options[document.getElementById('scan-fw').selectedIndex].text;
+    document.getElementById('scan-results').innerHTML=
+      '<div style="font-size:9px;color:#10b981;font-weight:800;letter-spacing:.1em;margin-bottom:12px">✓ ASSESSED BY SENTINEL APEX — AGENT ID: '+(backendResult.agent_id||'—')+'</div>'
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px">'
+        +'<div><div style="font-size:18px;font-weight:900;color:#fff">'+name+'</div>'
+        +'<div style="font-size:11px;color:var(--text-muted)">'+fwDisplay+' · '+caps.length+' capabilities · '+(net?'Internet-connected':'No internet')+'</div></div>'
+        +'<div style="text-align:center;background:rgba(0,0,0,.3);border:2px solid '+lcolor+';border-radius:12px;padding:12px 18px;min-width:76px;flex-shrink:0">'
+          +'<div style="font-size:30px;font-weight:900;color:'+lcolor+';font-family:monospace;line-height:1">'+(a.risk_score||0)+'</div>'
+          +'<div style="font-size:9px;font-weight:800;color:'+lcolor+';letter-spacing:.06em">'+level+'</div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">'
+        +'<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:#ef4444">'+(a.critical_issues||0)+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">CRITICAL</div></div>'
+        +'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:#f59e0b">'+(issues_be.filter(i=>i.severity==='HIGH').length)+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">HIGH</div></div>'
+        +'<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:#fff">'+(a.total_issues||issues_be.length)+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">TOTAL</div></div>'
+      +'</div>'
+      +'<div style="max-height:260px;overflow-y:auto;margin-bottom:20px;padding-right:2px">'+issueHtml+'</div>'
+      +'<div style="background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(239,68,68,.04));border:1px solid rgba(245,158,11,.18);border-radius:10px;padding:18px;text-align:center">'
+        +'<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">Save Report &amp; Monitor Continuously</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Register to save this assessment, receive alerts when new advisories affect your framework, and run automated rescans.</div>'
+        +'<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+          +'<a href="/#pricing" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;display:inline-block">Register &amp; Save Report →</a>'
+          +'<button onclick="document.getElementById(\'scan-results\').style.display=\'none\';document.getElementById(\'scan-form\').style.display=\'block\'" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer">Scan Another →</button>'
+        +'</div>'
+      +'</div>';
+    document.getElementById('scan-loading').style.display='none';
+    document.getElementById('scan-results').style.display='block';
+    return;
+  }
+
+  // Fallback: local OWASP LLM Top 10 rule-based assessment (no server)
+  if(stEl)stEl.textContent='Running local OWASP LLM Top 10 assessment...';
+
+  // OWASP LLM risk scoring (local rules — same logic as backend)
   const issues=[];let score=0;
   const SC={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#fbbf24',LOW:'#10b981'};
 
@@ -416,7 +473,7 @@ async function runAgentScan(){
   document.getElementById('scan-results').innerHTML=
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px">'
       +'<div>'
-        +'<div style="font-size:10px;color:#10b981;font-weight:800;letter-spacing:.1em;margin-bottom:4px">✓ SCAN COMPLETE — SENTINEL APEX</div>'
+        +'<div style="font-size:10px;color:#64748b;font-weight:800;letter-spacing:.1em;margin-bottom:4px">✓ LOCAL OWASP LLM TOP 10 ASSESSMENT (SIGN IN TO SAVE)</div>'
         +'<div style="font-size:18px;font-weight:900;color:#fff">'+name+'</div>'
         +'<div style="font-size:11px;color:var(--text-muted)">'+fwDisplay+' · '+caps.length+' capabilities · '+(net?'Internet-connected':'No internet')+'</div>'
       +'</div>'

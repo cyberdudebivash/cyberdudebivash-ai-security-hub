@@ -258,7 +258,9 @@ async function runCampaign(request, env) {
       promptsByCategory[p.category].push(p);
     }
 
-    // Simulate structured probe execution (real tests hit the target_endpoint)
+    // Simulation mode: maps MITRE ATLAS/OWASP LLM techniques to probe templates.
+    // Probes are NOT sent to target_endpoint here — live attack traffic requires
+    // the Enterprise "Live Attack Mode" with explicit target consent configuration.
     for (const tech of techniques) {
       const relevantCategory = tech.tactic.includes('LLM') ? 'jailbreak' :
         tech.id.startsWith('AML.T0025') || tech.id.startsWith('AML.T0026') ? 'data_extraction' :
@@ -266,7 +268,9 @@ async function runCampaign(request, env) {
       const probes = promptsByCategory[relevantCategory] || [];
       const probeResults = probes.slice(0, 3).map(probe => ({
         probeId: probe.id, technique: probe.technique, category: probe.category,
-        status: 'TESTED', finding: 'Manual verification required — real endpoint test needed',
+        status: 'SIMULATED', mode: 'simulation',
+        finding: 'Probe template generated — deploy against target using "Live Attack Mode" (Enterprise) to get real verdicts.',
+        probe_payload_preview: probe.prompt ? probe.prompt.slice(0, 120) + (probe.prompt.length > 120 ? '…' : '') : null,
         severity: probe.severity, mitigations: probe.mitigations
       }));
       testResults.push({ techniqueId: tech.id, techniqueName: tech.name, tactic: tech.tactic,
@@ -275,11 +279,19 @@ async function runCampaign(request, env) {
 
     const criticalFindings = testResults.filter(r => r.severity === 'CRITICAL');
     const highFindings = testResults.filter(r => r.severity === 'HIGH');
-    const summary = { totalTechniquesTested: testResults.length, criticalFindings: criticalFindings.length,
-      highFindings: highFindings.length, overallRisk: criticalFindings.length > 0 ? 'CRITICAL' : highFindings.length > 2 ? 'HIGH' : 'MEDIUM' };
+    const summary = {
+      mode: 'SIMULATION',
+      totalTechniquesMapped: testResults.length,
+      criticalTechniques: criticalFindings.length,
+      highTechniques: highFindings.length,
+      overallRisk: criticalFindings.length > 0 ? 'CRITICAL' : highFindings.length > 2 ? 'HIGH' : 'MEDIUM',
+      note: 'Simulation mode maps attack techniques and generates probe templates. Upgrade to Enterprise and configure Live Attack Mode to execute probes against the actual target endpoint.',
+    };
 
-    const campaignResults = { campaignId: id, status: 'COMPLETED', summary, testResults,
-      completedAt: new Date().toISOString() };
+    const campaignResults = {
+      campaignId: id, status: 'SIMULATION_COMPLETE', mode: 'SIMULATION', summary, testResults,
+      completedAt: new Date().toISOString(),
+    };
     await env.KV.put(`redteam_results:${id}`, JSON.stringify(campaignResults), { expirationTtl: 604800 });
     await env.DB.prepare('UPDATE ai_redteam_campaigns SET status=?,updated_at=? WHERE id=?').bind('COMPLETED', new Date().toISOString(), id).run();
 

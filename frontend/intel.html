@@ -1256,7 +1256,7 @@
                 <div class="ciso-stat-sub" id="stat-cves-critical"></div>
             </div>
             <div class="ciso-stat-card">
-                <div class="ciso-stat-value" id="stat-actors">20</div>
+                <div class="ciso-stat-value" id="stat-actors">—</div>
                 <div class="ciso-stat-label">APT Actors</div>
                 <div class="ciso-stat-sub">Nation-State + RaaS</div>
             </div>
@@ -1437,7 +1437,7 @@
                 const r = await fetch(`${API}/api/threat-actors?limit=50`);
                 if (r.ok) {
                     const d = await r.json();
-                    document.getElementById('stat-actors').textContent = d.count || 20;
+                    document.getElementById('stat-actors').textContent = d.count ?? '—';
                 }
             } catch {}
         }

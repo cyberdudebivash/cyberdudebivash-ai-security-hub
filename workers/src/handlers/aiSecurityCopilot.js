@@ -1955,12 +1955,6 @@ export async function handleCopilotCapabilities(request, env, authCtx) {
     };
   }
 
-  // Note: Anthropic excluded — no API key configured
-  providers['anthropic'] = {
-    configured: false,
-    env_key:    'ANTHROPIC_API_KEY',
-    note:       'Not used — APEX operates 100% on Groq / DeepSeek / OpenRouter open-weight models',
-  };
 
   const capabilities = TOOL_REGISTRY.map(t => ({
     name:          t.name,

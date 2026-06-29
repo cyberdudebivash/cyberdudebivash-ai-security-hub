@@ -127,55 +127,59 @@ function detectIOCType(value) {
   return 'unknown';
 }
 
-// ─── Simulated threat intel enrichment for IOCs ───────────────────────────────
-function enrichIOC(value, type) {
-  const hash = value.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const verdicts = ['clean', 'clean', 'suspicious', 'malicious', 'unknown'];
-  const verdict  = verdicts[hash % verdicts.length];
+// ─── IOC enrichment — queries platform D1 for CVE/threat data; returns honest
+//     "unavailable" for external-API-dependent lookups (VirusTotal etc.) that are
+//     not yet integrated rather than fabricating vendor verdicts.
+async function enrichIOC(value, type, db) {
+  // CVE type: query D1 threat_intel table directly — real data
+  if (type === 'cve' && db) {
+    try {
+      const row = await db.prepare(
+        `SELECT cve_id, severity, cvss_score, description, published_date, cisa_kev
+         FROM threat_intel WHERE cve_id = ? LIMIT 1`
+      ).bind(value.toUpperCase()).first();
+      if (row) {
+        return {
+          value,
+          type,
+          enrichment_status: 'found',
+          cve_id:      row.cve_id,
+          severity:    row.severity,
+          cvss_score:  row.cvss_score,
+          description: row.description,
+          published:   row.published_date,
+          cisa_kev:    !!row.cisa_kev,
+          sources: ['NVD NIST', ...(row.cisa_kev ? ['CISA KEV'] : [])],
+        };
+      }
+      return {
+        value, type,
+        enrichment_status: 'not_found',
+        message: `${value} not found in the platform threat intelligence database.`,
+      };
+    } catch {
+      // fall through to unavailable
+    }
+  }
 
-  const sources = {
+  // All other IOC types — external enrichment APIs (VirusTotal, AbuseIPDB, etc.)
+  // are not yet integrated. Return an honest status rather than fabricating verdicts.
+  const integrationMap = {
     ipv4:   ['VirusTotal', 'AbuseIPDB', 'Shodan', 'GreyNoise'],
-    domain: ['VirusTotal', 'URLhaus', 'PhishTank', 'WHOIS'],
-    md5:    ['VirusTotal', 'MalwareBazaar', 'Hybrid Analysis'],
-    sha1:   ['VirusTotal', 'MalwareBazaar', 'Hybrid Analysis'],
-    sha256: ['VirusTotal', 'MalwareBazaar', 'Joe Sandbox'],
-    url:    ['VirusTotal', 'URLhaus', 'Google SafeBrowsing'],
-    cve:    ['NVD NIST', 'CISA KEV', 'ExploitDB'],
-    email:  ['HaveIBeenPwned', 'SpamHaus', 'EmailRep'],
+    domain: ['VirusTotal', 'URLhaus', 'PhishTank'],
+    md5:    ['VirusTotal', 'MalwareBazaar'],
+    sha1:   ['VirusTotal', 'MalwareBazaar'],
+    sha256: ['VirusTotal', 'MalwareBazaar'],
+    url:    ['VirusTotal', 'URLhaus'],
+    email:  ['HaveIBeenPwned', 'SpamHaus'],
   };
-
-  const tags = {
-    malicious:  ['c2', 'malware', 'threat-actor'],
-    suspicious: ['scanner', 'proxy', 'tor-exit'],
-    clean:      [],
-  };
-
   return {
     value,
     type,
-    verdict,
-    confidence: verdict === 'malicious' ? 95 : verdict === 'suspicious' ? 60 : 10,
-    threat_score: verdict === 'malicious' ? Math.floor(70 + (hash % 30)) :
-                  verdict === 'suspicious' ? Math.floor(30 + (hash % 40)) : Math.floor(hash % 15),
-    sources: (sources[type] || ['VirusTotal']).map(s => ({
-      source: s,
-      verdict,
-      last_seen: new Date(Date.now() - (hash % 30) * 86400000).toISOString().slice(0, 10),
-    })),
-    tags: tags[verdict] || [],
-    first_seen: new Date(Date.now() - (hash % 180) * 86400000).toISOString().slice(0, 10),
-    last_seen:  new Date(Date.now() - (hash % 7)   * 86400000).toISOString().slice(0, 10),
-    related_iocs: verdict === 'malicious' ? [
-      { type: 'domain', value: `c2-${hash % 9999}.example.com`, verdict: 'malicious' },
-    ] : [],
-    mitre_techniques: verdict === 'malicious' ? [
-      { id: 'T1071.001', name: 'Web Protocols', tactic: 'Command and Control' },
-    ] : [],
-    geo: type === 'ipv4' ? {
-      country: ['RU', 'CN', 'KP', 'IR', 'US', 'DE'][hash % 6],
-      asn: `AS${10000 + (hash % 50000)}`,
-      org: 'AS Hosting Provider',
-    } : null,
+    enrichment_status: 'unavailable',
+    message: 'External enrichment API integration is not yet configured for this IOC type. Contact support@cyberdudebivash.com to enable live enrichment.',
+    supported_providers: integrationMap[type] || [],
+    platform_note: 'CVE lookups are available via platform threat-intel DB. IP/domain/hash enrichment requires API key configuration (Enterprise plan).',
   };
 }
 
@@ -205,24 +209,7 @@ export async function handleRunHunt(request, env, authCtx) {
   const safeQuery = query.slice(0, 10000);
   const qHash = safeQuery.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 
-  // Simulate hunt execution results
-  const eventCount = 50 + (qHash % 500);
-  const matchCount = Math.floor(eventCount * (0.01 + (qHash % 20) / 100));
-  const severity   = matchCount > 10 ? 'HIGH' : matchCount > 3 ? 'MEDIUM' : 'LOW';
-
-  const results = Array.from({ length: Math.min(matchCount, 20) }, (_, i) => ({
-    id:        `hunt-${qHash}-${i}`,
-    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-    host:      `WORKSTATION-${String.fromCharCode(65 + ((qHash + i) % 26))}${(qHash + i * 7) % 99}`,
-    user:      `user${(qHash + i * 3) % 99}@corp.local`,
-    event:     lang === 'kql'   ? 'SecurityEvent' :
-               lang === 'sigma' ? 'ProcessCreate' : 'FileEvent',
-    severity:  ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'][(qHash + i) % 4],
-    indicators: [`indicator-${(qHash + i) % 999}`],
-    raw:       `[SIMULATED] Event data for match ${i + 1} (${lang.toUpperCase()} hunt)`,
-  }));
-
-  // Infer MITRE technique from query content
+  // Infer MITRE technique from query content (rule-based, genuinely useful)
   const mitreTechniques = [];
   if (/lateral|logon|smb|rdp|wmi/i.test(safeQuery))  mitreTechniques.push({ id: 'T1021', name: 'Remote Services' });
   if (/persist|registry|run.*key|startup/i.test(safeQuery)) mitreTechniques.push({ id: 'T1547', name: 'Boot/Logon Autostart' });
@@ -242,9 +229,7 @@ export async function handleRunHunt(request, env, authCtx) {
       query_preview: safeQuery.slice(0, 200),
       executed_by:   authCtx.identity,
       executed_at:   new Date().toISOString(),
-      match_count:   matchCount,
-      event_count:   eventCount,
-      severity,
+      status:        'no_siem_connected',
     };
     env.SECURITY_HUB_KV.put(
       `hunt:session:${authCtx.identity}:${sessionId}`,
@@ -253,34 +238,30 @@ export async function handleRunHunt(request, env, authCtx) {
     ).catch(() => {});
   }
 
+  // v21.0 — Adaptive next hunt recommendations (sector + risk aware)
+  const adaptive_hunt_suggestions = (['PRO', 'ENTERPRISE'].includes(authCtx?.tier))
+    ? recommendHuntQueries(authCtx?.sector || 'technology', 45)
+    : undefined;
+
   return Response.json({
     session_id:  sessionId,
     lang,
     target:      sanitizeString(target || 'all', 100),
     scope,
     executed_at: new Date().toISOString(),
-    stats: {
-      events_scanned: eventCount,
-      matches_found:  matchCount,
-      severity,
-      hunt_duration_ms: 120 + (qHash % 800),
-    },
-    results,
+    status:      'no_siem_connected',
+    message:     'Live hunt execution requires a connected SIEM endpoint. The query has been validated and MITRE-mapped below. To run against your SIEM, configure the SIEM integration under Enterprise settings or contact support@cyberdudebivash.com.',
+    query_valid: true,
+    results:     [],
     mitre_techniques: mitreTechniques,
-    recommendations: matchCount > 5 ? [
-      'Investigate flagged hosts immediately',
-      'Correlate with SIEM alerts for the same time window',
-      'Escalate to IR team if critical assets are involved',
-    ] : matchCount > 0 ? [
-      'Review matched events for false positives',
-      'Tune query thresholds if noise is high',
-    ] : [
-      'No matches found — consider broadening query scope or time window',
+    // Query templates matching the detected language are returned so analysts
+    // can refine and run directly in their own SIEM.
+    next_steps: [
+      'Copy the validated query into your SIEM (Splunk / Sentinel / Elastic)',
+      'Use the templates endpoint (/api/hunt/templates) for pre-built queries',
+      'Contact support to enable live SIEM integration on Enterprise plan',
     ],
-    // v21.0 — Adaptive next hunt recommendations (sector + risk aware)
-    adaptive_hunt_suggestions: (['PRO', 'ENTERPRISE'].includes(authCtx?.tier))
-      ? recommendHuntQueries(authCtx?.sector || 'technology', matchCount > 5 ? 75 : 45)
-      : undefined,
+    adaptive_hunt_suggestions,
     platform: 'CYBERDUDEBIVASH AI Security Hub v21.0',
   });
 }
@@ -332,22 +313,21 @@ export async function handleIOCLookup(request, env, authCtx) {
     return Response.json({ error: 'Provide "ioc" (string) or "iocs" (array, max 20)' }, { status: 400 });
   }
 
-  const results = targets.map(v => {
+  const results = await Promise.all(targets.map(async v => {
     const cleaned = sanitizeString(String(v), 500);
     const type = detectIOCType(cleaned);
-    return enrichIOC(cleaned, type);
-  });
+    return enrichIOC(cleaned, type, env.DB);
+  }));
 
-  const maliciousCount  = results.filter(r => r.verdict === 'malicious').length;
-  const suspiciousCount = results.filter(r => r.verdict === 'suspicious').length;
+  const foundCount = results.filter(r => r.enrichment_status === 'found').length;
 
   return Response.json({
     queried_at: new Date().toISOString(),
     total:      results.length,
     summary: {
-      malicious:  maliciousCount,
-      suspicious: suspiciousCount,
-      clean:      results.length - maliciousCount - suspiciousCount,
+      found:       foundCount,
+      not_found:   results.filter(r => r.enrichment_status === 'not_found').length,
+      unavailable: results.filter(r => r.enrichment_status === 'unavailable').length,
     },
     results,
     platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
