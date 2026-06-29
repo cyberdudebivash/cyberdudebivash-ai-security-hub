@@ -161,7 +161,7 @@ export async function handleJoin(request, env, authCtx = {}) {
       pending_payout_inr:          0,
       paid_out_inr:                0,
     },
-    referral_url:  `https://cyberdudebivash.com?ref=${ref_code}`,
+    referral_url:  `https://cyberdudebivash.in?ref=${ref_code}`,
     utm_params:    `utm_source=affiliate&utm_medium=referral&utm_campaign=${ref_code}`,
     payout_method: null,
     payout_details:null,
@@ -183,7 +183,7 @@ export async function handleJoin(request, env, authCtx = {}) {
     referral_url: affiliate.referral_url,
     tier:         'AFFILIATE',
     commission:   TIERS.AFFILIATE.commission_pct + '% on first year of referred plan value',
-    dashboard_url:'https://cyberdudebivash.com/affiliate/dashboard',
+    dashboard_url:'https://cyberdudebivash.in/affiliate-hub',
   });
 }
 
@@ -238,12 +238,12 @@ export async function handleGetDashboard(request, env, authCtx = {}) {
     utm_params:       aff.utm_params,
     marketing_assets: {
       banner_urls: [
-        'https://cyberdudebivash.com/assets/affiliate/banner-728x90.png',
-        'https://cyberdudebivash.com/assets/affiliate/banner-300x250.png',
-        'https://cyberdudebivash.com/assets/affiliate/banner-1200x628.png',
+        'https://cyberdudebivash.in/assets/affiliate/banner-728x90.png',
+        'https://cyberdudebivash.in/assets/affiliate/banner-300x250.png',
+        'https://cyberdudebivash.in/assets/affiliate/banner-1200x628.png',
       ],
-      email_template_url: 'https://cyberdudebivash.com/assets/affiliate/email-template.html',
-      one_pager_url:      'https://cyberdudebivash.com/assets/affiliate/one-pager.pdf',
+      email_template_url: 'https://cyberdudebivash.in/assets/affiliate/email-template.html',
+      one_pager_url:      'https://cyberdudebivash.in/assets/affiliate/one-pager.pdf',
     },
   });
 }
