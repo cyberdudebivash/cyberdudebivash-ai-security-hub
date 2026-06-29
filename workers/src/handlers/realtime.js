@@ -296,10 +296,16 @@ function buildDefensePosture(alerts = []) {
   const highCount = alerts.filter(a => a.severity === 'HIGH').length;
   const total     = alerts.length;
 
-  let overall_score = 100;
-  overall_score -= critCount * 15;
-  overall_score -= highCount * 5;
-  overall_score = Math.max(0, Math.min(100, overall_score));
+  // Proportion-based, not absolute-count-based: the old formula subtracted
+  // a flat 15/5 points per critical/high entry in the fetched sample (up to
+  // 50 rows), so any catalog with more than ~7 criticals in its top-50
+  // pinned the score to 0 forever — which became guaranteed once the CVE
+  // catalog grew past a few hundred entries (it's now 1,625+). A large,
+  // healthy catalog should not look identical to "everything is on fire."
+  const critRatio    = total > 0 ? critCount / total : 0;
+  const highRatio    = total > 0 ? highCount / total : 0;
+  let overall_score = 100 - (critRatio * 70 + highRatio * 30);
+  overall_score = Math.max(0, Math.min(100, Math.round(overall_score)));
 
   const level =
     overall_score < 30 ? 'CRITICAL' :

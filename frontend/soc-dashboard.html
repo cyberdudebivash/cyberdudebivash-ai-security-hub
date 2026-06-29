@@ -623,8 +623,13 @@ async function loadAlerts() {
     document.getElementById('alert-feed-time').textContent =
       new Date().toLocaleTimeString() + ' — ' + alerts.length + ' alerts';
     document.getElementById('alert-badge').textContent = alerts.filter(a => a.severity === 'CRITICAL').length || alerts.length;
-    document.getElementById('kpi-critical').textContent = alerts.filter(a => a.severity === 'CRITICAL').length;
-    document.getElementById('kpi-high').textContent     = alerts.filter(a => a.severity === 'HIGH').length;
+    // NOTE: kpi-critical/kpi-high are labeled "Active CVEs" / "Requires action"
+    // and must reflect the CVE-catalog counts from applyPosture()/updateKPIs(),
+    // not this endpoint's operational alert count — those are a different
+    // metric entirely. Overwriting them here caused the dashboard to show
+    // contradictory numbers (e.g. "0 Active CVEs" next to a CRITICAL threat
+    // level banner) whenever there were CVE-level criticals but zero
+    // operational alerts. alert-badge above already carries the alert count.
   } catch (e) {
     document.getElementById('alert-feed').innerHTML =
       `<div style="text-align:center;padding:20px;color:var(--text-dim)">
