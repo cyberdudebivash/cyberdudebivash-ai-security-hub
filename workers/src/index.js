@@ -4123,8 +4123,15 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           handleGetDefensePosture(request, env, {}),
           handleGetPending(request, env, {}),
         ]);
-        const posture = await postureRes.json().catch(() => ({}));
-        const pending = await pendingRes.json().catch(() => ({ pending: [] }));
+        // handleGetDefensePosture wraps its payload as { success, data: { posture: {...} } } —
+        // unwrap to the real stats object so `posture.total_executions` etc. below aren't
+        // permanently undefined/0 (this was double-nested and silently broke gadgets.html's
+        // Auto Defense Engine stats and the recommendations.stats block below).
+        const postureRaw = await postureRes.json().catch(() => ({}));
+        const posture = postureRaw?.data?.posture || postureRaw?.posture || {};
+        // handleGetPending is likewise wrapped as { success, data: { pending, count } }.
+        const pendingRaw = await pendingRes.json().catch(() => ({}));
+        const pending = pendingRaw?.data || pendingRaw || { pending: [] };
         return withSecurityHeaders(withCors(Response.json({
           success: true,
           posture: posture,
