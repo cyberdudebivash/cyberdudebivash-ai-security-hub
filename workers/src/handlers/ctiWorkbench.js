@@ -237,6 +237,8 @@ async function getFallbackActors(env) {
   return BUILTIN_ACTORS;
 }
 
+// Curated baseline from MITRE ATT&CK — last_active reflects publicly reported dates,
+// not platform-observed activity. source:'mitre_attck_baseline' distinguishes from live D1 data.
 const BUILTIN_ACTORS = [
   {
     id: 'apt-lazarus', name: 'Lazarus Group', aliases: ['Hidden Cobra','ZINC','Guardians of Peace'],
@@ -244,7 +246,7 @@ const BUILTIN_ACTORS = [
     threat_level: 'CRITICAL', confidence_score: 95, mitre_group_id: 'G0032',
     target_sectors: ['Financial','Defense','Cryptocurrency','Government'],
     description: 'Nation-state APT linked to DPRK, responsible for major financial heists and ransomware campaigns.',
-    last_active: '2026-05-01',
+    last_active: null, last_active_note: 'Ongoing — see MITRE ATT&CK G0032', source: 'mitre_attck_baseline',
   },
   {
     id: 'apt-sandworm', name: 'Sandworm', aliases: ['Voodoo Bear','TeleBots','BlackEnergy'],
@@ -252,7 +254,7 @@ const BUILTIN_ACTORS = [
     threat_level: 'CRITICAL', confidence_score: 92, mitre_group_id: 'G0034',
     target_sectors: ['Energy','Government','Defense','Critical Infrastructure'],
     description: 'Russian GRU-linked APT known for destructive malware including NotPetya and Industroyer.',
-    last_active: '2026-04-15',
+    last_active: null, last_active_note: 'Ongoing — see MITRE ATT&CK G0034', source: 'mitre_attck_baseline',
   },
   {
     id: 'apt-cozy-bear', name: 'Cozy Bear', aliases: ['APT29','The Dukes','YTTRIUM'],
@@ -260,7 +262,7 @@ const BUILTIN_ACTORS = [
     threat_level: 'CRITICAL', confidence_score: 94, mitre_group_id: 'G0016',
     target_sectors: ['Government','Healthcare','Technology','Think Tanks'],
     description: 'SVR-linked APT conducting long-term espionage operations. Responsible for SolarWinds compromise.',
-    last_active: '2026-05-20',
+    last_active: null, last_active_note: 'Ongoing — see MITRE ATT&CK G0016', source: 'mitre_attck_baseline',
   },
   {
     id: 'apt-fin7', name: 'FIN7', aliases: ['Carbanak','Navigator Group'],
@@ -268,7 +270,7 @@ const BUILTIN_ACTORS = [
     threat_level: 'HIGH', confidence_score: 88, mitre_group_id: 'G0046',
     target_sectors: ['Retail','Hospitality','Finance','Restaurant'],
     description: 'Financially-motivated cybercriminal group targeting POS systems and financial data.',
-    last_active: '2026-03-10',
+    last_active: null, last_active_note: 'See MITRE ATT&CK G0046', source: 'mitre_attck_baseline',
   },
   {
     id: 'apt-hafnium', name: 'HAFNIUM', aliases: ['Silk Typhoon'],
@@ -276,7 +278,7 @@ const BUILTIN_ACTORS = [
     threat_level: 'CRITICAL', confidence_score: 90, mitre_group_id: 'G0125',
     target_sectors: ['Defense','Law Firms','Research','NGOs'],
     description: 'Chinese state-sponsored APT known for zero-day exploitation of Microsoft Exchange Server.',
-    last_active: '2026-04-01',
+    last_active: null, last_active_note: 'See MITRE ATT&CK G0125', source: 'mitre_attck_baseline',
   },
   {
     id: 'apt-scattered-spider', name: 'Scattered Spider', aliases: ['0ktapus','Starfraud','UNC3944'],
@@ -284,6 +286,6 @@ const BUILTIN_ACTORS = [
     threat_level: 'HIGH', confidence_score: 85, mitre_group_id: 'G1015',
     target_sectors: ['Technology','Finance','Telecom','Hospitality'],
     description: 'English-speaking cybercriminal group known for social engineering and identity-based attacks.',
-    last_active: '2026-05-25',
+    last_active: null, last_active_note: 'See MITRE ATT&CK G1015', source: 'mitre_attck_baseline',
   },
 ];

@@ -79,7 +79,7 @@ async function executeStep(step, context, env) {
   try {
     if (action === 'CREATE_SOC_CASE') {
       const caseId = genId('case');
-      const caseNum = `CDB-${new Date().toISOString().slice(2,7).replace('-','')}-${Math.floor(Math.random()*9000)+1000}`;
+      const caseNum = `CDB-${new Date().toISOString().slice(2,7).replace('-','')}-${crypto.randomUUID().slice(0,4).toUpperCase()}`;
       const title = config.auto_title
         ? `[Auto] ${context.trigger_type} detected — ${new Date().toLocaleString()}`
         : config.title || 'Automated Security Case';

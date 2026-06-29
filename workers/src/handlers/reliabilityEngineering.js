@@ -183,7 +183,7 @@ export async function handleCreateIncident(req, env) {
   if (!title) return Response.json({ error: 'title required' }, { status: 400 });
 
   const caseId = genId();
-  const caseNum = `REL-${new Date().toISOString().slice(2,7).replace('-','')}-${Math.floor(Math.random()*9000)+1000}`;
+  const caseNum = `REL-${new Date().toISOString().slice(2,7).replace('-','')}-${crypto.randomUUID().slice(0,4).toUpperCase()}`;
   const orgId = req.user.org_id || 'default';
 
   await env.DB.prepare(

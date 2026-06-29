@@ -56,32 +56,50 @@ export async function handleDeepHealth(request, env, authCtx) {
   });
 }
 
-// GET /api/platform/health/services — lightweight check (no deep probes)
+// GET /api/platform/health/services — lightweight check using real binding probes
 export async function handleServicesList(request, env, authCtx) {
+  const d1Ok  = !!env?.DB;
+  const kvOk  = !!env?.SECURITY_HUB_KV;
+  const r2Ok  = !!env?.REPORT_BUCKET;
+
+  // Probe D1 with a minimal query to confirm it's reachable
+  let d1Status = d1Ok ? 'operational' : 'unavailable';
+  if (d1Ok) {
+    try {
+      await env.DB.prepare('SELECT 1').first();
+      d1Status = 'operational';
+    } catch { d1Status = 'degraded'; }
+  }
+
+  const svc = (name, type, endpoint, up) => ({
+    name, type, endpoint,
+    status: up ? 'operational' : 'unavailable',
+  });
+
   const services = [
-    { name: 'Sentinel APEX',      type: 'intelligence',   status: 'operational', endpoint: '/api/threat-intel/stats' },
-    { name: 'MYTHOS v3',          type: 'ai_engine',      status: 'operational', endpoint: '/api/mythos/status' },
-    { name: 'Scan Engine',        type: 'security',       status: 'operational', endpoint: '/api/scan/stats' },
-    { name: 'CVE Intelligence',   type: 'intelligence',   status: 'operational', endpoint: '/api/vulns/stats' },
-    { name: 'Authentication',     type: 'auth',           status: 'operational', endpoint: '/api/auth/status' },
-    { name: 'Global Threat Feed', type: 'intelligence',   status: 'operational', endpoint: '/api/global-threat-feed/stats' },
-    { name: 'SOC Platform',       type: 'soc',            status: 'operational', endpoint: '/api/soc/cases/metrics' },
-    { name: 'CTI Workbench',      type: 'intelligence',   status: 'operational', endpoint: '/api/cti/stats' },
-    { name: 'Revenue Engine',     type: 'business',       status: 'operational', endpoint: '/api/revenue/metrics' },
-    { name: 'MSSP Workspace',     type: 'mssp',           status: 'operational', endpoint: '/api/mssp/overview' },
-    { name: 'D1 Database',        type: 'infrastructure', status: 'operational', endpoint: 'internal' },
-    { name: 'KV Store',           type: 'infrastructure', status: 'operational', endpoint: 'internal' },
-    { name: 'R2 Storage',         type: 'infrastructure', status: 'operational', endpoint: 'internal' },
-    { name: 'SSE Stream',         type: 'realtime',       status: 'operational', endpoint: '/api/dashboard/stream' },
-    { name: 'API Gateway',        type: 'infrastructure', status: 'operational', endpoint: '/' },
+    svc('Sentinel APEX',      'intelligence',   '/api/threat-intel/stats',       true),
+    svc('MYTHOS v3',          'ai_engine',      '/api/mythos/status',            true),
+    svc('Scan Engine',        'security',       '/api/scan/stats',               true),
+    svc('CVE Intelligence',   'intelligence',   '/api/vulns/stats',              true),
+    svc('Authentication',     'auth',           '/api/auth/status',              true),
+    svc('Global Threat Feed', 'intelligence',   '/api/global-threat-feed/stats', true),
+    svc('SOC Platform',       'soc',            '/api/soc/cases/metrics',        true),
+    svc('CTI Workbench',      'intelligence',   '/api/cti/stats',                true),
+    svc('Revenue Engine',     'business',       '/api/revenue/metrics',          true),
+    svc('MSSP Workspace',     'mssp',           '/api/mssp/overview',            true),
+    { name: 'D1 Database',    type: 'infrastructure', endpoint: 'internal', status: d1Status },
+    { name: 'KV Store',       type: 'infrastructure', endpoint: 'internal', status: kvOk ? 'operational' : 'unavailable' },
+    { name: 'R2 Storage',     type: 'infrastructure', endpoint: 'internal', status: r2Ok ? 'operational' : 'unavailable' },
+    svc('SSE Stream',         'realtime',       '/api/dashboard/stream',         true),
+    svc('API Gateway',        'infrastructure', '/',                             true),
   ];
 
   return Response.json({
-    success:  true,
+    success: true,
     services,
-    total:    services.length,
-    healthy:  services.filter(s => s.status === 'operational').length,
-    as_of:    new Date().toISOString(),
+    total:   services.length,
+    healthy: services.filter(s => s.status === 'operational').length,
+    as_of:   new Date().toISOString(),
   });
 }
 
