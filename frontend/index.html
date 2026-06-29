@@ -13870,9 +13870,9 @@ window.addEventListener('load', () => {
     return (PLAN_RANK[PLAN] || 0) >= (PLAN_RANK[required] || 0);
   }
 
-  // ── Urgency banner ───────────────────────────────────────────────────────
+  // ── Urgency banner — DISABLED (customer complaint: disruptive on mobile + desktop) ──
   function injectUrgencyBanner() {
-    if (planAtLeast('pro')) return; // pro+ users: no banner
+    return; // disabled: banner removed per customer/enterprise escalation
 
     const existing = document.getElementById('cdb-urgency-banner');
     if (existing) return;
