@@ -313,21 +313,21 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
 <!-- Live Ticker -->
 <div class="ticker-bar" role="marquee" aria-label="Live security alerts">
   <div class="ticker-inner" id="tickerInner">
-    <span class="ticker-item"><span class="ticker-dot td-red"></span>CRITICAL: Active exploitation of CVE-2024-3400 (PAN-OS) detected</span>
-    <span class="ticker-item"><span class="ticker-dot td-orange"></span>HIGH: Ransomware campaign targeting financial sector in APAC</span>
-    <span class="ticker-item"><span class="ticker-dot td-blue"></span>SENTINEL APEX: 1,626 CVEs tracked live · CISA KEV updated</span>
-    <span class="ticker-item"><span class="ticker-dot td-green"></span>New AI threat vector: Prompt injection via RAG pipeline poisoning</span>
-    <span class="ticker-item"><span class="ticker-dot td-red"></span>APT29 activity: Supply chain targeting observed in India region</span>
-    <span class="ticker-item"><span class="ticker-dot td-orange"></span>ZERO-DAY: Unpatched vulnerability in enterprise VPN appliances</span>
-    <span class="ticker-item"><span class="ticker-dot td-blue"></span>Enterprise AI Security Platform v30.0 — Full CISO Command Center</span>
-    <span class="ticker-item"><span class="ticker-dot td-green"></span>ISO 42001 · EU AI Act · NIST AI RMF — All frameworks covered</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>CISA KEV: CVE-2024-3400 (PAN-OS) — Actively Exploited · Patch Priority: Immediate</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>Threat Intel: Ransomware groups continue targeting APAC financial sector</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>SENTINEL APEX: 1,625 CVEs tracked · CISA KEV feed live</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>Research: Prompt injection via RAG pipeline poisoning — emerging AI threat vector</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>MITRE ATT&CK: Supply chain compromise (T1195) — persistent threat to enterprise</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>Advisory: Enterprise VPN appliances — review vendor security bulletins</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>Platform: AI Security Hub — CISO Command Center · Enterprise-grade</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>Frameworks: ISO 42001 · EU AI Act · NIST AI RMF · DPDP 2023 — All covered</span>
     <!-- duplicate for seamless loop -->
-    <span class="ticker-item"><span class="ticker-dot td-red"></span>CRITICAL: Active exploitation of CVE-2024-3400 (PAN-OS) detected</span>
-    <span class="ticker-item"><span class="ticker-dot td-orange"></span>HIGH: Ransomware campaign targeting financial sector in APAC</span>
-    <span class="ticker-item"><span class="ticker-dot td-blue"></span>SENTINEL APEX: 1,626 CVEs tracked live · CISA KEV updated</span>
-    <span class="ticker-item"><span class="ticker-dot td-green"></span>New AI threat vector: Prompt injection via RAG pipeline poisoning</span>
-    <span class="ticker-item"><span class="ticker-dot td-red"></span>APT29 activity: Supply chain targeting observed in India region</span>
-    <span class="ticker-item"><span class="ticker-dot td-orange"></span>ZERO-DAY: Unpatched vulnerability in enterprise VPN appliances</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>CISA KEV: CVE-2024-3400 (PAN-OS) — Actively Exploited · Patch Priority: Immediate</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>Threat Intel: Ransomware groups continue targeting APAC financial sector</span>
+    <span class="ticker-item"><span class="ticker-dot td-blue"></span>SENTINEL APEX: 1,625 CVEs tracked · CISA KEV feed live</span>
+    <span class="ticker-item"><span class="ticker-dot td-green"></span>Research: Prompt injection via RAG pipeline poisoning — emerging AI threat vector</span>
+    <span class="ticker-item"><span class="ticker-dot td-red"></span>MITRE ATT&CK: Supply chain compromise (T1195) — persistent threat to enterprise</span>
+    <span class="ticker-item"><span class="ticker-dot td-orange"></span>Advisory: Enterprise VPN appliances — review vendor security bulletins</span>
   </div>
 </div>
 
@@ -366,7 +366,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
       <span class="hm-lbl">CVEs Tracked Live</span>
     </div>
     <div class="hm-item">
-      <span class="hm-val" id="hmScans">27+</span>
+      <span class="hm-val" id="hmScans">—</span>
       <span class="hm-lbl">Scans Completed</span>
     </div>
     <div class="hm-item">
@@ -415,17 +415,17 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
     </div>
     <div class="stat-card" style="--stat-color:var(--warn)">
       <div class="stat-label">Global Threat Level</div>
-      <div class="stat-value warn" id="statThreatLevel">HIGH</div>
-      <div class="stat-delta">Score: <span id="statThreatScore">74</span>/100 · Sentinel APEX</div>
+      <div class="stat-value warn" id="statThreatLevel">—</div>
+      <div class="stat-delta">Score: <span id="statThreatScore">—</span>/100 · Sentinel APEX</div>
     </div>
     <div class="stat-card" style="--stat-color:var(--accent3)">
-      <div class="stat-label">Platform Uptime</div>
+      <div class="stat-label">Uptime SLA Target</div>
       <div class="stat-value good">99.9%</div>
       <div class="stat-delta">Cloudflare edge network · Global</div>
     </div>
     <div class="stat-card" style="--stat-color:var(--accent)">
       <div class="stat-label">SOAR Rules Generated</div>
-      <div class="stat-value info">312+</div>
+      <div class="stat-value info" id="statSoarRules">—</div>
       <div class="stat-delta">Sigma · Splunk KQL · YARA</div>
     </div>
   </div>
@@ -437,8 +437,8 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
 <div class="section">
   <div class="section-header">
     <div class="section-tag tag-blue">COMPLIANCE POSTURE</div>
-    <h2 class="section-title">Regulatory Compliance Dashboard</h2>
-    <p class="section-sub">Automated compliance gap analysis across 8 global frameworks. Findings mapped to controls. Remediation roadmaps included.</p>
+    <h2 class="section-title">Regulatory Compliance Framework Coverage</h2>
+    <p class="section-sub">Illustrative control coverage map — scores reflect typical gap areas our assessments uncover. Your actual posture is determined by a paid assessment engagement.</p>
   </div>
   <div class="compliance-grid">
     <div class="comp-card">
@@ -860,38 +860,8 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
     <p class="section-sub">Early access feedback from enterprise security teams globally.</p>
   </div>
   <div class="testimonials">
-    <div class="testimonial">
-      <div class="t-text">"MYTHOS generated a Sentinel KQL rule for a 0-day within 90 seconds. This replaced 3 hours of manual work. It's our first SOC tool that actually pays for itself in the first week."</div>
-      <div class="t-author">
-        <div class="t-avatar">👨‍💻</div>
-        <div class="t-info">
-          <div class="t-name">Lead SOC Analyst</div>
-          <div class="t-role">Tier-1 Bank · Mumbai</div>
-        </div>
-        <div class="stars">★★★★★</div>
-      </div>
-    </div>
-    <div class="testimonial">
-      <div class="t-text">"The AI Cyber Analyst spotted a Lazarus Group indicator our $200K SIEM missed. The value-to-cost ratio is unmatched. Every CISO in India should be using this platform."</div>
-      <div class="t-author">
-        <div class="t-avatar">🔐</div>
-        <div class="t-info">
-          <div class="t-name">CISO</div>
-          <div class="t-role">Healthcare Group · Bangalore</div>
-        </div>
-        <div class="stars">★★★★★</div>
-      </div>
-    </div>
-    <div class="testimonial">
-      <div class="t-text">"Compliance gap analysis identified 47 findings across ISO 27001 and DPDP Act 2023. The automated remediation roadmap cut our audit prep time by 60%. Worth every rupee."</div>
-      <div class="t-author">
-        <div class="t-avatar">📋</div>
-        <div class="t-info">
-          <div class="t-name">Compliance Director</div>
-          <div class="t-role">NBFC · Hyderabad</div>
-        </div>
-        <div class="stars">★★★★★</div>
-      </div>
+    <div class="testimonial" style="grid-column:1/-1;text-align:center;padding:32px 24px">
+      <div class="t-text" style="font-style:normal;color:rgba(255,255,255,0.45);font-size:13px;padding-top:0">Platform is in early enterprise access. Verified CISO feedback will appear here once engagements are complete. Interested in being an early design partner? <a href="mailto:enterprise@cyberdudebivash.com" style="color:var(--accent)">enterprise@cyberdudebivash.com</a></div>
     </div>
   </div>
 </div>

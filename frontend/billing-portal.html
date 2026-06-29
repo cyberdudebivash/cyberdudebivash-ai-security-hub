@@ -317,7 +317,7 @@
 
 <script>
 const API = '';
-const PLAN_PRICES = { FREE: 0, STARTER: 29, PRO: 99, ENTERPRISE: 499, MSSP: 999 };
+const PLAN_PRICES = { FREE: 0, STARTER: 199, PRO: 999, ENTERPRISE: 9999, MSSP: 24999 };
 const PLAN_LIMITS = { FREE: 150, STARTER: 3000, PRO: 15000, ENTERPRISE: 'Unlimited', MSSP: 'Unlimited' };
 let currentPlan = 'FREE';
 let selectedUpgradePlan = null;
@@ -477,10 +477,10 @@ async function cancelSubscription() {
 }
 
 const PLANS = [
-  { key: 'STARTER', label: 'Starter — $29/mo', desc: '3,000 API calls/month, all core features' },
-  { key: 'PRO', label: 'Pro — $99/mo', desc: '15,000 API calls/month, advanced analytics, priority support' },
-  { key: 'ENTERPRISE', label: 'Enterprise — $499/mo', desc: 'Unlimited API calls, SSO, SLA, dedicated success manager' },
-  { key: 'MSSP', label: 'MSSP — $999/mo', desc: 'Multi-tenant, white-label, partner dashboard, unlimited seats' },
+  { key: 'STARTER', label: 'Starter — ₹199/mo', desc: '3,000 API calls/month, all core features' },
+  { key: 'PRO', label: 'Pro — ₹999/mo', desc: '15,000 API calls/month, advanced analytics, priority support' },
+  { key: 'ENTERPRISE', label: 'Enterprise — ₹9,999/mo', desc: 'Unlimited API calls, SSO, SLA, dedicated success manager' },
+  { key: 'MSSP', label: 'MSSP — ₹24,999/mo', desc: 'Multi-tenant, white-label, partner dashboard, unlimited seats' },
 ];
 
 function openUpgradeModal() {
