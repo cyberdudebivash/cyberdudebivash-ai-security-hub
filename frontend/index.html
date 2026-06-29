@@ -11747,8 +11747,14 @@ async function refreshDashboardMetrics() {
 
 
   // ── Recent scans panel (live from D1 scan history) ──────────────────────
+  // Was calling a path that has never existed on the backend (/api/scan-history)
+  // — real route is /api/history, requires the user's bearer token, and rows use
+  // scanned_at, not created_at. The panel silently showed empty placeholders.
   try {
-    const rsRes = await fetch('/api/scan-history?limit=5&fields=target,module,risk_level,created_at');
+    const _rsToken = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || '';
+    const rsRes = await fetch('/api/history?limit=5', {
+      headers: _rsToken ? { 'Authorization': 'Bearer ' + _rsToken } : {},
+    });
     if (rsRes.ok) {
       const rsData = await rsRes.json();
       const scans = rsData.scans || rsData.results || rsData.data || [];
@@ -11760,7 +11766,8 @@ async function refreshDashboardMetrics() {
         if (tEl) tEl.textContent = scan.target || '—';
         if (mEl) {
           const mod = scan.module || 'domain';
-          const ts = scan.created_at ? new Date(scan.created_at).toRelative?.() || 'recently' : 'recently';
+          const rawTs = scan.scanned_at || scan.created_at;
+          const ts = rawTs ? new Date(rawTs).toRelative?.() || 'recently' : 'recently';
           const icon = MODULE_ICONS[mod] || '🔍';
           mEl.textContent = icon + ' ' + mod.charAt(0).toUpperCase() + mod.slice(1) + ' · ' + ts;
           if (scan.risk_level && tEl) tEl.style.color = RISK_COLORS[scan.risk_level] || '';
