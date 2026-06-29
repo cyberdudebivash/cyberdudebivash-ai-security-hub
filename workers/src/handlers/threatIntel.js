@@ -418,9 +418,19 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
   const format = url.searchParams.get('format') || 'json';
   const pag    = parsePagination(url);
 
+  // Dashboard/API consistency fix: this used to always request/report
+  // limits.max_results regardless of what the caller asked for, so the same
+  // nominal request (e.g. limit=20) returned a different-sized — and
+  // differently paginated — entry set than /api/threat-intel, which has
+  // always correctly capped to min(requested, plan max). A customer
+  // comparing dashboard vs API output for the same query saw a mismatch.
+  // Apply the identical cap here so both surfaces return the same records
+  // for the same effective limit.
+  const effectiveLimit = Math.min(pag.limit, limits.max_results);
+
   // BINDING: SECURITY_HUB_DB
   const d1Result = await queryD1(env?.SECURITY_HUB_DB, {
-    limit:    limits.max_results,
+    limit:    effectiveLimit,
     offset:   pag.offset,
     severity: pag.severity,
     source:   pag.source,
@@ -428,7 +438,7 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
     sortBy:   pag.sortBy,
   });
 
-  const entries  = d1Result?.entries || buildSeedFeed();
+  const entries  = (d1Result?.entries || buildSeedFeed()).slice(0, effectiveLimit);
   const enriched = enrichBatch(entries.map(e => ({ ...e })));
   const gated    = enriched.map(e => applyMonetizationGate(e, limits));
 
@@ -442,12 +452,14 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
     });
   }
 
+  const total = d1Result?.total || entries.length;
   return ok(request, {
-    entries:  gated,
-    total:    d1Result?.total || entries.length,
-    page:     pag.page,
-    limit:    limits.max_results,
-    plan:     tier,
+    entries:     gated,
+    total,
+    page:        pag.page,
+    limit:       effectiveLimit,
+    total_pages: Math.ceil(total / effectiveLimit),
+    plan:        tier,
   });
 }
 
