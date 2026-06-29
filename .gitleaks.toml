@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known false positives — public, non-secret identifiers that match generic-api-key entropy heuristics"
+regexes = [
+  '''ca-pub-\d{10,}''',                       # Google AdSense publisher ID — public, meant to be embedded client-side
+  '''U\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}''',      # Indian company CIN (Corporate Identification Number) — public registration number
+]
