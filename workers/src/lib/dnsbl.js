@@ -143,6 +143,9 @@ export async function checkDomainBlacklists(domain) {
   const listedFeeds  = results.filter(r => r.listed);
   const timeouts     = results.filter(r => r.timeout).length;
   const criticalHits = listedFeeds.filter(r => r.severity === 'CRITICAL');
+  const highHits     = listedFeeds.filter(r => r.severity === 'HIGH');
+  // Require CRITICAL hit OR 2+ HIGH hits to avoid false positives on major infra/CDN domains
+  const isBlacklisted = criticalHits.length > 0 || highHits.length >= 2;
 
   return {
     domain:            cleanDomain,
@@ -151,7 +154,7 @@ export async function checkDomainBlacklists(domain) {
     critical_hits:     criticalHits.length,
     timeout_count:     timeouts,
     threat_score:      calculateThreatScore(listedFeeds),
-    blacklisted:       listedFeeds.length > 0,
+    blacklisted:       isBlacklisted,
     listed_on:         listedFeeds.map(r => ({ feed: r.feed, severity: r.severity, detail: r.detail })),
     all_results:       results,
     checked_at:        new Date().toISOString(),
@@ -186,10 +189,14 @@ export async function checkIPBlacklists(ipv4Addresses) {
   }
 
   const listed = allResults.filter(r => r.listed);
+  const ipCriticalFeeds = [...new Set(listed.filter(r => r.severity === 'CRITICAL').map(r => r.feed))];
+  const ipHighFeeds     = [...new Set(listed.filter(r => r.severity === 'HIGH').map(r => r.feed))];
+  // Require CRITICAL hit on a distinct feed OR 2+ distinct HIGH feeds (same feed hitting many IPs counts once)
+  const ipBlacklisted = ipCriticalFeeds.length > 0 || ipHighFeeds.length >= 2;
   return {
     total_ips:      ipsToCheck.length,
     feeds_per_ip:   IP_DNSBL_FEEDS.length,
-    blacklisted:    listed.length > 0,
+    blacklisted:    ipBlacklisted,
     listed_count:   listed.length,
     threat_score:   calculateThreatScore(listed),
     listed_on:      listed.map(r => ({ ip: r.ip, feed: r.feed, severity: r.severity, detail: r.detail })),
