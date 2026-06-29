@@ -1332,8 +1332,22 @@ export default {
     // Affiliate stats (/api/affiliate/stats) are also internal; the public
     // affiliate programme endpoints (/api/affiliate/join, /status, etc.)
     // do NOT match this regex and remain accessible to participants.
+    // auto-soc: customer-facing ENTERPRISE feature — gated by plan tier inside handlers,
+    // NOT owner-only. Removed from owner gate; enterprise users must be authenticated.
+    if (path.startsWith('/api/auto-soc/')) {
+      const _asocCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const tier = (_asocCtx?.tier || '').toUpperCase();
+      const allowed = ['ENTERPRISE','MSSP','TEAM','PRO'].includes(tier) || isOwner(_asocCtx, env) || _asocCtx?.isAdmin;
+      if (!allowed) {
+        return withSecurityHeaders(withCors(
+          Response.json({ error: 'Enterprise plan required', upgrade: 'https://cyberdudebivash.in/#pricing', required_tier: 'ENTERPRISE' }, { status: 403 }),
+          request
+        ));
+      }
+    }
+    // Internal back-office owner-only gate (integrations config, revenue engine, etc.)
     if (
-      /^\/api\/(auto-soc|integrations|org-memory|workflows|white-label|revenue|monetize)(\/|$)/.test(path) ||
+      /^\/api\/(integrations|org-memory|workflows|white-label|revenue|monetize)(\/|$)/.test(path) ||
       path === '/api/funnel/metrics' ||
       path === '/api/funnel/event' ||
       path === '/api/affiliate/stats'
