@@ -127,14 +127,19 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   const receipt = generateReceiptId();
   const ip      = request.headers.get('CF-Connecting-IP') || 'unknown';
 
-  // Check for existing unpaid order for same target+module (prevent double charges)
+  // Check for existing unpaid order for same target+module+amount (prevent double
+  // charges). MUST also match amount: module='subscription' covers every plan
+  // tier (STARTER/PRO/ENTERPRISE/MSSP), so matching on module+target alone would
+  // return a cheaper/older plan's real Razorpay order_id while displaying the
+  // newly-requested (different-priced) plan's label — the Razorpay popup driven
+  // by that reused order_id would then charge the OLD amount, not what's shown.
   if (env.DB) {
     const existingOrder = await env.DB.prepare(
       `SELECT id, razorpay_order_id, status FROM payments
-       WHERE module = ? AND target = ? AND status = 'pending'
+       WHERE module = ? AND target = ? AND amount = ? AND status = 'pending'
        AND created_at > datetime('now', '-30 minutes')
        LIMIT 1`
-    ).bind(module, target.toLowerCase()).first().catch(() => null);
+    ).bind(module, target.toLowerCase(), price.amount).first().catch(() => null);
 
     if (existingOrder?.razorpay_order_id) {
       // Return existing order instead of creating a new one
@@ -174,9 +179,10 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   // Store pending payment record in D1
   if (env.DB) {
     const paymentId = crypto.randomUUID?.() || Date.now().toString(36);
+    const planLabel = module === 'subscription' ? (body.plan || 'STARTER').toUpperCase() : 'pay_per_report';
     await env.DB.prepare(
-      `INSERT INTO payments (id, user_id, scan_id, module, target, amount, currency, razorpay_order_id, status, ip, email, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, 'pending', ?, ?, datetime('now'))`
+      `INSERT INTO payments (id, user_id, scan_id, module, target, amount, currency, razorpay_order_id, status, plan, ip, email, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, 'pending', ?, ?, ?, datetime('now'))`
     ).bind(
       paymentId,
       authCtx.user_id || null,
@@ -185,6 +191,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       target.toLowerCase(),
       price.amount,
       razorOrder.id,
+      planLabel,
       ip,
       email || authCtx.email || null,
     ).run().catch(e => console.error('[Payments] D1 insert failed:', e.message));
@@ -370,7 +377,10 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     // there today; that needs its own schema migration, tracked separately.
     let issuedAccessToken = null;
     let issuedUserId      = null;
-    if (env.DB && confirmedEmail && (plan === 'PRO' || plan === 'ENTERPRISE')) {
+    // v45: users.tier now accepts STARTER/MSSP too — previously a customer who
+    // paid for either of those plans had their charge succeed but their tier
+    // never persisted, leaving them 403'd on the feature they just bought.
+    if (env.DB && confirmedEmail && ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(plan)) {
       try {
         const existing = await env.DB.prepare(
           `SELECT id FROM users WHERE email = ?`

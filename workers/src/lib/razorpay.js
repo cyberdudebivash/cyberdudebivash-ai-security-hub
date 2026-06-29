@@ -32,7 +32,7 @@ export const SUBSCRIPTION_PRICES = {
   STARTER:    { amount: 49900,   label: '₹499',    period: 'monthly', name: 'Starter Plan'    },
   PRO:        { amount: 149900,  label: '₹1,499',  period: 'monthly', name: 'Pro Plan'         },
   ENTERPRISE: { amount: 499900,  label: '₹4,999',  period: 'monthly', name: 'Enterprise Plan'  },
-  MSSP:          { amount: 4999900,  label: '₹49,999',  period: 'monthly', name: 'MSSP Plan'             },
+  MSSP:          { amount: 999900,   label: '₹9,999',   period: 'monthly', name: 'MSSP Plan'             },
   // P2-2: New enterprise tier per customer escalation audit
   ENTERPRISE_SOC: { amount: 4119900,  label: '₹41,199',  period: 'monthly', name: 'Autonomic Threat Intel API' },
   MSSP_PARTNER:   { amount: 199900,   label: '₹1,999',   period: 'monthly', name: 'Multi-Tenant MSSP Workspace'  },
