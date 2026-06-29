@@ -1,0 +1,117 @@
+/*!
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CYBERDUDEBIVASH® AI SECURITY HUB — UI/UX POLISH LAYER
+ * File   : /assets/cdb-ui-polish.css
+ * Version: v1.0.0   (2026-06-29)
+ * Owner  : Platform Engineering
+ * ───────────────────────────────────────────────────────────────────────────
+ * ZERO-REGRESSION GUARANTEE
+ *   1. Global rules in this file only touch chrome that cannot alter layout:
+ *      focus rings, scrollbars, text selection color, and the *transition*
+ *      timing on elements that already change state (hover/focus) — never a
+ *      base color, size, or position. Nothing here can shift content.
+ *   2. Everything else is an opt-in utility class (`.cdb-*`). No existing
+ *      page markup is required to change — utilities only apply where a page
+ *      explicitly adds the class to new dynamic-render output (loading/empty/
+ *      error states, badges), as already done in intel-hub.html,
+ *      agent-threats.html, soc-dashboard.html, and user-dashboard.html.
+ *   3. Loaded site-wide, after each page's own <style> block, so it can only
+ *      refine — a page's existing rules win on any real conflict because this
+ *      sheet deliberately avoids redeclaring layout-affecting properties.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ── 1. Accessible focus ring — keyboard-only, never shown for mouse clicks ── */
+:focus-visible {
+  outline: 2px solid rgba(0, 212, 255, .55);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── 2. Branded scrollbar (chrome only — no layout impact) ──────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, .03); }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .12);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .22); }
+
+/* ── 3. Text selection color ─────────────────────────────────────────────── */
+::selection { background: rgba(0, 212, 255, .28); color: #fff; }
+
+/* ── 4. Smooth, consistent hover/focus transitions on elements that already
+ *      change state. Only the `transition` *timing function* is unified —
+ *      every property/value pages already animate is left exactly as-is. ── */
+a, button, .btn, .btn-primary, .btn-secondary, .btn-adv, .feed-btn,
+.agent-card, .advisory, .tab-btn, [onclick] {
+  transition-timing-function: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ── 5. Reduced-motion respect — disables the above for users who ask for it,
+ *      a real accessibility requirement, never a visual regression risk. ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* ══════════════════ OPT-IN UTILITY CLASSES (markup must add these) ══════════ */
+
+/* ── Skeleton loading shimmer — for "Loading…" states ────────────────────── */
+.cdb-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .04);
+  border-radius: 8px;
+}
+.cdb-skeleton::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .06), transparent);
+  animation: cdbShimmer 1.4s ease-in-out infinite;
+}
+@keyframes cdbShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ── Consistent empty / error state card ─────────────────────────────────── */
+.cdb-state-card {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-dim, #64748b);
+  background: rgba(255, 255, 255, .015);
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 12px;
+}
+.cdb-state-card .cdb-state-icon { font-size: 32px; margin-bottom: 12px; line-height: 1; }
+.cdb-state-card .cdb-state-title { font-weight: 700; margin-bottom: 6px; color: var(--text-muted, #94a3b8); }
+.cdb-state-card .cdb-state-msg { font-size: 13px; }
+.cdb-state-card.cdb-state-error { border-color: rgba(239, 68, 68, .18); }
+.cdb-state-card.cdb-state-error .cdb-state-icon { color: #ef4444; }
+
+/* ── Fade-in entrance for freshly-rendered live content ──────────────────── */
+.cdb-fade-in { animation: cdbFadeIn .35s ease both; }
+@keyframes cdbFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Consistent "LIVE" pulse badge ───────────────────────────────────────── */
+.cdb-live-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  color: #10b981;
+}
+.cdb-live-badge::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: #10b981;
+  animation: cdbPulse 2s infinite;
+}
+@keyframes cdbPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(.8); }
+}
+
+/* ── Soft elevation on hover for clickable cards ─────────────────────────── */
+.cdb-hover-lift { transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease; }
+.cdb-hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
