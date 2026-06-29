@@ -414,8 +414,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
               <tr>
                 <th>Type</th>
                 <th>Indicator</th>
-                <th>Risk</th>
-                <th>Source</th>
+                <th>Severity</th>
+                <th>Linked Advisory</th>
                 <th>Seen</th>
               </tr>
             </thead>
@@ -744,22 +744,28 @@ function buildMockDecisions() {
 }
 
 // ── Load IOCs ─────────────────────────────────────────────────────────────────
-// NOTE: /api/threat-intel/iocs never existed on the backend (404 even on the
-// correct domain) — both branches below always fell through to mockIOCs(),
-// a hardcoded list of fake IPs/domains/hashes shown to every customer as if
-// they were real detected indicators. There is no real backend endpoint for
-// a "recent global IOC feed" today (/api/ioc/enrich is a single-value lookup,
-// not a listing). Removed the fabricated fallback — shows an honest
-// unavailable state instead of fake data. Found 2026-06-29.
+// Wired to the same /api/v1/iocs endpoint paying API customers use (the
+// ioc_registry table, joined to threat_intel for severity/title) — this is
+// the identical code path as the public API, by design, so the dashboard and
+// the API can never diverge for the same data (matches the pattern already
+// used by loadAlerts()/loadDecisions() on this page). Requires ENTERPRISE
+// plan, same as the API; shown as a clear upgrade prompt rather than a
+// confusing empty state. Found 2026-06-29.
 async function loadIOCs() {
   const tbody = document.getElementById('ioc-body');
   try {
-    const r = await fetch(`${API_BASE}/api/threat-intel/iocs?limit=10`, { headers: HEADERS });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const r = await fetch(`${API_BASE}/api/v1/iocs?limit=10`, { headers: HEADERS });
     const data = await r.json();
-    const iocs = data.iocs || [];
+    if (r.status === 403) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px">' +
+        (data?.error || 'IOC registry requires the ENTERPRISE plan') +
+        ' — <a href="https://cyberdudebivash.in/#pricing" style="color:var(--accent)">Upgrade</a></td></tr>';
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const iocs = data.data?.iocs || [];
     renderIOCs(iocs);
-  } catch {
+  } catch (e) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px">IOC feed temporarily unavailable</td></tr>';
   }
 }
@@ -770,16 +776,18 @@ function renderIOCs(iocs) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px">No IOCs detected</td></tr>';
     return;
   }
+  const sevClass = { CRITICAL:'risk-critical', HIGH:'risk-high', MEDIUM:'risk-medium', LOW:'risk-low' };
   tbody.innerHTML = iocs.map(ioc => {
-    const risk = ioc.risk_score || 75;
-    const rClass = risk >= 80 ? 'risk-critical' : risk >= 60 ? 'risk-high' : risk >= 40 ? 'risk-medium' : 'risk-low';
+    const sev = (ioc.severity || 'MEDIUM').toUpperCase();
+    const rClass = sevClass[sev] || 'risk-medium';
     const typeClass = { ip:'ioc-ip', domain:'ioc-domain', hash:'ioc-hash', url:'ioc-url' }[ioc.type] || 'ioc-ip';
+    const seen = ioc.created_at ? new Date(ioc.created_at).toLocaleDateString() : '—';
     return `<tr>
-      <td><span class="ioc-type ${typeClass}">${ioc.type || 'ip'}</span></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${escHtml(ioc.indicator || ioc.value || '—')}</td>
-      <td class="ioc-risk ${rClass}">${risk}</td>
-      <td style="color:var(--text-dim)">${escHtml(ioc.source || 'Sentinel APEX')}</td>
-      <td style="color:var(--text-dim)">${ioc.seen_at ? new Date(ioc.seen_at).toLocaleDateString() : 'Today'}</td>
+      <td><span class="ioc-type ${typeClass}">${escHtml(ioc.type || 'ip')}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${escHtml(ioc.value || '—')}</td>
+      <td class="ioc-risk ${rClass}">${sev}</td>
+      <td style="color:var(--text-dim);max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(ioc.intel_title || '—')}</td>
+      <td style="color:var(--text-dim)">${seen}</td>
     </tr>`;
   }).join('');
 }
