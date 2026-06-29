@@ -940,10 +940,11 @@ async function runMcpScan() {
     let data = null;
     let scanError = null;
     try {
+      // Handler reads server_url/server_name/config — not target/server_type.
       const r = await fetch(`${API_BASE}/api/mcp-security/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: url, server_type: type }),
+        body: JSON.stringify({ server_url: url, server_name: `${type} MCP Server` }),
       });
       if (r.ok) {
         const raw = await r.json();

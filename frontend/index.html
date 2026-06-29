@@ -8861,6 +8861,17 @@ function collectPayload(module) {
     case 'appsec':
       return { url: document.getElementById('appTarget')?.value?.trim(), standard: document.getElementById('appScanDepth')?.value,
         auth_header: document.getElementById('appAuthHeader')?.value?.trim()||null };
+    case 'mcp_security': {
+      // Handler reads server_url/server_name/config — not target/server_type.
+      const rawConfig = document.getElementById('mcp-config-input')?.value?.trim();
+      let config = null;
+      if (rawConfig) { try { config = JSON.parse(rawConfig); } catch (_) { /* fall back to server_url scan */ } }
+      return {
+        config,
+        server_url:  document.getElementById('mcp-server-url')?.value?.trim() || undefined,
+        server_name: document.getElementById('mcp-server-name')?.value?.trim() || 'MCP Server',
+      };
+    }
     default: return {};
   }
 }
@@ -9325,7 +9336,7 @@ async function executeScan(module, payload) {
     cloudsec:     '/api/scan/cloud-security',
     darkscan:     '/api/scan/darkscan',
     appsec:       '/api/scan/appsec',
-    mcp_security: '/api/scan/mcp',
+    mcp_security: '/api/mcp-security/scan',
     vibe_code:    '/api/scan/vibe-code',
   };
 
