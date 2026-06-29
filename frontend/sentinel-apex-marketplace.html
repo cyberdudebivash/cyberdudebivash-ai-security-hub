@@ -96,8 +96,8 @@
   },
   "aggregateRating": {
     "@type": "AggregateRating",
-    "ratingValue": "4.9",
-    "reviewCount": "47",
+    "ratingValue": "5",
+    "reviewCount": "1",
     "bestRating": "5"
   }
 }
@@ -826,12 +826,12 @@ function renderFallbackCVEs() {
 
 async function loadThreatActorCards(container) {
   const actors = [
-    { name: 'APT29 (Cozy Bear)', origin: 'Russia', status: 'ACTIVE', sectors: 'Government, Defence, Energy', tactics: 'Spear-phishing, supply chain, cloud credential theft', sev: 'CRITICAL' },
-    { name: 'Lazarus Group', origin: 'North Korea', status: 'ACTIVE', sectors: 'Financial, Crypto, Defence', tactics: 'SWIFT fraud, crypto theft, RAT deployment', sev: 'CRITICAL' },
-    { name: 'APT41 (Double Dragon)', origin: 'China', status: 'ACTIVE', sectors: 'Technology, Healthcare, Gaming', tactics: 'Dual espionage + cybercrime, zero-day exploitation', sev: 'HIGH' },
-    { name: 'BlackCat Ransomware Gang', origin: 'Unknown', status: 'ACTIVE', sectors: 'All sectors', tactics: 'Double extortion, ALPHV ransomware, data leak threats', sev: 'CRITICAL' },
-    { name: 'SideCopy (Pakistan)', origin: 'Pakistan', status: 'ACTIVE', sectors: 'India Government, Defence', tactics: 'RAT deployment, credential harvesting, DPDP-era targeting', sev: 'HIGH' },
-    { name: 'Scattered Spider', origin: 'Multi-national', status: 'ACTIVE', sectors: 'Hospitality, Retail, Finance', tactics: 'SIM swapping, social engineering, MFA bypass', sev: 'HIGH' },
+    { name: 'APT29 (Cozy Bear)', origin: 'Russia', status: 'TRACKED', sectors: 'Government, Defence, Energy', tactics: 'Spear-phishing, supply chain, cloud credential theft', sev: 'CRITICAL' },
+    { name: 'Lazarus Group', origin: 'North Korea', status: 'TRACKED', sectors: 'Financial, Crypto, Defence', tactics: 'SWIFT fraud, crypto theft, RAT deployment', sev: 'CRITICAL' },
+    { name: 'APT41 (Double Dragon)', origin: 'China', status: 'TRACKED', sectors: 'Technology, Healthcare, Gaming', tactics: 'Dual espionage + cybercrime, zero-day exploitation', sev: 'HIGH' },
+    { name: 'BlackCat Ransomware Gang', origin: 'Unknown', status: 'TRACKED', sectors: 'All sectors', tactics: 'Double extortion, ALPHV ransomware, data leak threats', sev: 'CRITICAL' },
+    { name: 'SideCopy (Pakistan)', origin: 'Pakistan', status: 'TRACKED', sectors: 'India Government, Defence', tactics: 'RAT deployment, credential harvesting, DPDP-era targeting', sev: 'HIGH' },
+    { name: 'Scattered Spider', origin: 'Multi-national', status: 'TRACKED', sectors: 'Hospitality, Retail, Finance', tactics: 'SIM swapping, social engineering, MFA bypass', sev: 'HIGH' },
   ];
   container.innerHTML = actors.map(a => `
     <div class="intel-card ${a.sev.toLowerCase()}">

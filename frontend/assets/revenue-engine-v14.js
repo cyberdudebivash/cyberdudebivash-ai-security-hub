@@ -973,7 +973,7 @@ function _injectUsersOnlineWidget() {
   `;
   bar.innerHTML = `
     <span style="width:6px;height:6px;border-radius:50%;background:#10b981;animation:statLivePulse 2s ease infinite"></span>
-    <span id="v14-users-online">18 users online now</span>
+    <span id="v14-users-online">— users online</span>
   `;
 
   // Insert near hero badge
@@ -1014,36 +1014,36 @@ function _showActivityToast(msg) {
   }, 3500);
 }
 
-/* ── Enterprise demo slot generator ─────────────────────────────────── */
+/* ── Enterprise demo slot loader ─────────────────────────────────────── */
 function _injectDemoSlots() {
   const container = document.getElementById('p4-demo-slots');
   if (!container) return;
 
-  const now = new Date();
-  const slots = [];
-  // Generate 6 realistic slots in the next 3 days
-  for (let i = 0; i < 3; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i + 1);
-    const dateStr = d.toLocaleDateString('en-IN', { weekday:'short', month:'short', day:'numeric' });
-    ['10:00 AM IST', '3:00 PM IST'].forEach(time => {
-      slots.push({ date: dateStr, time, available: true }); // v30: real slots from API or always available for WhatsApp booking
+  fetch('/api/demo/slots')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      const slots = d && Array.isArray(d.slots) ? d.slots : [];
+      if (!slots.length) {
+        container.innerHTML = '<span style="color:rgba(255,255,255,.5);font-size:12px">Contact us via WhatsApp to schedule a demo at a time that suits you.</span>';
+        return;
+      }
+      container.innerHTML = slots.map(s => `
+        <button onclick="${s.available ? `_selectDemoSlot(this,'${s.label}')` : 'void 0'}"
+          style="display:inline-flex;align-items:center;gap:6px;margin:3px;padding:7px 12px;
+                 background:${s.available ? 'rgba(99,102,241,.1)' : 'rgba(255,255,255,.03)'};
+                 border:1px solid ${s.available ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.07)'};
+                 color:${s.available ? '#e2e8f0' : 'rgba(255,255,255,.2)'};
+                 border-radius:8px;font-size:12px;cursor:${s.available ? 'pointer' : 'not-allowed'};
+                 transition:all .2s"
+          ${s.available ? `onmouseover="this.style.background='rgba(99,102,241,.2)'" onmouseout="this.style.background='rgba(99,102,241,.1)'"` : ''}>
+          ${s.available ? '📅' : '❌'} ${s.label}
+          ${!s.available ? `<span style="font-size:9px;color:rgba(255,255,255,.25)">Booked</span>` : ''}
+        </button>
+      `).join('');
+    })
+    .catch(() => {
+      container.innerHTML = '<span style="color:rgba(255,255,255,.5);font-size:12px">Contact us via WhatsApp to schedule a demo at a time that suits you.</span>';
     });
-  }
-
-  container.innerHTML = slots.map(s => `
-    <button onclick="${s.available ? `_selectDemoSlot(this,'${s.date} ${s.time}')` : 'void 0'}"
-      style="display:inline-flex;align-items:center;gap:6px;margin:3px;padding:7px 12px;
-             background:${s.available ? 'rgba(99,102,241,.1)' : 'rgba(255,255,255,.03)'};
-             border:1px solid ${s.available ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.07)'};
-             color:${s.available ? '#e2e8f0' : 'rgba(255,255,255,.2)'};
-             border-radius:8px;font-size:12px;cursor:${s.available ? 'pointer' : 'not-allowed'};
-             transition:all .2s"
-      ${s.available ? `onmouseover="this.style.background='rgba(99,102,241,.2)'" onmouseout="this.style.background='rgba(99,102,241,.1)'"` : ''}>
-      ${s.available ? '📅' : '❌'} ${s.date} · ${s.time}
-      ${!s.available ? `<span style="font-size:9px;color:rgba(255,255,255,.25)">Booked</span>` : ''}
-    </button>
-  `).join('');
 }
 
 window._selectDemoSlot = function(btn, slotStr) {

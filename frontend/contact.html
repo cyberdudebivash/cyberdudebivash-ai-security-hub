@@ -1439,7 +1439,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
             }
 
             // Show success confirmation regardless of API response
-            const ticketNumber = String(Math.floor(100000 + Math.random() * 900000));
+            const ticketNumber = 'CDB-' + new Date().getFullYear() + '-' + crypto.randomUUID().slice(0,8).toUpperCase();
             document.getElementById('ticketNumber').textContent = ticketNumber;
             document.getElementById('confirmationCard').classList.add('show');
 
