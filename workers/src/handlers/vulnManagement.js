@@ -212,7 +212,72 @@ export async function handleListVulns(request, env, authCtx) {
   const limit    = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 200);
   const offset   = parseInt(url.searchParams.get('offset') || '0', 10);
 
-  let vulns = generateSeedVulns();
+  // Build real vuln list from D1 threat_intel + user-created KV entries
+  let vulns = [];
+
+  // Source 1: D1 threat_intel — real CVEs ingested by the platform
+  if (env?.DB) {
+    try {
+      let q = `SELECT cve_id AS id, cve_id, title, severity, cvss_score AS cvss_score,
+                      epss_score, is_kev AS in_kev, description AS affected,
+                      published_date AS discovered_at, mitre_technique
+               FROM threat_intel
+               WHERE 1=1`;
+      const params = [];
+      if (severity) { q += ' AND severity = ?'; params.push(severity.toUpperCase()); }
+      if (kev === 'true') { q += ' AND is_kev = 1'; }
+      q += ` ORDER BY is_kev DESC, cvss_score DESC LIMIT 200`;
+      const rows = await env.DB.prepare(q).bind(...params).all().catch(() => ({ results: [] }));
+      for (const r of (rows.results || [])) {
+        vulns.push({
+          id:            r.cve_id,
+          cve_id:        r.cve_id,
+          title:         r.title || r.cve_id,
+          severity:      r.severity || 'MEDIUM',
+          cvss_score:    parseFloat(r.cvss_score) || 0,
+          epss_score:    parseFloat(r.epss_score) || 0,
+          in_kev:        !!r.in_kev,
+          affected:      r.affected || '',
+          stage:         'open',
+          discovered_at: r.discovered_at || null,
+          source:        'threat_intel',
+          tags:          r.mitre_technique ? [r.mitre_technique] : [],
+        });
+      }
+    } catch {}
+  }
+
+  // Source 2: User-created KV vulns for this org
+  if (env?.SECURITY_HUB_KV && authCtx?.authenticated) {
+    try {
+      const prefix = `vuln:${authCtx.orgId || authCtx.identity}:`;
+      const kvList = await env.SECURITY_HUB_KV.list({ prefix, limit: 200 });
+      for (const key of (kvList.keys || [])) {
+        if (key.name.includes(':latest')) continue; // skip duplicate latest keys
+        try {
+          const raw = await env.SECURITY_HUB_KV.get(key.name);
+          if (raw) {
+            const v = JSON.parse(raw);
+            if (!vulns.find(x => x.id === v.id)) vulns.push({ ...v, source: 'user_created' });
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // Apply filters in memory
+  if (stage)    vulns = vulns.filter(v => (v.stage || 'open') === stage);
+  if (severity) vulns = vulns.filter(v => v.severity === severity.toUpperCase());
+  if (kev === 'true') vulns = vulns.filter(v => v.in_kev);
+  if (search) {
+    const q = search.toLowerCase();
+    vulns = vulns.filter(v =>
+      v.title?.toLowerCase().includes(q) ||
+      v.cve_id?.toLowerCase().includes(q) ||
+      v.affected?.toLowerCase().includes(q) ||
+      v.tags?.some(t => t.includes(q))
+    );
+  }
 
   // Apply filters
   if (stage)    vulns = vulns.filter(v => v.stage === stage);
@@ -310,27 +375,43 @@ export async function handleCreateVuln(request, env, authCtx) {
 
 // ─── GET /api/vulns/:id ───────────────────────────────────────────────────────
 export async function handleGetVuln(request, env, authCtx, vulnId) {
-  // Check seed data first
-  const seed = generateSeedVulns().find(v => v.id === vulnId);
-  if (seed) {
-    return Response.json({
-      vuln: {
-        ...seed,
-        remediation_steps: generateRemediationSteps(seed),
-        sla_status: seed.sla_breached ? 'BREACHED' : 'ON_TRACK',
-        risk_score: Math.round(seed.cvss_score * 10 * (seed.in_kev ? 1.3 : 1) * (1 + seed.epss_score)),
-        next_stage: STAGE_TRANSITIONS[seed.stage]?.[0] || null,
-      },
-      platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
-    });
+  // Try D1 threat_intel first (CVE ID match)
+  if (env?.DB) {
+    try {
+      const row = await env.DB.prepare(
+        `SELECT cve_id, title, severity, cvss_score, epss_score, is_kev,
+                description, published_date, mitre_technique
+         FROM threat_intel WHERE cve_id = ?`
+      ).bind(vulnId).first().catch(() => null);
+      if (row) {
+        const vuln = {
+          id: row.cve_id, cve_id: row.cve_id, title: row.title, severity: row.severity,
+          cvss_score: parseFloat(row.cvss_score) || 0, epss_score: parseFloat(row.epss_score) || 0,
+          in_kev: !!row.is_kev, affected: row.description || '', stage: 'open',
+          discovered_at: row.published_date, source: 'threat_intel',
+        };
+        return Response.json({
+          vuln: {
+            ...vuln,
+            remediation_steps: generateRemediationSteps(vuln),
+            next_stage: STAGE_TRANSITIONS['open']?.[0] || null,
+          },
+          platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+        });
+      }
+    } catch {}
   }
 
-  // Try KV
-  if (env.SECURITY_HUB_KV && authCtx.authenticated) {
+  // Try user-created KV vuln
+  if (env?.SECURITY_HUB_KV && authCtx?.authenticated) {
     const raw = await env.SECURITY_HUB_KV.get(`vuln:${authCtx.orgId || authCtx.identity}:${vulnId}`).catch(() => null);
     if (raw) {
       try {
-        return Response.json({ vuln: JSON.parse(raw), platform: 'CYBERDUDEBIVASH AI Security Hub v19.0' });
+        const vuln = JSON.parse(raw);
+        return Response.json({
+          vuln: { ...vuln, remediation_steps: generateRemediationSteps(vuln), next_stage: STAGE_TRANSITIONS[vuln.stage || 'open']?.[0] || null },
+          platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
+        });
       } catch {}
     }
   }
@@ -360,9 +441,12 @@ export async function handleRemediateVuln(request, env, authCtx, vulnId) {
     }, { status: 400 });
   }
 
-  // Find vuln in seed or KV
-  const seed = generateSeedVulns().find(v => v.id === vulnId);
-  const currentStage = seed?.stage || 'open';
+  // Find current stage from KV (user-created vulns)
+  let currentStage = 'open';
+  if (env?.SECURITY_HUB_KV && authCtx?.authenticated) {
+    const raw = await env.SECURITY_HUB_KV.get(`vuln:${authCtx.orgId || authCtx.identity}:${vulnId}`).catch(() => null);
+    if (raw) { try { currentStage = JSON.parse(raw).stage || 'open'; } catch {} }
+  }
   const allowed = STAGE_TRANSITIONS[currentStage] || [];
 
   if (!allowed.includes(stage)) {
@@ -384,7 +468,7 @@ export async function handleRemediateVuln(request, env, authCtx, vulnId) {
 
   // Persist updated stage to KV
   if (env.SECURITY_HUB_KV) {
-    const updated = { ...(seed || { id: vulnId }), stage, ...update };
+    const updated = { id: vulnId, stage, ...update };
     env.SECURITY_HUB_KV.put(
       `vuln:${authCtx.orgId || authCtx.identity}:${vulnId}:latest`,
       JSON.stringify(updated),
@@ -410,28 +494,40 @@ export async function handleRemediateVuln(request, env, authCtx, vulnId) {
 
 // ─── GET /api/vulns/stats ─────────────────────────────────────────────────────
 export async function handleVulnStats(request, env, authCtx) {
-  const all = generateSeedVulns();
+  let total = 0, kev_count = 0, critical_open = 0, cvss_sum = 0, epss_sum = 0;
+  const by_severity = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  const by_stage    = {};
 
-  const stats = {
-    total:      all.length,
-    by_stage:   {},
-    by_severity:{},
-    kev_count:  all.filter(v => v.in_kev).length,
-    sla_breached: all.filter(v => v.sla_breached).length,
-    avg_cvss:   +(all.reduce((s, v) => s + (v.cvss_score || 0), 0) / all.length).toFixed(1),
-    avg_epss:   +(all.reduce((s, v) => s + (v.epss_score || 0), 0) / all.length).toFixed(3),
-    critical_open: all.filter(v => v.severity === 'CRITICAL' && v.stage === 'open').length,
-    risk_score: Math.round(all.reduce((s, v) =>
-      s + v.cvss_score * (v.in_kev ? 1.3 : 1) * (1 + v.epss_score), 0)),
-  };
+  if (env?.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT severity, cvss_score, epss_score, is_kev FROM threat_intel`
+      ).all().catch(() => ({ results: [] }));
+      for (const r of (rows.results || [])) {
+        total++;
+        cvss_sum  += parseFloat(r.cvss_score) || 0;
+        epss_sum  += parseFloat(r.epss_score) || 0;
+        if (r.is_kev) kev_count++;
+        if (r.severity === 'CRITICAL') critical_open++;
+        if (by_severity[r.severity] !== undefined) by_severity[r.severity]++;
+      }
+    } catch {}
+  }
 
-  all.forEach(v => {
-    stats.by_stage[v.stage]       = (stats.by_stage[v.stage]       || 0) + 1;
-    stats.by_severity[v.severity] = (stats.by_severity[v.severity] || 0) + 1;
-  });
+  by_stage.open = total;
 
   return Response.json({
-    stats,
+    stats: {
+      total,
+      by_severity,
+      by_stage,
+      kev_count,
+      sla_breached:  0,
+      avg_cvss:      total > 0 ? +(cvss_sum / total).toFixed(1) : 0,
+      avg_epss:      total > 0 ? +(epss_sum / total).toFixed(3) : 0,
+      critical_open,
+      risk_score:    Math.round(cvss_sum),
+    },
     generated_at: new Date().toISOString(),
     platform: 'CYBERDUDEBIVASH AI Security Hub v19.0',
   });

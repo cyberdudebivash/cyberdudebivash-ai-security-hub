@@ -84,8 +84,8 @@ const REPORT_TEMPLATES = [
   },
 ];
 
-function genJobId() { return 'rpt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-function genToken() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+function genJobId() { return 'rpt_' + Date.now().toString(36) + '_' + crypto.randomUUID().slice(0, 8); }
+function genToken() { return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, ''); }
 
 function requireRole(req, roles) {
   if (!req.user) return false;

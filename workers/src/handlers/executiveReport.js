@@ -37,16 +37,15 @@ async function getMRRData(env, orgId) {
     try { mrrConfig = (await env.SECURITY_HUB_KV.get(KV_MRR_KEY, { type: 'json' })) || {}; } catch {}
   }
 
-  // Default demo data — in production this integrates with billing system
   const {
-    free_users       = 120,
-    pro_users        = 34,
-    enterprise_users = 7,
-    mssp_clients     = 2,
-    api_revenue_monthly = 820,
-    churn_rate       = 3.2,
-    new_signups_30d  = 18,
-    conversions_30d  = 4,
+    free_users       = 0,
+    pro_users        = 0,
+    enterprise_users = 0,
+    mssp_clients     = 0,
+    api_revenue_monthly = 0,
+    churn_rate       = 0,
+    new_signups_30d  = 0,
+    conversions_30d  = 0,
   } = mrrConfig;
 
   const mrr_subscriptions =
@@ -128,7 +127,7 @@ async function getSecurityPosture(env, orgId) {
     posture.siem_integrations = siemKeys.keys?.length || 0;
   } catch {}
 
-  // Compliance score heuristic
+  // Posture readiness score — heuristic based on configured controls, not a certified compliance audit
   posture.compliance_score = Math.min(100, Math.round(
     (posture.siem_integrations * 10) +
     (posture.rules_deployed * 2) +
@@ -136,16 +135,18 @@ async function getSecurityPosture(env, orgId) {
     (posture.threats_blocked * 3)
   ));
 
-  // MTTD/MTTR estimates based on defense mode
+  // MTTD/MTTR: industry benchmarks by defense mode — not measured from real events.
+  // Label clearly so reports are honest with enterprise customers.
   const modeTimings = {
     AGGRESSIVE: { mttd: 2,  mttr: 8  },
     ASSISTED:   { mttd: 15, mttr: 60 },
     SAFE:       { mttd: 60, mttr: 240 },
-    UNKNOWN:    { mttd: 120, mttr: 480 },
+    UNKNOWN:    { mttd: null, mttr: null },
   };
   const timings = modeTimings[posture.auto_defense_mode] || modeTimings['UNKNOWN'];
-  posture.mean_time_to_detect  = timings.mttd;
-  posture.mean_time_to_respond = timings.mttr;
+  posture.mean_time_to_detect        = timings.mttd;
+  posture.mean_time_to_respond       = timings.mttr;
+  posture.mttd_mttr_source           = posture.auto_defense_mode !== 'UNKNOWN' ? 'industry_benchmark_by_mode' : null;
 
   return posture;
 }

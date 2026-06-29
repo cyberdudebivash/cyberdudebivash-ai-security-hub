@@ -376,7 +376,7 @@ export const handleCreatePaymentLink = withErrorBoundary(async (request, env) =>
 
   return ok(request, {
     payload,
-    razorpay_key: env.RAZORPAY_KEY_ID || 'rzp_live_PLACEHOLDER',
+    razorpay_key: env.RAZORPAY_KEY_ID || null,
     note: 'Use this payload to create a Razorpay payment link via their API',
   });
 });

@@ -131,7 +131,7 @@ export async function handleGetFeatured(request, env, authCtx = {}) {
     await env.SECURITY_HUB_KV?.put(cacheKey, JSON.stringify(featured), { expirationTtl: 600 });
     return json({ success: true, featured });
   } catch (err) {
-    return json({ success: false, error: 'Failed to fetch featured solutions', featured: getMockFeatured() });
+    return json({ success: false, error: 'Failed to fetch featured solutions', featured: [] });
   }
 }
 
@@ -535,13 +535,6 @@ function buildFOMOMessage(e) {
   return msgs[e.event_type] || `Activity on "${e.display_name}"`;
 }
 
-function getMockFeatured() {
-  return [
-    { id: 'mock-1', cve_id: 'CVE-2024-12345', title: 'Critical RCE Firewall Blocker', category: 'firewall_script', category_icon: '🔥', badge: 'INSTANT DEPLOY', price_inr: 799, price_usd: 10, severity: 'CRITICAL', severity_css: 'critical', threat_message: '🚨 Actively exploited in the wild', purchase_count: 47, preview: 'iptables/nftables rules blocking active exploitation vectors...', is_featured: true, social_proof: '47 enterprise teams deployed this', tags: ['CRITICAL', 'CVE-2024-12345'] },
-    { id: 'mock-2', cve_id: 'CVE-2024-67890', title: 'APT29 Sigma Detection Pack',    category: 'sigma_rule',      category_icon: '🔍', badge: 'MULTI-PLATFORM', price_inr: 499, price_usd: 6, severity: 'HIGH', severity_css: 'high', threat_message: '⚠️ Active exploitation detected', purchase_count: 31, preview: 'Sigma rules for Splunk/Elastic detecting APT29 lateral movement...', is_featured: true, social_proof: '31 SOC teams using this', tags: ['HIGH', 'APT29'] },
-    { id: 'mock-3', cve_id: 'CVE-2024-11111', title: 'Zero-Day YARA Detection Rules', category: 'yara_rule',       category_icon: '🧬', badge: 'MALWARE DETECT', price_inr: 599, price_usd: 7, severity: 'CRITICAL', severity_css: 'critical', threat_message: '🚨 Zero-day: no patch available', purchase_count: 29, preview: 'YARA rules detecting memory-resident malware and PE exploits...', is_featured: true, social_proof: '29 teams detecting with this', tags: ['CRITICAL', 'ZERO-DAY'] },
-  ];
-}
 
 async function trackFOMO(env, eventType, entityType, entityId, displayName) {
   try {

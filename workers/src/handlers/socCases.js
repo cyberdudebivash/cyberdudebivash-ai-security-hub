@@ -15,7 +15,7 @@ function caseNumber() {
   const now = new Date();
   const yy  = String(now.getFullYear()).slice(2);
   const mm  = String(now.getMonth() + 1).padStart(2, '0');
-  return `CDB-${yy}${mm}-${Math.floor(Math.random() * 9000 + 1000)}`;
+  return `CDB-${yy}${mm}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
 }
 
 function slaHours(severity) {
