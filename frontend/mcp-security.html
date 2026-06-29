@@ -938,57 +938,46 @@ async function runMcpScan() {
 
   try {
     let data = null;
+    let scanError = null;
     try {
-      const r = await fetch(`${API_BASE}/api/scan`, {
+      const r = await fetch(`${API_BASE}/api/mcp-security/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module: 'mcp_security', target: url, options: { server_type: type } }),
+        body: JSON.stringify({ target: url, server_type: type }),
       });
-      if (r.ok) data = await r.json();
-    } catch(e) { /* use demo results */ }
+      if (r.ok) {
+        const raw = await r.json();
+        // Real engine returns severity/description/total_findings; normalize
+        // to the field names this page's renderer expects.
+        data = {
+          target:        url,
+          risk_score:    raw.risk_score,
+          preview:       (raw.findings || []).length < (raw.total_vulnerabilities || 0),
+          total_findings: raw.total_vulnerabilities,
+          findings: (raw.findings || []).map(f => ({ sev: f.severity, title: f.title, desc: f.description })),
+        };
+      } else {
+        scanError = (await r.json().catch(() => ({}))).error || `Scan failed (HTTP ${r.status})`;
+      }
+    } catch(e) { scanError = e.message; }
 
     clearInterval(stepInterval);
     progressBar.style.width = '100%';
-    progressStep.textContent = 'Scan complete!';
+    progressStep.textContent = scanError ? 'Scan failed' : 'Scan complete!';
 
     await new Promise(r => setTimeout(r, 600));
     progress.style.display = 'none';
 
-    renderResults(data || getDemoResults(url, type));
+    if (data) renderResults(data);
+    else toast(scanError || 'Unable to reach the MCP scanner. Please try again.', 'error');
   } catch(e) {
     clearInterval(stepInterval);
     progress.style.display = 'none';
-    renderResults(getDemoResults(url, type));
+    toast('Unable to reach the MCP scanner. Please try again.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '🔌 Scan Again';
   }
-}
-
-function getDemoResults(url, type) {
-  const typeFindings = {
-    filesystem: [
-      { sev: 'CRITICAL', title: 'Path Traversal via Tool Description', desc: 'Tool description contains instructions enabling access outside declared root directory.' },
-      { sev: 'HIGH',     title: 'Overpermissioned Write Access', desc: 'MCP server requests write access to entire filesystem, not scoped to declared working directory.' },
-      { sev: 'MEDIUM',   title: 'Missing Audit Logging', desc: 'File access operations are not logged. No audit trail for compliance or forensics.' },
-    ],
-    database: [
-      { sev: 'CRITICAL', title: 'SQL Injection via Prompt Injection', desc: 'Tool description includes patterns that can be used to construct malicious SQL via LLM prompt injection.' },
-      { sev: 'HIGH',     title: 'Excessive Database Permissions', desc: 'Tool schema requests DML access (INSERT/UPDATE/DELETE) when only SELECT is required.' },
-      { sev: 'MEDIUM',   title: 'Connection String Exposure', desc: 'Error messages may expose database connection parameters including credentials.' },
-    ],
-    generic: [
-      { sev: 'HIGH',     title: 'Tool Description Injection Vector', desc: 'Tool descriptions contain patterns that may redirect LLM behavior when processed.' },
-      { sev: 'MEDIUM',   title: 'Missing Authentication Validation', desc: 'No verification of caller identity before executing tool calls.' },
-      { sev: 'LOW',      title: 'Rate Limiting Not Implemented', desc: 'No request rate limiting detected. Cost amplification and DoS possible.' },
-    ],
-  };
-  return {
-    target: url,
-    risk_score: type === 'database' ? 78 : type === 'filesystem' ? 82 : 61,
-    findings: typeFindings[type] || typeFindings.generic,
-    preview: true,
-  };
 }
 
 function renderResults(data) {
