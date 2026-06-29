@@ -133,15 +133,10 @@ export async function handlePlatformKPI(request, env, authCtx) {
     tierDist[t] = (tierDist[t] || 0) + 1;
   }
 
-  // LTV estimate (conservative 18-month avg tenure)
-  const ltv = arpu * 18;
-
-  // NRR estimate (expansion revenue proxy — upsell ratio)
-  const upgrades = invoices.filter(i => parseFloat(i.amount_usd) > 99).length;
-  const nrr = paidUsers > 0 ? Math.min(1.5, 1 + (upgrades / Math.max(paidUsers, 1)) * 0.3) : 1.0;
-
-  // CAC estimate (computed field — placeholder until ad spend integrated)
-  const cac_estimate = mrr > 0 ? Math.round(mrr * 0.15) : 0; // 15% of MRR as CAC proxy
+  // LTV/NRR/CAC require revenue history to compute meaningfully — null until real data available
+  const ltv = null;
+  const nrr = null;
+  const cac_estimate = null;
 
   const kpi = {
     generated_at:     now.toISOString(),
@@ -149,9 +144,12 @@ export async function handlePlatformKPI(request, env, authCtx) {
     mrr:              Math.round(mrr * 100) / 100,
     arr:              Math.round(arr * 100) / 100,
     arpu:             Math.round(arpu * 100) / 100,
-    ltv_estimate:     Math.round(ltv * 100) / 100,
-    nrr_estimate:     Math.round(nrr * 100) / 100,
-    cac_estimate,
+    ltv_estimate:     null,
+    ltv_note:         'Requires ≥3 months of revenue history to compute',
+    nrr_estimate:     null,
+    nrr_note:         'Requires subscription upgrade/downgrade event tracking',
+    cac_estimate:     null,
+    cac_note:         'Requires ad-spend and acquisition-channel data',
     revenue_ytd:      Math.round(revenueYTD * 100) / 100,
     active_paid_subs: paidUsers,
     trial_count:      trialCount,
@@ -521,10 +519,10 @@ export async function handleExecutiveKPI(request, env, authCtx) {
         churn_rate_est: kpi.churn_rate_est || 0,
         revenue_ytd: kpi.revenue_ytd || 0,
       },
-      board_narrative: `Platform operating at $${(kpi.arr || 0).toLocaleString()} ARR with ${kpi.active_paid_subs || 0} paying customers. `
+      board_narrative: `Platform operating at ₹${(kpi.arr || 0).toLocaleString('en-IN')} ARR with ${kpi.active_paid_subs || 0} paying customers. `
         + `MoM revenue growth: ${momGrowth > 0 ? '+' : ''}${momGrowth}%. `
         + `${kpi.trial_count || 0} trials in conversion pipeline. `
-        + `LTV/CAC ratio: ${kpi.cac_estimate > 0 ? Math.round((kpi.ltv_estimate || 0) / kpi.cac_estimate) : 'N/A'}x.`,
+        + `LTV/CAC ratio: N/A (requires revenue history ≥3 months).`,
     },
   });
 }

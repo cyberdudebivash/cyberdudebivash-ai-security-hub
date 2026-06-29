@@ -1439,42 +1439,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
 
 <!-- ATTENTION ENGINE + RISK COUNTER JS -->
 <script>
-(function CDB_ATTENTION(){
-  var recent_cves = [
-    "CVE-2025-21298 (Windows OLE RCE)","CVE-2025-0282 (Ivanti Connect Secure)","CVE-2024-55591 (Fortinet Auth Bypass)",
-    "CVE-2025-21333 (Windows Hyper-V ESC)","CVE-2024-53104 (Linux USB Video)","CVE-2025-22457 (Ivanti Pulse Secure)",
-    "CVE-2025-24813 (Apache Tomcat RCE)","CVE-2025-1974 (IngressNightmare K8s)","CVE-2024-49113 (Windows LDAP DoS)",
-    "CVE-2025-21335 (Windows Hyper-V PE)","CVE-2025-29824 (CLFS Zero-Day)","CVE-2025-30065 (Apache Parquet RCE)"
-  ];
-  var scanBase = 1247, cveBases = [847,851,849,853,850,848];
-  var tAgo = ["just now","1 min ago","2 min ago","3 min ago","4 min ago","5 min ago","8 min ago","12 min ago"];
-  var startTime = Date.now();
-
-  function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-  function elapsed(){return Math.floor((Date.now()-startTime)/60000);}
-
-  function tick(){
-    var live = rand(12,34);
-    var scansToday = scanBase + rand(0,50) + elapsed()*rand(1,3);
-    var cveActive = cveBases[rand(0,cveBases.length-1)];
-    var threatsHour = rand(8,24);
-    var cveNow = recent_cves[rand(0,recent_cves.length-1)];
-    var timeAgo = tAgo[rand(0,tAgo.length-1)];
-    var updateTime = elapsed() <= 0 ? "just now" : elapsed()+"m ago";
-
-    var el = function(id){return document.getElementById(id);};
-    if(el("ae-scan-live")) el("ae-scan-live").textContent = live;
-    if(el("ae-cve-count")) el("ae-cve-count").textContent = rand(2,6);
-    if(el("ae-update-time")) el("ae-update-time").textContent = updateTime;
-    if(el("rb-scans-today")) el("rb-scans-today").textContent = scansToday.toLocaleString();
-    if(el("rb-cve-active")) el("rb-cve-active").textContent = cveActive;
-    if(el("rb-threats-hour")) el("rb-threats-hour").textContent = threatsHour;
-    if(el("rb-last-cve")) el("rb-last-cve").textContent = cveNow;
-    if(el("rb-time-ago")) el("rb-time-ago").textContent = timeAgo;
-  }
-  /* fake ticker disabled — real data now from global.js CDB_LIVE_STATS */
-  /* (no synthetic refresh) */
-})();
+/* fake ticker removed — real stats from global.js */
 </script>
 
 

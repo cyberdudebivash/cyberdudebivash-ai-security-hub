@@ -205,15 +205,11 @@ export async function handlePublishContent(request, env, authCtx, postId) {
     results.telegram = { success: true, already_published: true };
   }
 
-  // LinkedIn placeholder (requires OAuth2 — returns instructions)
+  // LinkedIn: requires OAuth2 integration — returns copy-paste payload only, does NOT publish.
+  // DB is NOT marked published_to_linkedin=1 since no actual publish occurred.
   if (channels.includes('linkedin') && !post.published_to_linkedin) {
     results.linkedin = publishToLinkedIn(post);
-    if (results.linkedin.manual_copy) {
-      await env.DB.prepare(
-        `UPDATE content_posts SET published_to_linkedin = 1,
-         published_at = COALESCE(published_at, datetime('now')) WHERE id = ?`
-      ).bind(postId).run();
-    }
+    // Only mark published once real OAuth2 LinkedIn API integration is wired
   }
 
   return Response.json({

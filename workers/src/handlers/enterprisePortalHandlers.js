@@ -201,8 +201,9 @@ export async function handleStatusPage(request, env, authCtx) {
     ],
 
     uptime: {
-      last_30_days:  '99.94%',
-      last_90_days:  '99.87%',
+      last_30_days:  null,
+      last_90_days:  null,
+      uptime_note:   'Computed from incident log once uptime monitoring is configured',
       incidents_30d: incidents.length,
     },
 
@@ -326,7 +327,7 @@ export async function handleDocsPortal(request, env, authCtx) {
     },
     endpoints: result,
     available_categories: Object.keys(ALL_ENDPOINTS),
-    sdks:       ['REST API (all languages)', 'OpenAPI spec: GET /api/openapi.json (coming soon)'],
+    sdks:       ['REST API (all languages)'],
     support:    'api-support@cyberdudebivash.com',
     powered_by: 'CYBERDUDEBIVASH SENTINEL APEX',
     timestamp:  new Date().toISOString(),
@@ -502,11 +503,8 @@ export async function handleEnterpriseSalesKit(request, env, authCtx) {
       integrations:         ['SIEM (Splunk, Sentinel)', 'Slack', 'Telegram', 'JIRA', 'ServiceNow', 'REST API'],
     },
 
-    case_studies_teaser: [
-      { company: 'Regional Bank (APAC)',    result: '40% reduction in mean-time-to-detect (MTTD) after deploying MYTHOS continuous monitoring' },
-      { company: 'SaaS Company (100 emp)', result: 'OWASP LLM assessment identified 6 critical AI security gaps before product launch' },
-      { company: 'MSSP (50 clients)',      result: 'Threat Intel API Economy generated $8,000/month additional revenue by reselling intel feeds' },
-    ],
+    case_studies_teaser: [],
+    case_studies_note: 'Case studies will be added once enterprise engagements complete. Contact enterprise@cyberdudebivash.com to be an early design partner.',
 
     demo_cta: {
       book_demo:    'https://calendly.com/cyberdudebivash/enterprise-demo',
