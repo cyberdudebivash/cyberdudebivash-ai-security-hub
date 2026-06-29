@@ -40,8 +40,8 @@ export async function generateBlogPost(env, intel) {
 
   // Solution CTA — link to first matching defense solution
   const solutionCta = solution_ids.length
-    ? `https://cyberdudebivash.com/#defense-solutions?cve_id=${cve_id || ''}`
-    : `https://cyberdudebivash.com/#defense-solutions`;
+    ? `https://cyberdudebivash.in/#defense-solutions?cve_id=${cve_id || ''}`
+    : `https://cyberdudebivash.in/#defense-solutions`;
 
   const post = {
     cve_id:          cve_id || null,
@@ -85,8 +85,8 @@ export async function generateBlogPost(env, intel) {
 // ─── LinkedIn post generator ──────────────────────────────────────────────────
 export function generateLinkedInPost(intel, blogPost) {
   const { cve_id, severity, title, cvss_score, affected_products, cisa_kev } = intel;
-  const blogUrl = `https://cyberdudebivash.com/blog/${blogPost?.slug || 'threat-intel'}`;
-  const defenseUrl = `https://cyberdudebivash.com/#defense-solutions`;
+  const blogUrl = `https://cyberdudebivash.in/blog/${blogPost?.slug || 'threat-intel'}`;
+  const defenseUrl = `https://cyberdudebivash.in/#defense-solutions`;
   const sevEmoji = { CRITICAL: '🚨', HIGH: '⚠️', MEDIUM: '🔍', LOW: '📡' }[severity] || '⚠️';
   const apts = intel.apt_groups || [];
 
@@ -122,8 +122,8 @@ Are you protected? Drop your tech stack below and I'll tell you if you're vulner
 // ─── Telegram message generator ──────────────────────────────────────────────
 export function generateTelegramMessage(intel, blogPost) {
   const { cve_id, severity, title, cvss_score, affected_products, cisa_kev, epss_score } = intel;
-  const blogUrl    = `https://cyberdudebivash.com/blog/${blogPost?.slug || 'threat-intel'}`;
-  const defenseUrl = `https://cyberdudebivash.com/#defense-solutions`;
+  const blogUrl    = `https://cyberdudebivash.in/blog/${blogPost?.slug || 'threat-intel'}`;
+  const defenseUrl = `https://cyberdudebivash.in/#defense-solutions`;
   const sevEmoji   = { CRITICAL: '🚨', HIGH: '⚠️', MEDIUM: '🔍', LOW: '📡' }[severity] || '⚠️';
 
   const msg = `${sevEmoji} <b>${severity} THREAT: ${cve_id || title}</b>
@@ -168,8 +168,8 @@ export async function postToTelegram(env, message) {
         disable_web_page_preview: false,
         reply_markup: {
           inline_keyboard: [[
-            { text: '🛡️ Get Defense Solution', url: `https://cyberdudebivash.com/#defense-solutions` },
-            { text: '📖 Read Analysis',         url: message.url || 'https://cyberdudebivash.com' },
+            { text: '🛡️ Get Defense Solution', url: `https://cyberdudebivash.in/#defense-solutions` },
+            { text: '📖 Read Analysis',         url: message.url || 'https://cyberdudebivash.in' },
           ]],
         },
       }),
@@ -247,7 +247,7 @@ export async function runContentPipeline(env, intel) {
   try {
     // Step 1: Generate and store blog post
     const blogPost = await generateBlogPost(env, intel);
-    results.blog = { slug: blogPost.slug, title: blogPost.title, url: `https://cyberdudebivash.com/blog/${blogPost.slug}` };
+    results.blog = { slug: blogPost.slug, title: blogPost.title, url: `https://cyberdudebivash.in/blog/${blogPost.slug}` };
 
     // Step 2: Generate LinkedIn post
     const liPost   = generateLinkedInPost(intel, blogPost);
@@ -568,14 +568,14 @@ CYBERDUDEBIVASH Sentinel APEX has generated a production-ready defense toolkit f
 ✅ **IR Playbook** — 5-phase response with SLA timers
 ✅ **Executive Briefing** — board-ready PDF report
 
-**[→ Unlock Defense Solution — ${priceRange}](https://cyberdudebivash.com/#defense-solutions)**
+**[→ Unlock Defense Solution — ${priceRange}](https://cyberdudebivash.in/#defense-solutions)**
 
 *Trusted by enterprise SOC teams and MSSPs worldwide.*
 
 ---
 
 *Powered by CYBERDUDEBIVASH AI Security Hub | Sentinel APEX Threat Intelligence*
-*Stay protected: [cyberdudebivash.com](https://cyberdudebivash.com)*`;
+*Stay protected: [cyberdudebivash.com](https://cyberdudebivash.in)*`;
 }
 
 function markdownToHtml(md) {

@@ -129,7 +129,7 @@ export async function handleTrustCenter(request, env, authCtx) {
       'MYTHOS Platform Governor — autonomous 24/7 health monitoring',
     ],
 
-    policies_url:    'https://cyberdudebivash.com/privacy',
+    policies_url:    'https://cyberdudebivash.in/privacy',
     security_url:    'https://intel.cyberdudebivash.com/api/security-center',
     contact:         'trust@cyberdudebivash.com',
     powered_by:      'CYBERDUDEBIVASH SENTINEL APEX',

@@ -78,7 +78,7 @@ const FAQ_DATA = [
     id: 'faq-010',
     category: 'Security',
     question: 'Is my data secure?',
-    answer: 'Yes. All API traffic is TLS 1.3 encrypted. API keys use SHA-256 hashing. Platform is hosted on Cloudflare infrastructure with DDoS protection. We never store plaintext credentials. See our security policy at https://cyberdudebivash.com/security.',
+    answer: 'Yes. All API traffic is TLS 1.3 encrypted. API keys use SHA-256 hashing. Platform is hosted on Cloudflare infrastructure with DDoS protection. We never store plaintext credentials. See our security policy at https://cyberdudebivash.in/security.',
     tags: ['security', 'privacy', 'data'],
   },
   {
@@ -242,7 +242,7 @@ async function handleDocs(request, env) {
       { title: 'Rate Limits',            url: 'https://intel.cyberdudebivash.com/api/#limits', description: 'API quota and rate limiting documentation' },
       { title: 'IOC Feed Format',        url: 'https://intel.cyberdudebivash.com/api/#ioc',    description: 'IOC data schema and feed format specification' },
       { title: 'Enterprise SLA',         url: 'https://intel.cyberdudebivash.com/docs/sla',    description: 'Enterprise uptime and support SLA details' },
-      { title: 'Security Policy',        url: 'https://cyberdudebivash.com/security',          description: 'Platform security and data handling policy' },
+      { title: 'Security Policy',        url: 'https://cyberdudebivash.in/security',          description: 'Platform security and data handling policy' },
     ],
     platform_url: 'https://intel.cyberdudebivash.com',
     support_email: 'support@cyberdudebivash.com',

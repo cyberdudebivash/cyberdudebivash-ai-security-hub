@@ -345,7 +345,7 @@ export async function autoPublishIntel(env, intelEntry) {
           text:     `🚨 *${entry.cveId}* — CVSS ${entry.cvss} — ${entry.title}`,
           severity: entry.severity,
           cve:      entry.cveId,
-          url:      `https://cyberdudebivash.com/intel/${entry.cveId}`,
+          url:      `https://cyberdudebivash.in/intel/${entry.cveId}`,
         }),
       }).catch(() => {});
       results.enterprise_notified = true;
@@ -480,7 +480,7 @@ export async function buildWeeklyDigest(env, userEmail) {
       },
       cta: {
         label: 'Run a New Scan',
-        url:   'https://cyberdudebivash.com/#scan',
+        url:   'https://cyberdudebivash.in/#scan',
       },
     };
   } catch (e) {
@@ -509,7 +509,7 @@ function buildSocialPost(entry) {
     `✅ IR Playbook — ₹999`,
     `✅ Full Defense Pack — ₹2,499`,
     ``,
-    `🔗 https://cyberdudebivash.com/intel/${cveId}`,
+    `🔗 https://cyberdudebivash.in/intel/${cveId}`,
     ``,
     `#CyberSecurity #ThreatIntel #${cveId.replace(/-/g, '')} #InfoSec`,
   ].join('\n');
@@ -610,8 +610,8 @@ function buildEmailFromTemplate(type, data) {
             <h3 style="margin:0;color:#4f46e5">Special Offer: ${data.offer?.discount || 20}% Off</h3>
             <p>Use code <strong>COMEBACK${data.offer?.discount || 20}</strong> for ${data.offer?.discount || 20}% off your next ${data.offer?.duration || '2 months'}.</p>
           </div>
-          <a href="https://cyberdudebivash.com/#scan" style="display:inline-block;background:#4f46e5;color:white;padding:12px 24px;border-radius:6px;text-decoration:none">Run a New Scan →</a>
-          <p style="color:#888;font-size:12px;margin-top:30px"><a href="https://cyberdudebivash.com/unsubscribe?email=${encodeURIComponent(data.email)}">Unsubscribe</a></p>
+          <a href="https://cyberdudebivash.in/#scan" style="display:inline-block;background:#4f46e5;color:white;padding:12px 24px;border-radius:6px;text-decoration:none">Run a New Scan →</a>
+          <p style="color:#888;font-size:12px;margin-top:30px"><a href="https://cyberdudebivash.in/unsubscribe?email=${encodeURIComponent(data.email)}">Unsubscribe</a></p>
         </div>`,
     },
     purchase_confirmation: {
@@ -621,10 +621,10 @@ function buildEmailFromTemplate(type, data) {
           <h2>✅ Thank you for your purchase!</h2>
           <p>Your <strong>${data.product || data.plan}</strong> is ready.</p>
           ${data.plan ? `<p>Your account has been upgraded to <strong>${data.plan.toUpperCase()}</strong>. Reload the dashboard to access your new features.</p>` : ''}
-          ${data.product ? `<p>Download your defense tools from your <a href="https://cyberdudebivash.com/user-dashboard.html">dashboard</a>.</p>` : ''}
+          ${data.product ? `<p>Download your defense tools from your <a href="https://cyberdudebivash.in/user-dashboard.html">dashboard</a>.</p>` : ''}
           <p>Payment ID: <code>${data.payment_id || 'N/A'}</code></p>
           <p>Amount: <strong>₹${data.amount || 0}</strong></p>
-          <a href="https://cyberdudebivash.com/user-dashboard.html" style="display:inline-block;background:#10b981;color:white;padding:12px 24px;border-radius:6px;text-decoration:none">Go to Dashboard →</a>
+          <a href="https://cyberdudebivash.in/user-dashboard.html" style="display:inline-block;background:#10b981;color:white;padding:12px 24px;border-radius:6px;text-decoration:none">Go to Dashboard →</a>
         </div>`,
     },
     threat_alert: {
@@ -643,8 +643,8 @@ function buildEmailFromTemplate(type, data) {
             <li>IR Playbook — ₹999</li>
             <li>Full Defense Pack — ₹2,499</li>
           </ul>
-          <a href="https://cyberdudebivash.com/intel/${data.cve_id}" style="display:inline-block;background:#ef4444;color:white;padding:12px 24px;border-radius:6px;text-decoration:none">Get Defense Tools →</a>
-          <p style="color:#888;font-size:12px;margin-top:30px"><a href="https://cyberdudebivash.com/unsubscribe?email=">Unsubscribe from alerts</a></p>
+          <a href="https://cyberdudebivash.in/intel/${data.cve_id}" style="display:inline-block;background:#ef4444;color:white;padding:12px 24px;border-radius:6px;text-decoration:none">Get Defense Tools →</a>
+          <p style="color:#888;font-size:12px;margin-top:30px"><a href="https://cyberdudebivash.in/unsubscribe?email=">Unsubscribe from alerts</a></p>
         </div>`,
     },
   };

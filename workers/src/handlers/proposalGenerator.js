@@ -189,7 +189,7 @@ function buildProposalDocument(lead, packageId, customizations = {}) {
       name:     'CYBERDUDEBIVASH Pvt. Ltd.',
       address:  'India',
       email:    'enterprise@cyberdudebivash.com',
-      website:  'https://cyberdudebivash.com',
+      website:  'https://cyberdudebivash.in',
       gstin:    'PENDING_REGISTRATION',
     },
     client: {
@@ -294,8 +294,8 @@ function buildProposalDocument(lead, packageId, customizations = {}) {
       'Onboarding begins within 24 hours of payment confirmation',
     ],
 
-    accept_url:  `https://cyberdudebivash.com/proposal/accept?id=PROP_ID`,
-    contact_url: 'https://cyberdudebivash.com/contact',
+    accept_url:  `https://cyberdudebivash.in/proposal/accept?id=PROP_ID`,
+    contact_url: 'https://cyberdudebivash.in/contact',
     status:      'DRAFT',
   };
 }
@@ -328,7 +328,7 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
 
   const propId   = generateProposalId();
   const doc      = buildProposalDocument(lead, package_id, { discount_pct, setup_fee, payment_terms });
-  doc.accept_url = `https://cyberdudebivash.com/proposal/accept?id=${propId}`;
+  doc.accept_url = `https://cyberdudebivash.in/proposal/accept?id=${propId}`;
   doc.notes      = notes;
   doc.lead_id    = lead_id;
 

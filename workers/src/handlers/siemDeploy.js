@@ -218,7 +218,7 @@ function buildPayload(platform, rule, meta = {}) {
             sigma_rule: rule.sigma,
           },
         },
-        links: [{ href: 'https://cyberdudebivash.com', text: 'CYBERDUDEBIVASH Dashboard' }],
+        links: [{ href: 'https://cyberdudebivash.in', text: 'CYBERDUDEBIVASH Dashboard' }],
       };
 
     case 'qradar':
