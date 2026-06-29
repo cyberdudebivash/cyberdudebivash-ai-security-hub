@@ -682,7 +682,7 @@ export async function handleV1Hunting(request, env, authCtx = {}) {
   }
 
   const url    = new URL(request.url);
-  const minSev = url.searchParams.get('min_severity') || 'medium';
+  const minSev = (url.searchParams.get('min_severity') || 'medium').toLowerCase();
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || '100', 10));
   let entries  = [];
 

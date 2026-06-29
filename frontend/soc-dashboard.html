@@ -892,28 +892,36 @@ function renderAttackGraph() {
   });
 }
 
-// ── Load Threat Timeline ──────────────────────────────────────────────────────
-function loadTimeline() {
-  const tl = document.getElementById('threat-timeline');
-  const now = Date.now();
-  const events = [
-    { dt: now - 3600000*0.1, sev:'CRITICAL', title:'CVE-2025-XXXX detected', desc:'Active exploitation in wild', color:'#ef4444' },
-    { dt: now - 3600000*0.5, sev:'HIGH',     title:'DNS anomaly on 3 domains', desc:'Potential hijack attempt', color:'#f97316' },
-    { dt: now - 3600000*1,   sev:'HIGH',     title:'Brute force scan blocked', desc:'45 attempts/min from 185.x.x.x', color:'#f97316' },
-    { dt: now - 3600000*2,   sev:'MEDIUM',   title:'TLS 1.1 downgrade attempt', desc:'BEAST attack vector detected', color:'#f59e0b' },
-    { dt: now - 3600000*4,   sev:'LOW',      title:'Sentinel APEX feed updated', desc:'1,247 new IOCs ingested', color:'#10b981' },
-    { dt: now - 3600000*6,   sev:'CRITICAL', title:'CISA KEV bulletin published', desc:'3 new Known Exploited Vulnerabilities', color:'#ef4444' },
-    { dt: now - 3600000*8,   sev:'MEDIUM',   title:'Continuous monitor drift', desc:'Risk score increased +12 on target.com', color:'#f59e0b' },
-  ];
+// ── Load Threat Timeline (real alerts, no fabricated samples) ─────────────────
+const TL_COLOR = { CRITICAL:'#ef4444', HIGH:'#f97316', MEDIUM:'#f59e0b', LOW:'#10b981' };
 
-  tl.innerHTML = events.map(e => `
+async function loadTimeline() {
+  const tl = document.getElementById('threat-timeline');
+  try {
+    const r    = await fetch(`${API_BASE}/api/v1/alerts?limit=7`, { headers: HEADERS });
+    const data = await r.json();
+    const items = (data.alerts || []).slice(0, 7);
+
+    if (!items.length) {
+      tl.innerHTML = '<li class="tl-item"><div class="tl-content"><div class="tl-title">No recent alerts</div></div></li>';
+      return;
+    }
+
+    tl.innerHTML = items.map(a => {
+      const dt    = a.timestamp ? new Date(a.timestamp).getTime() : Date.now();
+      const color = TL_COLOR[a.severity] || TL_COLOR.MEDIUM;
+      return `
     <li class="tl-item">
-      <div class="tl-dot" style="background:${e.color}"></div>
+      <div class="tl-dot" style="background:${color}"></div>
       <div class="tl-content">
-        <div class="tl-title">${e.title}</div>
-        <div class="tl-meta">${e.desc} · ${timeAgo(e.dt)}</div>
+        <div class="tl-title">${escHtml(a.title || a.name || 'Unknown Threat')}</div>
+        <div class="tl-meta">${escHtml((a.description || '').substring(0,80))} · ${timeAgo(dt)}</div>
       </div>
-    </li>`).join('');
+    </li>`;
+    }).join('');
+  } catch (e) {
+    tl.innerHTML = `<li class="tl-item"><div class="tl-content"><div class="tl-title">Unable to load timeline</div></div></li>`;
+  }
 }
 
 // ── Stats update from SSE ─────────────────────────────────────────────────────
