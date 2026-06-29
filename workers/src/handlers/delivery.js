@@ -51,7 +51,7 @@ const DELIVERY_CATALOG = {
     name: 'Enterprise Plan',
     delivery_method: 'account_upgrade',
     access_details: {
-      instructions: 'Enterprise access activated. Dedicated support contact: bivash@cyberdudebivash.com',
+      instructions: 'Enterprise access activated. Dedicated support contact: contact@cyberdudebivash.in',
       features: ['Unlimited everything','Multi-tenant org','SIEM export','Custom reports','SLA support'],
     },
   },
@@ -403,7 +403,7 @@ export async function handleDeliveryAccess(request, env) {
       expires_at:    record.expires_at,
       access_count:  (record.access_count || 0) + 1,
       status:        'active',
-      support_email: 'bivash@cyberdudebivash.com',
+      support_email: 'contact@cyberdudebivash.in',
       support_whatsapp: '+918179881447',
       discord_invite: record.access_details?.discord_access ? 'https://discord.gg/cyberdudebivash' : null,
     });

@@ -1558,7 +1558,7 @@ export default {
         razorpay_mode:    (env.RAZORPAY_KEY_ID  || '').startsWith('rzp_live') ? 'live' : 'test',
         platform:         env.APP_NAME         || 'CYBERDUDEBIVASH AI Security Hub',
         version:          env.VERSION           || '40.0.0',
-        contact_email:    env.CONTACT           || 'bivash@cyberdudebivash.com',
+        contact_email:    env.CONTACT           || 'contact@cyberdudebivash.in',
         features: {
           subscriptions: true,
           per_report_payments: true,

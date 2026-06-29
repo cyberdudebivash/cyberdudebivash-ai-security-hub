@@ -17,7 +17,7 @@ export const TIERS = {
 };
 
 export const UPGRADE_URL   = 'https://cyberdudebivash.in/#pricing';
-export const CONTACT_EMAIL = 'bivash@cyberdudebivash.com';
+export const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
 
 // ─── Validate API Key: KV first, then D1 self-serve keys ──────────────────────
 async function resolveApiKey(key, env) {

@@ -79,9 +79,9 @@ export async function handleEnterpriseContact(request, env) {
         <div style="background:rgba(0,212,255,.08);border-left:3px solid #00d4ff;padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0">
           Our security architect will review your requirements and respond within <strong>24 business hours</strong>.
         </div>
-        <p>For urgent matters: <a href="mailto:bivash@cyberdudebivash.com" style="color:#60a5fa">bivash@cyberdudebivash.com</a> · WhatsApp +91 8179881447</p>
+        <p>For urgent matters: <a href="mailto:contact@cyberdudebivash.in" style="color:#60a5fa">contact@cyberdudebivash.in</a> · WhatsApp +91 8179881447</p>
       </div>`,
-      text: `Inquiry received. Ref: ${contactId.slice(0,8).toUpperCase()}. We'll respond within 24h. Contact: bivash@cyberdudebivash.com`,
+      text: `Inquiry received. Ref: ${contactId.slice(0,8).toUpperCase()}. We'll respond within 24h. Contact: contact@cyberdudebivash.in`,
     }).catch(() => {}),
     sendEmail(env, {
       to:      FOUNDER_EMAIL,

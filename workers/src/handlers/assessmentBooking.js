@@ -115,7 +115,7 @@ export async function handleBookAssessment(request, env) {
     } : null,
     next: rzpOrder
       ? 'Complete payment to confirm your assessment booking.'
-      : 'Manual payment required. Contact bivash@cyberdudebivash.com',
+      : 'Manual payment required. Contact contact@cyberdudebivash.in',
   }, 201);
 }
 

@@ -466,7 +466,7 @@ export async function handleEnterpriseInquiryAlias(request, env) {
     message: 'Enterprise inquiry received. We will respond within 4 business hours.',
     inquiry: { company, name, email, interest },
     next_steps: [
-      'Expect a response within 4 business hours on bivash@cyberdudebivash.com',
+      'Expect a response within 4 business hours on contact@cyberdudebivash.in',
       'For urgent matters, WhatsApp +91 81798 81447',
       'Or book a discovery call: https://wa.me/918179881447',
     ],

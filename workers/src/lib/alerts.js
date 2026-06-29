@@ -10,7 +10,7 @@
 import { resilientFetch } from './resilience.js';
 import { sendEmail }      from '../services/emailEngine.js';
 
-const CONTACT_EMAIL     = 'bivash@cyberdudebivash.com';
+const CONTACT_EMAIL     = 'contact@cyberdudebivash.in';
 const PLATFORM_URL      = 'https://tools.cyberdudebivash.com';
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
 const ALERT_TIMEOUT     = 8000; // 8s per alert delivery
