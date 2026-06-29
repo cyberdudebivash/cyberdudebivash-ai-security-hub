@@ -1418,7 +1418,7 @@ async function lookupIOC() {
   area.innerHTML = '<div class="empty-state"><p>⏳ Enriching IOC…</p></div>';
 
   try {
-    const params = new URLSearchParams({ indicator: value });
+    const params = new URLSearchParams({ value });
     if (type !== 'auto') params.set('type', type);
     const res  = await fetch(`${API}/api/ioc/enrich?${params}`);
     const data = await res.json();

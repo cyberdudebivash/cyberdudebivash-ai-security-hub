@@ -190,10 +190,10 @@ footer a{color:#10b981;margin:0 8px}
 <!-- STAT STRIP -->
 <div class="stat-strip">
   <div class="stat-strip-inner">
-    <div class="stat-item"><div class="stat-val" id="stat-total">847</div><div class="stat-label">Total Intel Items</div></div>
-    <div class="stat-item"><div class="stat-val" style="color:#ef4444" id="stat-crit">34</div><div class="stat-label">Critical Severity</div></div>
-    <div class="stat-item"><div class="stat-val" id="stat-cve">312</div><div class="stat-label">AI CVEs Tracked</div></div>
-    <div class="stat-item"><div class="stat-val" id="stat-actors">14</div><div class="stat-label">Threat Actors</div></div>
+    <div class="stat-item"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Total Intel Items</div></div>
+    <div class="stat-item"><div class="stat-val" style="color:#ef4444" id="stat-crit">—</div><div class="stat-label">Critical Severity</div></div>
+    <div class="stat-item"><div class="stat-val" id="stat-cve">—</div><div class="stat-label">AI CVEs Tracked</div></div>
+    <div class="stat-item"><div class="stat-val" id="stat-actors">—</div><div class="stat-label">Threat Actors</div></div>
     <div class="stat-item"><div class="stat-val">4h</div><div class="stat-label">Update Frequency</div></div>
     <div class="stat-item"><div class="stat-val" style="color:#10b981">LIVE</div><div class="stat-label">Feed Status</div></div>
   </div>
@@ -255,7 +255,7 @@ footer a{color:#10b981;margin:0 8px}
     </div>
 
     <div style="text-align:center;margin-top:24px">
-      <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:#10b981;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;transition:all .2s">View Full Sentinel APEX Feed ↗ (847 items)</a>
+      <a href="https://intel.cyberdudebivash.com" target="_blank" rel="noopener" id="apex-feed-link" style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:#10b981;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;transition:all .2s">View Full Sentinel APEX Feed ↗</a>
     </div>
   </div>
 
@@ -507,8 +507,13 @@ async function loadLiveStats(){
       .then(r=>r.ok?r.json():null)
       .then(t=>{
         const actors=t?.data?.total??t?.total;
-        if(actors!=null){animateCounter('stat-actors',0,actors,1200);animateCounter('side-actors',0,actors,1200);}
-        else{setText('stat-actors','—');setText('side-actors','—');}
+        if(actors!=null){
+          animateCounter('stat-actors',0,actors,1200);
+          animateCounter('side-actors',0,actors,1200);
+        }else{setText('stat-actors','—');setText('side-actors','—');}
+        // Update apex feed link with real count
+        const lnk=document.getElementById('apex-feed-link');
+        if(lnk&&total!=null){lnk.textContent='View Full Sentinel APEX Feed ↗ ('+total.toLocaleString()+' items)';}
       })
       .catch(()=>{setText('stat-actors','—');setText('side-actors','—');});
   }catch(e){

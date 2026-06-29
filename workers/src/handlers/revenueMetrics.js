@@ -79,13 +79,18 @@ async function buildRevenueMetrics(db) {
     newThisMonth = newQ?.cnt || 0;
   } catch (_) {}
 
-  // ── MRR calculation ────────────────────────────────────────────────────
-  // Pricing: pro = $49/mo, enterprise = $299/mo (from existing pricing logic)
-  const PRO_PRICE        = 4900;   // cents
-  const ENTERPRISE_PRICE = 29900;  // cents
-  const mrr_cents  = (planCounts.pro * PRO_PRICE) + (planCounts.enterprise * ENTERPRISE_PRICE);
+  // ── MRR calculation — canonical INR pricing (from subscriptionPaywallEngine.js SSOT)
+  // STARTER: ₹499  PRO: ₹1,499  ENTERPRISE: ₹4,999  MSSP: ₹9,999
+  const STARTER_PRICE_INR    = 499;
+  const PRO_PRICE_INR        = 1499;
+  const ENTERPRISE_PRICE_INR = 4999;
+  const mrr_inr  = (planCounts.starter || 0) * STARTER_PRICE_INR
+                 + (planCounts.pro      || 0) * PRO_PRICE_INR
+                 + (planCounts.enterprise || 0) * ENTERPRISE_PRICE_INR;
+  // Keep legacy _cents fields as INR paise for any callers that divide by 100
+  const mrr_cents  = mrr_inr * 100;
   const arr_cents  = mrr_cents * 12;
-  const arpu_cents = planCounts.total > 0 ? Math.round(mrr_cents / Math.max(planCounts.pro + planCounts.enterprise, 1)) : 0;
+  const arpu_cents = planCounts.total > 0 ? Math.round(mrr_cents / Math.max((planCounts.starter||0) + (planCounts.pro||0) + (planCounts.enterprise||0), 1)) : 0;
 
   // ── Conversion rates ────────────────────────────────────────────────────
   const paying = planCounts.pro + planCounts.enterprise;

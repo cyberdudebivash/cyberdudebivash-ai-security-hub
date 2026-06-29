@@ -108,35 +108,41 @@ async function buildNRRForecast(env, allRows) {
 
   // NRR = (Starting MRR + Expansion - Churn - Contraction) / Starting MRR
   const currentMRR = snaps.length ? snaps[snaps.length - 1].total_mrr : 0;
-  const avgChurnRate = snaps.length >= 2
+  // Require at least 2 MRR snapshots for meaningful rates — return insufficient_data flag when absent
+  const hasEnoughData = snaps.length >= 2;
+  const avgChurnRate = hasEnoughData
     ? snaps.reduce((a, s) => a + (s.churned_mrr / Math.max(s.total_mrr, 1)), 0) / snaps.length
-    : 0.02;
-  const avgExpansionRate = snaps.length >= 2
+    : null;
+  const avgExpansionRate = hasEnoughData
     ? snaps.reduce((a, s) => a + (s.expansion_mrr / Math.max(s.total_mrr, 1)), 0) / snaps.length
-    : 0.03;
+    : null;
 
-  // 3-month projections
+  // 3-month projections — only computed when enough historical data exists
   const months = [];
-  let projectedMRR = currentMRR;
-  for (let m = 1; m <= 3; m++) {
-    const churn = projectedMRR * avgChurnRate;
-    const expansion = projectedMRR * avgExpansionRate;
-    projectedMRR = projectedMRR - churn + expansion;
-    const d = new Date();
-    d.setMonth(d.getMonth() + m);
-    months.push({
-      month: d.toLocaleString('default', { month: 'short', year: 'numeric' }),
-      projected_mrr: Math.round(projectedMRR),
-      projected_churn_mrr: Math.round(churn),
-      projected_expansion_mrr: Math.round(expansion),
-    });
+  if (hasEnoughData) {
+    let projectedMRR = currentMRR;
+    for (let m = 1; m <= 3; m++) {
+      const churn = projectedMRR * avgChurnRate;
+      const expansion = projectedMRR * avgExpansionRate;
+      projectedMRR = projectedMRR - churn + expansion;
+      const d = new Date();
+      d.setMonth(d.getMonth() + m);
+      months.push({
+        month: d.toLocaleString('default', { month: 'short', year: 'numeric' }),
+        projected_mrr: Math.round(projectedMRR),
+        projected_churn_mrr: Math.round(churn),
+        projected_expansion_mrr: Math.round(expansion),
+      });
+    }
   }
 
-  const nrr = currentMRR > 0
+  const nrr = hasEnoughData && currentMRR > 0
     ? Math.round(((currentMRR - atRiskMRR + expansionMRR) / currentMRR) * 100)
-    : 100;
+    : null;
 
   return {
+    insufficient_data: !hasEnoughData,
+    snapshots_available: snaps.length,
     current_mrr: currentMRR,
     at_risk_mrr: atRiskMRR,
     potential_expansion_mrr: expansionMRR,

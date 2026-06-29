@@ -2737,7 +2737,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div class="proof-card">
 <div class="proof-card-icon">🏢</div>
 <div class="proof-card-title">Enterprise SOC Teams</div>
-<div class="proof-card-sub">Fortune 500 security operations centers running continuous threat monitoring</div>
+<div class="proof-card-sub">Enterprise security operations centers running continuous threat monitoring</div>
 </div>
 <div class="proof-card">
 <div class="proof-card-icon">🔍</div>
@@ -15133,7 +15133,7 @@ function showLeadModal(){
     '<p style="font-size:13px;color:rgba(255,255,255,.72);margin:0 0 22px;line-height:1.6">8 CRITICAL CVEs active right now. We will analyze your exposure and send a tailored report — free, no credit card.</p>'+
     '<input id="p13-lead-email" aria-label="Email address" type="email" placeholder="your@company.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(0,212,255,.25);border-radius:10px;padding:13px 16px;color:#fff;font-size:14px;outline:none;margin-bottom:12px">'+
     '<button id="p13-lead-btn" onclick="p13SubmitLead()" style="width:100%;background:linear-gradient(135deg,#00d4ff,#7c3aed);border:none;color:#fff;padding:14px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">&#9889; Get Free Threat Report &#8594;</button>'+
-    '<p style="font-size:11px;color:rgba(255,255,255,.72);margin:0">No spam. Used by 500+ security teams. 1-click unsubscribe.</p>'+
+    '<p style="font-size:11px;color:rgba(255,255,255,.72);margin:0">No spam. Join our security community. 1-click unsubscribe.</p>'+
     '<div id="p13-lead-status" style="margin-top:10px;font-size:13px;min-height:20px"></div></div>';
   m.addEventListener('click',function(e){if(e.target===m){m.remove();sessionStorage.setItem('cdb_lead_p13','1');}});
   document.body.appendChild(m);
@@ -20626,27 +20626,9 @@ window.p4LoadFunnel = function() {
 
 /* ── Live Counter Animation ─────────────────────────────────────────────── */
 function p4InitCounters() {
-  var counters = [
-    { id: 'p4-cnt-scans',   base: 12847, delta: 5,  interval: 8000  },
-    { id: 'p4-cnt-threats', base: 3291,  delta: 2,  interval: 12000 },
-    { id: 'p4-cnt-orgs',    base: 847,   delta: 1,  interval: 30000 }
-  ];
-  counters.forEach(function(c) {
-    var current = c.base;
-    setInterval(function() {
-      current += Math.floor(Math.random() * c.delta) + 1;
-      var el = document.getElementById(c.id);
-      if (el) { el.textContent = current.toLocaleString(); }
-      // Also update authority strip
-      var strip = {
-        'p4-cnt-scans':   'p4-scan-count',
-        'p4-cnt-threats': 'p4-threat-count',
-        'p4-cnt-orgs':    'p4-user-count'
-      };
-      var stripEl = strip[c.id] ? document.getElementById(strip[c.id]) : null;
-      if (stripEl) stripEl.textContent = current.toLocaleString() + '+';
-    }, c.interval);
-  });
+  // Removed: Math.random() fake incrementing counters.
+  // Real stats are populated by fetchRealStats() which calls /api/health every 5 min.
+  // p4-cnt-scans / p4-cnt-threats / p4-cnt-orgs are written only from live API data.
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
