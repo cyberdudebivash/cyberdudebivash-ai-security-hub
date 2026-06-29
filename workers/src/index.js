@@ -144,6 +144,7 @@ import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handle
 import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibe-code/vibeCodeScanner.js';
 import { handleListAgentAdvisories, handleAgentThreatOverview, handleCreateAgentAdvisory } from './handlers/agentThreatAdvisories.js';
 import { ingestAgentThreatAdvisories } from './services/agentThreatIngestion.js';
+import { ingestAttackLibraryTechniques } from './services/attackLibraryIngestion.js';
 import { handleListAttackTechniques, handleAttackLibraryOverview, handleCreateAttackTechnique } from './handlers/attackLibrary.js';
 
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
@@ -6949,6 +6950,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   if (path === '/api/admin/attack-library/techniques' && method === 'POST') {
     return withSecurityHeaders(withCors(await handleCreateAttackTechnique(request, env), request));
   }
+  if (path === '/api/admin/attack-library/ingest' && method === 'POST') {
+    if (!isAdminAuthorized(request, env)) {
+      return withSecurityHeaders(withCors(Response.json({ error: 'Unauthorized' }, { status: 401 }), request));
+    }
+    const result = await ingestAttackLibraryTechniques(env);
+    return withSecurityHeaders(withCors(Response.json({ success: true, ...result }), request));
+  }
 
   // -- v30.0: Platform Metrics ------------------------------------------------
   if (path === '/api/platform/metrics') {
@@ -7585,6 +7593,16 @@ ctx.waitUntil(
         ingestAgentThreatAdvisories(env)
           .then(r => console.log('[CRON] Agent Threat Advisories:', JSON.stringify(r)))
           .catch(e => console.error('[CRON] Agent Threat Advisories error:', e?.message))
+      );
+    }
+
+    // ── DAILY (6 AM): Pull the real MITRE ATLAS technique catalog so
+    //    /attack-library stops being frozen at its 11 hand-seeded rows. ──
+    if (cron === '0 6 * * *') {
+      ctx.waitUntil(
+        ingestAttackLibraryTechniques(env)
+          .then(r => console.log('[CRON] Attack Library Techniques:', JSON.stringify(r)))
+          .catch(e => console.error('[CRON] Attack Library Techniques error:', e?.message))
       );
     }
 

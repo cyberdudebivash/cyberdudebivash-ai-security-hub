@@ -19,5 +19,8 @@
   },
   "author": "CyberDudeBivash Pvt. Ltd. <bivash@cyberdudebivash.com>",
   "license": "UNLICENSED",
-  "homepage": "https://cyberdudebivash.in"
+  "homepage": "https://cyberdudebivash.in",
+  "dependencies": {
+    "js-yaml": "^5.2.0"
+  }
 }

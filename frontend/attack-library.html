@@ -186,7 +186,10 @@ footer a{color:#ef4444;margin:0 8px}
 // ── v44: Live, D1-backed attack library — replaces the static 11-card
 // dataset and the fabricated "87 Attack Techniques"/"Weekly" hero stats with
 // real data from /api/attack-library/techniques and /api/attack-library/overview.
-const CAT_LABELS={'prompt-injection':'Prompt Injection','jailbreak':'Jailbreak','agent-takeover':'Agent Takeover','rag-poisoning':'RAG Poisoning','data-exfil':'Data Exfiltration','model-abuse':'Model Abuse'};
+const CAT_LABELS={'prompt-injection':'Prompt Injection','jailbreak':'Jailbreak','agent-takeover':'Agent Takeover','rag-poisoning':'RAG Poisoning','data-exfil':'Data Exfiltration','model-abuse':'Model Abuse',
+  'reconnaissance':'Reconnaissance','resource-development':'Resource Development','ai-attack-staging':'AI Attack Staging','initial-access':'Initial Access','execution':'Execution',
+  'persistence':'Persistence','defense-evasion':'Defense Evasion','discovery':'Discovery','collection':'Collection','impact':'Impact',
+  'privilege-escalation':'Privilege Escalation','credential-access':'Credential Access','command-and-control':'Command &amp; Control','lateral-movement':'Lateral Movement'};
 let _techniques=[];
 let _currentCat='all';
 let _currentSearch='';
