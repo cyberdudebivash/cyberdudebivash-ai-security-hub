@@ -354,7 +354,7 @@ export async function handleBookDemo(request, env) {
     use_case,
     status:         'CONFIRMED',
     booked_at:      new Date().toISOString(),
-    meet_link:      'https://meet.google.com/cdb-demo-' + Math.random().toString(36).slice(2, 8),
+    meet_link:      null, // Meeting link sent via email confirmation after manual scheduling
     confirmation_sent: false,
   };
 

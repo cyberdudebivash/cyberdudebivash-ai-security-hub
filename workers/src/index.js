@@ -4781,40 +4781,25 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleOnboardingObservability(request, env), request));
     }
 
-    // ── P18.0: Revenue Intelligence & Churn Prevention Engine ────────────────
-    if (path === '/api/platform/revenue-intelligence' && method === 'GET') {
+    // ── P18.0: Revenue Intelligence & Churn Prevention Engine (owner-only) ──────
+    if (path.startsWith('/api/platform/revenue-intelligence')) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleRevenueIntelligence(request, env), request));
-    }
-    if (path === '/api/platform/revenue-intelligence/churn-alerts' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleChurnAlerts(request, env), request));
-    }
-    if (path === '/api/platform/revenue-intelligence/intervention' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleLogIntervention(request, env), request));
-    }
-    if (path === '/api/platform/revenue-intelligence/upgrade-signals' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleUpgradeSignals(request, env), request));
-    }
-    if (path === '/api/platform/revenue-intelligence/nrr-forecast' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleNRRForecast(request, env), request));
-    }
-    if (path === '/api/platform/revenue-intelligence/observability' && method === 'GET') {
-      return withSecurityHeaders(withCors(await handleRevenueIntelObservability(request, env), request));
-    }
-    // P19.0-B — automated churn notification trigger
-    if (path === '/api/platform/revenue-intelligence/churn-trigger' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      if (authCtx) request.user = authCtx;
-      return withSecurityHeaders(withCors(await handleChurnInterventionTrigger(request, env), request));
+      if (path === '/api/platform/revenue-intelligence' && method === 'GET')
+        return withSecurityHeaders(withCors(await handleRevenueIntelligence(request, env), request));
+      if (path === '/api/platform/revenue-intelligence/churn-alerts' && method === 'GET')
+        return withSecurityHeaders(withCors(await handleChurnAlerts(request, env), request));
+      if (path === '/api/platform/revenue-intelligence/intervention' && method === 'POST')
+        return withSecurityHeaders(withCors(await handleLogIntervention(request, env), request));
+      if (path === '/api/platform/revenue-intelligence/upgrade-signals' && method === 'GET')
+        return withSecurityHeaders(withCors(await handleUpgradeSignals(request, env), request));
+      if (path === '/api/platform/revenue-intelligence/nrr-forecast' && method === 'GET')
+        return withSecurityHeaders(withCors(await handleNRRForecast(request, env), request));
+      if (path === '/api/platform/revenue-intelligence/observability' && method === 'GET')
+        return withSecurityHeaders(withCors(await handleRevenueIntelObservability(request, env), request));
+      if (path === '/api/platform/revenue-intelligence/churn-trigger' && method === 'POST')
+        return withSecurityHeaders(withCors(await handleChurnInterventionTrigger(request, env), request));
     }
 
     // ── Attack Surface Management ─────────────────────────────────────────────
