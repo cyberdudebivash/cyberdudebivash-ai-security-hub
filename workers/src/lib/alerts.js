@@ -8,6 +8,7 @@
  */
 
 import { resilientFetch } from './resilience.js';
+import { sendEmail }      from '../services/emailEngine.js';
 
 const CONTACT_EMAIL     = 'bivash@cyberdudebivash.com';
 const PLATFORM_URL      = 'https://tools.cyberdudebivash.com';
@@ -93,19 +94,17 @@ async function sendTelegramAlert(env, botToken, chatId, text) {
   return { success: false, channel: 'telegram', status: res.status, error: res.error };
 }
 
-// ─── Send Email via Cloudflare Email Workers ──────────────────────────────────
-// Requires Email Workers binding — falls back gracefully if not configured
+// ─── Send Email via the platform's real mail sender (Resend / MailChannels) ───
+// This previously required a Cloudflare Email Workers binding (env.EMAIL_SENDER)
+// that was never provisioned in production — every customer who enabled email
+// alerts got "email_worker_not_configured" on every single alert, silently.
+// emailEngine.sendEmail() is the same sender already used for purchase
+// confirmations and is actually configured (RESEND_API_KEY / MailChannels).
 async function sendEmailAlert(env, toEmail, subject, body) {
-  if (!env?.EMAIL_SENDER) return { success: false, channel: 'email', error: 'email_worker_not_configured' };
   try {
-    const message = {
-      from: { email: 'alerts@cyberdudebivash.com', name: 'CYBERDUDEBIVASH Security Hub' },
-      to:   [{ email: toEmail }],
-      subject,
-      content: [{ type: 'text/plain', value: body }],
-    };
-    await env.EMAIL_SENDER.send(message);
-    return { success: true, channel: 'email' };
+    const result = await sendEmail(env, { to: toEmail, subject, text: body });
+    if (result?.success) return { success: true, channel: 'email' };
+    return { success: false, channel: 'email', error: result?.error || 'send_failed' };
   } catch (e) {
     return { success: false, channel: 'email', error: e?.message };
   }
