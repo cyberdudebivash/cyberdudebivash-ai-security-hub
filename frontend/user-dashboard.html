@@ -2176,7 +2176,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
       data.risk_score     = _allScans.length ? Math.round(tot / _allScans.length) : 0;
       data.critical_count = crit;
       data.categories     = cats;
-      data.mttr_days      = Math.round(2 + Math.random() * 8);
+      data.mttr_days      = null; // computed from real incidents when available
       data.compliance_pct = Math.max(30, 100 - data.risk_score);
       const buckets = {};
       _allScans.forEach(s => {
@@ -2191,45 +2191,50 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
     }
 
     if (!data.assets) {
-      data = { risk_score:67, critical_count:4, assets:8, mttr_days:5,
-               compliance_pct:72, scans_30d:34,
-               categories:{ domain:82, ai:55, redteam:91, compliance:48, identity:63 },
-               cves:[
-                 { cve_id:'CVE-2024-1234', cvss:9.8, severity:'critical', asset:'example.com',    date:new Date().toISOString(), status:'Open' },
-                 { cve_id:'CVE-2023-9876', cvss:7.5, severity:'high',     asset:'api.example.com',date:new Date().toISOString(), status:'Open' },
-                 { cve_id:'CVE-2024-5678', cvss:5.3, severity:'medium',   asset:'cdn.example.com',date:new Date().toISOString(), status:'Investigating' },
-               ],
-               frameworks:[
-                 { name:'OWASP Top 10', pct:68, color:'#00d4ff' },
-                 { name:'PCI-DSS',      pct:54, color:'#f59e0b' },
-                 { name:'ISO 27001',    pct:72, color:'#10b981' },
-                 { name:'NIST CSF',     pct:61, color:'#7c3aed' },
-                 { name:'SOC 2',        pct:49, color:'#ef4444' },
-               ],
-               trend: Array.from({length:30}, (_,i) => ({
-                 date: new Date(Date.now()-(29-i)*86400*1000).toISOString().slice(0,10),
-                 score: 40 + Math.round(Math.sin(i/4)*15 + Math.random()*12)
-               }))
-             };
+      // No scan data yet — show honest empty state rather than fabricated demo data
+      data = {
+        risk_score: null, critical_count: 0, assets: 0, mttr_days: null,
+        compliance_pct: null, scans_30d: 0,
+        categories: {}, cves: [], frameworks: [], trend: [],
+        _empty: true,
+      };
     }
     _cisoData = data;
 
+    if (data._empty) {
+      // No scans yet — show honest empty state
+      const el = document.getElementById('ciso-risk-score');
+      if (el) { el.textContent = '—'; el.style.color = '#64748b'; }
+      ['ciso-risk-delta','ciso-critical-delta','ciso-mttr-delta'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.innerHTML = '';
+      });
+      ['ciso-critical-ct','ciso-assets','ciso-mttr','ciso-scans-30'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.textContent = '—';
+      });
+      const cpEl = document.getElementById('ciso-compliance'); if (cpEl) cpEl.textContent = '—';
+      const bEl2 = document.getElementById('ciso-risk-bars');
+      if (bEl2) bEl2.innerHTML = '<li style="color:var(--muted);padding:16px 0;text-align:center">Run your first scan to see your risk posture →</li>';
+      const cveEl2 = document.getElementById('ciso-cve-table'); if (cveEl2) cveEl2.innerHTML = '';
+      const ccEl = document.getElementById('ciso-cve-count'); if (ccEl) ccEl.textContent = '0 open';
+      return;
+    }
+
     const rEl = document.getElementById('ciso-risk-score');
-    rEl.textContent = data.risk_score;
+    rEl.textContent = data.risk_score ?? '—';
     rEl.style.color = data.risk_score >= 70 ? '#ef4444' : data.risk_score >= 40 ? '#f59e0b' : '#10b981';
     document.getElementById('ciso-risk-delta').innerHTML =
-      `<span class="${data.risk_score>50?'delta-up':'delta-down'}">${data.risk_score>50?'▲ Elevated':'▼ Improving'}</span>`;
-    document.getElementById('ciso-critical-ct').textContent  = data.critical_count;
-    document.getElementById('ciso-assets').textContent       = data.assets;
-    document.getElementById('ciso-mttr').textContent         = data.mttr_days;
-    document.getElementById('ciso-compliance').textContent   = data.compliance_pct + '%';
-    document.getElementById('ciso-scans-30').textContent     = data.scans_30d;
+      data.risk_score != null ? `<span class="${data.risk_score>50?'delta-up':'delta-down'}">${data.risk_score>50?'▲ Elevated':'▼ Improving'}</span>` : '';
+    document.getElementById('ciso-critical-ct').textContent  = data.critical_count ?? '—';
+    document.getElementById('ciso-assets').textContent       = data.assets ?? '—';
+    document.getElementById('ciso-mttr').textContent         = data.mttr_days ?? '—';
+    document.getElementById('ciso-compliance').textContent   = data.compliance_pct != null ? data.compliance_pct + '%' : '—';
+    document.getElementById('ciso-scans-30').textContent     = data.scans_30d ?? '—';
     document.getElementById('ciso-critical-delta').innerHTML =
       data.critical_count > 0
         ? `<span class="delta-up">▲ ${data.critical_count} unresolved</span>`
         : `<span class="delta-down">✓ None open</span>`;
     document.getElementById('ciso-mttr-delta').innerHTML =
-      data.mttr_days <= 3
+      data.mttr_days == null ? '' : data.mttr_days <= 3
         ? `<span class="delta-down">▼ Good</span>`
         : `<span class="delta-up">▲ Needs work</span>`;
 
@@ -2695,7 +2700,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   }
 
   // ── Threat Graph Engine ─────────────────────────────────────────────────────
-  let _tgNodes = [], _tgEdges = [], _tgAnimFrame = null, _tgDrag = null;
+  let _tgNodes = [], _tgEdges = [], _tgAnimFrame = null, _tgDrag = null, _tgEmpty = false;
 
   const TG_COLORS = {
     domain: '#00d4ff', ip: '#10b981', cve_critical: '#ef4444',
@@ -2759,28 +2764,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       }
     });
 
-    // Fallback demo nodes if no scan data
+    // No scan data yet — show empty state on canvas, not fake demo nodes
     if (nodes.length === 0) {
-      const demo = [
-        { id:'dom_example.com',  label:'example.com',    type:'domain', severity:'info',     meta:{} },
-        { id:'CVE-2024-1234',    label:'CVE-2024-1234',  type:'cve',    severity:'critical', meta:{cvss:9.8} },
-        { id:'CVE-2023-9876',    label:'CVE-2023-9876',  type:'cve',    severity:'high',     meta:{cvss:7.5} },
-        { id:'ip_104.21.0.1',    label:'104.21.0.1',     type:'ip',     severity:'info',     meta:{country:'US'} },
-        { id:'actor_APT29',      label:'APT-29',         type:'actor',  severity:'critical', meta:{ttps:'T1566'} },
-        { id:'dom_api.example',  label:'api.example.com',type:'domain', severity:'info',     meta:{} },
-        { id:'CVE-2024-5678',    label:'CVE-2024-5678',  type:'cve',    severity:'medium',   meta:{cvss:5.3} },
-        { id:'ip_8.8.8.8',       label:'8.8.8.8',        type:'ip',     severity:'info',     meta:{country:'US'} },
-      ];
-      demo.forEach(n => { n.x = Math.random()*700+50; n.y = Math.random()*340+40; n.vx=0; n.vy=0; nodes.push(n); });
-      edges.push(
-        {source:'dom_example.com', target:'CVE-2024-1234'},
-        {source:'dom_example.com', target:'CVE-2023-9876'},
-        {source:'dom_example.com', target:'ip_104.21.0.1'},
-        {source:'CVE-2024-1234',   target:'actor_APT29'},
-        {source:'dom_api.example', target:'CVE-2024-5678'},
-        {source:'dom_api.example', target:'ip_8.8.8.8'},
-        {source:'dom_example.com', target:'dom_api.example'}
-      );
+      _tgEmpty = true;
     }
 
     _tgNodes = nodes;
@@ -2795,6 +2781,19 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     canvas.width  = wrap.clientWidth  || 800;
     canvas.height = 380;
     const ctx = canvas.getContext('2d');
+
+    if (_tgEmpty) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(100,116,139,0.18)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '600 15px system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No scan data yet — run your first domain scan to see the threat graph', canvas.width/2, canvas.height/2 - 10);
+      ctx.font = '13px system-ui,sans-serif';
+      ctx.fillText('Results appear here automatically after each scan', canvas.width/2, canvas.height/2 + 16);
+      return;
+    }
 
     const typeF = document.getElementById('tg-filter-type')?.value  || 'all';
     const sevF  = document.getElementById('tg-filter-severity')?.value || 'all';

@@ -481,17 +481,22 @@ export async function handleEnterpriseMetrics(req, env, authCtx) {
       D?.prepare(`SELECT COUNT(*) as cnt FROM org_webhooks WHERE org_id=? AND active=1`).bind(orgId(authCtx)).first().catch(() => null),
       D?.prepare(`SELECT COUNT(*) as cnt FROM org_team_members WHERE org_id=? AND status='active'`).bind(orgId(authCtx)).first().catch(() => null),
     ]);
+    const apiCallsCount   = apiCalls?.cnt || 0;
+    const activeWebhookCt = activeWebhooks?.cnt || 0;
     return Response.json({
       period: '30d',
-      api_calls: apiCalls?.cnt || 0,
-      avg_latency_ms: Math.round(apiCalls?.avg_ms || 0),
-      scan_jobs: scanJobs?.cnt || 0,
-      active_webhooks: activeWebhooks?.cnt || 0,
-      team_size: teamSize?.cnt || 0,
-      tier: userTier(authCtx),
+      api_calls:        apiCallsCount,
+      avg_latency_ms:   Math.round(apiCalls?.avg_ms || 0),
+      scan_jobs:        scanJobs?.cnt || 0,
+      active_webhooks:  activeWebhookCt,
+      team_size:        teamSize?.cnt || 0,
+      tier:             userTier(authCtx),
+      // Fields required by automation-dashboard.html
+      automation_health:    apiCallsCount > 0 || activeWebhookCt > 0 ? 'operational' : 'idle',
+      active_organizations: activeWebhookCt, // best proxy until multi-org table populated
     });
   } catch {
-    return Response.json({ period: '30d', api_calls: 0, scan_jobs: 0, active_webhooks: 0, team_size: 0, tier: userTier(authCtx) });
+    return Response.json({ period: '30d', api_calls: 0, scan_jobs: 0, active_webhooks: 0, team_size: 0, tier: userTier(authCtx), automation_health: 'idle', active_organizations: 0 });
   }
 }
 

@@ -1415,27 +1415,29 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                 return;
             }
 
-            // Store to localStorage as backup
-            const existingLeads = JSON.parse(localStorage.getItem('cdb_booking_leads') || '[]');
-            existingLeads.push(formData);
-            localStorage.setItem('cdb_booking_leads', JSON.stringify(existingLeads));
-
-            // Try to send to API endpoint
+            // Submit to API — only show success if the API confirms receipt
+            let apiOk = false;
             try {
                 const response = await fetch('/api/leads/capture', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(formData),
+                    signal: AbortSignal.timeout(10000)
                 });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                apiOk = response.ok;
+                if (!apiOk) throw new Error(`HTTP ${response.status}`);
             } catch (error) {
-                // API submission failed, data stored locally
+                // API failed — surface error to user, do not show false confirmation
+                const errEl = document.getElementById('preferredDateError') || document.createElement('div');
+                errEl.textContent = 'Submission failed — please try WhatsApp or email: bivash@cyberdudebivash.com';
+                errEl.style.cssText = 'color:#ef4444;margin-top:8px;font-size:13px';
+                if (!document.getElementById('preferredDateError')) {
+                    document.getElementById('bookingForm').appendChild(errEl);
+                }
+                return;
             }
 
-            // Show success message (non-blocking)
+            // Show success only on confirmed API receipt
             const successMsg = document.getElementById('successMessage');
             successMsg.classList.add('show');
             document.getElementById('bookingForm').reset();

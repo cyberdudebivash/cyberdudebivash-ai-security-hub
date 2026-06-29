@@ -206,7 +206,7 @@ export class RadarService {
     // 2. Collect → normalize → deduplicate → build
     const signals     = this.db ? await collectFromD1(this.db) : [];
     const deduped     = deduplicateSignals(signals);
-    const sourceCount = this.db ? 4 : 0; // threat_intel, ai_threat_feed, NVD cache, OSV cache
+    const sourceCount = deduped.length > 0 ? 4 : (this.db ? 1 : 0); // threat_intel, ai_threat_feed, NVD cache, OSV cache
     const snapshot    = buildSnapshot(deduped, sourceCount);
 
     // 3. Cache

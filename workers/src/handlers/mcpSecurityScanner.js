@@ -175,23 +175,37 @@ function scoreMCPConfig(config) {
     });
   }
 
-  // Check MCP-007: Rate limiting
-  if (!config.rate_limits || !config.rate_limits.tool_calls_per_minute) {
+  // Check MCP-007: Rate limiting — only meaningful when manifest was fetched (tools present)
+  if (tools.length > 0 && (!config.rate_limits || !config.rate_limits.tool_calls_per_minute)) {
     findings.push({ ...MCP_VULN_CATALOG[6], evidence: 'No rate_limits.tool_calls_per_minute configured' });
   }
 
-  // Check MCP-008: Schema validation
-  const toolsWithoutSchema = tools.filter(t => !t.output_schema && !t.returns);
-  if (toolsWithoutSchema.length > 2) {
-    findings.push({
-      ...MCP_VULN_CATALOG[7],
-      evidence: `${toolsWithoutSchema.length} tools have no output_schema defined`,
-    });
+  // Check MCP-008: Schema validation — requires actual tool definitions to evaluate
+  if (tools.length > 0) {
+    const toolsWithoutSchema = tools.filter(t => !t.output_schema && !t.returns);
+    if (toolsWithoutSchema.length > 2) {
+      findings.push({
+        ...MCP_VULN_CATALOG[7],
+        evidence: `${toolsWithoutSchema.length} tools have no output_schema defined`,
+      });
+    }
   }
 
-  // Check MCP-010: Audit log
-  if (!config.audit_log && !config.logging?.audit_tool_calls) {
+  // Check MCP-010: Audit log — only flag when we have actual manifest data, not empty defaults
+  if (tools.length > 0 && !config.audit_log && !config.logging?.audit_tool_calls) {
     findings.push({ ...MCP_VULN_CATALOG[9], evidence: 'No audit logging configured (audit_log: false or missing)' });
+  }
+
+  // Surface data-quality note when manifest was unavailable
+  if (tools.length === 0 && !config._manifest_fetched) {
+    findings.push({
+      id: 'MCP-000', severity: 'INFO',
+      title: 'Manifest Not Found',
+      description: 'Could not retrieve /.well-known/mcp-manifest.json from this server. Static URL analysis only.',
+      evidence: 'Submit a JSON config directly via the advanced tab for deeper analysis.',
+      remediation: 'Expose a public MCP manifest at /.well-known/mcp-manifest.json',
+      affected_tools: [],
+    });
   }
 
   // Compute risk score

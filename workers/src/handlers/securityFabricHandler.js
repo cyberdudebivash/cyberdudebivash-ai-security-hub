@@ -107,14 +107,21 @@ export async function handleFabricState(request, env, authCtx) {
     : highRisk > 5 || openCases > 10               ? 'ELEVATED'
     : 'OPERATIONAL';
 
+  // Derive statuses from actual data presence rather than hardcoding 'active'
+  const dbUp    = vulnRows.length > 0 || decisionRows.length > 0;
+  const queueUp = (queueStats.pending + queueStats.processing + queueStats.done) > 0 || !queueStats.error;
+
+  const subsystemStatus = (dataAvailable) => dataAvailable ? 'active' : 'degraded';
+
   const agents = [
-    { id: 'soc-command',       name: 'SOC Command Agent',           status: 'active', subsystem: 'P12' },
-    { id: 'threat-intel',      name: 'Threat Intelligence Agent',   status: 'active', subsystem: 'P11' },
-    { id: 'autonomous-ops',    name: 'Autonomous Operations Agent', status: 'active', subsystem: 'P13' },
-    { id: 'decision-engine',   name: 'Decision Engine Agent',       status: 'active', subsystem: 'core' },
-    { id: 'executive-copilot', name: 'Executive Copilot Agent',     status: 'active', subsystem: 'P13' },
-    { id: 'compliance-policy', name: 'Compliance & Policy Agent',   status: 'active', subsystem: 'P14' },
+    { id: 'soc-command',       name: 'SOC Command Agent',           status: subsystemStatus(openCases >= 0), subsystem: 'P12' },
+    { id: 'threat-intel',      name: 'Threat Intelligence Agent',   status: subsystemStatus(vulnRows.length > 0), subsystem: 'P11' },
+    { id: 'autonomous-ops',    name: 'Autonomous Operations Agent', status: subsystemStatus(predRows.length >= 0), subsystem: 'P13' },
+    { id: 'decision-engine',   name: 'Decision Engine Agent',       status: subsystemStatus(decisionRows.length >= 0), subsystem: 'core' },
+    { id: 'executive-copilot', name: 'Executive Copilot Agent',     status: dbUp ? 'active' : 'degraded', subsystem: 'P13' },
+    { id: 'compliance-policy', name: 'Compliance & Policy Agent',   status: dbUp ? 'active' : 'degraded', subsystem: 'P14' },
   ];
+  const activeAgentCount = agents.filter(a => a.status === 'active').length;
 
   const payload = {
     success: true,
@@ -122,17 +129,17 @@ export async function handleFabricState(request, env, authCtx) {
     timestamp: new Date().toISOString(),
     fabric_level: fabricLevel,
     subsystems: {
-      threat_intelligence: { status: 'active', vulns_indexed: vulnRows.length, kev_count: kevCount, critical_count: critVulns },
-      autonomous_ops:      { status: 'active', open_cases: openCases, high_risk_predictions: highRisk },
-      event_bus:           { status: 'active', ...queueStats },
-      workflow_engine:     { status: 'active', ...workflowStats },
-      decision_engine:     { status: 'active', decisions_indexed: decisionRows.length },
-      ai_agents:           { status: 'active', agent_count: agents.length },
+      threat_intelligence: { status: subsystemStatus(vulnRows.length > 0), vulns_indexed: vulnRows.length, kev_count: kevCount, critical_count: critVulns },
+      autonomous_ops:      { status: subsystemStatus(predRows.length >= 0 && dbUp), open_cases: openCases, high_risk_predictions: highRisk },
+      event_bus:           { status: subsystemStatus(queueUp), ...queueStats },
+      workflow_engine:     { status: subsystemStatus(Object.keys(workflowStats).length > 0), ...workflowStats },
+      decision_engine:     { status: subsystemStatus(decisionRows.length >= 0 && dbUp), decisions_indexed: decisionRows.length },
+      ai_agents:           { status: subsystemStatus(activeAgentCount > 0), agent_count: agents.length, active_count: activeAgentCount },
     },
     agents,
     summary: {
       total_subsystems:    6,
-      active_subsystems:   6,
+      active_subsystems:   agents.filter(a => a.status === 'active').length,
       critical_vulns:      critVulns,
       kev_exposure:        kevCount,
       open_cases:          openCases,

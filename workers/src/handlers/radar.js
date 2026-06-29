@@ -50,7 +50,7 @@ async function handleSnapshot(request, env) {
     const res  = jsonOk(data);
     // P3.0-009: edge-cache the snapshot on Cloudflare's CDN (free, no KV quota)
     try {
-      const cacheReq = new Request(`https://cdb-edge-cache/radar:snapshot:v1`);
+      const cacheReq = new Request(`https://cdb-edge-cache/radar/snapshot/v1`);
       const cached   = await caches.default.match(cacheReq);
       if (!cached) {
         const toCache = res.clone();

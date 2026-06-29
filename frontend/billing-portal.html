@@ -450,10 +450,10 @@ async function loadInvoices() {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="font-weight:600;font-family:monospace;font-size:0.8rem">${inv.id || '—'}</td>
-        <td style="color:var(--text-muted)">${fmtDate(inv.period_start)} – ${fmtDate(inv.period_end)}</td>
+        <td style="color:var(--text-muted)">${fmtDate(inv.created_at)}</td>
         <td style="font-weight:700">${fmtMoney(inv.amount_usd)}</td>
         <td><span class="inv-status ${statusClass}">${(inv.status || 'unknown').toUpperCase()}</span></td>
-        <td>${inv.pdf_url ? `<a href="${inv.pdf_url}" target="_blank" class="inv-link">Download</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td>${(inv.invoice_pdf_url||inv.pdf_url) ? `<a href="${inv.invoice_pdf_url||inv.pdf_url}" target="_blank" class="inv-link">Download</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       `;
       tbody.appendChild(tr);
     });

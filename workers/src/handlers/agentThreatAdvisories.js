@@ -103,7 +103,7 @@ export async function handleAgentThreatOverview(request, env) {
 
   try {
     const rows = await env.DB.prepare(
-      `SELECT framework, severity, cvss_score, patch_status FROM agent_threat_advisories`
+      `SELECT framework, severity, cvss_score, patch_status FROM agent_threat_advisories LIMIT 1000`
     ).all();
 
     const byFw = {};

@@ -175,14 +175,14 @@ export async function handleAutonomousOrchestratorPlan(request, env, authCtx) {
       },
     ],
     threat_level: threatLevel,
-    orchestrator_health: 'OPERATIONAL',
+    orchestrator_health: vulnRows.length > 0 ? 'OPERATIONAL' : 'DEGRADED',
     subsystems: {
-      decision_engine:    'ACTIVE',
-      investigation_engine: 'ACTIVE',
-      knowledge_graph:    'ACTIVE',
-      soc_command:        'ACTIVE',
-      predictive_engine:  'ACTIVE',
-      automation_platform:'ACTIVE',
+      decision_engine:      decisionRows.length >= 0 ? 'ACTIVE' : 'DEGRADED',
+      investigation_engine: openCases.length >= 0 ? 'ACTIVE' : 'DEGRADED',
+      knowledge_graph:      vulnRows.length > 0 ? 'ACTIVE' : 'DEGRADED',
+      soc_command:          openCases.length >= 0 ? 'ACTIVE' : 'DEGRADED',
+      predictive_engine:    critCVEs >= 0 ? 'ACTIVE' : 'DEGRADED',
+      automation_platform:  responseActions.length >= 0 ? 'ACTIVE' : 'DEGRADED',
     },
   };
 
@@ -646,7 +646,7 @@ export async function handleAutonomousObservability(request, env, authCtx) {
     infrastructure: {
       d1_healthy:  d1Healthy,  d1_latency_ms:  d1LatencyMs,
       kv_healthy:  kvHealthy,  kv_latency_ms:  kvLatencyMs,
-      worker_healthy: true,
+      worker_healthy: d1Healthy || kvHealthy,
     },
     performance: {
       cache_hit_ratio_pct:      cacheHitRatio,
@@ -661,14 +661,14 @@ export async function handleAutonomousObservability(request, env, authCtx) {
       worker_utilization:       'nominal',
     },
     subsystems: {
-      autonomous_orchestrator:  'ACTIVE',
-      incident_response_engine: 'ACTIVE',
-      predictive_risk_engine:   'ACTIVE',
-      workflow_coordinator:     'ACTIVE',
-      executive_copilot:        'ACTIVE',
-      knowledge_graph:          'ACTIVE',
-      soc_command:              'ACTIVE',
-      decision_engine:          'ACTIVE',
+      autonomous_orchestrator:  d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      incident_response_engine: d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      predictive_risk_engine:   d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      workflow_coordinator:     d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      executive_copilot:        d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      knowledge_graph:          d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      soc_command:              d1Healthy ? 'ACTIVE' : 'DEGRADED',
+      decision_engine:          d1Healthy ? 'ACTIVE' : 'DEGRADED',
     },
     powered_by: 'CYBERDUDEBIVASH SENTINEL APEX AI — P13.7',
   });

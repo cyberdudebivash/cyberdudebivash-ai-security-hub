@@ -711,7 +711,9 @@ async function triggerRun() {
 }
 
 // ── APEX AI Copilot ───────────────────────────────────────────────────────────
-const copilotHistory = [];
+// Backend: POST /api/copilot/chat expects {message: string, session_id?: string}
+// Session stored in KV by backend — multi-turn context handled server-side.
+const copilotSessionId = 'gm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 let copilotBusy = false;
 
 function copilotAppend(role, text) {
@@ -754,15 +756,16 @@ async function copilotSend() {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ messages: copilotHistory.slice(-12) }),
+      // Backend expects {message: string, session_id?: string} — session history
+      // is stored server-side in KV, keyed by session_id.
+      body: JSON.stringify({ message: msg, session_id: copilotSessionId }),
       signal: AbortSignal.timeout(30000),
     });
     const data = await res.json();
-    const reply = data?.message || data?.content || data?.response
+    const reply = data?.response || data?.message || data?.content
       || (data?.error ? `Error: ${data.error}` : 'No response from APEX.');
     thinking.textContent = reply;
-    copilotHistory.push({ role: 'assistant', content: reply });
-    if (status) status.textContent = data?.model ? `Model: ${data.model}` : '';
+    if (status) status.textContent = data?.model ? `Model: ${data.model}` : data?.provider ? `Provider: ${data.provider}` : '';
   } catch (e) {
     thinking.textContent = e.name === 'TimeoutError'
       ? 'APEX timed out. Try a shorter query.'

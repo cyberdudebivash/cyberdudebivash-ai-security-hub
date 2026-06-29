@@ -278,7 +278,7 @@ nav{position:sticky;top:0;z-index:1000;background:rgba(3,3,8,.92);backdrop-filte
         </button>
 
         <div class="bundle-urgency">
-          🔥 <span id="bundle-enrolled">27</span> students enrolled today · Limited slots available
+          🔥 Early access — enroll now and get lifetime updates
         </div>
       </div>
     </div>
@@ -946,31 +946,18 @@ async function academyBuy(productId, amountInr, label) {
 }
 
 // ── LIVE COUNTERS ────────────────────────────────────────────────
+// Enrollment counts are fetched from the platform stats API.
+// Static fallbacks reflect platform launch state — no fake random inflation.
 (function liveCounters(){
-  var base = { students: 2847, today: 27, soc: 843, ai: 612, mega1: 1204, mega2: 987, osint: 734, py: 521 };
-  var startTime = Date.now();
-  function r(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
   function el(id){return document.getElementById(id);}
-
-  function tick(){
-    var elapsed = Math.floor((Date.now()-startTime)/60000);
-    var gain = elapsed * r(1,3);
-    if(el('hs-students')) el('hs-students').textContent = (base.students + gain).toLocaleString();
-    if(el('hs-today')) el('hs-today').textContent = (base.today + r(0,4) + elapsed);
-    if(el('bundle-enrolled')) el('bundle-enrolled').textContent = (base.today + r(0,4) + elapsed);
-    if(el('soc-enrolled')) el('soc-enrolled').textContent = (base.soc + r(0,8) + elapsed).toLocaleString();
-    if(el('ai-enrolled')) el('ai-enrolled').textContent = (base.ai + r(0,5) + elapsed).toLocaleString();
-    if(el('mega1-enrolled')) el('mega1-enrolled').textContent = (base.mega1 + r(0,10) + elapsed).toLocaleString();
-    if(el('mega2-enrolled')) el('mega2-enrolled').textContent = (base.mega2 + r(0,7) + elapsed).toLocaleString();
-    if(el('osint-enrolled')) el('osint-enrolled').textContent = (base.osint + r(0,6) + elapsed).toLocaleString();
-    if(el('py-enrolled')) el('py-enrolled').textContent = (base.py + r(0,4) + elapsed).toLocaleString();
-    // Attention strip
-    if(el('acy-scan')) el('acy-scan').textContent = r(11,36);
-    if(el('acy-cve')) el('acy-cve').textContent = r(2,6);
-    if(el('acy-upd')) el('acy-upd').textContent = elapsed<=0?'just now':elapsed+'m ago';
-  }
-  tick();
-  setInterval(tick, 9000);
+  // Fetch real platform stats to show honest CVE and scan counts in the attention strip
+  fetch('/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+    if(el('acy-cve')&&d.cves_tracked) el('acy-cve').textContent = d.cves_tracked.toLocaleString();
+    if(el('acy-scan')&&d.total_scans)  el('acy-scan').textContent = d.total_scans.toLocaleString();
+    if(el('acy-upd')) el('acy-upd').textContent = 'live';
+  }).catch(()=>{
+    if(el('acy-upd')) el('acy-upd').textContent = 'live';
+  });
 })();
 
 // ── FAQ TOGGLE ────────────────────────────────────────────────────
