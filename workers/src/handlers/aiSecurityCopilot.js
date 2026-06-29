@@ -90,7 +90,7 @@ const MODELS = {
   OR_MISTRAL:      'mistralai/mistral-large',             // strong structured output, tools ✓
   OR_GEMINI_FLASH: 'google/gemini-flash-1.5',             // fast multimodal, tools ✓
   // CF Workers AI
-  CF_LLAMA:        '@cf/meta/llama-3.1-8b-instruct',     // text only (no tool calling)
+  CF_LLAMA:        '@cf/meta/llama-3.3-70b-instruct-fp8-fast', // replaces deprecated llama-3.1-8b-instruct (EOL 2026-05-30)
 };
 
 // ─── Routing matrix ───────────────────────────────────────────────────────────
@@ -1825,6 +1825,52 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
           console.warn(`[APEX] ${provider} text-fallback also failed: ${textErr.message}`);
         }
       }
+    }
+  }
+
+  // ── Last-resort direct text calls: try each configured provider with minimal payload ──
+  // This catches cases where the per-candidate text fallback above also failed,
+  // e.g. due to model-specific issues. Uses the fastest/simplest model per provider.
+  const lastResortCandidates = [
+    { provider: PROVIDERS.GROQ,       model: 'llama-3.1-8b-instant',  key: 'GROQ_API_KEY',       endpoint: 'https://api.groq.com/openai/v1/chat/completions' },
+    { provider: PROVIDERS.DEEPSEEK,   model: 'deepseek-chat',          key: 'DEEPSEEK_API_KEY',   endpoint: 'https://api.deepseek.com/chat/completions' },
+    { provider: PROVIDERS.OPENROUTER, model: 'meta-llama/llama-3.1-8b-instruct:free', key: 'OPENROUTER_API_KEY', endpoint: 'https://openrouter.ai/api/v1/chat/completions' },
+  ];
+  for (const lr of lastResortCandidates) {
+    const apiKey = env[lr.key];
+    if (!apiKey) continue;
+    try {
+      const res = await fetch(lr.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          ...(lr.provider === PROVIDERS.OPENROUTER ? { 'HTTP-Referer': 'https://cyberdudebivash.in', 'X-Title': 'APEX' } : {}),
+        },
+        body: JSON.stringify({
+          model: lr.model,
+          messages: [
+            { role: 'system', content: 'You are APEX, an expert AI cybersecurity analyst. Be concise and accurate.' },
+            { role: 'user',   content: lastMsg.slice(0, 2000) },
+          ],
+          max_tokens: 1024,
+          temperature: 0.3,
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        console.error(`[APEX last-resort] ${lr.provider}/${lr.model} HTTP ${res.status}: ${body.slice(0, 200)}`);
+        continue;
+      }
+      const data = JSON.parse(body);
+      const text = data.choices?.[0]?.message?.content || '';
+      if (text) {
+        return { content: text + '\n\n> Running in basic mode. Tool orchestration temporarily unavailable.', model: lr.model, provider: lr.provider, usage: data.usage || {} };
+      }
+    } catch (e) {
+      console.error(`[APEX last-resort] ${lr.provider} failed: ${e.message}`);
     }
   }
 
