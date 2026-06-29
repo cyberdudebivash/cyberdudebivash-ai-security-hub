@@ -898,6 +898,13 @@ async function loadG2() {
     const risk = riskRes.status === 'fulfilled' ? riskRes.value : null;
 
     if (!pred && !risk) throw new Error('Adaptive Cyber Brain unreachable');
+    if ((risk?.no_data && pred?.no_data) || (!risk?.adaptive_score && !pred?.chains?.length && (risk?.no_data || pred?.no_data))) {
+      $('g2-body').innerHTML = `<div class="gd-error-state">
+        <span>🧠 No scan history yet — risk scoring activates after your first domain scan</span>
+        <button class="gd-retry-btn" onclick="window.location.href='/'">Run a Scan</button>
+      </div>`;
+      return;
+    }
 
     const score   = risk?.adaptive_score ?? risk?.adaptiveScore ?? pred?.adaptive_score ?? 0;
     const level   = risk?.risk_level || (score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : score >= 40 ? 'ELEVATED' : 'LOW');

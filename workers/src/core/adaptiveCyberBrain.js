@@ -1137,6 +1137,29 @@ export async function handleGlobalIntel(request, env, authCtx) {
   return Response.json(result);
 }
 
+// When the caller doesn't pass an explicit ?target, the gadgets.html "AI Risk
+// Score + Attack Prediction" widget used to fall through to empty
+// findings/vulns/assets and render a permanent 0/empty result for every user —
+// indistinguishable from a dead endpoint. Resolve the caller's own most
+// recent real scan instead, so the gadget reflects real history when one
+// exists, and reports "no scans yet" (not a fabricated number) when it doesn't.
+async function resolveLatestScanTarget(env, authCtx) {
+  const userId = authCtx?.userId || authCtx?.user_id;
+  if (!env?.DB || !userId) return null;
+  try {
+    const row = await env.DB.prepare(
+      `SELECT target, result FROM scan_history WHERE user_id = ? AND target IS NOT NULL
+       ORDER BY scanned_at DESC LIMIT 1`
+    ).bind(userId).first();
+    if (!row?.target) return null;
+    let parsed = {};
+    try { parsed = JSON.parse(row.result || '{}'); } catch {}
+    return { target: row.target, cached: parsed };
+  } catch {
+    return null;
+  }
+}
+
 // ── GET /api/cyber-brain/adaptive-risk ────────────────────────────────────────
 export async function handleAdaptiveRisk(request, env, authCtx) {
   // Feature gate — STARTER+
@@ -1148,13 +1171,14 @@ export async function handleAdaptiveRisk(request, env, authCtx) {
   }
 
   const url    = new URL(request.url);
-  const target = url.searchParams.get('target') || '';
+  let target   = url.searchParams.get('target') || '';
   const sector = url.searchParams.get('sector') || 'technology';
 
   // Try to retrieve last scan findings for this target from KV
   let findings = [];
   let vulns    = [];
   let baseScore = 0;
+  let resolvedFromHistory = false;
 
   if (env?.SECURITY_HUB_KV && target) {
     const cached = await kvGet(env, `scan:domain:${target}`);
@@ -1175,6 +1199,28 @@ export async function handleAdaptiveRisk(request, env, authCtx) {
     } catch {}
   }
 
+  // No target given and no inline data: fall back to the caller's own most
+  // recent scan instead of returning an empty/zeroed result.
+  if (!target && !findings.length && !vulns.length) {
+    const latest = await resolveLatestScanTarget(env, authCtx);
+    if (latest) {
+      target    = latest.target;
+      findings  = latest.cached.findings || latest.cached.checks || [];
+      vulns     = latest.cached.cves     || latest.cached.vulns  || [];
+      baseScore = latest.cached.riskScore || latest.cached.risk_score || 0;
+      resolvedFromHistory = true;
+    }
+  }
+
+  const hasData = !!(target && (findings.length || vulns.length || baseScore));
+  if (!hasData) {
+    return Response.json({
+      target: null, sector, adaptive_score: null, risk_level: null,
+      confidence: 0, no_data: true,
+      message: 'Run a domain scan to activate adaptive risk scoring',
+    });
+  }
+
   const result = await computeAdaptiveRisk(
     env,
     { findings, vulns, sector, baseScore, target },
@@ -1182,7 +1228,7 @@ export async function handleAdaptiveRisk(request, env, authCtx) {
     authCtx.tier || 'FREE'
   );
 
-  return Response.json({ target, sector, ...result });
+  return Response.json({ target, sector, resolved_from_history: resolvedFromHistory, ...result });
 }
 
 // ── GET /api/cyber-brain/predictions ──────────────────────────────────────────
@@ -1192,7 +1238,7 @@ export async function handleAttackPredictions(request, env, authCtx) {
   if (gate) return gate;
 
   const url    = new URL(request.url);
-  const target = url.searchParams.get('target') || '';
+  let target   = url.searchParams.get('target') || '';
   const sector = url.searchParams.get('sector') || 'technology';
 
   // Retrieve last scan data for target
@@ -1214,6 +1260,24 @@ export async function handleAttackPredictions(request, env, authCtx) {
       vulns  = body.vulns  || body.vulnerabilities || [];
       assets = body.assets || [{ name: target, external: true }];
     } catch {}
+  }
+
+  // No target/body data: fall back to the caller's own most recent scan
+  // instead of running predictions against an empty asset list forever.
+  if (!target && !vulns.length) {
+    const latest = await resolveLatestScanTarget(env, authCtx);
+    if (latest) {
+      target = latest.target;
+      vulns  = latest.cached.cves || latest.cached.vulns || [];
+      assets = [{ name: target, external: true, services: latest.cached.open_ports || [] }];
+    }
+  }
+
+  if (!target || !vulns.length) {
+    return Response.json({
+      target: null, sector, chains: [], breach_probability: null, no_data: true,
+      message: 'Run a domain scan to activate attack-path prediction',
+    });
   }
 
   const result = await predictAttackPaths(env, assets, vulns, sector, authCtx?.tier || 'PRO');
