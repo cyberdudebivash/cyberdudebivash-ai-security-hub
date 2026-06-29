@@ -143,6 +143,7 @@ import {
 import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handleMCPQuickAssess } from './handlers/mcpSecurityScanner.js';
 import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibe-code/vibeCodeScanner.js';
 import { handleListAgentAdvisories, handleAgentThreatOverview, handleCreateAgentAdvisory } from './handlers/agentThreatAdvisories.js';
+import { ingestAgentThreatAdvisories } from './services/agentThreatIngestion.js';
 import { handleListAttackTechniques, handleAttackLibraryOverview, handleCreateAttackTechnique } from './handlers/attackLibrary.js';
 
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
@@ -6930,6 +6931,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   if (path === '/api/admin/agent-threats/advisories' && method === 'POST') {
     return withSecurityHeaders(withCors(await handleCreateAgentAdvisory(request, env), request));
   }
+  if (path === '/api/admin/agent-threats/ingest' && method === 'POST') {
+    if (!isAdminAuthorized(request, env)) {
+      return withSecurityHeaders(withCors(Response.json({ error: 'Unauthorized' }, { status: 401 }), request));
+    }
+    const result = await ingestAgentThreatAdvisories(env);
+    return withSecurityHeaders(withCors(Response.json({ success: true, ...result }), request));
+  }
 
   // ── v44: ATTACK LIBRARY — live D1-backed feed for /attack-library ──────────
   if (path === '/api/attack-library/techniques' && method === 'GET') {
@@ -7566,6 +7574,17 @@ ctx.waitUntil(
             epss: r.epss_enriched, errors: r.errors?.length, duration_ms: r.duration_ms,
           })))
           .catch(e => console.error('[CRON] Bulk Backfill error:', e?.message))
+      );
+    }
+
+    // ── DAILY (6 AM): Pull real GHSA advisories for tracked AI agent
+    //    frameworks (LangChain, CrewAI, AutoGen, OpenAI Agents, MCP,
+    //    LlamaIndex) so /agent-threats stops showing the same 5 seed rows. ──
+    if (cron === '0 6 * * *') {
+      ctx.waitUntil(
+        ingestAgentThreatAdvisories(env)
+          .then(r => console.log('[CRON] Agent Threat Advisories:', JSON.stringify(r)))
+          .catch(e => console.error('[CRON] Agent Threat Advisories error:', e?.message))
       );
     }
 
