@@ -248,91 +248,10 @@ footer a{color:#10b981;margin:0 8px}
     </div>
 
     <div class="intel-list" id="intel-list">
-
-      <div class="intel-item" data-type="ai-cve">
-        <div class="intel-sev sev-crit"><div class="sev-dot"></div><div class="sev-label">CRITICAL</div></div>
-        <div class="intel-body">
-          <div class="intel-id">CVE-2025-4891 · AI-CVE-0047</div>
-          <div class="intel-title">Ollama Remote Code Execution via Malformed Model Pull</div>
-          <div class="intel-desc">Unauthenticated RCE in Ollama ≤ 0.1.47 via crafted model pull request. CVSS 9.8. Local AI model server exploitation.</div>
-          <div class="intel-tags"><span class="intel-tag">Ollama</span><span class="intel-tag">RCE</span><span class="intel-tag">CVSS 9.8</span><span class="intel-tag">CWE-78</span></div>
-        </div>
-        <div class="intel-right">
-          <div class="intel-date">Jun 8, 2025</div>
-          <a href="/#pricing" class="btn-intel">Full Report →</a>
-        </div>
+      <div style="padding:40px;text-align:center;color:var(--text-muted,#888)">
+        <div style="font-size:32px;margin-bottom:12px">📡</div>
+        <div style="font-weight:600;margin-bottom:8px">Loading live threat feed…</div>
       </div>
-
-      <div class="intel-item" data-type="prompt">
-        <div class="intel-sev sev-crit"><div class="sev-dot"></div><div class="sev-label">CRITICAL</div></div>
-        <div class="intel-body">
-          <div class="intel-id">CDB-ATI-2025-0312 · PROMPT</div>
-          <div class="intel-title">Universal Jailbreak via Nested Role Injection (Cross-Model)</div>
-          <div class="intel-desc">New jailbreak technique effective across GPT-4o, Claude 3.5, Gemini Pro using nested system role impersonation with Unicode homoglyphs to evade safety classifiers.</div>
-          <div class="intel-tags"><span class="intel-tag">Jailbreak</span><span class="intel-tag">Universal</span><span class="intel-tag">GPT-4o</span><span class="intel-tag">Claude</span><span class="intel-tag">Gemini</span></div>
-        </div>
-        <div class="intel-right">
-          <div class="intel-date">Jun 7, 2025</div>
-          <a href="/#pricing" class="btn-intel">Full Report →</a>
-        </div>
-      </div>
-
-      <div class="intel-item" data-type="ai-cve">
-        <div class="intel-sev sev-high"><div class="sev-dot"></div><div class="sev-label">HIGH</div></div>
-        <div class="intel-body">
-          <div class="intel-id">CVE-2025-3847 · AI-CVE-0044</div>
-          <div class="intel-title">LangChain SQLDatabaseChain SQL Injection via Prompt</div>
-          <div class="intel-desc">SQL injection via malicious user prompts in LangChain SQLDatabaseChain ≤ 0.2.11. Attacker can read arbitrary database records. CVSS 8.6.</div>
-          <div class="intel-tags"><span class="intel-tag">LangChain</span><span class="intel-tag">SQLi</span><span class="intel-tag">CVSS 8.6</span><span class="intel-tag">CWE-89</span></div>
-        </div>
-        <div class="intel-right">
-          <div class="intel-date">Jun 5, 2025</div>
-          <a href="/#pricing" class="btn-intel">Full Report →</a>
-        </div>
-      </div>
-
-      <div class="intel-item" data-type="actor">
-        <div class="intel-sev sev-high"><div class="sev-dot"></div><div class="sev-label">HIGH</div></div>
-        <div class="intel-body">
-          <div class="intel-id">CDB-TA-2025-0014 · ACTOR</div>
-          <div class="intel-title">APT-AI-07 (PromptPanda) — New Campaign Targeting Enterprise LLM APIs</div>
-          <div class="intel-desc">Advanced persistent threat group targeting enterprise AI deployments via spear-phishing for API keys, followed by automated prompt injection campaigns to exfiltrate business data.</div>
-          <div class="intel-tags"><span class="intel-tag">APT</span><span class="intel-tag">PromptPanda</span><span class="intel-tag">Enterprise</span><span class="intel-tag">API Key Theft</span></div>
-        </div>
-        <div class="intel-right">
-          <div class="intel-date">Jun 4, 2025</div>
-          <a href="/#pricing" class="btn-intel">Full Report →</a>
-        </div>
-      </div>
-
-      <div class="intel-item" data-type="prompt">
-        <div class="intel-sev sev-med"><div class="sev-dot"></div><div class="sev-label">MEDIUM</div></div>
-        <div class="intel-body">
-          <div class="intel-id">CDB-ATI-2025-0309 · PROMPT</div>
-          <div class="intel-title">RAG Context Poisoning via PDF Metadata Injection</div>
-          <div class="intel-desc">Hidden instructions embedded in PDF document metadata (Author, Subject fields) are ingested into vector databases and retrieved during RAG queries, injecting attacker instructions into model context.</div>
-          <div class="intel-tags"><span class="intel-tag">RAG</span><span class="intel-tag">PDF Metadata</span><span class="intel-tag">Vector DB</span><span class="intel-tag">LLM01</span></div>
-        </div>
-        <div class="intel-right">
-          <div class="intel-date">Jun 2, 2025</div>
-          <a href="/#pricing" class="btn-intel">Full Report →</a>
-        </div>
-      </div>
-
-      <div class="intel-item" data-type="ai-cve">
-        <div class="intel-sev sev-high"><div class="sev-dot"></div><div class="sev-label">HIGH</div></div>
-        <div class="intel-body">
-          <div class="intel-id">CVE-2025-3291 · AI-CVE-0041</div>
-          <div class="intel-title">vLLM Serving Engine SSRF via Speculative Decoding Config</div>
-          <div class="intel-desc">Server-side request forgery in vLLM ≤ 0.4.2 speculative decoding configuration allows attacker to scan internal network from model serving endpoint. CVSS 7.5.</div>
-          <div class="intel-tags"><span class="intel-tag">vLLM</span><span class="intel-tag">SSRF</span><span class="intel-tag">CVSS 7.5</span><span class="intel-tag">CWE-918</span></div>
-        </div>
-        <div class="intel-right">
-          <div class="intel-date">May 30, 2025</div>
-          <a href="/#pricing" class="btn-intel">Full Report →</a>
-        </div>
-      </div>
-
     </div>
 
     <div style="text-align:center;margin-top:24px">
@@ -351,21 +270,11 @@ footer a{color:#10b981;margin:0 8px}
 
     <div class="side-card">
       <div class="side-title">📊 Feed Statistics</div>
-      <div class="mini-item"><span class="mini-label">Total IOCs</span><span class="mini-val green">3,847</span></div>
-      <div class="mini-item"><span class="mini-label">AI CVEs</span><span class="mini-val green">312</span></div>
-      <div class="mini-item"><span class="mini-label">Prompt Attacks</span><span class="mini-val yellow">428</span></div>
-      <div class="mini-item"><span class="mini-label">Agent Threats</span><span class="mini-val red">107</span></div>
-      <div class="mini-item"><span class="mini-label">Threat Actors</span><span class="mini-val yellow">14</span></div>
-      <div class="mini-item"><span class="mini-label">Last Update</span><span class="mini-val green">2h ago</span></div>
-    </div>
-
-    <div class="side-card">
-      <div class="side-title">🔥 Trending Threats</div>
-      <div class="mini-item"><span class="mini-label">MCP Poisoning</span><span class="mini-val red">↑ 340%</span></div>
-      <div class="mini-item"><span class="mini-label">Agentic Takeover</span><span class="mini-val red">↑ 218%</span></div>
-      <div class="mini-item"><span class="mini-label">RAG Poisoning</span><span class="mini-val yellow">↑ 154%</span></div>
-      <div class="mini-item"><span class="mini-label">Model Extraction</span><span class="mini-val yellow">↑ 89%</span></div>
-      <div class="mini-item"><span class="mini-label">LLM Jailbreaks</span><span class="mini-val green">↓ 12%</span></div>
+      <div class="mini-item"><span class="mini-label">Total Advisories</span><span class="mini-val green" id="side-total">—</span></div>
+      <div class="mini-item"><span class="mini-label">Critical</span><span class="mini-val red" id="side-crit">—</span></div>
+      <div class="mini-item"><span class="mini-label">Confirmed Exploited</span><span class="mini-val yellow" id="side-exploited">—</span></div>
+      <div class="mini-item"><span class="mini-label">Threat Actors Tracked</span><span class="mini-val yellow" id="side-actors">—</span></div>
+      <div class="mini-item"><span class="mini-label">Last Ingestion</span><span class="mini-val green" id="side-updated">—</span></div>
     </div>
 
     <div class="subscribe-card">
@@ -579,28 +488,43 @@ async function loadLiveStats(){
     // the dashboard always showed 847/34/312/14 regardless of real data. Found
     // 2026-06-29 while the numbers looked permanently frozen ("stalled").
     const s=d.data?.stats||d.stats||d;
-    const total=s.total_advisories??847;
-    const crit=s.critical??34;
-    const cves=s.confirmed_exploited??312; // actively-exploited CVEs — no AI-specific subset exists yet
-    animateCounter('stat-total',0,total,1200);
-    animateCounter('stat-crit',0,crit,1200);
-    animateCounter('stat-cve',0,cves,1200);
+    const total=s.total_advisories;
+    const crit=s.critical;
+    const cves=s.confirmed_exploited; // actively-exploited CVEs — no AI-specific subset exists yet
+    if(total!=null)animateCounter('stat-total',0,total,1200);
+    if(crit!=null)animateCounter('stat-crit',0,crit,1200);
+    if(cves!=null)animateCounter('stat-cve',0,cves,1200);
+    const setText=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+    if(total!=null)animateCounter('side-total',0,total,1200);else setText('side-total','—');
+    if(crit!=null)animateCounter('side-crit',0,crit,1200);else setText('side-crit','—');
+    if(cves!=null)animateCounter('side-exploited',0,cves,1200);else setText('side-exploited','—');
+    const lastRun=s.last_ingestion?.ran_at;
+    setText('side-updated',lastRun?_relativeAge(new Date(lastRun)):'—');
     // Threat-actor count isn't in this endpoint's response — pull the real
-    // figure from /api/trust-center instead of leaving the hardcoded 14.
-    fetch('/api/trust-center',{signal:AbortSignal.timeout(6000)})
+    // tracked-actor total from /api/intel/actors (same data the Threat Intel
+    // Workbench's APT Actor Profiles panel uses).
+    fetch('/api/intel/actors',{signal:AbortSignal.timeout(6000)})
       .then(r=>r.ok?r.json():null)
       .then(t=>{
-        const actors=t?.platform_stats?.threat_actors_tracked;
-        animateCounter('stat-actors',0,(actors??14),1200);
+        const actors=t?.data?.total??t?.total;
+        if(actors!=null){animateCounter('stat-actors',0,actors,1200);animateCounter('side-actors',0,actors,1200);}
+        else{setText('stat-actors','—');setText('side-actors','—');}
       })
-      .catch(()=>animateCounter('stat-actors',0,14,1000));
+      .catch(()=>{setText('stat-actors','—');setText('side-actors','—');});
   }catch(e){
-    // Fallback: animate static seed values
-    animateCounter('stat-total',0,847,1000);
-    animateCounter('stat-crit',0,34,1000);
-    animateCounter('stat-cve',0,312,1000);
-    animateCounter('stat-actors',0,14,1000);
+    // Honest failure — no fabricated fallback numbers.
+    ['stat-total','stat-crit','stat-cve','stat-actors','side-total','side-crit','side-exploited','side-actors','side-updated']
+      .forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});
   }
+}
+
+function _relativeAge(dt){
+  if(!dt||isNaN(dt))return'—';
+  const mins=Math.floor((Date.now()-dt.getTime())/60000);
+  if(mins<60)return mins+'m ago';
+  const hours=Math.floor(mins/60);
+  if(hours<24)return hours+'h ago';
+  return Math.floor(hours/24)+'d ago';
 }
 
 // Init on DOM ready

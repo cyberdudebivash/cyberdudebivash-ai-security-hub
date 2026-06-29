@@ -197,6 +197,28 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:20px;text-alig
     <ul class="pipeline" id="pipelineList"></ul>
   </section>
 
+  <!-- ── Agentic AI Command Center — Anomaly / Predictive / Agent Bus ──
+       These three engines (System 1/2/3) are real, D1-backed, cron-driven
+       backends with no UI anywhere on the platform until now — they were
+       marketed on the homepage as "real-time monitoring" but had nothing to
+       show them. Wired here using the same fetchJson/render pattern as the
+       CISO/ASPM/Compliance/Hunt cards above. ── -->
+  <h2 class="section-title" style="margin-top:16px">Agentic AI Command Center — Live Systems</h2>
+  <div class="grid grid-3" style="margin-top:8px">
+    <section class="card" aria-labelledby="anomaly-h">
+      <h2 id="anomaly-h">Anomaly Detection <span class="meta" id="anomaly-meta"></span></h2>
+      <div id="anomalyBody"><div class="empty">Loading…</div></div>
+    </section>
+    <section class="card" aria-labelledby="predict-h">
+      <h2 id="predict-h">Predictive Threat Intel <span class="meta" id="predict-meta"></span></h2>
+      <div id="predictBody"><div class="empty">Loading…</div></div>
+    </section>
+    <section class="card" aria-labelledby="agentbus-h">
+      <h2 id="agentbus-h">Agent Bus <span class="meta" id="agentbus-meta"></span></h2>
+      <div id="agentbusBody"><div class="empty">Loading…</div></div>
+    </section>
+  </div>
+
 </main>
 
 <footer>
@@ -462,7 +484,86 @@ function renderHunt(body) {
   setHTML('huntBody', html);
 }
 
+// ── Agentic Command Center renderers (Anomaly / Predictive / Agent Bus) ──────
+function renderAnomaly(b) {
+  $('anomaly-meta').textContent = b.timestamp ? ('updated ' + timeAgo(b.timestamp)) : '';
+  const byRisk = {};
+  for (const r of (b.by_risk_level || [])) byRisk[r.risk_level] = r.cnt;
+  let html = '<div class="grid grid-3">' +
+    tile('Last 24h', num(b.last_24h_total), num(b.last_24h_total) > 0 ? 'warn' : 'good') +
+    tile('High Risk', num(byRisk.HIGH), num(byRisk.HIGH) > 0 ? 'bad' : 'good') +
+    tile('Medium Risk', num(byRisk.MEDIUM), 'info') +
+    '</div>';
+  const recent = b.recent_anomalies || [];
+  if (recent.length) {
+    html += '<div style="margin-top:10px">' + recent.slice(0, 5).map(a =>
+      '<div class="rec" style="border-left-color:' + riskColor(a.risk_level) + '">' +
+        '<div><span class="area">' + esc(a.user_id) + '</span> · <span style="color:' + riskColor(a.risk_level) + '">' + esc(a.risk_level) + '</span></div>' +
+        '<div class="sub muted">score ' + num(a.anomaly_score) + ' · ' + timeAgo(a.created_at) + '</div>' +
+      '</div>'
+    ).join('') + '</div>';
+  } else {
+    html += '<div class="empty" style="margin-top:8px">No anomalies detected in the last 24h.</div>';
+  }
+  setHTML('anomalyBody', html);
+}
+function renderPredict(b) {
+  $('predict-meta').textContent = b.timestamp ? ('updated ' + timeAgo(b.timestamp)) : '';
+  const byRisk = {};
+  for (const r of (b.by_risk_level || [])) byRisk[r.risk_level] = r.cnt;
+  let html = '<div class="grid grid-3">' +
+    tile('Last 24h', num(b.last_24h_predictions), 'info') +
+    tile('Avg Risk', num(b.avg_risk_score), num(b.avg_risk_score) >= 70 ? 'bad' : num(b.avg_risk_score) >= 40 ? 'warn' : 'good') +
+    tile('High Risk', num(byRisk.HIGH), num(byRisk.HIGH) > 0 ? 'bad' : 'good') +
+    '</div>';
+  const apts = b.top_apt_groups || [];
+  if (apts.length) {
+    html += '<div style="margin-top:10px">' + apts.map(g =>
+      '<div class="rec"><div><span class="area">' + esc(g.group_name) + '</span></div>' +
+        '<div class="sub muted">' + num(g.mention_count) + ' active predictions mentioning this actor</div></div>'
+    ).join('') + '</div>';
+  } else {
+    html += '<div class="empty" style="margin-top:8px">No APT activity correlated in the last 24h.</div>';
+  }
+  setHTML('predictBody', html);
+}
+function renderAgentBus(b) {
+  $('agentbus-meta').textContent = b.timestamp ? ('updated ' + timeAgo(b.timestamp)) : '';
+  const q = b.queue || {};
+  let html = '<div class="grid grid-3">' +
+    tile('System', b.system || '—', b.system === 'OPERATIONAL' ? 'good' : 'bad') +
+    tile('Queue Depth', num(q.pending ?? q.queue_depth), 'info') +
+    tile('Active WAF Patches', num(b.waf && b.waf.active_patches), 'info') +
+    '</div>';
+  const byAgent = b.last_24h_by_agent || {};
+  const agentNames = Object.keys(byAgent);
+  if (agentNames.length) {
+    html += '<div style="margin-top:10px">' + agentNames.map(name => {
+      const statuses = byAgent[name];
+      const summary = Object.entries(statuses).map(([s, c]) => s + ': ' + c).join(' · ');
+      return '<div class="rec"><div><span class="area">' + esc(name) + '</span></div>' +
+        '<div class="sub muted">' + esc(summary) + ' (24h)</div></div>';
+    }).join('') + '</div>';
+  } else {
+    html += '<div class="empty" style="margin-top:8px">No agent actions in the last 24h.</div>';
+  }
+  setHTML('agentbusBody', html);
+}
+
 // ── Loaders ──────────────────────────────────────────────────────────────────
+async function loadAnomaly() {
+  try { const r = await fetchJson('/api/anomaly/stats'); if (!r.body) throw new Error('HTTP ' + r.status); renderAnomaly(r.body); }
+  catch (e) { setHTML('anomalyBody', '<div class="err">Anomaly endpoint error: ' + esc(e.message) + '</div>'); }
+}
+async function loadPredict() {
+  try { const r = await fetchJson('/api/predict/stats'); if (!r.body) throw new Error('HTTP ' + r.status); renderPredict(r.body); }
+  catch (e) { setHTML('predictBody', '<div class="err">Predictive endpoint error: ' + esc(e.message) + '</div>'); }
+}
+async function loadAgentBus() {
+  try { const r = await fetchJson('/api/agent/status'); if (!r.body) throw new Error('HTTP ' + r.status); renderAgentBus(r.body); }
+  catch (e) { setHTML('agentbusBody', '<div class="err">Agent Bus endpoint error: ' + esc(e.message) + '</div>'); }
+}
+
 async function loadStatus() {
   try {
     const r = await fetchJson(GM + '/status');
@@ -498,7 +599,7 @@ async function loadHunt() {
 
 async function refreshAll() {
   const running = await loadStatus();
-  await Promise.all([loadCiso(), loadAspm(), loadCompliance(), loadHunt()]);
+  await Promise.all([loadCiso(), loadAspm(), loadCompliance(), loadHunt(), loadAnomaly(), loadPredict(), loadAgentBus()]);
   scheduleNext(running);
   return running;
 }

@@ -522,6 +522,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
         </div>
         <button class="pp-btn" onclick="openPayment('AI_RED_TEAM', 99999, 'AI Red Team Platform — ₹99,999')">Select Pillar</button>
       </div>
+      <button onclick="openRedTeamDemo()" style="width:100%;margin-top:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text-muted,#94a3b8);padding:9px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">🔍 See a Live MITRE ATLAS Probe — Free, No Payment</button>
     </div>
 
     <!-- Pillar D: MCP Security -->
@@ -1023,6 +1024,24 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
   </div>
 </div>
 
+
+
+<!-- ── AI Red Team — Free Live Demo Modal ─────────────────────────────────────
+     Pillar 3's "Select Pillar" button only opened a payment modal with zero
+     proof of platform capability. This shows the REAL MITRE ATLAS v2.1
+     technique catalog and adversarial prompt library (60+ techniques, 15+
+     probes — all genuinely backed by /api/ai-redteam/*, not fabricated demo
+     data) before any payment, so prospects can verify the engine is real. -->
+<div id="redteamDemoModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);overflow-y:auto;padding:20px 16px">
+  <div style="max-width:680px;margin:40px auto;background:#0d0d22;border:1px solid rgba(239,68,68,.25);border-radius:16px;padding:28px;position:relative">
+    <button onclick="closeRedTeamDemo()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer">✕</button>
+    <div style="font-size:11px;color:#ef4444;font-weight:800;letter-spacing:.1em;margin-bottom:8px">🛡 PILLAR 03 — LIVE CAPABILITY DEMO</div>
+    <div style="font-size:19px;font-weight:900;color:#fff;margin-bottom:6px">AI Red Team Engine — MITRE ATLAS v2.1</div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:18px">Real technique catalog and adversarial probe library pulled live from our backend — the same engine used in paid engagements.</div>
+    <div id="redteamDemoBody" style="font-size:13px;color:#94a3b8">Loading…</div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
@@ -1068,6 +1087,61 @@ function toast(msg, type) {
   setTimeout(function() { el.classList.remove('show'); }, 4000);
 }
 
+/* ── AI Red Team — Free Live Demo ──────────────────────────────────────────── */
+async function openRedTeamDemo() {
+  var m = document.getElementById('redteamDemoModal');
+  var body = document.getElementById('redteamDemoBody');
+  m.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  body.innerHTML = 'Loading live MITRE ATLAS data…';
+  try {
+    var [techRes, promptRes] = await Promise.all([
+      fetch(API_BASE + '/api/ai-redteam/techniques', { signal: AbortSignal.timeout(8000) }),
+      fetch(API_BASE + '/api/ai-redteam/probe/jailbreak', { signal: AbortSignal.timeout(8000) }),
+    ]);
+    if (!techRes.ok || !promptRes.ok) throw new Error('API unavailable');
+    var tech = await techRes.json();
+    var probe = await promptRes.json();
+    var sampleTechs = (tech.techniques || []).filter(function(t) { return t.severity === 'CRITICAL'; }).slice(0, 4);
+    var sampleProbes = (probe.probes || []).slice(0, 2);
+
+    var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">'
+      + '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:#ef4444">' + (tech.total || 0) + '</div><div style="font-size:9px;color:#64748b">ATLAS TECHNIQUES</div></div>'
+      + '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:#f59e0b">' + (tech.severityBreakdown ? tech.severityBreakdown.CRITICAL : 0) + '</div><div style="font-size:9px;color:#64748b">CRITICAL</div></div>'
+      + '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:#fff">' + (probe.probeCount || 0) + '</div><div style="font-size:9px;color:#64748b">JAILBREAK PROBES</div></div>'
+      + '</div>'
+      + '<div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:8px">Sample critical techniques (live from /api/ai-redteam/techniques):</div>';
+
+    sampleTechs.forEach(function(t) {
+      html += '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+        + '<div style="font-size:9px;color:#ef4444;font-weight:800;font-family:monospace">' + t.id + ' · ' + t.tactic + '</div>'
+        + '<div style="font-size:13px;font-weight:700;color:#fff;margin:2px 0">' + t.name + '</div>'
+        + '<div style="font-size:11.5px;color:#94a3b8">' + t.description + '</div></div>';
+    });
+
+    html += '<div style="font-size:12px;font-weight:800;color:#fff;margin:16px 0 8px">Sample jailbreak probe (live from /api/ai-redteam/probe/jailbreak):</div>';
+    sampleProbes.forEach(function(p) {
+      html += '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+        + '<div style="font-size:9px;color:#f59e0b;font-weight:800">' + p.technique + ' · ' + p.severity + '</div>'
+        + '<div style="font-size:11.5px;color:#94a3b8;font-family:monospace;margin-top:4px">' + p.prompt.replace(/</g, '&lt;') + '</div></div>';
+    });
+
+    html += '<div style="background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(0,0,0,0));border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:16px;margin-top:16px;text-align:center">'
+      + '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">This is the real engine, not a mockup</div>'
+      + '<div style="font-size:11.5px;color:#94a3b8;margin-bottom:12px">A paid engagement runs the full ' + (tech.total || '60+') + '-technique catalog against your actual target model, with our analysts scoring every probe and delivering a MITRE ATLAS-mapped report.</div>'
+      + '<button onclick="closeRedTeamDemo();openPayment(\'AI_RED_TEAM\',99999,\'AI Red Team Platform — ₹99,999\')" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#ef4444;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">Book the Full Engagement →</button>'
+      + '</div>';
+
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">⚠️ Live demo temporarily unavailable. Please try again shortly.</div>';
+  }
+}
+function closeRedTeamDemo() {
+  document.getElementById('redteamDemoModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 /* ── Payment / Checkout ── */
 function openPayment(productId, amount, label) {
   if (typeof window.CDB_CHECKOUT_MODAL !== 'undefined') {
@@ -1085,66 +1159,88 @@ function openPayment(productId, amount, label) {
   }
 }
 
-/* ── Live APEX stats ── */
+/* ── Live APEX stats ──────────────────────────────────────────────────────────
+   These counters used to be hardcoded fallback numbers (847/23/12/67/34)
+   animated as if they were live platform metrics — none of them were ever
+   replaced with real data. Now pulled from the real, already-wired backends:
+   total AI-related advisories, jailbreak prompt library size, MCP advisory
+   count, and agent-takeover / RAG-poisoning technique counts. */
+var _apexRealValues = {};
 async function loadApexStats() {
-  try {
-    var r = await fetch(API_BASE + '/api/v1/intel/latest.json?limit=10');
-    if (!r.ok) return;
-    var d = await r.json();
-    var items = d.data || d.items || d.cves || [];
-    var aiRelated = items.filter(function(i) {
-      var kw = ((i.description || '') + (i.title || '')).toLowerCase();
-      return kw.indexOf('ai') !== -1 || kw.indexOf('llm') !== -1 ||
-             kw.indexOf('prompt') !== -1 || kw.indexOf('model') !== -1;
-    });
-    if (aiRelated.length > 0) {
-      var el = document.getElementById('apexLlmVulns');
-      if (el) el.textContent = Math.max(847, aiRelated.length + 847);
-    }
-  } catch(e) { /* non-blocking */ }
+  var fetches = [
+    fetch(API_BASE + '/api/threat-intel/stats', { signal: AbortSignal.timeout(8000) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        var s = (d && d.data && d.data.stats) || (d && d.stats);
+        if (s && s.total_advisories != null) {
+          _apexRealValues.statLlmVulns = s.total_advisories;
+          _apexRealValues.apexLlmVulns = s.total_advisories;
+        }
+      }).catch(function() {}),
+    fetch(API_BASE + '/api/ai-redteam/prompts?category=jailbreak', { signal: AbortSignal.timeout(8000) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d && d.total != null) _apexRealValues.apexJailbreaks = d.total; })
+      .catch(function() {}),
+    fetch(API_BASE + '/api/agent-threats/overview', { signal: AbortSignal.timeout(8000) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        var fws = d && d.frameworks || [];
+        var mcp = fws.find(function(f) { return f.framework === 'mcp'; });
+        if (mcp) _apexRealValues.apexMcpExploits = mcp.advisory_count;
+      }).catch(function() {}),
+    fetch(API_BASE + '/api/attack-library/techniques?category=agent-takeover&limit=200', { signal: AbortSignal.timeout(8000) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d && d.total != null) _apexRealValues.apexAgentPatterns = d.total; })
+      .catch(function() {}),
+    fetch(API_BASE + '/api/attack-library/techniques?category=rag-poisoning&limit=200', { signal: AbortSignal.timeout(8000) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d && d.total != null) _apexRealValues.apexRagTech = d.total; })
+      .catch(function() {}),
+  ];
+  await Promise.all(fetches);
+  initCounters();
 }
 
 /* ── Counter animation ── */
 function animateCounter(el, target, duration) {
   if (!el) return;
-  var start = 0;
   var startTime = null;
   var numeric = parseInt(String(target).replace(/\D/g, ''), 10) || 0;
-  var suffix = String(target).replace(/[\d,]/g, '');
   function step(ts) {
     if (!startTime) startTime = ts;
     var progress = Math.min((ts - startTime) / duration, 1);
     var ease = 1 - Math.pow(1 - progress, 3);
     var current = Math.floor(ease * numeric);
-    el.textContent = current.toLocaleString('en-IN') + suffix;
+    el.textContent = current.toLocaleString('en-IN');
     if (progress < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
 
-/* ── Intersection observer for stat counters ── */
+/* ── Intersection observer for stat counters — only animates real values;
+   if a fetch above failed, shows "—" instead of a fabricated number. ── */
 function initCounters() {
-  var counters = [
-    { id: 'statLlmVulns', target: 847, suffix: '' },
-    { id: 'apexLlmVulns', target: 847, suffix: '' },
-    { id: 'apexJailbreaks', target: 23, suffix: '' },
-    { id: 'apexMcpExploits', target: 12, suffix: '' },
-    { id: 'apexAgentPatterns', target: 67, suffix: '' },
-    { id: 'apexRagTech', target: 34, suffix: '' }
-  ];
-  if (!('IntersectionObserver' in window)) return;
+  var ids = ['statLlmVulns', 'apexLlmVulns', 'apexJailbreaks', 'apexMcpExploits', 'apexAgentPatterns', 'apexRagTech'];
+  if (!('IntersectionObserver' in window)) {
+    ids.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = _apexRealValues[id] != null ? _apexRealValues[id].toLocaleString('en-IN') : '—';
+    });
+    return;
+  }
   var obs = new IntersectionObserver(function(entries) {
     entries.forEach(function(entry) {
       if (entry.isIntersecting) {
         var id = entry.target.id;
-        var conf = counters.find(function(c) { return c.id === id; });
-        if (conf) animateCounter(entry.target, conf.target, 1800);
+        var val = _apexRealValues[id];
+        if (val != null) animateCounter(entry.target, val, 1800);
+        else entry.target.textContent = '—';
         obs.unobserve(entry.target);
       }
     });
   }, { threshold: 0.2 });
-  counters.forEach(function(c) {
-    var el = document.getElementById(c.id);
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
     if (el) obs.observe(el);
   });
 }
@@ -1238,8 +1334,7 @@ function setActiveNav() {
 
 /* ── Initialize ── */
 document.addEventListener('DOMContentLoaded', function() {
-  loadApexStats();
-  initCounters();
+  loadApexStats(); // calls initCounters() itself once real values are fetched
   setActiveNav();
 });
 </script>
