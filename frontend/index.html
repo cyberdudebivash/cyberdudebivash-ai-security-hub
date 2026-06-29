@@ -4074,7 +4074,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </div>
 <!-- ACTIVITY LOG -->
-<div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
+<div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;margin-bottom:20px">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
 <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.72);text-transform:uppercase">⚡ LIVE ACTIVITY LOG</div>
 <button onclick="cdbAutoSOCRefreshLog()" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:#00d4ff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">↻ Refresh</button>
@@ -4082,6 +4082,15 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div id="asoc-log" style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:rgba(255,255,255,.72);max-height:200px;overflow-y:auto">
 <div style="color:rgba(255,255,255,0.72)">— Waiting for pipeline activity —</div>
 </div>
+</div>
+
+<!-- GENERATED RULES PANEL — shown after successful run -->
+<div id="asoc-rules-panel" style="display:none;background:rgba(0,0,0,.3);border:1px solid rgba(0,212,255,.15);border-radius:16px;padding:24px">
+<!-- populated by showGeneratedRules() after each successful run -->
+</div>
+
+<!-- QUICK STATS — always visible when data exists -->
+<div id="asoc-run-summary" style="display:none;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:16px;margin-top:12px;font-size:12px;color:rgba(255,255,255,.72)">
 </div>
 </div>
 </section>
@@ -17809,6 +17818,41 @@ function updateMetrics(metrics) {
   });
 }
 
+// Show generated rules in an expandable panel after a successful run
+function showGeneratedRules(runId) {
+  var panel = document.getElementById('asoc-rules-panel');
+  if (!panel) return;
+  panel.innerHTML = '<div style="font-size:11px;color:rgba(0,212,255,.72)">Loading generated rules…</div>';
+  panel.style.display = 'block';
+  fetch('/api/auto-soc/latest-rules')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      var rules = data.rules || [];
+      if (!rules.length) { panel.style.display='none'; return; }
+      panel.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.72);text-transform:uppercase;margin-bottom:12px">⚡ GENERATED DETECTION RULES — COPY & DEPLOY</div>'
+        + rules.map(function(r, i) {
+          var id = 'rule-tab-' + i;
+          return '<div style="background:rgba(0,0,0,.35);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:14px;margin-bottom:10px">'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">'
+            + '<span style="font-size:12px;font-weight:800;color:#00d4ff;font-family:monospace">' + r.cve_id + '</span>'
+            + '<span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;padding:2px 8px;border-radius:12px;font-weight:700">' + (r.severity||'HIGH') + '</span>'
+            + (r.is_kev ? '<span style="font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;padding:2px 8px;border-radius:12px;font-weight:700">⚠ CISA KEV</span>' : '')
+            + '<span style="font-size:10px;color:rgba(255,255,255,.5)">CVSS ' + (r.cvss||'—') + '</span>'
+            + '</div>'
+            + ['sigma','kql','splunk'].map(function(fmt) {
+              var content = r[fmt] || '';
+              return '<div style="margin-bottom:6px">'
+                + '<div style="font-size:9px;color:rgba(255,255,255,.5);font-weight:700;text-transform:uppercase;margin-bottom:3px">' + fmt.toUpperCase() + '</div>'
+                + '<div style="position:relative">'
+                + '<pre style="background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px 10px;font-size:10px;overflow-x:auto;color:#a0aec0;margin:0;max-height:100px;overflow-y:auto">' + content.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>'
+                + '<button onclick="navigator.clipboard.writeText(this.dataset.txt)" data-txt="' + content.replace(/"/g,'&quot;') + '" style="position:absolute;top:4px;right:4px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;padding:2px 8px;border-radius:4px;font-size:9px;cursor:pointer;font-weight:700">Copy</button>'
+                + '</div></div>';
+            }).join('')
+            + '</div>';
+        }).join('');
+    }).catch(function(){ panel.style.display='none'; });
+}
+
 window.cdbAutoSOCToggle = function() {
   var newMode = !ASOC.autoMode;
   fetch('/api/auto-soc/mode', {
@@ -17830,27 +17874,74 @@ window.cdbAutoSOCToggle = function() {
 
 window.cdbAutoSOCRun = function() {
   var btn = document.getElementById('auto-soc-run-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Stage 1/5…'; }
 
-  appendASocLog('Manual', '▶ Pipeline triggered manually', '#00d4ff');
+  // Hide stale rules panel
+  var rulesPanel = document.getElementById('asoc-rules-panel');
+  if (rulesPanel) rulesPanel.style.display = 'none';
 
-  // Reset pipeline stages to running
+  appendASocLog('Manual', '▶ Pipeline triggered manually — 5-stage execution starting', '#00d4ff');
   renderPipeline(PIPELINE_STAGES.map(function(s) { return { id: s.id, status: 'idle', count: 0 }; }));
+
+  // Real-time stage polling — updates UI every 1.5s while pipeline runs
+  var stageLabels = ['Stage 1/5: Threat Detection', 'Stage 2/5: AI Analysis', 'Stage 3/5: Rule Generation', 'Stage 4/5: Deploy & Publish', 'Stage 5/5: Monitoring'];
+  var stageIdx = 0;
+  var pollTimer = setInterval(function() {
+    fetch('/api/auto-soc/pipeline')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (d && d.pipeline && d.pipeline.stages) {
+          renderPipeline(d.pipeline.stages);
+          // Advance stage label on button
+          var runningStage = d.pipeline.stages.findIndex(function(s){ return s.status === 'running'; });
+          if (runningStage >= 0 && btn) btn.textContent = '⏳ ' + stageLabels[runningStage];
+        }
+      }).catch(function(){});
+  }, 1500);
 
   fetch('/api/auto-soc/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
     .then(function(r){ return r.json(); })
     .then(function(data) {
+      clearInterval(pollTimer);
       if (data && data.metrics) updateMetrics(data.metrics);
       if (data && data.pipeline && data.pipeline.stages) renderPipeline(data.pipeline.stages);
+
       var lrEl = document.getElementById('auto-soc-last-run');
-      if (lrEl) lrEl.textContent = 'Just ran · ' + (data.duration_ms ? Math.round(data.duration_ms/1000) + 's' : '—');
-      appendASocLog('Pipeline', data.success ? '✅ Pipeline completed successfully' : '⚠️ Pipeline finished with warnings', data.success ? '#22c55e' : '#f59e0b');
+      if (lrEl) {
+        var secs = data.duration_ms ? Math.round(data.duration_ms / 1000) + 's' : '—';
+        var m = data.metrics || {};
+        lrEl.textContent = 'Last run: ' + new Date().toLocaleTimeString() + ' · ' + secs
+          + (m.threats ? ' · ' + m.threats + ' threats' : '')
+          + (m.rules   ? ' · ' + m.rules + ' rules'   : '');
+      }
+
+      if (data.success) {
+        appendASocLog('Pipeline', '✅ All 5 stages complete — '
+          + (data.metrics ? data.metrics.threats + ' threats, ' + data.metrics.rules + ' rules generated, ' + data.metrics.deployed + ' deployed' : 'done'),
+          '#22c55e');
+        // Show generated rules
+        if (data.metrics && data.metrics.rules > 0) showGeneratedRules(data.run_id);
+        // Show top threats in log
+        if (data.run_record && data.run_record.top_threats) {
+          data.run_record.top_threats.forEach(function(t) {
+            appendASocLog('Threat', (t.is_kev ? '⚠ KEV ' : '') + t.cve_id + ' — CVSS ' + (t.cvss || '—') + ' — ' + t.exploitability, '#f59e0b');
+          });
+        }
+      } else if (data.note) {
+        appendASocLog('Detection', '⚠ ' + data.note, '#f59e0b');
+      } else {
+        appendASocLog('Pipeline', '⚠️ Pipeline finished with warnings: ' + (data.error || 'unknown'), '#f59e0b');
+      }
     })
     .catch(function(err) {
+      clearInterval(pollTimer);
       appendASocLog('Error', '❌ Pipeline error: ' + err.message, '#ef4444');
     })
     .finally(function() {
+      clearInterval(pollTimer);
       if (btn) { btn.disabled = false; btn.textContent = '▶ Run Now'; }
+      // Final pipeline state refresh
+      setTimeout(cdbAutoSOCPollPipeline, 500);
     });
 };
 

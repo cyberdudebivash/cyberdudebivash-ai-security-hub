@@ -84,10 +84,20 @@ describe('analyzeThreat — deterministic ai_score and mitre_ttps', () => {
     }
   });
 
-  it('exploitability and priority are unaffected (already deterministic, no regression)', () => {
-    expect(analyzeThreat({ cvss: 9.8 }).exploitability).toBe('ACTIVE_EXPLOITATION');
-    expect(analyzeThreat({ cvss: 8.5 }).exploitability).toBe('LIKELY');
-    expect(analyzeThreat({ cvss: 6.0 }).exploitability).toBe('POSSIBLE');
+  it('exploitability is deterministic — uses KEV + CVSS tiers (no Math.random)', () => {
+    // KEV + high CVSS = ACTIVE_EXPLOITATION
+    expect(analyzeThreat({ cvss_score: 9.8, is_kev: true }).exploitability).toBe('ACTIVE_EXPLOITATION');
+    // KEV alone = ACTIVELY_EXPLOITED_KEV
+    expect(analyzeThreat({ cvss_score: 7.5, is_kev: true }).exploitability).toBe('ACTIVELY_EXPLOITED_KEV');
+    // High CVSS, no KEV
+    expect(analyzeThreat({ cvss_score: 9.8 }).exploitability).toBe('CRITICAL_EXPOSURE');
+    expect(analyzeThreat({ cvss: 8.5 }).exploitability).toBe('HIGH_EXPOSURE');
+    expect(analyzeThreat({ cvss: 6.0 }).exploitability).toBe('PROBABLE');
+    // Same input always produces same output (no randomness)
+    for (let i = 0; i < 10; i++) {
+      expect(analyzeThreat({ cvss_score: 9.6 }).exploitability).toBe('CRITICAL_EXPOSURE');
+      expect(analyzeThreat({ cvss_score: 9.1 }).exploitability).toBe('HIGH_EXPOSURE');
+    }
   });
 });
 
