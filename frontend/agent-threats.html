@@ -610,7 +610,7 @@ async function loadAdvisories(){
       animateCounter('crit-count',0,critCount,800);
       const upd=advisories.reduce((max,a)=>{const t=new Date(a.updated_at||a.published_at).getTime();return isNaN(t)?max:Math.max(max,t);},0);
       const updEl=document.getElementById('upd-time');
-      if(updEl)updEl.textContent=upd?_relativeAge(new Date(upd))+' ago':'—';
+      if(updEl){const ra=upd?_relativeAge(new Date(upd)):'';updEl.textContent=ra?(ra==='today'?'today':ra+' ago'):'—';}
       _renderLiveFeedSidebar([...advisories].sort((a,b)=>new Date(b.published_at)-new Date(a.published_at)));
     }
   }catch(e){

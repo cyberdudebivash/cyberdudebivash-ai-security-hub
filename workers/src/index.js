@@ -143,6 +143,7 @@ import {
 import { handleMCPSecurityScan, handleMCPScanResult, handleMCPThreatFeed, handleMCPQuickAssess } from './handlers/mcpSecurityScanner.js';
 import { handleVibeCodeScan, handleVibeCodePatterns } from './handlers/vibe-code/vibeCodeScanner.js';
 import { handleListAgentAdvisories, handleAgentThreatOverview, handleCreateAgentAdvisory } from './handlers/agentThreatAdvisories.js';
+import { handleListAttackTechniques, handleAttackLibraryOverview, handleCreateAttackTechnique } from './handlers/attackLibrary.js';
 
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
@@ -6927,6 +6928,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path === '/api/admin/agent-threats/advisories' && method === 'POST') {
     return withSecurityHeaders(withCors(await handleCreateAgentAdvisory(request, env), request));
+  }
+
+  // ── v44: ATTACK LIBRARY — live D1-backed feed for /attack-library ──────────
+  if (path === '/api/attack-library/techniques' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleListAttackTechniques(request, env), request));
+  }
+  if (path === '/api/attack-library/overview' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleAttackLibraryOverview(request, env), request));
+  }
+  if (path === '/api/admin/attack-library/techniques' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handleCreateAttackTechnique(request, env), request));
   }
 
   // -- v30.0: Platform Metrics ------------------------------------------------
