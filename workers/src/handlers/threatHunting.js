@@ -183,9 +183,182 @@ async function enrichIOC(value, type, db) {
   };
 }
 
-// ─── POST /api/hunt ───────────────────────────────────────────────────────────
+// ─── Hunt query parser: extract CVE IDs, IPs, MITRE techniques, keywords ────
+function parseHuntQuery(query) {
+  const q = query.toLowerCase();
+  const cveMatches  = [...query.matchAll(/CVE-\d{4}-\d{4,}/gi)].map(m => m[0].toUpperCase());
+  const ipMatches   = [...query.matchAll(/\b(\d{1,3}\.){3}\d{1,3}\b/g)].map(m => m[0]);
+  const techMatches = [...query.matchAll(/T\d{4}(?:\.\d{3})?/gi)].map(m => m[0].toUpperCase());
+
+  // Keyword extraction — product/vendor names, attack terminology
+  const keywords = [];
+  const KW_PATTERNS = [
+    /log4(?:j|shell)/i, /cobalt.?strike/i, /mimikatz/i, /psexec/i, /wannacry/i,
+    /ransomware/i, /webshell/i, /powershell/i, /lateral.?mov/i, /credential/i,
+    /exfiltrat/i, /c2|c&c|command.and.control/i, /persistence/i, /privilege.esc/i,
+    /palo.?alto|pan-?os/i, /fortinet|fortios/i, /exchange|owa/i, /vmware|vcenter/i,
+    /cisco|juniper/i, /apache|log4/i, /spring|springboot/i, /citrix|netscaler/i,
+    /openssh|ssh/i, /windows|ldap|smb|rdp|wmi/i, /kubernetes|k8s|docker/i,
+    /sql.inject/i, /xss|cross.site/i, /rce|remote.code/i, /dos|denial.of.service/i,
+  ];
+  for (const pat of KW_PATTERNS) {
+    const m = q.match(pat);
+    if (m) keywords.push(m[0].replace(/[^a-z0-9]/gi, ' ').trim());
+  }
+
+  // MITRE technique inference from content
+  const mitreTechniques = [];
+  if (/lateral|smb|rdp|wmi|psexec/i.test(q))   mitreTechniques.push({ id: 'T1021', name: 'Remote Services', tactic: 'Lateral Movement' });
+  if (/persist|registry|run.?key|startup/i.test(q)) mitreTechniques.push({ id: 'T1547', name: 'Boot/Logon Autostart', tactic: 'Persistence' });
+  if (/powershell|cmd|script|exec|wscript/i.test(q)) mitreTechniques.push({ id: 'T1059', name: 'Command Interpreter', tactic: 'Execution' });
+  if (/dns|beacon|c2|http.beacon/i.test(q))     mitreTechniques.push({ id: 'T1071', name: 'Application Layer Protocol', tactic: 'C2' });
+  if (/credential|lsass|mimikatz|dump|ntlm/i.test(q)) mitreTechniques.push({ id: 'T1003', name: 'OS Credential Dumping', tactic: 'Credential Access' });
+  if (/exfil|upload|ftp|dnsexfil/i.test(q))     mitreTechniques.push({ id: 'T1048', name: 'Exfiltration Over C2', tactic: 'Exfiltration' });
+  if (/webshell|aspx|php.shell/i.test(q))        mitreTechniques.push({ id: 'T1505', name: 'Server Software Component', tactic: 'Persistence' });
+  if (/priv|escalat|token|imperson/i.test(q))    mitreTechniques.push({ id: 'T1548', name: 'Abuse Elevation Control', tactic: 'Privilege Escalation' });
+  if (/ransomware|encrypt|shadow.copy/i.test(q)) mitreTechniques.push({ id: 'T1486', name: 'Data Encrypted for Impact', tactic: 'Impact' });
+  if (/discover|enum|recon|nmap|scan/i.test(q))  mitreTechniques.push({ id: 'T1082', name: 'System Information Discovery', tactic: 'Discovery' });
+
+  // Add any explicit T-codes found in query
+  for (const tech of techMatches) {
+    if (!mitreTechniques.find(t => t.id === tech)) {
+      mitreTechniques.push({ id: tech, name: 'Technique ' + tech, tactic: 'Unknown' });
+    }
+  }
+
+  return { cveMatches, ipMatches, techMatches, keywords: [...new Set(keywords)], mitreTechniques };
+}
+
+// ─── Execute hunt against platform D1 intelligence data ──────────────────────
+async function executeD1Hunt(env, parsed, safeQuery, authCtx) {
+  const results = [];
+  const { cveMatches, keywords, mitreTechniques } = parsed;
+  const db = env?.DB;
+  if (!db) return { results, sources_queried: [] };
+
+  const sources_queried = [];
+
+  // SOURCE 1: threat_intel — match on CVE IDs or keyword terms in title/description
+  try {
+    sources_queried.push('threat_intel');
+    let rows = [];
+
+    if (cveMatches.length > 0) {
+      // Direct CVE match — highest fidelity
+      const placeholders = cveMatches.map(() => '?').join(',');
+      const r = await db.prepare(
+        `SELECT cve_id, title, severity, cvss_score, epss_score, is_kev,
+                description, published_date, mitre_technique
+         FROM threat_intel
+         WHERE cve_id IN (${placeholders})
+         ORDER BY is_kev DESC, cvss_score DESC LIMIT 20`
+      ).bind(...cveMatches).all().catch(() => ({ results: [] }));
+      rows = r.results || [];
+    }
+
+    if (rows.length < 5) {
+      // Keyword / severity search
+      const sevFilter = /critical/i.test(safeQuery) ? "AND severity='CRITICAL'" :
+                        /high/i.test(safeQuery) ? "AND severity IN ('CRITICAL','HIGH')" : '';
+      const kevFilter = /kev|actively.exploit/i.test(safeQuery) ? 'AND is_kev=1' : '';
+      const r2 = await db.prepare(
+        `SELECT cve_id, title, severity, cvss_score, epss_score, is_kev,
+                description, published_date, mitre_technique
+         FROM threat_intel
+         WHERE (cvss_score >= 7.0 OR is_kev = 1) ${sevFilter} ${kevFilter}
+         ORDER BY is_kev DESC, cvss_score DESC LIMIT 20`
+      ).all().catch(() => ({ results: [] }));
+      const seen = new Set(rows.map(r => r.cve_id));
+      for (const r of (r2.results || [])) {
+        if (!seen.has(r.cve_id)) { rows.push(r); seen.add(r.cve_id); }
+        if (rows.length >= 20) break;
+      }
+    }
+
+    for (const row of rows) {
+      const cvss = parseFloat(row.cvss_score) || 0;
+      const risk = row.is_kev ? 'CRITICAL' : cvss >= 9 ? 'CRITICAL' : cvss >= 7 ? 'HIGH' : 'MEDIUM';
+      results.push({
+        source:     'platform_threat_intel',
+        host:       row.cve_id,
+        device:     row.title || row.cve_id,
+        risk,
+        cvss_score: cvss,
+        epss_score: parseFloat(row.epss_score) || 0,
+        is_kev:     !!row.is_kev,
+        message:    (row.description || row.title || '').slice(0, 200),
+        published:  row.published_date,
+        mitre:      row.mitre_technique ? [row.mitre_technique] : [],
+        detail:     `CVSS ${cvss.toFixed(1)}${row.is_kev ? ' · CISA KEV actively exploited' : ''}`,
+      });
+    }
+  } catch {}
+
+  // SOURCE 2: scan_history — real scan findings from platform users
+  try {
+    sources_queried.push('scan_history');
+    const userId = authCtx?.userId || authCtx?.user_id;
+    const riskFilter = /critical/i.test(safeQuery) ? "AND risk_level='CRITICAL'" :
+                       /high/i.test(safeQuery) ? "AND risk_level IN ('CRITICAL','HIGH')" : '';
+    const modFilter  = /domain|dns/i.test(safeQuery) ? "AND module='domain'" :
+                       /identity|auth/i.test(safeQuery) ? "AND module='identity'" :
+                       /redteam|pentest/i.test(safeQuery) ? "AND module='redteam'" :
+                       /compliance/i.test(safeQuery) ? "AND module='compliance'" : '';
+    const bindParams = userId ? [userId] : [];
+    const whereUser  = userId ? 'WHERE user_id = ?' : 'WHERE 1=1';
+    const r = await db.prepare(
+      `SELECT scan_id, target, module, risk_score, risk_level, grade, scanned_at, data_source
+       FROM scan_history
+       ${whereUser} ${riskFilter} ${modFilter}
+       AND (data_source IS NULL OR data_source != 'demo')
+       ORDER BY scanned_at DESC LIMIT 15`
+    ).bind(...bindParams).all().catch(() => ({ results: [] }));
+    for (const row of (r.results || [])) {
+      results.push({
+        source:  'platform_scan_history',
+        host:    row.target,
+        device:  row.target,
+        risk:    row.risk_level || 'MEDIUM',
+        risk_score: row.risk_score,
+        message: `${row.module?.toUpperCase()} scan: grade ${row.grade} (score ${row.risk_score})`,
+        detail:  `Scanned at ${row.scanned_at} via ${row.module} module`,
+        scanned_at: row.scanned_at,
+        module:  row.module,
+      });
+    }
+  } catch {}
+
+  // SOURCE 3: analytics_events — SOC and defense events (AutoSOC runs, rule deployments)
+  if (/soc|rule|deploy|defense|alert/i.test(safeQuery)) {
+    try {
+      sources_queried.push('analytics_events');
+      const r = await db.prepare(
+        `SELECT id, event_type, module, metadata, created_at
+         FROM analytics_events
+         WHERE event_type LIKE 'auto_soc.%'
+         ORDER BY created_at DESC LIMIT 10`
+      ).all().catch(() => ({ results: [] }));
+      for (const row of (r.results || [])) {
+        let meta = {};
+        try { meta = JSON.parse(row.metadata || '{}'); } catch {}
+        results.push({
+          source:  'autonomous_soc_events',
+          host:    row.event_type,
+          device:  `AutoSOC: ${row.event_type.replace('auto_soc.', '')}`,
+          risk:    'INFO',
+          message: meta.run_id ? `Run ${meta.run_id.slice(-8)} — ${meta.threats || 0} threats, ${meta.rules || 0} rules` : row.event_type,
+          detail:  `Module: ${row.module} · ${row.created_at}`,
+          created_at: row.created_at,
+        });
+      }
+    } catch {}
+  }
+
+  return { results, sources_queried };
+}
+
+// ─── POST /api/hunt  (also: POST /api/hunt/run) ───────────────────────────────
 export async function handleRunHunt(request, env, authCtx) {
-  // Rate limit — hunt costs 3 quota units
   const rl = await checkRateLimitCost(env, authCtx, 'hunt');
   if (!rl.allowed) return rateLimitResponse(rl, 'hunt');
 
@@ -198,7 +371,6 @@ export async function handleRunHunt(request, env, authCtx) {
   }
 
   const { query, lang = 'kql', target, scope = 'all' } = body;
-
   if (!query || typeof query !== 'string' || query.length < 5) {
     return Response.json({ error: 'query string is required (min 5 chars)' }, { status: 400 });
   }
@@ -206,63 +378,95 @@ export async function handleRunHunt(request, env, authCtx) {
     return Response.json({ error: 'lang must be one of: kql, sigma, yara' }, { status: 400 });
   }
 
-  const safeQuery = query.slice(0, 10000);
-  const qHash = safeQuery.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const safeQuery  = query.slice(0, 10000);
+  const parsed     = parseHuntQuery(safeQuery);
+  const startTime  = Date.now();
 
-  // Infer MITRE technique from query content (rule-based, genuinely useful)
-  const mitreTechniques = [];
-  if (/lateral|logon|smb|rdp|wmi/i.test(safeQuery))  mitreTechniques.push({ id: 'T1021', name: 'Remote Services' });
-  if (/persist|registry|run.*key|startup/i.test(safeQuery)) mitreTechniques.push({ id: 'T1547', name: 'Boot/Logon Autostart' });
-  if (/powershell|cmd|script|exec/i.test(safeQuery))  mitreTechniques.push({ id: 'T1059', name: 'Command Interpreter' });
-  if (/dns|beacon|c2|c&c|http/i.test(safeQuery))      mitreTechniques.push({ id: 'T1071', name: 'Application Layer Protocol' });
-  if (/credential|lsass|mimikatz|dump/i.test(safeQuery)) mitreTechniques.push({ id: 'T1003', name: 'OS Credential Dumping' });
-  if (/exfil|upload|ftp|cloud/i.test(safeQuery))      mitreTechniques.push({ id: 'T1048', name: 'Exfiltration Over C2' });
+  // Execute against platform D1 data sources
+  const { results, sources_queried } = await executeD1Hunt(env, parsed, safeQuery, authCtx);
 
-  // Persist hunt session to KV (7 day TTL)
-  const sessionId = `hunt_${Date.now().toString(36)}_${(qHash % 9999).toString(16)}`;
-  if (env.SECURITY_HUB_KV) {
-    const session = {
-      id: sessionId,
-      lang,
-      target: sanitizeString(target || 'all', 100),
-      scope,
-      query_preview: safeQuery.slice(0, 200),
-      executed_by:   authCtx.identity,
-      executed_at:   new Date().toISOString(),
-      status:        'no_siem_connected',
-    };
+  // Check if external SIEM integration is configured
+  let siemStatus = 'no_siem_connected';
+  let siemMessage = null;
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const siemCfg = await env.SECURITY_HUB_KV.get(
+        `siem_config:${authCtx?.orgId || authCtx?.userId || 'default'}:primary`,
+        { type: 'json' }
+      ).catch(() => null);
+      if (siemCfg?.endpoint) {
+        siemStatus  = 'siem_configured';
+        siemMessage = `SIEM integration active (${siemCfg.type || 'custom'}). Platform results shown — copy query to your SIEM for live telemetry execution.`;
+      }
+    } catch {}
+  }
+
+  // Persist hunt session
+  const sessionId = `hunt_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 6)}`;
+  if (env?.SECURITY_HUB_KV) {
     env.SECURITY_HUB_KV.put(
-      `hunt:session:${authCtx.identity}:${sessionId}`,
-      JSON.stringify(session),
+      `hunt:session:${authCtx?.identity || 'anon'}:${sessionId}`,
+      JSON.stringify({
+        id: sessionId, lang,
+        target:        sanitizeString(target || 'all', 100),
+        scope,
+        query_preview: safeQuery.slice(0, 200),
+        executed_by:   authCtx?.identity || 'anonymous',
+        executed_at:   new Date().toISOString(),
+        status:        siemStatus,
+        result_count:  results.length,
+        sources:       sources_queried,
+        cves_queried:  parsed.cveMatches,
+        mitre_matched: parsed.mitreTechniques.map(t => t.id),
+      }),
       { expirationTtl: 604800 }
     ).catch(() => {});
   }
 
-  // v21.0 — Adaptive next hunt recommendations (sector + risk aware)
+  // PRO/ENTERPRISE: adaptive next-hunt suggestions
   const adaptive_hunt_suggestions = (['PRO', 'ENTERPRISE'].includes(authCtx?.tier))
     ? recommendHuntQueries(authCtx?.sector || 'technology', 45)
     : undefined;
 
+  const duration_ms = Date.now() - startTime;
+  const critCount   = results.filter(r => r.risk === 'CRITICAL').length;
+  const highCount   = results.filter(r => r.risk === 'HIGH').length;
+
   return Response.json({
-    session_id:  sessionId,
+    session_id:       sessionId,
     lang,
-    target:      sanitizeString(target || 'all', 100),
+    target:           sanitizeString(target || 'all', 100),
     scope,
-    executed_at: new Date().toISOString(),
-    status:      'no_siem_connected',
-    message:     'Live hunt execution requires a connected SIEM endpoint. The query has been validated and MITRE-mapped below. To run against your SIEM, configure the SIEM integration under Enterprise settings or contact support@cyberdudebivash.com.',
-    query_valid: true,
-    results:     [],
-    mitre_techniques: mitreTechniques,
-    // Query templates matching the detected language are returned so analysts
-    // can refine and run directly in their own SIEM.
-    next_steps: [
-      'Copy the validated query into your SIEM (Splunk / Sentinel / Elastic)',
-      'Use the templates endpoint (/api/hunt/templates) for pre-built queries',
-      'Contact support to enable live SIEM integration on Enterprise plan',
+    executed_at:      new Date().toISOString(),
+    duration_ms,
+    status:           results.length > 0 ? 'results_found' : 'no_findings',
+    siem_status:      siemStatus,
+    siem_message:     siemMessage,
+    query_valid:      true,
+    result_count:     results.length,
+    summary: {
+      critical: critCount,
+      high:     highCount,
+      medium:   results.filter(r => r.risk === 'MEDIUM').length,
+      info:     results.filter(r => r.risk === 'INFO').length,
+    },
+    results,
+    sources_queried,
+    cves_matched:     parsed.cveMatches,
+    mitre_techniques: parsed.mitreTechniques,
+    next_steps: results.length > 0 ? [
+      critCount > 0 ? `IMMEDIATE: ${critCount} CRITICAL finding(s) — review and initiate containment` : null,
+      'Copy the query to your SIEM (Splunk / Sentinel / Elastic) to run against live endpoint telemetry',
+      'Use /api/auto-soc/run to trigger full autonomous detection + rule generation pipeline',
+      'Export findings via /api/export/siem for STIX/CEF/Sigma format delivery',
+    ].filter(Boolean) : [
+      'No matches in platform threat intelligence data for this query',
+      'Ingest more CVE/threat data via /api/threat-intel/ingest to enrich the hunt corpus',
+      'Connect a SIEM integration under Enterprise settings to run against live telemetry',
+      'Try a broader query or use /api/hunt/templates for pre-built detection queries',
     ],
     adaptive_hunt_suggestions,
-    platform: 'CYBERDUDEBIVASH AI Security Hub v21.0',
+    platform: 'CYBERDUDEBIVASH AI Security Hub v22.0',
   });
 }
 

@@ -665,6 +665,7 @@ import {
   handleRunHunt, handleHuntTemplates, handleIOCLookup,
   handleHuntSessions, handleMITREMatrix,
 } from './handlers/threatHunting.js';
+import { handleThreatIOC } from './handlers/iocEnrichment.js';
 import {
   handleGetAuditLog, handleWriteAuditEvent,
   handleAuditExport, handleAuditSummary,
@@ -6171,6 +6172,23 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/hunt' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: request.headers.get('CF-Connecting-IP') || 'ip:unknown' }));
       return withSecurityHeaders(withCors(await handleRunHunt(request, env, authCtx), request));
+    }
+
+    // POST /api/hunt/run — alias used by frontend threat hunting UI
+    if (path === '/api/hunt/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: request.headers.get('CF-Connecting-IP') || 'ip:unknown' }));
+      return withSecurityHeaders(withCors(await handleRunHunt(request, env, authCtx), request));
+    }
+
+    // GET /api/threat/ioc — production IOC enrichment (CVE/IP/domain/hash/URL/email)
+    if (path === '/api/threat/ioc' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: true, tier: 'FREE', identity: request.headers.get('CF-Connecting-IP') || 'ip:anon' }));
+      return withSecurityHeaders(withCors(await handleThreatIOC(request, env, authCtx), request));
+    }
+
+    // GET /api/demo/slots — public booking slot availability (alias for /api/sales/demo/slots)
+    if (path === '/api/demo/slots' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleGetDemoSlots(request, env), request));
     }
 
     // GET /api/hunt/templates — list built-in hunt query templates
