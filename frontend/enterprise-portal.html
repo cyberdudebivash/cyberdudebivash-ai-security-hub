@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enterprise Integration Portal — CYBERDUDEBIVASH AI Security Hub</title>
+<meta name="description" content="Complete enterprise integration guide for Oracle, Cisco, Dell, Intel, Microsoft, Google. SSO setup, SIEM wiring, TAXII 2.1, API keys, capability matrix.">
+<link rel="icon" href="/assets/favicon.ico">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#020617;--surface:#0f172a;--surface2:#1e293b;--border:#1e293b;--text:#e2e8f0;--muted:#94a3b8;--accent:#6366f1;--green:#4ade80;--red:#f87171;--yellow:#facc15;--orange:#fb923c;--cyan:#22d3ee}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+nav{background:rgba(2,6,23,.9);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.nav-brand{font-weight:800;font-size:1.1rem;background:linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links a{color:var(--muted);font-size:13px;margin-left:20px}
+.nav-links a:hover{color:var(--text)}
+.hero{padding:72px 24px 48px;text-align:center;border-bottom:1px solid var(--border)}
+.hero h1{font-size:clamp(2rem,5vw,3rem);font-weight:800;line-height:1.15;margin-bottom:16px}
+.hero p{color:var(--muted);max-width:640px;margin:0 auto 32px;font-size:1.05rem}
+.badge-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
+.badge-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green)}
+.badge-blue{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:#818cf8}
+.badge-yellow{background:rgba(250,204,21,.1);border-color:rgba(250,204,21,.3);color:var(--yellow)}
+section{padding:60px 0;border-bottom:1px solid var(--border)}
+h2{font-size:1.6rem;font-weight:700;margin-bottom:8px}
+h3{font-size:1.1rem;font-weight:700;margin-bottom:10px;color:var(--text)}
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-prod{background:var(--green)}
+.status-bench{background:var(--yellow)}
+.status-road{background:var(--muted)}
+.status-label{font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px}
+.sl-prod{background:rgba(74,222,128,.15);color:var(--green)}
+.sl-bench{background:rgba(250,204,21,.15);color:var(--yellow)}
+.sl-road{background:rgba(148,163,184,.15);color:var(--muted)}
+.card p{color:var(--muted);font-size:13px;margin-bottom:12px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{background:var(--surface2);color:var(--muted);font-size:11px;padding:3px 8px;border-radius:4px;font-family:monospace}
+.tag-api{background:rgba(99,102,241,.1);color:#a5b4fc;border:1px solid rgba(99,102,241,.2)}
+.steps{counter-reset:step;display:grid;gap:16px}
+.step{display:flex;gap:16px;align-items:flex-start}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-body h4{font-size:14px;font-weight:700;margin-bottom:4px}
+.step-body p{font-size:13px;color:var(--muted)}
+code{font-family:monospace;background:var(--surface2);color:#a5b4fc;padding:2px 6px;border-radius:4px;font-size:12px}
+.api-block{background:#020617;border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:12px}
+.api-block pre{font-family:monospace;font-size:12px;color:#a5f3fc;overflow-x:auto;white-space:pre-wrap}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
+.health-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+.health-card .val{font-size:20px;font-weight:800;margin-bottom:4px}
+.health-card .lbl{font-size:11px;color:var(--muted)}
+.cta-section{padding:80px 24px;text-align:center}
+.cta-section h2{font-size:2rem;margin-bottom:16px}
+.btn-primary{display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;color:#fff;font-weight:700;font-size:15px;margin:8px}
+.btn-secondary{display:inline-block;padding:13px 28px;border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:600;font-size:15px;margin:8px}
+footer{text-align:center;padding:40px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+#health-status{color:var(--muted);font-style:italic}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">CYBERDUDEBIVASH AI Security Hub™</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/api-docs">API Docs</a>
+    <a href="/booking">Book Demo</a>
+    <a href="/user-dashboard">Dashboard</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="container">
+    <div class="badge-row">
+      <span class="badge badge-green">Enterprise Ready</span>
+      <span class="badge badge-blue">TAXII 2.1</span>
+      <span class="badge badge-blue">STIX 2.1</span>
+      <span class="badge badge-blue">Azure AD SSO</span>
+      <span class="badge badge-blue">Splunk · Sentinel · QRadar</span>
+      <span class="badge badge-yellow">Cloudflare Edge · 300+ PoPs</span>
+    </div>
+    <h1>Enterprise Integration Portal</h1>
+    <p>Complete integration guide and live capability matrix for Oracle, Cisco, Dell, Intel, Microsoft, Google, and other enterprise customers evaluating the CYBERDUDEBIVASH AI Security Hub.</p>
+    <div id="health-status">Loading live platform status…</div>
+    <div class="health-grid" id="health-grid"></div>
+  </div>
+</div>
+
+<!-- PRODUCTION CAPABILITIES -->
+<section>
+<div class="container">
+  <div class="section-label">Production-Grade Capabilities</div>
+  <h2>What's Real, Persistent, and Battle-Tested</h2>
+  <p style="color:var(--muted);margin-bottom:32px">Every item below is backed by real external APIs, real persistent D1 storage, or both. No mock data, no benchmark substitutes.</p>
+  <div class="grid grid-2" id="prod-grid">
+    <!-- injected by JS -->
+  </div>
+</div>
+</section>
+
+<!-- BENCHMARK CAPABILITIES -->
+<section style="background:rgba(250,204,21,.02)">
+<div class="container">
+  <div class="section-label">Benchmark-Based Capabilities</div>
+  <h2>Industry-Data Intelligence — Honest Labelling</h2>
+  <p style="color:var(--muted);margin-bottom:32px">These features use real industry benchmark data (Verizon DBIR, NIST, Gartner) to provide actionable intelligence. They are clearly labelled — not presented as live integrations against your specific systems.</p>
+  <div class="grid grid-2" id="bench-grid"></div>
+</div>
+</section>
+
+<!-- INTEGRATION SETUP -->
+<section>
+<div class="container">
+  <div class="section-label">Integration Playbook</div>
+  <h2>Get Production-Connected in 5 Steps</h2>
+  <p style="color:var(--muted);margin-bottom:32px">From zero to fully integrated with your SIEM, TIP, and identity stack.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Enterprise SSO — Azure AD / Okta</h4>
+        <p>Register CYBERDUDEBIVASH as an OIDC app in your Azure AD or Okta. Set the Redirect URI, then call <code>POST /api/auth/enterprise/configure</code> with your tenant ID and client credentials. Your entire team can then authenticate at <code>/api/auth/enterprise/sso?org=your-org</code> using their corporate identity.</p>
+        <div class="tag-row">
+          <span class="tag tag-api">GET /api/auth/enterprise/config</span>
+          <span class="tag tag-api">POST /api/auth/enterprise/configure</span>
+          <span class="tag tag-api">GET /api/auth/enterprise/sso?org=&lt;slug&gt;</span>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>SIEM Integration — Splunk, Sentinel, QRadar, Elastic</h4>
+        <p>Register your SIEM endpoint once. After that, every new critical CVE can push a production-ready detection rule (Sigma/KQL/SPL/YARA) directly to your SIEM via the platform's rule deployment engine.</p>
+        <div class="tag-row">
+          <span class="tag tag-api">POST /api/integrations/configure</span>
+          <span class="tag tag-api">POST /api/integrations/test</span>
+          <span class="tag tag-api">POST /api/integrations/deploy</span>
+          <span class="tag tag-api">GET /api/integrations/deploy-log</span>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Threat Intelligence Pull — TAXII 2.1</h4>
+        <p>Configure your Threat Intelligence Platform (Cisco ThreatResponse, Oracle CASB, MISP, OpenCTI, CrowdStrike, Anomali) to pull from our TAXII 2.1 server. CVE feed is free; IOC and actor feeds require PRO/ENTERPRISE.</p>
+        <div class="tag-row">
+          <span class="tag tag-api">GET /api/taxii/discovery</span>
+          <span class="tag tag-api">GET /api/taxii/collections</span>
+          <span class="tag tag-api">GET /api/taxii/collections/cve-feed/objects</span>
+          <span class="tag tag-api">GET /api/taxii/collections/kev-feed/objects</span>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Machine-to-Machine API Keys</h4>
+        <p>Generate scoped API keys for your CI/CD pipelines, SOAR playbooks, and automated workflows. Per-key rate limiting, usage metering, and self-serve rotation.</p>
+        <div class="tag-row">
+          <span class="tag tag-api">POST /api/keys/generate</span>
+          <span class="tag tag-api">GET /api/keys/usage</span>
+          <span class="tag tag-api">GET /api/docs</span>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h4>Automate with Workflows</h4>
+        <p>Define trigger-action workflows: when a new CRITICAL CVE arrives → deploy detection rule to Splunk → create SOC case → push PagerDuty alert. All persisted in D1, auditable, and recoverable.</p>
+        <div class="tag-row">
+          <span class="tag tag-api">POST /api/workflows</span>
+          <span class="tag tag-api">POST /api/workflows/:id/execute</span>
+          <span class="tag tag-api">GET /api/audit/log</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- LIVE CAPABILITY API -->
+<section>
+<div class="container">
+  <div class="section-label">Machine-Readable Capability Matrix</div>
+  <h2>Live Capability API</h2>
+  <p style="color:var(--muted);margin-bottom:20px">Your procurement and integration teams can query our capability matrix programmatically for automated vendor evaluation.</p>
+  <div class="api-block">
+    <pre id="capability-json">Loading live capability data…</pre>
+  </div>
+</div>
+</section>
+
+<!-- ROADMAP -->
+<section style="background:rgba(99,102,241,.03)">
+<div class="container">
+  <div class="section-label">Product Roadmap</div>
+  <h2>Committed Pipeline</h2>
+  <div class="grid grid-3" style="margin-top:24px">
+    <div class="card">
+      <div class="card-header"><div class="status-dot" style="background:#a78bfa"></div><h3>Internal Network Scanner</h3><span class="status-label sl-road">Q3 2026</span></div>
+      <p>Lightweight Docker/binary agent for behind-firewall scanning — internal assets, AD/LDAP, internal services. No external traffic required.</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="status-dot" style="background:#a78bfa"></div><h3>Live Directory Integration</h3><span class="status-label sl-road">Q3 2026</span></div>
+      <p>Azure AD Graph API + Okta API integration for live identity data — real MFA status, privileged accounts, stale accounts from your actual directory.</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="status-dot" style="background:#a78bfa"></div><h3>ISO 27001 + SOC 2 Certification</h3><span class="status-label sl-road">Q4 2026</span></div>
+      <p>Platform-level certification pursuit for ISO 27001 and SOC 2 Type II — formal independent audit of security controls.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<div class="cta-section">
+  <div class="container">
+    <h2>Ready to Start Integration?</h2>
+    <p style="color:var(--muted);margin-bottom:28px;max-width:520px;margin-left:auto;margin-right:auto">Book a 60-minute enterprise integration session. We'll walk through SSO setup, SIEM wiring, and TAXII configuration live with your team.</p>
+    <a href="/booking" class="btn-primary">Book Integration Session</a>
+    <a href="/api/enterprise/capability" class="btn-secondary">View Capability Matrix API</a>
+    <a href="/api/auth/enterprise/config" class="btn-secondary">Enterprise SSO Setup Guide</a>
+  </div>
+</div>
+
+<footer>
+  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · Enterprise Integration Portal</p>
+  <p style="margin-top:8px">© 2024–2026 CYBERDUDEBIVASH Pvt Ltd · GSTIN: 21AOBPN4328N1ZK · <a href="/privacy-policy">Privacy</a> · <a href="/terms-of-service">Terms</a> · <a href="/.well-known/security.txt">Security</a></p>
+  <p style="margin-top:6px">enterprise@cyberdudebivash.in · support@cyberdudebivash.in</p>
+</footer>
+
+<script>
+const PROD_FEATURES = [
+  { name:'Threat Intelligence (CVE/KEV/EPSS)', icon:'🔍', apis:['NVD NIST','CISA KEV','EPSS FIRST.org'], endpoints:['/api/threat-intel','/api/threat-intel/stats','/api/threat-intel/:id'], formats:['JSON','CSV','STIX 2.1','CEF','Sigma','NDJSON'] },
+  { name:'IOC Enrichment', icon:'🎯', apis:['VirusTotal v3 (70+ AV)','AbuseIPDB','Shodan InternetDB'], endpoints:['/api/hunt/ioc'], note:'Unified verdict in <3s' },
+  { name:'Vulnerability Management', icon:'🛡️', apis:['NVD','CISA KEV','EPSS'], endpoints:['/api/vulns/cve/:id','/api/vulns','/api/vulns/:id'], note:'Full CRUD + history' },
+  { name:'Software Composition Analysis', icon:'📦', apis:['OSV.dev (Google)'], endpoints:['/api/devsecops/sca','/api/devsecops/sbom','/api/devsecops/sast'], note:'CycloneDX 1.5 SBOM' },
+  { name:'Domain Security Scan', icon:'🌐', apis:['Cloudflare DoH','Spamhaus','SURBL','URIBL'], endpoints:['/api/scan/domain','/api/scan/async/domain'], note:'SPF·DMARC·DKIM·DNSSEC·CAA' },
+  { name:'SIEM Integration', icon:'📡', apis:['Splunk HEC','Microsoft Sentinel','Elastic','IBM QRadar','AWS Security Hub','Google SecOps','Cortex XSOAR','PagerDuty'], endpoints:['/api/export/siem','/api/integrations/configure','/api/integrations/deploy'], note:'Push rules + export data' },
+  { name:'Detection Rule Generation', icon:'⚡', apis:['Internal (deterministic)'], endpoints:['/api/ai/generate-rules'], formats:['Sigma','Splunk SPL','Sentinel KQL','Elastic EQL','YARA'] },
+  { name:'Threat Hunting', icon:'🔎', apis:['Internal templates + D1'], endpoints:['/api/hunt/templates','/api/hunt','/api/hunt/history'], note:'MITRE ATT&CK aligned' },
+  { name:'SOC Case Management', icon:'📋', apis:['D1 SQLite (persistent)'], endpoints:['/api/soc/cases','/api/soc/cases/:id','/api/soc/cases/:id/comments'], note:'Full lifecycle + audit' },
+  { name:'STIX/TAXII 2.1 Server', icon:'🔗', apis:['D1 + NVD/KEV feeds'], endpoints:['/api/taxii/discovery','/api/taxii/collections','/api/taxii/collections/:id/objects'], note:'OASIS standard — TIP compatible' },
+  { name:'Workflow Automation (SOAR)', icon:'⚙️', apis:['D1 + webhook delivery'], endpoints:['/api/workflows','/api/workflows/:id/execute'], note:'Trigger → Action automation' },
+  { name:'Enterprise OIDC SSO', icon:'🔐', apis:['Azure AD','Okta','Any OIDC IdP'], endpoints:['/api/auth/enterprise/sso','/api/auth/enterprise/configure'], note:'Tenant-aware, D1 user upsert' },
+  { name:'MSSP White-Label Platform', icon:'🏢', apis:['D1 multi-tenant'], endpoints:['/api/mssp/workspace','/api/mssp/revenue','/api/mssp/tenant/provision'], note:'Partner isolation + revenue share' },
+  { name:'Audit Log', icon:'📜', apis:['D1 SQLite (immutable)'], endpoints:['/api/audit/log','/api/audit/export'], note:'Every API call logged' },
+];
+
+const BENCH_FEATURES = [
+  { name:'Red Team Assessment', icon:'⚔️', basis:'MITRE ATT&CK scenario mapping', not:'Not live adversarial probing', endpoint:'/api/scan/redteam' },
+  { name:'Identity Security Scan', icon:'👤', basis:'DBIR 2024, Entra 2024, Okta ZTA 2024', not:'Not real directory integration', endpoint:'/api/scan/identity' },
+  { name:'Compliance Gap Analysis', icon:'📊', basis:'AI-generated NIST/ISO/SOC2/GDPR/EU AI Act gaps', not:'Not a certified audit report', endpoint:'/api/generate/compliance' },
+  { name:'Zero Trust Score', icon:'🛡️', basis:'Inferred from request context signals', not:'Not full ZTA assessment', endpoint:'/api/zero-trust/score' },
+];
+
+function renderProd() {
+  const el = document.getElementById('prod-grid');
+  el.innerHTML = PROD_FEATURES.map(f => `
+    <div class="card">
+      <div class="card-header">
+        <div class="status-dot status-prod"></div>
+        <h3>${f.icon} ${f.name}</h3>
+        <span class="status-label sl-prod">PRODUCTION</span>
+      </div>
+      ${f.note ? `<p style="color:var(--cyan);font-size:12px;font-weight:600;margin-bottom:6px">${f.note}</p>` : ''}
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px"><strong style="color:#94a3b8">Data sources:</strong> ${(f.apis||[]).join(' · ')}</p>
+      <div class="tag-row">${(f.endpoints||[]).map(e=>`<span class="tag tag-api">${e}</span>`).join('')}${(f.formats||[]).map(e=>`<span class="tag">${e}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+function renderBench() {
+  const el = document.getElementById('bench-grid');
+  el.innerHTML = BENCH_FEATURES.map(f => `
+    <div class="card">
+      <div class="card-header">
+        <div class="status-dot status-bench"></div>
+        <h3>${f.icon} ${f.name}</h3>
+        <span class="status-label sl-bench">BENCHMARK</span>
+      </div>
+      <p><strong style="color:var(--yellow)">What it is:</strong> ${f.basis}</p>
+      <p><strong style="color:var(--muted)">What it's not:</strong> ${f.not}</p>
+      <div class="tag-row"><span class="tag tag-api">${f.endpoint}</span></div>
+    </div>
+  `).join('');
+}
+
+async function loadCapability() {
+  try {
+    const r = await fetch('/api/enterprise/capability');
+    const j = await r.json();
+    if (!j.success) { document.getElementById('capability-json').textContent = JSON.stringify(j,null,2); return; }
+    // Update health cards
+    const h = j.platform_health;
+    document.getElementById('health-status').style.display = 'none';
+    document.getElementById('health-grid').innerHTML = [
+      { label:'Database', val: h.database==='OPERATIONAL'?'✅ Live':'⚠️ Check', col: h.database==='OPERATIONAL'?'var(--green)':'var(--yellow)' },
+      { label:'CVE Intel', val: (h.cve_count||0).toLocaleString(), col:'var(--cyan)' },
+      { label:'Scans Today', val: (h.scans_today||0).toLocaleString(), col:'#818cf8' },
+      { label:'Global PoPs', val: '300+', col:'var(--green)' },
+      { label:'Uptime SLA', val: '99.9%', col:'var(--green)' },
+      { label:'Edge Runtime', val: '✅ CF Workers', col:'var(--green)' },
+    ].map(c=>`<div class="health-card"><div class="val" style="color:${c.col}">${c.val}</div><div class="lbl">${c.label}</div></div>`).join('');
+    // Show abbreviated JSON
+    document.getElementById('capability-json').textContent = JSON.stringify({
+      platform_health: j.platform_health,
+      production_capabilities: Object.keys(j.production_grade||{}).length + ' features',
+      benchmark_capabilities: Object.keys(j.benchmark_based||{}).length + ' features',
+      roadmap_items: Object.keys(j.roadmap||{}).length + ' items',
+      integration_guide: j.integration_guide,
+      contact: j.contact,
+      full_matrix: window.location.origin + '/api/enterprise/capability',
+    }, null, 2);
+  } catch(e) {
+    document.getElementById('capability-json').textContent = 'Error loading: ' + e.message + '\nDirect URL: /api/enterprise/capability';
+  }
+}
+
+renderProd();
+renderBench();
+loadCapability();
+</script>
+</body>
+</html>
