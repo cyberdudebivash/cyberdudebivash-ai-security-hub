@@ -11896,15 +11896,18 @@ async function initSentinelFeed() {
     const data = await resp.json();
 
     const items = [
-      ...(data.nvd_cves     || []).map(c => ({ ...c, source:'NVD'  })),
-      ...(data.cisa_kev     || []).map(c => ({ ...c, source:'CISA KEV', is_kev:true })),
+      ...(data.critical_cves     || []).map(c => ({ ...c, source:'NVD', _bucket:'CRITICAL' })),
+      ...(data.high_cves         || []).map(c => ({ ...c, source:'NVD', _bucket:'HIGH' })),
+      ...(data.actively_exploited|| []).map(c => ({ ...c, source:'CISA KEV', is_kev:true, _bucket:'CRITICAL' })),
     ].sort((a,b) => {
-      const sa = a.cvss_base_score ?? a.baseScore ?? 0;
-      const sb = b.cvss_base_score ?? b.baseScore ?? 0;
+      const sa = a.cvss_base_score ?? a.baseScore ?? (a.is_kev ? 10 : 0);
+      const sb = b.cvss_base_score ?? b.baseScore ?? (b.is_kev ? 10 : 0);
       return sb - sa;
     }).slice(0, 12);
 
     if (items.length === 0) throw new Error('empty');
+
+    const nvdDown = data.sources?.nvd?.status && data.sources.nvd.status !== 'ok';
 
     const SEV_COLORS = {
       CRITICAL: { bar:'#ef4444', bg:'rgba(239,68,68,.08)', border:'rgba(239,68,68,.25)', text:'#fca5a5' },
@@ -11916,11 +11919,11 @@ async function initSentinelFeed() {
     let html = '<div class="sentinel-v11">';
     items.forEach(item => {
       const cveId   = item.cve_id || item.cveID || item.id || '—';
-      const title   = item.description?.slice(0, 100) || item.vulnerabilityName || item.title || 'No description';
+      const title   = (item.vulnerability_name || item.short_description || item.description || item.vulnerabilityName || item.title || 'No description').slice(0, 100);
       const score   = item.cvss_base_score ?? item.baseScore ?? null;
-      const sev     = score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW';
+      const sev     = score != null ? (score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW') : (item._bucket || 'HIGH');
       const sc      = SEV_COLORS[sev] || SEV_COLORS.HIGH;
-      const dateStr = item.published || item.dateAdded || item.datePublished || '';
+      const dateStr = item.date_added || item.published || item.dateAdded || item.datePublished || '';
       const dateDisp= dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { month:'short', day:'numeric', year:'numeric' }) : '';
       const isKev   = item.is_kev || item.source === 'CISA KEV';
       const rowCls  = sev === 'CRITICAL' ? 'crit' : sev === 'HIGH' ? 'high' : 'med';
@@ -11950,8 +11953,10 @@ async function initSentinelFeed() {
     feedEl.innerHTML = html;
 
     if (lastUpEl) {
-      const ts = data.fetched_at || data.last_run || new Date().toISOString();
-      lastUpEl.textContent = `Updated ${new Date(ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}`;
+      const ts = data.generated_at || data.fetched_at || data.last_run || new Date().toISOString();
+      let label = `Updated ${new Date(ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}`;
+      if (nvdDown) label += ' · NVD feed temporarily down upstream — showing CISA KEV active-exploitation data';
+      lastUpEl.textContent = label;
     }
   } catch(e) {
     feedEl.innerHTML = `<div class="sentinel-error">
