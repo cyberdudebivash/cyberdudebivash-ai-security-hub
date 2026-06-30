@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DevSecOps Services | CYBERDUDEBIVASH AI Security Hub</title>
+<meta name="description" content="DevSecOps services — shift-left security with SAST/DAST/SCA, CI/CD pipeline security gates, IaC and container scanning, SBOM/SLSA supply chain security, and AI-generated code review."/>
+<meta name="keywords" content="DevSecOps, shift left security, SAST, DAST, SCA, CI/CD security, SBOM, SLSA, IaC scanning, vibe code scanner, secure SDLC"/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://cyberdudebivash.in/devsecops"/>
+<meta property="og:title" content="DevSecOps Services | CYBERDUDEBIVASH AI Security Hub"/>
+<meta property="og:description" content="Shift-left security with SAST/DAST/SCA, CI/CD pipeline gates, and AI-generated code review."/>
+<meta property="og:url" content="https://cyberdudebivash.in/devsecops"/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="https://cyberdudebivash.in/og-image.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link rel="alternate" type="application/rss+xml" title="CYBERDUDEBIVASH Security Intelligence" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/rss"/>
+<link rel="icon" href="/favicon.ico"/>
+<script type="module" src="/assets/js/seo-schema.js"></script>
+<style>
+:root{--bg:#0a0a0f;--card:#0f0f1a;--border:#1a1a2e;--text:#e2e8f0;--accent:#ec4899}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+nav{background:rgba(10,10,15,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:24px}
+.nav-brand{font-weight:800;font-size:1.1rem;background:linear-gradient(135deg,#ec4899,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;margin-right:auto}
+nav a{color:#94a3b8;text-decoration:none;font-size:.9rem}nav a:hover{color:#e2e8f0}
+.hero{padding:80px 24px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(236,72,153,.14) 0%,transparent 70%);border-bottom:1px solid var(--border)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);color:#f9a8d4;padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:600;margin-bottom:20px}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.2;margin-bottom:16px}
+.hero h1 span{background:linear-gradient(135deg,#ec4899,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.1rem;color:#94a3b8;max-width:700px;margin:0 auto 32px}
+.cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,#ec4899,#db2777);color:#fff;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:.95rem}
+.btn-secondary{background:transparent;color:#f9a8d4;padding:12px 28px;border-radius:8px;font-weight:600;text-decoration:none;font-size:.95rem;border:1px solid rgba(236,72,153,.4)}
+.metrics{display:flex;flex-wrap:wrap;justify-content:center;gap:32px;padding:40px 24px;border-bottom:1px solid var(--border)}
+.metric{text-align:center}
+.metric-val{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#ec4899,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.metric-label{font-size:.8rem;color:#64748b;margin-top:2px}
+section{padding:64px 24px}
+.container{max-width:1100px;margin:0 auto}
+h2{font-size:1.8rem;font-weight:800;margin-bottom:12px}
+h2 span{background:linear-gradient(135deg,#ec4899,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-sub{color:#94a3b8;margin-bottom:40px}
+.grid{display:grid;gap:20px}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;transition:border-color .2s}
+.card:hover{border-color:rgba(236,72,153,.4)}
+.card-icon{font-size:1.8rem;margin-bottom:12px}
+.card h3{font-size:1rem;font-weight:700;margin-bottom:8px}
+.card p{color:#94a3b8;font-size:.88rem;line-height:1.6}
+.tag{display:inline-block;background:rgba(236,72,153,.1);color:#f9a8d4;border:1px solid rgba(236,72,153,.25);padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700;margin-top:10px}
+.prose{max-width:820px;margin:0 auto}
+.prose h3{font-size:1.2rem;font-weight:700;color:#e2e8f0;margin:28px 0 10px}
+.prose p{color:#94a3b8;margin-bottom:14px;font-size:.95rem}
+.prose ul{color:#94a3b8;padding-left:20px;margin-bottom:14px}
+.prose ul li{margin-bottom:6px;font-size:.95rem}
+.cta-section{background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:64px 24px;text-align:center}
+footer{background:var(--card);border-top:1px solid var(--border);padding:32px 24px;text-align:center;color:#475569;font-size:.88rem}
+footer a{color:#ec4899;text-decoration:none}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="/">CYBERDUDEBIVASH®</a>
+  <a href="/cloud-security">Cloud Security</a>
+  <a href="/ai-security">AI Security</a>
+  <a href="/security-automation">Security Automation</a>
+  <a href="/booking">Book Call</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">🔧 DevSecOps</div>
+  <h1>Shift-Left Security <span>Built Into Your Pipeline</span></h1>
+  <p>SAST, DAST, SCA, IaC and container scanning, and our AI-generated code (vibe-code) scanner — wired directly into CI/CD as security gates, not after-the-fact audits.</p>
+  <div class="cta-row">
+    <a href="/security-assessment" class="btn-primary">Start Free Scan</a>
+    <a href="/booking" class="btn-secondary">Book DevSecOps Review →</a>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="metric-val">4</div><div class="metric-label">Scan Types: SAST/DAST/SCA/IaC</div></div>
+  <div class="metric"><div class="metric-val">1,625+</div><div class="metric-label">CVEs Mapped</div></div>
+  <div class="metric"><div class="metric-val">CI/CD</div><div class="metric-label">Native Pipeline Gates</div></div>
+  <div class="metric"><div class="metric-val">SBOM</div><div class="metric-label">Supply Chain Visibility</div></div>
+</div>
+
+<section>
+  <div class="container">
+    <h2>DevSecOps <span>Capabilities</span></h2>
+    <p class="section-sub">Security testing embedded at every stage of the software delivery lifecycle.</p>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="card-icon">🧪</div>
+        <h3>SAST — Static Analysis</h3>
+        <p>Source code analysis for injection flaws, insecure deserialization, hardcoded secrets, and OWASP Top 10 patterns before code merges.</p>
+        <span class="tag">Pre-Merge Gate</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌐</div>
+        <h3>DAST — Dynamic Analysis</h3>
+        <p>Runtime testing of deployed applications and APIs for exploitable vulnerabilities that static analysis cannot detect, including auth/session flaws.</p>
+        <span class="tag">Staging · Production</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <h3>SCA — Software Composition Analysis</h3>
+        <p>Dependency scanning against our 1,625+ CVE database with CISA KEV and EPSS prioritization, flagging exploitable open-source risk before deployment.</p>
+        <span class="tag">Dependency Risk</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏗️</div>
+        <h3>IaC & Container Scanning</h3>
+        <p>Scan Terraform, CloudFormation, Kubernetes manifests, and container images for misconfigurations and known-vulnerable base layers pre-deployment.</p>
+        <span class="tag">Terraform · K8s · Docker</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <h3>Vibe-Code Scanner</h3>
+        <p>Purpose-built security review for AI-generated code — catching the insecure defaults, missing input validation, and hallucinated dependencies common in LLM-authored code.</p>
+        <span class="tag">AI-Generated Code</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔗</div>
+        <h3>SBOM & Supply Chain Security</h3>
+        <p>Generate and validate Software Bill of Materials per SLSA framework guidance, tracking provenance and build integrity across your software supply chain.</p>
+        <span class="tag">SLSA · SBOM</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="prose">
+      <h2>Engineering <span>Security Into</span> the Delivery Pipeline</h2>
+      <p>DevSecOps is the practice of integrating security testing and controls directly into development and delivery workflows, rather than treating security as a separate gate applied after code is "done." The shift-left principle holds that the earlier a vulnerability is found in the software development lifecycle, the cheaper and less disruptive it is to fix — a flaw caught in a pull request costs a code review comment; the same flaw found in production costs an incident response engagement.</p>
+
+      <h3>The Four Pillars: SAST, DAST, SCA, IaC Scanning</h3>
+      <p><strong>SAST (Static Application Security Testing)</strong> analyzes source code without executing it, catching injection vulnerabilities, insecure deserialization, hardcoded credentials, and unsafe API usage at the earliest possible stage — ideally as a pre-commit or pre-merge CI gate. <strong>DAST (Dynamic Application Security Testing)</strong> tests the running application from the outside, finding runtime-only issues like authentication bypass, session management flaws, and server misconfiguration that static analysis cannot see because they only manifest in execution. <strong>SCA (Software Composition Analysis)</strong> addresses the reality that modern applications are assembled primarily from open-source dependencies — SCA inventories every dependency and cross-references it against known CVEs, prioritized by exploitation likelihood rather than raw CVSS score. <strong>IaC (Infrastructure as Code) scanning</strong> applies the same shift-left principle to infrastructure definitions — Terraform, CloudFormation, Kubernetes manifests — catching misconfigured security groups, missing encryption, and over-permissive IAM before the infrastructure is ever provisioned.</p>
+
+      <h3>CI/CD Pipeline Security Gates</h3>
+      <p>The defining characteristic of DevSecOps over traditional application security is automation embedded directly in the CI/CD pipeline rather than periodic manual review. Security gates run automatically on every pull request and deployment: SAST and SCA on code commit, container and IaC scanning on build, DAST against ephemeral staging environments before production promotion. Critical and high-severity findings block the pipeline; lower-severity findings are tracked but don't halt delivery — balancing security rigor against the velocity DevOps teams are measured on. This requires careful tuning: overly aggressive gates that block on every medium-severity finding train developers to bypass or ignore security tooling entirely.</p>
+
+      <h3>Container and Kubernetes Pipeline Integration</h3>
+      <p>Container images frequently inherit vulnerabilities from base layers that the application team never directly reviews — an outdated base OS image, a vulnerable system library bundled by the base image maintainer. Scanning container images during the build stage, before they're pushed to a registry, catches these inherited vulnerabilities before they reach any environment. Combined with Kubernetes manifest scanning for RBAC over-permissioning and missing network policies, this closes the gap between "the application code is secure" and "the deployed workload is secure."</p>
+
+      <h3>The Vibe-Code Security Problem</h3>
+      <p>AI code generation tools have fundamentally changed how much code enters production without a human author who deeply understands every line — a pattern often called "vibe coding." This introduces a distinct risk profile: LLM-generated code frequently includes insecure defaults (disabled TLS verification, permissive CORS configuration), missing input validation that a careful human developer would add reflexively, and occasionally hallucinated package names that don't exist — which attackers have begun registering as malicious packages in a technique known as slopsquatting. Our vibe-code scanner is purpose-built to catch these AI-generation-specific failure patterns, distinct from traditional SAST rules tuned for human-authored code patterns.</p>
+
+      <h3>Software Supply Chain Security: SLSA and SBOM</h3>
+      <p>The SLSA (Supply-chain Levels for Software Artifacts) framework defines progressive levels of build integrity assurance — from basic provenance tracking at SLSA Level 1 to fully verified, tamper-resistant build processes at SLSA Level 4. A Software Bill of Materials (SBOM) is the foundational artifact this requires: a machine-readable inventory of every component, dependency, and library version in a software artifact, enabling rapid impact assessment when a new CVE is disclosed ("do any of our SBOMs reference the affected package version?") instead of manually auditing every application. We generate and validate SBOMs as part of the CI/CD pipeline, mapped against our continuously updated CVE database.</p>
+
+      <h3>Secure SDLC: Beyond Tooling</h3>
+      <p>Tooling alone does not produce a secure software development lifecycle — it requires process integration: security requirements defined during design (threat modeling for new features handling sensitive data), security champions embedded within development teams who triage findings without requiring central security team involvement for every pull request, and clear severity-based SLAs for remediation. We help organizations define this operating model alongside the technical tooling, since a perfectly configured SAST pipeline produces no value if findings sit unaddressed in a backlog indefinitely.</p>
+
+      <h3>Balancing Velocity and Security</h3>
+      <p>The historical tension between "security slows us down" and "we shipped a vulnerability to production" is resolved not by choosing one priority over the other but by moving security checks earlier and making them fast enough to not disrupt developer flow. A SAST scan that takes 15 minutes and blocks every merge will be circumvented; one that completes in under a minute and surfaces only high-confidence, high-severity findings becomes a trusted part of the workflow. We tune pipeline gates specifically for signal-to-noise ratio, since false-positive fatigue is the single biggest reason DevSecOps tooling gets disabled six months after rollout.</p>
+
+      <h3>Secrets Detection and Pre-Commit Hooks</h3>
+      <p>Hardcoded secrets — API keys, database credentials, signing certificates — committed to source repositories remain one of the most common and most exploitable findings across DevSecOps engagements, frequently providing direct unauthorized access once discovered through automated repository scanning that attackers run continuously against public and leaked private repositories. Pre-commit hooks that scan staged changes for secret patterns before they ever reach the remote repository, combined with repository-wide historical scanning to catch secrets already committed in prior commits, close this gap at its earliest possible point — before the secret exists in any persisted git history that would otherwise require credential rotation and history rewriting to fully remediate.</p>
+
+      <h3>API Security Testing in the Pipeline</h3>
+      <p>Modern applications are increasingly API-first, and traditional DAST tooling designed for browser-rendered web applications often provides incomplete coverage of REST and GraphQL API endpoints — missing broken object-level authorization (the most common API vulnerability class per OWASP API Security Top 10), excessive data exposure in API responses, and rate-limiting gaps enabling resource exhaustion. We integrate API-specific security testing using OpenAPI/Swagger specifications as test input, validating authorization logic at the object level rather than relying solely on endpoint-level access control assumptions.</p>
+
+      <h3>Developer Enablement Over Gatekeeping</h3>
+      <p>DevSecOps programs fail when the security function operates purely as a gatekeeper issuing findings without context or remediation guidance, creating an adversarial relationship with engineering teams measured on delivery velocity. Effective programs instead provide actionable, specific remediation guidance directly within the developer's existing workflow — inline pull request comments showing the exact vulnerable code pattern and a suggested fix, rather than a separate security dashboard developers must context-switch to consult. We configure findings delivery to surface directly in GitHub/GitLab pull requests with remediation code snippets, measurably increasing fix rates compared to findings delivered only through a standalone security portal.</p>
+
+      <h3>Metrics That Matter for DevSecOps Maturity</h3>
+      <p>Meaningful DevSecOps metrics go beyond raw finding counts, which incentivize either under-scanning (fewer findings look better) or noise tolerance (more findings demonstrate thoroughness regardless of value). We track mean-time-to-remediation for critical and high findings, percentage of findings fixed before reaching production versus caught post-deployment, pipeline gate bypass rate (how often developers override a security gate, which signals either gate miscalibration or cultural friction), and trend of new versus recurring vulnerability classes — a rising rate of recurring SQL injection findings, for example, indicates a training or secure-coding-pattern gap rather than a tooling gap.</p>
+
+      <h3>Software Bill of Materials and Supply Chain Transparency</h3>
+      <p>Generating a Software Bill of Materials (SBOM) for every build has moved from a nice-to-have to an emerging requirement, particularly for organizations selling into regulated industries or government contracts where SBOM disclosure is now contractually mandated. An SBOM provides a complete, machine-readable inventory of every component — direct and transitive — in a given build artifact, enabling rapid impact assessment when a new CVE is disclosed: instead of manually auditing every application for a vulnerable dependency, an SBOM-aware vulnerability management process can query "which of our deployed artifacts contain this exact vulnerable package version" in seconds. We integrate SBOM generation directly into the build pipeline using industry-standard formats (CycloneDX, SPDX) so this capability exists from day one rather than as a retrofit exercise.</p>
+
+      <h3>Building a Security Champions Program</h3>
+      <p>Centralized security teams cannot scale review capacity linearly with engineering team growth. A security champions program — designated engineers within each development team who receive deeper security training and serve as the first point of contact for security questions — distributes security expertise without requiring every finding to route through a centralized bottleneck. Champions triage low-complexity findings directly, escalate genuinely novel or high-risk issues to the central security team, and provide crucial context during pipeline gate calibration since they understand both the security requirement and the specific engineering constraints of their team's codebase.</p>
+
+      <h3>Policy as Code: Versioned, Testable Security Requirements</h3>
+      <p>Expressing security requirements as code rather than prose policy documents produces two compounding benefits: the requirement is automatically and consistently enforced rather than depending on developers reading and remembering a wiki page, and the requirement itself is version-controlled alongside the infrastructure it governs, with changes reviewed through the same pull-request process as any other code change. A rule like "all production S3 buckets must block public access" written as a policy-as-code check catches violations on every single deployment going forward, whereas the same rule documented only in a security wiki relies entirely on individual developer awareness and diligence.</p>
+
+      <h3>Choosing Open-Source vs. Commercial DevSecOps Tooling</h3>
+      <p>Organizations building a DevSecOps pipeline face a genuine choice between mature open-source scanners and commercial platforms, and the right answer depends on team size, compliance requirements, and integration complexity tolerance. Open-source tools offer lower upfront cost and strong community-driven rule coverage, but typically require more engineering investment to integrate, maintain, and tune false-positive rates. Commercial platforms trade licensing cost for faster time-to-value, vendor-maintained rule updates, and dedicated support — often the better choice for teams without dedicated security engineering capacity to maintain an open-source toolchain themselves.</p>
+
+      <h3>DevSecOps Maturity Is a Journey, Not a Destination</h3>
+      <p>Organizations frequently expect a DevSecOps transformation to reach a stable end-state after initial tooling rollout, but mature programs treat it as a continuous improvement cycle: new vulnerability classes emerge, new languages and frameworks enter the stack, attacker techniques evolve, and pipeline gate calibration requires ongoing tuning as the codebase and team both grow. We work with engineering leadership to establish a recurring review cadence — typically quarterly — that reassesses tool coverage, gate thresholds, and emerging risk categories rather than treating the initial pipeline integration as a finished project.</p>
+    </div>
+  </div>
+</section>
+
+<div class="cta-section">
+  <div class="container">
+    <h2>Wire Security Into <span>Your Pipeline</span></h2>
+    <p style="color:#94a3b8;margin:12px auto 28px;max-width:560px">Run a free security scan, or book a DevSecOps pipeline review to identify gaps in your current CI/CD security gates.</p>
+    <div class="cta-row">
+      <a href="/security-assessment" class="btn-primary">Start Free Scan</a>
+      <a href="/booking" class="btn-secondary">Book DevSecOps Review</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · DevSecOps · SAST · DAST · SCA · SBOM · Vibe-Code Scanner</p>
+  <p style="margin-top:8px">© 2024–2026 CYBERDUDEBIVASH Pvt Ltd · GSTIN: 21AOBPN4328N1ZK · <a href="/privacy-policy">Privacy</a> · <a href="/terms-of-service">Terms</a></p>
+</footer>
+</body>
+</html>
