@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APEX Multi-Agent SOC — CYBERDUDEBIVASH AI Security Hub</title>
+<meta name="description" content="9 parallel AI SOC co-pilots — CVE Intel, IOC Hunter, SIEM Defender, Threat Hunter, IR Playbook, Compliance Guardian, Red Team, Zero Trust Sentinel, Risk Synthesizer.">
+<link rel="icon" href="/assets/favicon.ico">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#020617;--surface:#0f172a;--surface2:#1e293b;--border:#1e293b;--text:#e2e8f0;--muted:#94a3b8;--accent:#6366f1;--green:#4ade80;--red:#f87171;--yellow:#facc15;--orange:#fb923c;--cyan:#22d3ee;--purple:#a78bfa}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+nav{background:rgba(2,6,23,.95);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.nav-brand{font-weight:800;font-size:1rem;background:linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links a{color:var(--muted);font-size:13px;margin-left:18px}
+.nav-links a:hover{color:var(--text)}
+.hero{padding:48px 24px 32px;text-align:center;border-bottom:1px solid var(--border);background:radial-gradient(ellipse at 50% 0%,rgba(99,102,241,.12) 0%,transparent 60%)}
+.hero h1{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;line-height:1.2;margin-bottom:10px}
+.hero p{color:var(--muted);max-width:600px;margin:0 auto 20px;font-size:1rem}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.badge{display:inline-block;padding:3px 10px;border-radius:16px;font-size:11px;font-weight:600;border:1px solid}
+.bg-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple)}
+.bg-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green)}
+.bg-cyan{background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.3);color:var(--cyan)}
+.container{max-width:1100px;margin:0 auto;padding:0 20px}
+.main{display:grid;grid-template-columns:1fr 340px;gap:24px;padding:24px 20px;max-width:1100px;margin:0 auto}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+/* Left: input + agent grid */
+.task-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px}
+.task-box h3{font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text)}
+textarea#task-input{width:100%;min-height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:12px;resize:vertical;font-family:inherit}
+textarea#task-input:focus{outline:none;border-color:var(--accent)}
+.btn-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn-run{padding:11px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;flex:1}
+.btn-stream{padding:11px 22px;background:linear-gradient(135deg,#0891b2,#6366f1);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;flex:1}
+.btn-clear{padding:11px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;font-size:13px}
+.agent-selector{margin-top:14px}
+.agent-selector label{font-size:12px;color:var(--muted);display:block;margin-bottom:8px}
+.agent-chips{display:flex;flex-wrap:wrap;gap:6px}
+.agent-chip{padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:.15s}
+.agent-chip.selected{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.5);color:#818cf8;font-weight:600}
+/* Agent results grid */
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.agent-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:.2s}
+.agent-card.loading{border-color:rgba(99,102,241,.3);animation:pulse 1.5s ease-in-out infinite}
+.agent-card.success{border-color:rgba(74,222,128,.25)}
+.agent-card.error{border-color:rgba(248,113,113,.25)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.agent-card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.agent-icon{font-size:18px}
+.agent-name{font-weight:700;font-size:13px}
+.agent-status{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.status-running{background:rgba(99,102,241,.2);color:#818cf8}
+.status-done{background:rgba(74,222,128,.2);color:var(--green)}
+.status-error{background:rgba(248,113,113,.2);color:var(--red)}
+.agent-content{font-size:12px;color:var(--muted);line-height:1.7;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.agent-meta{display:flex;gap:12px;margin-top:8px;font-size:10px;color:#475569}
+/* Synthesis card */
+.synthesis-card{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);border-radius:14px;padding:22px;margin-top:20px}
+.synthesis-card h3{font-size:15px;font-weight:800;color:var(--purple);margin-bottom:12px}
+.synthesis-content{font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap}
+/* Right panel */
+.side-panel{display:flex;flex-direction:column;gap:16px}
+.panel-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.panel-card h4{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)}
+.provider-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.provider-row:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-green{background:var(--green)}
+.dot-red{background:var(--red)}
+.dot-gray{background:#475569}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--surface2);border-radius:8px;padding:12px;text-align:center}
+.stat .val{font-size:22px;font-weight:800;color:var(--accent)}
+.stat .lbl{font-size:10px;color:var(--muted);margin-top:2px}
+.example-list{list-style:none;display:grid;gap:6px}
+.example-list li{background:var(--surface2);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:.15s}
+.example-list li:hover{border-color:var(--accent);color:var(--text)}
+#stream-log{background:var(--surface2);border-radius:8px;padding:12px;font-size:11px;font-family:monospace;color:#a5f3fc;height:180px;overflow-y:auto;margin-top:12px;white-space:pre-wrap}
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-state .icon{font-size:48px;margin-bottom:16px}
+footer{text-align:center;padding:32px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">CYBERDUDEBIVASH AI Security Hub™</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/god-mode">APEX Copilot</a>
+    <a href="/threat-hunting">Threat Hunt</a>
+    <a href="/soc-dashboard">SOC Dashboard</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="container">
+    <div class="badge-row">
+      <span class="badge bg-purple">9 Specialist AI Agents</span>
+      <span class="badge bg-green">Parallel Execution</span>
+      <span class="badge bg-cyan">SSE Real-Time Streaming</span>
+      <span class="badge bg-purple">DeepSeek V3 · Groq · CF AI</span>
+    </div>
+    <h1>APEX Multi-Agent SOC</h1>
+    <p>9 specialist AI co-pilots running in parallel — CVE Intel, IOC Hunter, SIEM Defender, Threat Hunt, IR Playbook, Compliance Guardian, Red Team, Zero Trust Sentinel, Risk Synthesizer.</p>
+  </div>
+</div>
+
+<div class="main">
+  <!-- LEFT: Input + Results -->
+  <div>
+    <div class="task-box">
+      <h3>🎯 SOC Task — Describe your security challenge</h3>
+      <textarea id="task-input" placeholder="e.g. CVE-2024-3400 detected on our Palo Alto NGFW — assess risk, generate detection rules, and create an IR playbook…&#10;&#10;Or: We detected a suspicious IP 45.77.12.34 communicating with our internal servers. Enrich the IOC and recommend response.&#10;&#10;Or: Conduct a ransomware readiness assessment for a financial services org using Okta + Splunk."></textarea>
+      <div class="agent-selector">
+        <label>Select agents (leave all selected for auto-routing):</label>
+        <div class="agent-chips" id="agent-chips"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-stream" onclick="runStream()">▶ Stream (Real-Time)</button>
+        <button class="btn-run" onclick="runParallel()">⚡ Run All Parallel</button>
+        <button class="btn-clear" onclick="clearResults()">✕ Clear</button>
+      </div>
+    </div>
+
+    <div id="results-container">
+      <div class="empty-state">
+        <div class="icon">🤖</div>
+        <p>Describe your security challenge above and click <strong>Stream</strong> or <strong>Run All Parallel</strong>.<br>Multiple AI agents will analyze it simultaneously.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Status Panel -->
+  <div class="side-panel">
+    <div class="panel-card">
+      <h4>⚡ System Status</h4>
+      <div class="stat-grid">
+        <div class="stat"><div class="val" id="stat-agents">9</div><div class="lbl">AI Agents</div></div>
+        <div class="stat"><div class="val" id="stat-tasks">0</div><div class="lbl">Tasks Run</div></div>
+        <div class="stat"><div class="val" id="stat-latency">—</div><div class="lbl">Last Latency</div></div>
+        <div class="stat"><div class="val" id="stat-providers">—</div><div class="lbl">AI Providers</div></div>
+      </div>
+      <div id="provider-list" style="margin-top:14px"></div>
+    </div>
+
+    <div class="panel-card">
+      <h4>💡 Example Tasks</h4>
+      <ul class="example-list" id="example-list">
+        <li onclick="setExample(this)">CVE-2024-3400 detected on Palo Alto NGFW — assess risk, generate detection rules, create IR playbook</li>
+        <li onclick="setExample(this)">Suspicious IP 192.168.1.45 exfiltrating data at 3am — enrich IOC and respond immediately</li>
+        <li onclick="setExample(this)">Ransomware attack detected on Windows endpoints — full incident response needed</li>
+        <li onclick="setExample(this)">Oracle Cloud infrastructure compliance audit against ISO 27001 and NIST CSF</li>
+        <li onclick="setExample(this)">Red team assessment for Cisco network — map all attack paths and generate hunt rules</li>
+        <li onclick="setExample(this)">Log4Shell CVE-2021-44228 exposure across our Java microservices stack</li>
+        <li onclick="setExample(this)">Zero Trust maturity assessment for Azure AD + Okta environment with 5000 users</li>
+      </ul>
+    </div>
+
+    <div class="panel-card">
+      <h4>📡 Live Stream Log</h4>
+      <div id="stream-log">Agent stream ready. Click ▶ Stream to begin…</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · APEX Multi-Agent SOC v1.0</p>
+  <p style="margin-top:6px">© 2024–2026 CYBERDUDEBIVASH Pvt Ltd · 9 Parallel AI Agents · Groq · DeepSeek · Cloudflare Workers AI</p>
+</footer>
+
+<script>
+const AGENTS_DEF = [
+  { id:'cve_intel',           name:'CVE Intel',          icon:'🔍' },
+  { id:'ioc_hunter',          name:'IOC Hunter',          icon:'🎯' },
+  { id:'siem_defender',       name:'SIEM Defender',       icon:'⚡' },
+  { id:'threat_hunter',       name:'Threat Hunter',       icon:'🔎' },
+  { id:'ir_playbook',         name:'IR Playbook',         icon:'🚨' },
+  { id:'compliance_guardian', name:'Compliance Guardian', icon:'📋' },
+  { id:'red_team',            name:'Red Team',            icon:'⚔️' },
+  { id:'zero_trust_sentinel', name:'Zero Trust',          icon:'🛡️' },
+  { id:'risk_synthesizer',    name:'Risk Synthesizer',    icon:'🧠' },
+];
+
+let selectedAgents = new Set();
+let tasksRun = 0;
+let streamSource = null;
+
+// Build agent chip selector
+function buildChips() {
+  const el = document.getElementById('agent-chips');
+  el.innerHTML = AGENTS_DEF.map(a => `
+    <span class="agent-chip selected" data-id="${a.id}" onclick="toggleAgent('${a.id}',this)">
+      ${a.icon} ${a.name}
+    </span>
+  `).join('');
+  AGENTS_DEF.forEach(a => selectedAgents.add(a.id));
+}
+
+function toggleAgent(id, el) {
+  if (selectedAgents.has(id)) { selectedAgents.delete(id); el.classList.remove('selected'); }
+  else { selectedAgents.add(id); el.classList.add('selected'); }
+}
+
+function setExample(li) {
+  document.getElementById('task-input').value = li.textContent.trim();
+}
+
+function clearResults() {
+  document.getElementById('results-container').innerHTML = `
+    <div class="empty-state"><div class="icon">🤖</div>
+    <p>Describe your security challenge above and click <strong>Stream</strong> or <strong>Run All Parallel</strong>.</p></div>`;
+  document.getElementById('stream-log').textContent = 'Agent stream ready…';
+  document.getElementById('stat-latency').textContent = '—';
+}
+
+function logStream(msg) {
+  const el = document.getElementById('stream-log');
+  el.textContent += '\n' + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+function makeAgentCard(agentId, agentName, icon, status) {
+  const id = 'agent-card-' + agentId;
+  if (!document.getElementById(id)) {
+    const div = document.createElement('div');
+    div.className = 'agent-card loading';
+    div.id = id;
+    div.innerHTML = `
+      <div class="agent-card-header">
+        <span class="agent-icon">${icon}</span>
+        <span class="agent-name">${agentName}</span>
+        <span class="agent-status status-running" id="status-${agentId}">⟳ Running</span>
+      </div>
+      <div class="agent-content" id="content-${agentId}">Analyzing…</div>
+      <div class="agent-meta" id="meta-${agentId}"></div>`;
+    document.getElementById('agents-grid').appendChild(div);
+  }
+}
+
+function updateAgentCard(agentId, result) {
+  const card = document.getElementById('agent-card-' + agentId);
+  if (!card) return;
+  card.classList.remove('loading');
+  card.classList.add(result.status === 'success' ? 'success' : 'error');
+  const statusEl = document.getElementById('status-' + agentId);
+  if (statusEl) statusEl.className = 'agent-status ' + (result.status === 'success' ? 'status-done' : 'status-error');
+  if (statusEl) statusEl.textContent = result.status === 'success' ? '✓ Done' : '✗ Error';
+  const contentEl = document.getElementById('content-' + agentId);
+  if (contentEl) contentEl.textContent = result.content || 'No response.';
+  const metaEl = document.getElementById('meta-' + agentId);
+  if (metaEl) metaEl.textContent = [result.model && `Model: ${result.model}`, result.latency_ms && `${result.latency_ms}ms`].filter(Boolean).join(' · ');
+}
+
+// ── SSE Streaming ─────────────────────────────────────────────────────────────
+async function runStream() {
+  const msg = document.getElementById('task-input').value.trim();
+  if (!msg) { alert('Enter a security task first.'); return; }
+
+  clearResults();
+  const agents = [...selectedAgents];
+
+  // Build results layout
+  const rc = document.getElementById('results-container');
+  rc.innerHTML = `
+    <div style="margin-bottom:16px;padding:12px 16px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:13px;color:#818cf8">
+      <strong>🤖 MASOC Activated</strong> — ${agents.length} agents dispatching in parallel via real-time stream…
+    </div>
+    <div class="agents-grid" id="agents-grid"></div>
+    <div class="synthesis-card" id="synthesis-card" style="display:none">
+      <h3>🧠 Risk Synthesizer — Executive Brief</h3>
+      <div class="synthesis-content" id="synthesis-content"></div>
+    </div>`;
+
+  document.getElementById('stream-log').textContent = `[${new Date().toLocaleTimeString()}] Stream started…`;
+
+  try {
+    const resp = await fetch('/api/agents/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, agents }),
+    });
+
+    if (!resp.ok) {
+      logStream(`ERROR: HTTP ${resp.status}`);
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(line.slice(6));
+          handleStreamEvent(ev);
+        } catch {}
+      }
+    }
+  } catch(e) {
+    logStream(`ERROR: ${e.message}`);
+  }
+}
+
+function handleStreamEvent(ev) {
+  switch(ev.type) {
+    case 'start':
+      logStream(`[START] Task: "${ev.task.slice(0,50)}…" | Agents: ${ev.agents.length}`);
+      break;
+    case 'context':
+      if (ev.cve) logStream(`[ENRICH] CVE context loaded from NVD`);
+      if (ev.kev?.in_kev) logStream(`[ENRICH] ⚠️ CVE is in CISA KEV — actively exploited!`);
+      if (ev.ioc) logStream(`[ENRICH] IOC enrichment loaded`);
+      break;
+    case 'agent_start':
+      logStream(`[AGENT] ${ev.icon} ${ev.agent_name} → activated`);
+      makeAgentCard(ev.agent_id, ev.agent_name, ev.icon, 'running');
+      break;
+    case 'agent_result':
+      logStream(`[DONE] ${ev.icon} ${ev.agent_name} → ${ev.latency_ms}ms (${ev.model||'—'})`);
+      updateAgentCard(ev.agent_id, ev);
+      break;
+    case 'synthesis_start':
+      logStream(`[SYNTH] ${ev.message}`);
+      break;
+    case 'synthesis':
+      logStream(`[SYNTH] Risk Synthesizer complete → ${ev.latency_ms}ms`);
+      const sc = document.getElementById('synthesis-card');
+      if (sc) { sc.style.display = 'block'; document.getElementById('synthesis-content').textContent = ev.content; }
+      break;
+    case 'complete':
+      logStream(`[DONE] All ${ev.agents_activated} agents complete — ${ev.total_latency_ms}ms total`);
+      document.getElementById('stat-latency').textContent = ev.total_latency_ms + 'ms';
+      document.getElementById('stat-tasks').textContent = ++tasksRun;
+      break;
+    case 'error':
+      logStream(`[ERROR] ${ev.message}`);
+      break;
+  }
+}
+
+// ── Parallel Run (non-streaming) ──────────────────────────────────────────────
+async function runParallel() {
+  const msg = document.getElementById('task-input').value.trim();
+  if (!msg) { alert('Enter a security task first.'); return; }
+
+  clearResults();
+  const agents = [...selectedAgents];
+  const rc = document.getElementById('results-container');
+  rc.innerHTML = `
+    <div style="margin-bottom:16px;padding:12px 16px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:13px;color:#818cf8">
+      <strong>⚡ Running ${agents.length} agents in parallel…</strong> Results appear when all complete.
+    </div>
+    <div style="text-align:center;padding:40px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">⟳</div>
+      <p>AI agents working in parallel… please wait.</p>
+    </div>`;
+
+  logStream(`[RUN] ${agents.length} agents dispatched in parallel…`);
+
+  try {
+    const r = await fetch('/api/agents/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, agents }),
+    });
+    const j = await r.json();
+    if (!j.success) {
+      rc.innerHTML = `<div style="color:var(--red);padding:20px">Error: ${j.error || 'Unknown error'}</div>`;
+      return;
+    }
+
+    rc.innerHTML = `
+      <div style="margin-bottom:16px;padding:12px 16px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:10px;font-size:13px;color:var(--green)">
+        ✓ ${j.agents_activated} agents completed in <strong>${j.total_latency_ms}ms</strong>
+      </div>
+      <div class="agents-grid" id="agents-grid"></div>
+      <div class="synthesis-card" id="synthesis-card" style="display:none">
+        <h3>🧠 Risk Synthesizer — Executive Brief</h3>
+        <div class="synthesis-content" id="synthesis-content"></div>
+      </div>`;
+
+    document.getElementById('stat-latency').textContent = j.total_latency_ms + 'ms';
+    document.getElementById('stat-tasks').textContent = ++tasksRun;
+
+    for (const result of (j.agent_results || [])) {
+      makeAgentCard(result.agent_id, result.agent_name, result.icon, result.status);
+      updateAgentCard(result.agent_id, result);
+      logStream(`[DONE] ${result.icon} ${result.agent_name} — ${result.latency_ms}ms`);
+    }
+
+    if (j.synthesis) {
+      const sc = document.getElementById('synthesis-card');
+      if (sc) { sc.style.display = 'block'; document.getElementById('synthesis-content').textContent = j.synthesis.content; }
+      logStream(`[SYNTH] Risk Synthesizer complete`);
+    }
+  } catch(e) {
+    rc.innerHTML = `<div style="color:var(--red);padding:20px">Network error: ${e.message}</div>`;
+    logStream(`[ERROR] ${e.message}`);
+  }
+}
+
+// ── Load provider status ──────────────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/agents/status');
+    const j = await r.json();
+    if (!j.success) return;
+    const providers = j.ai_providers || {};
+    const active = Object.values(providers).filter(Boolean).length;
+    document.getElementById('stat-providers').textContent = `${active}/4`;
+    document.getElementById('provider-list').innerHTML = Object.entries(providers).map(([name, ok]) => `
+      <div class="provider-row">
+        <span><span class="dot ${ok?'dot-green':'dot-red'}"></span>${name.replace('_',' ').toUpperCase()}</span>
+        <span style="color:${ok?'var(--green)':'var(--red)';font-size:11px}">${ok?'✓ Ready':'✗ Not configured'}</span>
+      </div>`).join('');
+  } catch {}
+}
+
+buildChips();
+loadStatus();
+</script>
+</body>
+</html>

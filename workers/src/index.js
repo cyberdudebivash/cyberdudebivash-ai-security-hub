@@ -1726,6 +1726,25 @@ export default {
       return handleGoogleCallback(request, env);
     }
 
+    // ── APEX Multi-Agent SOC (MASOC) — 9 specialist AI agents in parallel (v49.0) ─
+    if (path === '/api/agents/status' && method === 'GET') {
+      const { handleAgentsStatus } = await import('./handlers/multiAgentSOC.js');
+      return withSecurityHeaders(withCors(await handleAgentsStatus(request, env, authCtx), request));
+    }
+    if (path === '/api/agents/run' && method === 'POST') {
+      const { handleAgentsRun } = await import('./handlers/multiAgentSOC.js');
+      return withSecurityHeaders(withCors(await handleAgentsRun(request, env, authCtx), request));
+    }
+    if (path === '/api/agents/stream' && method === 'POST') {
+      const { handleAgentsStream } = await import('./handlers/multiAgentSOC.js');
+      return handleAgentsStream(request, env, authCtx); // SSE — no CORS wrapper
+    }
+    if (path.startsWith('/api/agents/dispatch/') && method === 'POST') {
+      const agentId = path.split('/')[4];
+      const { handleAgentDispatch } = await import('./handlers/multiAgentSOC.js');
+      return withSecurityHeaders(withCors(await handleAgentDispatch(request, env, authCtx, agentId), request));
+    }
+
     // ── Enterprise OIDC SSO — Azure AD / Okta / any OIDC IdP (v48.0) ────────
     if (path === '/api/auth/enterprise/config' && method === 'GET') {
       const { handleEnterpriseSSoInfo } = await import('./handlers/enterpriseSsoHandler.js');
