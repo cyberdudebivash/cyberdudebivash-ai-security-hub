@@ -371,16 +371,18 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       }), { expirationTtl: 90 * 24 * 3600 }).catch(() => {});
     }
     if (env.DB) {
-      await env.DB.prepare(
-        `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
-      ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id).run()
-        .catch((e) => console.error('[Payments] UPDATE payments D1 failed', razorpay_payment_id, e?.message));
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO subscriptions (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at) VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
-      ).bind(
-        'sub_' + Date.now().toString(36), confirmedEmail || '', plan,
-        razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
-      ).run().catch((e) => console.error('[Payments] INSERT subscriptions D1 failed', razorpay_payment_id, e?.message));
+      // Batch UPDATE payments + INSERT subscriptions atomically — both or neither
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
+        ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id),
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO subscriptions (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at) VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
+        ).bind(
+          'sub_' + Date.now().toString(36), confirmedEmail || '', plan,
+          razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
+        ),
+      ]).catch((e) => console.error('[Payments] D1 batch (payments+subscriptions) failed', razorpay_payment_id, e?.message));
       const paidRow = await env.DB.prepare(
         `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
       ).bind(razorpay_order_id).first().catch(() => null);
@@ -785,19 +787,38 @@ export async function handleRazorpayWebhook(request, env) {
   try { event = JSON.parse(rawBody); }
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
-  // Webhook replay protection: deduplicate by Razorpay event ID (24-hour window)
-  const eventId   = event.id || (event.account_id + ':' + event.created_at + ':' + (event.payload?.payment?.entity?.id || ''));
-  const dedupKey  = `webhook_processed:${eventId}`;
-  const kvStore   = env.SECURITY_HUB_KV;
-  if (kvStore && eventId) {
+  // Webhook replay protection: deduplicate via D1 INSERT OR IGNORE (atomic, not KV)
+  // KV is eventually consistent and non-atomic — two simultaneous webhooks can both pass.
+  // D1 SQLite UNIQUE PRIMARY KEY guarantees exactly-once processing.
+  const eventId = event.id || (event.account_id + ':' + event.created_at + ':' + (event.payload?.payment?.entity?.id || ''));
+  if (env.DB && eventId) {
     try {
-      const already = await kvStore.get(dedupKey);
-      if (already) {
-        console.log('[Webhook] Duplicate event ignored:', eventId);
+      const payloadHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
+        .then(buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join(''));
+      const insert = await env.DB.prepare(
+        `INSERT OR IGNORE INTO webhook_events (id, event_type, payment_id, order_id, payload_hash, outcome, processed_at)
+         VALUES (?, ?, ?, ?, ?, 'processed', unixepoch())`
+      ).bind(
+        eventId,
+        event.event || 'unknown',
+        event.payload?.payment?.entity?.id || null,
+        event.payload?.payment?.entity?.order_id || event.payload?.order?.entity?.id || null,
+        payloadHash,
+      ).run();
+      if (insert.meta?.changes === 0) {
+        console.log('[Webhook] Duplicate event ignored (D1 dedup):', eventId);
         return Response.json({ received: true, duplicate: true });
       }
-      await kvStore.put(dedupKey, '1', { expirationTtl: 86400 });
-    } catch { /* KV unavailable — fail open to avoid blocking legitimate webhooks */ }
+    } catch (e) {
+      // D1 unavailable — log and proceed (KV fallback for dedup on degraded D1)
+      console.error('[Webhook] D1 dedup insert failed — proceeding without dedup guarantee', e?.message);
+      const kvStore = env.SECURITY_HUB_KV;
+      if (kvStore) {
+        const already = await kvStore.get(`webhook_processed:${eventId}`).catch(() => null);
+        if (already) return Response.json({ received: true, duplicate: true });
+        kvStore.put(`webhook_processed:${eventId}`, '1', { expirationTtl: 86400 }).catch(() => {});
+      }
+    }
   }
 
   const type    = event.event;
@@ -946,9 +967,32 @@ export async function handleRazorpayWebhook(request, env) {
   if (type === 'payment.failed') {
     const orderId = payload.order_id;
     if (env.DB && orderId) {
+      // Mark payment failed
       await env.DB.prepare(
         `UPDATE payments SET status = 'failed' WHERE razorpay_order_id = ? AND status = 'pending'`
-      ).bind(orderId).run().catch(() => {});
+      ).bind(orderId).run().catch((e) => console.error('[Webhook] payment.failed D1 update error', e?.message));
+
+      // Seed recovery pipeline — fetch payment details then insert recovery row
+      try {
+        const pRow = await env.DB.prepare(
+          `SELECT id, email, amount, module FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+        ).bind(orderId).first().catch(() => null);
+        if (pRow) {
+          await env.DB.prepare(
+            `INSERT OR IGNORE INTO payment_recovery
+             (id, payment_id, order_id, email, amount_inr, reason, status, max_attempts, next_retry_at, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', 3, datetime('now', '+1 hour'), datetime('now'))`
+          ).bind(
+            'pr_' + Date.now().toString(36),
+            pRow.id, orderId, pRow.email || '',
+            Math.round((pRow.amount || 0) / 100),
+            payload.error?.description || 'payment_failed',
+          ).run().catch((e) => console.error('[Webhook] payment_recovery insert error', e?.message));
+          console.log('[Webhook] payment.failed → recovery seeded for', orderId, pRow.email);
+        }
+      } catch (e) {
+        console.error('[Webhook] payment.failed recovery pipeline error', e?.message);
+      }
     }
   }
 

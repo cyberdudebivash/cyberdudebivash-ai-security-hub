@@ -257,6 +257,14 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
       return json({ success: false, error: 'Payment verification failed — signature mismatch' }, 400);
     }
 
+    // Idempotency: reject duplicate payment grants
+    if (env.DB) {
+      const existing = await env.DB.prepare(
+        `SELECT 1 FROM defense_purchases WHERE razorpay_order_id = ? AND status = 'paid' LIMIT 1`
+      ).bind(razorpay_order_id).first().catch(() => null);
+      if (existing) return json({ success: true, access_granted: true, duplicate: true, message: 'Access already granted for this payment' });
+    }
+
     // Grant access
     const row = await env.DB.prepare(
       `SELECT * FROM defense_solutions WHERE id = ?`

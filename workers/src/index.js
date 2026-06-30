@@ -8169,6 +8169,33 @@ ctx.waitUntil(
           console.log(`[CRON] v10 Revenue Snapshot: ${today}`);
         } catch (e) { console.error('[CRON] v10 Snapshot error:', e?.message); }
       })());
+
+      // ── Subscription expiry enforcement — downgrade expired subscribers to FREE ──
+      ctx.waitUntil((async () => {
+        try {
+          if (!env.DB) return;
+          // Find active subscriptions that have passed their expiry
+          const expired = await env.DB.prepare(
+            `SELECT s.id as sub_id, s.email, u.id as user_id
+             FROM subscriptions s
+             LEFT JOIN users u ON u.email = s.email
+             WHERE s.status = 'active'
+               AND s.expires_at IS NOT NULL
+               AND s.expires_at <= datetime('now')
+             LIMIT 100`
+          ).all().catch(() => ({ results: [] }));
+          const rows = expired?.results ?? [];
+          if (rows.length === 0) return;
+          const now = new Date().toISOString();
+          for (const row of rows) {
+            await env.DB.batch([
+              env.DB.prepare(`UPDATE subscriptions SET status = 'expired', updated_at = ? WHERE id = ?`).bind(now, row.sub_id),
+              ...(row.user_id ? [env.DB.prepare(`UPDATE users SET tier = 'FREE' WHERE id = ? AND tier NOT IN ('ENTERPRISE','MSSP')`).bind(row.user_id)] : []),
+            ]).catch((e) => console.error('[CRON] Expiry batch failed for sub', row.sub_id, e?.message));
+          }
+          console.log(`[CRON] Subscription expiry: ${rows.length} subscriptions expired and downgraded to FREE`);
+        } catch (e) { console.error('[CRON] Subscription expiry error:', e?.message); }
+      })());
     }
 
     // ── v12 P0 MISSION: Agentic AI Engine — Agent Event Queue Processing ───────

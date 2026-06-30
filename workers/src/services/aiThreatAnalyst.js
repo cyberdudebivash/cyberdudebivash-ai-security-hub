@@ -32,7 +32,7 @@ RULES:
 
 // ─── LLM provider cascade (mirrors APEX Copilot v4.0) ────────────────────────
 async function callLLM(systemPrompt, userMessage, env) {
-  const model = 'llama-3.1-70b-versatile';
+  const model = 'llama-3.3-70b-versatile';
 
   // ── Groq (fastest, primary) ───────────────────────────────────────────────
   if (env?.GROQ_API_KEY) {
