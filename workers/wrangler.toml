@@ -1,6 +1,11 @@
 name               = "cyberdudebivash-security-hub"
 main               = "src/index.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
 # account_id is intentionally omitted — injected at deploy time via CLOUDFLARE_ACCOUNT_ID env var
 
 [vars]

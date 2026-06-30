@@ -1737,7 +1737,7 @@ export default {
     }
     if (path === '/api/agents/stream' && method === 'POST') {
       const { handleAgentsStream } = await import('./handlers/multiAgentSOC.js');
-      return handleAgentsStream(request, env, authCtx); // SSE — no CORS wrapper
+      return handleAgentsStream(request, env, authCtx, ctx); // SSE — ctx for waitUntil
     }
     if (path.startsWith('/api/agents/dispatch/') && method === 'POST') {
       const agentId = path.split('/')[4];

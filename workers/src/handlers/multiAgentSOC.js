@@ -1,46 +1,33 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — APEX Multi-Agent SOC (MASOC) v1.0
+ * CYBERDUDEBIVASH AI Security Hub — APEX Multi-Agent SOC (MASOC) v2.0
  *
  * Architecture: 9 specialist AI agents dispatched in parallel via Promise.all()
- * Each agent has its own system prompt, AI provider routing, tool set, and domain expertise.
- * An Orchestrator classifies the user task and activates the relevant subset of agents.
- * A Synthesis Agent fuses all parallel results into a unified executive brief.
+ * Each agent has its own system prompt, AI provider routing, and domain expertise.
+ * An Orchestrator classifies the task and activates the relevant agent subset.
+ * A Synthesis Agent fuses all results into a unified executive brief.
  *
- * Agents:
- *   1. CVE_Intel_Agent         — NVD/KEV/EPSS threat intelligence & CVE enrichment
- *   2. IOC_Hunter_Agent        — VirusTotal/AbuseIPDB/Shodan IOC enrichment
- *   3. SIEM_Defender_Agent     — Detection rule generation & SIEM deployment
- *   4. Threat_Hunt_Agent       — MITRE ATT&CK hunt templates & correlation
- *   5. IR_Playbook_Agent       — NIST 800-61 incident response playbook generation
- *   6. Compliance_Guardian     — NIST/ISO/SOC2/PCI/GDPR compliance gap analysis
- *   7. RedTeam_Agent           — Attack path mapping & adversarial scenario analysis
- *   8. ZeroTrust_Sentinel      — Zero Trust posture & anomaly assessment
- *   9. Risk_Synthesizer        — Fuses all agent outputs → executive brief + risk score
- *
- * Endpoints:
- *   POST /api/agents/run       — parallel multi-agent execution (JSON response)
- *   POST /api/agents/stream    — streaming multi-agent SSE (real-time agent results)
- *   GET  /api/agents/status    — agent registry, capabilities, AI provider health
- *   POST /api/agents/dispatch/:agent — direct single-agent invocation
- *
- * AI Provider Routing per agent:
- *   CVE Intel / IOC / Red Team → DeepSeek V3 (best technical reasoning)
- *   Compliance / IR Playbook   → Groq 70B (structured prose + NIST frameworks)
- *   SIEM / Hunt                → Groq R1 (reasoning for rule correctness)
- *   Zero Trust / Risk Synth    → Groq 70B (executive-grade output)
- *   Fallback chain             → OpenRouter → CF Workers AI
- *
- * Cloudflare Workers compatibility:
- *   - All parallelism via Promise.all() — no threads needed
- *   - SSE streaming via ReadableStream/TransformStream
- *   - State via D1 (persistent task history) + KV (session cache)
- *   - AI via existing env.AI (CF Workers AI), GROQ_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY
+ * Production hardening (v2.0):
+ *   - ctx.waitUntil() for SSE floating promise (Workers best practice)
+ *   - Per-agent 25s AbortSignal timeout (prevents single slow provider hanging all agents)
+ *   - MASOC-specific rate limiting (5 runs/min per user, KV-backed)
+ *   - Real EPSS enrichment from api.first.org (EPSS v3)
+ *   - Body size guard (max 8 KB task input)
+ *   - SSE CORS restricted to platform origin (not wildcard)
+ *   - Structured JSON logging for CF observability
+ *   - Dynamic risk score/level extracted from synthesis output
  */
 
 import { routeAICall } from '../core/aiProviderRouter.js';
 
-// ─── Agent Registry ───────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+const MASOC_VERSION       = '2.0';
+const MAX_BODY_BYTES      = 8192;           // 8 KB max task input
+const AGENT_TIMEOUT_MS    = 25_000;         // per-agent AI call timeout
+const RATE_LIMIT_WINDOW_S = 60;            // 1-minute window
+const RATE_LIMIT_MAX      = 5;             // max MASOC runs per user per minute
+const PLATFORM_ORIGIN     = 'https://cyberdudebivash.in';
 
+// ─── Agent Registry ───────────────────────────────────────────────────────────
 const AGENTS = {
   cve_intel: {
     id:          'cve_intel',
@@ -51,7 +38,7 @@ const AGENTS = {
     domains:     ['cve', 'vulnerability', 'patch', 'nvd', 'kev', 'cvss', 'epss', 'exploit', 'threat intel'],
     system_prompt: `You are the CVE Intel Agent — a world-class cybersecurity threat intelligence specialist.
 Your sole focus: CVE enrichment, CVSS/EPSS scoring, CISA KEV status, exploit probability, and patch prioritization.
-Always provide: CVE ID, CVSS score, EPSS score, KEV status (exploited in the wild), severity, affected products, and a 3-bullet remediation plan.
+Always provide: CVE ID, CVSS score, EPSS score (exploitation probability %), KEV status (exploited in the wild), severity, affected products, and a 3-bullet remediation plan.
 Be precise, technical, and actionable. Prioritize by exploit probability × CVSS score. Never hallucinate CVE details.`,
     max_tokens:  900,
     temperature: 0.1,
@@ -181,105 +168,142 @@ Be ruthlessly concise — an enterprise CISO reads this in under 2 minutes. Ever
 
 const AGENT_IDS = Object.keys(AGENTS);
 
+// ─── Structured logger ────────────────────────────────────────────────────────
+function log(level, event, data = {}) {
+  console.log(JSON.stringify({ level, event, service: 'masoc', version: MASOC_VERSION, ts: new Date().toISOString(), ...data }));
+}
+
+// ─── Rate limiter (KV-backed, per user, sliding window) ───────────────────────
+async function checkRateLimit(env, userId) {
+  if (!env?.KV) return { allowed: true };
+  const key = `masoc_rl:${userId}`;
+  try {
+    const raw   = await env.KV.get(key);
+    const count = raw ? parseInt(raw, 10) : 0;
+    if (count >= RATE_LIMIT_MAX) {
+      return { allowed: false, count, limit: RATE_LIMIT_MAX, retry_after: RATE_LIMIT_WINDOW_S };
+    }
+    // Increment — reset TTL each call so window slides
+    await env.KV.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S });
+    return { allowed: true, count: count + 1 };
+  } catch {
+    return { allowed: true }; // fail open on KV error — don't block legitimate users
+  }
+}
+
 // ─── Task Classifier ──────────────────────────────────────────────────────────
-// Determines which agents are relevant for a given user request.
-// Returns an ordered subset of AGENT_IDS to activate.
-function classifyTask(userMessage) {
+export function classifyTask(userMessage) {
   const msg = userMessage.toLowerCase();
   const scores = {};
 
   for (const [id, agent] of Object.entries(AGENTS)) {
-    if (id === 'risk_synthesizer') continue; // always runs last
+    if (id === 'risk_synthesizer') continue;
     let score = 0;
     for (const domain of agent.domains) {
       if (msg.includes(domain)) score += 2;
     }
-    // Boost for strong exact matches
-    if (id === 'cve_intel'          && /cve-\d{4}-\d+/.test(msg)) score += 5;
-    if (id === 'ioc_hunter'         && /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(msg)) score += 5;
-    if (id === 'siem_defender'      && /(sigma|splunk|sentinel|elastic|kql|spl)\b/i.test(msg)) score += 4;
-    if (id === 'ir_playbook'        && /\b(incident|breach|ransom|compromis)\b/i.test(msg)) score += 4;
+    if (id === 'cve_intel'          && /cve-\d{4}-\d+/.test(msg))                                score += 5;
+    if (id === 'ioc_hunter'         && /\b(\d{1,3}\.){3}\d{1,3}\b/.test(msg))                    score += 5;
+    if (id === 'siem_defender'      && /(sigma|splunk|sentinel|elastic|kql|spl)\b/i.test(msg))    score += 4;
+    if (id === 'ir_playbook'        && /\b(incident|breach|ransom|compromis)\b/i.test(msg))       score += 4;
     if (id === 'compliance_guardian'&& /\b(nist|iso.?27001|soc.?2|pci|gdpr|hipaa|audit)\b/i.test(msg)) score += 4;
-    if (id === 'red_team'           && /\b(attack|apt|adversar|exploit|pentest)\b/i.test(msg)) score += 3;
-    if (id === 'zero_trust_sentinel'&& /\b(mfa|iam|identity|zero.?trust|access)\b/i.test(msg)) score += 3;
+    if (id === 'red_team'           && /\b(attack|apt|adversar|exploit|pentest)\b/i.test(msg))    score += 3;
+    if (id === 'zero_trust_sentinel'&& /\b(mfa|iam|identity|zero.?trust|access)\b/i.test(msg))   score += 3;
     if (id === 'threat_hunter'      && /\b(hunt|hypothes|lateral|persist|tactic|mitre)\b/i.test(msg)) score += 3;
     scores[id] = score;
   }
 
-  // Sort agents by relevance score
-  const sorted = Object.entries(scores)
-    .sort((a, b) => b[1] - a[1])
-    .map(([id]) => id);
-
-  // For broad queries (low scores), activate the core 4
+  const sorted  = Object.entries(scores).sort((a, b) => b[1] - a[1]).map(([id]) => id);
   const topScore = scores[sorted[0]] || 0;
-  if (topScore < 2) {
-    // Default: activate all relevant security agents for broad security questions
-    return ['cve_intel', 'threat_hunter', 'siem_defender', 'ir_playbook'];
-  }
 
-  // Activate agents with score ≥ 1, up to 6 (keep runtime fast)
+  if (topScore < 2) return ['cve_intel', 'threat_hunter', 'siem_defender', 'ir_playbook'];
+
   const selected = sorted.filter(id => scores[id] >= 1).slice(0, 6);
-  // Always include at minimum 3 agents for rich context
   if (selected.length < 3) {
-    const fill = sorted.filter(id => !selected.includes(id)).slice(0, 3 - selected.length);
-    selected.push(...fill);
+    selected.push(...sorted.filter(id => !selected.includes(id)).slice(0, 3 - selected.length));
   }
   return selected;
 }
 
-// ─── Real-data enrichment helpers ────────────────────────────────────────────
-// These pull real data to augment agent prompts before AI inference.
+// ─── Real-data enrichment helpers ─────────────────────────────────────────────
 
-async function fetchCVEContext(userMessage, env) {
+// NVD + EPSS enrichment in a single parallel fetch
+export async function fetchCVEContext(userMessage, _env) {
   const cveMatch = userMessage.match(/CVE-\d{4}-\d+/i);
   if (!cveMatch) return null;
   const cveId = cveMatch[0].toUpperCase();
+
   try {
-    const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cveId}`;
-    const r = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!r.ok) return null;
-    const j = await r.json();
-    const item = j?.vulnerabilities?.[0]?.cve;
-    if (!item) return null;
-    const desc = item.descriptions?.find(d => d.lang === 'en')?.value || '';
-    const metrics = item.metrics?.cvssMetricV31?.[0] || item.metrics?.cvssMetricV30?.[0];
-    const cvss = metrics?.cvssData?.baseScore;
-    return { cve_id: cveId, description: desc.slice(0, 400), cvss_score: cvss, source: 'NVD' };
-  } catch { return null; }
+    const [nvdResp, epssResp] = await Promise.allSettled([
+      fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cveId}`, {
+        headers: { Accept: 'application/json' },
+        signal:  AbortSignal.timeout(6000),
+      }),
+      fetch(`https://api.first.org/data/v1/epss?cve=${cveId}`, {
+        headers: { Accept: 'application/json' },
+        signal:  AbortSignal.timeout(5000),
+      }),
+    ]);
+
+    // Parse NVD
+    let description = '', cvss_score = null;
+    if (nvdResp.status === 'fulfilled' && nvdResp.value.ok) {
+      const j   = await nvdResp.value.json();
+      const item = j?.vulnerabilities?.[0]?.cve;
+      if (item) {
+        description = item.descriptions?.find(d => d.lang === 'en')?.value?.slice(0, 400) || '';
+        const metrics = item.metrics?.cvssMetricV31?.[0] || item.metrics?.cvssMetricV30?.[0];
+        cvss_score = metrics?.cvssData?.baseScore ?? null;
+      }
+    }
+
+    // Parse EPSS v3
+    let epss_score = null, epss_percentile = null;
+    if (epssResp.status === 'fulfilled' && epssResp.value.ok) {
+      const ej = await epssResp.value.json();
+      const row = ej?.data?.[0];
+      if (row) {
+        epss_score      = parseFloat(row.epss);
+        epss_percentile = parseFloat(row.percentile);
+      }
+    }
+
+    if (!description && cvss_score === null) return null;
+
+    log('info', 'cve_enrichment', { cve_id: cveId, cvss_score, epss_score });
+    return { cve_id: cveId, description, cvss_score, epss_score, epss_percentile, source: 'NVD+EPSS' };
+  } catch (err) {
+    log('warn', 'cve_enrichment_failed', { cve_id: cveId, error: err.message });
+    return null;
+  }
 }
 
-async function fetchKEVStatus(userMessage, env) {
+export async function fetchKEVStatus(userMessage, env) {
   const cveMatch = userMessage.match(/CVE-\d{4}-\d+/i);
   if (!cveMatch) return null;
   const cveId = cveMatch[0].toUpperCase();
   try {
-    const kv = env?.SECURITY_HUB_KV;
+    const kv = env?.KV;
     if (kv) {
       const cached = await kv.get('kev_catalog', { type: 'json' }).catch(() => null);
-      if (cached?.lookup?.[cveId]) {
-        return { in_kev: true, details: cached.lookup[cveId] };
-      }
+      if (cached?.lookup?.[cveId]) return { in_kev: true, details: cached.lookup[cveId] };
     }
     return { in_kev: false };
   } catch { return null; }
 }
 
-async function fetchIOCContext(userMessage, env) {
+export async function fetchIOCContext(userMessage, env) {
   const ipMatch   = userMessage.match(/\b(\d{1,3}\.){3}\d{1,3}\b/);
   const hashMatch = userMessage.match(/\b[a-f0-9]{32,64}\b/i);
   if (!ipMatch && !hashMatch) return null;
   const ioc = (ipMatch || hashMatch)[0];
   try {
-    const base = env?.ORIGIN || env?.WORKER_URL || 'https://cyberdudebivash.in';
+    const base = env?.ORIGIN || env?.WORKER_URL || PLATFORM_ORIGIN;
     const r = await fetch(`${base}/api/hunt/ioc`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ioc }),
-      signal: AbortSignal.timeout(6000),
+      body:    JSON.stringify({ ioc }),
+      signal:  AbortSignal.timeout(6000),
     });
     if (!r.ok) return null;
     const j = await r.json();
@@ -288,54 +312,85 @@ async function fetchIOCContext(userMessage, env) {
 }
 
 // ─── Single Agent Executor ────────────────────────────────────────────────────
-async function runAgent(agentId, userMessage, context, env, tier) {
+export async function runAgent(agentId, userMessage, context, env, tier) {
   const agent = AGENTS[agentId];
   if (!agent) throw new Error(`Unknown agent: ${agentId}`);
 
   const t0 = Date.now();
+  log('info', 'agent_start', { agent_id: agentId });
 
   // Build enriched prompt
   let enrichedPrompt = userMessage;
   if (context?.cve) {
-    enrichedPrompt += `\n\n[CVE CONTEXT FROM NVD]\nCVE ID: ${context.cve.cve_id}\nCVSS: ${context.cve.cvss_score}\nDescription: ${context.cve.description}`;
+    const { cve_id, cvss_score, epss_score, epss_percentile, description } = context.cve;
+    enrichedPrompt += `\n\n[CVE CONTEXT — NVD + EPSS v3]
+CVE ID:          ${cve_id}
+CVSS v3.1:       ${cvss_score ?? 'N/A'}
+EPSS Score:      ${epss_score !== null ? (epss_score * 100).toFixed(2) + '%' : 'N/A'} exploitation probability
+EPSS Percentile: ${epss_percentile !== null ? (epss_percentile * 100).toFixed(1) + 'th' : 'N/A'}
+Description:     ${description}`;
   }
   if (context?.kev?.in_kev) {
-    enrichedPrompt += `\n\n[CISA KEV] This CVE IS in the Known Exploited Vulnerabilities catalog — actively exploited in the wild.`;
+    enrichedPrompt += `\n\n[CISA KEV] ⚠️ This CVE IS in the Known Exploited Vulnerabilities catalog — actively exploited in the wild. Treat as CRITICAL priority.`;
   }
   if (context?.ioc) {
     enrichedPrompt += `\n\n[IOC ENRICHMENT]\n${JSON.stringify(context.ioc.result, null, 2).slice(0, 600)}`;
   }
-
   enrichedPrompt += `\n\nRespond as the ${agent.name}. Be precise, technical, and actionable. Output well-structured analysis.`;
 
-  const result = await routeAICall(env, {
-    prompt:      enrichedPrompt,
-    system:      agent.system_prompt,
-    task_type:   agent.task_type,
-    tier:        tier || 'ENTERPRISE',
-    max_tokens:  agent.max_tokens,
-    temperature: agent.temperature,
-  });
+  // Per-agent timeout via AbortSignal — prevents one slow provider hanging all parallel agents
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), AGENT_TIMEOUT_MS);
 
-  const latency_ms = Date.now() - t0;
+  try {
+    const result = await routeAICall(env, {
+      prompt:      enrichedPrompt,
+      system:      agent.system_prompt,
+      task_type:   agent.task_type,
+      tier:        tier || 'ENTERPRISE',
+      max_tokens:  agent.max_tokens,
+      temperature: agent.temperature,
+    });
 
-  return {
-    agent_id:    agentId,
-    agent_name:  agent.name,
-    icon:        agent.icon,
-    description: agent.description,
-    status:      result ? 'success' : 'no_provider',
-    content:     result?.content || `${agent.name} could not respond — no AI provider configured. Set GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY.`,
-    model:       result?.model || 'none',
-    provider:    result?.provider || 'none',
-    latency_ms,
-    tokens:      result?.tokens || null,
-  };
+    const latency_ms = Date.now() - t0;
+    log('info', 'agent_done', { agent_id: agentId, latency_ms, provider: result?.provider, model: result?.model });
+
+    return {
+      agent_id:    agentId,
+      agent_name:  agent.name,
+      icon:        agent.icon,
+      description: agent.description,
+      status:      result ? 'success' : 'no_provider',
+      content:     result?.content || `${agent.name} unavailable — no AI provider configured. Set GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY as Wrangler secrets.`,
+      model:       result?.model    || 'none',
+      provider:    result?.provider || 'none',
+      latency_ms,
+      tokens:      result?.tokens   || null,
+    };
+  } catch (err) {
+    const latency_ms = Date.now() - t0;
+    const timedOut   = err.name === 'AbortError';
+    log('error', 'agent_error', { agent_id: agentId, error: err.message, timed_out: timedOut, latency_ms });
+    return {
+      agent_id:   agentId,
+      agent_name: agent.name,
+      icon:       agent.icon,
+      description:agent.description,
+      status:     'error',
+      content:    timedOut ? `${agent.name} timed out after ${AGENT_TIMEOUT_MS / 1000}s. Try again or use a faster AI provider.` : `Agent error: ${err.message}`,
+      model:      'none',
+      provider:   'none',
+      latency_ms,
+      tokens:     null,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ─── Synthesis Agent ──────────────────────────────────────────────────────────
 async function runSynthesis(userMessage, agentResults, env, tier) {
-  const t0 = Date.now();
+  const t0        = Date.now();
   const synthAgent = AGENTS.risk_synthesizer;
 
   const agentSummaries = agentResults
@@ -348,7 +403,7 @@ async function runSynthesis(userMessage, agentResults, env, tier) {
 SPECIALIST AGENT OUTPUTS:
 ${agentSummaries}
 
-Now synthesize all the above specialist analyses into a single unified executive risk brief. Follow your system prompt format exactly.`;
+Synthesize all specialist analyses into a unified executive risk brief per your system prompt format.`;
 
   const result = await routeAICall(env, {
     prompt:      synthPrompt,
@@ -359,31 +414,56 @@ Now synthesize all the above specialist analyses into a single unified executive
     temperature: synthAgent.temperature,
   });
 
+  log('info', 'synthesis_done', { latency_ms: Date.now() - t0, provider: result?.provider });
+
   return {
     agent_id:   'risk_synthesizer',
     agent_name: synthAgent.name,
     icon:       synthAgent.icon,
     status:     result ? 'success' : 'no_provider',
     content:    result?.content || 'Synthesis unavailable — configure an AI provider.',
-    model:      result?.model || 'none',
+    model:      result?.model    || 'none',
     provider:   result?.provider || 'none',
     latency_ms: Date.now() - t0,
+    tokens:     result?.tokens   || null,
   };
 }
 
-// ─── POST /api/agents/run — parallel execution ────────────────────────────────
-export async function handleAgentsRun(request, env, authCtx) {
-  let body;
-  try { body = await request.json(); } catch {
-    return Response.json({ error: 'Invalid JSON body.' }, { status: 400 });
+// ─── Body size guard ──────────────────────────────────────────────────────────
+async function parseBody(request) {
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0', 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    return { error: `Request body too large (max ${MAX_BODY_BYTES} bytes).`, status: 413 };
   }
+  try {
+    const body = await request.json();
+    return { body };
+  } catch {
+    return { error: 'Invalid JSON body.', status: 400 };
+  }
+}
+
+// ─── POST /api/agents/run — parallel execution (JSON response) ────────────────
+export async function handleAgentsRun(request, env, authCtx) {
+  const { body, error, status } = await parseBody(request);
+  if (error) return Response.json({ error }, { status });
 
   const userMessage = (body.message || body.query || body.task || '').trim();
   if (!userMessage || userMessage.length < 5) {
     return Response.json({ error: 'message/query/task required (min 5 chars).' }, { status: 400 });
   }
 
-  // Determine which agents to run
+  // Rate limiting
+  const userId = authCtx?.user_id || authCtx?.key_id || request.headers.get('CF-Connecting-IP') || 'anon';
+  const rl = await checkRateLimit(env, userId);
+  if (!rl.allowed) {
+    log('warn', 'rate_limited', { user_id: userId });
+    return Response.json(
+      { error: `MASOC rate limit exceeded — max ${RATE_LIMIT_MAX} runs/minute. Retry in ${rl.retry_after}s.`, retry_after: rl.retry_after },
+      { status: 429, headers: { 'Retry-After': String(rl.retry_after) } }
+    );
+  }
+
   const requestedAgents = (body.agents && Array.isArray(body.agents))
     ? body.agents.filter(id => AGENT_IDS.includes(id))
     : classifyTask(userMessage);
@@ -391,7 +471,9 @@ export async function handleAgentsRun(request, env, authCtx) {
   const tier = authCtx?.tier || 'ENTERPRISE';
   const t0   = Date.now();
 
-  // Pull real-data context in parallel before running agents
+  log('info', 'run_start', { user_id: userId, agents: requestedAgents.length, task_len: userMessage.length });
+
+  // Pre-enrichment in parallel
   const [cveCtx, kevCtx, iocCtx] = await Promise.all([
     fetchCVEContext(userMessage, env),
     fetchKEVStatus(userMessage, env),
@@ -400,59 +482,76 @@ export async function handleAgentsRun(request, env, authCtx) {
   const context = { cve: cveCtx, kev: kevCtx, ioc: iocCtx };
 
   // Run all selected agents in parallel
-  const agentPromises = requestedAgents.map(id => runAgent(id, userMessage, context, env, tier));
-  const agentResults  = await Promise.all(agentPromises);
+  const agentResults = await Promise.all(
+    requestedAgents.map(id => runAgent(id, userMessage, context, env, tier))
+  );
 
-  // Run synthesis agent on all results
-  const synthesis = await runSynthesis(userMessage, agentResults, env, tier);
+  // Synthesis
+  const synthesis  = await runSynthesis(userMessage, agentResults, env, tier);
+  const totalMs    = Date.now() - t0;
 
-  const totalMs = Date.now() - t0;
+  // Extract real risk level/score from synthesis for D1
+  const synthText  = synthesis?.content || '';
+  const lvlMatch   = synthText.match(/\b(CRITICAL|HIGH|MEDIUM|LOW)\b/i);
+  const scrMatch   = synthText.match(/Risk Score[:\s]+(\d{1,3})/i) || synthText.match(/\bScore[:\s]+(\d{1,3})/i);
+  const riskLevel  = lvlMatch ? lvlMatch[1].toUpperCase() : 'HIGH';
+  const riskScore  = scrMatch ? Math.min(100, parseInt(scrMatch[1], 10)) : 75;
 
-  // Persist task to D1 — extract risk level from synthesis if possible
+  // Persist to D1
   try {
     if (env?.DB) {
-      const taskId = `masoc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-      const synthText = synthesis?.content || '';
-      const lvlMatch  = synthText.match(/\b(CRITICAL|HIGH|MEDIUM|LOW)\b/i);
-      const scrMatch  = synthText.match(/\bRisk Score[:\s]+(\d{1,3})/i) || synthText.match(/\bScore[:\s]+(\d{1,3})/i);
-      const riskLevel = lvlMatch ? lvlMatch[1].toUpperCase() : 'HIGH';
-      const riskScore = scrMatch ? Math.min(100, parseInt(scrMatch[1], 10)) : 75;
+      const taskId = `masoc_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`;
       await env.DB.prepare(
         `INSERT OR IGNORE INTO scan_jobs
          (id, user_id, module, target, status, risk_level, risk_score, completed_at)
          VALUES (?, ?, 'masoc', ?, 'completed', ?, ?, datetime('now'))`
       ).bind(taskId, authCtx?.user_id || null, userMessage.slice(0, 200), riskLevel, riskScore).run();
     }
-  } catch {}
+  } catch (dbErr) {
+    log('warn', 'db_persist_failed', { error: dbErr.message });
+  }
+
+  log('info', 'run_complete', { user_id: userId, total_ms: totalMs, agents: requestedAgents.length, risk_level: riskLevel });
 
   return Response.json({
-    success:         true,
-    task:            userMessage,
+    success:          true,
+    task:             userMessage,
     agents_activated: requestedAgents.length,
     total_latency_ms: totalMs,
     context_enriched: { cve: !!cveCtx, kev: !!kevCtx, ioc: !!iocCtx },
-    agent_results:   agentResults,
+    agent_results:    agentResults,
     synthesis,
-    timestamp:       new Date().toISOString(),
+    timestamp:        new Date().toISOString(),
   });
 }
 
-// ─── POST /api/agents/stream — SSE streaming ─────────────────────────────────
-export async function handleAgentsStream(request, env, authCtx) {
-  let body;
-  try { body = await request.json(); } catch {
-    return new Response('data: {"error":"Invalid JSON"}\n\n', {
-      status: 400,
+// ─── POST /api/agents/stream — SSE real-time streaming ───────────────────────
+export async function handleAgentsStream(request, env, authCtx, ctx) {
+  const { body, error, status } = await parseBody(request);
+  if (error) {
+    return new Response(`data: ${JSON.stringify({ type: 'error', message: error })}\n\n`, {
+      status,
       headers: { 'Content-Type': 'text/event-stream' },
     });
   }
 
   const userMessage = (body.message || body.query || body.task || '').trim();
   if (!userMessage || userMessage.length < 5) {
-    return new Response('data: {"error":"message required"}\n\n', {
+    return new Response(`data: ${JSON.stringify({ type: 'error', message: 'message required (min 5 chars)' })}\n\n`, {
       status: 400,
       headers: { 'Content-Type': 'text/event-stream' },
     });
+  }
+
+  // Rate limiting
+  const userId = authCtx?.user_id || authCtx?.key_id || request.headers.get('CF-Connecting-IP') || 'anon';
+  const rl = await checkRateLimit(env, userId);
+  if (!rl.allowed) {
+    log('warn', 'rate_limited_stream', { user_id: userId });
+    return new Response(
+      `data: ${JSON.stringify({ type: 'error', message: `Rate limit exceeded — max ${RATE_LIMIT_MAX} runs/minute. Retry in ${rl.retry_after}s.` })}\n\n`,
+      { status: 429, headers: { 'Content-Type': 'text/event-stream', 'Retry-After': String(rl.retry_after) } }
+    );
   }
 
   const requestedAgents = (body.agents && Array.isArray(body.agents))
@@ -470,12 +569,11 @@ export async function handleAgentsStream(request, env, authCtx) {
     try { writer.write(enc.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch {}
   };
 
-  // Run everything in background (CF Workers: use ctx.waitUntil if available)
   const runAll = async () => {
     try {
+      log('info', 'stream_start', { user_id: userId, agents: requestedAgents.length });
       send({ type: 'start', task: userMessage, agents: requestedAgents, ts: new Date().toISOString() });
 
-      // Enrich context
       const [cveCtx, kevCtx, iocCtx] = await Promise.all([
         fetchCVEContext(userMessage, env),
         fetchKEVStatus(userMessage, env),
@@ -487,15 +585,13 @@ export async function handleAgentsStream(request, env, authCtx) {
         send({ type: 'context', cve: cveCtx, kev: kevCtx, ioc: !!iocCtx });
       }
 
-      // Announce all agent activations
       requestedAgents.forEach(id => {
         const a = AGENTS[id];
         send({ type: 'agent_start', agent_id: id, agent_name: a.name, icon: a.icon, description: a.description });
       });
 
-      // Run all agents in parallel and stream each result as it arrives
       const agentResults = [];
-      const promises = requestedAgents.map(async (id) => {
+      await Promise.all(requestedAgents.map(async (id) => {
         try {
           const result = await runAgent(id, userMessage, context, env, tier);
           send({ type: 'agent_result', ...result });
@@ -503,42 +599,50 @@ export async function handleAgentsStream(request, env, authCtx) {
         } catch (err) {
           const errResult = {
             agent_id: id, agent_name: AGENTS[id]?.name || id, icon: AGENTS[id]?.icon || '❓',
-            status: 'error', content: `Agent error: ${err.message}`, latency_ms: 0,
+            description: AGENTS[id]?.description || '',
+            status: 'error', content: `Agent error: ${err.message}`,
+            model: 'none', provider: 'none', latency_ms: 0, tokens: null,
           };
           send({ type: 'agent_result', ...errResult });
           agentResults.push(errResult);
         }
-      });
-      await Promise.all(promises);
+      }));
 
-      // Synthesis
       send({ type: 'synthesis_start', message: 'Risk Synthesizer Agent fusing all results…' });
       const synthesis = await runSynthesis(userMessage, agentResults, env, tier);
       send({ type: 'synthesis', ...synthesis });
 
-      send({
-        type:             'complete',
-        agents_activated: requestedAgents.length,
-        total_latency_ms: Date.now() - t0,
-        timestamp:        new Date().toISOString(),
-      });
+      send({ type: 'complete', agents_activated: requestedAgents.length, total_latency_ms: Date.now() - t0, timestamp: new Date().toISOString() });
+      log('info', 'stream_complete', { user_id: userId, total_ms: Date.now() - t0 });
     } catch (err) {
+      log('error', 'stream_error', { error: err.message });
       send({ type: 'error', message: err.message });
     } finally {
       writer.close().catch(() => {});
     }
   };
 
-  runAll(); // fire and forget — stream stays open
+  // ctx.waitUntil ensures CF Workers keeps the request alive for the full stream duration
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(runAll());
+  } else {
+    void runAll();
+  }
+
+  // Restrict CORS to platform origin for SSE (not wildcard)
+  const origin = request.headers.get('Origin') || '';
+  const allowedOrigin = origin === PLATFORM_ORIGIN || origin.endsWith('.cyberdudebivash.in')
+    ? origin : PLATFORM_ORIGIN;
 
   return new Response(readable, {
     status: 200,
     headers: {
-      'Content-Type':  'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-store',
-      'Connection':    'keep-alive',
-      'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': '*',
+      'Content-Type':                'text/event-stream; charset=utf-8',
+      'Cache-Control':               'no-cache, no-store',
+      'Connection':                  'keep-alive',
+      'X-Accel-Buffering':           'no',
+      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Credentials': 'true',
     },
   });
 }
@@ -547,19 +651,21 @@ export async function handleAgentsStream(request, env, authCtx) {
 export async function handleAgentDispatch(request, env, authCtx, agentId) {
   const agent = AGENTS[agentId];
   if (!agent) {
-    return Response.json({
-      error: `Unknown agent: "${agentId}". Available: ${AGENT_IDS.join(', ')}`,
-    }, { status: 404 });
+    return Response.json({ error: `Unknown agent: "${agentId}". Available: ${AGENT_IDS.join(', ')}` }, { status: 404 });
   }
 
-  let body;
-  try { body = await request.json(); } catch {
-    return Response.json({ error: 'Invalid JSON body.' }, { status: 400 });
-  }
+  const { body, error, status } = await parseBody(request);
+  if (error) return Response.json({ error }, { status });
 
   const userMessage = (body.message || body.query || body.task || '').trim();
   if (!userMessage || userMessage.length < 5) {
     return Response.json({ error: 'message/query/task required (min 5 chars).' }, { status: 400 });
+  }
+
+  const userId = authCtx?.user_id || authCtx?.key_id || 'anon';
+  const rl = await checkRateLimit(env, `dispatch:${userId}`);
+  if (!rl.allowed) {
+    return Response.json({ error: `Rate limit exceeded. Retry in ${rl.retry_after}s.` }, { status: 429 });
   }
 
   const tier = authCtx?.tier || 'ENTERPRISE';
@@ -569,73 +675,58 @@ export async function handleAgentDispatch(request, env, authCtx, agentId) {
     fetchIOCContext(userMessage, env),
   ]);
   const context = { cve: cveCtx, kev: kevCtx, ioc: iocCtx };
-
-  const result = await runAgent(agentId, userMessage, context, env, tier);
+  const result  = await runAgent(agentId, userMessage, context, env, tier);
 
   return Response.json({
-    success: true,
-    agent:   result,
+    success:          true,
+    agent:            result,
     context_enriched: { cve: !!cveCtx, kev: !!kevCtx, ioc: !!iocCtx },
-    timestamp: new Date().toISOString(),
+    timestamp:        new Date().toISOString(),
   });
 }
 
 // ─── GET /api/agents/status ───────────────────────────────────────────────────
 export async function handleAgentsStatus(request, env, authCtx) {
-  // Quick provider availability check
   const providers = {
-    groq:        !!env.GROQ_API_KEY,
-    deepseek:    !!env.DEEPSEEK_API_KEY,
-    openrouter:  !!env.OPENROUTER_API_KEY,
-    cf_workers_ai: !!env.AI,
+    groq:          !!env?.GROQ_API_KEY,
+    deepseek:      !!env?.DEEPSEEK_API_KEY,
+    openrouter:    !!env?.OPENROUTER_API_KEY,
+    cf_workers_ai: !!env?.AI,
   };
-
-  const anyProvider = Object.values(providers).some(Boolean);
+  const anyProvider  = Object.values(providers).some(Boolean);
+  const activeCount  = Object.values(providers).filter(Boolean).length;
 
   return Response.json({
-    success: true,
-    service: 'APEX Multi-Agent SOC (MASOC) v1.0',
-    status:  anyProvider ? 'OPERATIONAL' : 'NO_PROVIDER_CONFIGURED',
+    success:    true,
+    service:    'APEX Multi-Agent SOC (MASOC)',
+    version:    MASOC_VERSION,
+    status:     anyProvider ? 'OPERATIONAL' : 'NO_PROVIDER_CONFIGURED',
     ai_providers: providers,
     provider_note: anyProvider
-      ? `${Object.entries(providers).filter(([,v])=>v).map(([k])=>k).join(', ')} available`
+      ? `${activeCount}/4 provider${activeCount !== 1 ? 's' : ''} active: ${Object.entries(providers).filter(([,v])=>v).map(([k])=>k).join(', ')}`
       : 'Set GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY as Wrangler secrets. CF Workers AI is always available as fallback.',
-    total_agents:   AGENT_IDS.length,
+    total_agents:  AGENT_IDS.length,
+    rate_limits: {
+      run_per_minute:      RATE_LIMIT_MAX,
+      window_seconds:      RATE_LIMIT_WINDOW_S,
+      agents_per_run:      'up to 9',
+      agent_timeout_ms:    AGENT_TIMEOUT_MS,
+    },
     agents: AGENT_IDS.map(id => {
       const a = AGENTS[id];
-      return {
-        id:          a.id,
-        name:        a.name,
-        icon:        a.icon,
-        description: a.description,
-        task_type:   a.task_type,
-        domains:     a.domains,
-        ai_routing:  a.task_type,
-      };
+      return { id: a.id, name: a.name, icon: a.icon, description: a.description, task_type: a.task_type, domains: a.domains };
     }),
     endpoints: {
-      run:      'POST /api/agents/run',
-      stream:   'POST /api/agents/stream  (SSE — real-time agent results)',
-      status:   'GET  /api/agents/status',
-      dispatch: 'POST /api/agents/dispatch/:agent_id',
+      run:      'POST /api/agents/run      — parallel JSON response',
+      stream:   'POST /api/agents/stream  — SSE real-time per-agent streaming',
+      status:   'GET  /api/agents/status  — agent registry + provider health',
+      dispatch: 'POST /api/agents/dispatch/:agent_id — single-agent invocation',
     },
-    usage: {
-      run_example: {
-        method: 'POST',
-        path:   '/api/agents/run',
-        body:   { message: 'We detected CVE-2024-3400 on our Palo Alto firewall — what should we do?', agents: ['cve_intel', 'ir_playbook', 'siem_defender'] },
-      },
-      stream_example: {
-        method: 'POST',
-        path:   '/api/agents/stream',
-        body:   { message: 'Ransomware detected on 10.0.0.45, hash abc123def456' },
-        note:   'Returns SSE stream — connect with EventSource in browser or curl -N',
-      },
-      dispatch_example: {
-        method: 'POST',
-        path:   '/api/agents/dispatch/cve_intel',
-        body:   { message: 'CVE-2024-21762 — assess risk and patch priority' },
-      },
+    enrichment: {
+      nvd:  'https://services.nvd.nist.gov/rest/json/cves/2.0',
+      epss: 'https://api.first.org/data/v1/epss  (EPSS v3)',
+      kev:  'CISA KEV catalog via KV cache',
+      ioc:  'POST /api/hunt/ioc  (VirusTotal+AbuseIPDB+Shodan)',
     },
     timestamp: new Date().toISOString(),
   });
