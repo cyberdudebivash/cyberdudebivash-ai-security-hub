@@ -71,7 +71,7 @@ footer a{color:#ec4899;text-decoration:none}
 <div class="hero">
   <div class="hero-badge">🔧 DevSecOps</div>
   <h1>Shift-Left Security <span>Built Into Your Pipeline</span></h1>
-  <p>SAST, DAST, SCA, IaC and container scanning, and our AI-generated code (vibe-code) scanner — wired directly into CI/CD as security gates, not after-the-fact audits.</p>
+  <p>Live SAST, SCA, and SBOM generation via self-serve API — plus our AI-generated code (vibe-code) scanner. DAST and IaC scanning are available today as expert-delivered engagements, with automated self-serve APIs on our roadmap.</p>
   <div class="cta-row">
     <a href="/security-assessment" class="btn-primary">Start Free Scan</a>
     <a href="/booking" class="btn-secondary">Book DevSecOps Review →</a>
@@ -79,10 +79,10 @@ footer a{color:#ec4899;text-decoration:none}
 </div>
 
 <div class="metrics">
-  <div class="metric"><div class="metric-val">4</div><div class="metric-label">Scan Types: SAST/DAST/SCA/IaC</div></div>
-  <div class="metric"><div class="metric-val">1,625+</div><div class="metric-label">CVEs Mapped</div></div>
-  <div class="metric"><div class="metric-val">CI/CD</div><div class="metric-label">Native Pipeline Gates</div></div>
-  <div class="metric"><div class="metric-val">SBOM</div><div class="metric-label">Supply Chain Visibility</div></div>
+  <div class="metric"><div class="metric-val">3</div><div class="metric-label">Live APIs: SAST/SCA/SBOM</div></div>
+  <div class="metric"><div class="metric-val">OSV.dev</div><div class="metric-label">Live Vulnerability Lookups</div></div>
+  <div class="metric"><div class="metric-val">CycloneDX</div><div class="metric-label">Real SBOM Generation</div></div>
+  <div class="metric"><div class="metric-val">1,625+</div><div class="metric-label">CVEs Mapped (Threat Intel)</div></div>
 </div>
 
 <section>
@@ -93,38 +93,38 @@ footer a{color:#ec4899;text-decoration:none}
       <div class="card">
         <div class="card-icon">🧪</div>
         <h3>SAST — Static Analysis</h3>
-        <p>Source code analysis for injection flaws, insecure deserialization, hardcoded secrets, and OWASP Top 10 patterns before code merges.</p>
-        <span class="tag">Pre-Merge Gate</span>
+        <p>Context-aware static analysis (string/comment masking, confidence-scored findings) for injection flaws, insecure deserialization, hardcoded secrets, and OWASP/CWE-mapped patterns. Live API: <code>POST /api/devsecops/sast</code>.</p>
+        <span class="tag">Live API</span>
       </div>
       <div class="card">
         <div class="card-icon">🌐</div>
         <h3>DAST — Dynamic Analysis</h3>
-        <p>Runtime testing of deployed applications and APIs for exploitable vulnerabilities that static analysis cannot detect, including auth/session flaws.</p>
-        <span class="tag">Staging · Production</span>
+        <p>Runtime testing of deployed applications for exploitable vulnerabilities that static analysis cannot detect, including auth/session flaws. Delivered as an expert-led engagement today — a self-serve automated API is on our roadmap, not yet live.</p>
+        <span class="tag">Expert-Delivered</span>
       </div>
       <div class="card">
         <div class="card-icon">📦</div>
         <h3>SCA — Software Composition Analysis</h3>
-        <p>Dependency scanning against our 1,625+ CVE database with CISA KEV and EPSS prioritization, flagging exploitable open-source risk before deployment.</p>
-        <span class="tag">Dependency Risk</span>
+        <p>Live dependency scanning against OSV.dev — Google's open, authoritative vulnerability database (NVD, GHSA, PyPI Advisory DB, Go vuln DB, RustSec, and more), checked in real time against every package in your manifest. Live API: <code>POST /api/devsecops/sca</code>.</p>
+        <span class="tag">Live API</span>
       </div>
       <div class="card">
         <div class="card-icon">🏗️</div>
         <h3>IaC & Container Scanning</h3>
-        <p>Scan Terraform, CloudFormation, Kubernetes manifests, and container images for misconfigurations and known-vulnerable base layers pre-deployment.</p>
-        <span class="tag">Terraform · K8s · Docker</span>
+        <p>Scan Terraform, CloudFormation, Kubernetes manifests, and container images for misconfigurations and known-vulnerable base layers pre-deployment. Delivered as an expert-led engagement today — a self-serve automated API is on our roadmap, not yet live.</p>
+        <span class="tag">Expert-Delivered</span>
       </div>
       <div class="card">
         <div class="card-icon">🤖</div>
         <h3>Vibe-Code Scanner</h3>
-        <p>Purpose-built security review for AI-generated code — catching the insecure defaults, missing input validation, and hallucinated dependencies common in LLM-authored code.</p>
-        <span class="tag">AI-Generated Code</span>
+        <p>Purpose-built security review for AI-generated code — catching the insecure defaults, missing input validation, and hallucinated dependencies common in LLM-authored code. Live API: <code>POST /api/vibe-code/scan</code>.</p>
+        <span class="tag">Live API</span>
       </div>
       <div class="card">
         <div class="card-icon">🔗</div>
         <h3>SBOM & Supply Chain Security</h3>
-        <p>Generate and validate Software Bill of Materials per SLSA framework guidance, tracking provenance and build integrity across your software supply chain.</p>
-        <span class="tag">SLSA · SBOM</span>
+        <p>Generate a real CycloneDX 1.5 Software Bill of Materials from your dependency manifest — machine-readable component inventory for rapid CVE impact assessment. Live API: <code>POST /api/devsecops/sbom</code>.</p>
+        <span class="tag">Live API</span>
       </div>
     </div>
   </div>

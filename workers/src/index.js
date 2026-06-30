@@ -7067,6 +7067,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     return handleVibeCodePatterns(request, env);
   }
 
+  // ── DevSecOps real scanners (SAST / SCA / SBOM) ─────────────────────────
+  if (path === '/api/devsecops/sast' && method === 'POST') {
+    const { handleDevSecOpsSAST } = await import('./handlers/devsecopsScanners.js');
+    return withSecurityHeaders(withCors(await handleDevSecOpsSAST(request, env, authCtx), request));
+  }
+  if (path === '/api/devsecops/sca' && method === 'POST') {
+    const { handleDevSecOpsSCA } = await import('./handlers/devsecopsScanners.js');
+    return withSecurityHeaders(withCors(await handleDevSecOpsSCA(request, env, authCtx), request));
+  }
+  if (path === '/api/devsecops/sbom' && method === 'POST') {
+    const { handleDevSecOpsSBOM } = await import('./handlers/devsecopsScanners.js');
+    return withSecurityHeaders(withCors(await handleDevSecOpsSBOM(request, env, authCtx), request));
+  }
+
   // ── v43: AGENT THREAT ADVISORIES — live D1-backed feed for /agent-threats ──
   if (path === '/api/agent-threats/advisories' && method === 'GET') {
     return withSecurityHeaders(withCors(await handleListAgentAdvisories(request, env), request));
