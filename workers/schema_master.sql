@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   email           TEXT    NOT NULL UNIQUE,
   password_hash   TEXT    NOT NULL,
   password_salt   TEXT    NOT NULL,
-  tier            TEXT    NOT NULL DEFAULT 'FREE' CHECK (tier IN ('FREE','PRO','ENTERPRISE')),
+  tier            TEXT    NOT NULL DEFAULT 'FREE' CHECK (tier IN ('FREE','STARTER','PRO','ENTERPRISE','MSSP')),
   status          TEXT    NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','unverified')),
   full_name       TEXT,
   company         TEXT,
@@ -44,15 +44,22 @@ CREATE TABLE IF NOT EXISTS organizations (
   updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- From: schema_v30_p0p1.sql
+-- From: schema_v30_p0p1.sql (corrected: matches auth/apiKeys.js INSERT signature)
+-- Original had key_id/email/tier — missing user_id, key_hash, key_prefix,
+-- daily_limit, monthly_limit which auth/apiKeys.js requires.
 CREATE TABLE IF NOT EXISTS api_keys (
-  key_id      TEXT PRIMARY KEY,
-  email       TEXT NOT NULL,
-  tier        TEXT NOT NULL DEFAULT 'COMMUNITY',
-  active      INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
-  label       TEXT,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  last_used   TEXT
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT,
+  key_hash      TEXT NOT NULL,
+  key_prefix    TEXT NOT NULL,
+  label         TEXT NOT NULL DEFAULT 'Default Key',
+  tier          TEXT NOT NULL DEFAULT 'FREE',
+  daily_limit   INTEGER NOT NULL DEFAULT 5,
+  monthly_limit INTEGER NOT NULL DEFAULT 50,
+  active        INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
+  created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+  last_used_at  TEXT,
+  expires_at    TEXT
 );
 
 -- From: schema.sql
@@ -2801,22 +2808,36 @@ CREATE TABLE IF NOT EXISTS subscription_tier_defs (
   features_json   TEXT
 );
 
--- From: schema_v30_p0p1.sql
+-- From: schema_v30_p0p1.sql (corrected to match live D1 schema)
 CREATE TABLE IF NOT EXISTS subscriptions (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  email         TEXT NOT NULL,
-  plan          TEXT NOT NULL DEFAULT 'COMMUNITY',
-  status        TEXT NOT NULL DEFAULT 'active'
-                  CHECK(status IN ('active','cancelled_stripe_cancellation',
-                                   'cancelled_razorpay_cancellation',
-                                   'cancelled_admin','expired','pending')),
-  processor     TEXT,
-  external_id   TEXT,
-  price_inr     INTEGER DEFAULT 0,
-  activated_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  expires_at    TEXT,
-  cancelled_at  TEXT,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  id                   TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+  user_id              TEXT NOT NULL,
+  email                TEXT NOT NULL,
+  plan                 TEXT NOT NULL DEFAULT 'FREE'
+                         CHECK(plan IN ('FREE','STARTER','PRO','ENTERPRISE','MSSP')),
+  status               TEXT NOT NULL DEFAULT 'active'
+                         CHECK(status IN ('trialing','active','past_due','cancelled','paused')),
+  price_inr            INTEGER NOT NULL DEFAULT 0,
+  billing_cycle        TEXT NOT NULL DEFAULT 'monthly'
+                         CHECK(billing_cycle IN ('monthly','annual')),
+  trial_ends_at        TEXT,
+  current_period_start TEXT NOT NULL DEFAULT (datetime('now')),
+  current_period_end   TEXT NOT NULL DEFAULT (datetime('now')),
+  cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+  cancelled_at         TEXT,
+  cancel_reason        TEXT,
+  razorpay_sub_id      TEXT,
+  razorpay_plan_id     TEXT,
+  payment_method       TEXT DEFAULT 'razorpay',
+  company              TEXT,
+  company_size         TEXT,
+  industry             TEXT,
+  country              TEXT DEFAULT 'IN',
+  utm_source           TEXT,
+  utm_campaign         TEXT,
+  referral_code        TEXT,
+  created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- From: schema_phase3.sql
@@ -4121,23 +4142,10 @@ CREATE INDEX IF NOT EXISTS idx_soc_response_priority   ON soc_response_actions(p
 
 CREATE INDEX IF NOT EXISTS idx_soc_timeline_case_id ON soc_timeline(case_id, org_id, occurred_at);
 
-CREATE INDEX IF NOT EXISTS idx_sub_created  ON subscriptions(created_at );
-
-CREATE INDEX IF NOT EXISTS idx_sub_created  ON subscriptions(created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_sub_created ON subscriptions(created_at);
-
-CREATE INDEX IF NOT EXISTS idx_sub_email    ON subscriptions(email);
-
-CREATE INDEX IF NOT EXISTS idx_sub_email ON subscriptions(email);
-
-CREATE INDEX IF NOT EXISTS idx_sub_plan     ON subscriptions(plan);
-
-CREATE INDEX IF NOT EXISTS idx_sub_plan ON subscriptions(plan);
-
-CREATE INDEX IF NOT EXISTS idx_sub_status   ON subscriptions(status);
-
-CREATE INDEX IF NOT EXISTS idx_sub_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_sub_created ON subscriptions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sub_email   ON subscriptions(email);
+CREATE INDEX IF NOT EXISTS idx_sub_plan    ON subscriptions(plan);
+CREATE INDEX IF NOT EXISTS idx_sub_status  ON subscriptions(status);
 
 CREATE INDEX IF NOT EXISTS idx_sub_user     ON subscriptions(user_id);
 

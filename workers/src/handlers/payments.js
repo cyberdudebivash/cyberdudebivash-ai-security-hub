@@ -370,44 +370,11 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         order_id: razorpay_order_id, activated: Date.now(), expires_at: expiresAt,
       }), { expirationTtl: 90 * 24 * 3600 }).catch(() => {});
     }
-    if (env.DB) {
-      // Batch UPDATE payments + INSERT subscriptions atomically — both or neither
-      await env.DB.batch([
-        env.DB.prepare(
-          `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
-        ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id),
-        env.DB.prepare(
-          `INSERT OR IGNORE INTO subscriptions (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at) VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
-        ).bind(
-          'sub_' + Date.now().toString(36), confirmedEmail || '', plan,
-          razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
-        ),
-      ]).catch((e) => console.error('[Payments] D1 batch (payments+subscriptions) failed', razorpay_payment_id, e?.message));
-      const paidRow = await env.DB.prepare(
-        `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
-      ).bind(razorpay_order_id).first().catch(() => null);
-      if (paidRow?.partner_id && paidRow?.id) {
-        recordRevenueShare(env, {
-          paymentId: paidRow.id, partnerId: paidRow.partner_id,
-          grossAmountPaise: paidRow.amount, customerEmail: confirmedEmail, module: 'subscription',
-        }).catch(e => console.error('[Verify] Revenue share record failed:', e.message));
-      }
-    }
-
-    // ── Actually grant the purchased tier ──────────────────────────────────
-    // Writing the `subscriptions` row above does NOT, by itself, unlock any
-    // PRO/ENTERPRISE-gated endpoint — those all check authCtx.tier, which
-    // resolveAuthV5() derives only from a JWT or DB-backed API key, never
-    // from this KV session. Without this block, a customer could pay for
-    // PRO/ENTERPRISE and still get 403'd on the very feature they bought.
-    // users.tier has a CHECK(tier IN ('FREE','PRO','ENTERPRISE')) — STARTER
-    // is a real priced tier (see SUBSCRIPTION_PRICES) but cannot be persisted
-    // there today; that needs its own schema migration, tracked separately.
+    // ── Step 1: Resolve/create user FIRST — we need user_id for the subscriptions INSERT ──
+    // Live subscriptions table schema has user_id TEXT NOT NULL, so the INSERT must
+    // include it. User lookup/create must precede the subscription INSERT.
     let issuedAccessToken = null;
     let issuedUserId      = null;
-    // v45: users.tier now accepts STARTER/MSSP too — previously a customer who
-    // paid for either of those plans had their charge succeed but their tier
-    // never persisted, leaving them 403'd on the feature they just bought.
     if (env.DB && confirmedEmail && ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(plan)) {
       try {
         const existing = await env.DB.prepare(
@@ -436,6 +403,48 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         issuedAccessToken = accessToken;
       } catch (e) {
         console.error('[Payments] Tier grant failed for', confirmedEmail, e.message);
+      }
+    }
+
+    if (env.DB) {
+      // Step 2: Batch UPDATE payments + INSERT subscriptions atomically.
+      // Column list matches the live D1 schema (TEXT PK, user_id NOT NULL,
+      // billing_cycle, current_period_start/end, razorpay_sub_id).
+      // period_end = 90 days from now (monthly billing window at purchase time).
+      const periodEnd = new Date(expiresAt).toISOString();
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
+        ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id),
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO subscriptions
+             (id, user_id, email, plan, status, price_inr, billing_cycle,
+              current_period_start, current_period_end, razorpay_sub_id,
+              payment_method, utm_source, utm_campaign, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'active', ?, 'monthly',
+                   datetime('now'), ?, ?,
+                   'razorpay', ?, ?, datetime('now'), datetime('now'))`
+        ).bind(
+          'sub_' + Date.now().toString(36),
+          issuedUserId || confirmedEmail || 'anon',
+          confirmedEmail || '',
+          plan,
+          priceInr,
+          periodEnd,
+          razorpay_payment_id,
+          utm_source || null,
+          utm_campaign || null,
+        ),
+      ]).catch((e) => console.error('[Payments] D1 batch (payments+subscriptions) failed', razorpay_payment_id, e?.message));
+
+      const paidRow = await env.DB.prepare(
+        `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+      ).bind(razorpay_order_id).first().catch(() => null);
+      if (paidRow?.partner_id && paidRow?.id) {
+        recordRevenueShare(env, {
+          paymentId: paidRow.id, partnerId: paidRow.partner_id,
+          grossAmountPaise: paidRow.amount, customerEmail: confirmedEmail, module: 'subscription',
+        }).catch(e => console.error('[Verify] Revenue share record failed:', e.message));
       }
     }
 

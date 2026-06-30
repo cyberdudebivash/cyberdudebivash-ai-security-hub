@@ -9,23 +9,26 @@ import { createRazorpayOrder, generateReceiptId, verifyPaymentSignature } from '
 import { corsHeaders } from '../middleware/cors.js';
 
 // ─── Subscription pricing (in paise = INR × 100) ─────────────────────────────
+// SSOT: These prices MUST match lib/razorpay.js SUBSCRIPTION_PRICES exactly.
+// razorpay.js is authoritative for what Razorpay charges; this file drives UI display.
+// Mismatch = customer sees wrong price → commercial/accounting failure.
 const SUBSCRIPTION_PLANS = {
   STARTER: {
     name:        'Starter',
-    price_inr:   999,
-    amount:      99900,
-    price_annual_inr: 9990,
-    scans:       25,
-    description: '25 scans/month, AI Threat Analysis, PDF Reports, API Access',
-    features:    ['25 scans/month', 'AI Threat Analysis', 'PDF Reports', 'Sentinel CVE Feed', '2 API Keys', 'Email Support'],
+    price_inr:   499,
+    amount:      49900,
+    price_annual_inr: 4990,
+    scans:       600,
+    description: '600 scans/month, AI Threat Analysis, PDF Reports, Sentinel CVE Feed',
+    features:    ['600 scans/month', 'AI Threat Analysis', 'PDF Reports', 'Sentinel CVE Feed', '2 API Keys', 'Email Support'],
     color:       '#3b82f6',
     popular:     false,
   },
   PRO: {
     name:        'Pro',
-    price_inr:   2999,
-    amount:      299900,
-    price_annual_inr: 29990,
+    price_inr:   1499,
+    amount:      149900,
+    price_annual_inr: 14990,
     scans:       -1,
     description: 'Unlimited scans, Full AI Suite, SIEM export, DPDP compliance, API Access',
     features:    [
@@ -38,9 +41,9 @@ const SUBSCRIPTION_PLANS = {
   },
   ENTERPRISE: {
     name:        'Enterprise',
-    price_inr:   25000,
-    amount:      2500000,
-    price_annual_inr: 250000,
+    price_inr:   4999,
+    amount:      499900,
+    price_annual_inr: 49990,
     scans:       -1,
     description: 'Multi-tenant SOC, MSSP white-label, dedicated support, SLA guarantee',
     features:    [
@@ -55,9 +58,9 @@ const SUBSCRIPTION_PLANS = {
   },
   MSSP: {
     name:        'MSSP Suite',
-    price_inr:   75000,
-    amount:      7500000,
-    price_annual_inr: 750000,
+    price_inr:   9999,
+    amount:      999900,
+    price_annual_inr: 99990,
     scans:       -1,
     description: 'Full white-label MSSP platform — unlimited tenants, revenue share',
     features:    [
