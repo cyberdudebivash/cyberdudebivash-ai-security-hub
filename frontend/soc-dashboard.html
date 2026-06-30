@@ -247,6 +247,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       <span class="icon">📅</span> Timeline
     </div>
 
+    <div class="sidebar-link" onclick="window.location='/soc-agents'" style="background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border-left:3px solid rgba(99,102,241,.5);color:#a78bfa;font-weight:800">
+      <span class="icon">🤖</span> MASOC Agents
+    </div>
+
     <span class="sidebar-label">Platform</span>
     <div class="sidebar-link" onclick="window.open('https://cyberdudebivash.in','_blank')">
       <span class="icon">🌐</span> Main Hub
@@ -301,6 +305,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
         <div class="kpi-label">AI Decisions</div>
         <div class="kpi-value" id="kpi-decisions">—</div>
         <div class="kpi-sub">Auto-resolved</div>
+      </div>
+      <div class="kpi-card" style="background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border-color:rgba(99,102,241,.3);cursor:pointer" onclick="window.location='/soc-agents'">
+        <div class="kpi-label" style="color:#a78bfa">🤖 MASOC Agents</div>
+        <div class="kpi-value" id="kpi-masoc-agents" style="color:#a78bfa">9</div>
+        <div class="kpi-sub" id="kpi-masoc-status">Parallel AI Agents</div>
       </div>
     </div>
 
@@ -520,6 +529,23 @@ function refreshAll() {
   loadDecisions();
   renderAttackGraph();
   loadTimeline();
+  loadMasocStatus();
+}
+
+async function loadMasocStatus() {
+  try {
+    const r = await fetch(`${API_BASE}/api/agents/status`, { headers: HEADERS });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.success) return;
+    const provCount = Object.values(j.ai_providers || {}).filter(Boolean).length;
+    const statusEl  = document.getElementById('kpi-masoc-status');
+    if (statusEl) statusEl.textContent = j.status === 'OPERATIONAL'
+      ? `${provCount} Provider${provCount !== 1 ? 's' : ''} Ready`
+      : 'No AI Provider';
+    const agentEl = document.getElementById('kpi-masoc-agents');
+    if (agentEl) agentEl.textContent = j.total_agents || 9;
+  } catch {}
 }
 
 // ── Real-time SSE Stream ──────────────────────────────────────────────────────

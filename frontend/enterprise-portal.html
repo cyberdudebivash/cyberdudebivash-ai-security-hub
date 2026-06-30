@@ -72,6 +72,7 @@ footer{text-align:center;padding:40px;color:var(--muted);font-size:13px;border-t
   <div class="nav-links">
     <a href="/">Home</a>
     <a href="/api-docs">API Docs</a>
+    <a href="/soc-agents" style="color:#a78bfa;font-weight:700">🤖 Multi-Agent SOC</a>
     <a href="/booking">Book Demo</a>
     <a href="/user-dashboard">Dashboard</a>
   </div>
@@ -255,6 +256,7 @@ const PROD_FEATURES = [
   { name:'Enterprise OIDC SSO', icon:'🔐', apis:['Azure AD','Okta','Any OIDC IdP'], endpoints:['/api/auth/enterprise/sso','/api/auth/enterprise/configure'], note:'Tenant-aware, D1 user upsert' },
   { name:'MSSP White-Label Platform', icon:'🏢', apis:['D1 multi-tenant'], endpoints:['/api/mssp/workspace','/api/mssp/revenue','/api/mssp/tenant/provision'], note:'Partner isolation + revenue share' },
   { name:'Audit Log', icon:'📜', apis:['D1 SQLite (immutable)'], endpoints:['/api/audit/log','/api/audit/export'], note:'Every API call logged' },
+  { name:'APEX Multi-Agent SOC (MASOC)', icon:'🤖', apis:['NVD NIST','CISA KEV','IOC Enrichment','Groq','DeepSeek','CF Workers AI'], endpoints:['/api/agents/run','/api/agents/stream','/api/agents/status','/api/agents/dispatch/:agent_id'], note:'9 parallel AI agents — CVE Intel · IOC Hunter · SIEM Defender · Threat Hunt · IR Playbook · Compliance · Red Team · Zero Trust · Risk Synthesizer' },
 ];
 
 const BENCH_FEATURES = [
