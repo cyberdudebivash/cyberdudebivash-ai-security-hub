@@ -42,24 +42,32 @@ function makeEnv({ existingUser = null } = {}) {
             return null;
           },
           async run() {
-            if (/UPDATE payments SET status='paid'/.test(sql)) return { success: true };
-            if (/INSERT OR IGNORE INTO subscriptions/.test(sql)) return { success: true };
+            if (/UPDATE payments SET status='paid'/.test(sql)) return { success: true, meta: { changes: 1 } };
+            if (/INSERT OR IGNORE INTO subscriptions/.test(sql)) return { success: true, meta: { changes: 1 } };
             if (/UPDATE users SET tier/.test(sql)) {
               env.__tierUpdate = { tier: bound[0], userId: bound[1] };
-              return { success: true };
+              return { success: true, meta: { changes: 1 } };
             }
             if (/INSERT INTO users/.test(sql)) {
               env.__userInsert = { id: bound[0], email: bound[1], tier: bound[4] };
-              return { success: true };
+              return { success: true, meta: { changes: 1 } };
             }
             if (/INSERT INTO refresh_tokens|INSERT OR REPLACE INTO refresh_tokens/.test(sql)) {
               refreshTokens.push(bound);
-              return { success: true };
+              return { success: true, meta: { changes: 1 } };
             }
-            return { success: true };
+            return { success: true, meta: { changes: 1 } };
           },
           async all() { return { results: [] }; },
         };
+      },
+      async batch(statements) {
+        // Execute each prepared+bound statement sequentially, mirroring D1 batch semantics
+        const results = [];
+        for (const stmt of statements) {
+          results.push(await stmt.run());
+        }
+        return results;
       },
     },
   };

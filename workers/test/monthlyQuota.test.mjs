@@ -25,21 +25,21 @@ function mockEnv(total, { throwOnQuery = false } = {}) {
 }
 
 describe('checkMonthlyQuota — STARTER metering gate', () => {
-  it('blocks STARTER once monthly usage reaches the limit (10)', async () => {
-    const r = await checkMonthlyQuota(mockEnv(10), { plan: 'STARTER', userId: 'u1' });
+  it('blocks STARTER once monthly usage reaches the limit (600)', async () => {
+    const r = await checkMonthlyQuota(mockEnv(600), { plan: 'STARTER', userId: 'u1' });
     expect(r.allowed).toBe(false);
-    expect(r.scans_limit).toBe(10);
+    expect(r.scans_limit).toBe(600);
   });
 
   it('allows STARTER while under the limit', async () => {
     const r = await checkMonthlyQuota(mockEnv(3), { plan: 'STARTER', userId: 'u1' });
     expect(r.allowed).toBe(true);
     expect(r.scans_used).toBe(3);
-    expect(r.scans_remaining).toBe(7);
+    expect(r.scans_remaining).toBe(597);
   });
 
   it('meters by key_id when an API key identity is supplied', async () => {
-    const r = await checkMonthlyQuota(mockEnv(10), { plan: 'STARTER', keyId: 'k1' });
+    const r = await checkMonthlyQuota(mockEnv(600), { plan: 'STARTER', keyId: 'k1' });
     expect(r.allowed).toBe(false);
   });
 
