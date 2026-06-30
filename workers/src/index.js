@@ -3383,14 +3383,68 @@ export default {
         return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
       }
 
-      // GET /api/v1/cves?module=domain → top exploited CVEs for a module
+      // GET /api/v1/cves?module=domain → top exploited CVEs from live D1 threat_intel table
       if (v1Path === '/cves' && method === 'GET') {
         const mod   = url.searchParams.get('module') || 'domain';
         const limit = Math.min(20, parseInt(url.searchParams.get('limit') || '10', 10));
-        const cves  = getTopCVEsForModule(mod, limit);
+        const sev   = (url.searchParams.get('severity') || '').toUpperCase();
+
+        // Query live D1 database — fall back to static engine only if D1 unavailable
+        let cves = [];
+        let source = 'live_d1';
+        try {
+          let q = `SELECT cve_id as id, severity, cvss_score as cvss, epss_score as epss,
+                          description, is_kev as exploited, product, vendor, published_at
+                   FROM threat_intel
+                   WHERE 1=1`;
+          const binds = [];
+          if (sev && ['CRITICAL','HIGH','MEDIUM','LOW'].includes(sev)) {
+            q += ` AND severity = ?`;
+            binds.push(sev);
+          }
+          // Module → keyword filter (maps to product/description search)
+          const MODULE_KEYWORDS = {
+            domain: ['dns','tls','ssl','http','web','nginx','apache'],
+            ai:     ['llm','ai','model','ml','prompt','openai','langchain'],
+            cloud:  ['aws','azure','gcp','cloud','kubernetes','docker','s3'],
+            network:['firewall','vpn','router','switch','cisco','palo alto'],
+            identity:['ad','ldap','kerberos','oauth','saml','mfa','iam'],
+          };
+          const kws = MODULE_KEYWORDS[mod] || [];
+          if (kws.length > 0) {
+            q += ` AND (${kws.map(() => 'LOWER(description) LIKE ? OR LOWER(product) LIKE ?').join(' OR ')})`;
+            kws.forEach(k => { binds.push(`%${k}%`); binds.push(`%${k}%`); });
+          }
+          q += ` ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
+                          epss_score DESC NULLS LAST
+                 LIMIT ?`;
+          binds.push(limit);
+          const rows = await env.DB?.prepare(q).bind(...binds).all().catch(() => null);
+          if (rows?.results?.length > 0) {
+            cves = rows.results.map(r => ({
+              id:          r.id,
+              cvss:        r.cvss   || 0,
+              severity:    r.severity || 'UNKNOWN',
+              epss:        r.epss   || 0,
+              exploited:   !!r.exploited,
+              description: r.description || '',
+              product:     r.product || '',
+              vendor:      r.vendor  || '',
+              published_at:r.published_at || null,
+            }));
+          } else {
+            // D1 returned no results for this module — fall back to static engine
+            cves   = getTopCVEsForModule(mod, limit);
+            source = 'static_fallback';
+          }
+        } catch {
+          cves   = getTopCVEsForModule(mod, limit);
+          source = 'static_fallback';
+        }
+
         return withSecurityHeaders(withCors(Response.json({
           success:   true,
-          data:      { module: mod, cves, total: cves.length },
+          data:      { module: mod, cves, total: cves.length, source },
           error:     null,
           timestamp: new Date().toISOString(),
         }), request));

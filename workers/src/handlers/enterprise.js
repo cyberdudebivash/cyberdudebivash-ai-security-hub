@@ -1,6 +1,6 @@
 /**
  * Enterprise Contact Handler — /api/contact/enterprise
- * Captures enterprise inquiries, stores in KV, triggers notification stub.
+ * Captures enterprise inquiries, stores in KV, sends email notification via emailEngine.
  * POST /api/contact/enterprise
  */
 import { parseBody, validateString } from '../middleware/validation.js';

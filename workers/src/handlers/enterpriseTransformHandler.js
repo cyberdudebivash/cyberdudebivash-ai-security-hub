@@ -313,25 +313,47 @@ export async function handleUpgradeInitiate(request, env, authCtx) {
     }, { status: 400 });
   }
 
-  const PRICE = { STARTER: 29, PRO: 99, ENTERPRISE: 499, MSSP: 999 };
-  const price = PRICE[newPlan] || 99;
+  const PRICE_INR = { STARTER: 49900, PRO: 149900, ENTERPRISE: 499900, MSSP: 999900 }; // paise
+  const PRICE_USD = { STARTER: 29,    PRO: 99,     ENTERPRISE: 499,    MSSP: 999    };
+  const amountPaise = PRICE_INR[newPlan] || 14990;
+  const amountUsd   = PRICE_USD[newPlan] || 99;
 
-  // Create Razorpay order stub — actual payment processed on client
-  const orderId = `upg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  // Create a real Razorpay order so the client SDK can open a verified checkout session
+  let razorpayOrderId = null;
+  const rzKey    = env.RAZORPAY_KEY_ID;
+  const rzSecret = env.RAZORPAY_KEY_SECRET;
+  if (rzKey && rzSecret) {
+    const receipt = `upg_${newPlan.toLowerCase()}_${userId.slice(0, 8)}_${Date.now()}`;
+    const r = await fetch('https://api.razorpay.com/v1/orders', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${btoa(`${rzKey}:${rzSecret}`)}` },
+      body: JSON.stringify({
+        amount:   amountPaise,
+        currency: 'INR',
+        receipt,
+        notes: { user_id: userId, from_plan: currentTier, to_plan: newPlan },
+      }),
+    });
+    if (r.ok) razorpayOrderId = (await r.json()).id;
+  }
 
-  // Record upgrade intent for funnel tracking
+  // Record upgrade intent (with real order ID when available)
+  const orderId = razorpayOrderId || `upg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   await env.DB?.prepare(
     `INSERT INTO provisioning_log (user_id, event, metadata, created_at) VALUES (?, 'UPGRADE_INITIATED', ?, datetime('now'))`
-  ).bind(userId, JSON.stringify({ from: currentTier, to: newPlan, order_id: orderId, amount_usd: price })).run().catch(() => {});
+  ).bind(userId, JSON.stringify({ from: currentTier, to: newPlan, order_id: orderId, amount_paise: amountPaise })).run().catch(() => {});
 
   return Response.json({
     success: true,
     upgrade: {
-      from_plan:  currentTier,
-      to_plan:    newPlan,
-      amount_usd: price,
-      order_id:   orderId,
-      checkout_url: `https://cyberdudebivash.in/upgrade.html?plan=${newPlan.toLowerCase()}&order=${orderId}`,
+      from_plan:         currentTier,
+      to_plan:           newPlan,
+      amount_inr:        amountPaise / 100,
+      amount_usd:        amountUsd,
+      razorpay_order_id: razorpayOrderId,
+      razorpay_key:      rzKey || null,
+      order_id:          orderId,
+      checkout_url:      `https://cyberdudebivash.in/upgrade.html?plan=${newPlan.toLowerCase()}&order=${orderId}`,
     },
   });
 }

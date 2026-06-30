@@ -179,7 +179,7 @@ function buildProposalDocument(lead, packageId, customizations = {}) {
 
   return {
     // Header
-    proposal_number:   `CDB-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}-${Math.floor(Math.random() * 9000 + 1000)}`,
+    proposal_number:   customizations.proposal_number || `CDB-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}-${Math.floor(Math.random() * 9000 + 1000)}`,
     generated_at:      now.toISOString(),
     valid_until,
     version:           '1.0',
@@ -327,7 +327,20 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
   if (!lead.id) return fail(request, 'Lead not found', 404, 'LEAD_NOT_FOUND');
 
   const propId   = generateProposalId();
-  const doc      = buildProposalDocument(lead, package_id, { discount_pct, setup_fee, payment_terms });
+
+  // Generate sequential, auditable proposal number via KV atomic counter
+  let seqNum = 1000;
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const raw = await env.SECURITY_HUB_KV.get('proposal:seq');
+      seqNum = parseInt(raw || '1000', 10) + 1;
+      await env.SECURITY_HUB_KV.put('proposal:seq', String(seqNum));
+    } catch {}
+  }
+  const now2 = new Date();
+  const sequentialProposalNumber = `CDB-${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, '0')}-${String(seqNum).padStart(4, '0')}`;
+
+  const doc      = buildProposalDocument(lead, package_id, { discount_pct, setup_fee, payment_terms, proposal_number: sequentialProposalNumber });
   doc.accept_url = `https://cyberdudebivash.in/proposal/accept?id=${propId}`;
   doc.notes      = notes;
   doc.lead_id    = lead_id;

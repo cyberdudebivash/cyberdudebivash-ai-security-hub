@@ -158,14 +158,16 @@ async function fetchKEVCatalog(env) {
     console.error('KEV fetch failed:', e.message);
   }
 
-  // Return stub if fetch failed
+  // Return structured error if fetch failed — callers must NOT silently ingest zeroed KEV counts
   if (!kevData) {
     return {
-      total: 0,
+      error:           true,
+      reason:          'kev_fetch_failed',
+      total:           null,
       catalog_version: 'unavailable',
-      fetched_at: new Date().toISOString(),
-      lookup: {},
-      fetch_error: true,
+      fetched_at:      new Date().toISOString(),
+      lookup:          {},
+      http_status:     503,
     };
   }
   return kevData;
@@ -350,6 +352,14 @@ export async function handleScoreThreats(request, env, authCtx = {}) {
 // ── GET /api/threat-confidence/kev ───────────────────────────────────────────
 export async function handleGetKEV(request, env, authCtx = {}) {
   const kev = await fetchKEVCatalog(env);
+
+  // Propagate upstream fetch failure as 503 so SIEM callers detect the gap
+  if (kev.error) {
+    return new Response(JSON.stringify({ success: false, error: kev.reason, fetched_at: kev.fetched_at }), {
+      status: 503, headers: { 'Content-Type': 'application/json', 'Retry-After': '120' },
+    });
+  }
+
   const url  = new URL(request.url);
   const q    = (url.searchParams.get('q') || '').toUpperCase();
   const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '20', 10));
@@ -373,7 +383,6 @@ export async function handleGetKEV(request, env, authCtx = {}) {
     catalog_version:    kev.catalog_version,
     date_released:      kev.date_released,
     fetched_at:         kev.fetched_at,
-    fetch_error:        kev.fetch_error || false,
     filtered_count:     entries.length,
     entries:            entries.slice(0, limit),
   });
