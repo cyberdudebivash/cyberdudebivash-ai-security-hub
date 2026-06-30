@@ -85,6 +85,58 @@ footer a{color:#ec4899;text-decoration:none}
   <div class="metric"><div class="metric-val">1,625+</div><div class="metric-label">CVEs Mapped (Threat Intel)</div></div>
 </div>
 
+<section style="padding:48px 24px 0">
+  <div class="container" style="max-width:680px;margin:0 auto">
+    <div class="card" style="padding:28px 32px">
+      <h3 style="margin-bottom:6px">📦 Try Live SCA Right Now</h3>
+      <p style="color:#94a3b8;font-size:.9rem;margin-bottom:16px">Real lookup against OSV.dev for a known-vulnerable package — not a mockup. Calls the live <code>POST /api/devsecops/sca</code> production endpoint.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:.85rem;color:#94a3b8">npm package:</span>
+        <input id="sca-pkg-input" type="text" value="lodash"
+          style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:#fff;font-size:.9rem;width:140px"/>
+        <span style="font-size:.85rem;color:#94a3b8">version:</span>
+        <input id="sca-ver-input" type="text" value="4.17.15"
+          style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:#fff;font-size:.9rem;width:100px"/>
+        <button id="sca-btn" class="btn-primary" style="border:none;cursor:pointer" onclick="devsecopsTrySCA()">Scan →</button>
+      </div>
+      <div id="sca-result" style="margin-top:16px;font-size:.85rem;color:#94a3b8"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+async function devsecopsTrySCA() {
+  const btn = document.getElementById('sca-btn');
+  const result = document.getElementById('sca-result');
+  const name = (document.getElementById('sca-pkg-input').value || '').trim();
+  const version = (document.getElementById('sca-ver-input').value || '').trim();
+  if (!name || !version) return;
+  btn.disabled = true; btn.textContent = 'Scanning…';
+  try {
+    const res = await fetch('https://cyberdudebivash.in/api/devsecops/sca', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ecosystem: 'npm', dependencies: [{ name, version }] }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+    const ae = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[c]));
+    if (!data.success) { result.textContent = data.error || 'Scan failed.'; return; }
+    const f = data.findings && data.findings[0];
+    result.innerHTML = f
+      ? `<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:14px;color:#fca5a5">
+           ⚠️ ${ae(f.vulnerability_count)} known vulnerabilities found for ${ae(name)}@${ae(version)}<br/>
+           <span style="font-size:.78rem">${(f.vulnerability_ids || []).map(ae).join(', ')}</span>
+         </div>`
+      : `<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:14px;color:#86efac">✅ No known vulnerabilities found for ${ae(name)}@${ae(version)} (via live OSV.dev lookup)</div>`;
+  } catch (e) {
+    result.textContent = 'Scan failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Scan →';
+  }
+}
+</script>
+
 <section>
   <div class="container">
     <h2>DevSecOps <span>Capabilities</span></h2>
