@@ -3091,6 +3091,8 @@ CREATE TABLE IF NOT EXISTS uptime_log (
   checked_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE INDEX IF NOT EXISTS idx_uptime_log_service_time ON uptime_log(service, checked_at DESC);
+
 -- From: schema_v12.sql
 CREATE TABLE IF NOT EXISTS user_behavior_baseline (
   user_id            TEXT PRIMARY KEY,

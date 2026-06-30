@@ -128,13 +128,10 @@ export async function getScannerRevenue(db, period) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const SERVICES = ['api', 'scanner', 'threat_intel', 'marketplace', 'mssp', 'auth'];
-const SEED_TESTIMONIALS = [
-  { name: 'Rajesh Kumar', title: 'Lead SOC Analyst', company: 'Tier-1 Bank · Mumbai', quote: 'MYTHOS generated a Sentinel KQL rule for a 0-day within 90 seconds. This replaced 3 hours of manual work.', rating: 5, verified: 1, featured: 1, use_case: 'SOC Automation' },
-  { name: 'Priya Sharma', title: 'CISO', company: 'Healthcare Group · Bangalore', quote: 'The AI Cyber Analyst spotted a Lazarus Group indicator our $200K SIEM missed. Unmatched value-to-cost ratio.', rating: 5, verified: 1, featured: 1, use_case: 'Threat Detection' },
-  { name: 'Anand Nair', title: 'Security Architect', company: 'MSSP Partner · Pan-India', quote: 'Managing 80 client environments with a single platform. The white-label feature is a game-changer for us.', rating: 5, verified: 1, featured: 1, use_case: 'MSSP' },
-];
 
-// Get full trust center data
+// Get full trust center data. Every field reflects real D1 state — no seeded/fabricated
+// testimonials, no default-to-99.9% uptime, no invented metrics. A service with zero
+// uptime_log samples reports status:'no_data', not a fake "operational" claim.
 export async function getTrustCenterData(db, kv) {
   try {
     // Check KV cache first (5 min TTL)
@@ -143,7 +140,7 @@ export async function getTrustCenterData(db, kv) {
       if (cached) return { ...cached, cached: true };
     }
 
-    const [incidents, releases, uptime, testimonials] = await Promise.all([
+    const [incidents, releases, uptime, testimonials, cveCount] = await Promise.all([
       // Active incidents
       db?.prepare(`
         SELECT * FROM trust_incidents
@@ -168,43 +165,44 @@ export async function getTrustCenterData(db, kv) {
         GROUP BY service
       `).all().catch(() => ({ results: [] })),
 
-      // Testimonials
+      // Testimonials — only real, customer-submitted rows. Never seeded with fabricated quotes.
       db?.prepare(`
         SELECT * FROM testimonials WHERE featured=1 ORDER BY rating DESC LIMIT 6
       `).all().catch(() => ({ results: [] })),
+
+      // Real CVE count actually tracked in threat_intel
+      db?.prepare(`SELECT COUNT(*) as c FROM threat_intel`).first().catch(() => null),
     ]);
 
-    // Build uptime map per service
+    // Build uptime map per service — no data means no claim, not an assumed 99.9%.
     const uptimeMap = {};
     const uptimeResults = uptime?.results || [];
     for (const svc of SERVICES) {
       const row = uptimeResults.find(r => r.service === svc);
-      uptimeMap[svc] = {
-        status:         row ? (row.had_issues ? 'degraded' : 'operational') : 'operational',
-        uptime_pct:     row ? Math.round((row.ok_checks / row.checks) * 1000) / 10 : 99.9,
-        avg_latency_ms: row ? Math.round(row.avg_latency || 0) : 0,
-      };
+      uptimeMap[svc] = row
+        ? {
+            status:         row.had_issues ? 'degraded' : 'operational',
+            uptime_pct:     Math.round((row.ok_checks / row.checks) * 1000) / 10,
+            avg_latency_ms: Math.round(row.avg_latency || 0),
+          }
+        : { status: 'no_data', uptime_pct: null, avg_latency_ms: null };
     }
 
-    const overallStatus = Object.values(uptimeMap).every(s => s.status === 'operational')
-      ? 'All Systems Operational'
-      : 'Partial Service Degradation';
-
-    // Seed testimonials if empty
-    let testimonialList = testimonials?.results || [];
-    if (testimonialList.length === 0) testimonialList = SEED_TESTIMONIALS;
+    const knownStatuses = Object.values(uptimeMap).filter(s => s.status !== 'no_data');
+    const overallStatus = knownStatuses.length === 0
+      ? 'Monitoring data not yet available'
+      : knownStatuses.every(s => s.status === 'operational')
+        ? 'All Systems Operational'
+        : 'Partial Service Degradation';
 
     const data = {
       overall_status:  overallStatus,
       services:        uptimeMap,
       incidents:       (incidents?.results || []).filter(i => i.status !== 'resolved'),
       recent_releases: releases?.results || [],
-      testimonials:    testimonialList,
+      testimonials:    testimonials?.results || [],
       metrics: {
-        uptime_pct:    99.97,
-        avg_response_ms: 47,
-        cves_tracked:  2400,
-        countries:     15,
+        cves_tracked: cveCount?.c ?? 0,
       },
       generated_at: new Date().toISOString(),
     };
@@ -212,7 +210,7 @@ export async function getTrustCenterData(db, kv) {
     // Cache for 5 minutes
     kv?.put('trust:center:v1', JSON.stringify(data), { expirationTtl: 300 }).catch(() => {});
     return data;
-  } catch (e) { return { error: e.message, overall_status: 'operational', services: {}, incidents: [], recent_releases: [], testimonials: SEED_TESTIMONIALS }; }
+  } catch (e) { return { error: e.message, overall_status: 'unknown', services: {}, incidents: [], recent_releases: [], testimonials: [], metrics: {} }; }
 }
 
 // Log uptime check (called by cron)

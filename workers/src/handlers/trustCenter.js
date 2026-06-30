@@ -74,14 +74,20 @@ export async function handleTrustMetrics(request, env) {
       env.DB.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_scans'").first(),
       env.DB.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_cves'").first(),
       env.DB.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_customers'").first(),
-      env.DB.prepare("SELECT uptime_pct FROM trust_metrics_cache WHERE id='singleton'").first(),
+      // Real measured uptime from the self-probe written every cron firing (index.js
+      // scheduled()) — trust_metrics_cache was never written by anything and always
+      // forced a fabricated 99.9% here; replaced with the actual uptime_log table.
+      env.DB.prepare(`
+        SELECT COUNT(*) AS checks, COUNT(CASE WHEN status='operational' THEN 1 END) AS ok_checks
+        FROM uptime_log WHERE service='api' AND checked_at > datetime('now','-30 days')
+      `).first().catch(() => null),
     ]);
 
     const metrics = {
       total_scans:      scansRow?.val     || 0,
       total_cves:       cvesRow?.val      || 0,
       total_customers:  customersRow?.val || 0,
-      uptime_pct:       uptimeRow?.uptime_pct || 99.9,
+      uptime_pct:       uptimeRow?.checks > 0 ? Math.round((uptimeRow.ok_checks / uptimeRow.checks) * 1000) / 10 : null,
       // Static/factual metrics (not from user counts)
       cve_alert_sla:    '< 2 hours',
       assessment_sla:   '72 hours',
@@ -99,7 +105,7 @@ export async function handleTrustMetrics(request, env) {
       metrics: {
         total_scans:    null,
         total_cves:     null,
-        uptime_pct:     99.9,
+        uptime_pct:     null,
         cve_alert_sla:  '< 2 hours',
         assessment_sla: '72 hours',
         note:           'Live counts temporarily unavailable',

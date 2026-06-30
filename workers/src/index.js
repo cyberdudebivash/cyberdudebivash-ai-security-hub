@@ -774,6 +774,7 @@ import {
 } from './handlers/visitorTracking.js';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
+import { logUptimeCheck } from './services/v24/platformEngine.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
@@ -7802,6 +7803,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     normalizeBindings(env);
     const cron = event.cron;
     console.log('[CRON] Trigger:', cron, event.scheduledTime);
+
+    // ── EVERY CRON FIRING: real self-uptime probe (D1 round-trip latency) ──
+    // Reuses the existing cron schedule rather than consuming one of the 5
+    // CF-Free-tier cron slots on a dedicated uptime trigger. This is a real
+    // measured latency value, not a fabricated default (Trust Center fix).
+    ctx.waitUntil((async () => {
+      const t0 = Date.now();
+      try {
+        await env.DB.prepare('SELECT 1').first();
+        await logUptimeCheck(env.DB, 'api', 200, Date.now() - t0);
+      } catch (e) {
+        await logUptimeCheck(env.DB, 'api', 500, Date.now() - t0).catch(() => {});
+      }
+    })());
 
     // ── HOURLY: Threat Intel Ingestion (Sentinel APEX v2.0 — D1-backed) ──
     // Runs every cron trigger — priority pipeline
