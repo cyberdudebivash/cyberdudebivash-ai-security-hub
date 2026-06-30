@@ -111,7 +111,7 @@ async function esAssess() {
   try {
     const [r1, r2] = await Promise.all([
       fetch('/api/generate/compliance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ domain, framework: 'ISO27001' }) }),
-      fetch('/api/zero-trust/score', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ domain, org_size: size }) })
+      fetch('/api/zero-trust/score')
     ]);
     const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
     const compScore = d1.compliance_score || 58;

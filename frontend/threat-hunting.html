@@ -97,24 +97,27 @@ footer a{color:#10b981;text-decoration:none}
   <div id="th-hunt-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
 </div>
 <script>
+let thTemplates = [];
 (async function thInit() {
   try {
     const r = await fetch('/api/hunt/templates');
     const d = await r.json();
+    thTemplates = d.templates || [];
     const sel = document.getElementById('th-template-sel');
-    sel.innerHTML = d.templates.map(t => `<option value="${t.id}">[${t.tactic}] ${t.name} — ${(t.mitre||[]).join(', ')}</option>`).join('');
-  } catch(e) { document.getElementById('th-template-sel').innerHTML = '<option value="kql-lateral-movement">Lateral Movement Detection — T1021, T1550</option>'; }
+    sel.innerHTML = thTemplates.map(function(t,i){ return '<option value="'+i+'">['+t.tactic+'] '+t.name+' — '+(t.mitre||[]).join(', ')+'</option>'; }).join('');
+  } catch(e) { document.getElementById('th-template-sel').innerHTML = '<option value="-1">Lateral Movement Detection — T1021, T1550</option>'; }
 })();
 async function thRunHunt() {
   const sel = document.getElementById('th-template-sel');
   const btn = document.getElementById('th-hunt-btn');
   const out = document.getElementById('th-hunt-result');
-  if (!sel.value) return;
   btn.disabled = true; btn.textContent = 'Hunting…';
   out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Executing hunt query…</span>';
+  const idx = parseInt(sel.value, 10);
+  const tpl = (thTemplates[idx]) || { query: 'SecurityEvent | where EventID in (4624,4625,4648) | limit 20', name: 'Lateral Movement' };
   try {
     const r = await fetch('/api/hunt', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ template_id: sel.value, type:'kql' }) });
+      body: JSON.stringify({ query: tpl.query || 'SecurityEvent | where EventID == 4625 | limit 10', lang: 'kql' }) });
     const d = await r.json();
     const sev = d.summary || {};
     out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid var(--border,#334155)">'
