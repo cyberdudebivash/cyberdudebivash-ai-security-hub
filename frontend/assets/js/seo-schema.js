@@ -463,6 +463,25 @@ if (document.readyState === 'loading') {
   initSEOSchemas();
 }
 
+// ─── GA4 — fire page_view on landing pages (skips pages that already load it,
+// e.g. index.html, to avoid double-counting) ──────────────────────────────────
+(function initGA4() {
+  if (window.gtag || window.dataLayer) return; // already loaded by this page
+  const GA4_ID = 'G-E78VH3NJS6';
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  window.gtag = gtag;
+  gtag('js', new Date());
+  gtag('config', GA4_ID, {
+    send_page_view: true,
+    allow_ad_personalization_signals: false,
+  });
+})();
+
 // ─── IndexNow ping on page load (tells Bing/Yandex about new content) ────────
 async function pingIndexNow() {
   try {
