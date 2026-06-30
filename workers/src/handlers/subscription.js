@@ -279,7 +279,7 @@ export async function handleActivateSubscription(request, env) {
         SUBSCRIPTION_PLANS[plan]?.amount || 0,
         userEmail,
         sessionToken,
-      ).run().catch(() => {});
+      ).run().catch((e) => console.error('[subscription] payments D1 write failed', razorpay_payment_id, e?.message));
 
       // Write to subscriptions table for renewal engine + lifecycle tracking
       await env.DB.prepare(
@@ -293,7 +293,7 @@ export async function handleActivateSubscription(request, env) {
         razorpay_payment_id,
         SUBSCRIPTION_PLANS[plan]?.price_inr || 499,
         new Date(expiresAt).toISOString(),
-      ).run().catch(() => {});
+      ).run().catch((e) => console.error('[subscription] subscriptions D1 write failed', razorpay_payment_id, e?.message));
     }
 
     // KV session cache — written after D1 so we don't serve stale token if DB fails.

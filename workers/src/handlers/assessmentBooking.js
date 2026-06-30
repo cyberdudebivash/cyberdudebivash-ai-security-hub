@@ -128,9 +128,7 @@ export async function handleConfirmAssessment(request, env) {
   if (!razorpay_payment_id || !razorpay_signature) return err('Payment details required');
 
   // Verify Razorpay signature
-  const valid = await verifyPaymentSignature(env, {
-    order_id: razorpay_order_id, payment_id: razorpay_payment_id, signature: razorpay_signature,
-  });
+  const valid = await verifyPaymentSignature(env, razorpay_order_id, razorpay_payment_id, razorpay_signature);
   if (!valid) return err('Payment verification failed', 400);
 
   // Update assessment status in D1

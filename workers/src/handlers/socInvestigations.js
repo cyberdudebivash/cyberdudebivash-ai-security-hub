@@ -29,7 +29,7 @@ export async function handleGetTimeline(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   try {
     // Verify the case exists and belongs to this org (or user is admin)
@@ -55,7 +55,7 @@ export async function handleListEvidence(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   try {
     const rows = await env.SECURITY_HUB_DB.prepare(
@@ -77,7 +77,7 @@ export async function handleAddEvidence(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   let body;
   try { body = await request.json(); }
@@ -121,7 +121,7 @@ export async function handleListNotes(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   try {
     const rows = await env.SECURITY_HUB_DB.prepare(
@@ -142,7 +142,7 @@ export async function handleAddNote(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   let body;
   try { body = await request.json(); }
@@ -181,7 +181,7 @@ export async function handleEscalateCase(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   let body;
   try { body = await request.json(); }
@@ -229,7 +229,7 @@ export async function handleInvestigationSummary(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   try {
     const [caseRow, evidenceCount, notesCount, timeline] = await Promise.all([
@@ -275,7 +275,7 @@ export async function handleResolveCase(request, env) {
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const caseId = new URL(request.url).pathname.split('/')[4];
-  const orgId  = authCtx.org_id || 'default';
+  const orgId  = authCtx.org_id || `user:${authCtx.user_id || authCtx.userId || 'anon'}`;
 
   let body;
   try { body = await request.json(); }

@@ -64,10 +64,12 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
 
   let scanResult = body.scan_result;
 
-  // If scan_id provided, try to pull from cache
+  // If scan_id provided, try to pull from cache (scoped to user identity to prevent cross-tenant reads)
   if (!scanResult && body.scan_id && env?.SECURITY_HUB_KV) {
     try {
-      const raw = await env.SECURITY_HUB_KV.get(`scan:${body.scan_id}`);
+      const userId = authCtx?.user_id || authCtx?.userId || authCtx?.key_id || null;
+      const scopedKey = userId ? `scan:${userId}:${body.scan_id}` : `scan:${body.scan_id}`;
+      const raw = await env.SECURITY_HUB_KV.get(scopedKey);
       if (raw) scanResult = JSON.parse(raw);
     } catch {}
   }

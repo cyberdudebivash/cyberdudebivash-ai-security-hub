@@ -253,7 +253,7 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
     const sigBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
     const expected  = Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    if (expected !== razorpay_signature && secret) {
+    if (!secret || expected !== razorpay_signature) {
       return json({ success: false, error: 'Payment verification failed — signature mismatch' }, 400);
     }
 
