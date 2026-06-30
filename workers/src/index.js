@@ -775,6 +775,7 @@ import {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { logUptimeCheck } from './services/v24/platformEngine.js';
+import { handleSSOLogin, handleSSOCallback, handleSSOConfigUpsert, handleSSOConfigGet, handleSSOConfigDelete } from './handlers/ssoAuth.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
@@ -1727,6 +1728,20 @@ export default {
     }
     if (path === '/api/auth/google/callback' && method === 'GET') {
       return handleGoogleCallback(request, env);
+    }
+
+    // ── Enterprise SSO (OIDC) — per-org IdP, owner-configured ──────────────────
+    if (path === '/api/auth/sso/login' && method === 'GET') {
+      return handleSSOLogin(request, env);
+    }
+    if (path === '/api/auth/sso/callback' && method === 'GET') {
+      return handleSSOCallback(request, env);
+    }
+    if (path === '/api/admin/sso/config') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (method === 'POST')   return handleSSOConfigUpsert(request, env, authCtx);
+      if (method === 'GET')    return handleSSOConfigGet(request, env, authCtx);
+      if (method === 'DELETE') return handleSSOConfigDelete(request, env, authCtx);
     }
 
     // ── APEX Multi-Agent SOC (MASOC) — 9 specialist AI agents in parallel (v49.0) ─

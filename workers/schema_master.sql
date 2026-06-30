@@ -2083,6 +2083,23 @@ CREATE TABLE IF NOT EXISTS org_members (
   UNIQUE (org_id, user_id)
 );
 
+-- Enterprise SSO (OIDC) — one IdP config per organization, owner-managed via
+-- POST /api/admin/sso/config. See handlers/ssoAuth.js + lib/oidc.js.
+CREATE TABLE IF NOT EXISTS sso_configs (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  org_id          TEXT NOT NULL UNIQUE,
+  provider_name   TEXT NOT NULL DEFAULT 'custom',
+  issuer          TEXT NOT NULL,
+  client_id       TEXT NOT NULL,
+  client_secret   TEXT NOT NULL,
+  allowed_domains TEXT NOT NULL DEFAULT '[]',
+  enabled         INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_sso_configs_org ON sso_configs(org_id);
+
 -- From: schema_v30_p0p1.sql
 CREATE TABLE IF NOT EXISTS p0_exceptions (
   id                  TEXT PRIMARY KEY,

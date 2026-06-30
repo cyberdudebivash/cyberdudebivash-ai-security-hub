@@ -26,7 +26,8 @@ This document does **not** claim SOC2 or ISO27001 **certification**. Certificati
 | Brute-force protection | ✅ Implemented | 10 attempts / 15 min, KV-backed, per-IP |
 | Role-based access | ✅ Implemented | Tier enforcement (FREE/STARTER/PRO/ENTERPRISE/MSSP) at middleware layer; owner-only routes gated via `isOwner()` (admin flag OR allow-listed owner email) |
 | Multi-tenant isolation | ✅ Implemented | `org_id` namespace scoping on SOC/MASOC data (fixed after a 2026-06 cross-tenant KV collision finding) |
-| SSO/SAML | ❌ Not yet | Not built. Required before Enterprise-tier accounts with centralized IdP requirements |
+| SSO (OIDC) | ✅ Implemented | Generic OpenID Connect relying party — works with Okta, Azure AD/Entra ID, Google Workspace, OneLogin, Auth0, PingFederate, or any standards-compliant IdP. Per-organization config, owner-provisioned. PKCE + nonce + RS256 JWKS signature verification (`workers/src/lib/oidc.js`, 17 dedicated security tests covering forged signatures, algorithm confusion, audience/issuer mismatch, expired/replayed tokens) |
+| SAML 2.0 | ❌ Not built | Deliberately not implemented — Cloudflare Workers has no mature XML-dsig library, and a hand-rolled SAML signature verifier is a security liability. Every enterprise IdP that supports SAML also supports OIDC; customers requiring SAML specifically should be routed to their IdP's OIDC connector |
 | MFA | ❌ Not yet | Not built |
 
 ## 2. Data Protection
@@ -98,7 +99,7 @@ This document does **not** claim SOC2 or ISO27001 **certification**. Certificati
 
 **Recommended sequencing**, in order of unlocking the most enterprise deals per unit of effort:
 1. External uptime monitoring (Cloudflare Healthchecks — free, ~10 minutes) — closes a real operational blind spot.
-2. SSO/SAML for Enterprise tier — the most commonly hard-blocking item in enterprise procurement.
+2. ~~SSO for Enterprise tier~~ — **done** (OIDC, see above). Onboarding an enterprise customer's IdP: `POST /api/admin/sso/config` with `{org, issuer, client_id, client_secret, allowed_domains}` (owner-only). Customer logs in at `/api/auth/sso/login?org=<slug>`.
 3. A commissioned third-party penetration test — typically the literal checkbox Fortune 500 security teams require before contract signature, independent of SOC2 status.
 4. SOC2 Type II engagement — budget for an accredited auditor; ~3–6 months once started, real cost (commonly mid five figures USD).
 
