@@ -223,6 +223,63 @@ footer a{color:#8b5cf6;text-decoration:none}
   </div>
 </section>
 
+<section style="background:#0f172a;padding:60px 0">
+<div class="container">
+  <h2 style="color:#fff;text-align:center;margin-bottom:8px">Live AI Governance Gap Analysis</h2>
+  <p style="color:#94a3b8;text-align:center;margin-bottom:28px">Assess your AI system against NIST AI RMF, EU AI Act, or ISO 42001 — get a compliance score instantly</p>
+  <div style="max-width:560px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <input id="aig-domain" type="text" placeholder="Your domain (e.g. acme.com)" value="enterprise.ai"
+        style="padding:12px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px">
+      <select id="aig-framework" style="padding:12px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px">
+        <option value="NIST-AI-RMF">NIST AI RMF</option>
+        <option value="EU-AI-Act">EU AI Act</option>
+        <option value="ISO42001">ISO 42001</option>
+        <option value="NIST-CSF">NIST CSF 2.0</option>
+      </select>
+    </div>
+    <button onclick="aigAssess()" style="width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:15px">Run Governance Assessment</button>
+    <div id="aig-result" style="margin-top:20px;display:none"></div>
+  </div>
+</div>
+</section>
+<script>
+async function aigAssess() {
+  var domain = document.getElementById('aig-domain').value.trim() || 'enterprise.ai';
+  var framework = document.getElementById('aig-framework').value;
+  var el = document.getElementById('aig-result');
+  el.style.display='block';
+  el.innerHTML='<p style="color:#94a3b8;text-align:center;padding:20px">Analyzing '+framework+' compliance gaps…</p>';
+  try {
+    var r = await fetch('/api/generate/compliance', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({domain: domain, framework: framework})});
+    var j = await r.json();
+    var d = j.data || j;
+    var score = d.compliance_score || d.score || 0;
+    var gaps = d.gaps || d.gaps_identified || 0;
+    var total = d.total_controls || d.controls || 0;
+    var risk = d.risk_level || (score >= 80 ? 'LOW' : score >= 60 ? 'MEDIUM' : score >= 40 ? 'HIGH' : 'CRITICAL');
+    var col = score >= 80 ? '#4ade80' : score >= 60 ? '#facc15' : score >= 40 ? '#fb923c' : '#f87171';
+    var items = d.gap_details || d.findings || d.items || [];
+    var itemsHtml = items.slice(0,5).map(function(g) {
+      var sev = g.severity || g.risk || 'MEDIUM';
+      var c2 = sev==='CRITICAL'?'#f87171':sev==='HIGH'?'#fb923c':sev==='MEDIUM'?'#facc15':'#4ade80';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#0f172a;border-radius:6px;margin-bottom:6px">' +
+        '<span style="font-size:12px;color:#e2e8f0">'+(g.control||g.name||g.title||g)+'</span>' +
+        '<span style="font-size:11px;font-weight:700;color:'+c2+'">'+sev+'</span></div>';
+    }).join('');
+    el.innerHTML = '<div style="background:#1e293b;border-radius:12px;padding:20px">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">' +
+        '<div style="text-align:center;background:#0f172a;border-radius:8px;padding:14px"><div style="font-size:28px;font-weight:800;color:'+col+'">'+score+'<span style="font-size:14px">/100</span></div><div style="font-size:11px;color:#64748b;margin-top:2px">Compliance Score</div></div>' +
+        '<div style="text-align:center;background:#0f172a;border-radius:8px;padding:14px"><div style="font-size:28px;font-weight:800;color:#fb923c">'+gaps+'</div><div style="font-size:11px;color:#64748b;margin-top:2px">Gaps Found</div></div>' +
+        '<div style="text-align:center;background:#0f172a;border-radius:8px;padding:14px"><div style="font-size:20px;font-weight:800;color:'+col+'">'+risk+'</div><div style="font-size:11px;color:#64748b;margin-top:2px">Risk Level</div></div>' +
+      '</div>' +
+      (itemsHtml ? '<div style="font-size:11px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Top Gaps</div>'+itemsHtml : '') +
+      '</div>';
+  } catch(e) { el.innerHTML='<p style="color:#f87171">Error: '+e.message+'</p>'; }
+}
+</script>
+
 <div class="cta-section">
   <div class="container">
     <h2>Ready to Govern <span>Your AI</span>?</h2>

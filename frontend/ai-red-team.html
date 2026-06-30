@@ -230,6 +230,56 @@ footer a{color:#ef4444;text-decoration:none}
   </div>
 </section>
 
+<section style="background:#0f172a;padding:60px 0">
+<div class="container">
+  <h2 style="color:#fff;text-align:center;margin-bottom:8px">Live AI Red Team Assessment</h2>
+  <p style="color:#94a3b8;text-align:center;margin-bottom:28px">Test your AI model against OWASP LLM Top 10 adversarial categories in real-time</p>
+  <div style="max-width:560px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <input id="art-target" type="text" placeholder="Target (e.g. chatbot.example.com)" value="api.openai.com"
+        style="padding:12px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px">
+      <select id="art-model" style="padding:12px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px">
+        <option value="gpt-4">GPT-4 (OpenAI)</option>
+        <option value="claude-3">Claude 3 (Anthropic)</option>
+        <option value="llama-3">Llama 3 (Meta)</option>
+        <option value="gemini-pro">Gemini Pro (Google)</option>
+        <option value="custom">Custom LLM</option>
+      </select>
+    </div>
+    <button onclick="artRun()" style="width:100%;padding:13px;background:linear-gradient(135deg,#dc2626,#9333ea);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:15px">Run AI Red Team Assessment</button>
+    <div id="art-result" style="margin-top:20px;display:none"></div>
+  </div>
+</div>
+</section>
+<script>
+async function artRun() {
+  var target = document.getElementById('art-target').value.trim() || 'api.openai.com';
+  var model = document.getElementById('art-model').value;
+  var el = document.getElementById('art-result');
+  el.style.display='block';
+  el.innerHTML='<p style="color:#94a3b8;text-align:center">Running adversarial probes across OWASP LLM Top 10…</p>';
+  try {
+    var r = await fetch('/api/scan/ai', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({target: target, model_type: model})});
+    var j = await r.json();
+    var d = j.data || j;
+    var cats = d.categories || d.findings || [];
+    if (!cats.length) { el.innerHTML='<p style="color:#f87171">No data returned. Try a different target.</p>'; return; }
+    var html='<div style="display:grid;gap:10px">';
+    cats.forEach(function(c) {
+      var risk = c.risk || c.severity || 'MEDIUM';
+      var col = risk==='CRITICAL'?'#f87171':risk==='HIGH'?'#fb923c':risk==='MEDIUM'?'#facc15':'#4ade80';
+      html+='<div style="background:#1e293b;border-left:3px solid '+col+';border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-weight:600;color:#e2e8f0;font-size:13px">'+(c.name||c.category||'')+'</div>' +
+        '<div style="font-size:11px;color:#64748b;margin-top:2px">'+(c.description||c.detail||'').slice(0,80)+'</div></div>' +
+        '<span style="font-size:11px;font-weight:700;color:'+col+';white-space:nowrap;margin-left:12px">'+risk+'</span></div>';
+    });
+    html+='</div>';
+    el.innerHTML=html;
+  } catch(e) { el.innerHTML='<p style="color:#f87171">Error: '+e.message+'</p>'; }
+}
+</script>
+
 <div class="cta-section">
   <div class="container">
     <h2>Put Your <span>AI Systems</span> to the Test</h2>

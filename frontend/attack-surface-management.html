@@ -153,6 +153,55 @@ footer a{color:#f97316;text-decoration:none}
   </div>
 </section>
 
+<section style="background:#0f172a;padding:60px 0">
+<div class="container">
+  <h2 style="color:#fff;text-align:center;margin-bottom:8px">Live Attack Surface Scanner</h2>
+  <p style="color:#94a3b8;text-align:center;margin-bottom:28px">Enter any IP address to get real exposure data from Shodan InternetDB — open ports, vulnerabilities, tags</p>
+  <div style="max-width:520px;margin:0 auto">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <input id="asm-ip" type="text" placeholder="e.g. 8.8.8.8" value="8.8.8.8"
+        style="flex:1;padding:12px 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px">
+      <button onclick="asmScan()" style="padding:12px 20px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer">Scan</button>
+    </div>
+    <div id="asm-result" style="display:none"></div>
+  </div>
+</div>
+</section>
+<script>
+async function asmScan() {
+  var ip = document.getElementById('asm-ip').value.trim();
+  if (!ip) return;
+  var el = document.getElementById('asm-result');
+  el.style.display='block';
+  el.innerHTML='<p style="color:#94a3b8;text-align:center;padding:20px">Querying Shodan InternetDB…</p>';
+  try {
+    var r = await fetch('/api/hunt/ioc', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ioc: ip})});
+    var j = await r.json();
+    var d = j.data || j;
+    var shodan = d.shodan || {};
+    var ports = (shodan.ports || d.ports || []).join(', ') || 'None detected';
+    var vulns = (shodan.vulns || d.vulns || []).slice(0,6);
+    var tags  = (shodan.tags  || d.tags  || []).join(', ') || 'None';
+    var hostnames = (shodan.hostnames || d.hostnames || []).slice(0,3).join(', ') || 'N/A';
+    var risk = (shodan.vulns || d.vulns || []).length > 0 ? '#f87171' : '#4ade80';
+    el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+      card('Open Ports', ports, '#0ea5e9') +
+      card('Hostnames', hostnames, '#a78bfa') +
+      card('Tags', tags, '#22d3ee') +
+      '<div style="background:#1e293b;border-radius:8px;padding:14px;border:1px solid #1e293b">' +
+        '<div style="font-size:11px;color:#64748b;margin-bottom:6px">Known CVEs</div>' +
+        (vulns.length ? vulns.map(function(v){return '<span style="display:inline-block;background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:2px 7px;font-size:11px;margin:2px">'+v+'</span>';}).join('') : '<span style="color:#4ade80;font-size:13px">No CVEs found</span>') +
+      '</div></div>';
+  } catch(e) { el.innerHTML='<p style="color:#f87171">Error: '+e.message+'</p>'; }
+}
+function card(label, val, col) {
+  return '<div style="background:#1e293b;border-radius:8px;padding:14px;border:1px solid #1e293b">' +
+    '<div style="font-size:11px;color:#64748b;margin-bottom:4px">'+label+'</div>' +
+    '<div style="font-weight:600;color:'+col+';font-size:13px;word-break:break-all">'+val+'</div></div>';
+}
+</script>
+
 <div class="cta-section">
   <div class="container">
     <h2>See Your <span>Attack Surface</span> Now</h2>
