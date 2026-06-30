@@ -8097,7 +8097,8 @@ ctx.waitUntil(
         try {
           if (!env.DB) return;
           const monthStart = new Date().toISOString().slice(0, 7) + '-01';
-          const PLAN_LIMITS = { FREE: 3, STARTER: 10 };
+          // Monthly scan limits — must match TIER_LIMITS in auth/apiKeys.js
+          const PLAN_LIMITS = { FREE: 50, STARTER: 600 };
           const rows = await env.DB.prepare(`
             SELECT ak.email, ak.tier, COALESCE(SUM(aku.request_count), 0) as used
             FROM api_keys ak

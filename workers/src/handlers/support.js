@@ -29,7 +29,7 @@ const FAQ_DATA = [
     id: 'faq-003',
     category: 'Billing',
     question: 'What is included in the PRO plan?',
-    answer: 'PRO includes: 10,000 API calls/day, full IOC feeds, STIX 2.1 export, AI threat predictions, actor attribution, report downloads, PDF reports, and dashboard pro access. Billed at $49/month.',
+    answer: 'PRO includes: 500 API calls/day (10,000/month), full IOC feeds, STIX 2.1 export, AI threat predictions, actor attribution, SIEM export, PDF reports, DPDP compliance engine, and 24h email support. Billed at ₹1,499/month.',
     tags: ['billing', 'pro', 'pricing'],
   },
   {
@@ -64,7 +64,7 @@ const FAQ_DATA = [
     id: 'faq-008',
     category: 'Technical',
     question: 'What is the API rate limit?',
-    answer: 'FREE: 100 calls/day. PRO: 1,000/day. TEAM: 10,000/day. ENTERPRISE/MSSP: Unlimited. Rate limits are enforced per user per UTC day. Headers X-RateLimit-Remaining and X-RateLimit-Reset are included in each response.',
+    answer: 'FREE: 5 calls/day (50/month). STARTER: 20 calls/day (600/month). PRO: 500 calls/day (10,000/month). ENTERPRISE/MSSP: Unlimited. Rate limits are enforced per API key per UTC day. Monthly quotas reset on the 1st of each month.',
     tags: ['rate-limit', 'api', 'quota'],
   },
   {
@@ -85,7 +85,7 @@ const FAQ_DATA = [
     id: 'faq-011',
     category: 'Enterprise',
     question: 'What is included in the ENTERPRISE plan?',
-    answer: 'ENTERPRISE includes everything in TEAM plus: unlimited API calls, dedicated endpoint URL, Board-Level reports (monthly), white-label reporting, analyst briefings (monthly), dedicated Slack/email support, and 99.9% SLA uptime guarantee.',
+    answer: 'ENTERPRISE (₹4,999/month) includes everything in PRO plus: unlimited API calls, multi-tenant SOC dashboard, MSSP white-label (unlimited tenants), custom SIEM integrations, 50 API keys, unlimited team seats, dedicated account manager, 4h SLA guarantee, and custom DPDP compliance reports.',
     tags: ['enterprise', 'pricing', 'features'],
   },
   {
@@ -109,11 +109,11 @@ const PLATFORM_COMPONENTS = [
 ];
 
 const SLA_TIERS = {
-  FREE:       { uptime_sla: '99.0%', support_response: '72 hours', support_channel: 'Community / Email', incident_notification: 'Status page only' },
-  PRO:        { uptime_sla: '99.5%', support_response: '24 hours', support_channel: 'Email', incident_notification: 'Email + Status page' },
-  TEAM:       { uptime_sla: '99.5%', support_response: '12 hours', support_channel: 'Email + Priority queue', incident_notification: 'Email + Status page' },
-  ENTERPRISE: { uptime_sla: '99.9%', support_response: '4 hours',  support_channel: 'Dedicated Slack + Email', incident_notification: 'Real-time Slack alerts + Status page' },
-  MSSP:       { uptime_sla: '99.9%', support_response: '2 hours',  support_channel: 'Dedicated account manager', incident_notification: 'Real-time Slack alerts + PagerDuty' },
+  FREE:       { uptime_sla: '99.0%', support_response: '72 hours', support_channel: 'Email', incident_notification: 'Status page only' },
+  STARTER:    { uptime_sla: '99.5%', support_response: '48 hours', support_channel: 'Email', incident_notification: 'Email + Status page' },
+  PRO:        { uptime_sla: '99.5%', support_response: '24 hours', support_channel: 'Priority Email', incident_notification: 'Email + Status page' },
+  ENTERPRISE: { uptime_sla: '99.9%', support_response: '4 hours',  support_channel: 'Dedicated Email + Account Manager', incident_notification: 'Real-time alerts + Status page' },
+  MSSP:       { uptime_sla: '99.9%', support_response: '2 hours',  support_channel: 'Dedicated account manager', incident_notification: 'Real-time alerts + PagerDuty' },
 };
 
 // ─── GET /api/support/faq ─────────────────────────────────────────────────────
