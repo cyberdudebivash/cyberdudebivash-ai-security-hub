@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#00d4ff"/>
+<title>OWASP LLM Top 10 Security | CYBERDUDEBIVASH — LLM Security Assessment & Prompt Injection Testing</title>
+<meta name="description" content="OWASP LLM Top 10 security assessments covering prompt injection, insecure output handling, training data poisoning, model theft, and all 10 LLM vulnerability classes. Expert AI security testing for enterprise LLM deployments."/>
+<meta name="keywords" content="OWASP LLM Top 10, LLM security, prompt injection, AI security assessment, large language model security, ChatGPT security, Claude security, LLM vulnerability, AI red team, generative AI security"/>
+<meta name="author" content="CyberDudeBivash Pvt. Ltd."/>
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
+<link rel="canonical" href="https://cyberdudebivash.in/owasp-llm-security"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://cyberdudebivash.in/owasp-llm-security"/>
+<meta property="og:title" content="OWASP LLM Top 10 Security | CYBERDUDEBIVASH AI Security Hub"/>
+<meta property="og:description" content="Complete OWASP LLM Top 10 assessments — prompt injection, training data poisoning, model theft, and all 10 vulnerability classes. Enterprise AI security testing."/>
+<meta property="og:image" content="https://cyberdudebivash.in/og-image.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:site_name" content="CYBERDUDEBIVASH AI Security Hub"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:site" content="@cyberdudebivash"/>
+<meta name="twitter:title" content="OWASP LLM Top 10 | CYBERDUDEBIVASH"/>
+<meta name="twitter:description" content="OWASP LLM Top 10 security assessments — prompt injection, AI red teaming, model security evaluation for enterprise LLM deployments."/>
+<meta name="twitter:image" content="https://cyberdudebivash.in/og-image.png"/>
+<link rel="preconnect" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev"/>
+<link rel="alternate" type="application/rss+xml" title="CYBERDUDEBIVASH Security Intelligence" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/rss"/>
+<link rel="icon" href="/favicon.ico"/>
+<script type="module" src="/assets/js/seo-schema.js"></script>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+<style>
+:root{--accent:#e11d48;--accent2:#7c3aed;--bg:#0a0a0f;--card:#0f0f1a;--border:#1a1a2e;--text:#e2e8f0;--muted:#64748b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+nav{background:rgba(10,10,15,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+.nav-brand{font-weight:800;font-size:1.1rem;background:linear-gradient(135deg,#7c3aed,#e11d48);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
+.nav-links{display:flex;gap:24px;list-style:none}
+.nav-links a{color:#94a3b8;text-decoration:none;font-size:.9rem}
+.nav-links a:hover{color:#e2e8f0}
+.breadcrumb{padding:16px 24px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);font-size:.9rem}
+.breadcrumb a{color:#e11d48;text-decoration:none}
+.breadcrumb span{color:#64748b;margin:0 8px}
+.hero{background:linear-gradient(135deg,#0a0a0f 0%,#1a0010 50%,#0a0a0f 100%);padding:80px 24px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(225,29,72,.1),transparent 70%);pointer-events:none}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;background:linear-gradient(135deg,#e11d48,#7c3aed,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:20px;max-width:900px;margin-inline:auto}
+.hero p.lead{font-size:1.2rem;color:#94a3b8;max-width:680px;margin:0 auto 28px}
+.badge{display:inline-block;background:rgba(225,29,72,.12);border:1px solid rgba(225,29,72,.3);color:#fda4af;padding:6px 16px;border-radius:999px;font-size:.85rem;font-weight:600;margin-bottom:20px}
+.cta-group{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.btn-primary{background:linear-gradient(135deg,#e11d48,#7c3aed);color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;transition:opacity .2s;display:inline-block}
+.btn-primary:hover{opacity:.9}
+.btn-outline{border:1px solid rgba(225,29,72,.4);color:#fda4af;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;transition:all .2s;display:inline-block}
+.btn-outline:hover{background:rgba(225,29,72,.08)}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+section{padding:72px 24px}
+.section-title{font-size:clamp(1.4rem,3vw,2.1rem);font-weight:800;margin-bottom:12px;background:linear-gradient(135deg,#e11d48,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-sub{color:#94a3b8;font-size:1.05rem;max-width:600px;margin-bottom:40px}
+.llm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;counter-reset:llm}
+.llm-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;counter-increment:llm;position:relative;transition:border-color .2s}
+.llm-card:hover{border-color:rgba(225,29,72,.35)}
+.llm-num{font-size:.7rem;font-weight:900;letter-spacing:.1em;color:#e11d48;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.llm-num::after{content:'';flex:1;height:1px;background:rgba(225,29,72,.2)}
+.llm-card h3{font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:8px}
+.llm-card p{color:#94a3b8;font-size:.88rem;line-height:1.7;margin-bottom:12px}
+.severity{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700;letter-spacing:.04em}
+.sev-critical{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.sev-high{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.25)}
+.sev-medium{background:rgba(234,179,8,.1);color:#fde047;border:1px solid rgba(234,179,8,.2)}
+.tag{display:inline-block;background:rgba(225,29,72,.08);border:1px solid rgba(225,29,72,.18);color:#fda4af;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;margin:2px}
+.tag-purple{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.2);color:#c4b5fd}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;transition:border-color .2s}
+.card:hover{border-color:rgba(225,29,72,.3)}
+.card h3{font-size:1.05rem;font-weight:700;margin-bottom:8px;color:#e2e8f0}
+.card p{color:#94a3b8;font-size:.92rem;line-height:1.7}
+.card .icon{font-size:1.6rem;margin-bottom:12px}
+.faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:0}
+.faq-item{border:1px solid var(--border);border-radius:0;margin-bottom:-1px;background:var(--card)}
+.faq-item:first-child{border-radius:12px 12px 0 0}
+.faq-item:last-child{border-radius:0 0 12px 12px}
+.faq-q{padding:18px 20px;font-weight:700;font-size:.95rem;color:#e2e8f0;cursor:pointer}
+.faq-a{padding:0 20px 18px;color:#94a3b8;font-size:.9rem;line-height:1.7}
+.prose{max-width:800px;margin:0 auto;color:#94a3b8;font-size:1rem;line-height:1.8}
+.prose h2{color:#e2e8f0;font-size:1.4rem;font-weight:700;margin:32px 0 10px}
+.prose h3{color:#cbd5e1;font-size:1.1rem;font-weight:600;margin:20px 0 6px}
+.prose p{margin-bottom:14px}
+.prose ul{padding-left:20px;margin-bottom:14px}
+.prose ul li{margin-bottom:6px}
+.prose code{background:#1a1a2e;color:#fda4af;padding:2px 6px;border-radius:4px;font-size:.88em;font-family:monospace}
+footer{background:var(--card);border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:#475569;font-size:.88rem}
+footer a{color:#e11d48;text-decoration:none}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="/">CYBERDUDEBIVASH®</a>
+  <ul class="nav-links">
+    <li><a href="/ai-security">AI Security</a></li>
+    <li><a href="/owasp-llm-security">OWASP LLM</a></li>
+    <li><a href="/mssp">MSSP</a></li>
+    <li><a href="/soc-operations">SOC</a></li>
+    <li><a href="/upgrade">Pricing</a></li>
+  </ul>
+</nav>
+<nav class="breadcrumb">
+  <a href="/">Home</a><span>›</span><a href="/ai-security">AI Security</a><span>›</span><span>OWASP LLM Top 10</span>
+</nav>
+
+<section class="hero">
+  <div class="badge">OWASP LLM Top 10 · All 10 Vulnerability Classes · Expert + Automated</div>
+  <h1>OWASP LLM Top 10 Security Assessment</h1>
+  <p class="lead">The definitive security assessment for enterprise LLM deployments — covering all 10 OWASP LLM vulnerability classes with automated scanning, expert manual testing, and actionable remediation guidance.</p>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:24px 0">
+    <div style="background:rgba(225,29,72,.1);border:1px solid rgba(225,29,72,.2);border-radius:8px;padding:12px 20px;text-align:center">
+      <div style="font-size:1.4rem;font-weight:900;color:#fda4af">LLM01–10</div>
+      <div style="font-size:.78rem;color:#64748b;margin-top:2px">Full Coverage</div>
+    </div>
+    <div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:12px 20px;text-align:center">
+      <div style="font-size:1.4rem;font-weight:900;color:#c4b5fd">100+</div>
+      <div style="font-size:.78rem;color:#64748b;margin-top:2px">Test Cases</div>
+    </div>
+    <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px 20px;text-align:center">
+      <div style="font-size:1.4rem;font-weight:900;color:#fcd34d">72h</div>
+      <div style="font-size:.78rem;color:#64748b;margin-top:2px">Report Delivery</div>
+    </div>
+    <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:12px 20px;text-align:center">
+      <div style="font-size:1.4rem;font-weight:900;color:#6ee7b7">CVSS</div>
+      <div style="font-size:.78rem;color:#64748b;margin-top:2px">Scored Findings</div>
+    </div>
+  </div>
+  <div class="cta-group">
+    <a class="btn-primary" href="/ai-security-assessment">Start OWASP LLM Assessment</a>
+    <a class="btn-outline" href="/booking">Book Expert Consultation</a>
+  </div>
+</section>
+
+<section style="background:rgba(225,29,72,.04);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <h2 class="section-title">All 10 OWASP LLM Vulnerability Classes</h2>
+      <p class="section-sub">Every assessment covers the complete OWASP LLM Top 10 — automated detection plus expert manual validation for complex attack scenarios.</p>
+    </div>
+    <div class="llm-grid">
+      <div class="llm-card">
+        <div class="llm-num">LLM01 — PROMPT INJECTION</div>
+        <h3>Prompt Injection</h3>
+        <p>Attackers manipulate LLM behavior by crafting inputs that override system instructions. Direct injection targets the model directly; indirect injection plants malicious instructions in external data retrieved by the LLM (RAG systems, web browsing, tool outputs).</p>
+        <span class="severity sev-critical">CRITICAL</span>
+        <div style="margin-top:10px"><span class="tag">Direct Injection</span><span class="tag">Indirect/RAG</span><span class="tag-purple">Jailbreak</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM02 — INSECURE OUTPUT HANDLING</div>
+        <h3>Insecure Output Handling</h3>
+        <p>LLM-generated content passed unsanitized to downstream systems enables XSS, CSRF, SSRF, privilege escalation, and remote code execution. Common in LLM-integrated web apps and code execution environments.</p>
+        <span class="severity sev-critical">CRITICAL</span>
+        <div style="margin-top:10px"><span class="tag">XSS via LLM</span><span class="tag">Code Injection</span><span class="tag-purple">SSRF</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM03 — TRAINING DATA POISONING</div>
+        <h3>Training Data Poisoning</h3>
+        <p>Adversarial manipulation of training datasets, fine-tuning data, or RLHF feedback to introduce backdoors, biases, or malicious behavior patterns that activate on specific trigger inputs.</p>
+        <span class="severity sev-high">HIGH</span>
+        <div style="margin-top:10px"><span class="tag">Backdoor Attacks</span><span class="tag">Bias Injection</span><span class="tag-purple">RLHF Poisoning</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM04 — MODEL DENIAL OF SERVICE</div>
+        <h3>Model Denial of Service</h3>
+        <p>Adversarial inputs that cause resource exhaustion — extremely long context windows, recursive prompts, computationally expensive reasoning chains — degrading service availability and increasing operational costs.</p>
+        <span class="severity sev-high">HIGH</span>
+        <div style="margin-top:10px"><span class="tag">Context Flooding</span><span class="tag">Cost Amplification</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM05 — SUPPLY CHAIN VULNERABILITIES</div>
+        <h3>Supply Chain Vulnerabilities</h3>
+        <p>Risks from third-party model providers, pre-trained base models, plugins, datasets, and deployment infrastructure. Includes compromised model weights, malicious fine-tuning datasets, and vulnerable LLM framework dependencies.</p>
+        <span class="severity sev-high">HIGH</span>
+        <div style="margin-top:10px"><span class="tag">Third-Party Models</span><span class="tag">Plugin Security</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM06 — SENSITIVE INFORMATION DISCLOSURE</div>
+        <h3>Sensitive Information Disclosure</h3>
+        <p>LLMs inadvertently revealing training data (memorization attacks), system prompts, API keys in context, or confidential business information embedded in fine-tuning datasets or retrieved via RAG systems.</p>
+        <span class="severity sev-critical">CRITICAL</span>
+        <div style="margin-top:10px"><span class="tag">Prompt Extraction</span><span class="tag">PII Leakage</span><span class="tag-purple">Memorization</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM07 — INSECURE PLUGIN DESIGN</div>
+        <h3>Insecure Plugin Design</h3>
+        <p>LLM plugins and function-calling tools with insufficient input validation, overly broad permissions, or inadequate authentication enabling unauthorized data access, privilege escalation, and lateral movement.</p>
+        <span class="severity sev-high">HIGH</span>
+        <div style="margin-top:10px"><span class="tag">Tool Poisoning</span><span class="tag">Privilege Escalation</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM08 — EXCESSIVE AGENCY</div>
+        <h3>Excessive Agency</h3>
+        <p>LLM-powered agents with excessive permissions, capabilities, or autonomy taking harmful actions beyond their intended scope — deleting files, sending emails, executing transactions, or modifying configurations without authorization.</p>
+        <span class="severity sev-critical">CRITICAL</span>
+        <div style="margin-top:10px"><span class="tag">Agent Autonomy</span><span class="tag-purple">Scope Violation</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM09 — OVERRELIANCE</div>
+        <h3>Overreliance</h3>
+        <p>Organizational risk from excessive trust in LLM outputs without verification — leading to security decisions based on hallucinated vulnerability data, incorrect compliance guidance, or fabricated threat intelligence.</p>
+        <span class="severity sev-medium">MEDIUM</span>
+        <div style="margin-top:10px"><span class="tag">Hallucination Risk</span><span class="tag">Process Design</span></div>
+      </div>
+      <div class="llm-card">
+        <div class="llm-num">LLM10 — MODEL THEFT</div>
+        <h3>Model Theft</h3>
+        <p>Unauthorized extraction of model architecture, weights, or training data through API abuse (model extraction attacks), side-channel analysis, or membership inference — enabling competitors to replicate proprietary AI without authorization.</p>
+        <span class="severity sev-high">HIGH</span>
+        <div style="margin-top:10px"><span class="tag">Model Extraction</span><span class="tag-purple">Membership Inference</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <h2 class="section-title">Assessment Methodology</h2>
+      <p class="section-sub">Automated scanning combined with expert manual testing — no checkbox compliance, real attack simulation.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="icon">🤖</div>
+        <h3>Automated Scanning</h3>
+        <p>Automated test suite executes 100+ prompt injection payloads, output handling tests, and information disclosure probes against your LLM API endpoints.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔬</div>
+        <h3>Manual Expert Testing</h3>
+        <p>Security engineers manually test complex attack chains — multi-turn prompt injection, indirect injection via RAG, plugin chaining attacks — that automated tools miss.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>CVSS-Scored Report</h3>
+        <p>Every finding scored with CVSS v3.1, detailed proof-of-concept, business impact analysis, and prioritized remediation guidance — delivered within 72 hours.</p>
+      </div>
+      <div class="card">
+        <div class="icon">✅</div>
+        <h3>Remediation Verification</h3>
+        <p>Post-fix retesting validates that remediation is effective and doesn't introduce new vulnerabilities. Included in the assessment at no additional cost.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📋</div>
+        <h3>Executive Summary</h3>
+        <p>Board-ready executive summary with risk heat map, business impact scoring, and budget justification language for security investment decisions.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🛡️</div>
+        <h3>AI Governance Alignment</h3>
+        <p>Findings mapped to NIST AI RMF, ISO 42001, EU AI Act requirements — turn assessment results directly into governance documentation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:72px 24px">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item">
+        <div class="faq-q">What is the OWASP LLM Top 10?</div>
+        <div class="faq-a">The OWASP LLM Top 10 is an industry-standard framework published by OWASP (Open Web Application Security Project) identifying the 10 most critical security risks for applications built on Large Language Models. It covers attack classes unique to AI systems — from prompt injection and training data poisoning to model theft — providing a common vocabulary for AI security risk assessment.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Which LLMs and AI systems can be tested?</div>
+        <div class="faq-a">We test any LLM-powered application accessible via API or web interface — OpenAI GPT-4/4o, Anthropic Claude, Google Gemini, Meta Llama, Mistral, custom fine-tuned models, RAG systems, AI agents built on LangChain/LlamaIndex/AutoGen, and enterprise AI applications built on Azure OpenAI Service or Bedrock.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How long does an OWASP LLM assessment take?</div>
+        <div class="faq-a">Standard assessments deliver a full report within 72 hours of API/access provisioning. Complex multi-agent system assessments may require 5–7 business days. Expedited 24-hour reports are available for Enterprise customers.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is prompt injection the most dangerous LLM vulnerability?</div>
+        <div class="faq-a">Prompt injection (LLM01) is consistently ranked the most critical because it's both highly prevalent and enables exploitation of other vulnerability classes. A successful indirect prompt injection attack via a retrieved document can trigger excessive agency (LLM08) to exfiltrate data, effectively chaining multiple OWASP LLM risks in a single attack.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Does the assessment include remediation guidance?</div>
+        <div class="faq-a">Yes — every finding includes a CVSS score, proof-of-concept reproduction steps, root cause analysis, and specific remediation guidance. After you implement fixes, we retest all identified vulnerabilities at no additional charge within 30 days of the original report.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="prose" style="padding:40px 24px 72px">
+  <h2>Why OWASP LLM Security Matters in 2026</h2>
+  <p>The integration of LLMs into enterprise workflows has dramatically expanded the attack surface. Traditional application security — input validation, authentication, authorization — remains necessary but is no longer sufficient. LLMs introduce fundamentally new attack vectors: the model itself becomes an attack surface through its ability to interpret and act on natural language instructions embedded in any input it processes.</p>
+  <p>High-profile incidents have validated these risks: LLM-powered chatbots manipulated into providing harmful content, RAG systems leaking confidential documents through carefully crafted queries, and AI agents performing unauthorized transactions after receiving indirect injection payloads in retrieved web pages.</p>
+
+  <h2>Prompt Injection: The Critical Path</h2>
+  <p>Prompt injection attacks exploit the fundamental tension in LLM design: the model must treat both instructions (system prompt) and data (user input, retrieved content) as natural language, making it inherently difficult to distinguish between "instruction to follow" and "data to process." Modern defenses include input sanitization, output filtering, privilege separation, and instruction hierarchy enforcement — but none are 100% reliable against sophisticated attackers.</p>
+  <p>Our assessment tests direct injection (user-controlled input), indirect injection (retrieved external content), multimodal injection (images containing embedded text instructions), and instruction hierarchy bypass techniques against your specific LLM implementation and deployment architecture.</p>
+</section>
+
+<section style="background:rgba(225,29,72,.06);border-top:1px solid var(--border);text-align:center">
+  <div class="container">
+    <h2 class="section-title">Secure Your AI Before Attackers Do</h2>
+    <p style="color:#94a3b8;max-width:560px;margin:0 auto 28px">Enterprise OWASP LLM assessments with 72-hour delivery. Trusted by AI security teams globally.</p>
+    <div class="cta-group">
+      <a class="btn-primary" href="/ai-security-assessment">Start Assessment →</a>
+      <a class="btn-outline" href="/booking">Book Expert Call</a>
+    </div>
+    <p style="margin-top:16px;color:#475569;font-size:.88rem">Starting ₹9,999 · 72-hour delivery · CVSS-scored findings · Remediation verification included</p>
+  </div>
+</section>
+
+<footer>
+  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · OWASP LLM Top 10 · AI Security Assessment</p>
+  <p style="margin-top:8px">
+    <a href="/ai-security">AI Security</a> · <a href="/owasp-llm-security">OWASP LLM</a> · <a href="/threat-intelligence">Threat Intel</a> · <a href="/mssp">MSSP</a> · <a href="/blog/">Blog</a>
+  </p>
+  <p style="margin-top:10px">© 2024–2026 CYBERDUDEBIVASH Pvt Ltd · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/.well-known/security.txt">Security</a></p>
+</footer>
+</body>
+</html>

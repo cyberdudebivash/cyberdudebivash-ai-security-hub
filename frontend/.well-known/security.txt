@@ -1,0 +1,20 @@
+# CYBERDUDEBIVASH AI Security Hub — Security Contact
+# https://cyberdudebivash.in/.well-known/security.txt
+# Compliant with RFC 9116 (securitytxt.org)
+
+Contact: mailto:security@cyberdudebivash.in
+Contact: https://cyberdudebivash.in/contact
+Expires: 2027-06-30T00:00:00.000Z
+Encryption: https://cyberdudebivash.in/.well-known/pgp-key.txt
+Preferred-Languages: en
+Canonical: https://cyberdudebivash.in/.well-known/security.txt
+Policy: https://cyberdudebivash.in/security-disclosure-policy
+Acknowledgments: https://cyberdudebivash.in/security-researchers
+Hiring: https://cyberdudebivash.in/careers
+
+# Responsible Disclosure Policy:
+# We are committed to working with security researchers to verify and
+# address any potential vulnerabilities. We follow coordinated vulnerability
+# disclosure (CVD) guidelines and aim to respond within 24 hours.
+# CVSS score will be assigned to all confirmed vulnerabilities.
+# Credit will be given to researchers in our Security Acknowledgments page.

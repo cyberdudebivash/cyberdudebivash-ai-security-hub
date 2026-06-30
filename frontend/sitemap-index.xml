@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- CYBERDUDEBIVASH AI Security Hub — Master Sitemap Index v42.0
+       Platform: https://cyberdudebivash.in
+       Updated: 2026-06-30 -->
+
+  <!-- Core Platform Pages -->
+  <sitemap>
+    <loc>https://cyberdudebivash.in/sitemap.xml</loc>
+    <lastmod>2026-06-30</lastmod>
+  </sitemap>
+
+  <!-- CVE Database (1,625 pages) -->
+  <sitemap>
+    <loc>https://cyberdudebivash.in/sitemap-cve.xml</loc>
+    <lastmod>2026-06-30</lastmod>
+  </sitemap>
+
+  <!-- Blog & Research Articles -->
+  <sitemap>
+    <loc>https://cyberdudebivash.in/sitemap-blog.xml</loc>
+    <lastmod>2026-06-30</lastmod>
+  </sitemap>
+
+  <!-- Enterprise Service Landing Pages -->
+  <sitemap>
+    <loc>https://cyberdudebivash.in/sitemap-services.xml</loc>
+    <lastmod>2026-06-30</lastmod>
+  </sitemap>
+
+  <!-- API Documentation -->
+  <sitemap>
+    <loc>https://cyberdudebivash.in/sitemap-api.xml</loc>
+    <lastmod>2026-06-30</lastmod>
+  </sitemap>
+
+</sitemapindex>

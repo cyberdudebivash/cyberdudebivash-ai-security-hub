@@ -77,6 +77,46 @@ User-agent: facebookexternalhit
 Allow: /
 Allow: /og-image.png
 
+# ── AI Search Crawlers (allow for AI Overviews, ChatGPT, Gemini, Perplexity) ─
+User-agent: GPTBot
+Allow: /
+Allow: /blog/
+Allow: /cve/
+Allow: /intel
+Allow: /api-docs
+Disallow: /api/
+Disallow: /admin-payments
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /admin-payments
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /blog/
+Allow: /cve/
+Disallow: /api/
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /blog/
+Allow: /cve/
+Disallow: /api/
+
+User-agent: Applebot
+Allow: /
+Disallow: /api/
+
 # ── Sitemaps ──────────────────────────────────────────────────────────────────
+Sitemap: https://cyberdudebivash.in/sitemap-index.xml
 Sitemap: https://cyberdudebivash.in/sitemap.xml
 Sitemap: https://cyberdudebivash.in/sitemap-cve.xml
+Sitemap: https://cyberdudebivash.in/sitemap-blog.xml
+Sitemap: https://cyberdudebivash.in/sitemap-services.xml
+Sitemap: https://cyberdudebivash.in/sitemap-api.xml
+
+# ── RSS & Atom Feeds ─────────────────────────────────────────────────────────
+# RSS:  https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/rss
+# Atom: https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/atom
+# JSON: https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/feed.json

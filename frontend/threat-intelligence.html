@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#00d4ff"/>
+<title>Enterprise Threat Intelligence | CYBERDUDEBIVASH — Real-Time CVE, CISA KEV, EPSS, IOC Enrichment</title>
+<meta name="description" content="Real-time enterprise threat intelligence: 1,600+ CVEs, CISA KEV integration, EPSS scoring, IOC enrichment (VirusTotal + AbuseIPDB + Shodan), SIEM export in STIX 2.1/Sigma/CEF. API-first platform."/>
+<meta name="keywords" content="threat intelligence platform, CVE database, CISA KEV, EPSS scoring, IOC enrichment, VirusTotal integration, SIEM integration, STIX 2.1, Sigma rules, threat hunting, vulnerability intelligence"/>
+<meta name="author" content="CyberDudeBivash Pvt. Ltd."/>
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
+<link rel="canonical" href="https://cyberdudebivash.in/threat-intelligence"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://cyberdudebivash.in/threat-intelligence"/>
+<meta property="og:title" content="Enterprise Threat Intelligence | CYBERDUDEBIVASH AI Security Hub"/>
+<meta property="og:description" content="Real-time CVE database, CISA KEV, EPSS scoring, IOC enrichment, SIEM export. API-first threat intelligence for enterprise SOC teams."/>
+<meta property="og:image" content="https://cyberdudebivash.in/og-image.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:site_name" content="CYBERDUDEBIVASH AI Security Hub"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:site" content="@cyberdudebivash"/>
+<meta name="twitter:title" content="Enterprise Threat Intelligence | CYBERDUDEBIVASH"/>
+<meta name="twitter:description" content="1,600+ CVEs, CISA KEV, EPSS, IOC enrichment, STIX 2.1 export. Real-time threat intelligence for enterprise SOC."/>
+<meta name="twitter:image" content="https://cyberdudebivash.in/og-image.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev"/>
+<link rel="alternate" type="application/rss+xml" title="CYBERDUDEBIVASH Threat Intelligence Feed" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/rss"/>
+<link rel="icon" href="/favicon.ico"/>
+<script type="module" src="/assets/js/seo-schema.js"></script>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+<style>
+:root{--accent:#06b6d4;--accent2:#7c3aed;--bg:#0a0a0f;--card:#0f0f1a;--border:#1a1a2e;--text:#e2e8f0;--muted:#64748b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+nav{background:rgba(10,10,15,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+.nav-brand{font-weight:800;font-size:1.1rem;background:linear-gradient(135deg,#7c3aed,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
+.nav-links{display:flex;gap:24px;list-style:none}
+.nav-links a{color:#94a3b8;text-decoration:none;font-size:.9rem;transition:color .2s}
+.nav-links a:hover{color:#e2e8f0}
+.breadcrumb{padding:16px 24px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.breadcrumb a{color:#06b6d4;text-decoration:none;font-size:.9rem}
+.breadcrumb span{color:#64748b;font-size:.9rem;margin:0 8px}
+.hero{background:linear-gradient(135deg,#0a0a0f 0%,#001a2e 50%,#0a0a1a 100%);padding:80px 24px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(6,182,212,.12),transparent 70%);pointer-events:none}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;background:linear-gradient(135deg,#06b6d4,#7c3aed,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:20px;max-width:900px;margin-inline:auto}
+.hero p.lead{font-size:1.25rem;color:#94a3b8;max-width:700px;margin:0 auto 32px}
+.badge{display:inline-block;background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.3);color:#67e8f9;padding:6px 16px;border-radius:999px;font-size:.85rem;font-weight:600;margin-bottom:20px}
+.stats-bar{display:flex;gap:48px;justify-content:center;flex-wrap:wrap;padding:32px 0}
+.stat-item{text-align:center}
+.stat-item .num{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-item .label{font-size:.82rem;color:#64748b;margin-top:4px}
+.cta-group{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#06b6d4,#7c3aed);color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;transition:opacity .2s}
+.btn-primary:hover{opacity:.9}
+.btn-outline{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(6,182,212,.4);color:#67e8f9;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;transition:all .2s}
+.btn-outline:hover{background:rgba(6,182,212,.08)}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+section{padding:72px 24px}
+.section-title{font-size:clamp(1.4rem,3vw,2.1rem);font-weight:800;margin-bottom:12px;background:linear-gradient(135deg,#06b6d4,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-sub{color:#94a3b8;font-size:1.05rem;max-width:600px;margin-bottom:40px;line-height:1.7}
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;transition:border-color .2s}
+.card:hover{border-color:rgba(6,182,212,.3)}
+.card h3{font-size:1.05rem;font-weight:700;margin-bottom:8px;color:#e2e8f0}
+.card p{color:#94a3b8;font-size:.92rem;line-height:1.7}
+.card .icon{font-size:1.6rem;margin-bottom:12px}
+.tag{display:inline-block;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);color:#67e8f9;padding:3px 9px;border-radius:4px;font-size:.78rem;font-weight:600;margin:2px}
+.tag-red{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:#fca5a5}
+.tag-orange{background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.2);color:#fdba74}
+.tag-green{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.2);color:#86efac}
+.integration-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.integration-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;transition:border-color .2s}
+.integration-card:hover{border-color:rgba(6,182,212,.3)}
+.integration-card h4{font-size:.9rem;font-weight:700;color:#e2e8f0;margin:10px 0 4px}
+.integration-card p{font-size:.8rem;color:#64748b}
+.code-block{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:20px;font-family:monospace;font-size:.85rem;color:#e6edf3;overflow-x:auto;margin:16px 0}
+.code-block .comment{color:#8b949e}
+.code-block .key{color:#79c0ff}
+.code-block .val{color:#a5d6ff}
+.code-block .str{color:#a8ff3e}
+.prose{max-width:800px;margin:0 auto;color:#94a3b8;font-size:1rem;line-height:1.8}
+.prose h2{color:#e2e8f0;font-size:1.4rem;font-weight:700;margin:32px 0 10px}
+.prose h3{color:#cbd5e1;font-size:1.1rem;font-weight:600;margin:20px 0 6px}
+.prose p{margin-bottom:14px}
+.prose ul{padding-left:20px;margin-bottom:14px}
+.prose ul li{margin-bottom:6px}
+.prose code{background:#1a1a2e;color:#67e8f9;padding:2px 6px;border-radius:4px;font-size:.88em;font-family:monospace}
+footer{background:var(--card);border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:#475569;font-size:.88rem}
+footer a{color:#06b6d4;text-decoration:none}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="/">CYBERDUDEBIVASH®</a>
+  <ul class="nav-links">
+    <li><a href="/ai-security">AI Security</a></li>
+    <li><a href="/threat-intelligence">Threat Intel</a></li>
+    <li><a href="/mssp">MSSP</a></li>
+    <li><a href="/api-docs">API</a></li>
+    <li><a href="/upgrade">Pricing</a></li>
+  </ul>
+</nav>
+
+<nav class="breadcrumb">
+  <a href="/">Home</a><span>›</span><a href="/services">Services</a><span>›</span><span>Threat Intelligence</span>
+</nav>
+
+<section class="hero">
+  <div class="badge">Real-Time · API-First · Enterprise-Grade</div>
+  <h1>Enterprise Threat Intelligence Platform</h1>
+  <p class="lead">1,600+ CVEs, CISA KEV active exploitation tracking, EPSS probability scoring, multi-source IOC enrichment, and SIEM-ready export in every major format — all via a unified REST API.</p>
+  <div class="stats-bar">
+    <div class="stat-item"><div class="num">1,600+</div><div class="label">CVE Advisories</div></div>
+    <div class="stat-item"><div class="num">EPSS</div><div class="label">Exploit Probability</div></div>
+    <div class="stat-item"><div class="num">3</div><div class="label">IOC Enrichment Sources</div></div>
+    <div class="stat-item"><div class="num">5</div><div class="label">SIEM Export Formats</div></div>
+    <div class="stat-item"><div class="num">99.9%</div><div class="label">API Uptime SLA</div></div>
+  </div>
+  <div class="cta-group">
+    <a class="btn-primary" href="/intel">Explore Live Threat Feed</a>
+    <a class="btn-outline" href="/api-docs">View API Reference</a>
+  </div>
+</section>
+
+<section style="background:rgba(6,182,212,.04);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <h2 class="section-title">Threat Intelligence Data Sources</h2>
+      <p class="section-sub">Aggregated from authoritative sources, enriched with AI analysis, delivered via real-time API.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="icon">🏛️</div>
+        <h3>NIST NVD Integration</h3>
+        <p>Direct integration with the National Vulnerability Database for authoritative CVE data including CWE classifications, CVSS v3.1/v4.0 base scores, affected product CPEs, and reference URLs.</p>
+        <div style="margin-top:12px"><span class="tag">CVSS v3.1</span><span class="tag">CVSS v4.0</span><span class="tag">CWE</span><span class="tag">CPE</span></div>
+      </div>
+      <div class="card">
+        <div class="icon">🚨</div>
+        <h3>CISA KEV Tracking</h3>
+        <p>Real-time monitoring of CISA's Known Exploited Vulnerabilities catalog with due date tracking, mandatory remediation timelines, and active exploitation status for every CVE.</p>
+        <div style="margin-top:12px"><span class="tag-red">Active Exploitation</span><span class="tag">Due Dates</span><span class="tag">FCEB Mandate</span></div>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>EPSS Probability Scoring</h3>
+        <p>Exploit Prediction Scoring System (EPSS) integration from Cyentia Institute — daily-updated probability scores for the likelihood of exploitation within 30 days, enabling risk-prioritized patching.</p>
+        <div style="margin-top:12px"><span class="tag-orange">Exploit Probability</span><span class="tag">Daily Updates</span><span class="tag">Risk Priority</span></div>
+      </div>
+      <div class="card">
+        <div class="icon">🔎</div>
+        <h3>VirusTotal v3 IOC Enrichment</h3>
+        <p>Real-time IOC analysis via VirusTotal v3 API — multi-engine malware scanning, reputation scores, behavioral analysis, and threat actor attribution for IPs, domains, URLs, and file hashes.</p>
+        <div style="margin-top:12px"><span class="tag">70+ AV Engines</span><span class="tag">Sandbox</span><span class="tag">Threat Actor</span></div>
+      </div>
+      <div class="card">
+        <div class="icon">🌐</div>
+        <h3>AbuseIPDB Integration</h3>
+        <p>IP reputation intelligence from AbuseIPDB with abuse confidence scores, geographic data, ISP information, and historical abuse reports to identify malicious infrastructure.</p>
+        <div style="margin-top:12px"><span class="tag">Confidence Score</span><span class="tag">GeoIP</span><span class="tag">Abuse History</span></div>
+      </div>
+      <div class="card">
+        <div class="icon">🛰️</div>
+        <h3>Shodan InternetDB</h3>
+        <p>Internet-wide scanning data via Shodan InternetDB — open ports, exposed services, running CVEs on scanned hosts, and banner information for threat context enrichment.</p>
+        <div style="margin-top:12px"><span class="tag">Open Ports</span><span class="tag">Exposed Services</span><span class="tag">Host CVEs</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <h2 class="section-title">SIEM Export Formats</h2>
+      <p class="section-sub">Export threat intelligence directly into your existing security stack with one API call.</p>
+    </div>
+    <div class="integration-grid">
+      <div class="integration-card">
+        <div style="font-size:1.8rem">📋</div>
+        <h4>STIX 2.1</h4>
+        <p>Structured Threat Information Expression for TAXII/MISP integration</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:1.8rem">🔍</div>
+        <h4>Sigma Rules</h4>
+        <p>Generic detection format for Splunk, Elastic, QRadar, ArcSight</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:1.8rem">📄</div>
+        <h4>CEF</h4>
+        <p>Common Event Format for HP ArcSight and CEF-compatible SIEMs</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:1.8rem">📊</div>
+        <h4>JSON</h4>
+        <p>Native JSON for custom integrations, Elasticsearch, and Splunk HEC</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:1.8rem">📑</div>
+        <h4>CSV</h4>
+        <p>Flat CSV for spreadsheet analysis, reporting, and legacy systems</p>
+      </div>
+    </div>
+
+    <div style="margin-top:40px">
+      <h3 style="color:#e2e8f0;font-size:1.1rem;margin-bottom:12px">API Quick Start</h3>
+      <div class="code-block">
+<span class="comment"># Get CRITICAL CVEs with CISA KEV flag</span>
+curl -H <span class="str">"x-api-key: YOUR_API_KEY"</span> \
+  <span class="str">"https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/v1/threat-intel?severity=CRITICAL&kev=true&limit=20"</span>
+
+<span class="comment"># Enrich an IOC</span>
+curl -X POST -H <span class="str">"Authorization: Bearer TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"ioc":"1.1.1.1","type":"ip"}'</span> \
+  <span class="str">"https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/hunt/ioc"</span>
+
+<span class="comment"># Export to SIEM (STIX 2.1 format)</span>
+curl -X POST -H <span class="str">"Authorization: Bearer TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"format":"stix","severity":["CRITICAL","HIGH"],"limit":500}'</span> \
+  <span class="str">"https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/export/siem"</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="prose" style="padding:72px 24px">
+  <h2>What is Enterprise Threat Intelligence?</h2>
+  <p>Enterprise threat intelligence is the structured collection, analysis, and dissemination of information about cybersecurity threats relevant to an organization's specific risk profile. Unlike generic vulnerability feeds, true threat intelligence contextualizes threats — answering not just "what vulnerabilities exist" but "which vulnerabilities are being actively exploited, against which industries, by which threat actors, and with what probability of targeting our environment."</p>
+  <p>CYBERDUDEBIVASH AI Security Hub provides threat intelligence at three levels: <strong>strategic</strong> (executive briefings, industry threat landscape), <strong>tactical</strong> (TTPs, MITRE ATT&CK mappings, detection rules), and <strong>operational</strong> (IOC feeds, CVE advisories, active exploitation alerts).</p>
+
+  <h2>CVSS Scoring and Vulnerability Prioritization</h2>
+  <p>The Common Vulnerability Scoring System (CVSS) provides a standardized numerical score (0–10) reflecting the severity of a vulnerability. CVSS v3.1 considers Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality/Integrity/Availability impact. CVSS v4.0 (2023) adds Supplemental and Threat metrics.</p>
+  <p>However, CVSS alone is insufficient for prioritization. A CVSS 9.8 vulnerability with zero public exploits and no CISA KEV listing may be lower priority than a CVSS 7.5 with a Metasploit module and active exploitation in the wild. CYBERDUDEBIVASH combines CVSS + EPSS + CISA KEV status for intelligent risk-based prioritization.</p>
+
+  <h2>CISA KEV: The Gold Standard for Prioritization</h2>
+  <p>CISA's Known Exploited Vulnerabilities (KEV) catalog is the most authoritative list of vulnerabilities confirmed to be actively exploited by threat actors in the wild. For Federal Civilian Executive Branch (FCEB) agencies, KEV remediation is mandatory with specific due dates. For all organizations, KEV status indicates "patch this now."</p>
+  <p>The CYBERDUDEBIVASH platform tracks every CVE's KEV status in real-time with API access at <code>GET /api/v1/intel/kev.json</code>, enabling automated prioritization workflows and SIEM alert enrichment.</p>
+
+  <h2>IOC Enrichment: From Indicator to Intelligence</h2>
+  <p>An Indicator of Compromise (IOC) — an IP address, domain, URL, file hash, or email address — is raw data. Intelligence is IOC data enriched with context: Who controls this IP? Has this domain been used for phishing? What malware families use this hash? What threat actor is associated with this infrastructure?</p>
+  <p>CYBERDUDEBIVASH's IOC enrichment pipeline hits VirusTotal v3 (70+ AV engines + behavioral analysis), AbuseIPDB (community abuse reports + confidence scoring), and Shodan InternetDB (open ports + running CVEs) simultaneously, returning a unified verdict within seconds via <code>POST /api/hunt/ioc</code>.</p>
+</section>
+
+<section style="background:rgba(6,182,212,.06);border-top:1px solid var(--border);text-align:center">
+  <div class="container">
+    <h2 class="section-title">Start With Threat Intelligence Today</h2>
+    <p style="color:#94a3b8;max-width:580px;margin:0 auto 28px">Free tier includes live CVE feed access. Enterprise API with full IOC enrichment and SIEM export from ₹2,999/month.</p>
+    <div class="cta-group">
+      <a class="btn-primary" href="/intel">Explore Live Feed →</a>
+      <a class="btn-outline" href="/upgrade">View Pricing</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · AI-Native Cyber Defense · Enterprise Threat Intelligence</p>
+  <p style="margin-top:8px">
+    <a href="/ai-security">AI Security</a> · <a href="/threat-intelligence">Threat Intel</a> · <a href="/mssp">MSSP</a> · <a href="/soc-operations">SOC</a> · <a href="/zero-trust">Zero Trust</a> · <a href="/blog/">Blog</a>
+  </p>
+  <p style="margin-top:10px">© 2024–2026 CYBERDUDEBIVASH Pvt Ltd · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/.well-known/security.txt">Security</a></p>
+</footer>
+</body>
+</html>

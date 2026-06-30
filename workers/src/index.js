@@ -1309,6 +1309,20 @@ export default {
       }
     }
 
+    // ── RSS / Atom / JSON Feed (no auth — SEO + discovery) ─────────────────
+    if (method === 'GET' && path === '/api/rss') {
+      const { handleRSSFeed } = await import('./handlers/seoFeeds.js');
+      return withSecurityHeaders(withCors(await handleRSSFeed(request, env), request));
+    }
+    if (method === 'GET' && path === '/api/atom') {
+      const { handleAtomFeed } = await import('./handlers/seoFeeds.js');
+      return withSecurityHeaders(withCors(await handleAtomFeed(request, env), request));
+    }
+    if (method === 'GET' && path === '/sitemap-dynamic.xml') {
+      const { handleDynamicSitemap } = await import('./handlers/seoFeeds.js');
+      return withSecurityHeaders(withCors(await handleDynamicSitemap(request, env), request));
+    }
+
     // ── Static / no-auth routes ─────────────────────────────────────────────
     // ── Public Sentinel APEX threat-intel feeds (no auth — advertised in footer) ──
     if (method === 'GET' && (

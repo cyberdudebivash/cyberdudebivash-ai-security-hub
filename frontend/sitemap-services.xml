@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- CYBERDUDEBIVASH AI Security Hub — Enterprise Service Pages Sitemap v42.0 -->
+
+  <!-- Core Service Landing Pages -->
+  <url><loc>https://cyberdudebivash.in/ai-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://cyberdudebivash.in/threat-intelligence</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://cyberdudebivash.in/mssp</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://cyberdudebivash.in/soc-operations</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://cyberdudebivash.in/owasp-llm-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://cyberdudebivash.in/zero-trust</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://cyberdudebivash.in/devsecops</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://cyberdudebivash.in/cloud-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://cyberdudebivash.in/incident-response</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://cyberdudebivash.in/threat-hunting</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://cyberdudebivash.in/ai-red-teaming</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://cyberdudebivash.in/ai-governance</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://cyberdudebivash.in/vulnerability-management</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://cyberdudebivash.in/security-automation</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://cyberdudebivash.in/enterprise-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://cyberdudebivash.in/compliance</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://cyberdudebivash.in/attack-surface-management</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.82</priority></url>
+
+  <!-- Existing Pages (enhanced) -->
+  <url><loc>https://cyberdudebivash.in/services</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.80</priority></url>
+  <url><loc>https://cyberdudebivash.in/ai-security-services</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.80</priority></url>
+  <url><loc>https://cyberdudebivash.in/ai-governance-frameworks</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.80</priority></url>
+  <url><loc>https://cyberdudebivash.in/ai-security-assessment</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://cyberdudebivash.in/security-assessment</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://cyberdudebivash.in/mcp-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.78</priority></url>
+  <url><loc>https://cyberdudebivash.in/agent-threats</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.78</priority></url>
+
+</urlset>

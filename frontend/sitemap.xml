@@ -55,4 +55,28 @@
   <url><loc>https://cyberdudebivash.in/terms-of-service</loc><lastmod>2026-06-01</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
   <url><loc>https://cyberdudebivash.in/refund-policy</loc><lastmod>2026-06-01</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
 
+  <!-- v42.0 Enterprise Service Landing Pages (2026-06-30) -->
+  <url><loc>https://cyberdudebivash.in/ai-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://cyberdudebivash.in/threat-intelligence</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://cyberdudebivash.in/mssp</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://cyberdudebivash.in/soc-operations</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://cyberdudebivash.in/owasp-llm-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://cyberdudebivash.in/zero-trust</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://cyberdudebivash.in/devsecops</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://cyberdudebivash.in/cloud-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://cyberdudebivash.in/incident-response</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://cyberdudebivash.in/threat-hunting</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://cyberdudebivash.in/vulnerability-management</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://cyberdudebivash.in/compliance</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://cyberdudebivash.in/enterprise-security</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://cyberdudebivash.in/ai-governance</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://cyberdudebivash.in/attack-surface-management</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://cyberdudebivash.in/security-automation</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.82</priority></url>
+  <!-- Enterprise Onboarding & Support (v42.0) -->
+  <url><loc>https://cyberdudebivash.in/enterprise/onboarding</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.80</priority></url>
+  <url><loc>https://cyberdudebivash.in/enterprise/welcome</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.78</priority></url>
+  <url><loc>https://cyberdudebivash.in/enterprise/contacts</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.75</priority></url>
+  <!-- Sitemap index -->
+  <url><loc>https://cyberdudebivash.in/sitemap</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.50</priority></url>
+
 </urlset>

@@ -39,6 +39,7 @@
 /sw.js                 /sw.js                  200
 /version.json          /version.json           200
 /security.txt          /security.txt           200
+/.well-known/*         /.well-known/:splat      200
 
 # Asset directories — never intercept with routing logic
 /assets/*              /assets/:splat          200
