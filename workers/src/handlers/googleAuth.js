@@ -17,8 +17,12 @@ const GOOGLE_USERINFO  = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const SCOPES           = 'openid email profile';
 const STATE_TTL        = 600; // 10 minutes
 
-const FRONTEND_URL     = 'https://tools.cyberdudebivash.com';
 const CALLBACK_URL     = 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/auth/google/callback';
+
+function getFrontendURL(env) {
+  // TOOLS_URL is the frontend hostname, falls back to WEBSITE, then hardcoded
+  return (env?.TOOLS_URL || env?.WEBSITE || 'https://tools.cyberdudebivash.com').replace(/\/$/, '');
+}
 
 function getClientIP(request) {
   return request.headers.get('CF-Connecting-IP') ||
@@ -62,8 +66,9 @@ export async function handleGoogleCallback(request, env) {
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
 
+  const FRONTEND_URL = getFrontendURL(env);
   const redirectFail = (msg) =>
-    Response.redirect(`${FRONTEND_URL}/auth/error?reason=${encodeURIComponent(msg)}`, 302);
+    Response.redirect(`${FRONTEND_URL}/auth/callback?reason=${encodeURIComponent(msg)}`, 302);
 
   if (error) return redirectFail(error);
   if (!code || !state) return redirectFail('missing_params');
