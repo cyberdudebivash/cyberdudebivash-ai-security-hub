@@ -124,7 +124,7 @@ async function callLLM(systemPrompt, userMessage, env) {
   // ── Cloudflare Workers AI (fallback) ──────────────────────────────────────
   if (env?.AI) {
     try {
-      const res = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      const res = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: userMessage },
@@ -132,7 +132,7 @@ async function callLLM(systemPrompt, userMessage, env) {
         max_tokens: 800,
       });
       const text = res?.response?.trim();
-      if (text) return { text, model: 'llama-3.1-8b-instruct', provider: 'cf_ai' };
+      if (text) return { text, model: 'llama-3.3-70b-instruct-fp8-fast', provider: 'cf_ai' };
     } catch {}
   }
 

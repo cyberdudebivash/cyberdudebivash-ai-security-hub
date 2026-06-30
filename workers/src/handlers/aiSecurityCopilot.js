@@ -1854,7 +1854,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
   const lastResortCandidates = [
     { provider: PROVIDERS.GROQ,       model: 'llama-3.1-8b-instant',  key: 'GROQ_API_KEY',       endpoint: 'https://api.groq.com/openai/v1/chat/completions' },
     { provider: PROVIDERS.DEEPSEEK,   model: 'deepseek-chat',          key: 'DEEPSEEK_API_KEY',   endpoint: 'https://api.deepseek.com/chat/completions' },
-    { provider: PROVIDERS.OPENROUTER, model: 'meta-llama/llama-3.1-8b-instruct:free', key: 'OPENROUTER_API_KEY', endpoint: 'https://openrouter.ai/api/v1/chat/completions' },
+    { provider: PROVIDERS.OPENROUTER, model: 'meta-llama/llama-3.3-70b-instruct:free', key: 'OPENROUTER_API_KEY', endpoint: 'https://openrouter.ai/api/v1/chat/completions' },
   ];
   for (const lr of lastResortCandidates) {
     const apiKey = env[lr.key];
