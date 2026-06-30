@@ -12,30 +12,61 @@ import { corsHeaders } from '../middleware/cors.js';
 const SUBSCRIPTION_PLANS = {
   STARTER: {
     name:        'Starter',
-    price_inr:   499,
-    amount:      49900,
-    scans:       10,
-    description: '10 scans/month, AI Analyze, PDF Reports',
-    features:    ['10 scans/month', 'AI Threat Analysis', 'PDF Reports', '2 API Keys', 'Email Support'],
+    price_inr:   999,
+    amount:      99900,
+    price_annual_inr: 9990,
+    scans:       25,
+    description: '25 scans/month, AI Threat Analysis, PDF Reports, API Access',
+    features:    ['25 scans/month', 'AI Threat Analysis', 'PDF Reports', 'Sentinel CVE Feed', '2 API Keys', 'Email Support'],
     color:       '#3b82f6',
+    popular:     false,
   },
   PRO: {
     name:        'Pro',
-    price_inr:   1499,
-    amount:      149900,
+    price_inr:   2999,
+    amount:      299900,
+    price_annual_inr: 29990,
     scans:       -1,
-    description: 'Unlimited scans, Full AI Suite, API Access',
-    features:    ['Unlimited scans', 'Full AI Brain V2', 'API Access', '5 API Keys', 'Priority Support', 'Advanced Reports'],
+    description: 'Unlimited scans, Full AI Suite, SIEM export, DPDP compliance, API Access',
+    features:    [
+      'Unlimited scans', 'Full AI Copilot (God Mode)', 'SIEM Export (JSON/CEF/STIX/Sigma)',
+      'DPDP Compliance Engine', 'IOC Enrichment (VirusTotal)', '5 API Keys',
+      'Priority Support (24h SLA)', 'GST Invoices', 'Advanced PDF Reports',
+    ],
     color:       '#8b5cf6',
+    popular:     true,
   },
   ENTERPRISE: {
     name:        'Enterprise',
-    price_inr:   4999,
-    amount:      499900,
+    price_inr:   25000,
+    amount:      2500000,
+    price_annual_inr: 250000,
     scans:       -1,
-    description: 'Multi-user, API access, dedicated support',
-    features:    ['Unlimited scans', 'Full AI Brain V2', 'API Access', '20 API Keys', 'Multi-User (10 seats)', 'Dedicated Support', 'Custom Integrations', 'SLA Guarantee'],
+    description: 'Multi-tenant SOC, MSSP white-label, dedicated support, SLA guarantee',
+    features:    [
+      'Unlimited scans', 'Full AI God Mode + APEX Copilot', 'Multi-tenant SOC Dashboard',
+      'MSSP White-label (unlimited tenants)', 'Custom SIEM integrations', '50 API Keys',
+      'Team access (unlimited seats)', 'Dedicated Account Manager', '4h SLA guarantee',
+      'Custom DPDP compliance reports', 'GST invoices + ITC support', 'Annual DPDP retainer',
+      'On-premise deployment option',
+    ],
     color:       '#f59e0b',
+    popular:     false,
+  },
+  MSSP: {
+    name:        'MSSP Suite',
+    price_inr:   75000,
+    amount:      7500000,
+    price_annual_inr: 750000,
+    scans:       -1,
+    description: 'Full white-label MSSP platform — unlimited tenants, revenue share',
+    features:    [
+      'Everything in Enterprise', 'Unlimited white-label tenants', 'Revenue share program (60/40)',
+      'Partner onboarding portal', 'Custom branded SOC dashboard', 'Reseller API',
+      'Co-marketing support', 'Dedicated infra SLA (99.9%)', 'CERT-In aligned reporting',
+    ],
+    color:       '#06b6d4',
+    popular:     false,
   },
 };
 
@@ -349,18 +380,40 @@ export async function handleActivateSubscription(request, env) {
 // Public — returns all available plans for the pricing page
 export async function handleGetPlans(request, env) {
   const headers = corsHeaders(request);
-  const plans = Object.entries(SUBSCRIPTION_PLANS).map(([key, p]) => ({
-    id:          key,
-    name:        p.name,
-    price_inr:   p.price_inr,
-    scans:       p.scans === -1 ? 'Unlimited' : `${p.scans}/month`,
-    description: p.description,
-    features:    p.features,
-    color:       p.color,
-    popular:     key === 'PRO',
-  }));
+  const plans = [
+    {
+      tier: 'FREE',
+      name: 'Explorer',
+      price_inr: 0,
+      price_annual_inr: 0,
+      billing_cycle: 'forever',
+      scans: '3/day',
+      description: 'Get started with domain scanning and threat intelligence',
+      features: ['3 domain scans/day', 'CVE feed (5 entries)', 'Basic threat intel', '1 API key', 'Community support'],
+      color: '#64748b',
+      popular: false,
+      cta: 'Start Free',
+    },
+    ...Object.entries(SUBSCRIPTION_PLANS).map(([key, p]) => ({
+      tier:             key,
+      name:             p.name,
+      price_inr:        p.price_inr,
+      price_annual_inr: p.price_annual_inr,
+      billing_cycle:    'monthly',
+      amount_paise:     p.amount,
+      scans:            p.scans === -1 ? 'Unlimited' : `${p.scans}/month`,
+      description:      p.description,
+      features:         p.features,
+      color:            p.color,
+      popular:          p.popular || false,
+      cta:              key === 'ENTERPRISE' || key === 'MSSP' ? 'Contact Sales' : 'Subscribe Now',
+      checkout_url:     ['ENTERPRISE', 'MSSP'].includes(key)
+        ? 'mailto:sales@cyberdudebivash.in'
+        : 'POST /api/subscription/create',
+    })),
+  ];
 
-  return new Response(JSON.stringify({ success: true, plans }), {
+  return new Response(JSON.stringify({ success: true, data: { plans, currency: 'INR', updated_at: new Date().toISOString() } }), {
     headers: { ...headers, 'Content-Type': 'application/json' },
   });
 }

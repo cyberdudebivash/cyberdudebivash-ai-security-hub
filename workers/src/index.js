@@ -122,6 +122,16 @@ import {
   handleCopilotCapabilities,
 } from './handlers/aiSecurityCopilot.js';
 
+// ── v41.0 CISCO ENTERPRISE MANDATE — SSO, DPDP, GST INVOICE ─────────────────
+import { handleGoogleOAuth, handleGoogleCallback } from './handlers/googleAuth.js';
+import {
+  handleDPDPOverview, handleDPDPAssess, handleDPDPSections,
+  handleDPDPRoPA, handleDPDPReports, handleDPDPReport,
+} from './handlers/dpdpCompliance.js';
+import {
+  handleListInvoices, handleGetInvoice, handleGenerateInvoice,
+} from './handlers/gstInvoice.js';
+
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
 import { handleAIRedTeamPro } from './handlers/aiRedTeamPro.js';
@@ -1684,6 +1694,14 @@ export default {
       return withSecurityHeaders(withCors(apiInfoResponse(), request));
     }
 
+    // ── Google SSO (v41.0) ────────────────────────────────────────────────────
+    if (path === '/api/auth/google' && method === 'GET') {
+      return handleGoogleOAuth(request, env);
+    }
+    if (path === '/api/auth/google/callback' && method === 'GET') {
+      return handleGoogleCallback(request, env);
+    }
+
     // ── Auth routes (no rate limit — have their own brute-force protection) ─
     if (path === '/api/auth/signup' && method === 'POST') {
       const res = await handleSignup(request, env);
@@ -3143,6 +3161,59 @@ export default {
     // POST /api/subscription/activate → verify payment + activate plan session
     if (path === '/api/subscription/activate' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleActivateSubscription(request, env), request));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // v41.0 CISCO ENTERPRISE MANDATE — DPDP, GST Invoice, MSSP Tenants
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // DPDP Act 2023 Compliance Engine
+    if (path === '/api/compliance/dpdp' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleDPDPOverview(request, env, authCtx), request));
+    }
+    if (path === '/api/compliance/dpdp/assess' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleDPDPAssess(request, env, authCtx), request));
+    }
+    if (path === '/api/compliance/dpdp/sections' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleDPDPSections(request, env, authCtx), request));
+    }
+    if (path === '/api/compliance/dpdp/ropa' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleDPDPRoPA(request, env, authCtx), request));
+    }
+    if (path === '/api/compliance/dpdp/reports' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleDPDPReports(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/compliance\/dpdp\/report\/([^/]+)$/) && method === 'GET') {
+      const authCtx  = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const reportId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleDPDPReport(request, env, authCtx, reportId), request));
+    }
+
+    // GST Invoice API
+    if (path === '/api/billing/invoices' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleListInvoices(request, env, authCtx), request));
+    }
+    if (path === '/api/billing/invoice/generate' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleGenerateInvoice(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/billing\/invoice\/([^/]+)$/) && method === 'GET') {
+      const authCtx   = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const invoiceId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleGetInvoice(request, env, authCtx, invoiceId), request));
+    }
+
+    // MSSP Tenant Provisioning (v41.0 — wire top-level /api/mssp/tenants)
+    if (path === '/api/mssp/tenants' || path.startsWith('/api/mssp/tenants/')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const { handleMsspTenantRoute } = await import('./handlers/msspTenantPlatform.js');
+      return withSecurityHeaders(withCors(await handleMsspTenantRoute(request, env, authCtx, path, method), request));
     }
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -720,8 +720,102 @@ export async function handleGetTenantUsage(request, env, authCtx, customerId) {
 
 // ── Main Route Dispatcher ─────────────────────────────────────────────────────
 
+// ─── Tenant provisioning CRUD (/api/mssp/tenants) ────────────────────────────
+async function ensureMsspTenantsTable(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS mssp_tenants (
+    id           TEXT PRIMARY KEY,
+    partner_id   TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    domain       TEXT,
+    plan         TEXT NOT NULL DEFAULT 'ENTERPRISE',
+    status       TEXT NOT NULL DEFAULT 'active',
+    contact_name TEXT,
+    contact_email TEXT,
+    api_key      TEXT,
+    config_json  TEXT,
+    seats        INTEGER DEFAULT 10,
+    monthly_fee_inr INTEGER DEFAULT 0,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+  )`).run().catch(() => {});
+}
+
+async function handleListTenants(request, env, authCtx) {
+  const partnerId = partnerScope(authCtx);
+  if (!partnerId) return Response.json({ error: 'Authentication required.' }, { status: 401 });
+  const tier = authCtx?.tier || 'FREE';
+  if (!['ENTERPRISE', 'MSSP'].includes(tier)) {
+    return Response.json({ error: 'ENTERPRISE or MSSP tier required for multi-tenant management.', upgrade_url: '/pricing' }, { status: 403 });
+  }
+  await ensureMsspTenantsTable(env.DB);
+  const url    = new URL(request.url);
+  const limit  = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+  const offset = parseInt(url.searchParams.get('offset') || '0');
+  const rows = await env.DB.prepare(
+    `SELECT id, name, domain, plan, status, contact_name, contact_email, seats, monthly_fee_inr, created_at, updated_at
+     FROM mssp_tenants WHERE partner_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ).bind(partnerId, limit, offset).all();
+  const countRow = await env.DB.prepare(`SELECT COUNT(*) as cnt FROM mssp_tenants WHERE partner_id = ?`).bind(partnerId).first();
+  return Response.json({ success: true, data: { tenants: rows?.results || [], total: countRow?.cnt || 0, limit, offset } });
+}
+
+async function handleCreateTenant(request, env, authCtx) {
+  const partnerId = partnerScope(authCtx);
+  if (!partnerId) return Response.json({ error: 'Authentication required.' }, { status: 401 });
+  const tier = authCtx?.tier || 'FREE';
+  if (!['ENTERPRISE', 'MSSP'].includes(tier)) {
+    return Response.json({ error: 'ENTERPRISE or MSSP tier required.', upgrade_url: '/pricing' }, { status: 403 });
+  }
+  await ensureMsspTenantsTable(env.DB);
+  let body = {};
+  try { body = await request.json(); } catch (_) {}
+  const { name, domain, plan = 'ENTERPRISE', contact_name, contact_email, seats = 10, monthly_fee_inr = 0 } = body;
+  if (!name) return Response.json({ error: 'Tenant name is required.' }, { status: 400 });
+
+  const tenantId = 'ten_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+  const apiKey   = 'cdb_tenant_' + crypto.randomUUID().replace(/-/g, '');
+  const now      = new Date().toISOString();
+
+  await env.DB.prepare(
+    `INSERT INTO mssp_tenants (id, partner_id, name, domain, plan, status, contact_name, contact_email, api_key, seats, monthly_fee_inr, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(tenantId, partnerId, name, domain || null, plan, contact_name || null, contact_email || null, apiKey, seats, monthly_fee_inr, now, now).run();
+
+  return Response.json({ success: true, data: { id: tenantId, name, domain, plan, status: 'active', api_key: apiKey, api_key_note: 'Tenant API key — share with the tenant. Cannot be retrieved again.', seats, monthly_fee_inr, created_at: now } }, { status: 201 });
+}
+
+async function handleGetTenant(request, env, authCtx, tenantId) {
+  const partnerId = partnerScope(authCtx);
+  if (!partnerId) return Response.json({ error: 'Authentication required.' }, { status: 401 });
+  await ensureMsspTenantsTable(env.DB);
+  const row = await env.DB.prepare(`SELECT * FROM mssp_tenants WHERE id = ? AND partner_id = ?`).bind(tenantId, partnerId).first();
+  if (!row) return Response.json({ error: 'Tenant not found.' }, { status: 404 });
+  const { api_key, ...safeRow } = row;
+  return Response.json({ success: true, data: safeRow });
+}
+
+async function handleDeleteTenant(request, env, authCtx, tenantId) {
+  const partnerId = partnerScope(authCtx);
+  if (!partnerId) return Response.json({ error: 'Authentication required.' }, { status: 401 });
+  await ensureMsspTenantsTable(env.DB);
+  await env.DB.prepare(`UPDATE mssp_tenants SET status = 'suspended', updated_at = datetime('now') WHERE id = ? AND partner_id = ?`).bind(tenantId, partnerId).run();
+  return Response.json({ success: true, message: 'Tenant suspended.' });
+}
+
 export async function handleMsspTenantRoute(request, env, authCtx, path, method) {
   const segments = path.split('/');
+
+  // /api/mssp/tenants[/:id]
+  if (path === '/api/mssp/tenants') {
+    if (method === 'GET')  return handleListTenants(request, env, authCtx);
+    if (method === 'POST') return handleCreateTenant(request, env, authCtx);
+  }
+  if (segments[3] === 'tenants' && segments[4]) {
+    const tenantId = segments[4];
+    if (method === 'GET')    return handleGetTenant(request, env, authCtx, tenantId);
+    if (method === 'DELETE') return handleDeleteTenant(request, env, authCtx, tenantId);
+  }
+
   // /api/mssp/ticket-rules[/:ruleId]
   if (path === '/api/mssp/ticket-rules') {
     if (method === 'GET')  return handleListTicketRules(request, env, authCtx);
