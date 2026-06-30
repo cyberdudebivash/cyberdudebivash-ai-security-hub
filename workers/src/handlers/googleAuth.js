@@ -20,8 +20,9 @@ const STATE_TTL        = 600; // 10 minutes
 const CALLBACK_URL     = 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/auth/google/callback';
 
 function getFrontendURL(env) {
-  // TOOLS_URL is the frontend hostname, falls back to WEBSITE, then hardcoded
-  return (env?.TOOLS_URL || env?.WEBSITE || 'https://tools.cyberdudebivash.com').replace(/\/$/, '');
+  // WEBSITE is the Cloudflare Pages site (cyberdudebivash.in) — use it for auth callbacks
+  // TOOLS_URL (tools.cyberdudebivash.com) is on Gumroad and can't host custom pages
+  return (env?.WEBSITE || 'https://cyberdudebivash.in').replace(/\/$/, '');
 }
 
 function getClientIP(request) {
