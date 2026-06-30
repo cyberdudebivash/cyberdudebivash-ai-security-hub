@@ -1455,8 +1455,10 @@ export default {
       // 3. Threat Intel probe — check threat_intel table for recent records
       if (env.DB && checks.db) {
         try {
+          // threat_intel.created_at is an unpopulated legacy column (every row is NULL);
+          // ingestion actually stamps ingested_at — query that instead (H-5 fix).
           const row = await env.DB.prepare(
-            "SELECT COUNT(*) as c FROM threat_intel WHERE created_at > datetime('now','-7 days')"
+            "SELECT COUNT(*) as c FROM threat_intel WHERE ingested_at > datetime('now','-7 days')"
           ).first().catch(() => null);
           checks.intel = (row?.c ?? 0) >= 0; // table exists = intel engine ok
           details.intel = { ok: checks.intel, recent_entries: row?.c ?? 0 };

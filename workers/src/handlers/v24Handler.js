@@ -19,6 +19,7 @@ import { scoreEnterpriseOpportunity, generateProposal } from '../services/v24/sa
 import { SCAN_TIERS, createScanOrder, fulfillScanOrder, getScanOrderByToken, getScannerRevenue, getTrustCenterData, logUptimeCheck, seedReleaseNotes, getCEODashboard } from '../services/v24/platformEngine.js';
 import { createRazorpayRefund } from '../lib/razorpay.js';
 import { isOwner } from '../auth/middleware.js';
+import { logSystemError } from '../lib/errorLog.js';
 
 const REFUND_REASONS = new Set(['customer_request', 'duplicate', 'fraud', 'service_failure', 'other']);
 
@@ -151,7 +152,10 @@ export async function handleV24(request, env, authCtx, path, method) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer')
     `).bind(refId, body.payment_id, body.invoice_id || null, authCtx.userId,
              body.email || authCtx.email, body.amount_inr || 0, reason, body.detail || body.reason).run()
-      .catch(e => { console.error('refund/request INSERT failed:', e.message); return null; });
+      .catch(async e => {
+        await logSystemError(env, { area: 'refund.request_insert', message: e.message, context: { payment_id: body.payment_id, user_id: authCtx.userId } });
+        return null;
+      });
     if (!result) return err('Refund request could not be recorded — please email support directly', 500);
     return json({ success: true, refund_id: refId, message: 'Refund request submitted. Review within 2 business days.' });
   }
@@ -175,13 +179,15 @@ export async function handleV24(request, env, authCtx, path, method) {
         { refund_record_id: refund.id, reason: refund.reason });
     } catch (e) {
       await db.prepare(`UPDATE refunds SET status = 'failed' WHERE id = ?`).bind(body.refund_id).run().catch(() => {});
+      await logSystemError(env, { area: 'refund.razorpay_api', message: e.message, context: { refund_id: body.refund_id, payment_id: refund.payment_id } });
       return err(`Razorpay refund failed: ${e.message}`, 502);
     }
 
     await db.prepare(`
       UPDATE refunds SET status = 'completed', razorpay_refund_id = ?, processed_at = datetime('now')
       WHERE id = ?
-    `).bind(rzpRefund.id, body.refund_id).run().catch(e => console.error('refund status update failed:', e.message));
+    `).bind(rzpRefund.id, body.refund_id).run()
+      .catch(e => logSystemError(env, { area: 'refund.status_update', message: e.message, context: { refund_id: body.refund_id }, notify: false }));
 
     return json({ success: true, refund_id: body.refund_id, razorpay_refund_id: rzpRefund.id, status: 'completed' });
   }

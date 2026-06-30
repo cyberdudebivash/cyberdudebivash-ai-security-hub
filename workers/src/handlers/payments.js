@@ -30,6 +30,7 @@ import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
 import { resolvePartnerIdForEmail, recordRevenueShare } from './msspRevenue.js';
 import { hashPassword } from '../auth/password.js';
 import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
+import { logSystemError } from '../lib/errorLog.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -556,7 +557,11 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       });
       r2Stored = true;
     } catch (e) {
-      console.error('[Payments] R2 store failed:', e.message);
+      await logSystemError(env, {
+        area: 'payments.r2_store',
+        message: `R2 report storage failed after successful payment: ${e.message}`,
+        context: { payment_id: razorpay_payment_id, order_id: razorpay_order_id, module, target },
+      });
     }
   }
 

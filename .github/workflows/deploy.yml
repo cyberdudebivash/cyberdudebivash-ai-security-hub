@@ -200,6 +200,11 @@ jobs:
             echo "✅ No hardcoded account_id in wrangler.toml — CLOUDFLARE_ACCOUNT_ID env var will be used"
           fi
 
+          # H-4: inject the real deployed commit SHA so /api/version reports it
+          # instead of the literal placeholder string "INJECT_AT_BUILD".
+          sed -i "s/INJECT_AT_BUILD/${DEPLOY_SHA}/g" workers/wrangler.toml
+          echo "✅ COMMIT injected into wrangler.toml: ${DEPLOY_SHA}"
+
       # ── PRE-DEPLOY BUNDLE VALIDATION ─────────────────────────────────────────
       # Fast-fail gate: validates that the Workers bundle compiles BEFORE attempting
       # the 3-retry deploy loop. A bundle failure here takes <15s; the same failure

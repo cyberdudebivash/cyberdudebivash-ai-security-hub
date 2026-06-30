@@ -2306,6 +2306,20 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id);
 
+-- system_errors: Stage-0 substitute for a Tail Worker (EBOC-1 / H-3). Critical-path
+-- failures (payment, refund, report fulfillment) land here + push a Telegram alert
+-- via lib/errorLog.js so production incidents are visible without the CF dashboard.
+CREATE TABLE IF NOT EXISTS system_errors (
+  id          TEXT PRIMARY KEY,
+  area        TEXT NOT NULL,
+  message     TEXT,
+  context     TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_errors_created ON system_errors(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_errors_area ON system_errors(area);
+
 -- From: schema_gtm_only.sql
 CREATE TABLE IF NOT EXISTS region_events (
   id          TEXT PRIMARY KEY,
@@ -4167,20 +4181,7 @@ CREATE INDEX IF NOT EXISTS idx_sub_created ON subscriptions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sub_email   ON subscriptions(email);
 CREATE INDEX IF NOT EXISTS idx_sub_plan    ON subscriptions(plan);
 CREATE INDEX IF NOT EXISTS idx_sub_status  ON subscriptions(status);
-
-CREATE INDEX IF NOT EXISTS idx_sub_user     ON subscriptions(user_id);
-
-CREATE INDEX IF NOT EXISTS idx_sub_user ON subscriptions(user_id);
-
-CREATE INDEX IF NOT EXISTS idx_subs_email    ON subscriptions(email);
-
-CREATE INDEX IF NOT EXISTS idx_subs_plan     ON subscriptions(plan);
-
-CREATE INDEX IF NOT EXISTS idx_subs_status   ON subscriptions(status);
-
-CREATE INDEX IF NOT EXISTS idx_subscriptions_email ON subscriptions(email);
-
-CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_sub_user    ON subscriptions(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_themes_domain ON tenant_themes(custom_domain);
 

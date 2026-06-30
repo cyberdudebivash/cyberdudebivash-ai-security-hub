@@ -10,6 +10,8 @@
  *   GET  /api/support/docs           - Documentation index
  */
 
+import { logSystemError } from '../lib/errorLog.js';
+
 const FAQ_DATA = [
   {
     id: 'faq-001',
@@ -198,7 +200,7 @@ async function handleTicket(request, env, authCtx) {
        VALUES (?, ?, ?, ?, ?, ?, ?, 'open', datetime('now'))`
     ).bind(ticketId, userId, tier, subject, description, category || 'general', priority || 'normal').run();
   } catch (e) {
-    console.error('support ticket INSERT failed:', e.message);
+    await logSystemError(env, { area: 'support.ticket_insert', message: e.message, context: { user_id: userId, tier } });
     return Response.json({ error: 'Ticket could not be recorded — please email support directly', contact: supportEmail }, { status: 500 });
   }
 
@@ -271,6 +273,26 @@ async function handleListTickets(request, env, authCtx) {
   return Response.json({ total: tickets.length, status_filter: status, tickets });
 }
 
+// ─── GET /api/support/errors (admin only) — system_errors log (EBOC-1 / H-3) ─
+async function handleListErrors(request, env, authCtx) {
+  const isAdmin = authCtx?.isAdmin || authCtx?.tier === 'ADMIN';
+  if (!isAdmin) return Response.json({ error: 'Admin access required' }, { status: 403 });
+
+  const url    = new URL(request.url);
+  const area   = url.searchParams.get('area');
+  const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+
+  let errors = [];
+  try {
+    const rows = area
+      ? await env.DB?.prepare(`SELECT * FROM system_errors WHERE area = ? ORDER BY created_at DESC LIMIT ?`).bind(area, limit).all().catch(() => ({ results: [] }))
+      : await env.DB?.prepare(`SELECT * FROM system_errors ORDER BY created_at DESC LIMIT ?`).bind(limit).all().catch(() => ({ results: [] }));
+    errors = rows?.results || [];
+  } catch { /* table may not exist */ }
+
+  return Response.json({ total: errors.length, area_filter: area || null, errors });
+}
+
 // ─── Main Dispatcher ─────────────────────────────────────────────────────────
 export async function handleSupport(request, env, authCtx, path, method) {
   try {
@@ -278,6 +300,7 @@ export async function handleSupport(request, env, authCtx, path, method) {
     if (path === '/api/support/status' && method === 'GET')   return handleStatus(request, env);
     if (path === '/api/support/ticket' && method === 'POST')  return handleTicket(request, env, authCtx);
     if (path === '/api/support/tickets' && method === 'GET')  return handleListTickets(request, env, authCtx);
+    if (path === '/api/support/errors' && method === 'GET')   return handleListErrors(request, env, authCtx);
     if (path === '/api/support/sla' && method === 'GET')      return handleSLA(request, env, authCtx);
     if (path === '/api/support/docs' && method === 'GET')     return handleDocs(request, env);
 
@@ -287,6 +310,8 @@ export async function handleSupport(request, env, authCtx, path, method) {
         'GET  /api/support/faq',
         'GET  /api/support/status',
         'POST /api/support/ticket',
+        'GET  /api/support/tickets (admin)',
+        'GET  /api/support/errors (admin)',
         'GET  /api/support/sla',
         'GET  /api/support/docs',
       ],
