@@ -56,6 +56,27 @@ export async function createRazorpayOrder(env, { amount, currency = 'INR', recei
   return resp.json(); // { id, entity, amount, currency, receipt, status, ... }
 }
 
+// ─── Issue Refund (admin-initiated) ───────────────────────────────────────────
+// amount in paise; omit to refund the full payment amount.
+export async function createRazorpayRefund(env, paymentId, amount, notes = {}) {
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay credentials not configured — set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET secrets');
+  }
+  const auth = btoa(`${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`);
+  const body = { notes };
+  if (amount) body.amount = amount;
+  const resp = await resilientFetch('razorpay', env, `https://api.razorpay.com/v1/payments/${paymentId}/refund`, {
+    method:  'POST',
+    headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  }, 15000);
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.description || `Razorpay refund API error ${resp.status}`);
+  }
+  return resp.json(); // { id, entity, amount, payment_id, status, ... }
+}
+
 // ─── Verify Payment Signature (frontend-initiated) ────────────────────────────
 // Signature = HMAC-SHA256( razorpay_order_id + "|" + razorpay_payment_id , key_secret )
 export async function verifyPaymentSignature(env, orderId, paymentId, signature) {

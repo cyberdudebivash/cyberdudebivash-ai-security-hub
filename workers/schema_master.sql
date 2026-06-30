@@ -2285,6 +2285,27 @@ CREATE TABLE IF NOT EXISTS refunds (
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE INDEX IF NOT EXISTS idx_refunds_status ON refunds(status);
+CREATE INDEX IF NOT EXISTS idx_refunds_user ON refunds(user_id);
+
+-- support_tickets: was referenced by handlers/support.js but never defined here,
+-- so it never existed in production D1 and every ticket INSERT silently failed (EBOC-1).
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT,
+  tier        TEXT,
+  subject     TEXT NOT NULL,
+  description TEXT,
+  category    TEXT DEFAULT 'general',
+  priority    TEXT DEFAULT 'normal',
+  status      TEXT NOT NULL DEFAULT 'open',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id);
+
 -- From: schema_gtm_only.sql
 CREATE TABLE IF NOT EXISTS region_events (
   id          TEXT PRIMARY KEY,

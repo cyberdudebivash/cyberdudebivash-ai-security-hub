@@ -192,14 +192,14 @@ async function handleTicket(request, env, authCtx) {
     ? 'enterprise@cyberdudebivash.com'
     : 'support@cyberdudebivash.com';
 
-  // Log ticket to D1 if table exists
   try {
     await env.DB.prepare(
       `INSERT INTO support_tickets (id, user_id, tier, subject, description, category, priority, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'open', datetime('now'))`
     ).bind(ticketId, userId, tier, subject, description, category || 'general', priority || 'normal').run();
-  } catch {
-    // Table may not exist — still return ticket confirmation
+  } catch (e) {
+    console.error('support ticket INSERT failed:', e.message);
+    return Response.json({ error: 'Ticket could not be recorded — please email support directly', contact: supportEmail }, { status: 500 });
   }
 
   return Response.json({

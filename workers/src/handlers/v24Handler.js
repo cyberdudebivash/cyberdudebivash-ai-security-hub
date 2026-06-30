@@ -17,6 +17,10 @@
 import { createInvoice, issueLicense, verifyLicense, createPayPalOrder, capturePayPalOrder, runPaymentRecovery, buildRenewalQueue } from '../services/v24/billingEngine.js';
 import { scoreEnterpriseOpportunity, generateProposal } from '../services/v24/salesOS.js';
 import { SCAN_TIERS, createScanOrder, fulfillScanOrder, getScanOrderByToken, getScannerRevenue, getTrustCenterData, logUptimeCheck, seedReleaseNotes, getCEODashboard } from '../services/v24/platformEngine.js';
+import { createRazorpayRefund } from '../lib/razorpay.js';
+import { isOwner } from '../auth/middleware.js';
+
+const REFUND_REASONS = new Set(['customer_request', 'duplicate', 'fraud', 'service_failure', 'other']);
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -139,15 +143,57 @@ export async function handleV24(request, env, authCtx, path, method) {
     if (!authCtx?.userId) return err('Authentication required', 401);
     const body = await parseBody(request);
     if (!body.payment_id || !body.reason) return err('payment_id and reason required');
-    if (db) {
-      const refId = `ref-${Date.now().toString(36)}`;
-      await db.prepare(`
-        INSERT INTO refunds (id, payment_id, invoice_id, user_id, email, reason, reason_detail, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
-      `).bind(refId, body.payment_id, body.invoice_id || null, authCtx.userId,
-               body.email || authCtx.email, body.reason, body.detail || '').run().catch(() => {});
+    if (!db) return err('Service temporarily unavailable', 503);
+    const reason = REFUND_REASONS.has(body.reason) ? body.reason : 'other';
+    const refId = `ref-${Date.now().toString(36)}`;
+    const result = await db.prepare(`
+      INSERT INTO refunds (id, payment_id, invoice_id, user_id, email, amount_inr, reason, reason_detail, status, initiated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer')
+    `).bind(refId, body.payment_id, body.invoice_id || null, authCtx.userId,
+             body.email || authCtx.email, body.amount_inr || 0, reason, body.detail || body.reason).run()
+      .catch(e => { console.error('refund/request INSERT failed:', e.message); return null; });
+    if (!result) return err('Refund request could not be recorded — please email support directly', 500);
+    return json({ success: true, refund_id: refId, message: 'Refund request submitted. Review within 2 business days.' });
+  }
+
+  // POST /api/v24/billing/refund/process (owner-only) — issues an instant Razorpay refund
+  if (path === '/api/v24/billing/refund/process' && method === 'POST') {
+    if (!isOwner(authCtx, env)) return err('Owner authorization required', 403);
+    const body = await parseBody(request);
+    if (!body.refund_id) return err('refund_id required');
+    if (!db) return err('Service temporarily unavailable', 503);
+    const refund = await db.prepare(`SELECT * FROM refunds WHERE id = ?`).bind(body.refund_id).first().catch(() => null);
+    if (!refund) return err('Refund record not found', 404);
+    if (refund.status !== 'pending') return err(`Refund already ${refund.status}`, 409);
+
+    await db.prepare(`UPDATE refunds SET status = 'processing' WHERE id = ?`).bind(body.refund_id).run().catch(() => {});
+
+    let rzpRefund;
+    try {
+      rzpRefund = await createRazorpayRefund(env, refund.payment_id,
+        refund.amount_inr > 0 ? Math.round(refund.amount_inr * 100) : undefined,
+        { refund_record_id: refund.id, reason: refund.reason });
+    } catch (e) {
+      await db.prepare(`UPDATE refunds SET status = 'failed' WHERE id = ?`).bind(body.refund_id).run().catch(() => {});
+      return err(`Razorpay refund failed: ${e.message}`, 502);
     }
-    return json({ success: true, message: 'Refund request submitted. Review within 2 business days.' });
+
+    await db.prepare(`
+      UPDATE refunds SET status = 'completed', razorpay_refund_id = ?, processed_at = datetime('now')
+      WHERE id = ?
+    `).bind(rzpRefund.id, body.refund_id).run().catch(e => console.error('refund status update failed:', e.message));
+
+    return json({ success: true, refund_id: body.refund_id, razorpay_refund_id: rzpRefund.id, status: 'completed' });
+  }
+
+  // GET /api/v24/billing/refunds (owner-only) — list refund queue
+  if (path === '/api/v24/billing/refunds' && method === 'GET') {
+    if (!isOwner(authCtx, env)) return err('Owner authorization required', 403);
+    const status = new URL(request.url).searchParams.get('status') || 'pending';
+    const rows = db ? await db.prepare(
+      `SELECT * FROM refunds WHERE status = ? ORDER BY created_at DESC LIMIT 100`
+    ).bind(status).all().catch(() => ({ results: [] })) : { results: [] };
+    return json({ success: true, refunds: rows.results || [] });
   }
 
   // POST /api/v24/billing/recovery/run (admin/cron)
