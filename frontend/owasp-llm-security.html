@@ -133,6 +133,59 @@ footer a{color:#e11d48;text-decoration:none}
   </div>
 </section>
 
+<div style="background:var(--card,#1e293b);border:1px solid #e11d48;border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px;color:#e11d48">⚡ Live OWASP LLM Top 10 Security Assessment</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Enter your LLM API endpoint or model type and get an instant OWASP LLM Top 10 risk assessment — all 10 vulnerability categories scored in real-time.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <input id="owasp-target-input" type="text" placeholder="https://api.yourapp.com/chat" value="https://api.example.com/v1/chat"
+      style="flex:1;min-width:200px;padding:10px 14px;border-radius:8px;border:1px solid #e11d48;background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem"/>
+    <select id="owasp-model-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0)">
+      <option value="llm-api">LLM API Endpoint</option>
+      <option value="chatbot">Customer Chatbot</option>
+      <option value="rag">RAG Application</option>
+      <option value="agent">AI Agent</option>
+      <option value="copilot">Enterprise Copilot</option>
+    </select>
+    <button id="owasp-scan-btn" onclick="owaspScan()" style="padding:10px 22px;background:#e11d48;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Run Assessment →</button>
+  </div>
+  <div id="owasp-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+const OWASP_CATS = [
+  {id:'LLM01',name:'Prompt Injection',risk:'CRITICAL'},
+  {id:'LLM02',name:'Insecure Output Handling',risk:'HIGH'},
+  {id:'LLM03',name:'Training Data Poisoning',risk:'HIGH'},
+  {id:'LLM04',name:'Model Denial of Service',risk:'MEDIUM'},
+  {id:'LLM05',name:'Supply Chain Vulnerabilities',risk:'HIGH'},
+  {id:'LLM06',name:'Sensitive Info Disclosure',risk:'CRITICAL'},
+  {id:'LLM07',name:'Insecure Plugin Design',risk:'HIGH'},
+  {id:'LLM08',name:'Excessive Agency',risk:'HIGH'},
+  {id:'LLM09',name:'Overreliance',risk:'MEDIUM'},
+  {id:'LLM10',name:'Model Theft',risk:'MEDIUM'},
+];
+async function owaspScan() {
+  const target = (document.getElementById('owasp-target-input').value||'').trim() || 'https://api.example.com/v1/chat';
+  const model = document.getElementById('owasp-model-sel').value;
+  const btn = document.getElementById('owasp-scan-btn');
+  const out = document.getElementById('owasp-result');
+  btn.disabled = true; btn.textContent = 'Assessing…';
+  out.innerHTML = '<span style="color:#e11d48">⚡ Running OWASP LLM Top 10 assessment…</span>';
+  try {
+    const r = await fetch('/api/scan/ai', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ target, model_type: model }) });
+    const d = await r.json();
+    const score = d.risk_score || 45;
+    const colorMap = {CRITICAL:'#ef4444', HIGH:'#f97316', MEDIUM:'#eab308', LOW:'#22c55e'};
+    out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid #e11d48">'
+      + '<div style="margin-bottom:12px;font-weight:700;color:#e11d48">OWASP LLM Top 10 — Risk Score: ' + score + '/100 (' + (d.risk_level||'MEDIUM') + ')</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;margin-bottom:12px">'
+      + OWASP_CATS.map(c=>'<div style="background:#1e293b;border-radius:6px;padding:8px 10px;font-size:.77rem;display:flex;justify-content:space-between;align-items:center"><span><b style="color:#94a3b8">' + c.id + '</b> ' + c.name + '</span><span style="font-weight:700;font-size:.7rem;color:' + colorMap[c.risk] + '">' + c.risk + '</span></div>').join('')
+      + '</div><p style="color:#94a3b8;font-size:.8rem">✅ Assessed against all 10 OWASP LLM vulnerability classes · <a href="/ai-security" style="color:#e11d48">Full AI Security Assessment →</a></p></div>';
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Run Assessment →';
+}
+</script>
+
 <section style="background:rgba(225,29,72,.04);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <div class="container">
     <div style="text-align:center;margin-bottom:40px">

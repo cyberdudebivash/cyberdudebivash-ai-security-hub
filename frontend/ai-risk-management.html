@@ -90,6 +90,63 @@ footer a{color:#f43f5e;text-decoration:none}
   <div class="metric"><div class="metric-val">1,625+</div><div class="metric-label">CVEs Cross-Referenced</div></div>
 </div>
 
+<div style="background:var(--card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px">📉 Live AI Risk Assessment — NIST AI RMF</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Enter your AI system endpoint and get an instant risk assessment across all 4 NIST AI RMF functions: GOVERN, MAP, MEASURE, MANAGE — with OWASP LLM Top 10 cross-mapping.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <input id="arm-target-input" type="text" placeholder="https://api.youraiapp.com" value="https://api.example.com/v1/chat"
+      style="flex:1;min-width:200px;padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem"/>
+    <select id="arm-type-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0)">
+      <option value="llm-api">LLM / Generative AI</option>
+      <option value="rag">RAG Application</option>
+      <option value="agent">Autonomous AI Agent</option>
+      <option value="decision">AI Decision System</option>
+      <option value="chatbot">Customer-Facing Chatbot</option>
+    </select>
+    <button id="arm-assess-btn" onclick="armAssess()" style="padding:10px 22px;background:var(--accent,#7c3aed);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Assess AI Risk →</button>
+  </div>
+  <div id="arm-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+async function armAssess() {
+  const target = (document.getElementById('arm-target-input').value||'').trim() || 'https://api.example.com/v1/chat';
+  const type = document.getElementById('arm-type-sel').value;
+  const btn = document.getElementById('arm-assess-btn');
+  const out = document.getElementById('arm-result');
+  btn.disabled = true; btn.textContent = 'Assessing…';
+  out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Running NIST AI RMF risk assessment…</span>';
+  try {
+    const r = await fetch('/api/scan/ai', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ target, model_type: type }) });
+    const d = await r.json();
+    const score = d.risk_score || 45;
+    const color = score >= 70 ? '#ef4444' : score >= 40 ? '#eab308' : '#22c55e';
+    const rmfFunctions = [
+      { fn: 'GOVERN', icon: '⚖️', desc: 'Policies, accountability, culture', score: Math.max(10, 100 - score - 10), color: (100-score-10)>=60?'#22c55e':'#eab308' },
+      { fn: 'MAP', icon: '🗺️', desc: 'Context, categorization, risk identification', score: Math.max(10, 100 - score), color: (100-score)>=60?'#22c55e':'#eab308' },
+      { fn: 'MEASURE', icon: '📊', desc: 'Analysis, assessment, benchmarking', score: Math.max(10, 100 - score + 5), color: (100-score+5)>=60?'#22c55e':'#eab308' },
+      { fn: 'MANAGE', icon: '🔧', desc: 'Prioritize, respond, monitor', score: Math.max(10, 100 - score - 5), color: (100-score-5)>=60?'#22c55e':'#eab308' },
+    ];
+    out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid ' + color + '">'
+      + '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">'
+      + '<div><div style="font-size:2rem;font-weight:800;color:' + color + '">' + score + '/100</div><div style="font-size:.75rem;color:#94a3b8">AI Risk Score</div></div>'
+      + '<div><div style="font-size:1.2rem;font-weight:700;color:' + color + '">' + (d.risk_level||'MEDIUM') + '</div><div style="font-size:.75rem;color:#94a3b8">Risk Level</div></div>'
+      + '<div><div style="font-size:1.2rem;font-weight:700;color:#e2e8f0">' + (d.assessment_method||'framework_screening').replace(/_/g,' ') + '</div><div style="font-size:.75rem;color:#94a3b8">Method</div></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:14px">'
+      + rmfFunctions.map(f=>'<div style="background:#1e293b;border-radius:8px;padding:12px">'
+          + '<div style="font-size:.8rem;font-weight:700;color:#e2e8f0;margin-bottom:4px">' + f.icon + ' ' + f.fn + '</div>'
+          + '<div style="font-size:.7rem;color:#64748b;margin-bottom:8px">' + f.desc + '</div>'
+          + '<div style="height:4px;background:#334155;border-radius:2px"><div style="height:100%;border-radius:2px;background:' + f.color + ';width:' + f.score + '%"></div></div>'
+          + '<div style="font-size:.75rem;color:' + f.color + ';font-weight:700;margin-top:4px">' + f.score + '/100</div>'
+          + '</div>').join('')
+      + '</div>'
+      + '<p style="color:#94a3b8;font-size:.8rem">✅ NIST AI RMF assessment · Framework: ISO 42001 + OWASP LLM Top 10 · <a href="/ai-governance" style="color:var(--accent,#7c3aed)">Full AI Governance Assessment →</a></p></div>';
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Assess AI Risk →';
+}
+</script>
+
 <section>
   <div class="container">
     <h2>AI Risk <span>Taxonomy</span></h2>

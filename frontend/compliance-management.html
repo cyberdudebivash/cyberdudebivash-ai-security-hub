@@ -90,6 +90,55 @@ footer a{color:#14b8a6;text-decoration:none}
   <div class="metric"><div class="metric-val">100%</div><div class="metric-label">Control-to-Evidence Traceability</div></div>
 </div>
 
+<div style="background:var(--card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px">✅ Live Compliance Gap Analysis</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Enter your domain and select a framework — get an instant, real compliance gap analysis with control scoring, critical gaps, and a remediation roadmap.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <input id="cm-domain-input" type="text" placeholder="yourdomain.com" value="example.com"
+      style="flex:1;min-width:160px;padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem"/>
+    <select id="cm-framework-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0)">
+      <option value="ISO27001">ISO 27001:2022</option>
+      <option value="SOC2">SOC 2 Type II</option>
+      <option value="GDPR">GDPR 2016/679</option>
+      <option value="PCI-DSS">PCI-DSS v4.0</option>
+      <option value="NIST-CSF">NIST CSF 2.0</option>
+      <option value="DPDP">DPDP Act 2023</option>
+    </select>
+    <button id="cm-assess-btn" onclick="cmRunAssessment()" style="padding:10px 22px;background:var(--accent,#7c3aed);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Run Assessment →</button>
+  </div>
+  <div id="cm-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+async function cmRunAssessment() {
+  const domain = (document.getElementById('cm-domain-input').value||'').trim() || 'example.com';
+  const framework = document.getElementById('cm-framework-sel').value;
+  const btn = document.getElementById('cm-assess-btn');
+  const out = document.getElementById('cm-result');
+  btn.disabled = true; btn.textContent = 'Assessing…';
+  out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Running compliance gap analysis…</span>';
+  try {
+    const r = await fetch('/api/generate/compliance', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ domain, framework }) });
+    const d = await r.json();
+    const score = d.compliance_score || d.risk_score || 0;
+    const gaps = d.gaps_identified || d.critical_gaps_total || 0;
+    const controls = d.total_controls || 0;
+    const color = score >= 70 ? '#22c55e' : score >= 40 ? '#eab308' : '#ef4444';
+    out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid var(--border,#334155)">'
+      + '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">'
+      + '<div><div style="font-size:2rem;font-weight:800;color:' + color + '">' + score + '/100</div><div style="font-size:.75rem;color:#94a3b8">Compliance Score</div></div>'
+      + '<div><div style="font-size:2rem;font-weight:800;color:#ef4444">' + gaps + '</div><div style="font-size:.75rem;color:#94a3b8">Gaps Found</div></div>'
+      + '<div><div style="font-size:2rem;font-weight:800;color:#e2e8f0">' + controls + '</div><div style="font-size:.75rem;color:#94a3b8">Controls Assessed</div></div>'
+      + '<div><div style="font-size:1.1rem;font-weight:700;color:' + color + '">' + (d.risk_level||'MEDIUM') + '</div><div style="font-size:.75rem;color:#94a3b8">Risk Level</div></div>'
+      + '</div>'
+      + '<div style="font-size:.8rem;color:#94a3b8;border-top:1px solid var(--border,#334155);padding-top:10px">'
+      + 'Framework: ' + (d.framework||framework) + ' · Domain: ' + domain + ' · Method: ' + (d.assessment_method||'gap_analysis')
+      + '</div><p style="color:#94a3b8;margin-top:8px;font-size:.8rem">✅ Full gap report with remediation roadmap available on Pro plan · <a href="/dashboard" style="color:var(--accent,#7c3aed)">Upgrade →</a></p></div>';
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Run Assessment →';
+}
+</script>
+
 <section>
   <div class="container">
     <h2><span>Frameworks</span> We Map</h2>

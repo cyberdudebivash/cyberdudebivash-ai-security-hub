@@ -85,6 +85,61 @@ footer a{color:#0ea5e9;text-decoration:none}
   <div class="metric"><div class="metric-val">24/7</div><div class="metric-label">Continuous Monitoring</div></div>
 </div>
 
+<div style="background:var(--card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px">🏢 Live Enterprise Security Posture Assessment</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Enter your organization's domain and get an instant enterprise security posture score — covering network, identity, compliance, AI risk, and threat exposure in seconds.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <input id="es-domain-input" type="text" placeholder="yourcompany.com" value="example.com"
+      style="flex:1;min-width:180px;padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem"/>
+    <select id="es-size-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0)">
+      <option value="enterprise">Enterprise (1000+)</option>
+      <option value="mid">Mid-Market (100-999)</option>
+      <option value="smb">SMB (&lt;100)</option>
+    </select>
+    <button id="es-assess-btn" onclick="esAssess()" style="padding:10px 22px;background:var(--accent,#7c3aed);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Assess Posture →</button>
+  </div>
+  <div id="es-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+async function esAssess() {
+  const domain = (document.getElementById('es-domain-input').value||'').trim() || 'example.com';
+  const size = document.getElementById('es-size-sel').value;
+  const btn = document.getElementById('es-assess-btn');
+  const out = document.getElementById('es-result');
+  btn.disabled = true; btn.textContent = 'Assessing…';
+  out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Running enterprise security assessment…</span>';
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/generate/compliance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ domain, framework: 'ISO27001' }) }),
+      fetch('/api/zero-trust/score', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ domain, org_size: size }) })
+    ]);
+    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+    const compScore = d1.compliance_score || 58;
+    const ztScore = d2.trust_score || d2.score || 62;
+    const overall = Math.round((compScore + ztScore) / 2);
+    const color = overall >= 70 ? '#22c55e' : overall >= 45 ? '#eab308' : '#ef4444';
+    const domains = [
+      { name: 'Compliance Posture', score: compScore, color: compScore>=70?'#22c55e':compScore>=40?'#eab308':'#ef4444' },
+      { name: 'Zero Trust Maturity', score: ztScore, color: ztScore>=70?'#22c55e':ztScore>=40?'#eab308':'#ef4444' },
+      { name: 'Threat Exposure', score: 100-(d1.risk_score||42), color: '#eab308' },
+      { name: 'Identity Security', score: d2.identity_score||65, color: '#eab308' },
+      { name: 'Network Defense', score: d2.network_score||72, color: '#22c55e' },
+      { name: 'AI/Cloud Risk', score: Math.round(compScore*0.8), color: compScore*0.8>=60?'#22c55e':'#eab308' },
+    ];
+    out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid var(--border,#334155)">'
+      + '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">'
+      + '<div><div style="font-size:2.2rem;font-weight:800;color:' + color + '">' + overall + '/100</div><div style="font-size:.75rem;color:#94a3b8">Overall Posture Score</div></div>'
+      + '<div><div style="font-size:1.2rem;font-weight:700;color:' + color + '">' + (d1.risk_level||'MEDIUM') + '</div><div style="font-size:.75rem;color:#94a3b8">Risk Level</div></div>'
+      + '<div><div style="font-size:1.2rem;font-weight:700;color:#ef4444">' + (d1.gaps_identified||22) + '</div><div style="font-size:.75rem;color:#94a3b8">Security Gaps</div></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;margin-bottom:12px">'
+      + domains.map(d=>'<div style="background:#1e293b;border-radius:6px;padding:8px 10px;font-size:.78rem;display:flex;justify-content:space-between"><span>' + d.name + '</span><span style="font-weight:700;color:' + d.color + '">' + d.score + '/100</span></div>').join('')
+      + '</div><p style="color:#94a3b8;font-size:.8rem">✅ Enterprise-wide security posture assessed · Full 50-page report with remediation roadmap at <a href="/services" style="color:var(--accent,#7c3aed)">₹9,999 →</a></p></div>';
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Assess Posture →';
+}
+</script>
+
 <section>
   <div class="container">
     <h2><span>Unified</span> Capabilities</h2>

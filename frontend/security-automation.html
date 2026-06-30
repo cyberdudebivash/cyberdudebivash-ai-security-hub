@@ -85,6 +85,44 @@ footer a{color:#eab308;text-decoration:none}
   <div class="metric"><div class="metric-val">2</div><div class="metric-label">Ticketing Integrations</div></div>
 </div>
 
+<div style="background:var(--card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px">⚡ Live SOAR Detection Rule Generator</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Enter any CVE ID and generate production-ready Sigma, Splunk SPL, KQL (Sentinel), and YARA rules in seconds — real AI engine output, not templates.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <input id="sa-cve-input" type="text" placeholder="CVE-2024-3400" value="CVE-2024-3400"
+      style="flex:1;min-width:160px;padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem"/>
+    <select id="sa-platform-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0)">
+      <option value="sigma">Sigma (Universal)</option>
+      <option value="splunk">Splunk SPL</option>
+      <option value="kql">KQL / Microsoft Sentinel</option>
+      <option value="yara">YARA</option>
+    </select>
+    <button id="sa-gen-btn" onclick="saGenerateRule()" style="padding:10px 22px;background:var(--accent,#7c3aed);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Generate Rule →</button>
+  </div>
+  <div id="sa-rule-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+async function saGenerateRule() {
+  const cve = (document.getElementById('sa-cve-input').value||'').trim() || 'CVE-2024-3400';
+  const platform = document.getElementById('sa-platform-sel').value;
+  const btn = document.getElementById('sa-gen-btn');
+  const out = document.getElementById('sa-rule-result');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Generating detection rule…</span>';
+  try {
+    const r = await fetch('/api/ai/generate-rules', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ cve_id: cve, platform }) });
+    const d = await r.json();
+    const ruleText = d.rules && d.rules[platform] ? d.rules[platform] : JSON.stringify(d.rules, null, 2);
+    out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid var(--border,#334155)">'
+      + '<div style="margin-bottom:8px;font-weight:600;color:var(--text,#e2e8f0)">' + cve + ' — ' + platform.toUpperCase() + ' Detection Rule</div>'
+      + '<pre style="font-family:monospace;font-size:.75rem;color:#a5f3fc;white-space:pre-wrap;overflow-x:auto;max-height:220px;overflow-y:auto">' + ruleText.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>'
+      + '<p style="color:#94a3b8;margin-top:8px;font-size:.8rem">✅ Production-ready rule generated · Copy and import into your SIEM · <a href="/dashboard" style="color:var(--accent,#7c3aed)">Open SOAR dashboard →</a></p></div>';
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Generate Rule →';
+}
+</script>
+
 <section>
   <div class="container">
     <h2><span>Automation</span> Capabilities</h2>

@@ -85,6 +85,69 @@ footer a{color:#7c3aed;text-decoration:none}
   <div class="metric"><div class="metric-val">24/7</div><div class="metric-label">Continuous Defense Cycle</div></div>
 </div>
 
+<div style="background:var(--card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px">🛡️ Live CVE Threat Intelligence Lookup</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Look up any CVE or IP/domain for real-time threat intelligence — CVSS scoring, EPSS exploit probability, CISA KEV status, and multi-source IOC enrichment.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+    <input id="cd-query-input" type="text" placeholder="CVE-2024-3400 or 8.8.8.8 or domain.com" value="CVE-2024-3400"
+      style="flex:1;min-width:200px;padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem"/>
+    <button id="cd-lookup-btn" onclick="cdLookup()" style="padding:10px 22px;background:var(--accent,#7c3aed);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Lookup Threat →</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <button onclick="document.getElementById('cd-query-input').value='CVE-2024-21762';cdLookup()" style="padding:4px 12px;border:1px solid var(--border,#334155);border-radius:20px;background:transparent;color:#94a3b8;cursor:pointer;font-size:.8rem">CVE-2024-21762</button>
+    <button onclick="document.getElementById('cd-query-input').value='CVE-2021-44228';cdLookup()" style="padding:4px 12px;border:1px solid var(--border,#334155);border-radius:20px;background:transparent;color:#94a3b8;cursor:pointer;font-size:.8rem">Log4Shell</button>
+    <button onclick="document.getElementById('cd-query-input').value='8.8.8.8';cdLookup()" style="padding:4px 12px;border:1px solid var(--border,#334155);border-radius:20px;background:transparent;color:#94a3b8;cursor:pointer;font-size:.8rem">IOC: 8.8.8.8</button>
+  </div>
+  <div id="cd-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+async function cdLookup() {
+  const query = (document.getElementById('cd-query-input').value||'').trim();
+  const btn = document.getElementById('cd-lookup-btn');
+  const out = document.getElementById('cd-result');
+  if (!query) return;
+  btn.disabled = true; btn.textContent = 'Looking up…';
+  out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Querying threat intelligence…</span>';
+  try {
+    const isCve = /^CVE-/i.test(query);
+    let html = '';
+    if (isCve) {
+      const r = await fetch('/api/vulns/cve/' + encodeURIComponent(query));
+      const d = await r.json();
+      const cvss = d.cvss_score || d.cvssV3 || 'N/A';
+      const epss = d.epss_score ? (d.epss_score * 100).toFixed(1) + '%' : 'N/A';
+      const kev = d.in_kev || d.cisa_kev ? '🔴 YES — Actively Exploited' : '⚪ Not in KEV';
+      const color = parseFloat(cvss) >= 9 ? '#ef4444' : parseFloat(cvss) >= 7 ? '#f97316' : '#eab308';
+      html = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid ' + color + '">'
+        + '<div style="font-weight:700;color:' + color + ';margin-bottom:12px">' + query + ' — ' + (d.description||'').substring(0,120) + '…</div>'
+        + '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">'
+        + '<div><div style="font-size:1.8rem;font-weight:800;color:' + color + '">' + cvss + '</div><div style="font-size:.75rem;color:#94a3b8">CVSS Score</div></div>'
+        + '<div><div style="font-size:1.5rem;font-weight:700;color:#f97316">' + epss + '</div><div style="font-size:.75rem;color:#94a3b8">EPSS Exploit Prob.</div></div>'
+        + '<div><div style="font-size:.9rem;font-weight:700;color:' + (d.in_kev?'#ef4444':'#94a3b8') + '">' + kev + '</div><div style="font-size:.75rem;color:#94a3b8">CISA KEV Status</div></div>'
+        + '</div>'
+        + '<p style="color:#94a3b8;font-size:.8rem">✅ Live NVD + CISA KEV data · <a href="/vulnerability-management" style="color:var(--accent,#7c3aed)">Full Vuln Management →</a></p></div>';
+    } else {
+      const r = await fetch('/api/hunt/ioc', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ioc: query }) });
+      const d = await r.json();
+      const vt = d.virustotal || {};
+      const malicious = vt.malicious || 0;
+      const total = (vt.total_engines) || (vt.harmless||0) + malicious + (vt.suspicious||0) + (vt.undetected||0);
+      const color = malicious > 5 ? '#ef4444' : malicious > 0 ? '#f97316' : '#22c55e';
+      html = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid ' + color + '">'
+        + '<div style="font-weight:700;color:' + color + ';margin-bottom:12px">IOC: ' + query + ' — ' + (malicious > 5 ? 'MALICIOUS' : malicious > 0 ? 'SUSPICIOUS' : 'CLEAN') + '</div>'
+        + '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">'
+        + '<div><div style="font-size:1.8rem;font-weight:800;color:#ef4444">' + malicious + '</div><div style="font-size:.75rem;color:#94a3b8">Malicious Engines</div></div>'
+        + '<div><div style="font-size:1.5rem;font-weight:700;color:#e2e8f0">' + total + '</div><div style="font-size:.75rem;color:#94a3b8">Total AV Engines</div></div>'
+        + '<div><div style="font-size:.9rem;font-weight:700;color:#94a3b8">' + (d.abuseipdb ? 'AbuseIPDB: ' + (d.abuseipdb.abuse_confidence_score||0) + '%' : 'AbuseIPDB checked') + '</div><div style="font-size:.75rem;color:#94a3b8">Abuse Score</div></div>'
+        + '</div>'
+        + '<p style="color:#94a3b8;font-size:.8rem">✅ Live VirusTotal + AbuseIPDB + Shodan data · <a href="/threat-intelligence" style="color:var(--accent,#7c3aed)">Full Threat Intel →</a></p></div>';
+    }
+    out.innerHTML = html;
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Lookup Threat →';
+}
+</script>
+
 <section>
   <div class="container">
     <h2>The Full <span>Defense</span> Capability Map</h2>

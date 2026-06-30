@@ -85,6 +85,52 @@ footer a{color:#10b981;text-decoration:none}
   <div class="metric"><div class="metric-val">KEV+EPSS</div><div class="metric-label">Exploitation-Prioritized</div></div>
 </div>
 
+<div style="background:var(--card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:28px 32px;margin:32px auto;max-width:900px">
+  <h3 style="margin-bottom:6px">🎯 Live Threat Hunt Executor</h3>
+  <p style="color:var(--text-dim,#94a3b8);font-size:.9rem;margin-bottom:18px">Select a MITRE ATT&CK hunt template and execute it against our live threat engine — real KQL/Sigma query simulation with MITRE technique mapping.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <select id="th-template-sel" style="flex:1;min-width:200px;padding:10px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:.9rem">
+      <option value="">Loading hunt templates…</option>
+    </select>
+    <button id="th-hunt-btn" onclick="thRunHunt()" style="padding:10px 22px;background:var(--accent,#7c3aed);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">Execute Hunt →</button>
+  </div>
+  <div id="th-hunt-result" style="font-size:.85rem;color:var(--text-dim,#94a3b8)"></div>
+</div>
+<script>
+(async function thInit() {
+  try {
+    const r = await fetch('/api/hunt/templates');
+    const d = await r.json();
+    const sel = document.getElementById('th-template-sel');
+    sel.innerHTML = d.templates.map(t => `<option value="${t.id}">[${t.tactic}] ${t.name} — ${(t.mitre||[]).join(', ')}</option>`).join('');
+  } catch(e) { document.getElementById('th-template-sel').innerHTML = '<option value="kql-lateral-movement">Lateral Movement Detection — T1021, T1550</option>'; }
+})();
+async function thRunHunt() {
+  const sel = document.getElementById('th-template-sel');
+  const btn = document.getElementById('th-hunt-btn');
+  const out = document.getElementById('th-hunt-result');
+  if (!sel.value) return;
+  btn.disabled = true; btn.textContent = 'Hunting…';
+  out.innerHTML = '<span style="color:var(--accent,#7c3aed)">⚡ Executing hunt query…</span>';
+  try {
+    const r = await fetch('/api/hunt', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ template_id: sel.value, type:'kql' }) });
+    const d = await r.json();
+    const sev = d.summary || {};
+    out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid var(--border,#334155)">'
+      + '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">'
+      + '<span style="color:#ef4444;font-weight:700">🔴 ' + (sev.critical||0) + ' CRITICAL</span>'
+      + '<span style="color:#f97316;font-weight:700">🟠 ' + (sev.high||0) + ' HIGH</span>'
+      + '<span style="color:#eab308;font-weight:700">🟡 ' + (sev.medium||0) + ' MEDIUM</span>'
+      + '<span style="color:#94a3b8">Total findings: ' + (d.result_count||0) + '</span></div>'
+      + '<div style="font-family:monospace;font-size:.8rem;color:#64748b;border-top:1px solid var(--border,#334155);padding-top:10px">'
+      + 'Session: ' + (d.session_id||'hunt_live') + ' · Lang: ' + ((d.lang||'kql').toUpperCase()) + ' · ' + new Date().toLocaleTimeString() + '</div>'
+      + '<p style="color:#94a3b8;margin-top:8px;font-size:.82rem">✅ Hunt executed against live MITRE ATT&CK threat model. Connect your SIEM at <a href="/dashboard" style="color:var(--accent,#7c3aed)">CYBERDUDEBIVASH Dashboard</a> to run against real telemetry.</p></div>';
+  } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
+  btn.disabled = false; btn.textContent = 'Execute Hunt →';
+}
+</script>
+
 <section>
   <div class="container">
     <h2>Hunting <span>Capabilities</span></h2>
