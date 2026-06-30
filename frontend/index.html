@@ -11541,10 +11541,8 @@ function localEngine(module, payload) {
         setTimeout(() => animateProgressBars(78, 62, 85, 55), 200);
         // Trigger Sentinel feed when dashboard first comes into view
         initSentinelFeed();
-        // Trigger the AI Threat Intelligence flagship section, then keep it
-        // genuinely "24/7 live" by auto-refreshing while the section is on-screen
-        renderAIThreatIntelFlagship();
-        setInterval(renderAIThreatIntelFlagship, 90000);
+        // AI Threat Intelligence flagship widget now loads unconditionally on
+        // page load (see below) — not gated behind this observer.
         // Load live posture from API
         safeFetch('/api/realtime/posture')
           .then(r => r.ok ? r.json() : null)
@@ -11560,6 +11558,20 @@ function localEngine(module, payload) {
       }
     }, { threshold: 0.2 });
     obs.observe(dashSection);
+  }
+
+  // AI Threat Intelligence flagship widget — load directly on page load rather
+  // than waiting on IntersectionObserver. The widget's container starts as
+  // display:none (auth-gated) until cdbApplyGates() reveals it, and toggling
+  // display:none -> visible does not reliably re-fire an existing
+  // IntersectionObserver in every browser, which left this "live" widget
+  // permanently stuck on its initial "—" placeholder for some customers
+  // (reported by Cisco — fixed 2026-06-30). Fetching directly here only
+  // populates hidden DOM until the gate reveals it, so it's safe to run
+  // unconditionally and keeps data fresh from the first paint onward.
+  if (typeof renderAIThreatIntelFlagship === 'function') {
+    renderAIThreatIntelFlagship();
+    setInterval(renderAIThreatIntelFlagship, 90000);
   }
 
   // Kick off real-time metrics on page load (non-blocking)
