@@ -35,7 +35,7 @@ nav a{color:#94a3b8;text-decoration:none;font-size:.9rem}nav a:hover{color:#e2e8
 .metrics{display:flex;flex-wrap:wrap;justify-content:center;gap:32px;padding:40px 24px;border-bottom:1px solid var(--border)}
 .metric{text-align:center}
 .metric-val{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#22c55e,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.metric-label{font-size:.8rem;color:#64748b;margin-top:2px}
+.metric-label{font-size:.8rem;color:#94a3b8;margin-top:2px}
 section{padding:64px 24px}
 .container{max-width:1100px;margin:0 auto}
 h2{font-size:1.8rem;font-weight:800;margin-bottom:12px}
@@ -64,7 +64,16 @@ h2 span{background:linear-gradient(135deg,#22c55e,#0ea5e9);-webkit-background-cl
 footer{background:var(--card);border-top:1px solid var(--border);padding:32px 24px;text-align:center;color:#475569;font-size:.88rem}
 footer a{color:#22c55e;text-decoration:none}
 .skeleton{opacity:.4}
-.note{font-size:.78rem;color:#64748b;margin-top:8px}
+.note{font-size:.78rem;color:#94a3b8;margin-top:8px}
+.ctable{width:100%;border-collapse:collapse;margin-top:16px}
+.ctable th{text-align:left;font-size:.78rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;padding:8px 12px;border-bottom:1px solid var(--border)}
+.ctable td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:.88rem;color:#e2e8f0}
+.ctable td.evidence{color:#94a3b8;font-size:.82rem}
+.status-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.74rem;font-weight:700}
+.status-implemented{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.status-aligned{background:rgba(14,165,233,.12);color:#7dd3fc;border:1px solid rgba(14,165,233,.3)}
+.status-progress{background:rgba(234,179,8,.12);color:#fde047;border:1px solid rgba(234,179,8,.3)}
+.status-planning{background:rgba(148,163,184,.12);color:#cbd5e1;border:1px solid rgba(148,163,184,.3)}
 </style>
 </head>
 <body>
@@ -141,8 +150,21 @@ footer a{color:#22c55e;text-decoration:none}
 </div>
 </div>
 <div class="prose" style="margin-top:32px">
-<h3>Standards We Map Findings To</h3>
-<div id="standards-tags"></div>
+<h3>Compliance Framework Status</h3>
+<p>Honestly scoped — we mark frameworks "In Progress" or "Planning" rather than implying certifications we don't yet hold.</p>
+<div id="compliance-table"></div>
+</div>
+</div>
+</section>
+
+<section style="background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+<div class="container">
+<h2>Vulnerability <span>Disclosure</span></h2>
+<p class="section-sub">Found a security issue? Here's how to report it responsibly.</p>
+<div class="grid grid-3">
+<div class="card"><div class="card-icon">📧</div><h3>Contact</h3><p id="vd-contact">security@cyberdudebivash.com</p></div>
+<div class="card"><div class="card-icon">⏱️</div><h3>Response SLA</h3><p id="vd-sla">Critical: 24h, High: 72h, Medium: 7 days</p></div>
+<div class="card"><div class="card-icon">🎯</div><h3>Bug Bounty</h3><p id="vd-bounty">Private program — contact for access</p></div>
 </div>
 </div>
 </section>
@@ -216,13 +238,39 @@ footer a{color:#22c55e;text-decoration:none}
     const res = await fetch('https://cyberdudebivash.in/api/trust-center');
     const data = await res.json();
     if (!data.success) return;
-    const m = data.metrics || {};
-    if (m.total_scans != null) document.getElementById('m-scans').textContent = m.total_scans.toLocaleString();
-    if (m.total_cves != null) document.getElementById('m-cves').textContent = m.total_cves.toLocaleString();
-    if (m.uptime_pct != null) document.getElementById('m-uptime').textContent = m.uptime_pct + '%';
 
-    const standards = (data.company && data.company.methodology && data.company.methodology.standards) || [];
-    document.getElementById('standards-tags').innerHTML = standards.map(s => `<span class="tag">${s}</span>`).join('');
+    const stats = data.platform_stats || {};
+    if (stats.security_scans != null) document.getElementById('m-scans').textContent = Number(stats.security_scans).toLocaleString();
+    if (stats.cves_in_database != null) document.getElementById('m-cves').textContent = Number(stats.cves_in_database).toLocaleString();
+    if (stats.platform_uptime) document.getElementById('m-uptime').textContent = stats.platform_uptime;
+
+    const statusClass = {
+      'Implemented': 'status-implemented',
+      'Aligned':     'status-aligned',
+      'In Progress': 'status-progress',
+      'Planning':    'status-planning',
+    };
+    const frameworks = (data.compliance_status && data.compliance_status.frameworks) || [];
+    if (frameworks.length) {
+      const rows = frameworks.map(f => `
+        <tr>
+          <td>${f.framework}</td>
+          <td><span class="status-pill ${statusClass[f.status] || 'status-planning'}">${f.status}</span></td>
+          <td class="evidence">${f.evidence}</td>
+        </tr>`).join('');
+      document.getElementById('compliance-table').innerHTML = `
+        <table class="ctable">
+          <thead><tr><th>Framework</th><th>Status</th><th>Evidence</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    const vd = data.vulnerability_disclosure;
+    if (vd) {
+      if (vd.contact) document.getElementById('vd-contact').textContent = vd.contact;
+      if (vd.response_sla) document.getElementById('vd-sla').textContent = vd.response_sla;
+      if (vd.bug_bounty) document.getElementById('vd-bounty').textContent = vd.bug_bounty;
+    }
   } catch (e) {
     // Graceful degradation — static content above already covers the essentials
   }
