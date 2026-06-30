@@ -169,6 +169,7 @@ import { handleIdentityScan }      from './handlers/identity.js';
 import { handleCompliance }        from './handlers/compliance.js';
 import { handleLeadCapture }       from './handlers/leads.js';
 import { handleEnterpriseContact } from './handlers/enterprise.js';
+import { handleEnterpriseOnboarding, handleSaveOnboardingProfile, handleEnterpriseWelcome, handleEnterpriseContacts } from './handlers/enterpriseOnboarding.js';
 
 // ─── New v5.0 handlers ────────────────────────────────────────────────────────
 import { handleReportDownload, handleReportGenerate } from './handlers/report.js';
@@ -1147,6 +1148,11 @@ function apiInfoResponse() {
       'POST /api/ai/analyze':        'Threat correlation → attack chain + MITRE ATT&CK + exploit probability',
       'POST /api/ai/simulate':       'Attack simulation → step-by-step attacker path + blast radius + scenario',
       'POST /api/ai/forecast':       'Risk forecast → exploitation likelihood + time-to-breach + financial impact',
+      // v42.0 — Enterprise Onboarding & Support
+      'GET  /api/enterprise/welcome':     'Platform capabilities overview for new enterprise customers (public)',
+      'GET  /api/enterprise/onboarding':  'Personalized quickstart guide for authenticated enterprise users',
+      'POST /api/enterprise/onboarding':  'Save onboarding profile (use_case, org_name, team_size) → personalized steps',
+      'GET  /api/enterprise/contacts':    'Dedicated support contacts, escalation matrix, SLA information',
       // V10.0 — Subscription SaaS Engine
       'GET  /api/subscription/plans':   'Public plan listing → STARTER/PRO/ENTERPRISE with pricing',
       'GET  /api/user/plan':            'Current plan + monthly usage for authenticated user',
@@ -1238,6 +1244,10 @@ export function normalizeBindings(env) {
 export default {
   async fetch(request, env, ctx) {
     normalizeBindings(env);
+
+    // Propagate or generate X-Request-ID for distributed tracing + enterprise audit trail
+    const requestId = request.headers.get('X-Request-ID') ||
+      `cdb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
     // ── P0 FIX: Binding validation — fail fast before any handler runs ──────
     // Prevents cryptic "Cannot read properties of undefined (reading 'prepare')"
@@ -1817,8 +1827,11 @@ export default {
         const cnt = parseInt(await rlKv.get(rlKey).catch(() => '0') || '0', 10);
         if (cnt >= 10) {
           return withSecurityHeaders(withCors(Response.json({
-            error: 'Rate limit exceeded — maximum 10 payment orders per hour per IP.',
+            success:     false,
+            error:       'Payment rate limit reached. Maximum 10 orders per hour per IP address.',
             retry_after: 3600,
+            support:     'For high-volume procurement, contact enterprise@cyberdudebivash.in',
+            code:        'ERR_RATE_LIMIT_PAYMENT',
           }, { status: 429 }), request));
         }
         await rlKv.put(rlKey, String(cnt + 1), { expirationTtl: 3600 }).catch(() => {});
@@ -2451,6 +2464,23 @@ export default {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       const { handleMsspTenantRoute } = await import('./handlers/msspTenantPlatform.js');
       return withSecurityHeaders(withCors(await handleMsspTenantRoute(request, env, authCtx, path, method), request));
+    }
+
+    // ── v42.0 ENTERPRISE ONBOARDING & SUPPORT CONTACTS ─────────────────────────
+    if (path === '/api/enterprise/onboarding' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleEnterpriseOnboarding(request, env, authCtx), request));
+    }
+    if (path === '/api/enterprise/onboarding' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleSaveOnboardingProfile(request, env, authCtx), request));
+    }
+    if (path === '/api/enterprise/welcome' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleEnterpriseWelcome(request, env), request));
+    }
+    if (path === '/api/enterprise/contacts' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleEnterpriseContacts(request, env, authCtx), request));
     }
 
     // SOC Cases
@@ -3140,22 +3170,28 @@ export default {
 
     // POST /api/subscription/create → create Razorpay order for a plan
     if (path === '/api/subscription/create' && method === 'POST') {
-      // IP-based rate limit: max 5 subscription order creates per hour
+      // IP-based rate limit: max 20 subscription order creates per hour
+      // (enterprise orgs may create multiple orders during procurement/renewal flows)
       const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
       const rlHour = new Date().toISOString().slice(0, 13);
       const rlKey  = `rl:sub_create:${ip}:${rlHour}`;
       const rlKv   = env.SECURITY_HUB_KV || env.KV;
       if (rlKv && ip !== 'unknown') {
         const cnt = parseInt(await rlKv.get(rlKey).catch(() => '0') || '0', 10);
-        if (cnt >= 5) {
-          return withSecurityHeaders(withCors(Response.json({
-            error: 'Rate limit exceeded — maximum 5 subscription requests per hour per IP.',
+        if (cnt >= 20) {
+          const resp = Response.json({
+            success:     false,
+            error:       'Rate limit exceeded. Maximum 20 subscription requests per hour per IP.',
             retry_after: 3600,
-          }, { status: 429 }), request));
+            support:     'Contact enterprise@cyberdudebivash.in for elevated limits.',
+          }, { status: 429 });
+          resp.headers?.set?.('Retry-After', '3600');
+          return withSecurityHeaders(withCors(resp, request));
         }
         await rlKv.put(rlKey, String(cnt + 1), { expirationTtl: 3600 }).catch(() => {});
       }
-      return withSecurityHeaders(withCors(await handleCreateSubscription(request, env), request));
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleCreateSubscription(request, env, authCtx), request));
     }
 
     // POST /api/subscription/activate → verify payment + activate plan session
@@ -7091,7 +7127,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           'Content-Type':                'application/json',
           'Cache-Control':               'public, max-age=3600, s-maxage=3600',
           'CDN-Cache-Control':           'max-age=3600',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://cyberdudebivash.in',
           'Vary':                        'CF-IPCountry',
           'X-Country':                   country,
           'X-Currency':                  currency,

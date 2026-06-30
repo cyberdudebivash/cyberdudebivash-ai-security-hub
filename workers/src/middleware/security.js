@@ -39,18 +39,22 @@ const SECURITY_HEADERS = {
 };
 
 const POWERED_BY_HEADERS = {
-  'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v19.0',
-  'X-API-Version':   '19.0.0',
+  'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v40.0',
+  'X-API-Version':   '40.0.0',
   'X-Security-Hub':  'cyberdudebivash.in',
   'X-Zero-Trust':    'enforced',
-  'X-Platform':      'GOD-Level AI Security Hub',
+  'X-Platform':      'AI-Native Cyber Defense | Enterprise-Grade Intelligence',
+  'X-Support':       'support@cyberdudebivash.in | SLA: enterprise@cyberdudebivash.in',
 };
 
 // ─── Apply Security Headers ───────────────────────────────────────────────────
-export function withSecurityHeaders(response) {
+export function withSecurityHeaders(response, requestId) {
   const h = new Headers(response.headers);
   Object.entries(SECURITY_HEADERS).forEach(([k, v]) => h.set(k, v));
   Object.entries(POWERED_BY_HEADERS).forEach(([k, v]) => h.set(k, v));
+  // Inject X-Request-ID for enterprise audit trail + distributed tracing
+  const reqId = requestId || h.get('X-Request-ID') || `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  h.set('X-Request-ID', reqId);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers: h });
 }
 

@@ -100,9 +100,40 @@ export async function handleSignup(request, env) {
   const ua           = getUA(request);
   await storeRefreshToken(env.DB, userId, refreshData, ip, ua);
 
+  // Fire-and-forget welcome email (non-blocking)
+  try {
+    const { sendEmail } = await import('../services/emailEngine.js');
+    await sendEmail(env, {
+      to:      email,
+      subject: 'Welcome to CYBERDUDEBIVASH AI Security Hub™',
+      html: `<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;background:#0f0f1a;color:#e2e8f0;padding:40px;border-radius:12px">
+        <h1 style="background:linear-gradient(135deg,#7c3aed,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0 0 8px">CYBERDUDEBIVASH®</h1>
+        <p style="color:#64748b;margin:0 0 32px;font-size:13px">AI Security Intelligence Platform</p>
+        <h2 style="color:#e2e8f0">Welcome${fullName ? ', ' + fullName : ''}!</h2>
+        <p style="color:#94a3b8">Your account has been created successfully. You're now part of an elite community of security professionals using AI-native cyber defense.</p>
+        <div style="background:#1a1a2e;border:1px solid #2d2d4e;border-radius:8px;padding:20px;margin:24px 0">
+          <p style="margin:0 0 8px;color:#7c3aed;font-weight:600">Your first API key:</p>
+          <code style="color:#e2e8f0;font-size:12px">${firstKey?.raw_key || 'Visit /api/keys to generate'}</code>
+          ${firstKey?.raw_key ? '<p style="color:#ef4444;font-size:12px;margin:8px 0 0">⚠️ Save this key now — it cannot be retrieved again.</p>' : ''}
+        </div>
+        <h3 style="color:#e2e8f0">Quick Start</h3>
+        <ul style="color:#94a3b8;padding-left:20px;line-height:1.8">
+          <li>Explore <a href="https://cyberdudebivash.in" style="color:#7c3aed">cyberdudebivash.in</a></li>
+          <li>API docs: <a href="https://cyberdudebivash.in/api-docs.html" style="color:#7c3aed">Full API Reference</a></li>
+          <li>Onboarding guide: <a href="https://cyberdudebivash.in/enterprise-onboarding.html" style="color:#7c3aed">Enterprise Guide</a></li>
+          <li>Support: <a href="mailto:support@cyberdudebivash.in" style="color:#7c3aed">support@cyberdudebivash.in</a></li>
+        </ul>
+        <p style="color:#475569;font-size:12px;margin-top:32px;border-top:1px solid #2d2d4e;padding-top:16px">
+          CYBERDUDEBIVASH Pvt Ltd · AI Security · Threat Intelligence · DevSecOps<br>
+          <a href="https://cyberdudebivash.in" style="color:#475569">cyberdudebivash.in</a>
+        </p>
+      </div>`,
+    }).catch(() => {}); // non-fatal
+  } catch (_) {}
+
   return Response.json({
     success:       true,
-    message:       'Account created successfully',
+    message:       'Account created successfully. A welcome email has been sent.',
     user: {
       id:        userId,
       email,
@@ -116,10 +147,13 @@ export async function handleSignup(request, env) {
     api_key:       firstKey?.raw_key || null,  // shown ONCE — store it now
     api_key_note:  firstKey?.raw_key ? 'Your first API key — save it now; it cannot be retrieved again.' : null,
     next_steps: [
-      'Use access_token in Authorization: Bearer header',
-      `Generate API keys at ${PLATFORM_URL}/keys`,
+      'Use access_token in Authorization: Bearer <token> header',
+      'Enterprise onboarding guide: GET /api/enterprise/onboarding',
+      'Platform capabilities: GET /api/enterprise/welcome',
+      `Manage API keys at GET /api/keys`,
       `Start scanning at POST /api/scan/domain`,
     ],
+    support: 'support@cyberdudebivash.in | Enterprise: enterprise@cyberdudebivash.in',
   }, { status: 201 });
 }
 

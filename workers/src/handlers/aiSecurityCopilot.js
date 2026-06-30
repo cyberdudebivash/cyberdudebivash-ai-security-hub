@@ -1907,10 +1907,11 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
   }
 
   return {
-    content:  `APEX AI is temporarily unavailable. ${cfAiError ? 'CF Workers AI: ' + cfAiError.message + '. ' : ''}Configure GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY as Wrangler secrets for full operation. Contact support@cyberdudebivash.com if this persists.`,
-    model:    'none',
+    content:  `The APEX AI Copilot is temporarily unavailable. Our team has been alerted and is working to restore full AI capabilities.\n\nIn the meantime:\n• Threat Intelligence: GET /api/threat-intel\n• IOC Enrichment: POST /api/hunt/ioc\n• SIEM Export: POST /api/export/siem\n• DPDP Compliance: GET /api/compliance/dpdp\n\nFor urgent assistance, contact: support@cyberdudebivash.in\nEnterprise SLA escalation: enterprise@cyberdudebivash.in`,
+    model:    'service-degraded',
     provider: 'none',
     error:    true,
+    support:  'support@cyberdudebivash.in',
   };
 }
 
