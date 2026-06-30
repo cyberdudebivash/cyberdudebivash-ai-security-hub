@@ -1726,6 +1726,24 @@ export default {
       return handleGoogleCallback(request, env);
     }
 
+    // ── Enterprise OIDC SSO — Azure AD / Okta / any OIDC IdP (v48.0) ────────
+    if (path === '/api/auth/enterprise/config' && method === 'GET') {
+      const { handleEnterpriseSSoInfo } = await import('./handlers/enterpriseSsoHandler.js');
+      return withSecurityHeaders(withCors(handleEnterpriseSSoInfo(), request));
+    }
+    if (path === '/api/auth/enterprise/sso' && method === 'GET') {
+      const { handleEnterpriseSSoInitiate } = await import('./handlers/enterpriseSsoHandler.js');
+      return handleEnterpriseSSoInitiate(request, env);
+    }
+    if (path === '/api/auth/enterprise/callback' && method === 'GET') {
+      const { handleEnterpriseSSoCallback } = await import('./handlers/enterpriseSsoHandler.js');
+      return handleEnterpriseSSoCallback(request, env);
+    }
+    if (path === '/api/auth/enterprise/configure' && method === 'POST') {
+      const { handleEnterpriseSSoConfigure } = await import('./handlers/enterpriseSsoHandler.js');
+      return withSecurityHeaders(withCors(await handleEnterpriseSSoConfigure(request, env, authCtx), request));
+    }
+
     // ── Auth routes (no rate limit — have their own brute-force protection) ─
     if (path === '/api/auth/signup' && method === 'POST') {
       const res = await handleSignup(request, env);
@@ -2495,6 +2513,10 @@ export default {
     if (path === '/api/enterprise/contacts' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       return withSecurityHeaders(withCors(await handleEnterpriseContacts(request, env, authCtx), request));
+    }
+    if (path === '/api/enterprise/capability' && method === 'GET') {
+      const { handleEnterpriseCapability } = await import('./handlers/enterprisePortalHandlers.js');
+      return withSecurityHeaders(withCors(await handleEnterpriseCapability(request, env, authCtx), request));
     }
 
     // SOC Cases
