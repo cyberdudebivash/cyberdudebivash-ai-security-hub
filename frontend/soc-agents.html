@@ -420,7 +420,7 @@ async function loadStatus() {
     document.getElementById('provider-list').innerHTML = Object.entries(providers).map(([name, ok]) => `
       <div class="provider-row">
         <span><span class="dot ${ok?'dot-green':'dot-red'}"></span>${name.replace('_',' ').toUpperCase()}</span>
-        <span style="color:${ok?'var(--green)':'var(--red)';font-size:11px}">${ok?'✓ Ready':'✗ Not configured'}</span>
+        <span style="color:${ok?'var(--green)':'var(--red)'};font-size:11px">${ok?'✓ Ready':'✗ Not configured'}</span>
       </div>`).join('');
   } catch {}
 }

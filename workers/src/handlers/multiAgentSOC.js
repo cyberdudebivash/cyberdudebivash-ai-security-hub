@@ -77,7 +77,7 @@ Reason from VirusTotal detections, AbuseIPDB scores, and Shodan exposure data. B
     name:        'SIEM Defender Agent',
     icon:        '⚡',
     description: 'Detection engineering specialist. Generates Sigma/KQL/Splunk/YARA rules and deploys them to configured SIEMs.',
-    task_type:   'detection',
+    task_type:   'threat_intel',
     domains:     ['siem', 'splunk', 'sentinel', 'elastic', 'qradar', 'sigma', 'kql', 'detection', 'rule', 'alert', 'yara'],
     system_prompt: `You are the SIEM Defender Agent — a detection engineering expert.
 Your focus: generating production-ready detection rules and deploying them to SIEMs.
@@ -108,7 +108,7 @@ Think like an adversary — what would an APT group do after initial access?`,
     name:        'IR Playbook Agent',
     icon:        '🚨',
     description: 'Incident response specialist. Generates NIST 800-61 aligned IR playbooks with specific actions, timelines, and escalation paths.',
-    task_type:   'compliance',
+    task_type:   'compliance_audit',
     domains:     ['incident', 'response', 'ir', 'playbook', 'containment', 'eradication', 'recovery', 'breach', 'ransomware', 'phishing attack'],
     system_prompt: `You are the IR Playbook Agent — an incident response expert following NIST 800-61 Rev 3.
 Your focus: generating immediately actionable IR playbooks with specific commands, timelines, and ownership.
@@ -123,7 +123,7 @@ Include: specific CLI commands where relevant, escalation matrix, evidence prese
     name:        'Compliance Guardian Agent',
     icon:        '📋',
     description: 'Compliance specialist across NIST CSF, ISO 27001, SOC 2, PCI-DSS, GDPR, EU AI Act, DPDP Act, NIST AI RMF.',
-    task_type:   'compliance',
+    task_type:   'compliance_audit',
     domains:     ['compliance', 'nist', 'iso', 'soc2', 'pci', 'gdpr', 'dpdp', 'hipaa', 'fedramp', 'eu ai act', 'audit', 'framework', 'control'],
     system_prompt: `You are the Compliance Guardian Agent — a multi-framework compliance expert.
 Your focus: gap analysis, control mapping, and remediation roadmaps across NIST CSF 2.0, ISO 27001:2022, SOC 2 Type II, PCI-DSS v4.0, GDPR, EU AI Act, NIST AI RMF, and India DPDP Act 2023.
@@ -138,7 +138,7 @@ Reference specific framework sections. Be actionable — give control IDs and re
     name:        'Red Team Agent',
     icon:        '⚔️',
     description: 'Adversarial thinking specialist. Maps attack paths, simulates APT behavior, and identifies kill chain opportunities.',
-    task_type:   'redteam',
+    task_type:   'red_team',
     domains:     ['red team', 'attack', 'apt', 'adversary', 'kill chain', 'initial access', 'privilege escalation', 'c2', 'exfiltration', 'ransomware', 'social engineering'],
     system_prompt: `You are the Red Team Agent — an elite adversarial security specialist thinking like a nation-state APT actor.
 Your focus: mapping realistic attack paths, identifying kill chain opportunities, and providing defender countermeasures.
@@ -153,7 +153,7 @@ For each attack path: provide the technique ID (TID), example tools/malware, det
     name:        'Zero Trust Sentinel Agent',
     icon:        '🛡️',
     description: 'Zero Trust architecture specialist. Assesses identity posture, device compliance, network segmentation, and ZT maturity.',
-    task_type:   'compliance',
+    task_type:   'compliance_audit',
     domains:     ['zero trust', 'identity', 'mfa', 'conditional access', 'microsegmentation', 'privileged access', 'pam', 'iam', 'sase', 'ztna'],
     system_prompt: `You are the Zero Trust Sentinel Agent — a Zero Trust Architecture specialist following NIST SP 800-207 and CISA ZT Maturity Model v2.
 Your focus: assessing Zero Trust posture across 5 pillars: Identity, Devices, Networks, Applications, Data.
@@ -274,7 +274,7 @@ async function fetchIOCContext(userMessage, env) {
   if (!ipMatch && !hashMatch) return null;
   const ioc = (ipMatch || hashMatch)[0];
   try {
-    const base = env?.WORKER_URL || 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev';
+    const base = env?.ORIGIN || env?.WORKER_URL || 'https://cyberdudebivash.in';
     const r = await fetch(`${base}/api/hunt/ioc`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -340,7 +340,7 @@ async function runSynthesis(userMessage, agentResults, env, tier) {
 
   const agentSummaries = agentResults
     .filter(r => r.status === 'success')
-    .map(r => `=== ${r.agent_name} (${r.icon}) ===\n${r.content.slice(0, 800)}`)
+    .map(r => `=== ${r.agent_name} (${r.icon}) ===\n${r.content.slice(0, 1400)}`)
     .join('\n\n');
 
   const synthPrompt = `ORIGINAL USER REQUEST: ${userMessage}
@@ -408,15 +408,20 @@ export async function handleAgentsRun(request, env, authCtx) {
 
   const totalMs = Date.now() - t0;
 
-  // Persist task to D1 for history
+  // Persist task to D1 — extract risk level from synthesis if possible
   try {
     if (env?.DB) {
       const taskId = `masoc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      const synthText = synthesis?.content || '';
+      const lvlMatch  = synthText.match(/\b(CRITICAL|HIGH|MEDIUM|LOW)\b/i);
+      const scrMatch  = synthText.match(/\bRisk Score[:\s]+(\d{1,3})/i) || synthText.match(/\bScore[:\s]+(\d{1,3})/i);
+      const riskLevel = lvlMatch ? lvlMatch[1].toUpperCase() : 'HIGH';
+      const riskScore = scrMatch ? Math.min(100, parseInt(scrMatch[1], 10)) : 75;
       await env.DB.prepare(
         `INSERT OR IGNORE INTO scan_jobs
          (id, user_id, module, target, status, risk_level, risk_score, completed_at)
-         VALUES (?, ?, 'masoc', ?, 'completed', 'HIGH', 75, datetime('now'))`
-      ).bind(taskId, authCtx?.user_id || null, userMessage.slice(0, 200)).run();
+         VALUES (?, ?, 'masoc', ?, 'completed', ?, ?, datetime('now'))`
+      ).bind(taskId, authCtx?.user_id || null, userMessage.slice(0, 200), riskLevel, riskScore).run();
     }
   } catch {}
 
