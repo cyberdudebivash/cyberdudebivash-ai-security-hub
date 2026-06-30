@@ -560,6 +560,18 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     }
   }
 
+  // ── If R2 storage failed, the download URL would 404. Surface this to the customer
+  //    so they can retry, rather than issuing a token that never works.
+  if (!r2Stored) {
+    return Response.json({
+      success: false,
+      error: 'Report storage temporarily unavailable. Your payment was received — please retry the download in a few minutes or contact support@cyberdudebivash.com with your payment ID.',
+      payment_id: razorpay_payment_id,
+      order_id: razorpay_order_id,
+      report_id: reportId,
+    }, { status: 503 });
+  }
+
   // ── Store access token in KV for fast lookup ──────────────────────────────────
   if (env.SECURITY_HUB_KV) {
     await env.SECURITY_HUB_KV.put(

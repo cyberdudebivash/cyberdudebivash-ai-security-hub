@@ -249,12 +249,35 @@ async function handleDocs(request, env) {
   });
 }
 
+// ─── GET /api/support/tickets (admin only) ───────────────────────────────────
+async function handleListTickets(request, env, authCtx) {
+  const isAdmin = authCtx?.isAdmin || authCtx?.tier === 'ADMIN';
+  if (!isAdmin) return Response.json({ error: 'Admin access required' }, { status: 403 });
+
+  const url    = new URL(request.url);
+  const status = url.searchParams.get('status') || 'open';
+  const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
+  const offset = parseInt(url.searchParams.get('offset') || '0');
+
+  let tickets = [];
+  try {
+    const rows = await env.DB?.prepare(
+      `SELECT id, user_id, tier, subject, category, priority, status, created_at
+         FROM support_tickets WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).bind(status, limit, offset).all().catch(() => ({ results: [] }));
+    tickets = rows?.results || [];
+  } catch { /* table may not exist */ }
+
+  return Response.json({ total: tickets.length, status_filter: status, tickets });
+}
+
 // ─── Main Dispatcher ─────────────────────────────────────────────────────────
 export async function handleSupport(request, env, authCtx, path, method) {
   try {
     if (path === '/api/support/faq' && method === 'GET')      return handleFAQ(request, env);
     if (path === '/api/support/status' && method === 'GET')   return handleStatus(request, env);
     if (path === '/api/support/ticket' && method === 'POST')  return handleTicket(request, env, authCtx);
+    if (path === '/api/support/tickets' && method === 'GET')  return handleListTickets(request, env, authCtx);
     if (path === '/api/support/sla' && method === 'GET')      return handleSLA(request, env, authCtx);
     if (path === '/api/support/docs' && method === 'GET')     return handleDocs(request, env);
 
