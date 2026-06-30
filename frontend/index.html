@@ -11895,6 +11895,12 @@ async function initSentinelFeed() {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
 
+    // HTML-escape every dynamic field before innerHTML insertion — feed
+    // content originates from upstream NVD/CISA KEV sources and should never
+    // be trusted as pre-sanitized markup.
+    const ae = (typeof window.escHTML === 'function') ? window.escHTML
+      : (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;' }[c]));
+
     const items = [
       ...(data.critical_cves     || []).map(c => ({ ...c, source:'NVD', _bucket:'CRITICAL' })),
       ...(data.high_cves         || []).map(c => ({ ...c, source:'NVD', _bucket:'HIGH' })),
@@ -11934,13 +11940,13 @@ async function initSentinelFeed() {
         </div>
         <div style="flex:1;min-width:0">
           <div class="cve-meta">
-            <span class="cve-id-badge">${cveId}</span>
+            <span class="cve-id-badge">${ae(cveId)}</span>
             ${score !== null ? `<span class="cvss-badge cvss-${sev}">CVSS ${Number(score).toFixed(1)}</span>` : ''}
             ${isKev ? `<span class="kev-badge">KEV</span>` : ''}
           </div>
-          <div class="cve-title-v11">${title}${title.length >= 100 ? '…' : ''}</div>
+          <div class="cve-title-v11">${ae(title)}${title.length >= 100 ? '…' : ''}</div>
           <div class="cve-footer">
-            <span>${item.source || 'NVD'}</span>
+            <span>${ae(item.source || 'NVD')}</span>
             <span>${dateDisp}</span>
           </div>
         </div>
