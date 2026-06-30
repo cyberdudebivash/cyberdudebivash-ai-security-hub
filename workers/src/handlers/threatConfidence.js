@@ -390,6 +390,9 @@ export async function handleEnrichThreat(request, env, authCtx = {}) {
 
   const scored = await scoreThreat(body, env);
 
+  // Persist to feed so dashboard shows live data
+  await pushToFeed(scored, env);
+
   // Generate AI enrichment narrative
   const narrative = buildNarrative(scored);
 

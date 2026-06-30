@@ -18073,8 +18073,12 @@ window.cdbSIEMLoad = function() {
   fetch('/api/integrations')
     .then(function(r){ return r.json(); })
     .then(function(data) {
-      SIEM.integrations = data.integrations || [];
-      renderSIEMGrid(SIEM.integrations);
+      if (data.error || !data.integrations || data.integrations.length === 0) {
+        renderSIEMGridFallback();
+      } else {
+        SIEM.integrations = data.integrations;
+        renderSIEMGrid(SIEM.integrations);
+      }
     })
     .catch(function() {
       renderSIEMGridFallback();
@@ -19662,7 +19666,8 @@ window.cdbDefenseRollback = function(id) {
 window.cdbLoadTCFeed = function() {
   var feedEl = document.getElementById('p3-tc-feed');
   if (!feedEl) return;
-  p3Req('/api/threat-confidence/stats').then(function(stats) {
+  p3Req('/api/threat-confidence/stats').then(function(resp) {
+    var stats = resp.data || resp;
     var kevEl = document.getElementById('p3-src-kev-status');
     var kevMeta = document.getElementById('p3-src-kev-meta');
     if (kevEl) {
@@ -19672,8 +19677,9 @@ window.cdbLoadTCFeed = function() {
     }
     if (kevMeta) kevMeta.textContent = 'v' + (stats.kev_catalog_version || 'unknown');
   });
-  p3Req('/api/threat-confidence/feed?limit=10').then(function(data) {
-    var feed = data.feed || [];
+  p3Req('/api/threat-confidence/feed?limit=10').then(function(resp) {
+    var inner = resp.data || resp;
+    var feed = inner.feed || resp.feed || [];
     if (feed.length === 0) {
       feedEl.innerHTML = '<div style="color:#475569;text-align:center;padding:40px;font-size:13px">No high-confidence threats scored yet. Use the enrichment tool above.</div>';
       return;
