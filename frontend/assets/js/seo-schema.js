@@ -398,6 +398,50 @@ function injectSchema(schemas) {
   });
 }
 
+// ─── International SEO readiness — self-referencing hreflang + geo tags ──────
+// Single-language (en) platform today; x-default + en-IN signal correct
+// regional targeting without claiming localized content that doesn't exist.
+function injectInternationalTags() {
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  const canonicalUrl = `${SITE.url}${path}`;
+  const head = document.head;
+
+  if (!document.querySelector('link[hreflang="x-default"]')) {
+    const xDefault = document.createElement('link');
+    xDefault.rel = 'alternate';
+    xDefault.hreflang = 'x-default';
+    xDefault.href = canonicalUrl;
+    head.appendChild(xDefault);
+  }
+  if (!document.querySelector('link[hreflang="en"]')) {
+    const en = document.createElement('link');
+    en.rel = 'alternate';
+    en.hreflang = 'en';
+    en.href = canonicalUrl;
+    head.appendChild(en);
+  }
+  if (!document.querySelector('link[hreflang="en-IN"]')) {
+    const enIN = document.createElement('link');
+    enIN.rel = 'alternate';
+    enIN.hreflang = 'en-IN';
+    enIN.href = canonicalUrl;
+    head.appendChild(enIN);
+  }
+  if (!document.querySelector('meta[name="geo.region"]')) {
+    const geoRegion = document.createElement('meta');
+    geoRegion.name = 'geo.region';
+    geoRegion.content = 'IN';
+    head.appendChild(geoRegion);
+  }
+  if (!document.querySelector('meta[name="geo.placename"]')) {
+    const geoPlace = document.createElement('meta');
+    geoPlace.name = 'geo.placename';
+    geoPlace.content = 'Odisha, India';
+    head.appendChild(geoPlace);
+  }
+}
+injectInternationalTags();
+
 // ─── Detect current page and inject appropriate schemas ──────────────────────
 function initSEOSchemas() {
   const path = window.location.pathname.replace(/\/$/, '') || '/';
