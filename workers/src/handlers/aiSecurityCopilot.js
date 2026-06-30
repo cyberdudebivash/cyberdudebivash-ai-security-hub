@@ -1932,7 +1932,7 @@ export async function handleCopilotChat(request, env, authCtx) {
 
   const userId    = authCtx?.userId || authCtx?.email || authCtx?.ip || 'anonymous';
   const tier      = (authCtx?.tier || 'FREE').toUpperCase();
-  const sessionId = body.session_id || `${userId}:default`;
+  const sessionId = ((body.session_id || '') + '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'default';
   const maxTokens = Math.min(body.max_tokens || 2048, ['ENTERPRISE','MSSP','TEAM'].includes(tier) ? 4096 : ['PRO'].includes(tier) ? 3072 : 1024);
 
   // Quota

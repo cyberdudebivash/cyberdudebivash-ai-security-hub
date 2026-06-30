@@ -373,13 +373,14 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     if (env.DB) {
       await env.DB.prepare(
         `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
-      ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id).run().catch(() => {});
+      ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id).run()
+        .catch((e) => console.error('[Payments] UPDATE payments D1 failed', razorpay_payment_id, e?.message));
       await env.DB.prepare(
         `INSERT OR IGNORE INTO subscriptions (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at) VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
       ).bind(
         'sub_' + Date.now().toString(36), confirmedEmail || '', plan,
         razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
-      ).run().catch(() => {});
+      ).run().catch((e) => console.error('[Payments] INSERT subscriptions D1 failed', razorpay_payment_id, e?.message));
       const paidRow = await env.DB.prepare(
         `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
       ).bind(razorpay_order_id).first().catch(() => null);

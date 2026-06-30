@@ -107,9 +107,22 @@ const OWASP_API_TOP10 = [
   },
 ];
 
+// ── SSRF guard — reject private/loopback/internal hostnames ──────────────────
+function isPrivateHost(rawUrl) {
+  try {
+    const hostname = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`).hostname.toLowerCase();
+    return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0|fc00:|fd)/.test(hostname)
+      || hostname === '[::1]'
+      || hostname.endsWith('.local')
+      || hostname.endsWith('.internal')
+      || !hostname.includes('.');
+  } catch { return true; }
+}
+
 // ── Probe API endpoints ───────────────────────────────────────────────────────
 async function probeAPIEndpoint(baseUrl) {
   const results = {};
+  if (isPrivateHost(baseUrl)) return { ssrf_blocked: true, error: 'Private/internal hosts not permitted' };
   const url = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
 
   // Test 1: OPTIONS (allowed methods)

@@ -749,6 +749,23 @@ async function handleIntegrationTest(req, env, authCtx) {
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const { type, url: targetUrl, token } = body;
   if (!targetUrl || !/^https:\/\//.test(targetUrl)) return Response.json({ error: 'HTTPS url required' }, { status: 400 });
+
+  // SSRF guard: reject private/loopback/link-local hostnames
+  try {
+    const parsed = new URL(targetUrl);
+    const hostname = parsed.hostname.toLowerCase();
+    const BLOCKED = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0|fc00:|fd)/;
+    if (BLOCKED.test(hostname) || hostname === '[::1]') {
+      return Response.json({ error: 'Private/loopback URLs are not permitted' }, { status: 400 });
+    }
+    // Restrict to known SIEM/integration hostnames — must be public FQDNs with a dot
+    if (!hostname.includes('.') || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      return Response.json({ error: 'URL must point to a public FQDN' }, { status: 400 });
+    }
+  } catch {
+    return Response.json({ error: 'Invalid URL' }, { status: 400 });
+  }
+
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (type === 'splunk' && token) headers['Authorization'] = `Splunk ${token}`;

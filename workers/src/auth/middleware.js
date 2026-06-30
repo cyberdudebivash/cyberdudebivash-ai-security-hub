@@ -32,7 +32,10 @@ export async function checkLoginRateLimit(db, email, ip) {
       return { allowed: false, reason: 'Too many failed login attempts. Try again in 15 minutes.' };
     }
     return { allowed: true };
-  } catch { return { allowed: true }; }
+  } catch (e) {
+    console.error('[Auth] checkLoginRateLimit DB failed — allowing request', e?.message);
+    return { allowed: true };
+  }
 }
 
 // ─── Record login attempt ─────────────────────────────────────────────────────
@@ -42,7 +45,9 @@ export async function recordLoginAttempt(db, email, ip, success) {
     await db.prepare(
       `INSERT INTO login_attempts (email, ip_address, success) VALUES (?, ?, ?)`
     ).bind(email.toLowerCase(), ip || null, success ? 1 : 0).run();
-  } catch {}
+  } catch (e) {
+    console.warn('[Auth] recordLoginAttempt failed — brute-force counter not updated', e?.message);
+  }
 }
 
 // ─── Build auth context from JWT ──────────────────────────────────────────────
@@ -54,7 +59,11 @@ async function resolveFromJWT(request, env) {
   if (!secret) return null;
 
   const payload = await verifyJWT(token, secret);
-  if (!payload || payload.type !== 'access') return null;
+  if (!payload || payload.type !== 'access') {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    console.warn('[Auth] JWT validation failed', { ip, reason: !payload ? 'verify_failed' : 'wrong_type' });
+    return null;
+  }
 
   const ip = request.headers.get('CF-Connecting-IP') ||
              request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
@@ -83,7 +92,12 @@ async function resolveFromApiKey(request, env) {
   if (!db) return null;
 
   const keyRow = await resolveApiKeyFromDB(db, rawKey);
-  if (!keyRow) return { authenticated: false, method: 'api_key', error: 'invalid_key' };
+  if (!keyRow) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const keyPrefix = rawKey.slice(0, 12) + '***';
+    console.warn('[Auth] Invalid API key rejected', { ip, keyPrefix });
+    return { authenticated: false, method: 'api_key', error: 'invalid_key' };
+  }
 
   const ip = request.headers.get('CF-Connecting-IP') ||
              request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';

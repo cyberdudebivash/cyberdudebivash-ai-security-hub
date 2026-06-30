@@ -3325,11 +3325,7 @@ CREATE INDEX IF NOT EXISTS idx_api_usage_email   ON api_usage_log(email);
 
 CREATE INDEX IF NOT EXISTS idx_api_usage_logged  ON api_usage_log(logged_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_apib_created ON api_billing(created_at );
-
 CREATE INDEX IF NOT EXISTS idx_apib_created ON api_billing(created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_apib_created ON api_billing(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_apib_key     ON api_billing(api_key_id);
 
@@ -4051,11 +4047,7 @@ CREATE INDEX IF NOT EXISTS idx_scan_jobs_identity ON scan_jobs(identity, created
 
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_module   ON scan_jobs(module);
 
-CREATE INDEX IF NOT EXISTS idx_scan_jobs_status   ON scan_jobs(status);
-
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_status   ON scan_jobs(status, created_at);
-
-CREATE INDEX IF NOT EXISTS idx_scan_jobs_user     ON scan_jobs(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_user     ON scan_jobs(user_id, created_at);
 

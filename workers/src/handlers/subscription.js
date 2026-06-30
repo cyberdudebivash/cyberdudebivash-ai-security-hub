@@ -218,6 +218,7 @@ export async function handleCreateSubscription(request, env) {
       notes,
     }), { headers: { ...headers, 'Content-Type': 'application/json' } });
   } catch (err) {
+    console.error('[Subscription] createRazorpayOrder failed', err?.message);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },

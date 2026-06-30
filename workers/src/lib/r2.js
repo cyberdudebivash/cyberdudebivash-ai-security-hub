@@ -15,7 +15,10 @@ const KV_TTL      = 86400 * 7; // 7 days in KV fallback
 function buildR2Key(jobId) {
   const now    = new Date();
   const month  = now.toISOString().slice(0, 7); // YYYY-MM
-  return `${R2_PREFIX}/${month}/${jobId}.json`;
+  // Sanitize jobId to prevent path traversal in R2 key
+  const safeId = String(jobId).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  if (!safeId) throw new Error('Invalid jobId for R2 storage');
+  return `${R2_PREFIX}/${month}/${safeId}.json`;
 }
 
 // ─── Store scan result in R2 (primary) or KV (fallback) ───────────────────────

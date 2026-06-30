@@ -56,7 +56,9 @@ export async function writeAuditEvent(env, event) {
     const dayKey = `audit:stats:${timestamp.slice(0, 10)}:${type.split('.')[0]}`;
     const cur = parseInt(await env.SECURITY_HUB_KV.get(dayKey) || '0', 10);
     env.SECURITY_HUB_KV.put(dayKey, String(cur + 1), { expirationTtl: 7776000 }).catch(() => {});
-  } catch {}
+  } catch (e) {
+    console.error('[AuditLog] KV write failed — audit event lost', { type, actor, outcome }, e?.message);
+  }
 }
 
 // ─── GET /api/audit-log ───────────────────────────────────────────────────────

@@ -173,21 +173,28 @@ function log(level, event, data = {}) {
   console.log(JSON.stringify({ level, event, service: 'masoc', version: MASOC_VERSION, ts: new Date().toISOString(), ...data }));
 }
 
-// ─── Rate limiter (KV-backed, per user, sliding window) ───────────────────────
+// ─── Rate limiter (KV-backed, per user, fixed 60-second window) ──────────────
 async function checkRateLimit(env, userId) {
-  if (!env?.KV) return { allowed: true };
-  const key = `masoc_rl:${userId}`;
+  const kvStore = env?.KV || env?.SECURITY_HUB_KV;
+  if (!kvStore) {
+    // Fail closed when KV unavailable — MASOC fires 9 parallel AI calls so abuse cost is high
+    console.warn('[MASOC] KV unavailable — rate limit enforced (fail closed)');
+    return { allowed: false, count: 0, limit: RATE_LIMIT_MAX, retry_after: 60, reason: 'kv_unavailable' };
+  }
+  // Fixed window: key includes current minute so window doesn't slide on each request
+  const window  = Math.floor(Date.now() / (RATE_LIMIT_WINDOW_S * 1000));
+  const key     = `masoc_rl:${userId}:${window}`;
   try {
-    const raw   = await env.KV.get(key);
+    const raw   = await kvStore.get(key);
     const count = raw ? parseInt(raw, 10) : 0;
     if (count >= RATE_LIMIT_MAX) {
       return { allowed: false, count, limit: RATE_LIMIT_MAX, retry_after: RATE_LIMIT_WINDOW_S };
     }
-    // Increment — reset TTL each call so window slides
-    await env.KV.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S });
+    await kvStore.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S * 2 });
     return { allowed: true, count: count + 1 };
-  } catch {
-    return { allowed: true }; // fail open on KV error — don't block legitimate users
+  } catch (e) {
+    console.error('[MASOC] Rate limit KV error — failing closed', e?.message);
+    return { allowed: false, count: 0, limit: RATE_LIMIT_MAX, retry_after: 30, reason: 'kv_error' };
   }
 }
 
