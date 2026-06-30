@@ -183,6 +183,10 @@ footer a{color:#10b981;text-decoration:none}
 
       <h3>When a Hunt Finds Nothing: Interpreting Negative Results</h3>
       <p>A hunt that finds no evidence of compromise is not a wasted exercise — when paired with confirmed data source coverage, a clean hunt result is itself meaningful evidence that the hypothesized technique was not used against the environment during the period examined. The critical caveat is distinguishing "we looked and found nothing" from "we couldn't actually see the relevant telemetry," which is why every hunt documents not only its findings but the specific data sources queried and their coverage limitations, so a negative result carries genuine confidence rather than false reassurance from an incomplete search.</p>
+
+      <h3>Frequently Asked Questions</h3>
+      <p><strong>How is threat hunting different from incident response?</strong> Incident response begins after a confirmed or suspected compromise has been identified; threat hunting actively searches for evidence of compromise that hasn't triggered any alert yet, operating under the assumption that some intrusions evade automated detection entirely.</p>
+      <p><strong>Do we need a SIEM before we can start threat hunting?</strong> Centralized log aggregation significantly accelerates hunting, but meaningful hunts can begin with targeted queries against EDR telemetry and authentication logs even before a full SIEM deployment, as long as retention and query access are sufficient for the specific hypothesis being tested.</p>
     </div>
   </div>
 </section>

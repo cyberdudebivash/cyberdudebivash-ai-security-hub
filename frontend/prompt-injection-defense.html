@@ -182,6 +182,7 @@ footer a{color:#06b6d4;text-decoration:none}
       <p><strong>How often should injection testing be repeated?</strong> At minimum on every change to system prompts, tool definitions, or retrieval pipelines, on every model or provider version upgrade, and on a recurring quarterly cadence to catch newly disclosed techniques that weren't part of your original test suite.</p>
       <p><strong>Does prompt injection affect open-source self-hosted models too?</strong> Yes — self-hosting eliminates dependency on a third-party provider's safety fine-tuning, which means self-hosted deployments often need stronger application-layer guardrails to compensate, since they cannot rely on a vendor's continuously updated safety training as even a partial backstop.</p>
       <p><strong>What's the single highest-leverage first step?</strong> Privilege separation — ensuring no tool call or high-impact action executes based solely on untrusted model output without independent validation — closes off the most damaging consequence of a successful injection even before every detection control is in place.</p>
+      <p><strong>Are smaller, less capable models safer from injection?</strong> Not necessarily — smaller models can be more susceptible to certain injection techniques because they have less nuanced instruction-following behavior, while larger models may resist simple injection attempts but remain vulnerable to more sophisticated multi-step or encoded attacks. Model size alone is not a reliable proxy for injection resistance.</p>
     </div>
   </div>
 </section>
