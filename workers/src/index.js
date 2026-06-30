@@ -7250,6 +7250,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMsspUsage(request, env), request));
     }
 
+    // GET /api/mssp/revenue?partner_id=... — real revenue-share ledger for one partner
+    if (path === '/api/mssp/revenue' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const { handleGetPartnerRevenue } = await import('./handlers/msspRevenue.js');
+      return withSecurityHeaders(withCors(await handleGetPartnerRevenue(request, env, authCtx, isOwner), request));
+    }
+
+    // GET /api/mssp/revenue/admin — real revenue-share summary across all partners
+    if (path === '/api/mssp/revenue/admin' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      const { handleGetAllPartnerRevenue } = await import('./handlers/msspRevenue.js');
+      return withSecurityHeaders(withCors(await handleGetAllPartnerRevenue(request, env, authCtx, isOwner), request));
+    }
+
     // GET /api/mssp/revenue-trend — Monthly MRR trend (6 months)
     if (path === '/api/mssp/revenue-trend' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));

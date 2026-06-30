@@ -27,6 +27,7 @@ import { sendPurchaseConfirmation } from '../services/emailEngine.js';
 import { createInvoice }            from '../services/v24/billingEngine.js';
 import { triggerPostPurchase }      from '../services/lifecycleEngine.js';
 import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
+import { resolvePartnerIdForEmail, recordRevenueShare } from './msspRevenue.js';
 import { hashPassword } from '../auth/password.js';
 import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
 
@@ -180,9 +181,14 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   if (env.DB) {
     const paymentId = crypto.randomUUID?.() || Date.now().toString(36);
     const planLabel = module === 'subscription' ? (body.plan || 'STARTER').toUpperCase() : 'pay_per_report';
+    const payerEmail = email || authCtx.email || null;
+    // MSSP revenue-share attribution: if this paying customer was onboarded by an
+    // MSSP partner (mssp_customers.contact_email match), stamp it now so the
+    // webhook can compute the real partner/platform split when payment captures.
+    const partnerId = await resolvePartnerIdForEmail(env, payerEmail).catch(() => null);
     await env.DB.prepare(
-      `INSERT INTO payments (id, user_id, scan_id, module, target, amount, currency, razorpay_order_id, status, plan, ip, email, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, 'pending', ?, ?, ?, datetime('now'))`
+      `INSERT INTO payments (id, user_id, scan_id, module, target, amount, currency, razorpay_order_id, status, plan, ip, email, partner_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, 'pending', ?, ?, ?, ?, datetime('now'))`
     ).bind(
       paymentId,
       authCtx.user_id || null,
@@ -193,7 +199,8 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       razorOrder.id,
       planLabel,
       ip,
-      email || authCtx.email || null,
+      payerEmail,
+      partnerId,
     ).run().catch(e => console.error('[Payments] D1 insert failed:', e.message));
 
     await trackEvent(env, 'payment_initiated', module, authCtx.user_id, ip, {
@@ -308,6 +315,15 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       await env.DB.prepare(
         `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
       ).bind(razorpay_payment_id, razorpay_signature, accessToken, razorpay_order_id).run().catch(() => {});
+      const paidRow = await env.DB.prepare(
+        `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+      ).bind(razorpay_order_id).first().catch(() => null);
+      if (paidRow?.partner_id && paidRow?.id) {
+        recordRevenueShare(env, {
+          paymentId: paidRow.id, partnerId: paidRow.partner_id,
+          grossAmountPaise: paidRow.amount, customerEmail: confirmedEmail, module: 'assessment',
+        }).catch(e => console.error('[Verify] Revenue share record failed:', e.message));
+      }
     }
     if (env.SECURITY_HUB_KV) {
       await env.SECURITY_HUB_KV.put(`assessment_access:${accessToken}`, JSON.stringify({
@@ -364,6 +380,15 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         'sub_' + Date.now().toString(36), confirmedEmail || '', plan,
         razorpay_payment_id, priceInr, new Date(expiresAt).toISOString(),
       ).run().catch(() => {});
+      const paidRow = await env.DB.prepare(
+        `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+      ).bind(razorpay_order_id).first().catch(() => null);
+      if (paidRow?.partner_id && paidRow?.id) {
+        recordRevenueShare(env, {
+          paymentId: paidRow.id, partnerId: paidRow.partner_id,
+          grossAmountPaise: paidRow.amount, customerEmail: confirmedEmail, module: 'subscription',
+        }).catch(e => console.error('[Verify] Revenue share record failed:', e.message));
+      }
     }
 
     // ── Actually grant the purchased tier ──────────────────────────────────
@@ -558,6 +583,16 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         expiresAt,
       ),
     ]).catch(e => console.error('[Payments] D1 update failed:', e.message));
+
+    const paidRow = await env.DB.prepare(
+      `SELECT id, partner_id, amount, email FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+    ).bind(razorpay_order_id).first().catch(() => null);
+    if (paidRow?.partner_id && paidRow?.id) {
+      recordRevenueShare(env, {
+        paymentId: paidRow.id, partnerId: paidRow.partner_id,
+        grossAmountPaise: paidRow.amount, customerEmail: paidRow.email, module,
+      }).catch(e => console.error('[Verify] Revenue share record failed:', e.message));
+    }
 
     await trackEvent(env, 'payment_completed', module, authCtx.user_id, ip, {
       razorpay_order_id,
@@ -776,7 +811,7 @@ export async function handleRazorpayWebhook(request, env) {
     if (env.DB && orderId) {
       // Fetch payment record including email/module for lifecycle trigger
       const existing = await env.DB.prepare(
-        `SELECT status, email, module, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+        `SELECT id, status, email, module, amount, partner_id FROM payments WHERE razorpay_order_id = ? LIMIT 1`
       ).bind(orderId).first().catch(() => null);
 
       if (existing?.status !== 'paid') {
@@ -789,6 +824,19 @@ export async function handleRazorpayWebhook(request, env) {
         ).bind(paymentId, orderId).run().catch(e =>
           console.error('[Webhook] D1 update failed:', e.message)
         );
+
+        // MSSP revenue-share: if this payment was attributed to a partner at
+        // order-creation time, compute and record the real 60/40 (or per-partner
+        // configured) split now that the payment has actually captured.
+        if (existing?.partner_id && existing?.id) {
+          recordRevenueShare(env, {
+            paymentId: existing.id,
+            partnerId: existing.partner_id,
+            grossAmountPaise: existing.amount,
+            customerEmail: existing.email,
+            module: existing.module,
+          }).catch(e => console.error('[Webhook] Revenue share record failed:', e.message));
+        }
 
         // Trigger lifecycle + email when frontend verify never completed
         const webhookEmail  = existing?.email || payload.email || payload.contact || null;

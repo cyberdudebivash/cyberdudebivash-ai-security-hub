@@ -606,6 +606,21 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
   </div>
 </div>
 
+<div class="modal-overlay" id="revenueModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="revModalTitle">Partner Revenue</div>
+      <button class="modal-close" onclick="closeRevenueModal()">&times;</button>
+    </div>
+    <div id="revModalBody">
+      <div class="table-empty">Loading revenue ledger...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeRevenueModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -788,8 +803,52 @@ function partnerStatusClass(s) {
   if (s === 'setup' || s === 'in setup' || s === 'onboarding') return 's-setup';
   return 's-inactive';
 }
-function viewPartner(id) {
-  showToast('Partner detail view coming soon.');
+// Real revenue-share detail view — replaces the former "coming soon" stub.
+// Reads /api/mssp/revenue?partner_id=... (real ledger, computed automatically
+// on every captured payment attributed to this partner — see workers/src/
+// handlers/msspRevenue.js).
+async function viewPartner(id) {
+  const partner = partnerData.find(p => String(p.id) === String(id));
+  document.getElementById('revModalTitle').textContent =
+    (partner ? esc(partner.company || partner.contact_email) + ' — ' : '') + 'Revenue Ledger';
+  document.getElementById('revModalBody').innerHTML = '<div class="table-empty">Loading revenue ledger...</div>';
+  document.getElementById('revenueModal').classList.add('open');
+
+  try {
+    const d = await apiFetch('/api/mssp/revenue?partner_id=' + encodeURIComponent(id));
+    const t = d.totals || {};
+    const rows = (d.ledger || []).map(r => `
+      <tr>
+        <td>${esc(r.created_at || '')}</td>
+        <td>${esc(r.module || '—')}</td>
+        <td>${esc(r.customer_email || '—')}</td>
+        <td>${fmtINR(r.gross_amount_inr)}</td>
+        <td>${(r.partner_share_pct ?? 60).toFixed(0)}%</td>
+        <td>${fmtINR(r.partner_share_inr)}</td>
+        <td><span class="status-badge ${r.status === 'paid_out' ? 's-active' : 's-setup'}">${esc(r.status)}</span></td>
+      </tr>`).join('');
+
+    document.getElementById('revModalBody').innerHTML = `
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="kpi-label">Partner Share</div><div class="kpi-value">${(d.partner_share_pct ?? 60).toFixed(0)}%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total Earned</div><div class="kpi-value">${fmtINR((t.total_partner_earnings_paise||0)/100)}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pending Payout</div><div class="kpi-value">${fmtINR((t.pending_payout_paise||0)/100)}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Already Paid Out</div><div class="kpi-value">${fmtINR((t.paid_out_paise||0)/100)}</div></div>
+      </div>
+      <div class="data-table-wrap">
+        <div class="table-scroll">
+          ${rows ? `<table class="data-table"><thead><tr>
+            <th>Date</th><th>Module</th><th>Customer</th><th>Gross</th><th>Split</th><th>Partner Earned</th><th>Status</th>
+          </tr></thead><tbody>${rows}</tbody></table>` : '<div class="table-empty">No revenue recorded yet for this partner.</div>'}
+        </div>
+      </div>`;
+  } catch (e) {
+    document.getElementById('revModalBody').innerHTML =
+      '<div class="table-empty">Failed to load revenue ledger: ' + esc(e.message) + '</div>';
+  }
+}
+function closeRevenueModal() {
+  document.getElementById('revenueModal').classList.remove('open');
 }
 
 function openPartnerModal() {
