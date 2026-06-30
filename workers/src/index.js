@@ -1727,19 +1727,24 @@ export default {
     }
 
     // ── APEX Multi-Agent SOC (MASOC) — 9 specialist AI agents in parallel (v49.0) ─
+    // Each block resolves its own authCtx to avoid TDZ from the outer const at line ~6900
     if (path === '/api/agents/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
       const { handleAgentsStatus } = await import('./handlers/multiAgentSOC.js');
       return withSecurityHeaders(withCors(await handleAgentsStatus(request, env, authCtx), request));
     }
     if (path === '/api/agents/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
       const { handleAgentsRun } = await import('./handlers/multiAgentSOC.js');
       return withSecurityHeaders(withCors(await handleAgentsRun(request, env, authCtx), request));
     }
     if (path === '/api/agents/stream' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
       const { handleAgentsStream } = await import('./handlers/multiAgentSOC.js');
       return handleAgentsStream(request, env, authCtx, ctx); // SSE — ctx for waitUntil
     }
     if (path.startsWith('/api/agents/dispatch/') && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
       const agentId = path.split('/')[4];
       const { handleAgentDispatch } = await import('./handlers/multiAgentSOC.js');
       return withSecurityHeaders(withCors(await handleAgentDispatch(request, env, authCtx, agentId), request));
@@ -1759,6 +1764,7 @@ export default {
       return handleEnterpriseSSoCallback(request, env);
     }
     if (path === '/api/auth/enterprise/configure' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
       const { handleEnterpriseSSoConfigure } = await import('./handlers/enterpriseSsoHandler.js');
       return withSecurityHeaders(withCors(await handleEnterpriseSSoConfigure(request, env, authCtx), request));
     }
