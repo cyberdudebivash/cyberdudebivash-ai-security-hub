@@ -1934,14 +1934,14 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
       const d = await res.json();
       _plan = d;
 
-      const tier = d.tier || 'FREE';
-      const used = d.usage?.today_count || 0;
-      const limit = d.plan?.daily_limit === -1 ? '∞' : (d.plan?.daily_limit || 5);
-      const keyLimit = d.plan?.key_limit || 2;
+      const tier = d.plan || 'FREE';
+      const used = d.usage?.scans_used || 0;
+      const limit = d.usage?.scans_limit === -1 ? '∞' : (d.usage?.scans_limit || 5);
+      const keyLimit = d.key_limit === -1 ? '∞' : (d.key_limit || 2);
       const pct = limit === '∞' ? 40 : Math.min(100, (used / Number(limit)) * 100);
 
       document.getElementById('stat-plan').textContent    = tier;
-      document.getElementById('stat-plan-sub').textContent = `₹${d.plan?.price_inr || 0}/mo`;
+      document.getElementById('stat-plan-sub').textContent = `₹${d.subscription?.price_inr || 0}/mo`;
       document.getElementById('stat-scans-today').textContent = used;
       document.getElementById('stat-quota').textContent   = `of ${limit} daily limit`;
       document.getElementById('stat-key-limit').textContent   = `of ${keyLimit} allowed`;
@@ -1987,7 +1987,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
         <td style="font-family:var(--mono);font-size:.8rem">${s.target || '—'}</td>
         <td><span style="color:${riskColor(s.risk_score)}">${s.risk_score ?? '—'}</span></td>
         <td><span class="badge ${s.status === 'completed' ? 'badge-green' : 'badge-gray'}">${s.status || 'done'}</span></td>
-        <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.created_at)}</td>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.scanned_at)}</td>
       </tr>
     `).join('');
   }
@@ -2004,7 +2004,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
         <td style="font-family:var(--mono);font-size:.8rem">${s.target || '—'}</td>
         <td><span style="color:${riskColor(s.risk_score)}">${s.risk_score ?? '—'}/100</span></td>
         <td>${s.findings_count ?? (s.findings?.length ?? '—')}</td>
-        <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.created_at)}</td>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.scanned_at)}</td>
         <td>${s.report_url ? `<a href="${s.report_url}" target="_blank" class="btn btn-outline btn-sm">Download</a>` : '<span style="color:var(--muted);font-size:.78rem">—</span>'}</td>
       </tr>
     `).join('');
@@ -2106,17 +2106,19 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
   // ── Payments ─────────────────────────────────────────────────────────────────
   async function loadPayments() {
     try {
-      // Fetch recent payment history via analytics events (plan-gated)
-      const res = await apiFetch('/api/admin/analytics?type=payments&limit=20');
+      // Real, user-scoped purchase history (was calling the owner-only
+      // /api/admin/analytics, which 403'd for every real customer and showed
+      // a misleading "Upgrade to PRO" message regardless of actual plan).
+      const res = await apiFetch('/api/customer/payments?limit=20');
       const tbody = document.getElementById('payment-history');
       const repTbody = document.getElementById('reports-table');
       if (!res.ok) {
-        tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Upgrade to PRO to view payment history.</td></tr>`;
+        tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Unable to load payment history.</td></tr>`;
         repTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports found.</td></tr>`;
         return;
       }
       const d = await res.json();
-      const payments = d.payments || d.events || [];
+      const payments = d.payments || [];
       if (!payments.length) {
         tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No payments yet.</td></tr>`;
         repTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports yet.</td></tr>`;
@@ -2152,16 +2154,42 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
 
     let data = { risk_score:0, critical_count:0, assets:0, mttr_days:0,
                  compliance_pct:0, scans_30d:0, categories:{}, trend:[], cves:[], frameworks:[] };
+    let apiHasData = false;
     try {
       const res = await apiFetch('/api/ciso/metrics');
-      if (res.ok) data = { ...data, ...(await res.json()) };
+      if (res.ok) {
+        const raw = await res.json();
+        // Unwrap standard { success, data, error } response envelope — the
+        // real metrics (risk_posture, kpis, platform, compliance_snapshot)
+        // are nested under .data, not at the top level.
+        const apiData = (raw && raw.success && raw.data) ? raw.data : raw;
+        if (apiData && apiData.risk_posture) {
+          data.risk_score     = apiData.risk_posture.composite_score ?? data.risk_score;
+          data.critical_count = apiData.risk_posture.critical_risks ?? data.critical_count;
+          data.mttr_days      = apiData.kpis?.mttr_hours != null ? +(apiData.kpis.mttr_hours / 24).toFixed(1) : data.mttr_days;
+          data.scans_30d      = apiData.platform?.scans_last_30d ?? data.scans_30d;
+          data.frameworks     = (apiData.compliance_snapshot || []).map(f => ({
+            name:  f.framework,
+            pct:   f.compliance_pct,
+            color: f.compliance_pct >= 80 ? '#10b981' : f.compliance_pct >= 60 ? '#f59e0b' : '#ef4444',
+          }));
+          if (data.frameworks.length) {
+            data.compliance_pct = Math.round(data.frameworks.reduce((a,f) => a + (f.pct || 0), 0) / data.frameworks.length);
+          }
+          apiHasData = true;
+        }
+      }
     } catch (_) {}
 
-    if (!data.assets && _allScans.length) {
+    // Registered assets = unique scan targets — always derived from real scan
+    // history when available, independent of whether the CISO API succeeded
+    // (that endpoint doesn't track an "assets" concept at all).
+    if (_allScans.length) data.assets = new Set(_allScans.map(s => s.target)).size;
+
+    if (!apiHasData && _allScans.length) {
       const now = Date.now();
-      const s30 = _allScans.filter(s => (now - new Date(s.created_at)) < 30*86400*1000);
+      const s30 = _allScans.filter(s => (now - new Date(s.scanned_at)) < 30*86400*1000);
       data.scans_30d = s30.length;
-      data.assets    = new Set(_allScans.map(s => s.target)).size;
       let tot = 0, crit = 0, cats = {};
       _allScans.forEach(s => {
         tot += (s.risk_score || 0);
@@ -2170,7 +2198,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
           const c = s.module || 'other';
           cats[c] = (cats[c] || 0) + (f.cvss || 5);
           if (f.cve_id) data.cves.push({ cve_id:f.cve_id, cvss:f.cvss||'—',
-            severity:f.severity||'medium', asset:s.target, date:s.created_at, status:'Open' });
+            severity:f.severity||'medium', asset:s.target, date:s.scanned_at, status:'Open' });
         });
       });
       data.risk_score     = _allScans.length ? Math.round(tot / _allScans.length) : 0;
@@ -2180,7 +2208,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
       data.compliance_pct = Math.max(30, 100 - data.risk_score);
       const buckets = {};
       _allScans.forEach(s => {
-        const k = new Date(s.created_at).toISOString().slice(0,10);
+        const k = new Date(s.scanned_at).toISOString().slice(0,10);
         if (!buckets[k]) buckets[k] = { sum:0, cnt:0 };
         buckets[k].sum += (s.risk_score||0); buckets[k].cnt++;
       });
@@ -2190,8 +2218,9 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
       });
     }
 
-    if (!data.assets) {
-      // No scan data yet — show honest empty state rather than fabricated demo data
+    if (!apiHasData && !data.assets) {
+      // No real backend data and no scan history — show honest empty state
+      // rather than fabricated demo data.
       data = {
         risk_score: null, critical_count: 0, assets: 0, mttr_days: null,
         compliance_pct: null, scans_30d: 0,
@@ -2264,21 +2293,20 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
       </tr>`).join('')
       : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No open CVEs ✓</td></tr>';
 
-    const fws = data.frameworks.length ? data.frameworks : [
-      { name:'OWASP Top 10', pct:data.compliance_pct,          color:'#00d4ff' },
-      { name:'PCI-DSS',      pct:Math.max(30,data.compliance_pct-18), color:'#f59e0b' },
-      { name:'ISO 27001',    pct:Math.min(95,data.compliance_pct+5),  color:'#10b981' },
-      { name:'NIST CSF',     pct:Math.max(35,data.compliance_pct-10), color:'#7c3aed' },
-      { name:'SOC 2',        pct:Math.max(25,data.compliance_pct-22), color:'#ef4444' },
-    ];
-    document.getElementById('ciso-compliance-grid').innerHTML = fws.map(f => `
-      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-        <div style="font-size:1.4rem;font-weight:700;font-family:var(--mono);color:${f.color}">${f.pct}%</div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">${f.name}</div>
-        <div style="margin-top:8px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
-          <div style="height:100%;width:${f.pct}%;background:${f.color};border-radius:2px"></div>
-        </div>
-      </div>`).join('');
+    // Real per-framework compliance data only — a prior version fabricated
+    // five specific framework percentages (OWASP/PCI-DSS/ISO 27001/NIST CSF/
+    // SOC 2) by arithmetically offsetting a single estimated number, and
+    // displayed them as if they were real per-framework assessments.
+    document.getElementById('ciso-compliance-grid').innerHTML = data.frameworks.length
+      ? data.frameworks.map(f => `
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:700;font-family:var(--mono);color:${f.color}">${f.pct}%</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:4px">${f.name}</div>
+          <div style="margin-top:8px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${f.pct}%;background:${f.color};border-radius:2px"></div>
+          </div>
+        </div>`).join('')
+      : '<div style="grid-column:1/-1;color:var(--muted);text-align:center;padding:16px 0">Run a Compliance scan to see framework-level results.</div>';
 
     renderCisoTrend(data.trend);
   }
@@ -2357,7 +2385,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
     const sel = document.getElementById('ai-scan-select');
     sel.innerHTML = '<option value="">— Select scan context (optional) —</option>' +
       _allScans.slice(0,40).map(s =>
-        `<option value="${s.id}">[${s.module||'scan'}] ${s.target} — ${fmtDate(s.created_at)}</option>`
+        `<option value="${s.scan_id}">[${s.module||'scan'}] ${s.target} — ${fmtDate(s.scanned_at)}</option>`
       ).join('');
 
     // Wire prompt tag clicks
@@ -2384,7 +2412,7 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
     if (!prompt) { showToast('Enter a prompt first.', 'err'); return; }
 
     const scanId  = document.getElementById('ai-scan-select').value;
-    const scanCtx = scanId ? _allScans.find(s => s.id == scanId) : null;
+    const scanCtx = scanId ? _allScans.find(s => s.scan_id == scanId) : null;
 
     const outputEl  = document.getElementById('ai-output');
     const spinEl    = document.getElementById('ai-submit-spinner');
@@ -3644,7 +3672,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         const r = await fetch('/api/seed/threats');
         if (!r.ok) return;
         const d = await r.json();
-        const threats = d?.data?.threats || d?.threats || [];
+        const threats = d?.data?.events || d?.events || [];
         const critical = threats.filter(t => t.severity === 'CRITICAL');
         if (critical.length) {
           const latest = critical[0];

@@ -429,6 +429,7 @@ import {
   handlePlatformKPI,
   handleCustomerBillingPortal,
   handleCustomerInvoices,
+  handleCustomerPayments,
   handleCancelSubscription,
   handleUpgradeInitiate,
   handleLiveUsage,
@@ -5214,6 +5215,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/customer/billing/invoices' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleCustomerInvoices(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/customer/payments' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleCustomerPayments(request, env, authCtx || {}), request));
     }
     if (path === '/api/customer/billing/cancel' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);

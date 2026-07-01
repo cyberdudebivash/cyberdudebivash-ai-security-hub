@@ -149,6 +149,7 @@ export async function handleGetUserPlan(request, env, authCtx = null) {
         scans_remaining: scansLimit === -1 ? -1 : Math.max(0, scansLimit - scansUsed),
         reset_date:      getMonthResetDate(),
       },
+      key_limit:    limits.api_keys,
       features:     PLAN_FEATURES[userPlan] || PLAN_FEATURES.FREE,
       subscription: planInfo ? {
         name:      planInfo.name,

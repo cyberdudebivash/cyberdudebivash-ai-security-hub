@@ -257,6 +257,32 @@ export async function handleCustomerInvoices(request, env, authCtx) {
   });
 }
 
+// ── Customer pay-per-report purchase history ─────────────────────────────────
+// The customer dashboard's Payment History tab used to call the owner-only
+// /api/admin/analytics endpoint, which 403'd for every real customer and
+// showed a misleading "Upgrade to PRO" message regardless of their actual
+// plan or purchase history. This is the real, user-scoped equivalent.
+export async function handleCustomerPayments(request, env, authCtx) {
+  const gate = authGuard(authCtx);
+  if (gate) return gate;
+
+  const userId = resolveUserId(authCtx);
+  const email  = authCtx.email || null;
+  const url    = new URL(request.url);
+  const limit  = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+
+  const rows = await env.DB?.prepare(
+    `SELECT id, module, target, amount, currency, status, plan, created_at, paid_at
+     FROM payments WHERE user_id=? OR email=?
+     ORDER BY created_at DESC LIMIT ?`
+  ).bind(userId, email, limit).all().catch(() => ({ results: [] }));
+
+  return Response.json({
+    success:  true,
+    payments: rows?.results || [],
+  });
+}
+
 export async function handleCancelSubscription(request, env, authCtx) {
   const gate = authGuard(authCtx);
   if (gate) return gate;

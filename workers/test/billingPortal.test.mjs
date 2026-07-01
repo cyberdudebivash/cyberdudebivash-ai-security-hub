@@ -26,13 +26,14 @@ import { describe, it, expect } from 'vitest';
 import {
   handleCustomerBillingPortal,
   handleCustomerInvoices,
+  handleCustomerPayments,
   handleCancelSubscription,
   handleUpgradeInitiate,
   handleLiveUsage,
 } from '../src/handlers/enterpriseTransformHandler.js';
 import { TIER_LIMITS, PLAN_FEATURES } from '../src/auth/apiKeys.js';
 
-function makeDB({ subscription = null, invoices = [], apiKeyUsage = { daily: 0, monthly: 0 }, overageUsd = 0 } = {}) {
+function makeDB({ subscription = null, invoices = [], payments = [], apiKeyUsage = { daily: 0, monthly: 0 }, overageUsd = 0 } = {}) {
   return {
     prepare(sql) {
       let bound = [];
@@ -47,6 +48,7 @@ function makeDB({ subscription = null, invoices = [], apiKeyUsage = { daily: 0, 
         },
         async all() {
           if (/FROM invoices/.test(sql)) return { results: invoices };
+          if (/FROM payments/.test(sql)) return { results: payments };
           if (/FROM customer_entitlements/.test(sql)) return { results: [] };
           if (/FROM api_keys/.test(sql)) return { results: [] };
           return { results: [] };
@@ -188,5 +190,29 @@ describe('handleCustomerInvoices', () => {
     const body = await res.json();
     expect(body.invoices).toHaveLength(1);
     expect(body.invoices[0].total_inr).toBe(1499);
+  });
+});
+
+describe('handleCustomerPayments', () => {
+  // The customer dashboard's Payment History tab used to call the owner-only
+  // /api/admin/analytics endpoint (isOwner-gated, no user filter at all),
+  // which 403'd for every real customer and showed a misleading "Upgrade to
+  // PRO" message regardless of actual plan or purchase history.
+  it('returns the caller\'s own pay-per-report purchases, not a platform-wide list', async () => {
+    const env = { DB: makeDB({ payments: [
+      { id: 'pay_1', module: 'domain', target: 'example.com', amount: 99900, currency: 'INR', status: 'paid', plan: 'pay_per_report', created_at: '2026-06-20', paid_at: '2026-06-20' },
+    ] }) };
+    const authCtx = { authenticated: true, tier: 'PRO', userId: 'u_1', email: 'user@example.com' };
+    const res = await handleCustomerPayments(new Request('https://x/api/customer/payments'), env, authCtx);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.payments).toHaveLength(1);
+    expect(body.payments[0].target).toBe('example.com');
+  });
+
+  it('requires authentication instead of allowing anonymous access to payment data', async () => {
+    const env = { DB: makeDB({ payments: [{ id: 'pay_1' }] }) };
+    const res = await handleCustomerPayments(new Request('https://x/api/customer/payments'), env, { authenticated: false });
+    expect(res.status).toBe(401);
   });
 });
