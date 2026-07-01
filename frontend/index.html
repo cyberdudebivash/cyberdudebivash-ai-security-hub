@@ -19361,7 +19361,8 @@ window.cdbDefenseSaveConfig = function() {
 window.cdbDefenseLoadExecutions = function() {
   var logEl = document.getElementById('p3-execution-log');
   if (!logEl) return;
-  p3Req('/api/defense-engine/executions').then(function(data) {
+  p3Req('/api/defense-engine/executions').then(function(raw) {
+    var data  = p3Unwrap(raw);
     var execs = (data.executions || []);
     if (execs.length === 0) {
       logEl.innerHTML = '<div style="color:#475569;text-align:center;padding:32px 0;font-size:12px">No executions recorded</div>';
@@ -19385,7 +19386,8 @@ window.cdbDefenseLoadExecutions = function() {
 window.cdbDefenseLoadPending = function() {
   var listEl = document.getElementById('p3-pending-list');
   if (!listEl) return;
-  p3Req('/api/defense-engine/pending').then(function(data) {
+  p3Req('/api/defense-engine/pending').then(function(raw) {
+    var data  = p3Unwrap(raw);
     var items = data.pending || [];
     if (items.length === 0) {
       listEl.innerHTML = '<div style="color:#475569;text-align:center;padding:32px 0;font-size:13px">No pending approvals</div>';
@@ -19469,7 +19471,8 @@ window.cdbEnrichCVE = function() {
   var resEl  = document.getElementById('p3-enrich-result');
   if (!cveId) { p3Toast('Enter a CVE ID or vulnerability title', 'error'); return; }
   if (resEl) resEl.innerHTML = '<div style="color:#818cf8;font-size:13px;padding:12px 0">Enriching ' + cveId + '...</div>';
-  p3Req('/api/threat-confidence/enrich', 'POST', { cve_id: cveId.toUpperCase(), cvss: cvss }).then(function(data) {
+  p3Req('/api/threat-confidence/enrich', 'POST', { cve_id: cveId.toUpperCase(), cvss: cvss }).then(function(raw) {
+    var data = p3Unwrap(raw);
     if (data.error || !data.confidence_score) {
       if (resEl) resEl.innerHTML = '<div style="color:#f87171;font-size:13px;padding:8px 0">Enrichment failed — check CVE ID</div>';
       return;
