@@ -135,6 +135,42 @@ async function main() {
     record('Telemetry', 'POST /api/track (analytics beacon) does not 500', 'blocker', r.status !== 500, `status=${r.status}`);
   }
 
+  // ── B2. CISO Command Center / MSSP / SOC — route-collision & auth-header
+  //        regression checks (added after the executive-dashboard route
+  //        collision and wrong-auth-header bugs found in this release) ──────
+  {
+    const r = await fetchJSON('/api/executive/dashboard');
+    record('CISO Hub', 'GET /api/executive/dashboard returns the CISO KPI shape (not the shadowed risk-platform shape)', 'blocker',
+      r.status === 200 && r.body?.success === true && !!r.body?.data?.kpis && !!r.body?.data?.risk_summary,
+      `status=${r.status} keys=${JSON.stringify(Object.keys(r.body?.data || {}))}`);
+    record('CISO Hub', 'GET /api/executive/dashboard is not the old shadowed shape (no top-level security_kpis)', 'blocker',
+      !r.body?.security_kpis, `has_security_kpis=${!!r.body?.security_kpis}`);
+  }
+  {
+    const r = await fetchJSON('/api/executive/risk-dashboard');
+    record('CISO Hub', 'GET /api/executive/risk-dashboard (moved route) does not 404', 'blocker',
+      r.status !== 404, `status=${r.status}`);
+  }
+  {
+    const r = await fetchJSON('/api/mssp/summary');
+    record('MSSP', 'GET /api/mssp/summary without auth is rejected cleanly (not 500)', 'blocker',
+      r.status === 403 && r.body?.success === false, `status=${r.status}`);
+  }
+  {
+    const r = await fetchJSON('/api/soc/command/state');
+    record('SOC Command', 'GET /api/soc/command/state without auth is rejected cleanly (not 500)', 'blocker',
+      (r.status === 401 || r.status === 403) && r.status !== 500, `status=${r.status}`);
+  }
+  {
+    // Garbage key exercises the ?api_key= -> x-api-key reattachment path
+    // added for the SSE auth fix without needing a real customer key.
+    const r = await fetchJSON('/api/soc/stream?api_key=release-gate-dummy-key', {
+      headers: { Accept: 'text/event-stream' },
+    });
+    record('SOC Command', 'GET /api/soc/stream?api_key= does not 500 (query-param auth path is wired)', 'blocker',
+      r.status !== 500, `status=${r.status}`);
+  }
+
   // ── C. Golden Path — real customer scan flow ──────────────────────────────
   {
     const r = await fetchJSON('/api/scan/domain', {
