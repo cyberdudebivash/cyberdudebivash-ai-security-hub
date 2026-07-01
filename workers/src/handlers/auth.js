@@ -372,7 +372,12 @@ export async function handleUpdateProfile(request, env, authCtx) {
   const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
   const values     = [...Object.values(updates), authCtx.user_id];
 
-  await env.DB.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).bind(...values).run();
+  try {
+    await env.DB.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).bind(...values).run();
+  } catch (e) {
+    console.error('[Auth] updateProfile DB error:', e?.message);
+    return Response.json({ error: 'Profile update failed', detail: 'Database error' }, { status: 500 });
+  }
 
   return Response.json({ success: true, updated: Object.keys(updates) });
 }

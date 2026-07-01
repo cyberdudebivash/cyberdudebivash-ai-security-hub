@@ -45,21 +45,42 @@ export async function handlePublicUptime(request, env) {
 
 // ─── Core calculation ─────────────────────────────────────────────────────────
 
+// Valid window sizes — days is always one of these, never user input
+const VALID_DAYS = new Set([1, 7, 30, 90]);
+
 async function calcWindowUptime(db, days, component = null) {
+  // Validate days is a known window (server-controlled, but double-check)
+  if (!VALID_DAYS.has(days)) return { uptime_pct: null, note: 'invalid_window' };
   try {
-    const compFilter = component ? `AND component = '${component.replace(/'/g, "''")}'` : '';
-    const row = await db.prepare(`
-      SELECT
-        COUNT(*)                                                AS total,
-        COUNT(CASE WHEN status = 'operational' THEN 1 END)     AS ok,
-        AVG(latency_ms)                                         AS avg_latency,
-        MIN(latency_ms)                                         AS min_latency,
-        MAX(latency_ms)                                         AS max_latency,
-        COUNT(CASE WHEN status IN ('partial_outage','major_outage') THEN 1 END) AS outage_count
-      FROM operational_history
-      WHERE checked_at > datetime('now', '-${days} days')
-        ${compFilter}
-    `).first();
+    // Use parameterized query for component to prevent SQL injection
+    let query, bindings;
+    if (component) {
+      query = `
+        SELECT
+          COUNT(*)                                                AS total,
+          COUNT(CASE WHEN status = 'operational' THEN 1 END)     AS ok,
+          AVG(latency_ms)                                         AS avg_latency,
+          MIN(latency_ms)                                         AS min_latency,
+          MAX(latency_ms)                                         AS max_latency,
+          COUNT(CASE WHEN status IN ('partial_outage','major_outage') THEN 1 END) AS outage_count
+        FROM operational_history
+        WHERE checked_at > datetime('now', '-${days} days')
+          AND component = ?`;
+      bindings = [component];
+    } else {
+      query = `
+        SELECT
+          COUNT(*)                                                AS total,
+          COUNT(CASE WHEN status = 'operational' THEN 1 END)     AS ok,
+          AVG(latency_ms)                                         AS avg_latency,
+          MIN(latency_ms)                                         AS min_latency,
+          MAX(latency_ms)                                         AS max_latency,
+          COUNT(CASE WHEN status IN ('partial_outage','major_outage') THEN 1 END) AS outage_count
+        FROM operational_history
+        WHERE checked_at > datetime('now', '-${days} days')`;
+      bindings = [];
+    }
+    const row = await db.prepare(query).bind(...bindings).first();
 
     if (!row || row.total < 3) {
       // Also try uptime_log as fallback (populated by cron self-probe)

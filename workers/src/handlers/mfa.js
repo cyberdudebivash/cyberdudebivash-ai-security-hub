@@ -122,15 +122,22 @@ export async function handleMFAEnable(request, env, authCtx) {
 // Body: { mfa_challenge_token, totp_code } OR { mfa_challenge_token, backup_code }
 export async function handleMFAAuthenticate(request, env) {
   const body = await parseBody(request);
-  const challengeToken = (body?.mfa_challenge_token || '').trim();
-  const totpCode       = (body?.totp_code   || '').trim();
-  const backupCode     = (body?.backup_code || '').trim();
+  const challengeToken = (body?.mfa_challenge_token || '').trim().slice(0, 128);
+  const totpCode       = (body?.totp_code   || '').trim().slice(0, 8);   // TOTP is always 6 digits
+  const backupCode     = (body?.backup_code || '').trim().slice(0, 20);  // XXXX-XXXX format = 9 chars
 
   if (!challengeToken) {
     return Response.json({ error: 'mfa_challenge_token required' }, { status: 400 });
   }
   if (!totpCode && !backupCode) {
     return Response.json({ error: 'totp_code or backup_code required' }, { status: 400 });
+  }
+  // Validate lengths after trimming — reject obviously wrong values early
+  if (totpCode && !/^\d{6}$/.test(totpCode)) {
+    return Response.json({ error: 'totp_code must be 6 digits' }, { status: 400 });
+  }
+  if (backupCode && backupCode.length > 20) {
+    return Response.json({ error: 'backup_code invalid format' }, { status: 400 });
   }
 
   const kvKey = `mfa_challenge:${challengeToken}`;

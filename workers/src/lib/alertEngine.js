@@ -63,17 +63,24 @@ export async function sendAlert(env, { type, component, message, severity = 'min
 
   // Set dedup key so we don't re-alert within the window
   if (env.KV && sentVia.length > 0) {
-    await env.KV.put(dedupKey, '1', { expirationTtl: DEDUP_TTL }).catch(() => {});
+    await env.KV.put(dedupKey, '1', { expirationTtl: DEDUP_TTL }).catch(e => {
+      console.error('[AlertEngine] KV dedup put failed:', e?.message);
+    });
   }
 
-  // Record in ops_alert_log D1 table
-  if (env.DB && sentVia.length > 0) {
+  // Record in ops_alert_log D1 table (both sent and attempted-but-failed)
+  if (env.DB) {
     const id = `alrt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
+    const sentViaStr = sentVia.length > 0 ? sentVia.join(',') : 'none';
     await env.DB.prepare(
       `INSERT INTO ops_alert_log (id, alert_type, component, message, sent_via, sent_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`
-    ).bind(id, type, component, message.slice(0, 500), sentVia.join(','))
-      .run().catch(() => {});
+    ).bind(id, type, component, message.slice(0, 500), sentViaStr)
+      .run().catch(e => console.error('[AlertEngine] ops_alert_log insert failed:', e?.message));
+  }
+
+  if (sentVia.length === 0) {
+    console.warn('[AlertEngine] Alert not delivered:', { type, component, severity });
   }
 
   return { sent: sentVia.length > 0, suppressed: false, channels: sentVia };
@@ -135,15 +142,18 @@ export const Alerts = {
 // ── Private senders ───────────────────────────────────────────────────────────
 
 async function sendTelegram(env, text) {
-  if (!env.ADMIN_TELEGRAM_BOT_TOKEN || !env.ADMIN_TELEGRAM_CHAT_ID) return false;
+  // Support both naming conventions (ADMIN_TELEGRAM_BOT_TOKEN = EOP name, TELEGRAM_BOT_TOKEN = legacy name)
+  const botToken = env.ADMIN_TELEGRAM_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN;
+  const chatId   = env.ADMIN_TELEGRAM_CHAT_ID   || env.TELEGRAM_CHANNEL_ID;
+  if (!botToken || !chatId) return false;
   try {
     const resp = await fetch(
-      `https://api.telegram.org/bot${env.ADMIN_TELEGRAM_BOT_TOKEN}/sendMessage`,
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id:    env.ADMIN_TELEGRAM_CHAT_ID,
+          chat_id:    chatId,
           text:       text.slice(0, 4096),
           parse_mode: 'Markdown',
         }),
