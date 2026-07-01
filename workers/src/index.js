@@ -4973,7 +4973,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleExecutiveRiskBrief(request, env, authCtx || {}), request));
     }
-    if (path === '/api/executive/dashboard' && method === 'GET') {
+    // NOTE: was registered as /api/executive/dashboard, colliding with the
+    // CISO Command Center's route (executiveReport.js handleGetDashboard,
+    // below) and silently shadowing it — every KPI on the live dashboard
+    // rendered as "—" because this handler's response shape doesn't match
+    // what the frontend reads. Moved to its own path; the frontend-facing
+    // dashboard route is served exclusively by handleGetDashboard now.
+    if (path === '/api/executive/risk-dashboard' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleExecutiveDashboard(request, env, authCtx || {}), request));
     }
