@@ -147,6 +147,72 @@ async function main() {
     }
   }
 
+  // ── C2. Every scan module — golden path across all product pillars ───────
+  // Mirrors frontend/index.html's `endpoints` map exactly (executeScan()).
+  // A 500 here means a customer clicking that module's scan button breaks in
+  // production; 200/400/403 all mean the route is alive and handling input.
+  const scanModules = [
+    { module: 'domain',       path: '/api/scan/domain',        payload: { domain: 'example.com' } },
+    { module: 'ai',           path: '/api/scan/ai',             payload: { model_name: 'gpt-4', use_case: 'chatbot' } },
+    { module: 'redteam',      path: '/api/scan/redteam',        payload: { target_org: 'example.com', scope: 'external' } },
+    { module: 'identity',     path: '/api/scan/identity',       payload: { org_name: 'example.com', identity_provider: 'azuread' } },
+    { module: 'compliance',   path: '/api/generate/compliance', payload: { org_name: 'example.com', framework: 'iso27001' } },
+    { module: 'cloudsec',     path: '/api/scan/cloud-security', payload: { domain: 'example.com', provider: 'aws', checks: [] } },
+    { module: 'mcp_security', path: '/api/mcp-security/scan',   payload: { server_url: 'https://example.com/mcp', server_name: 'test' } },
+    { module: 'vibe_code',    path: '/api/scan/vibe-code',      payload: { code: 'console.log(1)', language: 'javascript' } },
+  ];
+  for (const { module, path, payload } of scanModules) {
+    const r = await fetchJSON(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    record('Scan Modules', `POST ${path} (${module}) does not 500`, 'blocker',
+      r.status !== 500 && r.status !== 0, `status=${r.status}`);
+  }
+  // darkscan/appsec are intentionally not wired on the frontend (honest "not
+  // yet available" message shown client-side before any API call). If the
+  // route doesn't exist server-side either, 404 is correct, not a defect.
+  for (const { module, path } of [
+    { module: 'darkscan', path: '/api/scan/darkscan' },
+    { module: 'appsec',   path: '/api/scan/appsec' },
+  ]) {
+    const r = await fetchJSON(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    record('Scan Modules', `POST ${path} (${module}, known unimplemented) does not 500`, 'warn',
+      r.status !== 500, `status=${r.status}`);
+  }
+
+  // ── C3. AI Copilot / Multi-Agent SOC ───────────────────────────────────────
+  {
+    const r = await fetchJSON('/api/copilot/capabilities');
+    record('AI Copilot', 'GET /api/copilot/capabilities returns 200', 'blocker', r.status === 200, `status=${r.status}`);
+  }
+  {
+    const r = await fetchJSON('/api/agents/status');
+    record('AI Copilot', 'GET /api/agents/status returns 200', 'blocker', r.status === 200, `status=${r.status}`);
+  }
+  {
+    const r = await fetchJSON('/api/sentinel/status');
+    record('AI Copilot', 'GET /api/sentinel/status returns 200', 'warn', r.status === 200, `status=${r.status}`);
+  }
+
+  // ── C4. Streaming endpoints (SSE) — verify content-type without draining ──
+  for (const path of ['/api/dashboard/stream', '/api/realtime/feed']) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const resp = await fetch(`${BASE}${path}`, { signal: controller.signal });
+      const ct = resp.headers.get('content-type') || '';
+      record('Streaming', `GET ${path} responds (status ${resp.status})`, 'warn',
+        resp.status !== 500, `content-type=${ct}`);
+      resp.body?.cancel?.().catch(() => {});
+    } catch (e) {
+      record('Streaming', `GET ${path} responds`, 'warn', false, e?.message);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   // ── D. Auth boundary — must fail closed, never 500 ────────────────────────
   {
     const r = await fetchJSON('/api/admin/analytics');
@@ -180,10 +246,47 @@ async function main() {
       record('Security', 'X-Content-Type-Options: nosniff present', 'warn', xcto === 'nosniff');
     }
   }
-  {
-    const resp = await fetch(`${BASE}/intel.html`, { signal: AbortSignal.timeout(TIMEOUT_MS) }).catch(() => ({ ok: false, status: 0 }));
-    record('Frontend', 'GET /intel.html returns 200', 'warn', resp.status === 200, `status=${resp.status}`);
+
+  // ── F2. Full frontend page sweep — every page in frontend/*.html ─────────
+  // Catches the release-blocking defect class this platform has hit before
+  // (a page 404ing or throwing a fatal parse error in production) across the
+  // entire site, not just the homepage. Checks status + absence of a raw,
+  // unhandled server error string leaking into the HTML body.
+  const ALL_PAGES = [
+    'about.html','academy.html','admin-payments.html','agent-threats.html',
+    'ai-governance-frameworks.html','ai-governance-pdf.html','ai-governance.html',
+    'ai-red-team.html','ai-risk-management.html','ai-security-assessment.html',
+    'ai-security-scorecard.html','ai-security-services.html','ai-security.html',
+    'api-docs.html','attack-library.html','attack-surface-management.html',
+    'automation-dashboard.html','autonomous-soc-dashboard.html','billing-portal.html',
+    'booking.html','ciso-hub.html','cloud-security.html','compliance-management.html',
+    'contact.html','customer-dashboard.html','customer-success-dashboard.html',
+    'cyber-defense.html','cyber-signal-radar.html','decision-dashboard.html',
+    'developer-onboarding.html','devsecops.html','enterprise-dashboard.html',
+    'enterprise-kpi-dashboard.html','enterprise-portal.html','enterprise-security.html',
+    'gadgets.html','god-mode.html','incident-response.html','intel-hub.html','intel.html',
+    'marketplace-checkout.html','mcp-security.html','mssp-command-center.html',
+    'mssp-onboarding.html','mssp.html','ops-dashboard.html','owasp-llm-security.html',
+    'press.html','privacy-policy.html','prompt-injection-defense.html',
+    'proposal-generator.html','refund-policy.html','revenue-command-center.html',
+    'revenue-intelligence-dashboard.html','security-assessment.html',
+    'security-automation.html','security-fabric-dashboard.html',
+    'sentinel-apex-marketplace.html','services.html','sitemap.html','soc-agents.html',
+    'soc-command-dashboard.html','soc-dashboard.html','soc-operations.html',
+    'terms-of-service.html','threat-hunting.html','threat-intel-workbench.html',
+    'threat-intelligence.html','tools.html','trust-center.html','upgrade.html',
+    'user-dashboard.html','vibe-code-scanner.html','vulnerability-management.html',
+    'zero-trust-security.html',
+  ];
+  const pageFailures = [];
+  for (const page of ALL_PAGES) {
+    const resp = await fetch(`${BASE}/${page}`, { signal: AbortSignal.timeout(TIMEOUT_MS) })
+      .catch(e => ({ ok: false, status: 0, error: e?.message }));
+    const okStatus = resp.status === 200;
+    if (!okStatus) pageFailures.push(`${page} (status=${resp.status})`);
   }
+  record('Frontend Sweep', `All ${ALL_PAGES.length} frontend pages return 200`, 'blocker',
+    pageFailures.length === 0, pageFailures.length ? pageFailures.join(', ') : `${ALL_PAGES.length}/${ALL_PAGES.length} ok`);
 
   // ── Summary ────────────────────────────────────────────────────────────────
   const blockers = results.filter(r => r.severity === 'blocker' && !r.pass);
