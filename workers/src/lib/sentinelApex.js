@@ -241,7 +241,7 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
     } catch {}
   }
 
-  // Cache miss or nocache — fetch live
+  // Cache miss or nocache — fetch live from NVD/CISA
   try {
     const feed = await buildFeed();
 
@@ -254,12 +254,84 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
       status: 200,
       headers: { 'X-Cache': 'MISS', 'X-Feed-Generated': feed.generated_at, 'Cache-Control': `public, max-age=3600` },
     });
-  } catch (e) {
+  } catch (_) {
+    // External APIs unavailable — fall back to D1 threat_intel table so the
+    // dashboard always shows real data even when NVD/CISA are unreachable.
+    const d1Feed = await buildFeedFromD1(env?.DB);
+    if (d1Feed) {
+      return Response.json(d1Feed, {
+        status: 200,
+        headers: { 'X-Cache': 'D1-FALLBACK', 'X-Feed-Generated': d1Feed.generated_at, 'Cache-Control': 'public, max-age=300' },
+      });
+    }
     return Response.json({
       error: 'Feed temporarily unavailable',
       hint: 'The Sentinel APEX feed is refreshing. Try again in 60 seconds.',
       fallback: 'https://t.me/cyberdudebivashSentinelApex',
     }, { status: 503 });
+  }
+}
+
+// ─── D1 fallback feed — reads from threat_intel when external APIs are down ───
+async function buildFeedFromD1(db) {
+  if (!db) return null;
+  try {
+    const [critRows, highRows, kevRows] = await Promise.all([
+      db.prepare(`SELECT id, cve_id, title, description, severity, cvss_score, published_at, ingested_at, is_exploited, is_ransomware FROM threat_intel WHERE severity = 'CRITICAL' ORDER BY COALESCE(published_at, ingested_at) DESC LIMIT 10`).all(),
+      db.prepare(`SELECT id, cve_id, title, description, severity, cvss_score, published_at, ingested_at, is_exploited FROM threat_intel WHERE severity = 'HIGH' ORDER BY COALESCE(published_at, ingested_at) DESC LIMIT 8`).all(),
+      db.prepare(`SELECT id, cve_id, title, description, cvss_score, ingested_at, published_at, is_ransomware FROM threat_intel WHERE is_exploited = 1 ORDER BY COALESCE(published_at, ingested_at) DESC LIMIT 10`).all(),
+    ]);
+
+    const mapRow = (r) => ({
+      id: r.cve_id || r.id,
+      severity: r.severity || 'MEDIUM',
+      score: r.cvss_score ?? null,
+      description: r.description || '',
+      title: r.title || r.cve_id || r.id,
+      published: (r.published_at || r.ingested_at || '').split('T')[0] || null,
+      nvd_url: r.cve_id ? `https://nvd.nist.gov/vuln/detail/${r.cve_id}` : null,
+      source: 'd1_cache',
+    });
+
+    const critical   = (critRows.results || []).map(mapRow);
+    const high       = (highRows.results || []).map(mapRow);
+    const activelyEx = (kevRows.results || []).map(r => ({
+      cve_id:             r.cve_id || r.id,
+      vulnerability_name: r.title || r.cve_id,
+      short_description:  r.description ? r.description.slice(0, 200) : '',
+      date_added:         (r.published_at || r.ingested_at || '').split('T')[0] || null,
+      known_ransomware:   r.is_ransomware === 1,
+      nvd_url:            r.cve_id ? `https://nvd.nist.gov/vuln/detail/${r.cve_id}` : null,
+    }));
+
+    if (critical.length === 0 && high.length === 0 && activelyEx.length === 0) return null;
+
+    return {
+      feed_name:    'CYBERDUDEBIVASH Sentinel APEX',
+      feed_version: '1.0',
+      generated_at: new Date().toISOString(),
+      ttl_seconds:  300,
+      data_source:  'd1_threat_intel',
+      note:         'Serving from platform threat intelligence database. Live NVD/CISA feed will resume automatically.',
+      alert_level:  critical.length > 5 ? 'CRITICAL' : critical.length > 0 ? 'HIGH' : 'MEDIUM',
+      summary: {
+        total_new_cves:     critical.length + high.length,
+        critical_cves:      critical.length,
+        high_cves:          high.length,
+        actively_exploited: activelyEx.filter(v => v.known_ransomware).length,
+        kev_additions:      activelyEx.length,
+      },
+      critical_cves:      critical,
+      high_cves:          high,
+      actively_exploited: activelyEx,
+      sources: {
+        nvd: { name: 'NIST NVD', status: 'unavailable' },
+        kev: { name: 'CISA KEV', status: 'unavailable' },
+        d1:  { name: 'Platform D1 Cache', status: 'ok' },
+      },
+    };
+  } catch (_) {
+    return null;
   }
 }
 

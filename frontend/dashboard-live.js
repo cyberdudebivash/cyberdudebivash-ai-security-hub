@@ -254,9 +254,16 @@
   async function loadSOCFeed() {
     const feed = await Bus.fetch('/api/threat-intel/live');
     const list = $('cdb-soc-alert-feed');
-    if (!list || !feed) return;
+    if (!list) return;
+    if (!feed) {
+      list.innerHTML = '<div class="cdb-feed-item" style="color:var(--text-muted);font-size:12px">Feed loading — refreshing automatically every 2 min</div>';
+      return;
+    }
     const items = extractFeedItems(feed);
-    if (!items.length) return;
+    if (!items.length) {
+      list.innerHTML = '<div class="cdb-feed-item" style="color:var(--text-muted);font-size:12px">Feed loading — refreshing automatically every 2 min</div>';
+      return;
+    }
 
     list.innerHTML = items.slice(0, 8).map(item => {
       const { id, title, sev, ts } = normalizeFeedItem(item);
@@ -274,9 +281,16 @@
   async function loadSentinelIntel() {
     const feed = await Bus.fetch('/api/threat-intel/live');
     const grid = $('cdb-sentinel-cve-grid');
-    if (!grid || !feed) return;
+    if (!grid) return;
+    if (!feed) {
+      grid.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">Threat intelligence loading — refreshes every 2 min</div>';
+      return;
+    }
     const items = extractFeedItems(feed);
-    if (!items.length) return;
+    if (!items.length) {
+      grid.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">Threat intelligence loading — refreshes every 2 min</div>';
+      return;
+    }
 
     grid.innerHTML = items.slice(0, 6).map(item => {
       const { id, title, sev, cvss, kev, desc } = normalizeFeedItem(item);
@@ -500,7 +514,7 @@
       ]);
     };
 
-    // Slow 120s: trust + platform + reload soc feed
+    // Slow 120s: trust + platform + reload live feed panels
     const slowPoll = async () => {
       await Promise.allSettled([
         Bus.fetch('/api/trust/metrics'),
@@ -508,14 +522,15 @@
         Bus.fetch('/api/health'),
       ]);
       loadSOCFeed();
+      loadSentinelIntel();
       loadMSSPCenter();
     };
 
+    // Stagger med + slow polls to avoid thundering herd on load.
+    // Only ONE interval per tier — the setTimeout below creates the interval AND
+    // fires an immediate call; the bare setInterval at top was removed to avoid
+    // duplicate intervals (was causing 2× API calls and a race on initial load).
     setInterval(fastPoll, 30_000);
-    setInterval(medPoll,  60_000);
-    setInterval(slowPoll, 120_000);
-
-    // Offset med + slow polls to avoid thundering herd
     setTimeout(() => { setInterval(medPoll,  60_000); medPoll(); },  5_000);
     setTimeout(() => { setInterval(slowPoll, 120_000); slowPoll(); }, 10_000);
   }
