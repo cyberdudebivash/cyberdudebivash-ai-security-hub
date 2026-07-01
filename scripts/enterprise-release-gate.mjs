@@ -116,6 +116,24 @@ async function main() {
     const r = await fetchJSON('/api/uptime');
     record('Intel', 'GET /api/uptime returns 200', 'warn', r.status === 200);
   }
+  {
+    const r = await fetchJSON('/api/auth/status');
+    record('Auth', 'GET /api/auth/status returns 200 with {authenticated,tier}', 'blocker',
+      r.status === 200 && typeof r.body?.authenticated === 'boolean', `status=${r.status}`);
+  }
+  {
+    const r = await fetchJSON('/api/trust/compliance');
+    record('Trust', 'GET /api/trust/compliance returns real frameworks array', 'blocker',
+      r.status === 200 && Array.isArray(r.body?.frameworks) && r.body.frameworks.length > 0,
+      `status=${r.status}`);
+  }
+  {
+    const r = await fetchJSON('/api/track', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'page_view', session_id: 'release-gate-check' }),
+    });
+    record('Telemetry', 'POST /api/track (analytics beacon) does not 500', 'blocker', r.status !== 500, `status=${r.status}`);
+  }
 
   // ── C. Golden Path — real customer scan flow ──────────────────────────────
   {

@@ -2327,11 +2327,14 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
   function exportCisoPDF() {
     const plan = _plan?.plan || 'free';
     if (plan==='free') { showToast('PDF requires Pro or Enterprise plan.','err'); showPage('billing',null); return; }
-    showToast('Generating PDF board report…');
+    showToast('Generating board report…');
+    // Backend renders a print-ready HTML document (there is no PDF library in
+    // the Worker) — open it in a new tab and let the browser's own
+    // Print → Save as PDF produce the actual file, rather than fake-download
+    // HTML content mislabeled with a .pdf extension.
     apiFetch('/api/ciso/export-pdf',{method:'POST',body:JSON.stringify({data:_cisoData})})
       .then(r => r.ok ? r.blob() : Promise.reject())
-      .then(blob => { const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-        a.download='ciso-board-'+Date.now()+'.pdf'; a.click(); })
+      .then(blob => { window.open(URL.createObjectURL(blob), '_blank'); showToast('Report opened — use Print (Ctrl/Cmd+P) → Save as PDF.'); })
       .catch(()=>showToast('PDF export failed.','err'));
   }
 
@@ -2575,7 +2578,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     if (plan === 'free') {
       if (!confirm('Downgrade to Free? You will lose access to Pro features at end of billing cycle.')) return;
       try {
-        const res = await apiFetch('/api/billing/cancel', { method: 'POST' });
+        // Real backend is /api/customer/billing/cancel — /api/billing/cancel
+        // (a different, sales-facing billing namespace) never registers this path.
+        const res = await apiFetch('/api/customer/billing/cancel', { method: 'POST' });
         if (res.ok) { showToast('Subscription cancelled. Features active until period end.'); }
         else { const d = await res.json(); throw new Error(d.error); }
       } catch (e) { showToast(e.message || 'Cancel failed.', 'err'); }
@@ -2591,7 +2596,10 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     // Pro upgrade — initiate Razorpay/payment flow
     showToast('Initiating upgrade to Pro…');
     try {
-      const res = await apiFetch('/api/billing/create-subscription', {
+      // Real backend is POST /api/subscription/create (workers/src/handlers/
+      // subscription.js handleCreateSubscription) — /api/billing/create-subscription
+      // never existed.
+      const res = await apiFetch('/api/subscription/create', {
         method: 'POST',
         body: JSON.stringify({ plan: 'pro' })
       });
@@ -2602,7 +2610,10 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         window.location.href = d.payment_link;
       } else if (d.order_id && window.Razorpay) {
         const options = {
-          key:         d.razorpay_key || '',
+          // Backend field is key_id, not razorpay_key — this was silently
+          // opening Razorpay checkout with an empty key even once the path
+          // above pointed at a real endpoint.
+          key:         d.key_id || '',
           order_id:    d.order_id,
           amount:      d.amount || 99900,
           currency:    'INR',
@@ -2621,10 +2632,12 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   }
 
   function manageBilling() {
-    apiFetch('/api/billing/portal', { method: 'POST' })
-      .then(r => r.json())
-      .then(d => { if (d.url) window.location.href = d.url; else showToast('Portal unavailable. Contact support.', 'err'); })
-      .catch(() => showToast('Could not open billing portal.', 'err'));
+    // /api/billing/portal never existed. The real endpoint
+    // (/api/customer/billing/portal, GET) returns subscription/invoice/
+    // entitlement data for inline rendering, not a {url} redirect — there is
+    // no Stripe-style hosted billing portal on this Razorpay-based platform.
+    // billing-portal.html already implements a real page against that data.
+    window.location.href = 'billing-portal.html';
   }
 
   // ── Settings ─────────────────────────────────────────────────────────────────
@@ -2679,9 +2692,18 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const emailPref = document.getElementById('alert-email').value;
     const tg        = document.getElementById('alert-tg').value.trim();
     try {
-      const res = await apiFetch('/api/auth/alert-config', {
+      // Real backend is POST /api/auth/alerts (workers/src/handlers/auth.js
+      // handleAlertConfig) — /api/auth/alert-config never existed. Its field
+      // names also differ from this form's (email_enabled/min_risk_score/
+      // telegram_enabled/telegram_chat_id, not email_alerts/telegram_channel).
+      const res = await apiFetch('/api/auth/alerts', {
         method: 'POST',
-        body: JSON.stringify({ email_alerts: emailPref, telegram_channel: tg }),
+        body: JSON.stringify({
+          email_enabled:      emailPref !== 'none',
+          min_risk_score:     emailPref === 'critical_only' ? 90 : 0,
+          telegram_enabled:   !!tg,
+          telegram_chat_id:   tg || null,
+        }),
       });
       if (res.ok) { showToast('Alert preferences saved.'); }
       else { const d = await res.json(); throw new Error(d.error); }
@@ -3765,7 +3787,12 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       let verifyBody     = { ...paymentResp, module, target };
 
       if (type === 'subscription') {
-        verifyEndpoint = '/api/billing/verify-payment';
+        // Real backend is POST /api/subscription/activate (workers/src/
+        // handlers/subscription.js handleActivateSubscription), which expects
+        // exactly the raw Razorpay checkout fields (razorpay_order_id,
+        // razorpay_payment_id, razorpay_signature) already in paymentResp —
+        // /api/billing/verify-payment never existed.
+        verifyEndpoint = '/api/subscription/activate';
         verifyBody     = paymentResp;
       }
 

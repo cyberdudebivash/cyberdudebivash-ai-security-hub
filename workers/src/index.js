@@ -160,7 +160,7 @@ import { handleListAttackTechniques, handleAttackLibraryOverview, handleCreateAt
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
 import { handleBookAssessment, handleConfirmAssessment, handleGetAssessment, handleListAssessments, handleUpdateAssessmentStatus } from './handlers/assessmentBooking.js';
-import { handleTrustCenter, handleTrustMetrics, handleTrustCompany, handleSubmitTestimonial } from './handlers/trustCenter.js';
+import { handleTrustCenter, handleTrustMetrics, handleTrustCompany, handleSubmitTestimonial, handleTrustCompliance } from './handlers/trustCenter.js';
 
 import { handleDomainScan }        from './handlers/domain.js';
 import { handleAIScan }            from './handlers/ai.js';
@@ -176,6 +176,7 @@ import { handleReportDownload, handleReportGenerate } from './handlers/report.js
 import {
   handleSignup, handleLogin, handleRefresh, handleLogout,
   handleGetProfile, handleUpdateProfile, handleAlertConfig, handleTestAlert,
+  handleChangePassword, handleDeleteAccount,
 } from './handlers/auth.js';
 import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage } from './handlers/apikeys.js';
 import { handleAsyncScan, handleJobStatus, handleJobResult, handleD1History } from './handlers/jobs.js';
@@ -616,7 +617,7 @@ import {
 import {
   handleGetCISOMetrics, handleGetCISOPosture,
   handleGetIncidents, handleCreateIncident, handleUpdateIncident,
-  handleGetComplianceStatus, handleGetRiskRegister, handleGetCISOReport,
+  handleGetComplianceStatus, handleGetRiskRegister, handleGetCISOReport, handleExportCisoPdf,
 } from './handlers/cisoMetrics.js';
 
 // ─── Monetization Engine v2 ───────────────────────────────────────────────────
@@ -1908,6 +1909,19 @@ export default {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleLogout(request, env, authCtx), request));
     }
+    // GET /api/auth/status — lightweight auth/tier check for Bearer API keys.
+    // Two dashboards (security-fabric-dashboard.html, customer-success-dashboard.html)
+    // were calling this expecting {authenticated, tier} and it never existed
+    // server-side — every "verify API key" attempt on those pages 404'd.
+    if (path === '/api/auth/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(Response.json({
+        authenticated: !!authCtx.authenticated,
+        tier:          authCtx.tier || 'FREE',
+        user_id:       authCtx.user_id || null,
+        method:        authCtx.method || null,
+      }), request));
+    }
     if (path === '/api/auth/me' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleGetProfile(request, env, authCtx), request));
@@ -1923,6 +1937,17 @@ export default {
     if (path === '/api/auth/test-alert' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleTestAlert(request, env, authCtx), request));
+    }
+    // POST /api/auth/change-password, DELETE /api/auth/delete-account — the
+    // Account Settings page called these with no backend route ever
+    // registered; both were live 404s in production.
+    if (path === '/api/auth/change-password' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleChangePassword(request, env, authCtx), request));
+    }
+    if (path === '/api/auth/delete-account' && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleDeleteAccount(request, env, authCtx), request));
     }
 
     // ── API Key management ──────────────────────────────────────────────────
@@ -4040,6 +4065,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleGetCISOReport(request, env, authCtx), request));
     }
+    // POST /api/ciso/export-pdf — user-dashboard.html's board-report export
+    // button called this with no backend route ever registered.
+    if (path === '/api/ciso/export-pdf' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleExportCisoPdf(request, env, authCtx), request));
+    }
 
     // ── Phase 7: Global Expansion ───────────────────────────────────────────
     // GET /api/growth/region — region context + localized pricing + compliance
@@ -4410,6 +4441,18 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/threat-intel/live  → alias → /api/sentinel/feed
     if (path === '/api/threat-intel/live' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
+    }
+
+    // POST /api/track — alias → the existing funnel-event ingestion pipeline.
+    // frontend/assets/cdb-analytics.js has been firing sendBeacon/fetch calls
+    // to /api/track since it was added ("Emits...to your existing /api/track
+    // endpoint") but that route never existed — every pageview/funnel beacon
+    // silently 404'd. handleGtmFunnelEvent already accepts an arbitrary event
+    // string and never throws, so it's a safe, real sink for this telemetry.
+    if (path === '/api/track' && method === 'POST') {
+      const { handleGtmFunnelEvent } = await import('./handlers/gtm.js');
+      const trackAuth = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleGtmFunnelEvent(request, env, trackAuth), request));
     }
 
     // GET /api/apt-intel/groups — real APT attribution: CISA advisory + CVE
@@ -7343,6 +7386,9 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path === '/api/trust/company') {
     return handleTrustCompany(request, env);
+  }
+  if (path === '/api/trust/compliance') {
+    return handleTrustCompliance(request, env);
   }
   if (path === '/api/trust/testimonial' && method === 'POST') {
     return handleSubmitTestimonial(request, env);

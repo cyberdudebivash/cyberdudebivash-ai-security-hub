@@ -700,6 +700,62 @@ export async function handleGetCISOReport(request, env, authCtx = {}) {
   });
 }
 
+// ─── POST /api/ciso/export-pdf ─────────────────────────────────────────────────
+// user-dashboard.html's "Export PDF" board-report button called this with no
+// backend route ever registered — every click showed "Generating…" then
+// "PDF export failed." on a PRO/ENTERPRISE-gated feature. Reuses the same
+// real report data as GET /api/ciso/report (server-authoritative, not the
+// client-supplied dashboard snapshot) and renders it as a print-ready HTML
+// document — same "open it, Ctrl+P to save as PDF" pattern already used by
+// aiGovernancePdfHandler.js, since there's no PDF-rendering library in this
+// Worker.
+export async function handleExportCisoPdf(request, env, authCtx = {}) {
+  const reportResp = await handleGetCISOReport(request, env, authCtx);
+  if (reportResp.status !== 200) return reportResp;
+  const r = await reportResp.json();
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>CISO Board Report — ${esc(r.generated_date)}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:0 24px;color:#111}
+  h1{font-size:22px;border-bottom:3px solid #111;padding-bottom:8px}
+  h2{font-size:15px;color:#333;margin-top:28px}
+  .meta{color:#666;font-size:12px;margin-bottom:24px}
+  .scorecard{display:flex;gap:16px;margin:16px 0}
+  .score-box{border:1px solid #ccc;border-radius:6px;padding:12px 18px;text-align:center}
+  .score-box .val{font-size:24px;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:13px}
+  @media print{body{margin:0;padding:20px}}
+</style></head><body>
+<h1>CISO Board Report</h1>
+<div class="meta">${esc(r.period)} · Generated ${esc(r.generated_date)}</div>
+<p>${esc(r.executive_summary)}</p>
+<h2>Security Scorecard</h2>
+<div class="scorecard">
+  <div class="score-box"><div class="val">${esc(r.security_scorecard?.overall_score)}</div><div>Overall (Grade ${esc(r.security_scorecard?.grade)})</div></div>
+  <div class="score-box"><div class="val">${esc(r.key_metrics?.mttd_hours)}h</div><div>MTTD</div></div>
+  <div class="score-box"><div class="val">${esc(r.key_metrics?.mttr_hours)}h</div><div>MTTR</div></div>
+  <div class="score-box"><div class="val">${esc(r.key_metrics?.critical_risks)}</div><div>Critical Risks</div></div>
+</div>
+<h2>Board Priorities</h2>
+<table><tr><th>#</th><th>Area</th><th>Action</th><th>Impact</th><th>Effort</th></tr>
+${(r.priorities || []).map(p => `<tr><td>${esc(p.rank)}</td><td>${esc(p.area)}</td><td>${esc(p.action)}</td><td>${esc(p.impact)}</td><td>${esc(p.effort)}</td></tr>`).join('')}
+</table>
+<h2>Compliance Summary</h2>
+<table><tr><th>Framework</th><th>%</th><th>Grade</th></tr>
+${(r.compliance_summary || []).map(c => `<tr><td>${esc(c.framework)}</td><td>${esc(c.pct)}</td><td>${esc(c.grade)}</td></tr>`).join('')}
+</table>
+<p style="margin-top:32px;font-size:11px;color:#999">CYBERDUDEBIVASH AI Security Hub — Print this page (Ctrl/Cmd+P) and choose "Save as PDF" to download.</p>
+</body></html>`;
+
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
 // ─── Utility ──────────────────────────────────────────────────────────────────
 function groupBy(arr, key) {
   return arr.reduce((acc, item) => {

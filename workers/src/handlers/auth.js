@@ -434,3 +434,74 @@ export async function handleTestAlert(request, env, authCtx) {
   const result = await sendTestAlert(env, authCtx.user_id);
   return Response.json(result, { status: result.success ? 200 : 422 });
 }
+
+// ─── POST /api/auth/change-password ───────────────────────────────────────────
+// Was called by user-dashboard.html's Account Settings page with no backend
+// route ever registered — every "Change Password" click 404'd in production.
+export async function handleChangePassword(request, env, authCtx) {
+  if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+
+  const body = await parseBody(request);
+  const currentPassword = body?.current_password || '';
+  const newPassword     = body?.new_password || '';
+  if (!currentPassword || !newPassword) {
+    return Response.json({ error: 'current_password and new_password are required' }, { status: 400 });
+  }
+
+  const strength = validatePasswordStrength(newPassword);
+  if (!strength.valid) {
+    return Response.json({ error: strength.message || 'Password does not meet strength requirements' }, { status: 400 });
+  }
+
+  const user = await env.DB.prepare(
+    `SELECT id, password_hash, password_salt FROM users WHERE id = ?`
+  ).bind(authCtx.user_id).first();
+  if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
+
+  const currentValid = await verifyPassword(currentPassword, user.password_hash, user.password_salt);
+  if (!currentValid) return Response.json({ error: 'Current password is incorrect' }, { status: 403 });
+
+  const { hash, salt } = await hashPassword(newPassword);
+  await env.DB.prepare(
+    `UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?`
+  ).bind(hash, salt, authCtx.user_id).run();
+
+  // Revoke all other sessions — a password change should not leave old
+  // refresh tokens (e.g. from a compromised device) valid.
+  await revokeAllUserTokens(env.DB, authCtx.user_id).catch(() => {});
+
+  return Response.json({ success: true, message: 'Password updated. Other sessions have been signed out.' });
+}
+
+// ─── DELETE /api/auth/delete-account ──────────────────────────────────────────
+// Was called by user-dashboard.html's danger-zone "Delete Account" action with
+// no backend route ever registered — a real DPDP/GDPR-relevant gap: the site
+// markets DPDP Act 2023 compliance while the account-deletion button 404'd.
+// Anonymizes PII rather than hard-deleting the row, preserving billing/audit
+// records required for tax and dispute-resolution retention, consistent with
+// how the platform already retains scan_history/payments for other users.
+export async function handleDeleteAccount(request, env, authCtx) {
+  if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+
+  const userId = authCtx.user_id;
+  const anonEmail = `deleted-${userId}@deleted.cyberdudebivash.in`;
+
+  // users.status has a CHECK constraint of ('active','suspended','unverified')
+  // — there is no 'deleted' state without a schema migration. 'suspended'
+  // (already used to lock out accounts elsewhere) plus PII anonymization is
+  // the correct existing-schema representation of a deleted account.
+  await env.DB.prepare(
+    `UPDATE users SET
+       email = ?, password_hash = 'DELETED', password_salt = 'DELETED',
+       full_name = NULL, company = NULL, telegram_chat_id = NULL,
+       alert_email = NULL, status = 'suspended', updated_at = datetime('now')
+     WHERE id = ?`
+  ).bind(anonEmail, userId).run();
+
+  await revokeAllUserTokens(env.DB, userId).catch(() => {});
+  await env.DB.prepare(`DELETE FROM api_keys WHERE user_id = ?`).bind(userId).run().catch(() => {});
+
+  return Response.json({ success: true, message: 'Account deleted. You have been signed out.' });
+}

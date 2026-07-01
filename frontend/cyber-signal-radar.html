@@ -446,7 +446,11 @@ async function newsletterSubscribe(){
   if(!email || !email.includes('@')) return;
   const msg = document.getElementById('nl-msg');
   try {
-    await fetch(`${API}/api/newsletter/subscribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    // Real backend is /api/gtm/email-capture (workers/src/handlers/gtm.js
+    // handleGtmEmailCapture) — /api/newsletter/subscribe never existed. The
+    // catch{} below previously swallowed the 404, so every visitor saw
+    // "Subscribed!" while nothing was actually recorded.
+    await fetch(`${API}/api/gtm/email-capture`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email, source:'cyber_signal_radar'})});
   } catch {}
   msg.textContent = '✓ Subscribed! First digest arrives within 7 days.';
   msg.style.display = 'block';

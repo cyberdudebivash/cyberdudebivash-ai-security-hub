@@ -62,6 +62,30 @@ export async function handleTrustCompany(request, env) {
   return json({ success: true, company: COMPANY_INFO });
 }
 
+// GET /api/trust/compliance — framework alignment records ("honest badges").
+// frontend/assets/js/sentinel-apex-live-metrics.js has called this since it
+// was written but the route never existed. COMPANY_INFO.certifications is
+// deliberately []: this platform holds no formal third-party certifications
+// yet, so no framework is ever reported "certified" here — only "aligned"
+// (explicitly referenced in the real methodology.standards list above) or
+// "partial" (not yet formally mapped), matching the codebase's existing
+// de-fabrication stance.
+const COMPLIANCE_FRAMEWORKS = [
+  { framework: 'iso27001',  alignment_level: 'aligned', scope_note: 'ISO 27001 controls referenced in platform security architecture; no formal certification held.' },
+  { framework: 'dpdp',      alignment_level: 'aligned', scope_note: 'DPDP Act 2023 — dedicated compliance engine (/api/compliance/dpdp) available on PRO+.' },
+  { framework: 'owasp_llm', alignment_level: 'aligned', scope_note: 'OWASP LLM Top 10 mapped across AI Security scan modules.' },
+  { framework: 'mitre',     alignment_level: 'aligned', scope_note: 'MITRE ATT&CK techniques mapped in Red Team and Threat Intel modules.' },
+  { framework: 'soc2',      alignment_level: 'partial', scope_note: 'Not yet formally assessed against SOC 2 Trust Service Criteria.' },
+  { framework: 'gdpr',      alignment_level: 'partial', scope_note: 'Not yet formally assessed against GDPR 2016/679.' },
+  { framework: 'pcidss',    alignment_level: 'partial', scope_note: 'No cardholder data is stored by the platform; formal PCI-DSS assessment not performed.' },
+  { framework: 'hipaa',     alignment_level: 'partial', scope_note: 'Not yet formally assessed against HIPAA/HITECH.' },
+  { framework: 'nist_ai',   alignment_level: 'partial', scope_note: 'Not yet formally assessed against NIST AI RMF.' },
+];
+
+export async function handleTrustCompliance(request, env) {
+  return json({ success: true, frameworks: COMPLIANCE_FRAMEWORKS, generated_at: new Date().toISOString() });
+}
+
 // GET /api/trust/metrics — real numbers from D1 only
 export async function handleTrustMetrics(request, env) {
   try {

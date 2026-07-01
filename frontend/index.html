@@ -20605,10 +20605,14 @@ window.p4RequestPayout = function() {
   if (!userId) { p4Toast('⚠ No affiliate account.', '#f87171'); return; }
   var resEl = document.getElementById('p4-payout-result');
   if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Processing payout request…'; }
-  p4Post('/api/affiliate/payout', { user_id: userId, method: 'bank_transfer' }).then(function(d) {
+  // Real backend is /api/affiliate/payout/request (workers/src/handlers/
+  // affiliateSystem.js handleRequestPayout) — /api/affiliate/payout never
+  // existed. Its response is also flat ({requested, amount_inr}), not nested
+  // under a `payout` object.
+  p4Post('/api/affiliate/payout/request', { user_id: userId, method: 'bank_transfer' }).then(function(d) {
     if (resEl) {
-      if (d.payout) {
-        resEl.style.color = '#10b981'; resEl.textContent = '✅ Payout ₹' + (d.payout.amount_inr || 0).toLocaleString('en-IN') + ' requested!';
+      if (d.requested) {
+        resEl.style.color = '#10b981'; resEl.textContent = '✅ Payout ₹' + (d.amount_inr || 0).toLocaleString('en-IN') + ' requested!';
       } else {
         resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Payout failed.');
       }
