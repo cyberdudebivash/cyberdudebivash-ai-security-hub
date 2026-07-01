@@ -412,6 +412,25 @@ export async function handleGetDefensePosture(request, env, authCtx = {}) {
   if (env?.SECURITY_HUB_KV) {
     try { posture = (await env.SECURITY_HUB_KV.get(KV_POSTURE_KEY, { type: 'json' })) || posture; } catch {}
   }
+
+  const executions      = await loadExecutions(env);
+  const rolledBackCount = executions.filter(function(e) { return e.status === 'ROLLBACK'; }).length;
+  const pendingCount    = (await loadPending(env)).length;
+
+  // Real score: % of defense actions that stayed deployed (weren't rolled back),
+  // with a small penalty for a growing unresolved-approval backlog. Null (not 0)
+  // when there's no execution history yet — the frontend renders that as "—/100".
+  const postureScore = posture.total_executions > 0
+    ? Math.max(0, Math.min(100,
+        Math.round(((posture.total_executions - rolledBackCount) / posture.total_executions) * 100) - Math.min(pendingCount * 2, 20)
+      ))
+    : null;
+
+  posture.rules_deployed    = posture.total_rules_deployed || 0;
+  posture.pending_count     = pendingCount;
+  posture.rolled_back_count = rolledBackCount;
+  posture.posture_score     = postureScore;
+
   return ok(request, { posture, mode: config.mode, config, fetched_at: new Date().toISOString() });
 }
 

@@ -4509,9 +4509,12 @@ document.addEventListener('cdb:scan:complete', function(e) {
 (function loadFunnelDashboard() {
   async function load() {
     try {
-      const res = await fetch('/api/gtm/funnel-dashboard?period=30d');
+      const res = await fetch('/api/gtm/funnel-dashboard?days=30');
       if (!res.ok) return;
-      const data = await res.json();
+      const raw = await res.json();
+      // Unwrap standard { success, data, error } response envelope
+      const data = (raw && raw.success && raw.data) ? raw.data : raw;
+      const metrics = data.funnel_metrics || {};
       const steps = data.funnel || data.steps || [];
       const topCount = steps[0]?.count || 1;
       
@@ -4535,9 +4538,13 @@ document.addEventListener('cdb:scan:complete', function(e) {
         const el = document.getElementById('v26-conversion');
         if (el) el.textContent = Number(data.scan_to_email_rate).toFixed(1) + '%';
       }
-      if (data.total_emails !== undefined) {
+      // Real field is funnel_metrics.unique_leads (distinct emails captured in
+      // the period) — data.total_emails never existed on this endpoint's
+      // response, so this stat previously stayed at its "—" default forever.
+      const totalEmails = data.total_emails ?? metrics.unique_leads;
+      if (totalEmails !== undefined) {
         const el = document.getElementById('v26-emails-total');
-        if (el) el.textContent = Number(data.total_emails).toLocaleString('en-IN');
+        if (el) el.textContent = Number(totalEmails).toLocaleString('en-IN');
       }
     } catch(e) { /* non-blocking */ }
   }
@@ -17682,7 +17689,8 @@ window.cdbAutoSOCRun = function() {
   var pollTimer = setInterval(function() {
     fetch('/api/auto-soc/pipeline')
       .then(function(r){ return r.json(); })
-      .then(function(d) {
+      .then(function(raw) {
+        var d = (raw && raw.success && raw.data) ? raw.data : raw;
         if (d && d.pipeline && d.pipeline.stages) {
           renderPipeline(d.pipeline.stages);
           // Advance stage label on button
@@ -17694,7 +17702,8 @@ window.cdbAutoSOCRun = function() {
 
   fetch('/api/auto-soc/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
     .then(function(r){ return r.json(); })
-    .then(function(data) {
+    .then(function(raw) {
+      var data = (raw && raw.success && raw.data) ? raw.data : raw;
       clearInterval(pollTimer);
       if (data && data.metrics) updateMetrics(data.metrics);
       if (data && data.pipeline && data.pipeline.stages) renderPipeline(data.pipeline.stages);
@@ -17741,7 +17750,8 @@ window.cdbAutoSOCRun = function() {
 window.cdbAutoSOCPollPipeline = function() {
   fetch('/api/auto-soc/pipeline')
     .then(function(r){ return r.json(); })
-    .then(function(data) {
+    .then(function(raw) {
+      var data = (raw && raw.success && raw.data) ? raw.data : raw;
       if (data && data.pipeline && data.pipeline.stages) renderPipeline(data.pipeline.stages);
     }).catch(function(){});
 };
@@ -17749,7 +17759,8 @@ window.cdbAutoSOCPollPipeline = function() {
 window.cdbAutoSOCRefreshLog = function() {
   fetch('/api/auto-soc/log?limit=20')
     .then(function(r){ return r.json(); })
-    .then(function(data) {
+    .then(function(raw) {
+      var data  = (raw && raw.success && raw.data) ? raw.data : raw;
       var logEl = document.getElementById('asoc-log');
       if (!logEl || !data.log || data.log.length === 0) return;
       logEl.innerHTML = data.log.map(function(entry) {
@@ -17773,7 +17784,8 @@ window.cdbAutoSOCSetSchedule = function() {
     body: JSON.stringify({ interval_minutes: interval, enabled: true }),
   })
   .then(function(r){ return r.json(); })
-  .then(function(data) {
+  .then(function(raw) {
+    var data = (raw && raw.success && raw.data) ? raw.data : raw;
     var el = document.getElementById('auto-soc-next-run');
     if (el && data.schedule && data.schedule.next_run_at) {
       el.textContent = 'Next: ' + new Date(data.schedule.next_run_at).toLocaleString();
@@ -18026,8 +18038,10 @@ window.cdbSIEMRefreshLog = function() {
 window.cdbMemoryRefresh = function() {
   fetch('/api/org-memory')
     .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (!data) return;
+    .then(function(raw) {
+      if (!raw) return;
+      // Unwrap standard { success, data, error } response envelope
+      var data     = (raw && raw.success && raw.data) ? raw.data : raw;
       var patterns = data.patterns || {};
       var recs     = data.recommendations || [];
       var sevDist  = patterns.severity_distribution || {};
@@ -18067,7 +18081,8 @@ window.cdbMemoryRefresh = function() {
       // Recent events from history endpoint
       fetch('/api/org-memory/history?limit=10')
         .then(function(r2){ return r2.json(); })
-        .then(function(hist) {
+        .then(function(histRaw) {
+          var hist = (histRaw && histRaw.success && histRaw.data) ? histRaw.data : histRaw;
           renderMemoryEvents(hist.events || []);
         }).catch(function(){});
     })
@@ -19270,7 +19285,8 @@ function p3FmtMoney(n) {
 var p3CurrentMode = 'SAFE';
 
 window.cdbDefenseLoad = function() {
-  p3Req('/api/defense-engine/mode').then(function(data) {
+  p3Req('/api/defense-engine/mode').then(function(raw) {
+    var data = p3Unwrap(raw);
     if (data.config) {
       p3CurrentMode = data.config.mode || 'SAFE';
       p3UpdateModeUI(p3CurrentMode);
@@ -19285,7 +19301,8 @@ window.cdbDefenseLoad = function() {
       if (actEl)  actEl.checked = !!cfg.require_active_exp;
     }
   });
-  p3Req('/api/defense-engine/posture').then(function(data) {
+  p3Req('/api/defense-engine/posture').then(function(raw) {
+    var data = p3Unwrap(raw);
     if (!data.posture) return;
     var p = data.posture;
     var exEl = document.getElementById('p3-stat-executions');
