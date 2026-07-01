@@ -776,6 +776,7 @@ import {
 // ─── Middleware ───────────────────────────────────────────────────────────────
 import { logUptimeCheck } from './services/v24/platformEngine.js';
 import { handleSSOLogin, handleSSOCallback, handleSSOConfigUpsert, handleSSOConfigGet, handleSSOConfigDelete } from './handlers/ssoAuth.js';
+import { handleMFAStatus, handleMFASetup, handleMFAEnable, handleMFAAuthenticate, handleMFADisable } from './handlers/mfa.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
@@ -1728,6 +1729,19 @@ export default {
     }
     if (path === '/api/auth/google/callback' && method === 'GET') {
       return handleGoogleCallback(request, env);
+    }
+
+    // ── MFA (TOTP) — setup, enable, authenticate, disable, status ──────────────
+    if (path === '/api/auth/mfa/authenticate' && method === 'POST') {
+      return handleMFAAuthenticate(request, env);
+    }
+    if (path.startsWith('/api/auth/mfa/')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      if (!authCtx?.authenticated) return unauthorized();
+      if (path === '/api/auth/mfa/status'  && method === 'GET')  return handleMFAStatus(request, env, authCtx);
+      if (path === '/api/auth/mfa/setup'   && method === 'POST') return handleMFASetup(request, env, authCtx);
+      if (path === '/api/auth/mfa/enable'  && method === 'POST') return handleMFAEnable(request, env, authCtx);
+      if (path === '/api/auth/mfa/disable' && method === 'POST') return handleMFADisable(request, env, authCtx);
     }
 
     // ── Enterprise SSO (OIDC) — per-org IdP, owner-configured ──────────────────

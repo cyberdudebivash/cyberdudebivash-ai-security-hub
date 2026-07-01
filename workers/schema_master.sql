@@ -2100,6 +2100,18 @@ CREATE TABLE IF NOT EXISTS sso_configs (
 
 CREATE INDEX IF NOT EXISTS idx_sso_configs_org ON sso_configs(org_id);
 
+-- MFA (TOTP) — one row per user, secret stored as base32. Backup codes are
+-- SHA-256 hashed at rest. Enabled flag lets users turn off without losing config.
+CREATE TABLE IF NOT EXISTS mfa_secrets (
+  user_id      TEXT PRIMARY KEY,
+  secret       TEXT NOT NULL,
+  backup_codes TEXT NOT NULL DEFAULT '[]',
+  enabled      INTEGER NOT NULL DEFAULT 0,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- From: schema_v30_p0p1.sql
 CREATE TABLE IF NOT EXISTS p0_exceptions (
   id                  TEXT PRIMARY KEY,

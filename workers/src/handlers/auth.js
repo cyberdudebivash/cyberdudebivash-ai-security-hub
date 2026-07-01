@@ -17,6 +17,7 @@ import { checkLoginRateLimit, recordLoginAttempt } from '../auth/middleware.js';
 import { parseBody } from '../middleware/validation.js';
 import { inspectForAttacks } from '../middleware/security.js';
 import { sendTestAlert } from '../lib/alerts.js';
+import { issueMFAChallenge } from './mfa.js';
 
 const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
 const PLATFORM_URL  = 'https://tools.cyberdudebivash.com';
@@ -219,6 +220,17 @@ export async function handleLogin(request, env) {
   // Update last_login
   env.DB.prepare('UPDATE users SET last_login_at = datetime(\'now\'), login_count = login_count + 1 WHERE id = ?')
     .bind(user.id).run().catch(() => {});
+
+  // MFA check — if enabled, issue a challenge token instead of real tokens
+  const mfaChallenge = await issueMFAChallenge(env, user.id, user.email, user.tier);
+  if (mfaChallenge) {
+    return Response.json({
+      mfa_required:        true,
+      mfa_challenge_token: mfaChallenge,
+      expires_in:          300,
+      next_step:           'POST /api/auth/mfa/authenticate with { mfa_challenge_token, totp_code } or { mfa_challenge_token, backup_code }',
+    }, { status: 200 });
+  }
 
   // Issue tokens
   const accessToken = await createAccessToken(user, env.JWT_SECRET);
