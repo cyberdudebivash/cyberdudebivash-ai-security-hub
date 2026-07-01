@@ -2346,20 +2346,11 @@ a{color:var(--accent);text-decoration:none}
 <div class="tab-panel" id="tab-darkscan">
 <div class="scan-card">
 <h3>🕵️ Dark Web Exposure Scanner <span style="font-size:11px;background:linear-gradient(135deg,#ef4444,#7c3aed);color:#fff;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle">PRO+</span></h3>
-<p>Detect leaked credentials, breached emails, exposed API keys, and corporate data mentions across dark web paste sites, breach databases, and Tor indexers.</p>
+<p>Real external-exposure reconnaissance: discovers forgotten "shadow IT" subdomains via live Certificate Transparency logs, and directly checks for actively exposed credential files (.git, .env, cloud keys) — a live breach in progress, not a historical lookup. Live breach-database search (e.g. HaveIBeenPwned) is included automatically when enabled for your account.</p>
 <div class="form-row">
 <div class="form-group">
-<label for="darkTarget">Target Domain or Email</label>
-<input id="darkTarget" placeholder="example.com or user@company.com" type="text"/>
-</div>
-<div class="form-group">
-<label for="darkScanType">Scan Depth</label>
-<select id="darkScanType">
-<option value="breach_db">Breach Database Check (Have I Been Pwned)</option>
-<option value="paste_sites">Paste Sites (Pastebin, Ghostbin, etc.)</option>
-<option value="credential_leak">Credential Leak Detection</option>
-<option value="full">Full Dark Web Sweep (All Sources)</option>
-</select>
+<label for="darkTarget">Target Domain</label>
+<input id="darkTarget" placeholder="example.com" type="text"/>
 </div>
 </div>
 <div class="alert" id="alert-darkscan"></div>
@@ -2379,25 +2370,12 @@ a{color:var(--accent);text-decoration:none}
 <div class="tab-panel" id="tab-appsec">
 <div class="scan-card">
 <h3>📱 Application Security Scanner <span style="font-size:11px;background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle">PRO+</span></h3>
-<p>Dynamic application security testing (DAST) against OWASP Top 10 Web. Detects SQLi, XSS, SSRF, broken auth, security misconfigurations, and sensitive data exposure.</p>
+<p>Passive, non-destructive application-security reconnaissance: security headers &amp; CSP strength, cookie transport security, CORS misconfiguration, exposed source-control/config/backup files, directory listing, and verbose error disclosure. Read-only checks only — no injection payloads, brute force, or active exploitation are sent to your target.</p>
 <div class="form-row">
 <div class="form-group">
 <label for="appTarget">Application URL</label>
 <input id="appTarget" placeholder="https://app.example.com" type="text"/>
 </div>
-<div class="form-group">
-<label for="appScanDepth">OWASP Test Coverage</label>
-<select id="appScanDepth">
-<option value="top10_web">OWASP Top 10 Web 2021</option>
-<option value="top10_api">OWASP API Security Top 10</option>
-<option value="asvs">ASVS Level 2 (Full)</option>
-<option value="mobile">Mobile App Security (MSTG)</option>
-</select>
-</div>
-</div>
-<div class="form-group">
-<label for="appAuthHeader">Auth Header (optional)</label>
-<input id="appAuthHeader" placeholder="Bearer eyJhbGc... (for authenticated scan)" type="text"/>
 </div>
 <div class="alert" id="alert-appsec"></div>
 <div class="scan-btn-row">
@@ -9417,15 +9395,6 @@ async function executeScan(module, payload) {
     target: payload.domain || payload.model_name || payload.target_org || payload.org_name || 'unknown',
   };
 
-  // No backend exists yet for these two modules (confirmed 404 — there is no
-  // dark-web-breach-feed or app-pentest engine behind them). Rather than call
-  // a dead endpoint and show a confusing "Not Found" error, say so honestly.
-  if (module === 'darkscan' || module === 'appsec') {
-    setLoading(module, false);
-    showErrorState(module, 'This scanner module is still being built and is not yet available. Contact bivash@cyberdudebivash.com if you need this capability now.');
-    return;
-  }
-
   // ── Subscription quota gate (client-side UX check before API call) ───────────
   // Real enforcement happens on the backend; this just provides instant UX feedback.
   const subCache = SUBSCRIPTION.getCache();
@@ -9484,27 +9453,13 @@ async function executeScan(module, payload) {
     }
 
   } catch (e) {
-    // Fallback to client-side engine
-    console.warn('[API unreachable] Using local fallback engine:', e.message);
-    const fallbackData = localEngine(module, payload);
+    console.error('[API unreachable] Scan could not reach the server:', e.message);
     setLoading(module, false);
-    // Persist local engine result to history too
-    _saveScanToHistory(module, fallbackData);
-    try {
-      renderResults(module, fallbackData);
-    } catch (renderErr) {
-      console.error('[renderResults] Error rendering fallback data:', renderErr);
-      // Last-resort: show raw fallback data so user always sees output
-      const panel = document.getElementById(`results-${module}`);
-      if (panel) {
-        panel.className = 'results-panel show';
-        panel.innerHTML = `<div style="padding:24px;color:var(--text-muted);font-size:13px">
-          <div style="color:var(--accent);font-weight:700;margin-bottom:8px">⚡ Local Scan Complete (Offline Mode)</div>
-          <pre style="white-space:pre-wrap;font-size:12px;color:var(--text-dim)">${JSON.stringify(fallbackData, null, 2)}</pre>
-        </div>`;
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
+    showErrorState(
+      module,
+      `We couldn't reach the scan engine (${e.message || 'network error'}). No results were generated — please check your connection and try again.`,
+      () => runScan(module)
+    );
   }
 }
 
@@ -9999,8 +9954,6 @@ async function submitEnterprise() {
   btn.textContent = '📨 Send Enterprise Inquiry';
 }
 
-// ─── Local Fallback Engine (deterministic, mirrors API) ─────────────────
-function sh(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return Math.abs(h);}
 // ─── Lemon Squeezy Payment Integration ──────────────────────────────────────
 // ─── CYBERDUDEBIVASH Unified Payment Engine v3.0 ─────────────────────────────
 // Manual payment: UPI / Bank Transfer / PayPal / Crypto
@@ -11206,329 +11159,6 @@ async function renderRecentActivity() {
     </div>`;
   });
   container.innerHTML = html;
-}
-
-function sr2(seed,o=0){const x=Math.sin(seed+o+1)*10000;return Math.abs(x-Math.floor(x));}
-function ri2(min,max,seed,o=0){return min+Math.floor(sr2(seed,o)*(max-min+1));}
-
-function localEngine(module, payload) {
-  const target = payload.domain || payload.model_name || payload.target_org || payload.org_name || 'unknown';
-  const seed   = sh(target + module);
-  const score  = ri2(30, 85, seed, 1);
-  const level  = score>=80?'CRITICAL':score>=60?'HIGH':score>=35?'MEDIUM':'LOW';
-  // ── Enhanced finding catalogue — full module coverage ───────────────────────
-  const FINDING_DB = {
-    domain: [
-      { id:'DOM-001', title:'TLS 1.0/1.1 Protocol Support Detected', sev:'CRITICAL',
-        desc:'Legacy TLS protocols (1.0 and 1.1) are enabled on your server. These contain known vulnerabilities including POODLE and BEAST that allow man-in-the-middle decryption of HTTPS traffic.',
-        rec:'Disable TLS 1.0/1.1 in your web server configuration. Enable TLS 1.3 exclusively. Set HSTS with min-age 31536000 and includeSubDomains.',
-        cvss:'9.1', mitre:'T1557.001', cve:'CVE-2014-3566' },
-      { id:'DOM-002', title:'DNSSEC Not Configured', sev:'HIGH',
-        desc:'DNSSEC is absent on your domain. Without DNSSEC, attackers can perform DNS cache poisoning attacks (Kaminsky attack) to redirect users to malicious infrastructure without detection.',
-        rec:'Enable DNSSEC at your registrar and DNS provider. Deploy DS records at the parent zone. Verify with `dig +dnssec yourdomain.com`.',
-        cvss:'8.6', mitre:'T1584.002', cve:'CVE-2008-1447' },
-      { id:'DOM-003', title:'Missing Critical Security Headers', sev:'HIGH',
-        desc:'Content-Security-Policy, X-Frame-Options, and X-Content-Type-Options headers are absent. This enables XSS, clickjacking, and MIME-sniffing attacks against users.',
-        rec:'Add CSP with strict-dynamic, frame-ancestors, and default-src directives. Set X-Frame-Options: DENY and X-Content-Type-Options: nosniff in all HTTP responses.',
-        cvss:'7.5', mitre:'T1189', cve:'' },
-      { id:'DOM-004', title:'SPF Record Misconfiguration', sev:'HIGH',
-        desc:'Your SPF record uses +all or is missing entirely, allowing any server to send email as your domain. This enables phishing campaigns impersonating your brand.',
-        rec:'Set SPF to `v=spf1 include:your-provider.com -all`. Never use +all. Implement DKIM signing and set DMARC policy to p=reject.',
-        cvss:'7.3', mitre:'T1566.002', cve:'' },
-      { id:'DOM-005', title:'Open Port Exposure: Admin Services', sev:'CRITICAL',
-        desc:'Administrative service ports (SSH/22, RDP/3389, or database ports) are reachable from the public internet. This dramatically expands your attack surface for brute-force and exploitation.',
-        rec:'Restrict admin ports to VPN/bastion access only using firewall rules. Deploy MFA on all remote access. Consider port-knocking for SSH.',
-        cvss:'9.8', mitre:'T1046', cve:'' },
-      { id:'DOM-006', title:'Certificate Transparency Log Anomaly', sev:'MEDIUM',
-        desc:'Certificate transparency logs reveal certificates issued for unexpected subdomains, suggesting shadow IT or subdomain takeover risk.',
-        rec:'Audit all certificates in CT logs via crt.sh. Implement CAA DNS records to restrict which CAs can issue certificates for your domain.',
-        cvss:'5.9', mitre:'T1584.001', cve:'' },
-    ],
-    ai: [
-      { id:'LLM-001', title:'LLM01: Direct Prompt Injection — Confirmed', sev:'CRITICAL',
-        desc:'The AI system processes untrusted user input without sanitization, allowing attackers to override system instructions, extract system prompts, and pivot to unauthorized tool invocations.',
-        rec:'Implement prompt injection guards: validate all input against blocklist/allowlist patterns, use separate system/user context windows, deploy LLM-specific WAF rules, and never execute tool calls on user-controlled strings.',
-        cvss:'9.3', mitre:'T1059', cve:'CVE-2024-5184' },
-      { id:'LLM-002', title:'LLM02: Insecure Output Handling — XSS via AI Response', sev:'CRITICAL',
-        desc:'AI-generated content is rendered directly in the browser DOM without sanitization. An attacker who manipulates the model output can inject JavaScript that executes in the user\'s browser context.',
-        rec:'Sanitize all LLM outputs using DOMPurify before rendering. Escape HTML entities in all AI-generated content. Use a Content Security Policy to block inline script execution.',
-        cvss:'9.0', mitre:'T1059.007', cve:'' },
-      { id:'LLM-003', title:'LLM06: Sensitive Information Disclosure', sev:'HIGH',
-        desc:'The model returns internal system configuration details, partial training data, or PII in responses to crafted queries. This violates data minimization principles under GDPR/DPDP.',
-        rec:'Implement output filtering to detect and redact PII patterns (email, phone, ID numbers). Add guardrails that monitor for system prompt echoing and training data extraction.',
-        cvss:'8.2', mitre:'T1552', cve:'' },
-      { id:'LLM-004', title:'LLM08: Excessive Agency — Unrestricted Tool Access', sev:'HIGH',
-        desc:'The AI agent has been granted write access to external APIs, databases, and filesystem without an explicit approval step. A successful prompt injection could trigger irreversible actions.',
-        rec:'Enforce principle of least privilege on all agent tool bindings. Require human-in-the-loop confirmation for any destructive action. Log all tool invocations to an immutable audit trail.',
-        cvss:'8.8', mitre:'T1496', cve:'' },
-      { id:'LLM-005', title:'LLM04: Model Denial of Service via Adversarial Inputs', sev:'MEDIUM',
-        desc:'The AI endpoint accepts unbounded context sizes and recursive prompts. Attackers can craft resource-exhaustion payloads that cause timeout, high compute costs, or service degradation.',
-        rec:'Enforce strict token limits per request. Implement rate limiting at the API gateway layer. Monitor prompt complexity scores and reject outliers.',
-        cvss:'6.5', mitre:'T1499', cve:'' },
-      { id:'LLM-006', title:'LLM09: Overreliance — No Human Override Path', sev:'MEDIUM',
-        desc:'Critical business decisions are delegated entirely to the AI without mandatory human review checkpoints. Model hallucinations in high-stakes contexts pose operational and legal risk.',
-        rec:'Implement tiered confidence thresholds. Require human review for all AI decisions above defined risk levels. Document AI limitations in user-facing disclosures per the EU AI Act.',
-        cvss:'5.8', mitre:'', cve:'' },
-    ],
-    redteam: [
-      { id:'RT-001', title:'T1566.001: Spear Phishing — High Deliverability Score', sev:'CRITICAL',
-        desc:'Simulated spear phishing emails bypassed your email gateway with 94% deliverability. DMARC is set to p=none, allowing domain spoofing. 3 of 5 simulated targets clicked within 4 minutes.',
-        rec:'Set DMARC to p=reject. Deploy anti-phishing training via simulated campaigns monthly. Enable Microsoft Defender for Office 365 Safe Links and Safe Attachments.',
-        cvss:'9.6', mitre:'T1566.001', cve:'' },
-      { id:'RT-002', title:'T1078: Valid Account Compromise via Password Spray', sev:'CRITICAL',
-        desc:'Password spray attack succeeded against 4 accounts using the pattern `CompanyName@2024`. No account lockout was triggered after 50 failed attempts over 6 hours.',
-        rec:'Enable smart lockout (threshold: 10 attempts, duration: 60s). Enforce password complexity and length >16 characters. Deploy Entra ID Protection risk-based Conditional Access.',
-        cvss:'9.4', mitre:'T1110.003', cve:'' },
-      { id:'RT-003', title:'T1021.002: Lateral Movement via SMB Share Access', sev:'HIGH',
-        desc:'Once initial access was obtained, SMB shares were accessible without additional authentication. Internal recon revealed path to domain controller within 18 minutes of initial compromise.',
-        rec:'Implement network segmentation with micro-perimeters. Disable SMBv1. Deploy Windows Firewall rules blocking lateral SMB. Enable LAPS for local admin account management.',
-        cvss:'8.8', mitre:'T1021.002', cve:'' },
-      { id:'RT-004', title:'T1003.001: LSASS Memory Dump — Credential Extraction', sev:'HIGH',
-        desc:'Credential dumping from LSASS memory succeeded without triggering EDR alerts. 12 plaintext credentials and 8 NTLM hashes were extracted including 1 domain admin credential.',
-        rec:'Enable Credential Guard on all Windows endpoints. Configure Windows Defender Attack Surface Reduction rules. Block LSASS access via Protected Process Light (PPL).',
-        cvss:'8.4', mitre:'T1003.001', cve:'' },
-      { id:'RT-005', title:'T1486: Ransomware Simulation — Full Encryption Capability', sev:'CRITICAL',
-        desc:'Ransomware simulation achieved full file encryption across 3 test shares in 4 minutes 32 seconds without triggering any alerts. No immutable backup system detected.',
-        rec:'Deploy immutable backups (3-2-1 rule with air-gapped copy). Enable file share auditing with honeypot files. Deploy behavioral EDR with ransomware roll-back capability.',
-        cvss:'9.9', mitre:'T1486', cve:'' },
-      { id:'RT-006', title:'T1567.002: Data Exfiltration via HTTPS to Cloud Storage', sev:'HIGH',
-        desc:'300MB of sensitive data was exfiltrated to a cloud storage endpoint over encrypted HTTPS without triggering DLP or firewall alerts. No CASB controls were detected.',
-        rec:'Deploy CASB solution for cloud traffic visibility. Implement SSL inspection on egress. Configure DLP rules for sensitive data patterns. Block personal cloud storage categories.',
-        cvss:'8.6', mitre:'T1567.002', cve:'' },
-    ],
-    identity: [
-      { id:'IDN-001', title:'MFA Enrollment Gap — 34% of Accounts Unprotected', sev:'CRITICAL',
-        desc:'34% of user accounts have not enrolled in multi-factor authentication. These accounts are protected only by password, making them vulnerable to credential stuffing and phishing attacks.',
-        rec:'Enforce MFA via Conditional Access for all users immediately. Set a 7-day enrollment deadline with access cutoff. Prioritize admin and privileged accounts.',
-        cvss:'9.2', mitre:'T1078', cve:'' },
-      { id:'IDN-002', title:'Privileged Identity — Standing Admin Access Detected', sev:'CRITICAL',
-        desc:'12 accounts have permanent Global Administrator or equivalent privileges. Standing privilege violates Zero Trust principles and amplifies blast radius of any account compromise.',
-        rec:'Implement Privileged Identity Management (PIM/PAM). Convert standing admin to Just-In-Time access with approval workflows. Restrict admin role assignment to dedicated accounts.',
-        cvss:'9.0', mitre:'T1078.004', cve:'' },
-      { id:'IDN-003', title:'Stale Accounts — 67 Inactive Accounts Still Active', sev:'HIGH',
-        desc:'67 accounts show no authentication activity in 90+ days but remain enabled with full access. Former employees or contractors may retain unauthorized access.',
-        rec:'Automate 90-day inactivity review and disable cycle. Implement employee offboarding process with same-day account deprovisioning. Deploy access recertification campaigns quarterly.',
-        cvss:'8.1', mitre:'T1078', cve:'' },
-      { id:'IDN-004', title:'Service Accounts — Overprivileged with No Rotation Policy', sev:'HIGH',
-        desc:'18 service accounts have Global Reader or higher permissions. Credentials have not been rotated in 180+ days. Service account compromise provides persistent, stealthy access.',
-        rec:'Audit all service account permissions and apply least privilege. Implement Managed Identities or Workload Identity Federation where possible. Automate credential rotation every 90 days.',
-        cvss:'7.8', mitre:'T1528', cve:'' },
-      { id:'IDN-005', title:'Conditional Access — Geographic Anomalies Undetected', sev:'MEDIUM',
-        desc:'No Conditional Access policies block sign-ins from high-risk countries or impossible-travel scenarios. Test accounts successfully authenticated from 3 different continents within 2 hours.',
-        rec:'Enable Microsoft Entra ID Protection. Create named location policies blocking known malicious IP ranges. Set impossible-travel risk policy to require MFA step-up.',
-        cvss:'7.2', mitre:'T1078', cve:'' },
-      { id:'IDN-006', title:'Password Policy — Below NIST SP 800-63B Standards', sev:'MEDIUM',
-        desc:'Current password policy requires only 8 characters without complexity requirements beyond a single uppercase character. 2,400 common passwords were not blocked during testing.',
-        rec:'Implement password length minimum of 16 characters. Deploy banned password list containing 100,000+ common passwords. Remove complexity rules per NIST guidance — focus on length.',
-        cvss:'6.8', mitre:'T1110', cve:'' },
-    ],
-    compliance: [
-      { id:'CMP-001', title:'ISO 27001 — 23 Critical Control Gaps Identified', sev:'CRITICAL',
-        desc:'Annex A gap assessment identified 23 critical control deficiencies across Access Control (A.9), Cryptography (A.10), and Incident Management (A.16). Certification timeline at risk.',
-        rec:'Initiate gap remediation project with 90-day sprint. Prioritize A.9.4 (system access control) and A.16.1 (incident management). Engage a qualified ISO 27001 implementer.',
-        cvss:'', mitre:'', cve:'' },
-      { id:'CMP-002', title:'GDPR/DPDP — Data Processing Records Incomplete', sev:'HIGH',
-        desc:'Records of Processing Activities (ROPA) are missing for 8 of 14 identified data processing operations. This violates Article 30 (GDPR) and Schedule I (DPDP Act 2023).',
-        rec:'Complete ROPA immediately. Document all data flows, lawful basis, retention periods, and data subject rights procedures. Appoint a Data Protection Officer if thresholds are met.',
-        cvss:'', mitre:'', cve:'' },
-      { id:'CMP-003', title:'PCI DSS v4.0 — Cardholder Data Environment Scope Unclear', sev:'HIGH',
-        desc:'The cardholder data environment (CDE) boundary is undefined. Network segmentation between CDE and corporate network has not been validated, potentially expanding PCI scope.',
-        rec:'Conduct formal CDE scoping exercise with QSA. Implement network segmentation controls and validate with penetration test. Achieve PCI DSS compliant segmentation within 60 days.',
-        cvss:'', mitre:'', cve:'' },
-      { id:'CMP-004', title:'Incident Response Plan — Not Tested in 12+ Months', sev:'HIGH',
-        desc:'The Incident Response Plan has not been exercised in over 12 months. Key personnel contacts are outdated. Regulatory notification timelines (72h GDPR, 6h CERT-In) are not documented.',
-        rec:'Conduct tabletop exercise within 30 days. Update IRP with current contacts and notification timelines. Schedule bi-annual IR exercises and red-team simulations.',
-        cvss:'', mitre:'', cve:'' },
-      { id:'CMP-005', title:'Vendor Risk — 12 Critical Vendors Without Security Assessments', sev:'MEDIUM',
-        desc:'12 critical third-party vendors with access to sensitive data have not undergone security assessments in the past 12 months. Supply chain risk remains unquantified.',
-        rec:'Conduct vendor risk assessments for all critical vendors annually. Require SOC 2 Type II or ISO 27001 certification. Include security requirements in vendor contracts.',
-        cvss:'', mitre:'', cve:'' },
-    ],
-    cloudsec: [
-      { id:'CLD-001', title:'S3/Cloud Storage — Public Read Access Enabled', sev:'CRITICAL',
-        desc:'One or more cloud storage buckets are configured for public read access. Sensitive configuration files, backups, and customer data may be exposed to unauthenticated access.',
-        rec:'Audit all storage buckets immediately. Remove public ACLs. Enable Block Public Access settings. Implement S3 Object Ownership and server-side encryption (SSE-S3 or SSE-KMS).',
-        cvss:'9.8', mitre:'T1530', cve:'CVE-2024-38177' },
-      { id:'CLD-002', title:'IAM — Overprivileged Root Access Keys Active', sev:'CRITICAL',
-        desc:'AWS root account access keys are active and have been used recently. Root key compromise provides unrestricted access to all cloud resources with no scope limitation.',
-        rec:'Delete all root access keys immediately. Enable MFA on root account. Use IAM roles with least privilege for all workloads. Rotate all access keys older than 90 days.',
-        cvss:'10.0', mitre:'T1552.005', cve:'' },
-      { id:'CLD-003', title:'Security Groups — Unrestricted Inbound 0.0.0.0/0', sev:'HIGH',
-        desc:'Multiple EC2 security groups allow unrestricted inbound traffic from 0.0.0.0/0 on ports 22 (SSH), 3389 (RDP), and database ports. This exposes instances to the entire internet.',
-        rec:'Restrict SSH and RDP to VPN or bastion IP ranges only. Implement AWS Systems Manager Session Manager for SSH-less access. Remove all 0.0.0.0/0 inbound rules on admin ports.',
-        cvss:'9.1', mitre:'T1190', cve:'' },
-      { id:'CLD-004', title:'CloudTrail — Logging Disabled in 3 Regions', sev:'HIGH',
-        desc:'AWS CloudTrail is not enabled in 3 regions. API activity in these regions is not logged. This creates blind spots for threat detection and forensic investigation.',
-        rec:'Enable CloudTrail in all regions. Configure multi-region trail with CloudWatch Logs integration. Enable CloudTrail Insights for anomaly detection. Retain logs for minimum 12 months.',
-        cvss:'7.5', mitre:'T1562.008', cve:'' },
-      { id:'CLD-005', title:'Encryption at Rest — EBS Volumes Unencrypted', sev:'HIGH',
-        desc:'14 EBS volumes containing application data are not encrypted at rest. If AWS personnel or infrastructure is compromised, data is accessible in plaintext.',
-        rec:'Enable EBS default encryption for all new volumes. Snapshot and re-encrypt existing unencrypted volumes using AWS KMS customer-managed keys. Enable S3 default encryption.',
-        cvss:'7.8', mitre:'T1486', cve:'' },
-      { id:'CLD-006', title:'Container Security — Images with Critical CVEs in Production', sev:'CRITICAL',
-        desc:'ECR/container registry scan reveals 8 production container images with CRITICAL CVEs. Base images using Ubuntu 20.04 and Node 16 are past EOL.',
-        rec:'Implement mandatory container scanning in CI/CD pipeline. Enforce image signing and provenance verification. Upgrade base images to current LTS. Deploy runtime security (Falco).',
-        cvss:'9.3', mitre:'T1610', cve:'CVE-2024-21626' },
-    ],
-    darkscan: [
-      { id:'DRK-001', title:'Credential Breach — Email/Password Pairs Detected on Dark Web', sev:'CRITICAL',
-        desc:'847 corporate email addresses and associated plaintext passwords from your domain were found across 12 breach databases on dark web markets. Active credentials identified.',
-        rec:'Force immediate password reset for all affected accounts. Enable breach detection monitoring. Implement password manager adoption and FIDO2 hardware keys for privileged users.',
-        cvss:'9.8', mitre:'T1589.002', cve:'' },
-      { id:'DRK-002', title:'API Keys and Secrets Exposed on GitHub/Paste Sites', sev:'CRITICAL',
-        desc:'3 API keys, 2 AWS access keys, and 1 database connection string linked to your organization were found on public GitHub repositories and paste sites. Keys may still be active.',
-        rec:'Revoke all exposed credentials immediately. Implement pre-commit secret scanning (GitGuardian, Trufflehog). Add .env to .gitignore. Deploy AWS Macie for secrets detection.',
-        cvss:'10.0', mitre:'T1552.001', cve:'' },
-      { id:'DRK-003', title:'Ransomware Group — Your Domain Listed as Target', sev:'CRITICAL',
-        desc:'Your organization domain appears on a ransomware group\'s target list on a dark web forum. Initial access broker activity detected. Likely reconnaissance phase active.',
-        rec:'Immediately harden external attack surface. Engage threat intelligence team. Activate incident response retainer. Review and update IR playbook for ransomware scenario.',
-        cvss:'9.5', mitre:'T1591', cve:'' },
-      { id:'DRK-004', title:'Employee PII on Criminal Marketplace', sev:'HIGH',
-        desc:'Full names, phone numbers, and home addresses of 43 employees were found on a criminal data marketplace. Data appears sourced from a third-party HR platform breach.',
-        rec:'Notify affected employees per DPDP Act breach notification obligations. Contact CERT-In within 6 hours. Assess third-party HR vendor security posture immediately.',
-        cvss:'8.6', mitre:'T1589.001', cve:'' },
-      { id:'DRK-005', title:'Phishing Kit Targeting Your Brand — Active Campaign', sev:'HIGH',
-        desc:'A phishing kit impersonating your login portal is actively hosted on 4 domains. Kit includes pixel-perfect replica of your authentication page with credential harvesting.',
-        rec:'Submit takedown requests to hosting providers immediately. Enable brand monitoring. Notify users about phishing campaign via official channels. Report to Google Safe Browsing.',
-        cvss:'8.4', mitre:'T1566', cve:'' },
-    ],
-    appsec: [
-      { id:'APP-001', title:'SQL Injection — Blind SQLi in Search Parameter', sev:'CRITICAL',
-        desc:'Time-based blind SQL injection confirmed in the `q` search parameter. Backend database type identified. Automated extraction of 500+ rows of user data completed in test environment.',
-        rec:'Implement parameterized queries/prepared statements in all database interactions. Deploy WAF with SQLi rules. Conduct full application code review for injection vulnerabilities.',
-        cvss:'9.8', mitre:'T1190', cve:'CWE-89' },
-      { id:'APP-002', title:'Broken Authentication — Session Tokens Not Invalidated', sev:'CRITICAL',
-        desc:'Session tokens remain valid after logout. Tokens do not expire server-side. An attacker who obtains a valid session cookie can maintain persistent access indefinitely.',
-        rec:'Implement server-side session invalidation on logout. Set session timeouts (15min idle, 8h absolute). Use HttpOnly and Secure cookie flags. Implement session rotation on privilege escalation.',
-        cvss:'9.1', mitre:'T1539', cve:'CWE-613' },
-      { id:'APP-003', title:'XSS — Reflected Cross-Site Scripting in 4 Endpoints', sev:'HIGH',
-        desc:'Reflected XSS confirmed in 4 endpoints: /search, /profile, /feedback, and /support. JavaScript injection via URL parameters executes in the context of authenticated users.',
-        rec:'Implement Content Security Policy with strict-dynamic. Encode all user-controlled output with context-aware encoding (HTML, JS, URL). Use framework-level XSS protection (React JSX, etc.).',
-        cvss:'8.8', mitre:'T1059.007', cve:'CWE-79' },
-      { id:'APP-004', title:'Insecure Direct Object Reference — Unauthorized Data Access', sev:'HIGH',
-        desc:'IDOR vulnerability allows any authenticated user to access other users\' records by incrementing numeric IDs in API requests. 10,000+ user records accessible without authorization.',
-        rec:'Implement object-level authorization checks on all API endpoints. Replace sequential IDs with UUIDs. Add authorization middleware that validates user ownership before data access.',
-        cvss:'8.1', mitre:'T1078', cve:'CWE-639' },
-      { id:'APP-005', title:'Sensitive Data Exposure — PII in Error Messages', sev:'HIGH',
-        desc:'Application stack traces containing database credentials, internal IP addresses, and PII are returned in error responses. This provides valuable reconnaissance to attackers.',
-        rec:'Implement global error handler that returns generic messages to clients. Log detailed errors server-side only to secure log aggregator. Remove debug mode in production.',
-        cvss:'7.5', mitre:'T1552', cve:'CWE-209' },
-      { id:'APP-006', title:'Missing Rate Limiting — Credential Stuffing Vulnerable', sev:'HIGH',
-        desc:'Login, password reset, and OTP verification endpoints have no rate limiting. Automated credential stuffing attacks can attempt unlimited authentications without lockout.',
-        rec:'Implement rate limiting (10 req/min per IP on auth endpoints). Add CAPTCHA after 5 failed attempts. Enable account lockout with exponential backoff. Deploy bot management.',
-        cvss:'7.5', mitre:'T1110.004', cve:'CWE-307' },
-    ],
-    mcp_security: [
-      { id:'MCP-001', title:'MCP Tool Permissions — Excessive Scope Granted', sev:'CRITICAL',
-        desc:'MCP server grants tools filesystem write access, network access, and code execution capabilities in a single permission set. No per-tool scope restriction is enforced.',
-        rec:'Implement tool-level permission scoping. Separate read/write/execute permissions. Require explicit user consent for destructive or network-bound tool invocations.',
-        cvss:'9.5', mitre:'T1059', cve:'' },
-      { id:'MCP-002', title:'MCP Authentication — No Token Validation on Tool Calls', sev:'CRITICAL',
-        desc:'MCP server accepts tool calls without validating authentication tokens. Any process that discovers the MCP socket can invoke tools with full permissions.',
-        rec:'Implement JWT authentication on MCP endpoints. Validate token expiry and scope on every tool call. Restrict MCP socket access to the parent process only via filesystem permissions.',
-        cvss:'9.3', mitre:'T1078', cve:'' },
-      { id:'MCP-003', title:'Prompt Injection via MCP Tool Results', sev:'HIGH',
-        desc:'MCP tool results are passed back to the LLM without sanitization. Malicious web content fetched by a browse tool can inject instructions that override system prompts.',
-        rec:'Sanitize all tool results before passing to LLM context. Implement output format validation. Consider separate parsing context for tool results vs. conversation context.',
-        cvss:'8.7', mitre:'T1059', cve:'' },
-      { id:'MCP-004', title:'MCP Server — Sensitive Data Logged in Plaintext', sev:'HIGH',
-        desc:'MCP server logs contain tool invocation payloads including API keys, database credentials, and user PII passed through tool parameters. Log files stored without encryption.',
-        rec:'Implement structured logging with automatic PII/secret redaction. Encrypt log files at rest. Restrict log access. Implement log rotation with 90-day retention.',
-        cvss:'7.8', mitre:'T1552', cve:'' },
-    ],
-    vibe_code: [
-      { id:'VIB-001', title:'AI-Generated Code — SQL Injection in 6 Generated Functions', sev:'CRITICAL',
-        desc:'Static analysis of AI-generated code identified 6 functions using string concatenation for SQL query construction. Classic SQL injection patterns detected, likely from training data contamination.',
-        rec:'Replace all string-concatenated queries with parameterized statements. Run SAST scan (Semgrep, CodeQL) on all AI-generated code before merge. Never trust AI-generated database code without review.',
-        cvss:'9.8', mitre:'T1190', cve:'CWE-89' },
-      { id:'VIB-002', title:'Hardcoded Secrets — API Keys in AI-Generated Files', sev:'CRITICAL',
-        desc:'AI-generated code contains 4 hardcoded API keys and 2 database connection strings. AI assistants frequently reproduce secrets from training data or prior context.',
-        rec:'Scan all AI-generated code with Trufflehog/GitLeaks before commit. Revoke exposed credentials. Implement environment variable pattern enforcement in code review.',
-        cvss:'10.0', mitre:'T1552.001', cve:'' },
-      { id:'VIB-003', title:'Insecure Dependency Suggestions — CVE-Affected Packages', sev:'HIGH',
-        desc:'AI code assistant recommended 3 npm packages with known critical CVEs and 2 packages that are dependency confusion attack vectors. These were accepted without vulnerability scanning.',
-        rec:'Run `npm audit` before installing any AI-suggested packages. Verify package authenticity and download counts. Enable Dependabot or Snyk for continuous dependency monitoring.',
-        cvss:'8.8', mitre:'T1195.001', cve:'' },
-      { id:'VIB-004', title:'Missing Input Validation in AI-Generated API Handlers', sev:'HIGH',
-        desc:'AI-generated API route handlers lack input validation, type checking, and sanitization. 8 of 12 reviewed endpoints accept arbitrary user input without validation schemas.',
-        rec:'Add Zod/Joi schema validation to all AI-generated API handlers. Enforce validation middleware pipeline. Reject requests with unexpected fields or type mismatches.',
-        cvss:'8.1', mitre:'T1190', cve:'CWE-20' },
-    ],
-  };
-
-  const moduleFindings = FINDING_DB[module] || FINDING_DB.domain;
-  const sevOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-  // Deterministic shuffle using seed for consistent results per target+module
-  const shuffled = [...moduleFindings].sort((a, b) => {
-    const da = ri2(0, 100, seed, moduleFindings.indexOf(a) * 13);
-    const db = ri2(0, 100, seed, moduleFindings.indexOf(b) * 13);
-    return da - db;
-  });
-
-  // Free findings = first 2; rest locked (premium)
-  const freeFindings   = shuffled.slice(0, 2).map(f => ({ ...f, is_premium: false }));
-  const lockedFindings = shuffled.slice(2).map(f => ({
-    ...f, is_premium: true,
-    preview: f.desc.slice(0, 55) + '…',
-    title: f.title,
-  }));
-
-  const allFindings = [...freeFindings, ...lockedFindings];
-  const critCount   = allFindings.filter(f => f.sev === 'CRITICAL').length;
-  const highCount   = allFindings.filter(f => f.sev === 'HIGH').length;
-
-  // Enrich free findings with full field names expected by renderFinding()
-  const renderableFree = freeFindings.map(f => ({
-    id: f.id, title: f.title, severity: f.sev,
-    description: f.desc, recommendation: f.rec,
-    cvss_base: f.cvss || undefined, mitre_id: f.mitre || undefined,
-  }));
-  const renderableLocked = lockedFindings.map(f => ({
-    id: f.id, title: f.title, severity: f.sev,
-    preview: f.preview, description: f.desc, recommendation: f.rec,
-    cvss_base: f.cvss || undefined,
-  }));
-
-  const modLabels = { domain:'Domain', ai:'AI System', redteam:'Red Team', identity:'Identity', compliance:'Compliance', cloudsec:'Cloud Security', darkscan:'Dark Web', appsec:'AppSec', mcp_security:'MCP Security', vibe_code:'Vibe Code' };
-  const prices    = { domain:'₹999', ai:'₹2,499', redteam:'₹4,999', identity:'₹1,999', compliance:'₹999', cloudsec:'₹2,499', darkscan:'₹2,499', appsec:'₹2,499', mcp_security:'₹2,499', vibe_code:'₹1,499' };
-  const amounts   = { domain:99900, ai:249900, redteam:499900, identity:199900, compliance:99900, cloudsec:249900, darkscan:249900, appsec:249900, mcp_security:249900, vibe_code:149900 };
-
-  const recommendations = [
-    critCount > 0 ? `⚠️ ${critCount} CRITICAL finding${critCount>1?'s':''} require immediate remediation (within 24-48 hours)` : null,
-    highCount > 0 ? `🔴 ${highCount} HIGH severity finding${highCount>1?'s':''} — address within 7 days` : null,
-    `📥 Unlock full ${modLabels[module] || 'Security'} report (${renderableLocked.length} additional findings + remediation roadmap)`,
-    `📞 Book a 30-min remediation call: bivash@cyberdudebivash.com`,
-    `🛡 Enterprise coverage: CYBERDUDEBIVASH AI Security Hub — cyberdudebivash.in/#pricing`,
-  ].filter(Boolean);
-
-  return {
-    module,
-    target,
-    risk_score: score,
-    risk_level: level,
-    grade: score >= 80 ? 'F' : score >= 65 ? 'D' : score >= 50 ? 'C' : score >= 30 ? 'B' : 'A',
-    summary: `${modLabels[module] || 'Security'} scan of ${target} complete. Risk score: ${score}/100 (${level}). ${critCount} critical and ${highCount} high severity findings detected. Full report includes ${renderableLocked.length} additional findings with CVSS scores, MITRE ATT&CK mapping, and step-by-step remediation.`,
-    findings: renderableFree,
-    locked_findings: renderableLocked,
-    locked_findings_count: renderableLocked.length,
-    is_premium_locked: true,
-    owasp_coverage: module === 'appsec' || module === 'ai' ? `OWASP Top 10 — ${ri2(6,10,seed,2)} checks run` : undefined,
-    attack_paths_total: module === 'redteam' ? 8 : undefined,
-    attack_paths_succeeded: module === 'redteam' ? ri2(2, 6, seed, 3) : undefined,
-    zero_trust_score: module === 'identity' ? ri2(20, 65, seed, 4) : undefined,
-    compliance_score: module === 'compliance' ? ri2(40, 75, seed, 5) : undefined,
-    tls_grade: module === 'domain' ? (['A', 'B', 'C', 'F'][ri2(1, 3, seed, 6)]) : undefined,
-    dnssec_enabled: module === 'domain' ? (ri2(0, 1, seed, 7) === 0) : undefined,
-    monetization: {
-      unlock_price: prices[module] || '₹999',
-      amount: amounts[module] || 99900,
-      payment_url: 'https://cyberdudebivash.in/#pricing',
-      upgrade_cta: `Unlock ${renderableLocked.length} additional findings + full PDF report with CVSS scores, MITRE ATT&CK mapping, and step-by-step remediation roadmap`,
-    },
-    recommendations,
-    scan_engine: 'CYBERDUDEBIVASH Sentinel APEX (offline mode)',
-    scanned_at: new Date().toISOString(),
-  };
 }
 
 // ─── Dashboard Posture Ring Animation ──────────────────────────────────

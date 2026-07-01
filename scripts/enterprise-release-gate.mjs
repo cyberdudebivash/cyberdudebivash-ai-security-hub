@@ -212,6 +212,8 @@ async function main() {
     { module: 'identity',     path: '/api/scan/identity',       payload: { org_name: 'example.com', identity_provider: 'azuread' } },
     { module: 'compliance',   path: '/api/generate/compliance', payload: { org_name: 'example.com', framework: 'iso27001' } },
     { module: 'cloudsec',     path: '/api/scan/cloud-security', payload: { domain: 'example.com', provider: 'aws', checks: [] } },
+    { module: 'darkscan',     path: '/api/scan/darkscan',       payload: { target: 'example.com' } },
+    { module: 'appsec',       path: '/api/scan/appsec',         payload: { url: 'https://example.com' } },
     { module: 'mcp_security', path: '/api/mcp-security/scan',   payload: { server_url: 'https://example.com/mcp', server_name: 'test' } },
     { module: 'vibe_code',    path: '/api/vibe-code/scan',      payload: { code: 'console.log(1)', language: 'javascript' } },
   ];
@@ -224,16 +226,17 @@ async function main() {
     record('Scan Modules', `POST ${path} (${module}) does not 500`, 'blocker',
       r.status !== 500 && r.status !== 0, `status=${r.status}`);
   }
-  // darkscan/appsec are intentionally not wired on the frontend (honest "not
-  // yet available" message shown client-side before any API call). If the
-  // route doesn't exist server-side either, 404 is correct, not a defect.
+  // darkscan/appsec are real, PRO+-gated engines (Certificate Transparency +
+  // credential-leak probing; passive AppSec/DAST) — anonymous requests here
+  // are expected to be rejected by the tier gate (403), same as cloudsec,
+  // not a 404 (that was the pre-fix "known unimplemented" state).
   for (const { module, path } of [
     { module: 'darkscan', path: '/api/scan/darkscan' },
     { module: 'appsec',   path: '/api/scan/appsec' },
   ]) {
     const r = await fetchJSON(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    record('Scan Modules', `POST ${path} (${module}, known unimplemented) does not 500`, 'warn',
-      r.status !== 500, `status=${r.status}`);
+    record('Scan Modules', `POST ${path} (${module}) rejects anonymous access cleanly (not 500/404)`, 'blocker',
+      r.status !== 500 && r.status !== 404, `status=${r.status}`);
   }
 
   // ── C3. AI Copilot / Multi-Agent SOC ───────────────────────────────────────

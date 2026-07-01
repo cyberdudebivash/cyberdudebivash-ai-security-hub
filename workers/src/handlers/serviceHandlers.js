@@ -28,8 +28,12 @@ import { runConfigReviewAssessment }         from '../services/configReviewEngin
 import { runAIGovernanceAssessment }         from '../services/aiGovernanceEngine.js';
 import { runDevSecOpsAssessment }            from '../services/devSecOpsEngine.js';
 import { runConsultationPreAssessment }      from '../services/consultationPreAssessEngine.js';
+import { runAppSecScan }                     from '../services/appsecScanEngine.js';
+import { runDarkWebScan }                    from '../services/darkWebScanEngine.js';
 // ── MYTHOS enrichment ─────────────────────────────────────────────────────────
 import { enrichAssessmentWithMYTHOS }        from '../services/mythosEnrichmentEngine.js';
+import { validateDomain }                    from '../middleware/validation.js';
+import { inspectForAttacks, sanitizeString }  from '../middleware/security.js';
 
 // ── Scan observability: KV counter + audit log (REM-07 / REM-08) ────────────
 async function trackScan(env, { service, target, userId, tier, outcome = 'started' }) {
@@ -341,9 +345,9 @@ export async function handleAPISecurityScan(request, env, authCtx) {
 
 // ── POST /api/scan/cloud-security — cloud security audit ──────────────────────
 export async function handleCloudSecurityScan(request, env, authCtx) {
-  if (!authCtx?.isAdmin && !['PRO','ENTERPRISE'].includes(authCtx?.tier)) {
+  if (!authCtx?.isAdmin && !['PRO','ENTERPRISE','MSSP'].includes(authCtx?.tier)) {
     return Response.json({
-      error:       'PRO or ENTERPRISE plan required',
+      error:       'PRO plan or above required',
       upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
     }, { status: 403 });
   }
@@ -360,6 +364,85 @@ export async function handleCloudSecurityScan(request, env, authCtx) {
     });
   } catch {}
   return ok({ success: true, service: 'CDB-CSAU-001', ...report });
+}
+
+function validateScanTarget(body) {
+  const raw = body?.target || body?.domain || '';
+  if (inspectForAttacks(raw)) return { valid: false, message: 'Invalid input detected' };
+  return validateDomain(sanitizeString(raw));
+}
+
+const PRIVATE_HOST_RE = /^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0$|172\.(1[6-9]|2\d|3[01])\.)/i;
+
+// AppSec's frontend form collects a full application URL (e.g.
+// https://example.com/app/login), not a bare domain — validatePayload()
+// already enforces the http(s):// prefix client-side, but the server must
+// never trust that.
+function validateAppUrl(body) {
+  const raw = (body?.url || '').trim();
+  if (inspectForAttacks(raw)) return { valid: false, message: 'Invalid input detected' };
+  if (!raw || raw.length < 8 || raw.length > 2048) {
+    return { valid: false, message: 'url is required and must start with https:// or http://' };
+  }
+  let parsed;
+  try { parsed = new URL(raw); } catch { return { valid: false, message: 'Invalid URL format' }; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { valid: false, message: 'url must use http:// or https://' };
+  }
+  if (PRIVATE_HOST_RE.test(parsed.hostname)) {
+    return { valid: false, message: 'Scanning internal/private network targets is not permitted' };
+  }
+  return { valid: true, hostname: parsed.hostname, pageUrl: parsed.href, originUrl: parsed.origin };
+}
+
+// ── POST /api/scan/appsec — passive AppSec/DAST reconnaissance ────────────────
+export async function handleAppSecScan(request, env, authCtx) {
+  if (!authCtx?.isAdmin && !['PRO','ENTERPRISE','MSSP'].includes(authCtx?.tier)) {
+    return Response.json({
+      error:       'PRO plan or above required for AppSec / DAST scanning',
+      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+    }, { status: 403 });
+  }
+  const body = await parseBody(request);
+  const validation = validateAppUrl(body);
+  if (!validation.valid) return err(validation.message, 400, { field: 'url' });
+
+  const { hostname, pageUrl, originUrl } = validation;
+  void trackScan(env, { service: 'appsec-scan', target: hostname, userId: authCtx?.userId, tier: authCtx?.tier });
+  let report = await runAppSecScan(pageUrl, originUrl, hostname);
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'AppSec / DAST Scan', service_ref: 'CDB-APPSEC-001',
+      target: hostname, sector: body.industry || 'Technology', tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
+  return ok({ success: true, service: 'CDB-APPSEC-001', ...report });
+}
+
+// ── POST /api/scan/darkscan — dark web / external exposure scan ───────────────
+export async function handleDarkWebScan(request, env, authCtx) {
+  if (!authCtx?.isAdmin && !['PRO','ENTERPRISE','MSSP'].includes(authCtx?.tier)) {
+    return Response.json({
+      error:       'PRO plan or above required for Dark Web Exposure scanning',
+      upgrade_url: 'https://tools.cyberdudebivash.com/#pricing',
+    }, { status: 403 });
+  }
+  const body = await parseBody(request);
+  const validation = validateScanTarget(body);
+  if (!validation.valid) return err(validation.message, 400, { field: 'target' });
+
+  const target = validation.value;
+  void trackScan(env, { service: 'darkweb-scan', target, userId: authCtx?.userId, tier: authCtx?.tier });
+  let report = await runDarkWebScan(target, env);
+  try {
+    report = await enrichAssessmentWithMYTHOS(env, {
+      report, findings: report.findings || [],
+      service_name: 'Dark Web Exposure Scan', service_ref: 'CDB-DARKWEB-001',
+      target, sector: body.industry || 'Technology', tier: authCtx?.tier || 'PRO',
+    });
+  } catch {}
+  return ok({ success: true, service: 'CDB-DARKWEB-001', ...report });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

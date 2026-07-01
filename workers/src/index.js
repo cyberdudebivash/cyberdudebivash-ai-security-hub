@@ -534,6 +534,9 @@ import {
   handleSaaSSecurityScan, handleConfigReviewScan,
   handleAIGovernanceScan, handleDevSecOpsScan,
   handleConsultationPrep,
+  // ── AppSec/DAST + Dark Web Exposure: real engines closing the "known
+  //    unimplemented" gap the release gate previously accepted as-is ──
+  handleAppSecScan, handleDarkWebScan,
 } from './handlers/serviceHandlers.js';
 
 // ─── PHASE 2: Autonomous SOC Mode ────────────────────────────────────────────
@@ -5452,6 +5455,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/scan/cloud-security' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleCloudSecurityScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/appsec' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleAppSecScan(request, env, authCtx || {}), request));
+    }
+    if (path === '/api/scan/darkscan' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleDarkWebScan(request, env, authCtx || {}), request));
     }
 
     // ── MYTHOS-Powered new scan endpoints (formerly manual services) ──────────
