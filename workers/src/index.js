@@ -787,6 +787,7 @@ import { handleDeploymentRecord, handleDeploymentsList, handleLatestDeployment }
 import { handleOpsDashboard, handleOpsReport } from './handlers/eop/opsReport.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
+import { trackApiKeyUsage } from './auth/apiKeys.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
 import {
   withSecurityHeaders, checkBodySize,
@@ -3536,6 +3537,16 @@ export default {
           code:    'ERR_API_KEY_REQUIRED',
           docs:    'GET /api',
         }, { status: 401 }), request));
+      }
+
+      // Fire-and-forget usage tracking — every authenticated v1 request against
+      // this API key increments its daily/monthly usage bucket in D1, regardless
+      // of which sub-route below actually serves it. Best-effort: a tracking
+      // failure must never block or slow down the real API response.
+      if (authCtx.key_id && env?.DB) {
+        ctx.waitUntil(
+          trackApiKeyUsage(env.DB, authCtx.key_id, authCtx.user_id, path.slice(7).split('/')[1] || 'v1').catch(() => {})
+        );
       }
 
       // PRO/ENTERPRISE gate for versioned API

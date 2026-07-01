@@ -19,10 +19,11 @@
  * All responses: { success, data, error, timestamp }
  */
 
-import { correlateScanToCVEs, getTopCVEsForModule } from '../services/cveEngine.js';
+import { correlateScanToCVEs, getTopCVEsForModule, lookupCVE } from '../services/cveEngine.js';
 import { computeRiskScore } from '../services/riskEngine.js';
 import { runAttackSimulation } from '../services/simulationEngine.js';
 import { ok, fail, badRequest, forbidden, withErrorBoundary } from '../lib/response.js';
+import { routeAICall } from '../core/aiProviderRouter.js';
 
 // ─── MITRE ATT&CK technique database (curated subset) ────────────────────────
 const MITRE_TECHNIQUES = {
@@ -461,94 +462,122 @@ function extractCVE(text) {
   return match ? match[0].toUpperCase() : null;
 }
 
-function buildAnalystResponse(intent, message, context = []) {
-  const cveId = extractCVE(message) || extractCVE(JSON.stringify(context));
-  const contextSummary = context.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n');
+// Map each regex-detected intent → { response type/format metadata, router task_type,
+// suggested follow-up actions, and a system-prompt fragment appended to APEX NEXUS
+// telling the model exactly what shape of answer this intent expects }.
+const INTENT_META = {
+  analyze_cve: {
+    type: 'analysis', format: null, task_type: 'threat_intel',
+    actions: ['generate_sigma', 'generate_splunk', 'attack_path', 'mitigate'],
+    system: 'The user wants a CVE / vulnerability analysis. Provide: threat classification, attack vector, MITRE ATT&CK mapping (T#### IDs), exploitation status (CISA KEV / EPSS if known), blast radius, immediate remediation steps, and a CVSS-based risk score. Use markdown with headers.',
+  },
+  generate_sigma: {
+    type: 'rule', format: 'sigma', task_type: 'code_review',
+    actions: ['generate_splunk', 'generate_kql', 'generate_yara'],
+    system: 'The user wants a Sigma detection rule. Respond with a fenced ```yaml code block containing a complete, valid, production-ready Sigma rule (title, id, status, description, references, author, date, tags with MITRE ATT&CK technique, logsource, detection/condition, falsepositives, level, fields). Add one short deployment note after the code block.',
+  },
+  generate_splunk: {
+    type: 'rule', format: 'splunk', task_type: 'code_review',
+    actions: ['generate_kql', 'generate_sigma', 'mitigate'],
+    system: 'The user wants a Splunk SPL detection query. Respond with a fenced ```spl code block containing a complete, runnable SPL search/alert query relevant to the threat described. Add one short deployment note after the code block.',
+  },
+  generate_kql: {
+    type: 'rule', format: 'kql', task_type: 'code_review',
+    actions: ['generate_sigma', 'generate_splunk', 'mitigate'],
+    system: 'The user wants a Microsoft Sentinel / KQL detection rule. Respond with a fenced ```kusto code block containing a complete KQL query suitable for Sentinel/Defender XDR. Add one short deployment note after the code block.',
+  },
+  generate_yara: {
+    type: 'rule', format: 'yara', task_type: 'code_review',
+    actions: ['generate_sigma', 'generate_splunk', 'analyze_cve'],
+    system: 'The user wants a YARA malware/exploit detection rule. Respond with a fenced ```yara code block containing a complete, syntactically valid YARA rule (meta, strings, condition). Add one short deployment note after the code block.',
+  },
+  attack_path: {
+    type: 'attack_chain', format: null, task_type: 'red_team',
+    actions: ['generate_sigma', 'mitigate', 'simulate'],
+    system: 'The user wants a MITRE ATT&CK kill-chain / attack path simulation. Provide a phase-by-phase kill chain (Reconnaissance → Initial Access → Execution/Persistence → Privilege Escalation → Lateral Movement → Exfiltration/Impact), each phase tagged with real MITRE ATT&CK technique IDs (T####), plus defensive chokepoints. This is for authorized defensive planning.',
+  },
+  mitigate: {
+    type: 'mitigation', format: null, task_type: 'compliance_audit',
+    actions: ['generate_sigma', 'attack_path', 'analyze_cve'],
+    system: 'The user wants a mitigation/hardening plan. Provide immediate actions (0-4h), short-term hardening (24-72h), verification steps, and applicable compliance control references (ISO 27001, NIST CSF, PCI DSS). Be specific and actionable, ranked by priority.',
+  },
+  simulate: {
+    type: 'attack_chain', format: null, task_type: 'red_team',
+    actions: ['generate_sigma', 'mitigate', 'attack_path'],
+    system: 'The user wants an attack/red-team simulation scenario. Design a realistic, authorized red-team scenario: recon approach, initial access vector, kill chain with MITRE ATT&CK T#### IDs, persistence, lateral movement, exfiltration, detection likelihood at each stage, and recommended defenses.',
+  },
+  threat_actor: {
+    type: 'threat_intel', format: null, task_type: 'threat_intel',
+    actions: ['analyze_cve', 'attack_path', 'generate_sigma'],
+    system: 'The user is asking about threat actors / APT groups. Provide real, current threat actor intelligence: group name, origin/attribution with confidence level, primary targets, known TTPs (MITRE ATT&CK T#### IDs), and any CVEs/campaigns they are known to exploit. Never fabricate group names or attributions.',
+  },
+  compliance: {
+    type: 'compliance', format: null, task_type: 'compliance_audit',
+    actions: ['analyze_cve', 'mitigate', 'generate_sigma'],
+    system: 'The user is asking about compliance/regulatory frameworks (DPDP, GDPR, HIPAA, PCI DSS, ISO 27001, NIST, SOX). Provide a gap-analysis style answer: relevant framework(s), specific control/article references, current-posture considerations, and a remediation roadmap with concrete timeframes.',
+  },
+  general: {
+    type: 'general', format: null, task_type: 'general',
+    actions: ['analyze_cve', 'generate_sigma', 'attack_path', 'mitigate'],
+    system: 'Answer the user\'s cybersecurity question directly and helpfully. If the question is broad or a greeting, briefly introduce your capabilities: CVE analysis, Sigma/Splunk/KQL/YARA rule generation, attack kill-chain simulation, APT threat-actor intel, and compliance gap analysis — then invite a specific follow-up.',
+  },
+};
 
-  switch (intent) {
-    case 'analyze_cve': {
-      const id = cveId || 'the vulnerability';
-      return {
-        type: 'analysis',
-        response: `## 🔍 CVE Analysis: ${id}\n\n**Threat Classification:** Critical Remote Code Execution\n\n**Attack Vector:** Network — exploitable remotely without authentication.\n\n**MITRE ATT&CK Mapping:**\n- T1190 — Exploit Public-Facing Application (Initial Access)\n- T1059 — Command and Scripting Interpreter (Execution)\n- T1078 — Valid Accounts (Persistence)\n\n**Exploitation Status:** ${cveId ? 'Active exploitation confirmed in the wild. CISA KEV listed.' : 'Monitor CVE feeds for active exploitation indicators.'}\n\n**Blast Radius:** High — systems running unpatched versions are directly exploitable. Lateral movement possible within 15–45 minutes of initial access.\n\n**Immediate Actions Required:**\n1. Apply vendor patch within 24 hours (critical SLA)\n2. Block affected ports/services at perimeter firewall\n3. Enable enhanced monitoring on affected hosts\n4. Deploy detection rules (see: generate sigma rule for ${id})\n\n**Risk Score:** 9.4/10 — Immediate action required.`,
-        actions: ['generate_sigma', 'generate_splunk', 'attack_path', 'mitigate'],
-      };
-    }
-    case 'generate_sigma': {
-      const id = cveId || 'THREAT-GENERIC';
-      const title = id.startsWith('CVE') ? id : 'Suspicious Activity Detection';
-      return {
-        type: 'rule',
-        format: 'sigma',
-        response: `## ⚡ Sigma Detection Rule: ${title}\n\nDeploy this rule in your SIEM (Splunk, Elastic, Microsoft Sentinel, QRadar):\n\n\`\`\`yaml\ntitle: ${title} - Exploitation Attempt Detection\nid: cdb-${Date.now().toString(36)}\nstatus: production\ndescription: Detects exploitation attempts for ${title}. CYBERDUDEBIVASH MYTHOS Engine.\nreferences:\n  - https://cyberdudebivash.in\n  - https://nvd.nist.gov/vuln/detail/${id}\nauthor: CYBERDUDEBIVASH MYTHOS AI\ndate: ${new Date().toISOString().split('T')[0]}\nmodified: ${new Date().toISOString().split('T')[0]}\ntags:\n  - attack.initial_access\n  - attack.t1190\n  - attack.execution\n  - cve.${id.toLowerCase().replace('-','.')}\nlogsource:\n  category: webserver\n  product: apache\ndetection:\n  selection:\n    cs-uri-stem|contains:\n      - '/../'\n      - '/etc/passwd'\n      - '/bin/sh'\n      - 'cmd.exe'\n      - '\${IFS}'\n      - 'jndi:'\n  filter_legitimate:\n    cs-uri-stem|startswith: '/api/v'\n  condition: selection and not filter_legitimate\nfalsepositives:\n  - Legitimate penetration testing activity\n  - Security scanners\nlevel: high\nfields:\n  - c-ip\n  - cs-uri-stem\n  - cs-user-agent\n  - sc-status\n\`\`\`\n\n✅ **Deployment:** Copy and import into your SIEM. Tune \`filter_legitimate\` for your environment.`,
-        actions: ['generate_splunk', 'generate_kql', 'generate_yara'],
-      };
-    }
-    case 'generate_splunk': {
-      const id = cveId || 'THREAT-DETECTION';
-      return {
-        type: 'rule',
-        format: 'splunk',
-        response: `## 🔎 Splunk SPL Detection Query: ${id}\n\n\`\`\`spl\n| index=web_logs OR index=network\n| eval src_ip=coalesce(src_ip, c_ip, clientip)\n| eval dest_url=coalesce(uri_path, cs_uri_stem, url)\n| where isnotnull(dest_url)\n| rex field=dest_url \"(?i)(?<exploit_pattern>(\\.\\./|/etc/passwd|/bin/sh|cmd\\.exe|jndi:|\\$\\{IFS\\}))\"\n| where isnotnull(exploit_pattern)\n| eval risk_score=case(\n    match(exploit_pattern, \"jndi:\"), 10,\n    match(exploit_pattern, \"/etc/passwd\"), 9,\n    match(exploit_pattern, \"cmd\\.exe\"), 8,\n    1=1, 7\n  )\n| eval cve_ref=\"${id}\"\n| eval mitre_technique=\"T1190\"\n| stats count, earliest(_time) as first_seen, latest(_time) as last_seen,\n         values(exploit_pattern) as patterns, max(risk_score) as max_risk\n         by src_ip, dest_url, cve_ref\n| where count > 0\n| eval severity=if(max_risk >= 9, \"CRITICAL\", if(max_risk >= 7, \"HIGH\", \"MEDIUM\"))\n| sort -max_risk\n| table src_ip, dest_url, count, severity, patterns, first_seen, last_seen, cve_ref, mitre_technique\n\`\`\`\n\n**Splunk Alert Setup:** Save as alert, run every 5 minutes, trigger on count > 0.\n**Notable Event:** Route to \`ITSI\` or \`ES\` notable events with priority HIGH.`,
-        actions: ['generate_kql', 'generate_sigma', 'mitigate'],
-      };
-    }
-    case 'generate_kql': {
-      const id = cveId || 'THREAT-KQL';
-      return {
-        type: 'rule',
-        format: 'kql',
-        response: `## 🛡 Microsoft Sentinel / KQL Detection Rule: ${id}\n\n\`\`\`kusto\n// ${id} — Exploitation Attempt | CYBERDUDEBIVASH MYTHOS\n// Deploy in: Microsoft Sentinel | Azure Monitor | Microsoft Defender XDR\nlet exploit_patterns = dynamic([\"/../\", \"/etc/passwd\", \"/bin/sh\", \"cmd.exe\", \"jndi:\", \"\${IFS}\"]);\nlet lookback = 1h;\nunion\n  (\n    CommonSecurityLog\n    | where TimeGenerated > ago(lookback)\n    | where DeviceVendor has_any (\"Apache\", \"nginx\", \"IIS\", \"F5\")\n    | where RequestURL has_any (exploit_patterns)\n    | project TimeGenerated, SourceIP, RequestURL, DeviceProduct, Activity\n    | extend DataSource = \"CommonSecurityLog\"\n  ),\n  (\n    W3CIISLog\n    | where TimeGenerated > ago(lookback)\n    | where csUriStem has_any (exploit_patterns)\n    | project TimeGenerated, cIP, csUriStem, sSiteName\n    | extend SourceIP = cIP, RequestURL = csUriStem, DataSource = \"IISLog\"\n  )\n| extend\n    ExploitType = case(\n      RequestURL contains \"jndi:\", \"Log4Shell\",\n      RequestURL contains \"/etc/passwd\", \"LFI/Path Traversal\",\n      RequestURL contains \"cmd.exe\", \"RCE Attempt\",\n      \"Suspicious Request\"\n    ),\n    MitreATT_CK = \"T1190\",\n    CVE_Reference = \"${id}\",\n    RiskLevel = \"HIGH\"\n| summarize\n    AttackCount = count(),\n    FirstSeen = min(TimeGenerated),\n    LastSeen = max(TimeGenerated),\n    Patterns = make_set(ExploitType),\n    DataSources = make_set(DataSource)\n    by SourceIP, CVE_Reference, MitreATT_CK, RiskLevel\n| where AttackCount > 0\n| sort by AttackCount desc\n\`\`\`\n\n**Import:** Paste in Sentinel → Logs → Run. Create Scheduled Analytics Rule for continuous detection.\n**Playbook:** Attach Logic App automation to auto-block src IP in NSG.`,
-        actions: ['generate_sigma', 'generate_splunk', 'mitigate'],
-      };
-    }
-    case 'generate_yara': {
-      const id = cveId || 'GENERIC-THREAT';
-      return {
-        type: 'rule',
-        format: 'yara',
-        response: `## 🧬 YARA Malware Detection Rule: ${id}\n\n\`\`\`yara\n/*\n   YARA Rule: ${id} Malware/Exploit Detection\n   Author: CYBERDUDEBIVASH MYTHOS AI Engine\n   Date: ${new Date().toISOString().split('T')[0]}\n   Reference: https://cyberdudebivash.in\n   Tags: cve, exploit, webshell\n*/\n\nrule CDB_${id.replace(/-/g, '_')}_Exploit\n{\n    meta:\n        description = \"Detects ${id} exploitation artifacts and associated payloads\"\n        author      = \"CYBERDUDEBIVASH MYTHOS\"\n        date        = \"${new Date().toISOString().split('T')[0]}\"\n        reference   = \"https://nvd.nist.gov/vuln/detail/${id}\"\n        severity    = \"HIGH\"\n        mitre       = \"T1190, T1059\"\n\n    strings:\n        /* JNDI/Log4Shell patterns */\n        $jndi1  = \"jndi:ldap\" ascii wide nocase\n        $jndi2  = \"jndi:rmi\" ascii wide nocase\n        $jndi3  = { 6A 6E 64 69 3A 6C 64 61 70 }  // jndi:ldap hex\n\n        /* Webshell indicators */\n        $shell1 = \"cmd.exe /c\" ascii wide nocase\n        $shell2 = \"/bin/sh -c\" ascii wide nocase\n        $shell3 = \"base64_decode\" ascii wide nocase\n        $shell4 = \"eval(\" ascii wide nocase\n\n        /* Encoded exploit patterns */\n        $enc1   = \"\\x2F\\x65\\x74\\x63\\x2F\\x70\\x61\\x73\\x73\\x77\\x64\"  // /etc/passwd\n        $enc2   = { 24 7B 49 46 53 7D }  // \${IFS}\n\n        /* C2 beacon patterns */\n        $c2_1   = \"User-Agent: Mozilla\" ascii wide\n        $c2_2   = /[A-Za-z0-9+\\/]{50,}={0,2}/  // Base64 encoded C2\n\n    condition:\n        any of ($jndi*) or\n        (2 of ($shell*) and 1 of ($enc*)) or\n        (1 of ($c2*) and 1 of ($enc*))\n}\n\`\`\`\n\n**Deploy:** Compatible with YARA 4.x, VirusTotal, CrowdStrike, Carbon Black, Elastic Security.\n**Test:** \`yara -r rule.yar /path/to/scan/\``,
-        actions: ['generate_sigma', 'generate_splunk', 'analyze_cve'],
-      };
-    }
-    case 'attack_path': {
-      const id = cveId || 'target';
-      return {
-        type: 'attack_chain',
-        response: `## ⚔️ MITRE ATT&CK Kill Chain: ${id}\n\n**Simulated Attacker Profile:** APT29-style nation-state actor\n**Objective:** Data exfiltration + persistence\n**Estimated Time to Domain Compromise:** 2–6 hours\n\n---\n\n**Phase 1 — RECONNAISSANCE** \`T1595, T1596\`\n→ Active scanning of exposed services\n→ OSINT collection: DNS, WHOIS, LinkedIn, GitHub leaks\n→ Vulnerability fingerprinting via Shodan/Censys\n\n**Phase 2 — INITIAL ACCESS** \`T1190\`\n→ Exploit ${id} on internet-facing server\n→ Web shell deployment or reverse shell execution\n→ Initial foothold established\n\n**Phase 3 — EXECUTION + PERSISTENCE** \`T1059, T1053\`\n→ Execute malicious payload in server context\n→ Schedule persistent cron/registry run-key\n→ Deploy secondary C2 channel (HTTPS beacon)\n\n**Phase 4 — PRIVILEGE ESCALATION** \`T1548, T1134\`\n→ Exploit local kernel vulnerability or SUID binary\n→ Token impersonation / credential harvesting\n→ Move to domain/admin context\n\n**Phase 5 — LATERAL MOVEMENT** \`T1021, T1550\`\n→ Pass-the-hash / Kerberoasting\n→ Pivot to internal network segments\n→ Target: AD, databases, file servers\n\n**Phase 6 — EXFILTRATION** \`T1041, T1567\`\n→ Stage data in temp directories (encrypted)\n→ Exfiltrate via HTTPS C2 or DNS tunneling\n→ Cover tracks: clear logs, timestomping\n\n---\n\n**Defensive Chokepoints:**\n- 🔴 Block at Phase 1: firewall + honeypot\n- 🟠 Block at Phase 2: patch ${id} immediately\n- 🟡 Detect at Phase 3: EDR behavioral rules`,
-        actions: ['generate_sigma', 'mitigate', 'simulate'],
-      };
-    }
-    case 'mitigate': {
-      const id = cveId || 'the identified threat';
-      return {
-        type: 'mitigation',
-        response: `## 🛡 Mitigation + Hardening Plan: ${id}\n\n**Priority:** P0 — Complete within 24 hours\n\n---\n\n### ✅ Immediate Actions (0–4 hours)\n\n1. **Patch Deployment**\n   - Apply vendor security patch immediately\n   - If no patch: implement WAF virtual patching rule\n   - Verify patch applied: \`curl -I https://[host]/api/health\`\n\n2. **Network Isolation**\n   - Block inbound traffic to affected service port at perimeter\n   - Add WAF rule: block requests matching exploit pattern\n   - Enable geo-blocking for non-operational regions\n\n3. **Incident Check**\n   - Search logs for exploit indicators (past 30 days)\n   - Run YARA scan on affected servers for webshell artifacts\n   - Check for unauthorized cron jobs / scheduled tasks\n\n---\n\n### 🔒 Hardening (24–72 hours)\n\n4. **Segmentation**\n   - Move affected services behind bastion/proxy\n   - Implement zero-trust micro-segmentation\n   - Disable unnecessary service features\n\n5. **Detection Rules**\n   - Deploy Sigma/Splunk/Sentinel detection rule (generated above)\n   - Set SIEM alert for exploit pattern matches\n   - Enable enhanced logging: access, error, audit logs\n\n6. **Verification**\n   - Rescan with CYBERDUDEBIVASH scanner post-patch\n   - Validate WAF blocks via controlled test payload\n   - Confirm no persistence artifacts remain\n\n---\n\n**Compliance Impact:** This remediation satisfies ISO 27001 A.12.6.1, NIST CSF RS.MI-1, PCI DSS 6.3.3`,
-        actions: ['generate_sigma', 'attack_path', 'analyze_cve'],
-      };
-    }
-    case 'threat_actor': {
-      return {
-        type: 'threat_intel',
-        response: `## 🕵️ Threat Actor Intelligence Brief\n\n**Active APT Groups (2025–2026):**\n\n| Group | Origin | Primary Targets | TTPs | KEV CVEs |\n|-------|--------|-----------------|------|----------|\n| APT29 (Cozy Bear) | Russia | Government, Think Tanks | T1566, T1078, T1190 | 12+ |\n| APT40 (Bronze Mohawk) | China | Maritime, R&D, Gov | T1195, T1059, T1021 | 8+ |\n| Lazarus Group | DPRK | Finance, Crypto, Healthcare | T1189, T1204, T1041 | 15+ |\n| Volt Typhoon | China | Critical Infrastructure | T1078, T1133, T1105 | 6+ |\n| Midnight Blizzard | Russia | Tech, Gov, Defense | T1566, T1199, T1609 | 9+ |\n| Scattered Spider | Criminal | Telecom, Finance, Gaming | T1621, T1528, T1652 | 4+ |\n\n**Current Campaign Activity:**\n- 🔴 CRITICAL: Volt Typhoon living-off-the-land attacks on US infrastructure (active)\n- 🔴 CRITICAL: Lazarus targeting crypto exchanges via supply chain (active)\n- 🟠 HIGH: APT29 spear-phishing Microsoft 365 admin accounts\n- 🟠 HIGH: Scattered Spider SIM-swapping + MFA bypass campaigns\n\n**Recommended:** Enable Sentinel APEX live threat feed for real-time APT tracking →`,
-        actions: ['analyze_cve', 'attack_path', 'generate_sigma'],
-      };
-    }
-    case 'compliance': {
-      return {
-        type: 'compliance',
-        response: `## 📋 Compliance Framework Analysis\n\n**India DPDP Act 2023** — Effective 2025:\n- Mandatory data breach notification: 72 hours\n- Consent management for all personal data processing\n- Data fiduciary obligations for platforms\n- **CDB Coverage:** DPDP gap analysis available in Compliance Scanner\n\n**ISO 27001:2022** — Key controls:\n- A.5: Organizational controls (policies, roles)\n- A.8: Technology controls (endpoint, network, crypto)\n- A.12: Cryptographic controls (mandatory for cloud)\n\n**PCI DSS 4.0** (2024 deadline passed):\n- Requirement 6.3.3: All vulnerabilities patched within risk-based SLA\n- Requirement 11.3.2: Internal vulnerability scanning quarterly\n\n**NIST CSF 2.0** — New GOVERN function added:\n- Establish cybersecurity risk governance\n- Supply chain risk management mandatory\n\n**Gap Analysis:** Run the CYBERDUDEBIVASH Compliance Scanner for your specific environment → covers all 6 frameworks with auto-generated remediation roadmap.`,
-        actions: ['analyze_cve', 'mitigate', 'generate_sigma'],
-      };
-    }
-    default: {
-      return {
-        type: 'general',
-        response: `## 🤖 MYTHOS AI Cyber Analyst\n\nI'm your AI-powered security analyst. I can help you with:\n\n**🔍 Threat Analysis**\n- "Analyze CVE-2024-XXXXX"\n- "What is the risk of Log4Shell?"\n- "Explain the Midnight Blizzard attack"\n\n**⚡ Detection Rule Generation**\n- "Generate Sigma rule for CVE-2024-21762"\n- "Create Splunk query for lateral movement"\n- "Write KQL rule for Sentinel"\n- "Generate YARA rule for webshell detection"\n\n**⚔️ Attack Simulation**\n- "Show attack path for unpatched Exchange server"\n- "Simulate ransomware kill chain"\n- "Red team scenario for cloud misconfiguration"\n\n**🛡 Mitigation Planning**\n- "How do I fix CVE-2025-1234?"\n- "Hardening plan for Apache server"\n- "Zero trust implementation guide"\n\n**Try asking me anything about your security posture →**`,
-        actions: ['analyze_cve', 'generate_sigma', 'attack_path', 'mitigate'],
-      };
-    }
+function buildIntentContext(intent, message, context) {
+  // Gather real data (CVE lookups, conversation history) to inject as grounding
+  // context for the model — this is what keeps answers factual instead of
+  // hallucinated, without ever returning a canned template as the response itself.
+  const cveId = extractCVE(message) || extractCVE(JSON.stringify(context || []));
+  const cve = cveId ? lookupCVE(cveId) : null;
+  const recentTurns = (context || []).slice(-6)
+    .map(m => `${m.role === 'user' ? 'User' : 'Analyst'}: ${String(m.content || '').slice(0, 400)}`)
+    .join('\n');
+
+  let cveBlock = '';
+  if (cveId) {
+    cveBlock = cve
+      ? `\nKnown CVE data for ${cveId} (authoritative — use these exact facts, do not contradict them):\n` +
+        `- CVSS: ${cve.cvss} (${cve.severity})\n- EPSS: ${cve.epss}\n- Exploited in the wild: ${cve.exploited ? 'YES (treat as CISA KEV-relevant)' : 'no confirmed exploitation'}\n` +
+        `- CWE: ${cve.cwe}\n- Description: ${cve.description}\n- Reference: ${cve.nvd_url}\n`
+      : `\nThe user referenced ${cveId}, which is not in the local curated CVE database. Answer from general knowledge, and clearly flag if you are not fully certain about specific version/patch details for this CVE.\n`;
   }
+
+  return { cveId, cve, promptContext: `${recentTurns ? `Recent conversation:\n${recentTurns}\n` : ''}${cveBlock}` };
+}
+
+// ─── Real LLM-backed analyst response ─────────────────────────────────────────
+// Replaces the old static/regex-template engine. INTENT_PATTERNS/detectIntent are
+// kept as *hints* only — they steer which context (CVE data, task_type, expected
+// output format) gets fed to the model, but the actual response text always comes
+// from routeAICall() against the same multi-provider mesh MASOC uses
+// (Groq → DeepSeek → ... → Cloudflare Workers AI, per task_type routing).
+async function buildAnalystResponse(env, intent, message, context = []) {
+  const meta = INTENT_META[intent] || INTENT_META.general;
+  const { cveId, promptContext } = buildIntentContext(intent, message, context);
+
+  const prompt = `${promptContext}User request: "${message}"\n\nRespond as the MYTHOS AI Cyber Analyst. Be specific, technical, and grounded in real CVE/MITRE ATT&CK/compliance data. Use markdown formatting.`;
+
+  const result = await routeAICall(env, {
+    prompt,
+    system:      meta.system,
+    task_type:   meta.task_type,
+    tier:        'PRO',
+    max_tokens:  900,
+    temperature: 0.2,
+  });
+
+  if (!result || !result.content) {
+    return null; // signals total provider failure — caller returns honest error, no fake template
+  }
+
+  return {
+    type:     meta.type,
+    format:   meta.format,
+    response: result.content,
+    actions:  meta.actions,
+    provider: result.provider,
+    model:    result.model,
+  };
 }
 
 export async function handleAIChat(request, env) {
@@ -560,15 +589,45 @@ export async function handleAIChat(request, env) {
     return Response.json({ error: 'message required' }, { status: 400 });
   }
 
-  const intent  = detectIntent(message);
-  const result  = buildAnalystResponse(intent, message, context);
+  const intent = detectIntent(message);
+
+  // Pull persisted session history from KV to extend the in-request context
+  // (up to 20-message / 24h session memory), so multi-turn conversations stay
+  // grounded even if the frontend only sent a short recent-turns window.
+  const kv = env.SECURITY_HUB_KV || env.THREAT_INTEL;
+  let sessionHistory = [];
+  if (kv && session_id) {
+    try { sessionHistory = (await kv.get(`chat:${session_id}`, 'json')) || []; } catch (_) { sessionHistory = []; }
+  }
+  const mergedContext = sessionHistory.length ? sessionHistory : context;
+
+  let result;
+  try {
+    result = await buildAnalystResponse(env, intent, message, mergedContext);
+  } catch (err) {
+    console.error('[MYTHOS Chat] routeAICall threw:', err?.message);
+    result = null;
+  }
+
+  if (!result) {
+    // Honest failure — never fall back to a fake canned template.
+    return Response.json({
+      success:    false,
+      intent,
+      response:   'AI analyst temporarily unavailable — all providers failed to respond. Please try again shortly.',
+      type:       'error',
+      format:     null,
+      actions:    [],
+      session_id: session_id || null,
+      timestamp:  new Date().toISOString(),
+    }, { status: 503 });
+  }
 
   // Persist session to KV — uses SECURITY_HUB_KV (single binding); falls back to THREAT_INTEL alias
   try {
-    const kv = env.SECURITY_HUB_KV || env.THREAT_INTEL;
     if (kv && session_id) {
       const key = `chat:${session_id}`;
-      const prev = await kv.get(key, 'json') || [];
+      const prev = mergedContext.slice();
       prev.push({ role: 'user', content: message, ts: Date.now() });
       prev.push({ role: 'analyst', content: result.response, ts: Date.now() });
       await kv.put(key, JSON.stringify(prev.slice(-20)), { expirationTtl: 86400 });
@@ -583,6 +642,8 @@ export async function handleAIChat(request, env) {
     format:     result.format || null,
     actions:    result.actions || [],
     session_id: session_id || null,
+    provider:   result.provider || null,
+    model:      result.model || null,
     timestamp:  new Date().toISOString(),
   });
 }
