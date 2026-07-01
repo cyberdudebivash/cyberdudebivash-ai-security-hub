@@ -73,6 +73,23 @@ function makeRequest(body, method = 'POST') {
 
 const fakeAuth = { user_id: 'test-user-123', tier: 'ENTERPRISE', authenticated: true };
 
+// ── Default global fetch stub ──────────────────────────────────────────────────
+// handleAgentsRun()/handleAgentDispatch() internally call fetchCVEContext(),
+// which hits real NVD/EPSS endpoints for any CVE-containing message. Without a
+// stub, those tests make live network calls — in a network-restricted CI
+// runner the request blocks until fetchCVEContext's internal 6000ms
+// AbortSignal.timeout fires, which exceeds vitest's 5000ms test timeout and
+// causes an intermittent "Test timed out" failure unrelated to the code under
+// test. The fetchCVEContext() describe block below stubs fetch per-test with
+// specific payloads and cleans up via vi.unstubAllGlobals() — this default
+// simply ensures every other test resolves fast and deterministically.
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 // ── classifyTask ───────────────────────────────────────────────────────────────
 describe('classifyTask()', () => {
   it('routes a CVE message to cve_intel agent', () => {
