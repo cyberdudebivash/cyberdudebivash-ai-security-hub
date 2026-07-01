@@ -11,6 +11,10 @@
 
 const TOKEN_TTL_SECONDS = 86400 * 7; // 7 days
 
+function escapeHtmlLocal(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ─── Token Helpers ─────────────────────────────────────────────────────────
 function makeToken() {
   return Array.from(crypto.getRandomValues(new Uint8Array(32)))
@@ -43,20 +47,27 @@ async function validateToken(kv, token) {
 // ─── Report Generator ──────────────────────────────────────────────────────
 async function generateReportContent(env, reportId, orderId) {
   // Try to pull live threat intel from D1 to populate report
-  let cves = [], actors = [], malware = [], summary = {};
+  let cves = [], actors = [], summary = {}, iocs = [];
 
   try {
-    const [cveRows, actorRows, summaryRow] = await Promise.all([
+    const [cveRows, actorRows, summaryRow, iocRows] = await Promise.all([
       env.DB.prepare(`SELECT * FROM threat_intel WHERE severity IN ('CRITICAL','HIGH') ORDER BY cvss_score DESC LIMIT 15`).all(),
       env.DB.prepare(`SELECT * FROM threat_intel WHERE category = 'threat_actor' OR title LIKE '%APT%' OR title LIKE '%Lazarus%' LIMIT 8`).all(),
       env.DB.prepare(`SELECT COUNT(*) as total, MAX(cvss_score) as max_cvss FROM threat_intel WHERE severity = 'CRITICAL'`).first(),
+      env.DB.prepare(
+        `SELECT i.ioc_type, i.value, i.severity, i.confidence, i.last_seen, a.name AS actor_name
+         FROM cti_iocs i LEFT JOIN cti_actors a ON a.id = i.related_actor_id
+         WHERE i.is_active = 1 AND i.false_positive = 0
+         ORDER BY i.last_seen DESC LIMIT 8`
+      ).all(),
     ]);
     cves = cveRows.results || [];
     actors = actorRows.results || [];
     summary = summaryRow || {};
+    iocs = iocRows.results || [];
   } catch {}
 
-  // Fallback intelligence data
+  // Fallback intelligence data — real, publicly documented CVEs (not fabricated)
   if (!cves.length) {
     cves = [
       { title: 'CVE-2024-3400 — PAN-OS GlobalProtect OS Command Injection', severity: 'CRITICAL', cvss_score: 10.0, description: 'Unauthenticated OS command injection in Palo Alto PAN-OS GlobalProtect. Root-level RCE on firewall. Active exploitation confirmed by CISA KEV. Patch immediately.', is_kev: 1, published_at: '2024-04-12T00:00:00.000Z' },
@@ -70,7 +81,7 @@ async function generateReportContent(env, reportId, orderId) {
   const reportMeta = getReportMeta(reportId);
   const now = new Date().toISOString().slice(0, 10);
 
-  return generateReportHTML({ reportMeta, cves, actors, summary, now, orderId });
+  return generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orderId });
 }
 
 function getReportMeta(reportId) {
@@ -87,7 +98,7 @@ function getReportMeta(reportId) {
   return catalog[reportId] || { title: 'SENTINEL APEX™ Intelligence Report', category: 'Threat Intelligence', classification: 'CONFIDENTIAL', pages: 50 };
 }
 
-function generateReportHTML({ reportMeta, cves, actors, summary, now, orderId }) {
+function generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orderId }) {
   const critCount = cves.filter(c => c.severity === 'CRITICAL').length;
   const kevCount = cves.filter(c => c.is_kev).length;
 
@@ -324,16 +335,15 @@ SigninLogs
   <!-- IOC Feed -->
   <div class="section" id="ioc-feed">
     <h2>7. IOC Feed (Sample — Full Feed via API)</h2>
-    <p>Full IOC feed available via <code>GET /api/intel/ioc</code> with your API key. Below is a representative sample from current SENTINEL APEX intelligence.</p>
+    <p>Full IOC feed available via <code>GET /api/intel/ioc</code> with your API key. Below are the most recently observed active indicators in the SENTINEL APEX intelligence database.</p>
+    ${iocs.length ? `
     <table>
       <tr><th>Type</th><th>Indicator</th><th>Threat Actor</th><th>Confidence</th><th>Last Seen</th></tr>
-      <tr><td>IPv4</td><td style="font-family:monospace;color:#10b981">185.220.101.47</td><td>APT29 C2</td><td>HIGH</td><td>${now}</td></tr>
-      <tr><td>Domain</td><td style="font-family:monospace;color:#10b981">update-secure-cdn.net</td><td>Lazarus Group</td><td>HIGH</td><td>${now}</td></tr>
-      <tr><td>SHA256</td><td style="font-family:monospace;color:#10b981">a3f2e1…8bc4d9</td><td>LockBit 4.0</td><td>CRITICAL</td><td>${now}</td></tr>
-      <tr><td>URL</td><td style="font-family:monospace;color:#10b981">hxxps://verify-portal[.]ru/auth</td><td>APT28</td><td>HIGH</td><td>${now}</td></tr>
-      <tr><td>IPv4</td><td style="font-family:monospace;color:#10b981">45.142.213.101</td><td>Scattered Spider</td><td>MEDIUM</td><td>${now}</td></tr>
-    </table>
-    <p style="font-size:0.78rem;color:#64748b">Full IOC feed: 2,400+ indicators available via API. STIX 2.1 bundles available on TEAM+ plans.</p>
+      ${iocs.map(i => `
+      <tr><td>${escapeHtmlLocal(i.ioc_type || '—')}</td><td style="font-family:monospace;color:#10b981">${escapeHtmlLocal(i.value || '—')}</td><td>${escapeHtmlLocal(i.actor_name || 'Unattributed')}</td><td>${i.confidence != null ? i.confidence + '%' : '—'}</td><td>${(i.last_seen || '').slice(0,10) || now}</td></tr>`).join('')}
+    </table>` : `
+    <div class="warning"><strong>ℹ️ No active indicators currently cataloged</strong>The live IOC database has no entries matching this report's criteria as of ${now}. New indicators are added continuously via <code>GET /api/intel/ioc</code> — this section will populate as SENTINEL APEX ingests fresh intelligence.</div>`}
+    <p style="font-size:0.78rem;color:#64748b">Full IOC feed and historical indicators available via API. STIX 2.1 bundles available on TEAM+ plans.</p>
   </div>
 
   <!-- Remediation -->
