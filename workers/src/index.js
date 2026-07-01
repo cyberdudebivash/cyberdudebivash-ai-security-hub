@@ -5037,7 +5037,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleSOCObservability(request, env, authCtx || {}), request));
     }
     if (path === '/api/soc/stream' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      // EventSource can't send custom headers in any browser, so the API key
+      // arrives via ?api_key= instead — reattach it as x-api-key for auth
+      // resolution rather than widening resolveAuthV5's normal header contract.
+      let streamRequest = request;
+      const streamApiKey = url.searchParams.get('api_key');
+      if (streamApiKey && !request.headers.get('x-api-key')) {
+        const headers = new Headers(request.headers);
+        headers.set('x-api-key', streamApiKey);
+        streamRequest = new Request(request.url, { method: request.method, headers });
+      }
+      const authCtx = await resolveAuthV5(streamRequest, env).catch(() => null);
       return handleSOCEventStream(request, env, authCtx || {});
     }
     if (path === '/api/knowledge-graph' && method === 'GET') {

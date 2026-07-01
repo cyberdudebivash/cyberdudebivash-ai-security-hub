@@ -383,7 +383,7 @@ function logout() {
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 function apiFetch(path, key = apiKey) {
-  return fetch(API_BASE + path, { headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' } });
+  return fetch(API_BASE + path, { headers: { 'x-api-key': key, 'Accept': 'application/json' } });
 }
 
 async function apiGet(path) {
@@ -645,12 +645,9 @@ function connectStream() {
   const label = document.getElementById('stream-label');
   const stxt = document.getElementById('stream-status-text');
 
-  try {
-    eventSource = new EventSource(`${API_BASE}/api/soc/stream`, { headers: { 'Authorization': 'Bearer ' + apiKey } });
-  } catch {
-    // SSE doesn't support custom headers in browser — use URL param as fallback
-    eventSource = new EventSource(`${API_BASE}/api/soc/stream?token=${encodeURIComponent(apiKey)}`);
-  }
+  // EventSource cannot send custom headers in any browser — the API key
+  // must go in the URL; the backend accepts it via ?api_key= for this route.
+  eventSource = new EventSource(`${API_BASE}/api/soc/stream?api_key=${encodeURIComponent(apiKey)}`);
 
   eventSource.onopen = () => {
     dot.className   = 'stream-dot connected';
