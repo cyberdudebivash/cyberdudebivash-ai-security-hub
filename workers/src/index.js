@@ -267,6 +267,7 @@ import { correlateThreatIntel, getThreatIntelStats, purgeExpiredThreatIntel } fr
 
 // ─── Intelligence + Sentinel ─────────────────────────────────────────────────
 import { handleSentinelFeed, handleSentinelStatus, runSentinelCron } from './lib/sentinelApex.js';
+import { activeActorNames, attributeCves } from './lib/aptIntelEngine.js';
 import { processQueueBatch }   from './lib/queue.js';
 
 // ─── New v8.1 handlers — Real-Time Feed + Gumroad Revenue Engine + SIEM ──────
@@ -1007,6 +1008,7 @@ async function handleIntelligenceSummary(env) {
   const summary = {
     platform_threat_level: 'MODERATE',
     active_apt_groups:     [],
+    apt_attributions:      [],
     top_attack_vectors:    [],
     critical_cve_count:    0,
     high_cve_count:        0,
@@ -1022,7 +1024,7 @@ async function handleIntelligenceSummary(env) {
 
   if (env?.DB) {
     try {
-      const [scanStats, intelStats, recentIntel] = await Promise.all([
+      const [scanStats, intelStats, recentIntel, exploitedIntel] = await Promise.all([
         // Real scan counts from scan_history (authoritative table, not scan_jobs)
         env.DB.prepare(`
           SELECT COUNT(*) as total_today,
@@ -1046,6 +1048,15 @@ async function handleIntelligenceSummary(env) {
           FROM threat_intel
           WHERE UPPER(severity) IN ('CRITICAL','HIGH')
           ORDER BY COALESCE(published_at, ingested_at) DESC LIMIT 6
+        `).all().catch(() => ({ results: [] })),
+
+        // Broader recent CVE ID set (actively exploited + critical/high) for the
+        // APT attribution engine to correlate against — wider net than the 6
+        // shown in the feed, since attribution only fires on real matches.
+        env.DB.prepare(`
+          SELECT DISTINCT cve_id FROM threat_intel
+          WHERE cve_id IS NOT NULL AND (is_exploited = 1 OR UPPER(severity) IN ('CRITICAL','HIGH'))
+          ORDER BY COALESCE(published_at, ingested_at) DESC LIMIT 100
         `).all().catch(() => ({ results: [] })),
       ]);
 
@@ -1095,6 +1106,22 @@ async function handleIntelligenceSummary(env) {
           } catch {}
         }
         if (apts.size) summary.active_apt_groups = [...apts].slice(0, 5);
+      }
+
+      // Honest APT attribution engine: correlate live CVE IDs against a
+      // curated, publicly-documented CVE→actor table (aptIntelEngine.js).
+      // Only fires on real matches — never fabricates a name. Supplements
+      // (does not override) any apt_groups already sourced from D1 rows.
+      try {
+        const cveIds = (exploitedIntel?.results || []).map(r => r.cve_id).filter(Boolean);
+        const attributed = activeActorNames(cveIds, 5);
+        if (attributed.length) {
+          const merged = new Set([...summary.active_apt_groups, ...attributed]);
+          summary.active_apt_groups = [...merged].slice(0, 5);
+        }
+        summary.apt_attributions = attributeCves(cveIds);
+      } catch (e) {
+        console.error('[intelligence/summary] APT attribution error:', e?.message);
       }
 
       // Recommendations derived from what we actually found (real, not canned)

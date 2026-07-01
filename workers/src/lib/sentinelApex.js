@@ -1,16 +1,21 @@
 /**
- * CYBERDUDEBIVASH AI Security Hub — Sentinel APEX v1.0
+ * CYBERDUDEBIVASH AI Security Hub — Sentinel APEX v1.1
  * Real-time CVE & threat intelligence feed engine
- * Sources: NVD (NIST) API v2 | CISA KEV | GitHub Advisory
- * Runs on Cloudflare Workers cron (every 6h) — cached in KV
+ * Sources: NVD (NIST) API v2 | CISA KEV | ThreatFox (abuse.ch) | URLhaus (abuse.ch)
+ * Runs on Cloudflare Workers cron (every 6h, feed refresh every 5m) — cached in KV
  * Public endpoint: GET /api/sentinel/feed
  */
 
-const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
-const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
-const FEED_CACHE_KEY = 'sentinel:apex:feed:v1';
-const FEED_TTL       = 21600; // 6 hours — matches cron frequency
-const FETCH_TIMEOUT  = 8000;
+import { attributeCves } from './aptIntelEngine.js';
+
+const NVD_API_BASE      = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
+const CISA_KEV_URL      = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+const THREATFOX_API_URL = 'https://threatfox-api.abuse.ch/api/v1/';
+const URLHAUS_API_URL   = 'https://urlhaus-api.abuse.ch/v1/urls/recent/';
+const FEED_CACHE_KEY    = 'sentinel:apex:feed:v1';
+const FEED_TTL          = 300; // 5 minutes — fresher live feed (was 6h)
+const CRON_TTL          = 21600; // cron metadata retention unaffected
+const FETCH_TIMEOUT     = 8000;
 
 // ─── Safe fetch with timeout ──────────────────────────────────────────────────
 async function safeFetch(url, options = {}) {
@@ -119,6 +124,67 @@ async function fetchCISAKEV() {
   };
 }
 
+// ─── ThreatFox (abuse.ch) — recent IOC feed ──────────────────────────────────
+async function fetchThreatFox() {
+  const data = await safeFetch(THREATFOX_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: 'get_recent', days: 1 }),
+  });
+
+  if (!data || data.query_status !== 'ok' || !Array.isArray(data.data)) {
+    return { iocs: [], total: 0, source: 'threatfox', status: 'unavailable' };
+  }
+
+  const iocs = data.data.slice(0, 20).map(i => ({
+    ioc:           i.ioc,
+    ioc_type:      i.ioc_type,
+    threat_type:   i.threat_type,
+    malware:       i.malware_printable || i.malware || null,
+    confidence:    i.confidence_level ?? null,
+    first_seen:    i.first_seen_utc || null,
+    tags:          Array.isArray(i.tags) ? i.tags : [],
+    reference:     i.reference || null,
+    source:        'threatfox_abusech',
+  }));
+
+  return {
+    iocs,
+    total: data.data.length,
+    source: 'threatfox',
+    status: 'ok',
+    attribution: 'abuse.ch ThreatFox',
+  };
+}
+
+// ─── URLhaus (abuse.ch) — recent malicious URL feed ──────────────────────────
+async function fetchURLhaus() {
+  const data = await safeFetch(URLHAUS_API_URL);
+
+  if (!data || data.query_status !== 'ok' || !Array.isArray(data.urls)) {
+    return { urls: [], total: 0, source: 'urlhaus', status: 'unavailable' };
+  }
+
+  const urls = data.urls.slice(0, 20).map(u => ({
+    url:            u.url,
+    url_status:     u.url_status,
+    threat:         u.threat || null,
+    tags:           Array.isArray(u.tags) ? u.tags : [],
+    date_added:     u.date_added || null,
+    reporter:       u.reporter || null,
+    urlhaus_link:   u.urlhaus_reference || null,
+    source:         'urlhaus_abusech',
+  }));
+
+  return {
+    urls,
+    total: data.urls.length,
+    source: 'urlhaus',
+    status: 'ok',
+    attribution: 'abuse.ch URLhaus',
+  };
+}
+
 // ─── Tag builder ─────────────────────────────────────────────────────────────
 function buildTags(desc, cpes, weaknesses) {
   const tags = [];
@@ -166,16 +232,35 @@ function buildThreatTrends(nvdData) {
 
 // ─── Build Full Feed Payload ──────────────────────────────────────────────────
 async function buildFeed() {
-  const [nvd, kev] = await Promise.all([
+  const [nvd, kev, threatfox, urlhaus] = await Promise.all([
     fetchNVDCVEs(3),
     fetchCISAKEV(),
+    fetchThreatFox(),
+    fetchURLhaus(),
   ]);
 
   const trends = buildThreatTrends(nvd);
 
+  // Honest APT attribution: only tags KEV entries that have real, documented
+  // actor correlation (see aptIntelEngine.js). No match = no tag, ever.
+  const kevCveIds = (kev.vulnerabilities || []).map(v => v.cve_id).filter(Boolean);
+  const attributions = attributeCves(kevCveIds);
+  const attrByCve = new Map(attributions.map(a => [a.cve_id, a]));
+  const activelyExploited = (kev.vulnerabilities || []).map(v => {
+    const attr = attrByCve.get(v.cve_id);
+    if (!attr) return v;
+    return {
+      ...v,
+      attributed_actors:      attr.actors,
+      campaign:               attr.campaign,
+      attribution_confidence: attr.confidence,
+      attribution_source:     attr.source,
+    };
+  });
+
   return {
     feed_name:    'CYBERDUDEBIVASH Sentinel APEX',
-    feed_version: '1.0',
+    feed_version: '1.1',
     feed_url:     'https://t.me/cyberdudebivashSentinelApex',
     generated_at: new Date().toISOString(),
     ttl_seconds:  FEED_TTL,
@@ -186,14 +271,22 @@ async function buildFeed() {
       high_cves:          nvd.high?.length ?? 0,
       actively_exploited: kev.vulnerabilities?.filter(v => v.known_ransomware).length ?? 0,
       kev_additions:      kev.vulnerabilities?.length ?? 0,
+      threatfox_iocs:     threatfox.iocs?.length ?? 0,
+      urlhaus_urls:       urlhaus.urls?.length ?? 0,
+      apt_attributions:   attributions.length,
     },
     threat_trends:       trends,
     critical_cves:       nvd.critical?.slice(0, 10) ?? [],
     high_cves:           nvd.high?.slice(0, 8) ?? [],
-    actively_exploited:  kev.vulnerabilities ?? [],
+    actively_exploited:  activelyExploited,
+    ioc_feed:            threatfox.iocs ?? [],
+    malicious_urls:      urlhaus.urls ?? [],
+    apt_attributions:    attributions,
     sources: {
-      nvd:  { name:'NIST NVD', url:'https://nvd.nist.gov/', status: nvd.total > 0 ? 'ok' : 'unavailable' },
-      kev:  { name:'CISA KEV', url:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog', status: kev.total_in_catalog > 0 ? 'ok' : 'unavailable' },
+      nvd:       { name:'NIST NVD', url:'https://nvd.nist.gov/', status: nvd.total > 0 ? 'ok' : 'unavailable' },
+      kev:       { name:'CISA KEV', url:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog', status: kev.total_in_catalog > 0 ? 'ok' : 'unavailable' },
+      threatfox: { name:'abuse.ch ThreatFox', url:'https://threatfox.abuse.ch/', status: threatfox.status },
+      urlhaus:   { name:'abuse.ch URLhaus', url:'https://urlhaus.abuse.ch/', status: urlhaus.status },
     },
     telegram_channel: {
       name:  'Sentinel APEX',
@@ -215,7 +308,7 @@ export async function runSentinelCron(env) {
       alert_level: feed.alert_level,
       total_cves:  feed.summary.total_new_cves,
       kev_added:   feed.summary.kev_additions,
-    }), { expirationTtl: FEED_TTL * 2 });
+    }), { expirationTtl: CRON_TTL });
     return { success: true, generated_at: feed.generated_at, total_cves: feed.summary.total_new_cves };
   } catch (e) {
     return { success: false, error: e?.message || 'Unknown error' };
@@ -252,7 +345,7 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
 
     return Response.json(feed, {
       status: 200,
-      headers: { 'X-Cache': 'MISS', 'X-Feed-Generated': feed.generated_at, 'Cache-Control': `public, max-age=3600` },
+      headers: { 'X-Cache': 'MISS', 'X-Feed-Generated': feed.generated_at, 'Cache-Control': `public, max-age=${FEED_TTL}` },
     });
   } catch (_) {
     // External APIs unavailable — fall back to D1 threat_intel table so the
@@ -306,9 +399,19 @@ async function buildFeedFromD1(db) {
 
     if (critical.length === 0 && high.length === 0 && activelyEx.length === 0) return null;
 
+    // Honest APT attribution even in the D1 fallback path — only tags entries
+    // with real, documented correlation (aptIntelEngine.js), never fabricated.
+    const fallbackCveIds = activelyEx.map(v => v.cve_id).filter(Boolean);
+    const attributions = attributeCves(fallbackCveIds);
+    const attrByCve = new Map(attributions.map(a => [a.cve_id, a]));
+    const activelyExAttributed = activelyEx.map(v => {
+      const attr = attrByCve.get(v.cve_id);
+      return attr ? { ...v, attributed_actors: attr.actors, campaign: attr.campaign, attribution_confidence: attr.confidence, attribution_source: attr.source } : v;
+    });
+
     return {
       feed_name:    'CYBERDUDEBIVASH Sentinel APEX',
-      feed_version: '1.0',
+      feed_version: '1.1',
       generated_at: new Date().toISOString(),
       ttl_seconds:  300,
       data_source:  'd1_threat_intel',
@@ -320,14 +423,22 @@ async function buildFeedFromD1(db) {
         high_cves:          high.length,
         actively_exploited: activelyEx.filter(v => v.known_ransomware).length,
         kev_additions:      activelyEx.length,
+        threatfox_iocs:     0,
+        urlhaus_urls:       0,
+        apt_attributions:   attributions.length,
       },
       critical_cves:      critical,
       high_cves:          high,
-      actively_exploited: activelyEx,
+      actively_exploited: activelyExAttributed,
+      ioc_feed:           [],
+      malicious_urls:     [],
+      apt_attributions:   attributions,
       sources: {
-        nvd: { name: 'NIST NVD', status: 'unavailable' },
-        kev: { name: 'CISA KEV', status: 'unavailable' },
-        d1:  { name: 'Platform D1 Cache', status: 'ok' },
+        nvd:       { name: 'NIST NVD', status: 'unavailable' },
+        kev:       { name: 'CISA KEV', status: 'unavailable' },
+        threatfox: { name: 'abuse.ch ThreatFox', status: 'unavailable' },
+        urlhaus:   { name: 'abuse.ch URLhaus', status: 'unavailable' },
+        d1:        { name: 'Platform D1 Cache', status: 'ok' },
       },
     };
   } catch (_) {
@@ -351,7 +462,7 @@ export async function handleSentinelStatus(request, env) {
     last_run:      lastRun,
     feed_url:      'https://cyberdudebivash-security-hub.workers.dev/api/sentinel/feed',
     telegram:      'https://t.me/cyberdudebivashSentinelApex',
-    refresh_every: '6 hours (cron)',
-    sources:       ['NIST NVD CVE API v2', 'CISA Known Exploited Vulnerabilities'],
+    refresh_every: '5 minutes (feed cache), 6 hours (cron backfill)',
+    sources:       ['NIST NVD CVE API v2', 'CISA Known Exploited Vulnerabilities', 'abuse.ch ThreatFox', 'abuse.ch URLhaus'],
   }, { status: 200 });
 }
