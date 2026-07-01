@@ -267,6 +267,30 @@ jobs:
             sleep "$WAIT"
           done
 
+      - name: Record deployment to EOP (POST /api/admin/deployments)
+        if: success()
+        run: |
+          echo "━━━ Recording deployment to EOP ━━━"
+          PAYLOAD=$(printf '{"version":"%s","commit_sha":"%s","deployed_by":"github-actions","environment":"production","status":"success","notes":"CI/CD auto-deploy via deploy.yml"}' \
+            "${{ env.PLATFORM_VERSION }}" "${{ env.DEPLOY_SHA }}")
+
+          HTTP=$(curl -s -o /tmp/dep_record.json -w "%{http_code}" \
+            --max-time 15 \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}" \
+            "${{ env.PRIMARY_URL }}/api/admin/deployments" 2>/dev/null || echo "000")
+
+          echo "Response HTTP: ${HTTP}"
+          if [ -s /tmp/dep_record.json ]; then cat /tmp/dep_record.json; fi
+
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then
+            echo "✅ Deployment recorded in EOP"
+          else
+            echo "⚠️  EOP deployment record failed (HTTP ${HTTP}) — non-fatal, CI continues"
+          fi
+
       - name: Workers deploy step summary
         if: always()
         run: |

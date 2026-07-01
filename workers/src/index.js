@@ -777,6 +777,13 @@ import {
 import { logUptimeCheck } from './services/v24/platformEngine.js';
 import { handleSSOLogin, handleSSOCallback, handleSSOConfigUpsert, handleSSOConfigGet, handleSSOConfigDelete } from './handlers/ssoAuth.js';
 import { handleMFAStatus, handleMFASetup, handleMFAEnable, handleMFAAuthenticate, handleMFADisable } from './handlers/mfa.js';
+// ── EOP v1.0 — Enterprise Observability & Operations Platform ─────────────────
+import { handleHealthV2, handleHealthDetailed } from './handlers/eop/health.js';
+import { handlePublicIncidents, handlePublicIncident, handlePublicMaintenance, handleAdminIncidentCreate, handleAdminIncidentUpdate, handleAdminIncidentTimelineAdd, handleAdminMaintenanceCreate, handleAdminMaintenanceUpdate } from './handlers/eop/incidents.js';
+import { handlePublicUptime }  from './handlers/eop/uptime.js';
+import { handlePublicStatus }  from './handlers/eop/publicStatus.js';
+import { handleDeploymentRecord, handleDeploymentsList, handleLatestDeployment } from './handlers/eop/deployments.js';
+import { handleOpsDashboard, handleOpsReport } from './handlers/eop/opsReport.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
 import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
@@ -1258,7 +1265,7 @@ export default {
     // Health, version and status routes are exempt so monitoring always works.
     const url    = new URL(request.url);
     const _earlyPath = url.pathname.replace(/\/+$/, '') || '/';
-    const _bindingExempt = ['/api/health', '/api/platform/health', '/api/platform/activity', '/api/version', '/api/status', '/api/v13/status'];
+    const _bindingExempt = ['/api/health', '/api/platform/health', '/api/platform/activity', '/api/version', '/api/status', '/api/v13/status', '/api/incidents', '/api/uptime', '/api/maintenance', '/api/deployments/latest', '/status'];
     if (!env.DB || !env.KV) {
       if (!_bindingExempt.includes(_earlyPath)) {
         const _missing = [];
@@ -1504,7 +1511,11 @@ export default {
                    : passCount === 1 ? 'DEGRADED'   // api itself is up
                    : 'DOWN';
 
+      // EOP v1.0 — additive fields (backward compat: existing consumers still get status/api/db/intel/revenue)
+      const eopStatus = status === 'OK' ? 'operational' : status === 'DOWN' ? 'critical' : 'degraded';
+      const eopSeverity = status === 'DOWN' ? 'high' : status === 'DEGRADED' ? 'medium' : 'none';
       return withSecurityHeaders(withCors(Response.json({
+        // Legacy fields — unchanged for CI gate / existing consumers
         status,
         api:       checks.api,
         db:        checks.db,
@@ -1515,6 +1526,19 @@ export default {
         response_ms: Date.now() - start,
         timestamp: new Date().toISOString(),
         platform: 'CYBERDUDEBIVASH AI Security Hub',
+        // EOP v1.0 extended fields
+        eop: {
+          status:   eopStatus,
+          severity: eopSeverity,
+          build_id: env.COMMIT || 'unknown',
+          environment: env.ENVIRONMENT || 'production',
+          components: [
+            { name: 'Worker',               type: 'compute',      status: 'operational' },
+            { name: 'D1 Database',          type: 'database',     status: checks.db ? (details.db?.latency_ms > 1000 ? 'degraded' : 'operational') : 'major_outage', latency_ms: details.db?.latency_ms || -1 },
+            { name: 'Threat Intelligence',  type: 'intelligence', status: checks.intel ? 'operational' : 'degraded' },
+            { name: 'Payment System',       type: 'payments',     status: checks.revenue ? 'operational' : 'degraded' },
+          ],
+        },
       }, { status: status === 'DOWN' ? 503 : 200 }), request));
     }
 
@@ -1671,10 +1695,9 @@ export default {
       }), request));
     }
 
-    // ── Phase D Live Status Page (replaces v13 at /api/status) ───────────────
-    if (path === '/api/status' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleStatusPage(request, env, authCtx || {}), request));
+    // ── EOP v1.0 — Public Status Platform (Phase 3) ──────────────────────────
+    if ((path === '/api/status' || path === '/status' || path === '/api/status.html') && method === 'GET') {
+      return withSecurityHeaders(withCors(await handlePublicStatus(request, env), request));
     }
 
     // ── v13 Status (legacy — keep at /api/v13/status) ─────────────────────────
@@ -2628,7 +2651,81 @@ export default {
       return withSecurityHeaders(withCors(await handleAddIOC(request, env, authCtx), request));
     }
 
-    // Platform Observability
+    // ── EOP v1.0 — Platform Observability ────────────────────────────────────
+    // Phase 1: enhanced public health (new structured format, same route)
+    if (path === '/api/platform/health/v2' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleHealthV2(request, env), request));
+    }
+    // Phase 2: detailed ops diagnostics (admin-only)
+    if (path === '/api/platform/health/detailed' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleHealthDetailed(request, env, authCtx), request));
+    }
+    // Phase 6: uptime statistics
+    if (path === '/api/uptime' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handlePublicUptime(request, env), request));
+    }
+    // Phase 5: public incident list + detail
+    if (path === '/api/incidents' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handlePublicIncidents(request, env), request));
+    }
+    if (path.match(/^\/api\/incidents\/([^/]+)$/) && method === 'GET') {
+      const id = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handlePublicIncident(request, env, id), request));
+    }
+    // Phase 11: maintenance windows (public)
+    if (path === '/api/maintenance' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handlePublicMaintenance(request, env), request));
+    }
+    // Phase 9: latest deployment (public, non-sensitive)
+    if (path === '/api/deployments/latest' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleLatestDeployment(request, env), request));
+    }
+    // Phase 5: admin incident management
+    if (path === '/api/admin/incidents' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleAdminIncidentCreate(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/admin\/incidents\/([^/]+)$/) && method === 'PATCH') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const id = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleAdminIncidentUpdate(request, env, authCtx, id), request));
+    }
+    if (path.match(/^\/api\/admin\/incidents\/([^/]+)\/update$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const id = path.split('/')[4];
+      return withSecurityHeaders(withCors(await handleAdminIncidentTimelineAdd(request, env, authCtx, id), request));
+    }
+    // Phase 11: admin maintenance windows
+    if (path === '/api/admin/maintenance' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleAdminMaintenanceCreate(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/admin\/maintenance\/([^/]+)$/) && method === 'PATCH') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const id = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleAdminMaintenanceUpdate(request, env, authCtx, id), request));
+    }
+    // Phase 9: deployment recording + history
+    if (path === '/api/admin/deployments' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleDeploymentRecord(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/deployments' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleDeploymentsList(request, env, authCtx), request));
+    }
+    // Phase 8+10: executive ops dashboard + reports
+    if (path === '/api/admin/ops/dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleOpsDashboard(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/ops/report' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      return withSecurityHeaders(withCors(await handleOpsReport(request, env, authCtx), request));
+    }
+
+    // Legacy Platform Observability
     if (path === '/api/platform/health/deep' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       return withSecurityHeaders(withCors(await handleDeepHealth(request, env, authCtx), request));
