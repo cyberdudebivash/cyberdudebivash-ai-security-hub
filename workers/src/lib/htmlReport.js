@@ -354,6 +354,11 @@ code{font-family:'Courier New',monospace;font-size:12px;background:rgba(255,255,
   <div class="fw-chips">${fwTags}</div>
 </div>
 
+${scanResult.scan_metadata?.assessment_mode === 'STATIC' ? `
+<div class="disclaimer" style="margin:20px 0 0">
+  <strong>Framework-based readiness report:</strong> ${escapeHtml(scanResult.scan_metadata?.note || scanResult.note || 'This report maps applicable risks from a standard framework or industry benchmark for your selected profile. It is not a live test, live directory read, or live attack simulation against your specific environment.')}
+</div>` : ''}
+
 <!-- ── Executive Summary ──────────────────────────────────────────────────── -->
 <div class="section">
   <div class="section-heading">01</div>
