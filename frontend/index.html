@@ -19774,9 +19774,10 @@ window.cdbExecLoad = function() {
     p3Req('/api/executive/dashboard').catch(function() { return {}; }),
     safeFetch('/api/ciso/metrics').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
   ]).then(function(results) {
-  var data     = results[0] || {};
+  var execRaw  = results[0] || {};
   var cisoRaw  = results[1] || {};
-  // Unwrap CISO envelope: { success, data, ... }
+  // Unwrap standard { success, data, error } response envelope
+  var data     = (execRaw && execRaw.success && execRaw.data) ? execRaw.data : execRaw;
   var ciso     = (cisoRaw && cisoRaw.success && cisoRaw.data) ? cisoRaw.data : cisoRaw;
     var kpis = data.kpis || {};
     var rev  = data.revenue || {};
@@ -19841,12 +19842,13 @@ window.cdbGenerateReport = function() {
   var type   = document.getElementById('p3-report-type').value;
   var statEl = document.getElementById('p3-report-status');
   if (statEl) statEl.textContent = 'Generating report...';
-  p3Req('/api/executive/report', 'POST', { report_type: type }).then(function(data) {
-    if (data.error) {
-      if (statEl) statEl.textContent = 'Error: ' + (data.msg || 'Failed');
+  p3Req('/api/executive/report', 'POST', { report_type: type }).then(function(raw) {
+    if (raw.error || !raw.success) {
+      if (statEl) statEl.textContent = 'Error: ' + (raw.error || 'Failed');
       p3Toast('Report generation failed', 'error');
       return;
     }
+    var data = raw.data || raw;
     if (statEl) statEl.textContent = '✓ Report ' + data.report_id + ' generated';
     p3Toast('CISO report generated successfully', 'success');
     window.cdbListReports();
@@ -19854,9 +19856,10 @@ window.cdbGenerateReport = function() {
 };
 
 window.cdbListReports = function() {
-  p3Req('/api/executive/reports').then(function(data) {
+  p3Req('/api/executive/reports').then(function(raw) {
     var listEl = document.getElementById('p3-reports-list');
     if (!listEl) return;
+    var data = (raw && raw.success && raw.data) ? raw.data : (raw || {});
     var reports = data.reports || [];
     if (reports.length === 0) {
       listEl.innerHTML = '<div style="font-size:12px;color:#475569">No reports generated yet</div>';
@@ -19875,8 +19878,13 @@ window.cdbListReports = function() {
 // ── MSSP PANEL ───────────────────────────────────────────────────────────────
 var p3MSSPClients = [];
 
+function p3Unwrap(raw) {
+  return (raw && raw.success && raw.data) ? raw.data : (raw || {});
+}
+
 window.cdbMSSPLoad = function() {
-  p3Req('/api/mssp/summary').then(function(data) {
+  p3Req('/api/mssp/summary').then(function(raw) {
+    var data  = p3Unwrap(raw);
     var totEl = document.getElementById('p3-mssp-total');
     var actEl = document.getElementById('p3-mssp-active');
     var altEl = document.getElementById('p3-mssp-alerts-count');
@@ -19884,9 +19892,22 @@ window.cdbMSSPLoad = function() {
     if (actEl) actEl.textContent = p3Fmt(data.active_clients);
     if (altEl) altEl.textContent = p3Fmt(data.total_open_alerts);
   });
-  p3Req('/api/mssp/clients').then(function(data) {
+  p3Req('/api/mssp/clients').then(function(raw) {
+    var data = p3Unwrap(raw);
     p3MSSPClients = data.clients || [];
     p3RenderMSSPGrid(p3MSSPClients);
+  });
+  p3Req('/api/mssp/whitelabel').then(function(raw) {
+    var data = p3Unwrap(raw);
+    var wl   = data.whitelabel || {};
+    var nameEl = document.getElementById('p3-wl-name');
+    var emailEl = document.getElementById('p3-wl-email');
+    var colorEl = document.getElementById('p3-wl-color');
+    var domainEl = document.getElementById('p3-wl-domain');
+    if (nameEl && wl.brand_name)    nameEl.value = wl.brand_name;
+    if (emailEl && wl.support_email) emailEl.value = wl.support_email;
+    if (colorEl && wl.primary_color) colorEl.value = wl.primary_color;
+    if (domainEl && wl.domain)       domainEl.value = wl.domain;
   });
 };
 
@@ -19935,7 +19956,7 @@ window.cdbOnboardClient = function() {
   var email  = (document.getElementById('p3-ob-email').value || '').trim();
   if (!name || !domain) { p3Toast('Name and domain are required', 'error'); return; }
   p3Req('/api/mssp/clients', 'POST', { name: name, domain: domain, sector: sector, contact_email: email }).then(function(data) {
-    if (data.error) { p3Toast('Onboard failed: ' + data.msg, 'error'); return; }
+    if (data.error) { p3Toast('Onboard failed: ' + data.error, 'error'); return; }
     document.getElementById('p3-onboard-modal').style.display = 'none';
     p3Toast('Client ' + name + ' onboarded', 'success');
     window.cdbMSSPLoad();
