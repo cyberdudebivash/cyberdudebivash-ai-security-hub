@@ -142,7 +142,7 @@ async function fetchLiveMetricsFromD1(env) {
     soar_rules_total:     get(10),
     assessments_complete: 0,  // assessment_bookings table not provisioned yet — honest 0, not a proxy
     high_risk_scans:      get(8),
-    uptime_pct:           99.9,
+    uptime_pct:           null,  // calculated by /api/uptime from operational_history — not duplicated here
     cve_alert_sla:        '< 2 hours',
     assessment_sla:       '72 hours',
     hydrated_at:          new Date().toISOString(),
@@ -254,7 +254,7 @@ export async function servePlatformMetrics(request, env) {
       total_scans:         null,
       total_cves_tracked:  null,
       active_customers:    null,
-      uptime_pct:          99.9,
+      uptime_pct:          null,
       cve_alert_sla:       '< 2 hours',
       source:              'unavailable',
       note:                'Metrics temporarily unavailable',

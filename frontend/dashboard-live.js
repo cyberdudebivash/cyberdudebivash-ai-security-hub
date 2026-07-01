@@ -313,9 +313,14 @@
 
   // AI SecOps — AI asset registry
   async function loadAISecOps() {
-    // Auth-gated — gracefully degrade if 401/403
     const assets = await Bus.fetch('/api/ai-security/dashboard');
-    if (!assets) return;
+    if (!assets) {
+      // Auth-gated endpoint — show sign-in prompt rather than blank panel
+      ['cdb-ai-total-assets','cdb-ai-risk-score','cdb-ai-governance'].forEach(id => setText(id, '—'));
+      const list = $('cdb-ai-asset-list');
+      if (list) list.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">Sign in to view your AI asset security posture</div>';
+      return;
+    }
 
     const totalAssets = assets.total_assets ?? assets.count ?? assets.assets?.length ?? 0;
     const riskScore   = assets.risk_score ?? assets.overall_risk ?? 0;
@@ -346,15 +351,23 @@
   async function loadMSSPCenter() {
     const scans = Bus.get('/api/scan/stats');
     const platform = Bus.get('/api/platform/metrics');
-    const health   = Bus.get('/api/health');
+    // Fetch live health rather than reading stale cache so statuses reflect real state
+    const health = await Bus.fetch('/api/health');
+
+    const apiOk      = health?.status === 'operational';
+    const dbOk       = health?.database !== false && health?.db !== false;
+    const scanOk     = scans != null;
+    const intelOk    = scans?.cve_count > 0 || platform?.total_cves_tracked > 0;
+
+    const svcStatus  = (ok) => ok ? 'OPERATIONAL' : 'DEGRADED';
 
     const services = [
-      { name: 'Sentinel APEX',   status: 'OPERATIONAL',  metric: scans ? fmtK(scans.total_scans || 0) + ' scans'  : '—' },
-      { name: 'MYTHOS Engine',   status: 'OPERATIONAL',  metric: 'Active' },
-      { name: 'CVE Intelligence',status: 'OPERATIONAL',  metric: scans ? fmt(scans.cve_count || 0) + ' CVEs' : '—' },
-      { name: 'Threat Feed',     status: 'OPERATIONAL',  metric: 'Live' },
-      { name: 'API Gateway',     status: health?.status === 'operational' ? 'OPERATIONAL' : 'DEGRADED', metric: platform ? fmtK(platform.total_requests || 0) + ' reqs' : '—' },
-      { name: 'AI Brain',        status: 'OPERATIONAL',  metric: 'Active' },
+      { name: 'Sentinel APEX',    status: svcStatus(intelOk || scanOk), metric: scans ? fmtK(scans.total_scans || 0) + ' scans' : '—' },
+      { name: 'MYTHOS Engine',    status: svcStatus(apiOk),             metric: apiOk ? 'Active' : 'Checking…' },
+      { name: 'CVE Intelligence', status: svcStatus(intelOk),           metric: scans ? fmt(scans.cve_count || 0) + ' CVEs' : '—' },
+      { name: 'Threat Feed',      status: svcStatus(intelOk),           metric: intelOk ? 'Live' : 'Refreshing' },
+      { name: 'API Gateway',      status: svcStatus(apiOk),             metric: apiOk ? 'Online' : 'Degraded' },
+      { name: 'D1 Database',      status: svcStatus(dbOk),              metric: dbOk  ? 'Online' : 'Checking…' },
     ];
 
     const grid = $('cdb-mssp-service-grid');
