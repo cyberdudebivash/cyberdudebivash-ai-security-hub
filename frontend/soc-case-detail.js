@@ -26,9 +26,17 @@
     const body = document.querySelector('.cdb-cc-body');
     if (!nav || !body) { setTimeout(inject, 800); return; }
 
+    // Use the same class/attrs as the real Command Center tabs (dashboard-live.js's
+    // initCommandCenterTabs binds a single querySelectorAll('.cdb-cc-tab') pass at
+    // load time, so this tab's own listener — not that pass — drives it; but it
+    // must still use the shared .active-class system so switching to/from the
+    // other tabs behaves consistently instead of fighting over inline styles).
     const tab = document.createElement('button');
     tab.id          = TAB_ID;
-    tab.className   = 'cdb-cc-nav-btn';
+    tab.className   = 'cdb-cc-tab';
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', 'false');
+    tab.dataset.target = PANEL_ID;
     tab.textContent = '🔬 Investigation';
     tab.addEventListener('click', activateTab);
     nav.appendChild(tab);
@@ -36,7 +44,7 @@
     const panel = document.createElement('div');
     panel.id        = PANEL_ID;
     panel.className = 'cdb-cc-panel';
-    panel.style.display = 'none';
+    panel.setAttribute('role', 'tabpanel');
     panel.innerHTML = buildShell();
     body.appendChild(panel);
 
@@ -50,10 +58,12 @@
   }
 
   function activateTab() {
-    document.querySelectorAll('.cdb-cc-nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.cdb-cc-panel').forEach(p => { p.style.display = 'none'; });
-    document.getElementById(TAB_ID).classList.add('active');
-    document.getElementById(PANEL_ID).style.display = 'block';
+    document.querySelectorAll('.cdb-cc-tab').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+    document.querySelectorAll('.cdb-cc-panel').forEach(p => p.classList.remove('active'));
+    const tab = document.getElementById(TAB_ID);
+    tab.classList.add('active');
+    tab.setAttribute('aria-selected', 'true');
+    document.getElementById(PANEL_ID).classList.add('active');
     if (!activeCaseId) renderCaseSearch();
   }
 
