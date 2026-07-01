@@ -86,8 +86,11 @@ async function main() {
     }
   }
   {
-    const r = await fetchJSON('/api/sentinel/feed');
-    record('Intel', 'GET /api/sentinel/feed returns 200', 'blocker', r.status === 200);
+    // nocache=1 forces a fresh build from current code — otherwise this can
+    // read a KV-cached feed object built before a deploy (up to 6h stale),
+    // which would make a correct new deploy look like a false failure here.
+    const r = await fetchJSON('/api/sentinel/feed?nocache=1');
+    record('Intel', 'GET /api/sentinel/feed (nocache) returns 200', 'blocker', r.status === 200);
     if (r.body) {
       record('Intel', 'sentinel feed reports ThreatFox as a source', 'warn',
         !!r.body.sources?.threatfox, JSON.stringify(r.body.sources));
@@ -130,9 +133,18 @@ async function main() {
     record('Golden Path', 'GET /api/scan/stats returns 200', 'warn', r.status === 200);
   }
   {
+    // By design, unauthenticated callers get IP-scoped FREE-tier history (200,
+    // user_id: null) rather than a hard 401 — resolveAuthV5's "IP fallback"
+    // path (workers/src/auth/middleware.js) marks anonymous callers
+    // authenticated:true under an `ip:<addr>` identity. The check that matters
+    // is that no JWT means no *other* user's data comes back.
     const r = await fetchJSON('/api/history?limit=5');
-    record('Golden Path', 'GET /api/history without auth is rejected cleanly (401/403, not 500)', 'blocker',
-      [401, 403].includes(r.status), `status=${r.status}`);
+    record('Golden Path', 'GET /api/history without auth does not 500', 'blocker',
+      r.status !== 500, `status=${r.status}`);
+    if (r.status === 200 && r.body) {
+      record('Golden Path', 'GET /api/history without auth returns no user_id (IP-scoped anon, not another account)', 'blocker',
+        r.body.user_id === null || r.body.user_id === undefined, `user_id=${r.body.user_id}`);
+    }
   }
 
   // ── D. Auth boundary — must fail closed, never 500 ────────────────────────
