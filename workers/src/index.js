@@ -1002,69 +1002,108 @@ async function handleIntelligenceSummary(env) {
     }
   } catch { /* local dev — edge cache unavailable, fall through */ }
 
-  // Build fresh summary
+  // Build summary exclusively from real D1 data — no fabricated defaults.
+  // Fields are null when data is genuinely unavailable rather than made-up.
   const summary = {
-    platform_threat_level: 'HIGH',
-    active_apt_groups: ['APT29 (Cozy Bear)', 'Lazarus Group', 'Fancy Bear'],
-    top_attack_vectors: ['Phishing / Credential Theft', 'Supply Chain Compromise', 'Zero-Day Exploitation'],
-    critical_cve_count: 0,
-    high_cve_count:     0,
-    total_scans_today:  0,
-    critical_scans_today: 0,
-    global_risk_index:  72,
-    last_updated:       new Date().toISOString(),
-    intelligence_feed: [
-      { id:'INTEL-001', severity:'CRITICAL', title:'Active exploitation of MFA bypass via session hijacking', source:'CISA KEV', ts: new Date(Date.now()-3600000).toISOString() },
-      { id:'INTEL-002', severity:'HIGH',     title:'APT29 targeting cloud identity providers — phishing surge +340%', source:'Sentinel APEX', ts: new Date(Date.now()-7200000).toISOString() },
-      { id:'INTEL-003', severity:'HIGH',     title:'Prompt injection attacks against LLM APIs increasing', source:'OWASP LLM WG', ts: new Date(Date.now()-10800000).toISOString() },
-      { id:'INTEL-004', severity:'MEDIUM',   title:'DNSSEC misconfiguration exploited in BGP hijack campaign', source:'Sentinel APEX', ts: new Date(Date.now()-14400000).toISOString() },
-    ],
-    recommendations: [
-      'Enforce MFA on all privileged accounts immediately',
-      'Audit AI/LLM API endpoints for prompt injection exposure',
-      'Validate DNSSEC chain for all authoritative zones',
-      'Review supply chain dependencies for known CVEs',
-    ],
-    timestamp: new Date().toISOString(),
+    platform_threat_level: 'MODERATE',
+    active_apt_groups:     [],
+    top_attack_vectors:    [],
+    critical_cve_count:    0,
+    high_cve_count:        0,
+    total_cves:            0,
+    total_scans_today:     0,
+    critical_scans_today:  0,
+    global_risk_index:     null,
+    intelligence_feed:     [],
+    recommendations:       [],
+    timestamp:             new Date().toISOString(),
+    data_source:           'live_d1',
   };
 
-  // Try to enrich with real D1 data
   if (env?.DB) {
     try {
-      const [todayScans, critToday, cveFeed, recentIntel] = await Promise.all([
-        env.DB.prepare("SELECT COUNT(*) as c FROM scan_jobs WHERE created_at > datetime('now','-1 day')").first(),
-        env.DB.prepare("SELECT COUNT(*) as c FROM scan_jobs WHERE risk_level='CRITICAL' AND created_at > datetime('now','-1 day')").first(),
-        env.DB.prepare("SELECT COUNT(*) as c FROM threat_intel_cache WHERE severity='CRITICAL' AND expires_at > datetime('now')").first().catch(() => null),
+      const [scanStats, intelStats, recentIntel] = await Promise.all([
+        // Real scan counts from scan_history (authoritative table, not scan_jobs)
         env.DB.prepare(`
-          SELECT id, title, severity, source, apt_groups, published_at, ingested_at
+          SELECT COUNT(*) as total_today,
+                 SUM(CASE WHEN risk_level='CRITICAL' OR risk_score>=80 THEN 1 ELSE 0 END) as crit_today
+          FROM scan_history WHERE scanned_at > datetime('now','-1 day')
+        `).first().catch(() => null),
+
+        // Real CVE counts from threat_intel
+        env.DB.prepare(`
+          SELECT COUNT(*) as total,
+                 SUM(CASE WHEN UPPER(severity)='CRITICAL' THEN 1 ELSE 0 END) as critical,
+                 SUM(CASE WHEN UPPER(severity)='HIGH' THEN 1 ELSE 0 END) as high,
+                 SUM(CASE WHEN is_exploited=1 THEN 1 ELSE 0 END) as exploited
           FROM threat_intel
-          WHERE severity IN ('CRITICAL','HIGH')
-          ORDER BY ingested_at DESC LIMIT 6
+        `).first().catch(() => null),
+
+        // Recent high-severity CVEs from threat_intel for the live intelligence feed
+        env.DB.prepare(`
+          SELECT id, cve_id, title, severity, source, apt_groups,
+                 published_at, ingested_at, description
+          FROM threat_intel
+          WHERE UPPER(severity) IN ('CRITICAL','HIGH')
+          ORDER BY COALESCE(published_at, ingested_at) DESC LIMIT 6
         `).all().catch(() => ({ results: [] })),
       ]);
-      if (todayScans?.c)  summary.total_scans_today    = todayScans.c;
-      if (critToday?.c)   summary.critical_scans_today  = critToday.c;
-      if (cveFeed?.c)     summary.critical_cve_count    = cveFeed.c;
 
+      summary.total_scans_today   = scanStats?.total_today   || 0;
+      summary.critical_scans_today= scanStats?.crit_today    || 0;
+      summary.critical_cve_count  = intelStats?.critical     || 0;
+      summary.high_cve_count      = intelStats?.high         || 0;
+      summary.total_cves          = intelStats?.total        || 0;
+
+      // Threat level derived from real critical scans and CVEs
+      const critCves = summary.critical_cve_count;
+      const critScans= summary.critical_scans_today;
+      if (critScans >= 5 || critCves >= 100) summary.platform_threat_level = 'CRITICAL';
+      else if (critScans >= 2 || critCves >= 20) summary.platform_threat_level = 'HIGH';
+      else if (critCves >= 5 || critScans >= 1) summary.platform_threat_level = 'MODERATE';
+      else summary.platform_threat_level = 'LOW';
+
+      // Real risk index derived from severity distribution (0–100 scale, not hardcoded)
+      if (intelStats?.total > 0) {
+        summary.global_risk_index = Math.min(100, Math.round(
+          (critCves * 4 + summary.high_cve_count * 2) / intelStats.total * 100
+        ));
+      }
+
+      // Real intelligence feed from threat_intel rows
       const intelRows = recentIntel?.results || [];
-      if (intelRows.length) {
+      if (intelRows.length > 0) {
         summary.intelligence_feed = intelRows.slice(0, 4).map(r => ({
-          id: r.id, severity: r.severity, title: r.title,
-          source: r.source || 'CYBERDUDEBIVASH Threat Intel',
-          ts: r.published_at || r.ingested_at,
+          id:       r.cve_id || r.id,
+          severity: r.severity,
+          title:    r.title || r.cve_id || r.id,
+          source:   r.source || 'NVD',
+          ts:       r.published_at || r.ingested_at || new Date().toISOString(),
+          desc:     r.description ? r.description.slice(0, 120) : '',
         }));
+
+        // Extract real APT groups from the data — only if actually present
         const apts = new Set();
         for (const r of intelRows) {
-          try { (JSON.parse(r.apt_groups || '[]') || []).forEach(g => apts.add(g)); } catch {}
+          try {
+            const parsed = JSON.parse(r.apt_groups || '[]');
+            if (Array.isArray(parsed)) parsed.forEach(g => g && apts.add(g));
+          } catch {}
         }
         if (apts.size) summary.active_apt_groups = [...apts].slice(0, 5);
       }
 
-      // Adjust threat level based on real data
-      if (summary.critical_scans_today >= 5) summary.platform_threat_level = 'CRITICAL';
-      else if (summary.critical_scans_today >= 2) summary.platform_threat_level = 'HIGH';
-      else summary.platform_threat_level = 'MODERATE';
-    } catch {}
+      // Recommendations derived from what we actually found (real, not canned)
+      if (summary.critical_cve_count > 0)
+        summary.recommendations.push(`Patch ${summary.critical_cve_count} CRITICAL CVE${summary.critical_cve_count > 1 ? 's' : ''} — CVSS ≥ 9.0`);
+      if (intelStats?.exploited > 0)
+        summary.recommendations.push(`${intelStats.exploited} CVE${intelStats.exploited > 1 ? 's are' : ' is'} actively exploited in the wild — prioritize immediately`);
+      if (summary.high_cve_count > 0)
+        summary.recommendations.push(`Review ${summary.high_cve_count} HIGH severity CVEs for applicability to your stack`);
+    } catch (e) {
+      console.error('[intelligence/summary] D1 error:', e?.message);
+      summary.data_source = 'error_fallback';
+    }
   }
 
   // KV OPTIMIZATION: cache result in Cloudflare CDN edge cache (FREE) instead of KV.

@@ -135,9 +135,15 @@
       setText('cdb-sentinel-crit',  fmt(critical));
       setText('cdb-sentinel-kev',   fmt(kev));
 
-      // Uptime
+      // Uptime — from platform/metrics if present; otherwise fetch /api/uptime directly
       if (uptime !== null) {
         setText('cdb-exec-uptime', typeof uptime === 'number' ? uptime.toFixed(2) + '%' : uptime);
+      } else {
+        // metricsHydration.js delegates uptime to /api/uptime — fetch it separately
+        Bus.fetch('/api/uptime').then(ut => {
+          const pct = ut?.uptime_percentage ?? ut?.uptime_pct ?? ut?.uptime ?? null;
+          if (pct !== null) setText('cdb-exec-uptime', typeof pct === 'number' ? pct.toFixed(2) + '%' : pct);
+        }).catch(() => {});
       }
 
       // Threat level + bar — derived from REAL critical + recent-KEV counts
@@ -347,24 +353,48 @@
     }
   }
 
-  // MSSP — service health matrix
+  // MSSP — service health matrix + real client count
   async function loadMSSPCenter() {
-    const scans = Bus.get('/api/scan/stats');
+    const scans    = Bus.get('/api/scan/stats');
     const platform = Bus.get('/api/platform/metrics');
-    // Fetch live health rather than reading stale cache so statuses reflect real state
-    const health = await Bus.fetch('/api/health');
+    const m        = platform?.metrics || platform || null;
 
-    const apiOk      = health?.status === 'operational';
-    const dbOk       = health?.database !== false && health?.db !== false;
-    const scanOk     = scans != null;
-    const intelOk    = scans?.cve_count > 0 || platform?.total_cves_tracked > 0;
+    // Fetch health live — don't use stale cache for real-time service statuses
+    const [health, clientsResp] = await Promise.allSettled([
+      Bus.fetch('/api/health'),
+      // /api/mssp/clients is auth-gated — send stored JWT if present
+      (async () => {
+        const token = window.__CDB_JWT || localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || '';
+        const headers = { Accept: 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const r = await fetch('/api/mssp/clients?limit=1', { headers, signal: AbortSignal.timeout(6000) });
+        if (!r.ok) return null;
+        return r.json();
+      })(),
+    ]);
 
-    const svcStatus  = (ok) => ok ? 'OPERATIONAL' : 'DEGRADED';
+    const health_data = health.status === 'fulfilled' ? health.value : null;
+    const clients_data = clientsResp.status === 'fulfilled' ? clientsResp.value : null;
+
+    const apiOk   = health_data?.status === 'operational';
+    const dbOk    = health_data?.database !== false && health_data?.db !== false;
+    const scanOk  = scans != null;
+    const cveCount = m?.total_cves_tracked ?? scans?.cve_count ?? 0;
+    const intelOk  = cveCount > 0;
+
+    // Real client count from D1 via /api/mssp/clients
+    const clientCount = clients_data?.total ?? clients_data?.count ?? clients_data?.clients?.length ?? null;
+    if (clientCount !== null) setText('cdb-mssp-clients', fmt(clientCount));
+
+    // Real scan count for Sentinel APEX metric
+    const totalScans = m?.total_scans ?? scans?.total_scans ?? null;
+
+    const svcStatus = (ok) => ok ? 'OPERATIONAL' : 'DEGRADED';
 
     const services = [
-      { name: 'Sentinel APEX',    status: svcStatus(intelOk || scanOk), metric: scans ? fmtK(scans.total_scans || 0) + ' scans' : '—' },
+      { name: 'Sentinel APEX',    status: svcStatus(intelOk || scanOk), metric: totalScans !== null ? fmtK(totalScans) + ' scans' : '—' },
       { name: 'MYTHOS Engine',    status: svcStatus(apiOk),             metric: apiOk ? 'Active' : 'Checking…' },
-      { name: 'CVE Intelligence', status: svcStatus(intelOk),           metric: scans ? fmt(scans.cve_count || 0) + ' CVEs' : '—' },
+      { name: 'CVE Intelligence', status: svcStatus(intelOk),           metric: cveCount > 0 ? fmtCve(cveCount) + ' CVEs' : '—' },
       { name: 'Threat Feed',      status: svcStatus(intelOk),           metric: intelOk ? 'Live' : 'Refreshing' },
       { name: 'API Gateway',      status: svcStatus(apiOk),             metric: apiOk ? 'Online' : 'Degraded' },
       { name: 'D1 Database',      status: svcStatus(dbOk),              metric: dbOk  ? 'Online' : 'Checking…' },
@@ -554,11 +584,12 @@
   async function init() {
     console.info(LOG, `v${VERSION} booting — Enterprise Dashboard Adapter`);
 
-    // Pre-fetch all data in parallel
+    // Pre-fetch all data in parallel — includes threat feed for immediate command-center paint
     await Promise.allSettled([
       Bus.fetch('/api/scan/stats'),
       Bus.fetch('/api/vulns/stats'),
       Bus.fetch('/api/threat-intel/stats'),
+      Bus.fetch('/api/threat-intel/live'),   // pre-warm so loadSOCFeed + loadSentinelIntel are instant
       Bus.fetch('/api/trust/metrics'),
       Bus.fetch('/api/health'),
       Bus.fetch('/api/global-threat-feed/stats'),
@@ -568,7 +599,13 @@
     // Wire static counters
     await hydrateCounters();
 
-    // Initialize command center UI
+    // Eagerly load command center feeds on init — do NOT wait for IntersectionObserver.
+    // IBM mandate: dashboards must show populated content on first paint, not on scroll.
+    loadSOCFeed();
+    loadSentinelIntel();
+    loadMSSPCenter();
+
+    // Initialize command center UI (tabs + lazy reload on visibility)
     initCommandCenterTabs();
     initLazyLoader();
 
