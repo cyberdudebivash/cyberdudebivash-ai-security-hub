@@ -18482,7 +18482,13 @@ function _cdbKeyAuthH() {
   return h;
 }
 function _cdbKeySignedIn() {
-  return !!(localStorage.getItem('cdb_token') && localStorage.getItem('cdb_email'));
+  // cdb_token (the real JWT) is the actual credential — /api/keys validates
+  // it server-side regardless. Requiring cdb_email too broke customers who
+  // buy PRO/ENTERPRISE directly from pricing without first hitting a scan's
+  // email gate: the purchase flow never sets cdb_email, only cdb_token, so
+  // a paying customer with a valid session saw "please sign in" on the very
+  // feature (API keys) their plan advertises.
+  return !!localStorage.getItem('cdb_token');
 }
 
 window.cdbGenerateAPIKey = function() {
@@ -18593,13 +18599,14 @@ window.cdbLoadAPIUsage = function() {
       if (!data) { if(apiEl)apiEl.textContent='—'; if(aiEl)aiEl.textContent='—'; if(ruleEl)ruleEl.textContent='—'; clearBars(); return; }
       var lim = data.tier_limits || {};
       var keyCount = (data.keys || []).filter(function(k){ return k.active !== 0 && k.active !== false; }).length;
-      var maxKeys = data.max_keys || 2;
+      var maxKeys = (data.max_keys != null) ? data.max_keys : 2;
+      var maxKeysUnlimited = maxKeys === -1;
       var dailyLabel = (lim.daily_limit === -1) ? 'Unlimited' : (lim.daily_limit != null ? lim.daily_limit.toLocaleString() + ' req/day' : '—');
       if (apiEl)  apiEl.textContent  = dailyLabel;
-      if (aiEl)   aiEl.textContent   = keyCount + ' / ' + maxKeys + ' keys';
+      if (aiEl)   aiEl.textContent   = keyCount + ' / ' + (maxKeysUnlimited ? 'Unlimited' : maxKeys) + ' keys';
       if (ruleEl) ruleEl.textContent = (lim.monthly_limit === -1 ? 'Unlimited' : (lim.monthly_limit != null ? lim.monthly_limit.toLocaleString() + ' /mo' : '—'));
       var dA=document.getElementById('usage-api-bar'); if(dA) dA.style.width = (lim.daily_limit===-1?100:0)+'%';
-      var kB=document.getElementById('usage-ai-bar'); if(kB) kB.style.width = Math.min(100, Math.round(keyCount/maxKeys*100))+'%';
+      var kB=document.getElementById('usage-ai-bar'); if(kB) kB.style.width = (maxKeysUnlimited ? 0 : Math.min(100, Math.round(keyCount/maxKeys*100)))+'%';
       // Current Plan summary (honest — tier from account, burst from real limits)
       var tierEl=document.getElementById('plan-tier'); if(tierEl) tierEl.textContent = (localStorage.getItem('cdb_tier')||'FREE');
       var burstEl=document.getElementById('plan-burst'); if(burstEl) burstEl.textContent = (lim.burst_per_min != null ? lim.burst_per_min + ' req/min' : '—');

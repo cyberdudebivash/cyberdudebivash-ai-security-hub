@@ -9,15 +9,24 @@
 import { createApiKey, listUserApiKeys, revokeApiKey, getKeyUsageSummary, TIER_LIMITS } from '../auth/apiKeys.js';
 import { parseBody } from '../middleware/validation.js';
 
+// Per-tier API key allowance — must match the pricing page's advertised
+// "API Keys" row exactly (Free 1 / Starter 2 / Pro 5 / Enterprise 20 / MSSP
+// Unlimited). MSSP was previously missing here and fell through to the
+// generic 2-key default — the platform's top-paying tier (₹9,999/mo,
+// advertised "Unlimited" API keys) was silently capped at 2.
+const MAX_KEYS_BY_TIER = { FREE: 1, STARTER: 2, PRO: 5, ENTERPRISE: 20, MSSP: Infinity };
+function maxKeysForTier(tier) { return MAX_KEYS_BY_TIER[tier] ?? MAX_KEYS_BY_TIER.FREE; }
+
 export async function handleListKeys(request, env, authCtx) {
   if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
   if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
 
   const keys = await listUserApiKeys(env.DB, authCtx.user_id);
+  const maxKeys = maxKeysForTier(authCtx.tier);
   return Response.json({
     keys,
     count:       keys.length,
-    max_keys:    authCtx.tier === 'ENTERPRISE' ? 20 : authCtx.tier === 'PRO' ? 5 : 2,
+    max_keys:    Number.isFinite(maxKeys) ? maxKeys : -1, // -1 = unlimited (MSSP)
     tier_limits: TIER_LIMITS[authCtx.tier] || TIER_LIMITS.FREE,
   });
 }
@@ -31,7 +40,7 @@ export async function handleCreateKey(request, env, authCtx) {
   const label = (body?.label || body?.name || 'New Key').toString().slice(0, 60);
 
   // Enforce per-tier key limit
-  const maxKeys  = authCtx.tier === 'ENTERPRISE' ? 20 : authCtx.tier === 'PRO' ? 5 : 2;
+  const maxKeys  = maxKeysForTier(authCtx.tier);
   const existing = await listUserApiKeys(env.DB, authCtx.user_id);
   const active   = existing.filter(k => k.active);
 
