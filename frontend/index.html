@@ -155,8 +155,18 @@ window.CDB_FUNNEL = CDB_FUNNEL;
       // p4 counters
       const _p4s = document.getElementById('p4-cnt-scans');
       if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
-      const _gtb = document.getElementById('gtm-blocked');
-      if (_gtb && totalScans !== null) _gtb.textContent = Number(totalScans).toLocaleString('en-IN');
+
+      // Global Threat Map stat tiles — real counts from /api/threat-intel/stats,
+      // not the scan counter (a scan count is not an "exploited" count).
+      const _statsBlock = ti?.data?.stats ?? ti?.stats ?? null;
+      const _gtAttacks   = document.getElementById('gtm-attacks');
+      const _gtCampaigns = document.getElementById('gtm-campaigns');
+      const _gtBlocked   = document.getElementById('gtm-blocked');
+      if (_statsBlock) {
+        if (_gtAttacks   && _statsBlock.total_advisories    != null) _gtAttacks.textContent   = Number(_statsBlock.total_advisories).toLocaleString('en-IN');
+        if (_gtCampaigns && _statsBlock.critical            != null) _gtCampaigns.textContent = Number(_statsBlock.critical).toLocaleString('en-IN');
+        if (_gtBlocked   && _statsBlock.confirmed_exploited != null) _gtBlocked.textContent   = Number(_statsBlock.confirmed_exploited).toLocaleString('en-IN');
+      }
 
       // Hero live scan count
       const heroLive = document.getElementById('hero-live-scans');
@@ -7434,7 +7444,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
-<span style="color:#a855f7;font-size:12px;font-weight:800">🕸 DARK WEB SIGNALS</span>
+<span style="color:#a855f7;font-size:12px;font-weight:800">🕸 LIVE ADVISORY SIGNALS</span>
 <div id="zd-darkweb" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
 </div>
 <div style="background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:20px">
@@ -21810,12 +21820,40 @@ function draw(){ctx.fillStyle='#030310';ctx.fillRect(0,0,W,H);ctx.strokeStyle='r
 var co=[[[.1,.15],[.3,.15],[.35,.25],[.28,.45],[.22,.55],[.15,.45],[.08,.35]],[[.22,.55],[.32,.55],[.38,.65],[.35,.75],[.27,.78],[.2,.68]],[[.44,.22],[.58,.20],[.60,.30],[.55,.38],[.44,.35]],[[.44,.38],[.57,.38],[.60,.55],[.55,.72],[.46,.72],[.42,.55]],[[.58,.20],[.88,.20],[.90,.42],[.78,.55],[.65,.50],[.58,.38]],[[.77,.60],[.88,.60],[.89,.73],[.80,.76],[.75,.68]]];ctx.fillStyle='rgba(99,102,241,.1)';ctx.strokeStyle='rgba(99,102,241,.2)';ctx.lineWidth=1;co.forEach(function(pts){ctx.beginPath();ctx.moveTo(pts[0][0]*W,pts[0][1]*H);pts.slice(1).forEach(function(p){ctx.lineTo(p[0]*W,p[1]*H);});ctx.closePath();ctx.fill();ctx.stroke();});
 GTN.forEach(function(nd){var x=nd.x*W,y=nd.y*H,r=3+nd.v/2800,pulse=(Math.sin(GTF*.05+nd.x*10)+1)/2;ctx.beginPath();ctx.arc(x,y,r+3+pulse*5,0,Math.PI*2);ctx.strokeStyle=nd.c+'20';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=nd.c+'70';ctx.fill();ctx.strokeStyle=nd.c;ctx.lineWidth=1.5;ctx.stroke();});
 for(var pi=GTP.length-1;pi>=0;pi--){var pt=GTP[pi];pt.p+=pt.sp;if(pt.p>=1){GTP.splice(pi,1);continue;}var cx=(pt.sx+pt.tx)/2,cy=Math.min(pt.sy,pt.ty)-50,t=pt.p,px=(1-t)*(1-t)*pt.sx+2*(1-t)*t*cx+t*t*pt.tx,py=(1-t)*(1-t)*pt.sy+2*(1-t)*t*cy+t*t*pt.ty;for(var tr=5;tr>=1;tr--){var tp=Math.max(0,pt.p-tr*.015),tx2=(1-tp)*(1-tp)*pt.sx+2*(1-tp)*tp*cx+tp*tp*pt.tx,ty2=(1-tp)*(1-tp)*pt.sy+2*(1-tp)*tp*cy+tp*tp*pt.ty;ctx.beginPath();ctx.arc(tx2,ty2,1.5-tr*.2,0,Math.PI*2);ctx.fillStyle=pt.c+Math.floor((6-tr)/6*80).toString(16).padStart(2,'0');ctx.fill();}ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle=pt.c;ctx.fill();}GTF++;if(Math.random()<.08)sp();requestAnimationFrame(draw);}for(var si=0;si<10;si++)sp();draw();}
-var GAPT=[{n:'APT41 (China)',v:23,c:'#ef4444',f:'CN'},{n:'Lazarus (DPRK)',v:18,c:'#f59e0b',f:'KP'},{n:'Sandworm (Russia)',v:15,c:'#ef4444',f:'RU'},{n:'APT35 (Iran)',v:11,c:'#f59e0b',f:'IR'},{n:'TA453 (Iran)',v:9,c:'#818cf8',f:'IR'}];
+// GATK/gtmLog below feeds the panel explicitly labeled "SAMPLE THREAT ACTIVITY
+// (illustrative)" in the markup — kept as illustrative animation only.
 var GATK=[{s:'Beijing,CN',d:'New York,US',t:'SQL Injection',sev:'HIGH'},{s:'Moscow,RU',d:'London,UK',t:'Credential Stuffing',sev:'CRITICAL'},{s:'Pyongyang,KP',d:'Seoul,KR',t:'Spear Phishing',sev:'HIGH'},{s:'Bucharest,RO',d:'Frankfurt,DE',t:'Ransomware Staging',sev:'CRITICAL'},{s:'Tehran,IR',d:'Tel Aviv,IL',t:'DDoS Campaign',sev:'HIGH'},{s:'Unknown VPN',d:'Mumbai,IN',t:'API Abuse',sev:'MEDIUM'},{s:'Lagos,NG',d:'Toronto,CA',t:'BEC Fraud',sev:'HIGH'}];
 var GLI=0;
-function gtmAPTs(){var el=document.getElementById('gtm-apt-list');if(!el)return;el.innerHTML=GAPT.map(function(a){return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:rgba(255,255,255,.72);font-size:11px;font-weight:700;width:20px">'+esc(a.f)+'</span><div style="flex:1"><div style="color:#fff;font-size:12px;font-weight:700">'+esc(a.n)+'</div><div style="background:rgba(255,255,255,.08);border-radius:3px;height:3px;margin-top:4px"><div style="background:'+a.c+';height:3px;border-radius:3px;width:'+Math.min(100,a.v/25*100)+'%"></div></div></div><span style="color:'+a.c+';font-size:12px;font-weight:800">'+a.v+'</span></div>';}).join('');}
+// "TOP THREAT ACTOR GROUPS" is NOT labeled illustrative in the markup — it must
+// be real. Fetches /api/apt-intel/groups: attribution derived only from live
+// CISA advisories + this platform's own CVE correlation. Honest empty state
+// when nothing has actually correlated yet — no invented percentages.
+async function gtmAPTsLive(){
+  var el=document.getElementById('gtm-apt-list');if(!el)return;
+  try{
+    var r=await fetch('/api/apt-intel/groups');
+    var d=r.ok?await r.json():null;
+    var groups=(d&&Array.isArray(d.active_apt_groups))?d.active_apt_groups:[];
+    if(!groups.length){
+      el.innerHTML='<div style="color:rgba(255,255,255,0.72);font-size:11px;line-height:1.6;padding:6px 0">No threat actor group currently correlates to a live CISA advisory or tracked CVE. This list populates automatically as real evidence appears — it is never estimated.</div>';
+      return;
+    }
+    var maxM=Math.max.apply(null,groups.map(function(g){return g.mentions||1;}));
+    el.innerHTML=groups.map(function(g){
+      var pct=Math.min(100,Math.round((g.mentions||1)/maxM*100));
+      var ev=(g.evidence&&g.evidence[0])||null;
+      var title=ev?(ev.source+': '+(ev.title||'')):'';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)" title="'+esc(title)+'">'
+        +'<div style="flex:1"><div style="color:#fff;font-size:12px;font-weight:700">'+esc(g.group)+'</div>'
+        +'<div style="background:rgba(255,255,255,.08);border-radius:3px;height:3px;margin-top:4px"><div style="background:#a855f7;height:3px;border-radius:3px;width:'+pct+'%"></div></div></div>'
+        +'<span style="color:#a855f7;font-size:12px;font-weight:800">'+(g.mentions||1)+'</span></div>';
+    }).join('');
+  }catch(e){
+    el.innerHTML='<div style="color:rgba(255,255,255,0.72);font-size:11px">Attribution feed temporarily unavailable.</div>';
+  }
+}
 function gtmLog(){var el=document.getElementById('gtm-live-log');if(!el)return;var a=GATK[GLI%GATK.length];GLI++;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML='<div style="color:'+cc[a.sev]+'">['+new Date().toTimeString().slice(0,8)+'] <span style="color:rgba(255,255,255,.8)">'+esc(a.s)+'</span> &rarr; <span style="color:#00d4ff">'+esc(a.d)+'</span> <span style="color:rgba(255,255,255,.72)">'+esc(a.t)+'</span></div>'+el.innerHTML;var ls=el.children;if(ls.length>12)el.removeChild(ls[ls.length-1]);}
-(function(){function s(){gtmInit();gtmAPTs();setInterval(gtmLog,2800);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',s);else s();})();
+(function(){function s(){gtmInit();gtmAPTsLive();setInterval(gtmLog,2800);setInterval(gtmAPTsLive,300000);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',s);else s();})();
 
 /* === INCIDENT RESPONSE === */
 var IRPB={ransomware:'<div style="color:#ef4444;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F6A8; P1 RANSOMWARE RESPONSE &mdash; NIST 800-61 REV3</div><div style="color:#f59e0b;font-size:12px;font-weight:800;margin-bottom:8px">PHASE 1 &mdash; PREPARATION (T+0 to T+15min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate IR team bridge &mdash; alert CISO, Legal, Communications, Board</li><li>Snapshot affected VMs for forensic preservation before isolation</li><li>Notify cyber insurance carrier &mdash; preserve coverage</li><li>Open P1 incident ticket and assign IR lead</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 2 &mdash; IDENTIFICATION (T+15min to T+60min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Identify Patient Zero via EDR telemetry (CrowdStrike / Defender)</li><li>Determine ransomware family via ID-Ransomware tool</li><li>Map encrypted extensions and ransom note locations</li><li>Hunt lateral movement: SMB, PsExec, WMI, Cobalt Strike beacons</li><li>Search for data exfiltration via DLP, proxy logs, DNS queries</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 3 &mdash; CONTAINMENT (T+1h to T+4h)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Segment infected subnets &mdash; revoke network access at switch level</li><li>Reset ALL privileged credentials: AD, Azure AD, service accounts</li><li>Block C2 IOCs at NGFW, DNS sinkholes, and proxy layer</li><li>Disable VSS deletion &mdash; protect remaining shadow copies</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 4 &mdash; ERADICATION &amp; RECOVERY</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Wipe and reimage all affected systems from immutable golden image</li><li>Restore from offline/air-gapped backups with integrity validation</li><li>Deploy enhanced EDR and MFA before reconnecting to network</li><li>Conduct tabletop debrief and update IR plan</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1059 Execution','T1055 Injection','T1021 Lateral Move','T1083 Discovery','T1486 Encrypt Files','T1490 Inhibit Recovery'].map(function(t){return'<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',apt:'<div style="color:#a855f7;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F575; P1 APT INTRUSION &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate TI team + external DFIR retainer (Mandiant / CrowdStrike)</li><li>Establish out-of-band comms &mdash; assume primary channels compromised</li><li>Enable enhanced logging without alerting the adversary</li><li>Deploy deception assets: honeypots and honeytokens</li><li>Hunt LOLBins: powershell, certutil, regsvr32, wscript, mshta</li><li>Analyze DNS for DGA activity and long-TTL abnormalities</li><li>Retrieve memory dumps for offline forensic analysis</li><li>Map TTPs to MITRE ATT&amp;CK Navigator for attribution</li><li>Rotate ALL cryptographic keys, certs and API credentials</li><li>Enforce MFA and Just-In-Time privileged access everywhere</li></ul>',breach:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F513; P1 DATA BREACH &mdash; GDPR / DPDP ACT 2023</div><div style="color:#ef4444;font-size:12px;font-weight:800;margin-bottom:8px">CRITICAL: 72-HOUR REGULATORY NOTIFICATION CLOCK ACTIVE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage DPO and legal counsel immediately &mdash; preserve attorney privilege</li><li>Classify breached data: PII, PCI, PHI, trade secrets</li><li>Notify CERT-In within 6 hours (India) | DPA within 72h (GDPR)</li><li>Preserve all logs with forensic chain of custody</li><li>Enumerate affected individuals for breach notification</li><li>Prepare user notification per DPDP Act 2023 requirements</li></ul>',ddos:'<div style="color:#818cf8;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F30A; DDoS INCIDENT RESPONSE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Enable Cloudflare Under Attack mode immediately</li><li>Contact upstream ISP for BGP black-holing of attack sources</li><li>Analyze attack vector: volumetric, protocol, or application layer</li><li>Deploy geo-blocking and rate limiting at edge</li><li>Activate CDN failover and scale origin capacity</li><li>Document attack for law enforcement if warranted</li></ul>'};
@@ -21827,16 +21865,36 @@ window.irExportPlaybook=function(){if(typeof TOAST!=='undefined')TOAST.info('PDF
 
 /* === ZERO-DAY INTELLIGENCE === */
 var ZDD=[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS GlobalProtect',cvss:10.0,st:'ITW',dk:false,poc:true,pt:false,ag:'active',d:'OS command injection in GlobalProtect feature. CISA KEV listed — actively exploited by UTA0218 threat actor. Disable GlobalProtect or apply vendor patch immediately.'},{id:'CVE-2024-21762',p:'Fortinet FortiOS SSL-VPN',cvss:9.6,st:'ITW',dk:false,poc:true,pt:true,ag:'active',d:'Out-of-bounds write allows unauthenticated remote code execution via SSL-VPN. CISA KEV listed. Apply FortiOS patch immediately.'},{id:'CVE-2024-27198',p:'JetBrains TeamCity',cvss:9.8,st:'ITW',dk:false,poc:true,pt:true,ag:'active',d:'Authentication bypass allowing full CI/CD pipeline takeover. Exploited by APT29. Patch to 2023.11.4+ immediately.'},{id:'CVE-2024-1709',p:'ConnectWise ScreenConnect',cvss:10.0,st:'ITW',dk:false,poc:true,pt:true,ag:'active',d:'Authentication bypass enabling arbitrary file upload and RCE. Widely exploited in ransomware campaigns. Immediate patch required.'},{id:'CVE-2023-4966',p:'Citrix NetScaler ADC',cvss:9.4,st:'ITW',dk:false,poc:true,pt:true,ag:'recent',d:'Citrix Bleed: session token disclosure enabling session hijacking without authentication. Exploited by LockBit and APT29. Patch and invalidate all sessions.'}];
-(function fetchZDDLive(){fetch('/api/zeroday/feed').then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&Array.isArray(d.data)&&d.data.length){ZDD=d.data;zdFeed();}}).catch(function(){});})();
-var ZDW=[{src:'CISA',sig:'High-risk CVEs added to KEV catalog — patch immediately',thr:'CRITICAL',t:'live'},{src:'NVD',sig:'Critical severity CVEs published — review CVSS scores and affected systems',thr:'HIGH',t:'live'},{src:'CISA KEV',sig:'Known exploited vulnerabilities catalog updated — verify your exposure',thr:'HIGH',t:'live'},{src:'Sentinel APEX',sig:'Threat feed updated with latest NVD and CISA intelligence',thr:'MEDIUM',t:'live'},{src:'CERT-In',sig:'Monitor CERT-In advisories for India-specific threat landscape updates',thr:'MEDIUM',t:'advisory'}];
+(function fetchZDDLive(){fetch('/api/zeroday/feed').then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&Array.isArray(d.data)&&d.data.length){ZDD=d.data;zdFeed();buildZDWLive();}}).catch(function(){});})();
+// Previously a hardcoded, unchanging array mislabeled "live" regardless of
+// actual platform state. Replaced with signals computed from the real ZDD
+// feed (CISA KEV, already fetched above) and /api/threat-intel/stats —
+// counts are real and change as the underlying data changes.
+var ZDW=[];
+async function buildZDWLive(){
+  var out=[];
+  try{
+    var itw=(ZDD||[]).filter(function(z){return z.st==='ITW';}).length;
+    if(itw>0) out.push({src:'CISA KEV',sig:itw+' CVE'+(itw>1?'s':'')+' in the current feed '+(itw>1?'are':'is')+' actively exploited in the wild — patch immediately',thr:'CRITICAL',t:'live'});
+    var r=await fetch('/api/threat-intel/stats').then(function(x){return x.ok?x.json():null;}).catch(function(){return null;});
+    var s=r&&(r.data?r.data.stats:r.stats);
+    if(s){
+      if(s.critical>0) out.push({src:'Platform Intel',sig:s.critical+' CRITICAL severity CVE'+(s.critical>1?'s':'')+' tracked in the live database',thr:'HIGH',t:'live'});
+      if(s.confirmed_exploited>0) out.push({src:'Platform Intel',sig:s.confirmed_exploited+' confirmed-exploited CVE'+(s.confirmed_exploited>1?'s':'')+' under active tracking',thr:'HIGH',t:'live'});
+      if(s.ransomware_linked>0) out.push({src:'Platform Intel',sig:s.ransomware_linked+' CVE'+(s.ransomware_linked>1?'s are':' is')+' linked to known ransomware campaigns',thr:'MEDIUM',t:'live'});
+    }
+  }catch(e){}
+  ZDW=out;
+  zdDW();
+}
 function zdCard(z){var sc={ITW:'#ef4444',PoC:'#f59e0b',Private:'#a855f7',Researched:'#00d4ff'}[z.st]||'#818cf8';return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(168,85,247,.1);border-left:3px solid '+sc+';border-radius:10px;padding:14px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div><span style="font-weight:900;color:#fff;font-size:13px">'+esc(z.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:7px">'+esc(z.p)+'</span></div><div style="display:flex;gap:4px;flex-wrap:wrap"><span style="background:'+sc+'20;color:'+sc+';font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid '+sc+'40">'+esc(z.st)+'</span>'+(z.dk?'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">DARK WEB</span>':'')+(z.poc?'<span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PoC</span>':'')+(z.pt?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH</span>':'<span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'<span style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(z.ag)+'</span></div></div><div style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.5;margin-bottom:8px">'+esc(z.d)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap"><span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">CVSS '+z.cvss.toFixed(1)+'</span><button onclick="zdW(\''+esc(z.id)+'\')" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:#a855f7;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Watch</button><button onclick="zdM(\''+esc(z.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer">Mitigate</button></div></div>';}
 function zdFeed(){var el=document.getElementById('zd-feed');if(el)el.innerHTML=ZDD.map(zdCard).join('');}
-function zdDW(){var el=document.getElementById('zd-darkweb');if(!el)return;var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML=ZDW.map(function(d){return'<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:'+cc[d.thr]+';font-size:10px;font-weight:800">'+esc(d.thr)+'</span><span style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(d.t)+'</span></div><div style="color:rgba(255,255,255,.72);font-size:11px;line-height:1.5">'+esc(d.sig)+'</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">via '+esc(d.src)+'</div></div>';}).join('');}
+function zdDW(){var el=document.getElementById('zd-darkweb');if(!el)return;if(!ZDW.length){el.innerHTML='<div style="color:rgba(255,255,255,0.72);font-size:11px">No active advisory signals from the live feed right now.</div>';return;}var cc={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#818cf8'};el.innerHTML=ZDW.map(function(d){return'<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:'+cc[d.thr]+';font-size:10px;font-weight:800">'+esc(d.thr)+'</span><span style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(d.t)+'</span></div><div style="color:rgba(255,255,255,.72);font-size:11px;line-height:1.5">'+esc(d.sig)+'</div><div style="color:rgba(255,255,255,0.72);font-size:10px;margin-top:2px">via '+esc(d.src)+'</div></div>';}).join('');}
 window.zdRefreshFeed=function(){var el=document.getElementById('zd-feed');if(el){el.style.opacity='.4';setTimeout(function(){zdFeed();el.style.opacity='1';},600);}};
 window.zdW=function(id){if(typeof TOAST!=='undefined')TOAST.info('Watching '+id,'Watch');};
 window.zdM=function(id){if(typeof TOAST!=='undefined')TOAST.info('Mitigation guidance loading for '+id,'Mitigate');};
 window.zdSetAlert=function(){var t=document.getElementById('zd-alert-target'),l=document.getElementById('zd-alerts-list');if(!t||!l)return;var v=t.value.trim();if(!v)return;l.innerHTML='<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px;color:rgba(255,255,255,.72)">Monitoring: <strong style="color:#a855f7">'+esc(v)+'</strong><br><span style="color:rgba(255,255,255,0.72)">Dark web | Exploit markets | GitHub PoCs | Telegram</span></div>'+l.innerHTML;t.value='';if(typeof TOAST!=='undefined')TOAST.success('Alert set for '+v,'Zero-Day Alert');};
-(function(){function i(){zdFeed();zdDW();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
+(function(){function i(){zdFeed();buildZDWLive();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === INTERSECTION COUNTER ANIMATIONS === */
 function cntUp(id,target){var el=document.getElementById(id);if(!el)return;var v=0,step=target/60,iv=setInterval(function(){v+=step;if(v>=target){v=target;clearInterval(iv);}el.textContent=Math.floor(v).toLocaleString();},1400/60);}
@@ -22271,8 +22329,18 @@ function v21TriggerUrgencyPayment(){
       // p4 counters
       const _p4s = document.getElementById('p4-cnt-scans');
       if (_p4s && totalScans !== null) _p4s.textContent = Number(totalScans).toLocaleString('en-IN');
-      const _gtb = document.getElementById('gtm-blocked');
-      if (_gtb && totalScans !== null) _gtb.textContent = Number(totalScans).toLocaleString('en-IN');
+
+      // Global Threat Map stat tiles — real counts from /api/threat-intel/stats,
+      // not the scan counter (a scan count is not an "exploited" count).
+      const _statsBlock = ti?.data?.stats ?? ti?.stats ?? null;
+      const _gtAttacks   = document.getElementById('gtm-attacks');
+      const _gtCampaigns = document.getElementById('gtm-campaigns');
+      const _gtBlocked   = document.getElementById('gtm-blocked');
+      if (_statsBlock) {
+        if (_gtAttacks   && _statsBlock.total_advisories    != null) _gtAttacks.textContent   = Number(_statsBlock.total_advisories).toLocaleString('en-IN');
+        if (_gtCampaigns && _statsBlock.critical            != null) _gtCampaigns.textContent = Number(_statsBlock.critical).toLocaleString('en-IN');
+        if (_gtBlocked   && _statsBlock.confirmed_exploited != null) _gtBlocked.textContent   = Number(_statsBlock.confirmed_exploited).toLocaleString('en-IN');
+      }
 
       // Hero live scan count
       const heroLive = document.getElementById('hero-live-scans');

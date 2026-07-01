@@ -8,9 +8,40 @@
 
 const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+const THREATFOX_URL  = 'https://threatfox-api.abuse.ch/api/v1/';
 const FEED_CACHE_KEY = 'sentinel:apex:feed:v1';
-const FEED_TTL       = 21600; // 6 hours — matches cron frequency
+const FEED_TTL       = 1800; // 30 minutes — real "breaking" feel; CVE/KEV data doesn't need 6h staleness
 const FETCH_TIMEOUT  = 8000;
+
+// ─── ThreatFox (abuse.ch) — fresh IOCs, last 24h ──────────────────────────────
+// Unlike CVEs (which are inherently slower-moving), IOCs churn hourly — this
+// is the genuinely "breaking" layer of the feed the IBM mandate asked for.
+async function fetchThreatFoxRecent(limit = 12) {
+  try {
+    const resp = await fetch(THREATFOX_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'get_iocs', days: 1 }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const iocs = data.data || [];
+    return iocs.slice(0, limit).map(ioc => ({
+      ioc_type:    (ioc.ioc_type || 'unknown').toLowerCase(),
+      value:       ioc.ioc,
+      threat_type: ioc.threat_type || 'unknown',
+      malware:     ioc.malware_printable || ioc.malware || null,
+      confidence:  ioc.confidence_level ?? null,
+      first_seen:  ioc.first_seen,
+      tags:        ioc.tags || [],
+      reporter:    ioc.reporter || 'abuse.ch',
+      source:      'ThreatFox',
+    }));
+  } catch {
+    return [];
+  }
+}
 
 // ─── Safe fetch with timeout ──────────────────────────────────────────────────
 async function safeFetch(url, options = {}) {
@@ -166,9 +197,10 @@ function buildThreatTrends(nvdData) {
 
 // ─── Build Full Feed Payload ──────────────────────────────────────────────────
 async function buildFeed() {
-  const [nvd, kev] = await Promise.all([
+  const [nvd, kev, iocs] = await Promise.all([
     fetchNVDCVEs(3),
     fetchCISAKEV(),
+    fetchThreatFoxRecent(12),
   ]);
 
   const trends = buildThreatTrends(nvd);
@@ -191,9 +223,11 @@ async function buildFeed() {
     critical_cves:       nvd.critical?.slice(0, 10) ?? [],
     high_cves:           nvd.high?.slice(0, 8) ?? [],
     actively_exploited:  kev.vulnerabilities ?? [],
+    active_iocs:         iocs,
     sources: {
-      nvd:  { name:'NIST NVD', url:'https://nvd.nist.gov/', status: nvd.total > 0 ? 'ok' : 'unavailable' },
-      kev:  { name:'CISA KEV', url:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog', status: kev.total_in_catalog > 0 ? 'ok' : 'unavailable' },
+      nvd:       { name:'NIST NVD', url:'https://nvd.nist.gov/', status: nvd.total > 0 ? 'ok' : 'unavailable' },
+      kev:       { name:'CISA KEV', url:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog', status: kev.total_in_catalog > 0 ? 'ok' : 'unavailable' },
+      threatfox: { name:'ThreatFox (abuse.ch)', url:'https://threatfox.abuse.ch/', status: iocs.length > 0 ? 'ok' : 'unavailable' },
     },
     telegram_channel: {
       name:  'Sentinel APEX',
@@ -351,7 +385,7 @@ export async function handleSentinelStatus(request, env) {
     last_run:      lastRun,
     feed_url:      'https://cyberdudebivash-security-hub.workers.dev/api/sentinel/feed',
     telegram:      'https://t.me/cyberdudebivashSentinelApex',
-    refresh_every: '6 hours (cron)',
-    sources:       ['NIST NVD CVE API v2', 'CISA Known Exploited Vulnerabilities'],
+    refresh_every: '30 minutes (cache) / 6 hours (full cron re-index)',
+    sources:       ['NIST NVD CVE API v2', 'CISA Known Exploited Vulnerabilities', 'ThreatFox (abuse.ch) — live IOCs'],
   }, { status: 200 });
 }

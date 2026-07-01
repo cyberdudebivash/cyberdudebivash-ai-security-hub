@@ -267,6 +267,7 @@ import { correlateThreatIntel, getThreatIntelStats, purgeExpiredThreatIntel } fr
 
 // ─── Intelligence + Sentinel ─────────────────────────────────────────────────
 import { handleSentinelFeed, handleSentinelStatus, runSentinelCron } from './lib/sentinelApex.js';
+import { handleAptIntelGroups, getActiveAptGroups, correlateAptGroupsInD1 } from './lib/aptIntelEngine.js';
 import { processQueueBatch }   from './lib/queue.js';
 
 // ─── New v8.1 handlers — Real-Time Feed + Gumroad Revenue Engine + SIEM ──────
@@ -1095,6 +1096,16 @@ async function handleIntelligenceSummary(env) {
           } catch {}
         }
         if (apts.size) summary.active_apt_groups = [...apts].slice(0, 5);
+      }
+
+      // Fall back to the real APT intelligence engine (live CISA advisory +
+      // CVE correlation) when the D1 column hasn't been backfilled yet for
+      // this row window. Still empty, honestly, if no live evidence exists.
+      if (summary.active_apt_groups.length === 0) {
+        try {
+          const realApt = await getActiveAptGroups(env, { limit: 5 });
+          if (realApt.length) summary.active_apt_groups = realApt.map(g => g.group);
+        } catch { /* non-fatal — summary already has a safe empty default */ }
       }
 
       // Recommendations derived from what we actually found (real, not canned)
@@ -4399,6 +4410,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/threat-intel/live  → alias → /api/sentinel/feed
     if (path === '/api/threat-intel/live' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
+    }
+
+    // GET /api/apt-intel/groups — real APT attribution: CISA advisory + CVE
+    // correlation only. Empty array when no live evidence exists (never fabricated).
+    if (path === '/api/apt-intel/groups' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleAptIntelGroups(request, env), request));
     }
 
     // GET /api/zeroday/feed — recent CISA KEV entries as zero-day intelligence
@@ -8028,6 +8045,15 @@ ctx.waitUntil(
           duration_ms: r.duration_ms,
         })))
         .catch(e => console.error('[CRON] Threat Ingestion error:', e?.message))
+    );
+
+    // ── HOURLY: APT attribution backfill — scans recent threat_intel rows for
+    //    real actor names/aliases in their own title/description text and
+    //    tags apt_groups accordingly. Never invents activity. ──
+    ctx.waitUntil(
+      correlateAptGroupsInD1(env)
+        .then(r => console.log('[CRON] APT Correlation:', JSON.stringify(r)))
+        .catch(e => console.error('[CRON] APT Correlation error:', e?.message))
     );
 
     // ── HOURLY: AI Threat Radar — dedicated, targeted AI/LLM ecosystem scan

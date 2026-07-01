@@ -2,16 +2,22 @@
  * CYBERDUDEBIVASH AI Security Hub — ThreatFusion Engine v19.0
  * Global Threat Intelligence Domination Layer
  *
- * Aggregates, normalizes, deduplicates, and enriches threat intelligence from:
- *   - NVD / CISA KEV (live)
- *   - EPSS API (exploit prediction)
- *   - ThreatFox (MalwareBazaar, abuse.ch)
- *   - Shodan InternetDB (open ports, CVEs)
- *   - URLhaus (malicious URLs)
- *   - GreyNoise (benign vs. malicious scanner intelligence)
- *   - OpenPhish (phishing feeds)
- *   - IntelX OSINT (dark web signals — simulated when API unavailable)
- *   - Ransomware.live (ransomware group activity)
+ * Aggregates, normalizes, and deduplicates threat intelligence from real,
+ * live sources only:
+ *   - CISA KEV (live)
+ *   - ThreatFox (MalwareBazaar, abuse.ch) — live IOCs
+ *   - URLhaus (abuse.ch) — live malicious URLs
+ *   - Shodan InternetDB (open ports, CVEs) — on-demand lookup only
+ *
+ * GreyNoise, OpenPhish, IntelX, and Ransomware.live are NOT integrated —
+ * they were listed here previously but no fetcher for them exists in this
+ * file. This endpoint no longer claims sources it doesn't have.
+ *
+ * A prior version of this file included generateDarkWebIntel(), which
+ * fabricated dark-web/ransomware signals (random confidence scores,
+ * Date.now()-based fake timestamps, hardcoded actor names) and merged them
+ * indiscernibly into this paid feed. That function has been removed — this
+ * feed now contains only IOCs verifiably sourced from ThreatFox/URLhaus/KEV.
  *
  * All IOCs normalized to a universal schema.
  * Each IOC gets a confidence score (0–100) and MITRE ATT&CK mapping.
@@ -187,40 +193,6 @@ async function fetchEPSSHigh(limit = 10) {
   }
 }
 
-// Simulated dark web / ransomware intelligence (when live APIs unavailable)
-function generateDarkWebIntel(count = 8) {
-  const actors   = ['LockBit 3.0', 'CL0P', 'ALPHV/BlackCat', 'Play', 'Medusa', 'Royal', '8Base', 'Hunters International'];
-  const sectors  = ['healthcare', 'finance', 'manufacturing', 'education', 'government', 'technology', 'retail'];
-  const signals  = [
-    'New ransomware group claims breach of major enterprise',
-    'Credential dump of 2.3M accounts observed on dark web forum',
-    'Zero-day exploit for enterprise VPN solution being traded',
-    'Ransomware affiliate recruitment campaign observed on Telegram',
-    'Data from critical infrastructure provider listed for sale',
-    'New C2 infrastructure cluster identified — attributed to nation-state',
-    'Phishing kit targeting banking institutions distributed via Telegram',
-    'Source code for banking trojan leaked on underground forum',
-  ];
-
-  return Array.from({ length: count }, (_, i) => ({
-    id:          `dw_${Date.now()}_${i}`,
-    type:        'dark_web_signal',
-    value:       signals[i % signals.length],
-    source:      'DarkWeb_Monitor',
-    confidence:  55 + (i * 5) % 35,
-    threat_type: i % 2 === 0 ? 'ransomware' : 'credential_leak',
-    severity:    i < 3 ? 'HIGH' : 'MEDIUM',
-    mitre_technique: i % 2 === 0 ? 'T1486' : 'T1078',
-    first_seen:  new Date(Date.now() - i * 3600000).toISOString(),
-    last_seen:   new Date().toISOString(),
-    tags:        [actors[i % actors.length], sectors[i % sectors.length]],
-    geo:         null,
-    verdict:     'suspicious',
-    reporter:    'CYBERDUDEBIVASH Sentinel APEX',
-    threat_actor: actors[i % actors.length],
-  }));
-}
-
 // Shodan InternetDB lookup for a target IP/domain
 export async function shodanLookup(target) {
   try {
@@ -247,7 +219,7 @@ export async function shodanLookup(target) {
 
 // ─── Main feed aggregation ────────────────────────────────────────────────────
 export async function aggregateThreatFeed(env, options = {}) {
-  const { limit = 50, includeKEV = true, includeDarkWeb = true, includeURLhaus = true, includeThreatFox = true } = options;
+  const { limit = 50, includeKEV = true, includeURLhaus = true, includeThreatFox = true } = options;
 
   // Check KV cache (15 min TTL to avoid hammering external APIs)
   if (env?.SECURITY_HUB_KV) {
@@ -261,16 +233,15 @@ export async function aggregateThreatFeed(env, options = {}) {
     }
   }
 
-  // Fetch all sources in parallel
-  const [tfIOCs, urlhausIOCs, kevIOCs, darkWebIOCs] = await Promise.all([
+  // Fetch all real sources in parallel — no fabricated/simulated data.
+  const [tfIOCs, urlhausIOCs, kevIOCs] = await Promise.all([
     includeThreatFox ? fetchThreatFox(15) : [],
     includeURLhaus   ? fetchURLhaus(10) : [],
     includeKEV       ? fetchCISAKEV(10) : [],
-    includeDarkWeb   ? Promise.resolve(generateDarkWebIntel(8)) : [],
   ]);
 
   // Merge and deduplicate
-  const allIOCs = [...tfIOCs, ...urlhausIOCs, ...kevIOCs, ...darkWebIOCs];
+  const allIOCs = [...tfIOCs, ...urlhausIOCs, ...kevIOCs];
   const seen    = new Map();
   const deduped = [];
   for (const ioc of allIOCs) {
@@ -291,7 +262,7 @@ export async function aggregateThreatFeed(env, options = {}) {
   const result = {
     total:       deduped.length,
     feed:        deduped.slice(0, limit),
-    sources:     { threatfox: tfIOCs.length, urlhaus: urlhausIOCs.length, cisa_kev: kevIOCs.length, dark_web: darkWebIOCs.length },
+    sources:     { threatfox: tfIOCs.length, urlhaus: urlhausIOCs.length, cisa_kev: kevIOCs.length },
     high_confidence: deduped.filter(i => i.confidence >= 80).length,
     critical_count:  deduped.filter(i => i.severity === 'CRITICAL').length,
     generated_at: new Date().toISOString(),
