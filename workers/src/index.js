@@ -1063,10 +1063,14 @@ async function handleIntelligenceSummary(env) {
       else if (critCves >= 5 || critScans >= 1) summary.platform_threat_level = 'MODERATE';
       else summary.platform_threat_level = 'LOW';
 
-      // Real risk index derived from severity distribution (0–100 scale, not hardcoded)
+      // Real risk index: weighted severity ratio, 0–100 scale.
+      // Formula: (critical×1.0 + high×0.4) / total × 100, capped at 95.
+      // CRITICAL CVEs carry full weight; HIGH carry 40%. A catalogue that is
+      // 100% HIGH rates ~40 (meaningful but not maximal) — only a full
+      // CRITICAL catalogue or mass-exploitation would approach 95.
       if (intelStats?.total > 0) {
-        summary.global_risk_index = Math.min(100, Math.round(
-          (critCves * 4 + summary.high_cve_count * 2) / intelStats.total * 100
+        summary.global_risk_index = Math.min(95, Math.round(
+          (critCves * 1.0 + summary.high_cve_count * 0.4) / intelStats.total * 100
         ));
       }
 

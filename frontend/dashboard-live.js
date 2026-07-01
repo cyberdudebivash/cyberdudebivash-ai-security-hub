@@ -141,7 +141,10 @@
       } else {
         // metricsHydration.js delegates uptime to /api/uptime — fetch it separately
         Bus.fetch('/api/uptime').then(ut => {
-          const pct = ut?.uptime_percentage ?? ut?.uptime_pct ?? ut?.uptime ?? null;
+          // /api/uptime returns { uptime: { "7d": { uptime_pct: N }, ... } }
+          const pct = ut?.uptime?.['7d']?.uptime_pct
+                   ?? ut?.uptime?.['24h']?.uptime_pct
+                   ?? ut?.uptime_percentage ?? ut?.uptime_pct ?? null;
           if (pct !== null) setText('cdb-exec-uptime', typeof pct === 'number' ? pct.toFixed(2) + '%' : pct);
         }).catch(() => {});
       }
