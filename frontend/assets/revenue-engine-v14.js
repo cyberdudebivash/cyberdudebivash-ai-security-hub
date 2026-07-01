@@ -824,19 +824,19 @@ function _injectRevenueDashboard() {
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#10b981" id="v14-rev-today">₹18,400</div>
+        <div style="font-size:22px;font-weight:900;color:#10b981" id="v14-rev-today">—</div>
         <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">Today Revenue</div>
       </div>
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#00d4ff" id="v14-rev-month">₹2.4L</div>
+        <div style="font-size:22px;font-weight:900;color:#00d4ff" id="v14-rev-month">—</div>
         <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">Monthly Revenue</div>
       </div>
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#f59e0b" id="v14-rev-purchases">0</div>
+        <div style="font-size:22px;font-weight:900;color:#f59e0b" id="v14-rev-purchases">—</div>
         <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">Purchases</div>
       </div>
       <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#a78bfa" id="v14-rev-conversions">8.3%</div>
+        <div style="font-size:22px;font-weight:900;color:#a78bfa" id="v14-rev-conversions">—</div>
         <div style="font-size:10px;color:rgba(255,255,255,.35);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">Conv. Rate</div>
       </div>
     </div>
@@ -847,13 +847,13 @@ function _injectRevenueDashboard() {
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         ${[
-          { label:'Scans', value:100, color:'#00d4ff' },
-          { label:'Views', value:42, color:'#7c3aed' },
-          { label:'Intents', value:18, color:'#f59e0b' },
-          { label:'Purchases', value:8, color:'#10b981' },
+          { label:'Scans', color:'#00d4ff' },
+          { label:'Views', color:'#7c3aed' },
+          { label:'Intents', color:'#f59e0b' },
+          { label:'Purchases', color:'#10b981' },
         ].map(s => `
-          <div style="flex:${s.value};background:${s.color}20;border:1px solid ${s.color}30;border-radius:6px;padding:6px;text-align:center">
-            <div style="font-size:13px;font-weight:800;color:${s.color}" id="v14-funnel-${s.label.toLowerCase()}">${s.value}</div>
+          <div style="flex:1;background:${s.color}20;border:1px solid ${s.color}30;border-radius:6px;padding:6px;text-align:center">
+            <div style="font-size:13px;font-weight:800;color:${s.color}" id="v14-funnel-${s.label.toLowerCase()}">—</div>
             <div style="font-size:9px;color:rgba(255,255,255,.35)">${s.label}</div>
           </div>
         `).join('<div style="color:rgba(255,255,255,.2);font-size:12px">→</div>')}
@@ -922,7 +922,7 @@ function _injectStickyCTA() {
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:5px">
         <div style="width:7px;height:7px;border-radius:50%;background:#ef4444;animation:urgencyPulse 1.5s ease infinite"></div>
-        <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.7)" id="v14-sticky-scans">1,247+ scans run</span>
+        <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.7)" id="v14-sticky-scans">Live threat scanning active</span>
       </div>
       <div style="font-size:12px;color:rgba(255,255,255,.5)">·</div>
       <div style="font-size:12px;color:rgba(255,255,255,.7)">
@@ -1156,7 +1156,7 @@ function _init() {
   // Update sticky scans counter from activity engine
   setInterval(() => {
     const state = ACTIVITY_ENGINE.getState();
-    _setRevEl('v14-sticky-scans', `${state.scansRunning} active scans`);
+    if (state.scansRunning !== null) _setRevEl('v14-sticky-scans', `${state.scansRunning} active scan${state.scansRunning===1?'':'s'}`);
   }, 12000);
 
   console.log(`[OMNIGOD REVENUE ENGINE v${REV.version}] All systems online ⚡`);

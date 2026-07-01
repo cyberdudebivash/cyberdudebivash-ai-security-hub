@@ -11503,8 +11503,8 @@ async function refreshDashboardMetrics() {
 
   // ── Defense marketplace stats ──────────────────────────────────────────
   const totalProd  = ds?.total_solutions ?? ds?.total ?? null;
-  const totalSales = ds?.total_purchases  ?? ds?.purchases ?? null;
-  const totalRev   = ds?.total_revenue    ?? ds?.revenue_inr ?? null;
+  const totalSales = ds?.total_sales ?? ds?.total_purchases ?? ds?.purchases ?? null;
+  const totalRev   = ds?.total_revenue_inr ?? ds?.total_revenue ?? ds?.revenue_inr ?? null;
   const el_rev = document.getElementById('mc-revenue');
   if (el_rev && totalRev !== null) {
     el_rev.textContent = '₹' + Number(totalRev).toLocaleString('en-IN');
