@@ -385,7 +385,7 @@ async function authenticate() {
   if (!key) return;
   try {
     const res = await fetch('/api/auth/status', {
-      headers: { Authorization: 'Bearer ' + key }
+      headers: { 'x-api-key': key }
     });
     if (!res.ok) throw new Error('auth_fail');
     const data = await res.json();
@@ -407,7 +407,7 @@ async function authenticate() {
 async function apiFetch(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
-    headers: { Authorization: 'Bearer ' + _apiKey, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    headers: { 'x-api-key': _apiKey, 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });
   return res.json();
 }

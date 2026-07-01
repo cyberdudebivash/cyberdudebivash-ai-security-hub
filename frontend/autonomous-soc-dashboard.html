@@ -419,7 +419,7 @@ async function authenticate() {
   document.getElementById('auth-error').style.display = 'none';
   try {
     const res = await fetch(API_BASE + '/api/autonomous/orchestrator/plan', {
-      headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
+      headers: { 'x-api-key': key, 'Accept': 'application/json' }
     });
     if (res.status === 401 || res.status === 403) {
       document.getElementById('auth-error').style.display = 'block';
@@ -447,7 +447,7 @@ function logout() {
 // ── API helpers ──────────────────────────────────────────────────────────────
 async function apiGet(path) {
   try {
-    const res = await fetch(API_BASE + path, { headers: { 'Authorization': 'Bearer ' + apiKey, 'Accept': 'application/json' } });
+    const res = await fetch(API_BASE + path, { headers: { 'x-api-key': apiKey, 'Accept': 'application/json' } });
     if (!res.ok) return null;
     return res.json();
   } catch { return null; }
