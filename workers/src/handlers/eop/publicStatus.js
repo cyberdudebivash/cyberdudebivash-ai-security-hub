@@ -102,7 +102,10 @@ async function fetchHealthSummary(env) {
       last_check: r.checked_at,
     }));
 
-    if (components.length === 0) return { status: 'unknown', components: [] };
+    if (components.length === 0) {
+      // No recent history — do a live fallback probe so the status page is never "unknown"
+      return await fetchHealthLiveFallback(env);
+    }
 
     const hasOutage   = components.some(c => c.status === 'major_outage');
     const hasPartial  = components.some(c => c.status === 'partial_outage');
@@ -117,6 +120,43 @@ async function fetchHealthSummary(env) {
   } catch (_) {
     return { status: 'unknown', components: [] };
   }
+}
+
+async function fetchHealthLiveFallback(env) {
+  // Called when operational_history has no recent data (e.g. first deploy, cron not yet run).
+  // Performs live probes of the most critical components so the status page shows real state.
+  const t0 = Date.now();
+  const components = [];
+  let dbOk = false;
+
+  // D1 probe
+  try {
+    const row = await env.DB.prepare('SELECT 1 AS alive').first();
+    const latency = Date.now() - t0;
+    dbOk = row?.alive === 1;
+    components.push({ name: 'D1 Database', status: dbOk ? 'operational' : 'degraded', latency_ms: latency, last_check: 'live' });
+  } catch (_) {
+    components.push({ name: 'D1 Database', status: 'major_outage', latency_ms: Date.now() - t0, last_check: 'live' });
+  }
+
+  // Worker is executing, so it's operational by definition
+  components.push({ name: 'Worker', status: 'operational', latency_ms: 0, last_check: 'live' });
+
+  // Intel probe (requires DB)
+  if (dbOk) {
+    try {
+      const row = await env.DB.prepare("SELECT COUNT(*) AS c FROM threat_intel WHERE ingested_at > datetime('now','-7 days')").first().catch(() => null);
+      components.push({ name: 'Threat Intelligence', status: (row?.c ?? 0) > 0 ? 'operational' : 'degraded', latency_ms: 0, last_check: 'live' });
+    } catch (_) {
+      components.push({ name: 'Threat Intelligence', status: 'unknown', latency_ms: 0, last_check: 'live' });
+    }
+  }
+
+  const hasOutage   = components.some(c => c.status === 'major_outage');
+  const hasDegraded = components.some(c => c.status === 'degraded');
+  const status = hasOutage ? 'critical' : hasDegraded ? 'degraded' : 'operational';
+
+  return { status, components, note: 'live_probe' };
 }
 
 async function fetchPublicIncidents(env) {

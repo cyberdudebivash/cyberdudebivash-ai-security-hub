@@ -778,7 +778,7 @@ import { logUptimeCheck } from './services/v24/platformEngine.js';
 import { handleSSOLogin, handleSSOCallback, handleSSOConfigUpsert, handleSSOConfigGet, handleSSOConfigDelete } from './handlers/ssoAuth.js';
 import { handleMFAStatus, handleMFASetup, handleMFAEnable, handleMFAAuthenticate, handleMFADisable } from './handlers/mfa.js';
 // ── EOP v1.0 — Enterprise Observability & Operations Platform ─────────────────
-import { handleHealthV2, handleHealthDetailed } from './handlers/eop/health.js';
+import { handleHealthV2, handleHealthDetailed, recordHistory } from './handlers/eop/health.js';
 import { handlePublicIncidents, handlePublicIncident, handlePublicMaintenance, handleAdminIncidentCreate, handleAdminIncidentUpdate, handleAdminIncidentTimelineAdd, handleAdminMaintenanceCreate, handleAdminMaintenanceUpdate } from './handlers/eop/incidents.js';
 import { handlePublicUptime }  from './handlers/eop/uptime.js';
 import { handlePublicStatus }  from './handlers/eop/publicStatus.js';
@@ -1514,6 +1514,15 @@ export default {
       // EOP v1.0 — additive fields (backward compat: existing consumers still get status/api/db/intel/revenue)
       const eopStatus = status === 'OK' ? 'operational' : status === 'DOWN' ? 'critical' : 'degraded';
       const eopSeverity = status === 'DOWN' ? 'high' : status === 'DEGRADED' ? 'medium' : 'none';
+
+      // Seed operational_history non-blockingly so status page + uptime engine have data
+      recordHistory(env, [
+        { name: 'Worker',              type: 'compute',      status: 'operational',                                                                    latency_ms: 0 },
+        { name: 'D1 Database',         type: 'database',     status: checks.db ? (details.db?.latency_ms > 1000 ? 'degraded' : 'operational') : 'major_outage', latency_ms: details.db?.latency_ms ?? 0 },
+        { name: 'Threat Intelligence', type: 'intelligence', status: checks.intel ? (details.intel?.recent_entries > 0 ? 'operational' : 'degraded') : 'degraded', latency_ms: 0 },
+        { name: 'Payment System',      type: 'payments',     status: checks.revenue ? 'operational' : 'degraded',                                     latency_ms: 0 },
+      ], eopStatus);
+
       return withSecurityHeaders(withCors(Response.json({
         // Legacy fields — unchanged for CI gate / existing consumers
         status,
@@ -7943,6 +7952,15 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         await logUptimeCheck(env.DB, 'api', 500, Date.now() - t0).catch(() => {});
       }
     })());
+
+    // ── EVERY CRON FIRING: EOP 9-component health probe → seeds operational_history ──
+    // This is the data source for /api/status, /api/uptime, and the ops dashboard.
+    // Without this, operational_history is empty and the status page shows "unknown".
+    ctx.waitUntil(
+      handleHealthV2(new Request('https://internal/api/platform/health/v2', { method: 'GET' }), env)
+        .then(() => console.log('[CRON] EOP health probes: operational_history seeded'))
+        .catch(e => console.error('[CRON] EOP health probe error:', e?.message))
+    );
 
     // ── HOURLY: Threat Intel Ingestion (Sentinel APEX v2.0 — D1-backed) ──
     // Runs every cron trigger — priority pipeline

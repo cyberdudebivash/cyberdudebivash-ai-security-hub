@@ -281,7 +281,7 @@ function fireAlerts(env, components) {
   }
 }
 
-function recordHistory(env, components, overallStatus) {
+export function recordHistory(env, components, overallStatus) {
   if (!env.DB) return;
   const version = env.VERSION || '40.0.0';
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
