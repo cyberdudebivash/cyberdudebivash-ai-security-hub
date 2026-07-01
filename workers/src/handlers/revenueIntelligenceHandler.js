@@ -31,11 +31,12 @@ const UPGRADE_PATH = {
   COMMUNITY: 'PROFESSIONAL', PROFESSIONAL: 'TEAM', TEAM: 'BUSINESS', BUSINESS: 'ENTERPRISE',
 };
 
-function requireAdmin(req) {
-  if (!req.user) return false;
-  return ['admin', 'mssp_admin', 'platform_admin'].includes(req.user.role)
-    || req.user.tier === 'MSSP';
-}
+// Authorization for this whole module is enforced at the router level
+// (index.js gates every /api/platform/revenue-intelligence* route behind
+// isOwner()) — no additional per-handler role check is needed here.
+// A prior local requireAdmin(req) check duplicated this with different,
+// broken criteria (req.user.role is never set anywhere in the auth layer),
+// which silently locked the platform owner out of this dashboard.
 
 function genId() {
   return 'ri_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -103,7 +104,7 @@ async function buildNRRForecast(env, allRows) {
   const expansionRows = allRows.filter(r => interventionUrgency(r) === 'EXPANSION');
   const expansionMRR = expansionRows.reduce((s, r) => {
     const next = UPGRADE_PATH[r.tier?.toUpperCase()];
-    return s + (next ? Math.max(0, (TIER_PRICE[next] || 0) - tierToMRR(r.tier)) : 0);
+    return s + (next ? Math.max(0, (tierToMRR(next) || 0) - tierToMRR(r.tier)) : 0);
   }, 0);
 
   // NRR = (Starting MRR + Expansion - Churn - Contraction) / Starting MRR
@@ -158,8 +159,6 @@ async function buildNRRForecast(env, allRows) {
 // ── Exported Handlers ───────────────────────────────────────────────────────
 
 export async function handleRevenueIntelligence(req, env) {
-  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
-
   const cacheKey = 'ri:dashboard:v1';
   const cached = await env.KV?.get(cacheKey, 'json').catch(() => null);
   if (cached) return Response.json({ ...cached, cached: true });
@@ -194,7 +193,7 @@ export async function handleRevenueIntelligence(req, env) {
         current_mrr: tierToMRR(r.tier),
         potential_mrr_increase: (() => {
           const next = UPGRADE_PATH[r.tier?.toUpperCase()];
-          return next ? Math.max(0, (TIER_PRICE[next] || 0) - tierToMRR(r.tier)) : 0;
+          return next ? Math.max(0, (tierToMRR(next) || 0) - tierToMRR(r.tier)) : 0;
         })(),
         health_score: r.health_score,
         adoption_score: r.adoption_score,
@@ -227,8 +226,6 @@ export async function handleRevenueIntelligence(req, env) {
 }
 
 export async function handleChurnAlerts(req, env) {
-  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
-
   const cacheKey = 'ri:churn_alerts:v1';
   const cached = await env.KV?.get(cacheKey, 'json').catch(() => null);
   if (cached) return Response.json({ alerts: cached, cached: true });
@@ -259,8 +256,6 @@ export async function handleChurnAlerts(req, env) {
 }
 
 export async function handleLogIntervention(req, env) {
-  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
-
   let body;
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
@@ -302,8 +297,6 @@ export async function handleLogIntervention(req, env) {
 }
 
 export async function handleUpgradeSignals(req, env) {
-  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
-
   const cacheKey = 'ri:upgrade_signals:v1';
   const cached = await env.KV?.get(cacheKey, 'json').catch(() => null);
   if (cached) return Response.json({ signals: cached, cached: true });
@@ -314,7 +307,7 @@ export async function handleUpgradeSignals(req, env) {
       .filter(r => r.expansion_score > 65 && r.health_score > 60)
       .map(r => {
         const nextTier = UPGRADE_PATH[r.tier?.toUpperCase()];
-        const mrrIncrease = nextTier ? Math.max(0, (TIER_PRICE[nextTier] || 0) - tierToMRR(r.tier)) : 0;
+        const mrrIncrease = nextTier ? Math.max(0, (tierToMRR(nextTier) || 0) - tierToMRR(r.tier)) : 0;
         return {
           org_id: r.org_id,
           email: r.email,
@@ -344,8 +337,6 @@ export async function handleUpgradeSignals(req, env) {
 }
 
 export async function handleNRRForecast(req, env) {
-  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
-
   const cacheKey = 'ri:nrr_forecast:v1';
   const cached = await env.KV?.get(cacheKey, 'json').catch(() => null);
   if (cached) return Response.json({ forecast: cached, cached: true });
@@ -371,8 +362,6 @@ export async function handleNRRForecast(req, env) {
  * Dry-run mode: POST body { dry_run: true } — returns who would be notified without sending.
  */
 export async function handleChurnInterventionTrigger(req, env) {
-  if (!requireAdmin(req)) return Response.json({ error: 'Admin required' }, { status: 403 });
-
   let body = {};
   try { body = await req.json().catch(() => ({})); } catch {}
   const dryRun = body.dry_run === true;
