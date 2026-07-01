@@ -159,7 +159,7 @@ async function main() {
     { module: 'compliance',   path: '/api/generate/compliance', payload: { org_name: 'example.com', framework: 'iso27001' } },
     { module: 'cloudsec',     path: '/api/scan/cloud-security', payload: { domain: 'example.com', provider: 'aws', checks: [] } },
     { module: 'mcp_security', path: '/api/mcp-security/scan',   payload: { server_url: 'https://example.com/mcp', server_name: 'test' } },
-    { module: 'vibe_code',    path: '/api/scan/vibe-code',      payload: { code: 'console.log(1)', language: 'javascript' } },
+    { module: 'vibe_code',    path: '/api/vibe-code/scan',      payload: { code: 'console.log(1)', language: 'javascript' } },
   ];
   for (const { module, path, payload } of scanModules) {
     const r = await fetchJSON(path, {
