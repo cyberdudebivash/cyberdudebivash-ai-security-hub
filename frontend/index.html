@@ -8723,8 +8723,13 @@ async function runSimulation() {
   };
 
   try {
-    const res  = await SUBSCRIPTION.fetch(`${API_BASE}/api/ai/simulate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const simToken = SUBSCRIPTION.getToken();
+    const res  = await fetch(`${API_BASE}/api/ai/simulate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(simToken ? { 'Authorization': 'Bearer ' + simToken } : {}),
+      },
       body: JSON.stringify({ scan_result: scanResult, module, target }),
     });
     const json = res.ok ? await res.json() : null;
@@ -8809,7 +8814,9 @@ async function loadReportHistory() {
   panel.innerHTML      = '';
 
   try {
-    const res   = await SUBSCRIPTION.fetch(`${API_BASE}/api/history`);
+    const res   = await fetch(`${API_BASE}/api/history`, {
+      headers: SUBSCRIPTION.getToken() ? { 'Authorization': 'Bearer ' + SUBSCRIPTION.getToken() } : {},
+    });
     const json  = res.ok ? await res.json() : null;
     const scans = json?.data || json?.scans || json?.results || [];
 
@@ -8837,7 +8844,7 @@ async function loadReportHistory() {
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <span style="background:${rColor}22;color:${rColor};border:1px solid ${rColor}44;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">${risk} · ${score}</span>
-          <button onclick="generateReportFor('${scan.id||scan.job_id||''}','${mod}','${target}')"
+          <button onclick="generateReportFor('${scan.scan_id||scan.job_id||scan.id||''}','${mod}','${target}')"
             style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">
             📄 Generate Report
           </button>
@@ -8873,8 +8880,13 @@ async function generateReportFor(scanId, module, target) {
   panel.prepend(el);
 
   try {
-    const res  = await SUBSCRIPTION.fetch(`${API_BASE}/api/report/generate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const token = SUBSCRIPTION.getToken();
+    const res  = await fetch(`${API_BASE}/api/report/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+      },
       body: JSON.stringify({ scan_id: scanId, module, format: 'pdf' }),
     });
     const json = await res.json();

@@ -3,6 +3,7 @@ import { addMonetizationFlags } from '../middleware/monetization.js';
 import { validateString, validateEnum, parseBody } from '../middleware/validation.js';
 import { inspectForAttacks, sanitizeString } from '../middleware/security.js';
 import { enrichAssessmentWithMYTHOS } from '../services/mythosEnrichmentEngine.js';
+import { cacheScanResultForReport } from '../lib/scanResultCache.js';
 
 const VALID_USE_CASES = ['chatbot','code-generation','rag','agent','recommendation','classification','image','vision','voice','other'];
 function genScanId() { return 'sc_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -51,10 +52,12 @@ export async function handleAIScan(request, env, authCtx = {}) {
   } catch { /* non-blocking */ }
 
   // v40.1+: Guaranteed D1 tracking — awaited before response
-  const finalResponse = Response.json(addMonetizationFlags(result, 'ai', authCtx, scanId), { status: 200,
+  const responsePayload = addMonetizationFlags(result, 'ai', authCtx, scanId);
+  const finalResponse = Response.json(responsePayload, { status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'ai' } });
   try {
     void incrementScanCounter(env);
+    void cacheScanResultForReport(env, authCtx, scanId, responsePayload);
     if (env?.DB) {
       const jobId    = `sync_${crypto.randomUUID().slice(0,8)}_${scanId}`;
       const identity = authCtx?.user_id || authCtx?.keyId || 'api_anon';

@@ -183,11 +183,13 @@ export function buildReport(scanResult, meta = {}) {
 }
 
 // ─── Store Report in KV ───────────────────────────────────────────────────────
-export async function storeReport(env, report) {
+// htmlContent is optional — when provided (styled, print-to-PDF report), the
+// download endpoint serves it instead of the raw JSON structured report.
+export async function storeReport(env, report, htmlContent = null) {
   if (!env?.SECURITY_HUB_KV) return null;
   try {
     const downloadToken = generateToken();
-    await Promise.all([
+    const puts = [
       // Store full report
       env.SECURITY_HUB_KV.put(
         `report:${report.report_id}`,
@@ -200,7 +202,15 @@ export async function storeReport(env, report) {
         report.report_id,
         { expirationTtl: TOKEN_TTL_SECONDS }
       ),
-    ]);
+    ];
+    if (htmlContent) {
+      puts.push(env.SECURITY_HUB_KV.put(
+        `report_html:${report.report_id}`,
+        htmlContent,
+        { expirationTtl: REPORT_TTL_SECONDS }
+      ));
+    }
+    await Promise.all(puts);
     return { download_token: downloadToken, report_id: report.report_id, expires_at: report.expires_at };
   } catch { return null; }
 }
@@ -212,7 +222,10 @@ export async function getReportByToken(env, token) {
     const reportId = await env.SECURITY_HUB_KV.get(`report_token:${token}`);
     if (!reportId) return null;
     const raw = await env.SECURITY_HUB_KV.get(`report:${reportId}`);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const report = JSON.parse(raw);
+    const html = await env.SECURITY_HUB_KV.get(`report_html:${reportId}`).catch(() => null);
+    return html ? { ...report, _html: html } : report;
   } catch { return null; }
 }
 
@@ -221,7 +234,10 @@ export async function getReportById(env, reportId) {
   if (!env?.SECURITY_HUB_KV) return null;
   try {
     const raw = await env.SECURITY_HUB_KV.get(`report:${reportId}`);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const report = JSON.parse(raw);
+    const html = await env.SECURITY_HUB_KV.get(`report_html:${reportId}`).catch(() => null);
+    return html ? { ...report, _html: html } : report;
   } catch { return null; }
 }
 

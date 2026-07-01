@@ -17,6 +17,7 @@ import { enrichScanAdaptive } from '../core/adaptiveCyberBrain.js';
 import { enrichScanEnterprise, enrichFindingsWithATTACK, matchThreatActors, quantifyBusinessImpact } from '../services/enterpriseIntelligence.js';
 // v40.0 — MYTHOS enrichment (all scan types)
 import { enrichAssessmentWithMYTHOS } from '../services/mythosEnrichmentEngine.js';
+import { cacheScanResultForReport } from '../lib/scanResultCache.js';
 
 // ─── KV scan counter — reliable cross-handler increment ──────────────────────
 async function incrementScanCounter(env) {
@@ -267,7 +268,9 @@ export async function handleDomainScan(request, env, authCtx = {}) {
   // Cache hit
   const cached = await getCachedScan(env, domain);
   if (cached && !body?.nocache) {
-    return Response.json(addMonetizationFlags(cached, 'domain', authCtx, scanId), {
+    const cachedPayload = addMonetizationFlags(cached, 'domain', authCtx, scanId);
+    void cacheScanResultForReport(env, authCtx, scanId, cachedPayload);
+    return Response.json(cachedPayload, {
       status: 200,
       headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'HIT',
                  'X-Cache-Age': String(Math.round((Date.now() - cached._cached_at) / 1000)) + 's' },
@@ -356,12 +359,14 @@ export async function handleDomainScan(request, env, authCtx = {}) {
   } catch { /* non-blocking — MYTHOS enrichment must never break scan response */ }
 
   // ── v40.1+: Guaranteed D1 tracking — awaited before response (no ctx.waitUntil needed) ───
-  const finalResponse = Response.json(addMonetizationFlags(scanResult, 'domain', authCtx, scanId), {
+  const responsePayload = addMonetizationFlags(scanResult, 'domain', authCtx, scanId);
+  const finalResponse = Response.json(responsePayload, {
     status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v32.0' },
   });
   try {
     void incrementScanCounter(env);
+    void cacheScanResultForReport(env, authCtx, scanId, responsePayload);
     if (env?.DB) {
       const jobId   = `sync_${crypto.randomUUID().slice(0,8)}_${scanId}`;
       const identity = authCtx?.user_id || authCtx?.keyId || 'api_anon';

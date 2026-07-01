@@ -7,6 +7,8 @@
 
 import { buildReport, storeReport, getReportByToken, getReportById } from '../lib/reportEngine.js';
 import { parseBody } from '../middleware/validation.js';
+import { getCachedScanResult } from '../lib/scanResultCache.js';
+import { generateHTMLReport } from '../lib/htmlReport.js';
 
 // ─── GET /api/report/:token ───────────────────────────────────────────────────
 export async function handleReportDownload(request, env, authCtx = {}) {
@@ -38,6 +40,22 @@ export async function handleReportDownload(request, env, authCtx = {}) {
     return Response.json({ error: 'Report expired', expires_at: report.expires_at }, { status: 410 });
   }
 
+  // Serve the styled, print-to-PDF HTML report when available — this is what
+  // "Download PDF" in the UI actually promises. Falls back to raw JSON for
+  // older cached reports generated before HTML rendering was wired in.
+  if (report._html) {
+    return new Response(report._html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'X-Report-ID':  report.report_id,
+        'X-Generated':  report.generated_at,
+        'X-Expires':    report.expires_at,
+        'Content-Disposition': `inline; filename="cyberdudebivash-report-${report.target}-${report.report_id.slice(0,8)}.html"`,
+      },
+    });
+  }
+
   return Response.json(report, {
     status: 200,
     headers: {
@@ -64,18 +82,17 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
 
   let scanResult = body.scan_result;
 
-  // If scan_id provided, try to pull from cache (scoped to user identity to prevent cross-tenant reads)
-  if (!scanResult && body.scan_id && env?.SECURITY_HUB_KV) {
-    try {
-      const userId = authCtx?.user_id || authCtx?.userId || authCtx?.key_id || null;
-      const scopedKey = userId ? `scan:${userId}:${body.scan_id}` : `scan:${body.scan_id}`;
-      const raw = await env.SECURITY_HUB_KV.get(scopedKey);
-      if (raw) scanResult = JSON.parse(raw);
-    } catch {}
+  // If scan_id provided, pull the exact response the customer already saw
+  // (scoped to their identity to prevent cross-tenant reads)
+  if (!scanResult && body.scan_id) {
+    scanResult = await getCachedScanResult(env, authCtx, body.scan_id);
   }
 
   if (!scanResult || typeof scanResult !== 'object') {
-    return Response.json({ error: 'Could not resolve scan result', hint: 'Provide the full scan_result JSON from a previous scan' }, { status: 422 });
+    return Response.json({
+      error: 'Could not resolve scan result',
+      hint: 'Provide the full scan_result JSON, or a scan_id from a scan run within the last 7 days',
+    }, { status: 422 });
   }
 
   const meta = {
@@ -84,7 +101,11 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
   };
 
   const report     = buildReport(scanResult, meta);
-  const storeInfo  = await storeReport(env, report);
+  let htmlContent  = null;
+  try {
+    htmlContent = generateHTMLReport(scanResult, { report_id: report.report_id });
+  } catch { /* JSON report still ships even if HTML rendering fails */ }
+  const storeInfo  = await storeReport(env, report, htmlContent);
 
   return Response.json({
     success:        true,
