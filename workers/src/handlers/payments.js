@@ -374,8 +374,9 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     // ── Step 1: Resolve/create user FIRST — we need user_id for the subscriptions INSERT ──
     // Live subscriptions table schema has user_id TEXT NOT NULL, so the INSERT must
     // include it. User lookup/create must precede the subscription INSERT.
-    let issuedAccessToken = null;
-    let issuedUserId      = null;
+    let issuedAccessToken  = null;
+    let issuedRefreshToken = null;
+    let issuedUserId       = null;
     if (env.DB && confirmedEmail && ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(plan)) {
       try {
         const existing = await env.DB.prepare(
@@ -401,7 +402,12 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         await storeRefreshToken(env.DB, issuedUserId, refreshData,
           request.headers.get('CF-Connecting-IP') || 'unknown',
           request.headers.get('User-Agent') || 'unknown');
-        issuedAccessToken = accessToken;
+        issuedAccessToken  = accessToken;
+        // Access tokens are 15-minute JWTs (see auth/jwt.js ACCESS_TOKEN_TTL) —
+        // without also returning the refresh token here, the client has no way
+        // to stay authenticated past 15 minutes post-purchase and silently
+        // reverts to looking like an unauthenticated FREE-tier visitor.
+        issuedRefreshToken = refreshData.token;
       } catch (e) {
         console.error('[Payments] Tier grant failed for', confirmedEmail, e.message);
       }
@@ -484,6 +490,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     return Response.json({
       success: true, plan, session_token: sessionToken, expires_at: expiresAt,
       token: issuedAccessToken,
+      refresh_token: issuedRefreshToken,
       user_id: issuedUserId,
       message: issuedAccessToken
         ? `✅ ${subPlan.name} activated. Your account is now upgraded — use the access token to call PRO/ENTERPRISE-gated endpoints immediately.`

@@ -8507,7 +8507,7 @@ async function loadThreatIntel(filter = {}) {
   try {
     // ── PRIMARY: GET /api/threat-intel (new D1-backed endpoint) ──
     const res  = await fetch(`${API_BASE}/api/threat-intel?${params}`, {
-      headers: SUBSCRIPTION.getToken() ? { 'X-Session-Token': SUBSCRIPTION.getToken() } : {},
+      headers: SUBSCRIPTION.getToken() ? { 'Authorization': 'Bearer ' + SUBSCRIPTION.getToken() } : {},
     });
 
     if (res.ok) {
@@ -10638,27 +10638,36 @@ async function verifyAndDownload(module, target, paymentPayload) {
 
 // ─── Session subscription state ──────────────────────────────────────────────
 const SUBSCRIPTION = (function() {
-  const SS_KEY = 'cbd_sub_token_v1';
+  // Reads the real JWT issued at login/signup and after subscription
+  // purchase (see cdbStartSubscriptionAuto's success handler, which does
+  // localStorage.setItem('cdb_token', ...) — the same key every other
+  // authenticated call on this page uses). This object used to maintain
+  // its own separate 'cbd_sub_token_v1' key + X-Session-Token header,
+  // which nothing ever populated (SUBSCRIPTION.saveToken() was never
+  // called anywhere) — every call silently ran unauthenticated, so paying
+  // customers' plan badge, usage bar, and hasAccess()/isAtLeast() gates
+  // always read back as FREE regardless of their real tier.
+  const JWT_KEY = 'cdb_token';
   let _cache = null; // in-memory plan cache { plan, features, usage, token }
 
   function _loadToken() {
-    try { return sessionStorage.getItem(SS_KEY) || localStorage.getItem(SS_KEY) || null; } catch { return null; }
+    try { return localStorage.getItem(JWT_KEY) || sessionStorage.getItem(JWT_KEY) || null; } catch { return null; }
   }
   function _saveToken(token) {
-    try { sessionStorage.setItem(SS_KEY, token); localStorage.setItem(SS_KEY, token); } catch {}
+    try { localStorage.setItem(JWT_KEY, token); } catch {}
   }
 
   return {
     getToken() { return _loadToken(); },
     saveToken(t) { _saveToken(t); },
-    clearToken() { try { sessionStorage.removeItem(SS_KEY); localStorage.removeItem(SS_KEY); } catch {} _cache = null; },
+    clearToken() { try { sessionStorage.removeItem(JWT_KEY); localStorage.removeItem(JWT_KEY); } catch {} _cache = null; },
     getCache() { return _cache; },
     setCache(data) { _cache = data; },
 
     async fetch() {
       const token = _loadToken();
       const headers = { 'Content-Type': 'application/json' };
-      if (token) headers['X-Session-Token'] = token;
+      if (token) headers['Authorization'] = 'Bearer ' + token;
       try {
         const resp = await safeFetch('/api/user/plan', { headers });
         if (!resp.ok) return null;
@@ -10684,6 +10693,46 @@ const SUBSCRIPTION = (function() {
     },
   };
 })();
+
+// ─── Silent access-token refresh ──────────────────────────────────────────────
+// Access tokens (cdb_token) are 15-minute JWTs. Without this, any paying
+// customer's session would look unauthenticated 15 minutes after purchase —
+// the plan badge, usage bar, and SUBSCRIPTION.hasAccess()/isAtLeast() gates
+// would all silently revert to FREE even though the subscription is active.
+let _cdbRefreshTimer = null;
+async function cdbRefreshAccessToken() {
+  const refreshToken = localStorage.getItem('cdb_refresh_token');
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!res.ok) {
+      // Refresh token invalid/expired/revoked — stop trying and drop the
+      // stale session rather than looping on a 401 every few minutes.
+      localStorage.removeItem('cdb_token');
+      localStorage.removeItem('cdb_refresh_token');
+      if (_cdbRefreshTimer) { clearInterval(_cdbRefreshTimer); _cdbRefreshTimer = null; }
+      return false;
+    }
+    const data = await res.json();
+    if (data.access_token)  localStorage.setItem('cdb_token', data.access_token);
+    if (data.refresh_token) localStorage.setItem('cdb_refresh_token', data.refresh_token);
+    if (typeof SUBSCRIPTION !== 'undefined') SUBSCRIPTION.fetch().then(() => { if (typeof renderPlanBadge === 'function') renderPlanBadge(); });
+    return true;
+  } catch { return false; }
+}
+function cdbScheduleTokenRefresh() {
+  if (_cdbRefreshTimer) return; // already scheduled
+  if (!localStorage.getItem('cdb_refresh_token')) return;
+  // Refresh every 10 minutes — comfortably inside the 15-minute access-token TTL.
+  _cdbRefreshTimer = setInterval(cdbRefreshAccessToken, 10 * 60 * 1000);
+}
+// Returning visitors who already have a refresh token from an earlier
+// session should get silent renewal too, not just right after a purchase.
+cdbScheduleTokenRefresh();
 
 // Plan colors / labels
 const PLAN_META = {
@@ -10898,6 +10947,14 @@ async function cdbStartSubscriptionAuto(planKey) {
             if (vData.token) {
               localStorage.setItem('cdb_token', vData.token);
               localStorage.setItem('cdb_tier', planKey);
+            }
+            // Access tokens are short-lived (15 min) — persist the refresh
+            // token too and let cdbScheduleTokenRefresh keep the session
+            // alive, otherwise the plan badge and paid-feature gates would
+            // revert to looking unauthenticated 15 minutes after purchase.
+            if (vData.refresh_token) {
+              localStorage.setItem('cdb_refresh_token', vData.refresh_token);
+              if (typeof cdbScheduleTokenRefresh === 'function') cdbScheduleTokenRefresh();
             }
             // Show success
             if (typeof TOAST !== 'undefined') TOAST.success('Payment verified! ' + plan.label + ' plan activated.', 'Payment Success');
