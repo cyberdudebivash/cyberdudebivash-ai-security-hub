@@ -20,6 +20,8 @@
  *   NEVER duplicates: commercialPlatformHandler, revenueMetrics, subscriptionPaywallEngine
  */
 
+import { TIER_LIMITS } from '../auth/apiKeys.js';
+
 // ── Auth helpers (reused pattern from P15) ───────────────────────────────────
 
 const ADMIN_TIERS  = new Set(['OWNER', 'ADMIN']);
@@ -56,7 +58,7 @@ async function kvSet(env, key, value, ttl = 300) {
 }
 
 function resolveUserId(authCtx) {
-  return authCtx?.userId || authCtx?.owner_email || authCtx?.identity || 'anon';
+  return authCtx?.userId || authCtx?.email || authCtx?.identity || 'anon';
 }
 
 // ── P16.1 — Platform KPI Command Center ──────────────────────────────────────
@@ -77,10 +79,10 @@ export async function handlePlatformKPI(request, env, authCtx) {
   // Pull from D1 — subscriptions, invoices, api_key_usage, users
   const [subRows, invoiceRows, userRows, usageRows] = await Promise.all([
     env.DB?.prepare(
-      `SELECT tier, status, amount_usd, trial_ends_at, created_at FROM subscriptions WHERE status IN ('active','trialing')`
+      `SELECT plan, status, price_inr, trial_ends_at, created_at FROM subscriptions WHERE status IN ('active','trialing')`
     ).all().catch(() => ({ results: [] })),
     env.DB?.prepare(
-      `SELECT amount_usd, currency, status, created_at FROM invoices WHERE status='paid' AND created_at >= ? ORDER BY created_at DESC LIMIT 500`
+      `SELECT total_inr, currency, status, created_at FROM invoices WHERE status='paid' AND created_at >= ? ORDER BY created_at DESC LIMIT 500`
     ).bind(`${y}-01-01`).all().catch(() => ({ results: [] })),
     env.DB?.prepare(
       `SELECT tier, status, created_at FROM users ORDER BY created_at DESC LIMIT 1000`
@@ -178,22 +180,22 @@ export async function handleCustomerBillingPortal(request, env, authCtx) {
   if (gate) return gate;
 
   const userId = resolveUserId(authCtx);
-  const email  = authCtx.owner_email || null;
+  const email  = authCtx.email || null;
 
   const [subRow, invoiceRows, entitlementRows, keyRows] = await Promise.all([
     env.DB?.prepare(
-      `SELECT id, tier, status, amount_usd, trial_ends_at, current_period_end, cancel_at_period_end, created_at
+      `SELECT id, plan, status, price_inr, trial_ends_at, current_period_end, cancel_at_period_end, created_at
        FROM subscriptions WHERE user_id=? OR email=? ORDER BY created_at DESC LIMIT 1`
     ).bind(userId, email).first().catch(() => null),
     env.DB?.prepare(
-      `SELECT id, amount_usd, currency, status, created_at, invoice_pdf_url
+      `SELECT id, total_inr, currency, status, created_at, pdf_key
        FROM invoices WHERE user_id=? OR email=? ORDER BY created_at DESC LIMIT 12`
     ).bind(userId, email).all().catch(() => ({ results: [] })),
     env.DB?.prepare(
       `SELECT feature, granted_at, expires_at FROM customer_entitlements WHERE user_id=? AND (expires_at IS NULL OR expires_at > datetime('now'))`
     ).bind(userId).all().catch(() => ({ results: [] })),
     env.DB?.prepare(
-      `SELECT id, label, tier, request_count, last_used_at FROM api_keys WHERE user_id=? OR email=? ORDER BY last_used_at DESC LIMIT 10`
+      `SELECT id, label, tier, last_used_at FROM api_keys WHERE user_id=? OR email=? ORDER BY last_used_at DESC LIMIT 10`
     ).bind(userId, email).all().catch(() => ({ results: [] })),
   ]);
 
@@ -201,15 +203,17 @@ export async function handleCustomerBillingPortal(request, env, authCtx) {
   const invoices    = invoiceRows?.results || [];
   const features    = entitlementRows?.results || [];
   const keys        = keyRows?.results || [];
-  const currentTier = sub?.tier || authCtx.tier || 'FREE';
+  const currentTier = sub?.plan || authCtx.tier || 'FREE';
 
-  // Upgrade options — plans higher than current
+  // Upgrade options — plans higher than current. Priced from TIER_LIMITS, the
+  // same source of truth Razorpay checkout actually charges against, so what
+  // the customer is shown here always matches what they're billed.
   const currentOrder  = PLAN_ORDER[(currentTier || '').toUpperCase()] || 0;
   const upgradeOptions = Object.entries(PLAN_ORDER)
     .filter(([, order]) => order > currentOrder)
     .map(([plan]) => ({
       plan,
-      price_usd_month: { FREE: 0, STARTER: 29, PRO: 99, ENTERPRISE: 499, MSSP: 999 }[plan] || 0,
+      price_inr_month: TIER_LIMITS[plan]?.price_inr ?? 0,
       highlight: plan === 'PRO' ? 'Most Popular' : plan === 'ENTERPRISE' ? 'Best for Teams' : null,
     }));
 
@@ -235,13 +239,13 @@ export async function handleCustomerInvoices(request, env, authCtx) {
   if (gate) return gate;
 
   const userId = resolveUserId(authCtx);
-  const email  = authCtx.owner_email || null;
+  const email  = authCtx.email || null;
   const url    = new URL(request.url);
   const limit  = Math.min(parseInt(url.searchParams.get('limit') || '24'), 100);
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0'), 0);
 
   const rows = await env.DB?.prepare(
-    `SELECT id, amount_usd, currency, status, created_at, invoice_pdf_url, description
+    `SELECT id, total_inr, currency, status, created_at, pdf_key
      FROM invoices WHERE user_id=? OR email=?
      ORDER BY created_at DESC LIMIT ? OFFSET ?`
   ).bind(userId, email, limit, offset).all().catch(() => ({ results: [] }));
@@ -258,12 +262,12 @@ export async function handleCancelSubscription(request, env, authCtx) {
   if (gate) return gate;
 
   const userId = resolveUserId(authCtx);
-  const email  = authCtx.owner_email || null;
+  const email  = authCtx.email || null;
   const body   = await request.json().catch(() => ({}));
   const reason = (body.reason || 'user_requested').slice(0, 200);
 
   const sub = await env.DB?.prepare(
-    `SELECT id, tier, status FROM subscriptions WHERE (user_id=? OR email=?) AND status='active' LIMIT 1`
+    `SELECT id, plan, status FROM subscriptions WHERE (user_id=? OR email=?) AND status='active' LIMIT 1`
   ).bind(userId, email).first().catch(() => null);
 
   if (!sub) {
@@ -278,14 +282,14 @@ export async function handleCancelSubscription(request, env, authCtx) {
   // Log to provisioning events
   await env.DB?.prepare(
     `INSERT INTO provisioning_log (user_id, event, metadata, created_at) VALUES (?, 'CANCEL_REQUESTED', ?, datetime('now'))`
-  ).bind(userId, JSON.stringify({ subscription_id: sub.id, tier: sub.tier, reason })).run().catch(() => {});
+  ).bind(userId, JSON.stringify({ subscription_id: sub.id, plan: sub.plan, reason })).run().catch(() => {});
 
   // Invalidate KPI cache so next pull reflects change
   await env.SECURITY_HUB_KV?.delete('platform:kpi:v1').catch(() => {});
 
   return Response.json({
     success: true,
-    message: `Subscription will cancel at end of current billing period. You retain ${sub.tier} access until then.`,
+    message: `Subscription will cancel at end of current billing period. You retain ${sub.plan} access until then.`,
     subscription_id: sub.id,
   });
 }
@@ -296,7 +300,8 @@ export async function handleUpgradeInitiate(request, env, authCtx) {
 
   const userId   = resolveUserId(authCtx);
   const body     = await request.json().catch(() => ({}));
-  const newPlan  = (body.plan || '').toUpperCase();
+  // Frontend sends target_plan; accept plan too for direct API callers.
+  const newPlan  = (body.target_plan || body.plan || '').toUpperCase();
 
   if (!PLAN_ORDER[newPlan]) {
     return Response.json({ success: false, error: `Invalid plan: ${newPlan}` }, { status: 400 });
@@ -313,10 +318,9 @@ export async function handleUpgradeInitiate(request, env, authCtx) {
     }, { status: 400 });
   }
 
-  const PRICE_INR = { STARTER: 49900, PRO: 149900, ENTERPRISE: 499900, MSSP: 999900 }; // paise
-  const PRICE_USD = { STARTER: 29,    PRO: 99,     ENTERPRISE: 499,    MSSP: 999    };
-  const amountPaise = PRICE_INR[newPlan] || 14990;
-  const amountUsd   = PRICE_USD[newPlan] || 99;
+  // Priced from TIER_LIMITS — the same source of truth the billing portal
+  // displays prices from, so the amount charged always matches what was shown.
+  const amountPaise = Math.round((TIER_LIMITS[newPlan]?.price_inr ?? 0) * 100) || 14990;
 
   // Create a real Razorpay order so the client SDK can open a verified checkout session
   let razorpayOrderId = null;
@@ -349,7 +353,6 @@ export async function handleUpgradeInitiate(request, env, authCtx) {
       from_plan:         currentTier,
       to_plan:           newPlan,
       amount_inr:        amountPaise / 100,
-      amount_usd:        amountUsd,
       razorpay_order_id: razorpayOrderId,
       razorpay_key:      rzKey || null,
       order_id:          orderId,
@@ -363,13 +366,14 @@ export async function handleLiveUsage(request, env, authCtx) {
   if (gate) return gate;
 
   const userId = resolveUserId(authCtx);
-  const email  = authCtx.owner_email || null;
+  const email  = authCtx.email || null;
   const tier   = (authCtx.tier || 'FREE').toUpperCase();
-  const DAILY_LIMITS = { FREE: 5, STARTER: 100, PRO: 500, ENTERPRISE: -1, MSSP: -1 };
+  const dailyLimit   = TIER_LIMITS[tier]?.daily_limit   ?? TIER_LIMITS.FREE.daily_limit;
+  const monthlyLimit = TIER_LIMITS[tier]?.monthly_limit ?? TIER_LIMITS.FREE.monthly_limit;
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [dailyRow, monthlyRow, keyRows] = await Promise.all([
+  const [dailyRow, monthlyRow, keyRows, overageRow] = await Promise.all([
     env.DB?.prepare(
       `SELECT SUM(request_count) as reqs FROM api_key_usage
        WHERE (user_id=? OR email=?) AND period_start=?`
@@ -382,18 +386,25 @@ export async function handleLiveUsage(request, env, authCtx) {
       `SELECT label, tier, request_count, last_used_at FROM api_keys
        WHERE user_id=? OR email=? ORDER BY request_count DESC LIMIT 5`
     ).bind(userId, email).all().catch(() => ({ results: [] })),
+    env.DB?.prepare(
+      `SELECT SUM(amount_usd) as total FROM invoices
+       WHERE (user_id=? OR email=?) AND description='API Overage Charge' AND status IN ('pending','paid')
+       AND created_at >= date('now','start of month')`
+    ).bind(userId, email).first().catch(() => null),
   ]);
 
   const dailyReqs   = parseInt(dailyRow?.reqs  || 0);
   const monthlyReqs = parseInt(monthlyRow?.reqs || 0);
-  const dailyLimit  = DAILY_LIMITS[tier];
+  const overageUsd  = parseFloat(overageRow?.total || 0);
 
   return Response.json({
     success: true,
     usage: {
       tier,
-      daily:   { used: dailyReqs, limit: dailyLimit, pct: dailyLimit > 0 ? Math.round((dailyReqs / dailyLimit) * 100) : 0 },
-      monthly: { used: monthlyReqs },
+      daily:   { used: dailyReqs,   limit: dailyLimit,   pct: dailyLimit   > 0 ? Math.round((dailyReqs   / dailyLimit)   * 100) : 0 },
+      monthly: { used: monthlyReqs, limit: monthlyLimit, pct: monthlyLimit > 0 ? Math.round((monthlyReqs / monthlyLimit) * 100) : 0 },
+      total_requests:  monthlyReqs,
+      overage_charges_usd: Math.round(overageUsd * 100) / 100,
       top_keys: keyRows?.results || [],
       upgrade_nudge: dailyLimit > 0 && dailyReqs >= dailyLimit * 0.8
         ? { message: `You're at ${Math.round((dailyReqs / dailyLimit) * 100)}% of your daily limit. Upgrade for more.`, url: '/upgrade.html' }

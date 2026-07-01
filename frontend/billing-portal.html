@@ -317,10 +317,25 @@
 
 <script>
 const API = '';
-const PLAN_PRICES = { FREE: 0, STARTER: 199, PRO: 999, ENTERPRISE: 9999, MSSP: 24999 };
-const PLAN_LIMITS = { FREE: 150, STARTER: 3000, PRO: 15000, ENTERPRISE: 'Unlimited', MSSP: 'Unlimited' };
+// Same key SUBSCRIPTION uses elsewhere on the platform (localStorage 'cdb_token',
+// set at login/signup and after subscription purchase) — this page previously
+// sent `credentials: 'include'` (cookies) to a backend that only ever reads the
+// Authorization header, so every visitor resolved as an anonymous FREE-tier
+// user regardless of who was actually logged in.
+function authToken() {
+  try { return localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || null; }
+  catch { return null; }
+}
+function authedFetch(path, opts = {}) {
+  const token = authToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return fetch(`${API}${path}`, { ...opts, headers });
+}
+
 let currentPlan = 'FREE';
 let selectedUpgradePlan = null;
+let upgradeOptions = [];
 
 function toast(msg, type = 'info') {
   const t = document.getElementById('toast');
@@ -335,16 +350,19 @@ function fmtDate(d) {
   try { return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
   catch { return d; }
 }
-function fmtMoney(n) { return '$' + Number(n || 0).toFixed(2); }
+function fmtINR(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
 function barClass(pct) { return pct >= 90 ? 'fill-red' : pct >= 70 ? 'fill-yellow' : 'fill-green'; }
 
 async function loadPortal() {
   try {
-    const r = await fetch(`${API}/api/customer/billing/portal`, { credentials: 'include' });
+    const r = await authedFetch('/api/customer/billing/portal');
     const d = await r.json();
-    if (!r.ok) { document.getElementById('sub-loading').textContent = d.error || 'Failed to load subscription.'; return; }
+    if (!r.ok || !d.portal) { document.getElementById('sub-loading').textContent = d.error || 'Failed to load subscription.'; return; }
 
-    currentPlan = d.plan || 'FREE';
+    const p = d.portal;
+    const sub = p.subscription || {};
+    currentPlan = p.current_plan || 'FREE';
+    upgradeOptions = p.upgrade_options || [];
     document.getElementById('sub-loading').style.display = 'none';
     document.getElementById('sub-content').style.display = 'block';
 
@@ -352,32 +370,33 @@ async function loadPortal() {
     badge.textContent = currentPlan;
     badge.className = `plan-badge plan-${currentPlan}`;
     document.getElementById('plan-name').textContent = currentPlan.charAt(0) + currentPlan.slice(1).toLowerCase();
-    document.getElementById('plan-price').textContent = fmtMoney(PLAN_PRICES[currentPlan] || 0);
-    document.getElementById('renewal-date').textContent = fmtDate(d.current_period_end);
-    const lim = PLAN_LIMITS[currentPlan];
-    document.getElementById('monthly-limit').textContent = typeof lim === 'number' ? lim.toLocaleString() : lim;
-    document.getElementById('member-since').textContent = fmtDate(d.created_at);
+    document.getElementById('plan-price').textContent = fmtINR(sub.price_inr);
+    document.getElementById('renewal-date').textContent = fmtDate(sub.current_period_end);
+    document.getElementById('member-since').textContent = fmtDate(sub.created_at);
 
     const statusDot = document.getElementById('sub-status-dot');
     const statusLabel = document.getElementById('sub-status-label');
-    if (d.cancel_at_period_end) {
+    if (sub.cancel_at_period_end) {
       statusDot.className = 'status-dot dot-yellow';
-      statusLabel.textContent = 'Cancels ' + fmtDate(d.current_period_end);
+      statusLabel.textContent = 'Cancels ' + fmtDate(sub.current_period_end);
       document.getElementById('cancel-btn').style.display = 'none';
       const alert = document.getElementById('overage-alert');
-      alert.innerHTML = `<div class="alert-banner alert-warning">⚠ Your subscription will cancel on ${fmtDate(d.current_period_end)}. Re-subscribe anytime to continue access.</div>`;
+      alert.innerHTML = `<div class="alert-banner alert-warning">⚠ Your subscription will cancel on ${fmtDate(sub.current_period_end)}. Re-subscribe anytime to continue access.</div>`;
       alert.style.display = 'block';
-    } else if (d.status === 'active') {
+    } else if (sub.status === 'active') {
       statusDot.className = 'status-dot dot-green';
       statusLabel.textContent = 'Active';
+      document.getElementById('cancel-btn').style.display = p.can_cancel ? 'inline-flex' : 'none';
     } else {
       statusDot.className = 'status-dot dot-red';
-      statusLabel.textContent = d.status || 'Unknown';
+      statusLabel.textContent = sub.status || (currentPlan === 'FREE' ? 'Free plan' : 'Unknown');
+      document.getElementById('cancel-btn').style.display = 'none';
     }
 
-    document.getElementById('monthly-spend').textContent = fmtMoney(PLAN_PRICES[currentPlan] || 0);
-    document.getElementById('account-health').textContent = d.status === 'active' ? '✓ Healthy' : '⚠ Review Required';
-    document.getElementById('account-health').style.color = d.status === 'active' ? '#10b981' : '#f59e0b';
+    document.getElementById('monthly-spend').textContent = fmtINR(sub.price_inr);
+    document.getElementById('invoice-count').textContent = (p.invoices || []).length;
+    document.getElementById('account-health').textContent = sub.status === 'active' || currentPlan === 'FREE' ? '✓ Healthy' : '⚠ Review Required';
+    document.getElementById('account-health').style.color = sub.status === 'active' || currentPlan === 'FREE' ? '#10b981' : '#f59e0b';
   } catch(e) {
     document.getElementById('sub-loading').textContent = 'Error loading subscription.';
   }
@@ -385,19 +404,20 @@ async function loadPortal() {
 
 async function loadUsage() {
   try {
-    const r = await fetch(`${API}/api/customer/usage/live`, { credentials: 'include' });
+    const r = await authedFetch('/api/customer/usage/live');
     const d = await r.json();
-    if (!r.ok) { document.getElementById('usage-loading').textContent = d.error || 'Failed to load usage.'; return; }
+    if (!r.ok || !d.usage) { document.getElementById('usage-loading').textContent = d.error || 'Failed to load usage.'; return; }
 
     document.getElementById('usage-loading').style.display = 'none';
     document.getElementById('usage-content').style.display = 'block';
 
-    const used = d.monthly_used || 0;
-    const limit = d.monthly_limit === -1 ? Infinity : (d.monthly_limit || 150);
-    const dailyUsed = d.daily_used || 0;
-    const dailyLimit = d.daily_limit === -1 ? Infinity : (d.daily_limit || 5);
+    const u = d.usage;
+    const used       = u.monthly?.used ?? 0;
+    const limit      = u.monthly?.limit === -1 ? Infinity : (u.monthly?.limit ?? 50);
+    const dailyUsed  = u.daily?.used ?? 0;
+    const dailyLimit = u.daily?.limit === -1 ? Infinity : (u.daily?.limit ?? 5);
     const monthlyPct = limit === Infinity ? 0 : Math.min(100, Math.round((used / limit) * 100));
-    const dailyPct = dailyLimit === Infinity ? 0 : Math.min(100, Math.round((dailyUsed / dailyLimit) * 100));
+    const dailyPct   = dailyLimit === Infinity ? 0 : Math.min(100, Math.round((dailyUsed / dailyLimit) * 100));
 
     document.getElementById('api-usage-text').textContent = `${used.toLocaleString()} / ${limit === Infinity ? '∞' : limit.toLocaleString()}`;
     const apiBar = document.getElementById('api-bar');
@@ -411,8 +431,9 @@ async function loadUsage() {
 
     const remaining = limit === Infinity ? '∞' : Math.max(0, limit - used).toLocaleString();
     document.getElementById('remaining-text').textContent = remaining + ' calls left';
-    document.getElementById('total-requests').textContent = (d.total_requests || used).toLocaleString();
-    document.getElementById('overage-charges').textContent = fmtMoney(d.overage_charges || 0);
+    document.getElementById('total-requests').textContent = (u.total_requests ?? used).toLocaleString();
+    document.getElementById('overage-charges').textContent = fmtINR(u.overage_charges_usd);
+    document.getElementById('monthly-limit').textContent = limit === Infinity ? 'Unlimited' : limit.toLocaleString();
 
     if (monthlyPct >= 90 && limit !== Infinity) {
       const alert = document.getElementById('overage-alert');
@@ -430,12 +451,15 @@ async function loadInvoices() {
   document.getElementById('inv-loading').style.display = 'block';
   document.getElementById('inv-content').style.display = 'none';
   try {
-    const r = await fetch(`${API}/api/customer/billing/invoices`, { credentials: 'include' });
+    // The real, working GST invoice ledger (derived from actual Razorpay
+    // payments) — /api/customer/billing/invoices queries a separate table
+    // that per-scan-report and subscription purchases don't reliably populate.
+    const r = await authedFetch('/api/billing/invoices');
     const d = await r.json();
     document.getElementById('inv-loading').style.display = 'none';
     document.getElementById('inv-content').style.display = 'block';
 
-    const invoices = d.invoices || [];
+    const invoices = d.data?.invoices || [];
     document.getElementById('invoice-count').textContent = invoices.length;
     const tbody = document.getElementById('inv-body');
     tbody.innerHTML = '';
@@ -444,16 +468,17 @@ async function loadInvoices() {
       document.getElementById('inv-empty').style.display = 'block';
       return;
     }
+    document.getElementById('inv-empty').style.display = 'none';
 
     invoices.forEach(inv => {
-      const statusClass = inv.status === 'paid' ? 'inv-paid' : inv.status === 'pending' ? 'inv-pending' : 'inv-failed';
+      const statusClass = inv.status === 'PAID' ? 'inv-paid' : inv.status === 'PENDING' ? 'inv-pending' : 'inv-failed';
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="font-weight:600;font-family:monospace;font-size:0.8rem">${inv.id || '—'}</td>
-        <td style="color:var(--text-muted)">${fmtDate(inv.created_at)}</td>
-        <td style="font-weight:700">${fmtMoney(inv.amount_usd)}</td>
+        <td style="font-weight:600;font-family:monospace;font-size:0.8rem">${inv.invoice_number || '—'}</td>
+        <td style="color:var(--text-muted)">${fmtDate(inv.date)}</td>
+        <td style="font-weight:700">${inv.amount_inr || '—'}</td>
         <td><span class="inv-status ${statusClass}">${(inv.status || 'unknown').toUpperCase()}</span></td>
-        <td>${(inv.invoice_pdf_url||inv.pdf_url) ? `<a href="${inv.invoice_pdf_url||inv.pdf_url}" target="_blank" class="inv-link">Download</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td>${inv.download_url ? `<a href="${inv.download_url}" target="_blank" class="inv-link">Download</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -468,34 +493,27 @@ function closeModal(id) { document.getElementById(id).classList.remove('active')
 async function cancelSubscription() {
   closeModal('cancel-modal');
   try {
-    const r = await fetch(`${API}/api/customer/billing/cancel`, { method: 'POST', credentials: 'include' });
+    const r = await authedFetch('/api/customer/billing/cancel', { method: 'POST' });
     const d = await r.json();
-    if (!r.ok) { toast(d.error || 'Failed to cancel.', 'error'); return; }
-    toast('Subscription will cancel at period end. You retain full access until then.', 'success');
+    if (!r.ok || !d.success) { toast(d.error || 'Failed to cancel.', 'error'); return; }
+    toast(d.message || 'Subscription will cancel at period end. You retain full access until then.', 'success');
     await loadPortal();
   } catch(e) { toast('Network error. Please try again.', 'error'); }
 }
 
-const PLANS = [
-  { key: 'STARTER', label: 'Starter — ₹199/mo', desc: '3,000 API calls/month, all core features' },
-  { key: 'PRO', label: 'Pro — ₹999/mo', desc: '15,000 API calls/month, advanced analytics, priority support' },
-  { key: 'ENTERPRISE', label: 'Enterprise — ₹9,999/mo', desc: 'Unlimited API calls, SSO, SLA, dedicated success manager' },
-  { key: 'MSSP', label: 'MSSP — ₹24,999/mo', desc: 'Multi-tenant, white-label, partner dashboard, unlimited seats' },
-];
-
 function openUpgradeModal() {
   const container = document.getElementById('upgrade-options');
   container.innerHTML = '';
-  PLANS.filter(p => {
-    const ORDER = { FREE: 0, STARTER: 1, PRO: 2, ENTERPRISE: 3, MSSP: 4 };
-    return ORDER[p.key] > (ORDER[currentPlan] || 0);
-  }).forEach(p => {
+  if (!upgradeOptions.length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">You\'re already on the highest plan.</div>';
+  }
+  upgradeOptions.forEach(p => {
     const d = document.createElement('label');
     d.style.cssText = 'display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.2s';
-    d.innerHTML = `<input type="radio" name="upgrade_plan" value="${p.key}" style="margin-top:0.2rem">
-      <div><div style="font-weight:700;font-size:0.9rem">${p.label}</div><div style="color:var(--text-muted);font-size:0.8rem;margin-top:0.2rem">${p.desc}</div></div>`;
+    d.innerHTML = `<input type="radio" name="upgrade_plan" value="${p.plan}" style="margin-top:0.2rem">
+      <div><div style="font-weight:700;font-size:0.9rem">${p.plan} — ${fmtINR(p.price_inr_month)}/mo</div>${p.highlight ? `<div style="color:var(--accent);font-size:0.75rem;margin-top:0.2rem;font-weight:700">${p.highlight}</div>` : ''}</div>`;
     d.addEventListener('change', () => {
-      selectedUpgradePlan = p.key;
+      selectedUpgradePlan = p.plan;
       document.querySelectorAll('#upgrade-options label').forEach(l => l.style.borderColor = 'var(--border)');
       d.style.borderColor = 'var(--accent)';
     });
@@ -508,16 +526,16 @@ async function initiateUpgrade() {
   if (!selectedUpgradePlan) { toast('Please select a plan.', 'error'); return; }
   closeModal('upgrade-modal');
   try {
-    const r = await fetch(`${API}/api/customer/billing/upgrade`, {
+    const r = await authedFetch('/api/customer/billing/upgrade', {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target_plan: selectedUpgradePlan }),
     });
     const d = await r.json();
-    if (!r.ok) { toast(d.error || 'Upgrade failed.', 'error'); return; }
-    if (d.checkout_url) { window.location.href = d.checkout_url; return; }
-    toast(d.message || 'Upgrade initiated! You\'ll receive a confirmation email.', 'success');
+    if (!r.ok || !d.success) { toast(d.error || 'Upgrade failed.', 'error'); return; }
+    const checkoutUrl = d.upgrade?.checkout_url;
+    if (checkoutUrl) { window.location.href = checkoutUrl; return; }
+    toast('Upgrade initiated! You\'ll receive a confirmation email.', 'success');
     await loadPortal();
   } catch(e) { toast('Network error. Please try again.', 'error'); }
 }
