@@ -801,6 +801,8 @@ import {
   validateSchema, SCHEMAS,
 } from './middleware/security.js';
 import { handlePaymentWebhook }                                        from './middleware/monetization.js';
+import { logSystemError }                                              from './lib/errorLog.js';
+import { sendAlert }                                                   from './lib/alertEngine.js';
 
 // ─── Audit Logger ────────────────────────────────────────────────────────────
 // Writes sensitive-action audit events to D1 audit_log table (fire-and-forget).
@@ -1311,14 +1313,12 @@ export function normalizeBindings(env) {
   if (env.SECURITY_HUB_KV && !env.CDB_KV) env.CDB_KV = env.SECURITY_HUB_KV; // alias for manualPayments.js
 }
 
-// ─── Main fetch handler ───────────────────────────────────────────────────────
-export default {
-  async fetch(request, env, ctx) {
+// ─── Route dispatcher ─────────────────────────────────────────────────────────
+// The full route chain lives here. The exported fetch() below wraps it with the
+// global exception boundary, X-Request-ID propagation, response timing, and the
+// structured access log — handler logic must stay inside this function.
+export async function routeRequest(request, env, ctx, requestId) {
     normalizeBindings(env);
-
-    // Propagate or generate X-Request-ID for distributed tracing + enterprise audit trail
-    const requestId = request.headers.get('X-Request-ID') ||
-      `cdb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
     // ── P0 FIX: Binding validation — fail fast before any handler runs ──────
     // Prevents cryptic "Cannot read properties of undefined (reading 'prepare')"
@@ -8099,6 +8099,95 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       api_docs: 'GET /api',
       contact:  CONTACT_EMAIL,
     }, { status: 404 }), request));
+}
+
+// ─── Main fetch handler ───────────────────────────────────────────────────────
+// Global operational guard around the route dispatcher:
+//   1. X-Request-ID — the caller's ID (or a minted one) is stamped on every
+//      response, so one correlation ID links client, access log, error log,
+//      and alert for the same request. (Previously the ID was generated but
+//      never attached — every response carried a fresh random ID.)
+//   2. Exception boundary — an uncaught handler error used to surface as a
+//      Cloudflare 1101 HTML page: no CORS, no JSON envelope, no error record,
+//      invisible to ops. It now returns a structured 500, records to
+//      system_errors, and fires a deduped ops alert (30-min window).
+//   3. Access log — one structured JSON line per API request with status and
+//      duration, the platform's request-level observability feed.
+//   4. X-Response-Time — measured latency on every response.
+export default {
+  async fetch(request, env, ctx) {
+    normalizeBindings(env);
+    const t0 = Date.now();
+
+    const requestId = request.headers.get('X-Request-ID') ||
+      `cdb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+    let pathForLog = 'unparseable';
+    try { pathForLog = new URL(request.url).pathname; } catch {}
+
+    let response;
+    try {
+      response = await routeRequest(request, env, ctx, requestId);
+    } catch (err) {
+      const message = String(err?.message || err).slice(0, 500);
+      console.error(JSON.stringify({
+        level:      'error',
+        event:      'unhandled_exception',
+        request_id: requestId,
+        method:     request.method,
+        path:       pathForLog,
+        error:      message,
+        stack:      String(err?.stack || '').slice(0, 1500),
+      }));
+      if (ctx?.waitUntil) {
+        ctx.waitUntil(logSystemError(env, {
+          area:    'unhandled_exception',
+          message: `${request.method} ${pathForLog}: ${message}`,
+          context: { request_id: requestId, stack: String(err?.stack || '').slice(0, 1200) },
+          notify:  false, // alerting goes through the deduped alert engine below
+        }).catch(() => {}));
+        // Component = first two path segments — bounded cardinality for dedup keys
+        ctx.waitUntil(sendAlert(env, {
+          type:      'unhandled_exception',
+          component: pathForLog.split('/').slice(0, 3).join('/') || '/',
+          message:   `Unhandled exception on ${request.method} ${pathForLog}: ${message.slice(0, 200)}`,
+          severity:  'major',
+          context:   { request_id: requestId },
+        }).catch(() => {}));
+      }
+      response = withSecurityHeaders(withCors(Response.json({
+        success:    false,
+        error:      'Internal server error',
+        code:       'ERR_UNHANDLED',
+        request_id: requestId,
+      }, { status: 500 }), request));
+    }
+
+    // Correlation + timing headers on every response (success and failure)
+    const durMs   = Date.now() - t0;
+    const headers = new Headers(response.headers);
+    headers.set('X-Request-ID', requestId);
+    headers.set('X-Response-Time', `${durMs}ms`);
+    response = new Response(response.body, {
+      status:     response.status,
+      statusText: response.statusText,
+      headers,
+    });
+
+    // Structured access log — API traffic and any error response
+    if (pathForLog.startsWith('/api') || response.status >= 400) {
+      console.log(JSON.stringify({
+        level:      response.status >= 500 ? 'error' : 'info',
+        event:      'request',
+        request_id: requestId,
+        method:     request.method,
+        path:       pathForLog,
+        status:     response.status,
+        dur_ms:     durMs,
+      }));
+    }
+
+    return response;
   },
 
   // ── Cloudflare Queue consumer ─────────────────────────────────────────────

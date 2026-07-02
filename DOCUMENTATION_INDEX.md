@@ -12,10 +12,14 @@
 | Product overview | `README.md` | Platform modules, architecture, endpoints |
 | Architecture | `README.md` → Architecture section | Worker (JS) is the deployed surface; Python `generated_app` is the container stack |
 | Deployment | `DEPLOY.md` | Cloudflare Workers/Pages deploy. Runbooks: `DEPLOY_RECOVERY_RUNBOOK.md` |
-| Operations / Incident response | `DEPLOY_RECOVERY_RUNBOOK.md` | Recovery + rollback procedures |
+| Incident response | `INCIDENT_RESPONSE_RUNBOOK.md` | Severity ladder, detection sources, SEV playbooks |
+| Disaster recovery | `DISASTER_RECOVERY_RUNBOOK.md` | Backups (nightly `d1-backup.yml`), restore, rollback, RPO/RTO, drills |
+| Emergency recovery (legacy) | `DEPLOY_RECOVERY_RUNBOOK.md` | 2026-06-12 recovery execution record |
+| Operational risk | `docs/OPERATIONAL_RISK_REGISTER.md` | Living register: accepted risks + open items with owners |
 | Security posture | `SECURITY_GAP_ANALYSIS.md` | Current gaps + controls |
 | Artifact / binary policy | `ARTIFACT_RETENTION_POLICY.md` | What may be committed |
 | Production stabilization | `PRODUCTION_STABILIZATION_REPORT.md` | This pass: defects, fixes, validation, verdict |
+| Enterprise ops readiness | `docs/audit-history/ENTERPRISE_OPERATIONS_READINESS_2026-07.md` | 2026-07-02 ten-workstream assessment + GO/NO-GO |
 | Regression safety net | `tests/test_p0_p1_regression.py` + `workers/test/*` | Executable documentation of invariants |
 
 ## Historical / point-in-time records (do not update)

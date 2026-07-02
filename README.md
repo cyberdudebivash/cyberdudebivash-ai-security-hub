@@ -1,7 +1,12 @@
-# ⚔️ CYBERDUDEBIVASH AI Security Hub v2.0.0
+# ⚔️ CYBERDUDEBIVASH AI Security Hub
 
 **Enterprise-Grade AI Cybersecurity Intelligence Platform**
 *Built by [CyberDudeBivash Pvt. Ltd.](https://cyberdudebivash.in) — Fully Serverless · Free-Tier Compatible · Revenue-Ready*
+
+> **Deployed version:** see `PLATFORM_VERSION` in [`workers/wrangler.toml`](workers/wrangler.toml) (v40.x line) or live at [`/api/version`](https://cyberdudebivash.in/api/version).
+> This README describes the original v2 module core, which still underpins the platform; the deployed surface has grown far beyond it (841 routes, 155 handlers). For the authoritative doc map see [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md).
+
+**Operations:** [`INCIDENT_RESPONSE_RUNBOOK.md`](INCIDENT_RESPONSE_RUNBOOK.md) · [`DISASTER_RECOVERY_RUNBOOK.md`](DISASTER_RECOVERY_RUNBOOK.md) · [`docs/OPERATIONAL_RISK_REGISTER.md`](docs/OPERATIONAL_RISK_REGISTER.md) · nightly D1 backups via `.github/workflows/d1-backup.yml` · gated migrations via `.github/workflows/db-migrate.yml`
 
 ---
 

@@ -1,0 +1,158 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Nightly D1 Backup
+# =============================================================================
+# Closes the platform's #1 disaster-recovery gap: before this workflow, the
+# only restore path for the production D1 database was Cloudflare Time Travel
+# (bounded retention window, same-account only). The incident runbook referenced
+# "the last automated backup" — this workflow is what makes that reference true.
+#
+# What it does, nightly at 02:30 UTC (and on demand):
+#   1. wrangler d1 export → full SQL dump of the production database
+#   2. Integrity gate — dump must be non-trivial and contain CREATE TABLE
+#   3. SHA-256 recorded in the job summary for tamper evidence
+#   4. Compressed dump uploaded as a GitHub Actions artifact (30-day retention)
+#
+# Restore procedure: see DISASTER_RECOVERY_RUNBOOK.md (repo root).
+# Uses the same CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets as deploy.yml.
+# =============================================================================
+
+name: Nightly D1 Backup
+
+on:
+  schedule:
+    - cron: "30 2 * * *" # 02:30 UTC nightly — offset from platform cron slots
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why this manual backup is being taken (recorded in summary)"
+        required: false
+        default: "manual on-demand backup"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d1-backup
+  cancel-in-progress: false
+
+env:
+  D1_DATABASE_NAME: "cyberdudebivash-security-hub"
+  NODE_VERSION: "24"
+
+jobs:
+  backup:
+    name: Export production D1 database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Install Wrangler
+        working-directory: workers
+        run: npm ci --prefer-offline
+
+      - name: Validate required secrets
+        run: |
+          MISSING=()
+          [ -z "$CF_API_TOKEN" ]  && MISSING+=("CLOUDFLARE_API_TOKEN")
+          [ -z "$CF_ACCOUNT_ID" ] && MISSING+=("CLOUDFLARE_ACCOUNT_ID")
+          if [ "${#MISSING[@]}" -gt 0 ]; then
+            echo "❌ Missing GitHub Secrets: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "✅ Cloudflare credentials configured"
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Export D1 database (full SQL dump)
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          STAMP="$(date -u '+%Y%m%d-%H%M%S')"
+          echo "BACKUP_STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "━━━ Exporting D1 database: ${{ env.D1_DATABASE_NAME }} ━━━"
+
+          # Retry: transient Cloudflare API failures must not mark the nightly
+          # backup failed without a second attempt.
+          for attempt in 1 2 3; do
+            echo "▶ Export attempt ${attempt}/3..."
+            if npx wrangler d1 export "${{ env.D1_DATABASE_NAME }}" \
+                 --remote \
+                 --output "/tmp/d1-backup-${STAMP}.sql"; then
+              echo "✅ Export succeeded on attempt ${attempt}"
+              break
+            fi
+            [ "$attempt" -eq 3 ] && { echo "❌ D1 export failed after 3 attempts"; exit 1; }
+            sleep $((attempt * 20))
+          done
+
+      - name: Integrity gate — dump must be structurally valid
+        run: |
+          FILE="/tmp/d1-backup-${BACKUP_STAMP}.sql"
+          [ -s "$FILE" ] || { echo "❌ Backup file is empty or missing"; exit 1; }
+
+          SIZE_BYTES=$(stat -c%s "$FILE")
+          TABLE_COUNT=$(grep -c "CREATE TABLE" "$FILE" || echo 0)
+          SHA256=$(sha256sum "$FILE" | cut -d' ' -f1)
+
+          echo "Backup size   : ${SIZE_BYTES} bytes"
+          echo "CREATE TABLEs : ${TABLE_COUNT}"
+          echo "SHA-256       : ${SHA256}"
+
+          # The production schema has 200+ tables; a dump with fewer than 10
+          # means the export silently truncated or hit the wrong database.
+          if [ "$TABLE_COUNT" -lt 10 ]; then
+            echo "❌ Integrity gate FAILED: only ${TABLE_COUNT} CREATE TABLE statements"
+            exit 1
+          fi
+          if [ "$SIZE_BYTES" -lt 10240 ]; then
+            echo "❌ Integrity gate FAILED: dump under 10KB (${SIZE_BYTES} bytes)"
+            exit 1
+          fi
+          echo "✅ Integrity gate passed"
+
+          echo "BACKUP_SHA256=${SHA256}"       >> "$GITHUB_ENV"
+          echo "BACKUP_TABLES=${TABLE_COUNT}"  >> "$GITHUB_ENV"
+          echo "BACKUP_BYTES=${SIZE_BYTES}"    >> "$GITHUB_ENV"
+
+      - name: Compress backup
+        run: |
+          gzip -9 "/tmp/d1-backup-${BACKUP_STAMP}.sql"
+          ls -la "/tmp/d1-backup-${BACKUP_STAMP}.sql.gz"
+
+      - name: Upload backup artifact (30-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ env.BACKUP_STAMP }}
+          path: /tmp/d1-backup-${{ env.BACKUP_STAMP }}.sql.gz
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Write backup summary
+        if: always()
+        run: |
+          echo "## 🗄️ D1 Nightly Backup" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Database | \`${{ env.D1_DATABASE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Timestamp (UTC) | \`${BACKUP_STAMP:-failed-before-export}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Size (uncompressed) | ${BACKUP_BYTES:-n/a} bytes |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tables | ${BACKUP_TABLES:-n/a} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA-256 | \`${BACKUP_SHA256:-n/a}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Retention | 30 days (GitHub artifact) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Trigger | ${{ github.event_name }} — ${{ github.event.inputs.reason || 'scheduled' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Restore:** see \`DISASTER_RECOVERY_RUNBOOK.md\`" >> "$GITHUB_STEP_SUMMARY"

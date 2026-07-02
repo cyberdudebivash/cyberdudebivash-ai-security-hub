@@ -43,7 +43,9 @@
 
 4. If D1 is the cause (DB queries failing):
    → Cloudflare Dashboard → D1 → SECURITY_HUB_DB → check status
-   → If migration failure: restore from the last automated backup via dashboard
+   → If migration failure: restore per DISASTER_RECOVERY_RUNBOOK.md —
+     D1 Time Travel for point-in-time, or the latest "Nightly D1 Backup"
+     artifact from GitHub Actions for full restore
 
 5. Communicate on status page (if configured) within 15 min of acknowledgment.
 ```

@@ -1,0 +1,160 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Gated D1 Schema Migration
+# =============================================================================
+# Before this workflow, schema changes were applied by hand-running
+# `wrangler d1 execute` from a laptop — no pre-migration backup, no audit
+# trail, no standard ordering. This workflow makes migration a controlled,
+# repeatable release step:
+#
+#   1. Operator explicitly types APPLY (accidental-run guard)
+#   2. Pre-migration full export is taken and uploaded (90-day retention)
+#      → guaranteed rollback point for this exact migration
+#   3. The chosen schema file is applied with --remote
+#   4. Post-migration sanity check (table count from sqlite_master)
+#
+# The default file is schema_master.sql, which is idempotent (IF NOT EXISTS) —
+# the canonical way to converge production onto the full 200+-table schema.
+# Incremental files (workers/schema_v*.sql) can be applied the same way.
+#
+# Manual-only by design: schema changes must never ride silently on a code push.
+# =============================================================================
+
+name: D1 Schema Migration (gated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      schema_file:
+        description: "Schema file to apply (repo-relative path)"
+        required: true
+        default: "workers/schema_master.sql"
+      confirm:
+        description: 'Type APPLY to confirm you want to run this against PRODUCTION'
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d1-migrate
+  cancel-in-progress: false
+
+env:
+  D1_DATABASE_NAME: "cyberdudebivash-security-hub"
+  NODE_VERSION: "24"
+
+jobs:
+  migrate:
+    name: Apply schema to production D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Confirmation gate
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "APPLY" ]; then
+            echo "❌ Confirmation gate: you must type APPLY in the confirm input."
+            echo "   This workflow modifies the PRODUCTION database schema."
+            exit 1
+          fi
+          echo "✅ Confirmed by ${{ github.actor }}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate schema file
+        run: |
+          FILE="${{ github.event.inputs.schema_file }}"
+          case "$FILE" in
+            *.sql) ;;
+            *) echo "❌ Schema file must be a .sql file: ${FILE}"; exit 1 ;;
+          esac
+          [ -f "$FILE" ] || { echo "❌ Schema file not found: ${FILE}"; exit 1; }
+          echo "✅ Schema file: ${FILE} ($(wc -l < "$FILE") lines)"
+          echo "Statements preview:"
+          grep -E "^(CREATE|ALTER|DROP|INSERT)" "$FILE" | head -20 || true
+          # Surface unconditional DROP TABLE statements (DROP TABLE IF EXISTS is fine)
+          if grep -iE "^[[:space:]]*DROP[[:space:]]+TABLE" "$FILE" | grep -qivE "IF[[:space:]]+EXISTS"; then
+            echo "⚠️  File contains unconditional DROP TABLE statements — review carefully"
+          fi
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Install Wrangler
+        working-directory: workers
+        run: npm ci --prefer-offline
+
+      - name: Pre-migration backup (rollback point)
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          STAMP="$(date -u '+%Y%m%d-%H%M%S')"
+          echo "MIGRATION_STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "━━━ Taking pre-migration backup ━━━"
+          npx wrangler d1 export "${{ env.D1_DATABASE_NAME }}" \
+            --remote \
+            --output "/tmp/pre-migration-${STAMP}.sql"
+          [ -s "/tmp/pre-migration-${STAMP}.sql" ] || { echo "❌ Pre-migration backup is empty — ABORTING migration"; exit 1; }
+          gzip -9 "/tmp/pre-migration-${STAMP}.sql"
+          echo "✅ Pre-migration backup captured"
+
+      - name: Upload pre-migration backup (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-migration-${{ env.MIGRATION_STAMP }}
+          path: /tmp/pre-migration-${{ env.MIGRATION_STAMP }}.sql.gz
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Apply schema file to production
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          FILE="../${{ github.event.inputs.schema_file }}"
+          # workflow input is repo-relative; adjust when already under workers/
+          case "${{ github.event.inputs.schema_file }}" in
+            workers/*) FILE="../${{ github.event.inputs.schema_file }}" ;;
+            *)         FILE="${GITHUB_WORKSPACE}/${{ github.event.inputs.schema_file }}" ;;
+          esac
+          echo "━━━ Applying ${FILE} to ${{ env.D1_DATABASE_NAME }} (remote) ━━━"
+          npx wrangler d1 execute "${{ env.D1_DATABASE_NAME }}" \
+            --remote \
+            --yes \
+            --file "$FILE"
+          echo "✅ Schema applied"
+
+      - name: Post-migration sanity check
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "━━━ Post-migration verification ━━━"
+          npx wrangler d1 execute "${{ env.D1_DATABASE_NAME }}" \
+            --remote \
+            --command "SELECT COUNT(*) AS tables FROM sqlite_master WHERE type='table'" \
+            --json | tee /tmp/post-check.json
+          echo "✅ Database responding post-migration"
+
+      - name: Write migration summary
+        if: always()
+        run: |
+          echo "## 🧬 D1 Schema Migration" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Schema file | \`${{ github.event.inputs.schema_file }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Database | \`${{ env.D1_DATABASE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Applied by | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pre-migration backup | artifact \`pre-migration-${MIGRATION_STAMP:-n/a}\` (90-day retention) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Rollback | restore backup per DISASTER_RECOVERY_RUNBOOK.md |" >> "$GITHUB_STEP_SUMMARY"
