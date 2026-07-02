@@ -42,6 +42,23 @@
 
 ## 3. Restore Procedures
 
+### 3.0 Pre-flight — prove the artifact is restorable BEFORE touching any D1
+Run the offline restore drill first. It restores the dump into a throwaway
+SQLite database, runs `PRAGMA integrity_check`, and asserts table/row counts —
+no Cloudflare access, no risk to production. A backup that fails this is not a
+backup; do not proceed to 3.1 with it.
+```bash
+# 1. Fetch the artifact (GitHub → Actions → "Nightly D1 Backup" → latest green run
+#    → Artifacts → download d1-backup-<stamp>.sql.gz). Note the SHA-256 printed
+#    in that run's job summary.
+# 2. Prove it restores (Node 22.5+ has the built-in engine; no install needed):
+node scripts/d1-restore-drill.mjs d1-backup-<stamp>.sql.gz \
+  --expect-sha256 <sha256-from-job-summary> --min-tables 200
+#    → "RESTORE DRILL PASSED" + a RESTORE_DRILL_RESULT evidence line = artifact is good.
+#    → any "RESTORE DRILL FAILED" = corrupt/tampered/truncated; use the previous
+#      night's artifact or Time Travel (3.2) instead.
+```
+
 ### 3.1 D1 — full restore from nightly export
 ```bash
 # 1. Fetch the artifact (GitHub → Actions → "Nightly D1 Backup" → latest green run)
@@ -119,7 +136,8 @@ Full manifest with generation commands lives in `workers/wrangler.toml` (comment
 | Check | How | Frequency |
 |---|---|---|
 | Nightly backup is green | GitHub Actions → "Nightly D1 Backup" — failure = red run | Automatic; review weekly |
-| Backup restorability drill | Restore latest artifact into a scratch D1 (`wrangler d1 create dr-drill-<date>`), assert table count ≥ 200, then delete | Quarterly |
+| Backup restorability drill (offline) | `node scripts/d1-restore-drill.mjs <artifact.sql.gz> --expect-sha256 <sha> --min-tables 200` — restores into a throwaway SQLite DB, asserts integrity + table/row counts. No Cloudflare access needed. | Per first-of-month artifact; and before any real restore (§3.0) |
+| Backup restorability drill (live scratch D1) | Restore latest artifact into a scratch D1 (`wrangler d1 create dr-drill-<date>`), assert table count ≥ 200, then delete | Quarterly |
 | Rollback drill | `wrangler rollback` in a low-traffic window, verify `/api/version`, roll forward | Quarterly |
 | Time Travel availability | `wrangler d1 time-travel info` — confirm bookmark window matches plan expectation | Monthly |
 | Secret manifest accuracy | Diff `wrangler secret list` against the manifest in wrangler.toml | On every secret addition |
