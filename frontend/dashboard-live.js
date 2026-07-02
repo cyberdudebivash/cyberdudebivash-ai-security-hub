@@ -199,12 +199,15 @@
     // ── /api/health — platform status badge ──────────────────────────────────
     const health = await Bus.fetch('/api/health');
     if (health) {
-      const status = health.status || 'operational';
+      // /api/health only ever returns 'ok' | 'degraded' | 'error' — never
+      // 'operational' — so the badge was permanently stuck amber even when
+      // every component was healthy.
+      const status = health.status || 'ok';
       const badge  = $('cdb-platform-status');
       if (badge) {
         badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
         badge.className   = badge.className.replace(/\bcdb-status-\w+/g, '');
-        badge.classList.add(status === 'operational' ? 'cdb-status-green' : 'cdb-status-amber');
+        badge.classList.add(status === 'ok' ? 'cdb-status-green' : 'cdb-status-amber');
       }
     }
 
@@ -331,28 +334,34 @@
       return;
     }
 
-    const totalAssets = assets.total_assets ?? assets.count ?? assets.assets?.length ?? 0;
-    const riskScore   = assets.risk_score ?? assets.overall_risk ?? 0;
-    const governance  = assets.governance_status ?? assets.governance ?? 'Assessed';
+    // handleASPMDashboard nests real values under .posture — none of
+    // total_assets/risk_score/governance_status exist at the top level, so
+    // this always fell back to 0/"Assessed" regardless of real posture data.
+    const posture     = assets.posture || {};
+    const totalAssets = posture.total_assets ?? 0;
+    const riskScore   = posture.overall_score ?? 0; // 0-100 scale, not /10
+    const governance  = posture.grade || '—';
 
     setText('cdb-ai-total-assets',   fmt(totalAssets));
-    setText('cdb-ai-risk-score',     typeof riskScore === 'number' ? riskScore + '/10' : riskScore);
+    setText('cdb-ai-risk-score',     riskScore + '/100');
     setText('cdb-ai-governance',     governance);
 
+    // No flat per-asset list is returned by this endpoint — only per-type
+    // counts (assets_by_type). Render those groups honestly instead of
+    // silently leaving the list stuck on "Scanning AI asset inventory…"
+    // forever (the old `assets.assets || assets.items` guard never existed).
     const assetList = $('cdb-ai-asset-list');
-    if (assetList && (assets.assets || assets.items)) {
-      const items = assets.assets || assets.items || [];
-      assetList.innerHTML = items.slice(0, 5).map(a => {
-        const name = a.name || a.asset_name || a.id || 'AI Asset';
-        const type = a.type || a.asset_type || 'LLM';
-        const risk = a.risk_level || a.risk_score || '—';
-        const rCls = risk === 'HIGH' || Number(risk) >= 7 ? 'cdb-sev-high' : 'cdb-sev-med';
+    if (assetList) {
+      const groups = assets.assets_by_type || [];
+      assetList.innerHTML = groups.length ? groups.slice(0, 5).map(g => {
+        const risk = Math.round(g.avg_score || 0);
+        const rCls = risk < 60 ? 'cdb-sev-high' : risk < 80 ? 'cdb-sev-med' : 'cdb-sev-low';
         return `<div class="cdb-asset-row">
-          <span class="cdb-asset-name">${name}</span>
-          <span class="cdb-asset-type">${type}</span>
-          <span class="cdb-sev-badge ${rCls}">${risk}</span>
+          <span class="cdb-asset-name">${g.asset_type || 'AI Asset'}</span>
+          <span class="cdb-asset-type">${g.cnt} asset${g.cnt === 1 ? '' : 's'}</span>
+          <span class="cdb-sev-badge ${rCls}">${risk}/100</span>
         </div>`;
-      }).join('');
+      }).join('') : '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">No AI assets registered yet.</div>';
     }
   }
 
@@ -377,10 +386,16 @@
     ]);
 
     const health_data = health.status === 'fulfilled' ? health.value : null;
-    const clients_data = clientsResp.status === 'fulfilled' ? clientsResp.value : null;
+    // /api/mssp/clients goes through the shared ok() helper, which nests the
+    // real payload under .data — reading fields off the raw response meant
+    // clientCount was always null and the tile never left its "—" default.
+    const clientsRaw   = clientsResp.status === 'fulfilled' ? clientsResp.value : null;
+    const clients_data = (clientsRaw && clientsRaw.success && clientsRaw.data) ? clientsRaw.data : clientsRaw;
 
-    const apiOk   = health_data?.status === 'operational';
-    const dbOk    = health_data?.database !== false && health_data?.db !== false;
+    // /api/health only ever returns status: 'ok' | 'degraded' | 'error' — never
+    // 'operational' — so apiOk (and everything gated on it) was always false.
+    const apiOk   = health_data?.status === 'ok';
+    const dbOk    = health_data?.components?.database?.status === 'ok';
     const scanOk  = scans != null;
     const cveCount = m?.total_cves_tracked ?? scans?.cve_count ?? 0;
     const intelOk  = cveCount > 0;

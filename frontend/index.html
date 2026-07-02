@@ -3802,7 +3802,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <section data-auth-gate="true" data-section-id="threat-graph-2" id="threat-graph" style="display:none;background:linear-gradient(180deg,#0a0a1e 0%,#080812 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)">
 <div style="max-width:1200px;margin:0 auto">
 <div style="text-align:center;margin-bottom:40px">
-<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#a78bfa;text-transform:uppercase;margin-bottom:16px">
+<div id="graph-live-badge" style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#a78bfa;text-transform:uppercase;margin-bottom:16px">
       🔗 LIVE THREAT INTELLIGENCE GRAPH
     </div>
 <h2 style="font-size:clamp(26px,3.5vw,40px);font-weight:900;margin:0 0 12px;color:#fff">Threat Intelligence <span style="background:linear-gradient(135deg,#a78bfa,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Knowledge Graph</span></h2>
@@ -14703,7 +14703,29 @@ window.socLoadThreatFeed=async function(){var feed=document.getElementById('socT
 function renderThreatFeed(threats){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='';window._socThreats=threats;threats.forEach(function(t,idx){var sev=t.severity||(t.cvss>=9?'CRITICAL':t.cvss>=7?'HIGH':'MEDIUM');var item=document.createElement('div');item.className='soc-threat-item sev-'+sev;item.onclick=function(){socSelectThreat(t,item);};item.innerHTML='<div style="flex:1;min-width:0"><div class="soc-threat-cve">'+(t.id||t.cve_id||'CVE-UNKNOWN')+'</div><div class="soc-threat-title">'+(t.title||t.description||'Threat')+'</div><div class="soc-threat-meta"><span class="soc-sev-chip '+sev+'">'+sev+'</span><span class="soc-cvss-chip">CVSS:'+(t.cvss||'N/A')+'</span>'+(t.kev||t.is_kev?'<span class="soc-kev-chip">KEV</span>':'')+'</div></div>';feed.appendChild(item);});setEl('soc-feed-count',threats.length+' threats active');var crit=threats.filter(function(t){return(t.severity||'')==='CRITICAL'||(t.cvss||0)>=9;}).length;var kev=threats.filter(function(t){return t.kev||t.is_kev;}).length;setEl('soc-cve-active',threats.length);setEl('soc-kev-live',kev);setEl('soc-exploited',crit);var risk=Math.max(20,Math.min(95,50+crit*5+kev*3));setEl('socRiskScore',risk);var ring=document.getElementById('socRiskRing');if(ring){ring.style.strokeDashoffset=188*(1-risk/100);ring.style.stroke=risk>75?'#ef4444':risk>50?'#f59e0b':'#10b981';}var rl=document.getElementById('soc-rail-threat-lbl');if(rl)rl.textContent='THREAT: '+(crit>=3?'CRITICAL':crit>=1?'HIGH':'ELEVATED');}
 
 /* AI VERDICT */
-window.socSelectThreat=async function(threat,el){document.querySelectorAll('.soc-threat-item').forEach(function(i){i.classList.remove('active');});if(el)el.classList.add('active');window._socSelectedThreat=threat;var cveId=threat.id||threat.cve_id||'Unknown';var sev=threat.severity||(threat.cvss>=9?'CRITICAL':'HIGH');logSOC('Selected: '+cveId+' - '+sev+' - running AI analysis','ai','ai');document.getElementById('socSelectedThreat').style.display='none';document.getElementById('socAIVerdict').style.display='none';document.getElementById('socAILoading').style.display='block';var verdict=null;try{var r=await fetch('/api/ai/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threat_id:cveId,severity:sev,cvss:threat.cvss,title:threat.title,apt:threat.apt,kev:threat.kev||threat.is_kev})});if(r.ok)verdict=await r.json();}catch(e){}var confidence=verdict&&verdict.confidence?verdict.confidence:(sev==='CRITICAL'?94:sev==='HIGH'?82:68);var decision=verdict&&(verdict.verdict||verdict.action)?(verdict.verdict||verdict.action):(sev==='CRITICAL'?'IMMEDIATE ACTION':sev==='HIGH'?'HIGH PRIORITY':'MONITOR');var risk_lv=verdict&&verdict.risk_level?verdict.risk_level:sev;var mitre=verdict&&(verdict.mitre_techniques||verdict.mitre)?(verdict.mitre_techniques||verdict.mitre):'T1190 · T1071 · T1053';var actions=verdict&&(verdict.recommendations||verdict.actions)?(verdict.recommendations||verdict.actions):[(sev==='CRITICAL'?'Apply vendor patch IMMEDIATELY - zero-day exploitation confirmed':'Schedule patching within 24 hours'),'Block affected network segments if exploitation detected','Deploy detection rules for endpoint monitoring','Enable enhanced logging on affected systems'];document.getElementById('socAILoading').style.display='none';document.getElementById('socAIVerdict').style.display='block';setEl('soc-verdict-cve',cveId);var sb=document.getElementById('soc-verdict-severity');if(sb){sb.textContent=sev;sb.style.background=sev==='CRITICAL'?'rgba(239,68,68,.2)':'rgba(245,158,11,.15)';sb.style.color=sev==='CRITICAL'?'#fca5a5':'#fcd34d';sb.style.borderColor=sev==='CRITICAL'?'rgba(239,68,68,.3)':'rgba(245,158,11,.25)';}setEl('soc-verdict-decision',decision);setEl('soc-conf-pct',confidence+'%');setEl('soc-verdict-risk',risk_lv);setEl('soc-verdict-mitre',mitre);var cb=document.getElementById('socConfBar');if(cb)setTimeout(function(){cb.style.width=confidence+'%';},100);var ae=document.getElementById('soc-verdict-actions');if(ae){if(Array.isArray(actions)){ae.innerHTML=actions.map(function(a){return'<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:6px"><span style="color:var(--accent3);flex-shrink:0">→</span><span>'+a+'</span></div>';}).join('');}else{ae.textContent=actions;}}showCorrelation(threat);logSOC('AI verdict: '+decision+' | Confidence: '+confidence+'% | MITRE: '+mitre.split('·')[0].trim(),'ai','ai');if(sev==='CRITICAL')logSOC('PREDICT: '+cveId+' exploitation probability HIGH next 72h - KEV confirmed','warn','crit');};
+window.socSelectThreat=async function(threat,el){document.querySelectorAll('.soc-threat-item').forEach(function(i){i.classList.remove('active');});if(el)el.classList.add('active');window._socSelectedThreat=threat;var cveId=threat.id||threat.cve_id||'Unknown';var sev=threat.severity||(threat.cvss>=9?'CRITICAL':'HIGH');logSOC('Selected: '+cveId+' - '+sev+' - running AI analysis','ai','ai');document.getElementById('socSelectedThreat').style.display='none';document.getElementById('socAIVerdict').style.display='none';document.getElementById('socAILoading').style.display='block';var verdict=null;
+  // Real per-CVE scoring engine — /api/ai/analyze requires {scan_result,module}
+  // (a completed scan), which a live-feed CVE click never has; it always 400'd
+  // and this panel silently rendered a fake severity-based template forever.
+  // /api/threat-confidence/enrich is the real per-CVE engine (KEV + ThreatFox +
+  // APT attribution + CVSS), which is what "AI Verdict" actually means here.
+  try{var r=await fetch('/api/threat-confidence/enrich',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cve_id:cveId,cvss:threat.cvss,title:threat.title})});if(r.ok){var raw=await r.json();verdict=(raw&&raw.success&&raw.data)?raw.data:raw;}}catch(e){}
+  var confidence=verdict&&verdict.confidence_score!=null?verdict.confidence_score:(sev==='CRITICAL'?94:sev==='HIGH'?82:68);
+  var decision=verdict&&verdict.remediation&&verdict.remediation.label?verdict.remediation.label:(sev==='CRITICAL'?'IMMEDIATE ACTION':sev==='HIGH'?'HIGH PRIORITY':'MONITOR');
+  var risk_lv=verdict&&verdict.risk_tier?verdict.risk_tier.replace(/_/g,' '):sev;
+  var mitre='—'; // no real per-CVE MITRE mapping exists from this engine — show honest "—" instead of a fixed fake technique list
+  var actions;
+  if(verdict&&verdict.signals){var s=verdict.signals,a=[];
+    if(s.kev_listed)a.push('Listed in CISA Known Exploited Vulnerabilities catalog — remediate on the KEV-mandated timeline');
+    if(s.active_exploitation)a.push('Active exploitation confirmed in the wild');
+    if(s.exploit_public&&!s.active_exploitation)a.push('Public exploit code available — treat as imminent risk');
+    if(verdict.apt_attribution&&verdict.apt_attribution.length)a.push('Attributed to: '+verdict.apt_attribution.join(', '));
+    if(verdict.remediation&&verdict.remediation.label)a.push(verdict.remediation.label);
+    actions=a.length?a:['No corroborating exploitation signals found for this CVE — monitor for changes'];
+  }else{
+    actions=[(sev==='CRITICAL'?'Apply vendor patch IMMEDIATELY - zero-day exploitation confirmed':'Schedule patching within 24 hours'),'Block affected network segments if exploitation detected','Deploy detection rules for endpoint monitoring','Enable enhanced logging on affected systems'];
+  }
+  document.getElementById('socAILoading').style.display='none';document.getElementById('socAIVerdict').style.display='block';setEl('soc-verdict-cve',cveId);var sb=document.getElementById('soc-verdict-severity');if(sb){sb.textContent=sev;sb.style.background=sev==='CRITICAL'?'rgba(239,68,68,.2)':'rgba(245,158,11,.15)';sb.style.color=sev==='CRITICAL'?'#fca5a5':'#fcd34d';sb.style.borderColor=sev==='CRITICAL'?'rgba(239,68,68,.3)':'rgba(245,158,11,.25)';}setEl('soc-verdict-decision',decision);setEl('soc-conf-pct',confidence+'%');setEl('soc-verdict-risk',risk_lv);setEl('soc-verdict-mitre',mitre);var cb=document.getElementById('socConfBar');if(cb)setTimeout(function(){cb.style.width=confidence+'%';},100);var ae=document.getElementById('soc-verdict-actions');if(ae){if(Array.isArray(actions)){ae.innerHTML=actions.map(function(a){return'<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:6px"><span style="color:var(--accent3);flex-shrink:0">→</span><span>'+a+'</span></div>';}).join('');}else{ae.textContent=actions;}}showCorrelation(threat);logSOC('AI verdict: '+decision+' | Confidence: '+confidence+'%','ai','ai');if(sev==='CRITICAL')logSOC('PREDICT: '+cveId+' exploitation probability HIGH next 72h - KEV confirmed','warn','crit');};
 function showCorrelation(threat){var p=document.getElementById('socCorrelation');var l=document.getElementById('socCorrelationList');if(!p||!l)return;var rel=(window._socThreats||[]).filter(function(t){return t!==threat&&(t.apt===threat.apt||(t.cvss>=8.5&&threat.cvss>=8.5));}).slice(0,3);if(!rel.length){p.style.display='none';return;}l.innerHTML=rel.map(function(t){return'<div class="soc-corr-item"><span style="font-family:monospace;color:#00d4ff;font-size:10px">'+(t.id||t.cve_id)+'</span><span class="soc-sev-chip '+(t.severity||'HIGH')+'" style="font-size:8px">'+(t.severity||'HIGH')+'</span></div>';}).join('');p.style.display='block';}
 
 /* SOC ACTIONS */
@@ -17189,6 +17211,52 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
     }
   };
 
+  // Real backend node types (CVE/ACTOR/ASSET/DECISION/INDUSTRY/CAMPAIGN) don't
+  // all have a dedicated color/radius — unmapped types fall back gracefully
+  // (TYPE_COLORS[n.type] || '#00d4ff', TYPE_RADII[n.type] || 12) so this is safe.
+  var TYPE_LABEL_MAP = { CVE:'cve', ACTOR:'apt' };
+  function describeRealNode(n) {
+    switch (n.type) {
+      case 'CVE':      return 'CVSS ' + (n.cvss != null ? n.cvss : '—') + ' ' + (n.severity || '') + (n.kev ? ' — actively exploited (CISA KEV)' : '') + (n.source ? ' — source: ' + n.source : '');
+      case 'ACTOR':    return 'Threat actor' + (n.sector ? ', sector: ' + n.sector : '') + (n.active ? ' — active' : '');
+      case 'ASSET':     return 'Registered asset (' + (n.asset_type || 'unknown type') + ')';
+      case 'DECISION':  return 'SOC decision' + (n.priority ? ', priority ' + n.priority : '') + (n.confidence != null ? ', confidence ' + n.confidence : '');
+      case 'INDUSTRY':  return 'Targeted industry sector';
+      case 'CAMPAIGN':  return 'Correlated attack campaign' + (n.technique ? ' (MITRE ' + n.technique + ')' : '');
+      default:          return n.type;
+    }
+  }
+
+  // Fetch the real, D1-backed relationship graph for PRO+/authenticated users.
+  // Falls back to the labeled demo dataset (not silently, and never claiming
+  // "LIVE") for anonymous/FREE visitors or on any fetch failure.
+  function loadRealGraphData() {
+    var badge = document.getElementById('graph-live-badge');
+    return fetch('/api/knowledge-graph').then(function(r) {
+      if (!r.ok) return null;
+      return r.json();
+    }).then(function(d) {
+      if (!d || !d.success || !Array.isArray(d.nodes) || !d.nodes.length) return false;
+      var maxX = 780, maxY = 580;
+      GRAPH_DATA = {
+        nodes: d.nodes.map(function(n) {
+          return {
+            id: n.id, label: n.label || n.id,
+            type: TYPE_LABEL_MAP[n.type] || (n.type || '').toLowerCase(),
+            x: 20 + Math.random() * (maxX - 40), y: 20 + Math.random() * (maxY - 40),
+            desc: describeRealNode(n), cvss: n.cvss || null,
+          };
+        }),
+        edges: (d.edges || []).map(function(e) { return { from: e.source, to: e.target, label: e.type }; }),
+      };
+      if (badge) badge.textContent = '🔗 LIVE THREAT INTELLIGENCE GRAPH';
+      return true;
+    }).catch(function() { return false; }).then(function(loaded) {
+      if (!loaded && badge) badge.textContent = '🔗 DEMO DATA — SIGN IN (PRO+) FOR YOUR LIVE GRAPH';
+      return loaded;
+    });
+  }
+
   /* ── Init on DOMContentLoaded or section scroll ─────────────── */
   window.cdbGraphRender = function() {
     canvas = document.getElementById('threat-graph-canvas');
@@ -17202,15 +17270,19 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
     canvas.height = 480 * dpr;
     ctx.scale(dpr, dpr);
 
-    // Scale initial positions to canvas logical size
-    var W = rect.width || 800, H = 480;
-    var maxX = 780, maxY = 580;
-    GRAPH_DATA.nodes.forEach(function(n) {
-      n.x = (n.x / maxX) * (W - 60) + 30;
-      n.y = (n.y / maxY) * (H - 60) + 30;
-    });
+    loadRealGraphData().then(function() {
+      // Scale initial positions to canvas logical size
+      var W = rect.width || 800, H = 480;
+      var maxX = 780, maxY = 580;
+      GRAPH_DATA.nodes.forEach(function(n) {
+        n.x = (n.x / maxX) * (W - 60) + 30;
+        n.y = (n.y / maxY) * (H - 60) + 30;
+      });
 
-    initSim();
+      initSim();
+      if (animFrame) cancelAnimationFrame(animFrame);
+      loop();
+    });
 
     // Mouse events
     canvas.addEventListener('mousemove', function(e) {
@@ -21565,7 +21637,7 @@ window.thLookupIOC=function(){var inp=document.getElementById('th-ioc-input'),re
 
 /* === VULNERABILITY MANAGEMENT === */
 var VMD={critical:[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS',cvss:10.0,epss:.942,kev:true,patch:false,d:'Command injection in GlobalProtect. Exploited by UTA0218. 150K+ devices exposed. No workaround without disabling feature.'},{id:'CVE-2024-21762',p:'Fortinet FortiOS',cvss:9.6,epss:.893,kev:true,patch:true,d:'Out-of-bounds write SSL VPN unauthenticated RCE. Apply patch immediately.'},{id:'CVE-2021-44228',p:'Apache Log4j',cvss:10.0,epss:.975,kev:true,patch:true,d:'Log4Shell JNDI injection RCE. Most exploited vulnerability of the decade.'},{id:'CVE-2023-34362',p:'MOVEit Transfer',cvss:9.8,epss:.971,kev:true,patch:true,d:'SQL injection to RCE. Cl0p ransomware campaign hit 2,500+ orgs.'}],kev:[{id:'CVE-2024-27198',p:'JetBrains TeamCity',cvss:9.8,epss:.953,kev:true,patch:true,d:'Auth bypass -- full CI/CD server takeover. Patch to 2023.11.4+.'},{id:'CVE-2023-4966',p:'Citrix NetScaler',cvss:9.4,epss:.965,kev:true,patch:true,d:'Citrix Bleed session disclosure. Update and invalidate all active sessions.'},{id:'CVE-2024-1708',p:'ConnectWise ScreenConnect',cvss:8.4,epss:.945,kev:true,patch:true,d:'Path traversal RCE. Immediate patch + credential rotation required.'}],epss:[{id:'CVE-2024-1709',p:'ConnectWise ScreenConnect',cvss:10.0,epss:.980,kev:true,patch:true,d:'Authentication bypass allowing arbitrary file upload and remote code execution. CISA KEV listed.'},{id:'CVE-2024-21893',p:'Ivanti Connect Secure',cvss:8.2,epss:.867,kev:true,patch:true,d:'SSRF leading to authentication bypass. Nation-state actors exploiting against enterprise networks.'}],zero:[{id:'CVE-2024-38112',p:'Windows MSHTML Platform',cvss:7.5,epss:.621,kev:true,patch:true,d:'Windows MSHTML spoofing zero-day exploited before patch. Update to latest Windows security patch.'},{id:'CVE-2024-30051',p:'Windows DWM Core',cvss:7.8,epss:.574,kev:true,patch:true,d:'Windows Desktop Window Manager privilege escalation zero-day. Exploited in the wild by QakBot operators.'}]};
-(function fetchVMDLive(){fetch('/api/threat-intel?severity=CRITICAL&limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){if(!d||!d.data||!d.data.length)return;var mapped=d.data.slice(0,4).map(function(e){return{id:e.id,p:(e.affected_products&&e.affected_products[0])||e.title||e.id,cvss:parseFloat(e.cvss_score||e.score)||9.0,epss:parseFloat(e.epss_score||0),kev:!!(e.is_kev||e.kev),patch:!!(e.patch_available||e.patch),d:(e.description||e.title||e.id).slice(0,200)};});if(mapped.length){VMD.critical=mapped;vmFilter('critical');}}).catch(function(){});})();
+(function fetchVMDLive(){fetch('/api/threat-intel?severity=CRITICAL&limit=8').then(function(r){return r.ok?r.json():null;}).then(function(raw){var d=raw&&raw.success&&raw.data?raw.data:raw;if(!d||!d.entries||!d.entries.length)return;var mapped=d.entries.slice(0,4).map(function(e){return{id:e.id,p:(e.affected_products&&e.affected_products[0])||e.title||e.id,cvss:parseFloat(e.cvss_score||e.score)||9.0,epss:parseFloat(e.epss_score||0),kev:!!(e.is_kev||e.kev),patch:!!(e.patch_available||e.patch),d:(e.description||e.title||e.id).slice(0,200)};});if(mapped.length){VMD.critical=mapped;vmFilter('critical');}}).catch(function(){});})();
 function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#fca5a5;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
 window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.72)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,0.72);font-size:11px">None</span>';};
 window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var p=document.getElementById('vm-detail-panel');if(!p)return;p.innerHTML='<div style="color:#00d4ff;text-align:center;padding:20px">Looking up '+esc(id)+' via NVD...</div>';fetch('/api/vulns/cve/'+encodeURIComponent(id)).then(function(r){return r.json();}).then(function(d){if(!d||d.error){p.innerHTML='<div style="color:#ef4444;text-align:center;padding:20px">'+esc((d&&d.error)||'CVE not found')+'</div>';return;}var entry={id:d.cve_id||id,p:(d.cwe&&d.cwe[0])||d.source||'Unknown product',cvss:parseFloat(d.cvss_score)||0,epss:parseFloat(d.epss_score)||0,kev:!!d.in_kev,patch:!!(d.remediation||d.references&&d.references.length),d:d.description||'No description available.'};p.innerHTML=vmC(entry);}).catch(function(){p.innerHTML='<div style="color:#ef4444;text-align:center;padding:20px">Lookup failed -- try again</div>';});};

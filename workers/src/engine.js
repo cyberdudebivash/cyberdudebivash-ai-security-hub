@@ -248,7 +248,7 @@ export function aiScanEngine(modelName, useCase) {
     title: p.pattern,
     severity: p.severity,
     description: p.desc,
-    mitigation: 'Implement strict input validation, output filtering, and instruction hierarchies.',
+    recommendation: 'Implement strict input validation, output filtering, and instruction hierarchies.',
     cvss_base: p.severity === 'CRITICAL' ? 9.0 : p.severity === 'HIGH' ? 7.5 : 5.5,
     is_premium: i >= 2,
   }));
@@ -318,9 +318,29 @@ const RT_SEVERITY = {
   'T1486':     'CRITICAL',  // Ransomware Simulation
 };
 
+// Standard MITRE-aligned remediation guidance per technique (not target-specific claims)
+const RT_REMEDIATION = {
+  'T1566':     'Deploy email authentication (SPF/DKIM/DMARC), attachment sandboxing, and mandatory phishing-simulation training for privileged users.',
+  'T1110.003': 'Enforce MFA on all identity providers, enable smart lockout / sign-in risk policies, and alert on distributed low-frequency auth failures.',
+  'T1046':     'Segment internal networks, restrict east-west traffic with host-based firewalls, and monitor for anomalous internal port scanning.',
+  'T1550.002': 'Enable Credential Guard / LSA protection, enforce Local Administrator Password Solution (LAPS), and disable NTLM where Kerberos is viable.',
+  'T1053':     'Restrict scheduled-task creation to admins, audit Task Scheduler event IDs 4698/4699, and alert on SYSTEM-context task creation outside change windows.',
+  'T1048':     'Deploy DNS query monitoring/filtering, restrict outbound DNS to approved resolvers, and alert on high-volume TXT record queries.',
+  'T1070':     'Forward logs to a write-once SIEM in real time, enable Windows Event Log protection, and alert on log-clearing event IDs (1102/104).',
+  'T1486':     'Maintain offline/immutable backups, deploy EDR with ransomware behavioral detection, and rehearse incident response / restore procedures.',
+};
+
 export function redteamEngine(targetOrg, scope) {
   const findings = RT_SCENARIOS.map((s, i) => ({
     ...s,
+    // Aliases matching the convention every other scan engine's findings use
+    // (title/description/recommendation/mitre_id) — renderFinding() reads
+    // these exact names; without them every card literally rendered the text
+    // "undefined" and dropped its description, MITRE badge, and remediation box.
+    title: s.name,
+    description: s.desc,
+    mitre_id: s.tech,
+    recommendation: RT_REMEDIATION[s.tech] || null,
     severity: RT_SEVERITY[s.tech] || 'HIGH',
     result: 'NOT_TESTED',
     is_premium: i >= 2,
@@ -667,6 +687,23 @@ export function complianceEngine(orgName, framework) {
   const totalControls   = gaps.reduce((a, g) => a + g.gap_count, 0);
   const totalCritical   = gaps.reduce((a, g) => a + g.critical_gaps, 0);
 
+  // Top-level findings array, matching every other scan engine's convention
+  // (title/description/recommendation/severity/cvss_base/is_premium). Without
+  // this, the real per-control gap data only lived under domain_assessments,
+  // which lockFindings()/renderResults() never read — so the "Total Findings"
+  // strip always showed 0, no individual gaps were ever displayed, and the
+  // paid unlock CTA (which only renders when locked findings exist) never
+  // appeared, breaking the compliance report purchase flow entirely.
+  const findings = gaps.flatMap(g => g.failing_controls.map(c => ({
+    id: c.id,
+    title: c.name,
+    description: c.gap,
+    recommendation: `Remediate per ${c.sla_label} — required for ${g.domain} certification.`,
+    severity: c.severity,
+    cvss_base: c.cvss_estimate,
+    is_premium: c.is_premium,
+  })));
+
   return {
     module:'compliance_generator', version:'4.0.0', target:orgName, framework:fw.name, framework_key:framework,
     risk_score: 100 - complianceScore,
@@ -679,6 +716,7 @@ export function complianceEngine(orgName, framework) {
     immediate_action_required: allFreeControls.filter(c => c.sla_days <= 14),
     summary: `${fw.name} gap analysis for "${orgName}": industry benchmark readiness ${complianceScore}% (Gartner/ISACA 2024). ${totalControls} controls require assessment. ${totalCritical} critical-severity gaps identified — remediation required before certification.`,
     free_preview: { overall_score: complianceScore, weakest_domain: { name: worst?.domain, score: complianceScore }, critical_gaps: totalCritical },
+    findings,
     domain_assessments: gaps,
     note: 'Compliance score reflects industry benchmark for this framework. Actual score requires completing the assessment questionnaire against your specific controls.',
     remediation_roadmap: [
