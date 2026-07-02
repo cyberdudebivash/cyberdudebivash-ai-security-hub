@@ -400,6 +400,22 @@
     const cveCount = m?.total_cves_tracked ?? scans?.cve_count ?? 0;
     const intelOk  = cveCount > 0;
 
+    // Executive-panel "Platform Status" rows — used to be 6 permanently
+    // hardcoded "Active"/"Online" labels with no backend call at all.
+    // Wire them to the same real signals the MSSP service grid below uses.
+    const setStatus = (id, ok, onLabel, offLabel) => {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = ok ? onLabel : offLabel;
+      el.style.color = ok ? '#4ade80' : '#f59e0b';
+    };
+    setStatus('cdb-ps-sentinel',  intelOk || scanOk, 'Active',    'Degraded');
+    setStatus('cdb-ps-mythos',    apiOk,             'Active',    'Degraded');
+    setStatus('cdb-ps-cve',       intelOk,           'Live Feed', 'Refreshing');
+    setStatus('cdb-ps-detection', apiOk,             'Operational', 'Degraded');
+    setStatus('cdb-ps-gateway',   apiOk,             'Online',    'Degraded');
+    setStatus('cdb-ps-aibrain',   dbOk,              'Active',    'Degraded');
+
     // Real client count from D1 via /api/mssp/clients
     const clientCount = clients_data?.total ?? clients_data?.count ?? clients_data?.clients?.length ?? null;
     if (clientCount !== null) setText('cdb-mssp-clients', fmt(clientCount));

@@ -9466,6 +9466,10 @@ async function executeScan(module, payload) {
     _saveScanToHistory(module, data);
     try {
       renderResults(module, data);
+      // Feed the real scan result into the attack graph widget — the
+      // window.showScanResult/renderScanResult hooks it used to rely on
+      // are never actually defined anywhere, so onScanComplete never fired.
+      if (window.CDB_ATTACKGRAPH?.onScanComplete) window.CDB_ATTACKGRAPH.onScanComplete(module, data);
     } catch (renderErr) {
       console.error('[renderResults] Error rendering API response:', renderErr);
       showErrorState(module, `Render error: ${renderErr.message}. Raw data logged to console.`, () => runScan(module));
@@ -16112,14 +16116,19 @@ const CDB_ATTACKGRAPH = window.CDB_ATTACKGRAPH = (() => {
       svgEl.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="12" font-family="monospace">⟳ Loading attack graph...</text>';
 
       try{
-        const body = { domain: context?.domain||'target.example.com', scan_id: context?.scan_id||null };
+        // Backend requires the actual scan result + module name — it has no
+        // concept of {domain, scan_id}. Without a real scan_result there's
+        // nothing to graph, so skip straight to the demo fallback.
+        if(!context?.scan_result) throw new Error('no scan result yet');
+        const body = { scan_result: context.scan_result, module: context.module||'domain' };
         const r = await fetch(API+'/api/attack-graph', {
           method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
         });
         if(!r.ok) throw new Error('HTTP '+r.status);
         const d = await r.json();
-        const nodes = d.nodes||d.graph?.nodes||[];
-        const edges = d.edges||d.graph?.edges||d.links||[];
+        const g = d.graph||d;
+        const nodes = g.nodes||[];
+        const edges = g.links||g.edges||[];
         if(nodes.length > 0){
           _renderSVG(svgEl, nodes, edges);
         } else {
@@ -16137,15 +16146,17 @@ const CDB_ATTACKGRAPH = window.CDB_ATTACKGRAPH = (() => {
       }
     },
 
-    // Re-render on scan completion with real context
+    // Re-render on scan completion with the real scan result — the backend
+    // builds the graph from scan_result.findings, not from a domain string.
     onScanComplete(module, scanData){
+      const ctx = { scan_result: scanData, module };
       const svgId = 'attackGraphSvg-'+module;
       if(document.getElementById(svgId)){
-        this.render(svgId, {domain: scanData?.target||scanData?.domain, scan_id: scanData?.scan_id});
+        this.render(svgId, ctx);
       }
       // Also update the main SOC attack graph panel
       if(document.getElementById('attackGraphSvg')){
-        this.render('attackGraphSvg', {domain: scanData?.target, scan_id: scanData?.scan_id});
+        this.render('attackGraphSvg', ctx);
       }
     }
   };
@@ -21641,7 +21652,48 @@ var VMD={critical:[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS',cvss:10.0,epss:.942,
 function vmC(e){var cv=cvssL(e.cvss);return'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px"><div><span style="font-weight:900;color:#fff;font-size:14px">'+esc(e.id)+'</span><span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.72);font-size:10px;padding:2px 7px;border-radius:4px;margin-left:8px">'+esc(e.p)+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap">'+(e.kev?'<span style="background:rgba(239,68,68,.15);color:#fca5a5;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.3)">CISA KEV</span>':'')+(e.patch?'<span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">PATCH AVAIL</span>':'<span style="background:rgba(168,85,247,.12);color:#a855f7;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px">NO PATCH</span>')+'</div></div><div style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.6;margin-bottom:10px">'+esc(e.d)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:'+cv.c+'20;color:'+cv.c+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid '+cv.c+'40">CVSS '+e.cvss.toFixed(1)+' '+cv.l+'</span><span style="background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;padding:3px 10px;border-radius:6px">EPSS '+(e.epss*100).toFixed(1)+'%</span><button onclick="vmRem(\''+esc(e.id)+'\')" style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">Start Remediation</button></div></div>';}
 window.vmFilter=function(t){var p=document.getElementById('vm-detail-panel');if(p)p.innerHTML=(VMD[t]||VMD.critical).map(vmC).join('');var open=document.getElementById('vm-col-open');if(open)open.innerHTML=(VMD[t]||VMD.critical).filter(function(e){return!e.patch;}).slice(0,3).map(function(e){return'<div style="background:rgba(239,68,68,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.72)">'+esc(e.id)+'</div>';}).join('')||'<span style="color:rgba(255,255,255,0.72);font-size:11px">None</span>';};
 window.vmLookupCVE=function(){var inp=document.getElementById('vm-cve-input');if(!inp)return;var id=inp.value.trim();if(!id)return;var p=document.getElementById('vm-detail-panel');if(!p)return;p.innerHTML='<div style="color:#00d4ff;text-align:center;padding:20px">Looking up '+esc(id)+' via NVD...</div>';fetch('/api/vulns/cve/'+encodeURIComponent(id)).then(function(r){return r.json();}).then(function(d){if(!d||d.error){p.innerHTML='<div style="color:#ef4444;text-align:center;padding:20px">'+esc((d&&d.error)||'CVE not found')+'</div>';return;}var entry={id:d.cve_id||id,p:(d.cwe&&d.cwe[0])||d.source||'Unknown product',cvss:parseFloat(d.cvss_score)||0,epss:parseFloat(d.epss_score)||0,kev:!!d.in_kev,patch:!!(d.remediation||d.references&&d.references.length),d:d.description||'No description available.'};p.innerHTML=vmC(entry);}).catch(function(){p.innerHTML='<div style="color:#ef4444;text-align:center;padding:20px">Lookup failed -- try again</div>';});};
-window.vmRem=function(id){var w=document.getElementById('vm-col-wip');if(w)w.innerHTML='<div style="background:rgba(245,158,11,.06);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:#f59e0b">'+esc(id)+'</div>'+w.innerHTML;if(typeof TOAST!=='undefined')TOAST.info('Remediation started: '+id,'Remediation');};
+/* Remediation Workflow Board — mirrors real POST /api/vulns/:id/remediate
+   state machine (open→in_progress→testing→patched). VM_BOARD is a client-side
+   mirror of whatever stage the backend confirms so the kanban always reflects
+   the real, persisted stage rather than a purely local scratch pad. */
+var VM_BOARD={};
+function vmRenderBoard(){
+  var cols={in_progress:'vm-col-wip',testing:'vm-col-test',patched:'vm-col-done'};
+  var next={in_progress:{stage:'testing',label:'→ Testing'},testing:{stage:'patched',label:'✅ Mark Patched'},patched:null};
+  ['vm-col-wip','vm-col-test','vm-col-done'].forEach(function(cid){var el=document.getElementById(cid);if(el)el.innerHTML='';});
+  Object.keys(VM_BOARD).forEach(function(id){
+    var stage=VM_BOARD[id],colId=cols[stage];
+    if(!colId)return;
+    var el=document.getElementById(colId);
+    if(!el)return;
+    var n=next[stage];
+    var btn=n?'<button onclick="vmAdvance(\''+esc(id)+'\',\''+n.stage+'\')" style="background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer;margin-left:6px">'+n.label+'</button>':'';
+    el.innerHTML+='<div style="background:rgba(255,255,255,.04);border-radius:5px;padding:5px 7px;margin-bottom:4px;font-size:11px;color:rgba(255,255,255,.85);display:flex;justify-content:space-between;align-items:center;gap:6px"><span>'+esc(id)+'</span>'+btn+'</div>';
+  });
+  ['vm-col-wip','vm-col-test','vm-col-done'].forEach(function(cid){var el=document.getElementById(cid);if(el&&!el.innerHTML)el.innerHTML='<span style="color:rgba(255,255,255,0.4);font-size:11px">--</span>';});
+}
+function vmAdvance(id,stage){
+  var token=localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||'';
+  if(!token){
+    if(typeof TOAST!=='undefined')TOAST.error('Please sign in to track remediation','Sign in required');
+    if(typeof openAuthModal==='function')openAuthModal();
+    return;
+  }
+  fetch('/api/vulns/'+encodeURIComponent(id)+'/remediate',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({stage:stage})})
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok){
+        if(typeof TOAST!=='undefined')TOAST.error((res.d&&res.d.error)||'Could not update remediation stage','Remediation');
+        return;
+      }
+      VM_BOARD[id]=(res.d&&res.d.new_stage)||stage;
+      vmRenderBoard();
+      if(typeof TOAST!=='undefined')TOAST.success('Moved '+id+' to '+((res.d&&res.d.new_stage)||stage).replace('_',' '),'Remediation');
+    })
+    .catch(function(){if(typeof TOAST!=='undefined')TOAST.error('Network error — try again','Remediation');});
+}
+window.vmAdvance=vmAdvance;
+window.vmRem=function(id){vmAdvance(id,'in_progress');};
 (function(){function i(){vmFilter('critical');}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === GLOBAL THREAT MAP === */
@@ -21688,12 +21740,64 @@ function gtmLog(){var el=document.getElementById('gtm-live-log');if(!el)return;v
 (function(){function s(){gtmInit();gtmAPTsLive();setInterval(gtmLog,2800);setInterval(gtmAPTsLive,300000);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',s);else s();})();
 
 /* === INCIDENT RESPONSE === */
-var IRPB={ransomware:'<div style="color:#ef4444;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F6A8; P1 RANSOMWARE RESPONSE &mdash; NIST 800-61 REV3</div><div style="color:#f59e0b;font-size:12px;font-weight:800;margin-bottom:8px">PHASE 1 &mdash; PREPARATION (T+0 to T+15min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate IR team bridge &mdash; alert CISO, Legal, Communications, Board</li><li>Snapshot affected VMs for forensic preservation before isolation</li><li>Notify cyber insurance carrier &mdash; preserve coverage</li><li>Open P1 incident ticket and assign IR lead</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 2 &mdash; IDENTIFICATION (T+15min to T+60min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Identify Patient Zero via EDR telemetry (CrowdStrike / Defender)</li><li>Determine ransomware family via ID-Ransomware tool</li><li>Map encrypted extensions and ransom note locations</li><li>Hunt lateral movement: SMB, PsExec, WMI, Cobalt Strike beacons</li><li>Search for data exfiltration via DLP, proxy logs, DNS queries</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 3 &mdash; CONTAINMENT (T+1h to T+4h)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Segment infected subnets &mdash; revoke network access at switch level</li><li>Reset ALL privileged credentials: AD, Azure AD, service accounts</li><li>Block C2 IOCs at NGFW, DNS sinkholes, and proxy layer</li><li>Disable VSS deletion &mdash; protect remaining shadow copies</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 4 &mdash; ERADICATION &amp; RECOVERY</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Wipe and reimage all affected systems from immutable golden image</li><li>Restore from offline/air-gapped backups with integrity validation</li><li>Deploy enhanced EDR and MFA before reconnecting to network</li><li>Conduct tabletop debrief and update IR plan</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1059 Execution','T1055 Injection','T1021 Lateral Move','T1083 Discovery','T1486 Encrypt Files','T1490 Inhibit Recovery'].map(function(t){return'<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',apt:'<div style="color:#a855f7;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F575; P1 APT INTRUSION &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate TI team + external DFIR retainer (Mandiant / CrowdStrike)</li><li>Establish out-of-band comms &mdash; assume primary channels compromised</li><li>Enable enhanced logging without alerting the adversary</li><li>Deploy deception assets: honeypots and honeytokens</li><li>Hunt LOLBins: powershell, certutil, regsvr32, wscript, mshta</li><li>Analyze DNS for DGA activity and long-TTL abnormalities</li><li>Retrieve memory dumps for offline forensic analysis</li><li>Map TTPs to MITRE ATT&amp;CK Navigator for attribution</li><li>Rotate ALL cryptographic keys, certs and API credentials</li><li>Enforce MFA and Just-In-Time privileged access everywhere</li></ul>',breach:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F513; P1 DATA BREACH &mdash; GDPR / DPDP ACT 2023</div><div style="color:#ef4444;font-size:12px;font-weight:800;margin-bottom:8px">CRITICAL: 72-HOUR REGULATORY NOTIFICATION CLOCK ACTIVE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage DPO and legal counsel immediately &mdash; preserve attorney privilege</li><li>Classify breached data: PII, PCI, PHI, trade secrets</li><li>Notify CERT-In within 6 hours (India) | DPA within 72h (GDPR)</li><li>Preserve all logs with forensic chain of custody</li><li>Enumerate affected individuals for breach notification</li><li>Prepare user notification per DPDP Act 2023 requirements</li></ul>',ddos:'<div style="color:#818cf8;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F30A; DDoS INCIDENT RESPONSE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Enable Cloudflare Under Attack mode immediately</li><li>Contact upstream ISP for BGP black-holing of attack sources</li><li>Analyze attack vector: volumetric, protocol, or application layer</li><li>Deploy geo-blocking and rate limiting at edge</li><li>Activate CDN failover and scale origin capacity</li><li>Document attack for law enforcement if warranted</li></ul>'};
+var IRPB={ransomware:'<div style="color:#ef4444;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F6A8; P1 RANSOMWARE RESPONSE &mdash; NIST 800-61 REV3</div><div style="color:#f59e0b;font-size:12px;font-weight:800;margin-bottom:8px">PHASE 1 &mdash; PREPARATION (T+0 to T+15min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate IR team bridge &mdash; alert CISO, Legal, Communications, Board</li><li>Snapshot affected VMs for forensic preservation before isolation</li><li>Notify cyber insurance carrier &mdash; preserve coverage</li><li>Open P1 incident ticket and assign IR lead</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 2 &mdash; IDENTIFICATION (T+15min to T+60min)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Identify Patient Zero via EDR telemetry (CrowdStrike / Defender)</li><li>Determine ransomware family via ID-Ransomware tool</li><li>Map encrypted extensions and ransom note locations</li><li>Hunt lateral movement: SMB, PsExec, WMI, Cobalt Strike beacons</li><li>Search for data exfiltration via DLP, proxy logs, DNS queries</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 3 &mdash; CONTAINMENT (T+1h to T+4h)</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Segment infected subnets &mdash; revoke network access at switch level</li><li>Reset ALL privileged credentials: AD, Azure AD, service accounts</li><li>Block C2 IOCs at NGFW, DNS sinkholes, and proxy layer</li><li>Disable VSS deletion &mdash; protect remaining shadow copies</li></ul><div style="color:#f59e0b;font-size:12px;font-weight:800;margin:12px 0 8px">PHASE 4 &mdash; ERADICATION &amp; RECOVERY</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Wipe and reimage all affected systems from immutable golden image</li><li>Restore from offline/air-gapped backups with integrity validation</li><li>Deploy enhanced EDR and MFA before reconnecting to network</li><li>Conduct tabletop debrief and update IR plan</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1059 Execution','T1055 Injection','T1021 Lateral Move','T1083 Discovery','T1486 Encrypt Files','T1490 Inhibit Recovery'].map(function(t){return'<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',apt:'<div style="color:#a855f7;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F575; P1 APT INTRUSION &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Activate TI team + external DFIR retainer (Mandiant / CrowdStrike)</li><li>Establish out-of-band comms &mdash; assume primary channels compromised</li><li>Enable enhanced logging without alerting the adversary</li><li>Deploy deception assets: honeypots and honeytokens</li><li>Hunt LOLBins: powershell, certutil, regsvr32, wscript, mshta</li><li>Analyze DNS for DGA activity and long-TTL abnormalities</li><li>Retrieve memory dumps for offline forensic analysis</li><li>Map TTPs to MITRE ATT&amp;CK Navigator for attribution</li><li>Rotate ALL cryptographic keys, certs and API credentials</li><li>Enforce MFA and Just-In-Time privileged access everywhere</li></ul>',breach:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F513; P1 DATA BREACH &mdash; GDPR / DPDP ACT 2023</div><div style="color:#ef4444;font-size:12px;font-weight:800;margin-bottom:8px">CRITICAL: 72-HOUR REGULATORY NOTIFICATION CLOCK ACTIVE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage DPO and legal counsel immediately &mdash; preserve attorney privilege</li><li>Classify breached data: PII, PCI, PHI, trade secrets</li><li>Notify CERT-In within 6 hours (India) | DPA within 72h (GDPR)</li><li>Preserve all logs with forensic chain of custody</li><li>Enumerate affected individuals for breach notification</li><li>Prepare user notification per DPDP Act 2023 requirements</li></ul>',ddos:'<div style="color:#818cf8;font-size:14px;font-weight:900;margin-bottom:12px">&#x1F30A; DDoS INCIDENT RESPONSE</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Enable Cloudflare Under Attack mode immediately</li><li>Contact upstream ISP for BGP black-holing of attack sources</li><li>Analyze attack vector: volumetric, protocol, or application layer</li><li>Deploy geo-blocking and rate limiting at edge</li><li>Activate CDN failover and scale origin capacity</li><li>Document attack for law enforcement if warranted</li></ul>',insider:'<div style="color:#f59e0b;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F464; P1 INSIDER THREAT &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Engage HR and Legal before any account action &mdash; employment-law sensitive</li><li>Preserve evidence quietly: DLP logs, USB/print activity, email exfil, VPN/badge logs</li><li>Suspend (do not delete) access to sensitive systems and shared drives</li><li>Review privileged-access and admin-action logs for the individual\'s history</li><li>Rotate shared credentials and service-account secrets the individual could reach</li><li>Coordinate a single, deliberate offboarding action to avoid tipping off the subject early</li><li>Notify regulators/customers only if confirmed data exfiltration meets breach thresholds</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1078 Valid Accounts','T1005 Local Data','T1567 Exfil to Cloud','T1052 Exfil via Media'].map(function(t){return'<span style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:#f59e0b;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>',phishing:'<div style="color:#00d4ff;font-size:14px;font-weight:900;margin-bottom:16px">&#x1F3A3; PHISHING / BEC INCIDENT RESPONSE &mdash; NIST 800-61 REV3</div><ul style="color:rgba(255,255,255,.75);font-size:13px;line-height:2;padding-left:20px"><li>Pull the phishing message from all mailboxes it reached (mail-flow search + purge)</li><li>Identify who clicked/entered credentials via URL-click and auth logs</li><li>Force password reset + revoke active sessions/tokens for affected accounts</li><li>Check mailbox rules and forwarding addresses for silent exfil (common BEC pattern)</li><li>If wire transfer involved: contact bank\'s fraud line immediately &mdash; recall window is short</li><li>Block sender domain/IOCs at email gateway and web proxy</li><li>Run a targeted awareness reminder for the affected team</li></ul><div style="color:#22c55e;font-size:12px;font-weight:800;margin:12px 0 8px">MITRE ATT&amp;CK CHAIN</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['T1566 Phishing','T1114 Email Collection','T1098 Account Manipulation','T1586 Compromise Accounts'].map(function(t){return'<span style="background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:#00d4ff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">'+t+'</span>';}).join('')+'</div>'};
 var IRTL=[];
 function irTL(msg){IRTL.unshift({ts:new Date().toISOString(),m:msg});var el=document.getElementById('ir-timeline');if(!el)return;el.innerHTML=IRTL.slice(0,8).map(function(e,i){return'<div style="padding:8px 0'+(i>0?';border-top:1px solid rgba(255,255,255,.05)':'')+'"><div style="color:rgba(255,255,255,0.72);font-size:10px">'+esc(e.ts.slice(11,19)+' UTC')+'</div><div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">'+esc(e.m)+'</div></div>';}).join('');}
 window.irGeneratePlaybook=function(){var t=document.getElementById('ir-type'),o=document.getElementById('ir-playbook-output');if(!t||!o)return;o.innerHTML=IRPB[t.value]||IRPB.ransomware;irTL('Playbook loaded: '+t.options[t.selectedIndex].text);};
-window.irDeclareIncident=function(){var t=document.getElementById('ir-type'),l=t?t.options[t.selectedIndex].text:'Unknown';irTL('INCIDENT DECLARED: '+l);irTL('IR Bridge activated');irTL('Evidence preservation started');if(typeof TOAST!=='undefined')TOAST.error('Active Incident: '+l,'INCIDENT');};
+/* Declaring an incident persists a real record via POST /api/ciso/incidents
+   (used to only write a local UI line — nothing survived a page refresh and
+   the "Incident Timeline" never reflected an actual backend incident). */
+window.irDeclareIncident=function(){
+  var t=document.getElementById('ir-type'),sevSel=document.getElementById('ir-severity'),sys=document.getElementById('ir-systems'),ioc=document.getElementById('ir-iocs');
+  var typeLabel=t?t.options[t.selectedIndex].text:'Unknown';
+  var sevMap={p1:'CRITICAL',p2:'HIGH',p3:'MEDIUM'};
+  var severity=sevMap[sevSel?sevSel.value:'p2']||'HIGH';
+  var systems=(sys&&sys.value.trim())?sys.value.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
+  var token=localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||'';
+  if(!token){
+    if(typeof TOAST!=='undefined')TOAST.error('Please sign in to declare and track an incident','Sign in required');
+    if(typeof openAuthModal==='function')openAuthModal();
+    return;
+  }
+  var body={title:typeLabel+' — declared '+new Date().toLocaleString(),severity:severity,category:typeLabel,description:(ioc&&ioc.value.trim())||'',affected_systems:systems};
+  fetch('/api/ciso/incidents',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(body)})
+    .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok||!res.d||!res.d.success){
+        if(typeof TOAST!=='undefined')TOAST.error((res.d&&res.d.error)||'Could not declare incident','Incident');
+        return;
+      }
+      var inc=res.d.data&&res.d.data.incident;
+      irTL('INCIDENT DECLARED: '+typeLabel+(inc?' (#'+inc.id+')':''));
+      irTL('IR Bridge activated');
+      irTL('Evidence preservation started');
+      if(typeof TOAST!=='undefined')TOAST.error('Active Incident: '+typeLabel,'INCIDENT');
+    })
+    .catch(function(){if(typeof TOAST!=='undefined')TOAST.error('Network error — try again','Incident');});
+};
 window.irExportPlaybook=function(){if(typeof TOAST!=='undefined')TOAST.info('PDF export available in PRO plan','Export');};
+/* Load real previously-declared incidents into the timeline on page load —
+   anonymous visitors keep the honest "No active incidents declared." default
+   since GET /api/ciso/incidents requires auth. */
+function irLoadIncidents(){
+  var token=localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||'';
+  if(!token)return;
+  fetch('/api/ciso/incidents?limit=10',{headers:{'Authorization':'Bearer '+token}})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(raw){
+      var d=raw&&raw.success&&raw.data?raw.data:raw;
+      var incidents=d&&d.incidents;
+      if(!incidents||!incidents.length)return;
+      incidents.forEach(function(inc){
+        IRTL.push({ts:inc.detected_at||inc.created_at||new Date().toISOString(),m:'['+(inc.status||'OPEN')+'] '+(inc.title||'Incident')+' ('+(inc.severity||'—')+')'});
+      });
+      IRTL.sort(function(a,b){return new Date(b.ts)-new Date(a.ts);});
+      var el=document.getElementById('ir-timeline');
+      if(el)el.innerHTML=IRTL.slice(0,8).map(function(e,i){return'<div style="padding:8px 0'+(i>0?';border-top:1px solid rgba(255,255,255,.05)':'')+'"><div style="color:rgba(255,255,255,0.72);font-size:10px">'+esc((e.ts||'').slice(11,19)+' UTC')+'</div><div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">'+esc(e.m)+'</div></div>';}).join('');
+    })
+    .catch(function(){});
+}
+(function(){function i(){irLoadIncidents();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === ZERO-DAY INTELLIGENCE === */
 var ZDD=[{id:'CVE-2024-3400',p:'Palo Alto PAN-OS GlobalProtect',cvss:10.0,st:'ITW',dk:false,poc:true,pt:false,ag:'active',d:'OS command injection in GlobalProtect feature. CISA KEV listed — actively exploited by UTA0218 threat actor. Disable GlobalProtect or apply vendor patch immediately.'},{id:'CVE-2024-21762',p:'Fortinet FortiOS SSL-VPN',cvss:9.6,st:'ITW',dk:false,poc:true,pt:true,ag:'active',d:'Out-of-bounds write allows unauthenticated remote code execution via SSL-VPN. CISA KEV listed. Apply FortiOS patch immediately.'},{id:'CVE-2024-27198',p:'JetBrains TeamCity',cvss:9.8,st:'ITW',dk:false,poc:true,pt:true,ag:'active',d:'Authentication bypass allowing full CI/CD pipeline takeover. Exploited by APT29. Patch to 2023.11.4+ immediately.'},{id:'CVE-2024-1709',p:'ConnectWise ScreenConnect',cvss:10.0,st:'ITW',dk:false,poc:true,pt:true,ag:'active',d:'Authentication bypass enabling arbitrary file upload and RCE. Widely exploited in ransomware campaigns. Immediate patch required.'},{id:'CVE-2023-4966',p:'Citrix NetScaler ADC',cvss:9.4,st:'ITW',dk:false,poc:true,pt:true,ag:'recent',d:'Citrix Bleed: session token disclosure enabling session hijacking without authentication. Exploited by LockBit and APT29. Patch and invalidate all sessions.'}];
@@ -21725,8 +21829,83 @@ function zdDW(){var el=document.getElementById('zd-darkweb');if(!el)return;if(!Z
 window.zdRefreshFeed=function(){var el=document.getElementById('zd-feed');if(el){el.style.opacity='.4';setTimeout(function(){zdFeed();el.style.opacity='1';},600);}};
 window.zdW=function(id){if(typeof TOAST!=='undefined')TOAST.info('Watching '+id,'Watch');};
 window.zdM=function(id){if(typeof TOAST!=='undefined')TOAST.info('Mitigation guidance loading for '+id,'Mitigate');};
-window.zdSetAlert=function(){var t=document.getElementById('zd-alert-target'),l=document.getElementById('zd-alerts-list');if(!t||!l)return;var v=t.value.trim();if(!v)return;l.innerHTML='<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px;color:rgba(255,255,255,.72)">Monitoring: <strong style="color:#a855f7">'+esc(v)+'</strong><br><span style="color:rgba(255,255,255,0.72)">Dark web | Exploit markets | GitHub PoCs | Telegram</span></div>'+l.innerHTML;t.value='';if(typeof TOAST!=='undefined')TOAST.success('Alert set for '+v,'Zero-Day Alert');};
-(function(){function i(){zdFeed();buildZDWLive();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
+/* Zero-Day alerts now persist via the real CTI watchlist API instead of a
+   local array that vanished on refresh — POST /watchlists (once, cached) +
+   POST /watchlists/:id/entries per target. */
+function zdAlertCard(v){return '<div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px;color:rgba(255,255,255,.72)">Monitoring: <strong style="color:#a855f7">'+esc(v)+'</strong><br><span style="color:rgba(255,255,255,0.72)">Dark web | Exploit markets | GitHub PoCs | Telegram</span></div>';}
+window.zdSetAlert=function(){
+  var t=document.getElementById('zd-alert-target'),l=document.getElementById('zd-alerts-list');
+  if(!t||!l)return;
+  var v=t.value.trim();
+  if(!v)return;
+  var token=localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||'';
+  if(!token){
+    if(typeof TOAST!=='undefined')TOAST.error('Please sign in to save a persistent zero-day alert','Sign in required');
+    if(typeof openAuthModal==='function')openAuthModal();
+    return;
+  }
+  var headers={'Content-Type':'application/json','Authorization':'Bearer '+token};
+  function addEntry(wlId){
+    return fetch('/api/cti/v2/watchlists/'+encodeURIComponent(wlId)+'/entries',{method:'POST',headers:headers,body:JSON.stringify({ioc_value:v,ioc_type:'domain',confidence:60,tags:['zero-day-alert']})})
+      .then(function(r){return r.json().then(function(d){return{ok:r.ok,status:r.status,d:d};});});
+  }
+  function createWatchlistAndAdd(){
+    return fetch('/api/cti/v2/watchlists',{method:'POST',headers:headers,body:JSON.stringify({name:'Zero-Day Alerts',description:'Early-warning targets set from the Zero-Day Intelligence panel',ioc_types:['domain','ip','url'],alert_on_match:true})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d||!d.success||!d.watchlist_id) return {ok:false,d:d};
+        localStorage.setItem('cdb_zd_watchlist_id',d.watchlist_id);
+        return addEntry(d.watchlist_id);
+      });
+  }
+  var wlId=localStorage.getItem('cdb_zd_watchlist_id');
+  var flow=wlId?addEntry(wlId).then(function(res){
+    // Cached watchlist id can go stale (deleted / different org) — recreate once.
+    if(!res.ok&&res.status===404) return createWatchlistAndAdd();
+    return res;
+  }):createWatchlistAndAdd();
+  flow.then(function(res){
+    if(!res||!res.ok||!res.d||!res.d.success){
+      if(typeof TOAST!=='undefined')TOAST.error((res&&res.d&&res.d.error)||'Could not save alert','Zero-Day Alert');
+      return;
+    }
+    if(l.dataset.hasAlerts!=='1'){l.innerHTML='';l.dataset.hasAlerts='1';}
+    l.innerHTML=zdAlertCard(v)+l.innerHTML;
+    t.value='';
+    if(typeof TOAST!=='undefined')TOAST.success('Alert saved for '+v,'Zero-Day Alert');
+  }).catch(function(){
+    if(typeof TOAST!=='undefined')TOAST.error('Network error — try again','Zero-Day Alert');
+  });
+};
+// Load previously saved alerts on page load so they survive a refresh.
+function zdLoadAlerts(){
+  var token=localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||'';
+  if(!token)return;
+  function renderEntries(wlId){
+    fetch('/api/cti/v2/watchlists/'+encodeURIComponent(wlId)+'/entries',{headers:{'Authorization':'Bearer '+token}})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){
+        var entries=d&&d.entries;
+        if(!entries||!entries.length)return;
+        var l=document.getElementById('zd-alerts-list');
+        if(!l)return;
+        l.innerHTML=entries.map(function(e){return zdAlertCard(e.ioc_value);}).join('');
+      })
+      .catch(function(){});
+  }
+  var cachedId=localStorage.getItem('cdb_zd_watchlist_id');
+  if(cachedId){renderEntries(cachedId);return;}
+  fetch('/api/cti/v2/watchlists',{headers:{'Authorization':'Bearer '+token}})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      var wl=(d&&d.watchlists||[]).find(function(w){return w.name==='Zero-Day Alerts';});
+      if(!wl)return;
+      localStorage.setItem('cdb_zd_watchlist_id',wl.id);
+      renderEntries(wl.id);
+    })
+    .catch(function(){});
+}
+(function(){function i(){zdFeed();buildZDWLive();zdLoadAlerts();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === INTERSECTION COUNTER ANIMATIONS === */
 function cntUp(id,target){var el=document.getElementById(id);if(!el)return;var v=0,step=target/60,iv=setInterval(function(){v+=step;if(v>=target){v=target;clearInterval(iv);}el.textContent=Math.floor(v).toLocaleString();},1400/60);}
@@ -22928,12 +23107,12 @@ function v21TriggerUrgencyPayment(){
 <div class="cdb-two-col">
 <div>
 <div class="cdb-section-heading">Platform Status</div>
-<div class="cdb-info-row"><span class="cdb-info-label">Sentinel APEX</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
-<div class="cdb-info-row"><span class="cdb-info-label">MYTHOS v3 Engine</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
-<div class="cdb-info-row"><span class="cdb-info-label">CVE Intelligence</span><span class="cdb-info-value" style="color:#4ade80">Live Feed</span></div>
-<div class="cdb-info-row"><span class="cdb-info-label">Threat Detection</span><span class="cdb-info-value" style="color:#4ade80">Operational</span></div>
-<div class="cdb-info-row"><span class="cdb-info-label">API Gateway</span><span class="cdb-info-value" style="color:#4ade80">Online</span></div>
-<div class="cdb-info-row"><span class="cdb-info-label">AI Security Brain</span><span class="cdb-info-value" style="color:#4ade80">Active</span></div>
+<div class="cdb-info-row"><span class="cdb-info-label">Sentinel APEX</span><span class="cdb-info-value" id="cdb-ps-sentinel" style="color:#94a3b8">Checking…</span></div>
+<div class="cdb-info-row"><span class="cdb-info-label">MYTHOS v3 Engine</span><span class="cdb-info-value" id="cdb-ps-mythos" style="color:#94a3b8">Checking…</span></div>
+<div class="cdb-info-row"><span class="cdb-info-label">CVE Intelligence</span><span class="cdb-info-value" id="cdb-ps-cve" style="color:#94a3b8">Checking…</span></div>
+<div class="cdb-info-row"><span class="cdb-info-label">Threat Detection</span><span class="cdb-info-value" id="cdb-ps-detection" style="color:#94a3b8">Checking…</span></div>
+<div class="cdb-info-row"><span class="cdb-info-label">API Gateway</span><span class="cdb-info-value" id="cdb-ps-gateway" style="color:#94a3b8">Checking…</span></div>
+<div class="cdb-info-row"><span class="cdb-info-label">AI Security Brain</span><span class="cdb-info-value" id="cdb-ps-aibrain" style="color:#94a3b8">Checking…</span></div>
 </div>
 <div>
 <div class="cdb-section-heading">Quick Actions</div>

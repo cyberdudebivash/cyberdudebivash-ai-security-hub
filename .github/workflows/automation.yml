@@ -168,7 +168,7 @@ jobs:
         run: |
           set +e
           RAW_URL=$(echo "${WORKERS_API_URL}" | tr -d '[:space:]')
-          API_URL="${PRIMARY_WORKERS_URL}"
+          API_URL="${TERTIARY_DOMAIN_URL}"
           if echo "${RAW_URL}" | grep -qE '^https?://'; then
             API_URL="${RAW_URL}"
           fi
@@ -294,7 +294,7 @@ jobs:
             API_URL="${RAW_URL}"
             echo "✅ Using WORKERS_API_URL secret: ${API_URL}"
           else
-            API_URL="${PRIMARY_WORKERS_URL}"
+            API_URL="${TERTIARY_DOMAIN_URL}"
             echo "⚠️  Secret not set or malformed — using hardcoded fallback: ${API_URL}"
           fi
 
@@ -984,11 +984,11 @@ jobs:
               echo "api_url=${RAW_URL}" >> "$GITHUB_OUTPUT"
               echo "✅ Using WORKERS_API_URL"
             else
-              echo "api_url=${PRIMARY_WORKERS_URL}" >> "$GITHUB_OUTPUT"
+              echo "api_url=${TERTIARY_DOMAIN_URL}" >> "$GITHUB_OUTPUT"
               echo "⚠️  DNS not resolved — using hardcoded fallback"
             fi
           else
-            echo "api_url=${PRIMARY_WORKERS_URL}" >> "$GITHUB_OUTPUT"
+            echo "api_url=${TERTIARY_DOMAIN_URL}" >> "$GITHUB_OUTPUT"
             echo "⚠️  Secret not set — using hardcoded fallback"
           fi
           exit 0
