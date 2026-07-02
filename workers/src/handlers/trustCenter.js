@@ -8,6 +8,8 @@
  * GET /api/trust/company         -> verified company information
  */
 
+import { fetchLiveMetricsFromD1 } from '../services/metricsHydration.js';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -109,19 +111,23 @@ export async function handleTrustMetrics(request, env) {
     const cached = await env.SECURITY_HUB_KV?.get(cacheKey);
     if (cached) return json({ success: true, cached: true, metrics: JSON.parse(cached) });
 
-    // Prefer the canonical hydrated platform metrics (same blend /api/platform/metrics
-    // serves). Falls back to direct D1 counts if that cache is cold.
+    // Single source of truth: the SAME canonical metric blend /api/platform/metrics
+    // serves. Prefer the hydrated KV snapshot; if cold, recompute via the shared
+    // hydrator (never a divergent trust-only query). This guarantees the Trust
+    // Center's scan/CVE/customer counts equal the platform dashboard's by
+    // construction — the earlier bug served scan_history-only (21) while the
+    // platform showed the KV+D1 blend (62), an enterprise-visible contradiction.
     let live = null;
     try {
       const raw = await env.SECURITY_HUB_KV?.get('platform:metrics:live');
       if (raw) live = JSON.parse(raw);
-    } catch { /* fall through to D1 */ }
+    } catch { /* fall through to hydrator */ }
+    if (!live) {
+      try { live = await fetchLiveMetricsFromD1(env); }
+      catch { /* leave null → COALESCE to 0 below */ }
+    }
 
-    const [scansRow, cvesRow, customersRow, soarRow, uptimeRow] = await Promise.all([
-      live ? Promise.resolve(null)
-           : env.DB.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history").first().catch(() => null),
-      live ? Promise.resolve(null)
-           : env.DB.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel").first().catch(() => null),
+    const [customersRow, soarRow, uptimeRow] = await Promise.all([
       env.DB.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'").first().catch(() => null),
       env.DB.prepare("SELECT COALESCE(value_int,0) AS v FROM platform_metrics WHERE key='soar_rules_total'").first().catch(() => null),
       // Real measured uptime from the self-probe written every cron firing (index.js scheduled()).
@@ -132,10 +138,13 @@ export async function handleTrustMetrics(request, env) {
     ]);
 
     const metrics = {
-      total_scans:      live ? (live.total_scans        ?? 0) : (scansRow?.v     ?? 0),
-      total_cves:       live ? (live.total_cves_tracked ?? 0) : (cvesRow?.v      ?? 0),
-      total_customers:  live ? (live.active_customers   ?? 0) : (customersRow?.v ?? 0),
-      total_soar_rules: live ? (live.soar_rules_total   ?? 0) : (soarRow?.v      ?? 0),
+      // Canonical counts — identical to /api/platform/metrics (blended total, not scan_history-only).
+      total_scans:      live?.total_scans        ?? 0,
+      total_cves:       live?.total_cves_tracked ?? 0,
+      // active_customers comes from the same hydrator; the direct subscriptions
+      // count is the fallback only when the hydrator itself was unavailable.
+      total_customers:  live?.active_customers   ?? (customersRow?.v ?? 0),
+      total_soar_rules: live?.soar_rules_total   ?? (soarRow?.v ?? 0),
       uptime_pct:       uptimeRow?.checks > 0 ? Math.round((uptimeRow.ok_checks / uptimeRow.checks) * 1000) / 10 : null,
       // Static/factual metrics (not from user counts)
       cve_alert_sla:    '< 2 hours',
@@ -144,7 +153,10 @@ export async function handleTrustMetrics(request, env) {
       last_updated:     new Date().toISOString(),
     };
 
-    await env.SECURITY_HUB_KV?.put(cacheKey, JSON.stringify(metrics), { expirationTtl: 600 });
+    // 60s TTL keeps the Trust Center within ~1 min of the platform dashboard's
+    // 45s-fresh metrics — a previous 600s TTL let the two surfaces disagree by
+    // up to 10 minutes of organic growth even after sourcing was unified.
+    await env.SECURITY_HUB_KV?.put(cacheKey, JSON.stringify(metrics), { expirationTtl: 60 });
     return json({ success: true, metrics });
 
   } catch(e) {

@@ -44,18 +44,25 @@ function dbStub(counts = {}) {
     prepare(sql) {
       return {
         bind() { return this; },
-        async first() {
+        // Column-aware: the shared hydrator (fetchLiveMetricsFromD1) reads scalars
+        // via `.first('v')` (D1 semantics), while trustCenter's residual queries
+        // call `.first()` and read object properties. Support both.
+        async first(col) {
           if (/platform_metrics WHERE key='total_scans'/.test(sql) ||
               /platform_metrics WHERE key='total_cves'/.test(sql) ||
               /platform_metrics WHERE key='total_customers'/.test(sql)) {
             throw new Error('regression: read an unwritten platform_metrics total_* key');
           }
-          if (/FROM scan_history/.test(sql))                              return { v: scan_history };
-          if (/FROM threat_intel/.test(sql))                             return { v: threat_intel };
-          if (/FROM subscriptions/.test(sql))                            return { v: subscriptions };
-          if (/platform_metrics WHERE key='soar_rules_total'/.test(sql)) return { v: soar_rules_total };
-          if (/FROM uptime_log/.test(sql))                               return { checks: uptime_checks, ok_checks: uptime_ok };
-          return null;
+          let row = null;
+          if (/risk_score >= 80/.test(sql))                                   row = { v: 0 };
+          else if (/FROM scan_history/.test(sql))                             row = { v: scan_history };
+          else if (/FROM threat_intel/.test(sql))                            row = { v: threat_intel };
+          else if (/FROM subscriptions/.test(sql))                           row = { v: subscriptions };
+          else if (/FROM payments/.test(sql))                                row = { v: 0 };
+          else if (/platform_metrics WHERE key='soar_rules_total'/.test(sql)) row = { v: soar_rules_total };
+          else if (/FROM uptime_log/.test(sql))                              row = { checks: uptime_checks, ok_checks: uptime_ok };
+          if (col && row) return row[col];   // .first('v') → scalar, matching D1
+          return row;
         },
       };
     },
@@ -120,6 +127,22 @@ describe('GET /api/trust/metrics — real sourcing (no fabricated / no structura
     const { metrics } = await res.json();
     expect(metrics.total_scans).toBe(42);
     expect(metrics.total_cves).toBe(900);
+  });
+
+  it('cold-path total_scans equals the canonical platform blend (max KV counter, D1) — not scan_history-only', async () => {
+    // The production defect: with the hydrated blend cold, trust returned the
+    // scan_history-only count (21) while /api/platform/metrics returned the
+    // KV+D1 blend (62). Trust now recomputes via the SAME shared hydrator, so a
+    // higher KV rolling counter wins identically on both surfaces.
+    const today = new Date().toISOString().slice(0, 10);
+    const env = {
+      SECURITY_HUB_KV: kvStub({ [`scan_count:total:${today}`]: '62' }), // KV rolling counter
+      DB: dbStub({ scan_history: 21, threat_intel: 1637 }),             // lower D1 count
+    };
+    const res = await handleTrustMetrics(req, env);
+    const { metrics } = await res.json();
+    expect(metrics.total_scans).toBe(62);   // blend wins — matches /api/platform/metrics, not 21
+    expect(metrics.total_cves).toBe(1637);
   });
 
   it('degrades to safe nested nulls (still { metrics }) if D1 is fully unavailable', async () => {

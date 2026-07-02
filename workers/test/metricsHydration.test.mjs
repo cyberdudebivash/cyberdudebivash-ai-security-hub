@@ -30,6 +30,8 @@ function mockDB({ failTables = [], failAll = false } = {}) {
           if (/FROM scan_history WHERE risk_score/.test(sql))   return 1;
           if (/scanned_at > datetime/.test(sql))                return 0;   // d1 scans today
           if (/FROM scan_history/.test(sql))                    return 11;  // d1 total scans
+          if (/FROM scan_jobs/.test(sql) && /created_at > datetime/.test(sql)) return 5;   // scan_jobs today
+          if (/FROM scan_jobs/.test(sql))                       return 118; // scan_jobs lifetime (= /api/health stats.total_scans)
           if (/severity='CRITICAL'/.test(sql))                  return 8;   // = stats.critical
           if (/severity='HIGH'/.test(sql))                      return 37;  // = stats.high
           if (/published_at >= date/.test(sql))                 return 12;  // recent KEV (30d)
@@ -84,14 +86,17 @@ describe('platform metrics — single source of truth', () => {
     expect(body.metrics.soar_rules_total).toBe(312);  // platform_metrics key
   });
 
-  it('total_scans blends KV counters with D1 (consistent with /api/scan/stats)', async () => {
+  it('total_scans = max across ALL ledgers incl. scan_jobs — agrees with /api/health (118), no understatement', async () => {
     const env = {
-      DB: mockDB(),
-      SECURITY_HUB_KV: mockKV({ [`scan_count:total:${TODAY}`]: '20' }),
+      DB: mockDB(),                                                   // scan_jobs=118, scan_history=11
+      SECURITY_HUB_KV: mockKV({ [`scan_count:total:${TODAY}`]: '20' }), // KV 7-day counter=20
     };
     const body = await (await call(env)).json();
-    expect(body.metrics.total_scans).toBe(20);   // max(KV 20, D1 11)
-    expect(body.metrics.scans_today).toBe(20);    // max(KV 20, D1 0)
+    // The production contradiction: platform showed max(KV 20, scan_history 11)=20
+    // while /api/health + CISO hub showed scan_jobs=118. scan_jobs now participates,
+    // so the canonical number equals the highest real ledger — every surface agrees.
+    expect(body.metrics.total_scans).toBe(118);  // max(KV 20, scan_history 11, scan_jobs 118)
+    expect(body.metrics.scans_today).toBe(20);   // max(KV 20, scan_history 0, scan_jobs today 5)
   });
 
   it('converts payment paise to INR correctly', async () => {

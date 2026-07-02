@@ -86,7 +86,7 @@ async function readKvScanCounters(env) {
 // drift) degrades only that metric to 0, instead of nuking every counter as the
 // previous single db.batch() did (one bad statement aborted the whole batch,
 // which is why /api/platform/metrics served "unavailable" in production).
-async function fetchLiveMetricsFromD1(env) {
+export async function fetchLiveMetricsFromD1(env) {
   const db = env.SECURITY_HUB_DB || env.DB;
   if (!db) throw new Error('D1 binding unavailable');
 
@@ -106,6 +106,8 @@ async function fetchLiveMetricsFromD1(env) {
     "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE severity='HIGH'",                        // 9 high-severity threats
     "SELECT COALESCE(value_int,0) AS v FROM platform_metrics WHERE key='soar_rules_total'",            // 10 SOAR rules generated
     "SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel WHERE exploit_status='confirmed' AND published_at >= date('now','-30 day')", // 11 recent KEV (30d) — drives threat level
+    "SELECT COALESCE(COUNT(*),0) AS v FROM scan_jobs",                                                 // 12 scan_jobs ledger (lifetime, all modules) — = /api/health stats.total_scans
+    "SELECT COALESCE(SUM(CASE WHEN created_at > datetime('now','-1 day') THEN 1 ELSE 0 END),0) AS v FROM scan_jobs", // 13 scan_jobs today
   ];
 
   const timeout = new Promise((_, rej) =>
@@ -127,9 +129,15 @@ async function fetchLiveMetricsFromD1(env) {
 
   // Blend KV + D1 scans (canonical, matches /api/scan/stats); revenue paise→INR.
   // Field names match the frontend client contract (sentinel-apex-live-metrics.js).
+  // total_scans = MAX across all three real ledgers (KV 7-day counter, D1
+  // scan_history, D1 scan_jobs). scan_jobs is the fullest lifetime ledger and is
+  // what /api/health already reports; folding it in via max() means the platform
+  // dashboard, Trust Center and CISO hub all show the SAME number and none can
+  // understate — the previous formula (max of KV+scan_history only) showed 62
+  // while /api/health + CISO hub showed 118, a customer-visible contradiction.
   return {
-    total_scans:          Math.max(kvScans.total, get(0)),
-    scans_today:          Math.max(kvScans.today, get(1)),
+    total_scans:          Math.max(kvScans.total, get(0), get(12)),
+    scans_today:          Math.max(kvScans.today, get(1), get(13)),
     critical_threats:     get(2),
     high_threats:         get(9),
     kev_count:            get(3),
