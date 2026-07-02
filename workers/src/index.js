@@ -193,6 +193,9 @@ import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handl
 // ─── AI Cyber Brain V2 handlers (analyze / simulate / forecast) ──────────────
 import { handleAIAnalyze, handleAISimulate, handleAIForecast,
          handleAIChat, handleGenerateRules, handleRulesHistory, handleGetSavedRule } from './handlers/aiAnalysis.js';
+// Canonical plan-feature matrix (ai_simulate / ai_forecast are PRO+; STARTER/FREE = false).
+// Same source of truth used by PLAN_FEATURES in auth/apiKeys.js and the pricing matrix.
+import { hasAccess as planHasAccess } from './auth/apiKeys.js';
 
 // ─── CVE Engine (for /api/v1/cves endpoint) ───────────────────────────────────
 import { getTopCVEsForModule } from './services/cveEngine.js';
@@ -803,6 +806,30 @@ import {
 import { handlePaymentWebhook }                                        from './middleware/monetization.js';
 import { logSystemError }                                              from './lib/errorLog.js';
 import { sendAlert }                                                   from './lib/alertEngine.js';
+
+// ─── AI Brain V2 feature gate ─────────────────────────────────────────────────
+// AI Attack Simulation (ai_simulate) and Risk Forecast (ai_forecast) are
+// advertised PRO+ (pricing matrix) and documented PRO+ in the handler itself,
+// but the /api/ai/* routes enforced nothing — any anonymous FREE caller received
+// full results (subscription bypass). This resolves auth from headers only, so it
+// never consumes the request body the downstream handler must still read. Returns
+// a 402 upsell Response when the tier lacks the feature, or null to proceed.
+const AI_FEATURE_LABEL = { ai_simulate: 'AI Attack Simulation', ai_forecast: 'AI Risk Forecast' };
+async function gateAIBrainFeature(request, env, feature) {
+  const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+  if (planHasAccess(feature, authCtx?.tier)) return null;
+  const label = AI_FEATURE_LABEL[feature] || 'This feature';
+  return Response.json({
+    success:       false,
+    error:         `${label} requires a Pro plan or above.`,
+    code:          'ERR_PLAN_REQUIRED',
+    feature,
+    current_plan:  authCtx?.tier || 'FREE',
+    required_plan: 'PRO',
+    upgrade_cta:   { message: `Upgrade to Pro (₹1,499/mo) to unlock ${label}.`, route: '/checkout?plan=pro' },
+    upgrade_url:   'https://cyberdudebivash.in/#pricing',
+  }, { status: 402 });
+}
 
 // ─── Audit Logger ────────────────────────────────────────────────────────────
 // Writes sensitive-action audit events to D1 audit_log table (fire-and-forget).
@@ -3424,8 +3451,10 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleAIAnalyze(request, env), request));
     }
 
-    // POST /api/ai/simulate → step-by-step attacker path + blast radius
+    // POST /api/ai/simulate → step-by-step attacker path + blast radius (PRO+)
     if (path === '/api/ai/simulate' && method === 'POST') {
+      const gate = await gateAIBrainFeature(request, env, 'ai_simulate');
+      if (gate) return withSecurityHeaders(withCors(gate, request));
       return withSecurityHeaders(withCors(await handleAISimulate(request, env), request));
     }
 
@@ -3451,8 +3480,10 @@ export async function routeRequest(request, env, ctx, requestId) {
       const recordId = path.split('/').pop();
       return withSecurityHeaders(withCors(await handleGetSavedRule(request, env, authCtx, recordId), request));
     }
-    // POST /api/ai/forecast → exploitation likelihood + time-to-breach + financial impact
+    // POST /api/ai/forecast → exploitation likelihood + time-to-breach + financial impact (PRO+)
     if (path === '/api/ai/forecast' && method === 'POST') {
+      const gate = await gateAIBrainFeature(request, env, 'ai_forecast');
+      if (gate) return withSecurityHeaders(withCors(gate, request));
       return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
     }
 
@@ -3620,8 +3651,17 @@ export async function routeRequest(request, env, ctx, requestId) {
         return withSecurityHeaders(withCors(await handleAISimulate(request, env), request));
       }
 
-      // POST /api/v1/forecast → risk forecast
+      // POST /api/v1/forecast → risk forecast (PRO+ — matches pricing matrix)
       if (v1Path === '/forecast' && method === 'POST') {
+        if (!planHasAccess('ai_forecast', authCtx.tier)) {
+          return withSecurityHeaders(withCors(Response.json({
+            success:       false,
+            error:         'AI Risk Forecast via API requires a Pro plan or above.',
+            code:          'ERR_PLAN_REQUIRED',
+            current_plan:  authCtx.tier || 'FREE',
+            required_plan: 'PRO',
+          }, { status: 402 }), request));
+        }
         return withSecurityHeaders(withCors(await handleAIForecast(request, env), request));
       }
 

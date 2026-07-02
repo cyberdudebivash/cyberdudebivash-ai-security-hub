@@ -86,21 +86,45 @@ export async function handleTrustCompliance(request, env) {
   return json({ success: true, frameworks: COMPLIANCE_FRAMEWORKS, generated_at: new Date().toISOString() });
 }
 
-// GET /api/trust/metrics — real numbers from D1 only
+// GET /api/trust/metrics — real numbers only
+//
+// The response envelope is ALWAYS { success, metrics: { … } }. The frontend
+// Trust Center hydrator (frontend/index.html) reads `d.metrics.*`; an earlier
+// version spread the cached metrics to the TOP LEVEL on cache hits
+// (`...JSON.parse(cached)`) while nesting them under `metrics` on cache misses,
+// so on every warm-cache load `d.metrics` was undefined and the tiles silently
+// fell back to their hardcoded HTML/baseline defaults. Both branches now nest.
+//
+// Counts come from the SAME hydrated source as GET /api/platform/metrics
+// (KV key `platform:metrics:live`, refreshed every cron firing) so the Trust
+// Center can never contradict the live dashboard. The previous implementation
+// read platform_metrics keys `total_scans`/`total_cves`/`total_customers` that
+// NO writer populates — they were structurally pinned to 0 forever, which is
+// why the public Trust Center reported "0 scans / 0 CVEs" while 60+ scans and
+// 1600+ CVEs actually existed. Cache key is bumped to :v2 so the old flat/zero
+// value is never served by this nested-shape reader.
 export async function handleTrustMetrics(request, env) {
   try {
-    // Cache in KV for 10 minutes
-    const cacheKey = 'cache:trust:metrics';
+    const cacheKey = 'cache:trust:metrics:v2';
     const cached = await env.SECURITY_HUB_KV?.get(cacheKey);
-    if (cached) return json({ success: true, cached: true, ...JSON.parse(cached) });
+    if (cached) return json({ success: true, cached: true, metrics: JSON.parse(cached) });
 
-    const [scansRow, cvesRow, customersRow, uptimeRow] = await Promise.all([
-      env.DB.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_scans'").first(),
-      env.DB.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_cves'").first(),
-      env.DB.prepare("SELECT value_int AS val FROM platform_metrics WHERE key='total_customers'").first(),
-      // Real measured uptime from the self-probe written every cron firing (index.js
-      // scheduled()) — trust_metrics_cache was never written by anything and always
-      // forced a fabricated 99.9% here; replaced with the actual uptime_log table.
+    // Prefer the canonical hydrated platform metrics (same blend /api/platform/metrics
+    // serves). Falls back to direct D1 counts if that cache is cold.
+    let live = null;
+    try {
+      const raw = await env.SECURITY_HUB_KV?.get('platform:metrics:live');
+      if (raw) live = JSON.parse(raw);
+    } catch { /* fall through to D1 */ }
+
+    const [scansRow, cvesRow, customersRow, soarRow, uptimeRow] = await Promise.all([
+      live ? Promise.resolve(null)
+           : env.DB.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM scan_history").first().catch(() => null),
+      live ? Promise.resolve(null)
+           : env.DB.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM threat_intel").first().catch(() => null),
+      env.DB.prepare("SELECT COALESCE(COUNT(*),0) AS v FROM subscriptions WHERE status='active'").first().catch(() => null),
+      env.DB.prepare("SELECT COALESCE(value_int,0) AS v FROM platform_metrics WHERE key='soar_rules_total'").first().catch(() => null),
+      // Real measured uptime from the self-probe written every cron firing (index.js scheduled()).
       env.DB.prepare(`
         SELECT COUNT(*) AS checks, COUNT(CASE WHEN status='operational' THEN 1 END) AS ok_checks
         FROM uptime_log WHERE service='api' AND checked_at > datetime('now','-30 days')
@@ -108,9 +132,10 @@ export async function handleTrustMetrics(request, env) {
     ]);
 
     const metrics = {
-      total_scans:      scansRow?.val     || 0,
-      total_cves:       cvesRow?.val      || 0,
-      total_customers:  customersRow?.val || 0,
+      total_scans:      live ? (live.total_scans        ?? 0) : (scansRow?.v     ?? 0),
+      total_cves:       live ? (live.total_cves_tracked ?? 0) : (cvesRow?.v      ?? 0),
+      total_customers:  live ? (live.active_customers   ?? 0) : (customersRow?.v ?? 0),
+      total_soar_rules: live ? (live.soar_rules_total   ?? 0) : (soarRow?.v      ?? 0),
       uptime_pct:       uptimeRow?.checks > 0 ? Math.round((uptimeRow.ok_checks / uptimeRow.checks) * 1000) / 10 : null,
       // Static/factual metrics (not from user counts)
       cve_alert_sla:    '< 2 hours',
@@ -123,7 +148,8 @@ export async function handleTrustMetrics(request, env) {
     return json({ success: true, metrics });
 
   } catch(e) {
-    // Graceful degradation — return only static/safe metrics on DB error
+    // Graceful degradation — return only static/safe metrics on DB error.
+    // Shape stays { success, metrics } so the frontend contract holds.
     return json({
       success: true,
       metrics: {

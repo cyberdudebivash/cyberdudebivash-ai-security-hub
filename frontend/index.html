@@ -8740,6 +8740,12 @@ async function runSimulation() {
       },
       body: JSON.stringify({ scan_result: scanResult, module, target }),
     });
+    if (res.status === 402) {
+      const g = await res.json().catch(() => ({}));
+      const route = (g.upgrade_cta && g.upgrade_cta.route) || g.upgrade_url || '#pricing';
+      panel.innerHTML = `<div class="alert" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#a78bfa;padding:16px;border-radius:10px">⚡ ${g.error || 'AI Attack Simulation requires a Pro plan.'} <a href="${route}" style="color:#c4b5fd;text-decoration:underline;font-weight:700">Upgrade to Pro →</a></div>`;
+      return;
+    }
     const json = res.ok ? await res.json() : null;
     const sim  = json?.data || json;
     if (!sim || !res.ok) throw new Error(json?.error || 'Simulation failed');

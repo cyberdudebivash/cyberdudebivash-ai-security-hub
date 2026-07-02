@@ -757,6 +757,9 @@ jobs:
           BASE="${{ env.PRIMARY_URL }}"
           PAYLOAD='{"scan_result":{"risk_score":75,"risk_level":"HIGH","findings":[{"severity":"CRITICAL","title":"Test finding","recommendation":"Fix it"}],"target":"smoke-test.example.com"},"module":"domain","target":"smoke-test.example.com"}'
 
+          # analyze is available from STARTER; simulate/forecast are PRO+ and the
+          # smoke test is unauthenticated, so 402 (ERR_PLAN_REQUIRED) is the CORRECT
+          # live response for those two — it proves the subscription gate is enforced.
           ALL_OK=true
           for ENDPOINT in /api/ai/analyze /api/ai/simulate /api/ai/forecast; do
             HTTP=$(curl -s -o /tmp/ai_resp.json -w "%{http_code}" \
@@ -766,7 +769,13 @@ jobs:
               -d "$PAYLOAD" \
               "${BASE}${ENDPOINT}" 2>/dev/null || echo "000")
 
-            if [ "$HTTP" = "200" ]; then
+            GATED=false
+            case "$ENDPOINT" in */simulate|*/forecast) GATED=true ;; esac
+
+            if [ "$HTTP" = "402" ] && [ "$GATED" = "true" ]; then
+              CODE=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('code',''))" < /tmp/ai_resp.json 2>/dev/null || echo "")
+              echo "  ✅ ${ENDPOINT} → HTTP 402 gated (${CODE:-ERR_PLAN_REQUIRED}) — PRO+ enforcement live"
+            elif [ "$HTTP" = "200" ]; then
               SUCCESS=$(python3 -c "import sys,json; d=json.load(sys.stdin); print('ok' if d.get('success') else 'fail')" < /tmp/ai_resp.json 2>/dev/null || echo "parse_error")
               if [ "$SUCCESS" = "ok" ]; then
                 echo "  ✅ ${ENDPOINT} → HTTP 200 + success:true"
