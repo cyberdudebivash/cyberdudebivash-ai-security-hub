@@ -19,6 +19,7 @@ import { checkRateLimitCost, rateLimitResponse }  from '../middleware/rateLimit.
 // v21.0 — Adaptive CyberBrain: vuln prioritization
 import { prioritizeVulns } from '../core/cyberBrain.js';
 import { isRealUser } from '../auth/middleware.js';
+import { KEV_PREDICATE, KEV_ORDER } from '../lib/businessMetrics.js';
 
 // ─── Remediation stage lifecycle ─────────────────────────────────────────────
 const STAGES = ['open', 'in_progress', 'testing', 'patched', 'accepted_risk', 'false_positive'];
@@ -219,15 +220,18 @@ export async function handleListVulns(request, env, authCtx) {
   // Source 1: D1 threat_intel — real CVEs ingested by the platform
   if (env?.DB) {
     try {
+      // KEV flag/filter/ordering use the canonical exploit_status='confirmed'
+      // definition (the raw is_kev column is never populated → the ?kev=true
+      // filter previously returned NOTHING and every row reported in_kev:0).
       let q = `SELECT cve_id AS id, cve_id, title, severity, cvss_score AS cvss_score,
-                      epss_score, is_kev AS in_kev, description AS affected,
+                      epss_score, ${KEV_ORDER} AS in_kev, description AS affected,
                       published_date AS discovered_at, mitre_technique
                FROM threat_intel
                WHERE 1=1`;
       const params = [];
       if (severity) { q += ' AND severity = ?'; params.push(severity.toUpperCase()); }
-      if (kev === 'true') { q += ' AND is_kev = 1'; }
-      q += ` ORDER BY is_kev DESC, cvss_score DESC LIMIT 200`;
+      if (kev === 'true') { q += ` AND ${KEV_PREDICATE}`; }
+      q += ` ORDER BY ${KEV_ORDER} DESC, cvss_score DESC LIMIT 200`;
       const rows = await env.DB.prepare(q).bind(...params).all().catch(() => ({ results: [] }));
       for (const r of (rows.results || [])) {
         vulns.push({

@@ -338,11 +338,14 @@ export async function predictCVEThreat(env, cveId, contextOverride = {}) {
  * Called from cron — scores all CVEs published in last 7 days
  */
 export async function runPredictiveBatch(env) {
+  // Canonical KEV definition (raw is_kev is never populated → this OR-branch
+  // matched nothing, starving the predictor of confirmed-exploited CVEs).
   const recent = await env.DB.prepare(`
-    SELECT cve_id, cvss_score as cvss, epss_score as epss, is_kev
+    SELECT cve_id, cvss_score as cvss, epss_score as epss,
+           CASE WHEN exploit_status = 'confirmed' THEN 1 ELSE 0 END as is_kev
     FROM threat_intel
     WHERE published_date > datetime('now', '-7 days')
-       OR (is_kev = 1)
+       OR (exploit_status = 'confirmed')
     ORDER BY cvss_score DESC
     LIMIT 50
   `).all().catch(() => ({ results: [] }));

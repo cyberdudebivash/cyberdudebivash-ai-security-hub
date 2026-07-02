@@ -13,6 +13,7 @@
 
 import { checkRateLimitCost, rateLimitResponse } from '../middleware/rateLimit.js';
 import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js';
+import { KEV_PREDICATE, KEV_ORDER } from '../lib/businessMetrics.js';
 // v21.0 — Adaptive hunt query recommendations
 import { recommendHuntQueries } from '../core/cyberBrain.js';
 // v22.1 — Live IOC enrichment (VirusTotal, AbuseIPDB, Shodan, D1)
@@ -230,13 +231,15 @@ async function executeD1Hunt(env, parsed, safeQuery, authCtx) {
       // Keyword / severity search
       const sevFilter = /critical/i.test(safeQuery) ? "AND severity='CRITICAL'" :
                         /high/i.test(safeQuery) ? "AND severity IN ('CRITICAL','HIGH')" : '';
-      const kevFilter = /kev|actively.exploit/i.test(safeQuery) ? 'AND is_kev=1' : '';
+      // Canonical KEV definition — raw is_kev is never populated, so a "KEV" /
+      // "actively exploited" hunt previously matched nothing.
+      const kevFilter = /kev|actively.exploit/i.test(safeQuery) ? `AND ${KEV_PREDICATE}` : '';
       const r2 = await db.prepare(
-        `SELECT cve_id, title, severity, cvss_score, epss_score, is_kev,
+        `SELECT cve_id, title, severity, cvss_score, epss_score, ${KEV_ORDER} AS is_kev,
                 description, published_date, mitre_technique
          FROM threat_intel
-         WHERE (cvss_score >= 7.0 OR is_kev = 1) ${sevFilter} ${kevFilter}
-         ORDER BY is_kev DESC, cvss_score DESC LIMIT 20`
+         WHERE (cvss_score >= 7.0 OR ${KEV_PREDICATE}) ${sevFilter} ${kevFilter}
+         ORDER BY ${KEV_ORDER} DESC, cvss_score DESC LIMIT 20`
       ).all().catch(() => ({ results: [] }));
       const seen = new Set(rows.map(r => r.cve_id));
       for (const r of (r2.results || [])) {

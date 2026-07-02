@@ -13,6 +13,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { KEV_PREDICATE } from '../lib/businessMetrics.js';
 
 const KV_MRR_KEY        = 'executive:mrr_config';
 const KV_REPORTS_PREFIX = 'executive:report:';
@@ -509,8 +510,11 @@ async function getActiveAttackPanel(env, orgId) {
 
   if (env?.SECURITY_HUB_DB) {
     try {
+      // Canonical KEV definition (was `in_kev = 1` — a NON-EXISTENT column, so
+      // this silently returned 0, making the executive report claim zero
+      // actively-exploited vulnerabilities regardless of reality).
       const kevRows = await env.SECURITY_HUB_DB.prepare(
-        `SELECT COUNT(*) as cnt FROM threat_intel WHERE in_kev = 1`
+        `SELECT COUNT(*) as cnt FROM threat_intel WHERE ${KEV_PREDICATE}`
       ).first();
       panel.unpatched_kev_count = kevRows?.cnt || 0;
     } catch {}

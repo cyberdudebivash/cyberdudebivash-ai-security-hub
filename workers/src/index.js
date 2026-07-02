@@ -1802,7 +1802,7 @@ export async function routeRequest(request, env, ctx, requestId) {
       const [dbStatus, kvStatus, threatRows, agentRows, anomalyRows] = await Promise.allSettled([
         env.DB?.prepare('SELECT 1').first(),
         env.KV?.get('healthcheck_ts'),
-        env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN is_kev=1 THEN 1 ELSE 0 END) as kev FROM threat_intel`).first(),
+        env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN exploit_status='confirmed' THEN 1 ELSE 0 END) as kev FROM threat_intel`).first(),
         env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN execution_status='SUCCESS' THEN 1 ELSE 0 END) as success, SUM(CASE WHEN execution_status='pending' THEN 1 ELSE 0 END) as pending FROM agent_actions`).first(),
         env.DB?.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN risk_level IN ('CRITICAL','HIGH') THEN 1 ELSE 0 END) as high_risk, SUM(auto_actioned) as actioned FROM anomaly_events WHERE created_at > datetime('now','-24 hours')`).first(),
       ]);
@@ -3821,10 +3821,13 @@ export async function routeRequest(request, env, ctx, requestId) {
              FROM threat_predictions ORDER BY risk_score DESC, probability_pct DESC LIMIT ?`
           ).bind(limit).all().catch(()=>({results:[]}));
           const stats = await env.DB?.prepare(
+            // kev_count derives from the canonical threat_intel catalog
+            // (exploit_status='confirmed') — threat_predictions.is_kev is never
+            // populated, so the old SUM(is_kev=1) was always 0.
             `SELECT COUNT(*) as total,
                     SUM(CASE WHEN risk_score>=80 THEN 1 ELSE 0 END) as critical_count,
                     SUM(CASE WHEN probability_pct>=70 THEN 1 ELSE 0 END) as high_exploit,
-                    SUM(CASE WHEN is_kev=1 THEN 1 ELSE 0 END) as kev_count
+                    SUM(CASE WHEN cve_id IN (SELECT cve_id FROM threat_intel WHERE exploit_status='confirmed') THEN 1 ELSE 0 END) as kev_count
              FROM threat_predictions WHERE prediction_date=date('now')`
           ).first().catch(()=>({}));
           return withSecurityHeaders(withCors(Response.json({
@@ -8742,10 +8745,11 @@ ctx.waitUntil(
       try {
         // Get recent HIGH+KEV CVEs for auto-patching
         const recentCVEs = await env.DB?.prepare(`
-          SELECT cve_id, cvss_score as cvss, epss_score as epss, is_kev,
+          SELECT cve_id, cvss_score as cvss, epss_score as epss,
+                 CASE WHEN exploit_status = 'confirmed' THEN 1 ELSE 0 END as is_kev,
                  description, cvss_vector
           FROM threat_intel
-          WHERE (cvss_score >= 7.0 OR is_kev = 1)
+          WHERE (cvss_score >= 7.0 OR exploit_status = 'confirmed')
             AND published_date > datetime('now', '-3 days')
           ORDER BY cvss_score DESC LIMIT 20
         `).all().catch(() => ({ results: [] }));

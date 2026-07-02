@@ -339,7 +339,12 @@ export async function aggregateGlobalSignals(env, tier = 'PRO', sector = null) {
 
     // Recent CVE/threat intel with high CVSS
     d1All(env,
-      `SELECT cve_id, title, cvss_score, in_kev, source, ingested_at
+      // `in_kev` is not a real column (only `exploit_status` is populated), so
+      // this query previously errored out and fed the CyberBrain an empty set.
+      // Derive the canonical KEV flag as in_kev so downstream `c.in_kev === 1` holds.
+      `SELECT cve_id, title, cvss_score,
+              CASE WHEN exploit_status = 'confirmed' THEN 1 ELSE 0 END AS in_kev,
+              source, ingested_at
        FROM threat_intel
        WHERE cvss_score >= 7.0
          AND ingested_at >= datetime('now','-7 days')
