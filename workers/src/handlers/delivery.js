@@ -25,6 +25,7 @@
 // ─── Product Delivery Catalog ─────────────────────────────────────────────────
 // Maps product IDs to delivery content and instructions
 import { triggerPostPurchase } from '../services/lifecycleEngine.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const DELIVERY_CATALOG = {
   // ── Subscription Plans ──
@@ -418,7 +419,7 @@ export async function handleDeliveryAccess(request, env) {
  * Returns all purchases/deliveries for the authenticated user
  */
 export async function handleMyPurchases(request, env, authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return jsonErr('Authentication required', 401);
   }
 
@@ -470,7 +471,7 @@ export async function handleMyPurchases(request, env, authCtx) {
  * Supports optional ?module= query parameter to filter by scan module.
  */
 export async function handleUserReports(request, env, authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return jsonErr('Authentication required', 401);
   }
 

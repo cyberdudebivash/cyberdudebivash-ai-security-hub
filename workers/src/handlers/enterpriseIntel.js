@@ -13,6 +13,7 @@
  */
 
 import { RadarService } from '../services/radarService.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const PUBLISHER = 'CYBERDUDEBIVASH® Sentinel APEX Intelligence';
 const ALLOWED_TIERS = ['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN'];
@@ -72,7 +73,7 @@ function jsonErr(msg, status = 400) {
 }
 
 function checkAuth(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return jsonErr('Authentication required — provide Authorization: Bearer <token> or X-API-Key header', 401);
   }
   if (!ALLOWED_TIERS.includes((authCtx.tier || '').toUpperCase())) {

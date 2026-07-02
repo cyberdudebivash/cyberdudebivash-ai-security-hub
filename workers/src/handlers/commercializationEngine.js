@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub — v34.0 Phase 4 (God Mode)
  * Commercialization Engine — /api/commercial/*
@@ -13,8 +14,8 @@ function genId() {
   return `com_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function requireAuth(authCtx)  { return authCtx?.authenticated === true; }
-function requireAdmin(authCtx) { return authCtx?.role === 'admin'; }
+function requireAuth(authCtx)  { return isRealUser(authCtx); }
+function requireAdmin(authCtx) { return authCtx?.isAdmin === true; }
 
 // ─── Expansion signal engine ──────────────────────────────────────────────────
 // Returns { score: 0-100, signals: [...], recommended_tier, segment }

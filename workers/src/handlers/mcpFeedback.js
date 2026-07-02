@@ -18,6 +18,7 @@
  */
 
 import { storeFeedback, validateFeedback } from '../services/mcpLearningEngine.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function jsonOk(data, extra = {}) {
@@ -183,7 +184,7 @@ export async function handleMCPFeedbackBatch(request, env, authCtx = {}) {
  * Returns top performing items + context breakdown. Auth required.
  */
 export async function handleMCPFeedbackStats(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
 
   const url    = new URL(request.url);
   const limit  = Math.min(parseInt(url.searchParams.get('limit') || '10', 10), 50);
@@ -242,7 +243,7 @@ export async function handleMCPFeedbackStats(request, env, authCtx = {}) {
  * Useful for admin dashboard to see which items are learning well.
  */
 export async function handleMCPItemScores(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
   if (!env?.DB) return jsonErr('Database unavailable', 503);
 
   const url    = new URL(request.url);
@@ -277,7 +278,7 @@ export async function handleMCPItemScores(request, env, authCtx = {}) {
  * Returns A/B experiment results from KV + D1. Auth required.
  */
 export async function handleMCPABResults(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
   if (!env?.SECURITY_HUB_KV) return jsonErr('KV unavailable', 503);
 
   const EXPERIMENT_IDS = ['cta_urgency_v1', 'discount_signal_v1', 'bundle_urgency_v1'];

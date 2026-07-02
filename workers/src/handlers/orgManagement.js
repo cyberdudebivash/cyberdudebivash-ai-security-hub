@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH AI Security Hub — Enterprise Multi-Tenant Management v8.0
  *
@@ -34,7 +35,7 @@ const ROLE_PERMISSIONS = {
 
 // ─── Create organization ──────────────────────────────────────────────────────
 export async function handleCreateOrg(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -92,7 +93,7 @@ export async function handleCreateOrg(request, env, authCtx) {
 
 // ─── List user's orgs ─────────────────────────────────────────────────────────
 export async function handleListOrgs(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -111,7 +112,7 @@ export async function handleListOrgs(request, env, authCtx) {
 
 // ─── Get org detail ───────────────────────────────────────────────────────────
 export async function handleGetOrg(request, env, authCtx, orgSlugOrId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -148,7 +149,7 @@ export async function handleGetOrg(request, env, authCtx, orgSlugOrId) {
 
 // ─── Org security dashboard ───────────────────────────────────────────────────
 export async function handleOrgDashboard(request, env, authCtx, orgId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -241,7 +242,7 @@ export async function handleOrgDashboard(request, env, authCtx, orgId) {
 
 // ─── Invite member ────────────────────────────────────────────────────────────
 export async function handleInviteMember(request, env, authCtx, orgId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -309,7 +310,7 @@ export async function handleInviteMember(request, env, authCtx, orgId) {
 
 // ─── Update member role ───────────────────────────────────────────────────────
 export async function handleUpdateMemberRole(request, env, authCtx, orgId, targetUserId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -340,7 +341,7 @@ export async function handleUpdateMemberRole(request, env, authCtx, orgId, targe
 
 // ─── Remove member ────────────────────────────────────────────────────────────
 export async function handleRemoveMember(request, env, authCtx, orgId, targetUserId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -362,7 +363,7 @@ export async function handleRemoveMember(request, env, authCtx, orgId, targetUse
 
 // ─── Org-wide scan history ────────────────────────────────────────────────────
 export async function handleOrgScans(request, env, authCtx, orgId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -400,7 +401,7 @@ export async function handleOrgScans(request, env, authCtx, orgId) {
 
 // ─── Update org settings ──────────────────────────────────────────────────────
 export async function handleUpdateOrg(request, env, authCtx, orgId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -437,7 +438,7 @@ export async function handleUpdateOrg(request, env, authCtx, orgId) {
 
 // ─── Delete organization ──────────────────────────────────────────────────────
 export async function handleDeleteOrg(request, env, authCtx, orgId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 

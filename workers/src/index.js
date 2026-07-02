@@ -795,7 +795,7 @@ import { handlePublicStatus }  from './handlers/eop/publicStatus.js';
 import { handleDeploymentRecord, handleDeploymentsList, handleLatestDeployment } from './handlers/eop/deployments.js';
 import { handleOpsDashboard, handleOpsReport } from './handlers/eop/opsReport.js';
 import { corsHeaders, withCors }                                       from './middleware/cors.js';
-import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden }   from './auth/middleware.js';
+import { resolveAuthV5, unauthorized, enforceQuota, CONTACT_EMAIL, isOwner, forbidden, isRealUser } from './auth/middleware.js';
 import { checkRateLimitV2, rateLimitResponse, injectRateLimitHeaders } from './middleware/rateLimit.js';
 import {
   withSecurityHeaders, checkBodySize,
@@ -1955,7 +1955,7 @@ export async function routeRequest(request, env, ctx, requestId) {
     if (path === '/api/auth/status' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(Response.json({
-        authenticated: !!authCtx.authenticated,
+        authenticated: isRealUser(authCtx),
         tier:          authCtx.tier || 'FREE',
         user_id:       authCtx.user_id || null,
         method:        authCtx.method || null,
@@ -1992,7 +1992,7 @@ export async function routeRequest(request, env, ctx, requestId) {
     // ── API Key management ──────────────────────────────────────────────────
     if (path === '/api/keys') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       if (method === 'GET')  return withSecurityHeaders(withCors(await handleListKeys(request, env, authCtx), request));
       if (method === 'POST') return withSecurityHeaders(withCors(await handleCreateKey(request, env, authCtx), request));
     }
@@ -2016,7 +2016,7 @@ export async function routeRequest(request, env, ctx, requestId) {
     if (path.startsWith('/api/scan/async/') && method === 'POST') {
       const module  = path.split('/')[4]; // /api/scan/async/:module
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const quota = await enforceQuota(env, authCtx, module);
       if (!quota.allowed) return withSecurityHeaders(withCors(
         rateLimitResponse({ ...quota, reason: 'daily_limit_reached' }, module), request
@@ -3205,7 +3205,7 @@ export async function routeRequest(request, env, ctx, requestId) {
     }
     if (path === '/api/cti/v2/stix/export' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       // STIX 2.1 export — PRO+ entitlement gate (Task 9)
       const { featureGate, FEATURES } = await import('./middleware/entitlementCheck.js');
       const stixGate = await featureGate(env.DB, authCtx, FEATURES.STIX_21_EXPORT);
@@ -3894,7 +3894,7 @@ export async function routeRequest(request, env, ctx, requestId) {
     // POST /api/generate-key → alias of POST /api/keys
     if (path === '/api/generate-key' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleCreateKey(request, env, authCtx), request));
     }
     // GET /api/usage → alias of GET /api/admin/api-usage
@@ -4285,7 +4285,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/revenue/dashboard — revenue analytics (ENTERPRISE only)
     if (path === '/api/revenue/dashboard' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       if (authCtx.tier !== 'ENTERPRISE') {
         return withSecurityHeaders(withCors(Response.json({
           success: false, error: 'Revenue dashboard requires ENTERPRISE plan.',
@@ -4326,7 +4326,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/revenue/metrics' && method === 'GET') {
       const { handleRevenueMetrics } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRevenueMetrics(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role, email: authCtx.email }), request));
     }
 
@@ -4341,7 +4341,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/revenue/recommendations' && method === 'GET') {
       const { handleRevenueRecommendations } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRevenueRecommendations(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
     }
 
@@ -4349,7 +4349,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/revenue/event' && method === 'POST') {
       const { handleRevenueEvent } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRevenueEvent(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -4364,7 +4364,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/revenue/dashboard/enhanced' && method === 'GET') {
       const { handleEnhancedDashboard } = await import('./handlers/revenueDashboard.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleEnhancedDashboard(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
     }
 
@@ -4372,7 +4372,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/revenue/trends' && method === 'GET') {
       const { handleRevenueTrends } = await import('./handlers/revenueDashboard.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRevenueTrends(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
     }
 
@@ -4380,7 +4380,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/revenue/growth' && method === 'GET') {
       const { handleRevenueGrowth } = await import('./handlers/revenueDashboard.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRevenueGrowth(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
     }
 
@@ -4402,7 +4402,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/monetize/churn-risk' && method === 'GET') {
       const { handleChurnRisk } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleChurnRisk(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
     }
 
@@ -4410,7 +4410,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/monetize/optimize' && method === 'POST') {
       const { handleRevenueOptimize } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRevenueOptimize(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase() }), request));
     }
 
@@ -4418,7 +4418,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/monetize/bulk-optimize' && method === 'POST') {
       const { handleBulkOptimize } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleBulkOptimize(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -4426,7 +4426,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/funnel/metrics' && method === 'GET') {
       const { handleFunnelMetrics } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleFunnelMetrics(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role }), request));
     }
 
@@ -4468,7 +4468,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/affiliate/stats' && method === 'GET') {
       const { handleAffiliateStats } = await import('./handlers/revenue.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleAffiliateStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -4476,7 +4476,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/automation/run' && method === 'POST') {
       const { handleAutomationRun } = await import('./services/automationEngine.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleAutomationRun(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -4515,7 +4515,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/defense/generate' && method === 'POST') {
       const { handleGenerateSolutions } = await import('./handlers/defenseMarketplace.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleGenerateSolutions(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -6003,7 +6003,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/scan/upsell/stats' && method === 'GET') {
       const { handleUpsellStats } = await import('./services/scanUpsellEngine.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleUpsellStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -6072,7 +6072,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/content/run' && method === 'POST') {
       const { handleRunContentPipeline } = await import('./services/contentPipeline.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRunContentPipeline(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -6109,7 +6109,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/enterprise/stats' && method === 'GET') {
       const { handleEnterpriseStats } = await import('./handlers/enterpriseLayer.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleEnterpriseStats(request, env, { userId: authCtx.userId, role: authCtx.role }), request));
     }
 
@@ -6321,7 +6321,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/content/pipeline/run' && method === 'POST') {
       const { runBulkContentPipeline } = await import('./services/contentPipeline.js');
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       if (authCtx.role !== 'admin') return withSecurityHeaders(withCors(new Response(JSON.stringify({ error: 'Admin only' }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
       const body  = await request.json().catch(() => ({}));
       const result = await runBulkContentPipeline(env, body.limit || 3);
@@ -6342,7 +6342,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/export/siem — generate export file (TEAM+ entitlement gate — Task 9)
     if (path === '/api/export/siem' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const { featureGate, FEATURES: SIEM_FEATS } = await import('./middleware/entitlementCheck.js');
       const siemGate = await featureGate(env.DB, authCtx, SIEM_FEATS.SIEM_WEBHOOK);
       if (siemGate) return withSecurityHeaders(withCors(siemGate, request));
@@ -6352,7 +6352,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/export/siem/stream — streaming NDJSON (TEAM+ entitlement gate — Task 9)
     if (path === '/api/export/siem/stream' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const { featureGate, FEATURES: STREAM_FEATS } = await import('./middleware/entitlementCheck.js');
       const streamGate = await featureGate(env.DB, authCtx, STREAM_FEATS.SIEM_WEBHOOK);
       if (streamGate) return withSecurityHeaders(withCors(streamGate, request));
@@ -6365,7 +6365,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/agent/rollback, GET|POST /api/agent/waf/*, POST /api/agent/process-queue
     if (path.startsWith('/api/agent/')) {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const subpath = path.replace('/api/agent/', '');
       const res = await handleAgentRequest(request, env, authCtx, subpath);
       return withSecurityHeaders(withCors(res, request));
@@ -6377,7 +6377,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/anomaly/record, POST /api/anomaly/batch
     if (path.startsWith('/api/anomaly/') || path === '/api/anomaly') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const subpath = path.replace('/api/anomaly', '').replace(/^\//, '');
       const res = await handleAnomalyRequest(request, env, authCtx, subpath);
       return withSecurityHeaders(withCors(res, request));
@@ -6388,7 +6388,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/predict/:cve_id/trend, POST /api/predict/batch, POST /api/predict/score
     if (path.startsWith('/api/predict/') || path === '/api/predict') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const subpath = path.replace('/api/predict', '').replace(/^\//, '');
       const res = await handlePredictiveRequest(request, env, authCtx, subpath);
       return withSecurityHeaders(withCors(res, request));
@@ -6401,7 +6401,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/delivery/activate — admin: activate delivery for a verified payment
     if (path === '/api/delivery/activate' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleDeliveryActivate(request, env, authCtx), request));
     }
 
@@ -6413,14 +6413,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/delivery/my-purchases — authenticated: list own deliveries
     if (path === '/api/delivery/my-purchases' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleMyPurchases(request, env, authCtx), request));
     }
 
     // POST /api/delivery/resend — admin: resend delivery instructions
     if (path === '/api/delivery/resend' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleResendDelivery(request, env, authCtx), request));
     }
 
@@ -6432,7 +6432,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/delivery/catalog — admin: list full delivery catalog
     if (path === '/api/delivery/catalog' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleDeliveryCatalog(request, env, authCtx), request));
     }
 
@@ -6440,14 +6440,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // Also accepts GET /api/user/trainings and /api/user/tools (convenience aliases)
     if (path === '/api/user/reports' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleUserReports(request, env, authCtx), request));
     }
 
     // GET /api/user/trainings — convenience: my-purchases filtered to trainings/bundles
     if (path === '/api/user/trainings' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       // Reuse handleMyPurchases — frontend already filters by product_type
       return withSecurityHeaders(withCors(await handleMyPurchases(request, env, authCtx), request));
     }
@@ -6455,7 +6455,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/user/tools — returns tool access based on user plan tier
     if (path === '/api/user/tools' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env);
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const TOOL_ACCESS = {
         FREE:       ['domain_scanner', 'ai_scan', 'threat_feed', 'basic_reports'],
         PRO:        ['domain_scanner', 'ai_scan', 'threat_feed', 'basic_reports', 'redteam_scan', 'identity_scan', 'compliance_scan', 'api_keys', 'monitoring', 'full_reports', 'siem_export', 'org_memory'],
@@ -6656,7 +6656,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // Returns: top offers by RPI, conversion, revenue_score
     if (path === '/api/mcp/revenue/performance' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated || authCtx.role !== 'admin') {
+      if (!authCtx.isAdmin) {
         return withSecurityHeaders(withCors(new Response(JSON.stringify({
           ok: false, error: 'Admin auth required'
         }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
@@ -6679,7 +6679,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // Returns impression→click→purchase conversion funnel from D1
     if (path === '/api/mcp/revenue/funnel' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated || authCtx.role !== 'admin') {
+      if (!authCtx.isAdmin) {
         return withSecurityHeaders(withCors(new Response(JSON.stringify({
           ok: false, error: 'Admin auth required'
         }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
@@ -7033,7 +7033,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/cyber-brain/learn — submit feedback to evolve risk model (STARTER+)
     if (path === '/api/cyber-brain/learn' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleLearnFeedback(request, env, authCtx), request));
     }
 
@@ -7046,7 +7046,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/cyber-brain/adaptive-risk — personalised adaptive risk score (STARTER+)
     if (path === '/api/cyber-brain/adaptive-risk' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleAdaptiveRisk(request, env, authCtx), request));
     }
 
@@ -7077,7 +7077,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/global-threat-feed/ingest — manual IOC submission
     if (path === '/api/global-threat-feed/ingest' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleThreatFeedIngest(request, env, authCtx), request));
     }
 
@@ -7102,14 +7102,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/zero-trust/anomalies — detected session anomalies for user
     if (path === '/api/zero-trust/anomalies' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleZeroTrustAnomalies(request, env, authCtx), request));
     }
 
     // POST /api/zero-trust/verify — risk-based authentication verification
     if (path === '/api/zero-trust/verify' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleZeroTrustVerify(request, env, authCtx), request));
     }
 
@@ -7128,7 +7128,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // POST /api/revenue/subscribe — create or upgrade subscription
     if (path === '/api/revenue/subscribe' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleSubscribeV20(request, env, authCtx), request));
     }
 
@@ -7141,7 +7141,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     // GET /api/revenue/billing — current billing status + usage
     if (path === '/api/revenue/billing' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx.authenticated) return withSecurityHeaders(withCors(unauthorized(), request));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleBillingStatus(request, env, authCtx), request));
     }
 

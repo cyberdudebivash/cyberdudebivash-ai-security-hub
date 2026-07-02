@@ -21,6 +21,7 @@
 import { buildAttackGraph }  from '../lib/attackGraph.js';
 import { buildMitreMapping, buildExecutiveBrief } from '../lib/aiBrain.js';
 import { correlateThreatIntel } from '../lib/threatCorrelation.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Schedule intervals ───────────────────────────────────────────────────────
 const SCHEDULE_INTERVALS = {
@@ -37,7 +38,7 @@ const DRIFT_ALERT_THRESHOLD   = 10;  // default point threshold for alert
 
 // ─── Create monitor config ────────────────────────────────────────────────────
 export async function handleCreateMonitor(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required to create monitors' }, { status: 401 });
   }
 
@@ -111,7 +112,7 @@ export async function handleCreateMonitor(request, env, authCtx) {
 
 // ─── List monitors ────────────────────────────────────────────────────────────
 export async function handleListMonitors(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -154,7 +155,7 @@ export async function handleListMonitors(request, env, authCtx) {
 
 // ─── Get monitor detail ───────────────────────────────────────────────────────
 export async function handleGetMonitor(request, env, authCtx, monitorId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -182,7 +183,7 @@ export async function handleGetMonitor(request, env, authCtx, monitorId) {
 
 // ─── Update monitor ───────────────────────────────────────────────────────────
 export async function handleUpdateMonitor(request, env, authCtx, monitorId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -226,7 +227,7 @@ export async function handleUpdateMonitor(request, env, authCtx, monitorId) {
 
 // ─── Delete monitor ───────────────────────────────────────────────────────────
 export async function handleDeleteMonitor(request, env, authCtx, monitorId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -243,7 +244,7 @@ export async function handleDeleteMonitor(request, env, authCtx, monitorId) {
 
 // ─── Monitor history (risk trend) ────────────────────────────────────────────
 export async function handleMonitorHistory(request, env, authCtx, monitorId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -276,7 +277,7 @@ export async function handleMonitorHistory(request, env, authCtx, monitorId) {
 
 // ─── Manual trigger ───────────────────────────────────────────────────────────
 export async function handleTriggerMonitor(request, env, authCtx, monitorId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 

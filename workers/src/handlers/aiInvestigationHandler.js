@@ -18,6 +18,7 @@
 
 import { generateAdaptiveRecommendations } from '../core/adaptiveCyberBrain.js';
 import { callClaude }                      from '../core/mythosAIProvider.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // MITRE ATT&CK phase taxonomy (static, no fabrication — reflects known stages)
 const MITRE_PHASES = {
@@ -39,7 +40,7 @@ const MITRE_PHASES = {
 const ALLOWED_TIERS = new Set(['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN']);
 
 function checkTier(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required', service: 'CDB-AI-INVESTIGATION' },
       { status: 401 }

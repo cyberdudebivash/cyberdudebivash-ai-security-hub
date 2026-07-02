@@ -13,6 +13,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ── Supported integration platforms ──────────────────────────────────────────
 export const INTEGRATION_PLATFORMS = {
@@ -355,7 +356,7 @@ async function deployToEndpoint(platformId, config, payload) {
 // gate at /api/integrations already enforces this via isOwner(); these checks
 // are a second layer of defense so the handlers are safe if called directly.
 function requireAdmin(request, authCtx) {
-  if (!authCtx?.isAdmin && !authCtx?.authenticated) {
+  if (!authCtx?.isAdmin && !isRealUser(authCtx)) {
     return fail(request, 'Admin access required for SIEM integration management', 403, 'ADMIN_ONLY');
   }
   return null;

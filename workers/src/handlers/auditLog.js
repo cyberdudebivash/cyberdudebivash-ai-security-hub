@@ -12,6 +12,7 @@
 
 import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js';
 import { checkRateLimitCost, rateLimitResponse }  from '../middleware/rateLimit.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Allowed audit event types ────────────────────────────────────────────────
 const AUDIT_EVENT_TYPES = new Set([
@@ -63,7 +64,7 @@ export async function writeAuditEvent(env, event) {
 
 // ─── GET /api/audit-log ───────────────────────────────────────────────────────
 export async function handleGetAuditLog(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -121,7 +122,7 @@ export async function handleGetAuditLog(request, env, authCtx) {
 
 // ─── POST /api/audit-log ─────────────────────────────────────────────────────
 export async function handleWriteAuditEvent(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
   if (authCtx.tier !== 'ENTERPRISE') {
@@ -165,7 +166,7 @@ export async function handleWriteAuditEvent(request, env, authCtx) {
 
 // ─── GET /api/audit-log/export ────────────────────────────────────────────────
 export async function handleAuditExport(request, env, authCtx) {
-  if (!authCtx.authenticated || authCtx.tier !== 'ENTERPRISE') {
+  if (!isRealUser(authCtx) || authCtx.tier !== 'ENTERPRISE') {
     return Response.json({
       error: 'Audit log export requires ENTERPRISE tier',
       upgrade_url: 'https://cyberdudebivash.in/#pricing',
@@ -224,7 +225,7 @@ export async function handleAuditExport(request, env, authCtx) {
 
 // ─── GET /api/audit-log/summary ───────────────────────────────────────────────
 export async function handleAuditSummary(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 

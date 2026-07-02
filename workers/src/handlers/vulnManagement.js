@@ -18,6 +18,7 @@ import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js
 import { checkRateLimitCost, rateLimitResponse }  from '../middleware/rateLimit.js';
 // v21.0 — Adaptive CyberBrain: vuln prioritization
 import { prioritizeVulns } from '../core/cyberBrain.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Remediation stage lifecycle ─────────────────────────────────────────────
 const STAGES = ['open', 'in_progress', 'testing', 'patched', 'accepted_risk', 'false_positive'];
@@ -327,7 +328,7 @@ export async function handleListVulns(request, env, authCtx) {
 
 // ─── POST /api/vulns ──────────────────────────────────────────────────────────
 export async function handleCreateVuln(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -421,7 +422,7 @@ export async function handleGetVuln(request, env, authCtx, vulnId) {
 
 // ─── POST /api/vulns/:id/remediate ────────────────────────────────────────────
 export async function handleRemediateVuln(request, env, authCtx, vulnId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 

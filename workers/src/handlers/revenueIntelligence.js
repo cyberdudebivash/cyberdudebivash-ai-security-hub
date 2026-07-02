@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub — v34.0 Phase 4 (God Mode)
  * Revenue Intelligence — /api/revenue/intel/*
@@ -18,8 +19,8 @@ function genId() {
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
-function requireAuth(authCtx)  { return authCtx?.authenticated === true; }
-function requireAdmin(authCtx) { return authCtx?.role === 'admin'; }
+function requireAuth(authCtx)  { return isRealUser(authCtx); }
+function requireAdmin(authCtx) { return authCtx?.isAdmin === true; }
 
 // ─── POST /api/revenue/intel/snapshot ────────────────────────────────────────
 // Admin-only: compute and persist today's revenue snapshot

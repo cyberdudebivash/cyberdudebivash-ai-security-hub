@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * SENTINEL APEX™ Secure Report Delivery Engine
  * Issues time-limited signed download tokens via KV.
@@ -397,7 +398,7 @@ SigninLogs
 // ─── Route Handlers ─────────────────────────────────────────────────────────
 
 async function handleGenerateReport(request, env, authCtx, orderId) {
-  if (!authCtx?.userId && !authCtx?.authenticated)
+  if (!isRealUser(authCtx))
     return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const userId = authCtx.userId || authCtx.id;

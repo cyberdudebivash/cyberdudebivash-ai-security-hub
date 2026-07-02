@@ -90,7 +90,9 @@ describe('TIER_LIMITS / PLAN_FEATURES — MSSP was silently downgraded to FREE',
 describe('handleCustomerBillingPortal — real subscription data for a real logged-in customer', () => {
   it('resolves the customer\'s real PRO subscription via email fallback (authCtx.email, not owner_email)', async () => {
     const env = { DB: makeDB({ subscription: REAL_SUB }) };
-    const authCtx = { authenticated: true, tier: 'PRO', email: 'ciso@fortune500.com' }; // no userId — email-only match
+    // userId misses the subscriptions row on purpose — the WHERE user_id=? OR email=?
+    // fallback must resolve it by email (a real JWT principal always carries a userId).
+    const authCtx = { authenticated: true, tier: 'PRO', userId: 'u_email_fallback', email: 'ciso@fortune500.com' };
     const res = await handleCustomerBillingPortal(new Request('https://x'), env, authCtx);
     expect(res.status).toBe(200);
     const body = await res.json();

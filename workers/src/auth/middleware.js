@@ -223,6 +223,18 @@ export function unauthorized(reason = 'missing') {
   }, { status: 401 });
 }
 
+// ─── Real-principal check ─────────────────────────────────────────────────────
+// resolveAuthV5 sets `authenticated: true` even for the anonymous IP-fallback
+// tier (user_id === null), so `authCtx.authenticated` means "not an invalid
+// API key" — NOT "logged in". Every route that requires a real logged-in
+// principal (JWT user, API key, or admin) must gate on this instead.
+export function isRealUser(authCtx) {
+  if (!authCtx || authCtx.authenticated !== true) return false;
+  if (authCtx.isAdmin === true) return true;
+  const uid = authCtx.user_id ?? authCtx.userId;
+  return uid !== null && uid !== undefined && uid !== '';
+}
+
 // ─── Owner identity ───────────────────────────────────────────────────────────
 // The internal sales/CRM/proposal/funnel tooling is single-tenant (the owner's own
 // business data). "Owner" = the ADMIN_KEY bypass (isAdmin) OR a logged-in user whose

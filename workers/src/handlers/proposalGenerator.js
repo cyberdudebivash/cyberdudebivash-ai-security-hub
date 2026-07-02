@@ -23,6 +23,7 @@ import { ok, fail } from '../lib/response.js';
 import { isOwner }            from '../auth/middleware.js';
 import { triggerPostPurchase } from '../services/lifecycleEngine.js';
 import { enrollInSequence }    from '../services/emailEngine.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const KV_PROPOSALS_INDEX = 'proposals:index';
 const KV_PROPOSAL_PREFIX = 'proposals:doc:';
@@ -306,7 +307,7 @@ function generateProposalId() {
 
 // ── POST /api/proposals/generate ─────────────────────────────────────────────
 export async function handleGenerateProposal(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let body = {};
   try { body = await request.json(); } catch {}

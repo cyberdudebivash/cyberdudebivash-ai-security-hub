@@ -21,6 +21,7 @@
  */
 
 import { TIER_LIMITS } from '../auth/apiKeys.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ── Auth helpers (reused pattern from P15) ───────────────────────────────────
 
@@ -28,7 +29,7 @@ const ADMIN_TIERS  = new Set(['OWNER', 'ADMIN']);
 const PLAN_ORDER   = { FREE: 0, STARTER: 1, PRO: 2, ENTERPRISE: 3, MSSP: 4 };
 
 function authGuard(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required', service: 'CDB-P16' },
       { status: 401 }

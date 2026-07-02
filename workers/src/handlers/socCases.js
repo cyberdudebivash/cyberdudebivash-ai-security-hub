@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub
  * SOC Case Management — /api/soc/cases/*
@@ -24,7 +25,7 @@ function slaHours(severity) {
 
 // GET /api/soc/cases
 export async function handleListCases(request, env, authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -76,7 +77,7 @@ export async function handleListCases(request, env, authCtx) {
 
 // GET /api/soc/cases/:id
 export async function handleGetCase(request, env, authCtx, caseId) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -116,7 +117,7 @@ export async function handleGetCase(request, env, authCtx, caseId) {
 
 // POST /api/soc/cases
 export async function handleCreateCase(request, env, authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -169,7 +170,7 @@ export async function handleCreateCase(request, env, authCtx) {
 
 // PATCH /api/soc/cases/:id
 export async function handleUpdateCase(request, env, authCtx, caseId) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -214,7 +215,7 @@ export async function handleUpdateCase(request, env, authCtx, caseId) {
 
 // POST /api/soc/cases/:id/comments
 export async function handleAddCaseComment(request, env, authCtx, caseId) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -252,7 +253,7 @@ export async function handleAddCaseComment(request, env, authCtx, caseId) {
 
 // GET /api/soc/cases/metrics
 export async function handleCaseMetrics(request, env, authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 

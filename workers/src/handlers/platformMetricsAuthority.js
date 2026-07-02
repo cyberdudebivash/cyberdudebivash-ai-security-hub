@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub — v34.0 Phase 4 (God Mode)
  * Platform Metrics Authority — /api/authority/*
@@ -27,7 +28,7 @@ function requireAdmin(authCtx) {
 }
 
 function requireAuth(authCtx) {
-  return authCtx?.authenticated === true;
+  return isRealUser(authCtx);
 }
 
 // ─── Core aggregation logic ───────────────────────────────────────────────────

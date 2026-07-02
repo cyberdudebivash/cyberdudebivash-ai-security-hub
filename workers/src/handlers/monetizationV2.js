@@ -14,6 +14,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 export const PLANS = {
@@ -231,7 +232,7 @@ function buildUsageStatus(usage, tier) {
 
 // ─── GET /api/billing/usage ───────────────────────────────────────────────────
 export async function handleGetUsage(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const tier   = getUserTier(authCtx);
   const usage  = await loadUsage(env, authCtx.userId);
@@ -284,7 +285,7 @@ export async function handleGetUsage(request, env, authCtx = {}) {
 
 // ─── POST /api/billing/upgrade ────────────────────────────────────────────────
 export async function handleUpgrade(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let body = {};
   try { body = await request.json(); } catch {}
@@ -375,14 +376,14 @@ export async function handleGetBillingPlans(request, env, authCtx = {}) {
     cta_label:     key === 'FREE' ? 'Start Free' : key === 'PRO' ? 'Upgrade to Pro' : 'Contact Sales',
   }));
 
-  const currentTier = authCtx?.authenticated ? getUserTier(authCtx) : null;
+  const currentTier = isRealUser(authCtx) ? getUserTier(authCtx) : null;
 
   return ok(request, { plans, current_tier: currentTier });
 }
 
 // ─── POST /api/billing/trial/start ───────────────────────────────────────────
 export async function handleStartTrial(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const tier = getUserTier(authCtx);
   if (tier !== 'FREE') return fail(request, 'Trial only available for Free tier users', 400, 'INELIGIBLE');
@@ -420,7 +421,7 @@ export async function handleStartTrial(request, env, authCtx = {}) {
 
 // ─── GET /api/billing/limits ──────────────────────────────────────────────────
 export async function handleGetLimits(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const tier  = getUserTier(authCtx);
   const plan  = PLANS[tier] || PLANS.FREE;
@@ -435,7 +436,7 @@ export async function handleGetLimits(request, env, authCtx = {}) {
 
 // ─── GET /api/billing/invoices ────────────────────────────────────────────────
 export async function handleGetInvoices(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let invoices = [];
   if (env?.SECURITY_HUB_KV) {
@@ -453,7 +454,7 @@ export async function handleGetInvoices(request, env, authCtx = {}) {
 
 // ─── POST /api/billing/downgrade ─────────────────────────────────────────────
 export async function handleDowngrade(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const tier = getUserTier(authCtx);
   if (tier === 'FREE') return fail(request, 'You are already on the Free plan', 400, 'ALREADY_FREE');
@@ -481,7 +482,7 @@ export async function handleDowngrade(request, env, authCtx = {}) {
 
 // ─── GET /api/billing/downgrade — pending downgrade status ──────────────────
 export async function handleDowngradeStatus(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let pending = null;
   if (env?.SECURITY_HUB_KV) {
@@ -503,7 +504,7 @@ export async function handleDowngradeStatus(request, env, authCtx = {}) {
 // the route did not exist, so customers could schedule a downgrade but never
 // take it back.
 export async function handleDowngradeCancel(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   if (!env?.SECURITY_HUB_KV) {
     return fail(request, 'Billing storage unavailable — try again shortly', 503, 'STORAGE_UNAVAILABLE');

@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH AI Security Hub — ThreatFusion Engine v19.0
  * Global Threat Intelligence Domination Layer
@@ -370,7 +371,7 @@ export async function handleThreatFeedStats(request, env, authCtx) {
 
 // ─── Handler: POST /api/global-threat-feed/ingest ─────────────────────────────
 export async function handleThreatFeedIngest(request, env, authCtx) {
-  if (!authCtx.authenticated || !['PRO','ENTERPRISE'].includes(authCtx.tier)) {
+  if (!isRealUser(authCtx) || !['PRO','ENTERPRISE'].includes(authCtx.tier)) {
     return Response.json({
       error: 'Manual IOC ingest requires PRO or ENTERPRISE tier',
       upgrade_url: 'https://cyberdudebivash.in/#pricing',

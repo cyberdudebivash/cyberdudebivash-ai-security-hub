@@ -17,6 +17,7 @@ import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js
 import { recommendHuntQueries } from '../core/cyberBrain.js';
 // v22.1 — Live IOC enrichment (VirusTotal, AbuseIPDB, Shodan, D1)
 import { enrichIOC as enrichIOCLive } from '../services/iocEnrichmentEngine.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Built-in hunt templates ──────────────────────────────────────────────────
 // ─── Signature decoder (AV/EDR false-positive mitigation) ─────────────────────
@@ -509,7 +510,7 @@ export async function handleIOCLookup(request, env, authCtx) {
 
 // ─── GET /api/hunt/sessions ───────────────────────────────────────────────────
 export async function handleHuntSessions(request, env, authCtx) {
-  if (!authCtx.authenticated || authCtx.tier === 'IP') {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required to view hunt sessions' }, { status: 401 });
   }
 

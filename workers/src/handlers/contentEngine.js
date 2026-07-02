@@ -17,6 +17,7 @@
  */
 
 import { generateBlogPost, buildExecutiveBrief } from '../lib/aiBrain.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const MAX_CONTENT_FREE       = 5;
 const MAX_CONTENT_PRO        = 50;
@@ -24,7 +25,7 @@ const MAX_CONTENT_ENTERPRISE = 500;
 
 // ─── Generate content from scan result ───────────────────────────────────────
 export async function handleGenerateContent(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required to generate content' }, { status: 401 });
   }
 
@@ -119,7 +120,7 @@ export async function handleGenerateContent(request, env, authCtx) {
 
 // ─── List content ─────────────────────────────────────────────────────────────
 export async function handleListContent(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -154,7 +155,7 @@ export async function handleListContent(request, env, authCtx) {
 
 // ─── Get single post ──────────────────────────────────────────────────────────
 export async function handleGetContent(request, env, authCtx, postId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -172,7 +173,7 @@ export async function handleGetContent(request, env, authCtx, postId) {
 
 // ─── Publish to Telegram / LinkedIn ──────────────────────────────────────────
 export async function handlePublishContent(request, env, authCtx, postId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -225,7 +226,7 @@ export async function handlePublishContent(request, env, authCtx, postId) {
 
 // ─── Delete content ───────────────────────────────────────────────────────────
 export async function handleDeleteContent(request, env, authCtx, postId) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 

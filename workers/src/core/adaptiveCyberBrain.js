@@ -42,6 +42,7 @@
  */
 
 import { enforceFeatureGate } from './revenueGate.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PLATFORM = 'CYBERDUDEBIVASH AI Security Hub v21.0';
@@ -1094,7 +1095,7 @@ export async function enrichScanAdaptive(env, scanResult, {
 // ── POST /api/cyber-brain/learn ───────────────────────────────────────────────
 export async function handleLearnFeedback(request, env, authCtx) {
   // Require authentication
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required to submit feedback' }, { status: 401 });
   }
 
@@ -1166,7 +1167,7 @@ export async function handleAdaptiveRisk(request, env, authCtx) {
   const gate = enforceFeatureGate('ai_brain', authCtx?.tier || 'FREE');
   if (gate) return gate;
 
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required for adaptive risk scoring' }, { status: 401 });
   }
 

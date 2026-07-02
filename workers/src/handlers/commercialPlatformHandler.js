@@ -30,12 +30,13 @@
  */
 
 import { FEATURES } from '../middleware/entitlementCheck.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Tier gates ───────────────────────────────────────────────────────────────
 const ADMIN_TIERS = new Set(['OWNER', 'ADMIN']);
 
 function checkAuth(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required', service: 'CDB-COMMERCIAL' },
       { status: 401 }
@@ -393,7 +394,7 @@ export async function handleCustomerSuccessScore(request, env, authCtx) {
 
 // ─── P15.6a: Update API Key Metadata (PATCH /api/keys/:id) ───────────────────
 export async function handleKeyUpdateMeta(request, env, authCtx, keyId) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ success: false, error: 'Authentication required', service: 'CDB-COMMERCIAL' }, { status: 401 });
   }
   if (!keyId || !/^[a-zA-Z0-9_-]{1,64}$/.test(keyId)) {
@@ -471,7 +472,7 @@ export async function handleKeyUpdateMeta(request, env, authCtx, keyId) {
 
 // ─── P15.6b: Key Rotation History (GET /api/keys/:id/history) ─────────────────
 export async function handleKeyHistory(request, env, authCtx, keyId) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ success: false, error: 'Authentication required', service: 'CDB-COMMERCIAL' }, { status: 401 });
   }
   if (!keyId || !/^[a-zA-Z0-9_-]{1,64}$/.test(keyId)) {

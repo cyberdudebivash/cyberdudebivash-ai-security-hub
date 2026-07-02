@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub
  * CTI Workbench — /api/cti/*
@@ -138,7 +139,7 @@ export async function handleIOCSearch(request, env, authCtx) {
 
 // POST /api/cti/ioc — submit new IOC
 export async function handleAddIOC(request, env, authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
   if (authCtx.tier === 'FREE') {

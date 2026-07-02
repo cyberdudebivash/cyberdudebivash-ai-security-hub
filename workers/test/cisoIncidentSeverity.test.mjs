@@ -15,27 +15,27 @@ function req(body) {
 
 describe('handleCreateIncident — severity contract', () => {
   it('accepts lowercase severity and normalizes it to canonical uppercase', async () => {
-    const res = await handleCreateIncident(req({ title: 'Suspicious login pattern', severity: 'high' }), {}, { authenticated: true, email: 'a@b.com' });
+    const res = await handleCreateIncident(req({ title: 'Suspicious login pattern', severity: 'high' }), {}, { authenticated: true, user_id: 'u_test', email: 'a@b.com' });
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.incident.severity).toBe('HIGH');
   });
 
   it('defaults to MEDIUM when severity is omitted', async () => {
-    const res = await handleCreateIncident(req({ title: 'Unusual outbound traffic' }), {}, { authenticated: true });
+    const res = await handleCreateIncident(req({ title: 'Unusual outbound traffic' }), {}, { authenticated: true, user_id: 'u_test' });
     const body = await res.json();
     expect(body.data.incident.severity).toBe('MEDIUM');
   });
 
   it('rejects an invalid severity with 400 INVALID_SEV', async () => {
-    const res = await handleCreateIncident(req({ title: 'Test incident title', severity: 'urgent' }), {}, { authenticated: true });
+    const res = await handleCreateIncident(req({ title: 'Test incident title', severity: 'urgent' }), {}, { authenticated: true, user_id: 'u_test' });
     const body = await res.json();
     expect(res.status).toBe(400);
     expect(body.code).toBe('INVALID_SEV');
   });
 
   it('rejects INFO — a deliberate domain narrowing of the 5-value shared enum', async () => {
-    const res = await handleCreateIncident(req({ title: 'Test incident title', severity: 'info' }), {}, { authenticated: true });
+    const res = await handleCreateIncident(req({ title: 'Test incident title', severity: 'info' }), {}, { authenticated: true, user_id: 'u_test' });
     expect(res.status).toBe(400);
   });
 

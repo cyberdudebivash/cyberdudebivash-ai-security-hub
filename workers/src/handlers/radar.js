@@ -17,6 +17,7 @@
  */
 
 import { RadarService, CACHE_HEADER_TTL } from '../services/radarService.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const PUBLISHER = 'CYBERDUDEBIVASH® Cyber Signal Radar';
 
@@ -306,7 +307,7 @@ async function handleSectors(request, env) {
 
 // ── P3.0-008 — Enterprise endpoints (auth required) ──────────────────────────
 async function handleEnterprise(request, env, authCtx, subpath) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return jsonErr('Authentication required — provide Authorization: Bearer <token> or X-API-Key header', 401);
   }
   const allowedTiers = ['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN'];

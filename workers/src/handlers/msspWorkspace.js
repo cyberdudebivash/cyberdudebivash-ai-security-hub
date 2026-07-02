@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub
  * MSSP Workspace — Multi-Tenant Customer Management
@@ -24,7 +25,7 @@ function requireMSSPAdmin(authCtx) {
 }
 
 function requireAuth(authCtx) {
-  return authCtx?.authenticated === true;
+  return isRealUser(authCtx);
 }
 
 // ─── Per-partner isolation scope ──────────────────────────────────────────────────────

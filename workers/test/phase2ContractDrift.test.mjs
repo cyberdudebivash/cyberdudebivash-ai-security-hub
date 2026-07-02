@@ -69,7 +69,7 @@ describe('Contract: GET /api/v1/decisions (soc.js handleGetDecisions)', () => {
 
 describe('Contract: GET /api/platform/kpi (enterpriseTransformHandler.js handlePlatformKPI)', () => {
   it('exposes the real field names the Executive KPI Dashboard reads', async () => {
-    const res = await handlePlatformKPI(req('https://x/api/platform/kpi'), makeEnv(), { authenticated: true, tier: 'OWNER' });
+    const res = await handlePlatformKPI(req('https://x/api/platform/kpi'), makeEnv(), { authenticated: true, user_id: 'u_owner', tier: 'OWNER' });
     const body = await res.json();
     expect(body.success).toBe(true);
     const kpi = body.kpi;

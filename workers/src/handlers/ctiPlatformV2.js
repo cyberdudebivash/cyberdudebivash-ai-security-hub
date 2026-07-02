@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub — v34.0 Phase 4 (God Mode)
  * CTI Platform V2 — /api/cti/v2/*
@@ -15,7 +16,7 @@ function genId(prefix = 'wl') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function requireAuth(authCtx) { return authCtx?.authenticated === true; }
+function requireAuth(authCtx) { return isRealUser(authCtx); }
 
 // ─── GET /api/cti/v2/watchlists ───────────────────────────────────────────────
 export async function handleListWatchlists(request, env) {

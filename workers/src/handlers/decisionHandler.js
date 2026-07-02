@@ -27,12 +27,13 @@ import { generateAdaptiveRecommendations }             from '../core/adaptiveCyb
 import { RadarService }                                from '../services/radarService.js';
 import { scoreCVE, analyzeRiskDistribution }           from '../services/compositeRiskScoring.js';
 import { callClaude }                                  from '../core/mythosAIProvider.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Tier gate ────────────────────────────────────────────────────────────────
 const ALLOWED_TIERS = new Set(['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN']);
 
 function checkTier(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required — provide Authorization: Bearer <token>', service: 'CDB-DECISION' },
       { status: 401 }

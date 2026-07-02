@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub — v34.0 Phase 4 (God Mode)
  * SOC Investigation Depth Layer — /api/soc/inv/*
@@ -12,7 +13,7 @@ function genId(prefix = 'inv') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function requireAuth(authCtx) { return authCtx?.authenticated === true; }
+function requireAuth(authCtx) { return isRealUser(authCtx); }
 
 async function logTimeline(env, caseId, orgId, eventType, description, actor, oldVal, newVal, meta) {
   try {

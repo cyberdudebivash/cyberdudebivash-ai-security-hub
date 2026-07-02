@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH® AI Security Hub — Operations Engine v1.0 (P6.0)
  * Enterprise operations: usage analytics, subscription enforcement,
@@ -110,7 +111,7 @@ const MONTHLY_LIMITS = {
 };
 
 export function checkEntitlements(authCtx, feature) {
-  if (!authCtx?.authenticated) return { allowed: false, reason: 'Authentication required' };
+  if (!isRealUser(authCtx)) return { allowed: false, reason: 'Authentication required' };
   const tier = (authCtx.tier || 'FREE').toUpperCase();
   const required = (FEATURE_REQUIREMENTS[feature] || 'FREE').toUpperCase();
   if ((TIER_ORDER[tier] ?? 0) < (TIER_ORDER[required] ?? 0)) {
@@ -183,7 +184,7 @@ export async function getFeatureFlag(env, userId, flagName) {
 }
 
 async function handleGetFeatureFlags(req, env, authCtx) {
-  if (!authCtx.authenticated) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isRealUser(authCtx)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const db = env.SECURITY_HUB_DB || env.DB;
   await ensureOpsTables(db);
   try {
@@ -225,7 +226,7 @@ async function handleSetFeatureFlag(req, env, authCtx) {
 // ─── P6.0-006: Enterprise Administration APIs ─────────────────────────────────
 function assertAdmin(authCtx) {
   const tier = (authCtx?.tier || '').toUpperCase();
-  if (!authCtx?.authenticated || !['ADMIN', 'OWNER'].includes(tier))
+  if (!authCtx?.isAdmin && !['ADMIN', 'OWNER'].includes(tier))
     return Response.json({ error: 'OWNER or ADMIN required' }, { status: 403 });
   return null;
 }
@@ -465,7 +466,7 @@ export async function runOpsLifecycleCron(env) {
 
 // ─── Public notification endpoint (customer-facing) ───────────────────────────
 async function handleGetMyNotifications(req, env, authCtx) {
-  if (!authCtx.authenticated) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isRealUser(authCtx)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const db = env.SECURITY_HUB_DB || env.DB;
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 100);

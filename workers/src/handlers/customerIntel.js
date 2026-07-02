@@ -17,6 +17,7 @@
  */
 
 import { RadarService } from '../services/radarService.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const PUB = 'CYBERDUDEBIVASH® Sentinel APEX Customer Intelligence';
 const KV_PROFILE_TTL = 3600;
@@ -50,7 +51,7 @@ function jsonErr(msg, status = 400) {
 }
 
 function reqAuth(authCtx) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
   return null;
 }
 

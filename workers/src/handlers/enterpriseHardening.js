@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * CYBERDUDEBIVASH AI Security Hub — Enterprise Hardening v1.0 (GOD MODE v16)
@@ -18,7 +19,7 @@ function jsonErr(msg, s = 400){ return Response.json({ success: false, error: ms
 // ─── POST /api/enterprise/auto-qualify ────────────────────────────────────────
 // Scans all NEW leads in D1 crm_leads; auto-advances to QUALIFIED if icp_score >= 60
 export async function handleAutoQualify(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
 
   if (!env.DB) return jsonErr('D1 not available', 503);
 
@@ -66,7 +67,7 @@ export async function handleAutoQualify(request, env, authCtx = {}) {
 // ─── GET /api/enterprise/org-dashboard ────────────────────────────────────────
 // Org-level pipeline view: stages, deal value, ICP distribution, top leads
 export async function handleOrgDashboard(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
 
   if (!env.DB) {
     return jsonOk({ error: 'Database not connected', data_available: false });
@@ -146,7 +147,7 @@ export async function handleOrgDashboard(request, env, authCtx = {}) {
 // ─── POST /api/enterprise/auto-proposal ───────────────────────────────────────
 // For all leads in DEMO_DONE stage: generate a proposal stub + advance to PROPOSAL_SENT
 export async function handleAutoProposal(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return jsonErr('Authentication required', 401);
+  if (!isRealUser(authCtx)) return jsonErr('Authentication required', 401);
 
   let body = {};
   try { body = await request.json(); } catch {}

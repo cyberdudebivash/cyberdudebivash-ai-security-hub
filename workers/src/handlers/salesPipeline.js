@@ -20,6 +20,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const KV_LEADS_INDEX  = 'crm:leads_index';
 const KV_LEAD_PREFIX  = 'crm:lead:';
@@ -174,7 +175,7 @@ export async function handleCreateLead(request, env) {
 
 // ── GET /api/sales/leads ──────────────────────────────────────────────────────
 export async function handleListLeads(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const url    = new URL(request.url);
   const stage  = url.searchParams.get('stage');
@@ -202,7 +203,7 @@ export async function handleListLeads(request, env, authCtx = {}) {
 
 // ── GET /api/sales/leads/:id ──────────────────────────────────────────────────
 export async function handleGetLead(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
   const id = new URL(request.url).pathname.split('/').slice(-1)[0];
   const lead = await loadLead(env, id);
   if (!lead) return fail(request, 'Lead not found', 404, 'NOT_FOUND');
@@ -211,7 +212,7 @@ export async function handleGetLead(request, env, authCtx = {}) {
 
 // ── PUT /api/sales/leads/:id/stage ────────────────────────────────────────────
 export async function handleAdvanceStage(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const parts = new URL(request.url).pathname.split('/');
   const id    = parts[parts.length - 2];
@@ -248,7 +249,7 @@ export async function handleAdvanceStage(request, env, authCtx = {}) {
 
 // ── POST /api/sales/leads/:id/note ───────────────────────────────────────────
 export async function handleAddNote(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const parts = new URL(request.url).pathname.split('/');
   const id    = parts[parts.length - 2];
@@ -267,7 +268,7 @@ export async function handleAddNote(request, env, authCtx = {}) {
 
 // ── POST /api/sales/leads/:id/qualify ────────────────────────────────────────
 export async function handleQualifyLead(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const parts = new URL(request.url).pathname.split('/');
   const id    = parts[parts.length - 2];
@@ -301,7 +302,7 @@ export async function handleQualifyLead(request, env, authCtx = {}) {
 
 // ── POST /api/sales/leads/:id/close ──────────────────────────────────────────
 export async function handleCloseLead(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const parts = new URL(request.url).pathname.split('/');
   const id    = parts[parts.length - 2];
@@ -417,7 +418,7 @@ export async function handleGetDemoSlots(request, env) {
 
 // ── GET /api/sales/pipeline ───────────────────────────────────────────────────
 export async function handleGetPipeline(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const leads = await loadLeads(env);
   const board = {};
@@ -442,7 +443,7 @@ export async function handleGetPipeline(request, env, authCtx = {}) {
 
 // ── GET /api/sales/metrics ────────────────────────────────────────────────────
 export async function handleGetMetrics(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const leads = await loadLeads(env);
   const won   = leads.filter(l => l.stage === 'CLOSED_WON');

@@ -24,12 +24,13 @@
 import { generateAdaptiveRecommendations } from '../core/adaptiveCyberBrain.js';
 import { callClaude }                      from '../core/mythosAIProvider.js';
 import { RadarService }                    from '../services/radarService.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Tier gate ────────────────────────────────────────────────────────────────
 const ALLOWED_TIERS = new Set(['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN']);
 
 function checkTier(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required', service: 'CDB-SOC-COMMAND' },
       { status: 401 }

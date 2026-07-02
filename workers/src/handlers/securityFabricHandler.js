@@ -29,12 +29,13 @@
 
 import { publishEvent, getQueueStats, EVENT_TYPES } from '../agents/agentBus.js';
 import { checkEntitlement, getUserEntitlements }     from '../middleware/entitlementCheck.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Tier gate ────────────────────────────────────────────────────────────────
 const ALLOWED_TIERS = new Set(['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN']);
 
 function checkTier(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required', service: 'CDB-SECURITY-FABRIC' },
       { status: 401 }

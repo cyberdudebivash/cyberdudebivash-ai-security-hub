@@ -13,7 +13,7 @@ const CACHE_TTL = 300; // 5 minutes
 export async function handleRevenueMetrics(request, env, authCtx) {
   // Role gate: admin, mssp_admin, or enterprise tier
   const allowed = ['admin', 'mssp_admin', 'enterprise'];
-  if (!authCtx?.authenticated && authCtx?.tier !== 'ENTERPRISE' && authCtx?.role !== 'admin') {
+  if (!authCtx?.isAdmin && !['ENTERPRISE', 'MSSP'].includes((authCtx?.tier || '').toUpperCase())) {
     return Response.json({ error: 'Enterprise tier required', code: 403 }, { status: 403 });
   }
 

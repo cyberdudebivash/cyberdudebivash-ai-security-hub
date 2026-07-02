@@ -28,12 +28,13 @@ import { generateAdaptiveRecommendations, computeAdaptiveRisk, predictAttackPath
 import { callClaude }                from '../core/mythosAIProvider.js';
 import { getTopThreats, computePredictiveRiskScore } from '../services/predictiveEngine.js';
 import { RadarService }              from '../services/radarService.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── Tier gate ────────────────────────────────────────────────────────────────
 const ALLOWED_TIERS = new Set(['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN']);
 
 function checkTier(authCtx) {
-  if (!authCtx?.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json(
       { success: false, error: 'Authentication required', service: 'CDB-AUTONOMOUS-OPS' },
       { status: 401 }

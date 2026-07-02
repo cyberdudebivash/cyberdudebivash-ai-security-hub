@@ -1,4 +1,5 @@
 import { ok, fail } from '../lib/response.js';
+import { isRealUser } from '../auth/middleware.js';
 
 /**
  * CYBERDUDEBIVASH AI Security Hub — Zero Trust Security Engine v19.0
@@ -294,7 +295,7 @@ export async function handleTrustScore(request, env, authCtx) {
 
 // ─── Handler: GET /api/zero-trust/anomalies ───────────────────────────────────
 export async function handleZeroTrustAnomalies(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return fail(request, 'Authentication required', 401, 'ERR_UNAUTHORIZED');
   }
 
@@ -320,7 +321,7 @@ export async function handleZeroTrustAnomalies(request, env, authCtx) {
 
 // ─── Handler: POST /api/zero-trust/verify ────────────────────────────────────
 export async function handleZeroTrustVerify(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return fail(request, 'Authentication required', 401, 'ERR_UNAUTHORIZED');
   }
 

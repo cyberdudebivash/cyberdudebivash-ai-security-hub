@@ -1,3 +1,4 @@
+import { isRealUser } from '../auth/middleware.js';
 /**
  * CYBERDUDEBIVASH AI Security Hub — Unified Security Graph Engine v19.0
  * Extends threatGraph.js with live asset nodes, dynamic vulnerability edges,
@@ -255,7 +256,7 @@ export async function handleSecurityGraphNodes(request, env, authCtx) {
 
 // ─── Handler: POST /api/security-graph/asset ──────────────────────────────────
 export async function handleRegisterAsset(request, env, authCtx) {
-  if (!authCtx.authenticated) {
+  if (!isRealUser(authCtx)) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
   let body;

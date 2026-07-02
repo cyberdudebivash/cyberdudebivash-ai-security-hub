@@ -24,6 +24,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const KV_USER_BEHAVIOR_PREFIX = 'conv:behavior:';
 const KV_DISMISSED_PREFIX     = 'conv:dismissed:';
@@ -344,7 +345,7 @@ export async function handleDismissTrigger(request, env, authCtx = {}) {
 
 // ── GET /api/conversion/funnel ────────────────────────────────────────────────
 export async function handleGetFunnel(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let funnel = {};
   if (env?.SECURITY_HUB_KV) {
@@ -410,7 +411,7 @@ export async function handleGetCTA(request, env, authCtx = {}) {
 
 // ── POST /api/conversion/retarget ─────────────────────────────────────────────
 export async function handleRetarget(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let body = {};
   try { body = await request.json(); } catch {}

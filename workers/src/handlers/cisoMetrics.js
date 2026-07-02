@@ -17,6 +17,7 @@
 
 import { ok, fail } from '../lib/response.js';
 import { normalizeSeverity } from '../lib/contracts.js';
+import { isRealUser } from '../auth/middleware.js';
 
 const KV_INCIDENTS_KEY   = 'ciso:incidents';
 const KV_POSTURE_KEY     = 'ciso:posture_cache';
@@ -537,7 +538,7 @@ export async function handleGetCISOPosture(request, env, authCtx = {}) {
 
 // ─── GET /api/ciso/incidents ──────────────────────────────────────────────────
 export async function handleGetIncidents(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const url    = new URL(request.url);
   const status = url.searchParams.get('status');    // OPEN|INVESTIGATING|RESOLVED
@@ -554,7 +555,7 @@ export async function handleGetIncidents(request, env, authCtx = {}) {
 
 // ─── POST /api/ciso/incidents ─────────────────────────────────────────────────
 export async function handleCreateIncident(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   let body = {};
   try { body = await request.json(); } catch {}
@@ -598,7 +599,7 @@ export async function handleCreateIncident(request, env, authCtx = {}) {
 
 // ─── PUT /api/ciso/incidents/:id ──────────────────────────────────────────────
 export async function handleUpdateIncident(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const url = new URL(request.url);
   const id  = url.pathname.split('/').pop();
@@ -650,7 +651,7 @@ export async function handleGetComplianceStatus(request, env, authCtx = {}) {
 
 // ─── GET /api/ciso/risk-register ──────────────────────────────────────────────
 export async function handleGetRiskRegister(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const incidents   = await loadIncidents(env);
   const register    = buildRiskRegister([], incidents);
@@ -668,7 +669,7 @@ export async function handleGetRiskRegister(request, env, authCtx = {}) {
 
 // ─── GET /api/ciso/report ─────────────────────────────────────────────────────
 export async function handleGetCISOReport(request, env, authCtx = {}) {
-  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
   const incidents   = await loadIncidents(env);
   const mttx        = calculateMTTX(incidents);
