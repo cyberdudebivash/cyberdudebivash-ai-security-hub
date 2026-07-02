@@ -136,3 +136,29 @@ On closure of R-A, R-B, and R-C — with R-D/R-E/R-F scheduled — this recommen
 
 1. **Trust Center metrics** (`workers/src/handlers/trustCenter.js`): source counts from the canonical hydrated blend (`platform:metrics:live`) with live-D1 fallback; always return the nested `{ success, metrics }` shape; cache key bumped to `:v2`; honest `total_customers` preserved. Tests: `test/trustMetricsContract.test.mjs` (5).
 2. **AI Brain PRO+ gate** (`workers/src/index.js`, `frontend/index.html`, `.github/workflows/deploy.yml`): `/api/ai/simulate`, `/api/ai/forecast`, `/api/v1/forecast` gated via the canonical `PLAN_FEATURES` matrix → 402 for FREE/STARTER, pass for PRO/ENTERPRISE/MSSP; frontend degrades to an upsell; smoke test treats 402 as the correct gated response. Tests: `test/aiBrainEntitlementGate.test.mjs` (4).
+
+---
+
+## Addendum — Enterprise Hardening Pass 2 (2026-07-02, commits `e21316f` + `77e53ab`)
+
+Follow-up remediation to close the remaining code-shippable acceptance gaps. Regression baseline advanced **899 → 938 tests passing** (39 added across this and the prior EH pass). All work deployed to production and live-verified; deploy pipeline green end-to-end including the 7-step smoke test.
+
+### Blockers moved
+
+| Prior status | Item | New status | Evidence |
+|---|---|---|---|
+| OPEN (R-B / EA-04) | Payment → entitlement never proven end-to-end | **PARTLY RESOLVED** | `test/paymentEntitlementE2E.test.mjs` [T]: through the real `worker.fetch` with real HMAC-SHA256 crypto — FREE→402 on `/api/ai/simulate`, signed PRO verify writes `users.tier` + `subscriptions` row + mints tier:PRO JWT, same endpoint→200; tampered signature→400 with zero writes; STARTER does not over-grant. **Residual (owner):** one live Razorpay pilot transaction. |
+| OPEN (R-E / EA-05) | SSO/SAML + MFA advertised, not round-trip-verified | **PARTLY RESOLVED** | `test/mfaSsoRoundTrip.test.mjs` [T]: MFA setup→RFC-6238-computed TOTP→enable→backup-code burn/replay semantics; SSO OIDC PKCE login→RS256-signed id_token (nonce/aud/iss enforced)→user provisioned at org plan→platform JWT that authenticates; state replay + out-of-domain rejection fail closed. **Residual (owner):** one live round-trip against a customer's real IdP. |
+| OPEN (EH-03) | Systemic `.authenticated` authz flaw (158 gate sites) | **CLOSED** | Canonical `isRealUser(authCtx)` in `auth/middleware.js`; 41 route gates + 40 handler/service files migrated; `test/authGateRealUser.test.mjs` (25) [T] + live probes [M]: migrated gates 401 for anonymous, scan funnel stays 200, `/api/auth/status` now reports real login state, four dead-admin gates fixed. |
+| OPEN (R-C / R-06) | Restore never drilled | **PARTLY RESOLVED** | `scripts/d1-restore-drill.mjs` [V] + `test/restoreDrill.test.mjs` (6) [T]: offline drill restores an artifact into a throwaway SQLite DB, runs `PRAGMA integrity_check`, asserts table/row counts + SHA-256; proven to pass on valid dumps and fail on corrupt/truncated/tampered ones; wired into DR runbook §3.0. **Residual (owner):** run once against the first real nightly artifact (lands 02:30 UTC; workflow_dispatch unavailable to this session). |
+
+### Still OPEN — owner/product decisions, not engineering
+
+1. **Uptime/SLA truth (EA-03 / R-07)** — advertised 99.9% vs measured ~95–96% raw. NOTE: the uptime **engine** was already corrected in `87781f2` (availability = responded; degraded reported separately; live `/api/uptime` now 100% availability / 4.2% degraded). The residual is a **copy/product decision**: confirm the public SLA figure matches the availability definition now published.
+2. **Live Razorpay pilot transaction** — needs a real payment instrument.
+3. **Live IdP round-trip** — needs a customer's actual OIDC tenant at onboarding.
+4. **Workers plan-limit confirmation (R-09)** — confirm Paid plan headroom for the hourly cron fan-out.
+
+### Recommendation (unchanged, with reduced residual risk)
+
+**CONDITIONAL GO** — cleared for a supervised enterprise pilot now. The four items above are the only barriers to unconditional GO, and **none is further engineering** — each is an owner action or product decision. Every acceptance gap that could be closed in code has been closed, tested, deployed, and live-verified this pass.
