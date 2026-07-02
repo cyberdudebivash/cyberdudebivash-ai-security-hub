@@ -52,30 +52,31 @@ async function calcWindowUptime(db, days, component = null) {
   // Validate days is a known window (server-controlled, but double-check)
   if (!VALID_DAYS.has(days)) return { uptime_pct: null, note: 'invalid_window' };
   try {
-    // Use parameterized query for component to prevent SQL injection
+    // Availability = the service RESPONDED (operational OR degraded), i.e. NOT a
+    // partial/major outage. A "degraded" sample is a slow-but-up response
+    // (latency over the warn threshold) — that is a latency/performance concern,
+    // NOT downtime. Counting degraded-but-responding as "down" is why this engine
+    // previously reported ~95.8% "uptime" alongside 0 outage_events — an internal
+    // contradiction that made the figure indefensible next to the advertised SLA.
+    // `degraded` is now reported as its own field so latency is disclosed, not hidden.
+    const SELECT_COLS = `
+          COUNT(*)                                                                 AS total,
+          COUNT(CASE WHEN status NOT IN ('partial_outage','major_outage') THEN 1 END) AS available,
+          COUNT(CASE WHEN status = 'operational' THEN 1 END)                       AS fully_ok,
+          COUNT(CASE WHEN status = 'degraded' THEN 1 END)                          AS degraded_count,
+          AVG(latency_ms)                                                          AS avg_latency,
+          MIN(latency_ms)                                                          AS min_latency,
+          MAX(latency_ms)                                                          AS max_latency,
+          COUNT(CASE WHEN status IN ('partial_outage','major_outage') THEN 1 END)  AS outage_count`;
     let query, bindings;
     if (component) {
-      query = `
-        SELECT
-          COUNT(*)                                                AS total,
-          COUNT(CASE WHEN status = 'operational' THEN 1 END)     AS ok,
-          AVG(latency_ms)                                         AS avg_latency,
-          MIN(latency_ms)                                         AS min_latency,
-          MAX(latency_ms)                                         AS max_latency,
-          COUNT(CASE WHEN status IN ('partial_outage','major_outage') THEN 1 END) AS outage_count
+      query = `SELECT ${SELECT_COLS}
         FROM operational_history
         WHERE checked_at > datetime('now', '-${days} days')
           AND component = ?`;
       bindings = [component];
     } else {
-      query = `
-        SELECT
-          COUNT(*)                                                AS total,
-          COUNT(CASE WHEN status = 'operational' THEN 1 END)     AS ok,
-          AVG(latency_ms)                                         AS avg_latency,
-          MIN(latency_ms)                                         AS min_latency,
-          MAX(latency_ms)                                         AS max_latency,
-          COUNT(CASE WHEN status IN ('partial_outage','major_outage') THEN 1 END) AS outage_count
+      query = `SELECT ${SELECT_COLS}
         FROM operational_history
         WHERE checked_at > datetime('now', '-${days} days')`;
       bindings = [];
@@ -103,19 +104,25 @@ async function calcWindowUptime(db, days, component = null) {
       };
     }
 
-    const uptimePct = Math.round((row.ok / row.total) * 1000) / 10;
-    const downtimePct = 100 - uptimePct;
+    // Availability (uptime) = responded / total. Degraded is surfaced separately.
+    const uptimePct       = Math.round((row.available / row.total) * 1000) / 10;
+    const degradedPct     = Math.round((row.degraded_count / row.total) * 1000) / 10;
+    const downtimePct     = 100 - uptimePct;
     const downtimeMinutes = Math.round(downtimePct * days * 24 * 60 / 100);
 
     return {
-      uptime_pct:      uptimePct,
+      uptime_pct:       uptimePct,          // availability — service reachable
       downtime_minutes: downtimeMinutes,
-      sample_count:    row.total,
-      outage_events:   row.outage_count,
-      avg_latency_ms:  row.avg_latency ? Math.round(row.avg_latency) : null,
-      min_latency_ms:  row.min_latency ?? null,
-      max_latency_ms:  row.max_latency ?? null,
-      source:          'operational_history',
+      sample_count:     row.total,
+      outage_events:    row.outage_count,
+      // Latency/performance transparency — degraded = up but slow, not down.
+      degraded_pct:     degradedPct,
+      degraded_samples: row.degraded_count,
+      avg_latency_ms:   row.avg_latency ? Math.round(row.avg_latency) : null,
+      min_latency_ms:   row.min_latency ?? null,
+      max_latency_ms:   row.max_latency ?? null,
+      basis:            'availability (responded); degraded_pct reports slow-but-up separately',
+      source:           'operational_history',
     };
   } catch (_) {
     return { uptime_pct: null, error: 'calculation_failed' };

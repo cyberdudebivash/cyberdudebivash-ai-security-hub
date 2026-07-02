@@ -1856,8 +1856,14 @@ export async function routeRequest(request, env, ctx, requestId) {
       return handleMFAAuthenticate(request, env);
     }
     if (path.startsWith('/api/auth/mfa/')) {
-      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
-      if (!authCtx?.authenticated) return unauthorized();
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      // MFA is a per-account operation — it requires a REAL logged-in principal.
+      // resolveAuthV5 sets authenticated:true even for the anonymous IP-fallback
+      // tier (user_id === null), so gating on `.authenticated` let an unauthenticated
+      // caller reach setup/enable/disable and mint a TOTP secret bound to a null
+      // user (otpauth …:null, KV key `mfa_setup:null` shared across all anon callers).
+      // Require a concrete user_id instead.
+      if (!authCtx?.user_id) return unauthorized();
       if (path === '/api/auth/mfa/status'  && method === 'GET')  return handleMFAStatus(request, env, authCtx);
       if (path === '/api/auth/mfa/setup'   && method === 'POST') return handleMFASetup(request, env, authCtx);
       if (path === '/api/auth/mfa/enable'  && method === 'POST') return handleMFAEnable(request, env, authCtx);
