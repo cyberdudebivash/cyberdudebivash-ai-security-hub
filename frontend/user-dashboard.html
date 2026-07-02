@@ -1904,10 +1904,15 @@ successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b
       if (!_token) return; // leave login overlay visible
     }
     try {
-      const res = await apiFetch('/api/auth/profile');
+      // GET /api/auth/me is the current-profile endpoint. It returns a FLAT
+      // user object (no {user} wrapper) whose display-name field is full_name.
+      // (The old code called GET /api/auth/profile — which does not exist as a
+      // GET route — so every load 404'd and silently logged the customer out.)
+      const res = await apiFetch('/api/auth/me');
       if (!res.ok) { doLogout(); return; }
       const d = await res.json();
-      _user = d.user;
+      _user = d.user || d;
+      _user.name = _user.name || _user.full_name || '';
       document.getElementById('login-overlay').style.display = 'none';
     } catch { doLogout(); return; }
 
@@ -2675,13 +2680,17 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const okEl  = document.getElementById('settings-ok');
     errEl.style.display = okEl.style.display = 'none';
     try {
+      // PUT /api/auth/profile reads `full_name` (not `name`); sending `name`
+      // was silently ignored, so "Save profile" appeared to succeed but never
+      // persisted anything.
       const res = await apiFetch('/api/auth/profile', {
         method: 'PUT',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ full_name: name }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Update failed');
       document.getElementById('user-name').textContent = name;
+      if (_user) { _user.name = name; _user.full_name = name; }
       okEl.textContent = 'Profile updated!';
       okEl.style.display = 'block';
     } catch (e) {
