@@ -249,6 +249,40 @@ export function buildRealResult(domain, dns, tls, bl) {
   };
 }
 
+// ─── Per-scan D1 tracking (scan_jobs + per-user scan_history) ────────────────
+// Called on BOTH the fresh-scan and cache-hit paths. The response cache is
+// keyed by domain (shared across all users), so a cache hit must still record
+// this user's own history row — otherwise a customer's scan history silently
+// drops any scan of a domain someone else recently scanned, and history
+// becomes non-deterministic. Never allowed to throw into the scan response.
+async function trackDomainScan(env, authCtx, scanId, domain, result, dataSource) {
+  if (!env?.DB) return;
+  try {
+    const jobId = `sync_${crypto.randomUUID().slice(0, 8)}_${scanId}`;
+    const identity = authCtx?.user_id || authCtx?.keyId || 'api_anon';
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO scan_jobs
+         (id, user_id, identity, module, target, status, risk_level, risk_score, completed_at)
+       VALUES (?, ?, ?, 'domain', ?, 'completed', ?, ?, datetime('now'))`
+    ).bind(
+      jobId, authCtx?.user_id || null, identity, domain,
+      result.risk_level || 'LOW', result.risk_score || 0
+    ).run();
+
+    if (authCtx?.user_id) {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO scan_history
+           (user_id, job_id, scan_id, target, module, risk_score, risk_level, grade, data_source, status)
+         VALUES (?, ?, ?, ?, 'domain', ?, ?, ?, ?, 'completed')`
+      ).bind(
+        authCtx.user_id, jobId, scanId, domain,
+        result.risk_score || 0, result.risk_level || 'LOW',
+        result.grade || 'A', dataSource || result.data_source || 'live_dns'
+      ).run();
+    }
+  } catch { /* tracking must never break scan response */ }
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 export async function handleDomainScan(request, env, authCtx = {}) {
   const body = await parseBody(request);
@@ -270,6 +304,9 @@ export async function handleDomainScan(request, env, authCtx = {}) {
   if (cached && !body?.nocache) {
     const cachedPayload = addMonetizationFlags(cached, 'domain', authCtx, scanId);
     void cacheScanResultForReport(env, authCtx, scanId, cachedPayload);
+    // Persist THIS user's history even on a shared-cache hit (awaited so the
+    // row exists before we respond — otherwise history is lost for cached scans).
+    await trackDomainScan(env, authCtx, scanId, domain, cached, cached?.data_source);
     return Response.json(cachedPayload, {
       status: 200,
       headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'HIT',
@@ -364,37 +401,8 @@ export async function handleDomainScan(request, env, authCtx = {}) {
     status: 200,
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v32.0' },
   });
-  try {
-    void incrementScanCounter(env);
-    void cacheScanResultForReport(env, authCtx, scanId, responsePayload);
-    if (env?.DB) {
-      const jobId   = `sync_${crypto.randomUUID().slice(0,8)}_${scanId}`;
-      const identity = authCtx?.user_id || authCtx?.keyId || 'api_anon';
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO scan_jobs
-         (id, user_id, identity, module, target, status, risk_level, risk_score, completed_at)
-         VALUES (?, ?, ?, 'domain', ?, 'completed', ?, ?, datetime('now'))`
-      ).bind(
-        jobId,
-        authCtx?.user_id || null,
-        identity,
-        domain,
-        scanResult.risk_level || 'LOW',
-        scanResult.risk_score || 0
-      ).run();
-      if (authCtx?.user_id) {
-        await env.DB.prepare(
-          `INSERT OR IGNORE INTO scan_history (user_id, job_id, scan_id, target, module, risk_score, risk_level, grade, data_source, status)
-           VALUES (?, ?, ?, ?, 'domain', ?, ?, ?, ?, 'completed')`
-        ).bind(
-          authCtx.user_id, jobId, scanId, domain,
-          scanResult.risk_score || 0,
-          scanResult.risk_level || 'LOW',
-          scanResult.grade || 'A',
-          dataSource || 'live_dns'
-        ).run();
-      }
-    }
-  } catch { /* tracking must never break scan response */ }
+  void incrementScanCounter(env);
+  void cacheScanResultForReport(env, authCtx, scanId, responsePayload);
+  await trackDomainScan(env, authCtx, scanId, domain, scanResult, dataSource);
   return finalResponse;
 }
