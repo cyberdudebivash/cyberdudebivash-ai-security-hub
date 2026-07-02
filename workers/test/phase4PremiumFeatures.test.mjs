@@ -190,13 +190,29 @@ describe('generate-rules — save, history, versioning, revisit', () => {
 // ═══ B. Reporting engine — CTI and AI_SECURITY types ═════════════════════════
 
 function reportDB({ threatIntel = [], sevStats = [], aptProfiles = [], aiAssets = [], findingStats = [], findings = [], redteam = null, governance = [] } = {}) {
+  const jobs = new Map();
   return {
+    _jobs: jobs,
     prepare(sql) {
       let bound = [];
       const stmt = {
         bind(...args) { bound = args; return stmt; },
-        async run() { return { success: true }; },
+        async run() {
+          if (/INSERT INTO report_jobs/.test(sql)) {
+            const [id, report_type, format, org_id, created_by, config_json] = bound;
+            jobs.set(id, { id, report_type, format, status: 'GENERATING', org_id, created_by, config_json });
+          }
+          if (/UPDATE report_jobs SET status='READY'/.test(sql)) {
+            const [download_token, download_expires_at, id] = bound;
+            const j = jobs.get(id);
+            if (j) Object.assign(j, { status: 'READY', download_token, download_expires_at });
+          }
+          return { success: true };
+        },
         async first() {
+          if (/FROM report_jobs WHERE id = \?$/.test(sql) || /SELECT \* FROM report_jobs WHERE id = \?/.test(sql)) {
+            return jobs.get(bound[0]) || null;
+          }
           if (/FROM ai_redteam_attempts/.test(sql)) return redteam;
           if (/FROM scan_results/.test(sql)) return { total: 0, critical_ct: 0, high_ct: 0, avg_risk: 50 };
           return null;
@@ -311,6 +327,42 @@ describe('reportingEngine — AI_SECURITY report', () => {
     expect(html).toContain('No open AI security findings');
     expect(html).toContain('No AI red team engagements recorded yet');
     expect(html).toContain('No governance assessments completed yet');
+  });
+});
+
+describe('reportingEngine — report retention / revisit after cache expiry', () => {
+  const proUser = { role: 'user', tier: 'pro', id: 'u1', userId: 'u1', org_id: 'org-1' };
+
+  it('lets an authenticated member of the owning org re-download after the KV cache expired (regenerates from the job row)', async () => {
+    const env = { DB: reportDB(), KV: reportKV() };
+    const createReq = jsonReq('https://x/api/reports', 'POST', { type: 'SECURITY_POSTURE' });
+    createReq.user = proUser;
+    const created = await (await handleCreateReport(createReq, env)).json();
+    expect(created.success).toBe(true);
+
+    // Simulate the 1-hour KV cache (html + token) expiring
+    env.KV = reportKV();
+
+    // No token, but signed in to the owning org → regenerated download
+    const dlReq = jsonReq(`https://x/api/reports/${created.job_id}/download`, 'GET');
+    dlReq.user = proUser;
+    const dl = await handleDownloadReport(dlReq, env, created.job_id);
+    expect(dl.status).toBe(200);
+    const html = await dl.text();
+    expect(html).toContain('Executive Summary');
+  });
+
+  it('denies download to authenticated users from a different org once the token is gone', async () => {
+    const env = { DB: reportDB(), KV: reportKV() };
+    const createReq = jsonReq('https://x/api/reports', 'POST', { type: 'SECURITY_POSTURE' });
+    createReq.user = proUser;
+    const created = await (await handleCreateReport(createReq, env)).json();
+
+    env.KV = reportKV();
+    const dlReq = jsonReq(`https://x/api/reports/${created.job_id}/download`, 'GET');
+    dlReq.user = { role: 'user', tier: 'pro', id: 'intruder', userId: 'intruder', org_id: 'other-org' };
+    const dl = await handleDownloadReport(dlReq, env, created.job_id);
+    expect(dl.status).toBe(401);
   });
 });
 

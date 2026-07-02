@@ -759,15 +759,46 @@ export async function handleGetReport(req, env, jobId) {
 export async function handleDownloadReport(req, env, jobId) {
   const url = new URL(req.url);
   const token = url.searchParams.get('token');
-  if (!token) return Response.json({ error: 'Download token required' }, { status: 401 });
 
-  const tokenData = await env.KV?.get(`report_token_${token}`, 'json').catch(() => null);
-  if (!tokenData || tokenData.jobId !== jobId) {
-    return Response.json({ error: 'Invalid or expired download token' }, { status: 401 });
+  // Job row is the durable record (KV html/token expire after 1h; the pricing
+  // page advertises 7-day to 1-year report retention, so downloads must not
+  // die with the cache).
+  const job = await env.DB.prepare(
+    `SELECT * FROM report_jobs WHERE id = ?`
+  ).bind(jobId).first().catch(() => null);
+
+  // Two authorization paths:
+  //  1. Fresh download token (shareable link, 1h TTL) — original flow.
+  //  2. Authenticated member of the owning org — lets customers revisit and
+  //     re-download reports after the token has expired.
+  let authorized = false;
+  if (token) {
+    const tokenData = await env.KV?.get(`report_token_${token}`, 'json').catch(() => null);
+    if (tokenData && tokenData.jobId === jobId) authorized = true;
+  }
+  if (!authorized && job && req.user && (req.user.id || req.user.user_id || req.user.userId)) {
+    const orgId = req.user.org_id || 'default';
+    if (job.org_id === orgId) authorized = true;
+  }
+  if (!authorized) {
+    return Response.json({ error: 'Valid download token required, or sign in to the organization that owns this report' }, { status: 401 });
   }
 
-  const html = await env.KV?.get(`report_html_${jobId}`).catch(() => null);
-  if (!html) return Response.json({ error: 'Report content expired. Please regenerate.' }, { status: 404 });
+  let html = await env.KV?.get(`report_html_${jobId}`).catch(() => null);
+  if (!html) {
+    // Cache expired — regenerate from the persisted job definition
+    if (!job || job.status === 'FAILED') {
+      return Response.json({ error: 'Report not found' }, { status: 404 });
+    }
+    try {
+      const config = JSON.parse(job.config_json || '{}');
+      const actorUserId = req.user?.userId ?? req.user?.user_id ?? null;
+      html = await generateReportHTML(job.report_type, job.org_id, config, env, actorUserId, job.format);
+      await env.KV?.put(`report_html_${jobId}`, html, { expirationTtl: 3600 }).catch(() => null);
+    } catch (e) {
+      return Response.json({ error: 'Report regeneration failed', detail: e?.message }, { status: 500 });
+    }
+  }
 
   return new Response(html, {
     headers: { 'Content-Type': 'text/html;charset=UTF-8', 'Content-Disposition': `inline; filename="report-${jobId}.html"` },
