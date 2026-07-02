@@ -381,15 +381,15 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
   </div>
   <div class="hero-metrics">
     <div class="hm-item">
-      <span class="hm-val purple">847</span>
+      <span class="hm-val purple" id="heroLlmVulns">—</span>
       <span class="hm-lbl">LLM Vulns Tracked</span>
     </div>
     <div class="hm-item">
-      <span class="hm-val">200+</span>
+      <span class="hm-val" id="heroAgentsTested">—</span>
       <span class="hm-lbl">AI Agents Tested</span>
     </div>
     <div class="hm-item">
-      <span class="hm-val green">50+</span>
+      <span class="hm-val green" id="heroMcpAudited">—</span>
       <span class="hm-lbl">MCP Servers Audited</span>
     </div>
     <div class="hm-item">
@@ -1141,6 +1141,7 @@ async function loadApexStats() {
         if (s && s.total_advisories != null) {
           _apexRealValues.statLlmVulns = s.total_advisories;
           _apexRealValues.apexLlmVulns = s.total_advisories;
+          _apexRealValues.heroLlmVulns = s.total_advisories;
         }
       }).catch(function() {}),
     fetch(API_BASE + '/api/ai-redteam/prompts?category=jailbreak', { signal: AbortSignal.timeout(8000) })
@@ -1186,7 +1187,12 @@ function animateCounter(el, target, duration) {
 /* ── Intersection observer for stat counters — only animates real values;
    if a fetch above failed, shows "—" instead of a fabricated number. ── */
 function initCounters() {
-  var ids = ['statLlmVulns', 'apexLlmVulns', 'apexJailbreaks', 'apexMcpExploits', 'apexAgentPatterns', 'apexRagTech'];
+  // heroAgentsTested / heroMcpAudited have no real backend source (no metric
+  // for "AI agents tested" or "MCP servers audited" exists yet) — they were
+  // hardcoded "200+"/"50+" with no wiring at all; including them here makes
+  // them honestly show "—" like every other stat that has no real value,
+  // instead of a specific-looking fabricated number sitting next to real ones.
+  var ids = ['statLlmVulns', 'apexLlmVulns', 'apexJailbreaks', 'apexMcpExploits', 'apexAgentPatterns', 'apexRagTech', 'heroLlmVulns', 'heroAgentsTested', 'heroMcpAudited'];
   if (!('IntersectionObserver' in window)) {
     ids.forEach(function(id) {
       var el = document.getElementById(id);

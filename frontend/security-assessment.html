@@ -370,7 +370,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
       <span class="hm-lbl">Delivery SLA</span>
     </div>
     <div class="hm-item">
-      <span class="hm-val" id="hmThreats">312+</span>
+      <span class="hm-val" id="hmThreats">—</span>
       <span class="hm-lbl">Threats Found &amp; Fixed</span>
     </div>
     <div class="hm-item">
@@ -925,35 +925,29 @@ function calcROI() {
 
 async function loadLiveStats() {
   try {
-    var r = await fetch(API_BASE + '/api/v1/intel/latest.json?limit=5');
+    // /api/v1/intel/latest.json?limit=5 only ever returns up to 5 items, so it
+    // can't power a "total CVEs tracked" counter. /api/threat-intel/stats is
+    // the real aggregate endpoint (wrapped in the shared {success,data} envelope).
+    var r = await fetch(API_BASE + '/api/threat-intel/stats');
     if (!r.ok) return;
-    var d = await r.json();
-    var cves = d.data || d.items || d.cves || [];
-    var critCount = cves.filter(function(c){ return (c.cvss_score || c.cvssScore || 0) >= 9.0; }).length;
-    if (d.meta && d.meta.total_cves) {
-      document.getElementById('hmCves').textContent = d.meta.total_cves.toLocaleString();
+    var raw = await r.json();
+    var d = (raw && raw.success && raw.data) ? raw.data : raw;
+    var total = d && d.stats && d.stats.total_advisories;
+    if (total) {
+      document.getElementById('hmCves').textContent = total.toLocaleString();
       var tickers = document.querySelectorAll('#tickerInner span');
       tickers.forEach(function(t){
-        if (t.id === 'tickerCves') t.textContent = d.meta.total_cves.toLocaleString();
+        if (t.id === 'tickerCves') t.textContent = total.toLocaleString();
       });
-    }
-    if (critCount > 0) {
-      toast('⚠️ ' + critCount + ' critical CVEs detected in latest threat feed', 'warn');
     }
   } catch(e) {}
 }
 
-async function loadPlatformMetrics() {
-  try {
-    var r = await fetch(API_BASE + '/api/health');
-    if (!r.ok) return;
-    var d = await r.json();
-    if (d.metrics) {
-      if (d.metrics.total_scans) document.getElementById('hmAssessments').textContent = d.metrics.total_scans + '+';
-      if (d.metrics.total_findings) document.getElementById('hmThreats').textContent = d.metrics.total_findings + '+';
-    }
-  } catch(e) {}
-}
+// hmAssessments ("Assessments Delivered") and hmThreats ("Threats Found &
+// Fixed") are paid-engagement business metrics — /api/health only reports
+// platform-wide automated scan counts, which is a different, unrelated
+// number. There's no real backend source for these yet, so they stay at
+// their honest "—" default rather than being wired to the wrong field.
 
 function animateBars() {
   document.querySelectorAll('.sbr-fill[data-target]').forEach(function(el) {
@@ -977,7 +971,6 @@ document.addEventListener('DOMContentLoaded', function() {
   calcROI();
   observeBars();
   loadLiveStats();
-  loadPlatformMetrics();
 });
 
 (function loadCheckout() {

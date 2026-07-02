@@ -603,54 +603,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
         </div>
       </div>
       <div class="feed-items" id="threatFeed">
-        <div class="feed-item">
-          <div class="fi-sev fi-crit">CRITICAL</div>
-          <div class="fi-body">
-            <div class="fi-title">CVE-2024-3400: PAN-OS OS Command Injection — Active Exploitation</div>
-            <div class="fi-meta">CVSS 10.0 · CISA KEV · APT29 Campaign · Palo Alto GlobalProtect</div>
-          </div>
-          <div class="fi-time">4m ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="fi-sev fi-high">HIGH</div>
-          <div class="fi-body">
-            <div class="fi-title">LockBit 4.0 Ransomware: New Encryption Variant Targeting APAC Banks</div>
-            <div class="fi-meta">Ransomware · Financial Sector · IOCs Published</div>
-          </div>
-          <div class="fi-time">17m ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="fi-sev fi-crit">CRITICAL</div>
-          <div class="fi-body">
-            <div class="fi-title">CVE-2024-21762: Fortinet FortiOS SSL-VPN RCE — 0-Day</div>
-            <div class="fi-meta">CVSS 9.6 · CISA KEV · Actively Exploited · FortiGate</div>
-          </div>
-          <div class="fi-time">1h ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="fi-sev fi-high">HIGH</div>
-          <div class="fi-body">
-            <div class="fi-title">APT41 Supply Chain: npm package poisoning targeting Node.js devs</div>
-            <div class="fi-meta">Supply Chain · APT41 · Node.js Ecosystem</div>
-          </div>
-          <div class="fi-time">2h ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="fi-sev fi-med">MEDIUM</div>
-          <div class="fi-body">
-            <div class="fi-title">AI Prompt Injection: New jailbreak technique bypasses GPT-4o guardrails</div>
-            <div class="fi-meta">AI Security · OWASP LLM01 · ChatGPT · Claude</div>
-          </div>
-          <div class="fi-time">3h ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="fi-sev fi-info">INTEL</div>
-          <div class="fi-body">
-            <div class="fi-title">DPDP Act 2023: India regulators issue guidance on AI data processing</div>
-            <div class="fi-meta">Compliance · DPDP 2023 · India · Data Protection</div>
-          </div>
-          <div class="fi-time">5h ago</div>
-        </div>
+        <div class="feed-item"><div class="fi-body"><div class="fi-title" style="color:var(--text-dim)">Connecting to Sentinel APEX live threat feed…</div></div></div>
       </div>
     </div>
     <div class="threat-stats">
@@ -666,7 +619,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:40px
       </div>
       <div class="threat-stat-card">
         <div class="tsc-label">APT Groups Active</div>
-        <div class="tsc-value" style="color:var(--accent)">24+</div>
+        <div class="tsc-value" id="tcApt" style="color:var(--accent)">—</div>
         <div class="tsc-sub">Tracked by APEX</div>
       </div>
       <div class="threat-stat-card" style="background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(124,58,237,.08));border-color:rgba(239,68,68,.2)">
@@ -992,24 +945,71 @@ function toast(msg, type = 'success') {
 }
 
 /* ── Live Stats from SENTINEL APEX ── */
+function relTime(iso) {
+  if (!iso) return '';
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+function renderThreatFeed(cves) {
+  const el = document.getElementById('threatFeed');
+  if (!el) return;
+  if (!cves.length) {
+    el.innerHTML = '<div class="feed-item"><div class="fi-body"><div class="fi-title" style="color:var(--text-dim)">No advisories in the live feed right now.</div></div></div>';
+    return;
+  }
+  const sevCls = { CRITICAL: 'fi-crit', HIGH: 'fi-high', MEDIUM: 'fi-med', LOW: 'fi-info' };
+  el.innerHTML = cves.slice(0, 6).map(c => {
+    const sev = (c.severity || 'MEDIUM').toUpperCase();
+    const meta = [
+      c.cvss ? 'CVSS ' + c.cvss : null,
+      c.actively_exploited ? 'Actively Exploited' : null,
+      c.known_ransomware ? 'Ransomware' : null,
+      c.source,
+    ].filter(Boolean).join(' · ');
+    return `<div class="feed-item">
+      <div class="fi-sev ${sevCls[sev] || 'fi-info'}">${sev}</div>
+      <div class="fi-body">
+        <div class="fi-title">${(c.id || '') + (c.id ? ': ' : '') + (c.title || '')}</div>
+        <div class="fi-meta">${meta}</div>
+      </div>
+      <div class="fi-time">${relTime(c.published_at)}</div>
+    </div>`;
+  }).join('');
+}
 async function loadLiveStats() {
   try {
-    const r = await fetch(`${API_BASE}/api/v1/intel/latest.json?limit=5`);
-    if (!r.ok) return;
-    const d = await r.json();
-    const cves = d.data || d.items || d.cves || [];
-    const critCount = cves.filter(c => (c.cvss_score || c.cvssScore || 0) >= 9.0).length;
-    const kevCount  = cves.filter(c => c.kev || c.inKev || c.cisa_kev).length;
-    if (critCount > 0) {
+    const r = await fetch(`${API_BASE}/api/v1/intel/latest.json?limit=6`);
+    if (r.ok) {
+      const d = await r.json();
+      const cves = d.data || d.items || d.cves || [];
+      const critCount = cves.filter(c => (c.cvss || c.cvss_score || 0) >= 9.0).length;
+      const kevCount  = cves.filter(c => c.actively_exploited || c.kev || c.inKev || c.cisa_kev).length;
       document.getElementById('statCritCves').textContent = critCount;
       document.getElementById('tcCritical').textContent   = critCount;
+      document.getElementById('statKev').textContent      = kevCount + ' entries';
+      document.getElementById('tcKev').textContent        = kevCount;
+      renderThreatFeed(cves);
     }
-    if (kevCount > 0) {
-      document.getElementById('statKev').textContent = kevCount + ' entries';
-      document.getElementById('tcKev').textContent   = kevCount;
+    // /api/threat-intel/stats is the real aggregate endpoint — the latest.json
+    // feed above is capped at a handful of items and has no `meta.total_cves`
+    // field, so "CVEs Tracked Live" was permanently stuck at a hardcoded number.
+    const statsResp = await fetch(`${API_BASE}/api/threat-intel/stats`);
+    if (statsResp.ok) {
+      const raw = await statsResp.json();
+      const sd = (raw && raw.success && raw.data) ? raw.data : raw;
+      const total = sd && sd.stats && sd.stats.total_advisories;
+      if (total != null) document.getElementById('hmCves').textContent = total.toLocaleString();
     }
-    if (d.meta && d.meta.total_cves) {
-      document.getElementById('hmCves').textContent = d.meta.total_cves.toLocaleString();
+    // Real APT attribution count — only reports a group when it appears in a
+    // live CISA advisory or an ingested CVE record; can honestly be 0.
+    const aptResp = await fetch(`${API_BASE}/api/apt-intel/groups`);
+    if (aptResp.ok) {
+      const ad = await aptResp.json();
+      if (ad && ad.total != null) document.getElementById('tcApt').textContent = ad.total;
     }
   } catch(e) { /* non-blocking */ }
 }
@@ -1019,8 +1019,10 @@ async function loadPlatformMetrics() {
     const r = await fetch(`${API_BASE}/api/health`);
     if (!r.ok) return;
     const d = await r.json();
-    if (d.metrics && d.metrics.total_scans) {
-      document.getElementById('hmScans').textContent = d.metrics.total_scans + '+';
+    // /api/health returns stats.total_scans, not metrics.total_scans — this
+    // field never existed, so "Scans Run" was permanently stuck.
+    if (d.stats && d.stats.total_scans != null) {
+      document.getElementById('hmScans').textContent = d.stats.total_scans + '+';
     }
   } catch(e) { /* non-blocking */ }
 }
