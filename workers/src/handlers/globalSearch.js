@@ -11,6 +11,18 @@
 
 function genId() { return 'srch_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+// Stable, Workers-safe cache-key hash. The previous implementation used
+// Buffer.from(...).toString('base64') — but Buffer does not exist in the
+// Cloudflare Workers runtime (no nodejs_compat flag), so ANY search with a
+// query >= 2 chars threw ReferenceError → Cloudflare 1101 → HTTP 500. (Node's
+// Buffer masked this in unit tests.) djb2 avoids both Buffer and btoa's
+// Latin1-only limitation, so it also handles Unicode queries safely.
+function stableHash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 const ENTITY_TYPES = ['ioc', 'actor', 'case', 'customer', 'scan', 'workflow'];
 
 function scoreResult(item, query) {
@@ -33,7 +45,7 @@ export async function handleGlobalSearch(req, env) {
 
   if (!q || q.length < 2) return Response.json({ results: [], total: 0, query: q });
 
-  const cacheKey = `search_${Buffer.from(q + orgId + types.join(',')).toString('base64').slice(0, 32)}`;
+  const cacheKey = `search_${stableHash(q + '|' + orgId + '|' + types.join(','))}`;
   const cached = await env.KV?.get(cacheKey, 'json').catch(() => null);
   if (cached) return Response.json({ ...cached, cached: true });
 
