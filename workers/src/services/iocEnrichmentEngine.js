@@ -379,7 +379,12 @@ export async function enrichIOC(env, value, typeHint = null) {
   const result = {
     value, type, verdict, risk_score: riskScore, tags,
     sources_hit:   sourcesHit,
-    sources:       sources,
+    // Named to match the D1-cache-hit return path above (`raw_data`) — this
+    // used to be named `sources` here only, so any consumer reading
+    // `result.raw_data` (e.g. frontend/threat-intelligence.html's VirusTotal/
+    // Shodan detail panel) got `undefined` on every cache-miss (first-time)
+    // lookup and only worked by accident when a cached hit happened to serve.
+    raw_data:      sources,
     country:       sources.abuseipdb?.country || null,
     asn:           sources.abuseipdb?.isp || null,
     org:           sources.abuseipdb?.isp || null,

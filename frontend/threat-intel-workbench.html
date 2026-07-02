@@ -1423,28 +1423,42 @@ async function lookupIOC() {
     const res  = await fetch(`${API}/api/ioc/enrich?${params}`);
     const data = await res.json();
 
+    // enrichIOC() (workers/src/services/iocEnrichmentEngine.js) returns
+    // {verdict, risk_score, tags, country, asn, org, abuse_score,
+    // vt_positives, sources|raw_data, ...} — there is no confidence_score,
+    // first_seen/last_seen, related_cve, or context/description field.
+    // Reading those always yielded a fake "0% confidence / CLEAN" verdict
+    // regardless of the real risk computed server-side.
     const ioc = data.data || data.ioc || data;
-    const confidence = ioc.confidence_score || ioc.confidence || 0;
-    const confColor = confidence >= 80 ? '#ef4444' : confidence >= 50 ? '#f59e0b' : '#10b981';
+    const verdict = (ioc.verdict || 'unknown').toLowerCase();
+    const riskScore = Number(ioc.risk_score) || 0;
+    const VERDICT_META = {
+      malicious:  { label: 'MALICIOUS',  sev: 'CRITICAL', color: '#ef4444' },
+      suspicious: { label: 'SUSPICIOUS', sev: 'HIGH',      color: '#f59e0b' },
+      low_risk:   { label: 'LOW RISK',   sev: 'MEDIUM',    color: '#f59e0b' },
+      clean:      { label: 'CLEAN',      sev: 'LOW',       color: '#10b981' },
+      unknown:    { label: 'UNKNOWN',    sev: 'LOW',       color: '#64748b' },
+    };
+    const vm = VERDICT_META[verdict] || VERDICT_META.unknown;
+    const sourcesHit = (ioc.sources_hit || []).join(', ') || '—';
 
     area.innerHTML = `
       <div class="ioc-result-card">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
           <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent)">${value}</div>
-          <span class="sev sev-${confidence >= 80 ? 'CRITICAL' : confidence >= 50 ? 'HIGH' : 'LOW'}">${confidence >= 80 ? 'MALICIOUS' : confidence >= 50 ? 'SUSPICIOUS' : 'CLEAN'}</span>
-          <span style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:${confColor};margin-left:auto">${confidence}% confidence</span>
+          <span class="sev sev-${vm.sev}">${vm.label}</span>
+          <span style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:${vm.color};margin-left:auto">${riskScore}/100 risk score</span>
         </div>
         ${[
           ['Type', ioc.type || type],
-          ['Source', ioc.source || 'cyberdudebivash'],
-          ['First Seen', ioc.first_seen || '—'],
-          ['Last Seen', ioc.last_seen || '—'],
-          ['Related CVE', ioc.related_cve || ioc.intel_id || '—'],
-          ['Context', ioc.context || ioc.description || '—'],
+          ['Sources Checked', sourcesHit],
+          ['Country', ioc.country || '—'],
+          ['ASN / Org', ioc.asn || ioc.org || '—'],
           ['Tags', (ioc.tags || []).join(', ') || '—'],
-          ['Abuse Score', ioc.abuse_score || '—'],
-          ['Country', ioc.country || ioc.geo?.country || '—'],
-          ['ASN', ioc.asn || ioc.geo?.asn || '—'],
+          ['Abuse Score', ioc.abuse_score ?? '—'],
+          ['VirusTotal Detections', ioc.vt_positives ?? '—'],
+          ['Internal Intel Hits', ioc.internal_hits ?? '—'],
+          ['From Cache', ioc.from_cache ? `Yes (${ioc.cached_at || '—'})` : 'No — freshly enriched'],
         ].map(([label, val]) => `
           <div class="ioc-field">
             <span class="ioc-field-label">${label}</span>
@@ -1453,7 +1467,7 @@ async function lookupIOC() {
         `).join('')}
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">STIX Pattern</div>
-          <code style="font-family:var(--font-mono);font-size:11px;color:#a5f3fc;background:var(--bg-base);padding:8px;border-radius:4px;display:block">${ioc.stix_pattern || generateSTIXPattern(value, ioc.type || type)}</code>
+          <code style="font-family:var(--font-mono);font-size:11px;color:#a5f3fc;background:var(--bg-base);padding:8px;border-radius:4px;display:block">${generateSTIXPattern(value, ioc.type || type)}</code>
         </div>
       </div>
     `;

@@ -1419,15 +1419,21 @@
             try {
                 const r = await fetch(`${API}/api/threat-intel?limit=200&severity=CRITICAL`);
                 if (r.ok) {
-                    const d = await r.json();
+                    const raw = await r.json();
+                    // handleGetThreatIntel wraps its payload in {success,data,error} —
+                    // the real fields are one level deeper than d.total/d.data, and
+                    // d.data was an object ({entries,total,...}), not an array, so
+                    // .filter() on it silently threw inside this empty catch.
+                    const d = raw && raw.success && raw.data ? raw.data : raw;
                     if (d.total !== undefined) {
                         document.getElementById('stat-cves').textContent = d.total.toLocaleString();
                     }
-                    const critCount = (d.data || []).filter(t => t.severity === 'CRITICAL').length;
+                    const entries = d.entries || [];
+                    const critCount = entries.filter(t => t.severity === 'CRITICAL').length;
                     if (critCount > 0) document.getElementById('stat-cves-critical').textContent = `${critCount} CRITICAL`;
-                    const exploitCount = (d.data || []).filter(t => t.exploit_status === 'confirmed_exploit').length;
+                    const exploitCount = entries.filter(t => t.exploit_status === 'confirmed_exploit').length;
                     if (exploitCount > 0) document.getElementById('stat-exploits').textContent = exploitCount;
-                    const ransomCount = (d.data || []).filter(t => t.known_ransomware == 1).length;
+                    const ransomCount = entries.filter(t => t.known_ransomware == 1).length;
                     if (ransomCount > 0) document.getElementById('stat-ransomware').textContent = `${ransomCount} Ransomware`;
                 }
             } catch {}
@@ -1771,7 +1777,11 @@
             try {
                 const r = await fetch('/api/threat-intel/stats', { signal: AbortSignal.timeout(5000) });
                 if (!r.ok) return;
-                const data = await r.json();
+                const raw = await r.json();
+                // handleThreatIntelStats wraps the payload in {success,data,error} —
+                // the real stats live at data.data.stats, one level deeper than
+                // this used to check, so the hero counters never animated.
+                const data = raw && raw.success && raw.data ? raw.data : raw;
                 const s = data.stats || data;
                 const total    = s.total_advisories ?? s.total_cves ?? s.total ?? 0;
                 const critical = s.critical ?? s.critical_cves ?? 0;
@@ -1799,8 +1809,11 @@
 
                 if (!response.ok) throw new Error('API Error');
 
-                const data = await response.json();
-                // API returns { entries: [...] } — normalize field names for the renderer
+                const rawResp = await response.json();
+                // handleGetThreatIntel wraps the payload in {success,data,error} —
+                // data.entries was always undefined one level too shallow, so this
+                // silently fell back to FALLBACK_CVES on every real load.
+                const data = rawResp && rawResp.success && rawResp.data ? rawResp.data : rawResp;
                 const raw = Array.isArray(data) ? data
                           : (data.entries || data.threats || null);
                 if (raw && raw.length > 0) {

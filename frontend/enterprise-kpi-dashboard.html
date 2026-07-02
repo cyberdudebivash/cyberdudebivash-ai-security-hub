@@ -252,14 +252,24 @@ let currentAudience = 'ceo';
 const PLAN_COLORS = { FREE: '#64748b', STARTER: '#10b981', PRO: '#00c2ff', ENTERPRISE: '#7c3aed', MSSP: '#f59e0b' };
 const PLAN_BADGE = { FREE: 'badge-yellow', STARTER: 'badge-green', PRO: 'badge-blue', ENTERPRISE: 'badge-purple', MSSP: 'badge-yellow' };
 
+// null/undefined means "the backend doesn't compute this yet" — rendered as
+// "N/A" so it can never be confused with a real, computed zero.
 function fmtMoney(n, short=false) {
-  const v = Number(n || 0);
+  if (n === null || n === undefined) return 'N/A';
+  const v = Number(n);
   if (short && v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
   if (short && v >= 1000) return '$' + (v/1000).toFixed(1) + 'K';
   return '$' + v.toFixed(2);
 }
-function fmtNum(n) { return Number(n || 0).toLocaleString(); }
-function fmtPct(n) { return Number(n || 0).toFixed(1) + '%'; }
+function fmtNum(n) { return (n === null || n === undefined) ? 'N/A' : Number(n).toLocaleString(); }
+function fmtPct(n) { return (n === null || n === undefined) ? 'N/A' : Number(n).toFixed(1) + '%'; }
+// LTV and CAC are both currently unmodeled by the backend (hardcoded null) —
+// show 'N/A' rather than a fake '∞x', which previously fired for the same
+// null-CAC case and read as "infinitely good," the opposite of "unknown."
+function ltvCacRatio(d) {
+  if (d.ltv === null || d.ltv === undefined || !(d.cac > 0)) return 'N/A';
+  return (d.ltv / d.cac).toFixed(1) + 'x';
+}
 function trendHtml(v, prefix='') {
   if (v === null || v === undefined) return '';
   const cls = v > 0 ? 'trend-up' : v < 0 ? 'trend-down' : 'trend-flat';
@@ -277,7 +287,28 @@ async function loadKPI() {
     }
     // Backend nests real metrics under `kpi`; flatten so the renderers below
     // (which read d.nrr, d.mrr, d.churn_rate, etc. off the root) get real values.
-    kpiData = raw.kpi || raw;
+    // handlePlatformKPI's actual field names diverge from what the renderers
+    // read in several places (e.g. `api_requests_mtd` not
+    // `total_api_calls_month`) — remap those here in one place. Fields the
+    // handler genuinely never computes (mrr_growth_pct, customer_growth_pct,
+    // overage_revenue_month, trial_conversion_rate, mrr_history,
+    // top_overage_accounts) are left as `null`/`[]` so fmtMoney/fmtPct/fmtNum
+    // render an honest "N/A" instead of a fabricated 0/$0.00/0.0%.
+    const k = raw.kpi || raw;
+    kpiData = {
+      ...k,
+      ltv: k.ltv_estimate ?? null,
+      cac: k.cac_estimate ?? null,
+      total_api_calls_month: k.api_requests_mtd ?? null,
+      active_api_keys: k.api_active_users ?? null, // real field counts distinct active USERS, not API keys — see relabeled "Active API Users" KPI
+      new_customers_month: k.new_users_mtd ?? null,
+      trial_conversion_rate: null,  // not computable from a point-in-time snapshot (needs cohort tracking)
+      mrr_growth_pct: null,         // handler computes no historical MoM comparison
+      customer_growth_pct: null,
+      overage_revenue_month: null,  // handler tracks no overage billing
+      mrr_history: [],              // handler returns no historical series
+      top_overage_accounts: [],     // handler tracks no per-account overage
+    };
     document.getElementById('main-loading').style.display = 'none';
     document.getElementById('dashboard-content').style.display = 'block';
     document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
@@ -335,9 +366,9 @@ function renderCEOKPIs(d) {
 function renderBoardKPIs(d) {
   return [
     kpiCard('ARR', fmtMoney(d.arr, true), 'Annual Recurring Revenue', null, 'kpi-green'),
-    kpiCard('MRR Growth', fmtPct(d.mrr_growth_pct), 'Month-over-month', null, d.mrr_growth_pct > 0 ? 'kpi-green' : 'kpi-red'),
+    kpiCard('MRR Growth', fmtPct(d.mrr_growth_pct), 'Month-over-month', null, d.mrr_growth_pct == null ? 'kpi-blue' : d.mrr_growth_pct > 0 ? 'kpi-green' : 'kpi-red'),
     kpiCard('NRR', fmtPct(d.nrr), 'Net Revenue Retention', null, 'kpi-blue'),
-    kpiCard('LTV/CAC', (d.cac > 0 ? (d.ltv / d.cac).toFixed(1) : '∞') + 'x', 'Unit economics ratio', null, 'kpi-purple'),
+    kpiCard('LTV/CAC', ltvCacRatio(d), 'Unit economics ratio', null, 'kpi-purple'),
     kpiCard('Total Customers', fmtNum(d.total_customers), 'Paying + trial', null, 'kpi-blue'),
     kpiCard('Churn', fmtPct(d.churn_rate), 'Monthly customer churn', null, d.churn_rate > 5 ? 'kpi-red' : 'kpi-green'),
     kpiCard('API Consumption', fmtNum(d.total_api_calls_month), 'Calls this month', null, 'kpi-yellow'),
@@ -347,7 +378,7 @@ function renderBoardKPIs(d) {
 
 function renderCISOKPIs(d) {
   return [
-    kpiCard('Active API Keys', fmtNum(d.active_api_keys), 'Live credentials', null, 'kpi-blue'),
+    kpiCard('Active API Users', fmtNum(d.active_api_keys), 'Distinct users with API activity', null, 'kpi-blue'),
     kpiCard('API Calls / Mo', fmtNum(d.total_api_calls_month), 'Platform consumption', null, 'kpi-blue'),
     kpiCard('Paying Customers', fmtNum(d.total_customers), 'Subscribed accounts', null, 'kpi-green'),
     kpiCard('Trial-to-Paid', fmtPct(d.trial_conversion_rate), 'Conversion rate', null, 'kpi-purple'),
@@ -363,11 +394,11 @@ function renderFinanceKPIs(d) {
     kpiCard('MRR', fmtMoney(d.mrr, true), 'Monthly Recurring Revenue', d.mrr_growth_pct, 'kpi-green'),
     kpiCard('ARR', fmtMoney(d.arr, true), 'Annual Run Rate', null, 'kpi-green'),
     kpiCard('Overage Revenue', fmtMoney(d.overage_revenue_month, true), 'Expansion billing', null, 'kpi-orange'),
-    kpiCard('Total Revenue', fmtMoney((d.mrr||0) + (d.overage_revenue_month||0), true), 'MRR + Overage', null, 'kpi-green'),
+    kpiCard('Total Revenue', fmtMoney((d.mrr||0) + (d.overage_revenue_month||0), true), d.overage_revenue_month == null ? 'MRR only — overage not tracked' : 'MRR + Overage', null, 'kpi-green'),
     kpiCard('ARPU', fmtMoney(d.arpu), 'Avg revenue/user', null, 'kpi-blue'),
     kpiCard('LTV', fmtMoney(d.ltv, true), 'Lifetime value', null, 'kpi-purple'),
     kpiCard('CAC', fmtMoney(d.cac), 'Acquisition cost', null, 'kpi-yellow'),
-    kpiCard('LTV/CAC', (d.cac > 0 ? (d.ltv / d.cac).toFixed(1) : '∞') + 'x', 'Unit economics', null, 'kpi-purple'),
+    kpiCard('LTV/CAC', ltvCacRatio(d), 'Unit economics', null, 'kpi-purple'),
   ].join('');
 }
 
@@ -380,30 +411,30 @@ function renderGrowthKPIs(d) {
     kpiCard('API Adoption', fmtNum(d.total_api_calls_month), 'Calls this month', null, 'kpi-blue'),
     kpiCard('ARPU', fmtMoney(d.arpu), 'Avg revenue/user', null, 'kpi-yellow'),
     kpiCard('Total Customers', fmtNum(d.total_customers), 'All paying tiers', null, 'kpi-blue'),
-    kpiCard('MRR Growth', fmtPct(d.mrr_growth_pct), 'MoM', null, d.mrr_growth_pct > 0 ? 'kpi-green' : 'kpi-red'),
+    kpiCard('MRR Growth', fmtPct(d.mrr_growth_pct), 'MoM', null, d.mrr_growth_pct == null ? 'kpi-blue' : d.mrr_growth_pct > 0 ? 'kpi-green' : 'kpi-red'),
   ].join('');
 }
 
 function buildCEONarrative(d) {
-  const mrrGrow = d.mrr_growth_pct > 0 ? `growing at <strong>${d.mrr_growth_pct?.toFixed(1)}% MoM</strong>` : `down ${Math.abs(d.mrr_growth_pct||0).toFixed(1)}% MoM`;
+  const mrrGrow = d.mrr_growth_pct == null ? 'with month-over-month growth not yet tracked' : d.mrr_growth_pct > 0 ? `growing at <strong>${d.mrr_growth_pct.toFixed(1)}% MoM</strong>` : `down ${Math.abs(d.mrr_growth_pct).toFixed(1)}% MoM`;
   const churnHealth = d.churn_rate < 3 ? 'excellent churn control' : d.churn_rate < 6 ? 'moderate churn' : 'elevated churn requiring attention';
   return `Platform is generating <strong>${fmtMoney(d.mrr, true)} MRR</strong> (${fmtMoney(d.arr, true)} ARR), ${mrrGrow}.
   <strong>${fmtNum(d.total_customers)} paying customers</strong> with an ARPU of <strong>${fmtMoney(d.arpu)}</strong> and LTV of <strong>${fmtMoney(d.ltv, true)}</strong>.
-  Unit economics: LTV/CAC ratio of <strong>${d.cac > 0 ? (d.ltv/d.cac).toFixed(1) : '∞'}x</strong>.
+  Unit economics: LTV/CAC ratio of <strong>${ltvCacRatio(d)}</strong>.
   NRR stands at <strong>${fmtPct(d.nrr)}</strong> — indicating ${d.nrr >= 100 ? 'expansion revenue from existing customers' : 'contraction from existing base'}.
   ${churnHealth.charAt(0).toUpperCase() + churnHealth.slice(1)} at <strong>${fmtPct(d.churn_rate)}</strong>.`;
 }
 
 function buildBoardNarrative(d) {
   return `ARR stands at <strong>${fmtMoney(d.arr, true)}</strong> with NRR of <strong>${fmtPct(d.nrr)}</strong>.
-  LTV/CAC ratio of <strong>${d.cac > 0 ? (d.ltv/d.cac).toFixed(1) : '∞'}x</strong> demonstrates ${d.cac > 0 && d.ltv/d.cac > 3 ? 'strong' : 'developing'} unit economics.
+  LTV/CAC ratio of <strong>${ltvCacRatio(d)}</strong> demonstrates ${d.cac > 0 && d.ltv > 0 && d.ltv/d.cac > 3 ? 'strong' : 'developing'} unit economics.
   Customer base of <strong>${fmtNum(d.total_customers)}</strong> with monthly churn of <strong>${fmtPct(d.churn_rate)}</strong>.
   API consumption at <strong>${fmtNum(d.total_api_calls_month)} calls/month</strong> indicates active platform engagement.
   Overage revenue of <strong>${fmtMoney(d.overage_revenue_month, true)}</strong> signals expansion opportunity from power users.`;
 }
 
 function buildCISONarrative(d) {
-  return `Platform serves <strong>${fmtNum(d.total_customers)} enterprise customers</strong> with <strong>${fmtNum(d.active_api_keys)} active API keys</strong>.
+  return `Platform serves <strong>${fmtNum(d.total_customers)} enterprise customers</strong> with <strong>${fmtNum(d.active_api_keys)} active API users</strong>.
   <strong>${fmtNum(d.plan_distribution?.ENTERPRISE || 0)} Enterprise</strong> and <strong>${fmtNum(d.plan_distribution?.MSSP || 0)} MSSP</strong> tier accounts represent highest-trust access.
   API throughput of <strong>${fmtNum(d.total_api_calls_month)}/month</strong> across all tiers.
   Trial-to-paid conversion at <strong>${fmtPct(d.trial_conversion_rate)}</strong>.
@@ -412,10 +443,11 @@ function buildCISONarrative(d) {
 
 function buildFinanceNarrative(d) {
   const totalRev = (d.mrr || 0) + (d.overage_revenue_month || 0);
-  return `Total monthly revenue: <strong>${fmtMoney(totalRev, true)}</strong> (<strong>${fmtMoney(d.mrr, true)} MRR</strong> + <strong>${fmtMoney(d.overage_revenue_month, true)} overage</strong>).
+  const overageNote = d.overage_revenue_month == null ? '(overage billing is not yet tracked by the platform)' : `(<strong>${fmtMoney(d.mrr, true)} MRR</strong> + <strong>${fmtMoney(d.overage_revenue_month, true)} overage</strong>)`;
+  return `Total monthly revenue: <strong>${fmtMoney(totalRev, true)}</strong> ${overageNote}.
   ARR projection: <strong>${fmtMoney(d.arr, true)}</strong>.
   ARPU of <strong>${fmtMoney(d.arpu)}</strong> with LTV of <strong>${fmtMoney(d.ltv, true)}</strong> against CAC of <strong>${fmtMoney(d.cac)}</strong>.
-  LTV/CAC ratio: <strong>${d.cac > 0 ? (d.ltv/d.cac).toFixed(1) : '∞'}x</strong>.
+  LTV/CAC ratio: <strong>${ltvCacRatio(d)}</strong>.
   MRR growth: <strong>${fmtPct(d.mrr_growth_pct)} MoM</strong>. Customer churn: <strong>${fmtPct(d.churn_rate)}</strong>.`;
 }
 
@@ -460,11 +492,11 @@ function renderCharts(d) {
   // Health grid
   const health = [
     { icon: '💰', label: 'MRR', val: fmtMoney(d.mrr, true), ok: (d.mrr||0) > 0 },
-    { icon: '📈', label: 'Growth', val: fmtPct(d.mrr_growth_pct), ok: (d.mrr_growth_pct||0) >= 0 },
+    { icon: '📈', label: 'Growth', val: fmtPct(d.mrr_growth_pct), ok: d.mrr_growth_pct != null && d.mrr_growth_pct >= 0 },
     { icon: '🔄', label: 'NRR', val: fmtPct(d.nrr), ok: (d.nrr||0) >= 100 },
     { icon: '📉', label: 'Churn', val: fmtPct(d.churn_rate), ok: (d.churn_rate||0) < 5 },
     { icon: '⚡', label: 'API / Mo', val: fmtNum(d.total_api_calls_month), ok: true },
-    { icon: '🏆', label: 'Conv Rate', val: fmtPct(d.trial_conversion_rate), ok: (d.trial_conversion_rate||0) > 10 },
+    { icon: '🏆', label: 'Conv Rate', val: fmtPct(d.trial_conversion_rate), ok: d.trial_conversion_rate != null && d.trial_conversion_rate > 10 },
   ];
   document.getElementById('health-grid').innerHTML = health.map(h => `
     <div class="health-item">
@@ -481,7 +513,7 @@ function renderCharts(d) {
       <td style="font-family:monospace;font-size:0.75rem">${a.email || a.user_id || '—'}</td>
       <td><span class="badge ${PLAN_BADGE[a.plan] || 'badge-blue'}">${a.plan || '—'}</span></td>
       <td style="font-weight:700;color:var(--orange)">${fmtMoney(a.overage_charges)}</td>
-    </tr>`).join('') : '<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:1rem">No overage accounts this month</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:1rem">Per-account overage billing is not yet tracked</td></tr>';
 }
 
 async function refreshDashboard() {

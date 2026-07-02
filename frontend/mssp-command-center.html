@@ -739,7 +739,9 @@ async function loadPartners() {
   const wrap = document.getElementById('partnerTableWrap');
   try {
     const data = await apiFetch('/api/mssp/partners');
-    partnerData = Array.isArray(data) ? data : [];
+    // handleListMsspPartners returns { partners:[...], total } — not a bare
+    // array — so this always fell through to the empty state.
+    partnerData = Array.isArray(data?.partners) ? data.partners : (Array.isArray(data) ? data : []);
     if (partnerData.length === 0) {
       wrap.innerHTML = `
         <div class="empty-state">
@@ -895,38 +897,48 @@ async function loadWLStatus() {
     wlData = await apiFetch('/api/mssp/wl-status');
   } catch(e) {}
 
+  // handleMsspWlStatus never returns api_status/portal_status/domain_status —
+  // it only computes aggregate configured/pending/total counts across
+  // partners.brand_name + partners.custom_domain. The 3 cards below used to
+  // silently fall through to their hardcoded "Available" default every time.
+  // Replaced with the real, available signals instead of fabricating status.
+  const partners  = Array.isArray(wlData.partners) ? wlData.partners : [];
+  const total      = wlData.total ?? partners.length;
+  const brandedCnt = partners.filter(p => p.brand_name).length;
+  const domainCnt  = partners.filter(p => p.custom_domain).length;
+  const pendingCnt = wlData.pending ?? Math.max(0, total - (wlData.configured ?? 0));
+
   const cards = [
     {
-      key: 'api_status',
-      icon: '🛰️',
-      name: 'White Label API Status',
-      desc: 'Partner-facing API endpoint availability and authentication',
-      color: 'var(--accent)',
-      default: 'Available'
-    },
-    {
-      key: 'portal_status',
       icon: '🖥️',
-      name: 'Branded Portal Status',
-      desc: 'White-label partner portal — branding, config, and client access',
-      color: 'var(--accent2)',
-      default: 'Available'
+      name: 'Branded Portals Configured',
+      desc: 'Partners with a brand name set for their white-label portal',
+      color: 'var(--accent)',
+      value: total ? `${brandedCnt} / ${total}` : 'No partners yet',
+      active: brandedCnt > 0,
     },
     {
-      key: 'domain_status',
       icon: '🌐',
-      name: 'Custom Domain Status',
-      desc: 'Custom domain mapping and SSL certificate provisioning',
+      name: 'Custom Domains Mapped',
+      desc: 'Partners with a custom domain configured',
+      color: 'var(--accent2)',
+      value: total ? `${domainCnt} / ${total}` : 'No partners yet',
+      active: domainCnt > 0,
+    },
+    {
+      icon: '⏳',
+      name: 'Pending Setup',
+      desc: 'Partners missing a brand name or custom domain',
       color: 'var(--accent3)',
-      default: 'Available'
+      value: total ? `${pendingCnt} pending` : 'No partners yet',
+      active: pendingCnt === 0 && total > 0,
     }
   ];
 
   board.innerHTML = cards.map(c => {
-    const rawStatus = (wlData[c.key] || c.default || 'Available');
-    const sl = rawStatus.toLowerCase();
-    const dotClass = sl.includes('active') ? 'ws-active' : sl.includes('setup') ? 'ws-setup' : 'ws-available';
-    const statusColor = sl.includes('active') ? 'var(--accent3)' : sl.includes('setup') ? 'var(--gold)' : 'var(--text-muted)';
+    const dotClass = c.active ? 'ws-active' : 'ws-setup';
+    const statusColor = c.active ? 'var(--accent3)' : 'var(--gold)';
+    const rawStatus = c.value;
     return `
       <div class="wl-card" style="--wl-color:${c.color}">
         <span class="wl-icon">${c.icon}</span>
@@ -946,47 +958,31 @@ async function loadApiUsage() {
   const wrap = document.getElementById('usageTableWrap');
   try {
     const data = await apiFetch('/api/mssp/usage');
-    const rows = Array.isArray(data) ? data : [];
-    if (rows.length === 0) {
-      wrap.innerHTML = '<div class="table-empty">No API usage data available. Partners will appear here once they begin using the API.</div>';
+    // handleMsspUsage returns one platform-wide aggregate object for the
+    // month ({month,total_scans,total_api_calls,total_reports,
+    // active_clients,total_alerts}) — there is no per-partner breakdown at
+    // all, so the previous per-partner table always rendered its empty
+    // state. Show the real aggregate instead of a fabricated partner list.
+    if (!data || typeof data !== 'object') {
+      wrap.innerHTML = '<div class="table-empty">No API usage data available yet.</div>';
       return;
     }
+    const tiles = [
+      { label: 'Total Scans',        value: data.total_scans   ?? 0 },
+      { label: 'Total API Calls',    value: data.total_api_calls ?? 0 },
+      { label: 'Total Reports',      value: data.total_reports ?? 0 },
+      { label: 'Active Clients',     value: data.active_clients ?? 0 },
+      { label: 'Total Alerts',       value: data.total_alerts  ?? 0 },
+    ];
     wrap.innerHTML = `
-      <table class="data-table" id="usageTable">
-        <thead><tr>
-          <th>Partner</th>
-          <th>API Calls (This Month)</th>
-          <th>Plan Limit</th>
-          <th>Usage</th>
-          <th>Status</th>
-        </tr></thead>
-        <tbody>
-          ${rows.map(u => {
-            const calls = Number(u.calls) || 0;
-            const limit = Number(u.limit) || 0;
-            const pct = limit > 0 ? Math.min(100, Math.round((calls/limit)*100)) : 0;
-            const barColor = pct >= 90 ? 'var(--danger)' : pct >= 80 ? 'var(--warn)' : 'var(--accent3)';
-            const usageStatus = pct >= 90 ? 's-failed' : pct >= 80 ? 's-pending' : 's-active';
-            const usageLabel = pct >= 90 ? 'Critical' : pct >= 80 ? 'High Usage' : 'Normal';
-            return `
-              <tr>
-                <td style="font-weight:700;color:#fff">${esc(u.partner||'—')}</td>
-                <td style="font-weight:700">${calls.toLocaleString()}</td>
-                <td>${limit > 0 ? limit.toLocaleString() : 'Unlimited'}</td>
-                <td>
-                  <div class="usage-bar-wrap">
-                    <div class="usage-bar-bg">
-                      <div class="usage-bar-fill" style="width:${pct}%;background:${barColor}"></div>
-                    </div>
-                    <span class="usage-pct" style="color:${barColor}">${pct}%</span>
-                  </div>
-                </td>
-                <td><span class="status-badge ${usageStatus}">${usageLabel}</span></td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Platform-wide usage for ${esc(data.month || 'this month')} — per-partner attribution is not tracked yet.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+        ${tiles.map(t => `
+          <div style="background:var(--bg-elevated,#0f172a);border-radius:8px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:#fff">${Number(t.value).toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${t.label}</div>
+          </div>`).join('')}
+      </div>
     `;
   } catch(e) {
     wrap.innerHTML = '<div class="table-empty">Unable to load API usage data. API unavailable.</div>';
@@ -999,10 +995,14 @@ async function loadRevTrend() {
   let months = [];
   let values = [];
   try {
-    const d = await apiFetch('/api/mssp/revenue-trend');
-    if (Array.isArray(d) && d.length > 0) {
-      months = d.map(r => r.month || '');
-      values = d.map(r => Number(r.revenue) || 0);
+    const resp = await apiFetch('/api/mssp/revenue-trend');
+    // handleMsspRevenueTrend returns { months:[{month,label,mrr_inr}], ... }
+    // — the response itself is an object, and each entry's revenue field is
+    // named mrr_inr, not revenue. This always produced the 6-bar zero chart.
+    const d = resp && Array.isArray(resp.months) ? resp.months : [];
+    if (d.length > 0) {
+      months = d.map(r => r.label || r.month || '');
+      values = d.map(r => Number(r.mrr_inr) || 0);
     }
   } catch(e) {}
 
@@ -1033,29 +1033,35 @@ async function loadRevTrend() {
 // ── 6. EXPANSION OPPORTUNITIES ────────────────────────────────────────────────
 async function loadExpOpps() {
   const grid = document.getElementById('expOppGrid');
-  let data = { tier_upgrade: 0, api_limit: 0, inactive: 0 };
+  // handleMsspExpansionOpps only ever computes tier-upgrade candidates
+  // (via opportunities[].recommended_tier, based on client capacity % / 3mo
+  // MRR) — there is no api_limit or inactive-partner tracking anywhere in
+  // the handler, so those two counts were always silently 0. Show the real
+  // tier-upgrade count and mark the other two honestly as not yet tracked
+  // instead of implying "checked, found zero."
+  let opportunities = [];
   try {
     const d = await apiFetch('/api/mssp/expansion-opps');
-    data = Object.assign(data, d || {});
+    opportunities = Array.isArray(d?.opportunities) ? d.opportunities : [];
   } catch(e) {}
 
   grid.innerHTML = `
     <div class="exp-card upgrade">
-      <div class="exp-count" style="color:var(--accent3)">${Number(data.tier_upgrade)||0}</div>
+      <div class="exp-count" style="color:var(--accent3)">${opportunities.length}</div>
       <div class="exp-label">Partners Eligible for Tier Upgrade</div>
-      <p class="exp-desc">Partners who meet criteria to move from Reseller to White Label or White Label to OEM based on deal volume.</p>
+      <p class="exp-desc">Partners who meet criteria to move up a tier based on client capacity or 3-month billing performance.</p>
       <button class="exp-cta" onclick="showToast('Reviewing upgrade criteria...')">Review eligibility &rarr;</button>
     </div>
     <div class="exp-card upsell">
-      <div class="exp-count" style="color:var(--gold)">${Number(data.api_limit)||0}</div>
+      <div class="exp-count" style="color:var(--text-dim)">—</div>
       <div class="exp-label">Partners at 80%+ API Limit</div>
-      <p class="exp-desc">Upsell opportunity — these partners are approaching their plan limits and are candidates for an API plan upgrade.</p>
+      <p class="exp-desc">Not yet tracked by the platform — per-partner API quota usage isn't recorded.</p>
       <button class="exp-cta" onclick="scrollToUsage()">View API usage &rarr;</button>
     </div>
     <div class="exp-card churn">
-      <div class="exp-count" style="color:var(--danger)">${Number(data.inactive)||0}</div>
+      <div class="exp-count" style="color:var(--text-dim)">—</div>
       <div class="exp-label">Partners with No Activity &gt;30 Days</div>
-      <p class="exp-desc">Churn risk — these partners have not made any API calls or recorded any client activity in the last 30 days.</p>
+      <p class="exp-desc">Not yet tracked by the platform — last-activity timestamps per partner aren't recorded.</p>
       <button class="exp-cta" onclick="showToast('Preparing re-engagement list...')">Re-engage &rarr;</button>
     </div>
   `;

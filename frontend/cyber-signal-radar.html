@@ -422,12 +422,16 @@ async function loadRadar(){
       camp.innerHTML = `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">No active campaigns detected</div>`;
     }
 
-    // Actors
+    // Actors — the public radar snapshot (sanitizeForPublic in
+    // radarService.js) intentionally strips active_threat_actors for
+    // non-enterprise callers; it is never present here, so the old "No
+    // active threat actors" message was misleading (implies "checked, found
+    // none" rather than "gated behind Enterprise").
     const act = document.getElementById('actors-list');
     if(data.active_threat_actors?.length){
       act.innerHTML = data.active_threat_actors.map(a=>`<div class="actor-item"><span class="actor-name">${a.name}</span><span class="actor-count">${a.count}</span></div>`).join('');
     } else {
-      act.innerHTML = `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">No active threat actors</div>`;
+      act.innerHTML = `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">Threat-actor attribution is an Enterprise feature — <a href="/enterprise-security" style="color:var(--accent)">upgrade to view</a></div>`;
     }
 
     // Update bar

@@ -313,13 +313,15 @@ async function msspCalc() {
   try {
     var r = await fetch('/api/v1/intel/pricing.json');
     var j = await r.json();
-    var plans = (j.data||j).plans || j;
+    // Real shape is flat { tiers: [{tier,label,price_inr,...}], ... } —
+    // no .data wrapper and no .plans field, so this branch never ran.
+    var plans = j.tiers || [];
     var prices = {starter:999, professional:4999, enterprise:14999};
     var margins = {starter:0.35, professional:0.40, enterprise:0.45};
     var clientPrice = prices[tier] || 4999;
     var margin = margins[tier] || 0.40;
     if (Array.isArray(plans)) {
-      var plan = plans.find(function(p){return p.id===tier||p.name&&p.name.toLowerCase().includes(tier);});
+      var plan = plans.find(function(p){return p.tier===tier||p.label&&p.label.toLowerCase().includes(tier);});
       if (plan && plan.price_inr) clientPrice = plan.price_inr;
     }
     var grossMRR = clients * clientPrice;
