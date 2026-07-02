@@ -16,6 +16,7 @@
  */
 
 import { ok, fail } from '../lib/response.js';
+import { normalizeSeverity } from '../lib/contracts.js';
 
 const KV_INCIDENTS_KEY   = 'ciso:incidents';
 const KV_POSTURE_KEY     = 'ciso:posture_cache';
@@ -561,8 +562,12 @@ export async function handleCreateIncident(request, env, authCtx = {}) {
   const { title, severity = 'MEDIUM', category = 'General', description = '', affected_systems = [] } = body;
   if (!title || title.length < 5) return fail(request, 'title is required (min 5 chars)', 400, 'MISSING_TITLE');
 
+  // Incidents intentionally exclude INFO — an "informational" incident isn't
+  // a meaningful severity for this domain — so the shared 5-value SEVERITY
+  // enum is normalized then narrowed, rather than redefining its own list.
+  const normalizedSeverity = normalizeSeverity(severity);
   const validSeverities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
-  if (!validSeverities.includes(severity.toUpperCase())) {
+  if (!normalizedSeverity || !validSeverities.includes(normalizedSeverity)) {
     return fail(request, `severity must be one of: ${validSeverities.join(', ')}`, 400, 'INVALID_SEV');
   }
 
@@ -570,7 +575,7 @@ export async function handleCreateIncident(request, env, authCtx = {}) {
   const incident = {
     id:               generateIncidentId(),
     title,
-    severity:         severity.toUpperCase(),
+    severity:         normalizedSeverity,
     category,
     description,
     affected_systems,
