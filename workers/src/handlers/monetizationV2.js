@@ -479,6 +479,55 @@ export async function handleDowngrade(request, env, authCtx = {}) {
   });
 }
 
+// ─── GET /api/billing/downgrade — pending downgrade status ──────────────────
+export async function handleDowngradeStatus(request, env, authCtx = {}) {
+  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+
+  let pending = null;
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      pending = await env.SECURITY_HUB_KV.get(`billing:downgrade_request:${authCtx.userId}`, { type: 'json' });
+    } catch {}
+  }
+
+  return ok(request, {
+    downgrade_pending: !!pending,
+    request:           pending,
+    current_plan:      getUserTier(authCtx),
+    ...(pending ? { cancel_url: '/api/billing/downgrade/cancel' } : {}),
+  });
+}
+
+// ─── POST /api/billing/downgrade/cancel — cancel a scheduled downgrade ──────
+// The downgrade response has always advertised this cancel_url; before Phase 4
+// the route did not exist, so customers could schedule a downgrade but never
+// take it back.
+export async function handleDowngradeCancel(request, env, authCtx = {}) {
+  if (!authCtx?.authenticated) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+
+  if (!env?.SECURITY_HUB_KV) {
+    return fail(request, 'Billing storage unavailable — try again shortly', 503, 'STORAGE_UNAVAILABLE');
+  }
+
+  const key = `billing:downgrade_request:${authCtx.userId}`;
+  let pending = null;
+  try { pending = await env.SECURITY_HUB_KV.get(key, { type: 'json' }); } catch {}
+
+  if (!pending) {
+    return fail(request, 'No scheduled downgrade found for your account', 404, 'NO_PENDING_DOWNGRADE');
+  }
+
+  try { await env.SECURITY_HUB_KV.delete(key); } catch {
+    return fail(request, 'Could not cancel the downgrade — try again shortly', 500, 'CANCEL_FAILED');
+  }
+
+  return ok(request, {
+    downgrade_cancelled: true,
+    current_plan:        getUserTier(authCtx),
+    message:             'Scheduled downgrade cancelled. Your current plan continues unchanged.',
+  });
+}
+
 // ─── Track usage (internal utility, called from scan handlers) ────────────────
 export async function trackUsage(env, userId, module, count = 1) {
   if (!env?.SECURITY_HUB_KV || !userId) return;

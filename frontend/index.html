@@ -3762,6 +3762,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <option value="kql">Microsoft Sentinel / KQL</option>
 <option value="yara">YARA (Malware)</option>
 <option value="elastic">Elastic EQL</option>
+<option value="stix">STIX 2.1 Bundle</option>
 <option value="all">All Platforms</option>
 </select>
 </div>
@@ -16804,7 +16805,7 @@ window.cdbGenerateSOARRule = function() {
 
   if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⚡ Generating...'; }
 
-  var platformLabels = { sigma:'SIGMA RULE', splunk:'SPLUNK SPL', kql:'KQL / SENTINEL', yara:'YARA RULE', elastic:'ELASTIC EQL', all:'ALL PLATFORMS' };
+  var platformLabels = { sigma:'SIGMA RULE', splunk:'SPLUNK SPL', kql:'KQL / SENTINEL', yara:'YARA RULE', elastic:'ELASTIC EQL', stix:'STIX 2.1 BUNDLE', all:'ALL PLATFORMS' };
 
   fetch('/api/ai/generate-rules', {
     method: 'POST',
@@ -16825,14 +16826,23 @@ window.cdbGenerateSOARRule = function() {
         if (data.rules.kql)     parts.push('// ── KQL/SENTINEL ──\n' + data.rules.kql);
         if (data.rules.yara)    parts.push('// ── YARA ──\n' + data.rules.yara);
         if (data.rules.elastic) parts.push('// ── ELASTIC EQL ──\n' + data.rules.elastic);
+        if (data.rules.stix)    parts.push('// ── STIX 2.1 BUNDLE ──\n' + data.rules.stix);
         ruleContent = parts.join('\n\n');
       } else {
         ruleContent = data.rules[platform] || JSON.stringify(data.rules, null, 2);
       }
     } else if (data && data.rule) {
       ruleContent = data.rule;
-    } else {
-      ruleContent = soarFallbackRule(cve, platform);
+    }
+
+    if (!ruleContent) {
+      // Honest failure state — never present a locally fabricated rule as engine output
+      ruleContent = '// Rule generation failed — the engine returned no rule for "' + cve + '".\n// Please retry in a moment. If this persists, contact support@cyberdudebivash.com.';
+    } else if (ruleText) {
+      // Remember what was generated so Download can pick the right filename
+      ruleText.dataset.platform = platform;
+      ruleText.dataset.cve = cve;
+      ruleText.dataset.filename = (data && data.export_filenames && data.export_filenames[platform]) || '';
     }
 
     if (ruleText) ruleText.textContent = ruleContent;
@@ -16840,46 +16850,12 @@ window.cdbGenerateSOARRule = function() {
   .catch(function() {
     if (outputBox)  outputBox.style.display = 'block';
     if (outputLabel) outputLabel.textContent = platformLabels[platform] || platform.toUpperCase();
-    if (ruleText) ruleText.textContent = soarFallbackRule(cve, platform);
+    if (ruleText) ruleText.textContent = '// Rule generation is temporarily unavailable (network or server error).\n// Nothing was generated — please retry in a moment.';
   })
   .finally(function() {
     if (genBtn) { genBtn.disabled = false; genBtn.textContent = '⚡ Generate Rules'; }
   });
 };
-
-function soarFallbackRule(cve, platform) {
-  var cveSafe = cve.replace(/[^A-Z0-9\-]/gi,'');
-  var ts = new Date().toISOString().slice(0,10);
-  if (platform === 'sigma' || platform === 'all') {
-    return 'title: ' + cveSafe + ' Exploitation Attempt\nid: cdb-' + cveSafe.toLowerCase() + '-' + Date.now()
-      + '\nstatus: experimental\nauthor: CYBERDUDEBIVASH MYTHOS Engine\ndate: ' + ts
-      + '\ndescription: Detects exploitation attempts related to ' + cveSafe
-      + '\nreferences:\n  - https://nvd.nist.gov/vuln/detail/' + cveSafe
-      + '\nlogsource:\n  category: process_creation\n  product: windows'
-      + '\ndetection:\n  selection:\n    CommandLine|contains:\n      - \'exploit\'\n      - \'payload\''
-      + '\n  condition: selection\nfalsepositives:\n  - Penetration testing\nlevel: high\ntags:\n  - attack.initial_access\n  - attack.t1190';
-  }
-  if (platform === 'splunk') {
-    return 'index=* sourcetype=WinEventLog:Security\n| search CommandLine="*exploit*" OR CommandLine="*payload*"\n| eval cve="' + cveSafe + '"\n| table _time host user CommandLine cve\n| sort -_time';
-  }
-  if (platform === 'kql') {
-    return 'DeviceProcessEvents\n| where TimeGenerated > ago(24h)\n| where ProcessCommandLine has_any ("exploit", "payload")\n| extend CVE = "' + cveSafe + '"\n| project TimeGenerated, DeviceName, AccountName, ProcessCommandLine, CVE\n| order by TimeGenerated desc';
-  }
-  if (platform === 'yara') {
-    return 'rule ' + cveSafe.replace(/-/g,'_') + '_Exploit {\n  meta:\n    author = "CYBERDUDEBIVASH MYTHOS"\n    description = "Detects ' + cveSafe + ' exploitation artifacts"\n    date = "' + ts + '"\n    severity = "HIGH"\n  strings:\n    $exploit1 = "exploit" nocase\n    $exploit2 = "payload" nocase\n  condition:\n    any of them\n}';
-  }
-  if (platform === 'elastic') {
-    return JSON.stringify({
-      "query": { "bool": { "must": [
-        { "match": { "event.type": "process" } },
-        { "query_string": { "query": "process.command_line:(exploit OR payload)", "default_field": "process.command_line" } }
-      ] } },
-      "_source": ["@timestamp","host.name","user.name","process.command_line"],
-      "sort": [{ "@timestamp": { "order": "desc" } }]
-    }, null, 2);
-  }
-  return '# ' + cveSafe + ' detection rule\n# Platform: ' + platform + '\n# Generated: ' + ts + '\n# Customize for your environment';
-}
 
 window.cdbCopySOARRule = function(btnOrNull) {
   var text = '';
@@ -16905,14 +16881,23 @@ window.cdbCopySOARRule = function(btnOrNull) {
 
 window.cdbDownloadSOARRule = function(btnOrNull, filename) {
   var text = '';
+  var el = document.getElementById('soar-rule-text');
   if (btnOrNull && btnOrNull.dataset && btnOrNull.dataset.content) {
     text = decodeURIComponent(btnOrNull.dataset.content);
   } else {
-    var el = document.getElementById('soar-rule-text');
     text = el ? el.textContent : '';
   }
   if (!text) return;
-  var fname = filename || ('cdb_rule_' + Date.now() + '.yaml');
+  var fname = filename;
+  if (!fname && el && el.dataset && el.dataset.filename) fname = el.dataset.filename;
+  if (!fname) {
+    // Build a platform-correct filename: Sigma→.yml, Splunk→.spl, KQL→.kql,
+    // YARA→.yar, Elastic/STIX→.json, All→.txt
+    var extMap = { sigma:'yml', splunk:'spl', kql:'kql', yara:'yar', elastic:'json', stix:'json', all:'txt' };
+    var plat = (el && el.dataset && el.dataset.platform) || 'sigma';
+    var cvePart = ((el && el.dataset && el.dataset.cve) || 'rule').replace(/[^A-Za-z0-9_-]/g, '_');
+    fname = 'cdb_' + cvePart + '_' + plat + '.' + (extMap[plat] || 'txt');
+  }
   var blob = new Blob([text], { type: 'text/plain' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

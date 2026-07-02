@@ -66,6 +66,52 @@ export async function handleCreateKey(request, env, authCtx) {
   }, { status: 201 });
 }
 
+/**
+ * POST /api/keys/:id/rotate — atomic key rotation.
+ * Revokes the old key and issues a replacement with the same label on the
+ * user's CURRENT tier (so a rotated key picks up plan upgrades). Because the
+ * old key is revoked first, rotation never trips the per-tier key limit.
+ */
+export async function handleRotateKey(request, env, authCtx, keyId) {
+  if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+  if (!keyId) return Response.json({ error: 'Key ID required' }, { status: 400 });
+
+  // Verify ownership and active status before revoking anything
+  const existing = (await listUserApiKeys(env.DB, authCtx.user_id)).find(k => k.id === keyId);
+  if (!existing) return Response.json({ error: 'Key not found' }, { status: 404 });
+  if (!existing.active) {
+    return Response.json({ error: 'Key is already revoked — create a new key instead', hint: 'POST /api/keys' }, { status: 409 });
+  }
+
+  const revoked = await revokeApiKey(env.DB, keyId, authCtx.user_id);
+  if (!revoked) return Response.json({ error: 'Key not found or already revoked' }, { status: 404 });
+
+  try {
+    const result = await createApiKey(env.DB, authCtx.user_id, authCtx.tier, existing.label || 'Rotated Key');
+    return Response.json({
+      success:     true,
+      message:     'Key rotated. The old key is revoked immediately. Save the new key now — this is the only time you will see it.',
+      old_key_id:  keyId,
+      old_prefix:  existing.key_prefix,
+      key:         result.raw_key,   // shown ONCE — never retrievable again
+      key_id:      result.id,
+      prefix:      result.prefix,
+      label:       result.label,
+      tier:        result.tier,
+      limits:      TIER_LIMITS[result.tier] || TIER_LIMITS.FREE,
+      warning:     'Update every integration using the old key — it stopped working the moment this rotation completed.',
+    }, { status: 201 });
+  } catch (e) {
+    // Old key is already revoked; surface that honestly rather than pretending rotation succeeded
+    return Response.json({
+      error:      'Rotation partially failed: the old key was revoked but the replacement could not be created. Create a new key with POST /api/keys.',
+      old_key_id: keyId,
+      detail:     e?.message,
+    }, { status: 500 });
+  }
+}
+
 export async function handleRevokeKey(request, env, authCtx, keyId) {
   if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
   if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });

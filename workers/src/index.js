@@ -178,7 +178,7 @@ import {
   handleGetProfile, handleUpdateProfile, handleAlertConfig, handleTestAlert,
   handleChangePassword, handleDeleteAccount,
 } from './handlers/auth.js';
-import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage } from './handlers/apikeys.js';
+import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage, handleRotateKey } from './handlers/apikeys.js';
 import { handleAsyncScan, handleJobStatus, handleJobResult, handleD1History } from './handlers/jobs.js';
 
 // ─── New v7.0 handlers ────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ import { handleGetAnalytics, handleScanStats, trackEvent, meterApiRequest, handl
 
 // ─── AI Cyber Brain V2 handlers (analyze / simulate / forecast) ──────────────
 import { handleAIAnalyze, handleAISimulate, handleAIForecast,
-         handleAIChat, handleGenerateRules } from './handlers/aiAnalysis.js';
+         handleAIChat, handleGenerateRules, handleRulesHistory, handleGetSavedRule } from './handlers/aiAnalysis.js';
 
 // ─── CVE Engine (for /api/v1/cves endpoint) ───────────────────────────────────
 import { getTopCVEsForModule } from './services/cveEngine.js';
@@ -628,6 +628,7 @@ import {
 import {
   handleGetUsage, handleUpgrade, handleGetBillingPlans,
   handleStartTrial, handleGetLimits, handleGetInvoices, handleDowngrade,
+  handleDowngradeStatus, handleDowngradeCancel,
 } from './handlers/monetizationV2.js';
 
 // ─── Affiliate & Partner System ───────────────────────────────────────────────
@@ -1167,6 +1168,7 @@ function apiInfoResponse() {
       // API Keys
       'GET  /api/keys':             'List your API keys',
       'POST /api/keys':             'Generate new API key (shown once)',
+      'POST /api/keys/:id/rotate':  'Rotate a key — revokes old, issues replacement (shown once)',
       'DELETE /api/keys/:id':       'Revoke a key',
       'GET  /api/keys/:id/usage':   'Daily/monthly usage for a key',
       // Sync scans (v4 compatible)
@@ -1965,6 +1967,11 @@ export default {
       const keyId   = path.split('/')[3];
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleKeyUsage(request, env, authCtx, keyId), request));
+    }
+    if (path.startsWith('/api/keys/') && path.endsWith('/rotate') && method === 'POST') {
+      const keyId   = path.split('/')[3];
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleRotateKey(request, env, authCtx, keyId), request));
     }
     if (path.startsWith('/api/keys/') && method === 'DELETE') {
       const keyId   = path.split('/')[3];
@@ -3426,9 +3433,23 @@ export default {
     if (path === '/api/ai/chat' && method === 'POST') {
       return withSecurityHeaders(withCors(await handleAIChat(request, env), request));
     }
-    // POST /api/ai/generate-rules → SOAR rule generation (Sigma/Splunk/KQL/YARA/Elastic)
+    // POST /api/ai/generate-rules → SOAR rule generation (Sigma/Splunk/KQL/YARA/Elastic/STIX)
+    // Auth is optional here: anonymous visitors can generate, but only
+    // authenticated users get their generations saved to rule history.
     if (path === '/api/ai/generate-rules' && method === 'POST') {
-      return withSecurityHeaders(withCors(await handleGenerateRules(request, env), request));
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleGenerateRules(request, env, authCtx), request));
+    }
+    // GET /api/ai/rules/history → user's saved rule generations (auth required)
+    if (path === '/api/ai/rules/history' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleRulesHistory(request, env, authCtx), request));
+    }
+    // GET /api/ai/rules/:id → full content of one saved rule generation
+    if (path.match(/^\/api\/ai\/rules\/[A-Za-z0-9_-]+$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const recordId = path.split('/').pop();
+      return withSecurityHeaders(withCors(await handleGetSavedRule(request, env, authCtx, recordId), request));
     }
     // POST /api/ai/forecast → exploitation likelihood + time-to-breach + financial impact
     if (path === '/api/ai/forecast' && method === 'POST') {
@@ -4003,6 +4024,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/billing/downgrade' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleDowngrade(request, env, authCtx), request));
+    }
+    // GET /api/billing/downgrade — pending downgrade status
+    if (path === '/api/billing/downgrade' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDowngradeStatus(request, env, authCtx), request));
+    }
+    // POST /api/billing/downgrade/cancel — cancel a scheduled downgrade
+    // (this URL has always been advertised in the downgrade response)
+    if (path === '/api/billing/downgrade/cancel' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleDowngradeCancel(request, env, authCtx), request));
     }
 
     // ─── THREAT INTELLIGENCE GRAPH ──────────────────────────────────────────

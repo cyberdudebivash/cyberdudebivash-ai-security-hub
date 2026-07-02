@@ -434,6 +434,233 @@ ${assessments.map(({ label, result }) => `
   </tbody></table>
   <p style="font-size:11px;color:#64748b;margin-top:8px;">Compliance percentages reflect industry-benchmark readiness (Gartner/ISACA 2024 methodology) per framework and require a completed assessment questionnaire to certify actual organizational scores.</p>
 </div>`;
+  } else if (type === 'CTI') {
+    // Threat Intelligence report — real data from the threat_intel ingestion
+    // pipeline (NVD/CISA KEV) and apt_profiles. Columns queried here are the
+    // ones threatIngestion.js storeInD1() actually writes — do not "improve"
+    // them to is_kev/mitre_tactics, which do not exist on this table.
+    let cves = [], aptGroups = [], sevCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    let totalCves = 0, kevCount = 0, exploitedCount = 0;
+    try {
+      const [top, stats, apts] = await Promise.all([
+        db.prepare(
+          `SELECT id, title, severity, cvss, epss_score, exploit_status, known_ransomware,
+                  actively_exploited, published_at, iocs
+           FROM threat_intel
+           WHERE ingested_at >= datetime('now','-30 days')
+           ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END,
+                    COALESCE(cvss, 0) DESC
+           LIMIT 15`
+        ).all().catch(() => ({ results: [] })),
+        db.prepare(
+          `SELECT severity, COUNT(*) as ct,
+                  SUM(COALESCE(actively_exploited,0)) as exploited,
+                  SUM(CASE WHEN exploit_status='confirmed' THEN 1 ELSE 0 END) as confirmed
+           FROM threat_intel
+           WHERE ingested_at >= datetime('now','-30 days')
+           GROUP BY severity`
+        ).all().catch(() => ({ results: [] })),
+        db.prepare(
+          `SELECT group_name, origin_country, target_sectors, typical_cves, mitre_ttps, activity_level, last_seen
+           FROM apt_profiles WHERE activity_level = 'ACTIVE'
+           ORDER BY last_seen DESC LIMIT 8`
+        ).all().catch(() => ({ results: [] })),
+      ]);
+      cves = top?.results || [];
+      aptGroups = apts?.results || [];
+      for (const row of (stats?.results || [])) {
+        const sev = String(row.severity || '').toUpperCase();
+        if (sevCounts[sev] !== undefined) sevCounts[sev] = row.ct || 0;
+        totalCves += row.ct || 0;
+        exploitedCount += row.exploited || 0;
+        kevCount += row.confirmed || 0;
+      }
+    } catch (_) {}
+
+    const iocRows = [];
+    for (const c of cves) {
+      let parsed = [];
+      try { parsed = JSON.parse(c.iocs || '[]'); } catch {}
+      for (const ioc of parsed.slice(0, 3)) iocRows.push({ cve: c.id, ioc, severity: c.severity });
+      if (iocRows.length >= 10) break;
+    }
+
+    const ttpSet = new Map();
+    for (const g of aptGroups) {
+      let ttps = [];
+      try { ttps = JSON.parse(g.mitre_ttps || '[]'); } catch {}
+      for (const t of ttps) {
+        if (!ttpSet.has(t)) ttpSet.set(t, []);
+        ttpSet.get(t).push(g.group_name);
+      }
+    }
+
+    const sevBadge = s => `<span class="badge ${String(s || '').toLowerCase()}">${escHTML(String(s || 'N/A').toUpperCase())}</span>`;
+
+    bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">CVEs Ingested (30d)</div><div class="kpi-value">${totalCves}</div><div class="kpi-sub">NVD + CISA KEV pipeline</div></div>
+  <div class="kpi"><div class="kpi-label">Critical</div><div class="kpi-value" style="color:#ef4444">${sevCounts.CRITICAL}</div><div class="kpi-sub">Severity CRITICAL</div></div>
+  <div class="kpi"><div class="kpi-label">Actively Exploited</div><div class="kpi-value" style="color:#f97316">${exploitedCount}</div><div class="kpi-sub">EPSS/KEV-derived</div></div>
+  <div class="kpi"><div class="kpi-label">Active APT Groups</div><div class="kpi-value">${aptGroups.length}</div><div class="kpi-sub">Tracked profiles</div></div>
+</div>
+<div class="section">
+  <h2>Threat Landscape (Last 30 Days)</h2>
+  ${totalCves === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No CVEs have been ingested in the last 30 days. The threat-intel ingestion pipeline runs hourly — this report will populate automatically after the next ingestion cycle.</p>`
+    : `<table><thead><tr><th>Severity</th><th>Count</th></tr></thead><tbody>
+        ${Object.entries(sevCounts).map(([s, ct]) => `<tr><td>${sevBadge(s)}</td><td>${ct}</td></tr>`).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>CVE Summary — Top Threats</h2>
+  ${cves.length === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No CVE records available for this period.</p>`
+    : `<table><thead><tr><th>CVE</th><th>Title</th><th>Severity</th><th>CVSS</th><th>EPSS</th><th>Exploited</th></tr></thead><tbody>
+        ${cves.map(c => `<tr>
+          <td>${escHTML(c.id)}</td>
+          <td>${escHTML(String(c.title || '').slice(0, 90))}</td>
+          <td>${sevBadge(c.severity)}</td>
+          <td>${c.cvss != null ? Number(c.cvss).toFixed(1) : '—'}</td>
+          <td>${c.epss_score != null ? (Number(c.epss_score) * 100).toFixed(1) + '%' : '—'}</td>
+          <td>${c.actively_exploited ? 'YES' : c.exploit_status === 'confirmed' ? 'CONFIRMED' : '—'}</td>
+        </tr>`).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>Top IOCs</h2>
+  ${iocRows.length === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No extracted IOCs are associated with this period's CVE records. IOC extraction depends on source advisories publishing indicators.</p>`
+    : `<table><thead><tr><th>Indicator</th><th>Source CVE</th><th>Severity</th></tr></thead><tbody>
+        ${iocRows.map(r => `<tr><td style="font-family:monospace">${escHTML(String(r.ioc).slice(0, 80))}</td><td>${escHTML(r.cve)}</td><td>${sevBadge(r.severity)}</td></tr>`).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>Threat Actors</h2>
+  ${aptGroups.length === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No active APT group profiles are currently tracked. Profiles populate from the APT intelligence engine as attribution data becomes available.</p>`
+    : `<table><thead><tr><th>Group</th><th>Origin</th><th>Target Sectors</th><th>Activity</th><th>Last Seen</th></tr></thead><tbody>
+        ${aptGroups.map(g => {
+          let sectors = []; try { sectors = JSON.parse(g.target_sectors || '[]'); } catch {}
+          return `<tr><td>${escHTML(g.group_name)}</td><td>${escHTML(g.origin_country || '—')}</td><td>${escHTML(sectors.slice(0, 4).join(', ') || '—')}</td><td>${escHTML(g.activity_level)}</td><td>${escHTML(g.last_seen || '—')}</td></tr>`;
+        }).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>MITRE ATT&amp;CK Coverage</h2>
+  ${ttpSet.size === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No MITRE TTP mappings available — TTP coverage derives from tracked APT group profiles, which are not yet populated for this period.</p>`
+    : `<table><thead><tr><th>Technique</th><th>Used By</th></tr></thead><tbody>
+        ${[...ttpSet.entries()].slice(0, 12).map(([t, groups]) => `<tr><td>${escHTML(t)}</td><td>${escHTML(groups.join(', '))}</td></tr>`).join('')}
+      </tbody></table>`}
+</div>`;
+  } else if (type === 'AI_SECURITY') {
+    // AI Security report — real data from the AI SPM tables (ai_assets,
+    // ai_findings, ai_redteam_attempts, ai_governance_assessments).
+    let assets = [], findingsBySev = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
+    let openFindings = [], redteam = { total: 0, successful: 0 }, governance = [];
+    let totalAssets = 0, publicAssets = 0;
+    try {
+      const [assetRows, findingStats, findingRows, rtRow, govRows] = await Promise.all([
+        db.prepare(
+          `SELECT name, asset_type, provider, exposure, risk_score, security_score, status
+           FROM ai_assets WHERE org_id = ? AND status = 'active'
+           ORDER BY risk_score DESC LIMIT 12`
+        ).bind(orgId).all().catch(() => ({ results: [] })),
+        db.prepare(
+          `SELECT f.severity, COUNT(*) as ct
+           FROM ai_findings f JOIN ai_assets a ON f.asset_id = a.id
+           WHERE a.org_id = ? AND f.status = 'open' GROUP BY f.severity`
+        ).bind(orgId).all().catch(() => ({ results: [] })),
+        db.prepare(
+          `SELECT f.category, f.title, f.severity, f.owasp_ref, a.name as asset_name
+           FROM ai_findings f JOIN ai_assets a ON f.asset_id = a.id
+           WHERE a.org_id = ? AND f.status = 'open'
+           ORDER BY CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END
+           LIMIT 12`
+        ).bind(orgId).all().catch(() => ({ results: [] })),
+        db.prepare(
+          `SELECT COUNT(*) as total, SUM(success) as successful
+           FROM ai_redteam_attempts rt JOIN ai_redteam_engagements e ON rt.engagement_id = e.id
+           WHERE e.org_id = ?`
+        ).bind(orgId).first().catch(() => null),
+        db.prepare(
+          `SELECT framework, overall_score, risk_tier, status
+           FROM ai_governance_assessments WHERE org_id = ?
+           ORDER BY created_at DESC LIMIT 6`
+        ).bind(orgId).all().catch(() => ({ results: [] })),
+      ]);
+      assets = assetRows?.results || [];
+      openFindings = findingRows?.results || [];
+      governance = govRows?.results || [];
+      for (const r of (findingStats?.results || [])) {
+        const sev = String(r.severity || '').toUpperCase();
+        if (findingsBySev[sev] !== undefined) findingsBySev[sev] = r.ct || 0;
+      }
+      if (rtRow) redteam = { total: rtRow.total || 0, successful: rtRow.successful || 0 };
+      totalAssets = assets.length;
+      publicAssets = assets.filter(a => a.exposure === 'public').length;
+    } catch (_) {}
+
+    const totalOpen = Object.values(findingsBySev).reduce((a, b) => a + b, 0);
+    const sevBadge = s => `<span class="badge ${String(s || '').toLowerCase()}">${escHTML(String(s || 'N/A').toUpperCase())}</span>`;
+
+    bodyHTML = `
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">AI Assets</div><div class="kpi-value">${totalAssets}</div><div class="kpi-sub">${publicAssets} publicly exposed</div></div>
+  <div class="kpi"><div class="kpi-label">Open Findings</div><div class="kpi-value" style="color:${totalOpen > 0 ? '#f97316' : '#22c55e'}">${totalOpen}</div><div class="kpi-sub">${findingsBySev.CRITICAL} critical</div></div>
+  <div class="kpi"><div class="kpi-label">Red Team Attempts</div><div class="kpi-value">${redteam.total}</div><div class="kpi-sub">${redteam.successful} successful breaches</div></div>
+  <div class="kpi"><div class="kpi-label">Governance Assessments</div><div class="kpi-value">${governance.length}</div><div class="kpi-sub">NIST AI RMF · ISO 42001 · EU AI Act</div></div>
+</div>
+<div class="section">
+  <h2>AI Asset Inventory</h2>
+  ${assets.length === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No AI assets registered for this organization yet. Register assets via the AI SPM dashboard or POST /api/aispm/assets — this report populates from the live asset inventory.</p>`
+    : `<table><thead><tr><th>Asset</th><th>Type</th><th>Provider</th><th>Exposure</th><th>Risk</th><th>Security Score</th></tr></thead><tbody>
+        ${assets.map(a => `<tr>
+          <td>${escHTML(a.name)}</td><td>${escHTML(a.asset_type)}</td><td>${escHTML(a.provider || '—')}</td>
+          <td>${escHTML(a.exposure)}</td><td>${a.risk_score}/100</td><td>${a.security_score}/100</td>
+        </tr>`).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>OWASP LLM Top 10 Findings</h2>
+  ${openFindings.length === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No open AI security findings. Findings appear here after AI security scans detect OWASP LLM Top 10 or governance-framework issues.</p>`
+    : `<table><thead><tr><th>Category</th><th>Finding</th><th>Asset</th><th>Severity</th></tr></thead><tbody>
+        ${openFindings.map(f => `<tr>
+          <td>${escHTML(f.owasp_ref || f.category)}</td><td>${escHTML(String(f.title).slice(0, 80))}</td>
+          <td>${escHTML(f.asset_name || '—')}</td><td>${sevBadge(f.severity)}</td>
+        </tr>`).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>Red Team Findings</h2>
+  ${redteam.total === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No AI red team engagements recorded yet. Run an engagement from the AI Red Team platform to populate adversarial-testing results here.</p>`
+    : `<p style="font-size:13px;color:#94a3b8;line-height:1.6;">
+        <strong>${redteam.total}</strong> adversarial attempts executed across this organization's engagements;
+        <strong style="color:${redteam.successful > 0 ? '#ef4444' : '#22c55e'}">${redteam.successful}</strong> succeeded.
+        ${redteam.successful > 0 ? 'Successful attempts indicate exploitable weaknesses — review the engagement detail view and prioritize the mapped remediations.' : 'No successful breaches — current guardrails withstood all attempted attacks.'}
+      </p>`}
+</div>
+<div class="section">
+  <h2>Governance Posture</h2>
+  ${governance.length === 0
+    ? `<p style="font-size:13px;color:#94a3b8;">No governance assessments completed yet. Run a NIST AI RMF, ISO 42001, or EU AI Act assessment from the AI Governance Center to populate this section.</p>`
+    : `<table><thead><tr><th>Framework</th><th>Score</th><th>Risk Tier</th><th>Status</th></tr></thead><tbody>
+        ${governance.map(g => `<tr><td>${escHTML(g.framework)}</td><td>${g.overall_score}/100</td><td>${escHTML(g.risk_tier)}</td><td>${escHTML(g.status)}</td></tr>`).join('')}
+      </tbody></table>`}
+</div>
+<div class="section">
+  <h2>Remediation Plan</h2>
+  <table><thead><tr><th>#</th><th>Priority</th><th>Action</th></tr></thead><tbody>
+    ${findingsBySev.CRITICAL > 0 ? `<tr><td>1</td><td>${sevBadge('CRITICAL')}</td><td>Remediate ${findingsBySev.CRITICAL} critical AI finding(s) immediately — these represent actively exploitable AI attack surface.</td></tr>` : ''}
+    ${findingsBySev.HIGH > 0 ? `<tr><td>2</td><td>${sevBadge('HIGH')}</td><td>Address ${findingsBySev.HIGH} high-severity finding(s) within 7 days.</td></tr>` : ''}
+    ${publicAssets > 0 ? `<tr><td>3</td><td>${sevBadge('MEDIUM')}</td><td>Review the ${publicAssets} publicly exposed AI asset(s) — confirm authentication, rate limiting, and prompt-injection guardrails.</td></tr>` : ''}
+    ${totalOpen === 0 && publicAssets === 0 ? `<tr><td>1</td><td>${sevBadge('LOW')}</td><td>No open findings — maintain scan cadence and re-assess governance quarterly.</td></tr>` : ''}
+  </tbody></table>
+</div>`;
   } else {
     bodyHTML = `
 <div class="section">
