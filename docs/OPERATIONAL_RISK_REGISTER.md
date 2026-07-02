@@ -5,13 +5,23 @@
 > disposition when a risk is closed or accepted; add new risks at the bottom.
 > Point-in-time context: `docs/audit-history/ENTERPRISE_OPERATIONS_READINESS_2026-07.md`.
 
-**Last reviewed:** 2026-07-02 (Enterprise Operations Readiness pass)
+**Last reviewed:** 2026-07-02 (Enterprise Acceptance pass — see `docs/audit-history/ENTERPRISE_ACCEPTANCE_CERTIFICATION_2026-07.md`)
 
 | Sev | Likelihood | Meaning |
 |---|---|---|
 | S1 | — | Customer-visible outage / data loss / revenue loss |
 | S2 | — | Degraded service, ops blind spot, or recovery slower than SLA |
 | S3 | — | Hygiene / efficiency / future scaling constraint |
+
+## Enterprise Acceptance pass (2026-07-02) — new entries
+
+| ID | Risk | Sev | Evidence | Disposition |
+|----|------|-----|----------|-------------|
+| EA-01 | Trust Center reported 0 scans / 0 CVEs — `handleTrustMetrics` read never-written `platform_metrics` keys, and a cache-hit/miss envelope-shape mismatch made `/api/trust/center` metrics null (frontend fell back to a hardcoded baseline placeholder) | S1 (trust) | Live probe: trust=0 while platform/metrics=60, health=115; frontend reads `d.metrics.*` | **CLOSED** (commit `e141f1a`): source from hydrated blend, nested shape, cache `:v2`; `trustMetricsContract.test.mjs` |
+| EA-02 | Subscription bypass — `/api/ai/simulate`, `/api/ai/forecast`, `/api/v1/forecast` advertised PRO+ but enforced nothing; anonymous FREE received full results | S1 (revenue) | Live: anon FREE → HTTP 200 full kill-chain; handler docstring says "(PRO+)" | **CLOSED** (commit `e141f1a`, per owner decision): gated via canonical `PLAN_FEATURES` → 402; `aiBrainEntitlementGate.test.mjs` |
+| EA-03 | Uptime figure divergence: 95.8% (uptime API, degraded-inclusive) vs 100% (trust, availability) vs 99.9%/99.97% marketing SLA | S1 (trust/legal) | Live probes 2026-07-02 | **OPEN — product decision.** Reconcile before signing any uptime SLA. Supersedes/merges R-07 |
+| EA-04 | Payment → entitlement grant not exercised end-to-end (live Razorpay capture → tier upgrade → feature unlock) | S1 (revenue) | Not exercised this pass; billing suites green in CI only | **OPEN** — run one pilot transaction before onboarding a paying enterprise |
+| EA-05 | SSO/SAML + MFA advertised (ENTERPRISE) but not live-verified (no IdP/TOTP round-trip evidence) | S2 | Handlers/schema/tests present; no live proof | **OPEN** — live IdP + TOTP round-trip before ENTERPRISE SSO commitments |
 
 ---
 
