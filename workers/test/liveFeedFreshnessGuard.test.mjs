@@ -46,4 +46,12 @@ describe('live-feed freshness — recency ordering is never lost to caching or d
     // loadThreatIntel builds params then sets sort to recent (or a filter override).
     expect(/params\.set\('sort',\s*filter\.sort\s*\|\|\s*'recent'\)/.test(fe)).toBe(true);
   });
+
+  it('homepage dashboard surfaces the Global Threat Intel Firehose section', () => {
+    const fe = read('../frontend/index.html');
+    expect(/id="global-firehose"/.test(fe)).toBe(true);       // the section
+    expect(/id="gfh-list"/.test(fe)).toBe(true);              // the card grid
+    expect(/\/api\/global-intel\/briefing/.test(fe)).toBe(true); // wired to the briefing
+    expect(/\/api\/global-intel\?limit=/.test(fe)).toBe(true);   // and the feed
+  });
 });

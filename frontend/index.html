@@ -1873,6 +1873,40 @@ a{color:var(--accent);text-decoration:none}
 </div>
 </div><!-- /cdb-soc-v12 -->
 <!-- ════════════════════════════════════════════════════ -->
+<!-- GLOBAL THREAT INTEL FIREHOSE — worldwide OSINT, hourly -->
+<!-- Breaking-first: news · vendor research · CERT · IOCs.  -->
+<!-- Backed by /api/global-intel (tier-gated). Full at      -->
+<!-- /intel-hub.                                            -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="global-firehose" style="margin:28px 0;background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(0,212,255,.05) 60%,rgba(124,58,237,.03));border:1px solid rgba(239,68,68,.28);border-radius:18px;padding:26px;position:relative;overflow:hidden;box-shadow:0 0 40px rgba(239,68,68,.05)">
+  <div style="position:absolute;top:-45px;right:-25px;font-size:140px;opacity:.05;pointer-events:none;line-height:1">🌐</div>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;z-index:1;margin-bottom:18px">
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:9px;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,#ef4444,#00d4ff);color:#140404;padding:3px 10px;border-radius:20px;text-transform:uppercase">Firehose</span>
+        <span class="metric-live-badge" style="background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,0.72);font-size:8px">LIVE · 24×7</span>
+      </div>
+      <h2 style="font-size:22px;font-weight:900;color:#e2e8f0;margin:0 0 4px;letter-spacing:.01em">🌐 Global Threat Intel Firehose</h2>
+      <div id="gfh-headline" style="font-size:12.5px;color:#94a3b8;max-width:640px">Aggregating worldwide intel every hour — breaking incidents · vendor research · CERT advisories · live IOC feeds…</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <div style="text-align:center"><div id="gfh-level" style="font-size:19px;font-weight:900;color:#f59e0b">—</div><div style="font-size:8.5px;color:#64748b;letter-spacing:.1em;text-transform:uppercase">Threat Level</div></div>
+      <div style="text-align:center"><div id="gfh-breaking" style="font-size:19px;font-weight:900;color:#ef4444">—</div><div style="font-size:8.5px;color:#64748b;letter-spacing:.1em;text-transform:uppercase">Breaking 6h</div></div>
+      <div style="text-align:center"><div id="gfh-sources" style="font-size:19px;font-weight:900;color:#10b981">30</div><div style="font-size:8.5px;color:#64748b;letter-spacing:.1em;text-transform:uppercase">Sources</div></div>
+    </div>
+  </div>
+  <div id="gfh-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;position:relative;z-index:1">
+    <div style="grid-column:1/-1;padding:26px;text-align:center;color:#64748b;font-size:13px">📡 Loading global firehose…</div>
+  </div>
+  <div id="gfh-cta" style="display:none;margin-top:16px;text-align:center;position:relative;z-index:1">
+    <a href="/pricing#pro" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(239,68,68,.14),rgba(0,212,255,.1));border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:11px 26px;border-radius:10px;font-size:13px;font-weight:800;text-decoration:none">🔓 <span id="gfh-cta-text">Upgrade to PRO for the full firehose + live IOCs & attribution</span></a>
+  </div>
+  <div style="text-align:center;margin-top:14px;position:relative;z-index:1">
+    <a href="/intel-hub" style="color:#00d4ff;font-size:12px;font-weight:700;text-decoration:none">Open full Intel Hub →</a>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
 <!-- AI THREAT INTELLIGENCE — FLAGSHIP DASHBOARD SECTION   -->
 <!-- Dedicated, permanent section for the AI/LLM-specific  -->
 <!-- threat feed (OWASP LLM Top 10 + MITRE ATT&CK/ATLAS).  -->
@@ -23433,4 +23467,57 @@ function v21TriggerUrgencyPayment(){
 <!-- SOC case management + full investigation workspace — self-inject into the SOC Operations command-center panel (built, backed by real /api/soc/cases and /api/soc/inv/* endpoints, but never previously included on any page) -->
 <script defer="" src="/soc-investigations.js"></script>
 <script defer="" src="/soc-case-detail.js"></script>
+
+<!-- Global Threat Intel Firehose — homepage dashboard loader (tier-gated feed) -->
+<script>
+(function(){
+  var SEV={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#00d4ff',LOW:'#64748b'};
+  var ICON={news:'📰',research:'🔬',advisory:'🏛️',ioc:'🎯',ransomware:'🔒',breach:'💥',apt:'🕵️',malware:'🦠',phishing:'🎣',exploit:'⚡',vulnerability:'🛡️'};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function ago(iso){if(!iso)return'';var d=new Date(iso);if(isNaN(d))return'';var m=Math.floor((Date.now()-d.getTime())/60000);if(m<1)return'just now';if(m<60)return m+'m ago';var h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago';}
+  function tok(){return(window.SUBSCRIPTION&&SUBSCRIPTION.getToken&&SUBSCRIPTION.getToken())||'';}
+  function card(it){
+    var col=SEV[it.severity]||'#64748b';var chips=[];
+    (it.cve_ids||[]).slice(0,2).forEach(function(c){chips.push('<span style="background:rgba(0,212,255,.12);color:#00d4ff;font-size:9px;padding:2px 6px;border-radius:4px">'+esc(c)+'</span>');});
+    (it.actors||[]).slice(0,1).forEach(function(a){chips.push('<span style="background:rgba(239,68,68,.12);color:#ef4444;font-size:9px;padding:2px 6px;border-radius:4px">🕵️ '+esc(a)+'</span>');});
+    (it.malware||[]).slice(0,1).forEach(function(w){chips.push('<span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:9px;padding:2px 6px;border-radius:4px">🦠 '+esc(w)+'</span>');});
+    if(it.enrichment_gated){var ec=it.enrichment_counts||{};var n=(ec.cves||0)+(ec.actors||0)+(ec.malware||0)+(ec.iocs||0);if(n>0)chips.push('<span style="background:rgba(148,163,184,.12);color:#94a3b8;font-size:9px;padding:2px 6px;border-radius:4px">🔒 '+n+' indicators — PRO</span>');}
+    return '<a href="'+esc(it.url)+'" target="_blank" rel="noopener" style="display:block;background:rgba(10,10,20,.55);border:1px solid rgba(255,255,255,.07);border-left:3px solid '+col+';border-radius:10px;padding:12px 14px;text-decoration:none">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+      +(it.is_breaking?'<span style="background:#ef4444;color:#fff;font-size:8px;font-weight:900;padding:2px 6px;border-radius:4px;letter-spacing:.08em">BREAKING</span>':'')
+      +'<span style="font-size:12px">'+(ICON[it.category]||'🌐')+'</span>'
+      +'<span style="font-size:9px;font-weight:800;color:'+col+'">'+esc(it.severity)+'</span>'
+      +'<span style="font-size:10px;color:#64748b;margin-left:auto">'+esc(it.source_name)+' · '+ago(it.published_at)+'</span></div>'
+      +'<div style="font-size:13px;font-weight:700;color:#e2e8f0;line-height:1.35">'+esc(it.title)+'</div>'
+      +(chips.length?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'+chips.join('')+'</div>':'')+'</a>';
+  }
+  function load(){
+    var list=document.getElementById('gfh-list');if(!list)return;
+    var h=tok()?{'Authorization':'Bearer '+tok(),'Accept':'application/json'}:{'Accept':'application/json'};
+    fetch('/api/global-intel/briefing',{headers:h}).then(function(r){return r.json();}).then(function(j){
+      var d=(j&&j.data)||j;var b=d&&d.briefing;if(!b)return;
+      var lv=document.getElementById('gfh-level');if(lv){lv.textContent=b.threat_level||'—';lv.style.color=b.threat_level==='CRITICAL'?'#ef4444':b.threat_level==='HIGH'?'#f59e0b':'#10b981';}
+      var bk=document.getElementById('gfh-breaking');if(bk)bk.textContent=(b.breaking_count!=null?b.breaking_count:'—');
+      var hd=document.getElementById('gfh-headline');if(hd&&b.headline)hd.textContent=b.headline;
+    }).catch(function(){});
+    fetch('/api/global-intel?limit=12&sort=breaking',{headers:h}).then(function(r){return r.json();}).then(function(j){
+      var d=(j&&j.data)||j;var items=(d&&d.items)||[];
+      if(items.length){
+        list.innerHTML=items.map(card).join('');
+        var s={};items.forEach(function(i){s[i.source]=1;});
+        var se=document.getElementById('gfh-sources');if(se)se.textContent=Object.keys(s).length;
+        var cta=document.getElementById('gfh-cta');
+        if(cta){if(d.upgrade_cta){cta.style.display='block';var t=document.getElementById('gfh-cta-text');if(t&&d.upgrade_cta.message)t.textContent=d.upgrade_cta.message;}else{cta.style.display='none';}}
+      }else{
+        list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:#64748b;font-size:13px">🌐 First worldwide sweep in progress — fresh intel lands within the hour.</div>';
+      }
+    }).catch(function(){
+      list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:#64748b;font-size:13px">⚠️ Firehose temporarily unavailable — retrying…</div>';
+      setTimeout(load,30000);
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();
+  setInterval(load,5*60*1000);
+})();
+</script>
 </body>
