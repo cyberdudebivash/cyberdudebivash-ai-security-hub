@@ -66,6 +66,17 @@ Platform-metric facts (scans/CVEs/customers/SOAR) remain canonicalised in **`met
 - **Core customer-visible facts (scans, KEV, CVSS, published date):** now single-source and consistent, with regression guards preventing re-divergence.
 - **Coverage:** the threat-intel + scanning + executive domains were traced exhaustively for duplicate SQL and unified. Billing/subscription, marketplace, training, identity, cloud, org/project/asset domains were **not** exhaustively re-traced this pass beyond the payments/subscriptions facts already covered.
 
+## 6a. Live verification (post-deploy)
+
+| Check | Before | After (live) |
+|---|---|---|
+| `/api/vulns` list total | **0** (query errored on phantom `mitre_technique`) | **200** rows returned |
+| `/api/vulns?kev=true` | 0 | 200 (KEV-first ordering) |
+| KEV: `/api/threat-intel/stats` == `/api/platform/metrics` | — | **1631 == 1631** |
+| `total_scans`: health == platform == trust | 118/62/21 | **118 == 118 == 118** |
+
+**Pending data heal (not code):** the `cvss_score` and `cve_id` self-heals deployed with `04c7006`; they run on the next ingestion cron (or immediately via `schema_migration_cvss_score_backfill.sql`). Until then, freshly-read `cvss_score`/`cve_id` may still show 0/null on rows ingested before the heal — the query itself is fixed and returns data. Owner action: run the one migration for instant healing.
+
 ## 7. Recommendation
 
 ### CONDITIONAL GO
