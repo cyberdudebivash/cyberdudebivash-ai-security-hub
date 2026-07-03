@@ -8,6 +8,34 @@ import { isRealUser } from '../auth/middleware.js';
  * Requires authenticated session (any plan)
  */
 
+// ── Tenant isolation ──────────────────────────────────────────────────────────
+// A user's SOC cases are isolated by org_id. Users without an explicit org must
+// NOT collapse into a shared 'default' bucket (that leaked every org-less user's
+// cases to every other org-less user) — they get a per-user tenant key instead.
+export function tenantKey(authCtx = {}) {
+  if (authCtx.org_id) return authCtx.org_id;
+  const uid = authCtx.user_id || authCtx.userId;
+  return uid ? `u:${uid}` : 'default';
+}
+
+function isPrivileged(authCtx = {}) {
+  return authCtx.role === 'admin' || authCtx.role === 'mssp_admin';
+}
+
+// Confirms a case belongs to the caller's tenant before a mutation; returns a
+// Response to short-circuit with, or null when access is allowed.
+async function assertCaseOwnership(env, authCtx, caseId) {
+  if (isPrivileged(authCtx)) return null;
+  const owner = await env.SECURITY_HUB_DB.prepare(
+    `SELECT org_id FROM soc_cases WHERE id = ? OR case_number = ?`
+  ).bind(caseId, caseId).first();
+  if (!owner) return Response.json({ error: 'Case not found' }, { status: 404 });
+  if (owner.org_id !== tenantKey(authCtx)) {
+    return Response.json({ error: 'Access denied' }, { status: 403 });
+  }
+  return null;
+}
+
 function genId(prefix = 'case') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -38,10 +66,10 @@ export async function handleListCases(request, env, authCtx) {
   let where  = [];
   let params = [];
 
-  // Non-admin users only see their org's cases
-  if (authCtx.role !== 'admin' && authCtx.role !== 'mssp_admin') {
+  // Non-admin users only see their own tenant's cases
+  if (!isPrivileged(authCtx)) {
     where.push('org_id = ?');
-    params.push(authCtx.org_id || 'default');
+    params.push(tenantKey(authCtx));
   }
   if (status) { where.push('status = ?'); params.push(status.toUpperCase()); }
   if (severity) { where.push('severity = ?'); params.push(severity.toUpperCase()); }
@@ -88,11 +116,9 @@ export async function handleGetCase(request, env, authCtx, caseId) {
 
     if (!c) return Response.json({ error: 'Case not found' }, { status: 404 });
 
-    // Org check for non-admins
-    if (authCtx.role !== 'admin' && authCtx.role !== 'mssp_admin') {
-      if (c.org_id !== (authCtx.org_id || 'default')) {
-        return Response.json({ error: 'Access denied' }, { status: 403 });
-      }
+    // Tenant check for non-admins
+    if (!isPrivileged(authCtx) && c.org_id !== tenantKey(authCtx)) {
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const comments = await env.SECURITY_HUB_DB.prepare(
@@ -139,7 +165,7 @@ export async function handleCreateCase(request, env, authCtx) {
   const slaHrs  = slaHours(sev);
   const now     = new Date();
   const sla_due = new Date(now.getTime() + slaHrs * 3600 * 1000).toISOString();
-  const org_id  = authCtx.org_id || 'default';
+  const org_id  = tenantKey(authCtx);
 
   try {
     await env.SECURITY_HUB_DB.prepare(`
@@ -177,6 +203,10 @@ export async function handleUpdateCase(request, env, authCtx, caseId) {
   let body;
   try { body = await request.json(); }
   catch (_) { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  // Tenant isolation: a user may only mutate a case in their own tenant.
+  const denied = await assertCaseOwnership(env, authCtx, caseId);
+  if (denied) return denied;
 
   const allowed = ['status','severity','assignee_id','mitre_tactics','ioc_list','playbook_id','summary','resolution'];
   const updates = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
@@ -226,6 +256,10 @@ export async function handleAddCaseComment(request, env, authCtx, caseId) {
   const { text, comment_type = 'note', visibility = 'internal' } = body;
   if (!text) return Response.json({ error: 'text required' }, { status: 400 });
 
+  // Tenant isolation: a user may only comment on a case in their own tenant.
+  const denied = await assertCaseOwnership(env, authCtx, caseId);
+  if (denied) return denied;
+
   const id = genId('cmt');
   try {
     await env.SECURITY_HUB_DB.prepare(`
@@ -257,8 +291,11 @@ export async function handleCaseMetrics(request, env, authCtx) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });
   }
 
+  // Scope metrics to the caller's tenant (privileged roles see platform-wide).
+  const scoped = !isPrivileged(authCtx);
+  const orgClause = scoped ? 'WHERE org_id = ?' : '';
   try {
-    const stats = await env.SECURITY_HUB_DB.prepare(`
+    const stmt = env.SECURITY_HUB_DB.prepare(`
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END) as open_count,
@@ -267,8 +304,9 @@ export async function handleCaseMetrics(request, env, authCtx) {
         SUM(CASE WHEN status IN ('RESOLVED','CLOSED') THEN 1 ELSE 0 END) as resolved,
         SUM(CASE WHEN severity = 'CRITICAL' AND status = 'OPEN' THEN 1 ELSE 0 END) as crit_open,
         SUM(CASE WHEN severity = 'HIGH' AND status = 'OPEN' THEN 1 ELSE 0 END) as high_open
-      FROM soc_cases
-    `).first();
+      FROM soc_cases ${orgClause}
+    `);
+    const stats = await (scoped ? stmt.bind(tenantKey(authCtx)) : stmt).first();
 
     return Response.json({
       success:     true,
