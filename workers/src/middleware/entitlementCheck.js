@@ -141,28 +141,44 @@ export async function getUserEntitlements(db, userId, tier = 'FREE') {
 // ─── Upgrade Prompt Payloads ──────────────────────────────────────────────────
 
 export function buildUpgradePayload(feature, currentTier = 'FREE') {
+  // Prices + tiers MUST match the customer-facing billing source of truth
+  // (handlers/monetizationV2.js PLANS, served by /api/billing/plans):
+  //   PRO ₹2,999/mo ($36) · ENTERPRISE ₹24,999/mo ($299).
+  // Two prior defects fixed here:
+  //  1) every upgrade CTA misquoted the price (PRO ₹3,999, ENTERPRISE ₹39,999)
+  //     — the customer saw one price in the gate and was charged another.
+  //  2) SIEM_WEBHOOK / KILL_CHAIN_MAPPING required tier 'TEAM' — a tier that is
+  //     NOT purchasable (billing sells FREE/PRO/ENTERPRISE only). The features
+  //     are granted at ENTERPRISE (TIER_IMPLICIT_FEATURES.ENTERPRISE = all), so
+  //     the CTA now correctly directs the customer to ENTERPRISE.
+  const PRO   = { required_tier: 'PRO',        price_usd: '$36/mo',  price_inr: '₹2,999/mo' };
+  const ENT   = { required_tier: 'ENTERPRISE', price_usd: '$299/mo', price_inr: '₹24,999/mo' };
   const UPGRADE_MAP = {
-    [FEATURES.THREAT_FEED_FULL]:   { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' },
-    [FEATURES.STIX_21_EXPORT]:     { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' },
-    [FEATURES.SIEM_WEBHOOK]:       { required_tier: 'TEAM', price_usd: '$99/mo', price_inr: '₹7,999/mo' },
-    [FEATURES.KILL_CHAIN_MAPPING]: { required_tier: 'TEAM', price_usd: '$99/mo', price_inr: '₹7,999/mo' },
-    [FEATURES.ACTOR_ATTRIBUTION]:  { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' },
-    [FEATURES.AI_PREDICTIONS]:     { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' },
-    [FEATURES.BOARD_REPORTS]:      { required_tier: 'ENTERPRISE', price_usd: '$499/mo', price_inr: '₹39,999/mo' },
-    [FEATURES.ANALYST_BRIEFINGS]:  { required_tier: 'ENTERPRISE', price_usd: '$499/mo', price_inr: '₹39,999/mo' },
-    [FEATURES.WHITE_LABEL]:        { required_tier: 'ENTERPRISE', price_usd: '$499/mo', price_inr: '₹39,999/mo' },
-    [FEATURES.DEDICATED_ENDPOINT]: { required_tier: 'ENTERPRISE', price_usd: '$499/mo', price_inr: '₹39,999/mo' },
-    [FEATURES.REPORT_DOWNLOAD]:    { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' },
-    [FEATURES.DASHBOARD_PRO]:      { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' },
+    [FEATURES.THREAT_FEED_FULL]:   PRO,
+    [FEATURES.STIX_21_EXPORT]:     PRO,
+    [FEATURES.SIEM_WEBHOOK]:       ENT,
+    [FEATURES.KILL_CHAIN_MAPPING]: ENT,
+    [FEATURES.ACTOR_ATTRIBUTION]:  PRO,
+    [FEATURES.AI_PREDICTIONS]:     PRO,
+    [FEATURES.BOARD_REPORTS]:      ENT,
+    [FEATURES.ANALYST_BRIEFINGS]:  ENT,
+    [FEATURES.WHITE_LABEL]:        ENT,
+    [FEATURES.DEDICATED_ENDPOINT]: ENT,
+    [FEATURES.REPORT_DOWNLOAD]:    PRO,
+    [FEATURES.DASHBOARD_PRO]:      PRO,
   };
 
-  const upg = UPGRADE_MAP[feature] || { required_tier: 'PRO', price_usd: '$49/mo', price_inr: '₹3,999/mo' };
+  const upg = UPGRADE_MAP[feature] || PRO;
 
   return {
     error: 'feature_locked',
     feature,
     current_tier: currentTier,
     required_tier: upg.required_tier,
+    // Structured price (matches /api/billing/plans) so the frontend renders the
+    // exact figure the customer will be charged, not a parsed CTA string.
+    price_usd: upg.price_usd,
+    price_inr: upg.price_inr,
     upgrade_url: 'https://intel.cyberdudebivash.com/pricing.html',
     cta: `Upgrade to ${upg.required_tier} — ${upg.price_usd} / ${upg.price_inr}`,
     trial_available: currentTier === 'FREE',

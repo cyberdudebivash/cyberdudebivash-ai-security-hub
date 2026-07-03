@@ -370,14 +370,14 @@ export async function handleFabricPlugins(request, env, authCtx) {
   const registry = await kvGet(env, 'fabric:v1:plugins:registry') || { plugins: [], updated_at: null };
 
   const builtinPlugins = [
-    { id: 'siem-splunk',       name: 'Splunk SIEM',          category: 'siem',        status: 'available', tier_required: 'TEAM' },
-    { id: 'siem-elastic',      name: 'Elastic SIEM',         category: 'siem',        status: 'available', tier_required: 'TEAM' },
+    { id: 'siem-splunk',       name: 'Splunk SIEM',          category: 'siem',        status: 'available', tier_required: 'ENTERPRISE' },
+    { id: 'siem-elastic',      name: 'Elastic SIEM',         category: 'siem',        status: 'available', tier_required: 'ENTERPRISE' },
     { id: 'soar-palo',         name: 'Palo Alto XSOAR',      category: 'soar',        status: 'available', tier_required: 'ENTERPRISE' },
     { id: 'threat-feed-otx',   name: 'AlienVault OTX',       category: 'threat_feed', status: 'available', tier_required: 'PRO' },
     { id: 'threat-feed-abuse', name: 'AbuseIPDB',            category: 'threat_feed', status: 'available', tier_required: 'PRO' },
     { id: 'compliance-iso27001',name:'ISO 27001 Pack',        category: 'compliance',  status: 'available', tier_required: 'ENTERPRISE' },
     { id: 'reporting-pdf',     name: 'PDF Report Pack',      category: 'reporting',   status: 'available', tier_required: 'PRO' },
-    { id: 'workflow-jira',     name: 'Jira Integration',     category: 'workflow',    status: 'available', tier_required: 'TEAM' },
+    { id: 'workflow-jira',     name: 'Jira Integration',     category: 'workflow',    status: 'available', tier_required: 'ENTERPRISE' },
     { id: 'ai-openai',         name: 'OpenAI GPT-4 Provider',category: 'ai_provider', status: 'available', tier_required: 'PRO' },
   ];
 
@@ -486,7 +486,7 @@ export async function handleFabricPolicyEvaluate(request, env, authCtx) {
     mssp_policy:       { applicable: tier === 'MSSP', white_label: entitlements['white_label']?.granted || false },
     executive_policy:  { applicable: ['ENTERPRISE', 'MSSP'].includes(tier), board_reports: entitlements['board_reports']?.granted || false },
     compliance_policy: { applicable: true, audit_logging: true },
-    workflow_policy:   { applicable: ['TEAM', 'ENTERPRISE', 'MSSP'].includes(tier), siem_webhook: entitlements['siem_webhook']?.granted || false },
+    workflow_policy:   { applicable: ['ENTERPRISE', 'MSSP'].includes(tier), siem_webhook: entitlements['siem_webhook']?.granted || false },
   };
 
   return Response.json({
