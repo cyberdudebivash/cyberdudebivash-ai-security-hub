@@ -25,7 +25,7 @@ import { runHunting }                    from '../services/huntingEngine.js';
 import { ok, fail }                      from '../lib/response.js';
 
 const FEED_CACHE_KEY    = 'threat_intel:feed:v2';
-const FEED_CACHE_TTL    = 3600;  // 1 hour — long-term KV cache (full feed)
+const FEED_CACHE_TTL    = 300;   // 5 min — fallback KV cache (only when D1 empty); short so a "live" feed never serves hour-stale data
 const HOT_CACHE_KEY     = 'threat_intel:hot:v2';
 const HOT_CACHE_TTL     = 60;   // Phase 8: 60s hot cache for frequent queries
 const STATS_CACHE_KEY   = 'threat_intel:stats:v2';
@@ -130,9 +130,17 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    const recency = `published_at DESC, created_at DESC`;
     const orderMap = {
       severity: `CASE severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 ELSE 1 END DESC, cvss DESC`,
-      date:     `published_at DESC, created_at DESC`,
+      date:     recency,
+      // Recency aliases — a "LIVE" feed asking for the freshest items must NOT
+      // fall back to severity ordering (which surfaces old CRITICAL 2024 CVEs
+      // above genuinely-new advisories, making the feed look stale).
+      recent:   recency,
+      newest:   recency,
+      latest:   recency,
+      published: recency,
       cvss:     `cvss DESC, severity DESC`,
     };
     const order = orderMap[sortBy] || orderMap.severity;
@@ -156,10 +164,14 @@ async function queryD1(db, { limit, offset, severity, source, query, sortBy }) {
 }
 
 // ─── Get feed from KV cache ───────────────────────────────────────────────────
-async function getFromKVCache(env, hot = false) {
+// The hot cache is keyed by sort order: a "LIVE" feed asking for the freshest
+// items (sort=recent) must never be served a severity-ordered cache written by
+// a different request. Without the sort suffix a single shared key would defeat
+// the recency ordering and make the feed look stale.
+async function getFromKVCache(env, hot = false, sortBy = '') {
   if (!env?.SECURITY_HUB_KV) return null;
   try {
-    const key    = hot ? HOT_CACHE_KEY : FEED_CACHE_KEY;
+    const key    = hot ? `${HOT_CACHE_KEY}:${sortBy || 'severity'}` : FEED_CACHE_KEY;
     const cached = await env.SECURITY_HUB_KV.get(key, { type: 'json' });
     return cached;
   } catch {
@@ -168,9 +180,10 @@ async function getFromKVCache(env, hot = false) {
 }
 
 // ─── Write to KV hot cache ────────────────────────────────────────────────────
-async function writeHotCache(env, data) {
+async function writeHotCache(env, data, sortBy = '') {
   if (!env?.SECURITY_HUB_KV) return;
-  env.SECURITY_HUB_KV.put(HOT_CACHE_KEY, JSON.stringify(data), { expirationTtl: HOT_CACHE_TTL }).catch(() => {});
+  const key = `${HOT_CACHE_KEY}:${sortBy || 'severity'}`;
+  env.SECURITY_HUB_KV.put(key, JSON.stringify(data), { expirationTtl: HOT_CACHE_TTL }).catch(() => {});
 }
 
 // ─── Build feed from seed + enrichment (ultimate fallback) ───────────────────
@@ -197,7 +210,7 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
 
   const isUnfiltered = !pagination.severity && !pagination.source && !pagination.query && !nocache;
   if (isUnfiltered) {
-    const hotCached = await getFromKVCache(env, true);
+    const hotCached = await getFromKVCache(env, true, pagination.sortBy);
     if (hotCached?.entries?.length > 0) {
       const hotEntries = hotCached.entries.slice(effectiveOffset, effectiveOffset + effectiveLimit);
       const gatedHot   = hotEntries.map(e => applyMonetizationGate(e, planLimits));
@@ -233,7 +246,7 @@ export async function handleGetThreatIntel(request, env, authCtx = {}) {
     dataSource = 'd1';
 
     if (isUnfiltered && pagination.page === 1) {
-      writeHotCache(env, { entries, total, cached_at: new Date().toISOString() });
+      writeHotCache(env, { entries, total, cached_at: new Date().toISOString() }, pagination.sortBy);
     }
   } else {
     // 2. Try KV cache

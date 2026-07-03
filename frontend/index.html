@@ -8493,6 +8493,10 @@ async function loadThreatIntel(filter = {}) {
   // Build query params
   const tier    = SUBSCRIPTION.getPlan() || 'FREE';
   const params  = new URLSearchParams({ limit: tier === 'FREE' ? 5 : tier === 'STARTER' ? 20 : 50 });
+  // A "LIVE" feed must surface the freshest advisories first — without this the
+  // backend defaults to severity ordering, which pins the same old high-CVSS
+  // CVEs to the top and makes the feed look frozen ("not getting fresh intel").
+  params.set('sort', filter.sort || 'recent');
   if (filter.severity) params.set('severity', filter.severity);
   if (filter.query)    params.set('q', filter.query);
 
@@ -17774,7 +17778,8 @@ function renderPipeline(stages) {
 
 /* ── Load Auto SOC state ────────────────────────────────────── */
 window.cdbAutoSOCLoad = function() {
-  fetch('/api/auto-soc/mode')
+  var _t = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/auto-soc/mode', { headers: _t ? { 'Authorization': 'Bearer ' + _t } : {} })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       ASOC.autoMode = !!(data && data.auto_mode);
@@ -17874,19 +17879,37 @@ function showGeneratedRules(runId) {
 
 window.cdbAutoSOCToggle = function() {
   var newMode = !ASOC.autoMode;
+  var _t = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  // Autonomous SOC is an enterprise-gated control — the POST MUST carry the auth
+  // token or the server sees an anonymous FREE caller and returns 403, which used
+  // to leave the toggle silently stuck OFF (the 403 body has no auto_mode field).
+  if (!_t) {
+    appendASocLog('System', '🔒 Sign in with a PRO/ENTERPRISE account to enable Autonomous SOC Mode.', '#f59e0b');
+    updateToggleUI();
+    return;
+  }
   fetch('/api/auto-soc/mode', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _t },
     body: JSON.stringify({ enabled: newMode }),
   })
-  .then(function(r){ return r.json(); })
-  .then(function(data) {
-    ASOC.autoMode = !!(data && data.auto_mode);
+  .then(function(r){ return r.json().then(function(b){ return { ok: r.ok, status: r.status, body: b }; }); })
+  .then(function(res) {
+    if (!res.ok || (res.body && res.body.error)) {
+      // Gate/failure — do NOT flip the toggle; surface the reason (e.g. upgrade).
+      var msg = (res.body && (res.body.error || res.body.message)) || 'Could not change mode';
+      var up  = res.body && res.body.upgrade;
+      appendASocLog('System', '⚠️ ' + msg + (up ? ' → ' + up : ''), '#f59e0b');
+      updateToggleUI();
+      return;
+    }
+    ASOC.autoMode = !!(res.body && res.body.auto_mode);
     updateToggleUI();
-    appendASocLog('System', newMode ? '🟢 Autonomous SOC Mode ACTIVATED' : '🔴 Autonomous SOC Mode DEACTIVATED', newMode ? '#10b981' : '#ef4444');
+    appendASocLog('System', ASOC.autoMode ? '🟢 Autonomous SOC Mode ACTIVATED' : '🔴 Autonomous SOC Mode DEACTIVATED', ASOC.autoMode ? '#10b981' : '#ef4444');
   })
   .catch(function() {
-    ASOC.autoMode = newMode; // optimistic update
+    // True network error — revert to the real server state on next load.
+    appendASocLog('System', '⚠️ Network error toggling Autonomous SOC Mode — try again.', '#ef4444');
     updateToggleUI();
   });
 };
