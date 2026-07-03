@@ -5191,7 +5191,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div style="font-size:12px;color:#64748b">Organizations Protected</div>
 </div>
 <div style="text-align:center">
-<div id="p4-cnt-uptime" style="font-size:32px;font-weight:800;color:#f59e0b">99.9%</div>
+<div id="p4-cnt-uptime" style="font-size:32px;font-weight:800;color:#f59e0b">—</div>
 <div style="font-size:12px;color:#64748b">Uptime SLA Target</div>
 </div>
 </div>
@@ -5262,7 +5262,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <button onclick="if(window.CDB_PAY)CDB_PAY.open('ULTIMATE_BUNDLE_2026',1999,'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026')" style="width:100%;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:14px;font-weight:900;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
         🚀 Get Ultimate Bundle — ₹1,999
       </button>
-<div style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,.72)">🔥 <span id="acs-bundle-today">27</span> enrolled today · Instant delivery</div>
+<div style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,.72)">⚡ Instant delivery — download links emailed immediately after purchase</div>
 </div>
 <!-- Course Mini Grid -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -17384,9 +17384,11 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
   // the CDB_ATTENTION_INDEX function. Counters start at '0' in HTML and only
   // animate if the API returns real non-zero data.
   var METRICS = [
-    // Real values injected by CDB_ATTENTION_INDEX — do NOT hardcode targets here
-    { id:'tm-uptime', target: 99.9,   suffix:'%', decimals:1 },
-    { id:'tm-sla',    target: 2,      suffix:'h', decimals:0 }
+    // tm-sla is a static SLA COMMITMENT ("<2h"), not a measured result — safe to
+    // animate to a fixed target. tm-uptime is a MEASURED result and must never
+    // have a hardcoded target: it is animated separately, only after the real
+    // value arrives from /api/trust/metrics (see hydrateUptime below).
+    { id:'tm-sla', target: 2, suffix:'h', decimals:0 }
   ];
 
   function animateCounter(id, target, suffix, decimals) {
@@ -17437,6 +17439,13 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
     var sec = document.getElementById('trust-center');
     if (sec) trustObserver.observe(sec);
 
+    // tm-uptime starts as "—" in HTML (see markup) and is ONLY ever set from
+    // this fetch — it never has a hardcoded fallback number. If the API is
+    // unreachable, times out, or has no uptime_log data yet, it stays "—"
+    // (honest "not yet measured"), matching the backend's own contract:
+    // uptime_pct is null when there is no data, "not an assumed 99.9%".
+    var eu = document.getElementById('tm-uptime');
+
     // v29: Hydrate from real /api/trust/metrics — overrides '0' defaults
     fetch('/api/trust/metrics', {signal: AbortSignal.timeout(8000)})
       .then(function(r){ return r.ok ? r.json() : {}; })
@@ -17453,9 +17462,12 @@ window.cdbDownloadSOARRule = function(btnOrNull, filename) {
         safe('tm-scans', _applyFloor(m.total_scans||0,_SCAN_BASELINE));
         safe('tm-cves',  m.total_cves);
         safe('tm-rules', m.total_soar_rules);
-        if (m.uptime_pct) {
-          var eu = document.getElementById('tm-uptime');
-          if (eu) eu.textContent = m.uptime_pct.toFixed(1) + '%';
+        // uptime_pct is a real MEASURED result (may legitimately be 0 during
+        // an outage, or null with no data yet) — check `!= null`, not
+        // truthiness, so a real 0% is shown honestly instead of silently
+        // left at "—".
+        if (eu && m.uptime_pct != null) {
+          animateCounter('tm-uptime', m.uptime_pct, '%', 1);
         }
       })
       .catch(function(e){ console.warn('[TrustMetrics] API unavailable:', e.message); });
