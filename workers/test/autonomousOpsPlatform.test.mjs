@@ -102,7 +102,9 @@ function makeDB({
           if (/FROM threat_intel/.test(sql))          return { results: tiRows };
           if (/FROM customer_assets/.test(sql))       return { results: assetRows };
           if (/FROM threat_actors/.test(sql))         return { results: actorRows };
-          if (/FROM soc_cases/.test(sql) && !/id = \?/.test(sql)) return { results: caseRows };
+          // \bid distinguishes `WHERE id = ?` (single case) from `WHERE org_id = ?`
+          // (tenant-scoped list) — `_` is a word char, so \bid does NOT match org_id.
+          if (/FROM soc_cases/.test(sql) && !/\bid = \?/.test(sql)) return { results: caseRows };
           if (/FROM soc_decisions/.test(sql))         return { results: decisionRows };
           if (/FROM workflow_executions/.test(sql) && !/GROUP BY/.test(sql)) return { results: execRows };
           if (/FROM soc_timeline/.test(sql))          return { results: timelineRows };
@@ -112,7 +114,7 @@ function makeDB({
           return { results: [] };
         },
         async first() {
-          if (/FROM soc_cases/.test(sql) && /id = \?/.test(sql)) return caseRows[0] || null;
+          if (/FROM soc_cases/.test(sql) && /\bid = \?/.test(sql)) return caseRows[0] || null;
           if (/COUNT\(\*\) cnt FROM soc_cases/.test(sql))         return { cnt: caseRows.filter(c => c.status === 'OPEN').length };
           if (/COUNT\(\*\) cnt FROM soc_evidence/.test(sql))      return { cnt: 2 };
           if (/COUNT\(\*\) cnt FROM soc_notes/.test(sql))         return { cnt: 1 };

@@ -105,6 +105,13 @@ function cveToSTIX(entry) {
 
 // ─── APT actor → STIX Threat-Actor object ────────────────────────────────────
 function actorToSTIX(actor) {
+  // motivation is an optional field. Curated actors always supply an array, but a
+  // D1-sourced or externally-supplied actor may omit it or provide a scalar. Without
+  // this guard, `.includes()` throws and the ENTIRE STIX bundle export 500s for the
+  // customer's SIEM/TIP. Normalize to a string[] so every downstream check is safe.
+  const motivation = Array.isArray(actor.motivation)
+    ? actor.motivation
+    : (actor.motivation != null ? [String(actor.motivation)] : []);
   return {
     type:             'threat-actor',
     spec_version:     STIX_SPEC_VERSION,
@@ -114,17 +121,17 @@ function actorToSTIX(actor) {
     modified:         nowISO(),
     name:             actor.id,
     description:      actor.description || '',
-    threat_actor_types: actor.motivation.includes('espionage') ? ['nation-state'] :
-                       actor.motivation.includes('ransomware-as-a-service') ? ['crime-syndicate'] :
+    threat_actor_types: motivation.includes('espionage') ? ['nation-state'] :
+                       motivation.includes('ransomware-as-a-service') ? ['crime-syndicate'] :
                        ['unknown'],
     aliases:          actor.aliases || [],
     sophistication:   actor.risk_score >= 90 ? 'advanced' :
                       actor.risk_score >= 70 ? 'expert' : 'intermediate',
     resource_level:   actor.suspected_sponsor ? 'government' : 'organization',
-    primary_motivation: actor.motivation.includes('financial-gain') ? 'personal-gain' :
-                       actor.motivation.includes('espionage') ? 'organizational-gain' :
+    primary_motivation: motivation.includes('financial-gain') ? 'personal-gain' :
+                       motivation.includes('espionage') ? 'organizational-gain' :
                        'disruption',
-    labels:           actor.motivation,
+    labels:           motivation,
     external_references: [{
       source_name: 'mitre-attack',
       url:         `https://attack.mitre.org/groups/${actor.id.replace(' ', '_')}/`,

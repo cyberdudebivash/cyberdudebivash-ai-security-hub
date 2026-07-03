@@ -337,9 +337,17 @@ export async function handleAutonomousPredictiveRisk(request, env, authCtx) {
   const topThreats = await getTopThreats(env, 20).catch(() => ({ threats: [], total: 0 }));
 
   const db = env.DB;
+  // Tenant isolation (CWE-639): this risk score is cached per user, so its soc_cases
+  // input must be the caller's own cases — not every tenant's — or the score reflects
+  // unrelated orgs' incident volume. Scope to the caller's org; admins see all.
+  const privileged = authCtx.role === 'admin' || authCtx.role === 'mssp_admin' || authCtx.isAdmin === true;
+  const scopeKey   = tenantKey(authCtx);
+  const caseStmt = privileged
+    ? db?.prepare(`SELECT severity, status, created_at FROM soc_cases ORDER BY created_at DESC LIMIT 50`)
+    : db?.prepare(`SELECT severity, status, created_at FROM soc_cases WHERE org_id = ? ORDER BY created_at DESC LIMIT 50`).bind(scopeKey);
   const [assetRows, caseRows, tiRows] = await Promise.all([
     db ? db.prepare(`SELECT asset_value, asset_type FROM customer_assets LIMIT 50`).all().then(r => r.results || []).catch(() => []) : [],
-    db ? db.prepare(`SELECT severity, status, created_at FROM soc_cases ORDER BY created_at DESC LIMIT 50`).all().then(r => r.results || []).catch(() => []) : [],
+    db ? caseStmt.all().then(r => r.results || []).catch(() => []) : [],
     db ? db.prepare(`SELECT cvss_score, epss_score, is_kev, severity FROM threat_intel ORDER BY cvss_score DESC LIMIT 50`).all().then(r => r.results || []).catch(() => []) : [],
   ]);
 
@@ -430,10 +438,23 @@ export async function handleAutonomousWorkflowStatus(request, env, authCtx) {
   const t0 = Date.now();
   const db = env.DB;
 
+  // Tenant isolation (CWE-639): soc_cases / soc_timeline are per-tenant. This status
+  // view returns case_number + title + timeline, so an unscoped read leaks other
+  // tenants' SOC case content to any tier-gated caller. Scope to the caller's org;
+  // platform/MSSP admins may see all. (Matches the brief path's tenant scoping.)
+  const privileged = authCtx.role === 'admin' || authCtx.role === 'mssp_admin' || authCtx.isAdmin === true;
+  const scopeKey   = tenantKey(authCtx);
+  const caseStmt = privileged
+    ? db.prepare(`SELECT id, case_number, title, severity, status, assignee_id, sla_due_at, created_at FROM soc_cases ORDER BY created_at DESC LIMIT 30`)
+    : db.prepare(`SELECT id, case_number, title, severity, status, assignee_id, sla_due_at, created_at FROM soc_cases WHERE org_id = ? ORDER BY created_at DESC LIMIT 30`).bind(scopeKey);
+  const timelineStmt = privileged
+    ? db.prepare(`SELECT case_id, event_type, actor, occurred_at FROM soc_timeline ORDER BY occurred_at DESC LIMIT 50`)
+    : db.prepare(`SELECT case_id, event_type, actor, occurred_at FROM soc_timeline WHERE org_id = ? ORDER BY occurred_at DESC LIMIT 50`).bind(scopeKey);
+
   const [caseRows, execRows, timelineRows] = await Promise.all([
-    db ? db.prepare(`SELECT id, case_number, title, severity, status, assignee_id, sla_due_at, created_at FROM soc_cases ORDER BY created_at DESC LIMIT 30`).all().then(r => r.results || []).catch(() => []) : [],
+    db ? caseStmt.all().then(r => r.results || []).catch(() => []) : [],
     db ? db.prepare(`SELECT id, workflow_id, status, started_at, completed_at, steps_json FROM workflow_executions ORDER BY started_at DESC LIMIT 30`).all().then(r => r.results || []).catch(() => []) : [],
-    db ? db.prepare(`SELECT case_id, event_type, actor, occurred_at FROM soc_timeline ORDER BY occurred_at DESC LIMIT 50`).all().then(r => r.results || []).catch(() => []) : [],
+    db ? timelineStmt.all().then(r => r.results || []).catch(() => []) : [],
   ]);
 
   const now = new Date();
@@ -624,11 +645,17 @@ export async function handleAutonomousObservability(request, env, authCtx) {
   }
   const cacheHitRatio = Math.round((hits / cacheKeys.length) * 100);
 
-  // Queue depth from D1
+  // Queue depth from D1 — scoped to the caller's tenant (admins see the whole platform)
+  // so a customer sees their own automation backlog, not every tenant's open-case total.
+  const obsPrivileged = authCtx.role === 'admin' || authCtx.role === 'mssp_admin' || authCtx.isAdmin === true;
+  const obsScopeKey   = tenantKey(authCtx);
   let queueDepth = 0, automationSuccessRate = 100, failureRate = 0;
   try {
+    const openCasesStmt = obsPrivileged
+      ? db.prepare(`SELECT COUNT(*) cnt FROM soc_cases WHERE status = 'OPEN'`)
+      : db.prepare(`SELECT COUNT(*) cnt FROM soc_cases WHERE status = 'OPEN' AND org_id = ?`).bind(obsScopeKey);
     const [openCases, execStats] = await Promise.all([
-      db.prepare(`SELECT COUNT(*) cnt FROM soc_cases WHERE status = 'OPEN'`).first().catch(() => ({ cnt: 0 })),
+      openCasesStmt.first().catch(() => ({ cnt: 0 })),
       db.prepare(`SELECT status, COUNT(*) cnt FROM workflow_executions GROUP BY status`).all().catch(() => ({ results: [] })),
     ]);
     queueDepth = openCases?.cnt || 0;

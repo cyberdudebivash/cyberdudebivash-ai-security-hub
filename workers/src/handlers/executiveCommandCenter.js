@@ -486,11 +486,12 @@ async function generateBoardReport(request, env) {
         values:kriValues,
         note:'Submit KRI values via POST /api/executive/kri/submit'
       },
-      competitivePosture:{
-        position:'MARKET LEADER',
-        capabilityScore:95, industryAverage:68,
-        uniqueCapabilities:['EU AI Act Compliance (only FULL implementation vs competitors)','MITRE ATLAS AI Red Team (unique — no competitor has FULL)','API Self-Serve Economy (unique differentiation)','Edge-native Cloudflare deployment (300+ PoPs, zero servers)']
-      },
+      // Differentiators are stated as capabilities (verifiable feature claims), not as a
+      // fabricated "MARKET LEADER / score 95 vs industry 68" benchmark. Self-assessed
+      // competitive scoring is not a measured metric and must not sit among real risk data
+      // in a board report. The explicit /api/executive/competitive-matrix endpoint remains
+      // for a clearly-labeled vendor self-comparison.
+      keyDifferentiators:['EU AI Act Compliance Engine','MITRE ATLAS AI Red Team','API Self-Serve Economy','Edge-native Cloudflare deployment (300+ PoPs, zero servers)'],
       boardRecommendations:[
         { priority:1, recommendation:'Approve AI governance policy mandate across all business units', rationale:'EU AI Act compliance required — penalties up to 7% global turnover' },
         { priority:2, recommendation:'Fund quarterly AI red team exercises using MITRE ATLAS framework', rationale:'LLM jailbreak and prompt injection risk increasing 340% YoY' },
@@ -571,7 +572,6 @@ async function executiveDashboard(request, env) {
       aiGovernance:{ totalModels, riskBreakdown:modelRisk, criticalModels:modelRisk.CRITICAL, highModels:modelRisk.HIGH },
       redTeam:{ campaigns:campaignRows.reduce((s,r)=>s+(r.cnt||0),0), completed:campaignRows.find(r=>r.status==='COMPLETED')?.cnt||0, running:campaignRows.find(r=>r.status==='RUNNING')?.cnt||0 },
       kris:{ lastPeriod:kriStored?'Submitted':'Not Submitted', link:'GET /api/executive/kri/dashboard' },
-      competitive:{ position:'MARKET LEADER', score:95, industryAverage:68 },
       quickLinks:{
         boardReport:'POST /api/executive/reports/board',
         cisoReport:'POST /api/executive/reports/ciso',

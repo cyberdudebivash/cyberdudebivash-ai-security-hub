@@ -52,6 +52,7 @@ import { scoreICP, generateProposalContent, getPipelineMetrics, revenueForecast9
 import { getAPIUsage, getDevPortalData, recordAPICall, queueCVEsForGeneration, runProductPipeline } from '../services/revos/apiEconomyEngine.js';
 import { getMSSPDashboard, onboardMSSPClient, runCSAnalysis, getCSDashboard } from '../services/revos/msspEngine.js';
 import { generateCISOReport } from '../services/revos/cisoReportEngine.js';
+import { isOwner, isRealUser } from '../auth/middleware.js';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -74,8 +75,16 @@ async function parseBody(req) {
   try { return await req.json(); } catch { return {}; }
 }
 
-function isAdmin(authCtx) {
-  return authCtx?.role === 'admin' || authCtx?.userId === 'admin';
+// RevOS PHASE 1/2/4/6/7/8 endpoints expose the platform OWNER's private business
+// intelligence — MRR/ARR/churn/LTV/CAC, the full CRM deal pipeline, every customer
+// proposal, platform-wide API analytics, and executive CISO reports. These are
+// single-tenant owner tooling (see the /api/proposals + /api/keys/:id/usage twins,
+// which are already isOwner-guarded). Historically this handler gated them on a weak
+// `role==='admin'` check that the real owner login never satisfies (owner is isAdmin
+// via ADMIN_KEY or an OWNER_EMAILS match), so most were effectively open to any
+// caller. requireOwner() closes that with the canonical guard.
+function requireOwner(authCtx, env) {
+  return isOwner(authCtx, env) ? null : err('Owner access required', 403, 'FORBIDDEN');
 }
 
 // ─── Main RevOS route dispatcher ─────────────────────────────────────────────
@@ -87,25 +96,26 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 1: Revenue Dashboard ───────────────────────────────────────────
   if (path === '/api/revos/dashboard' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const data = await getRevOSDashboard(db);
     return json(data);
   }
 
   if (path === '/api/revos/mrr' && method === 'GET') {
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const live = await computeLiveMRR(db);
     return json({ success: true, ...live, generated_at: new Date().toISOString() });
   }
 
   if (path === '/api/revos/mrr/snapshot' && method === 'POST') {
-    if (!isAdmin(authCtx)) return err('Admin only', 403);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const result = await writeMRRSnapshot(db);
     return json({ success: true, result });
   }
 
   // ── PHASE 2: Enterprise CRM ──────────────────────────────────────────────
   if (path === '/api/revos/crm/pipeline' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const metrics = await getPipelineMetrics(db);
     return json({ success: true, ...metrics });
   }
@@ -165,7 +175,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path === '/api/revos/crm/deal' && method === 'POST') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const body = await parseBody(request);
     if (!body.deal_id && !body.contact_email) return err('deal_id or contact_email required');
 
@@ -189,6 +199,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path === '/api/revos/crm/propose' && method === 'POST') {
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const body = await parseBody(request);
     if (!body.company || !body.contact_email) return err('company and contact_email required');
 
@@ -214,7 +225,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path === '/api/revos/crm/proposals' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const rows = db ? await db.prepare(
       `SELECT id, type, company, contact_email, value_inr, status, created_at, valid_until
        FROM proposals ORDER BY created_at DESC LIMIT 50`
@@ -223,6 +234,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path === '/api/revos/crm/forecast' && method === 'GET') {
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const live = await computeLiveMRR(db);
     const forecast = await revenueForecast90d(db, live.mrr_inr);
     return json({ success: true, current_mrr: live.mrr_inr, forecast });
@@ -230,22 +242,37 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 3: API Economy ─────────────────────────────────────────────────
   if (path === '/api/revos/developer' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isRealUser(authCtx)) return err('Authentication required', 401);
     const data = await getDevPortalData(db, authCtx.userId);
     return json({ success: true, ...data });
   }
 
   if (path === '/api/revos/api-usage' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isRealUser(authCtx)) return err('Authentication required', 401);
     const url = new URL(request.url);
-    const keyId = url.searchParams.get('key_id');
     const period = url.searchParams.get('period');
-    const usage = await getAPIUsage(db, keyId || authCtx.apiKeyId, period);
+    // BOLA guard: a caller may only read usage for a key they own. The owner may
+    // inspect any key via ?key_id=…; everyone else is forced to their own key,
+    // ignoring an attacker-supplied key_id (was: keyId || authCtx.apiKeyId — and
+    // apiKeyId is never set on the auth context, so the query param was the ONLY
+    // input, letting any authenticated user read another tenant's key usage/cost).
+    const ownKeyId = authCtx.keyId ?? authCtx.key_id ?? null;
+    let keyId = ownKeyId;
+    if (isOwner(authCtx, env)) {
+      keyId = url.searchParams.get('key_id') || keyId;
+    } else {
+      const requested = url.searchParams.get('key_id');
+      if (requested && requested !== ownKeyId) {
+        return err('You can only view usage for your own API key', 403, 'FORBIDDEN');
+      }
+    }
+    if (!keyId) return err('No API key in context — call with an API key or specify a key_id you own', 400);
+    const usage = await getAPIUsage(db, keyId, period);
     return json({ success: true, usage });
   }
 
   if (path === '/api/revos/api-analytics' && method === 'GET') {
-    if (!isAdmin(authCtx)) return err('Admin only', 403);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const period = new URL(request.url).searchParams.get('period') || new Date().toISOString().slice(0, 7);
     const [totalCalls, topEndpoints, topUsers] = await Promise.all([
       db?.prepare(`SELECT COUNT(*) as calls, SUM(cost_paise) as revenue FROM api_billing WHERE billing_period=?`)
@@ -267,6 +294,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 4: Defense Product Pipeline ───────────────────────────────────
   if (path === '/api/revos/product-pipeline' && method === 'GET') {
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const rows = db ? await db.prepare(
       `SELECT * FROM product_pipeline ORDER BY created_at DESC LIMIT 50`
     ).all().catch(() => ({ results: [] })) : { results: [] };
@@ -281,7 +309,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path === '/api/revos/product-pipeline/trigger' && method === 'POST') {
-    if (!isAdmin(authCtx)) return err('Admin only', 403);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const body = await parseBody(request);
     const cveIds = body.cve_ids || [];
     if (!cveIds.length) return err('cve_ids array required');
@@ -296,13 +324,13 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 5: MSSP ────────────────────────────────────────────────────────
   if (path === '/api/revos/mssp/dashboard' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isRealUser(authCtx)) return err('Authentication required', 401);
     const data = await getMSSPDashboard(db, authCtx.userId);
     return json({ success: true, ...data });
   }
 
   if (path === '/api/revos/mssp/client' && method === 'POST') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isRealUser(authCtx)) return err('Authentication required', 401);
     const body = await parseBody(request);
     if (!body.client_name || !body.client_email) return err('client_name and client_email required');
     const result = await onboardMSSPClient(db, authCtx.userId, body);
@@ -310,7 +338,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path.startsWith('/api/revos/mssp/client/') && method === 'PUT') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isRealUser(authCtx)) return err('Authentication required', 401);
     const clientId = path.replace('/api/revos/mssp/client/', '').split('/')[0];
     const body = await parseBody(request);
     if (db && clientId) {
@@ -331,19 +359,19 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 6: Customer Success ────────────────────────────────────────────
   if (path === '/api/revos/cs/dashboard' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const data = await getCSDashboard(db);
     return json({ success: true, ...data });
   }
 
   if (path === '/api/revos/cs/analyze' && method === 'POST') {
-    if (!isAdmin(authCtx)) return err('Admin only', 403);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const result = await runCSAnalysis(db);
     return json({ success: true, ...result });
   }
 
   if (path.startsWith('/api/revos/cs/resolve/') && method === 'POST') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const sigId = path.replace('/api/revos/cs/resolve/', '').split('/')[0];
     if (db) {
       await db.prepare(`UPDATE cs_signals SET resolved=1, resolved_at=datetime('now') WHERE id=?`)
@@ -354,6 +382,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 7: CISO Reports ────────────────────────────────────────────────
   if (path === '/api/revos/ciso-report' && method === 'POST') {
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const body = await parseBody(request);
     const result = await generateCISOReport(db, kv, {
       reportType: body.report_type || 'monthly',
@@ -365,15 +394,19 @@ export async function handleRevOS(request, env, authCtx, path, method) {
   }
 
   if (path === '/api/revos/ciso-report/list' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const rows = db ? await db.prepare(
       `SELECT id, report_type, period, status, created_at FROM ciso_reports
-       WHERE user_id=? ORDER BY created_at DESC LIMIT 20`
-    ).bind(authCtx.userId).all().catch(() => ({ results: [] })) : { results: [] };
+       ORDER BY created_at DESC LIMIT 20`
+    ).all().catch(() => ({ results: [] })) : { results: [] };
     return json({ success: true, reports: rows.results || [] });
   }
 
   if (path.startsWith('/api/revos/ciso-report/') && method === 'GET') {
+    // BOLA guard: CISO reports embed platform-wide financials (MRR/ARR/churn) and
+    // executive intelligence. IDs are timestamp-derived and enumerable, so this must
+    // be owner-only — previously any anonymous caller could read any report by id.
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const reportId = path.replace('/api/revos/ciso-report/', '').split('/')[0];
     if (reportId === 'list') return json({ success: false, error: 'Not found' }, 404);
     const row = db ? await db.prepare(`SELECT * FROM ciso_reports WHERE id=?`)
@@ -385,7 +418,7 @@ export async function handleRevOS(request, env, authCtx, path, method) {
 
   // ── PHASE 8: Admin/Scaling ───────────────────────────────────────────────
   if (path === '/api/revos/audit-log' && method === 'GET') {
-    if (!isAdmin(authCtx)) return err('Admin only', 403);
+    const gate = requireOwner(authCtx, env); if (gate) return gate;
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
     const rows = db ? await db.prepare(
