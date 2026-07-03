@@ -130,6 +130,14 @@ export async function handleKeyUsage(request, env, authCtx, keyId) {
   if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
   if (!keyId) return Response.json({ error: 'Key ID required' }, { status: 400 });
 
+  // Ownership check (BOLA/IDOR — CWE-639): getKeyUsageSummary queries
+  // api_key_usage by key_id ALONE (userId is ignored), so without this guard any
+  // authenticated caller could read another tenant's request volume + module
+  // breakdown by enumerating key ids. Mirror the rotate/revoke ownership pattern:
+  // 404 for a key the caller does not own (no existence oracle, no data leak).
+  const owns = (await listUserApiKeys(env.DB, authCtx.user_id)).some(k => k.id === keyId);
+  if (!owns) return Response.json({ error: 'Key not found' }, { status: 404 });
+
   const usage = await getKeyUsageSummary(env.DB, keyId, authCtx.user_id);
   return Response.json({ key_id: keyId, ...usage });
 }
