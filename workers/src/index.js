@@ -156,6 +156,8 @@ import { handleListAgentAdvisories, handleAgentThreatOverview, handleCreateAgent
 import { ingestAgentThreatAdvisories } from './services/agentThreatIngestion.js';
 import { ingestAttackLibraryTechniques } from './services/attackLibraryIngestion.js';
 import { handleListAttackTechniques, handleAttackLibraryOverview, handleCreateAttackTechnique } from './handlers/attackLibrary.js';
+import { handleGlobalIntelFeed, handleGlobalIntelBriefing, handleGlobalIntelSources, handleGlobalIntelRefresh } from './handlers/globalIntel.js';
+import { runGlobalIntelFirehose } from './services/globalIntelFirehose.js';
 
 // ── v27 ENTERPRISE DOMINANCE IMPORTS ─────────────────────────────────────────
 import { handleCEODashboard, handleCEOSnapshot }    from './handlers/ceoExecutiveDashboard.js';
@@ -7594,6 +7596,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     return withSecurityHeaders(withCors(Response.json({ success: true, ...result }), request));
   }
 
+  // ── v45: GLOBAL THREAT INTEL FIREHOSE — worldwide OSINT, breaking-first ─────
+  if (path === '/api/global-intel' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleGlobalIntelFeed(request, env), request));
+  }
+  if (path === '/api/global-intel/briefing' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleGlobalIntelBriefing(request, env), request));
+  }
+  if (path === '/api/global-intel/sources' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleGlobalIntelSources(request, env), request));
+  }
+  if (path === '/api/global-intel/refresh' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handleGlobalIntelRefresh(request, env), request));
+  }
+
   // -- v30.0: Platform Metrics ------------------------------------------------
   if (path === '/api/platform/metrics') {
     return servePlatformMetrics(request, env);
@@ -8308,6 +8324,19 @@ ctx.waitUntil(
           duration_ms: r.duration_ms,
         })))
         .catch(e => console.error('[CRON] Threat Ingestion error:', e?.message))
+    );
+
+    // ── HOURLY (24×7×365): Global Threat Intel Firehose — worldwide OSINT
+    //    (news + vendor research + CERT advisories + abuse.ch live IOC feeds).
+    //    Fetch→ingest→enrich→analyse→draft→format→publish; breaking-first. ──
+    ctx.waitUntil(
+      runGlobalIntelFirehose(env)
+        .then(r => console.log('[CRON] Global Intel Firehose:', JSON.stringify({
+          sources_ok: r.sources_ok, sources_total: r.sources_total, fetched: r.fetched,
+          unique: r.unique_items, inserted: r.inserted, breaking: r.breaking,
+          level: r.threat_level, duration_ms: r.duration_ms,
+        })))
+        .catch(e => console.error('[CRON] Global Intel Firehose error:', e?.message))
     );
 
     // ── HOURLY: APT attribution backfill — scans recent threat_intel rows for
