@@ -6,6 +6,8 @@
  * Public endpoint: GET /api/sentinel/feed
  */
 
+import { buildFreshnessContract } from './contracts.js';
+
 const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
 const THREATFOX_URL  = 'https://threatfox-api.abuse.ch/api/v1/';
@@ -257,6 +259,28 @@ export async function runSentinelCron(env) {
 }
 
 // ─── HTTP Handler — GET /api/sentinel/feed ────────────────────────────────────
+// Counts records across the feed's actual array fields — kept in one place so
+// the Freshness Contract's `records_displayed` can never silently drift from
+// what the frontend actually renders as new fields are added to the feed.
+function countFeedRecords(feed) {
+  return ['critical_cves', 'high_cves', 'actively_exploited', 'active_iocs']
+    .reduce((sum, key) => sum + (Array.isArray(feed?.[key]) ? feed[key].length : 0), 0);
+}
+
+function withFeedFreshness(feed, pipelineSourceLabel) {
+  return {
+    ...feed,
+    freshness: buildFreshnessContract({
+      source: pipelineSourceLabel,
+      latestRecordAt: feed?.generated_at || null,
+      expectedIntervalSec: FEED_TTL,
+      recordsDisplayed: countFeedRecords(feed),
+      recordsAvailable: null,
+      autoRefreshSec: 300, // matches setInterval(socLoadThreatFeed, 5*60*1000) on the homepage panel
+    }),
+  };
+}
+
 export async function handleSentinelFeed(request, env, authCtx = {}) {
   const url    = new URL(request.url);
   const nocache = url.searchParams.get('nocache') === '1';
@@ -267,7 +291,7 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
       const cached = await env.SECURITY_HUB_KV.get(FEED_CACHE_KEY);
       if (cached) {
         const feed = JSON.parse(cached);
-        return Response.json(feed, {
+        return Response.json(withFeedFreshness(feed, 'Sentinel APEX / NVD + CISA KEV (cached)'), {
           status: 200,
           headers: { 'X-Cache': 'HIT', 'X-Feed-Generated': feed.generated_at, 'Cache-Control': `public, max-age=${FEED_TTL}` },
         });
@@ -284,7 +308,7 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
       env.SECURITY_HUB_KV.put(FEED_CACHE_KEY, JSON.stringify(feed), { expirationTtl: FEED_TTL }).catch(() => {});
     }
 
-    return Response.json(feed, {
+    return Response.json(withFeedFreshness(feed, 'Sentinel APEX / NVD + CISA KEV (live)'), {
       status: 200,
       headers: { 'X-Cache': 'MISS', 'X-Feed-Generated': feed.generated_at, 'Cache-Control': `public, max-age=3600` },
     });
@@ -293,7 +317,7 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
     // dashboard always shows real data even when NVD/CISA are unreachable.
     const d1Feed = await buildFeedFromD1(env?.DB);
     if (d1Feed) {
-      return Response.json(d1Feed, {
+      return Response.json(withFeedFreshness(d1Feed, 'Sentinel APEX / D1 threat_intel (fallback — NVD/CISA unreachable)'), {
         status: 200,
         headers: { 'X-Cache': 'D1-FALLBACK', 'X-Feed-Generated': d1Feed.generated_at, 'Cache-Control': 'public, max-age=300' },
       });
@@ -302,6 +326,7 @@ export async function handleSentinelFeed(request, env, authCtx = {}) {
       error: 'Feed temporarily unavailable',
       hint: 'The Sentinel APEX feed is refreshing. Try again in 60 seconds.',
       fallback: 'https://t.me/cyberdudebivashSentinelApex',
+      freshness: buildFreshnessContract({ source: 'Sentinel APEX', latestRecordAt: null }),
     }, { status: 503 });
   }
 }

@@ -114,3 +114,75 @@ export function nowISO() {
 export function withTimestamp(obj = {}) {
   return { timestamp: nowISO(), ...obj };
 }
+
+// ─── Freshness Contract ────────────────────────────────────────────────────
+// Enterprise Real-Time Intelligence Assurance Program.
+//
+// Premium "LIVE" intelligence widgets (Sentinel APEX, AI Threat Intel, MYTHOS
+// GOD MODE, etc.) previously carried only a "LIVE" badge with no supporting
+// evidence — a customer had no way to tell ingestion-stale from cache-stale
+// from UI-stale, and support had no way to diagnose which layer failed
+// without reading logs. This contract is the single shape every freshness-
+// bearing endpoint attaches under a `freshness` key, so the frontend can
+// render one shared widget (see frontend renderFreshnessContract()) instead
+// of every panel inventing its own ad hoc "Updated Xm ago" text.
+//
+// PIPELINE_STATUS is deliberately a small enum, not a boolean, because
+// "the API responded" and "the underlying feed is current" are different
+// facts — a cached-but-stale response should read DELAYED, not HEALTHY.
+export const PIPELINE_STATUS = Object.freeze({
+  HEALTHY: 'HEALTHY',   // ingested within its expected interval
+  DELAYED: 'DELAYED',   // reachable, but older than expected interval
+  OFFLINE: 'OFFLINE',   // ingestion has not run at all recently, or errored
+  UNKNOWN: 'UNKNOWN',   // no freshness data available for this source yet
+});
+
+/**
+ * Build a Freshness Contract for one intelligence source.
+ *
+ * @param {object} p
+ * @param {string} p.source              Human-readable origin, e.g. "Sentinel APEX / CISA KEV".
+ * @param {string|null} p.latestRecordAt ISO timestamp of the NEWEST underlying record (not the
+ *                                       response time) — null if genuinely no data exists yet.
+ * @param {number} p.expectedIntervalSec Expected max gap between ingestions, in seconds
+ *                                       (e.g. 3600 for hourly, 21600 for every 6h).
+ * @param {number} p.recordsDisplayed    Count actually returned in this response.
+ * @param {number|null} p.recordsAvailable Total count available server-side, if known.
+ * @param {number} p.autoRefreshSec      How often the FRONTEND re-polls this widget.
+ * @returns {object} Freshness Contract — safe to serialize directly into an API response.
+ */
+export function buildFreshnessContract({
+  source,
+  latestRecordAt = null,
+  expectedIntervalSec = 3600,
+  recordsDisplayed = 0,
+  recordsAvailable = null,
+  autoRefreshSec = 300,
+} = {}) {
+  const now = Date.now();
+  let ageSec = null;
+  let pipelineStatus = PIPELINE_STATUS.UNKNOWN;
+
+  if (latestRecordAt) {
+    const t = new Date(latestRecordAt).getTime();
+    if (!Number.isNaN(t)) {
+      ageSec = Math.max(0, Math.round((now - t) / 1000));
+      // 2x grace window absorbs normal cron jitter without false-alarming.
+      pipelineStatus = ageSec <= expectedIntervalSec * 2 ? PIPELINE_STATUS.HEALTHY
+        : ageSec <= expectedIntervalSec * 6 ? PIPELINE_STATUS.DELAYED
+        : PIPELINE_STATUS.OFFLINE;
+    }
+  }
+
+  return {
+    source,
+    latest_record_at:      latestRecordAt,
+    latest_record_age_sec: ageSec,
+    pipeline_status:       pipelineStatus,
+    records_displayed:     recordsDisplayed,
+    records_available:     recordsAvailable,
+    expected_interval_sec: expectedIntervalSec,
+    auto_refresh_sec:      autoRefreshSec,
+    generated_at:          nowISO(),
+  };
+}

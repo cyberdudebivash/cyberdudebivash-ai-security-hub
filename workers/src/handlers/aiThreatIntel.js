@@ -18,6 +18,7 @@
 
 import { RADAR_STATUS_KV_KEY, AI_RADAR_PACKAGES, runAIThreatRadar } from '../services/aiThreatRadar.js';
 import { ensureAIThreatFeedTable } from '../services/aiThreatIngestion.js';
+import { buildFreshnessContract } from '../lib/contracts.js';
 
 const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization' };
 const json = (d,s=200) => new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}});
@@ -207,6 +208,18 @@ export async function handleAIThreatFeed(request, env, authCtx) {
         cta: 'Upgrade to unlock the full live feed',
       },
     } : {}),
+    // radar.last_scan_at is the genuine "when was the live component of this
+    // feed last refreshed" signal — the AI Threat Radar cron runs hourly
+    // (see index.js scheduled()), independent of the always-visible curated
+    // library baseline, which does not need a freshness claim of its own.
+    freshness: buildFreshnessContract({
+      source: 'AI Threat Radar (OSV.dev + NVD keyword scan + GitHub Advisories API)',
+      latestRecordAt: radarStatus?.last_scan_at || null,
+      expectedIntervalSec: 3600,
+      recordsDisplayed: curated.prompt_attack_patterns.length + curated.agent_threats.length + curated.ai_vulnerabilities.length,
+      recordsAvailable: null,
+      autoRefreshSec: 90, // matches setInterval(renderAIThreatIntelFlagship, 90000) on the homepage panel
+    }),
   });
 }
 

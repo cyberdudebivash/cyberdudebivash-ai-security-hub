@@ -17,6 +17,7 @@ import {
   getGodModeStatus,
   getGodModeReport,
 } from '../services/mythosGodMode.js';
+import { buildFreshnessContract } from '../lib/contracts.js';
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -75,7 +76,19 @@ export async function handleGodModeRun(request, env, authCtx, ctx) {
 export async function handleGodModeStatus(request, env, authCtx) {
   try {
     const status = await getGodModeStatus(env);
-    return json({ success: true, ...status });
+    return json({
+      success: true,
+      ...status,
+      // Cron cadence: wrangler.toml "0 */6 * * *" — every 6 hours.
+      freshness: buildFreshnessContract({
+        source: 'MYTHOS GOD MODE v5.0 APEX NEXUS (god-mode-d1)',
+        latestRecordAt: status?.last_run?.last_run_at || null,
+        expectedIntervalSec: 21600,
+        recordsDisplayed: status?.lifetime_metrics?.total_runs ?? 0,
+        recordsAvailable: status?.lifetime_metrics?.total_runs ?? null,
+        autoRefreshSec: 0, // homepage widget loads once on page load, no polling interval
+      }),
+    });
   } catch (err) {
     return json({ success: false, error: err.message }, 500);
   }

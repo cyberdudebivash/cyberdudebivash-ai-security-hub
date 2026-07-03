@@ -1758,6 +1758,7 @@ a{color:var(--accent);text-decoration:none}
 <span style="font-size:10px;color:var(--text-dim)">Click threat to analyze</span>
 <span id="soc-feed-count" style="font-size:10px;color:var(--accent)">Loading...</span>
 </div>
+<div id="soc-feed-freshness"></div>
 </div>
 <!-- CENTER: Attack Graph -->
 <div class="soc-col soc-col-center">
@@ -1905,6 +1906,8 @@ a{color:var(--accent);text-decoration:none}
 <span style="color:rgba(255,255,255,.15)">|</span>
 <span id="atiRadarSources">24/7 watch: OSV.dev · NVD keyword scan · GitHub Advisories API</span>
 </div>
+<!-- Freshness Contract — Source / Latest Intelligence / Pipeline / Records / Auto-refresh / UI-refresh -->
+<div id="ati-freshness" style="position:relative;z-index:1"></div>
 <!-- Stat strip -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;position:relative;z-index:1">
 <div style="background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px">
@@ -2032,6 +2035,7 @@ a{color:var(--accent);text-decoration:none}
 <div style="font-size:10px;color:var(--text-dim);text-align:right" id="gm-last-run">Loading status…</div>
 </div>
 </div>
+<div id="gm-freshness" style="position:relative;z-index:1"></div>
 </div>
 <!-- CTA Row v11 -->
 <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px;flex-wrap:wrap">
@@ -11427,6 +11431,7 @@ async function renderRecentActivity() {
             lastRun.textContent = 'No runs yet — click to trigger';
           }
         }
+        if (b.freshness) renderFreshnessContract('gm-freshness', b.freshness);
       })
       .catch(function() {
         if (pill) { pill.textContent = 'OFFLINE'; pill.style.color = '#64748b'; }
@@ -11771,6 +11776,65 @@ async function initSentinelFeed() {
   }
 }
 
+// ─── Freshness Contract — shared render for the `freshness` object every
+// intelligence endpoint attaches (see workers/src/lib/contracts.js
+// buildFreshnessContract). Renders exactly the evidence an enterprise
+// customer needs to trust — or correctly distrust — a "LIVE" claim:
+// source, newest record age, pipeline health, records shown vs available,
+// and both the auto-refresh cadence and a LIVE-ticking "last UI refresh"
+// clock. One implementation, reused by every panel — no per-widget copies.
+const CDB_FRESHNESS_TICKERS = new Map();
+
+function cdbFormatAgo(sec) {
+  if (sec == null) return 'unknown';
+  if (sec < 60) return sec + 's ago';
+  if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+  if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+  return Math.floor(sec / 86400) + 'd ago';
+}
+
+function cdbPipelineColor(status) {
+  return { HEALTHY: '#34d399', DELAYED: '#f59e0b', OFFLINE: '#ef4444', UNKNOWN: '#94a3b8' }[status] || '#94a3b8';
+}
+
+function renderFreshnessContract(containerId, freshness) {
+  const el = document.getElementById(containerId);
+  if (!el || !freshness) return;
+
+  // Stop any previous ticker bound to this container before starting a new one.
+  const prior = CDB_FRESHNESS_TICKERS.get(containerId);
+  if (prior) clearInterval(prior);
+
+  const uiRefreshedAt = Date.now();
+  const color = cdbPipelineColor(freshness.pipeline_status);
+  const recordsLine = freshness.records_available != null
+    ? `${freshness.records_displayed.toLocaleString('en-IN')} of ${freshness.records_available.toLocaleString('en-IN')}`
+    : freshness.records_displayed.toLocaleString('en-IN');
+  const latestLine = freshness.latest_record_at
+    ? new Date(freshness.latest_record_at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
+    : 'No data ingested yet';
+  const autoRefreshLine = freshness.auto_refresh_sec > 0
+    ? `Every ${freshness.auto_refresh_sec >= 60 ? Math.round(freshness.auto_refresh_sec/60)+'m' : freshness.auto_refresh_sec+'s'}`
+    : 'On page load only';
+
+  el.innerHTML =
+    '<div style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:10.5px;color:var(--text-dim,#8296a6);font-family:ui-monospace,monospace;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-top:8px">' +
+      `<span title="Where this intelligence is sourced from">Source: <b style="color:var(--text,#d6dee6)">${freshness.source}</b></span>` +
+      `<span title="Timestamp of the newest underlying record, not this response">Latest Intelligence: <b style="color:var(--text,#d6dee6)">${latestLine}</b></span>` +
+      `<span title="HEALTHY = within expected ingestion interval; DELAYED = late; OFFLINE = ingestion has stalled">Pipeline: <b style="color:${color}">${freshness.pipeline_status}</b></span>` +
+      `<span title="Records shown in this response vs total known to exist">Records: <b style="color:var(--text,#d6dee6)">${recordsLine}</b></span>` +
+      `<span title="How often this widget automatically re-fetches">Auto-refresh: <b style="color:var(--text,#d6dee6)">${autoRefreshLine}</b></span>` +
+      `<span title="How long ago your browser last redrew this data">UI Refresh: <b id="${containerId}-ago" style="color:var(--text,#d6dee6)">just now</b></span>` +
+    '</div>';
+
+  const ticker = setInterval(function () {
+    const agoEl = document.getElementById(containerId + '-ago');
+    if (!agoEl) { clearInterval(ticker); CDB_FRESHNESS_TICKERS.delete(containerId); return; }
+    agoEl.textContent = cdbFormatAgo(Math.round((Date.now() - uiRefreshedAt) / 1000));
+  }, 1000);
+  CDB_FRESHNESS_TICKERS.set(containerId, ticker);
+}
+
 // ─── AI Threat Intelligence — Flagship Dashboard Section ────────────────
 // Live-wired to /api/ai-security/threat-feed (OWASP LLM Top 10 + MITRE
 // ATT&CK/ATLAS mapped, tier-gated). Distinct data source from the generic
@@ -11821,6 +11885,9 @@ async function renderAIThreatIntelFlagship() {
         radarLabel.textContent = 'Radar warming up — first scan pending (runs hourly)';
       }
     }
+
+    // Freshness Contract — real evidence backing the "LIVE" badge above
+    if (data.freshness) renderFreshnessContract('ati-freshness', data.freshness);
 
     // Stat strip
     const s = data.summary || {};
@@ -14754,7 +14821,7 @@ window.proceedUpgrade=function(){closeUpgradeModal();if(typeof startSubscription
 /* THREAT FEED */
 window._socThreats=[];window._socSelectedThreat=null;
 var SEED_THREATS=[{id:'CVE-2024-3400',severity:'CRITICAL',cvss:10.0,title:'PAN-OS GlobalProtect OS Command Injection',kev:true,apt:'UTA0218'},{id:'CVE-2024-21762',severity:'CRITICAL',cvss:9.6,title:'Fortinet FortiOS SSL-VPN Out-of-Bound Write',kev:true,apt:'APT28'},{id:'CVE-2024-27198',severity:'CRITICAL',cvss:9.8,title:'JetBrains TeamCity Auth Bypass - Full Takeover',kev:true,apt:'APT29'},{id:'CVE-2024-1709',severity:'CRITICAL',cvss:10.0,title:'ConnectWise ScreenConnect Auth Bypass',kev:true,apt:'Various'},{id:'CVE-2024-21893',severity:'HIGH',cvss:8.2,title:'Ivanti Connect Secure SSRF Auth Bypass',kev:true,apt:'UNC5221'},{id:'CVE-2023-34362',severity:'CRITICAL',cvss:9.8,title:'MOVEit Transfer SQL Injection - Cl0p',kev:true,apt:'Cl0p'},{id:'CVE-2023-4966',severity:'CRITICAL',cvss:9.4,title:'Citrix Bleed NetScaler Session Token Leak',kev:true,apt:'APT29'},{id:'CVE-2021-44228',severity:'CRITICAL',cvss:10.0,title:'Log4Shell JNDI Injection - Widespread',kev:true,apt:'Multiple APTs'}];
-window.socLoadThreatFeed=async function(){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='<div class="soc-skel"></div><div class="soc-skel"></div><div class="soc-skel"></div>';logSOC('Fetching live CVE threat feed...','sys','info');var threats=[];try{var r=await fetch('/api/threat-intel/live?limit=20');var d=await r.json();var raw=[];if(Array.isArray(d.actively_exploited)&&d.actively_exploited.length){raw=d.actively_exploited.slice(0,8).map(function(c){return{id:c.cve_id||c.id,severity:'CRITICAL',cvss:c.cvss_score||9.0,title:(c.vulnerability_name||c.vulnerabilityName||c.product||c.cve_id||'').slice(0,90),kev:true,apt:'CISA KEV'};});}if(Array.isArray(d.critical_cves)&&d.critical_cves.length){raw=[...raw,...d.critical_cves.slice(0,6).map(function(c){return{id:c.id,severity:c.severity||'CRITICAL',cvss:c.score||9.0,title:(c.description||c.id||'').slice(0,90),kev:false,apt:'NVD'};})];}if(Array.isArray(d.high_cves)&&d.high_cves.length){raw=[...raw,...d.high_cves.slice(0,4).map(function(c){return{id:c.id,severity:'HIGH',cvss:c.score||7.5,title:(c.description||c.id||'').slice(0,90),kev:false,apt:'NVD'};})];}if(raw.length){var seen=new Set();threats=raw.filter(function(t){if(!t.id||seen.has(t.id))return false;seen.add(t.id);return true;}).slice(0,12);}if(!threats.length)threats=d.threats||d.cves||d.data||[];}catch(e){}if(!threats.length){feed.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:16px;text-align:center">Live threat feed loading — refreshes automatically every 5 min</div>';logSOC('Live feed unavailable — retrying shortly','warn','warn');return;}renderThreatFeed(threats);logSOC(threats.length+' threats loaded - '+threats.filter(function(t){return t.severity==='CRITICAL'||t.cvss>=9;}).length+' CRITICAL','ok','ok');};
+window.socLoadThreatFeed=async function(){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='<div class="soc-skel"></div><div class="soc-skel"></div><div class="soc-skel"></div>';logSOC('Fetching live CVE threat feed...','sys','info');var threats=[];try{var r=await fetch('/api/threat-intel/live?limit=20');var d=await r.json();var raw=[];if(Array.isArray(d.actively_exploited)&&d.actively_exploited.length){raw=d.actively_exploited.slice(0,8).map(function(c){return{id:c.cve_id||c.id,severity:'CRITICAL',cvss:c.cvss_score||9.0,title:(c.vulnerability_name||c.vulnerabilityName||c.product||c.cve_id||'').slice(0,90),kev:true,apt:'CISA KEV'};});}if(Array.isArray(d.critical_cves)&&d.critical_cves.length){raw=[...raw,...d.critical_cves.slice(0,6).map(function(c){return{id:c.id,severity:c.severity||'CRITICAL',cvss:c.score||9.0,title:(c.description||c.id||'').slice(0,90),kev:false,apt:'NVD'};})];}if(Array.isArray(d.high_cves)&&d.high_cves.length){raw=[...raw,...d.high_cves.slice(0,4).map(function(c){return{id:c.id,severity:'HIGH',cvss:c.score||7.5,title:(c.description||c.id||'').slice(0,90),kev:false,apt:'NVD'};})];}if(raw.length){var seen=new Set();threats=raw.filter(function(t){if(!t.id||seen.has(t.id))return false;seen.add(t.id);return true;}).slice(0,12);}if(!threats.length)threats=d.threats||d.cves||d.data||[];}catch(e){}if(!threats.length){feed.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:16px;text-align:center">Live threat feed loading — refreshes automatically every 5 min</div>';logSOC('Live feed unavailable — retrying shortly','warn','warn');return;}renderThreatFeed(threats);if(typeof d!=='undefined'&&d&&d.freshness)renderFreshnessContract('soc-feed-freshness',d.freshness);logSOC(threats.length+' threats loaded - '+threats.filter(function(t){return t.severity==='CRITICAL'||t.cvss>=9;}).length+' CRITICAL','ok','ok');};
 function renderThreatFeed(threats){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='';window._socThreats=threats;threats.forEach(function(t,idx){var sev=t.severity||(t.cvss>=9?'CRITICAL':t.cvss>=7?'HIGH':'MEDIUM');var item=document.createElement('div');item.className='soc-threat-item sev-'+sev;item.onclick=function(){socSelectThreat(t,item);};item.innerHTML='<div style="flex:1;min-width:0"><div class="soc-threat-cve">'+(t.id||t.cve_id||'CVE-UNKNOWN')+'</div><div class="soc-threat-title">'+(t.title||t.description||'Threat')+'</div><div class="soc-threat-meta"><span class="soc-sev-chip '+sev+'">'+sev+'</span><span class="soc-cvss-chip">CVSS:'+(t.cvss||'N/A')+'</span>'+(t.kev||t.is_kev?'<span class="soc-kev-chip">KEV</span>':'')+'</div></div>';feed.appendChild(item);});setEl('soc-feed-count',threats.length+' threats active');var crit=threats.filter(function(t){return(t.severity||'')==='CRITICAL'||(t.cvss||0)>=9;}).length;var kev=threats.filter(function(t){return t.kev||t.is_kev;}).length;setEl('soc-cve-active',threats.length);setEl('soc-kev-live',kev);setEl('soc-exploited',crit);var risk=Math.max(20,Math.min(95,50+crit*5+kev*3));setEl('socRiskScore',risk);var ring=document.getElementById('socRiskRing');if(ring){ring.style.strokeDashoffset=188*(1-risk/100);ring.style.stroke=risk>75?'#ef4444':risk>50?'#f59e0b':'#10b981';}var rl=document.getElementById('soc-rail-threat-lbl');if(rl)rl.textContent='THREAT: '+(crit>=3?'CRITICAL':crit>=1?'HIGH':'ELEVATED');}
 
 /* AI VERDICT */
@@ -15060,9 +15127,12 @@ async function initMythosUI(){
     var pub=m.total_published||d.total_published||d.stats&&d.stats.total_published||0;
     var running=d.is_running||false;
     
-    // SOC log
+    // SOC log — "runs every 6h" is the real, static cron cadence
+    // (wrangler.toml: "0 */6 * * *"); a specific "next run: Xh" countdown
+    // was previously a hardcoded literal that never changed, so it was
+    // fabricated the instant more or less than exactly 4h remained.
     if(typeof logSOC==='function'){
-      logSOC('MYTHOS AI: '+total+' defense tools generated | '+pub+' published | next run: 4h','ai','ai');
+      logSOC('MYTHOS AI: '+total+' defense tools generated | '+pub+' published | runs every 6h','ai','ai');
     }
     
     // Status bar
@@ -15889,29 +15959,37 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
 
   async function _loadMythos(){
     try{
-      const r = await fetch(API+'/api/mythos/status');
+      // Canonical status source (see initGodModeWidget) — the legacy
+      // /api/mythos/status endpoint this used to call tracks a separate,
+      // stale counter set (verified live: 17+ days behind the real pipeline)
+      // and has no uptime concept at all, which is why 'ag-m-uptime' below
+      // was previously two different hardcoded literals depending on which
+      // code path ran, never a computed value in either case.
+      const r = await fetch(API+'/api/mythos/god-mode/status');
       if(!r.ok) throw new Error('status '+r.status);
       const d = await r.json();
-      // API shape: { success, is_running, metrics: { total_tools, total_published, total_runs, total_failed }, last_run, recent_runs }
-      const m = d.metrics || {};
-      const tools     = m.total_tools     || d.total_tools     || 0;
-      const published = m.total_published || d.total_published || 0;
-      const runs      = m.total_runs      || d.total_runs      || 0;
-      const isRunning = d.is_running || false;
-      document.getElementById('ag-m-tools')?.innerHTML !== undefined && (document.getElementById('ag-m-tools').textContent = tools || '—');
-      document.getElementById('ag-m-published').textContent = published || '—';
-      document.getElementById('ag-m-pipeline').textContent = isRunning ? '1 active' : '0';
-      document.getElementById('ag-m-uptime').textContent = '100%';
-      document.getElementById('ag-lbl-mythos').textContent = tools+' tools';
-      _appendLog('ag-mythos-log', `MYTHOS: ${tools} tools · ${published} published · ${runs} runs · pipeline ${isRunning?'RUNNING':'nominal'}`, 'ai');
+      const lm = d.lifetime_metrics || {};
+      const s  = d.last_report_summary || {};
+      const tools     = lm.total_tools || 0;
+      const published = lm.total_published || 0;
+      const runs      = lm.total_runs || 0;
+      const isRunning = !!d.is_running;
+      const el = (id) => document.getElementById(id);
+      if (el('ag-m-tools'))     el('ag-m-tools').textContent = tools || '—';
+      if (el('ag-m-published')) el('ag-m-published').textContent = published || '—';
+      if (el('ag-m-pipeline'))  el('ag-m-pipeline').textContent = isRunning ? '1 active' : '0';
+      // No real uptime/availability metric exists for this pipeline — show an
+      // honest placeholder rather than a fabricated percentage.
+      if (el('ag-m-uptime'))    el('ag-m-uptime').textContent = '—';
+      if (el('ag-lbl-mythos'))  el('ag-lbl-mythos').textContent = tools+' tools';
+      _appendLog('ag-mythos-log', `MYTHOS: ${tools} tools · ${published} published · ${runs} runs · pipeline ${isRunning?'RUNNING':(s.status||'nominal')}`, 'ai');
     }catch(e){
+      // Stats endpoint unavailable — show honest placeholders, never demo data.
       _appendLog('ag-mythos-log', `MYTHOS status unreachable: ${e.message}`, 'warn');
-      // Demo fallback
-      document.getElementById('ag-m-tools').textContent='847';
-      document.getElementById('ag-m-published').textContent='823';
-      document.getElementById('ag-m-pipeline').textContent='12';
-      document.getElementById('ag-m-uptime').textContent='99.8%';
-      document.getElementById('ag-lbl-mythos').textContent='847 tools';
+      ['ag-m-tools','ag-m-published','ag-m-pipeline','ag-m-uptime'].forEach(function(id){
+        const e2 = document.getElementById(id); if (e2) e2.textContent = '—';
+      });
+      const lbl = document.getElementById('ag-lbl-mythos'); if (lbl) lbl.textContent = 'unavailable';
     }
   }
 
@@ -16033,10 +16111,22 @@ const CDB_AGCONSOLE = window.CDB_AGCONSOLE = (() => {
       const btn = document.querySelector('[onclick="CDB_AGCONSOLE.triggerMythos()"]');
       if(btn){ btn.disabled=true; btn.textContent='⏳ Running...'; }
       try{
-        const r = await fetch(API+'/api/mythos/run',{method:'POST',headers:{..._authH(),'x-admin-key':'REDACTED_ROTATED_KEY','Content-Type':'application/json'},body:JSON.stringify({source:'manual_admin'})});
-        const d = await r.json();
-        _appendLog('ag-mythos-log', `✅ MYTHOS run triggered: job ${d.job_id||'queued'}`, 'ok');
-        setTimeout(()=>_loadMythos(), 3000);
+        // POST /api/mythos/run requires a real x-admin-key (checked server-side
+        // against env.ADMIN_KEY) — this public page never holds that secret, so
+        // this call is EXPECTED to be rejected with 403 for every visitor,
+        // including staff, until routed through an authenticated internal admin
+        // session. Do not resurrect a hardcoded key here: any literal string
+        // under this header risks becoming a real leaked credential on the next
+        // rotation. The response is always checked for success below — a
+        // rejected trigger must never be reported to the user as "triggered."
+        const r = await fetch(API+'/api/mythos/run',{method:'POST',headers:{..._authH(),'Content-Type':'application/json'},body:JSON.stringify({source:'manual_admin'})});
+        const d = await r.json().catch(()=>({}));
+        if(r.ok && d.success !== false){
+          _appendLog('ag-mythos-log', `✅ MYTHOS run triggered: job ${d.job_id||'queued'}`, 'ok');
+          setTimeout(()=>_loadMythos(), 3000);
+        } else {
+          _appendLog('ag-mythos-log', `Trigger not authorized: ${d.error||('HTTP '+r.status)} — manual trigger requires an internal admin session, not available from this page.`, 'warn');
+        }
       }catch(e){
         _appendLog('ag-mythos-log', `Trigger failed: ${e.message}`, 'err');
       }finally{
