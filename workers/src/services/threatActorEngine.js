@@ -290,9 +290,51 @@ export const APT_DATABASE = [
   },
 ];
 
+// ─── Self-healing schema ──────────────────────────────────────────────────────
+// threat_actors is defined in schema_master.sql only. That migration is manual
+// and gated (.github/workflows/db-migrate.yml is workflow_dispatch-only, typed
+// "APPLY" confirmation) and has zero runs against production. Without this,
+// every INSERT below throws "no such table", is swallowed by catch {}, and
+// seedThreatActors() silently returns seeded:0 forever while its caller
+// (handleSeedThreatActors) still reports success:true.
+//
+// Deliberately no isolate-level "already ensured" cache flag (unlike
+// customerIntel.js's _tablesReady): CREATE TABLE IF NOT EXISTS is already
+// idempotent and cheap, and a cached boolean would incorrectly skip creation
+// the moment any code path binds a different D1 instance to `db` within the
+// same isolate lifetime — mirrors threatIngestion.js's ensureThreatIntelColumns(),
+// which runs unconditionally on every call for the same reason.
+async function ensureThreatActorsTable(db) {
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS threat_actors (
+      id               TEXT PRIMARY KEY,
+      name             TEXT NOT NULL,
+      aliases          TEXT DEFAULT '[]',
+      country          TEXT,
+      motivation       TEXT,
+      sophistication   TEXT DEFAULT 'advanced',
+      active           INTEGER DEFAULT 1,
+      first_seen       TEXT,
+      last_active      TEXT,
+      target_sectors   TEXT DEFAULT '[]',
+      target_countries TEXT DEFAULT '[]',
+      ttps             TEXT DEFAULT '[]',
+      iocs             TEXT DEFAULT '{}',
+      tools            TEXT DEFAULT '[]',
+      campaigns        TEXT DEFAULT '[]',
+      description      TEXT,
+      ref_urls         TEXT DEFAULT '[]',
+      mitre_group_id   TEXT,
+      created_at       TEXT DEFAULT (datetime('now')),
+      updated_at       TEXT DEFAULT (datetime('now'))
+    )`).run();
+  } catch { /* best-effort; callers already catch their own errors */ }
+}
+
 // ─── Seed threat actors into D1 ───────────────────────────────────────────────
 export async function seedThreatActors(env) {
   if (!env.DB) return { seeded: 0 };
+  await ensureThreatActorsTable(env.DB);
   let seeded = 0;
 
   for (const actor of APT_DATABASE) {
@@ -333,6 +375,7 @@ export async function listThreatActors(env, opts = {}) {
 
   if (env.DB) {
     try {
+      await ensureThreatActorsTable(env.DB);
       let sql = 'SELECT * FROM threat_actors WHERE active = 1';
       const bindings = [];
       if (country)    { sql += ' AND country = ?';            bindings.push(country.toUpperCase()); }
@@ -360,6 +403,7 @@ export async function getThreatActor(env, id) {
   // Try D1 first
   if (env.DB) {
     try {
+      await ensureThreatActorsTable(env.DB);
       const row = await env.DB.prepare('SELECT * FROM threat_actors WHERE id = ?').bind(id).first();
       if (row) return parseActorRow(row);
     } catch {}
@@ -374,6 +418,7 @@ export async function searchThreatActors(env, query) {
 
   if (env.DB) {
     try {
+      await ensureThreatActorsTable(env.DB);
       const rows = await env.DB.prepare(`
         SELECT * FROM threat_actors
         WHERE LOWER(name) LIKE ?

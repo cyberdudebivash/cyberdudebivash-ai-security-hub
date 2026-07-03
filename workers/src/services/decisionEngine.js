@@ -315,9 +315,39 @@ export function quickDecision(entry) {
   return analyzeEntry(entry, []);
 }
 
+// ─── Self-healing schema ──────────────────────────────────────────────────────
+// soc_decisions is defined in schema_master.sql only; that migration is manual,
+// gated (.github/workflows/db-migrate.yml, workflow_dispatch + typed "APPLY"),
+// and has zero runs against production. Without this, every INSERT below threw
+// "no such table" and was silently no-op'd by .catch(() => {}) — decisions were
+// computed correctly but never persisted, so the Knowledge Graph's DECISION
+// nodes and mitigates edges were always empty.
+//
+// Deliberately no isolate-level "already ensured" cache flag: CREATE TABLE IF
+// NOT EXISTS is already idempotent and cheap, and a cached boolean would
+// incorrectly skip creation the moment a different D1 instance is bound to
+// `db` within the same isolate lifetime — mirrors threatIngestion.js's
+// ensureThreatIntelColumns(), which runs unconditionally on every call.
+async function ensureSocDecisionsTable(db) {
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS soc_decisions (
+      id          TEXT PRIMARY KEY,
+      cve_id      TEXT NOT NULL,
+      decision    TEXT NOT NULL,
+      priority    TEXT NOT NULL,
+      confidence  INTEGER DEFAULT 0,
+      risk_score  INTEGER DEFAULT 0,
+      reason      TEXT,
+      factors     TEXT DEFAULT '{}',
+      created_at  TEXT DEFAULT (datetime('now'))
+    )`).run();
+  } catch { /* best-effort; INSERT below already catches its own errors */ }
+}
+
 // ─── Store decisions in D1 ────────────────────────────────────────────────────
 export async function storeDecisions(env, decisionResult) {
   if (!env?.DB || !decisionResult?.decisions?.length) return;
+  await ensureSocDecisionsTable(env.DB);
 
   const toStore = decisionResult.decisions
     .filter(d => ['P1-CRITICAL', 'P2-HIGH'].includes(d.priority))

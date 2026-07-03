@@ -1,4 +1,5 @@
 import { isRealUser } from '../auth/middleware.js';
+import { mapToAttack } from '../services/mitreAttackService.js';
 /**
  * CYBERDUDEBIVASH AI Security Hub — P12.3 Knowledge Graph
  *
@@ -49,6 +50,68 @@ async function kvSet(env, key, value, ttl = 300) {
   catch {}
 }
 
+// ─── D1 row fetchers ──────────────────────────────────────────────────────────
+// threat_intel's only guaranteed columns are the self-healing set written by
+// storeInD1()/ensureThreatIntelColumns() (services/threatIngestion.js) — there
+// is no `cve_id`, `cvss_score`, or `mitre_technique` column. Those names only
+// exist in schema_master.sql, a manual, workflow_dispatch-gated migration that
+// production has never run. Querying them directly throws, is swallowed by
+// .catch(() => []), and the graph silently returns success:true while empty.
+// Alias the real self-healed columns and compute the MITRE correlation live
+// via the already-production mapToAttack() engine instead of a column that
+// will never exist.
+async function fetchVulnRows(db) {
+  if (!db) return [];
+  const rows = await db.prepare(
+    `SELECT id AS cve_id, cvss AS cvss_score, severity, actively_exploited, source,
+            title, description, tags, weakness_types, exploit_status, known_ransomware
+     FROM threat_intel ORDER BY cvss DESC LIMIT 100`
+  ).all().then(r => r.results || []).catch(() => []);
+
+  return rows.map(v => ({
+    ...v,
+    mitre_technique: mapToAttack(v).primary_technique?.technique_id || null,
+  }));
+}
+
+// threat_actors is self-healed by services/threatActorEngine.js's
+// ensureThreatActorsTable() with column `target_sectors`, not `sector` — and
+// target_sectors is a JSON array (an actor can target several industries), not
+// a single string. Parse it for real multi-industry edges, while keeping a
+// joined `sector` string for the frontend's describeRealNode() tooltip, which
+// already reads node.sector as display text.
+async function fetchActorRows(db) {
+  if (!db) return [];
+  const rows = await db.prepare(
+    `SELECT name, target_sectors, active FROM threat_actors LIMIT 50`
+  ).all().then(r => r.results || []).catch(() => []);
+
+  return rows.map(a => {
+    let sectors = [];
+    try {
+      const parsed = JSON.parse(a.target_sectors || '[]');
+      if (Array.isArray(parsed)) sectors = parsed.filter(Boolean);
+    } catch {}
+    return { ...a, sectors, sector: sectors.join(', ') };
+  });
+}
+
+async function fetchAssetRows(db) {
+  if (!db) return [];
+  return db.prepare(
+    `SELECT asset_value, asset_type FROM customer_assets LIMIT 100`
+  ).all().then(r => r.results || []).catch(() => []);
+}
+
+// soc_decisions column names already match; the table itself is self-healed
+// by services/decisionEngine.js's ensureSocDecisionsTable().
+async function fetchDecisionRows(db) {
+  if (!db) return [];
+  return db.prepare(
+    `SELECT id, cve_id, decision, priority, confidence, risk_score FROM soc_decisions LIMIT 50`
+  ).all().then(r => r.results || []).catch(() => []);
+}
+
 // ─── Graph builder ────────────────────────────────────────────────────────────
 function buildGraph(vulnRows = [], actorRows = [], assetRows = [], decisionRows = []) {
   const nodes = [];
@@ -88,18 +151,20 @@ function buildGraph(vulnRows = [], actorRows = [], assetRows = [], decisionRows 
     const actorId = `actor:${a.name.replace(/\s+/g, '_')}`;
     addNode(actorId, 'ACTOR', a.name, { sector: a.sector, active: Boolean(a.active) });
 
-    // Actor targets CVEs with matching sector keywords (correlation, not fabrication)
-    const sectorKeywords = (a.sector || '').toLowerCase();
-    for (const v of vulnRows.filter(v => v.source === 'cisa_kev' || v.cvss_score >= 9).slice(0, 20)) {
-      if (sectorKeywords) {
+    const sectors = Array.isArray(a.sectors) ? a.sectors : [];
+
+    // Actor targets high-severity/KEV CVEs (correlation, not fabrication)
+    if (sectors.length > 0) {
+      for (const v of vulnRows.filter(v => v.source === 'cisa_kev' || v.cvss_score >= 9).slice(0, 20)) {
         addEdge(actorId, v.cve_id, 'targets', 1);
       }
     }
 
-    // Industry edge
-    if (a.sector) {
-      const industryId = `industry:${a.sector.toLowerCase().replace(/\s+/g, '_')}`;
-      addNode(industryId, 'INDUSTRY', a.sector.charAt(0).toUpperCase() + a.sector.slice(1), { sector: a.sector });
+    // Industry node + edge — one per real target sector. target_sectors is a
+    // JSON array; a single actor commonly targets several industries.
+    for (const sector of sectors) {
+      const industryId = `industry:${sector.toLowerCase().replace(/\s+/g, '_')}`;
+      addNode(industryId, 'INDUSTRY', sector, { sector });
       addEdge(actorId, industryId, 'targets', 1);
     }
   }
@@ -190,19 +255,10 @@ export async function handleKnowledgeGraph(request, env, authCtx) {
 
   if (db) {
     [vulnRows, actorRows, assetRows, decisionRows] = await Promise.all([
-      db.prepare(
-        `SELECT cve_id, cvss_score, severity, actively_exploited, source, mitre_technique
-         FROM threat_intel ORDER BY cvss_score DESC LIMIT 100`
-      ).all().then(r => r.results || []).catch(() => []),
-      db.prepare(
-        `SELECT name, sector, active FROM threat_actors LIMIT 50`
-      ).all().then(r => r.results || []).catch(() => []),
-      db.prepare(
-        `SELECT asset_value, asset_type FROM customer_assets LIMIT 100`
-      ).all().then(r => r.results || []).catch(() => []),
-      db.prepare(
-        `SELECT id, cve_id, decision, priority, confidence, risk_score FROM soc_decisions LIMIT 50`
-      ).all().then(r => r.results || []).catch(() => []),
+      fetchVulnRows(db),
+      fetchActorRows(db),
+      fetchAssetRows(db),
+      fetchDecisionRows(db),
     ]);
   }
 
@@ -242,10 +298,10 @@ export async function handleKnowledgeGraphQuery(request, env, authCtx) {
 
   if (db) {
     [vulnRows, actorRows, assetRows, decisionRows] = await Promise.all([
-      db.prepare(`SELECT cve_id, cvss_score, severity, actively_exploited, source, mitre_technique FROM threat_intel ORDER BY cvss_score DESC LIMIT 100`).all().then(r => r.results || []).catch(() => []),
-      db.prepare(`SELECT name, sector, active FROM threat_actors LIMIT 50`).all().then(r => r.results || []).catch(() => []),
-      db.prepare(`SELECT asset_value, asset_type FROM customer_assets LIMIT 100`).all().then(r => r.results || []).catch(() => []),
-      db.prepare(`SELECT id, cve_id, decision, priority, confidence, risk_score FROM soc_decisions LIMIT 50`).all().then(r => r.results || []).catch(() => []),
+      fetchVulnRows(db),
+      fetchActorRows(db),
+      fetchAssetRows(db),
+      fetchDecisionRows(db),
     ]);
   }
 
