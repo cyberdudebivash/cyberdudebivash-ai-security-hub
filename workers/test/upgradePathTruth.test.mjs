@@ -5,18 +5,23 @@
  * mapping told the customer "required_tier: TEAM (₹7,999/mo)" — but billing
  * (/api/billing/plans) sells only FREE / PRO / ENTERPRISE. A customer wanting
  * SIEM integration hit a dead-end upgrade path. Separately, every CTA misquoted
- * the price (PRO ₹3,999 vs billed ₹2,999; ENTERPRISE ₹39,999 vs billed ₹24,999).
+ * the price. The CTA price MUST equal the price the customer is actually charged
+ * at checkout — the canonical source is TIER_LIMITS (auth/apiKeys.js) /
+ * SUBSCRIPTION_PRICES (lib/razorpay.js): PRO ₹1,499, ENTERPRISE ₹4,999. (A prior
+ * pass wrongly aligned these to the orphaned monetizationV2 ₹2,999/₹24,999, which
+ * no checkout path uses — that made the gate quote ₹2,999 while checkout charged
+ * ₹1,499. Corrected to the charged price.)
  */
 import { describe, it, expect } from 'vitest';
 import { buildUpgradePayload } from '../src/middleware/entitlementCheck.js';
 import { FEATURES } from '../src/middleware/entitlementCheck.js';
 
-// Tiers a customer can actually buy (matches /api/billing/plans → monetizationV2 PLANS).
+// Tiers a customer can actually buy.
 const PURCHASABLE = new Set(['PRO', 'ENTERPRISE']);
-// Authoritative customer-facing prices (monetizationV2 PLANS).
+// The price the customer is actually charged at checkout (canonical: TIER_LIMITS).
 const BILLING = {
-  PRO:        '₹2,999/mo',
-  ENTERPRISE: '₹24,999/mo',
+  PRO:        '₹1,499/mo',
+  ENTERPRISE: '₹4,999/mo',
 };
 
 const ALL_FEATURES = Object.values(FEATURES);
@@ -41,8 +46,8 @@ describe('upgrade CTA truth', () => {
     }
   });
 
-  it('never quotes the old wrong prices (₹3,999 / ₹39,999 / ₹7,999)', () => {
-    const wrong = ['₹3,999/mo', '₹39,999/mo', '₹7,999/mo'];
+  it('never quotes a non-canonical price (₹3,999 / ₹39,999 / ₹7,999 / ₹2,999 / ₹24,999)', () => {
+    const wrong = ['₹3,999/mo', '₹39,999/mo', '₹7,999/mo', '₹2,999/mo', '₹24,999/mo'];
     for (const f of ALL_FEATURES) {
       const p = buildUpgradePayload(f, 'FREE');
       expect(wrong).not.toContain(p.price_inr);

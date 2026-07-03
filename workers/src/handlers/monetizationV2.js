@@ -17,6 +17,14 @@ import { ok, fail } from '../lib/response.js';
 import { isRealUser } from '../auth/middleware.js';
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
+// NOTE ON PRICING CANONICALITY: prices here MUST equal the price the customer is
+// actually charged at checkout. The canonical price source is TIER_LIMITS
+// (auth/apiKeys.js) / SUBSCRIPTION_PRICES (lib/razorpay.js), used by every live
+// checkout path (/api/payments/create-order, /api/customer/billing/upgrade):
+//   PRO ₹1,499/mo · ENTERPRISE ₹4,999/mo.
+// These values were previously ₹2,999 / ₹24,999 — a stale duplicate that no
+// customer UI reads (the /api/billing/* routes below are not wired to the
+// frontend), but which leaked into feature-gate upsells. Aligned to canonical.
 export const PLANS = {
   FREE: {
     name:          'Free',
@@ -63,8 +71,8 @@ export const PLANS = {
   PRO: {
     name:          'Pro',
     display_name:  'Pro Defender',
-    price_inr:     2999,
-    price_usd:     36,
+    price_inr:     1499,
+    price_usd:     18,
     billing_cycle: 'monthly',
     color:         '#7c3aed',
     razorpay_plan_id: 'plan_pro_monthly',
@@ -106,8 +114,8 @@ export const PLANS = {
   ENTERPRISE: {
     name:          'Enterprise',
     display_name:  'Enterprise Fortress',
-    price_inr:     24999,
-    price_usd:     299,
+    price_inr:     4999,
+    price_usd:     60,
     billing_cycle: 'monthly',
     color:         '#f59e0b',
     razorpay_plan_id: 'plan_enterprise_monthly',

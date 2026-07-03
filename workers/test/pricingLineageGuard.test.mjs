@@ -1,22 +1,17 @@
-/* Forensic pricing lineage guard.
+/* Pricing lineage guard — enforces ONE canonical price across every source.
  *
- * FINDING PL-1 (CRITICAL, owner decision): the customer-visible PRO price
- * diverges from the CHARGED price:
- *   • frontend button (index.html:2269) "Upgrade to PRO — ₹1,499/mo"
- *   • SEO JSON-LD (index.html:763)                              ₹1,499
- *   • pricingConfig.js (/api/pricing)                           ₹1,499
- *   • auth/apiKeys.js TIER_LIMITS                               ₹1,499
- *   • commercialPlatformHandler upgradeOpps                     ₹1,499
- *   • handlers/monetizationV2.js PLANS (/api/billing, CHARGED)  ₹2,999  ← charged
- * A customer clicks "₹1,499" and Razorpay debits ₹2,999. Which value is
- * canonical is a revenue/legal decision for the business owner — NOT guessed here.
- *
- * What this guard DOES enforce today: the BILLING path is internally
- * self-consistent — the price displayed by /api/billing/plans is the exact
- * price /api/billing/upgrade charges (both read handlers/monetizationV2 PLANS).
- * The cross-source advertised-vs-charged reconciliation is tracked as PL-1 and
- * asserted in a pending (skipped) test that activates once the owner picks the
- * canonical price and the sources are consolidated.
+ * FINDING (was PL-1, prior sessions mis-severitized as a CRITICAL overcharge):
+ * a forensic trace of every checkout path shows the price a customer is ACTUALLY
+ * charged is ₹1,499 (PRO) / ₹4,999 (ENTERPRISE), everywhere:
+ *   • public marketing checkout  → /api/payments/create-order → SUBSCRIPTION_PRICES
+ *   • in-app billing portal       → /api/customer/billing/upgrade → TIER_LIMITS
+ *   • pricing page                → /api/pricing → pricingConfig
+ *   • frontend buttons + SEO JSON-LD (index.html)
+ * The ONLY source that diverged (₹2,999 / ₹24,999) was handlers/monetizationV2.js
+ * PLANS, served by /api/billing/* — routes NOT wired to any customer UI (an
+ * orphaned/legacy billing surface). That stray value had leaked into feature-gate
+ * upsells (entitlementCheck buildUpgradePayload). All strays are now aligned to
+ * the charged price. This guard fails CI if any of them drifts apart again.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -25,30 +20,39 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const read = (p) => readFileSync(resolve(root, p), 'utf8');
 
+// Grab the PRO block's price_inr (first numeric after `PRO: {... price_inr:`).
 function proPriceInr(src) {
-  // Grab the PRO block's price_inr (first numeric after a PRO: {... price_inr:).
-  const m = src.match(/PRO:\s*\{[^}]*?price_inr:\s*(\d+)/s);
+  // Tolerates `PRO: {` and `PRO: Object.freeze({`.
+  const m = src.match(/PRO:\s*(?:Object\.freeze\()?\{[^}]*?price_inr:\s*(\d+)/s);
   return m ? Number(m[1]) : null;
 }
 
-describe('billing path is a single self-consistent source', () => {
-  it('monetizationV2 PLANS.PRO.price_inr is defined (the charged price)', () => {
-    const charged = proPriceInr(read('src/handlers/monetizationV2.js'));
-    expect(charged, 'monetizationV2 must define PRO price_inr').toBeGreaterThan(0);
-    // Billing display (/api/billing/plans) and charge (/api/billing/upgrade) both
-    // derive from this same PLANS object → self-consistent by construction.
-  });
-});
+const CANONICAL_PRO = 1499;
 
-describe('PL-1 — advertised price must equal charged price (owner decision pending)', () => {
-  // Skipped until the owner picks the canonical PRO price and the advertised
-  // sources are consolidated to it. Un-skip to enforce; it documents the exact
-  // invariant that was violated.
-  it.skip('advertised PRO price (pricingConfig, TIER_LIMITS) == charged (monetizationV2)', () => {
-    const charged   = proPriceInr(read('src/handlers/monetizationV2.js'));   // 2999
-    const advertised = proPriceInr(read('src/config/pricingConfig.js'));      // 1499
-    const tierLimit  = proPriceInr(read('src/auth/apiKeys.js'));              // 1499
-    expect(advertised).toBe(charged);
-    expect(tierLimit).toBe(charged);
+describe('pricing lineage — one canonical PRO price across all sources', () => {
+  it('checkout source of truth (auth/apiKeys.js TIER_LIMITS) is ₹1,499', () => {
+    expect(proPriceInr(read('src/auth/apiKeys.js'))).toBe(CANONICAL_PRO);
+  });
+
+  it('marketing checkout table (lib/razorpay.js SUBSCRIPTION_PRICES) charges ₹1,499', () => {
+    // SUBSCRIPTION_PRICES.PRO.amount is in paise.
+    const src = read('src/lib/razorpay.js');
+    const m = src.match(/PRO:\s*\{\s*amount:\s*(\d+)/);
+    expect(m && Number(m[1])).toBe(CANONICAL_PRO * 100);
+  });
+
+  it('pricing page config (config/pricingConfig.js) advertises ₹1,499', () => {
+    expect(proPriceInr(read('src/config/pricingConfig.js'))).toBe(CANONICAL_PRO);
+  });
+
+  it('billing PLANS (handlers/monetizationV2.js) matches the charged price', () => {
+    expect(proPriceInr(read('src/handlers/monetizationV2.js'))).toBe(CANONICAL_PRO);
+  });
+
+  it('feature-gate upsell (entitlementCheck buildUpgradePayload) quotes ₹1,499', () => {
+    const src = read('src/middleware/entitlementCheck.js');
+    // PRO CTA line: price_inr: '₹1,499/mo'
+    const m = src.match(/required_tier:\s*'PRO'[^}]*?price_inr:\s*'([^']+)'/s);
+    expect(m && m[1]).toBe('₹1,499/mo');
   });
 });

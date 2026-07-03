@@ -141,18 +141,21 @@ export async function getUserEntitlements(db, userId, tier = 'FREE') {
 // ─── Upgrade Prompt Payloads ──────────────────────────────────────────────────
 
 export function buildUpgradePayload(feature, currentTier = 'FREE') {
-  // Prices + tiers MUST match the customer-facing billing source of truth
-  // (handlers/monetizationV2.js PLANS, served by /api/billing/plans):
-  //   PRO ₹2,999/mo ($36) · ENTERPRISE ₹24,999/mo ($299).
-  // Two prior defects fixed here:
-  //  1) every upgrade CTA misquoted the price (PRO ₹3,999, ENTERPRISE ₹39,999)
-  //     — the customer saw one price in the gate and was charged another.
+  // Prices + tiers MUST match the price the customer is ACTUALLY charged at
+  // checkout — the canonical source is TIER_LIMITS (auth/apiKeys.js) /
+  // SUBSCRIPTION_PRICES (lib/razorpay.js), which every live checkout path uses:
+  //   PRO ₹1,499/mo ($18) · ENTERPRISE ₹4,999/mo ($60).
+  // Defects fixed here:
+  //  1) upgrade CTAs previously quoted PRO ₹2,999 / ENTERPRISE ₹24,999 (copied
+  //     from the ORPHANED handlers/monetizationV2.js PLANS, which no customer UI
+  //     calls). A customer hitting a feature gate saw ₹2,999 but checkout charges
+  //     ₹1,499 — a price contradiction. CTAs now quote the charged price.
   //  2) SIEM_WEBHOOK / KILL_CHAIN_MAPPING required tier 'TEAM' — a tier that is
-  //     NOT purchasable (billing sells FREE/PRO/ENTERPRISE only). The features
-  //     are granted at ENTERPRISE (TIER_IMPLICIT_FEATURES.ENTERPRISE = all), so
-  //     the CTA now correctly directs the customer to ENTERPRISE.
-  const PRO   = { required_tier: 'PRO',        price_usd: '$36/mo',  price_inr: '₹2,999/mo' };
-  const ENT   = { required_tier: 'ENTERPRISE', price_usd: '$299/mo', price_inr: '₹24,999/mo' };
+  //     NOT purchasable (billing sells FREE/STARTER/PRO/ENTERPRISE/MSSP). The
+  //     features are granted at ENTERPRISE (TIER_IMPLICIT_FEATURES.ENTERPRISE =
+  //     all), so the CTA now correctly directs the customer to ENTERPRISE.
+  const PRO   = { required_tier: 'PRO',        price_usd: '$18/mo', price_inr: '₹1,499/mo' };
+  const ENT   = { required_tier: 'ENTERPRISE', price_usd: '$60/mo', price_inr: '₹4,999/mo' };
   const UPGRADE_MAP = {
     [FEATURES.THREAT_FEED_FULL]:   PRO,
     [FEATURES.STIX_21_EXPORT]:     PRO,
