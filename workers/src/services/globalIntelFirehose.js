@@ -243,9 +243,14 @@ function enrich(item) {
 
   const cveIds = Array.from(new Set((text.match(/CVE-\d{4}-\d{4,7}/gi) || []).map(s => s.toUpperCase())));
   const actors = THREAT_ACTORS.filter(a => lc.includes(a.toLowerCase()));
+  // A source-provided malware label (abuse.ch) is only kept if it looks like a
+  // real family name — not a generic descriptor tag ("32-bit", "exe", "elf",
+  // "unknown"), which URLhaus stores in the same tags array.
+  const isFamilyName = (m) => typeof m === 'string' && /^[A-Za-z][A-Za-z0-9._-]{2,}$/.test(m)
+    && !/^(32-bit|64-bit|exe|elf|dll|apk|js|vbs|ps1|doc|xls|pdf|zip|rar|unknown|malware|trojan|generic|other|none)$/i.test(m);
   const malware = Array.from(new Set([
     ...MALWARE_FAMILIES.filter(m => lc.includes(m.toLowerCase())),
-    ...(item._malware ? [item._malware] : []),
+    ...(item._malware && isFamilyName(item._malware) ? [item._malware] : []),
   ].filter(Boolean)));
 
   // IOCs — for OSINT text pull from body; for abuse.ch use the provided indicator.
