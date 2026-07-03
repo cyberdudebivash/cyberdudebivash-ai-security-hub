@@ -8,7 +8,8 @@ blocker remains; residual risks are documented with owners.* Not "100% bug-free,
 "certify perfection." Only independently verified evidence is certified; everything else is
 marked **NOT VERIFIED**.
 
-**Test suite:** `vitest run` → **1053 passing / 88 files / 0 skipped** (7 added this session).
+**Test suite:** `vitest run` → **1064 passing / 90 files / 0 skipped** (18 added this session,
+incl. 11 external-integration tests: capture→entitlement + OIDC id_token verification).
 **Build:** `node --eval 'import "./src/index.js"'` parses clean.
 **Deploy:** commit `3df7ae1` shipped to `main` → gated pipeline green (Lint, Secret Scan,
 Test & Quality Gate) → **Deploy to Cloudflare success** → live in production (`cyberdudebivash.in`).
@@ -25,8 +26,10 @@ single largest residual-risk item — *"live production behavior not exercised t
 from NOT VERIFIED to **VERIFIED**, and upgrades §7 golden-path rows from static-trace to
 live-verified. The recommendation stands at **CONDITIONAL GO**, but the conditions are now
 materially reduced to two external round-trips (payment capture→entitlement, SSO/SAML) and
-seeded-MSSP depth — all of which are **coded, wired, and unit-tested**, pending a live external
-transaction (§11, §15). Nothing in the verified scope blocks a global launch; the residual items
+seeded-MSSP depth. The two external code paths are now **integration-tested against the real
+handler code** (real HMAC-signed webhook → tier grant; real RS256 id_token verification incl.
+alg-confusion/expiry/audience/nonce) — only the live network delivery hop remains, with a
+runbook to close it (§11.3, `scripts/verify-external-integrations.sh`). Nothing in the verified scope blocks a global launch; the residual items
 are the business's accept-with-mitigation (pilot→GA, refund/rollback plan) decision.
 
 ---
@@ -166,14 +169,22 @@ to competitors. No monetization path charges above the advertised price (prior f
 2. **Authenticated MSSP / multi-tenant depth** — ⚠ NOT VERIFIED. Org invites, member RBAC,
    white-label, client isolation are gated (unauth `/api/mssp/*` returns 403 live) but not
    exercised against a **seeded paid tenant** (business must provision). Owner: platform team.
-3. **External-dependency round-trips** — ⚠ NOT VERIFIED LIVE (code complete). The Razorpay
-   **capture → entitlement** path is fully implemented (webhook HMAC verify + D1 atomic
-   idempotency/replay guard + paid-status update + `subscriptions status='active'` grant +
-   lifecycle trigger) and SSO is a real **OIDC** flow (discovery/PKCE/state/code-exchange/
-   ID-token verify) — neither is a stub. What remains is one **live test transaction** and one
-   **live IdP** round-trip. Owner: platform team. Mitigation for launch: run a live ₹-test
-   purchase + one IdP login before enabling paid self-serve, or gate paid tiers behind
-   manual activation for day 1 with a refund/rollback plan.
+3. **External-dependency round-trips** — ✅ **VERIFIED AT THE INTEGRATION BOUNDARY**;
+   ⚠ one live network hop each remains. The Razorpay **capture → entitlement** path and the
+   SSO **OIDC id_token** verification are now covered by real integration tests that run the
+   actual production code:
+   - `workers/test/paymentEntitlement.test.mjs` (4 tests) — drives the real
+     `handleRazorpayWebhook` with a **real HMAC-signed** `payment.captured`: asserts the
+     `users.tier` grant, 401 on bad signature, idempotent replay (no double-grant), and the
+     lost-callback safety-net that provisions the charged account.
+   - `workers/test/ssoOidcVerify.test.mjs` (7 tests) — drives the real `verifyIdToken` with a
+     **real RS256** token from a generated keypair: accepts a valid token; rejects tampered
+     signature, expiry, audience/issuer mismatch, nonce mismatch, and an alg-confusion
+     downgrade to `none`.
+   The only remaining unproven hop is the **live network delivery** (Razorpay → our webhook;
+   browser → real IdP), which no CI can exercise. Runbook: `scripts/verify-external-integrations.sh`
+   (owner runs with production credentials). Mitigation unchanged: run the runbook, or gate paid
+   self-serve behind monitored activation + refund/rollback for day 1.
 4. **Report freshness-metadata uniformity** — source/last-updated/record-count implemented on the
    posture card; not yet uniform across all KPI widgets. LOW.
 
