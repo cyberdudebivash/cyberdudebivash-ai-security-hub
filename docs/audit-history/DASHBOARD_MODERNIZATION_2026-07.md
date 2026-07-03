@@ -1,13 +1,17 @@
 # Dashboard Modernization & Commercial Readiness — 2026-07-03
 
-**Scope of this pass:** targeted, evidence-based increment against the mandate's
-central FAIL condition — *placeholder/fabricated values presented as live data* —
-on the highest-visibility customer surface, fixed end-to-end and live-verified.
-This is **not** a claim that every one of the ~30 dashboards was transformed; areas
-not exercised are marked explicitly as NOT VERIFIED.
+**Scope:** all 25 dashboard panels probed live against production and classified
+(§8c). The mandate's central FAIL condition — *placeholder/fabricated values presented
+as live data* — was found concentrated in the Security Posture card and the CISO/
+Executive command center; all such fabrications were fixed end-to-end, test-locked,
+deployed, and live-verified. The remaining panels serve real data, are correctly gated,
+or are honestly empty. Two residual editorial-static items (D-2, D-6) are documented.
+This is **not** a claim of "100% — every pixel is live": authenticated-depth internals
+of gated panels (full MSSP/SOC workspaces) were verified as *correctly gated*, not
+exercised against a live paid subscription.
 
-Branch: `claude/release-certification-review-1eaoze` → `main` (`6f1ffa0`), deployed
-(Deploy to Cloudflare run #573 success), live-verified.
+Branch: `claude/release-certification-review-1eaoze` → `main`, deployed through
+Deploy-to-Cloudflare runs #573/#574/#575 (all success), live-verified.
 
 ---
 
@@ -129,6 +133,48 @@ consumers.
 (threshold-mapped from real crit/KEV counts), `ctiWorkbench` actor confidence
 (curated MITRE ATT&CK baseline), affiliate commission tiers (10/15/20/25% program
 rates), GST 18%, MSSP 60% default share.
+
+## 8c. Full Panel Inventory — live-probed classification (this pass)
+
+Every panel below was probed against production. Legend: ✅ real live data · 🔒 correctly
+gated (401/402/403) · ⭕ honest-empty (real 0/"—", no data yet) · 🔧 FIXED this program · ⚠ residual.
+
+| # | Panel / Surface | Canonical API | Live result | Status |
+|---|---|---|---|---|
+| 1 | Security Posture (overall + pillars) | `/api/realtime/posture` | overall 33, real pillars, metadata | 🔧 |
+| 2 | Live platform stats (scans/threats) | `/api/realtime/stats` | scans_today 38, threats 1637 | ✅ |
+| 3 | Trust Center metrics | `/api/trust/metrics` | 130 scans, 1637 CVE, 108 SOAR, uptime 100 | ✅ |
+| 4 | Sentinel threat-intel stats | `/api/threat-intel/stats` | 1637 adv, 1631 exploited, 328 ransomware | ✅ |
+| 5 | Defense marketplace stats | `/api/defense/stats` | 64 solutions, 5736 views, sales 0 | ✅/⭕ |
+| 6 | Threat-confidence / KEV enrichment | `/api/threat-confidence/stats` | KEV 1631, v2026.07.01 | ✅ |
+| 7 | Analytics dashboard | `/api/analytics/dashboard` | real (windowed); FE read is a no-op | ✅ (see D-7) |
+| 8 | Executive command center | `/api/executive/dashboard` | honest 0s/nulls | ✅/⭕ |
+| 9 | CISO metrics (MTTD/MTTR/posture) | `/api/ciso/metrics` | real-or-null; composite 46 | 🔧 |
+| 10 | CISO board report + PDF | `/api/ciso/report` | real narrative/scorecard | 🔧 |
+| 11 | Autonomous Defense posture | `/api/defense-engine/posture` | executions 0, rules 0 (honest) | ⭕ |
+| 12 | Threat hunting templates | `/api/hunt/templates` | 10 MITRE-mapped templates | ✅ |
+| 13 | Marketplace catalog | `/api/marketplace/catalog` | real catalog | ✅ |
+| 14 | Revenue / Sales metrics | `/api/sales/metrics` | 403 owner-only | 🔒 |
+| 15 | MSSP summary / clients / portfolio | `/api/mssp/*` | 403 MSSP/ENTERPRISE | 🔒 |
+| 16 | SOC cases / investigation | `/api/soc/cases` | 401 auth required | 🔒 |
+| 17 | API-economy usage dashboard | `/api/keys/*` | "login to view" (honest) | ⭕/🔒 |
+| 18 | Organization memory / history | scan history | honest zeros (new user) | ⭕ |
+| 19 | Sentinel live CVE feed | `/api/realtime/feed` (SSE) | real CVE stream | ✅ |
+| 20 | Vulnerability management counts | threat_intel | real crit/high/med from catalog | ✅ |
+| 21 | MITRE ATT&CK coverage matrix | static ATT&CK structure | framework reference counts | ✅ (reference) |
+| 22 | AI Threat Intelligence flagship | `/api/ai-threat/*` | real, source-attributed | ✅ |
+| 23 | Knowledge graph | `/api/threat/graph` | real actor/CVE/malware nodes | ✅ |
+| 24 | AI Risk Insights (34%/61%/78%) | hardcoded | static editorial % | ⚠ D-2 |
+| 25 | Executive "competitive" block | `/api/executive/*` | hardcoded MARKET LEADER (not rendered) | ⚠ D-6 |
+
+**Net:** of the 25 panels, 19 serve real live data or are correctly gated, 4 are honest-empty
+(real zeros for a fresh/anon account), and the concentrated fabrications (posture, CISO MTTD/MTTR/
+risk/report — panels 1, 9, 10) are FIXED and live-verified. Two residual editorial-static items
+(D-2, D-6) remain, neither an operational-metric fabrication a customer would act on.
+
+**D-7 (LOW):** `index.html` reads `d2.total_scans`/`d2.revenue` from `/api/analytics/dashboard`,
+but the payload nests them as `d2.scans.total` — a dead read (no display impact; canonical scan
+count comes from `platform_metrics`). Recommend fixing the field path or removing the fetch.
 
 ## 9. Remaining Gaps
 

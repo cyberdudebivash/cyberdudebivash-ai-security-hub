@@ -14879,12 +14879,11 @@ async function fetchLiveMetrics(){
     }
   }catch(e){}
   
-  try{
-    var r2=await fetch('/api/analytics/dashboard');
-    var d2=await r2.json();
-    if(d2.total_scans>0)_metrics.scans=d2.total_scans;
-    if(d2.revenue>0)_metrics.revenue=d2.revenue;
-  }catch(e){}
+  // NOTE: the canonical scan count comes from /api/trust/metrics + /api/realtime/stats
+  // (platform_metrics, all-time). /api/analytics/dashboard returns a *windowed*
+  // event count under d2.scans.total — a different metric — so we intentionally do
+  // NOT overwrite _metrics.scans from it (doing so would show 23 here vs 130 in the
+  // Trust Center). Removed the previous dead read of the non-existent d2.total_scans.
   
   syncMetricsToDOM();
 }
