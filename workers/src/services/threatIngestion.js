@@ -717,6 +717,20 @@ export async function storeInD1(db, entries) {
     }
   }
 
+  // ─── Canonical CVSS self-heal ──────────────────────────────────────────────
+  // This ingestion path writes the score to `cvss`, but the canonical column —
+  // the one 60+ readers query (critical/high counts, risk sorting, the frontend
+  // feed) and the one indexed as idx_ti_cvss — is `cvss_score`. Left unset, every
+  // CVSS-based business metric read NULL and silently returned 0. Backfill the
+  // canonical column from `cvss` on every ingestion cycle so the whole platform's
+  // CVSS truth self-heals (idempotent — only touches rows still out of sync).
+  try {
+    await db.prepare(
+      `UPDATE threat_intel SET cvss_score = cvss
+       WHERE cvss_score IS NULL AND cvss IS NOT NULL`
+    ).run();
+  } catch { /* non-fatal — never fail ingestion on the heal step */ }
+
   return { inserted, updated, errors };
 }
 

@@ -223,9 +223,12 @@ export async function handleListVulns(request, env, authCtx) {
       // KEV flag/filter/ordering use the canonical exploit_status='confirmed'
       // definition (the raw is_kev column is never populated → the ?kev=true
       // filter previously returned NOTHING and every row reported in_kev:0).
+      // published_at is the canonical column ingestion writes; `published_date`
+      // does not exist on threat_intel, so this SELECT previously errored and the
+      // entire vulnerability list (incl. ?kev=true) silently returned nothing.
       let q = `SELECT cve_id AS id, cve_id, title, severity, cvss_score AS cvss_score,
                       epss_score, ${KEV_ORDER} AS in_kev, description AS affected,
-                      published_date AS discovered_at, mitre_technique
+                      published_at AS discovered_at, mitre_technique
                FROM threat_intel
                WHERE 1=1`;
       const params = [];
@@ -384,16 +387,17 @@ export async function handleGetVuln(request, env, authCtx, vulnId) {
   if (env?.DB) {
     try {
       const row = await env.DB.prepare(
-        `SELECT cve_id, title, severity, cvss_score, epss_score, is_kev,
-                description, published_date, mitre_technique
+        `SELECT cve_id, title, severity, cvss_score, epss_score,
+                ${KEV_ORDER} AS in_kev,
+                description, published_at, mitre_technique
          FROM threat_intel WHERE cve_id = ?`
       ).bind(vulnId).first().catch(() => null);
       if (row) {
         const vuln = {
           id: row.cve_id, cve_id: row.cve_id, title: row.title, severity: row.severity,
           cvss_score: parseFloat(row.cvss_score) || 0, epss_score: parseFloat(row.epss_score) || 0,
-          in_kev: !!row.is_kev, affected: row.description || '', stage: 'open',
-          discovered_at: row.published_date, source: 'threat_intel',
+          in_kev: !!row.in_kev, affected: row.description || '', stage: 'open',
+          discovered_at: row.published_at, source: 'threat_intel',
         };
         return Response.json({
           vuln: {

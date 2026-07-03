@@ -87,8 +87,8 @@ export async function handleRSSFeed(request, env) {
   if (env.DB) {
     try {
       const result = await env.DB.prepare(
-        `SELECT id, title, description, cve_id, severity, published_date, cvss_score
-         FROM threat_intel ORDER BY published_date DESC LIMIT 10`
+        `SELECT id, title, description, cve_id, severity, published_at AS published_date, cvss_score
+         FROM threat_intel ORDER BY published_at DESC LIMIT 10`
       ).all();
       intelItems = result.results || [];
     } catch (_) {}

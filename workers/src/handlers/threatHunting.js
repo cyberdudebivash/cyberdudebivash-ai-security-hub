@@ -219,7 +219,7 @@ async function executeD1Hunt(env, parsed, safeQuery, authCtx) {
       const placeholders = cveMatches.map(() => '?').join(',');
       const r = await db.prepare(
         `SELECT cve_id, title, severity, cvss_score, epss_score, is_kev,
-                description, published_date, mitre_technique
+                description, published_at AS published_date, mitre_technique
          FROM threat_intel
          WHERE cve_id IN (${placeholders})
          ORDER BY is_kev DESC, cvss_score DESC LIMIT 20`
@@ -236,7 +236,7 @@ async function executeD1Hunt(env, parsed, safeQuery, authCtx) {
       const kevFilter = /kev|actively.exploit/i.test(safeQuery) ? `AND ${KEV_PREDICATE}` : '';
       const r2 = await db.prepare(
         `SELECT cve_id, title, severity, cvss_score, epss_score, ${KEV_ORDER} AS is_kev,
-                description, published_date, mitre_technique
+                description, published_at AS published_date, mitre_technique
          FROM threat_intel
          WHERE (cvss_score >= 7.0 OR ${KEV_PREDICATE}) ${sevFilter} ${kevFilter}
          ORDER BY ${KEV_ORDER} DESC, cvss_score DESC LIMIT 20`

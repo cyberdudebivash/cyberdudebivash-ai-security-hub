@@ -344,7 +344,7 @@ export async function runPredictiveBatch(env) {
     SELECT cve_id, cvss_score as cvss, epss_score as epss,
            CASE WHEN exploit_status = 'confirmed' THEN 1 ELSE 0 END as is_kev
     FROM threat_intel
-    WHERE published_date > datetime('now', '-7 days')
+    WHERE published_at > datetime('now', '-7 days')
        OR (exploit_status = 'confirmed')
     ORDER BY cvss_score DESC
     LIMIT 50

@@ -581,7 +581,7 @@ async function handleSiemExport(req, env, authCtx) {
       try {
         const since = new Date(Date.now() - lookback_hours * 3600000).toISOString();
         const typeFilter = intel_type !== 'all' ? ` AND tags LIKE '%${intel_type}%'` : '';
-        const row = await D.prepare(`SELECT COUNT(*) as cnt FROM threat_intel WHERE published_date >= ?${typeFilter}`).bind(since).first().catch(() => null);
+        const row = await D.prepare(`SELECT COUNT(*) as cnt FROM threat_intel WHERE published_at >= ?${typeFilter}`).bind(since).first().catch(() => null);
         job.estimated_records = row?.cnt || 0;
         job.record_count = job.estimated_records;
         job.status = 'completed';
