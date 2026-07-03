@@ -17,7 +17,11 @@ Every core threat-intel fact had **multiple SQL definitions, several silently br
 | **KEV / actively-exploited** | `exploit_status='confirmed'` (1631) · `is_kev=1` (0, never written) · `in_kev=1` (0, column absent) · `actively_exploited=1` | stats=1631, exec report=0, hunt filter=∅ | `exploit_status = 'confirmed'` | **FIXED** `fef2022` |
 | **CVSS score** | `cvss` (10, written) · `cvss_score` (null, canonical + 60 readers) | CRITICAL CVE: `{cvss:10, cvss_score:null}` | `cvss_score` (self-healed from cvss) | **FIXED** `cfbcc58` |
 | **published date** | `published_at` (written, 37 readers) · `published_date` (absent → query errors) | vulns list / SEO feed empty | `published_at` | **FIXED** `cfbcc58` |
+| **mitre_technique** | selected FROM threat_intel by 5 handlers · column absent in both schemas → query errors | vulns/hunt empty | `NULL AS mitre_technique` (synthesized, no error) | **FIXED** `04c7006` |
+| **cve_id** | CVE written to primary-key `id`; canonical `cve_id` left NULL | live `{id:"CVE-2024-3400", cve_id:null}` | `cve_id` (self-healed from id) | **FIXED** `04c7006` |
 | **critical severity** | `severity='CRITICAL'` (14) · `cvss_score>=9` (exec risk) | 14 vs cvss-based | `severity='CRITICAL'` (headline); cvss≥9 exposed separately | **DOCUMENTED** (§5) |
+
+**Root pattern:** `threat_intel` accumulated two schema generations. The active ingestion path (`threatIngestion.js`) writes `cvss`/`id`/`exploit_status`/`published_at`/`known_ransomware`, while a large reader population expects the earlier/canonical `cvss_score`/`cve_id`/`is_kev`/`published_date`/`mitre_technique`. The fix strategy: **self-heal the canonical columns at the ingestion source** (cvss_score←cvss, cve_id←id) so readers heal without per-query edits, and **route the truly-absent columns** (is_kev/in_kev→exploit_status, published_date→published_at, mitre_technique→NULL) to real columns.
 
 Customer impact of the broken definitions (all now closed): the executive report claimed **0 actively-exploited vulnerabilities**; the vuln-management `?kev=true` filter, SEO/marketing threat feed, and threat-hunting "actively exploited" hunts returned **nothing**; every CVSS-based critical/high count and risk-sort read **null → 0**.
 
