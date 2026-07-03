@@ -24,6 +24,7 @@
  */
 
 import { buildReportShell } from './reportingEngine.js';
+import { csvCell } from '../lib/csvSafe.js';
 
 const SUPPORTED_FORMATS = ['json', 'cef', 'stix', 'sigma', 'csv', 'ndjson', 'ioc_bundle', 'executive_pdf'];
 const PLAN_LIMITS = {
@@ -695,10 +696,10 @@ function mapSigmaLevel(sev) {
 function buildCSV(records, source) {
   if (!records.length) return 'no_data\n';
 
-  const escape = v => {
-    const s = String(v == null ? '' : (typeof v === 'object' ? JSON.stringify(v) : v));
-    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
-  };
+  // Canonical CSV-safe encoding: structural escaping + formula-injection
+  // neutralization (CWE-1236). SIEM exports carry attacker-influenceable threat
+  // titles / IOC values that a customer's analyst opens in Excel.
+  const escape = csvCell;
 
   // Dynamic headers from first record (filtered)
   const skipKeys = new Set(['findings', 'iocs', 'mitre_tactics', 'affected_products', 'metadata']);

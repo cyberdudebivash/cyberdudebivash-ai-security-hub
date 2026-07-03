@@ -16,6 +16,7 @@
  */
 
 import { runIngestion, SEED_ENTRIES }  from '../services/threatIngestion.js';
+import { csvRow } from '../lib/csvSafe.js';
 import { enrichBatch, buildFeedSummary } from '../services/enrichment.js';
 import { extractIOCsFromText }           from '../services/iocExtractor.js';
 import { correlateEntry, buildCorrelationSummary } from '../services/correlationEngine.js';
@@ -445,7 +446,7 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
   if (format === 'csv' && tier === 'ENTERPRISE') {
     const header = 'id,severity,cvss,title,source,published_at,exploit_status,known_ransomware\n';
     const rows   = gated.map(e =>
-      [e.id, e.severity, e.cvss, `"${(e.title || '').replace(/"/g, '""')}"`, e.source, e.published_at, e.exploit_status, e.known_ransomware].join(',')
+      csvRow([e.id, e.severity, e.cvss, e.title || '', e.source, e.published_at, e.exploit_status, e.known_ransomware])
     ).join('\n');
     return new Response(header + rows, {
       headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename=threat-intel.csv' }

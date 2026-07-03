@@ -11,6 +11,7 @@
  */
 
 import { inspectBodyForAttacks, sanitizeString } from '../middleware/security.js';
+import { csvRow } from '../lib/csvSafe.js';
 import { checkRateLimitCost, rateLimitResponse }  from '../middleware/rateLimit.js';
 import { isRealUser } from '../auth/middleware.js';
 
@@ -197,12 +198,13 @@ export async function handleAuditExport(request, env, authCtx) {
   entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
   if (format === 'csv') {
+    // csvRow neutralizes formula injection (CWE-1236) + structural escaping —
+    // audit fields (actor, resource, action) are attacker-influenceable and this
+    // export is opened by compliance analysts in Excel.
     const header = 'id,timestamp,type,actor,actor_tier,ip,resource,action,outcome,org_id\n';
     const rows = entries.map(e =>
-      [e.id, e.timestamp, e.type, e.actor, e.actor_tier, e.ip,
-       `"${(e.resource||'').replace(/"/g,'""')}"`,
-       `"${(e.action||'').replace(/"/g,'""')}"`,
-       e.outcome, e.org_id || ''].join(',')
+      csvRow([e.id, e.timestamp, e.type, e.actor, e.actor_tier, e.ip,
+              e.resource || '', e.action || '', e.outcome, e.org_id || ''])
     ).join('\n');
     return new Response(header + rows, {
       headers: {
