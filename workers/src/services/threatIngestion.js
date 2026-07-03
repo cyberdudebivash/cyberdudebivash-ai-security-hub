@@ -606,7 +606,19 @@ function deduplicateEntries(entries) {
 }
 
 // ─── Self-healing schema: ensure every column the upsert writes exists ────────
+// cve_id/cvss_score are the platform's canonical, widely-queried column names
+// (30+ readers across executive reporting, threat hunting, SOC command,
+// autonomous ops, IOC enrichment, paid report downloads, and more) — they were
+// added to schema_master.sql and to the self-heal UPDATEs below in an earlier
+// pass (see the "Canonical CVSS/cve_id self-heal" blocks in storeInD1), but
+// schema_master.sql is a manual, gated migration that has never been run
+// against production, and neither column was ever added here. Every one of
+// those 30+ readers, and both self-heal UPDATEs, threw "no such column" and
+// were silently swallowed. Adding them here is what actually makes the
+// already-correct self-heal UPDATEs (and every reader keyed on these names)
+// work in production.
 const THREAT_INTEL_COLUMNS = [
+  ['cve_id', 'TEXT'], ['cvss_score', 'REAL'],
   ['title', 'TEXT'], ['severity', 'TEXT'], ['cvss', 'REAL'], ['cvss_vector', 'TEXT'],
   ['description', 'TEXT'], ['source', 'TEXT'], ['source_url', 'TEXT'], ['published_at', 'TEXT'],
   ['exploit_status', 'TEXT'], ['known_ransomware', 'INTEGER DEFAULT 0'],
@@ -625,6 +637,8 @@ async function ensureThreatIntelColumns(db) {
   for (const [name, type] of THREAT_INTEL_COLUMNS) {
     try { await db.prepare(`ALTER TABLE threat_intel ADD COLUMN ${name} ${type}`).run(); } catch { /* already exists */ }
   }
+  // Matches the index name already assumed by 30+ readers' query plans/comments.
+  try { await db.prepare(`CREATE INDEX IF NOT EXISTS idx_ti_cvss ON threat_intel(cvss_score DESC)`).run(); } catch {}
 }
 
 // ─── Store entries in D1 (upsert) ────────────────────────────────────────────

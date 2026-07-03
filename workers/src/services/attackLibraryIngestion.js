@@ -114,8 +114,46 @@ function buildTacticMap(legacyDoc) {
   };
 }
 
+// ─── Self-healing schema ──────────────────────────────────────────────────────
+// attack_library_techniques is defined only in schema_v44_attack_library.sql,
+// which — like schema_master.sql — is applied solely via the manual, gated
+// db-migrate.yml workflow_dispatch (typed "APPLY" confirmation required) and
+// has zero runs against production. Without this, every INSERT below throws
+// "no such table", is swallowed by its own try/catch, and this real, working
+// daily MITRE ATLAS ingestion never actually writes anything.
+export async function ensureAttackLibraryTable(db) {
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS attack_library_techniques (
+      id                 TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      technique_id       TEXT    NOT NULL UNIQUE,
+      name               TEXT    NOT NULL,
+      category           TEXT    NOT NULL,
+      severity           TEXT    NOT NULL DEFAULT 'MEDIUM',
+      icon               TEXT    NOT NULL DEFAULT '🎯',
+      description        TEXT    NOT NULL,
+      full_description   TEXT,
+      example_payload    TEXT,
+      defenses           TEXT,
+      tags               TEXT    NOT NULL DEFAULT '[]',
+      complexity         TEXT,
+      impact             TEXT,
+      detectability      TEXT,
+      mitre_atlas_id     TEXT,
+      owasp_llm_id       TEXT,
+      cwe_id             TEXT,
+      published_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+      created_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+      source             TEXT    NOT NULL DEFAULT 'cyberdudebivash_research'
+    )`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_atklib_category ON attack_library_techniques(category)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_atklib_severity ON attack_library_techniques(severity)`).run();
+  } catch { /* best-effort; INSERT below already catches its own errors */ }
+}
+
 export async function ingestAttackLibraryTechniques(env) {
   if (!env.DB) return { inserted: 0, skipped: 0, errors: ['no DB binding'] };
+  await ensureAttackLibraryTable(env.DB);
 
   let v6doc, legacyDoc;
   try {

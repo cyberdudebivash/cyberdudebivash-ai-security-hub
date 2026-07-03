@@ -9,6 +9,8 @@
  *   POST /api/admin/agent-threats/advisories  → publish a new advisory (ADMIN_TOKEN)
  */
 
+import { ensureAgentThreatAdvisoriesTable } from '../services/agentThreatIngestion.js';
+
 const FRAMEWORKS = ['mcp', 'langchain', 'autogen', 'openai', 'crewai', 'semantic_kernel', 'llama_index', 'custom'];
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 const SEVERITY_WEIGHT = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -174,6 +176,7 @@ export async function handleCreateAgentAdvisory(request, env) {
   if (!authorized) return json({ success: false, error: 'Unauthorized' }, 401);
 
   if (!env.DB) return json({ success: false, error: 'Database unavailable' }, 503);
+  await ensureAgentThreatAdvisoriesTable(env.DB);
 
   let body;
   try { body = await request.json(); }

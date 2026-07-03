@@ -59,8 +59,47 @@ async function fetchAdvisoriesFor(pkg) {
   return res.json();
 }
 
+// ─── Self-healing schema ──────────────────────────────────────────────────────
+// agent_threat_advisories is defined only in schema_v43_agent_threat_advisories.sql,
+// which — like schema_master.sql — is applied solely via the manual, gated
+// db-migrate.yml workflow_dispatch (typed "APPLY" confirmation required) and
+// has zero runs against production. Without this, every INSERT below throws
+// "no such table", is swallowed by its own try/catch, and this real, working
+// daily GHSA ingestion never actually writes anything.
+export async function ensureAgentThreatAdvisoriesTable(db) {
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS agent_threat_advisories (
+      id                 TEXT    PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      advisory_id        TEXT    NOT NULL UNIQUE,
+      title              TEXT    NOT NULL,
+      description        TEXT    NOT NULL,
+      framework          TEXT    NOT NULL,
+      affected_versions  TEXT,
+      affected_products  TEXT,
+      severity           TEXT    NOT NULL DEFAULT 'MEDIUM',
+      cvss_score         REAL,
+      owasp_llm_id       TEXT,
+      cwe_id             TEXT,
+      mitre_atlas_id     TEXT,
+      tags               TEXT    NOT NULL DEFAULT '[]',
+      patch_status       TEXT    NOT NULL DEFAULT 'no_patch',
+      patch_version      TEXT,
+      published_at       TEXT    NOT NULL,
+      updated_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+      created_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+      source             TEXT    NOT NULL DEFAULT 'cyberdudebivash_research',
+      is_new             INTEGER NOT NULL DEFAULT 0,
+      full_advisory_url  TEXT
+    )`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_agt_adv_framework ON agent_threat_advisories(framework)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_agt_adv_severity ON agent_threat_advisories(severity)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_agt_adv_published ON agent_threat_advisories(published_at DESC)`).run();
+  } catch { /* best-effort; INSERT/UPDATE below already catch their own errors */ }
+}
+
 export async function ingestAgentThreatAdvisories(env) {
   if (!env.DB) return { inserted: 0, skipped: 0, errors: ['no DB binding'] };
+  await ensureAgentThreatAdvisoriesTable(env.DB);
 
   let inserted = 0;
   let skipped = 0;

@@ -247,10 +247,14 @@ describe('Knowledge Graph — production self-healing schema regression (no sche
       ]));
 
       const intelCols = columnNames(env.DB, 'threat_intel');
-      expect(intelCols).not.toContain('cve_id');
-      expect(intelCols).not.toContain('cvss_score');
+      // cve_id/cvss_score are now real, intentionally self-healed columns (see
+      // threatIntelCanonicalColumns.test.mjs) — a separate fix for the 30+
+      // other readers keyed on those names. That doesn't change this handler's
+      // own behavior: fetchVulnRows() still aliases FROM the canonical id/cvss
+      // fields regardless of whether cve_id/cvss_score also exist alongside
+      // them, so both fixes are independently correct and compatible.
       expect(intelCols).not.toContain('mitre_technique');
-      expect(intelCols).toEqual(expect.arrayContaining(['id', 'cvss', 'severity', 'source']));
+      expect(intelCols).toEqual(expect.arrayContaining(['id', 'cvss', 'cve_id', 'cvss_score', 'severity', 'source']));
 
       const actorCols = columnNames(env.DB, 'threat_actors');
       expect(actorCols).not.toContain('sector');

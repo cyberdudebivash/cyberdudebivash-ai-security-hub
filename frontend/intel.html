@@ -1534,140 +1534,11 @@
             API_TIMEOUT: 5000,
         };
 
-        const FALLBACK_CVES = [
-            {
-                id: 'CVE-2024-3400',
-                severity: 'CRITICAL',
-                cvss: 9.8,
-                title: 'Critical RCE in OpenSSL',
-                product: 'OpenSSL 3.x',
-                description: 'Remote Code Execution vulnerability in OpenSSL cryptographic library affecting widespread enterprise deployments.',
-                apt: ['APT29'],
-                kev: true,
-                date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-6387',
-                severity: 'CRITICAL',
-                cvss: 9.1,
-                title: 'OpenSSH Signal Handler Race Condition',
-                product: 'OpenSSH',
-                description: 'Unauthenticated RCE in OpenSSH prior to version 8.7p1. Exploitable without authentication.',
-                apt: ['Lazarus', 'APT41'],
-                kev: true,
-                date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-21412',
-                severity: 'CRITICAL',
-                cvss: 9.6,
-                title: 'Windows Elevation of Privilege',
-                product: 'Windows 10/11',
-                description: 'Critical privilege escalation affecting latest Windows versions. Actively exploited in the wild.',
-                apt: ['FIN7'],
-                kev: true,
-                date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-30051',
-                severity: 'HIGH',
-                cvss: 8.8,
-                title: 'Outlook Information Disclosure',
-                product: 'Microsoft Outlook',
-                description: 'Information disclosure vulnerability allowing remote attackers to access sensitive data.',
-                apt: ['APT29'],
-                kev: false,
-                date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-26169',
-                severity: 'HIGH',
-                cvss: 8.6,
-                title: 'Apache Log4j2 RCE',
-                product: 'Apache Log4j2',
-                description: 'Remote code execution in Log4j2 JNDI lookup functionality. Widely used in enterprise applications.',
-                apt: ['APT41', 'Lazarus'],
-                kev: true,
-                date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-43461',
-                severity: 'HIGH',
-                cvss: 8.2,
-                title: 'PHP File Upload RCE',
-                product: 'PHP Framework',
-                description: 'Arbitrary file upload leading to remote code execution in popular PHP frameworks.',
-                apt: ['FIN7'],
-                kev: false,
-                date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-45519',
-                severity: 'MEDIUM',
-                cvss: 7.5,
-                title: 'Django SQL Injection',
-                product: 'Django Web Framework',
-                description: 'SQL injection vulnerability in Django ORM allowing database compromise.',
-                apt: [],
-                kev: false,
-                date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-38094',
-                severity: 'CRITICAL',
-                cvss: 9.7,
-                title: 'Cisco IOS XE RCE',
-                product: 'Cisco IOS XE',
-                description: 'Unauthenticated RCE in Cisco networking devices affecting critical infrastructure.',
-                apt: ['APT41'],
-                kev: true,
-                date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-47575',
-                severity: 'HIGH',
-                cvss: 8.4,
-                title: 'Kubernetes API Server Privilege Escalation',
-                product: 'Kubernetes',
-                description: 'Privilege escalation in Kubernetes API server affecting container orchestration environments.',
-                apt: ['APT29'],
-                kev: false,
-                date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-49138',
-                severity: 'CRITICAL',
-                cvss: 9.9,
-                title: 'Linux Kernel Memory Corruption',
-                product: 'Linux Kernel 6.x',
-                description: 'Critical memory corruption vulnerability in Linux kernel affecting all major distributions.',
-                apt: ['Lazarus', 'BlackCat'],
-                kev: true,
-                date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-21338',
-                severity: 'HIGH',
-                cvss: 8.1,
-                title: 'Exchange Server Weakness',
-                product: 'Microsoft Exchange Server',
-                description: 'Authentication bypass in Exchange Server affecting enterprise email infrastructure.',
-                apt: ['FIN7', 'APT41'],
-                kev: false,
-                date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
-            },
-            {
-                id: 'CVE-2024-35250',
-                severity: 'MEDIUM',
-                cvss: 7.2,
-                title: 'Jenkins Plugin Vulnerability',
-                product: 'Jenkins CI/CD',
-                description: 'Script injection vulnerability in popular Jenkins plugins used for CI/CD pipelines.',
-                apt: [],
-                kev: false,
-                date: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000)
-            }
-        ];
+        // The static CVE catalog previously here (FALLBACK_CVES) was fabricated
+        // data — invented CVE-to-APT attributions silently shown as live feed
+        // results on empty responses or fetch errors. Removed; see fetchThreats()
+        // and renderThreats() below for the honest empty/error states that
+        // replaced it.
 
         const APT_GROUPS = [
             {
@@ -1715,7 +1586,10 @@
         ];
 
         // ===== STATE =====
-        let threatData = [...FALLBACK_CVES];
+        // Starts empty, not fabricated — see the removal note above and
+        // fetchThreats() below for what this replaced.
+        let threatData = [];
+        let feedHealthy = false;
         let currentFilter = 'all';
         let lastRefreshTime = new Date();
 
@@ -1800,6 +1674,7 @@
 
         // ===== FETCH THREAT DATA =====
         async function fetchThreats() {
+            let hadError = false;
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
@@ -1821,22 +1696,57 @@
                           : (data.entries || data.threats || null);
                 if (raw && raw.length > 0) {
                     threatData = raw.map(normalizeEntry);
+                    feedHealthy = true;
                 } else {
-                    threatData = [...FALLBACK_CVES];
+                    // Genuinely empty result — show an honest "initializing" state
+                    // in renderThreats(), never fabricated CVE/APT data.
+                    threatData = [];
+                    feedHealthy = false;
                 }
             } catch (error) {
-                console.warn('Threat fetch failed, using fallback:', error);
-                threatData = [...FALLBACK_CVES];
+                console.warn('Threat fetch failed:', error);
+                threatData = [];
+                feedHealthy = false;
+                hadError = true;
             }
 
             updateStats();
-            renderThreats();
+            renderThreats(hadError);
             updateRefreshTime();
+            updateLiveBadge();
+
+            // Recover faster than the normal 3-minute cadence after a transient error.
+            if (hadError) setTimeout(fetchThreats, 30000);
+        }
+
+        // ===== LIVE BADGE — reflects real feed health, never claims LIVE on fake data =====
+        function updateLiveBadge() {
+            const badge = document.querySelector('.live-badge');
+            if (!badge) return;
+            badge.innerHTML = feedHealthy
+                ? '<span class="live-dot"></span>LIVE FEED'
+                : '<span class="live-dot" style="background:#888"></span>CONNECTING…';
         }
 
         // ===== RENDER THREATS =====
-        function renderThreats() {
+        function renderThreats(hadError) {
             const feedEl = document.getElementById('threat-feed');
+
+            if (threatData.length === 0) {
+                feedEl.innerHTML = hadError
+                    ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:#888">
+                         <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+                         <div style="font-weight:600;margin-bottom:8px">Feed Temporarily Unavailable</div>
+                         <div style="font-size:13px">Retrying in 30 seconds…</div>
+                       </div>`
+                    : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:#888">
+                         <div style="font-size:32px;margin-bottom:12px">📡</div>
+                         <div style="font-weight:600;margin-bottom:8px">Threat Intelligence Feed Initializing</div>
+                         <div style="font-size:13px">Live CVE ingestion is running. Check back in a few minutes.</div>
+                       </div>`;
+                return;
+            }
+
             const filtered = filterThreats(threatData, currentFilter);
 
             feedEl.innerHTML = filtered.map(threat => {

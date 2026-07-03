@@ -10,6 +10,8 @@
  *   POST /api/admin/attack-library/techniques → publish a new technique (ADMIN_TOKEN)
  */
 
+import { ensureAttackLibraryTable } from '../services/attackLibraryIngestion.js';
+
 const CATEGORIES = ['prompt-injection', 'jailbreak', 'agent-takeover', 'rag-poisoning', 'data-exfil', 'model-abuse'];
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
@@ -145,6 +147,7 @@ export async function handleCreateAttackTechnique(request, env) {
   if (!authorized) return json({ success: false, error: 'Unauthorized' }, 401);
 
   if (!env.DB) return json({ success: false, error: 'Database unavailable' }, 503);
+  await ensureAttackLibraryTable(env.DB);
 
   let body;
   try { body = await request.json(); }
