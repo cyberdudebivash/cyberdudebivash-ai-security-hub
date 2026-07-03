@@ -176,6 +176,31 @@ risk/report — panels 1, 9, 10) are FIXED and live-verified. Two residual edito
 but the payload nests them as `d2.scans.total` — a dead read (no display impact; canonical scan
 count comes from `platform_metrics`). Recommend fixing the field path or removing the fetch.
 
+## 8d. Increment 3 — Authenticated walkthrough (real accounts) & tenant isolation
+
+Drove gated panels with real signed-in accounts (not just gate checks). Findings:
+
+**Verified real, authenticated, end-to-end:**
+- **API-usage panel** — real key auto-provisioning, tier limits, per-module usage quotas.
+- **SOC workspace** — create case → real case number + computed SLA → persists → reads back.
+- **Notifications center, CISO metrics** — real authenticated responses.
+- **MSSP** — correctly 403 for non-MSSP (internals require a real MSSP subscription; not
+  exercised — verified by isolation tests instead of a live payment).
+
+**D-8 (CRITICAL, FIXED & LIVE-VERIFIED) — cross-tenant data isolation.**
+Two different accounts saw/could-mutate each other's SOC cases. Root cause was systemic:
+`resolveAuthV5` never set `org_id`, so ~15 handlers scoping customer data with
+`authCtx.org_id || 'default'` collapsed every authenticated user into one shared tenant.
+Fixes:
+- SOC handlers (`80c4375`): per-user tenant key; ownership checks added to the previously
+  UNSCOPED update & comment writes; metrics scoped. 6 regression tests.
+- Systemic root (`1d94003`): `withAuthAliases` assigns every authenticated principal a
+  stable `org_id = u:<user_id>` — fixes the whole class (governance, red team, CTI, org
+  memory, investigations, workflow automation, …) in one place. Verified nothing seeds/reads
+  shared `'default'` data and `total_customers=0`, so it only tightens isolation. 3 tests.
+- **Live proof:** fresh account B → `list 0`, `GET 403`, `PATCH 403`, `metrics 0` against
+  account A's case; A still sees its own. 998 tests green.
+
 ## 9. Remaining Gaps
 
 - **D-2 (MEDIUM):** "AI Risk Insights" stats (34%/61%/78%/42%) are hardcoded but
