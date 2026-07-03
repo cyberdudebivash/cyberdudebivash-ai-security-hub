@@ -330,6 +330,52 @@ function getSeedIncidents() {
   return [];
 }
 
+// ─── Real risk-posture computation ────────────────────────────────────────────
+// Derives a composite security-posture score from data that ACTUALLY exists —
+// compliance control coverage and the open/critical risk register. Returns an
+// honest all-null block (data_available:false) when there is no underlying data,
+// instead of the previously hardcoded 74.2 / "+4.1" / 68 / 31 constants.
+export function computeRiskPosture(complianceStatus = [], riskRegister = [], incidents = []) {
+  const openCrit = riskRegister.filter(r => r.status === 'OPEN' && r.risk_level === 'CRITICAL').length;
+  const openHigh = riskRegister.filter(r => r.status === 'OPEN' && r.risk_level === 'HIGH').length;
+  const openRisks     = riskRegister.filter(r => r.status === 'OPEN').length;
+  const criticalRisks = riskRegister.filter(r => r.risk_level === 'CRITICAL').length;
+
+  // Compliance control coverage (0..100) across all assessed frameworks, if any.
+  let coverage = null;
+  if (Array.isArray(complianceStatus) && complianceStatus.length) {
+    let met = 0, tot = 0;
+    for (const f of complianceStatus) { met += (f.controls_met || 0); tot += (f.controls_total || 0); }
+    if (tot > 0) coverage = (met / tot) * 100;
+  }
+
+  const hasData = coverage !== null || riskRegister.length > 0 || incidents.length > 0;
+  if (!hasData) {
+    return {
+      composite_score: null, grade: null, trend_30d: null,
+      open_risks: 0, critical_risks: 0, risk_appetite_used: null, attack_surface_score: null,
+      data_available: false,
+      message: 'No posture data yet — run compliance and identity scans to populate.',
+    };
+  }
+
+  // Base from compliance coverage when available, else start optimistic and let
+  // real open risks drive it down. Single documented computation.
+  const base = coverage !== null ? coverage : 100;
+  const composite = Math.max(0, Math.min(100, Math.round(base - (openCrit * 12 + openHigh * 5))));
+
+  return {
+    composite_score:      composite,
+    grade:                scoreToGrade(composite),
+    trend_30d:            null,   // no historical posture snapshots → cannot fabricate a trend
+    open_risks:           openRisks,
+    critical_risks:       criticalRisks,
+    risk_appetite_used:   Math.min(100, Math.round((openCrit * 20 + openHigh * 8))) || 0,
+    attack_surface_score: Math.min(100, openCrit * 10 + openHigh * 4),  // lower = better; 0 when clean
+    data_available:       true,
+  };
+}
+
 // ─── GET /api/ciso/metrics ────────────────────────────────────────────────────
 export async function handleGetCISOMetrics(request, env, authCtx = {}) {
   // Cache check (5 min)
@@ -385,27 +431,21 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
   const metrics = {
     // ── Executive KPIs ────────────────────────────────────────────────────────
     kpis: {
-      mttd_hours:          mttx.mttd_hours ?? 2.8,     // Mean Time To Detect
-      mttr_hours:          mttx.mttr_hours ?? 24.0,    // Mean Time To Respond/Resolve
+      // Real MTTD/MTTR from incident timestamps; null (→ "—" in the UI) when there
+      // are no incidents yet. No hardcoded 2.8h/24h fallback.
+      mttd_hours:          mttx.mttd_hours,     // Mean Time To Detect (null if no incidents)
+      mttr_hours:          mttx.mttr_hours,     // Mean Time To Respond (null if no incidents)
       mttd_industry_avg:   mttx.industry_mttd_hours,
       mttr_industry_avg:   mttx.industry_mttr_hours,
       mttd_vs_industry:    mttx.mttd_vs_industry,
       mttr_vs_industry:    mttx.mttr_vs_industry,
-      mean_time_to_patch:  '6.3 days',
+      mean_time_to_patch:  null,   // no patch-timeline data source yet — honest null, not "6.3 days"
       vulnerability_backlog: riskRegister.filter(r => r.status === 'OPEN').length,
       unresolved_critical: activeBySeveiry['CRITICAL'] + activeBySeveiry['HIGH'],
     },
 
-    // ── Risk posture ──────────────────────────────────────────────────────────
-    risk_posture: {
-      composite_score:     74.2,
-      grade:               scoreToGrade(74.2),
-      trend_30d:           '+4.1',
-      open_risks:          riskRegister.filter(r => r.status === 'OPEN').length,
-      critical_risks:      riskRegister.filter(r => r.risk_level === 'CRITICAL').length,
-      risk_appetite_used:  68, // %
-      attack_surface_score: 31, // lower = better
-    },
+    // ── Risk posture (real, data-derived — or honest null when no data) ─────────
+    risk_posture: computeRiskPosture(complianceStatus, riskRegister, incidents),
 
     // ── Incident metrics ──────────────────────────────────────────────────────
     incidents: {
