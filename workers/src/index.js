@@ -340,6 +340,9 @@ import {
 // ─── Threat Intel Pro v1.0 — MITRE ATT&CK, APT Actors, Composite Risk, STIX 2.1, AI Analyst ──
 import { handleThreatIntelPro } from './handlers/threatIntelPro.js';
 
+// ─── Mitigation & Response Playbook Engine v1.0 ──────────────────────────────
+import { handleGeneratePlaybook, handleGetPlaybook, handleListPlaybooks } from './handlers/mitigationPlaybook.js';
+
 // ─── Phase B: AI Security Posture Management (AI SPM) ────────────────────────
 import {
   handleAISPMInventory,
@@ -4996,6 +4999,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     ) {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleThreatIntelPro(request, env, authCtx || {}), request));
+    }
+
+    // ── Mitigation & Response Playbook Engine v1.0 ────────────────────────────
+    if (path === '/api/threat-intel/playbooks/history' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      return withSecurityHeaders(withCors(await handleListPlaybooks(request, env, authCtx || {}), request));
+    }
+    if (path.match(/^\/api\/threat-intel\/[^/]+\/playbook$/) && (method === 'GET' || method === 'POST')) {
+      const authCtx = await resolveAuthV5(request, env).catch(() => null);
+      const handler = method === 'POST' ? handleGeneratePlaybook : handleGetPlaybook;
+      return withSecurityHeaders(withCors(await handler(request, env, authCtx || {}), request));
     }
 
     // ── Phase C: MYTHOS Platform Governor API ────────────────────────────────
