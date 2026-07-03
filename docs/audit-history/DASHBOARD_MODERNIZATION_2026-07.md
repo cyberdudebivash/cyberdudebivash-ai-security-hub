@@ -96,6 +96,40 @@ The posture card now delivers a genuine, live threat-pressure read per security 
 (actionable: which domain is under the most active-exploitation pressure right now),
 instead of a decorative constant. That is real, renewable operational value.
 
+## 8b. Increment 2 — CISO / Executive Command Center (this pass)
+
+Traced `/api/ciso/metrics`, `/api/executive/dashboard`, `/api/ciso/report`. Findings:
+
+**D-3 (HIGH, FIXED) — fabricated MTTD/MTTR.** `/api/ciso/metrics` served
+`mttd_hours 2.8 / mttr_hours 24` even with **0 incidents** (the `?? 2.8 / ?? 24.0`
+fallbacks overwrote the correct `null`), and the dashboard *prefers* these for its
+MTTD/MTTR tiles. Now real-or-null (→ `—`). Live-verified: `mttd_hours: null`.
+
+**D-4 (HIGH, FIXED) — hardcoded risk posture.** `risk_posture` returned constant
+`composite_score 74.2 / trend_30d "+4.1" / risk_appetite 68 / attack_surface 31`.
+Now `computeRiskPosture()` derives the composite from real compliance coverage +
+open/critical risk register; `trend_30d` is null (no history). Live-verified:
+`composite_score: 46, trend_30d: null, data_available: true`.
+
+**D-5 (HIGH, FIXED) — fabricated CISO Board Report + PDF.** `/api/ciso/report`
+(ENTERPRISE-gated) and its PDF export served a fully invented executive summary
+("posture improved by 4.1 points to 74.2/100 … Three critical incidents were
+handled and resolved … ISO 27001 compliance stands at 68.4%") regardless of real
+data, and computed `compliance_avg` as `NaN` (called `buildComplianceStatus([])`
+instead of `env`). Now the summary/scorecard/metrics derive from real data with
+honest phrasing when a source is empty; PDF renders `—` for nulls. Test-locked.
+
+**D-6 (LOW, documented) — `executiveCommandCenter` competitive block.** Returns a
+hardcoded `{ position:'MARKET LEADER', score:95, industryAverage:68 }`. Not rendered
+on any dashboard (API-only editorial positioning). Recommend removing or labeling as
+vendor self-assessment; left in place to avoid altering an API shape with unknown
+consumers.
+
+**Verified legitimate (not fabrications):** `dashboardStream` threat scores
+(threshold-mapped from real crit/KEV counts), `ctiWorkbench` actor confidence
+(curated MITRE ATT&CK baseline), affiliate commission tiers (10/15/20/25% program
+rates), GST 18%, MSSP 60% default share.
+
 ## 9. Remaining Gaps
 
 - **D-2 (MEDIUM):** "AI Risk Insights" stats (34%/61%/78%/42%) are hardcoded but
