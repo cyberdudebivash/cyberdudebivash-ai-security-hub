@@ -242,7 +242,15 @@ function extractThreatId(pathname) {
   return idx >= 0 && parts[idx + 1] ? decodeURIComponent(parts[idx + 1]) : null;
 }
 
-// ─── POST /api/threat-intel/:id/playbook — generate (and persist) fresh ─────
+// Auth is optional on both generate and fetch — anonymous callers get the
+// full playbook computed on the fly, but nothing is written to D1 for them.
+// This mirrors the platform's existing rule-generation convention
+// (handlers/aiAnalysis.js: `if (env?.DB && authCtx?.user_id)`) and closes an
+// unbounded-write abuse path: without this gate, an anonymous caller could
+// spam POST on any real CVE id and grow threat_playbooks without limit.
+const HISTORY_HINT = '/api/threat-intel/playbooks/history';
+
+// ─── POST /api/threat-intel/:id/playbook — generate fresh; persist only for signed-in callers ──
 export async function handleGeneratePlaybook(request, env, authCtx = {}) {
   if (!env?.DB) return jsonResponse({ error: 'Database unavailable' }, 503);
 
@@ -252,13 +260,17 @@ export async function handleGeneratePlaybook(request, env, authCtx = {}) {
   const entry = await env.DB.prepare('SELECT * FROM threat_intel WHERE id = ?').bind(threatId).first().catch(() => null);
   if (!entry) return jsonResponse({ error: 'threat_intel item not found', threat_intel_id: threatId }, 404);
 
-  const playbook   = buildPlaybook(entry);
-  const playbookId = await persistPlaybook(env.DB, threatId, authCtx, entry, playbook);
+  const playbook = buildPlaybook(entry);
 
-  return jsonResponse({ success: true, playbook_id: playbookId, stale: false, playbook }, 201);
+  if (!authCtx?.user_id) {
+    return jsonResponse({ success: true, playbook_id: null, persisted: false, stale: false, playbook, history: 'Sign in to save this playbook and track staleness over time' }, 200);
+  }
+
+  const playbookId = await persistPlaybook(env.DB, threatId, authCtx, entry, playbook);
+  return jsonResponse({ success: true, playbook_id: playbookId, persisted: true, stale: false, playbook, history: HISTORY_HINT }, 201);
 }
 
-// ─── GET /api/threat-intel/:id/playbook — fetch latest, lazy-generate once ──
+// ─── GET /api/threat-intel/:id/playbook — fetch latest; lazy-generate (persisting only for signed-in callers) ──
 export async function handleGetPlaybook(request, env, authCtx = {}) {
   if (!env?.DB) return jsonResponse({ error: 'Database unavailable' }, 503);
 
@@ -274,19 +286,24 @@ export async function handleGetPlaybook(request, env, authCtx = {}) {
   ).bind(threatId).first().catch(() => null);
 
   if (!latest) {
-    const playbook   = buildPlaybook(entry);
+    const playbook = buildPlaybook(entry);
+    if (!authCtx?.user_id) {
+      return jsonResponse({ success: true, playbook_id: null, persisted: false, stale: false, generated_now: true, playbook, history: 'Sign in to save this playbook and track staleness over time' });
+    }
     const playbookId = await persistPlaybook(env.DB, threatId, authCtx, entry, playbook);
-    return jsonResponse({ success: true, playbook_id: playbookId, stale: false, generated_now: true, playbook });
+    return jsonResponse({ success: true, playbook_id: playbookId, persisted: true, stale: false, generated_now: true, playbook, history: HISTORY_HINT });
   }
 
   const stale = !!(entry.updated_at && latest.source_updated_at && entry.updated_at !== latest.source_updated_at);
   return jsonResponse({
     success: true,
     playbook_id: latest.id,
+    persisted: true,
     stale,
     stale_reason: stale ? 'The underlying threat_intel record has been updated since this playbook was generated — POST to regenerate current guidance.' : null,
     generated_at: latest.created_at,
     playbook: JSON.parse(latest.playbook_json),
+    history: authCtx?.user_id ? HISTORY_HINT : 'Sign in to save future playbooks and track staleness over time',
   });
 }
 

@@ -554,6 +554,53 @@ footer a{color:var(--accent);margin:0 8px}
           </div>
         </div>
       </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/api/threat-intel/:id/playbook</span>
+          <span class="tier-badge tier-free">FREE</span>
+          <span class="endpoint-desc">Mitigation &amp; response playbook for a CVE/threat-intel item</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-subtitle">Description</div>
+          <p style="font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:16px">
+            Deterministically generates immediate mitigation actions, detection guidance, a threat hunting
+            guide, a SOC playbook, an incident response playbook (NIST&nbsp;SP&nbsp;800-61), an executive
+            advisory, security architecture guidance, an operational checklist, and references — grounded
+            entirely in the real <code>threat_intel</code> record plus the live MITRE ATT&amp;CK mapping and
+            composite risk score. Anonymous callers get the full playbook computed on demand; sign in to
+            persist it and get staleness tracking if the underlying intelligence is later re-enriched.
+          </p>
+          <div class="endpoint-subtitle">Response (abridged)</div>
+          <div class="code-block">
+            <pre>{
+  <span class="key">"success"</span>: <span class="kw">true</span>,
+  <span class="key">"playbook_id"</span>: <span class="str">"pbk_mr4z..."</span>,
+  <span class="key">"persisted"</span>: <span class="kw">true</span>,
+  <span class="key">"stale"</span>: <span class="kw">false</span>,
+  <span class="key">"playbook"</span>: {
+    <span class="key">"risk_tier"</span>: <span class="str">"CRITICAL"</span>,
+    <span class="key">"immediate_actions"</span>: [ <span class="str">"..."</span> ],
+    <span class="key">"detection_guidance"</span>: [ <span class="str">"..."</span> ],
+    <span class="key">"threat_hunting_guide"</span>: { <span class="key">"suggested_query"</span>: <span class="str">"..."</span> },
+    <span class="key">"soc_playbook"</span>: [ { <span class="key">"stage"</span>: <span class="str">"Triage"</span>, <span class="key">"action"</span>: <span class="str">"..."</span> } ],
+    <span class="key">"incident_response_playbook"</span>: [ <span class="cmt">/* NIST SP 800-61 phases */</span> ],
+    <span class="key">"executive_advisory"</span>: <span class="str">"..."</span>,
+    <span class="key">"security_architecture_guidance"</span>: [ <span class="cmt">/* per ATT&amp;CK tactic */</span> ],
+    <span class="key">"operational_checklist"</span>: [ <span class="cmt">/* checkbox items */</span> ],
+    <span class="key">"references"</span>: [ { <span class="key">"label"</span>: <span class="str">"NVD — CVE-..."</span>, <span class="key">"url"</span>: <span class="str">"https://nvd.nist.gov/..."</span> } ],
+    <span class="key">"supporting_evidence"</span>: { <span class="cmt">/* every real field the playbook was built from */</span> }
+  }
+}</pre>
+          </div>
+          <div class="endpoint-subtitle">Related</div>
+          <p style="font-size:13px;color:var(--text-dim);line-height:1.7">
+            <code>POST /api/threat-intel/:id/playbook</code> — force regeneration from current intelligence.
+            <code>GET /api/threat-intel/playbooks/history</code> — your saved generation history (sign-in required).
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- VIBE CODE SCANNER -->

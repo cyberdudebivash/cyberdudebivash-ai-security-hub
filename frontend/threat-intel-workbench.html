@@ -1134,9 +1134,69 @@ async function showCVEDetail(cveId) {
           </div>
         `).join('')}
       ` : ''}
+      <div class="section-title mt-16">🛡️ Response Playbook</div>
+      <div id="cve-playbook-panel">
+        <button class="btn btn-primary btn-sm" onclick="loadCVEPlaybook('${cveId}')">Generate Response Playbook</button>
+      </div>
     `;
   } catch(err) {
     body.innerHTML = `<div class="text-danger">Error loading CVE detail: ${err.message}</div>`;
+  }
+}
+
+// ── Response Playbook (mitigation / detection / SOC / IR guidance) ──────────
+async function loadCVEPlaybook(cveId) {
+  const panel = document.getElementById('cve-playbook-panel');
+  panel.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Generating playbook from live threat intelligence…</p>';
+  try {
+    const res = await fetch(`${API}/api/threat-intel/${cveId}/playbook`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Playbook generation failed');
+    const pb = data.playbook;
+
+    const list = (items) => `<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text-secondary);line-height:1.7">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+    const stageRows = (rows, keyA, keyB) => rows.map(r => `
+      <div class="technique-row"><span class="technique-id" style="min-width:110px">${r[keyA]}</span><div class="technique-info"><div class="technique-name" style="font-weight:400;font-size:13px;line-height:1.6">${r[keyB]}</div></div></div>
+    `).join('');
+
+    panel.innerHTML = `
+      ${data.stale ? `<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b;border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:12px">⚠ ${data.stale_reason}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span class="confidence-pill ${pb.risk_tier === 'CRITICAL' || pb.risk_tier === 'HIGH' ? 'conf-high' : 'conf-medium'}">${pb.risk_tier}</span>
+        <span style="font-size:11px;color:var(--text-muted)">${data.persisted ? `Generated ${new Date(data.generated_at || Date.now()).toLocaleString()}` : data.history}</span>
+      </div>
+
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px">${pb.executive_advisory}</div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px">Immediate Actions</div>
+      ${list(pb.immediate_actions)}
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">Detection Guidance</div>
+      ${list(pb.detection_guidance)}
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">Threat Hunting Guide</div>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:0 0 6px">${pb.threat_hunting_guide.summary}</p>
+      <code style="display:block;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--accent);overflow-x:auto;white-space:pre">${pb.threat_hunting_guide.suggested_query}</code>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">SOC Playbook</div>
+      ${stageRows(pb.soc_playbook, 'stage', 'action')}
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">Incident Response Playbook (NIST SP 800-61)</div>
+      ${stageRows(pb.incident_response_playbook, 'phase', 'action')}
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">Security Architecture Guidance</div>
+      ${list(pb.security_architecture_guidance.map(g => g.tactic ? `<b>${g.tactic}:</b> ${g.guidance}` : g.guidance))}
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">Operational Checklist</div>
+      ${list(pb.operational_checklist.map(c => c.item))}
+
+      ${pb.references?.length ? `
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:14px 0 6px">References</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.8">${pb.references.map(r => `<li><a href="${r.url}" target="_blank" rel="noopener" style="color:var(--accent)">${r.label}</a></li>`).join('')}</ul>
+      ` : ''}
+    `;
+  } catch(err) {
+    panel.innerHTML = `<div class="text-danger" style="font-size:13px">Failed to generate playbook: ${err.message}</div>`;
   }
 }
 

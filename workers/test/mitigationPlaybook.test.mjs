@@ -181,19 +181,42 @@ describe('handleGeneratePlaybook — POST persists a real, D1-backed playbook', 
   });
 });
 
-describe('handleGetPlaybook — GET lazy-generates once, then reuses, and flags staleness', () => {
-  it('lazy-generates on first visit when nothing has been persisted yet', async () => {
+describe('handleGetPlaybook — anonymous callers never write to D1 (abuse-path fix)', () => {
+  it('an anonymous caller gets a full playbook but nothing is persisted', async () => {
     const env = { DB: makeDB([RICH_ENTRY]) };
     const res = await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, {});
     const body = await res.json();
+    expect(body.playbook.threat_intel_id).toBe('CVE-2026-11111');
+    expect(body.persisted).toBe(false);
+    expect(body.playbook_id).toBeNull();
+    expect(env.DB._playbooks.length).toBe(0);
+  });
+
+  it('5 repeated anonymous POSTs on the same id create zero rows (was: 5 rows, unbounded growth)', async () => {
+    const env = { DB: makeDB([RICH_ENTRY]) };
+    for (let i = 0; i < 5; i++) {
+      await handleGeneratePlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook', 'POST'), env, {});
+    }
+    expect(env.DB._playbooks.length).toBe(0);
+  });
+});
+
+describe('handleGetPlaybook — signed-in callers get persistence, reuse, and staleness tracking', () => {
+  const authed = { user_id: 'u1', org_id: 'org1' };
+
+  it('lazy-generates and persists on first visit for a signed-in caller', async () => {
+    const env = { DB: makeDB([RICH_ENTRY]) };
+    const res = await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, authed);
+    const body = await res.json();
     expect(body.generated_now).toBe(true);
+    expect(body.persisted).toBe(true);
     expect(env.DB._playbooks.length).toBe(1);
   });
 
   it('reuses the persisted playbook on a second visit instead of regenerating', async () => {
     const env = { DB: makeDB([RICH_ENTRY]) };
-    await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, {});
-    const res2 = await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, {});
+    await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, authed);
+    const res2 = await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, authed);
     const body2 = await res2.json();
     expect(body2.generated_now).toBeUndefined();
     expect(env.DB._playbooks.length).toBe(1);
@@ -203,9 +226,9 @@ describe('handleGetPlaybook — GET lazy-generates once, then reuses, and flags 
   it('flags stale:true when the underlying threat_intel row changed since generation', async () => {
     const entry = { ...RICH_ENTRY };
     const env = { DB: makeDB([entry]) };
-    await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, {});
+    await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, authed);
     entry.updated_at = '2026-06-09T00:00:00Z'; // simulate re-enrichment
-    const res2 = await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, {});
+    const res2 = await handleGetPlaybook(req('https://x/api/threat-intel/CVE-2026-11111/playbook'), env, authed);
     const body2 = await res2.json();
     expect(body2.stale).toBe(true);
     expect(body2.stale_reason).toMatch(/updated since this playbook was generated/i);
