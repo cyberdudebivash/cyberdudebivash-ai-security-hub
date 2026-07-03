@@ -168,7 +168,21 @@ export async function handleRealtimePosture(request, env, authCtx = {}) {
   const enriched   = enrichBatch(rawEntries);
   const detection  = runDetection(enriched);
   const posture    = buildDefensePosture(detection.alerts || []);
-  const payload    = { posture, generated_at: new Date().toISOString(), plan: authCtx?.tier || 'FREE' };
+  // Freshness metadata (mandate: every widget states source + freshness + record count).
+  // live=true only when the score is derived from real DB rows, not the seed fallback.
+  const live       = Array.isArray(rawEntries) && rawEntries.length > 0 && !!env?.DB;
+  const payload    = {
+    posture,
+    // Flattened for the dashboard posture card:
+    overall_score: posture.overall_score,
+    scores:        posture.scores,
+    data_source:   'threat_intel catalog (NVD · CISA KEV)',
+    record_count:  posture.total_threats,
+    last_updated:  new Date().toISOString(),
+    live,
+    generated_at:  new Date().toISOString(),
+    plan:          authCtx?.tier || 'FREE',
+  };
 
   try {
     caches.default.put(new Request(CACHE_URL), new Response(JSON.stringify(payload), {
@@ -291,6 +305,67 @@ async function buildPlatformStats(env) {
   return stats;
 }
 
+// ─── Pillar classification ────────────────────────────────────────────────────
+// Maps a threat to one or more security domains by keyword, so the dashboard's
+// per-pillar posture bars are DERIVED FROM THE LIVE CATALOG rather than being
+// hardcoded constants. Every score below is a function of real threat_intel rows.
+const PILLAR_PATTERNS = {
+  network:    /\b(vpn|firewall|router|gateway|tls|ssl|dns|https?|proxy|netscaler|fortinet|fortios|palo\s?alto|pan-os|cisco|ios\s?xe|apache|nginx|ssrf|\brce\b|port|smb|\brdp\b|bgp|load\s?balanc|citrix|f5\b|edge|network)\b/i,
+  identity:   /\b(auth(entication)?|sso|saml|oauth|ldap|kerberos|credential|password|session|\bmfa\b|privilege|escalat|\biam\b|okta|active\s?directory|token|bypass|identity|login|account)\b/i,
+  ai_systems: /\b(\bai\b|llm|prompt\s?inject|machine\s?learning|\bml\b|tensorflow|pytorch|langchain|openai|\brag\b|gpt|neural|embedding|genai|agent(ic)?|mcp|model)\b/i,
+};
+
+function textOf(a) {
+  return `${a.title || a.name || ''} ${a.product || ''} ${a.vendor || ''} ${a.description || ''}`;
+}
+
+// Per-pillar threat-pressure score in [35,98]: starts at 98 and is reduced by the
+// severity- and exploitation-weighted count of catalog threats mapped to that
+// pillar, normalized by sample size. Returns null pillars only when there is no
+// catalog data at all (so the frontend can show an honest "unavailable" state).
+export function computePillarScores(alerts = []) {
+  const total = alerts.length;
+  if (total === 0) return null;
+
+  const acc = {
+    network:    { pressure: 0, hits: 0 },
+    identity:   { pressure: 0, hits: 0 },
+    ai_systems: { pressure: 0, hits: 0 },
+  };
+  let unpatchedKev = 0;
+
+  for (const a of alerts) {
+    const t   = textOf(a);
+    const sev = a.severity === 'CRITICAL' ? 3 : a.severity === 'HIGH' ? 2 : 1;
+    const exploited = (a.is_exploited || a.actively_exploited || a.kev) ? 1.6 : 1;
+    for (const [pillar, re] of Object.entries(PILLAR_PATTERNS)) {
+      if (re.test(t)) { acc[pillar].pressure += sev * exploited; acc[pillar].hits += 1; }
+    }
+    // Compliance/governance exposure: active threats that are KEV-listed or lack a
+    // patch are the ones that drive regulatory/breach risk.
+    if ((a.is_exploited || a.kev || a.cisa_kev_date) && !a.patch_available) unpatchedKev += 1;
+  }
+
+  // Pillar score = 98 minus a penalty that grows with severity/exploitation-weighted
+  // pressure in that pillar. The "+6" smoothing denominator keeps small or homogeneous
+  // samples from saturating instantly, so the score degrades gradually with real load.
+  const score = (p) => {
+    const penalty = Math.min(63, Math.round((p.pressure / (total + 6)) * 55));
+    return Math.max(35, Math.min(98, 98 - penalty));
+  };
+  // Compliance: penalize by the share of active threats that are unpatched+KEV.
+  const compNorm  = unpatchedKev / total;
+  const compliance = Math.max(35, Math.min(98, 95 - Math.round(compNorm * 110)));
+
+  return {
+    network:    score(acc.network),
+    identity:   score(acc.identity),
+    ai_systems: score(acc.ai_systems),
+    compliance,
+    sample_size: total,
+  };
+}
+
 function buildDefensePosture(alerts = []) {
   const critCount = alerts.filter(a => a.severity === 'CRITICAL').length;
   const highCount = alerts.filter(a => a.severity === 'HIGH').length;
@@ -316,6 +391,7 @@ function buildDefensePosture(alerts = []) {
   return {
     overall_score,
     level,
+    scores:          computePillarScores(alerts),   // real per-pillar breakdown (or null if no data)
     total_threats:   total,
     critical:        critCount,
     high:            highCount,

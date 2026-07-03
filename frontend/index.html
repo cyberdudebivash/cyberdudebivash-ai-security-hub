@@ -1621,7 +1621,7 @@ a{color:var(--accent);text-decoration:none}
 <circle class="ring-fill" cx="60" cy="60" id="postureRing" r="45" stroke="url(#ringGrad11)" style="stroke-dasharray:283;stroke-dashoffset:85"></circle>
 </svg>
 <div class="risk-ring-center">
-<span class="risk-score-num" id="postureVal" style="color:#00d4ff">70</span>
+<span class="risk-score-num" id="postureVal" style="color:#00d4ff">—</span>
 <span class="risk-score-lbl">Posture Score</span>
 </div>
 </div>
@@ -1633,34 +1633,35 @@ a{color:var(--accent);text-decoration:none}
 <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
 <div class="prog-bar-fill" id="pb-network" style="width:0%;height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);border-radius:4px;transition:width 1s ease"></div>
 </div>
-<span class="prog-val" id="pb-network-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#00d4ff">78</span>
+<span class="prog-val" id="pb-network-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#00d4ff">—</span>
 </div>
 <div class="prog-row">
 <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">Identity</span>
 <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
 <div class="prog-bar-fill" id="pb-identity" style="width:0%;height:100%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:4px;transition:width 1s ease .1s"></div>
 </div>
-<span class="prog-val" id="pb-identity-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#f59e0b">62</span>
+<span class="prog-val" id="pb-identity-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#f59e0b">—</span>
 </div>
 <div class="prog-row">
 <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">AI Systems</span>
 <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
 <div class="prog-bar-fill" id="pb-ai" style="width:0%;height:100%;background:linear-gradient(90deg,#10b981,#00d4ff);border-radius:4px;transition:width 1s ease .2s"></div>
 </div>
-<span class="prog-val" id="pb-ai-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#10b981">85</span>
+<span class="prog-val" id="pb-ai-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#10b981">—</span>
 </div>
 <div class="prog-row">
 <span class="prog-label" style="font-size:11px;color:var(--text-muted);min-width:80px">Compliance</span>
 <div class="prog-bar-wrap" style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden">
 <div class="prog-bar-fill" id="pb-compliance" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:4px;transition:width 1s ease .3s"></div>
 </div>
-<span class="prog-val" id="pb-compliance-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#a78bfa">55</span>
+<span class="prog-val" id="pb-compliance-val" style="font-size:11px;font-weight:700;min-width:24px;text-align:right;color:#a78bfa">—</span>
 </div>
 </div>
 <!-- Quick scan CTA -->
 <a href="#scanner" onmouseout="this.style.background='rgba(0,212,255,.08)'" onmouseover="this.style.background='rgba(0,212,255,.15)'" style="display:block;margin-top:14px;padding:10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;text-align:center;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;transition:all .2s">
           🔍 Scan Your Domain Now →
         </a>
+<div id="posture-meta" style="margin-top:8px;font-size:9px;color:var(--text-dim);text-align:center;line-height:1.4">Loading live posture…</div>
 </div>
 <!-- Recent Scans -->
 <div class="dash-panel">
@@ -11268,7 +11269,10 @@ async function renderRecentActivity() {
   }
 
   // ── Animate progress bars v11 ─────────────────────────────────────────────
-  function animateProgressBars(net=78, ident=62, ai=85, comp=55) {
+  // Values MUST come from the live /api/realtime/posture payload. There are no
+  // hardcoded fallbacks — when data is unavailable we render an honest "—" state
+  // (markPostureUnavailable) rather than showing invented numbers under a LIVE badge.
+  function animateProgressBars(net, ident, ai, comp) {
     const bars = [
       { id:'pb-network',    val:net,  valId:'pb-network-val'    },
       { id:'pb-identity',   val:ident,valId:'pb-identity-val'   },
@@ -11277,11 +11281,45 @@ async function renderRecentActivity() {
     ];
     bars.forEach(({id, val, valId}) => {
       const bar = document.getElementById(id);
-      if (bar) bar.style.width = val + '%';
+      if (bar) bar.style.width = (Number(val) || 0) + '%';
       const label = document.getElementById(valId);
-      if (label) label.textContent = val;
+      if (label) label.textContent = (val == null ? '—' : val);
     });
-    animatePostureRing(Math.round((net + ident + ai + comp) / 4));
+    // NOTE: the overall ring is driven separately by the real backend
+    // overall_score — NOT the average of these bars (business-truth: one source).
+  }
+
+  // Honest "data unavailable" state for the Security Posture card. Blanks the
+  // pillar values and flips the LIVE badge to a muted OFFLINE indicator so we
+  // never present placeholders as live production data.
+  function markPostureUnavailable(reason) {
+    ['pb-network-val','pb-identity-val','pb-ai-val','pb-compliance-val'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = '—';
+    });
+    ['pb-network','pb-identity','pb-ai','pb-compliance'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.width = '0%';
+    });
+    const pv = document.getElementById('postureVal');
+    if (pv) pv.textContent = '—';
+    const badge = document.getElementById('posture-api-badge');
+    if (badge) {
+      badge.textContent = 'OFFLINE';
+      badge.style.color = '#f59e0b';
+      badge.style.borderColor = 'rgba(245,158,11,.6)';
+      badge.style.background = 'rgba(245,158,11,.12)';
+      badge.title = reason || 'Live posture feed unavailable — retrying';
+    }
+    const meta = document.getElementById('posture-meta');
+    if (meta) meta.textContent = reason || 'Live feed unavailable — retrying shortly';
+  }
+
+  // Render freshness metadata under the posture card (source + last updated + count).
+  function setPostureMeta(source, lastUpdated, recordCount) {
+    const meta = document.getElementById('posture-meta');
+    if (!meta) return;
+    let when = '';
+    try { when = new Date(lastUpdated).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); } catch {}
+    meta.textContent = `${source || 'threat catalog'} · ${recordCount != null ? recordCount + ' threats · ' : ''}updated ${when || 'just now'}`;
   }
 
   // IntersectionObserver — trigger animations when dashboard is visible
@@ -11291,24 +11329,27 @@ async function renderRecentActivity() {
     const obs = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && !animated) {
         animated = true;
-        // Animate progress bars
-        setTimeout(() => animateProgressBars(78, 62, 85, 55), 200);
+        // Neutral loading state while the live posture loads — NOT invented values.
+        const _pmeta = document.getElementById('posture-meta');
+        if (_pmeta) _pmeta.textContent = 'Loading live posture…';
         // Trigger Sentinel feed when dashboard first comes into view
         initSentinelFeed();
         // AI Threat Intelligence flagship widget now loads unconditionally on
         // page load (see below) — not gated behind this observer.
-        // Load live posture from API
+        // Load live posture from API — real overall score + real pillar breakdown.
         safeFetch('/api/realtime/posture')
           .then(r => r.ok ? r.json() : null)
           .then(p => {
-            if (!p) return;
-            const net   = p.scores?.network    ?? p.network    ?? 78;
-            const ident = p.scores?.identity   ?? p.identity   ?? 62;
-            const ai    = p.scores?.ai_systems ?? p.ai         ?? 85;
-            const comp  = p.scores?.compliance ?? p.compliance ?? 55;
-            setTimeout(() => animateProgressBars(net, ident, ai, comp), 600);
+            const sc      = p && (p.scores || (p.posture && p.posture.scores));
+            const overall = p && (p.overall_score ?? (p.posture && p.posture.overall_score));
+            if (!p || !sc || overall == null) { markPostureUnavailable(); return; }
+            setTimeout(() => {
+              animateProgressBars(sc.network, sc.identity, sc.ai_systems, sc.compliance);
+              animatePostureRing(overall);   // real backend overall_score
+              setPostureMeta(p.data_source, p.last_updated, p.record_count);
+            }, 400);
           })
-          .catch(() => setTimeout(() => animateProgressBars(78, 62, 85, 55), 200));
+          .catch(() => markPostureUnavailable('Live posture feed unreachable'));
       }
     }, { threshold: 0.2 });
     obs.observe(dashSection);
