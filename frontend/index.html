@@ -9184,7 +9184,7 @@ async function loadMCPThreatFeed() {
   try {
     const resp = await safeFetch('/api/mcp-security/threats');
     const data = await resp.json();
-    let html = `<div style="margin-bottom:12px;font-size:13px;font-weight:700;color:#a78bfa">📡 Live MCP Threat Feed — ${data.total} threats · ${data.critical} CRITICAL · Last updated: ${new Date(data.last_updated).toLocaleString()}</div>`;
+    let html = `<div style="margin-bottom:12px;font-size:13px;font-weight:700;color:#a78bfa">📡 MCP Threat Pattern Catalog — ${data.total} patterns · ${data.critical} CRITICAL · Catalog updated: ${data.catalog_last_updated ? new Date(data.catalog_last_updated).toLocaleDateString() : '—'}</div>`;
     (data.threats || []).forEach(t => {
       const c = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#818cf8' };
       html += `<div style="background:rgba(0,0,0,.3);border:1px solid rgba(${t.severity==='CRITICAL'?'239,68,68':'245,158,11'},.2);border-radius:10px;padding:14px;margin-bottom:10px">

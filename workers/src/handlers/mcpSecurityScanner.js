@@ -7,7 +7,7 @@
  * ENDPOINTS:
  *   POST /api/mcp-security/scan        — Full MCP server config scan
  *   GET  /api/mcp-security/results/:id — Get scan results by ID
- *   GET  /api/mcp-security/threats     — Live MCP threat feed
+ *   GET  /api/mcp-security/threats     — Curated MCP threat-pattern catalog
  *   POST /api/mcp-security/assess      — Quick risk assessment (3-question flow)
  *
  * Revenue trigger: Free = 3 findings | Paid ₹999 = Full report + remediation
@@ -361,7 +361,7 @@ export async function handleMCPThreatFeed(request, env) {
       title: 'Indirect Prompt Injection via MCP Web Search Tool',
       description: 'Attacker embeds malicious instructions in web pages that are returned by MCP web_search tools, hijacking agent behavior.',
       affected_tools: ['web_search', 'browse_url', 'fetch_page'],
-      first_seen: '2026-03-15', last_seen: new Date().toISOString().split('T')[0],
+      first_seen: '2026-03-15', last_seen: '2026-03-15',
       mitre_atlas: 'AML.T0054.001',
       cve: null, poc_available: true,
       indicators: ['Unusual tool chain: web_search → write_file', 'Tool results containing role: or system: prefix'],
@@ -371,7 +371,7 @@ export async function handleMCPThreatFeed(request, env) {
       title: 'MCP Tool Chaining for Filesystem Takeover',
       description: 'Sequence of read_file + write_file + execute_command tools used to achieve arbitrary code execution on MCP server host.',
       affected_tools: ['read_file', 'write_file', 'execute_command'],
-      first_seen: '2026-04-02', last_seen: new Date().toISOString().split('T')[0],
+      first_seen: '2026-04-02', last_seen: '2026-04-02',
       mitre_atlas: 'AML.T0010',
       cve: null, poc_available: true,
       indicators: ['Tool chain: read_file → write_file in /tmp → execute_command /tmp/'],
@@ -381,7 +381,7 @@ export async function handleMCPThreatFeed(request, env) {
       title: 'Sensitive Data Exfiltration via Webhook Tool',
       description: 'Agent instructed to read sensitive files and send contents to attacker-controlled endpoint via webhook/http_request tools.',
       affected_tools: ['read_file', 'http_request', 'send_email', 'webhook'],
-      first_seen: '2026-04-18', last_seen: new Date().toISOString().split('T')[0],
+      first_seen: '2026-04-18', last_seen: '2026-04-18',
       mitre_atlas: 'AML.T0048',
       cve: null, poc_available: false,
       indicators: ['read_file + http_request in same session', 'Outbound requests to non-allowlisted domains'],
@@ -391,7 +391,7 @@ export async function handleMCPThreatFeed(request, env) {
       title: 'MCP Environment Variable Extraction',
       description: 'Prompt injection causes agent to call execute_command with env or printenv, exposing API keys and secrets.',
       affected_tools: ['execute_command', 'bash', 'shell'],
-      first_seen: '2026-05-01', last_seen: new Date().toISOString().split('T')[0],
+      first_seen: '2026-05-01', last_seen: '2026-05-01',
       mitre_atlas: 'AML.T0056',
       cve: null, poc_available: true,
       indicators: ['execute_command with printenv, env, cat ~/.env', 'Tool result contains API_KEY= pattern'],
@@ -401,19 +401,22 @@ export async function handleMCPThreatFeed(request, env) {
       title: 'Cross-Agent MCP Session Hijacking',
       description: 'Shared MCP server state allows one agent session to read or modify another session\'s tool context.',
       affected_tools: ['*'],
-      first_seen: '2026-05-22', last_seen: new Date().toISOString().split('T')[0],
+      first_seen: '2026-05-22', last_seen: '2026-05-22',
       mitre_atlas: 'AML.T0049',
       cve: null, poc_available: false,
       indicators: ['Tool calls accessing resources from different session_id', 'Missing session isolation headers'],
     },
   ];
 
+  const catalogUpdatedAt = threats.reduce((max, t) => (t.last_seen > max ? t.last_seen : max), threats[0].last_seen);
+
   return Response.json({
     feed_version: 'v29.0',
+    source: 'CYBERDUDEBIVASH MCP Security Research Lab (curated catalog)',
     total: threats.length,
     critical: threats.filter(t => t.severity === 'CRITICAL').length,
     high: threats.filter(t => t.severity === 'HIGH').length,
-    last_updated: new Date().toISOString(),
+    catalog_last_updated: catalogUpdatedAt,
     threats,
     powered_by: 'CYBERDUDEBIVASH Sentinel APEX + MCP Security Research Lab',
   }, {
