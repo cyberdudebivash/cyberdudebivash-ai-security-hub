@@ -127,6 +127,19 @@ function withAuthAliases(ctx) {
   if (ctx && typeof ctx === 'object') {
     if (ctx.userId === undefined) ctx.userId = ctx.user_id ?? null;
     if (ctx.keyId  === undefined) ctx.keyId  = ctx.key_id  ?? null;
+    // ── Tenant isolation (root fix) ──────────────────────────────────────────
+    // ~15 handlers scope customer data with `authCtx.org_id || 'default'`. Because
+    // resolveAuthV5 never set org_id, EVERY authenticated user collapsed into one
+    // shared 'default' tenant — a cross-tenant leak (confirmed on SOC cases). Give
+    // each authenticated principal a stable per-user tenant id so those handlers
+    // isolate correctly. A real org id (from org membership) always wins; an
+    // anonymous IP-fallback principal (no user_id) intentionally keeps no org_id so
+    // its own 'default' applies. Nothing seeds shared 'default' data, so this only
+    // tightens isolation — it never hides another tenant's rows.
+    if (ctx.org_id == null && ctx.authenticated) {
+      const uid = ctx.user_id ?? ctx.userId;
+      if (uid) ctx.org_id = `u:${uid}`;
+    }
   }
   return ctx;
 }
