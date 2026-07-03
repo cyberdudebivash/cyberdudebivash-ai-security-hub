@@ -4064,11 +4064,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       return withSecurityHeaders(withCors(await handleGetLimits(request, env, authCtx), request));
     }
-    // GET /api/billing/invoices — invoice history
-    if (path === '/api/billing/invoices' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
-      return withSecurityHeaders(withCors(await handleGetInvoices(request, env, authCtx), request));
-    }
+    // NOTE: GET /api/billing/invoices is handled earlier (→ handleListInvoices).
+    // A duplicate definition here (→ handleGetInvoices) was DEAD — unreachable
+    // because the first path+method match returns. Removed in the forensic
+    // lineage audit; handleListInvoices is the canonical invoice-history source.
     // POST /api/billing/downgrade — schedule plan downgrade
     if (path === '/api/billing/downgrade' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
@@ -4325,14 +4324,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleRevenueSnapshot(request, env, authCtx), request));
     }
 
-    // GET /api/revenue/metrics — plan-gated full metrics
-    if (path === '/api/revenue/metrics' && method === 'GET') {
-      const { handleRevenueMetrics } = await import('./handlers/revenue.js');
-      const authCtx = await resolveAuthV5(request, env);
-      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
-      return withSecurityHeaders(withCors(await handleRevenueMetrics(request, env, { userId: authCtx.userId, plan: authCtx.tier?.toLowerCase(), role: authCtx.role, email: authCtx.email }), request));
-    }
-
+    // NOTE: GET /api/revenue/metrics is handled earlier (owner-gated via isOwner →
+    // handleRevenueMetrics). A duplicate definition here was DEAD — unreachable,
+    // and would have WEAKENED the gate (isRealUser = any logged-in user could see
+    // revenue). Removed in the forensic lineage audit; the owner-gated definition
+    // is canonical.
     // GET /api/revenue/products — product catalog with live sales data (public)
     if (path === '/api/revenue/products' && method === 'GET') {
       const { handleRevenueProducts } = await import('./handlers/revenue.js');
@@ -4523,11 +4519,9 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ═══ ROUTE ALIASES: fix 404s hit by the frontend ══════════════════════════
-    // GET /api/threat-intel/live  → alias → /api/sentinel/feed
-    if (path === '/api/threat-intel/live' && method === 'GET') {
-      return withSecurityHeaders(withCors(await handleSentinelFeed(request, env), request));
-    }
-
+    // NOTE: GET /api/threat-intel/live is handled earlier (→ handleSentinelFeed).
+    // An identical duplicate definition here was DEAD (unreachable) — removed in
+    // the forensic lineage audit.
     // POST /api/track — alias → the existing funnel-event ingestion pipeline.
     // frontend/assets/cdb-analytics.js has been firing sendBeacon/fetch calls
     // to /api/track since it was added ("Emits...to your existing /api/track
