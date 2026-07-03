@@ -107,6 +107,15 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
   } catch { /* JSON report still ships even if HTML rendering fails */ }
   const storeInfo  = await storeReport(env, report, htmlContent);
 
+  // Build the download URL on the SAME origin the customer called (e.g.
+  // https://cyberdudebivash.in) instead of hardcoding the raw workers.dev
+  // subdomain — the hardcoded host is off-brand and, behind the custom-domain
+  // proxy, may not be directly reachable when a customer copies the link.
+  const origin = (() => {
+    try { return new URL(request.url).origin; }
+    catch { return 'https://cyberdudebivash.in'; }
+  })();
+
   return Response.json({
     success:        true,
     report_id:      report.report_id,
@@ -114,7 +123,7 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
     expires_at:     report.expires_at,
     target:         report.target,
     download_token: storeInfo?.download_token ?? null,
-    download_url:   storeInfo ? `https://cyberdudebivash-security-hub.workers.dev/api/report/${storeInfo.download_token}` : null,
+    download_url:   storeInfo ? `${origin}/api/report/${storeInfo.download_token}` : null,
     report:         report,  // inline for convenience
   }, {
     status: 201,
