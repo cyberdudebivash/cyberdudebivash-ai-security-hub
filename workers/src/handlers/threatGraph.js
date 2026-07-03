@@ -286,7 +286,7 @@ export async function handleGetThreatGraph(request, env, authCtx = {}) {
   if (env?.DB) {
     try {
       const rows = await env.DB.prepare(
-        `SELECT cve_id, severity, cvss_score, epss_score, is_kev, mitre_technique, description
+        `SELECT cve_id, severity, cvss_score, epss_score, CASE WHEN exploit_status='confirmed' THEN 1 ELSE 0 END AS is_kev, NULL AS mitre_technique, description
          FROM threat_intel WHERE cvss_score >= 8.0 ORDER BY is_kev DESC, cvss_score DESC LIMIT 50`
       ).all().catch(() => ({ results: [] }));
       const existingIds = new Set(nodes.map(n => n.id));

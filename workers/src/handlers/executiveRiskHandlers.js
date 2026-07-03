@@ -600,7 +600,7 @@ export async function handlePlaybookRecommendations(request, env, authCtx) {
     const [tiRows, assetRows, asmRows] = await Promise.all([
       env.DB.prepare(`
         SELECT cve_id, title, description, cvss_score, epss_score,
-               actively_exploited, known_ransomware, mitre_technique, severity
+               actively_exploited, known_ransomware, NULL AS mitre_technique, severity
         FROM threat_intel
         WHERE severity IN ('CRITICAL','HIGH')
         ORDER BY cvss_score DESC LIMIT 25

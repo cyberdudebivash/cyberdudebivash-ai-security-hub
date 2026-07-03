@@ -60,7 +60,7 @@ async function enrichCVE(ioc, env) {
     const row = await env.DB.prepare(
       `SELECT cve_id, title, severity, cvss_score, epss_score,
               CASE WHEN exploit_status = 'confirmed' THEN 1 ELSE 0 END AS is_kev,
-              description, published_at AS published_date, mitre_technique, ingested_at
+              description, published_at AS published_date, NULL AS mitre_technique, ingested_at
        FROM threat_intel WHERE cve_id = ? LIMIT 1`
     ).bind(ioc.toUpperCase()).first().catch(() => null);
 

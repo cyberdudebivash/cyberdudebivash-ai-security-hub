@@ -228,7 +228,7 @@ export async function handleListVulns(request, env, authCtx) {
       // entire vulnerability list (incl. ?kev=true) silently returned nothing.
       let q = `SELECT cve_id AS id, cve_id, title, severity, cvss_score AS cvss_score,
                       epss_score, ${KEV_ORDER} AS in_kev, description AS affected,
-                      published_at AS discovered_at, mitre_technique
+                      published_at AS discovered_at, NULL AS mitre_technique
                FROM threat_intel
                WHERE 1=1`;
       const params = [];
@@ -389,7 +389,7 @@ export async function handleGetVuln(request, env, authCtx, vulnId) {
       const row = await env.DB.prepare(
         `SELECT cve_id, title, severity, cvss_score, epss_score,
                 ${KEV_ORDER} AS in_kev,
-                description, published_at, mitre_technique
+                description, published_at, NULL AS mitre_technique
          FROM threat_intel WHERE cve_id = ?`
       ).bind(vulnId).first().catch(() => null);
       if (row) {

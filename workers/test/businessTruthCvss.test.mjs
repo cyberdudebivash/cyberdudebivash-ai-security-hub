@@ -44,6 +44,11 @@ describe('CVSS self-heal on ingestion', () => {
     const heal = run.find(s => /UPDATE threat_intel SET cvss_score = cvss/i.test(s));
     expect(heal, 'ingestion must run the cvss_score self-heal').toBeTruthy();
     expect(heal).toMatch(/WHERE cvss_score IS NULL AND cvss IS NOT NULL/i);
+
+    // cve_id self-heal: the CVE identifier is written to `id`; cve_id must be backfilled.
+    const cveHeal = run.find(s => /UPDATE threat_intel SET cve_id = id/i.test(s));
+    expect(cveHeal, 'ingestion must run the cve_id self-heal').toBeTruthy();
+    expect(cveHeal).toMatch(/id LIKE 'CVE-%'/i);
   });
 
   it('storeInD1 never throws when the heal step fails (non-fatal)', async () => {

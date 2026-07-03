@@ -731,6 +731,18 @@ export async function storeInD1(db, entries) {
     ).run();
   } catch { /* non-fatal — never fail ingestion on the heal step */ }
 
+  // ─── Canonical cve_id self-heal ────────────────────────────────────────────
+  // This path writes the CVE identifier to the primary-key `id` column, leaving
+  // the canonical `cve_id` column NULL. Readers/filters that key on cve_id (e.g.
+  // single-CVE lookups, the vulnerability list's identifiers) then saw null.
+  // Backfill cve_id from id for CVE-shaped rows so cve_id is authoritative.
+  try {
+    await db.prepare(
+      `UPDATE threat_intel SET cve_id = id
+       WHERE (cve_id IS NULL OR cve_id = '') AND id LIKE 'CVE-%'`
+    ).run();
+  } catch { /* non-fatal */ }
+
   return { inserted, updated, errors };
 }
 

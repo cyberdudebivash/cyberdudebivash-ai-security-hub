@@ -22,5 +22,14 @@ UPDATE threat_intel
  WHERE cvss_score IS NULL
    AND cvss IS NOT NULL;
 
--- Verify (optional): rows should report 0 remaining out-of-sync.
--- SELECT COUNT(*) AS still_null FROM threat_intel WHERE cvss_score IS NULL AND cvss IS NOT NULL;
+-- Canonical cve_id backfill: this ingestion path writes the CVE to the primary
+-- key `id`, leaving the canonical `cve_id` column NULL. Readers keyed on cve_id
+-- (single-CVE lookups, the vulnerability list identifiers) saw null.
+UPDATE threat_intel
+   SET cve_id = id
+ WHERE (cve_id IS NULL OR cve_id = '')
+   AND id LIKE 'CVE-%';
+
+-- Verify (optional): both should report 0 remaining out-of-sync.
+-- SELECT COUNT(*) AS cvss_null FROM threat_intel WHERE cvss_score IS NULL AND cvss IS NOT NULL;
+-- SELECT COUNT(*) AS cveid_null FROM threat_intel WHERE (cve_id IS NULL OR cve_id='') AND id LIKE 'CVE-%';
