@@ -1,0 +1,76 @@
+/*!
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CYBERDUDEBIVASH® AI SECURITY HUB — GLOBAL UX UPGRADE LAYER
+ * File   : /assets/cdb-ux-upgrade.css
+ * Version: v1.0.0   (2026-07-03)
+ * Owner  : Platform Engineering
+ * ───────────────────────────────────────────────────────────────────────────
+ * ZERO-REGRESSION GUARANTEE
+ *   This sheet is a companion to cdb-ui-polish.css. Every rule is written so it
+ *   can NEVER override a style a page author intended:
+ *
+ *   1. SPECIFICITY 0 — element/attribute rules are wrapped in :where(), which
+ *      contributes zero specificity. Any real page rule (a class, an id, an
+ *      inline style, even a bare element selector) therefore WINS on conflict.
+ *      This sheet only fills gaps a page left unspecified.
+ *   2. CHROME-ONLY / MEDIA-SCOPED — the few non-:where rules touch only
+ *      non-layout chrome (cursor, text-rendering, underline offset, print) or
+ *      live inside a @media query.
+ *   3. NON-DESTRUCTIVE — no markup or JS change; loaded site-wide after each
+ *      page's own <style> and after cdb-ui-polish.css.
+ *
+ *   Net effect: crisper type, consistent interactive affordances, honest
+ *   disabled/placeholder states, motion-safety, and print output — with no
+ *   ability to shift, resize, or recolor anything a page already defines.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ── 1. Crisper typography (cosmetic only — no metrics change) ─────────────── */
+:where(html) {
+  -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+}
+:where(body) {
+  -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── 2. Smooth in-page navigation — disabled under reduced-motion (a11y) ───── */
+@media (prefers-reduced-motion: no-preference) {
+  :where(html) { scroll-behavior: smooth; }
+}
+/* Anchor jumps clear a sticky top nav if one exists (harmless when none does) */
+:where(html) { scroll-padding-top: 72px; }
+
+/* ── 3. Consistent interactive affordances (specificity 0) ────────────────── */
+:where(button, [role="button"], summary, label[for], select) { cursor: pointer; }
+:where(a) { text-underline-offset: .15em; }              /* only affects underlined links */
+:where(a, button, [role="button"]) { -webkit-tap-highlight-color: transparent; }
+
+/* ── 4. Honest disabled + placeholder states (specificity 0) ──────────────── */
+:where(button:disabled, [disabled], [aria-disabled="true"]) {
+  cursor: not-allowed;
+  opacity: .6;
+}
+:where(::placeholder) { opacity: 1; color: var(--text-dim, #64748b); }
+
+/* ── 5. Overflow safety for media on every viewport (specificity 0) ───────── */
+:where(img, svg, video, canvas) { max-width: 100%; }
+
+/* ── 6. hr nicety (specificity 0 — default groove looks poor on a dark theme) ─ */
+:where(hr) { border: 0; border-top: 1px solid rgba(255, 255, 255, .08); }
+
+/* ── 7. Print output — readable, ink-friendly, chrome removed ─────────────── */
+@media print {
+  /* Hide site chrome / floating UI that isn't useful on paper. Opt-out safe:
+     these are conventional chrome selectors; content is never hidden. */
+  nav, .nav, .navbar, header .nav-links, footer,
+  .cdb-bsp-bar, .cdb-authority-strip, .cdb-ticker,
+  [class*="floating"], [class*="sticky-cta"], .cookie, .toast, .modal-overlay {
+    display: none !important;
+  }
+  :where(a[href]) { text-decoration: underline; }
+  :where(body) { background: #fff !important; color: #000 !important; }
+  :where(.card, .panel, section) { break-inside: avoid; }
+}
