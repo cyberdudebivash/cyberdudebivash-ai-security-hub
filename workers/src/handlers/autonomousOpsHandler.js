@@ -29,6 +29,7 @@ import { callClaude }                from '../core/mythosAIProvider.js';
 import { getTopThreats, computePredictiveRiskScore } from '../services/predictiveEngine.js';
 import { RadarService }              from '../services/radarService.js';
 import { isRealUser } from '../auth/middleware.js';
+import { tenantKey } from './socCases.js';
 
 // ─── Tier gate ────────────────────────────────────────────────────────────────
 const ALLOWED_TIERS = new Set(['PRO', 'ENTERPRISE', 'MSSP', 'OWNER', 'ADMIN']);
@@ -65,16 +66,26 @@ async function kvSet(env, key, value, ttl = 300) {
 }
 
 // ─── Shared D1 context loader ─────────────────────────────────────────────────
-async function loadOpsContext(env) {
+export async function loadOpsContext(env, authCtx = {}) {
   const db = env.DB;
   if (!db) {
     return { vulnRows: [], actorRows: [], assetRows: [], caseRows: [], decisionRows: [], predRows: [] };
   }
+  // Tenant isolation: soc_cases is per-tenant. The autonomous brief/plan must only
+  // see the caller's own cases — not every tenant's. threat_intel / threat_actors /
+  // threat_predictions are global threat data and stay shared.
+  const privileged = authCtx.role === 'admin' || authCtx.role === 'mssp_admin' || authCtx.isAdmin === true;
+  const scopeKey   = tenantKey(authCtx);
+  const caseSql = privileged
+    ? `SELECT id, case_number, title, severity, status, assignee_id, sla_due_at, mitre_tactics, ioc_list, created_at FROM soc_cases ORDER BY created_at DESC LIMIT 30`
+    : `SELECT id, case_number, title, severity, status, assignee_id, sla_due_at, mitre_tactics, ioc_list, created_at FROM soc_cases WHERE org_id = ? ORDER BY created_at DESC LIMIT 30`;
+  const caseStmt = privileged ? db.prepare(caseSql) : db.prepare(caseSql).bind(scopeKey);
+
   const [vulnRows, actorRows, assetRows, caseRows, decisionRows, predRows] = await Promise.all([
     db.prepare(`SELECT cve_id, cvss_score, epss_score, is_kev, severity, mitre_technique, description FROM threat_intel ORDER BY cvss_score DESC LIMIT 50`).all().then(r => r.results || []).catch(() => []),
     db.prepare(`SELECT name, sector, active FROM threat_actors LIMIT 30`).all().then(r => r.results || []).catch(() => []),
     db.prepare(`SELECT asset_value, asset_type FROM customer_assets LIMIT 50`).all().then(r => r.results || []).catch(() => []),
-    db.prepare(`SELECT id, case_number, title, severity, status, assignee_id, sla_due_at, mitre_tactics, ioc_list, created_at FROM soc_cases ORDER BY created_at DESC LIMIT 30`).all().then(r => r.results || []).catch(() => []),
+    caseStmt.all().then(r => r.results || []).catch(() => []),
     db.prepare(`SELECT id, cve_id, decision, priority, confidence, risk_score FROM soc_decisions ORDER BY risk_score DESC LIMIT 30`).all().then(r => r.results || []).catch(() => []),
     db.prepare(`SELECT cve_id, risk_score, risk_level, exploit_probability, impact_score FROM threat_predictions WHERE predicted_at > datetime('now', '-24 hours') ORDER BY risk_score DESC LIMIT 30`).all().then(r => r.results || []).catch(() => []),
   ]);
@@ -99,7 +110,7 @@ export async function handleAutonomousOrchestratorPlan(request, env, authCtx) {
   if (cached) return Response.json({ ...cached, _cache: 'HIT' });
 
   const t0 = Date.now();
-  const { vulnRows, actorRows, assetRows, caseRows, decisionRows } = await loadOpsContext(env);
+  const { vulnRows, actorRows, assetRows, caseRows, decisionRows } = await loadOpsContext(env, authCtx);
 
   // Build vulns array for adaptive brain
   const vulns = vulnRows.map(r => ({
@@ -514,7 +525,7 @@ export async function handleAutonomousExecutiveBrief(request, env, authCtx) {
   if (cached) return Response.json({ ...cached, _cache: 'HIT' });
 
   const t0 = Date.now();
-  const { vulnRows, actorRows, caseRows, decisionRows, predRows } = await loadOpsContext(env);
+  const { vulnRows, actorRows, caseRows, decisionRows, predRows } = await loadOpsContext(env, authCtx);
 
   const openCases    = caseRows.filter(c => c.status === 'OPEN');
   const critCases    = caseRows.filter(c => c.severity === 'CRITICAL');
