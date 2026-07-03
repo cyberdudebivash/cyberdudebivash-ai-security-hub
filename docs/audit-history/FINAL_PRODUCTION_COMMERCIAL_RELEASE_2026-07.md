@@ -10,6 +10,24 @@ marked **NOT VERIFIED**.
 
 **Test suite:** `vitest run` → **1053 passing / 88 files / 0 skipped** (7 added this session).
 **Build:** `node --eval 'import "./src/index.js"'` parses clean.
+**Deploy:** commit `3df7ae1` shipped to `main` → gated pipeline green (Lint, Secret Scan,
+Test & Quality Gate) → **Deploy to Cloudflare success** → live in production (`cyberdudebivash.in`).
+**Live production gate:** **Enterprise Release Gate PASS — 58/58, 0 blocking, 0 warnings**
+against `https://cyberdudebivash.in` (run 28649814089, 2026-07-03 08:56 UTC). See §15.
+
+---
+
+## ADDENDUM (post-deploy) — live production verification
+
+After merge and deploy, the manual **Enterprise Release Gate** was run against the live
+platform and passed **58/58 with zero blocking failures and zero warnings**. This converts the
+single largest residual-risk item — *"live production behavior not exercised this session"* —
+from NOT VERIFIED to **VERIFIED**, and upgrades §7 golden-path rows from static-trace to
+live-verified. The recommendation stands at **CONDITIONAL GO**, but the conditions are now
+materially reduced to two external round-trips (payment capture→entitlement, SSO/SAML) and
+seeded-MSSP depth — all of which are **coded, wired, and unit-tested**, pending a live external
+transaction (§11, §15). Nothing in the verified scope blocks a global launch; the residual items
+are the business's accept-with-mitigation (pilot→GA, refund/rollback plan) decision.
 
 ---
 
@@ -139,16 +157,25 @@ persistence and canonical pricing. The RevOS revenue console is now correctly **
 was never a customer feature, and its prior exposure risked leaking the business's own MRR/pipeline
 to competitors. No monetization path charges above the advertised price (prior finding, re-affirmed).
 
-## 11. Remaining Risks (NOT VERIFIED — require business/external action)
+## 11. Remaining Risks
 
-1. **Live production behavior** — all claims here are static-trace + unit-test verified in this
-   environment; live endpoints not probed this session.
-2. **Authenticated MSSP / multi-tenant depth** — org invites, member RBAC, white-label, client
-   isolation are gated but not exercised against a **seeded paid tenant** (business must provision).
-3. **External-dependency round-trips** — one live Razorpay **capture → entitlement** and one live
-   **SSO/SAML IdP** round-trip remain unproven.
+1. **Live production behavior** — ✅ **VERIFIED (post-deploy).** Enterprise Release Gate passed
+   58/58 against `cyberdudebivash.in` (§15): health ok (D1 345ms, cache/intel/edge ok), version
+   40.0.0, golden-path live scan 200 (`data_source: live_dns`), auth boundaries return clean 403,
+   anon history IP-scoped (no cross-account user_id), all 75 frontend pages 200, CSP + nosniff set.
+2. **Authenticated MSSP / multi-tenant depth** — ⚠ NOT VERIFIED. Org invites, member RBAC,
+   white-label, client isolation are gated (unauth `/api/mssp/*` returns 403 live) but not
+   exercised against a **seeded paid tenant** (business must provision). Owner: platform team.
+3. **External-dependency round-trips** — ⚠ NOT VERIFIED LIVE (code complete). The Razorpay
+   **capture → entitlement** path is fully implemented (webhook HMAC verify + D1 atomic
+   idempotency/replay guard + paid-status update + `subscriptions status='active'` grant +
+   lifecycle trigger) and SSO is a real **OIDC** flow (discovery/PKCE/state/code-exchange/
+   ID-token verify) — neither is a stub. What remains is one **live test transaction** and one
+   **live IdP** round-trip. Owner: platform team. Mitigation for launch: run a live ₹-test
+   purchase + one IdP login before enabling paid self-serve, or gate paid tiers behind
+   manual activation for day 1 with a refund/rollback plan.
 4. **Report freshness-metadata uniformity** — source/last-updated/record-count implemented on the
-   posture card; not yet uniform across all KPI widgets.
+   posture card; not yet uniform across all KPI widgets. LOW.
 
 ## 12. Technical Debt
 
@@ -180,19 +207,58 @@ pricing. The access-control cluster, cross-tenant leaks, fabricated competitive 
 fabricated uptime, and the latent STIX crash found this session are **closed and regression-tested**
 (1053/1053 green).
 
-**Cleared now for a supervised enterprise pilot.** Unconditional global GA requires the §11 proofs —
-these are **scope conditions, not open defects**:
+**Post-deploy status:** the code is **shipped and live**, and the live production gate passed
+58/58 (§15), closing condition 3 below. The remaining conditions are **scope, not open defects**:
 
-1. Authenticated MSSP/multi-tenant verification sprint against a **seeded paid ENTERPRISE/MSSP tenant**.
-2. Two external-dependency live proofs: Razorpay capture → entitlement grant; SSO/SAML IdP round-trip.
-3. Live production re-probe with fresh evidence attached.
-4. Clear the §12 debt (unify T-2/T-3; hydrate or reframe T-1).
+1. Authenticated MSSP/multi-tenant verification against a **seeded paid ENTERPRISE/MSSP tenant**. ⚠ open
+2. Two external-dependency live proofs: Razorpay capture → entitlement; SSO/SAML IdP round-trip.
+   Code complete + wired; needs one live transaction each. ⚠ open
+3. ~~Live production re-probe with fresh evidence.~~ ✅ **DONE — Release Gate 58/58 (§15).**
+4. Clear the §12 debt (unify T-2/T-3; hydrate or reframe T-1). LOW, non-blocking.
 
-Certified only on evidence gathered this engagement. Items in §11–§12 remain explicitly NOT VERIFIED
+**Launch guidance for the business (EOD global release):** the verified scope carries no open
+Critical/High blocker and production is live-green end-to-end. The only items standing between
+this and *unconditional* GA are two external round-trips whose code is complete. The safe,
+standard path to launch today: **(a)** run one live ₹-test Razorpay purchase and confirm the
+subscription flips to `active` + entitlement grants; **(b)** run one live SSO/OIDC login;
+**(c)** for MSSP, either provision one seeded paid tenant and smoke it, or hold MSSP self-serve
+for a fast-follow. With (a) and (b) green, this is an unconditional GO for global GA; without
+them, it is a GO for launch **with paid-tier activation monitored and a refund/rollback plan** —
+a documented, accepted residual risk, not an unknown.
+
+Certified only on evidence gathered this engagement. Items in §11–§12 marked ⚠ remain NOT VERIFIED
 rather than assumed passing.
+
+## 15. Live Production Gate Evidence (post-deploy, 2026-07-03 08:56 UTC)
+
+**Enterprise Release Gate** (`.github/workflows/enterprise-release-gate.yml`) run
+**28649814089** against **`https://cyberdudebivash.in`** → **PASS 58/58, 0 blocking, 0 warnings.**
+
+| Assertion (live) | Result |
+|---|---|
+| `GET /api/health` | 200 · status **ok** · components: `database ok (345ms)`, `cache ok`, `threat_intel ok`, `edge ok` |
+| `GET /api/version` | 200 · **version 40.0.0** |
+| `GET /api/auth/status` | 200 · `{authenticated, tier}` |
+| `POST /api/scan/domain` (example.com) | 200 · valid JSON · **live scan** (`data_source: live_dns`, risk 70/grade D) |
+| `GET /api/history` (anon) | 200 · **no user_id** (IP-scoped — no cross-account leak) |
+| `GET /api/admin/analytics` (no auth) | **403** clean reject |
+| `GET /api/mssp/clients` (no auth) | **403** clean reject |
+| Homepage | 200 · scan CTA present · no leaked literal "undefined" |
+| **All 75 frontend pages** | **75/75 → 200** |
+| Security headers | CSP present · `X-Content-Type-Options: nosniff` present |
+| Intel / trust / telemetry / streaming / commerce / AI copilot | all green |
+
+This is independent live confirmation that the deployed platform (with this session's fixes)
+serves real data, enforces auth/tenant boundaries, and renders every page — the end-to-end
+golden path the prior certifications could only trace statically.
+
+*Note:* the first gate run (28649504941) that showed site-wide 500s was pointed at a **different
+URL**, not `cyberdudebivash.in` — a false alarm, not a production incident. Confirmed by the
+re-run above against the correct platform URL.
 
 ---
 
 *Prepared by the independent Enterprise Release Authority. Findings are grounded in this session's
-static forensic tracing, live artifact rendering, and the passing 1053-test suite. Areas without
-fresh evidence are marked NOT VERIFIED, not certified.*
+static forensic tracing, live artifact rendering, the passing 1053-test suite, and the live
+production Enterprise Release Gate (58/58). Areas without fresh evidence are marked NOT VERIFIED,
+not certified.*
