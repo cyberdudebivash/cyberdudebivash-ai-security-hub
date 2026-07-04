@@ -70,6 +70,25 @@ Account: `cert.pilot.<ts>@example.com` created, exercised, and deleted on produc
 
 ---
 
+## 5b. Phase III — multi-tenant, developer & concurrency (live)
+
+Two fresh tenants (A, B) created on production; A ran a scan + generated a report; B probed A's resources.
+
+| Probe | Live result | Decision |
+|-------|-------------|----------|
+| B → A job status | HTTP 404 | ✅ isolated |
+| B → A job result | HTTP 404 | ✅ isolated |
+| B → report by A's scan_id | not resolved, no data leak | ✅ isolated |
+| B → own scan history | 0 entries, excludes A's target | ✅ isolated |
+| B → A report via A's download token | HTTP 200 | ℹ️ capability URL by design (unguessable UUID + 7-day expiry; B only had it because it was handed over — not enumerable, not derivable from A's identity/scan_id/job) |
+| Concurrency intake | 3 concurrent async scans → 3× HTTP 202, distinct job IDs, all queued & drained | ✅ approved |
+| API abuse protection | metered intel endpoints enforce daily quota (429 on limit, code-verified); `/api/v1/intel/latest.json` is an intentional public edge-cached preview | ✅ approved |
+| GDPR deletion (both tenants) | erased api_keys/scan_history/scan_jobs incl. queued jobs; login blocked | ✅ approved |
+
+**Verdict:** multi-tenant isolation is **SOUND** (identity-based cross-tenant access uniformly blocked). Report download is a deliberate shareable capability-link; an auth-gated option is recommended for enterprise tenants (roadmap item 2 in the Customer Readiness Dossier).
+
+---
+
 ## 6. Release posture
 
 The **entire free-tier customer lifecycle now passes end-to-end on live production** — signup → scan (real data) → history → **report (generation 201 + download 200)** → dashboard → grounded AI → GDPR deletion — with the single blocker (async→report) root-caused, fixed, tested, **deployed (`1586044`), and re-verified live**. Paid paths are contract-verified pending a live transaction. This is evidence-backed pilot/demo readiness within the verified scope, with residuals disclosed above.
