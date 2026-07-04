@@ -255,3 +255,37 @@ every cycle). The optimization target is **customer confidence**: when
 engineering convenience conflicts with customer trust, customer trust wins;
 when internal assumptions conflict with externally verifiable evidence, the
 evidence wins.
+
+## 10. The Verifiable-Statement Rule (permanent, CEAP)
+
+**Every customer-facing statement — in the product, documentation, support
+guidance, pricing, marketing, or AI responses — must be continuously
+verifiable against observed production behavior. If production evidence
+changes, the statement is updated or withdrawn.**
+
+Operating consequences:
+
+1. **Documentation drift is a production-quality defect**, triaged like any
+   other: reproduce over the customer channel, correct the statement or the
+   behavior (whichever is wrong), and record the resolution in the Customer
+   Objection Register or the Operational Excellence Report.
+2. **Statements ship with their evidence.** A claim enters a customer-facing
+   surface only with a named verification behind it (a live probe, a
+   regression lock, a pipeline run). "It should work that way" is not
+   evidence. Where evidence cannot yet exist (e.g. renewal behavior before
+   the first real customer), the surface says so plainly instead of implying
+   the evidence.
+3. **Certifications are revisable in one direction only — toward the
+   evidence.** When new production evidence contradicts an earlier
+   certification, the certification is updated transparently with the reason
+   (never silently edited to hide the regression; see the Objection
+   Register's update protocol).
+4. **The enforcement instruments** are the CEAP synthetic sweep
+   (`scripts/ceap-sweep.mjs`, scheduled by `.github/workflows/ceap-assurance.yml`
+   every 6 hours against live production), the documentation-accuracy audit
+   in each operations cycle, and the living registers indexed in
+   `DOCUMENTATION_INDEX.md`.
+
+This rule is the standing form of the mandate that has governed every cycle
+since the Release Candidate program: the platform succeeds only while a
+customer can independently verify that it behaves as advertised.

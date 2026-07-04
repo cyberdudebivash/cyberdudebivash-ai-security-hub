@@ -46,7 +46,7 @@ and it is still an excellent first-session experience.
 | Restore drill | **Armed, never yet run** — first schedule fires Monday 05:00 UTC; manual dispatch attempted by this board and denied (integration lacks `workflow_dispatch` permission — owner-only). Restore script itself is regression-tested both directions (`workers/test/restoreDrill.test.mjs`) | ARMED / FIRST RUN PENDING |
 | Deploy discipline | 7 consecutive green gated deploys today (#618–#624), each: test gate → deploy → post-deploy smoke; three releases this cycle went through the identical path with zero manual intervention | OPERATING |
 | Rollback | Documented (`DEPLOY_RECOVERY_RUNBOOK.md`); mechanism is the same pipeline (fast-forward to a known-good commit) — exercised implicitly by every deploy; no live rollback has been needed post-GA | DOCUMENTED, UNEXERCISED LIVE |
-| Detection | External probe (availability) + post-deploy smoke (deploy sanity) exist; **no error-rate alerting/APM** — a partial-surface failure is still detected by customers first (this is how RC-B1 was found) | GAP — top backlog item (CI-1) |
+| Detection | External probe (availability) + post-deploy smoke (deploy sanity) + **CEAP synthetic customer sweep every 6 h** (`ceap-assurance.yml` running `scripts/ceap-sweep.mjs`: 13 lifecycle checks incl. the exact IR-1/IR-2 journeys; a FAIL = production incident). Error-rate alerting/APM still absent — CEAP catches journey breakage within 6 h, not error spikes between sweeps | PARTIALLY CLOSED (journey half); CI-1 (alerting half) remains |
 
 ## 3. Support documentation accuracy audit
 
@@ -107,12 +107,25 @@ failures — nothing in monitoring would have caught either. That is why CI-1
 
 | ID | Item | Why | Priority |
 |----|------|-----|----------|
-| CI-1 | Error-rate alerting on 5xx spikes (Workers analytics/logpush) | Both production incidents were customer-first detections | **P1** |
+| CI-1 | Error-rate alerting on 5xx spikes (Workers analytics/logpush) | Both production incidents were customer-first detections. **Partially addressed (CEAP cycle 1):** the 6-hourly synthetic customer sweep now auto-detects journey regressions (would have caught IR-1); error-*rate* alerting between sweeps still open | **P1 (remaining half)** |
 | CI-2 | Nightly prod-schema export → CI diff vs `schema_bootstrap.sql` | Would have caught RC-B1 class before ship | P2 |
 | CI-3 | First restore drill (Monday's scheduled run) — then weekly cadence review | Backup trust requires restore proof | P2 (automatic) |
 | CI-4 | `X-RateLimit-*` headers on burst-path 429s (parity with daily path) | Body is authoritative today; header parity helps API clients | P3 |
 | CI-5 | APM/latency percentiles in production | Cold-scan TTFV ~7 s deserves tracking over time | P3 |
 | CI-6 | Legacy route envelope migration (carried) | Localized 500 risk on old routes | P3 |
+
+## 7a. CEAP — Continuous Enterprise Assurance (standing cadence)
+
+This report is now maintained under CEAP: the representative customer
+lifecycle re-executes against live production **every 6 hours** via
+`scripts/ceap-sweep.mjs` (committed, dependency-free, reproducible by anyone:
+`node scripts/ceap-sweep.mjs`). Cycle-1 evidence: **13/13 green** on build
+`534bf14` (~12 s, throwaway account created and deleted; enumeration safety,
+paid gates, id contracts, and IR-1/IR-2 journeys all asserted, not just
+status codes). Any FAIL is treated as a production incident until disproven.
+The governing principle is now permanent: `docs/ENGINEERING_STANDARDS.md`
+**§10 — every customer-facing statement must remain continuously verifiable
+against observed production behavior**.
 
 ## 8. Executive Operations Review
 

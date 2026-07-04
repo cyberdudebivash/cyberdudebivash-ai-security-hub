@@ -5,7 +5,7 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 6 · **Date:** 2026-07-04 · **Production commit:** `34cd6c5` (deploy #625); post-GA operations cycle
+> **Edition:** 7 · **Date:** 2026-07-04 · **Production commit:** `534bf14`; CEAP cycle 1
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
@@ -49,6 +49,15 @@
 > per-key usage semantics). Incident Review Register opened (IR-1/IR-2:
 > both prior incidents were customer/audit-detected — error-rate alerting is
 > improvement priority CI-1). Full record: `OPERATIONAL_EXCELLENCE_REPORT.md`.
+> **Edition 7 (CEAP cycle 1, same day):** Continuous Enterprise Assurance
+> stood up as the standing loop. Shipped `scripts/ceap-sweep.mjs` +
+> `ceap-assurance.yml`: the 13-check customer lifecycle now re-executes
+> against live production **every 6 hours** (cycle-1 run: 13/13 green on
+> `534bf14`) — closing the journey half of the IR-1/IR-2 detection gap;
+> error-rate alerting remains CI-1. Permanent Verifiable-Statement Rule
+> codified (`docs/ENGINEERING_STANDARDS.md` §10): every customer-facing
+> statement stays continuously verifiable against production, or is
+> withdrawn.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.
