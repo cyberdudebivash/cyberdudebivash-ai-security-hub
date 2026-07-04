@@ -210,11 +210,30 @@ request, a named regression lock, or a living register in this repository.
 
 ---
 
-## Release Verification Addendum
+## Release Verification Addendum — RC-B1 **Verified** in production
 
-*Appended at the release gate after the gated pipeline (test → deploy →
-smoke) ships this commit: production re-execution of the exact RC-B1
-customer journey — signup → org create → `GET /api/orgs/{id}/dashboard` →
-`GET /api/orgs/{id}/scans` → account delete — with observed status codes and
-the serving commit. Until that evidence is recorded here, RC-B1's production
-verification status is **Pending**.*
+**Release:** `main` fast-forwarded `b81bce0 → 9bebbfa` · Test & Quality Gate
+run **#440** passed · Deploy to Cloudflare run **#622** completed/success
+(includes post-deploy smoke) · production `/api/version` **and**
+`/version.json` both served commit `9bebbfa` ~165 s after push — frontend
+and backend in sync.
+
+**Production re-execution of the exact RC-B1 customer journey**
+(2026-07-04, live `https://cyberdudebivash.in`, fresh throwaway accounts,
+public workflows only, full cleanup):
+
+| Step | Pre-release (build `b81bce0`) | Post-release (build `9bebbfa`) |
+|------|-------------------------------|--------------------------------|
+| Signup → org create | 201 / 201 | 201 / 201 |
+| `GET /api/orgs/{id}/dashboard` | **500 ERR_UNHANDLED** (`request_id 49ad647b…`) | **200** — `member_count=1`, honest empty-state aggregates |
+| `GET /api/orgs/{id}/scans` | **500 ERR_UNHANDLED** (`request_id e2164bfc…`) | **200** — `total=0` |
+| Domain scan → dashboard | n/a (dashboard unreachable) | scan 200 → dashboard **200** with `total_scans_30d=1`, `recent_scans[0].scanned_at` populated |
+| Domain scan → org scans | n/a | **200** with `total=1`, `scanned_at` populated |
+| Cleanup | account delete 200 | account delete 200; login-after-delete 401 |
+
+**Regression spot-checks on the new build (all still correct):** plans page
+FREE "5 domain scans/day"; `/api/user/plan` `reports=true`,
+`ai_analyze=true`, `api_access=false` (paid gates intact).
+
+RC-B1 verification status: **Verified**. Org security dashboard + org scan
+history: **RELEASE APPROVED** (per §3).
