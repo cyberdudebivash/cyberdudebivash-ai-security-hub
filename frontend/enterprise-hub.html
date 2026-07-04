@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enterprise Hub — CYBERDUDEBIVASH® SENTINEL APEX</title>
+  <meta name="description" content="Provision CYBERDUDEBIVASH® SENTINEL APEX for your enterprise. Dedicated tenancy, SSO, RBAC, SLA-backed support, SOC 2 Type II certified. Trusted by global SOCs, MSSPs, and CTI teams." />
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --bg: #070910; --surface: #0d0f15; --card: #11141c; --border: #1a1f2e; --border-hi: #252d40;
+      --accent: #00d4ff; --accent2: #7c3aed; --accent3: #10b981; --accent4: #f59e0b; --accent5: #ef4444;
+      --text: #e8ecf4; --muted: #8892a4; --subtle: #3a4155;
+      --g1: linear-gradient(135deg, #00d4ff 0%, #7c3aed 50%, #10b981 100%);
+      --g2: linear-gradient(135deg, #7c3aed 0%, #ef4444 100%);
+      --g3: linear-gradient(135deg, #10b981 0%, #00d4ff 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+    a { color: var(--accent); text-decoration: none; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,9,16,0.93); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-brand span { font-weight: 800; font-size: 0.92rem; background: var(--g1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--muted); font-size: 0.87rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta { background: var(--g1); color: #000 !important; border-radius: 7px; padding: 7px 18px !important; font-weight: 700 !important; font-size: 0.82rem !important; }
+
+    /* HERO */
+    .hero {
+      padding: 6rem 2rem 5rem;
+      text-align: center;
+      background:
+        radial-gradient(ellipse 100% 70% at 50% -10%, rgba(124,58,237,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(0,212,255,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(16,185,129,0.06) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 20px; padding: 5px 18px; font-size: 0.77rem; font-weight: 700;
+      color: #a78bfa; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 1.75rem;
+    }
+    .hero h1 { font-size: clamp(2.2rem, 5.5vw, 4rem); font-weight: 900; line-height: 1.08; margin-bottom: 1.25rem; }
+    .hero h1 .grad { background: var(--g1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 1.12rem; color: var(--muted); max-width: 680px; margin: 0 auto 2rem; }
+    .hero-trust { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-bottom: 3rem; }
+    .trust-item { display: flex; align-items: center; gap: 8px; font-size: 0.83rem; color: var(--muted); }
+    .trust-item svg { opacity: 0.6; }
+    .trust-check { color: var(--accent3); font-weight: 700; }
+    .hero-actions { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-grad { background: var(--g1); color: #000; font-weight: 800; border: none; border-radius: 9px; padding: 14px 32px; font-size: 0.95rem; cursor: pointer; transition: opacity 0.2s; display: inline-block; }
+    .btn-grad:hover { opacity: 0.85; color: #000; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border-hi); border-radius: 9px; padding: 14px 32px; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-block; }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* TRUST LOGOS */
+    .trust-strip {
+      background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 1.75rem 2rem; text-align: center;
+    }
+    .trust-strip p { font-size: 0.78rem; color: var(--subtle); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.25rem; }
+    .trust-logos { display: flex; justify-content: center; align-items: center; gap: 3rem; flex-wrap: wrap; }
+    .trust-logo-item { font-size: 0.82rem; font-weight: 700; color: var(--subtle); letter-spacing: 0.04em; opacity: 0.6; }
+
+    /* SECTION */
+    .section { padding: 5rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section-header { text-align: center; margin-bottom: 3.5rem; }
+    .section-header h2 { font-size: 2.25rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .section-header p { color: var(--muted); max-width: 560px; margin: 0 auto; font-size: 1rem; }
+    .label-accent { color: var(--accent); font-size: 0.77rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; display: block; }
+
+    /* TIERS */
+    .tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    .tier-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem;
+      position: relative; transition: border-color 0.2s, transform 0.2s; display: flex; flex-direction: column;
+    }
+    .tier-card:hover { transform: translateY(-3px); }
+    .tier-card.featured { border-color: var(--accent2); }
+    .tier-card.featured::before {
+      content: 'MOST POPULAR'; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+      background: var(--accent2); color: #fff; font-size: 0.65rem; font-weight: 800;
+      padding: 3px 14px; border-radius: 0 0 8px 8px; letter-spacing: 0.08em;
+    }
+    .tier-name { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
+    .tier-price { font-size: 2.2rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; }
+    .tier-price sub { font-size: 0.95rem; font-weight: 500; color: var(--muted); }
+    .tier-price span.rupee { font-size: 1.5rem; }
+    .tier-period { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.25rem; }
+    .tier-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.55; }
+    .tier-features { list-style: none; display: flex; flex-direction: column; gap: 9px; margin-bottom: 2rem; flex: 1; }
+    .tier-features li { font-size: 0.83rem; display: flex; align-items: flex-start; gap: 9px; }
+    .tier-features li::before { content: '✓'; color: var(--accent3); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .tier-cta {
+      width: 100%; padding: 11px; border-radius: 8px; font-size: 0.87rem; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--border-hi); background: transparent;
+      color: var(--text); transition: all 0.2s; text-align: center; display: block;
+    }
+    .tier-cta:hover { border-color: var(--accent); color: var(--accent); }
+    .tier-cta.primary { background: var(--g1); border: none; color: #000; }
+    .tier-cta.primary:hover { opacity: 0.85; color: #000; }
+
+    /* FEATURES GRID */
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; }
+    .feat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem;
+      transition: border-color 0.2s;
+    }
+    .feat-card:hover { border-color: var(--border-hi); }
+    .feat-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .feat-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feat-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    /* DEPLOYMENT */
+    .deploy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+    .deploy-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;
+      text-align: center;
+    }
+    .deploy-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .deploy-card h4 { font-weight: 700; margin-bottom: 0.4rem; }
+    .deploy-card p { font-size: 0.82rem; color: var(--muted); }
+
+    /* PROCESS */
+    .process-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
+    .process-step { text-align: center; }
+    .step-num {
+      width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 1rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; font-weight: 900; background: var(--g1); color: #000;
+    }
+    .process-step h4 { font-weight: 700; margin-bottom: 0.4rem; }
+    .process-step p { font-size: 0.83rem; color: var(--muted); }
+    .process-connector { border-top: 2px dashed var(--border); margin-top: 2.5rem; position: relative; }
+
+    /* CONTACT FORM */
+    .contact-section {
+      background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(0,212,255,0.05) 100%);
+      border: 1px solid var(--border-hi); border-radius: 22px; padding: 3.5rem;
+      max-width: 760px; margin: 0 auto;
+    }
+    .contact-form { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
+    .contact-form .full { grid-column: 1/-1; }
+    .contact-form input, .contact-form select, .contact-form textarea {
+      width: 100%; padding: 11px 15px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 0.88rem; font-family: inherit;
+    }
+    .contact-form input:focus, .contact-form select:focus, .contact-form textarea:focus {
+      outline: none; border-color: var(--accent);
+    }
+    .contact-form textarea { resize: vertical; min-height: 90px; }
+    .contact-form input::placeholder, .contact-form textarea::placeholder { color: var(--subtle); }
+    #contact-status { margin-top: 1rem; font-size: 0.87rem; min-height: 24px; text-align: center; }
+
+    /* SLA TABLE */
+    .sla-table { width: 100%; border-collapse: collapse; }
+    .sla-table th { background: var(--surface); color: var(--muted); font-size: 0.77rem; text-transform: uppercase; letter-spacing: 0.07em; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border); }
+    .sla-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.87rem; }
+    .sla-table tr:last-child td { border-bottom: none; }
+    .sla-table tr:hover td { background: rgba(255,255,255,0.015); }
+    .sla-check { color: var(--accent3); font-weight: 700; }
+    .sla-dash { color: var(--subtle); }
+
+    /* TESTIMONIAL */
+    .quote-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+    .quote-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem;
+      position: relative;
+    }
+    .quote-card::before { content: '"'; font-size: 5rem; color: var(--accent2); opacity: 0.15; position: absolute; top: 0.5rem; left: 1.25rem; line-height: 1; }
+    .quote-text { font-size: 0.9rem; color: var(--muted); line-height: 1.65; margin-bottom: 1.25rem; padding-top: 1.5rem; }
+    .quote-author { display: flex; align-items: center; gap: 10px; }
+    .quote-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--g1); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; color: #000; flex-shrink: 0; }
+    .quote-name { font-weight: 700; font-size: 0.88rem; }
+    .quote-role { font-size: 0.78rem; color: var(--muted); }
+
+    footer { border-top: 1px solid var(--border); padding: 3rem 2rem; text-align: center; color: var(--muted); font-size: 0.82rem; }
+    footer strong { color: var(--text); }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .hero h1 { font-size: 2rem; }
+      .contact-form { grid-template-columns: 1fr; }
+      .contact-section { padding: 2rem 1.25rem; }
+    }
+
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent3); box-shadow: 0 0 6px var(--accent3); margin-right: 6px; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,212,255,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#0a0c10"/><path d="M16 4L28 10V22L16 28L4 22V10L16 4Z" stroke="#00d4ff" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="#00d4ff" opacity="0.9"/></svg>
+    <span>SENTINEL APEX — Enterprise</span>
+  </div>
+  <div class="nav-links">
+    <a href="/">Platform</a>
+    <a href="/integrations.html">Integrations</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/marketplace.html">Marketplace</a>
+    <a href="/enterprise-hub.html" style="color:var(--accent)">Enterprise</a>
+    <a href="#contact" class="nav-cta">Talk to Sales</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <span class="status-dot"></span>
+    SOC 2 Type II Certified · Enterprise Ready
+  </div>
+  <h1>The World's Best<br /><span class="grad">AI Security Hub</span><br />For Your Enterprise</h1>
+  <p>Dedicated tenancy. Enterprise SSO. RBAC. SLA-backed 24/7 support. SOC 2 Type II certified. Integrated with every major threat intel platform on the planet.</p>
+  <div class="hero-trust">
+    <div class="trust-item"><span class="trust-check">✓</span> SOC 2 Type II</div>
+    <div class="trust-item"><span class="trust-check">✓</span> ISO 27001:2022</div>
+    <div class="trust-item"><span class="trust-check">✓</span> 99.99% SLA</div>
+    <div class="trust-item"><span class="trust-check">✓</span> Dedicated Tenancy</div>
+    <div class="trust-item"><span class="trust-check">✓</span> 24/7 SOC Support</div>
+    <div class="trust-item"><span class="trust-check">✓</span> STIX 2.1 / TAXII 2.1</div>
+    <div class="trust-item"><span class="trust-check">✓</span> GDPR / DPDP Compliant</div>
+  </div>
+  <div class="hero-actions">
+    <a href="#contact" class="btn-grad">Talk to Sales</a>
+    <a href="/integrations.html" class="btn-outline">Browse Integrations</a>
+  </div>
+</div>
+
+<!-- TRUST STRIP -->
+<div class="trust-strip">
+  <p>Trusted by security teams at global enterprises</p>
+  <div class="trust-logos">
+    <div class="trust-logo-item">FORTUNE 500 SOC TEAMS</div>
+    <div class="trust-logo-item">GLOBAL MSSP NETWORKS</div>
+    <div class="trust-logo-item">FINANCIAL SERVICES CISOS</div>
+    <div class="trust-logo-item">HEALTHCARE SECURITY ORGS</div>
+    <div class="trust-logo-item">GOVERNMENT & DEFENSE</div>
+    <div class="trust-logo-item">CRITICAL INFRASTRUCTURE</div>
+  </div>
+</div>
+
+<!-- PLANS -->
+<div class="section">
+  <div class="section-header">
+    <span class="label-accent">Enterprise Tiers</span>
+    <h2>Plans Built for Security Teams</h2>
+    <p>From individual analysts to global MSSP networks — SENTINEL APEX scales with your mission.</p>
+  </div>
+  <div class="tier-grid">
+    <div class="tier-card">
+      <div class="tier-name">Community</div>
+      <div class="tier-price">Free</div>
+      <div class="tier-period">Forever. No credit card.</div>
+      <div class="tier-desc">For security researchers and students getting started with CTI.</div>
+      <ul class="tier-features">
+        <li>100 API calls/day</li>
+        <li>Domain &amp; IP reputation</li>
+        <li>Public IOC feeds</li>
+        <li>MITRE ATT&amp;CK mapping</li>
+        <li>Community dashboard</li>
+        <li>STIX 2.1 export (limited)</li>
+      </ul>
+      <a href="/login.html" class="tier-cta">Get Started Free</a>
+    </div>
+    <div class="tier-card">
+      <div class="tier-name">Professional</div>
+      <div class="tier-price"><span class="rupee">₹</span>2,999<sub>/mo</sub></div>
+      <div class="tier-period">Annual billing saves 20%</div>
+      <div class="tier-desc">For individual analysts and small security teams.</div>
+      <ul class="tier-features">
+        <li>10,000 API calls/day</li>
+        <li>Full threat intelligence</li>
+        <li>VirusTotal &amp; Shodan connectors</li>
+        <li>SIEM export (Splunk, Sentinel)</li>
+        <li>PDF compliance reports</li>
+        <li>Sigma &amp; YARA rules</li>
+        <li>NIST CSF mapping</li>
+        <li>Email support (48h SLA)</li>
+      </ul>
+      <a href="/checkout.html?tier=PROFESSIONAL" class="tier-cta">Start Free Trial</a>
+    </div>
+    <div class="tier-card featured">
+      <div class="tier-name">Business</div>
+      <div class="tier-price"><span class="rupee">₹</span>9,999<sub>/mo</sub></div>
+      <div class="tier-period">Per workspace. Annual billing.</div>
+      <div class="tier-desc">For growing security teams and mid-market enterprises.</div>
+      <ul class="tier-features">
+        <li>100,000 API calls/day</li>
+        <li>Full integration catalog</li>
+        <li>MISP &amp; OpenCTI sync</li>
+        <li>All SIEM connectors</li>
+        <li>SOC 2 &amp; ISO 27001 reports</li>
+        <li>TheHive integration</li>
+        <li>MSSP white-labeling</li>
+        <li>Priority support (8h SLA)</li>
+        <li>Dedicated Slack channel</li>
+      </ul>
+      <a href="/checkout.html?tier=BUSINESS" class="tier-cta primary">Get Business</a>
+    </div>
+    <div class="tier-card">
+      <div class="tier-name">Enterprise</div>
+      <div class="tier-price">Custom</div>
+      <div class="tier-period">Volume pricing available</div>
+      <div class="tier-desc">For global MSSPs, government agencies, and Fortune 500 security teams.</div>
+      <ul class="tier-features">
+        <li>Unlimited API calls</li>
+        <li>Dedicated cloud tenancy</li>
+        <li>Enterprise SSO (SAML/OIDC)</li>
+        <li>Custom RBAC policies</li>
+        <li>PCI-DSS, EU AI Act support</li>
+        <li>Mandiant &amp; Recorded Future feeds</li>
+        <li>24/7 SOC analyst support</li>
+        <li>4h response SLA</li>
+        <li>On-prem deployment option</li>
+        <li>Executive briefings &amp; QBRs</li>
+        <li>Custom integrations</li>
+      </ul>
+      <a href="#contact" class="tier-cta">Talk to Sales</a>
+    </div>
+  </div>
+</div>
+
+<!-- ENTERPRISE FEATURES -->
+<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:1px 0;">
+  <div class="section">
+    <div class="section-header">
+      <span class="label-accent">Platform Capabilities</span>
+      <h2>Enterprise-Grade at Every Layer</h2>
+      <p>Security, reliability, compliance, and integrations — all built-in from day one.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🔐</div>
+        <h3>Enterprise SSO &amp; RBAC</h3>
+        <p>SAML 2.0 and OIDC SSO with your identity provider (Okta, Azure AD, Ping). Role-based access control with custom policy definitions.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏢</div>
+        <h3>Dedicated Tenancy</h3>
+        <p>Isolated compute, storage, and network for your organization. No shared infrastructure with other tenants. Your data never co-mingles.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📡</div>
+        <h3>STIX 2.1 / TAXII 2.1</h3>
+        <p>Consume and publish threat intelligence via open standards. Subscribe to curated TAXII collections or push your internal IOCs into the platform.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🛡️</div>
+        <h3>SOC 2 Type II Certified</h3>
+        <p>Annual SOC 2 Type II audit by independent assessors. Security, Availability, Confidentiality, and Processing Integrity trust services criteria.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🌍</div>
+        <h3>Global Data Residency</h3>
+        <p>Choose where your data lives — India, EU, US, or APAC. Regional data residency for GDPR, DPDP Act, and local compliance requirements.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <h3>99.99% Uptime SLA</h3>
+        <p>Cloudflare edge infrastructure with global redundancy. 99.99% uptime SLA contractually backed. Real-time status page and incident notifications.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🤖</div>
+        <h3>AI-Powered Detection</h3>
+        <p>Cloudflare Workers AI for real-time threat classification, anomaly detection, and intelligent prioritization. No model data retained.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <h3>Executive Intelligence Reports</h3>
+        <p>Automated PDF reports for CISOs, boards, and auditors. EU AI Act, NIST AI RMF, ISO 42001, SOC 2, and compliance frameworks covered.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔄</div>
+        <h3>Bi-Directional Integrations</h3>
+        <p>Push and pull with MISP, OpenCTI, Splunk, Sentinel, QRadar, Chronicle, and 25+ more. Webhooks for real-time alerting into your SOAR.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEPLOYMENT OPTIONS -->
+<div class="section">
+  <div class="section-header">
+    <span class="label-accent">Deployment</span>
+    <h2>Deploy Anywhere</h2>
+    <p>Cloud-native, on-premises, or hybrid — SENTINEL APEX fits your architecture.</p>
+  </div>
+  <div class="deploy-grid">
+    <div class="deploy-card">
+      <div class="deploy-icon">☁️</div>
+      <h4>Cloudflare Edge</h4>
+      <p>Global Cloudflare Workers deployment. Zero cold starts. 300+ PoPs worldwide.</p>
+    </div>
+    <div class="deploy-card">
+      <div class="deploy-icon">🏗️</div>
+      <h4>Dedicated Cloud</h4>
+      <p>Isolated tenant on AWS, Azure, or GCP. Your VPC, your keys, your control.</p>
+    </div>
+    <div class="deploy-card">
+      <div class="deploy-icon">🖥️</div>
+      <h4>On-Premises</h4>
+      <p>Air-gapped deployment for government and critical infrastructure. Docker or Kubernetes.</p>
+    </div>
+    <div class="deploy-card">
+      <div class="deploy-icon">🔀</div>
+      <h4>Hybrid</h4>
+      <p>Edge intelligence with on-prem data plane. Enforce local data residency at scale.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING PROCESS -->
+<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:1px 0;">
+  <div class="section">
+    <div class="section-header">
+      <span class="label-accent">Onboarding</span>
+      <h2>Production in 72 Hours</h2>
+      <p>Structured onboarding from contract to production — guided by a dedicated technical account manager.</p>
+    </div>
+    <div class="process-steps">
+      <div class="process-step">
+        <div class="step-num">1</div>
+        <h4>Discovery Call</h4>
+        <p>30-minute call to understand your security stack, integration requirements, and compliance needs.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">2</div>
+        <h4>Technical Design</h4>
+        <p>Architecture blueprint for your deployment. Integration mapping. Data flow diagram. SLA agreement.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">3</div>
+        <h4>Tenant Provisioning</h4>
+        <p>Dedicated environment provisioned. SSO configured. RBAC policies applied. API keys issued.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">4</div>
+        <h4>Integration Setup</h4>
+        <p>SIEM connectors live. STIX/TAXII feeds active. MISP/OpenCTI sync running. Webhooks tested.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">5</div>
+        <h4>Go-Live &amp; Training</h4>
+        <p>Analyst training. SOC runbook delivered. Compliance reports generated. Hypercare support begins.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLA TABLE -->
+<div class="section">
+  <div class="section-header">
+    <span class="label-accent">SLA Commitments</span>
+    <h2>Contractual Reliability</h2>
+    <p>Our SLAs aren't aspirational — they're contractual. With financial remedies for any breach.</p>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="sla-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Professional</th>
+          <th>Business</th>
+          <th>Enterprise</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Platform Uptime</strong></td><td>99.9%</td><td>99.95%</td><td>99.99%</td></tr>
+        <tr><td><strong>API Response (p95)</strong></td><td>&lt; 2s</td><td>&lt; 1s</td><td>&lt; 500ms</td></tr>
+        <tr><td><strong>Support Response</strong></td><td>48 hours</td><td>8 hours</td><td>4 hours</td></tr>
+        <tr><td><strong>Incident Response</strong></td><td>Email</td><td>Email + Slack</td><td>Phone + Slack + War Room</td></tr>
+        <tr><td><strong>Data Retention</strong></td><td>30 days</td><td>1 year</td><td>7 years</td></tr>
+        <tr><td><strong>Dedicated TAM</strong></td><td class="sla-dash">—</td><td class="sla-dash">—</td><td class="sla-check">✓</td></tr>
+        <tr><td><strong>QBR &amp; Executive Briefings</strong></td><td class="sla-dash">—</td><td class="sla-dash">—</td><td class="sla-check">✓</td></tr>
+        <tr><td><strong>SLA Financial Remedy</strong></td><td class="sla-dash">—</td><td class="sla-check">✓</td><td class="sla-check">✓</td></tr>
+        <tr><td><strong>Custom Integrations SLA</strong></td><td class="sla-dash">—</td><td class="sla-dash">—</td><td class="sla-check">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TESTIMONIALS -->
+<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:1px 0;">
+  <div class="section">
+    <div class="section-header">
+      <span class="label-accent">What Teams Say</span>
+      <h2>Trusted by Security Leaders</h2>
+    </div>
+    <div class="quote-grid">
+      <div class="quote-card">
+        <p class="quote-text">SENTINEL APEX replaced three separate threat intel tools. The STIX export into our MISP instance was operational in under an hour. The risk scoring is genuinely useful — not just colored boxes.</p>
+        <div class="quote-author">
+          <div class="quote-avatar">S</div>
+          <div>
+            <div class="quote-name">Senior CTI Analyst</div>
+            <div class="quote-role">Global MSSP · 500+ managed clients</div>
+          </div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <p class="quote-text">The SOC 2 evidence package saved us six weeks of audit prep. Every control is mapped, every log is structured. Our auditors were impressed with the depth of documentation.</p>
+        <div class="quote-author">
+          <div class="quote-avatar">R</div>
+          <div>
+            <div class="quote-name">CISO</div>
+            <div class="quote-role">FinTech Enterprise · Series C</div>
+          </div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <p class="quote-text">We integrated SENTINEL APEX into our Splunk SIEM in 45 minutes using the HEC connector. The MITRE ATT&CK mapping on every indicator means our detection rules are immediately actionable.</p>
+        <div class="quote-author">
+          <div class="quote-avatar">A</div>
+          <div>
+            <div class="quote-name">SOC Manager</div>
+            <div class="quote-role">Healthcare Security Operations Center</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT / SALES -->
+<div class="section" id="contact">
+  <div class="contact-section">
+    <div style="text-align:center;">
+      <span class="label-accent">Talk to Sales</span>
+      <h2 style="font-size:1.9rem;font-weight:800;margin-bottom:0.75rem;">Ready to Deploy Enterprise?</h2>
+      <p style="color:var(--muted);max-width:480px;margin:0 auto;">Tell us about your environment. Our team will design a deployment architecture and pricing tailored to your requirements.</p>
+    </div>
+    <form id="enterprise-form" class="contact-form" onsubmit="submitEnterprise(event)">
+      <input type="text" name="org_name" placeholder="Organization Name *" required />
+      <input type="text" name="industry" placeholder="Industry (e.g. FinTech, Healthcare)" />
+      <input type="text" name="contact_name" placeholder="Your Name *" required />
+      <input type="text" name="title" placeholder="Job Title" />
+      <input type="email" name="contact_email" placeholder="Work Email *" required />
+      <input type="tel" name="phone" placeholder="Phone Number" />
+      <input type="text" name="domain" placeholder="Company Domain *" required />
+      <select name="team_size">
+        <option value="">Team Size</option>
+        <option value="1-10">1–10 analysts</option>
+        <option value="11-50">11–50 analysts</option>
+        <option value="51-200">51–200 analysts</option>
+        <option value="200+">200+ analysts</option>
+      </select>
+      <div class="full">
+        <select name="tier">
+          <option value="ENTERPRISE">Enterprise — Custom</option>
+          <option value="BUSINESS">Business — ₹9,999/mo</option>
+          <option value="MSSP_GOLD">MSSP Gold — ₹49,999/mo</option>
+        </select>
+      </div>
+      <div class="full">
+        <input type="text" name="integrations" placeholder="Required integrations (e.g. Splunk, QRadar, MISP, OpenCTI)" />
+      </div>
+      <div class="full">
+        <textarea name="requirements" placeholder="Tell us about your security requirements, current challenges, and deployment timeline..."></textarea>
+      </div>
+      <div class="full">
+        <button type="submit" class="btn-grad" style="width:100%;font-size:0.97rem;padding:14px;border-radius:9px;border:none;cursor:pointer;">
+          Request Enterprise Demo
+        </button>
+      </div>
+    </form>
+    <div id="contact-status"></div>
+    <p style="text-align:center;color:var(--subtle);font-size:0.8rem;margin-top:1.5rem;">
+      Or email us directly at <a href="mailto:bivash@cyberdudebivash.com">bivash@cyberdudebivash.com</a><br />
+      We respond to enterprise inquiries within 4 hours on business days.
+    </p>
+  </div>
+</div>
+
+<footer>
+  <strong>CYBERDUDEBIVASH® SENTINEL APEX</strong> — Enterprise Hub v25.0<br />
+  <span style="margin-top:0.5rem;display:block;">
+    SOC 2 Type II · ISO 27001:2022 · NIST CSF 2.0 · PCI-DSS v4.0 · GDPR · India DPDP Act · EU AI Act 2024
+  </span>
+  <div style="margin-top:1.5rem;">
+    <a href="/">Platform</a> &bull; <a href="/integrations.html">Integrations</a> &bull; <a href="/pricing.html">Pricing</a> &bull;
+    <a href="/marketplace.html">Marketplace</a> &bull; <a href="mailto:bivash@cyberdudebivash.com">Enterprise Sales</a>
+  </div>
+  <p style="margin-top:1rem;">&copy; 2025 CYBERDUDEBIVASH® — All rights reserved.</p>
+</footer>
+
+<script>
+async function submitEnterprise(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form));
+  const status = document.getElementById('contact-status');
+  status.innerHTML = '<span class="spinner"></span> Submitting...';
+  try {
+    const res = await fetch('/api/enterprise/provision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const resp = await res.json();
+    if (res.ok) {
+      status.innerHTML = '<span style="color:var(--accent3);font-size:0.95rem">✓ Request received! Our enterprise team will contact you within 4 hours.</span>';
+      form.reset();
+    } else {
+      status.innerHTML = `<span style="color:var(--accent5)">${resp.error || 'Submission failed. Email bivash@cyberdudebivash.com'}</span>`;
+    }
+  } catch {
+    status.innerHTML = '<span style="color:var(--accent5)">Network error — please email bivash@cyberdudebivash.com</span>';
+  }
+}
+</script>
+</body>
+</html>

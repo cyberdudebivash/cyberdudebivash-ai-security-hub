@@ -450,6 +450,28 @@ import {
   handlePdfObservability,
 } from './handlers/aiGovernancePdfHandler.js';
 
+// ─── P25.0: Enterprise Integration Hub ───────────────────────────────────────
+import {
+  handleIntegrationCatalog,
+  handleIntegrationConnect,
+  handleIntegrationList,
+  handleStixBundle,
+  handleTaxiiCollections,
+  handleSiemSplunk,
+  handleSiemSentinel,
+  handleSiemQradar,
+  handleSiemChronicle,
+  handleWebhookTest,
+  handleConnectorVirustotal,
+  handleConnectorShodan,
+  handleConnectorOtx,
+  handleConnectorAbuseIPDB,
+  handleConnectorMisp,
+  handleEnterpriseProvision,
+  handleEnterpriseStatus,
+  handleIntegrationObservability,
+} from './handlers/enterpriseIntegrationHub.js';
+
 // ─── P20.0: Developer Onboarding & Self-Serve Trial Engine ───────────────────
 import {
   handleTrialKeyRequest,
@@ -2367,6 +2389,66 @@ export default {
     if (path === '/api/mssp/onboarding/observability' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleMsspOnboardingObservability(request, env), request));
     }
+
+    // ── P25.0: Enterprise Integration Hub ────────────────────────────────────
+    if (path === '/api/integrations/catalog' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleIntegrationCatalog(request, env), request));
+    }
+    if (path === '/api/integrations/connect' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleIntegrationConnect(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/list' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleIntegrationList(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/stix/bundle' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      return withSecurityHeaders(withCors(await handleStixBundle(request, env, authCtx), request));
+    }
+    if (path === '/api/integrations/taxii/collections' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleTaxiiCollections(request, env), request));
+    }
+    if (path === '/api/integrations/siem/splunk' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleSiemSplunk(request, env), request));
+    }
+    if (path === '/api/integrations/siem/sentinel' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleSiemSentinel(request, env), request));
+    }
+    if (path === '/api/integrations/siem/qradar' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleSiemQradar(request, env), request));
+    }
+    if (path === '/api/integrations/siem/chronicle' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleSiemChronicle(request, env), request));
+    }
+    if (path === '/api/integrations/webhook/test' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleWebhookTest(request, env), request));
+    }
+    if (path === '/api/integrations/connector/virustotal' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleConnectorVirustotal(request, env), request));
+    }
+    if (path === '/api/integrations/connector/shodan' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleConnectorShodan(request, env), request));
+    }
+    if (path === '/api/integrations/connector/otx' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleConnectorOtx(request, env), request));
+    }
+    if (path === '/api/integrations/connector/abuseipdb' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleConnectorAbuseIPDB(request, env), request));
+    }
+    if (path === '/api/integrations/connector/misp' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleConnectorMisp(request, env), request));
+    }
+    if (path === '/api/enterprise/provision' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleEnterpriseProvision(request, env), request));
+    }
+    if (path === '/api/enterprise/status' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleEnterpriseStatus(request, env), request));
+    }
+    if (path === '/api/integrations/observability' && method === 'GET') {
+      return withSecurityHeaders(withCors(await handleIntegrationObservability(request, env), request));
+    }
+    // ── END P25.0 ─────────────────────────────────────────────────────────────
 
     // MSSP Workspace
     if (path === '/api/mssp/overview' && method === 'GET') {

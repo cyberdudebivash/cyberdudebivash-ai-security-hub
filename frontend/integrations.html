@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enterprise Integrations — CYBERDUDEBIVASH® AI Security Hub</title>
+  <meta name="description" content="Connect CYBERDUDEBIVASH® AI Security Hub to your entire security stack. Native integrations with VirusTotal, Splunk, Microsoft Sentinel, IBM QRadar, Google Chronicle, MISP, OpenCTI, and 30+ platforms via STIX 2.1 / TAXII 2.1." />
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #0f1117;
+      --card: #13161e;
+      --border: #1e2330;
+      --border-accent: #2a3045;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --accent4: #f59e0b;
+      --accent5: #ef4444;
+      --text: #e8ecf4;
+      --muted: #8892a4;
+      --subtle: #4a5568;
+      --gradient: linear-gradient(135deg, #00d4ff 0%, #7c3aed 50%, #10b981 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: #fff; }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,16,0.92); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-brand img { width: 32px; height: 32px; border-radius: 6px; }
+    .nav-brand span { font-weight: 700; font-size: 0.95rem; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--muted); font-size: 0.88rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta { background: var(--accent); color: #000 !important; border-radius: 6px; padding: 6px 16px !important; font-weight: 700 !important; font-size: 0.82rem !important; }
+
+    /* HERO */
+    .hero {
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 70%),
+                  radial-gradient(ellipse 60% 40% at 80% 80%, rgba(124,58,237,0.05) 0%, transparent 70%);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 20px; padding: 5px 16px; font-size: 0.78rem; font-weight: 600;
+      color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1.5rem;
+    }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.1; margin-bottom: 1.25rem; }
+    .hero h1 span { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 1.1rem; color: var(--muted); max-width: 720px; margin: 0 auto 2.5rem; }
+    .hero-stats { display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .hero-stat strong { display: block; font-size: 2rem; font-weight: 800; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-stat span { font-size: 0.82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .hero-actions { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-primary { background: var(--gradient); color: #000; font-weight: 700; border: none; border-radius: 8px; padding: 12px 28px; font-size: 0.92rem; cursor: pointer; transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.85; color: #000; }
+    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border-accent); border-radius: 8px; padding: 12px 28px; font-size: 0.92rem; cursor: pointer; transition: border-color 0.2s; }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* SECTION */
+    section { padding: 4rem 2rem; max-width: 1280px; margin: 0 auto; }
+    .section-header { text-align: center; margin-bottom: 3rem; }
+    .section-header h2 { font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .section-header p { color: var(--muted); max-width: 600px; margin: 0 auto; }
+
+    /* CATEGORY FILTER */
+    .cat-tabs { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .cat-tab {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 18px; font-size: 0.82rem; font-weight: 600; color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .cat-tab:hover, .cat-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+
+    /* INTEGRATION GRID */
+    .integration-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .int-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s;
+      display: flex; flex-direction: column; gap: 0.85rem;
+    }
+    .int-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .int-card-head { display: flex; align-items: center; gap: 12px; }
+    .int-logo {
+      width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 800; flex-shrink: 0;
+    }
+    .int-name { font-weight: 700; font-size: 0.97rem; }
+    .int-type { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .int-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.5; flex: 1; }
+    .int-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .int-badge {
+      font-size: 0.7rem; font-weight: 600; padding: 3px 9px; border-radius: 4px;
+      border: 1px solid; letter-spacing: 0.03em;
+    }
+    .badge-ti { color: #00d4ff; border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.06); }
+    .badge-siem { color: #7c3aed; border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.06); }
+    .badge-compliance { color: #10b981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+    .badge-framework { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+    .badge-live { color: #10b981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+    .badge-enterprise { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+    .int-action { margin-top: auto; }
+    .int-connect-btn {
+      width: 100%; padding: 8px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 7px; color: var(--accent); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s; text-align: center;
+    }
+    .int-connect-btn:hover { background: rgba(0,212,255,0.15); }
+
+    /* STIX / TAXII BLOCK */
+    .standards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem; }
+    .standard-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 2rem;
+      position: relative; overflow: hidden;
+    }
+    .standard-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--gradient);
+    }
+    .standard-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .standard-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .standard-card p { color: var(--muted); font-size: 0.87rem; margin-bottom: 1.25rem; }
+    .standard-attrs { display: flex; flex-direction: column; gap: 8px; }
+    .standard-attr { display: flex; justify-content: space-between; font-size: 0.82rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .standard-attr label { color: var(--muted); }
+    .standard-attr span { color: var(--accent); font-weight: 600; }
+
+    /* ENTERPRISE PROVISION */
+    .provision-section {
+      background: linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(124,58,237,0.06) 100%);
+      border: 1px solid var(--border-accent); border-radius: 20px; padding: 3rem;
+      text-align: center; margin: 4rem auto; max-width: 1280px; margin: 0 2rem;
+    }
+    .provision-section h2 { font-size: 2rem; font-weight: 800; margin-bottom: 1rem; }
+    .provision-section p { color: var(--muted); max-width: 600px; margin: 0 auto 2rem; }
+    .provision-form { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 560px; margin: 0 auto 1.5rem; text-align: left; }
+    .provision-form input, .provision-form select {
+      width: 100%; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.88rem;
+    }
+    .provision-form input:focus, .provision-form select:focus { outline: none; border-color: var(--accent); }
+    .provision-form .full { grid-column: 1 / -1; }
+    #provision-result { margin-top: 1rem; font-size: 0.87rem; min-height: 24px; }
+
+    /* SIEM EXPORT */
+    .siem-section { background: var(--surface); border-top: 1px solid var(--border); padding: 4rem 2rem; }
+    .siem-inner { max-width: 1280px; margin: 0 auto; }
+    .siem-tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .siem-tab {
+      padding: 8px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.83rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .siem-tab.active { border-color: var(--accent2); color: #a78bfa; background: rgba(124,58,237,0.1); }
+    .siem-panel { display: none; }
+    .siem-panel.active { display: block; }
+    .code-block {
+      background: #080a10; border: 1px solid var(--border); border-radius: 10px;
+      padding: 1.5rem; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.8rem;
+      color: #a8d8ff; overflow-x: auto; line-height: 1.7;
+    }
+    .code-block .key { color: #c792ea; }
+    .code-block .str { color: #c3e88d; }
+    .code-block .num { color: #f78c6c; }
+
+    /* SOC 2 TIER TABLE */
+    .tier-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+    .tier-table th { background: var(--surface); color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border); }
+    .tier-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.87rem; vertical-align: middle; }
+    .tier-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .check { color: var(--accent3); font-size: 1.1rem; }
+    .dash { color: var(--subtle); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border); padding: 3rem 2rem;
+      text-align: center; color: var(--muted); font-size: 0.82rem;
+    }
+    footer strong { color: var(--text); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .hero-stats { gap: 1.5rem; }
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .provision-form { grid-template-columns: 1fr; }
+      .standards-grid { grid-template-columns: 1fr; }
+    }
+
+    /* LOADER */
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(0,212,255,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent3); box-shadow: 0 0 6px var(--accent3); margin-right: 6px; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#0a0c10"/><path d="M16 4L28 10V22L16 28L4 22V10L16 4Z" stroke="#00d4ff" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="#00d4ff" opacity="0.9"/></svg>
+    <span>CYBERDUDEBIVASH® SENTINEL APEX</span>
+  </div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/integrations.html" style="color:var(--accent)">Integrations</a>
+    <a href="/marketplace.html">Marketplace</a>
+    <a href="/enterprise-hub.html">Enterprise</a>
+    <a href="https://intel.cyberdudebivash.com/api/docs" target="_blank">API Docs</a>
+    <a href="/login.html" class="nav-cta">Get Started</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <span class="status-dot"></span>
+    Enterprise Integration Hub — P25.0
+  </div>
+  <h1>Connect to Your <span>Entire Security Stack</span></h1>
+  <p>Native integrations with the world's top threat intelligence platforms, SIEM/SOAR solutions, and security standards. Push STIX 2.1 bundles, stream to Splunk, export to Sentinel — one API.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><strong>30+</strong><span>Integrations</span></div>
+    <div class="hero-stat"><strong>STIX 2.1</strong><span>Native Export</span></div>
+    <div class="hero-stat"><strong>TAXII 2.1</strong><span>Collections</span></div>
+    <div class="hero-stat"><strong>8 SIEM</strong><span>Connectors</span></div>
+    <div class="hero-stat"><strong>SOC 2</strong><span>Certified</span></div>
+  </div>
+  <div class="hero-actions">
+    <a href="#provision" class="btn-primary" style="text-decoration:none;display:inline-block;">Provision Enterprise</a>
+    <a href="#catalog" class="btn-secondary" style="text-decoration:none;display:inline-block;">Browse Catalog</a>
+  </div>
+</div>
+
+<!-- INTEGRATION CATALOG -->
+<section id="catalog">
+  <div class="section-header">
+    <h2>Integration Catalog</h2>
+    <p>Every major security platform — connected, normalized, and ready to act on.</p>
+  </div>
+  <div class="cat-tabs">
+    <button class="cat-tab active" data-cat="all">All Integrations</button>
+    <button class="cat-tab" data-cat="threat_intel">Threat Intel</button>
+    <button class="cat-tab" data-cat="siem_soar">SIEM / SOAR</button>
+    <button class="cat-tab" data-cat="frameworks">Standards & Frameworks</button>
+    <button class="cat-tab" data-cat="compliance">Compliance</button>
+  </div>
+  <div class="integration-grid" id="integration-grid">
+    <!-- Rendered by JS -->
+    <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--muted)"><span class="spinner"></span></div>
+  </div>
+</section>
+
+<!-- STIX / TAXII STANDARDS -->
+<section>
+  <div class="section-header">
+    <h2>Open Standards — STIX 2.1 &amp; TAXII 2.1</h2>
+    <p>Export and consume threat intelligence using industry-standard formats trusted by every major CTI platform.</p>
+  </div>
+  <div class="standards-grid">
+    <div class="standard-card">
+      <div class="standard-icon">🛡️</div>
+      <h3>STIX 2.1 Bundle Export</h3>
+      <p>Export indicators, malware, threat actors, campaigns, and relationships as fully compliant STIX 2.1 bundles. Consumable by any STIX-aware platform.</p>
+      <div class="standard-attrs">
+        <div class="standard-attr"><label>Endpoint</label><span>GET /api/integrations/stix/bundle</span></div>
+        <div class="standard-attr"><label>Spec</label><span>OASIS STIX 2.1</span></div>
+        <div class="standard-attr"><label>Objects</label><span>indicator, malware, threat-actor, campaign, relationship</span></div>
+        <div class="standard-attr"><label>Format</label><span>JSON — application/stix+json</span></div>
+      </div>
+    </div>
+    <div class="standard-card">
+      <div class="standard-icon">📡</div>
+      <h3>TAXII 2.1 Collections</h3>
+      <p>Subscribe to curated threat intelligence collections via TAXII 2.1. Pull indicators, APT tracking, CVE intel, and IOC feeds in real-time.</p>
+      <div class="standard-attrs">
+        <div class="standard-attr"><label>Endpoint</label><span>GET /api/integrations/taxii/collections</span></div>
+        <div class="standard-attr"><label>Spec</label><span>OASIS TAXII 2.1</span></div>
+        <div class="standard-attr"><label>Collections</label><span>threat-intel, IOCs, APT tracking, CVE intel</span></div>
+        <div class="standard-attr"><label>Auth</label><span>API Key (Bearer)</span></div>
+      </div>
+    </div>
+    <div class="standard-card">
+      <div class="standard-icon">⚔️</div>
+      <h3>MITRE ATT&amp;CK Mapping</h3>
+      <p>All detections and indicators mapped to MITRE ATT&amp;CK Enterprise, ICS, and Mobile matrices. Ready for ATT&amp;CK Navigator import.</p>
+      <div class="standard-attrs">
+        <div class="standard-attr"><label>Framework</label><span>ATT&amp;CK v15</span></div>
+        <div class="standard-attr"><label>Matrices</label><span>Enterprise, ICS, Mobile</span></div>
+        <div class="standard-attr"><label>Format</label><span>Navigator layer JSON</span></div>
+        <div class="standard-attr"><label>Coverage</label><span>700+ techniques</span></div>
+      </div>
+    </div>
+    <div class="standard-card">
+      <div class="standard-icon">🔎</div>
+      <h3>Sigma &amp; YARA Rules</h3>
+      <p>Download detection rules in Sigma and YARA formats. Deploy directly into Splunk, QRadar, Elastic, or any rule-based detection engine.</p>
+      <div class="standard-attrs">
+        <div class="standard-attr"><label>Sigma</label><span>v1.0.4 compatible</span></div>
+        <div class="standard-attr"><label>YARA</label><span>v4.x</span></div>
+        <div class="standard-attr"><label>Rules</label><span>500+ curated</span></div>
+        <div class="standard-attr"><label>Updates</label><span>Daily</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIEM EXPORT -->
+<div class="siem-section">
+  <div class="siem-inner">
+    <div class="section-header">
+      <h2>SIEM Export Formats</h2>
+      <p>One click to stream normalized events to your SIEM — no custom parsers needed.</p>
+    </div>
+    <div class="siem-tabs">
+      <button class="siem-tab active" data-panel="splunk">Splunk HEC</button>
+      <button class="siem-tab" data-panel="sentinel">Microsoft Sentinel</button>
+      <button class="siem-tab" data-panel="qradar">IBM QRadar</button>
+      <button class="siem-tab" data-panel="chronicle">Google Chronicle</button>
+    </div>
+    <div id="panel-splunk" class="siem-panel active">
+      <div class="code-block">
+<span class="key">POST</span> <span class="str">https://hec.your-splunk.com:8088/services/collector</span>
+<span class="key">Authorization:</span> <span class="str">Splunk &lt;HEC_TOKEN&gt;</span>
+<span class="key">Content-Type:</span> <span class="str">application/json</span>
+
+{
+  <span class="key">"time"</span>: <span class="num">1719513600</span>,
+  <span class="key">"host"</span>: <span class="str">"cyberdudebivash-sentinel-apex"</span>,
+  <span class="key">"source"</span>: <span class="str">"sentinel_apex"</span>,
+  <span class="key">"sourcetype"</span>: <span class="str">"cyberdudebivash:threat_intel"</span>,
+  <span class="key">"index"</span>: <span class="str">"security"</span>,
+  <span class="key">"event"</span>: {
+    <span class="key">"indicator_type"</span>: <span class="str">"ip"</span>,
+    <span class="key">"value"</span>: <span class="str">"192.0.2.99"</span>,
+    <span class="key">"risk_score"</span>: <span class="num">92</span>,
+    <span class="key">"threat_class"</span>: <span class="str">"C2_SERVER"</span>,
+    <span class="key">"mitre_technique"</span>: <span class="str">"T1071.001"</span>,
+    <span class="key">"confidence"</span>: <span class="num">0.95</span>,
+    <span class="key">"tags"</span>: [<span class="str">"APT29"</span>, <span class="str">"COZY_BEAR"</span>]
+  }
+}
+      </div>
+    </div>
+    <div id="panel-sentinel" class="siem-panel">
+      <div class="code-block">
+<span class="key">POST</span> <span class="str">https://api.loganalytics.io/v1/workspaces/{workspaceId}/data</span>
+<span class="key">Authorization:</span> <span class="str">Bearer &lt;AZURE_TOKEN&gt;</span>
+<span class="key">Log-Type:</span> <span class="str">CyberdudebiVash_ThreatIntel</span>
+
+{
+  <span class="key">"TimeGenerated"</span>: <span class="str">"2025-06-28T00:00:00Z"</span>,
+  <span class="key">"IndicatorType"</span>: <span class="str">"ip"</span>,
+  <span class="key">"Value"</span>: <span class="str">"192.0.2.99"</span>,
+  <span class="key">"RiskScore"</span>: <span class="num">92</span>,
+  <span class="key">"ThreatClass"</span>: <span class="str">"C2_SERVER"</span>,
+  <span class="key">"MitreTechnique"</span>: <span class="str">"T1071.001"</span>,
+  <span class="key">"Confidence"</span>: <span class="num">0.95</span>,
+  <span class="key">"TlpLevel"</span>: <span class="str">"AMBER"</span>,
+  <span class="key">"Source"</span>: <span class="str">"CYBERDUDEBIVASH_SENTINEL_APEX"</span>
+}
+      </div>
+    </div>
+    <div id="panel-qradar" class="siem-panel">
+      <div class="code-block">
+<span class="key">POST</span> <span class="str">https://qradar.your-org.com/api/siem/offenses</span>
+<span class="key">SEC:</span> <span class="str">&lt;QRADAR_TOKEN&gt;</span>
+<span class="key">Version:</span> <span class="num">17.0</span>
+
+<span class="key">CEF:0|CYBERDUDEBIVASH|SENTINEL_APEX|40.0.0|indicator|Threat Indicator|High|</span>
+<span class="str">src=192.0.2.99 dpt=443 act=block cs1=C2_SERVER cs1Label=threat_class</span>
+<span class="str">cs2=T1071.001 cs2Label=mitre_technique cs3=APT29 cs3Label=actor</span>
+<span class="str">cn1=92 cn1Label=risk_score cn2=95 cn2Label=confidence</span>
+<span class="str">msg=High-confidence C2 server indicator detected by SENTINEL APEX</span>
+      </div>
+    </div>
+    <div id="panel-chronicle" class="siem-panel">
+      <div class="code-block">
+<span class="key">POST</span> <span class="str">https://malachiteingestion-pa.googleapis.com/v2/udmevents:batchCreate</span>
+<span class="key">Authorization:</span> <span class="str">Bearer &lt;GOOGLE_TOKEN&gt;</span>
+
+{
+  <span class="key">"events"</span>: [{
+    <span class="key">"metadata"</span>: {
+      <span class="key">"eventTimestamp"</span>: <span class="str">"2025-06-28T00:00:00Z"</span>,
+      <span class="key">"eventType"</span>: <span class="str">"NETWORK_CONNECTION"</span>,
+      <span class="key">"productName"</span>: <span class="str">"CYBERDUDEBIVASH SENTINEL APEX"</span>,
+      <span class="key">"vendorName"</span>: <span class="str">"CYBERDUDEBIVASH"</span>
+    },
+    <span class="key">"network"</span>: { <span class="key">"ip_protocol"</span>: <span class="str">"TCP"</span>, <span class="key">"direction"</span>: <span class="str">"OUTBOUND"</span> },
+    <span class="key">"principal"</span>: { <span class="key">"ip"</span>: [<span class="str">"192.0.2.99"</span>] },
+    <span class="key">"securityResult"</span>: [{
+      <span class="key">"severity"</span>: <span class="str">"HIGH"</span>, <span class="key">"riskScore"</span>: <span class="num">92</span>,
+      <span class="key">"threatName"</span>: <span class="str">"C2_SERVER"</span>
+    }]
+  }]
+}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLIANCE -->
+<section>
+  <div class="section-header">
+    <h2>Compliance &amp; Certification Coverage</h2>
+    <p>SOC 2 Type II, ISO 27001, PCI-DSS, and more — built in, not bolted on.</p>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tier-table">
+      <thead>
+        <tr>
+          <th>Framework</th>
+          <th>Community</th>
+          <th>Professional</th>
+          <th>Business</th>
+          <th>Enterprise</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>SOC 2 Type II</strong></td>
+          <td class="dash">—</td><td class="dash">—</td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">Full controls mapping and evidence package</td>
+        </tr>
+        <tr>
+          <td><strong>ISO 27001:2022</strong></td>
+          <td class="dash">—</td><td class="dash">—</td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">ISMS controls with gap analysis</td>
+        </tr>
+        <tr>
+          <td><strong>NIST CSF 2.0</strong></td>
+          <td class="dash">—</td>
+          <td class="check">✓</td><td class="check">✓</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">Identify, Protect, Detect, Respond, Recover mapping</td>
+        </tr>
+        <tr>
+          <td><strong>PCI-DSS v4.0</strong></td>
+          <td class="dash">—</td><td class="dash">—</td>
+          <td class="dash">—</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">Cardholder data environment controls</td>
+        </tr>
+        <tr>
+          <td><strong>CIS Controls v8</strong></td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">18 control groups, IG1–IG3 implementation</td>
+        </tr>
+        <tr>
+          <td><strong>MITRE ATT&CK</strong></td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">Full technique/tactic mapping, Navigator export</td>
+        </tr>
+        <tr>
+          <td><strong>GDPR / DPDP</strong></td>
+          <td class="dash">—</td><td class="dash">—</td>
+          <td class="check">✓</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">Data processing impact assessment support</td>
+        </tr>
+        <tr>
+          <td><strong>EU AI Act 2024</strong></td>
+          <td class="dash">—</td><td class="dash">—</td>
+          <td class="dash">—</td><td class="check">✓</td>
+          <td style="color:var(--muted);font-size:0.83rem;">AI system risk classification and compliance docs</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ENTERPRISE PROVISIONING -->
+<div style="padding:0 2rem;margin:0 auto;max-width:1280px;" id="provision">
+  <div class="provision-section">
+    <h2>Provision Your Enterprise</h2>
+    <p>Deploy SENTINEL APEX into your production environment in minutes. Full SSO, RBAC, dedicated tenancy, and SLA-backed support.</p>
+    <form id="provision-form" class="provision-form" onsubmit="submitProvision(event)">
+      <div class="full">
+        <input type="text" name="org_name" placeholder="Organization Name *" required />
+      </div>
+      <input type="text" name="contact_name" placeholder="Contact Name *" required />
+      <input type="email" name="contact_email" placeholder="Work Email *" required />
+      <input type="text" name="domain" placeholder="Domain (e.g. acme.com) *" required />
+      <select name="tier">
+        <option value="ENTERPRISE">Enterprise — Custom Pricing</option>
+        <option value="BUSINESS">Business — ₹99,999/mo</option>
+      </select>
+      <div class="full">
+        <input type="text" name="integrations" placeholder="Required integrations (e.g. Splunk, QRadar, MISP)" />
+      </div>
+      <div class="full">
+        <button type="submit" class="btn-primary" style="width:100%;font-size:0.95rem;padding:13px;">
+          Request Enterprise Provisioning
+        </button>
+      </div>
+    </form>
+    <div id="provision-result"></div>
+  </div>
+</div>
+
+<br /><br />
+
+<!-- FOOTER -->
+<footer>
+  <strong>CYBERDUDEBIVASH® SENTINEL APEX</strong> — Enterprise Integration Hub v25.0<br />
+  <span style="margin-top:0.5rem;display:block;">
+    STIX 2.1 &bull; TAXII 2.1 &bull; Splunk &bull; Microsoft Sentinel &bull; IBM QRadar &bull; Google Chronicle &bull; VirusTotal &bull; Shodan &bull; MISP &bull; OpenCTI<br />
+    SOC 2 Type II &bull; ISO 27001 &bull; NIST CSF 2.0 &bull; CIS Controls v8 &bull; PCI-DSS v4.0
+  </span>
+  <div style="margin-top:1.5rem;">
+    <a href="/">Home</a> &bull; <a href="/pricing.html">Pricing</a> &bull; <a href="/marketplace.html">Marketplace</a> &bull;
+    <a href="/enterprise-hub.html">Enterprise Hub</a> &bull; <a href="mailto:bivash@cyberdudebivash.com">Contact</a>
+  </div>
+  <p style="margin-top:1rem;">&copy; 2025 CYBERDUDEBIVASH® — All rights reserved.</p>
+</footer>
+
+<script>
+const INTEGRATIONS = [
+  // Threat Intel
+  { id:'virustotal', name:'VirusTotal', category:'threat_intel', icon:'🦠', bg:'rgba(0,212,255,0.12)', desc:'Scan IPs, domains, URLs, and files against 70+ AV engines. Real-time verdict enrichment.', badges:['TI','LIVE'], tier:'PROFESSIONAL' },
+  { id:'shodan', name:'Shodan', category:'threat_intel', icon:'🔭', bg:'rgba(124,58,237,0.12)', desc:'Internet-wide port scans, banner data, exposed service discovery, CVE correlation.', badges:['TI','LIVE'], tier:'PROFESSIONAL' },
+  { id:'alienvault', name:'AlienVault OTX', category:'threat_intel', icon:'👽', bg:'rgba(245,158,11,0.12)', desc:'Collaborative threat intelligence with millions of IoC pulses from the global security community.', badges:['TI'], tier:'COMMUNITY' },
+  { id:'abuseipdb', name:'AbuseIPDB', category:'threat_intel', icon:'🚫', bg:'rgba(239,68,68,0.12)', desc:'Community-sourced IP reputation database with 90-day abuse history and category classification.', badges:['TI'], tier:'COMMUNITY' },
+  { id:'threatfox', name:'ThreatFox', category:'threat_intel', icon:'🦊', bg:'rgba(16,185,129,0.12)', desc:'Abuse.ch IoC sharing platform. Malware hashes, C2 domains, botnet tracking.', badges:['TI'], tier:'COMMUNITY' },
+  { id:'misp', name:'MISP', category:'threat_intel', icon:'🔗', bg:'rgba(0,212,255,0.12)', desc:'Open-source threat sharing platform. Bi-directional sync with your MISP instance via REST API.', badges:['TI','ENTERPRISE'], tier:'BUSINESS' },
+  { id:'opencti', name:'OpenCTI', category:'threat_intel', icon:'🕸️', bg:'rgba(124,58,237,0.12)', desc:'Structured threat intelligence management with STIX 2.1 native import/export.', badges:['TI','ENTERPRISE'], tier:'BUSINESS' },
+  { id:'recorded_future', name:'Recorded Future', category:'threat_intel', icon:'📊', bg:'rgba(245,158,11,0.12)', desc:'AI-powered threat intelligence platform. Fusion with SENTINEL APEX risk scoring.', badges:['TI','ENTERPRISE'], tier:'ENTERPRISE' },
+  { id:'ibm_xforce', name:'IBM X-Force', category:'threat_intel', icon:'💠', bg:'rgba(0,212,255,0.12)', desc:'Global threat data from IBM Security. IP reputation, URL categorization, malware analysis.', badges:['TI','ENTERPRISE'], tier:'ENTERPRISE' },
+  { id:'mandiant', name:'Mandiant TI', category:'threat_intel', icon:'🎯', bg:'rgba(239,68,68,0.12)', desc:'Nation-state actor tracking, APT profiles, and zero-day intelligence from Mandiant frontline.', badges:['TI','ENTERPRISE'], tier:'ENTERPRISE' },
+  // SIEM / SOAR
+  { id:'splunk', name:'Splunk', category:'siem_soar', icon:'📈', bg:'rgba(124,58,237,0.12)', desc:'Stream enriched threat events to Splunk via HEC. Custom sourcetypes and index routing.', badges:['SIEM','LIVE'], tier:'PROFESSIONAL' },
+  { id:'sentinel', name:'Microsoft Sentinel', category:'siem_soar', icon:'🛡️', bg:'rgba(0,212,255,0.12)', desc:'Push normalized events to Azure Log Analytics / Sentinel via DCR ingestion endpoint.', badges:['SIEM','LIVE'], tier:'PROFESSIONAL' },
+  { id:'qradar', name:'IBM QRadar', category:'siem_soar', icon:'🔵', bg:'rgba(16,185,129,0.12)', desc:'CEF-formatted log ingestion via syslog or REST API. Custom DSM support available.', badges:['SIEM','LIVE'], tier:'PROFESSIONAL' },
+  { id:'chronicle', name:'Google Chronicle', category:'siem_soar', icon:'🌐', bg:'rgba(245,158,11,0.12)', desc:'UDM event ingestion via Chronicle Ingestion API. Normalized entity and network events.', badges:['SIEM','LIVE'], tier:'PROFESSIONAL' },
+  { id:'elastic', name:'Elastic SIEM', category:'siem_soar', icon:'🟡', bg:'rgba(245,158,11,0.12)', desc:'Elasticsearch document ingestion. ECS-compatible field mapping for seamless rule execution.', badges:['SIEM'], tier:'BUSINESS' },
+  { id:'cortex_xsiam', name:'Cortex XSIAM', category:'siem_soar', icon:'🦁', bg:'rgba(239,68,68,0.12)', desc:'Palo Alto Cortex XSIAM dataset push. AI-enriched alerts with MITRE mapping.', badges:['SIEM','ENTERPRISE'], tier:'ENTERPRISE' },
+  { id:'thehive', name:'TheHive', category:'siem_soar', icon:'🐝', bg:'rgba(245,158,11,0.12)', desc:'Open-source SOC platform. Auto-create cases and alerts from SENTINEL APEX findings.', badges:['SOAR'], tier:'BUSINESS' },
+  { id:'aws_securityhub', name:'AWS Security Hub', category:'siem_soar', icon:'☁️', bg:'rgba(245,158,11,0.12)', desc:'ASFF-formatted findings push to AWS Security Hub. Cross-account aggregation support.', badges:['SIEM','ENTERPRISE'], tier:'ENTERPRISE' },
+  // Frameworks
+  { id:'stix', name:'STIX 2.1', category:'frameworks', icon:'📦', bg:'rgba(0,212,255,0.12)', desc:'Export complete threat intelligence bundles in OASIS STIX 2.1 format. All object types supported.', badges:['FRAMEWORK','LIVE'], tier:'COMMUNITY' },
+  { id:'taxii', name:'TAXII 2.1', category:'frameworks', icon:'📡', bg:'rgba(124,58,237,0.12)', desc:'Pull from curated TAXII 2.1 collections. Compatible with any TAXII-aware platform.', badges:['FRAMEWORK','LIVE'], tier:'COMMUNITY' },
+  { id:'mitre', name:'MITRE ATT&CK', category:'frameworks', icon:'⚔️', bg:'rgba(239,68,68,0.12)', desc:'Full technique/tactic mapping across Enterprise, ICS, and Mobile. Navigator layer export.', badges:['FRAMEWORK'], tier:'COMMUNITY' },
+  { id:'sigma', name:'Sigma Rules', category:'frameworks', icon:'🔍', bg:'rgba(16,185,129,0.12)', desc:'Download 500+ curated Sigma detection rules mapped to SENTINEL APEX intelligence.', badges:['FRAMEWORK'], tier:'PROFESSIONAL' },
+  { id:'yara', name:'YARA Rules', category:'frameworks', icon:'🧬', bg:'rgba(0,212,255,0.12)', desc:'Malware family YARA rules for endpoint and memory scanning. Updated daily.', badges:['FRAMEWORK'], tier:'PROFESSIONAL' },
+  // Compliance
+  { id:'soc2', name:'SOC 2 Type II', category:'compliance', icon:'✅', bg:'rgba(16,185,129,0.12)', desc:'Full controls mapping and evidence package for SOC 2 Type II audit readiness.', badges:['COMPLIANCE','ENTERPRISE'], tier:'BUSINESS' },
+  { id:'iso27001', name:'ISO 27001:2022', category:'compliance', icon:'🏅', bg:'rgba(245,158,11,0.12)', desc:'ISMS controls mapping with gap analysis. Evidence collection for certification audits.', badges:['COMPLIANCE','ENTERPRISE'], tier:'BUSINESS' },
+  { id:'nist_csf', name:'NIST CSF 2.0', category:'compliance', icon:'🇺🇸', bg:'rgba(0,212,255,0.12)', desc:'IDENTIFY → PROTECT → DETECT → RESPOND → RECOVER function mapping with maturity scoring.', badges:['COMPLIANCE'], tier:'PROFESSIONAL' },
+  { id:'pci_dss', name:'PCI-DSS v4.0', category:'compliance', icon:'💳', bg:'rgba(239,68,68,0.12)', desc:'Cardholder data environment threat monitoring and control validation for PCI compliance.', badges:['COMPLIANCE','ENTERPRISE'], tier:'ENTERPRISE' },
+];
+
+const BADGE_CLASS = { TI:'badge-ti', SIEM:'badge-siem', SOAR:'badge-siem', COMPLIANCE:'badge-compliance', FRAMEWORK:'badge-framework', LIVE:'badge-live', ENTERPRISE:'badge-enterprise' };
+
+function renderGrid(cat) {
+  const items = cat === 'all' ? INTEGRATIONS : INTEGRATIONS.filter(i => i.category === cat);
+  const grid = document.getElementById('integration-grid');
+  grid.innerHTML = items.map(i => `
+    <div class="int-card" data-cat="${i.category}">
+      <div class="int-card-head">
+        <div class="int-logo" style="background:${i.bg}">${i.icon}</div>
+        <div>
+          <div class="int-name">${i.name}</div>
+          <div class="int-type">${i.category.replace('_',' ')}</div>
+        </div>
+      </div>
+      <div class="int-desc">${i.desc}</div>
+      <div class="int-badges">${i.badges.map(b=>`<span class="int-badge ${BADGE_CLASS[b]||'badge-ti'}">${b}</span>`).join('')}
+        <span class="int-badge" style="color:var(--muted);border-color:var(--border)">${i.tier}+</span>
+      </div>
+      <div class="int-action">
+        <div class="int-connect-btn" onclick="connectIntegration('${i.id}','${i.name}')">Connect →</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.cat-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    renderGrid(tab.dataset.cat);
+  });
+});
+
+renderGrid('all');
+
+// SIEM tabs
+document.querySelectorAll('.siem-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.siem-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.siem-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+  });
+});
+
+async function connectIntegration(id, name) {
+  try {
+    const res = await fetch('/api/integrations/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ integration_id: id })
+    });
+    const data = await res.json();
+    if (data.error === 'auth_required' || res.status === 401) {
+      window.location.href = '/login.html?return=/integrations.html&integration=' + id;
+    } else {
+      alert(`${name} integration initiated. Check your email for setup instructions.`);
+    }
+  } catch {
+    window.location.href = '/login.html?return=/integrations.html';
+  }
+}
+
+async function submitProvision(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form));
+  const result = document.getElementById('provision-result');
+  result.innerHTML = '<span class="spinner"></span> Submitting request...';
+  try {
+    const res = await fetch('/api/enterprise/provision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const resp = await res.json();
+    if (res.ok) {
+      result.innerHTML = '<span style="color:var(--accent3)">✓ Request received. Our enterprise team will contact you within 24 hours.</span>';
+      form.reset();
+    } else {
+      result.innerHTML = `<span style="color:var(--accent5)">${resp.error || 'Submission failed. Please email bivash@cyberdudebivash.com'}</span>`;
+    }
+  } catch {
+    result.innerHTML = '<span style="color:var(--accent5)">Network error. Please email bivash@cyberdudebivash.com</span>';
+  }
+}
+
+// Load live catalog
+fetch('/api/integrations/catalog').then(r=>r.json()).catch(()=>null);
+</script>
+</body>
+</html>
