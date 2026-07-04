@@ -150,13 +150,31 @@ production-verified.
 | Customer Adoption Dashboard | `PHASE_IX_RELEASE_CANDIDATE_REPORT.md` §6 (no new real-customer data can exist yet) |
 | Operational Readiness / Production Health Dashboard | `PRODUCTION_HEALTH_SCORECARD.md` (Ed. 5) |
 
-## 7. Release Verification Addendum
+## 7. Release Verification Addendum — GA-B1 **Verified** in production
 
-*Appended at the Phase X release gate: gated pipeline result and live
-production verification of the credential-recovery endpoints
-(`forgot-password` 200-generic for known and unknown emails alike;
-`reset-password` 400 on an invalid token; login UI serving the new views).
-Until recorded, GA-B1's production verification status is **Pending**.*
+**Release:** `main` fast-forwarded `bf12e10 → 94dcb07` · Test & Quality Gate
+passed · Deploy to Cloudflare run **#624** completed/success (includes
+post-deploy smoke) · production `/api/version` **and** `/version.json` both
+served `94dcb07` ~165 s after push.
+
+**Live production verification** (2026-07-04, fresh throwaway account, full
+cleanup):
+
+| Probe | Pre-release | Post-release (`94dcb07`) |
+|-------|-------------|--------------------------|
+| `POST /api/auth/forgot-password` (real account) | **404** | **200** generic |
+| Same request for a nonexistent email | 404 | **200, byte-identical** to the real-account response — no enumeration oracle |
+| Malformed email | 404 | **400** with clear message |
+| `POST /api/auth/reset-password` invalid token | 404 | **400** — "Invalid or expired reset link. Request a new one." |
+| Weak password | 404 | **400** (strength enforced) |
+| Login UI | no affordance | "Forgot password?" link, forgot + reset views, endpoints wired |
+| Auth regression control | — | login with unchanged password still **200**; account delete 200 |
+
+GA-B1 verification status: **Verified** (flow, endpoints, UI). Credential
+recovery: **GA APPROVED WITH DOCUMENTED LIMITATIONS** — the single remaining
+limitation is GA-O5: email *delivery* needs one real inbox round-trip with
+`RESEND_API_KEY` configured (owner). The happy-path token journey is
+regression-locked end-to-end in `phase10PasswordReset.test.mjs`.
 
 ---
 
