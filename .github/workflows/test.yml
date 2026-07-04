@@ -157,3 +157,37 @@ jobs:
           npx playwright install --with-deps chromium
           npx playwright test tests/e2e --reporter=line || \
             { echo "::error::E2E smoke failed"; exit 1; }
+
+  # ── Worker bundle-size gate (required) ───────────────────────────────────
+  # Closes risk R-13: the Worker bundle (1.32 MB gzip at gate introduction) is
+  # capped by Cloudflare at 3 MB gzip — silent growth past that ceiling would
+  # make production undeployable. Fail the gate at 2.5 MB gzip so the trend is
+  # caught with headroom to react.
+  bundle-size:
+    name: Worker Bundle Size Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: workers } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24", cache: "npm", cache-dependency-path: workers/package-lock.json }
+      - run: npm ci || npm install
+      - name: Build bundle (wrangler dry-run) and enforce the gzip ceiling
+        run: |
+          npx wrangler deploy --dry-run --outdir /tmp/bundle-check
+          raw=$(wc -c < /tmp/bundle-check/index.js)
+          gz=$(gzip -c /tmp/bundle-check/index.js | wc -c)
+          limit=2621440   # 2.5 MiB gate
+          cf_cap=3145728  # Cloudflare hard cap (3 MiB gzip)
+          pct=$(( gz * 100 / cf_cap ))
+          echo "Bundle: raw ${raw} bytes · gzip ${gz} bytes (${pct}% of the Cloudflare 3 MiB cap)"
+          {
+            echo "## Worker bundle size"
+            echo "- gzip: **${gz} bytes** (${pct}% of Cloudflare's 3 MiB cap; gate at 2.5 MiB)"
+            echo "- raw: ${raw} bytes"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$gz" -gt "$limit" ]; then
+            echo "::error::Worker bundle ${gz} bytes gzip exceeds the 2.5 MiB gate — prune before it hits Cloudflare's 3 MiB deploy cap (risk R-13)."
+            exit 1
+          fi

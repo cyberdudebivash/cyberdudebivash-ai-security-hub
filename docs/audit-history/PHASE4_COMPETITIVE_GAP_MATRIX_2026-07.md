@@ -4,6 +4,8 @@
 
 Legend: ✅ competitive · ◐ partial · ✗ missing
 
+> **Erratum (2026-07-04, remediation pass):** the "STIX/TAXII interchange — ✗ missing" cell in §1 was wrong. STIX 2.1 export **exists and is routed**: `GET /api/v1/intel/stix.json` (PRO+, per the public pricing matrix) and the entitlement-gated `GET /api/cti/v2/stix/export`. The audit's route-literal grep missed them. What WAS broken has been fixed this pass: the `/api/intel/*` responses' `stix_available` flag was always undefined, and the internal tier flag said PRO had no STIX while pricing sold PRO `stix_export: true` — both corrected and regression-locked. A **TAXII 2.1 server** (poll/collections protocol) remains genuinely missing; §1's row should read: STIX ✅ · TAXII ✗.
+
 ## 1. Threat Intelligence Platform (TIP) category
 
 | Enterprise expectation | Platform | Evidence / gap |

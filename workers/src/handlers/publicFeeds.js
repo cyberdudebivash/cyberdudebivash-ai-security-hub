@@ -25,10 +25,19 @@ import {
 const PUBLISHER = 'CYBERDUDEBIVASH® Sentinel APEX';
 const UPGRADE_URL = 'https://cyberdudebivash.in/#pricing';
 
-function jsonError(message, status) {
+function jsonError(message, status, extraHeaders = {}) {
   return new Response(JSON.stringify({ error: message, upgrade_url: UPGRADE_URL }, null, 2), {
-    status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Powered-By': PUBLISHER },
+    status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Powered-By': PUBLISHER, ...extraHeaders },
   });
+}
+
+// 429 body/headers that distinguish the advertised per-minute window from the
+// daily quota, so integrators can implement correct backoff.
+function rateLimited(rl) {
+  if (rl.reason === 'rate_per_min') {
+    return jsonError(`Rate limit exceeded: ${rl.limit} requests/minute on your plan. Retry in 60s.`, 429, { 'Retry-After': '60' });
+  }
+  return jsonError('Daily quota exceeded for your plan. Upgrade: ' + UPGRADE_URL, 429);
 }
 
 function parseLimit(request) {
@@ -326,14 +335,14 @@ export async function handlePublicFeeds(request, env, path) {
       return jsonError('STIX 2.1 export requires a Pro plan or above. Upgrade: ' + UPGRADE_URL, 402);
     }
     const rl = await enforceDailyLimit(env, ent, ent.identity);
-    if (!rl.allowed) return jsonError('Daily quota exceeded for your plan. Upgrade: ' + UPGRADE_URL, 429);
+    if (!rl.allowed) return rateLimited(rl);
     return jsonResponse(await buildStix(env, ent, reqLimit), 300, rateHeaders(rl, ent));
   }
 
   // Paid (keyed) callers → dynamic, full-detail, rate-limited (no shared cache).
   if (ent.keyed) {
     const rl = await enforceDailyLimit(env, ent, ent.identity);
-    if (!rl.allowed) return jsonError('Daily quota exceeded for your plan. Upgrade: ' + UPGRADE_URL, 429);
+    if (!rl.allowed) return rateLimited(rl);
     const headers = rateHeaders(rl, ent);
     switch (path) {
       case '/api/feed.json':                return jsonResponse(await buildFeed(env, ent, reqLimit),     60, headers);

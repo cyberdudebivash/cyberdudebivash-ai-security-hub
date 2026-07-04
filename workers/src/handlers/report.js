@@ -9,6 +9,7 @@ import { buildReport, storeReport, getReportByToken, getReportById } from '../li
 import { parseBody } from '../middleware/validation.js';
 import { getCachedScanResult } from '../lib/scanResultCache.js';
 import { generateHTMLReport } from '../lib/htmlReport.js';
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── GET /api/report/:token ───────────────────────────────────────────────────
 export async function handleReportDownload(request, env, authCtx = {}) {
@@ -38,6 +39,23 @@ export async function handleReportDownload(request, env, authCtx = {}) {
   // Check expiry
   if (report.expires_at && new Date(report.expires_at) < new Date()) {
     return Response.json({ error: 'Report expired', expires_at: report.expires_at }, { status: 410 });
+  }
+
+  // Private reports (visibility:'private' at generation) are owner-bound: the
+  // capability token alone is NOT sufficient — the caller must authenticate as
+  // the user who generated the report. Default (shareable-link) reports are
+  // unchanged.
+  if (report.access?.private) {
+    if (!isRealUser(authCtx)) {
+      return Response.json({
+        error: 'Authentication required',
+        hint:  'This report was generated with visibility:"private" — sign in as its owner to download it.',
+      }, { status: 401 });
+    }
+    const callerId = authCtx.user_id ?? authCtx.userId;
+    if (authCtx.isAdmin !== true && String(callerId) !== String(report.access.owner_id)) {
+      return Response.json({ error: 'Forbidden', hint: 'This private report belongs to another account.' }, { status: 403 });
+    }
   }
 
   // Serve the styled, print-to-PDF HTML report when available — this is what
@@ -95,12 +113,26 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
     }, { status: 422 });
   }
 
+  // Optional enterprise mode: visibility:'private' binds the report to the
+  // generating account — the download link then requires authentication as
+  // that owner instead of being an anyone-with-the-link capability URL.
+  const wantsPrivate = body?.visibility === 'private';
+  if (wantsPrivate && !isRealUser(authCtx)) {
+    return Response.json({
+      error: 'Authentication required for private reports',
+      hint:  'visibility:"private" binds the report to your account — call this endpoint with a valid session token or API key.',
+    }, { status: 401 });
+  }
+
   const meta = {
     email:  authCtx.owner_email || body.email || null,
     tier:   authCtx.tier || 'FREE',
   };
 
   const report     = buildReport(scanResult, meta);
+  if (wantsPrivate) {
+    report.access = { private: true, owner_id: authCtx.user_id ?? authCtx.userId };
+  }
   let htmlContent  = null;
   try {
     htmlContent = generateHTMLReport(scanResult, { report_id: report.report_id });
@@ -122,6 +154,7 @@ export async function handleReportGenerate(request, env, authCtx = {}) {
     generated_at:   report.generated_at,
     expires_at:     report.expires_at,
     target:         report.target,
+    visibility:     wantsPrivate ? 'private' : 'shareable',
     download_token: storeInfo?.download_token ?? null,
     download_url:   storeInfo ? `${origin}/api/report/${storeInfo.download_token}` : null,
     report:         report,  // inline for convenience

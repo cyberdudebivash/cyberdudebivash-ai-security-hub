@@ -206,7 +206,11 @@ export async function enqueueScanJob(env, jobData, authCtx = {}) {
     poll_url:     `/api/jobs/${jobId}`,
     result_url:   `/api/jobs/${jobId}/result`,
     created_at:   new Date().toISOString(),
-    estimated_eta: priority >= 2 ? '< 5s' : priority === 1 ? '< 10s' : '< 30s',
+    // Honest ETAs: live-measured free-tier queue drain is ~1-2 minutes end to
+    // end (Phase II customer-journey verification), not the "< 30s" this field
+    // previously promised. Higher queue priority shortens the wait but the
+    // consumer batch cadence dominates — do not advertise below-minute times.
+    estimated_eta: priority >= 2 ? '~1 min' : priority === 1 ? '1-2 min' : '1-3 min',
   };
 }
 

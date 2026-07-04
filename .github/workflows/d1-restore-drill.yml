@@ -1,0 +1,98 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Automated D1 Restore Drill
+# =============================================================================
+# Closes operational risk R-06: "restore has never been drilled." The nightly
+# backup workflow proves we can EXPORT the database; this workflow proves —
+# every week, automatically, against the newest REAL nightly artifact — that
+# the export can be RESTORED: decompress → restore into a throwaway SQLite DB →
+# PRAGMA integrity_check → schema/table-count assertions
+# (scripts/d1-restore-drill.mjs, itself regression-tested both directions in
+# workers/test/restoreDrill.test.mjs).
+#
+# A failing run means the current backups may not be trustworthy — treat it as
+# an S1 per DISASTER_RECOVERY_RUNBOOK.md §3.0 (the drill is the mandatory
+# pre-flight before any production restore).
+# =============================================================================
+
+name: D1 Restore Drill
+
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC — after that night's 02:30 backup
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Backup run ID to drill (default: latest successful nightly)"
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: d1-restore-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Restore the latest real backup artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Locate the latest successful nightly backup run
+        id: locate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          run_id="${{ github.event.inputs.run_id }}"
+          if [ -z "$run_id" ]; then
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow d1-backup.yml \
+                     --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "::error::No successful d1-backup.yml run found — nothing to drill."
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Drilling backup artifact from run $run_id"
+
+      - name: Download the backup artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir -p /tmp/drill
+          gh run download "${{ steps.locate.outputs.run_id }}" --repo "$GITHUB_REPOSITORY" --dir /tmp/drill
+          find /tmp/drill -type f -name '*.sql.gz' -o -type f -name '*.sql' | head -5
+
+      - name: Run the restore drill against the real artifact
+        run: |
+          set -e
+          dump=$(find /tmp/drill -type f \( -name '*.sql.gz' -o -name '*.sql' \) | head -1)
+          if [ -z "$dump" ]; then
+            echo "::error::Backup run contained no .sql/.sql.gz artifact."
+            exit 1
+          fi
+          echo "Artifact: $dump ($(stat -c%s "$dump") bytes)"
+          # The production schema has 200+ tables; require a healthy floor so a
+          # truncated-but-parseable dump can never pass.
+          node scripts/d1-restore-drill.mjs "$dump" --min-tables 50
+
+      - name: Write drill summary
+        if: always()
+        run: |
+          {
+            echo "## D1 Restore Drill — ${{ job.status }}"
+            echo "- Backup run drilled: ${{ steps.locate.outputs.run_id }}"
+            echo "- $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "- A failure here means current backups may not be restorable — see DISASTER_RECOVERY_RUNBOOK.md §3.0."
+          } >> "$GITHUB_STEP_SUMMARY"

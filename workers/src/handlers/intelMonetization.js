@@ -51,9 +51,31 @@ export async function resolveFeedTier(request, env) {
   };
 }
 
-// ─── Daily rate limit (KV counter; only enforced for keyed/dynamic requests) ──
+// ─── Rate limits (KV counters; only enforced for keyed/dynamic requests) ──────
+// Enforces BOTH limits the pricing matrix advertises (`rate_per_min` + daily
+// quota). The per-minute window applies to every tier — including the
+// unlimited-daily ENTERPRISE/MSSP plans, whose advertised 120/240 rpm was
+// previously not enforced anywhere. KV counters are best-effort (fail open on
+// KV outage — availability over enforcement, consistent with risk R-14).
 export async function enforceDailyLimit(env, ent, identity) {
-  if (!env?.SECURITY_HUB_KV || ent.daily_limit < 0) {
+  if (!env?.SECURITY_HUB_KV) {
+    return { allowed: true, remaining: -1, limit: ent.daily_limit };
+  }
+
+  // Per-minute window first (advertised as rate_per_min in pricing.json).
+  const rpm = ent.rpm > 0 ? ent.rpm : 0;
+  if (rpm > 0) {
+    const minute = new Date().toISOString().slice(0, 16); // 2026-07-04T09:41
+    const mKey = `intel:rl:min:${identity}:${minute}`;
+    let burst = 0;
+    try { burst = parseInt((await env.SECURITY_HUB_KV.get(mKey)) || '0', 10) || 0; } catch {}
+    if (burst >= rpm) {
+      return { allowed: false, reason: 'rate_per_min', remaining: 0, limit: rpm, retry_after: 60 };
+    }
+    env.SECURITY_HUB_KV.put(mKey, String(burst + 1), { expirationTtl: 120 }).catch(() => {});
+  }
+
+  if (ent.daily_limit < 0) {
     return { allowed: true, remaining: -1, limit: ent.daily_limit };
   }
   const day = new Date().toISOString().slice(0, 10);
@@ -61,7 +83,7 @@ export async function enforceDailyLimit(env, ent, identity) {
   let used = 0;
   try { used = parseInt((await env.SECURITY_HUB_KV.get(key)) || '0', 10) || 0; } catch {}
   if (used >= ent.daily_limit) {
-    return { allowed: false, remaining: 0, limit: ent.daily_limit };
+    return { allowed: false, reason: 'daily_quota', remaining: 0, limit: ent.daily_limit };
   }
   // Best-effort increment (TTL to end of day-ish: 26h covers timezone slack).
   env.SECURITY_HUB_KV.put(key, String(used + 1), { expirationTtl: 93600 }).catch(() => {});

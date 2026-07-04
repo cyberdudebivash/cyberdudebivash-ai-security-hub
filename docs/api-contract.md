@@ -1,258 +1,66 @@
-# CYBERDUDEBIVASH AI Security Hub — API Contract v3.0
+# CYBERDUDEBIVASH AI Security Hub — API Contract (v40)
 
-**Base URL:** `https://cyberdudebivash-security-hub.workers.dev`
-**Auth:** Optional `x-api-key` header. Without it: FREE tier (IP-based, 5 req/day).
+**Base URL:** `https://cyberdudebivash.in` (fallback origin: `https://cyberdudebivash-security-hub.workers.dev`)
+**Interactive docs:** https://cyberdudebivash.in/api-docs · **Endpoint directory:** `GET /api`
+**Superseded:** the previous v3.0 contract in this file described the retired deterministic-engine era (workers.dev base URL, 5 req/day FREE, ₹9,999 PRO) and no longer matched the platform — flagged NEEDS REMEDIATION in `docs/audit-history/PHASE4_GLOBAL_RELEASE_DECISION_2026-07.md` (#16) and replaced by this document.
 
----
+Everything below is stated from verified behavior (regression suite + same-day live verification, 2026-07-04), not aspiration.
 
 ## Authentication
 
-| Header | Value | Effect |
-|--------|-------|--------|
-| `x-api-key` | `sk_live_...` | Uses registered tier (FREE/PRO/ENTERPRISE) |
-| *(none)* | — | IP fallback, FREE tier (5 req/day) |
+| Method | How | Notes |
+|---|---|---|
+| Session JWT | `Authorization: Bearer <token>` from `POST /api/auth/login` / `signup` | Refresh via `POST /api/auth/refresh` |
+| API key | `x-api-key: <key>` | First key issued automatically at signup; manage via `/api/keys` |
+| None | — | Anonymous IP-fallback: FREE-tier limits, public/preview surfaces only |
 
-**Tier Limits:**
+## Plans & limits (canonical tier table — enforced)
 
-| Tier | Daily Limit | Burst/Min | Price |
-|------|-------------|-----------|-------|
-| FREE | 5 req/day | 2 req/min | ₹0 |
-| PRO | 500 req/day | 20 req/min | ₹9,999/mo |
-| ENTERPRISE | Unlimited | 60 req/min | Custom |
+| Tier | Price (INR/mo) | API daily | Burst/min | API keys |
+|---|---|---|---|---|
+| FREE | 0 | 5 | 2 | 2 |
+| STARTER | 499 | 20 | 5 | 2 |
+| PRO | 1,499 | 500 | 20 | 5 |
+| ENTERPRISE | 4,999 | unlimited | 60 | 20 |
+| MSSP | 9,999 | unlimited | 120 | unlimited |
 
----
+Live source of truth: `GET /api/auth/plans`. The **threat-intel feed product** has its own metered tiers — `GET /api/v1/intel/pricing.json` (FREE 100/day·10 rpm → MSSP unlimited·240 rpm). **Both the daily quota and the per-minute rate are enforced** (the per-minute window was advertised-only before 2026-07-04; a 429 for the minute window carries `Retry-After: 60`).
 
-## Standard Response Headers
+## Core customer endpoints (verified live)
 
-Every response includes:
-```
-X-RateLimit-Tier: FREE
-X-RateLimit-Remaining: 4
-X-RateLimit-Reset: tomorrow UTC midnight
-X-Scan-ID: sc_lx3j2k8a9f
-X-Powered-By: CYBERDUDEBIVASH AI Security Hub v3.0
-```
+| Endpoint | Purpose | Verified behavior |
+|---|---|---|
+| `POST /api/auth/signup` | Create account | 201 → access token + first API key, tier FREE |
+| `POST /api/auth/login` / `GET /api/auth/me` | Session | 200 / real user row |
+| `POST /api/scan/async/:module` | Queue a scan (domain, ai, redteam, identity, compliance) | 202 → `job_id`, `poll_url`, honest `estimated_eta` (~1–3 min by queue priority) |
+| `GET /api/jobs/:id` · `/api/jobs/:id/result` | Poll job / fetch result | Owner-scoped (404 cross-tenant); results carry `data_source: live_dns` etc. |
+| `GET /api/scan/history` | Per-user scan history | Scoped to the caller |
+| `POST /api/report/generate` | Report from `scan_id` or inline `scan_result` | 201 → `download_url`. Optional `visibility:"private"` binds the report to your account: the download then requires auth as the owner (401/403 otherwise). Default links remain shareable capability URLs (unguessable token, 7-day expiry) |
+| `GET /api/report/:token` | Download report | Styled HTML (print-to-PDF); 410 after expiry |
+| `POST /api/copilot/chat` | Grounded AI copilot | Cites real CVE data; explicitly acknowledges unknowns — never fabricates |
+| `GET /api/platform/metrics` | Live platform metrics (SSOT) | Honest structured 503 with null values when unavailable |
+| `DELETE /api/auth/delete-account` | GDPR erasure | Purges api_keys / scan_history / scan_jobs (incl. queued) / mfa_secrets; login → 401 after |
 
----
+## Threat-intel product endpoints
 
-## Endpoints
+| Endpoint | Tier | Notes |
+|---|---|---|
+| `GET /api/v1/intel/latest.json` | public preview (edge-cached) / full detail with key | 25-item FREE preview is intentional |
+| `GET /api/v1/intel/kev.json` | STARTER+ (full KEV) | |
+| `GET /api/v1/intel/stix.json` | **PRO+** | STIX 2.1 bundle for SIEM/TIP ingestion |
+| `GET /api/v1/intel/pricing.json` | public | Machine-readable pricing matrix |
+| `GET/POST /api/intel/ioc · cve · actor · ttp · risk` | FREE (ioc,cve) / PRO+ (all) | Responses carry truthful `stix_available` + `stix_endpoint`; 429s include `retry_after` |
+| `GET /api/cti/v2/stix/export` | entitlement-gated | Enterprise CTI export path |
 
-### GET /api/health
-```json
-{
-  "status": "ok",
-  "version": "3.0.0",
-  "modules": ["domain","ai","redteam","identity","compliance"]
-}
-```
+## Standard response conventions
 
-### GET /api
-Returns full API info and endpoint directory.
+- Security headers on every response (HSTS preload, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`) plus **`X-Request-ID`** — quote it in support requests; it joins your call to the worker's structured logs.
+- Rate headers on metered feeds: `X-RateLimit-Tier/-Limit/-Remaining`; 429 bodies distinguish `rate_per_min` (with `Retry-After: 60`) from daily quota.
+- Errors are structured JSON: 400 validation (`{error, message, field}`), 401/403 auth, 404 `{error:"Not Found", path, method}`, 410 expired, 413 oversize, 429 quota, 500 `{code:"ERR_UNHANDLED", request_id}` via the global exception boundary — no raw HTML errors.
 
----
+## Status & transparency endpoints
 
-### POST /api/scan/domain
-
-**Request:**
-```json
-{ "domain": "example.com" }
-```
-
-**Free Response:**
-```json
-{
-  "module": "domain_scanner",
-  "version": "3.0.0",
-  "target": "example.com",
-  "risk_score": 62,
-  "risk_level": "HIGH",
-  "grade": "D",
-  "tls_grade": "FAIR",
-  "dnssec_enabled": false,
-  "exposed_subdomain_count": 3,
-  "findings": [
-    {
-      "id": "DOM-001",
-      "title": "TLS/SSL Configuration",
-      "severity": "MEDIUM",
-      "description": "TLS grade: FAIR. Configuration meets baseline...",
-      "recommendation": "Enforce TLS 1.3 minimum.",
-      "cvss_base": 4.3,
-      "is_premium": false
-    }
-  ],
-  "locked_findings": [
-    { "id": "DOM-004", "title": "Subdomain Enumeration", "severity": "HIGH", "preview": "3 exposed subdomains detected...", "locked": true }
-  ],
-  "locked_findings_count": 4,
-  "is_premium_locked": true,
-  "monetization": {
-    "unlock_price": "₹199",
-    "payment_url": "https://rzp.io/l/cyberdudebivash-domain",
-    "upgrade_cta": "Unlock 4 additional findings + full Domain Vulnerability Report for ₹199"
-  }
-}
-```
+`GET /api/health` (per-component latency) · `GET /api/version` (deployed commit) · `GET /api/uptime` (availability with `degraded_pct` disclosed separately) · `GET /api/status`, `/api/incidents` · trust center: `/trust-center.html`, sub-processors disclosed in `SUB_PROCESSOR_LIST.md`.
 
 ---
-
-### POST /api/scan/ai
-
-**Request:**
-```json
-{ "model_name": "GPT-4o", "use_case": "chatbot" }
-```
-`use_case` options: `chatbot` · `code-generation` · `rag` · `agent` · `recommendation` · `classification` · `voice` · `other`
-
----
-
-### POST /api/scan/redteam
-
-**Request:**
-```json
-{ "target_org": "Acme Corp", "scope": "external" }
-```
-`scope` options: `external` · `internal` · `full` · `web` · `cloud` · `hybrid` · `api`
-
----
-
-### POST /api/scan/identity
-
-**Request:**
-```json
-{ "org_name": "Acme Corp", "identity_provider": "azure-ad" }
-```
-`identity_provider` options: `azure-ad` · `okta` · `google-workspace` · `auth0` · `onelogin` · `jumpcloud` · `ping` · `duo` · `other`
-
----
-
-### POST /api/generate/compliance
-
-**Request:**
-```json
-{ "org_name": "Acme Corp", "framework": "iso27001" }
-```
-`framework` options: `iso27001` · `soc2` · `gdpr` · `pcidss` · `dpdp` · `hipaa`
-
----
-
-### POST /api/leads/capture
-
-**Request:**
-```json
-{ "email": "user@company.com", "scan_id": "sc_abc123", "module": "domain" }
-```
-
-**Response (201):**
-```json
-{
-  "status": "ok",
-  "lead_id": "ld_m2k9r5x",
-  "message": "Email captured successfully."
-}
-```
-
----
-
-### POST /api/contact/enterprise
-
-**Request:**
-```json
-{
-  "company_name": "Acme Corp",
-  "email": "security@acme.com",
-  "domain": "acme.com",
-  "requirements": "We need quarterly red team simulations and ISO 27001 compliance support.",
-  "package": "enterprise"
-}
-```
-
-**Response (201):**
-```json
-{
-  "status": "ok",
-  "contact_id": "ent_p3x7q2",
-  "message": "Enterprise inquiry received. Response within 24 hours.",
-  "direct_contact": {
-    "email": "bivashnayak.ai007@gmail.com",
-    "phone": "+918179881447"
-  }
-}
-```
-
----
-
-### POST /api/webhooks/razorpay
-
-Razorpay webhook endpoint. Signature verified via `x-razorpay-signature` header.
-On `payment.captured` event: unlocks full report access (24h token stored in KV).
-
----
-
-## Error Responses
-
-### 400 Bad Request
-```json
-{ "error": "Validation failed", "message": "domain must be 4–253 characters", "field": "domain" }
-```
-
-### 401 Unauthorized
-```json
-{ "error": "Invalid API key", "hint": "Check your key or generate a new one", "upgrade_url": "https://cyberdudebivash.in/#pricing" }
-```
-
-### 413 Payload Too Large
-```json
-{ "error": "Payload too large", "max_size_bytes": 16384 }
-```
-
-### 429 Rate Limited
-```json
-{
-  "error": "Rate limit exceeded",
-  "reason": "daily_limit_reached",
-  "tier": "FREE",
-  "remaining": 0,
-  "reset": "tomorrow UTC midnight",
-  "retry_after": 86400,
-  "upgrade_url": "https://cyberdudebivash.in/#pricing"
-}
-```
-
-### 500 Internal Error
-```json
-{ "error": "Internal server error", "request_id": "abc123", "support": "bivash@cyberdudebivash.com" }
-```
-
----
-
-## Deployment (3 Commands)
-
-```bash
-# 1. Create KV namespace
-cd workers && npx wrangler kv:namespace create SECURITY_HUB_KV
-# → Copy the id output to wrangler.toml
-
-# 2. Set secrets
-npx wrangler secret put RAZORPAY_WEBHOOK_SECRET
-
-# 3. Deploy
-npx wrangler deploy
-
-# 4. Deploy frontend
-npx wrangler pages deploy ../frontend --project-name cyberdudebivash-security-hub
-```
-
----
-
-## Required GitHub Secrets
-
-| Secret | Description |
-|--------|-------------|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Workers + Pages deploy permissions |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
-| `WORKERS_KV_NAMESPACE_ID` | KV namespace ID from `wrangler kv:namespace create` |
-
----
-
-*CyberDudeBivash Pvt. Ltd. · bivash@cyberdudebivash.com · https://cyberdudebivash.in*
+*CyberDudeBivash Pvt. Ltd. · contact@cyberdudebivash.in · Operations: `PRODUCTION_OPERATIONS_MANUAL.md`*

@@ -32,13 +32,13 @@
 | Is it up? | `GET /api/health` (per-component status + latency) · `GET /api/uptime` (availability + `degraded_pct`, honest accounting) · `GET /api/status`, `/api/incidents` |
 | Is it healthy long-term? | ops-dashboard / platform-health pages; `operational_history` (seeded by every cron firing via the 9-component probe) |
 | What broke? | `system_errors` table (every unhandled exception, structured, with request path) · structured access logs: one JSON line per request (`event:"request"`, status, `dur_ms`, `X-Request-ID`) via `wrangler tail` |
-| Am I being alerted? | Telegram admin chat (alertEngine; deduped 30-min window; severity-tagged). **Known gap: no external probe — a total Worker outage silences self-monitoring (risk R-11).** |
+| Am I being alerted? | Telegram admin chat (alertEngine; deduped 30-min window; severity-tagged) **plus the external uptime probe** (`external-uptime-probe.yml`, every 15 min from GitHub runners — outside the Worker's failure domain): on outage it files/refreshes a GitHub issue and fails the run (owner notification). Closes the monitoring half of risk R-11 |
 | Correlate a customer report | Ask for their `X-Request-ID` (returned on every response) → grep tail/logs |
 
 ## 4. Data protection
 
-- **Backups:** nightly 02:30 UTC full D1 export (`d1-backup.yml`) — integrity-gated, SHA-256 recorded, 30-day GitHub-artifact retention (long-term archive: open risk R-12).
-- **Restore:** `DISASTER_RECOVERY_RUNBOOK.md` (per-store RPO/RTO, Time-Travel and export paths). **Mandatory pre-flight:** `node scripts/d1-restore-drill.mjs <dump>` — validates the artifact into a throwaway DB before touching production. A drill against a real nightly artifact is still owed (risk R-06).
+- **Backups:** nightly 02:30 UTC full D1 export (`d1-backup.yml`) — integrity-gated, SHA-256 recorded, 90-day GitHub-artifact retention (>90-day compliance archive: residual of risk R-12).
+- **Restore:** `DISASTER_RECOVERY_RUNBOOK.md` (per-store RPO/RTO, Time-Travel and export paths). **Mandatory pre-flight:** `node scripts/d1-restore-drill.mjs <dump>` — validates the artifact into a throwaway DB before touching production. The drill also runs **automatically every Monday 05:00 UTC against the newest real nightly artifact** (`d1-restore-drill.yml`); a failing drill run means current backups may not be restorable — treat as S1 (risk R-06).
 - **Migrations:** only via `db-migrate.yml` (typed APPLY gate, automatic pre-migration export, post-check). Never `d1 execute` by hand against production.
 - **KV/Queues are not backed up** by design (rebuildable; R-16).
 
@@ -51,9 +51,10 @@ Open `INCIDENT_RESPONSE_RUNBOOK.md` (severity ladder, playbooks, customer-comms 
 | Cadence | Task | Mechanism |
 |---|---|---|
 | Continuous | CVE feed refresh, monitoring probes, MYTHOS runs, content, revenue snapshot | The 5 cron slots (automatic) |
+| Every 15 min | External uptime probe | Automatic (`external-uptime-probe.yml`); on outage: GitHub issue + failed-run notification |
 | Nightly 02:30 UTC | D1 backup | Automatic; check the run went green after any schema change |
 | After every deploy | Smoke verification | Automatic in `deploy.yml`; spot-check `/api/version` |
-| Quarterly | DR restore drill | Manual — DR runbook §drills; **first real-artifact drill still pending** |
+| Weekly Mon 05:00 UTC | DR restore drill vs newest real backup artifact | Automatic (`d1-restore-drill.yml`); failure = treat backups as untrusted (S1) |
 | On demand (pre-release) | Enterprise release gate | Actions → "Enterprise Release Gate" (`workflow_dispatch`) → runs `scripts/enterprise-release-gate.mjs` end-to-end against production |
 | Ongoing | Risk register review | `docs/OPERATIONAL_RISK_REGISTER.md` — living, with owners |
 

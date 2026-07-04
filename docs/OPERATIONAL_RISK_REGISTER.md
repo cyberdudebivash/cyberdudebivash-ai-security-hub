@@ -5,7 +5,17 @@
 > disposition when a risk is closed or accepted; add new risks at the bottom.
 > Point-in-time context: `docs/audit-history/ENTERPRISE_OPERATIONS_READINESS_2026-07.md`.
 
-**Last reviewed:** 2026-07-02 (Enterprise Acceptance pass — see `docs/audit-history/ENTERPRISE_ACCEPTANCE_CERTIFICATION_2026-07.md`)
+**Last reviewed:** 2026-07-04 (Phase IV remediation pass — see `docs/audit-history/PHASE4_REMEDIATION_REPORT_2026-07.md`)
+
+## Phase IV remediation pass (2026-07-04) — dispositions changed
+
+| ID | Change | Mechanism |
+|----|--------|-----------|
+| R-06 | **PARTLY RESOLVED → automated.** Weekly restore drill now runs against the newest REAL nightly backup artifact in CI (`.github/workflows/d1-restore-drill.yml`: download artifact → `scripts/d1-restore-drill.mjs` → integrity + ≥50-table floor). Closes fully when the first scheduled run is green (Mondays 05:00 UTC; also `workflow_dispatch`). |
+| R-11 | **PARTLY RESOLVED.** External uptime probe now runs OUTSIDE the platform's failure domain (`.github/workflows/external-uptime-probe.yml`, every 15 min: /api/health on custom domain + workers.dev fallback, 3-attempt backoff; outage → auto-filed GitHub issue + failed run notification). A Cloudflare Healthcheck remains a recommended second vantage point (owner, ~10 min). |
+| R-12 | **MITIGATED.** Backup artifact retention raised 30 → 90 days (GitHub Actions maximum). Residual: >90-day compliance archive still needs R2/external shipping if a customer contract requires it. |
+| R-13 | **CLOSED.** CI bundle-size gate added to the Test & Quality Gate (`bundle-size` job: wrangler dry-run, fail > 2.5 MB gzip; measured 1.32 MB at introduction = 44% of Cloudflare's 3 MB cap). |
+| (copy) | **CLOSED.** Scan-ETA honesty: homepage "<30s" claims and the API's `estimated_eta: '< 30s'` replaced with measured "~1–3 min" ranges; advertised-but-unenforced per-minute API limits now enforced in both metered paths. Locked by `honestCopy.test.mjs`, `intelRateLimitEnforcement.test.mjs`. |
 
 | Sev | Likelihood | Meaning |
 |---|---|---|

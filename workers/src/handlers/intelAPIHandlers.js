@@ -11,8 +11,14 @@
  *
  * Tier gates:
  *   Developer  (FREE):       100 req/day  — IOC + CVE basic only
- *   Business   (PRO):      1,000 req/day  — all 5 endpoints + historical
+ *   Business   (PRO):      1,000 req/day  — all 5 endpoints + historical + STIX
  *   Enterprise (ENTERPRISE): unlimited   — all endpoints + STIX export + webhook
+ *
+ * STIX 2.1 bundle export lives at GET /api/v1/intel/stix.json (PRO+, per the
+ * public pricing matrix); `stix_available` in responses reflects the caller's
+ * real entitlement. Per-minute burst limits (canonical tier table: FREE 2/min,
+ * STARTER 5, PRO 20, ENTERPRISE 60, MSSP 120) are enforced here in addition to
+ * the daily quota — both were advertised, only daily was previously enforced.
  */
 
 import { callClaude } from '../core/mythosAIProvider.js';
@@ -31,10 +37,32 @@ function json(data, status = 200) {
 }
 
 function tierLimits(tier) {
-  if (tier === 'ENTERPRISE' || tier === 'MSSP') return { daily: Infinity, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
-  if (tier === 'TEAM')  return { daily: 10000, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
-  if (tier === 'PRO')   return { daily: 1000,  endpoints: ['ioc','cve','actor','ttp','risk'], stix: false };
-  return                       { daily: 100,   endpoints: ['ioc','cve'],                      stix: false };
+  // `stix` mirrors the public pricing matrix (FEED_TIERS in intelMonetization.js):
+  // STIX 2.1 export is sold as PRO+ — this flag previously said PRO:false while
+  // pricing.json advertised PRO stix_export:true.
+  if (tier === 'ENTERPRISE' || tier === 'MSSP') return { daily: Infinity, burst: 60,  endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
+  if (tier === 'TEAM')  return { daily: 10000, burst: 30, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
+  if (tier === 'PRO')   return { daily: 1000,  burst: 20, endpoints: ['ioc','cve','actor','ttp','risk'], stix: true  };
+  if (tier === 'STARTER') return { daily: 100, burst: 5,  endpoints: ['ioc','cve'],                      stix: false };
+  return                       { daily: 100,   burst: 2,  endpoints: ['ioc','cve'],                      stix: false };
+}
+
+// Per-minute burst check shared by all /api/intel/* endpoints. Best-effort KV
+// counter — fails open on KV outage (availability over enforcement, risk R-14).
+async function checkIntelBurst(env, authCtx, limits) {
+  const kv = env.KV || env.SECURITY_HUB_KV;
+  if (!kv || !(limits.burst > 0)) return { allowed: true };
+  const id     = authCtx?.userId || authCtx?.id || authCtx?.user_id || `ip:${authCtx?.ip || 'unknown'}`;
+  const minute = new Date().toISOString().slice(0, 16);
+  const key    = `intel_burst:${id}:${minute}`;
+  try {
+    const current = parseInt(await kv.get(key) || '0', 10);
+    if (current >= limits.burst) {
+      return { allowed: false, reason: `Rate limit exceeded: ${limits.burst} requests/minute on your plan. Retry in 60s.`, retry_after: 60 };
+    }
+    await kv.put(key, String(current + 1), { expirationTtl: 120 });
+    return { allowed: true };
+  } catch { return { allowed: true }; }
 }
 
 // Feature required per endpoint (for entitlement table check)
@@ -49,6 +77,13 @@ const ENDPOINT_FEATURE = {
 async function checkIntelQuota(env, authCtx, endpoint) {
   const tier   = authCtx?.tier || 'FREE';
   const userId = authCtx?.userId || authCtx?.id || null;
+  const limits = tierLimits(tier);
+
+  // ── Step 0: Per-minute burst window (advertised alongside the daily quota) ──
+  const burst = await checkIntelBurst(env, authCtx, limits);
+  if (!burst.allowed) {
+    return { allowed: false, reason: burst.reason, retry_after: burst.retry_after, tier, upgrade: 'https://intel.cyberdudebivash.com/pricing.html' };
+  }
 
   // ── Step 1: Check customer_entitlements table (v39 grants) ─────────────────
   const requiredFeature = ENDPOINT_FEATURE[endpoint] || FEATURES.API_ACCESS;
@@ -57,8 +92,7 @@ async function checkIntelQuota(env, authCtx, endpoint) {
       const entResult = await checkEntitlement(env.DB, userId, requiredFeature, tier);
       if (entResult.granted && entResult.source === 'entitlement') {
         // Has explicit entitlement grant — use entitlement-derived daily limit
-        const limits = tierLimits(tier);
-        if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'entitlement' };
+        if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'entitlement', stix: limits.stix };
 
         const key = `intel_quota:${userId}:${new Date().toISOString().slice(0,10)}`;
         const kv  = env.KV || env.SECURITY_HUB_KV;
@@ -66,19 +100,18 @@ async function checkIntelQuota(env, authCtx, endpoint) {
           const current = parseInt(await kv?.get(key) || '0', 10);
           if (current >= limits.daily) return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html', reset: 'tomorrow 00:00 UTC' };
           await kv?.put(key, String(current + 1), { expirationTtl: 86400 });
-          return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'entitlement' };
-        } catch { return { allowed: true, tier, remaining: 'unknown', source: 'entitlement' }; }
+          return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'entitlement', stix: limits.stix };
+        } catch { return { allowed: true, tier, remaining: 'unknown', source: 'entitlement', stix: limits.stix }; }
       }
     } catch {}
   }
 
   // ── Step 2: Legacy tier-based check (backward compatibility) ───────────────
-  const limits = tierLimits(tier);
   if (!limits.endpoints.includes(endpoint)) {
     return { allowed: false, reason: `${endpoint.toUpperCase()} endpoint requires PRO or ENTERPRISE plan`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html' };
   }
 
-  if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'tier' };
+  if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'tier', stix: limits.stix };
 
   const key = `intel_quota:${userId || 'anon'}:${new Date().toISOString().slice(0,10)}`;
   const kv  = env.KV || env.SECURITY_HUB_KV;
@@ -89,9 +122,9 @@ async function checkIntelQuota(env, authCtx, endpoint) {
       return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached on ${tier} plan`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html', reset: 'tomorrow 00:00 UTC' };
     }
     await kv?.put(key, String(current + 1), { expirationTtl: 86400 });
-    return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'tier' };
+    return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'tier', stix: limits.stix };
   } catch {
-    return { allowed: true, tier, remaining: 'unknown', source: 'tier' };
+    return { allowed: true, tier, remaining: 'unknown', source: 'tier', stix: limits.stix };
   }
 }
 
@@ -163,7 +196,7 @@ function riskVerdict(score) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleIntelIOC(request, env, authCtx) {
   const quota = await checkIntelQuota(env, authCtx, 'ioc');
-  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade, reset: quota.reset }, 429);
+  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade, reset: quota.reset, retry_after: quota.retry_after }, 429);
 
   const body  = await extractBody(request);
   const value = extractParam(request, 'value', 'ioc', 'indicator') || body?.value || body?.ioc || body?.indicator;
@@ -227,7 +260,8 @@ export async function handleIntelIOC(request, env, authCtx) {
                        iocType === 'ipv4'   ? 'T1071.001 (Web Protocols C2)' :
                        ['md5','sha1','sha256'].includes(iocType) ? 'T1204.002 (Malicious File)' : null,
     },
-    stix_available: quota.stix,
+    stix_available: quota.stix === true,
+    stix_endpoint:  quota.stix === true ? '/api/v1/intel/stix.json' : null,
     quota: { used: quota.used, limit: quota.limit, remaining: quota.remaining, tier: quota.tier },
     powered_by: 'CYBERDUDEBIVASH SENTINEL APEX',
     timestamp:  new Date().toISOString(),
@@ -239,7 +273,7 @@ export async function handleIntelIOC(request, env, authCtx) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleIntelCVE(request, env, authCtx) {
   const quota = await checkIntelQuota(env, authCtx, 'cve');
-  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade }, 429);
+  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade, retry_after: quota.retry_after }, 429);
 
   const body   = await extractBody(request);
   const cveId  = (extractParam(request, 'cve_id', 'cve', 'id') || body?.cve_id || body?.cve || '').toUpperCase().trim();
@@ -345,7 +379,7 @@ Cover: active exploitation evidence, affected products/versions, patch availabil
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleIntelActor(request, env, authCtx) {
   const quota = await checkIntelQuota(env, authCtx, 'actor');
-  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade }, 429);
+  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade, retry_after: quota.retry_after }, 429);
 
   const body    = await extractBody(request);
   const actorId = extractParam(request, 'actor_id', 'actor', 'name') || body?.actor_id || body?.actor || body?.name || null;
@@ -423,7 +457,7 @@ export async function handleIntelActor(request, env, authCtx) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleIntelTTP(request, env, authCtx) {
   const quota = await checkIntelQuota(env, authCtx, 'ttp');
-  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade }, 429);
+  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade, retry_after: quota.retry_after }, 429);
 
   const body    = await extractBody(request);
   const ttpId   = (extractParam(request, 'ttp_id', 'technique_id', 'id') || body?.ttp_id || body?.technique_id || '').toUpperCase();
@@ -526,7 +560,7 @@ export async function handleIntelTTP(request, env, authCtx) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleIntelRisk(request, env, authCtx) {
   const quota = await checkIntelQuota(env, authCtx, 'risk');
-  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade }, 429);
+  if (!quota.allowed) return json({ success: false, error: quota.reason, upgrade: quota.upgrade, retry_after: quota.retry_after }, 429);
 
   const body    = await extractBody(request);
   const target  = extractParam(request, 'target', 'domain', 'org') || body?.target || body?.domain || body?.org;
