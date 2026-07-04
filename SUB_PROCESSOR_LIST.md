@@ -1,5 +1,5 @@
 # CYBERDUDEBIVASH® — Sub-Processor List
-**Version:** 1.0 | **Effective:** 2026-07-01 | **Last reviewed:** 2026-07-01
+**Version:** 1.1 | **Effective:** 2026-07-04 | **Last reviewed:** 2026-07-04
 
 This list identifies all third-party sub-processors that may process personal data on behalf of CYBERDUDEBIVASH in the course of providing the AI Security Hub platform.
 
@@ -13,6 +13,22 @@ This list identifies all third-party sub-processors that may process personal da
 | **Razorpay Software Pvt Ltd** | India | Payment processing | Payment transactions, order amounts, payment method type | Payment amount, currency, Razorpay order ID, payment ID (no raw card/UPI credentials stored by us — tokenized by Razorpay) | Necessary for contract performance (payment processing); Razorpay is a RBI-licensed payment aggregator |
 | **Telegram (Telegram Messenger Inc.)** | UAE (HQ) | Admin operational alerts only | Admin notification messages | No customer personal data — internal operational alerts (error messages, system events) to the operator's private Telegram bot | Legitimate interest (internal operations) |
 | **NVD / NIST (U.S. NIST)** | United States | Threat intelligence data source — CVE data ingestion | Public CVE records only | No personal data — public vulnerability records | N/A (publicly available data) |
+| **Google LLC (Google Analytics 4)** | United States | Web analytics on public marketing pages | Page views, marketing-funnel events | Pseudonymous analytics identifiers, IP-derived coarse location (ad personalization signals disabled) | Standard Contractual Clauses (Google Ads Data Processing Terms) |
+
+## AI / LLM Inference Sub-Processors
+
+Conversational and generative AI features (AI Security Copilot, AI verdicts, executive summaries, multi-agent SOC analysis) send the prompt content — which may include user chat messages, scan targets, and scan findings — to one of the following inference providers. The platform's provider router selects a provider at request time based on availability and task type; a request is sent to exactly one provider (with automatic fallback to the next on failure). Providers whose API key is not configured in the production environment are never contacted.
+
+| Sub-Processor | Country | Role | Data Processed |
+|---|---|---|---|
+| **Groq, Inc.** | United States | Primary LLM inference | AI chat messages, scan-derived analysis context |
+| **Cloudflare, Inc. (Workers AI)** | United States (HQ); edge globally | LLM inference fallback (in-infrastructure) | AI chat messages, scan-derived analysis context |
+| **DeepSeek (Hangzhou DeepSeek AI Co., Ltd.)** | China | LLM inference fallback (only if configured) | AI chat messages, scan-derived analysis context |
+| **OpenRouter, Inc.** | United States | LLM inference fallback / meta-provider (only if configured) | AI chat messages, scan-derived analysis context |
+| **Together Computer, Inc. (Together AI)** | United States | LLM inference fallback (only if configured) | AI chat messages, scan-derived analysis context |
+| **Anthropic, PBC** | United States | LLM inference fallback (only if configured) | AI chat messages, scan-derived analysis context |
+
+Deterministic features — scan scoring, rule generation from templates, CVE feed ingestion, risk grading — do **not** call LLM providers.
 
 ---
 

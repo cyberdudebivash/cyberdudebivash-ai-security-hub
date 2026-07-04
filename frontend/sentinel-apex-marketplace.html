@@ -795,37 +795,14 @@ async function loadCVECards(container) {
 }
 
 function renderFallbackCVEs() {
-  const fallback = [
-    { id: 'CVE-2024-3400', title: 'PAN-OS GlobalProtect OS command injection — CISA KEV, actively exploited', sev: 'CRITICAL', cvss: '10.0', epss: '0.94', kev: true },
-    { id: 'CVE-2024-21762', title: 'Fortinet FortiOS SSL-VPN out-of-bounds write RCE — CISA KEV listed', sev: 'CRITICAL', cvss: '9.6', epss: '0.89', kev: true },
-    { id: 'CVE-2024-27198', title: 'JetBrains TeamCity authentication bypass — full CI/CD takeover vector', sev: 'CRITICAL', cvss: '9.8', epss: '0.95', kev: true },
-    { id: 'CVE-2024-1709', title: 'ConnectWise ScreenConnect authentication bypass — ransomware exploitation confirmed', sev: 'CRITICAL', cvss: '10.0', epss: '0.98', kev: true },
-    { id: 'CVE-2024-21893', title: 'Ivanti Connect Secure SSRF — nation-state exploitation by UNC5221', sev: 'HIGH', cvss: '8.2', epss: '0.87', kev: true },
-    { id: 'CVE-2023-4966', title: 'Citrix Bleed NetScaler session token disclosure — LockBit campaign', sev: 'CRITICAL', cvss: '9.4', epss: '0.97', kev: true },
-  ];
-  return fallback.map(c => `
-    <div class="intel-card ${c.sev.toLowerCase()}">
-      <div class="card-header">
-        <span class="card-type">CVE Intelligence</span>
-        <span class="severity-badge sev-${c.sev}">${c.sev}</span>
-      </div>
-      <div class="card-body">
-        <h3>${c.id}</h3>
-        <p>${c.title}</p>
-        <div class="card-meta">
-          <span class="meta-item">CVSS <strong>${c.cvss}</strong></span>
-          <span class="meta-item">EPSS <strong>${(parseFloat(c.epss)*100).toFixed(0)}%</strong></span>
-          ${c.kev ? '<span class="meta-item" style="color:#ef4444">🔴 <strong>KEV</strong></span>' : ''}
-        </div>
-      </div>
-      <div class="card-preview-bar">
-        <span class="preview-text">🔒 Full analysis locked — IOCs, SIGMA, patch info</span>
-        <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${c.id} Intelligence Report','Full IOC analysis, SIGMA rules, affected products, and exploitation timeline.','$49 / ₹3,999')">
-          Buy Full Report
-        </button>
-      </div>
-    </div>`).join('');
+  // Honest error state — never present a static CVE list as live intelligence.
+  return `
+    <div style="grid-column:1/-1;text-align:center;padding:40px 20px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.15);border-radius:12px">
+      <div style="font-size:28px;margin-bottom:10px">📡</div>
+      <div style="color:#e2e8f0;font-weight:700;margin-bottom:6px">Live CVE feed temporarily unavailable</div>
+      <div style="color:rgba(255,255,255,.55);font-size:.85rem;margin-bottom:14px">We only show real, current intelligence — no cached samples. Please retry in a moment.</div>
+      <button class="btn btn-ghost" onclick="location.reload()" style="font-size:.8rem;padding:8px 20px">↻ Retry</button>
+    </div>`;
 }
 
 async function loadThreatActorCards(container) {
@@ -896,16 +873,21 @@ async function loadMalwareCards(container) {
 }
 
 // ── Report Catalog ─────────────────────────────────────────────────────────
+// Real products live in /api/marketplace/catalog under category
+// "intelligence_report" and the response shape is {catalog:{<cat>:{items}}}.
+// (This section previously queried a non-existent "report" category, read a
+// non-existent "products" field, and always fell back to a fabricated list.)
+async function fetchReportProducts() {
+  const r = await fetch(`${API_BASE}/api/marketplace/catalog?category=intelligence_report`);
+  const d = r.ok ? await r.json() : {};
+  return d.catalog?.intelligence_report?.items || [];
+}
+
 async function loadReportCatalog() {
   const grid = document.getElementById('report-catalog-grid');
   try {
-    const r = await fetch(`${API_BASE}/api/marketplace/catalog?category=report`);
-    const d = r.ok ? await r.json() : {};
-    const products = d.products || [];
-    if (products.length) {
-      renderReportGrid(grid, products);
-      return;
-    }
+    const products = await fetchReportProducts();
+    if (products.length) { renderReportGrid(grid, products); return; }
   } catch {}
   renderFallbackReports(grid);
 }
@@ -916,71 +898,49 @@ function renderReportGrid(grid, products) {
 
 async function loadReportCatalogGrid(container) {
   try {
-    const r = await fetch(`${API_BASE}/api/marketplace/catalog?category=report`);
-    const d = r.ok ? await r.json() : {};
-    const products = d.products || [];
+    const products = await fetchReportProducts();
     if (products.length) { container.innerHTML = products.map(p => renderProductCard(p)).join(''); return; }
   } catch {}
   renderFallbackReports(container);
 }
 
 function renderProductCard(p) {
-  const icons = { cve:'🔴', malware:'🦠', threat_actor:'🎯', executive:'📊', industry:'🏭', ai_security:'🤖', bundle:'📦' };
+  const icons = { cve:'🔴', malware:'🦠', threat_actor:'🎯', executive:'📊', industry:'🏭', ai_security:'🤖', bundle:'📦', intelligence_report:'📊' };
   return `
-    <div class="product-card ${p.featured ? 'featured' : ''}">
+    <div class="product-card ${p.popular ? 'featured' : ''}">
       <div class="product-icon">${icons[p.category] || '📋'}</div>
       <h3>${escHtml(p.name || p.title)}</h3>
-      <p>${escHtml((p.description || p.summary || '').substring(0, 120))}…</p>
+      <p>${escHtml((p.tagline || p.description || p.summary || '').substring(0, 120))}…</p>
       <div class="product-price">
-        <span class="price-main">$${p.price || p.price_usd || 49}</span>
+        <span class="price-main">${escHtml(p.price_display || '')}</span>
         <span class="price-period">one-time</span>
       </div>
-      <div class="price-inr">₹${(p.price_inr || 3999).toLocaleString()}</div>
+      <div class="price-inr">${escHtml(p.price_usd_display || '')} · GST invoice included</div>
       <ul class="feature-list">
-        <li>Full intelligence report (PDF)</li>
-        <li>IOC feeds included</li>
-        <li>1-year dashboard access</li>
+        <li>Instant delivery after payment</li>
+        <li>Analyst-authored intelligence (PDF)</li>
+        <li>MITRE ATT&amp;CK mappings</li>
         <li>GST invoice included</li>
       </ul>
-      <button class="btn btn-primary" style="width:100%;justify-content:center"
-        onclick="openModal('${escHtml(p.name || p.title)}','${escHtml((p.description||'').substring(0,80))}','$${p.price || 49} / ₹${p.price_inr || 3999}')">
+      <a class="btn btn-primary" style="width:100%;justify-content:center"
+        href="${escHtml(p.checkout_url || '/marketplace-checkout.html?product=' + encodeURIComponent(p.id))}">
         ⚡ Buy Report
-      </button>
+      </a>
     </div>`;
 }
 
 function renderFallbackReports(container) {
-  const reports = [
-    { icon:'🔴', title:'Critical CVE Intelligence Report — Q2 2026', category:'CVE Intelligence', price:'$49', inr:'₹3,999', featured:true },
-    { icon:'🎯', title:'APT Group Intelligence: Russian Threat Actors 2026', category:'Threat Actor', price:'$79', inr:'₹6,499', featured:true },
-    { icon:'🦠', title:'Ransomware Threat Landscape — Q2 2026', category:'Malware Intelligence', price:'$79', inr:'₹6,499', featured:false },
-    { icon:'📊', title:'Executive Threat Intelligence Briefing — June 2026', category:'Executive Intelligence', price:'$149', inr:'₹12,499', featured:true },
-    { icon:'🏭', title:'FinTech India Threat Report 2026', category:'Industry Intelligence', price:'$99', inr:'₹8,199', featured:false },
-    { icon:'🤖', title:'AI Security Threat Intelligence Report 2026', category:'AI Security', price:'$99', inr:'₹8,199', featured:true },
-    { icon:'🏥', title:'Healthcare Sector Threat Report — India 2026', category:'Industry Intelligence', price:'$99', inr:'₹8,199', featured:false },
-    { icon:'📦', title:'Complete Intelligence Bundle — Q2 2026', category:'Bundle (7 reports)', price:'$349', inr:'₹28,999', featured:true },
-  ];
-  container.innerHTML = reports.map(r => `
-    <div class="product-card ${r.featured ? 'featured' : ''}">
-      <div class="product-icon">${r.icon}</div>
-      <h3>${r.title}</h3>
-      <p>${r.category} · SENTINEL APEX™ analyst-authored, production-grade intelligence with IOC feeds, MITRE mappings, and detection rules.</p>
-      <div class="product-price">
-        <span class="price-main">${r.price}</span>
-        <span class="price-period">one-time</span>
-      </div>
-      <div class="price-inr">${r.inr} · GST invoice included</div>
-      <ul class="feature-list">
-        <li>Full intelligence report (50+ pages PDF)</li>
-        <li>IOC feeds + SIGMA/YARA rules</li>
-        <li>MITRE ATT&CK mappings</li>
-        <li>1-year dashboard access</li>
-      </ul>
-      <button class="btn btn-primary" style="width:100%;justify-content:center"
-        onclick="openModal('${r.title}','SENTINEL APEX™ analyst-authored intelligence report with IOC feeds, SIGMA rules, and MITRE mappings.','${r.price} / ${r.inr}')">
-        ⚡ Buy Report
-      </button>
-    </div>`).join('');
+  // Honest error state — never render purchasable products that don't exist
+  // in the real catalog (the previous static list here was buyable via
+  // Razorpay with no fulfillable product behind it).
+  container.innerHTML = `
+    <div style="grid-column:1/-1;text-align:center;padding:40px 20px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.15);border-radius:12px">
+      <div style="font-size:28px;margin-bottom:10px">📊</div>
+      <div style="color:#e2e8f0;font-weight:700;margin-bottom:6px">Report catalog temporarily unavailable</div>
+      <div style="color:rgba(255,255,255,.55);font-size:.85rem;margin-bottom:14px">We couldn't load the live report catalog. Please retry, or browse the full marketplace.</div>
+      <button class="btn btn-ghost" onclick="location.reload()" style="font-size:.8rem;padding:8px 20px;margin-right:8px">↻ Retry</button>
+      <a class="btn btn-primary" href="/marketplace-checkout.html" style="font-size:.8rem;padding:8px 20px">Open Marketplace →</a>
+    </div>`;
 }
 
 // ── API Plans (Threat-Intel API — live SSOT: /api/v1/intel/pricing.json) ─────

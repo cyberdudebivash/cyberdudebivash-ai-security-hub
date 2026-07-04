@@ -145,12 +145,12 @@ footer a{color:#22c55e;text-decoration:none}
 <div class="card">
 <div class="card-icon">🧠</div>
 <h3>AI Analysis</h3>
-<p>MYTHOS AI: deterministic threat correlation. No scan data is sent to external LLM providers.</p>
+<p>Scan scoring and threat correlation are deterministic. Conversational AI features (copilot, AI verdicts, executive summaries) are processed by external LLM providers disclosed in our <a href="#sub-processors" style="color:#86efac">Sub-Processor List</a>, with provider selection and fallback controlled by the platform.</p>
 </div>
 <div class="card">
 <div class="card-icon">🗄️</div>
 <h3>Data Handling</h3>
-<p>Scan targets are processed in-flight, not stored. No PII is collected on scan targets.</p>
+<p>Scan targets and results are stored under your account for history and reports, encrypted at rest, and permanently erased on account deletion (GDPR/DPDP right to erasure).</p>
 </div>
 </div>
 <div class="prose" style="margin-top:32px">
@@ -214,6 +214,23 @@ footer a{color:#22c55e;text-decoration:none}
 </div>
 </div>
 <p class="note">Threat intel feeds are partially open-source: <a href="https://github.com/cyberdudebivash/cyberdudebivash-ai-security-hub" style="color:#86efac">github.com/cyberdudebivash/cyberdudebivash-ai-security-hub</a></p>
+</div>
+</section>
+
+<section id="sub-processors" style="background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+<div class="container">
+<h2>Sub-Processor <span>Disclosure</span></h2>
+<div class="prose">
+<p>Third parties that may process data on our behalf. Enterprise customers receive 30 days advance notice before a new sub-processor is added. Questions: <strong>privacy@cyberdudebivash.in</strong></p>
+<h3>Infrastructure &amp; Payments</h3>
+<ul>
+<li><strong>Cloudflare, Inc.</strong> (US) — compute, database, storage, CDN. Processes account data, API traffic, scan results.</li>
+<li><strong>Razorpay Software Pvt Ltd</strong> (India) — payment processing. Card/UPI credentials are tokenized by Razorpay and never touch our application layer.</li>
+<li><strong>Google LLC</strong> (US) — Google Analytics 4 on public marketing pages, with ad personalization signals disabled.</li>
+</ul>
+<h3>AI / LLM Inference</h3>
+<p>Conversational AI features (AI Copilot, AI verdicts, executive summaries) send prompt content — which may include chat messages, scan targets, and scan findings — to one inference provider per request, selected by our provider router with automatic fallback: <strong>Groq</strong> (US), <strong>Cloudflare Workers AI</strong> (US/edge), and — only where configured — <strong>DeepSeek</strong> (China), <strong>OpenRouter</strong> (US), <strong>Together AI</strong> (US), <strong>Anthropic</strong> (US). Deterministic features (scan scoring, template-based rule generation, CVE ingestion) do not call LLM providers.</p>
+</div>
 </div>
 </section>
 
