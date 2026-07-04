@@ -250,8 +250,13 @@ export async function handleMFADisable(request, env, authCtx) {
 // ─── Exported helper used by auth/login ──────────────────────────────────────
 // Returns a challenge token if MFA is enabled for this user; null otherwise.
 export async function issueMFAChallenge(env, userId, email, tier) {
+  // NOTE: mfa_secrets has NO `id` column — its PRIMARY KEY is user_id (see
+  // schema_master.sql). Selecting `id` threw "no such column: id" on every
+  // login, and the .catch below swallowed it → issueMFAChallenge always
+  // returned null → MFA was NEVER enforced at login even for enrolled users
+  // (a silent full 2FA bypass). Select an existing column.
   const mfaRow = await env.DB.prepare(
-    'SELECT id FROM mfa_secrets WHERE user_id = ? AND enabled = 1'
+    'SELECT user_id FROM mfa_secrets WHERE user_id = ? AND enabled = 1'
   ).bind(userId).first().catch(() => null);
 
   if (!mfaRow) return null;
