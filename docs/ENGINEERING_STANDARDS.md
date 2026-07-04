@@ -289,3 +289,73 @@ Operating consequences:
 This rule is the standing form of the mandate that has governed every cycle
 since the Release Candidate program: the platform succeeds only while a
 customer can independently verify that it behaves as advertised.
+
+## 11. The Production Truth Law (supreme rule)
+
+**The production environment is the ultimate source of truth.**
+
+Tests establish confidence. Customer simulations establish probability.
+Documentation establishes expectations. **Only observed production behaviour
+establishes reality.**
+
+Whenever implementation, documentation, monitoring, customer expectation, or
+operational assumptions disagree with verified production behaviour,
+production behaviour becomes the starting point for investigation. Every
+discrepancy must either:
+
+- be **corrected**,
+- be **documented**, or
+- be **explicitly accepted** as a known limitation.
+
+Nothing else is permitted. Where this law conflicts with any other section
+of this document, this law wins. (Precedent: IR-1 was invisible to a green
+1,300-test suite because the lab schema disagreed with production — the
+suite established confidence, production established reality.)
+
+## 12. The Governance Operating System (permanent — no more phases)
+
+Phase-numbered programs are retired. The product operates under four
+standing programs plus one council. New work is an iteration through this
+system, never a new phase.
+
+### CEAP — Continuous Enterprise Assurance (implemented)
+Owns production truth, customer verification, regression prevention,
+documentation verification, and evidence collection. Instruments: the
+6-hourly synthetic sweep (`scripts/ceap-sweep.mjs` via `ceap-assurance.yml`),
+the per-cycle documentation-accuracy audit, and the living registers. A
+sweep FAIL is a production incident.
+
+### CIP — Continuous Improvement Program
+Every improvement **starts** here: product evolution, customer objections,
+roadmap, UX, performance, technical debt. Intake instruments: the Customer
+Objection Register (voice of customer) and the Continuous Improvement
+Backlog (`OPERATIONAL_EXCELLENCE_REPORT.md` §7), prioritized **only** by
+observed customer impact — engineering convenience is never sufficient
+justification. The objective given to any engineering agent is not "find
+bugs" but **"continuously reduce operational risk."**
+
+### CORB — Continuous Operational Review Board (weekly)
+Reviews incidents and near misses, deployments, customer feedback, support
+metrics, reliability, AI quality, cost, and performance — against the KPI
+Dashboard (`KPI_DASHBOARD.md`). Produces **action items only** (into the CIP
+backlog with owners); it does not produce reports.
+
+### CAB — Change Advisory Board (every production change)
+No production deployment bypasses CAB. Every release to `main` must answer,
+in its commit/PR record, the six CAB questions:
+**Why? · Risk? · Rollback? · Customer impact? · Evidence? · Success
+criteria?** The gated pipeline (test → deploy → smoke) is CAB's mechanical
+arm; the six answers are its record. A change that cannot answer all six is
+not ready to ship.
+
+### Product Council (monthly — extends §7)
+Perspectives at the table: CEO, CTO, CISO, Customer Success, Support, Sales,
+Engineering, AI, DevOps. Every feature proposal must answer: does a customer
+actually need this · does it increase customer trust · does it increase ARR ·
+does it reduce churn · does it reduce support burden · does it reduce
+operational complexity · does it strengthen the platform? **If not — don't
+build it.** (The §7 four-question gate remains the per-change fast path; the
+Council is the monthly portfolio view.)
+
+**Measurement:** progress is tracked exclusively by the outcome metrics in
+`KPI_DASHBOARD.md` — never by feature counts, commit counts, or test counts.

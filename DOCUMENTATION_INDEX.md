@@ -27,7 +27,8 @@
 | Implementation | `IMPLEMENTATION_PLAYBOOK.md` | Verified onboarding path, tier planning, SSO setup, integrations, self-host bootstrap, cutover checklist |
 | Support | `SUPPORT_PLAYBOOK.md` | Ticket taxonomy with verified diagnostics, error contract, escalation ladder |
 | Customer success | `CUSTOMER_SUCCESS_PLAYBOOK.md` | Measured value milestones, segment adoption paths, renewal/expansion signals |
-| Engineering standards + gates | `docs/ENGINEERING_STANDARDS.md` | Canonical conventions (§1–6), Product Council gate (§7), Customer Adoption Rule (§8), permanent release lifecycle (§9), Verifiable-Statement Rule (§10) |
+| Engineering standards + gates | `docs/ENGINEERING_STANDARDS.md` | Conventions (§1–6), Product Council gate (§7), Customer Adoption Rule (§8), release lifecycle (§9), Verifiable-Statement Rule (§10), **Production Truth Law (§11)**, governance operating system CEAP/CIP/CORB/CAB + Council (§12) |
+| KPI dashboard (the only scoreboard) | `KPI_DASHBOARD.md` | Outcome metrics only (onboarding, TTFV, incident rate, MTTD/MTTR, regression rate, doc accuracy, deploy/drill success, blocker aging; CSAT/renewal honestly UNKNOWN) — reviewed weekly by CORB |
 | Continuous assurance (CEAP) | `scripts/ceap-sweep.mjs` + `.github/workflows/ceap-assurance.yml` | 13-check customer-lifecycle sweep against live production, scheduled every 6 h; a FAIL is a production incident |
 | Release decision (current) | `docs/audit-history/PHASE4_GLOBAL_RELEASE_DECISION_2026-07.md` | Phase IV final gate: per-capability + per-segment decisions, conditions register. Deltas from the same-day remediation pass: `docs/audit-history/PHASE4_REMEDIATION_REPORT_2026-07.md` |
 | Vendor security questionnaire | `docs/SECURITY_QUESTIONNAIRE_PACK.md` | CAIQ-lite pre-answered pack for procurement due-diligence (evidence-bounded, gaps included) |
