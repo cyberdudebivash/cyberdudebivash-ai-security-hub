@@ -16,6 +16,8 @@
 | Disaster recovery | `DISASTER_RECOVERY_RUNBOOK.md` | Backups (nightly `d1-backup.yml`), restore, rollback, RPO/RTO, drills |
 | Emergency recovery (legacy) | `DEPLOY_RECOVERY_RUNBOOK.md` | 2026-06-12 recovery execution record |
 | Operational risk | `docs/OPERATIONAL_RISK_REGISTER.md` | Living register: accepted risks + open items with owners |
+| Production operations | `PRODUCTION_OPERATIONS_MANUAL.md` | Operator's entry point: topology, state visibility, calendars; links to runbooks |
+| Release decision (current) | `docs/audit-history/PHASE4_GLOBAL_RELEASE_DECISION_2026-07.md` | Phase IV final gate: per-capability + per-segment decisions, conditions register |
 | Security posture | `SECURITY_GAP_ANALYSIS.md` | Current gaps + controls |
 | Artifact / binary policy | `ARTIFACT_RETENTION_POLICY.md` | What may be committed |
 | Production stabilization | `PRODUCTION_STABILIZATION_REPORT.md` | This pass: defects, fixes, validation, verdict |
