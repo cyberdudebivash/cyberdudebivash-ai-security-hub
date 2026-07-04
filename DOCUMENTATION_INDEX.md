@@ -23,6 +23,7 @@
 | Enterprise operations (Phase VIII) | `PHASE_VIII_ENTERPRISE_OPERATIONS_REPORT.md` | 100-customer × six-month live-operations simulation: success/expansion matrices, support/ops/commercial readiness, executive launch review, global GA recommendation |
 | Release Candidate governance (Phase IX) | `PHASE_IX_RELEASE_CANDIDATE_REPORT.md` | Live-production RC program: Release Blocker Board, per-capability release decisions, risk/limitations registers, readiness + adoption dashboards, release verification addendum |
 | **GA decision (current)** | `GENERAL_AVAILABILITY_REPORT.md` | Phase X GA Board: customer trust certification, GA Decision Matrix per capability, GA Blocker Board (owner actions), permanent release lifecycle adoption |
+| Post-GA operations (current cycle) | `OPERATIONAL_EXCELLENCE_REPORT.md` | Operations Board: live lifecycle reliability pass, ops-machinery verification, support-doc accuracy audit, Incident Review Register, continuous-improvement backlog, executive operations review |
 | Implementation | `IMPLEMENTATION_PLAYBOOK.md` | Verified onboarding path, tier planning, SSO setup, integrations, self-host bootstrap, cutover checklist |
 | Support | `SUPPORT_PLAYBOOK.md` | Ticket taxonomy with verified diagnostics, error contract, escalation ladder |
 | Customer success | `CUSTOMER_SUCCESS_PLAYBOOK.md` | Measured value milestones, segment adoption paths, renewal/expansion signals |

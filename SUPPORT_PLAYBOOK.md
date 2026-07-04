@@ -39,10 +39,19 @@ defect. Key was auto-issued at signup and shown once; if lost, revoke and
 re-issue (FREE limit: 1 key).
 
 ### "I'm being rate limited / scans rejected"
-Expected shape (verified): **429** with `reason`
-(`daily_limit_reached` / `burst_exceeded`), `retry_after`, `Retry-After` +
-`X-RateLimit-*` headers, `upgrade_url`, per-tier `upgrade_benefits`. FREE =
+Expected shape (verified live): **429** whose **body** always carries
+`reason` (`daily_limit_reached` / `burst_exceeded`), `retry_after`, and
+`upgrade_url` with per-tier `upgrade_benefits`. `Retry-After` /
+`X-RateLimit-*` **headers** appear on the daily-quota path but not on burst
+429s — read the body, not the headers (parity is backlog CI-4). FREE =
 5/day, 2/min. This is the tier boundary working; guide sizing or upgrade.
+
+### "My API key usage shows zero but I've been scanning"
+Per-key usage (`GET /api/keys/{id}/usage`) counts **key-authenticated**
+requests only (verified live: a key-authed scan increments `today.total`; a
+session-token scan does not). Dashboard/session activity appears in
+`GET /api/history` instead. Both views are correct — they answer different
+questions.
 
 ### "My report says the scan doesn't exist" (422)
 Historic S1 (Phase VIII, fixed): body `scan_id` must equal the `X-Scan-ID`

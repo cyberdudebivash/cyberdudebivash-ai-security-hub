@@ -5,7 +5,7 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 5 · **Date:** 2026-07-04 · **Production commit:** `bf12e10` (deploy #623); branch at Phase X GA fix
+> **Edition:** 6 · **Date:** 2026-07-04 · **Production commit:** `34cd6c5` (deploy #625); post-GA operations cycle
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
@@ -38,6 +38,17 @@
 > `GENERAL_AVAILABILITY_REPORT.md`. Permanent release lifecycle adopted
 > (`docs/ENGINEERING_STANDARDS.md` §9) — phase-numbered programs end here.
 > Suite 1,311 tests / 128 files.
+> **Edition 6 (post-GA operations, same day):** first cycle under the
+> permanent lifecycle — an operations audit, no code shipped. Full customer
+> lifecycle re-executed live in one 15.7 s pass, all green; **zero new
+> objections** (first such cycle). Verified operating: nightly backups (2/2
+> green), external probe (5/5), 7 consecutive green gated deploys. Verified
+> commercially: checkout creates a **live Razorpay order** — only settlement
+> remains (GA-O1). Restore drill armed, first run Monday (dispatch is
+> owner-only). Support playbook precision-fixed twice (429 header nuance,
+> per-key usage semantics). Incident Review Register opened (IR-1/IR-2:
+> both prior incidents were customer/audit-detected — error-rate alerting is
+> improvement priority CI-1). Full record: `OPERATIONAL_EXCELLENCE_REPORT.md`.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.
