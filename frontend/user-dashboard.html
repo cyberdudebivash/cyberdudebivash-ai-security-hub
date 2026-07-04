@@ -752,21 +752,50 @@
 
     <div id="login-err" class="alert alert-error" style="display:none"></div>
 
-    <div class="form-group">
-      <label class="form-label">Email address</label>
-      <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
+    <div id="login-view">
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">
+        <span id="login-spinner" style="display:none" class="spinner"></span>
+        Sign In
+      </button>
+      <p style="text-align:center;margin-top:10px;font-size:.83rem">
+        <a href="#" onclick="showAuthView('forgot-view');return false">Forgot password?</a>
+      </p>
+      <p style="text-align:center;margin-top:6px;font-size:.83rem;color:var(--muted)">
+        No account? <a href="/">Get started free</a>
+      </p>
     </div>
-    <div class="form-group">
-      <label class="form-label">Password</label>
-      <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password" />
+
+    <div id="forgot-view" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input id="forgot-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doForgotPassword()">Send reset link</button>
+      <div id="forgot-msg" class="alert" style="display:none;margin-top:12px"></div>
+      <p style="text-align:center;margin-top:10px;font-size:.83rem">
+        <a href="#" onclick="showAuthView('login-view');return false">← Back to sign in</a>
+      </p>
     </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">
-      <span id="login-spinner" style="display:none" class="spinner"></span>
-      Sign In
-    </button>
-    <p style="text-align:center;margin-top:16px;font-size:.83rem;color:var(--muted)">
-      No account? <a href="/">Get started free</a>
-    </p>
+
+    <div id="reset-view" style="display:none">
+      <div class="form-group">
+        <label class="form-label">New password</label>
+        <input id="reset-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doResetPassword()">Set new password</button>
+      <div id="reset-msg" class="alert" style="display:none;margin-top:12px"></div>
+      <p style="text-align:center;margin-top:10px;font-size:.83rem">
+        <a href="#" onclick="showAuthView('login-view');return false">← Back to sign in</a>
+      </p>
+    </div>
   </div>
 </div>
 
@@ -1905,6 +1934,62 @@
   document.getElementById('login-pass').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
+
+  // ── Credential recovery ──────────────────────────────────────────────────────
+  function showAuthView(id) {
+    for (const v of ['login-view', 'forgot-view', 'reset-view']) {
+      document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
+    }
+    document.getElementById('login-err').style.display = 'none';
+  }
+
+  async function doForgotPassword() {
+    const email = document.getElementById('forgot-email').value.trim();
+    const msgEl = document.getElementById('forgot-msg');
+    msgEl.style.display = 'none';
+    if (!email) { msgEl.className = 'alert alert-error'; msgEl.textContent = 'Email is required.'; msgEl.style.display = 'block'; return; }
+    try {
+      const res = await fetch(API_BASE + '/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const d = await res.json();
+      msgEl.className = res.ok ? 'alert' : 'alert alert-error';
+      msgEl.textContent = d.message || d.error || 'Request failed.';
+      msgEl.style.display = 'block';
+    } catch (e) {
+      msgEl.className = 'alert alert-error'; msgEl.textContent = e.message; msgEl.style.display = 'block';
+    }
+  }
+
+  async function doResetPassword() {
+    const token = new URLSearchParams(location.search).get('reset_token') || '';
+    const pass  = document.getElementById('reset-pass').value;
+    const msgEl = document.getElementById('reset-msg');
+    msgEl.style.display = 'none';
+    try {
+      const res = await fetch(API_BASE + '/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, new_password: pass }),
+      });
+      const d = await res.json();
+      msgEl.className = res.ok ? 'alert' : 'alert alert-error';
+      msgEl.textContent = d.message || d.error || 'Reset failed.';
+      msgEl.style.display = 'block';
+      if (res.ok) {
+        history.replaceState(null, '', location.pathname);
+        setTimeout(() => showAuthView('login-view'), 2500);
+      }
+    } catch (e) {
+      msgEl.className = 'alert alert-error'; msgEl.textContent = e.message; msgEl.style.display = 'block';
+    }
+  }
+
+  if (new URLSearchParams(location.search).get('reset_token')) {
+    showAuthView('reset-view');
+  }
 
   function doLogout() {
     clearTokens();

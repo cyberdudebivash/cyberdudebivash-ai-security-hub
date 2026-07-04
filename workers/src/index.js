@@ -179,6 +179,7 @@ import {
   handleSignup, handleLogin, handleRefresh, handleLogout,
   handleGetProfile, handleUpdateProfile, handleAlertConfig, handleTestAlert,
   handleChangePassword, handleDeleteAccount,
+  handleForgotPassword, handleResetPassword,
 } from './handlers/auth.js';
 import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage, handleRotateKey } from './handlers/apikeys.js';
 import { handleAsyncScan, handleJobStatus, handleJobResult, handleD1History } from './handlers/jobs.js';
@@ -1211,6 +1212,8 @@ function apiInfoResponse() {
       'POST /api/auth/signup':      'Create account → access + refresh tokens',
       'DELETE /api/auth/delete-account': 'Delete account — erases personal data (GDPR/DPDP)',
       'POST /api/auth/login':       'Authenticate → access + refresh tokens',
+      'POST /api/auth/forgot-password': 'Request a password-reset link by email (30-min, single-use)',
+      'POST /api/auth/reset-password':  'Set a new password with a reset token; revokes old sessions',
       'POST /api/auth/refresh':     'Rotate access token using refresh token',
       'POST /api/auth/logout':      'Revoke session (single or all)',
       'GET  /api/auth/me':          'Current user profile + scan stats',
@@ -2000,6 +2003,14 @@ export async function routeRequest(request, env, ctx, requestId) {
     if (path === '/api/auth/test-alert' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleTestAlert(request, env, authCtx), request));
+    }
+    // Credential recovery (public, like login) — Phase X closed the GA gap
+    // where a forgotten password permanently locked a customer out.
+    if (path === '/api/auth/forgot-password' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleForgotPassword(request, env), request));
+    }
+    if (path === '/api/auth/reset-password' && method === 'POST') {
+      return withSecurityHeaders(withCors(await handleResetPassword(request, env), request));
     }
     // POST /api/auth/change-password, DELETE /api/auth/delete-account — the
     // Account Settings page called these with no backend route ever

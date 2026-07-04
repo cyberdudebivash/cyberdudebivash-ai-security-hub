@@ -10,7 +10,7 @@
 > customer-observable behavior that caused it is fixed and re-verified over the
 > same channel a customer would use. See `docs/ENGINEERING_STANDARDS.md` §8.
 >
-> **Edition:** 2 · **Date:** 2026-07-04 · **Build:** `b81bce0` (live production) + Phase IX RC fixes
+> **Edition:** 3 · **Date:** 2026-07-04 · **Build:** `bf12e10` (live production) + Phase X GA fixes
 > **Method (Ed. 1, Phase VIII):** 100 simulated organizations across 10
 > enterprise archetypes, exercised over HTTP only (no implementation knowledge)
 > against a lab runtime of the deployed build.
@@ -123,6 +123,20 @@
 
 ---
 
+## OBJ-08 — "I forgot my password and there is no way to get my account back." · RESOLVED (code) / email delivery = owner evidence
+
+| Field | Detail |
+|-------|--------|
+| **Objection** | A customer who forgets their password has **no recovery path at all**: every standard reset endpoint returned 404 in live production, and the login UI offered no "Forgot password?" affordance. The account — with its organization, scan history, API keys, and any paid subscription — is permanently lost unless single-operator support manually intervenes (and no admin reset tool existed either). |
+| **Persona** | Any customer; discovered by the Phase X GA Board. Highest impact on a platform admin whose organization is anchored to their account. |
+| **Business impact** | Guaranteed churn event on first occurrence; for a security vendor, "we can't recover your account" is also a credibility failure. GA-blocking for customer operations and support readiness. |
+| **Classification** | **Product** (missing capability) + **Support** (no fallback procedure). |
+| **Root cause** | Credential recovery was never built — signup/login/change-password existed, but no unauthenticated reset flow, no token infrastructure, no UI affordance. |
+| **Corrective action** | Phase X built the full flow: `POST /api/auth/forgot-password` (enumeration-safe generic response, per-email rate limit 3/hour, 32-byte token stored **hashed** in KV with a 30-minute TTL — no schema migration) → email with a single-use link (Resend primary, MailChannels fallback, honest failure reporting) → `POST /api/auth/reset-password` (strength-validated, consume-token-before-write single use, revokes **all** prior sessions) → "Forgot password?" + reset views added to the login UI (`frontend/user-dashboard.html`). |
+| **Resolution evidence** | Locked by `workers/test/phase10PasswordReset.test.mjs` (6 tests: token hashed at rest, byte-identical response for unknown emails, single-use, weak-password rejection, session revocation, rate limit). Production endpoint verification at the Phase X release gate — see `GENERAL_AVAILABILITY_REPORT.md`. **Open owner evidence:** one real inbox round-trip (requires `RESEND_API_KEY` configured in production); until then email *delivery* is unverified — the flow, tokens, and UI are. |
+
+---
+
 ## Positive signals (objections a customer did *not* raise)
 
 Recorded for balance — capabilities that survived the same adversarial customer scrutiny without producing an objection:
@@ -138,6 +152,12 @@ Phase IX RC (verified against **live production**, build `b81bce0`):
 - **Measurement honesty** — an unmeasurable domain returns `grade: null`, `risk: UNKNOWN` in production rather than a fabricated verdict (Phase VII posture holds live).
 - **Input validation** — malformed signup input returns a clean 400 with a clear message, not a 500.
 - **SSO surface** — `/api/auth/sso/login` (400 asking for the org slug), `/api/auth/sso/callback` (302), `/api/auth/enterprise/sso` (setup guidance) all respond correctly in production; what remains is live-IdP round-trip evidence, an owner action.
+
+Phase X GA Board (verified against **live production**, build `bf12e10`):
+
+- **API key rotation** — rotate returns the replacement once (201); the old key is dead immediately and the new key authenticates via the documented `x-api-key` header. Per-key daily/monthly usage reporting returns clean structured data.
+- **User provisioning lifecycle** — invite (201) → member accesses org dashboard (200) → RBAC denial for over-privilege (analyst inviting → 403) → role change by owner (200) → removal (200) → removed member locked out (403). The full enterprise admin loop works with no engineering intervention.
+- **AI consistency** — `/api/ai/analyze` rejects malformed input with a clean 400 naming the required fields; a real scan yields `confidence_score`, `exploit_probability`, a phased attack chain, and MITRE mappings grounded in the customer's own scan findings.
 
 ## Update protocol
 

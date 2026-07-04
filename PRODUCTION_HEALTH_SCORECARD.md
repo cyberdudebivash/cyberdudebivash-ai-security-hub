@@ -5,7 +5,7 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 4 · **Date:** 2026-07-04 · **Production commit:** `b81bce0` (deploy #621); branch at Phase IX RC fix
+> **Edition:** 5 · **Date:** 2026-07-04 · **Production commit:** `bf12e10` (deploy #623); branch at Phase X GA fix
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
@@ -27,6 +27,17 @@
 > Phase VIII fixes, and SSO surface re-verified live. Per-capability release
 > decisions + blocker board: `PHASE_IX_RELEASE_CANDIDATE_REPORT.md`.
 > Suite 1,305 tests / 127 files.
+> **Edition 5 (Phase X GA, same day):** GA Board certification. One GA
+> blocker found and closed: **credential recovery did not exist** (all reset
+> paths 404'd live; a forgotten password permanently lost the account —
+> OBJ-08/GA-B1). Built enumeration-safe forgot/reset flow (hashed single-use
+> KV tokens, session revocation, login-UI views), locked by 6 tests. Live
+> verified this phase: full API-key rotation lifecycle, member
+> invite→role-change→removal loop with RBAC denials, per-key usage
+> reporting, AI trust consistency. GA decisions per capability:
+> `GENERAL_AVAILABILITY_REPORT.md`. Permanent release lifecycle adopted
+> (`docs/ENGINEERING_STANDARDS.md` §9) — phase-numbered programs end here.
+> Suite 1,311 tests / 128 files.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.

@@ -22,6 +22,7 @@
 | Customer objections | `CUSTOMER_OBJECTION_REGISTER.md` | Living Phase VIII instrument: every customer objection with persona, business impact, classification, corrective action, and resolution evidence |
 | Enterprise operations (Phase VIII) | `PHASE_VIII_ENTERPRISE_OPERATIONS_REPORT.md` | 100-customer × six-month live-operations simulation: success/expansion matrices, support/ops/commercial readiness, executive launch review, global GA recommendation |
 | Release Candidate governance (Phase IX) | `PHASE_IX_RELEASE_CANDIDATE_REPORT.md` | Live-production RC program: Release Blocker Board, per-capability release decisions, risk/limitations registers, readiness + adoption dashboards, release verification addendum |
+| **GA decision (current)** | `GENERAL_AVAILABILITY_REPORT.md` | Phase X GA Board: customer trust certification, GA Decision Matrix per capability, GA Blocker Board (owner actions), permanent release lifecycle adoption |
 | Implementation | `IMPLEMENTATION_PLAYBOOK.md` | Verified onboarding path, tier planning, SSO setup, integrations, self-host bootstrap, cutover checklist |
 | Support | `SUPPORT_PLAYBOOK.md` | Ticket taxonomy with verified diagnostics, error contract, escalation ladder |
 | Customer success | `CUSTOMER_SUCCESS_PLAYBOOK.md` | Measured value milestones, segment adoption paths, renewal/expansion signals |

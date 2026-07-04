@@ -18,6 +18,7 @@ import { parseBody } from '../middleware/validation.js';
 import { inspectForAttacks } from '../middleware/security.js';
 import { sendTestAlert } from '../lib/alerts.js';
 import { issueMFAChallenge } from './mfa.js';
+import { sendEmail } from '../services/emailEngine.js';
 
 const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
 const PLATFORM_URL  = 'https://tools.cyberdudebivash.com';
@@ -489,6 +490,105 @@ export async function handleChangePassword(request, env, authCtx) {
   await revokeAllUserTokens(env.DB, authCtx.user_id).catch(() => {});
 
   return Response.json({ success: true, message: 'Password updated. Other sessions have been signed out.' });
+}
+
+// ─── POST /api/auth/forgot-password ───────────────────────────────────────────
+// Phase X GA gap: there was NO credential recovery — a customer who forgot
+// their password permanently lost the account (all standard reset paths 404'd
+// in production and the login UI had no affordance). Tokens are single-use,
+// KV-stored by SHA-256 hash with a 30-minute TTL — no schema migration needed.
+// The response is identical whether or not the account exists (no enumeration
+// oracle), and requests are rate-limited per email.
+async function sha256Hex(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+const RESET_GENERIC = {
+  success: true,
+  message: 'If that email has an account, a password-reset link has been sent. It expires in 30 minutes.',
+};
+
+export async function handleForgotPassword(request, env) {
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+
+  const body  = await parseBody(request);
+  const email = (body?.email || '').trim().toLowerCase();
+  const emailVal = validateEmail(email);
+  if (!emailVal.valid) {
+    return Response.json({ error: emailVal.message || 'A valid email is required' }, { status: 400 });
+  }
+
+  // Everything below returns the same generic 200 — existence is never revealed.
+  if (!env.SECURITY_HUB_KV) return Response.json(RESET_GENERIC);
+
+  const rlKey = `pwreset-rl:${email}`;
+  const attempts = parseInt(await env.SECURITY_HUB_KV.get(rlKey) || '0', 10);
+  if (attempts >= 3) return Response.json(RESET_GENERIC);
+  await env.SECURITY_HUB_KV.put(rlKey, String(attempts + 1), { expirationTtl: 3600 });
+
+  const user = await env.DB.prepare(
+    `SELECT id, email, status FROM users WHERE email = ?`
+  ).bind(email).first();
+  if (!user || user.status !== 'active') return Response.json(RESET_GENERIC);
+
+  const tokenBytes = new Uint8Array(32);
+  crypto.getRandomValues(tokenBytes);
+  const token = [...tokenBytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  await env.SECURITY_HUB_KV.put(
+    `pwreset:${await sha256Hex(token)}`,
+    JSON.stringify({ user_id: user.id, email: user.email }),
+    { expirationTtl: 1800 }
+  );
+
+  const resetUrl = `https://cyberdudebivash.in/user-dashboard.html?reset_token=${token}`;
+  await sendEmail(env, {
+    to: user.email,
+    subject: 'Reset your CYBERDUDEBIVASH password',
+    text: `A password reset was requested for this account.\n\nReset link (valid 30 minutes, single use):\n${resetUrl}\n\nIf you did not request this, ignore this email — your password is unchanged.`,
+    html: `<p>A password reset was requested for this account.</p><p><a href="${resetUrl}">Reset your password</a> (valid 30 minutes, single use).</p><p>If you did not request this, ignore this email — your password is unchanged.</p>`,
+  }).catch(() => {});
+
+  return Response.json(RESET_GENERIC);
+}
+
+// ─── POST /api/auth/reset-password ──────────────────────────────────────────
+export async function handleResetPassword(request, env) {
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+  if (!env?.SECURITY_HUB_KV) return Response.json({ error: 'Password reset unavailable' }, { status: 503 });
+
+  const body        = await parseBody(request);
+  const token       = body?.token || '';
+  const newPassword = body?.new_password || '';
+  if (!token || !newPassword) {
+    return Response.json({ error: 'token and new_password are required' }, { status: 400 });
+  }
+
+  const strength = validatePasswordStrength(newPassword);
+  if (!strength.valid) {
+    return Response.json({ error: strength.message || 'Password does not meet strength requirements' }, { status: 400 });
+  }
+
+  const kvKey = `pwreset:${await sha256Hex(token)}`;
+  const rec   = await env.SECURITY_HUB_KV.get(kvKey, { type: 'json' });
+  if (!rec?.user_id) {
+    return Response.json({ error: 'Invalid or expired reset link. Request a new one.' }, { status: 400 });
+  }
+  // Single use: consume the token before changing anything.
+  await env.SECURITY_HUB_KV.delete(kvKey);
+
+  const { hash, salt } = await hashPassword(newPassword);
+  await env.DB.prepare(
+    `UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?`
+  ).bind(hash, salt, rec.user_id).run();
+
+  // A recovered account must not leave possibly-compromised sessions alive.
+  await revokeAllUserTokens(env.DB, rec.user_id).catch(() => {});
+
+  return Response.json({
+    success: true,
+    message: 'Password reset. Sign in with your new password. All previous sessions have been signed out.',
+  });
 }
 
 // ─── DELETE /api/auth/delete-account ──────────────────────────────────────────

@@ -23,6 +23,15 @@ Wrong password returns **401** (verified). Check: correct email; account not
 deleted (deleted accounts also 401 by design — verified). Password change:
 `POST /api/auth/change-password`.
 
+### "I forgot my password"
+Self-service since Phase X: "Forgot password?" on the login page →
+`POST /api/auth/forgot-password` (always answers generically — never confirms
+whether an email has an account) → emailed single-use link (30-min expiry) →
+`POST /api/auth/reset-password`. Resetting revokes all previous sessions.
+Rate limit: 3 requests/hour per email. If the customer reports no email
+arriving, verify `RESEND_API_KEY` is configured in production
+(lock: `phase10PasswordReset.test.mjs`).
+
 ### "My API key doesn't work"
 Invalid key → **401** (verified). FREE keys are valid on the standard `/api`
 surface but get **403 on `/api/v1`** (premium) — that is entitlement, not a

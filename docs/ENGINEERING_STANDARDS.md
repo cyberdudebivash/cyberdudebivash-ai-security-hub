@@ -218,3 +218,40 @@ Sections 7 and 8 are complementary: §7 decides whether a capability should
 exist; §8 decides whether an existing capability is actually succeeding with
 customers. A feature can pass §7 and still fail §8 — that failure is a defect,
 tracked and fixed, exactly like a functional bug.
+
+## 9. The Permanent Release Lifecycle (adopted at GA, Phase X)
+
+Phase-numbered validation programs (VIII, IX, X…) end with the GA decision.
+From GA forward, all work moves through one permanent lifecycle — the same one
+mature software organizations run:
+
+1. **Development** — build on a feature branch; §1–6 conventions apply.
+2. **Engineering Verification** — full suite green; every customer-facing
+   change carries a regression lock; schema-touching changes are tested
+   against a **production-faithful schema** (the RC-B1 lesson: a healed lab
+   schema masked a production-only 500).
+3. **Customer Verification** — exercise the change over the channel a
+   customer actually uses (HTTP against the running build), production-first
+   where safe: reproduce through the customer experience, *then* inspect
+   the implementation.
+4. **Release Candidate** — the gated pipeline (test gate → deploy →
+   post-deploy smoke) is the only path to production; no manual deploys,
+   no admin overrides.
+5. **GA Decision** — every capability holds exactly one evidence-backed
+   status from the fixed vocabulary (GA APPROVED / GA APPROVED WITH
+   DOCUMENTED LIMITATIONS / PILOT ONLY / NOT READY / BLOCKED). Never
+   "100% complete", "bug free", or "guaranteed".
+6. **Post-GA Customer Operations** — the default posture is operating, not
+   building: watch production, answer objections, keep every customer-facing
+   claim equal to verified platform behavior.
+7. **Continuous Improvement** — real-world evidence (objections, incidents,
+   usage) drives the backlog; fixes re-enter at step 1.
+
+Standing instruments: the **Customer Objection Register** (voice-of-customer
+intake, §8), the **GA Blocker Board** (`GENERAL_AVAILABILITY_REPORT.md` §5 —
+only genuine customer-impacting blockers, each with owner and required
+evidence), and the **Production Health Scorecard** (state + trends, updated
+every cycle). The optimization target is **customer confidence**: when
+engineering convenience conflicts with customer trust, customer trust wins;
+when internal assumptions conflict with externally verifiable evidence, the
+evidence wins.
