@@ -5,26 +5,34 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 2 · **Date:** 2026-07-04 · **Production commit:** `cc828ef` (deploy #618)
+> **Edition:** 3 · **Date:** 2026-07-04 · **Production commit:** `cc828ef` (deploy #618); branch at Phase VIII fixes
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
 > committed tool-banner corruption removed from the customer dashboard.
+> **Edition 3 (Phase VIII, same day):** 100-customer × six-month live-operations
+> simulation. Three customer-visible defects found at scale and fixed — the
+> scan→report 422 on cached domains (S1-class), pricing that contradicted itself
+> across three surfaces, and an entitlement display that under-sold the free
+> tier. Fresh-environment DB bootstrap closed (`schema_bootstrap.sql`, 228
+> tables/0 err on empty). Tenant isolation, AI honesty, and throttle-grace
+> verified at scale. Suite 1,300 tests / 126 files.
 > **Governance:** every action in the queue below must pass the Product
-> Council gate (`docs/ENGINEERING_STANDARDS.md` §7) before implementation.
+> Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
+> judged by the §8 Customer Adoption Rule via the Customer Objection Register.
 
 ## Summary
 
 | # | Dimension | State | Trend | One-line basis |
 |---|-----------|-------|-------|----------------|
-| 1 | Product Quality | **GOOD** | ▲ | 1,271 tests/122 files green; Phase V truth-fixes verified live on the homepage |
+| 1 | Product Quality | **GOOD** | ▲ | 1,300 tests/126 files green; Phase VIII fixed 3 customer-visible scale defects (scan→report 422, pricing drift, entitlement display) |
 | 2 | Security | **GOOD** | ▲ | Phase IV/V security blockers closed; gitleaks + security-headers CI; no SOC 2 attestation (organizational) |
 | 3 | Reliability | **GOOD** | ▲ | 30 consecutive green deploys; external probe live; restore drill armed (first run pending) |
 | 4 | Performance | **GOOD (directional)** | ▬ | p50 44ms/p99 131ms local; bundle 1.32MB vs 2.5MB gate; no production APM yet |
-| 5 | Scalability | **ADEQUATE** | ▬ | Cloudflare edge architecture; unproven beyond current load (155 scans, 1,257 sessions) |
+| 5 | Scalability | **GOOD (directional)** | ▲ | 100 orgs / 10 archetypes onboarded cleanly (0 errors); tenant isolation held; sustained-load throttling graceful by-design. Still unproven against real production concurrency |
 | 6 | Maintainability | **ADEQUATE** | ▲ | Standards doc + envelope for new code; 71% of legacy routes still unwrapped (accepted, migrating opportunistically) |
 | 7 | AI Quality | **GOOD** | ▬ | Grounded, source-attributed intel; honest-uncertainty posture regression-locked; no automated eval harness yet |
-| 8 | Customer Satisfaction | **UNKNOWN** | ▬ | Zero verified customer feedback exists; testimonial section honestly empty |
+| 8 | Customer Satisfaction | **UNKNOWN (real) / measured (simulated)** | ▬ | Zero *real* customer feedback still; but the 100-customer simulation now yields a structured Customer Objection Register (`CUSTOMER_OBJECTION_REGISTER.md`) — 6 objections, 5 resolved, 1 owner-open |
 | 9 | Documentation | **GOOD** | ▲ | Contract/architecture docs rewritten from verified v40; index enforces one-canonical-doc rule |
 | 10 | Operational Readiness | **GOOD** | ▲ | Runbooks + backups + probe + drill automation; single-operator on-call remains the top risk (R-10) |
 | 11 | Commercial Readiness | **PILOT** | ▬ | ₹0 revenue, 0 paying customers; 4 owner-action gates to GA unchanged |

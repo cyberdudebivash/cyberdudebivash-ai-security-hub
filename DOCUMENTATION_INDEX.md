@@ -18,8 +18,10 @@
 | Operational risk | `docs/OPERATIONAL_RISK_REGISTER.md` | Living register: accepted risks + open items with owners |
 | Production operations | `PRODUCTION_OPERATIONS_MANUAL.md` | Operator's entry point: topology, state visibility, calendars; links to runbooks |
 | Production health (current state) | `PRODUCTION_HEALTH_SCORECARD.md` | Living Phase VI scorecard: 11 dimensions with evidence, trends, and the Product Council-gated action queue |
-| Customer journey certification | `ENTERPRISE_CUSTOMER_SUCCESS_MATRIX.md` | Living Phase VII matrix: per-journey certification statuses with evidence, fixes, and standing limitations |
-| Engineering standards + Product Council gate | `docs/ENGINEERING_STANDARDS.md` | Canonical conventions for new code (§1–6) and the permanent four-question gate for whether work is done at all (§7) |
+| Customer journey certification | `ENTERPRISE_CUSTOMER_SUCCESS_MATRIX.md` | Living Phase VII/VIII matrix (Edition 2): per-journey certification statuses with evidence, incl. the Phase VIII 100-customer scale journeys J13–J19 |
+| Customer objections | `CUSTOMER_OBJECTION_REGISTER.md` | Living Phase VIII instrument: every customer objection with persona, business impact, classification, corrective action, and resolution evidence |
+| Enterprise operations (Phase VIII) | `PHASE_VIII_ENTERPRISE_OPERATIONS_REPORT.md` | 100-customer × six-month live-operations simulation: success/expansion matrices, support/ops/commercial readiness, executive launch review, global GA recommendation |
+| Engineering standards + gates | `docs/ENGINEERING_STANDARDS.md` | Canonical conventions for new code (§1–6), the four-question Product Council gate for whether to build (§7), and the permanent Customer Adoption Rule for whether a capability is succeeding with customers (§8) |
 | Release decision (current) | `docs/audit-history/PHASE4_GLOBAL_RELEASE_DECISION_2026-07.md` | Phase IV final gate: per-capability + per-segment decisions, conditions register. Deltas from the same-day remediation pass: `docs/audit-history/PHASE4_REMEDIATION_REPORT_2026-07.md` |
 | Vendor security questionnaire | `docs/SECURITY_QUESTIONNAIRE_PACK.md` | CAIQ-lite pre-answered pack for procurement due-diligence (evidence-bounded, gaps included) |
 | Security posture | `SECURITY_GAP_ANALYSIS.md` | Current gaps + controls |

@@ -5,7 +5,11 @@
 > evidence. Statuses: CERTIFIED · PILOT READY · PRODUCTION READY ·
 > APPROVED WITH LIMITATIONS · NEEDS IMPROVEMENT · BLOCKED.
 >
-> **Edition:** 1 · **Date:** 2026-07-04 · **Build evaluated:** `781db7e` + Phase VII fixes
+> **Edition:** 2 · **Date:** 2026-07-04 · **Build evaluated:** `0dbf739` + Phase VIII fixes
+> (Edition 2 appends the Phase VIII 100-customer scale journeys — see the
+> "Phase VIII — scale simulation journeys" section below. Phase VII journeys
+> J1–J12 are retained; J4/J5 were re-verified at scale and their evidence is
+> extended, not replaced.)
 >
 > **Vantage points (disclosed):** production egress is policy-blocked from the
 > engineering sandbox, so journeys were executed against a lab runtime of the
@@ -48,6 +52,22 @@
 2. **GA gates unchanged:** one live payment, one live SSO round-trip, external SLA measurement, support deputy (R-10), SOC 2 for regulated segments.
 3. **Integration evidence** (J12) requires a customer-side system; first pilot tenant closes it.
 
+## Phase VIII — scale simulation journeys (100 customers, six months)
+
+Executed against 100 organizations across 10 enterprise archetypes over HTTP
+only. Full detail in `PHASE_VIII_ENTERPRISE_OPERATIONS_REPORT.md`; objections in
+`CUSTOMER_OBJECTION_REGISTER.md`.
+
+| # | Journey (persona) | Status | Evidence highlights |
+|---|-------------------|--------|---------------------|
+| J13 | Onboard 100 orgs at scale (all archetypes) | **PRODUCTION READY** | 100/100 onboarded; TTFV p50 406 ms / p95 778 ms; 0 errors, 0 objections in the clean post-fix pass |
+| J14 | Scan → report on an already-cached domain (SOC analyst) | **PRODUCTION READY** (fixed) | Was S1: cache-hit returned a stale `scan_id`, so report generation 422'd for any previously-scanned domain. Fixed (scan_id alignment); 90/90 reports generate; locked by `phase8CachedScanReportId` |
+| J15 | Compare pricing across surfaces (evaluator) | **PRODUCTION READY** (fixed) | FREE 5 vs 3 vs 50 and STARTER shown worse-than-FREE reconciled; `/api` tiers now derived from enforced `TIER_LIMITS`; locked by `phase8EntitlementTruth` |
+| J16 | Read plan entitlements (admin) | **PRODUCTION READY** (fixed) | Plan page said no AI / no reports while delivering both; now advertises what FREE actually ships; locked by `phase8EntitlementTruth` |
+| J17 | Cross-tenant isolation probe (CISO) | **CERTIFIED** | Second tenant's token → 403 on another org's dashboard, record, and update; owner control → 200. No isolation breach |
+| J18 | Sustained-load throttling (MSSP/SOC) | **APPROVED WITH LIMITATIONS** | FREE 2/min burst throttles heavy usage by-design; 429 names tier/reason/retry/upgrade — graceful, no 500s. Upgrade closes it |
+| J19 | Fresh-environment DB bootstrap (impl. engineer) | **PRODUCTION READY** (fixed) | Phase VII J8's "canonical bootstrap queued" delivered: `schema_bootstrap.sql` stands up an empty DB to 228 tables, 0 errors, 0 phantom-table refs |
+
 ## Update protocol
 
 Re-execute a journey whenever its surface changes; a journey's status may only
@@ -55,3 +75,7 @@ change with fresh evidence. New journeys append; statuses never silently edit.
 Certification language per the Phase VII final rule: a workflow is not "working"
 — it is "completed by a customer under production-like conditions with verified
 evidence and no production-critical blockers within the validated scope."
+Phase VIII adds the §8 Customer Adoption Rule: a capability is successful only
+when a representative customer can discover, understand, configure, use, and
+gain business value from it with acceptable operations — tracked via the
+Customer Objection Register.

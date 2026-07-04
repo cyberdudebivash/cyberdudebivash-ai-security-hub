@@ -21,7 +21,13 @@ export const TIER_LIMITS = {
 
 // ─── Plan features matrix ─────────────────────────────────────────────────────
 export const PLAN_FEATURES = {
-  FREE:       { ai_analyze: false, ai_simulate: false, ai_forecast: false, api_access: false, multi_user: false, reports: false, priority_support: false },
+  // FREE genuinely ships domain-scan report generation (Phase VII-certified, 7-day
+  // retention) and AI threat-correlation (/api/ai/analyze is intentionally NOT
+  // PRO-gated — see test/aiBrainEntitlementGate). Advertising them as false was a
+  // Phase VIII finding: /api/user/plan under-sold the free tier and contradicted
+  // the product's own behavior. api_access stays false (that flag denotes the
+  // premium /api/v1 REST surface, which correctly 403s for FREE keys).
+  FREE:       { ai_analyze: true,  ai_simulate: false, ai_forecast: false, api_access: false, multi_user: false, reports: true,  priority_support: false },
   STARTER:    { ai_analyze: true,  ai_simulate: false, ai_forecast: false, api_access: false, multi_user: false, reports: true,  priority_support: false },
   PRO:        { ai_analyze: true,  ai_simulate: true,  ai_forecast: true,  api_access: true,  multi_user: false, reports: true,  priority_support: false },
   ENTERPRISE: { ai_analyze: true,  ai_simulate: true,  ai_forecast: true,  api_access: true,  multi_user: true,  reports: true,  priority_support: true  },

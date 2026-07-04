@@ -356,7 +356,20 @@ export async function handleDomainScan(request, env, authCtx = {}) {
   const cached = await getCachedScan(env, domain);
   if (cached && !body?.nocache) {
     const cachedPayload = addMonetizationFlags(cached, 'domain', authCtx, scanId);
-    void cacheScanResultForReport(env, authCtx, scanId, cachedPayload);
+    // The response cache is keyed by domain and SHARED across users, so `cached`
+    // still carries the ORIGINAL scan's id. Stamp THIS request's fresh scanId
+    // onto the payload the customer receives so it matches the id we key the
+    // report cache, history row and X-Scan-ID header under. Without this, the
+    // customer reads the stale id from the body and POST /api/report/generate
+    // {scan_id} 422s ("Could not resolve scan result") for any already-cached
+    // domain — a broken scan→report workflow that only appears at scale.
+    cachedPayload.scan_id = scanId;
+    if (cachedPayload.scan_metadata) {
+      cachedPayload.scan_metadata = { ...cachedPayload.scan_metadata, scan_id: scanId };
+    }
+    // Awaited (not fire-and-forget): a customer generating a report immediately
+    // after the scan must find the cache entry already written.
+    await cacheScanResultForReport(env, authCtx, scanId, cachedPayload);
     // Persist THIS user's history even on a shared-cache hit (awaited so the
     // row exists before we respond — otherwise history is lost for cached scans).
     await trackDomainScan(env, authCtx, scanId, domain, cached, cached?.data_source);
@@ -428,7 +441,8 @@ export async function handleDomainScan(request, env, authCtx = {}) {
     headers: { 'X-Scan-ID': scanId, 'X-Module': 'domain', 'X-Cache': 'MISS', 'X-Data-Source': dataSource, 'X-Brain-Version': 'v32.0' },
   });
   void incrementScanCounter(env);
-  void cacheScanResultForReport(env, authCtx, scanId, responsePayload);
+  // Awaited so a report generated immediately after the scan resolves the id.
+  await cacheScanResultForReport(env, authCtx, scanId, responsePayload);
   await trackDomainScan(env, authCtx, scanId, domain, scanResult, dataSource);
   return finalResponse;
 }

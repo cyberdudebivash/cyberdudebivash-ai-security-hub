@@ -176,3 +176,45 @@ implementation.
 How this interacts with the rest of this document: sections 1–6 govern
 *how* code is written once approved. Section 7 governs *whether* it gets
 written at all.
+
+## 8. The Customer Adoption Rule (permanent, Phase VIII)
+
+Adopted 2026-07-04 as a permanent owner-directed rule for all future phases,
+marking the transition from *engineering completeness* to *customer adoption*
+as the definition of done. It is the standard by which every capability is
+judged "successful":
+
+> **No capability is successful because it works technically. It is successful
+> only when a representative customer can discover it, understand it, configure
+> it, use it effectively, and achieve meaningful business value with an
+> acceptable operational experience.**
+
+Concretely, a capability is not "done" until all six hold, each with evidence:
+
+1. **Discover** — a real customer can find it without being told it exists
+   (navigation, docs, `/api` self-description, onboarding guide).
+2. **Understand** — its purpose and value are clear without reading source.
+3. **Configure** — a customer can set it up with the documented steps, and the
+   documented steps actually work on a clean environment.
+4. **Use effectively** — the primary workflow completes end-to-end under
+   production-like conditions, including the second and hundredth use, not just
+   the first.
+5. **Business value** — it solves a named business problem and the customer can
+   see the result (a report, a verdict, a saved hour) — not just a 200 response.
+6. **Acceptable operations** — failure modes are honest and recoverable, limits
+   are disclosed before they bite, and support has a path when it breaks.
+
+The enforcement instrument for this rule is the **Customer Objection Register**
+(`CUSTOMER_OBJECTION_REGISTER.md`): every time a simulated or real customer says
+"I don't understand this", "why is this useful", "why should I trust this",
+"this is too complicated", "your pricing isn't clear", "onboarding is hard", or
+"this doesn't answer my question", it is recorded with persona, business impact,
+classification (product / documentation / onboarding / sales), corrective
+action, and evidence of resolution. An objection is not closed until the
+customer-observable behavior that caused it is fixed and re-verified over the
+same channel a customer would use.
+
+Sections 7 and 8 are complementary: §7 decides whether a capability should
+exist; §8 decides whether an existing capability is actually succeeding with
+customers. A feature can pass §7 and still fail §8 — that failure is a defect,
+tracked and fixed, exactly like a functional bug.

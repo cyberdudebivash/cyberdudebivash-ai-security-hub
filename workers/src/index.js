@@ -197,7 +197,24 @@ import { handleAIAnalyze, handleAISimulate, handleAIForecast,
          handleAIChat, handleGenerateRules, handleRulesHistory, handleGetSavedRule } from './handlers/aiAnalysis.js';
 // Canonical plan-feature matrix (ai_simulate / ai_forecast are PRO+; STARTER/FREE = false).
 // Same source of truth used by PLAN_FEATURES in auth/apiKeys.js and the pricing matrix.
-import { hasAccess as planHasAccess } from './auth/apiKeys.js';
+import { hasAccess as planHasAccess, TIER_LIMITS as PLAN_TIER_LIMITS } from './auth/apiKeys.js';
+
+// Public /api "tiers" doc row, DERIVED from the enforced TIER_LIMITS so the
+// customer-facing docs can never drift from what the platform actually charges
+// and enforces. (Phase VIII: the hardcoded copy had FREE key_limit 2 vs enforced
+// 1, and STARTER scan_limit 10 vs enforced 600 — a prospect saw STARTER as worse
+// than FREE.) queue_priority is presentation-only and passed per tier.
+function apiTierDoc(tier, queue_priority) {
+  const t = PLAN_TIER_LIMITS[tier] || PLAN_TIER_LIMITS.FREE;
+  return {
+    daily_limit: t.daily_limit,          // -1 = unlimited
+    burst: `${t.burst_per_min}/min`,
+    scan_limit: t.scan_limit,            // monthly scan cap; -1 = unlimited
+    key_limit: t.api_keys,               // -1 = unlimited
+    price_inr: t.price_inr,
+    queue_priority,
+  };
+}
 
 // ─── CVE Engine (for /api/v1/cves endpoint) ───────────────────────────────────
 import { getTopCVEsForModule } from './services/cveEngine.js';
@@ -1305,10 +1322,11 @@ function apiInfoResponse() {
       'POST /api/webhooks/razorpay': 'Razorpay payment webhook',
     },
     tiers: {
-      FREEMIUM:   { daily_limit:  5, burst: '2/min',  scan_limit: 50,  key_limit: 2,  price_inr: 0,    queue_priority: 'low'    },
-      STARTER:    { daily_limit: 20, burst: '5/min',  scan_limit: 10,  key_limit: 2,  price_inr: 499,  queue_priority: 'normal' },
-      PRO:        { daily_limit: 500, burst: '20/min', scan_limit: -1,  key_limit: 5,  price_inr: 1499, queue_priority: 'normal' },
-      ENTERPRISE: { daily_limit: -1, burst: '60/min', scan_limit: -1,  key_limit: 20, price_inr: 4999, queue_priority: 'high'   },
+      // Derived from the enforced TIER_LIMITS (auth/apiKeys.js) — see apiTierDoc.
+      FREEMIUM:   apiTierDoc('FREE',       'low'),
+      STARTER:    apiTierDoc('STARTER',    'normal'),
+      PRO:        apiTierDoc('PRO',        'normal'),
+      ENTERPRISE: apiTierDoc('ENTERPRISE', 'high'),
     },
     contact: CONTACT_EMAIL,
     pricing: 'https://tools.cyberdudebivash.com/#pricing',
