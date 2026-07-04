@@ -172,44 +172,48 @@ export async function handleOrgDashboard(request, env, authCtx, orgId) {
 
   const memberPlaceholders = memberIds.map(() => '?').join(',');
 
-  // Aggregate scan stats for all members
+  // Aggregate scan stats for all members. scan_history's canonical time
+  // column is scanned_at (see schema.sql + history.js). Each aggregate
+  // degrades to an empty result instead of failing the whole dashboard.
+  const safeFirst = (stmt) => stmt.first().catch(() => null);
+  const safeAll   = (stmt) => stmt.all().catch(() => ({ results: [] }));
   const [scanStats, riskStats, moduleBreakdown, recentScans, monitorStats] = await Promise.all([
     // Total scans
-    env.DB.prepare(
+    safeFirst(env.DB.prepare(
       `SELECT COUNT(*) as total, SUM(CASE WHEN risk_level='CRITICAL' THEN 1 ELSE 0 END) as critical_count
-       FROM scan_history WHERE user_id IN (${memberPlaceholders}) AND created_at > datetime('now', '-30 days')`
-    ).bind(...memberIds).first(),
+       FROM scan_history WHERE user_id IN (${memberPlaceholders}) AND scanned_at > datetime('now', '-30 days')`
+    ).bind(...memberIds)),
 
     // Risk distribution
-    env.DB.prepare(
+    safeAll(env.DB.prepare(
       `SELECT risk_level, COUNT(*) as count, AVG(risk_score) as avg_score
        FROM scan_history WHERE user_id IN (${memberPlaceholders})
        GROUP BY risk_level`
-    ).bind(...memberIds).all(),
+    ).bind(...memberIds)),
 
     // Module breakdown
-    env.DB.prepare(
+    safeAll(env.DB.prepare(
       `SELECT module, COUNT(*) as count, AVG(risk_score) as avg_score, MAX(risk_score) as max_score
        FROM scan_history WHERE user_id IN (${memberPlaceholders})
        GROUP BY module ORDER BY count DESC`
-    ).bind(...memberIds).all(),
+    ).bind(...memberIds)),
 
     // Recent scans (last 5)
-    env.DB.prepare(
+    safeAll(env.DB.prepare(
       `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
-              u.full_name as scanned_by, sh.created_at
+              u.full_name as scanned_by, sh.scanned_at
        FROM scan_history sh
        LEFT JOIN users u ON u.id = sh.user_id
        WHERE sh.user_id IN (${memberPlaceholders})
-       ORDER BY sh.created_at DESC LIMIT 5`
-    ).bind(...memberIds).all(),
+       ORDER BY sh.scanned_at DESC LIMIT 5`
+    ).bind(...memberIds)),
 
     // Monitor stats
-    env.DB.prepare(
+    safeFirst(env.DB.prepare(
       `SELECT COUNT(*) as total,
               SUM(CASE WHEN enabled=1 THEN 1 ELSE 0 END) as active_count
        FROM monitor_configs WHERE org_id = ?`
-    ).bind(orgId).first(),
+    ).bind(orgId)),
   ]);
 
   // Calculate overall org risk score
@@ -385,13 +389,13 @@ export async function handleOrgScans(request, env, authCtx, orgId) {
 
   const placeholders = memberIds.map(() => '?').join(',');
   let query  = `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
-                       u.full_name as scanned_by, sh.created_at
+                       u.full_name as scanned_by, sh.scanned_at
                 FROM scan_history sh LEFT JOIN users u ON u.id = sh.user_id
                 WHERE sh.user_id IN (${placeholders})`;
   const params = [...memberIds];
 
   if (module) { query += ' AND sh.module = ?'; params.push(module); }
-  query += ' ORDER BY sh.created_at DESC LIMIT ? OFFSET ?';
+  query += ' ORDER BY sh.scanned_at DESC LIMIT ? OFFSET ?';
   params.push(limit, offset);
 
   const { results } = await env.DB.prepare(query).bind(...params).all();

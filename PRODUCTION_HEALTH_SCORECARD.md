@@ -5,7 +5,7 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 3 · **Date:** 2026-07-04 · **Production commit:** `cc828ef` (deploy #618); branch at Phase VIII fixes
+> **Edition:** 4 · **Date:** 2026-07-04 · **Production commit:** `b81bce0` (deploy #621); branch at Phase IX RC fix
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
@@ -17,6 +17,16 @@
 > tier. Fresh-environment DB bootstrap closed (`schema_bootstrap.sql`, 228
 > tables/0 err on empty). Tenant isolation, AI honesty, and throttle-grace
 > verified at scale. Suite 1,300 tests / 126 files.
+> **Edition 4 (Phase IX RC, same day):** Release Candidate governance executed
+> **against live production** with paying-customer journeys (throwaway
+> accounts, full cleanup). One critical production defect found and fixed:
+> org dashboard + org scan history 500'd (`scan_history.created_at` vs the
+> canonical `scanned_at`; the lab had masked it via a heal-pass column —
+> RC-B1). Fix ships with a production-faithful-schema regression lock plus
+> per-aggregate dashboard degradation. Negative paths, measurement honesty,
+> Phase VIII fixes, and SSO surface re-verified live. Per-capability release
+> decisions + blocker board: `PHASE_IX_RELEASE_CANDIDATE_REPORT.md`.
+> Suite 1,305 tests / 127 files.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.

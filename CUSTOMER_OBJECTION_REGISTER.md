@@ -10,11 +10,15 @@
 > customer-observable behavior that caused it is fixed and re-verified over the
 > same channel a customer would use. See `docs/ENGINEERING_STANDARDS.md` §8.
 >
-> **Edition:** 1 · **Date:** 2026-07-04 · **Build:** `0dbf739` + Phase VIII fixes
-> **Method:** 100 simulated organizations across 10 enterprise archetypes,
-> exercised over HTTP only (no implementation knowledge) against a lab runtime
-> of the deployed build. Objections are recorded only when a customer action
-> actually produced them — none are hypothetical.
+> **Edition:** 2 · **Date:** 2026-07-04 · **Build:** `b81bce0` (live production) + Phase IX RC fixes
+> **Method (Ed. 1, Phase VIII):** 100 simulated organizations across 10
+> enterprise archetypes, exercised over HTTP only (no implementation knowledge)
+> against a lab runtime of the deployed build.
+> **Method (Ed. 2, Phase IX RC):** paying-customer journeys executed against
+> **live production** (`https://cyberdudebivash.in`) with throwaway accounts and
+> full cleanup — public workflows only, no admin overrides, no DB manipulation.
+> Objections are recorded only when a customer action actually produced them —
+> none are hypothetical.
 
 ## Status legend
 
@@ -105,6 +109,20 @@
 
 ---
 
+## OBJ-07 — "I created my organization and its security dashboard just crashes." · RESOLVED
+
+| Field | Detail |
+|-------|--------|
+| **Objection** | A brand-new enterprise customer signs up on **live production**, creates an organization (201), then opens the org security dashboard — `GET /api/orgs/{id}/dashboard` returns **500 ERR_UNHANDLED**. The org-wide scan history (`GET /api/orgs/{id}/scans`) also returns **500**. The flagship multi-tenant surface fails on first touch. |
+| **Persona** | Platform administrator / SOC manager on day one of an enterprise evaluation — the exact moment a deployment decision is formed. |
+| **Business impact** | A hard 500 on the organization dashboard immediately after org creation ends an enterprise evaluation. It is the highest-visibility failure a paying customer can encounter: the feature they are paying for (multi-user org security posture) does not open. |
+| **Classification** | **Product** (defect) — found **in live production** by the Phase IX RC program (`request_id 49ad647b…` dashboard, `e2164bfc…` scans, build `b81bce0`). |
+| **Root cause** | Both handlers queried `scan_history.created_at`; the canonical (and only) time column is `scanned_at` (base schema, all indexes, and the working `/api/history` all use `scanned_at`). Production has the correct schema, so SQLite threw `no such column` → unhandled 500. The Phase VIII lab **masked** the bug because a bootstrap heal-pass had added a stray `created_at` column — which is precisely why the RC mandate requires production-first validation. |
+| **Corrective action** | `workers/src/handlers/orgManagement.js` — all `scan_history` queries in `handleOrgDashboard` and `handleOrgScans` use the canonical `scanned_at`; every dashboard aggregate is additionally wrapped so a single failing query degrades that panel to an empty state instead of hard-500ing the customer's dashboard. |
+| **Resolution evidence** | Regression-locked by `workers/test/phase9OrgDashboardSchema.test.mjs` (5 tests) which runs the **real handlers against a production-faithful schema** — `scan_history` with `scanned_at` and deliberately **no** `created_at` — so the pre-fix code fails the suite and any regression back to `created_at` is caught before deploy. Includes a degradation test (missing aggregate table → 200 with empty panel, not 500) and a 403 non-member control. Production re-verification of the exact failing journey (signup → org create → dashboard 200 → scans 200 → account delete) executed at the Phase IX release gate — see `PHASE_IX_RELEASE_CANDIDATE_REPORT.md`, Release Verification Addendum. |
+
+---
+
 ## Positive signals (objections a customer did *not* raise)
 
 Recorded for balance — capabilities that survived the same adversarial customer scrutiny without producing an objection:
@@ -113,6 +131,13 @@ Recorded for balance — capabilities that survived the same adversarial custome
 - **AI honesty** — asked about a CVE absent from the intel DB, the analyst refused to fabricate a severity. No "your AI made something up" objection (Phase VII J6, held in Phase VIII).
 - **Offboarding** — account deletion returns a per-category erasure receipt; credentials die immediately. No "I couldn't get my data deleted" objection.
 - **Onboarding speed** — time-to-first-value p50 **406 ms** / p95 778 ms across 100 orgs (signup → org → key → scan → report → AI). No "onboarding is slow" objection.
+
+Phase IX RC (verified against **live production**, build `b81bce0`):
+
+- **Failure honesty** — wrong password → 401, bad API key → 401, paid AI gate → 402 with the required plan named, login after account deletion → 401. Clean, truthful negative paths.
+- **Measurement honesty** — an unmeasurable domain returns `grade: null`, `risk: UNKNOWN` in production rather than a fabricated verdict (Phase VII posture holds live).
+- **Input validation** — malformed signup input returns a clean 400 with a clear message, not a 500.
+- **SSO surface** — `/api/auth/sso/login` (400 asking for the org slug), `/api/auth/sso/callback` (302), `/api/auth/enterprise/sso` (setup guidance) all respond correctly in production; what remains is live-IdP round-trip evidence, an owner action.
 
 ## Update protocol
 

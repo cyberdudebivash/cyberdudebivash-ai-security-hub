@@ -21,6 +21,10 @@
 | Customer journey certification | `ENTERPRISE_CUSTOMER_SUCCESS_MATRIX.md` | Living Phase VII/VIII matrix (Edition 2): per-journey certification statuses with evidence, incl. the Phase VIII 100-customer scale journeys J13–J19 |
 | Customer objections | `CUSTOMER_OBJECTION_REGISTER.md` | Living Phase VIII instrument: every customer objection with persona, business impact, classification, corrective action, and resolution evidence |
 | Enterprise operations (Phase VIII) | `PHASE_VIII_ENTERPRISE_OPERATIONS_REPORT.md` | 100-customer × six-month live-operations simulation: success/expansion matrices, support/ops/commercial readiness, executive launch review, global GA recommendation |
+| Release Candidate governance (Phase IX) | `PHASE_IX_RELEASE_CANDIDATE_REPORT.md` | Live-production RC program: Release Blocker Board, per-capability release decisions, risk/limitations registers, readiness + adoption dashboards, release verification addendum |
+| Implementation | `IMPLEMENTATION_PLAYBOOK.md` | Verified onboarding path, tier planning, SSO setup, integrations, self-host bootstrap, cutover checklist |
+| Support | `SUPPORT_PLAYBOOK.md` | Ticket taxonomy with verified diagnostics, error contract, escalation ladder |
+| Customer success | `CUSTOMER_SUCCESS_PLAYBOOK.md` | Measured value milestones, segment adoption paths, renewal/expansion signals |
 | Engineering standards + gates | `docs/ENGINEERING_STANDARDS.md` | Canonical conventions for new code (§1–6), the four-question Product Council gate for whether to build (§7), and the permanent Customer Adoption Rule for whether a capability is succeeding with customers (§8) |
 | Release decision (current) | `docs/audit-history/PHASE4_GLOBAL_RELEASE_DECISION_2026-07.md` | Phase IV final gate: per-capability + per-segment decisions, conditions register. Deltas from the same-day remediation pass: `docs/audit-history/PHASE4_REMEDIATION_REPORT_2026-07.md` |
 | Vendor security questionnaire | `docs/SECURITY_QUESTIONNAIRE_PACK.md` | CAIQ-lite pre-answered pack for procurement due-diligence (evidence-bounded, gaps included) |
