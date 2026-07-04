@@ -8,7 +8,7 @@
 import { verifyJWT, extractBearerToken } from './jwt.js';
 import { resolveApiKeyFromDB, trackApiKeyUsage, checkDailyQuota, TIER_LIMITS } from './apiKeys.js';
 
-export const UPGRADE_URL   = 'https://tools.cyberdudebivash.com/#pricing';
+export const UPGRADE_URL   = 'https://cyberdudebivash.in/#pricing';
 export const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
 
 // ─── Brute-force check for login ─────────────────────────────────────────────

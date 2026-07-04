@@ -87,7 +87,7 @@ export async function handleIOCEnrich(request, env, authCtx) {
     return json({
       success: false,
       error:   `Daily IOC enrichment limit reached (${usage.limit}/day on ${usage.tier} plan)`,
-      upgrade: 'https://tools.cyberdudebivash.com/#pricing',
+      upgrade: 'https://cyberdudebivash.in/#pricing',
     }, 429);
   }
 
@@ -123,7 +123,7 @@ export async function handleIOCEnrichBatch(request, env, authCtx) {
     return json({
       success: false,
       error:   'Batch IOC enrichment requires PRO or ENTERPRISE plan',
-      upgrade: 'https://tools.cyberdudebivash.com/#pricing',
+      upgrade: 'https://cyberdudebivash.in/#pricing',
     }, 403);
   }
 
@@ -152,7 +152,7 @@ export async function handleASMAddTarget(request, env, authCtx, ctx) {
     return json({
       success: false,
       error:   'Attack Surface Management requires PRO or ENTERPRISE plan',
-      upgrade: 'https://tools.cyberdudebivash.com/#pricing',
+      upgrade: 'https://cyberdudebivash.in/#pricing',
       features: ['External subdomain discovery', 'Certificate monitoring', 'Service exposure alerts', 'Continuous scan every 24h'],
     }, 403);
   }
@@ -269,7 +269,7 @@ export async function handleBrandAddMonitor(request, env, authCtx, ctx) {
     return json({
       success: false,
       error:   'Brand Protection requires PRO or ENTERPRISE plan',
-      upgrade: 'https://tools.cyberdudebivash.com/#pricing',
+      upgrade: 'https://cyberdudebivash.in/#pricing',
       features: ['Typosquatting detection', 'Domain impersonation alerts', 'Phishing domain monitoring', 'MX-enabled fake domain alerts'],
     }, 403);
   }

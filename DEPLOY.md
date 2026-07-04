@@ -117,3 +117,39 @@ git revert HEAD --no-edit
 git push origin main
 cd workers && npx wrangler deploy
 ```
+
+---
+
+## Required secrets & environment configuration (Phase VII, 2026-07-04)
+
+**A fresh deployment that skips this section will serve a worker whose entire
+auth surface returns 500** — this exact failure was reproduced during the
+Phase VII customer-simulation lab build. Set secrets with
+`npx wrangler secret put <NAME>` (or `.dev.vars` for `wrangler dev --local`).
+
+| Secret | Required for | Failure mode if missing |
+|--------|--------------|-------------------------|
+| `JWT_SECRET` | All signup/login/session auth | Every `/api/auth/*` call 500s (HMAC key length 0) |
+| `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` | Payments/checkout | Payment creation fails |
+| `RAZORPAY_WEBHOOK_SECRET` | Payment confirmation webhook | Webhooks rejected 401 |
+| `TELEGRAM_BOT_TOKEN` + `ADMIN_TELEGRAM_CHAT_ID` | Ops alerting, Sentinel channel posts | Alerts silently no-op |
+| `RESEND_API_KEY` | Transactional email (welcome, reports) | Emails silently no-op |
+| `ADMIN_KEY` / `ADMIN_TOKEN` | Admin endpoints, deploy recording | Admin calls 401 |
+| `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` | PayPal rail (optional) | PayPal checkout unavailable |
+| `GOOGLE_CLIENT_ID` | Google SSO (optional) | Google sign-in unavailable |
+
+Bindings (in `wrangler.toml`, not secrets): `DB`/`SECURITY_HUB_DB` (D1),
+`SECURITY_HUB_KV`/`KV` (KV), `SCAN_RESULTS` (KV), `AI` (Workers AI).
+
+### Fresh-environment database bootstrap — known limitation
+
+The repo's `schema*.sql` files are **historical migrations, not a reproducible
+bootstrap**: applied in sequence to an empty D1 they conflict (later files
+assume column states produced by hotfixes; core-table foreign keys reference
+`users_v44_backup`, an artifact of the v44→v45 users migration that exists in
+production but is created by no schema file). **The supported way to stand up
+a staging/DR environment with the production schema is to restore the newest
+nightly backup artifact** (validated weekly by `d1-restore-drill.yml`; see
+`DISASTER_RECOVERY_RUNBOOK.md` §3). Producing a single canonical
+`schema_bootstrap.sql` from a live export is tracked in the Production Health
+Scorecard action queue.

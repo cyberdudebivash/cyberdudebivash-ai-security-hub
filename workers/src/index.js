@@ -1183,7 +1183,7 @@ async function handleIntelligenceSummary(env) {
 function apiInfoResponse() {
   return Response.json({
     name:    'CYBERDUDEBIVASH AI Security Hub API',
-    version: '10.0.0',
+    version: '40.0.0',
     auth_methods: {
       jwt:     'Authorization: Bearer <access_token>  (from /api/auth/login)',
       api_key: 'x-api-key: cdb_<key>  (from /api/keys)',
@@ -1192,6 +1192,7 @@ function apiInfoResponse() {
     endpoints: {
       // Auth
       'POST /api/auth/signup':      'Create account → access + refresh tokens',
+      'DELETE /api/auth/delete-account': 'Delete account — erases personal data (GDPR/DPDP)',
       'POST /api/auth/login':       'Authenticate → access + refresh tokens',
       'POST /api/auth/refresh':     'Rotate access token using refresh token',
       'POST /api/auth/logout':      'Revoke session (single or all)',
@@ -3608,7 +3609,7 @@ export async function routeRequest(request, env, ctx, requestId) {
       if (!authCtx.authenticated || authCtx.method !== 'api_key') {
         return withSecurityHeaders(withCors(Response.json({
           success: false,
-          error:   'API v1 requires a valid API key (x-api-key: cdb_*). Obtain one at /api/keys.',
+          error:   'API v1 requires a valid API key on a PRO or ENTERPRISE plan (x-api-key: cdb_*). Keys: POST /api/keys. Free-tier intel feeds need no key: /api/v1/intel/*.json.',
           code:    'ERR_API_KEY_REQUIRED',
           docs:    'GET /api',
         }, { status: 401 }), request));

@@ -73,7 +73,7 @@ function buildRealFindings(domain, dns, tls, bl) {
   const tlsSev   = tlsGrade === 'STRONG' ? 'LOW' : tlsGrade === 'FAIR' ? 'MEDIUM' : 'CRITICAL';
   findings.push({
     id: 'DOM-001', title: 'TLS/SSL & HSTS Configuration', severity: tlsSev,
-    description: tls?.reachable === false
+    description: !tls || tls.reachable === false
       ? `Domain "${domain}" did not respond to HTTPS — may be offline or certificate invalid.`
       : `HSTS: ${tls.hsts_present ? `max-age=${tls.hsts_max_age}s${tls.hsts_preload ? ', preload' : ''}` : 'missing'}. TLS grade: ${tlsGrade}.`,
     hsts_present: tls?.hsts_present ?? false, hsts_max_age: tls?.hsts_max_age ?? 0,
@@ -212,13 +212,56 @@ function computeRealRiskScore(dns, tls, bl) {
   else if (dns.dmarc.enforcement_level === 'NONE')  score += 8;
   if (!dns?.dkim?.found)                            score += 10;
   if (!dns?.caa?.present)                           score += 5;
-  score += Math.round((bl?.combined_threat_score ?? 0) * 0.5);
-  return Math.min(100, score);
+  // A non-numeric feed score must never poison the total: NaN propagates
+  // through every `>=` grade boundary as false, which once shipped a
+  // "grade A / risk LOW" verdict for a domain that didn't even resolve.
+  const blThreat = Number(bl?.combined_threat_score);
+  score += Math.round((Number.isFinite(blThreat) ? blThreat : 0) * 0.5);
+  return Number.isFinite(score) ? Math.min(100, score) : 0;
 }
 
-// ─── buildRealResult — exported for queue consumer (no circular dep) ──────────
-export function buildRealResult(domain, dns, tls, bl) {
-  const scanId    = genScanId();
+// ─── Unmeasurable target — honest non-verdict ────────────────────────────────
+// A domain that does not resolve gives us NOTHING to grade. Returning any
+// letter grade or risk level would be a fabricated verdict (customers scanning
+// a typo'd or internal-only domain must not receive false assurance).
+function buildUnmeasurableResult(domain, scanId) {
+  return {
+    scan_id: scanId,
+    module: 'domain_scanner', version: '5.0.0', target: domain,
+    scan_status: 'unmeasurable',
+    risk_score: null, risk_level: 'UNKNOWN', grade: null,
+    data_source: 'live_dns',
+    resolves: false, ipv4: [], ipv6: [], nameservers: [], mx_records: [],
+    tls_grade: 'NOT_MEASURED', hsts_present: null,
+    dnssec_enabled: null, dnssec_status: 'NOT_MEASURED',
+    spf_policy: null, dmarc_policy: null, dkim_found: null, caa_present: null,
+    blacklisted: null, threat_score: null,
+    summary: `"${domain}" did not resolve in public DNS — no security posture could be measured, so no grade or risk level is given. Check the spelling, or note that internal-only domains cannot be scanned from the public internet.`,
+    findings: [{
+      id: 'DOM-000', title: 'Domain did not resolve', severity: 'INFO',
+      description: `Public DNS resolution for "${domain}" returned no records. Every other check (TLS, DNSSEC, SPF/DKIM/DMARC, threat feeds) requires a resolvable target, so none were performed.`,
+      recommendation: 'Verify the domain spelling. If this is an internal domain, scan a publicly reachable asset instead.',
+      data_source: 'live_dns',
+    }],
+    email_security: null,
+    threat_intelligence: null,
+    scan_metadata: {
+      engine_version: '5.0.0', scan_timestamp: new Date().toISOString(), scan_id: scanId,
+      data_source: 'live_dns + cloudflare_doh + dnsbl',
+      scan_modules: ['dns_resolution'],
+      powered_by: 'CYBERDUDEBIVASH AI Security Hub',
+    },
+  };
+}
+
+// ─── buildRealResult — THE single live-scan result builder ────────────────────
+// Used by both the sync handler below and the async queue consumer (queue.js).
+// The sync path previously carried a near-identical inline copy (labeled
+// v4.0.0) — one business truth, one builder.
+export function buildRealResult(domain, dns, tls, bl, scanId = genScanId()) {
+  // No resolution → nothing was measured → no verdict. See buildUnmeasurableResult.
+  if (dns && dns.resolves === false) return buildUnmeasurableResult(domain, scanId);
+
   const riskScore = computeRealRiskScore(dns, tls, bl);
   const findings  = buildRealFindings(domain, dns, tls, bl);
   return {
@@ -227,6 +270,7 @@ export function buildRealResult(domain, dns, tls, bl) {
     // exact scan without a second round-trip to /api/scan/history.
     scan_id: scanId,
     module: 'domain_scanner', version: '5.0.0', target: domain,
+    scan_status: 'measured',
     risk_score: riskScore, risk_level: riskLevel(riskScore),
     grade: riskScore >= 80 ? 'F' : riskScore >= 60 ? 'D' : riskScore >= 40 ? 'C' : riskScore >= 20 ? 'B' : 'A',
     data_source: 'live_dns',
@@ -237,12 +281,13 @@ export function buildRealResult(domain, dns, tls, bl) {
     spf_policy: dns.spf.policy, dmarc_policy: dns.dmarc.policy,
     dkim_found: dns.dkim.found, caa_present: dns.caa.present,
     blacklisted: bl?.any_blacklisted ?? false, threat_score: bl?.combined_threat_score ?? 0,
-    summary: `"${domain}" scanned live. Risk: ${riskScore}/100 (${riskLevel(riskScore)}). ${findings.filter(f=>['CRITICAL','HIGH'].includes(f.severity)).length} critical/high findings.`,
+    summary: `"${domain}" scanned live via DoH across DNS, TLS, email security, and ${bl?.feeds_total ?? 7} threat feeds. Risk: ${riskScore}/100 (${riskLevel(riskScore)}). ${findings.filter(f=>['CRITICAL','HIGH'].includes(f.severity)).length} critical/high findings.`,
     findings,
     email_security: { spf: dns.spf, dmarc: dns.dmarc, dkim: dns.dkim },
     threat_intelligence: bl ? {
       any_blacklisted: bl.any_blacklisted, combined_threat_score: bl.combined_threat_score,
-      risk_label: bl.risk_label, feeds_total: bl.feeds_total, summary: bl.summary,
+      risk_label: bl.risk_label, domain_listed_on: bl.domain_check?.listed_on,
+      ip_listed_on: bl.ip_check?.listed_on, feeds_total: bl.feeds_total, summary: bl.summary,
     } : null,
     scan_metadata: {
       engine_version: '5.0.0', scan_timestamp: new Date().toISOString(), scan_id: scanId,
@@ -280,8 +325,12 @@ async function trackDomainScan(env, authCtx, scanId, domain, result, dataSource)
          VALUES (?, ?, ?, ?, 'domain', ?, ?, ?, ?, 'completed')`
       ).bind(
         authCtx.user_id, jobId, scanId, domain,
-        result.risk_score || 0, result.risk_level || 'LOW',
-        result.grade || 'A', dataSource || result.data_source || 'live_dns'
+        // An unmeasurable scan must not enter history as "0 / LOW / A" —
+        // that false assurance would outlive the scan response itself.
+        result.risk_score ?? 0,
+        result.scan_status === 'unmeasurable' ? 'UNKNOWN' : (result.risk_level || 'LOW'),
+        result.scan_status === 'unmeasurable' ? 'N/A' : (result.grade || 'A'),
+        dataSource || result.data_source || 'live_dns'
       ).run();
     }
   } catch { /* tracking must never break scan response */ }
@@ -329,40 +378,12 @@ export async function handleDomainScan(request, env, authCtx = {}) {
   let scanResult;
 
   if (dataSource === 'live_dns' && dns) {
-    const riskScore = computeRealRiskScore(dns, tls, bl);
-    const findings  = buildRealFindings(domain, dns, tls, bl);
-
-    scanResult = {
-      scan_id: scanId,   // top-level (mirrored in scan_metadata) — see buildRealResult
-      module: 'domain_scanner', version: '4.0.0', target: domain,
-      risk_score: riskScore, risk_level: riskLevel(riskScore),
-      grade: riskScore >= 80 ? 'F' : riskScore >= 60 ? 'D' : riskScore >= 40 ? 'C' : riskScore >= 20 ? 'B' : 'A',
-      data_source:    'live_dns',
-      resolves:       dns.resolves, ipv4: dns.ipv4, ipv6: dns.ipv6,
-      nameservers:    dns.nameservers, mx_records: dns.mx.records,
-      tls_grade:      tls?.tls_grade ?? 'UNKNOWN', hsts_present: tls?.hsts_present ?? false,
-      dnssec_enabled: dns.dnssec.enabled, dnssec_status: dns.dnssec.status,
-      spf_policy:     dns.spf.policy,  dmarc_policy: dns.dmarc.policy,
-      dkim_found:     dns.dkim.found,  caa_present:  dns.caa.present,
-      blacklisted:    bl?.any_blacklisted ?? false, threat_score: bl?.combined_threat_score ?? 0,
-      summary: `"${domain}" scanned live via DoH across DNS, TLS, email security, and ${bl?.feeds_total ?? 7} threat feeds. Risk: ${riskScore}/100 (${riskLevel(riskScore)}). ${findings.filter(f=>['CRITICAL','HIGH'].includes(f.severity)).length} critical/high findings.`,
-      findings,
-      email_security: { spf: dns.spf, dmarc: dns.dmarc, dkim: dns.dkim },
-      threat_intelligence: bl ? {
-        any_blacklisted: bl.any_blacklisted, combined_threat_score: bl.combined_threat_score,
-        risk_label: bl.risk_label, domain_listed_on: bl.domain_check?.listed_on,
-        ip_listed_on: bl.ip_check?.listed_on, feeds_total: bl.feeds_total, summary: bl.summary,
-      } : null,
-      scan_metadata: {
-        engine_version: '4.0.0', scan_timestamp: new Date().toISOString(), scan_id: scanId,
-        data_source: 'live_dns + cloudflare_doh + dnsbl',
-        scan_modules: ['tls_probe','dnssec','spf','dmarc','dkim','caa','dnsbl_domain','dnsbl_ip'],
-        powered_by: 'CYBERDUDEBIVASH AI Security Hub',
-      },
-    };
+    scanResult = buildRealResult(domain, dns, tls, bl, scanId);
     // v32.0 — Enterprise intelligence enrichment (non-blocking, always runs)
     scanResult = await enrichScanEnterprise(scanResult, 'domain', env).catch(() => scanResult);
-    await cacheScan(env, domain, scanResult);
+    // An unmeasurable scan is a property of THIS attempt (DNS may be
+    // mid-propagation) — never cache it as the domain's shared result.
+    if (scanResult.scan_status !== 'unmeasurable') await cacheScan(env, domain, scanResult);
 
   } else {
     scanResult = {

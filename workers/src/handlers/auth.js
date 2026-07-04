@@ -94,12 +94,29 @@ export async function handleSignup(request, env) {
   let firstKey = null;
   try { firstKey = await createApiKey(env.DB, userId, 'FREE', 'Default Key'); } catch (_) {}
 
-  // Generate tokens
-  const accessToken  = await createAccessToken({ id: userId, email, tier: 'FREE' }, env.JWT_SECRET);
-  const refreshData  = await createRefreshToken();
-  const ip           = getClientIP(request);
-  const ua           = getUA(request);
-  await storeRefreshToken(env.DB, userId, refreshData, ip, ua);
+  // Generate tokens. If anything after the user INSERT fails, roll the
+  // half-created account back — otherwise the customer's retry is met with
+  // "Email already registered" for an account they never received
+  // credentials for (observed live in Phase VII: signup 500 → stranded row).
+  let accessToken, refreshData;
+  try {
+    accessToken = await createAccessToken({ id: userId, email, tier: 'FREE' }, env.JWT_SECRET);
+    refreshData = await createRefreshToken();
+    const ip = getClientIP(request);
+    const ua = getUA(request);
+    await storeRefreshToken(env.DB, userId, refreshData, ip, ua);
+  } catch (e) {
+    try {
+      await env.DB.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').bind(userId).run().catch(() => {});
+      await env.DB.prepare('DELETE FROM api_keys WHERE user_id = ?').bind(userId).run().catch(() => {});
+      await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+    } catch (_) { /* best-effort — duplicate check on retry still guards */ }
+    console.error('[Auth] signup token issuance failed — account rolled back:', e?.message);
+    return Response.json(
+      { error: 'Registration could not be completed — no account was created. Please try again.', code: 'ERR_SIGNUP_INCOMPLETE' },
+      { status: 500 },
+    );
+  }
 
   // Fire-and-forget welcome email (non-blocking)
   try {
