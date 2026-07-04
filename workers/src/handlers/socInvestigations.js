@@ -92,6 +92,12 @@ export async function handleAddEvidence(request, env) {
     return Response.json({ error: `evidence_type must be one of: ${VALID_TYPES.join(', ')}` }, { status: 400 });
   }
 
+  // Tenant isolation: only attach evidence to a case in your own org (or admin).
+  const ownedEv = await env.SECURITY_HUB_DB.prepare(
+    `SELECT id FROM soc_cases WHERE id = ? AND (org_id = ? OR ? = 'admin')`
+  ).bind(caseId, orgId, authCtx.role || '').first();
+  if (!ownedEv) return Response.json({ error: 'Case not found' }, { status: 404 });
+
   const id = genId('ev');
   try {
     await env.SECURITY_HUB_DB.prepare(
@@ -156,6 +162,14 @@ export async function handleAddNote(request, env) {
   if (!VALID_NOTE_TYPES.includes(note_type)) {
     return Response.json({ error: `note_type must be one of: ${VALID_NOTE_TYPES.join(', ')}` }, { status: 400 });
   }
+
+  // Tenant isolation: only write notes to a case in your own org (or admin).
+  // Without this, any authenticated user could inject notes onto another
+  // tenant's case_id (cross-tenant write) — the read handlers already gate this.
+  const ownedNote = await env.SECURITY_HUB_DB.prepare(
+    `SELECT id FROM soc_cases WHERE id = ? AND (org_id = ? OR ? = 'admin')`
+  ).bind(caseId, orgId, authCtx.role || '').first();
+  if (!ownedNote) return Response.json({ error: 'Case not found' }, { status: 404 });
 
   const id     = genId('note');
   const author = authCtx.userId || authCtx.email || 'unknown';
