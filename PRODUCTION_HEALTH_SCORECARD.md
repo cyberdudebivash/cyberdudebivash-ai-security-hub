@@ -5,7 +5,15 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 3 · **Date:** 2026-07-04 · **Production commit:** `cc828ef` (deploy #618); branch at Phase VIII fixes
+> **Edition:** 4 · **Date:** 2026-07-04 · **Production commit:** `b81bce0` (deploy #621, live); branch at Phase IX RC fix
+> **Edition 4 (Phase IX RC, same day):** Release-candidate governance. Full
+> paying-customer journeys run against **live production**; one production defect
+> found and fixed — the org security dashboard 500'd (queried a non-existent
+> `created_at`; canonical is `scanned_at`; a fresh lab masked it). Fixed with
+> per-aggregate resilience + regression-locked on a production-faithful schema.
+> RC decision: RELEASE APPROVED for free/self-serve + non-regulated paid within
+> scope, conditional on deploying the dashboard fix; regulated/SSO/billing remain
+> owner-action gates. See `PHASE_IX_RELEASE_CANDIDATE_REPORT.md`. Suite 1,304/127.
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a

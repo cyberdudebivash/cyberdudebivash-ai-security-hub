@@ -172,44 +172,49 @@ export async function handleOrgDashboard(request, env, authCtx, orgId) {
 
   const memberPlaceholders = memberIds.map(() => '?').join(',');
 
-  // Aggregate scan stats for all members
+  // Aggregate scan stats for all members. The canonical scan_history time column
+  // is `scanned_at` (base schema + indexes + history.js all use it) — an earlier
+  // revision of this handler queried a non-existent `created_at`, which 500'd the
+  // whole dashboard in production (a fresh lab masked it). Each aggregate is also
+  // individually guarded so a single query failure degrades that one metric to a
+  // safe default rather than failing the entire customer-facing dashboard.
   const [scanStats, riskStats, moduleBreakdown, recentScans, monitorStats] = await Promise.all([
-    // Total scans
+    // Total scans (last 30 days)
     env.DB.prepare(
       `SELECT COUNT(*) as total, SUM(CASE WHEN risk_level='CRITICAL' THEN 1 ELSE 0 END) as critical_count
-       FROM scan_history WHERE user_id IN (${memberPlaceholders}) AND created_at > datetime('now', '-30 days')`
-    ).bind(...memberIds).first(),
+       FROM scan_history WHERE user_id IN (${memberPlaceholders}) AND scanned_at > datetime('now', '-30 days')`
+    ).bind(...memberIds).first().catch(() => ({ total: 0, critical_count: 0 })),
 
     // Risk distribution
     env.DB.prepare(
       `SELECT risk_level, COUNT(*) as count, AVG(risk_score) as avg_score
        FROM scan_history WHERE user_id IN (${memberPlaceholders})
        GROUP BY risk_level`
-    ).bind(...memberIds).all(),
+    ).bind(...memberIds).all().catch(() => ({ results: [] })),
 
     // Module breakdown
     env.DB.prepare(
       `SELECT module, COUNT(*) as count, AVG(risk_score) as avg_score, MAX(risk_score) as max_score
        FROM scan_history WHERE user_id IN (${memberPlaceholders})
        GROUP BY module ORDER BY count DESC`
-    ).bind(...memberIds).all(),
+    ).bind(...memberIds).all().catch(() => ({ results: [] })),
 
     // Recent scans (last 5)
     env.DB.prepare(
       `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
-              u.full_name as scanned_by, sh.created_at
+              u.full_name as scanned_by, sh.scanned_at
        FROM scan_history sh
        LEFT JOIN users u ON u.id = sh.user_id
        WHERE sh.user_id IN (${memberPlaceholders})
-       ORDER BY sh.created_at DESC LIMIT 5`
-    ).bind(...memberIds).all(),
+       ORDER BY sh.scanned_at DESC LIMIT 5`
+    ).bind(...memberIds).all().catch(() => ({ results: [] })),
 
     // Monitor stats
     env.DB.prepare(
       `SELECT COUNT(*) as total,
               SUM(CASE WHEN enabled=1 THEN 1 ELSE 0 END) as active_count
        FROM monitor_configs WHERE org_id = ?`
-    ).bind(orgId).first(),
+    ).bind(orgId).first().catch(() => ({ total: 0, active_count: 0 })),
   ]);
 
   // Calculate overall org risk score

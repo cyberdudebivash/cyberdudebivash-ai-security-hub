@@ -10,11 +10,14 @@
 > customer-observable behavior that caused it is fixed and re-verified over the
 > same channel a customer would use. See `docs/ENGINEERING_STANDARDS.md` §8.
 >
-> **Edition:** 1 · **Date:** 2026-07-04 · **Build:** `0dbf739` + Phase VIII fixes
-> **Method:** 100 simulated organizations across 10 enterprise archetypes,
-> exercised over HTTP only (no implementation knowledge) against a lab runtime
-> of the deployed build. Objections are recorded only when a customer action
-> actually produced them — none are hypothetical.
+> **Edition:** 2 · **Date:** 2026-07-04 · **Build:** `b81bce0` (live) + Phase IX RC fix
+> **Method:** Phase VIII — 100 simulated orgs against a lab runtime. Phase IX (RC)
+> — paying-customer journeys executed over HTTP against **live production**
+> (`https://cyberdudebivash.in`), public workflows only, throwaway accounts
+> deleted. Objections are recorded only when a customer action actually produced
+> them — none are hypothetical. Phase IX entries (OBJ-07+) carry the fuller RC
+> schema: persona · scenario · statement · observed · expected · impact · root
+> cause · corrective action · evidence · release version · verification status.
 
 ## Status legend
 
@@ -104,6 +107,22 @@
 | **Resolution evidence** | Graceful degradation confirmed at scale (throttle escalation across the six-month waves is clean 429s, not errors or 500s). Documented as a tier boundary in the operations report. No code change required; **ACCEPTED**. |
 
 ---
+
+## OBJ-07 — "I created an organization and its dashboard is broken." · RESOLVED (Phase IX RC)
+
+| Field | Detail |
+|-------|--------|
+| **Persona** | Platform administrator / SOC manager standing up a multi-user organization. |
+| **Business scenario** | Day-1 enterprise setup: sign up, create the organization, open the org security-posture dashboard to see aggregate risk across the team. |
+| **Customer statement** | "I just created my organization and the dashboard throws a server error — is the platform broken?" |
+| **Observed behaviour** | `GET /api/orgs/:id/dashboard` → **500 `ERR_UNHANDLED`** in live production (request_id captured), while `GET /api/orgs/:id` and `GET /api/orgs` both returned 200. |
+| **Expected behaviour** | The org dashboard returns 200 with aggregates (or a clean empty-state for a brand-new org). |
+| **Business impact** | The organization/RBAC dashboard is a core enterprise-tier feature and a QBR/executive-reporting surface. A hard 500 on first use undermines confidence in the multi-tenant story and blocks the enterprise buying motion. |
+| **Root cause** | The dashboard aggregated `scan_history` by a **non-existent `created_at` column**; the canonical column is `scanned_at` (base schema, indexes, and `history.js` all use it). Production has the correct schema, so the query threw "no such column"; a freshly-bootstrapped lab masked the defect because its bootstrap had accidentally added a `created_at` column. Only testing against real production exposed it. |
+| **Corrective action** | `workers/src/handlers/orgManagement.js` — use the canonical `scanned_at`; additionally guard each of the five dashboard aggregates so a single query failure degrades that one metric to a safe default instead of 500-ing the whole customer-facing dashboard. |
+| **Evidence** | Reproduced live in production (500 + request_id). Regression-locked by `workers/test/phase9OrgDashboardSchema.test.mjs` (4 tests) which runs the handler against a **production-faithful schema** (`scan_history` with `scanned_at`, no `created_at`) on a real SQL engine — the pre-fix code throws, the fix returns 200 with correct aggregates and degrades gracefully when the monitors table is absent. |
+| **Release version** | Fixed on branch `claude/enterprise-scale-simulation-hvzjah`; targets the next production deploy after `b81bce0`. |
+| **Verification status** | **Verified (code + regression test).** Production re-verification pending the deploy of this fix (RC release decision). |
 
 ## Positive signals (objections a customer did *not* raise)
 

@@ -5,11 +5,11 @@
 > evidence. Statuses: CERTIFIED · PILOT READY · PRODUCTION READY ·
 > APPROVED WITH LIMITATIONS · NEEDS IMPROVEMENT · BLOCKED.
 >
-> **Edition:** 2 · **Date:** 2026-07-04 · **Build evaluated:** `0dbf739` + Phase VIII fixes
-> (Edition 2 appends the Phase VIII 100-customer scale journeys — see the
-> "Phase VIII — scale simulation journeys" section below. Phase VII journeys
-> J1–J12 are retained; J4/J5 were re-verified at scale and their evidence is
-> extended, not replaced.)
+> **Edition:** 3 · **Date:** 2026-07-04 · **Build evaluated:** `b81bce0` (live) + Phase IX RC fix
+> (Edition 2 appended the Phase VIII 100-customer scale journeys J13–J19.
+> Edition 3 appends the Phase IX Release Candidate journeys J20–J25, executed
+> against **live production**. Prior journeys are retained; statuses change only
+> with fresh evidence.)
 >
 > **Vantage points (disclosed):** production egress is policy-blocked from the
 > engineering sandbox, so journeys were executed against a lab runtime of the
@@ -67,6 +67,21 @@ only. Full detail in `PHASE_VIII_ENTERPRISE_OPERATIONS_REPORT.md`; objections in
 | J17 | Cross-tenant isolation probe (CISO) | **CERTIFIED** | Second tenant's token → 403 on another org's dashboard, record, and update; owner control → 200. No isolation breach |
 | J18 | Sustained-load throttling (MSSP/SOC) | **APPROVED WITH LIMITATIONS** | FREE 2/min burst throttles heavy usage by-design; 429 names tier/reason/retry/upgrade — graceful, no 500s. Upgrade closes it |
 | J19 | Fresh-environment DB bootstrap (impl. engineer) | **PRODUCTION READY** (fixed) | Phase VII J8's "canonical bootstrap queued" delivered: `schema_bootstrap.sql` stands up an empty DB to 228 tables, 0 errors, 0 phantom-table refs |
+
+## Phase IX — Release Candidate journeys (live production, public workflows)
+
+Executed as a paying customer over HTTP against **live production**
+(`https://cyberdudebivash.in`), throwaway accounts deleted. Full detail in
+`PHASE_IX_RELEASE_CANDIDATE_REPORT.md`.
+
+| # | Journey (persona) | Status | Evidence highlights |
+|---|-------------------|--------|---------------------|
+| J20 | Full self-serve implementation (admin) | **RELEASE APPROVED** | signup 201 → login → org 201 → keys → MFA, all live, no engineering help; TTFV ~2.6 s |
+| J21 | Org security dashboard (SOC manager) | **APPROVED W/ LIMITATIONS** (fixed) | Was **500 in production** (`created_at` vs canonical `scanned_at`); fixed + resilience; locked by `phase9OrgDashboardSchema`; prod re-verify pending deploy |
+| J22 | Operations suite (SOC analyst) | **RELEASE APPROVED** | scan/unmeasurable-honesty/report+download/AI(conf 94)/history/threat-intel/KEV all green live |
+| J23 | Support error-quality (support engineer) | **RELEASE APPROVED** | 401/401(plan)/402(plan+upgrade)/400(clear)/429(retry+upgrade) — every error self-explaining |
+| J24 | Commercial & offboarding (buyer/compliance) | **RELEASE APPROVED** | plans consistent, entitlements truthful, order creates; delete → erasure receipt, credentials dead |
+| J25 | SSO onboarding (enterprise IT) | **PILOT ONLY** | Endpoints implemented & respond (need `?org=`); no live IdP round-trip (GA gate 2) |
 
 ## Update protocol
 
