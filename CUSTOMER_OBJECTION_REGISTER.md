@@ -159,10 +159,27 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 - **User provisioning lifecycle** — invite (201) → member accesses org dashboard (200) → RBAC denial for over-privilege (analyst inviting → 403) → role change by owner (200) → removal (200) → removed member locked out (403). The full enterprise admin loop works with no engineering intervention.
 - **AI consistency** — `/api/ai/analyze` rejects malformed input with a clean 400 naming the required fields; a real scan yields `confidence_score`, `exploit_probability`, a phased attack chain, and MITRE mappings grounded in the customer's own scan findings.
 
+## OBJ-09 — "When I Google your platform, nothing rich shows up — other companies get full listings." · RESOLVED (code) / indexing & knowledge panel = owner + time
+
+| Field | Detail |
+|-------|--------|
+| **Objection** | Searching "cyberdudebivash ai security hub" shows the owner's Google Business Profile card but no rich organic result for the platform itself; competitors' searches show full knowledge panels. (Owner-reported with screenshots, 2026-07-05.) |
+| **Persona** | Every prospect at the **Discovery** stage — the first trust stage in the GA certification. |
+| **Business impact** | Weak discovery caps the entire funnel: a platform that can't be found can't be evaluated, bought, or recommended. |
+| **Classification** | **Product (SEO/structured data)** + **Sales/owner (search-engine assets)** + **inherent time factor** (knowledge panels require corroboration + crawl cycles). |
+| **Root cause (audited production-first)** | The basics existed (title/description/OG/Twitter/canonical/sitemap/robots/Search Console verification, a production-grade 1200×630 og-image). Three real defects: (1) **fabricated `AggregateRating` markup** — "4.8 from 312 reviews" on the homepage and "5 from 1" on the marketplace with zero real customers — a Google review-spam policy violation that risks suppression of **all** rich results; (2) Organization JSON-LD lacked the registered legal entity (`CYBERDUDEBIVASH PRIVATE LIMITED`) and full registered address, weakening knowledge-graph reconciliation with the GBP; (3) unverifiable preview copy ("Trusted by security teams globally", hardcoded "1,625+" counts that drift from the live product). |
+| **Corrective action** | Removed all review/rating markup until real reviews exist; Organization now carries `legalName`, `brand` (the platform), and the full registered address (29, Korai - Sukinda - Ramchandrapur Rd, JAJPUR ROAD, Ragadi, Jajpur, Odisha 755019, IN); preview copy made verifiable; homepage sitemap `lastmod` refreshed. Locked by `workers/test/seoStructuredDataTruth.test.mjs` (5 tests: JSON-LD validity, no rating markup, legal entity + address, canonical/og-image contract incl. file existence, no unverifiable preview claims). |
+| **Owner actions (no code can close)** | In Search Console (already verified): submit/refresh `sitemap.xml` and request indexing of the homepage. Complete the Google Business Profile: link `https://cyberdudebivash.in` as the website, add phone, photos, and the exact legal name so Google can merge the entities. Register the site in Bing Webmaster Tools (imports from Search Console in one click). Knowledge panels additionally require third-party corroboration (LinkedIn company page, GitHub org profile, press/directory listings matching the same name/address) and **crawl time — typically days to weeks**; no tag can force it. |
+| **Verification status** | Code fixes verified at the release gate (live JSON-LD parses, no rating markup served, legal entity present). Rich-result appearance itself is **owner + time**; re-check via Google's Rich Results Test after deploy and again after re-indexing. |
+
+---
+
 ## Trend (post-GA operations cycle, build `34cd6c5`)
 
-Lifetime: **8 objections — 6 RESOLVED (regression-locked), 1 ACCEPTED
-boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. The first full post-GA lifecycle
+Lifetime: **9 objections — 7 RESOLVED (regression-locked), 1 ACCEPTED
+boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09 (discovery) is the first
+**owner-reported real-world** objection — exactly the Voice-of-Customer
+intake CEAP was built for. The first full post-GA lifecycle
 pass (onboarding → scan → report → AI → org → upgrade-to-payment-gate → key
 rotation → recovery → offboarding, all live) surfaced **zero new
 objections** — the first cycle with no new product defect. All open friction
