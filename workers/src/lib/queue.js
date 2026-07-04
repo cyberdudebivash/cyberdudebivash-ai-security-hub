@@ -15,6 +15,7 @@ import { domainScanEngine }               from '../engine.js';
 import { storeReport, buildReport }        from './reportEngine.js';
 import { storeResultR2 }                   from './r2.js';
 import { triggerAlerts }                   from './alerts.js';
+import { cacheScanResultForReport }        from './scanResultCache.js';
 
 // ─── Job ID generator ─────────────────────────────────────────────────────────
 export function generateJobId() {
@@ -259,6 +260,15 @@ async function processJob(env, job) {
 
   // Store full result in R2
   const r2Key = await storeResultR2(env, job_id, scanResult);
+
+  // Cache the result under the scan_id, scoped to the owner, so the customer
+  // can generate a report from it (POST /api/report/generate?scan_id=…). The
+  // synchronous scan handlers do this; the async/queue path previously did
+  // not — so every report generated from an async scan_id 422'd
+  // ("Could not resolve scan result"). This closes that gap.
+  if (scanResult?.scan_id) {
+    await cacheScanResultForReport(env, authCtx, scanResult.scan_id, scanResult).catch(() => {});
+  }
 
   // Build and store report
   const report = buildReport(scanResult, { email: job.email, tier: job.tier });
