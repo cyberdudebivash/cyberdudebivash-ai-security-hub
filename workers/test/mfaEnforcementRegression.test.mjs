@@ -90,4 +90,12 @@ describe('MFA enrollment UI is wired in the account dashboard', () => {
     // Sends the correct field the backend requires.
     expect(/totp_code/.test(html)).toBe(true);
   });
+  it('CSP allows the client-side QR library the enrollment UI uses', () => {
+    // The QR renders locally (secret never leaves the browser) but the lib is
+    // loaded from cdnjs — the enforced CSP script-src MUST allow it or the QR
+    // silently fails to the manual-key fallback.
+    const headers = readFileSync(resolve(import.meta.dirname, '../../frontend/_headers'), 'utf8');
+    const enforced = headers.split('\n').find(l => /^\s*Content-Security-Policy:/.test(l)) || '';
+    expect(enforced).toContain('https://cdnjs.cloudflare.com');
+  });
 });
