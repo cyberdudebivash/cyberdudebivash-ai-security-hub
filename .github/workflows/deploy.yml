@@ -825,20 +825,38 @@ jobs:
           echo "CDN  /version.json  : ${VJ_VER}"
           echo "CI   PLATFORM_VERSION: ${{ env.PLATFORM_VERSION }}"
 
-          # Sync check
-          if [ "$API_VER" = "unavailable" ] && [ "$VJ_VER" = "unavailable" ]; then
-            echo "⚠️  Both sources unavailable — CDN propagation still in progress"
-          elif [ "$API_VER" = "$VJ_VER" ] && [ "$API_VER" != "unavailable" ]; then
-            echo "✅ Frontend and backend in sync: both on v${API_VER}"
-          elif [ "$API_VER" != "unavailable" ] && [ "$VJ_VER" = "unavailable" ]; then
-            echo "✅ API confirmed v${API_VER} — version.json still propagating (normal)"
+          # ── COMMIT-level sync (version string "40.0.0" rarely changes between
+          #    deploys, so it can't detect that FE and BE landed on DIFFERENT
+          #    commits — the real "did my change reflect?" signal). Compare the
+          #    commit SHA both sources expose, with propagation-tolerant retries.
+          get_commit() { curl -s --max-time ${{ env.SMOKE_TIMEOUT }} -H "Cache-Control: no-cache" "$1" 2>/dev/null \
+            | python3 -c "import sys,json;print((json.load(sys.stdin).get('commit') or '')[:8])" 2>/dev/null || echo ""; }
+          EXPECT="${GITHUB_SHA:0:8}"
+          API_C=""; VJ_C=""
+          for attempt in 1 2 3 4; do
+            API_C=$(get_commit "${{ env.PRIMARY_URL }}${{ env.VERSION_PATH }}")
+            VJ_C=$(get_commit "${{ env.PRIMARY_URL }}/version.json")
+            echo "commit poll ${attempt}/4 — API=${API_C:-?} CDN=${VJ_C:-?} expect=${EXPECT}"
+            [ -n "$API_C" ] && [ "$API_C" = "$VJ_C" ] && break
+            sleep 20
+          done
+
+          if [ -z "$API_C" ] && [ -z "$VJ_C" ]; then
+            echo "⚠️  Commit unavailable from both sources — CDN propagation still in progress (non-fatal)"
+          elif [ "$API_C" = "$VJ_C" ]; then
+            echo "✅ Frontend and backend on the SAME commit: ${API_C}"
+            [ "$API_C" != "$EXPECT" ] && echo "   (note: live commit ${API_C} != CI head ${EXPECT} — a newer deploy may have superseded this run)"
           else
-            echo "⚠️  SPLIT-BRAIN DETECTED:"
-            echo "   API reports    : ${API_VER}"
-            echo "   Frontend shows : ${VJ_VER}"
-            echo "   Possible cause : partial deploy, rollback, or CDN lag"
-            echo "   Action         : The self-healing frontend will force-reload stale browsers"
-            echo "   Manual action  : Check Cloudflare Pages dashboard for deploy status"
+            echo "⚠️  COMMIT SPLIT-BRAIN — FE and BE are on different commits after deploy:"
+            echo "   API /api/version : ${API_C:-unavailable}"
+            echo "   CDN /version.json: ${VJ_C:-unavailable}"
+            echo "   This is the exact 'my change didn't reflect' condition. Usually clears within"
+            echo "   a couple minutes of CDN propagation; if it persists, re-run the frontend deploy."
+          fi
+
+          # Legacy version-string check (kept for continuity)
+          if [ "$API_VER" = "$VJ_VER" ] && [ "$API_VER" != "unavailable" ]; then
+            echo "✅ version string matches: v${API_VER}"
           fi
 
       # ── STEP 7: Smoke test summary ─────────────────────────────────────────
