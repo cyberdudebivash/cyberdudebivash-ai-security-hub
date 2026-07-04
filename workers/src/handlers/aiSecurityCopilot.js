@@ -1919,6 +1919,35 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
 // ROUTE HANDLERS
 // ════════════════════════════════════════════════════════════════════════════════
 
+// ─── CVE grounding (retrieval) ────────────────────────────────────────────────
+// The copilot's base model (Groq llama-3.1-8b) has a stale/limited CVE memory and
+// was observed calling a REAL, critical, actively-exploited CVE (CVE-2024-3400)
+// "fictional or non-existent". The platform already holds authoritative CVE data
+// in D1 (threat_intel). Inject the real facts for any CVE the user names so the
+// copilot answers from ground truth — in BOTH the tool-orchestrated and
+// last-resort ("basic") paths. Bounded (≤5 CVEs), read-only, fail-open.
+export async function buildCveGrounding(env, message) {
+  const db = env?.SECURITY_HUB_DB;
+  if (!db || !message) return null;
+  const ids = Array.from(new Set((message.match(/CVE-\d{4}-\d{4,7}/gi) || []).map(s => s.toUpperCase()))).slice(0, 5);
+  if (!ids.length) return null;
+  try {
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = await db.prepare(
+      `SELECT id, severity, cvss, title, description, source, published_at, exploit_status, known_ransomware
+       FROM threat_intel WHERE UPPER(id) IN (${placeholders})`
+    ).bind(...ids).all();
+    const found = rows?.results || [];
+    if (!found.length) return null;
+    const lines = found.map(r =>
+      `- ${r.id}: ${r.severity || '?'} severity, CVSS ${r.cvss ?? '?'}. ${String(r.title || r.description || '').slice(0, 300)}`
+      + ` Exploit status: ${r.exploit_status || 'unknown'}${r.known_ransomware ? ' (known ransomware use)' : ''}.`
+      + ` Published ${r.published_at || 'n/a'}. Source: ${r.source || 'NVD'}.`
+    );
+    return `AUTHORITATIVE PLATFORM THREAT-INTEL DATA — the following CVEs are REAL and present in the CYBERDUDEBIVASH database. Base your answer on these facts and do NOT claim they are fictional or unknown:\n${lines.join('\n')}`;
+  } catch { return null; }
+}
+
 /** POST /api/copilot/chat */
 export async function handleCopilotChat(request, env, authCtx) {
   if (request.method !== 'POST') return badRequest(request, 'Use POST');
@@ -1953,7 +1982,14 @@ export async function handleCopilotChat(request, env, authCtx) {
   let session = await loadSession(env, userId, sessionId);
   session     = await compactSession(env, session, tier);
 
-  const conversationMessages = [...session.messages, { role: 'user', content: userMessage }];
+  // Ground any CVE the user names in the platform's authoritative D1 data, so
+  // the copilot never dismisses a real CVE as fictional (works in every path).
+  const cveGrounding = await buildCveGrounding(env, userMessage);
+  const conversationMessages = [
+    ...session.messages,
+    ...(cveGrounding ? [{ role: 'system', content: cveGrounding }] : []),
+    { role: 'user', content: userMessage },
+  ];
 
   // Orchestrate
   const t0       = Date.now();
