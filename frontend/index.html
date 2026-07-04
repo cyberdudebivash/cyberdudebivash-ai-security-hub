@@ -1671,27 +1671,27 @@ a{color:var(--accent);text-decoration:none}
 <div class="scan-log-item">
 <span style="font-size:16px">🌐</span>
 <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t1">Loading...</div><div class="scan-log-meta" id="rs-m1">Fetching live data</div></div>
-<span class="scan-log-badge" style="background:rgba(245,158,11,.2);color:#f59e0b">HIGH</span>
+<span class="scan-log-badge" id="rs-b1" style="background:rgba(255,255,255,.06);color:var(--text-dim)">—</span>
 </div>
 <div class="scan-log-item">
 <span style="font-size:16px">🤖</span>
 <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t2">—</div><div class="scan-log-meta" id="rs-m2">—</div></div>
-<span class="scan-log-badge" style="background:rgba(239,68,68,.2);color:#ef4444">CRITICAL</span>
+<span class="scan-log-badge" id="rs-b2" style="background:rgba(255,255,255,.06);color:var(--text-dim)">—</span>
 </div>
 <div class="scan-log-item">
 <span style="font-size:16px">🎯</span>
 <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t3">—</div><div class="scan-log-meta" id="rs-m3">—</div></div>
-<span class="scan-log-badge" style="background:rgba(59,130,246,.2);color:#3b82f6">MEDIUM</span>
+<span class="scan-log-badge" id="rs-b3" style="background:rgba(255,255,255,.06);color:var(--text-dim)">—</span>
 </div>
 <div class="scan-log-item">
 <span style="font-size:16px">🔐</span>
 <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t4">—</div><div class="scan-log-meta" id="rs-m4">—</div></div>
-<span class="scan-log-badge" style="background:rgba(16,185,129,.2);color:#10b981">LOW</span>
+<span class="scan-log-badge" id="rs-b4" style="background:rgba(255,255,255,.06);color:var(--text-dim)">—</span>
 </div>
 <div class="scan-log-item">
 <span style="font-size:16px">📋</span>
 <div style="flex:1;min-width:0"><div class="scan-log-target" id="rs-t5">—</div><div class="scan-log-meta" id="rs-m5">—</div></div>
-<span class="scan-log-badge" style="background:rgba(245,158,11,.2);color:#f59e0b">HIGH</span>
+<span class="scan-log-badge" id="rs-b5" style="background:rgba(255,255,255,.06);color:var(--text-dim)">—</span>
 </div>
 </div>
 <!-- AI Risk Insights + Top Vulnerabilities -->
@@ -11661,9 +11661,11 @@ async function refreshDashboardMetrics() {
       const scans = rsData.scans || rsData.results || rsData.data || [];
       const MODULE_ICONS = { domain:'🌐', ai:'🤖', redteam:'🎯', identity:'🔐', compliance:'📋', threat:'🛡' };
       const RISK_COLORS = { CRITICAL:'#ef4444', HIGH:'#f59e0b', MEDIUM:'#818cf8', LOW:'#22c55e' };
+      const RISK_BG     = { CRITICAL:'rgba(239,68,68,.2)', HIGH:'rgba(245,158,11,.2)', MEDIUM:'rgba(59,130,246,.2)', LOW:'rgba(16,185,129,.2)' };
       scans.slice(0, 5).forEach((scan, i) => {
         const tEl = document.getElementById('rs-t' + (i+1));
         const mEl = document.getElementById('rs-m' + (i+1));
+        const bEl = document.getElementById('rs-b' + (i+1));
         if (tEl) tEl.textContent = scan.target || '—';
         if (mEl) {
           const mod = scan.module || 'domain';
@@ -11673,13 +11675,29 @@ async function refreshDashboardMetrics() {
           mEl.textContent = icon + ' ' + mod.charAt(0).toUpperCase() + mod.slice(1) + ' · ' + ts;
           if (scan.risk_level && tEl) tEl.style.color = RISK_COLORS[scan.risk_level] || '';
         }
+        // Badge must reflect the REAL scan severity — not the static HTML value.
+        if (bEl) {
+          const rl = (scan.risk_level || '').toUpperCase();
+          if (RISK_COLORS[rl]) {
+            bEl.textContent = rl;
+            bEl.style.color = RISK_COLORS[rl];
+            bEl.style.background = RISK_BG[rl];
+          } else {
+            bEl.textContent = '—';
+            bEl.style.color = 'var(--text-dim)';
+            bEl.style.background = 'rgba(255,255,255,.06)';
+          }
+        }
       });
-      // If fewer than 5 scans, fill with placeholder
+      // Fewer than 5 real scans → leave the row empty AND neutralize the badge
+      // so we never show a fabricated severity next to "No recent scans".
       for (let i = scans.length; i < 5; i++) {
         const tEl = document.getElementById('rs-t' + (i+1));
         const mEl = document.getElementById('rs-m' + (i+1));
+        const bEl = document.getElementById('rs-b' + (i+1));
         if (tEl) tEl.textContent = '—';
         if (mEl) mEl.textContent = 'No recent scans';
+        if (bEl) { bEl.textContent = '—'; bEl.style.color = 'var(--text-dim)'; bEl.style.background = 'rgba(255,255,255,.06)'; }
       }
     }
   } catch(rsErr) {

@@ -134,3 +134,23 @@ describe('sentinel-apex-marketplace.html — report grid is wired to the real ca
     expect(MARKET).toContain('Live CVE feed temporarily unavailable');
   });
 });
+
+describe('index.html — Recent Scans badges reflect real severity, not static HTML', () => {
+  it('badges start neutral and carry ids so JS can update them', () => {
+    for (let i = 1; i <= 5; i++) {
+      expect(INDEX).toContain(`id="rs-b${i}"`);
+    }
+    // The static severity words must not be hardcoded into the initial badges.
+    // (Grab the Recent Scans markup block and assert it has no baked-in badge.)
+    const block = INDEX.slice(INDEX.indexOf('<!-- Recent Scans -->'), INDEX.indexOf('<!-- AI Risk Insights'));
+    expect(block).not.toMatch(/scan-log-badge[^>]*>CRITICAL</);
+    expect(block).not.toMatch(/scan-log-badge[^>]*>HIGH</);
+  });
+
+  it('JS drives the badge from scan.risk_level and neutralizes empty rows', () => {
+    expect(INDEX).toContain("document.getElementById('rs-b'");
+    expect(INDEX).toContain('bEl.textContent = rl');
+    // The empty-row fill loop must reset the badge too.
+    expect(INDEX).toMatch(/No recent scans[\s\S]{0,200}bEl\.textContent = '—'/);
+  });
+});
