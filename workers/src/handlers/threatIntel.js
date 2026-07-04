@@ -456,7 +456,14 @@ export async function handleV1ThreatIntel(request, env, authCtx = {}) {
   const enriched = enrichBatch(entries.map(e => ({ ...e })));
   const gated    = enriched.map(e => applyMonetizationGate(e, limits));
 
-  if (format === 'csv' && tier === 'ENTERPRISE') {
+  if (format === 'csv') {
+    // Gate on the ACTUAL export entitlement (PRO/ENTERPRISE/ENTERPRISE_SOC),
+    // not a hardcoded tier check. Previously this required tier==='ENTERPRISE',
+    // so PRO customers — whose plan advertises export:true — silently got JSON
+    // instead of the CSV they paid for (and ENTERPRISE_SOC was denied too).
+    if (!limits.export) {
+      return fail(request, 'CSV export requires a PRO plan or higher.', 403, 'export_gated');
+    }
     const header = 'id,severity,cvss,title,source,published_at,exploit_status,known_ransomware\n';
     const rows   = gated.map(e =>
       csvRow([e.id, e.severity, e.cvss, e.title || '', e.source, e.published_at, e.exploit_status, e.known_ransomware])
