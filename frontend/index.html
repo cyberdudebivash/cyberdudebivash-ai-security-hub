@@ -11160,7 +11160,10 @@ function _saveScanToHistory(module, data) {
       risk_score: data.risk_score || null,
       risk_level: data.risk_level || null,
       scanned_at: new Date().toISOString(),
-      scan_id:    data.scan_id || null,
+      // Every scan module returns scan_id at the top level OR nested in
+      // scan_metadata — read both so "run scan → generate report" always has
+      // the id (missing it silently broke report generation for the just-run scan).
+      scan_id:    data.scan_id || (data.scan_metadata && data.scan_metadata.scan_id) || null,
     };
     const history = JSON.parse(sessionStorage.getItem(SESSION_HISTORY_KEY) || '[]');
     // Deduplicate: remove previous entry with same module+target

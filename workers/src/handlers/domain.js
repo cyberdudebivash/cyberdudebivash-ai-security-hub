@@ -222,6 +222,10 @@ export function buildRealResult(domain, dns, tls, bl) {
   const riskScore = computeRealRiskScore(dns, tls, bl);
   const findings  = buildRealFindings(domain, dns, tls, bl);
   return {
+    // scan_id at the TOP level (also mirrored in scan_metadata) so API
+    // integrators and the "run scan → generate report" UI can reference the
+    // exact scan without a second round-trip to /api/scan/history.
+    scan_id: scanId,
     module: 'domain_scanner', version: '5.0.0', target: domain,
     risk_score: riskScore, risk_level: riskLevel(riskScore),
     grade: riskScore >= 80 ? 'F' : riskScore >= 60 ? 'D' : riskScore >= 40 ? 'C' : riskScore >= 20 ? 'B' : 'A',
@@ -329,6 +333,7 @@ export async function handleDomainScan(request, env, authCtx = {}) {
     const findings  = buildRealFindings(domain, dns, tls, bl);
 
     scanResult = {
+      scan_id: scanId,   // top-level (mirrored in scan_metadata) — see buildRealResult
       module: 'domain_scanner', version: '4.0.0', target: domain,
       risk_score: riskScore, risk_level: riskLevel(riskScore),
       grade: riskScore >= 80 ? 'F' : riskScore >= 60 ? 'D' : riskScore >= 40 ? 'C' : riskScore >= 20 ? 'B' : 'A',
