@@ -1983,13 +1983,14 @@ export async function handleCopilotChat(request, env, authCtx) {
   session     = await compactSession(env, session, tier);
 
   // Ground any CVE the user names in the platform's authoritative D1 data, so
-  // the copilot never dismisses a real CVE as fictional (works in every path).
+  // the copilot never dismisses a real CVE as fictional. The grounding is
+  // embedded in the USER turn content (not a separate system message) because
+  // the last-resort/"basic mode" path only forwards the last message's content —
+  // a separate system message would be dropped there. The original userMessage
+  // is still what gets saved to session history (grounding is not persisted).
   const cveGrounding = await buildCveGrounding(env, userMessage);
-  const conversationMessages = [
-    ...session.messages,
-    ...(cveGrounding ? [{ role: 'system', content: cveGrounding }] : []),
-    { role: 'user', content: userMessage },
-  ];
+  const llmUserContent = cveGrounding ? `${cveGrounding}\n\nUser question: ${userMessage}` : userMessage;
+  const conversationMessages = [...session.messages, { role: 'user', content: llmUserContent }];
 
   // Orchestrate
   const t0       = Date.now();
