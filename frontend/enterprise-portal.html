@@ -186,7 +186,7 @@ footer{text-align:center;padding:40px;color:var(--muted);font-size:13px;border-t
         <div class="tag-row">
           <span class="tag tag-api">POST /api/workflows</span>
           <span class="tag tag-api">POST /api/workflows/:id/execute</span>
-          <span class="tag tag-api">GET /api/audit/log</span>
+          <span class="tag tag-api">GET /api/audit-log</span>
         </div>
       </div>
     </div>
@@ -253,13 +253,13 @@ const PROD_FEATURES = [
   { name:'Domain Security Scan', icon:'🌐', apis:['Cloudflare DoH','Spamhaus','SURBL','URIBL'], endpoints:['/api/scan/domain','/api/scan/async/domain'], note:'SPF·DMARC·DKIM·DNSSEC·CAA' },
   { name:'SIEM Integration', icon:'📡', apis:['Splunk HEC','Microsoft Sentinel','Elastic','IBM QRadar','AWS Security Hub','Google SecOps','Cortex XSOAR','PagerDuty'], endpoints:['/api/export/siem','/api/integrations/configure','/api/integrations/deploy'], note:'Push rules + export data' },
   { name:'Detection Rule Generation', icon:'⚡', apis:['Internal (deterministic)'], endpoints:['/api/ai/generate-rules'], formats:['Sigma','Splunk SPL','Sentinel KQL','Elastic EQL','YARA'] },
-  { name:'Threat Hunting', icon:'🔎', apis:['Internal templates + D1'], endpoints:['/api/hunt/templates','/api/hunt','/api/hunt/history'], note:'MITRE ATT&CK aligned' },
+  { name:'Threat Hunting', icon:'🔎', apis:['Internal templates + D1'], endpoints:['/api/hunt/templates','/api/hunt','/api/hunt/sessions'], note:'MITRE ATT&CK aligned' },
   { name:'SOC Case Management', icon:'📋', apis:['D1 SQLite (persistent)'], endpoints:['/api/soc/cases','/api/soc/cases/:id','/api/soc/cases/:id/comments'], note:'Full lifecycle + audit' },
   { name:'STIX/TAXII 2.1 Server', icon:'🔗', apis:['D1 + NVD/KEV feeds'], endpoints:['/api/taxii/discovery','/api/taxii/collections','/api/taxii/collections/:id/objects'], note:'OASIS standard — TIP compatible' },
   { name:'Workflow Automation (SOAR)', icon:'⚙️', apis:['D1 + webhook delivery'], endpoints:['/api/workflows','/api/workflows/:id/execute'], note:'Trigger → Action automation' },
   { name:'Enterprise OIDC SSO', icon:'🔐', apis:['Azure AD','Okta','Any OIDC IdP'], endpoints:['/api/auth/enterprise/sso','/api/auth/enterprise/configure'], note:'Tenant-aware, D1 user upsert' },
-  { name:'MSSP White-Label Platform', icon:'🏢', apis:['D1 multi-tenant'], endpoints:['/api/mssp/workspace','/api/mssp/revenue','/api/mssp/tenant/provision'], note:'Partner isolation + revenue share' },
-  { name:'Audit Log', icon:'📜', apis:['D1 SQLite (immutable)'], endpoints:['/api/audit/log','/api/audit/export'], note:'Every API call logged' },
+  { name:'MSSP White-Label Platform', icon:'🏢', apis:['D1 multi-tenant'], endpoints:['/api/mssp/overview','/api/mssp/revenue','/api/mssp/tenants'], note:'Partner isolation + revenue share' },
+  { name:'Audit Log', icon:'📜', apis:['D1 SQLite (immutable)'], endpoints:['/api/audit-log','/api/audit-log/export'], note:'Every API call logged' },
   { name:'APEX Multi-Agent SOC (MASOC)', icon:'🤖', apis:['NVD NIST','CISA KEV','IOC Enrichment','Groq','DeepSeek','CF Workers AI'], endpoints:['/api/agents/run','/api/agents/stream','/api/agents/status','/api/agents/dispatch/:agent_id'], note:'9 parallel AI agents — CVE Intel · IOC Hunter · SIEM Defender · Threat Hunt · IR Playbook · Compliance · Red Team · Zero Trust · Risk Synthesizer' },
 ];
 
