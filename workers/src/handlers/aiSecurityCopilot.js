@@ -1938,13 +1938,25 @@ export async function buildCveGrounding(env, message) {
        FROM threat_intel WHERE UPPER(id) IN (${placeholders})`
     ).bind(...ids).all();
     const found = rows?.results || [];
-    if (!found.length) return null;
-    const lines = found.map(r =>
-      `- ${r.id}: ${r.severity || '?'} severity, CVSS ${r.cvss ?? '?'}. ${String(r.title || r.description || '').slice(0, 300)}`
-      + ` Exploit status: ${r.exploit_status || 'unknown'}${r.known_ransomware ? ' (known ransomware use)' : ''}.`
-      + ` Published ${r.published_at || 'n/a'}. Source: ${r.source || 'NVD'}.`
-    );
-    return `AUTHORITATIVE PLATFORM THREAT-INTEL DATA — the following CVEs are REAL and present in the CYBERDUDEBIVASH database. Base your answer on these facts and do NOT claim they are fictional or unknown:\n${lines.join('\n')}`;
+    const foundIds = new Set(found.map(r => String(r.id || '').toUpperCase()));
+    const missing  = ids.filter(id => !foundIds.has(id));
+
+    const parts = [];
+    if (found.length) {
+      const lines = found.map(r =>
+        `- ${r.id}: ${r.severity || '?'} severity, CVSS ${r.cvss ?? '?'}. ${String(r.title || r.description || '').slice(0, 300)}`
+        + ` Exploit status: ${r.exploit_status || 'unknown'}${r.known_ransomware ? ' (known ransomware use)' : ''}.`
+        + ` Published ${r.published_at || 'n/a'}. Source: ${r.source || 'NVD'}.`
+      );
+      parts.push(`AUTHORITATIVE PLATFORM THREAT-INTEL DATA — the following CVEs are REAL and present in the CYBERDUDEBIVASH database. Base your answer on these facts and do NOT claim they are fictional or unknown:\n${lines.join('\n')}`);
+    }
+    if (missing.length) {
+      // Uncertainty guard: without this, the ungrounded basic-mode model is
+      // free to invent details for (or wrongly dismiss) CVEs we have no
+      // verified intel on.
+      parts.push(`UNVERIFIED CVE IDS — the CYBERDUDEBIVASH threat-intel database has NO record of: ${missing.join(', ')}. Do NOT invent severity scores, affected products, exploit activity, or any other details for these IDs, and do NOT assert they are fictional. State clearly that the platform has no verified intelligence on them yet and recommend checking the official NVD / CISA KEV records.`);
+    }
+    return parts.length ? parts.join('\n\n') : null;
   } catch { return null; }
 }
 

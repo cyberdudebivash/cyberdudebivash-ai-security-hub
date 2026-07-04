@@ -48,8 +48,24 @@ describe('copilot CVE grounding retrieves real platform data', () => {
     expect(await buildCveGrounding(env, 'How is my security posture?')).toBeNull();
   });
 
-  it('returns null for a CVE not in the platform DB (no fabrication)', async () => {
-    expect(await buildCveGrounding(env, 'Tell me about CVE-1999-0001')).toBeNull();
+  it('injects an uncertainty guard for a CVE not in the platform DB (no fabrication, no false "fictional")', async () => {
+    const g = await buildCveGrounding(env, 'Tell me about CVE-1999-0001');
+    expect(g).toBeTruthy();
+    expect(g).toContain('NO record of: CVE-1999-0001');
+    expect(g).toMatch(/Do NOT invent/i);
+    expect(g).toMatch(/do NOT assert they are fictional/i);
+    expect(g).toMatch(/NVD \/ CISA KEV/);
+    // Must not carry the authoritative-data preamble when nothing was found.
+    expect(g).not.toMatch(/AUTHORITATIVE PLATFORM THREAT-INTEL DATA/);
+  });
+
+  it('grounds found CVEs and flags missing ones in the same message', async () => {
+    const g = await buildCveGrounding(env, 'Compare CVE-2024-3400 with CVE-1999-0001');
+    expect(g).toContain('AUTHORITATIVE PLATFORM THREAT-INTEL DATA');
+    expect(g).toContain('PAN-OS GlobalProtect command injection');
+    expect(g).toContain('NO record of: CVE-1999-0001');
+    // The missing-ID section must not swallow the found ID.
+    expect(g).not.toContain('NO record of: CVE-2024-3400');
   });
 
   it('is case-insensitive and de-duplicates CVE ids', async () => {

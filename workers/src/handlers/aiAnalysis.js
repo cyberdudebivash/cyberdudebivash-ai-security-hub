@@ -461,16 +461,74 @@ function extractCVE(text) {
   return match ? match[0].toUpperCase() : null;
 }
 
-function buildAnalystResponse(intent, message, context = []) {
+// Fetch a CVE's authoritative facts from the platform's own threat_intel table.
+// Returns the row, or null (CVE unknown to us, or DB unavailable). Exported for
+// regression testing.
+export async function lookupCveIntel(env, cveId) {
+  const db = env?.SECURITY_HUB_DB || env?.DB;
+  if (!db || !cveId) return null;
+  try {
+    const row = await db.prepare(
+      `SELECT id, severity, cvss, title, description, source, published_at, exploit_status, known_ransomware
+       FROM threat_intel WHERE UPPER(id) = ?`
+    ).bind(cveId.toUpperCase()).first();
+    return row || null;
+  } catch { return null; }
+}
+
+// Map a CVSS base score to a severity band (CVSS v3.1) when the row lacks an
+// explicit severity label. Never invents a score — only labels a real one.
+function severityFromCvss(cvss) {
+  const n = Number(cvss);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 9.0) return 'CRITICAL';
+  if (n >= 7.0) return 'HIGH';
+  if (n >= 4.0) return 'MEDIUM';
+  if (n > 0)    return 'LOW';
+  return 'NONE';
+}
+
+function buildAnalystResponse(intent, message, context = [], cveIntel = null) {
   const cveId = extractCVE(message) || extractCVE(JSON.stringify(context));
   const contextSummary = context.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n');
 
   switch (intent) {
     case 'analyze_cve': {
       const id = cveId || 'the vulnerability';
+
+      // No CVE id at all → ask for one instead of inventing a verdict.
+      if (!cveId) {
+        return {
+          type: 'analysis',
+          response: `## 🔍 CVE Analysis\n\nI can pull authoritative details from the CYBERDUDEBIVASH threat-intel database for a specific CVE — severity, CVSS, exploitation status, and known-ransomware association.\n\nPlease provide a CVE ID (e.g. \`CVE-2024-3400\`) and I'll analyze it.`,
+          actions: ['generate_sigma', 'generate_splunk'],
+        };
+      }
+
+      // CVE named but NOT in our database → acknowledge the gap. Never fabricate
+      // a severity, KEV listing, or exploitation status we can't verify.
+      if (!cveIntel) {
+        return {
+          type: 'analysis',
+          response: `## 🔍 CVE Analysis: ${id}\n\n⚠️ **No verified intelligence on record.** The CYBERDUDEBIVASH threat-intel database currently has no entry for **${id}**, so I won't assert its severity, exploitation status, or KEV listing — doing so would be guesswork.\n\n**What you can do:**\n1. Confirm the CVE ID is correct.\n2. Check the authoritative sources directly — [NVD](https://nvd.nist.gov/vuln/detail/${id}) and the [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog).\n3. I can still generate a detection-rule scaffold for this ID on request (Sigma/Splunk/KQL/YARA), clearly labeled as a template pending confirmed IOCs.`,
+          actions: ['generate_sigma', 'generate_splunk'],
+        };
+      }
+
+      // Grounded analysis from REAL platform data.
+      const sev   = (cveIntel.severity || severityFromCvss(cveIntel.cvss) || 'UNRATED').toUpperCase();
+      const cvss  = (cveIntel.cvss !== null && cveIntel.cvss !== undefined && cveIntel.cvss !== '') ? `${cveIntel.cvss}/10` : 'not scored in our data';
+      const isKev = String(cveIntel.exploit_status || '').toLowerCase().includes('kev')
+                 || String(cveIntel.source || '').toLowerCase().includes('kev');
+      const exploitLine = cveIntel.exploit_status
+        ? `Exploitation status: **${cveIntel.exploit_status}**${isKev ? ' (CISA KEV listed)' : ''}.`
+        : `No confirmed exploitation status in our data${isKev ? ' — but it is CISA KEV listed' : ''}.`;
+      const ransomLine = cveIntel.known_ransomware ? `\n- ⚠️ **Associated with known ransomware campaigns.**` : '';
+      const titleLine  = String(cveIntel.title || cveIntel.description || '').slice(0, 400);
+
       return {
         type: 'analysis',
-        response: `## 🔍 CVE Analysis: ${id}\n\n**Threat Classification:** Critical Remote Code Execution\n\n**Attack Vector:** Network — exploitable remotely without authentication.\n\n**MITRE ATT&CK Mapping:**\n- T1190 — Exploit Public-Facing Application (Initial Access)\n- T1059 — Command and Scripting Interpreter (Execution)\n- T1078 — Valid Accounts (Persistence)\n\n**Exploitation Status:** ${cveId ? 'Active exploitation confirmed in the wild. CISA KEV listed.' : 'Monitor CVE feeds for active exploitation indicators.'}\n\n**Blast Radius:** High — systems running unpatched versions are directly exploitable. Lateral movement possible within 15–45 minutes of initial access.\n\n**Immediate Actions Required:**\n1. Apply vendor patch within 24 hours (critical SLA)\n2. Block affected ports/services at perimeter firewall\n3. Enable enhanced monitoring on affected hosts\n4. Deploy detection rules (see: generate sigma rule for ${id})\n\n**Risk Score:** 9.4/10 — Immediate action required.`,
+        response: `## 🔍 CVE Analysis: ${id}\n\n**Summary:** ${titleLine || '(no description on record)'}\n\n**Severity:** ${sev}${ransomLine}\n**CVSS:** ${cvss}\n**Exploitation:** ${exploitLine}\n${cveIntel.published_at ? `**Published:** ${cveIntel.published_at}\n` : ''}**Source:** ${cveIntel.source || 'NVD'}\n\n**Recommended actions:**\n1. Confirm exposure — inventory assets running the affected product/version.\n2. Apply the vendor patch; prioritize internet-facing systems.\n3. Deploy detection coverage (ask me to generate a Sigma/Splunk/KQL rule for ${id}).\n4. ${isKev ? 'This is CISA KEV listed — treat as time-critical per BOD 22-01.' : 'Monitor NVD/KEV for any change in exploitation status.'}\n\n_Facts above are drawn from the CYBERDUDEBIVASH threat-intel database. Verify against [NVD](https://nvd.nist.gov/vuln/detail/${id}) for the authoritative record._`,
         actions: ['generate_sigma', 'generate_splunk', 'attack_path', 'mitigate'],
       };
     }
@@ -561,7 +619,15 @@ export async function handleAIChat(request, env) {
   }
 
   const intent  = detectIntent(message);
-  const result  = buildAnalystResponse(intent, message, context);
+  // Ground CVE analysis in the platform's REAL threat-intel data. Without this,
+  // the analyze_cve template reported every CVE as a "Critical RCE, CISA KEV,
+  // 9.4/10, active exploitation" regardless of what the CVE actually is —
+  // fabricated intelligence about real vulnerabilities.
+  let cveIntel = null;
+  if (intent === 'analyze_cve') {
+    cveIntel = await lookupCveIntel(env, extractCVE(message) || extractCVE(JSON.stringify(context)));
+  }
+  const result  = buildAnalystResponse(intent, message, context, cveIntel);
 
   // Persist session to KV — uses SECURITY_HUB_KV (single binding); falls back to THREAT_INTEL alias
   try {
