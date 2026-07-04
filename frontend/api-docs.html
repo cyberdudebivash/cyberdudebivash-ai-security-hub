@@ -707,8 +707,8 @@ footer a{color:var(--accent);margin:0 8px}
 
     <!-- GOD MODE API -->
     <div class="section" id="godmode">
-      <div class="section-title">MYTHOS God Mode API — Autonomous 12-Phase Orchestrator</div>
-      <p style="color:var(--text-muted);margin-bottom:20px;font-size:14px">MYTHOS GOD MODE v4.0 runs a 12-phase autonomous security orchestration pipeline. All read endpoints are public (no auth required); the run trigger requires an <code>x-api-key</code> admin key.</p>
+      <div class="section-title">MYTHOS God Mode API — Autonomous 16-Phase Orchestrator</div>
+      <p style="color:var(--text-muted);margin-bottom:20px;font-size:14px">MYTHOS GOD MODE v5.0 runs a 16-phase autonomous security orchestration pipeline. All read endpoints are public (no auth required); the run trigger requires an <code>x-api-key</code> admin key.</p>
 
       <div class="endpoint-card">
         <div class="endpoint-header" onclick="toggleEndpoint(this)">
@@ -779,11 +779,11 @@ footer a{color:var(--accent);margin:0 8px}
         <div class="endpoint-header" onclick="toggleEndpoint(this)">
           <span class="method-badge method-post">POST</span>
           <span class="endpoint-path">/api/mythos/god-mode/run</span>
-          <span class="endpoint-summary">Trigger a full 12-phase God Mode run — admin only</span>
+          <span class="endpoint-summary">Trigger a full 16-phase God Mode run — admin only</span>
           <span class="endpoint-chevron">▾</span>
         </div>
         <div class="endpoint-body">
-          <div class="endpoint-desc">Triggers an asynchronous 12-phase autonomous security orchestration run. Returns immediately with a job ID. Requires an <code>x-api-key</code> admin header.</div>
+          <div class="endpoint-desc">Triggers an asynchronous 16-phase autonomous security orchestration run. Returns immediately with a job ID. Requires an <code>x-api-key</code> admin header.</div>
           <div class="code-block"><button class="copy-code-btn" onclick="copyBlock(this)">Copy</button><pre>curl -X POST https://cyberdudebivash.in/api/mythos/god-mode/run \
   -H "Content-Type: application/json" \
   -H "x-api-key: &lt;YOUR_ADMIN_KEY&gt;" \

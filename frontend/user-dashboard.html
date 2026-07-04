@@ -1,4 +1,4 @@
-successfully downloaded text file (SHA: d535c34caba8911a061d79038cc349359b14884b)[Resource from github at repo://cyberdudebivash/cyberdudebivash-ai-security-hub/sha/4b07ecde3da892f8e2c484af687cbf288e9d07ca/contents/frontend/user-dashboard.html] <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -3812,24 +3812,32 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     document.getElementById('notif-badge')?.classList.remove('visible');
   }
 
-  // Poll /api/seed/threats every 5 min, push new threat notifications
+  // Poll the REAL live threat feed (NVD + CISA KEV) every 5 min and notify on
+  // new actively-exploited CVEs. This previously polled /api/seed/threats — a
+  // deterministic PRNG demo generator whose first three events are always
+  // CRITICAL — so every customer got a fabricated "New CRITICAL Threat"
+  // notification each poll. Customer alerts may only come from verified intel.
   function startNotifPoller() {
     async function poll() {
       try {
-        const r = await fetch('/api/seed/threats');
+        const r = await fetch('/api/threat-intel/live?limit=10');
         if (!r.ok) return;
         const d = await r.json();
-        const threats = d?.data?.events || d?.events || [];
-        const critical = threats.filter(t => t.severity === 'CRITICAL');
-        if (critical.length) {
-          const latest = critical[0];
-          pushNotification({
-            icon:  '🚨',
-            title: `New CRITICAL Threat: ${latest.type || 'APT Activity'}`,
-            body:  latest.target_sector ? `Sector: ${latest.target_sector}` : 'New threat detected in feed',
-            href:  '/intel.html',
-          });
-        }
+        const kev = Array.isArray(d?.actively_exploited) ? d.actively_exploited : [];
+        if (!kev.length) return;
+        const latest = kev[0];
+        const cveId  = latest.cve_id || latest.id;
+        if (!cveId) return;
+        // Never re-notify the same CVE — real feeds change slowly.
+        const seenKey = 'cdb_notif_last_kev';
+        if (localStorage.getItem(seenKey) === cveId) return;
+        localStorage.setItem(seenKey, cveId);
+        pushNotification({
+          icon:  '🚨',
+          title: `CISA KEV: ${cveId}`,
+          body:  (latest.vulnerability_name || latest.vulnerabilityName || latest.product || 'Actively exploited vulnerability — see live feed').slice(0, 120),
+          href:  '/intel.html',
+        });
       } catch { /* ignore */ }
     }
     poll(); // immediate poll

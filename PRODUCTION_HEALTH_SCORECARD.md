@@ -5,7 +5,11 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 1 (baseline) · **Date:** 2026-07-04 · **Production commit:** `9c5886e` (deploy #617)
+> **Edition:** 2 · **Date:** 2026-07-04 · **Production commit:** `cc828ef` (deploy #618)
+> Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
+> notifications eliminated, seed endpoints labeled synthetic, attestation
+> badges reworded, MYTHOS labels aligned to the deployed engine, and a
+> committed tool-banner corruption removed from the customer dashboard.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7) before implementation.
 
@@ -195,14 +199,17 @@
 
 | Priority | Action | Owner | Gate status |
 |----------|--------|-------|-------------|
-| P1 | Release the threat-level single-source fix (this branch → main) | Owner (merge) | PASSED — verified live contradiction, small fix, regression-locked |
+| ✅ Done | Threat-level single-source fix — **released, deploy #618 green** | — | Closed 2026-07-04 |
+| ✅ Done | "SOC 2 Type II" badge audit — ticker + CISO-hub bar reworded to Aligned/Ready/Mapped; section badges & modals were already honest | — | Closed 2026-07-04, locked by `phase6TruthLocks.test.mjs` |
+| ✅ Done | Metric contradiction audit: KEV trend no longer fabricates "0 critical, 0 KEV" for absent fields; products split into "Marketplace Solutions" (defense/stats) vs "generated across MYTHOS runs · N published" (mythos/status); MYTHOS v4.0/12-phase labels aligned to deployed v5.0/16-phase everywhere | — | Closed 2026-07-04, regression-locked |
+| ✅ Done | **Found in audit:** customer notifications were fabricated from `/api/seed/threats` (PRNG demo; first 3 events always CRITICAL) — poller now reads the real NVD/KEV feed with per-CVE dedupe; all `/api/seed/*` responses now self-declare `synthetic: true` | — | Closed 2026-07-04 |
+| ✅ Done | **Found in audit:** `user-dashboard.html` shipped with a committed tool-download banner BEFORE `<!DOCTYPE html>` (visible to every logged-in customer, forced quirks mode) — stripped; doctype lock added for all key pages | — | Closed 2026-07-04 |
 | P1 | Watch Monday 05:00 UTC restore drill; green closes R-06, red is S1 | Engineering | PASSED — reliability evidence requirement |
-| P2 | Audit "SOC 2 Type II" badge-strip context; reword if it reads as attestation | Engineering | PASSED Q1 pending code verification |
-| P2 | Verify remaining dashboard metric contradictions (product counts, daily-scan drift, KEV summary, GOD MODE version label) | Engineering | Q1 pending verification per item |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
 | P3 | One live payment end-to-end (GA gate 1) | Owner | PASSED — blocks all commercial evidence |
-| — | Deferred: load testing, big-bang envelope migration, new feature work | — | FAILED Q1 (no verified customer problem today) |
+| Deferred | "Scans today" 1-count drift (11 vs 12): three endpoints compute it from the same real counters at different instants (`/api/health`, `/api/intelligence/summary`, `/api/realtime/stats`). Not fabrication — timing skew. Consolidating to one shared helper is a backend refactor; revisit when touching those handlers | Engineering | Q2/Q4 weak — cost outweighs a 1-count cosmetic drift |
+| Deferred | Load testing, big-bang envelope migration, new feature work | — | FAILED Q1 (no verified customer problem today) |
 
 ## Update protocol
 

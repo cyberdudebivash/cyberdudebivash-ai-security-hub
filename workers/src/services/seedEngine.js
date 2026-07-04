@@ -513,7 +513,8 @@ export async function handleGetPlatformStats(request, env) {
 
   return Response.json({
     success: true,
-    data: stats,
+    data: { ...stats, source: 'seeded', synthetic: true,
+            notice: 'Deterministic demo data for empty-state prevention — NOT live platform metrics. Real metrics: /api/health, /api/platform/metrics.' },
     error: null,
   }, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' } });
 }
@@ -529,7 +530,8 @@ export async function handleGetSOCMetrics(request, env) {
 
   return Response.json({
     success: true,
-    data: metrics,
+    data: { ...metrics, source: 'seeded', synthetic: true,
+            notice: 'Deterministic demo data for empty-state prevention — NOT live SOC metrics.' },
     error: null,
   });
 }
@@ -549,7 +551,7 @@ export async function handleGetSIEMStream(request, env) {
 export async function handleGetAPTProfiles(request, env) {
   return Response.json({
     success: true,
-    data: { profiles: generateAPTProfiles(), total: 5 },
+    data: { profiles: generateAPTProfiles(), total: 5, source: 'seeded', synthetic: true },
     error: null,
   }, { headers: { 'Cache-Control': 'public, max-age=3600' } });
 }
