@@ -14,6 +14,8 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { issueMFAChallenge } from '../src/handlers/mfa.js';
 
 function makeRealD1() {
@@ -71,5 +73,21 @@ describe('MFA is actually enforced at login (issueMFAChallenge)', () => {
     const cols = env.DB._sqlite.prepare(`PRAGMA table_info(mfa_secrets)`).all().map(c => c.name);
     expect(cols).not.toContain('id');
     expect(cols).toContain('user_id');
+  });
+});
+
+describe('MFA enrollment UI is wired in the account dashboard', () => {
+  const html = readFileSync(resolve(import.meta.dirname, '../../frontend/user-dashboard.html'), 'utf8');
+  it('has the 2FA settings panel', () => {
+    expect(/Two-Factor Authentication/i.test(html)).toBe(true);
+    expect(/id="mfa-body"/.test(html)).toBe(true);
+  });
+  it('drives the full enroll/disable flow against the real endpoints', () => {
+    expect(/\/api\/auth\/mfa\/status/.test(html)).toBe(true);
+    expect(/\/api\/auth\/mfa\/setup/.test(html)).toBe(true);
+    expect(/\/api\/auth\/mfa\/enable/.test(html)).toBe(true);
+    expect(/\/api\/auth\/mfa\/disable/.test(html)).toBe(true);
+    // Sends the correct field the backend requires.
+    expect(/totp_code/.test(html)).toBe(true);
   });
 });
