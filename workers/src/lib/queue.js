@@ -30,13 +30,17 @@ export function tierPriority(tier) {
 
 // ─── KV key helpers ───────────────────────────────────────────────────────────
 const kvJobKey     = (jobId) => `job:${jobId}`;
-const kvDedupKey   = (module, target) => `dedup:${module}:${target.toLowerCase()}`;
+// Dedup is scoped PER IDENTITY. A global key (module:target) would hand one
+// tenant's job — and its result — to a different tenant who scanned the same
+// target (cross-tenant sharing), and would collide with per-job ownership
+// checks. Scoping by the caller's identity keeps each tenant's jobs private.
+const kvDedupKey   = (module, target, scope) => `dedup:${scope || 'anon'}:${module}:${target.toLowerCase()}`;
 
-// ─── Deduplication check (1h window) ─────────────────────────────────────────
-export async function checkDedup(env, module, target) {
+// ─── Deduplication check (1h window, per identity) ───────────────────────────
+export async function checkDedup(env, module, target, scope) {
   if (!env?.SECURITY_HUB_KV) return null;
   try {
-    const key   = kvDedupKey(module, target);
+    const key   = kvDedupKey(module, target, scope);
     const jobId = await env.SECURITY_HUB_KV.get(key);
     if (!jobId) return null;
     // Return existing job if it exists and is not failed
@@ -46,10 +50,10 @@ export async function checkDedup(env, module, target) {
   } catch { return null; }
 }
 
-async function markDedup(env, module, target, jobId) {
+async function markDedup(env, module, target, jobId, scope) {
   if (!env?.SECURITY_HUB_KV) return;
   try {
-    const key = kvDedupKey(module, target);
+    const key = kvDedupKey(module, target, scope);
     await env.SECURITY_HUB_KV.put(key, jobId, { expirationTtl: 3600 }); // 1h dedup window
   } catch {}
 }
@@ -128,9 +132,11 @@ async function insertD1History(env, jobId, scanResult, authCtx) {
 // ─── Enqueue a new scan job ───────────────────────────────────────────────────
 export async function enqueueScanJob(env, jobData, authCtx = {}) {
   const { module, target, payload } = jobData;
+  const dedupScope = authCtx.user_id || authCtx.identity || 'anon';
 
-  // Deduplication — return existing job if same target scanned recently
-  const dedupJob = await checkDedup(env, module, target);
+  // Deduplication — return existing job if same target scanned recently by the
+  // SAME identity (never share another tenant's job/result).
+  const dedupJob = await checkDedup(env, module, target, dedupScope);
   if (dedupJob) {
     return { job_id: dedupJob.job_id, status: 'deduped', deduplicated: true, existing_job: dedupJob };
   }
@@ -150,13 +156,17 @@ export async function enqueueScanJob(env, jobData, authCtx = {}) {
     enqueued_at: new Date().toISOString(),
   };
 
-  // Set initial KV state
+  // Set initial KV state. user_id + identity are persisted so the job-status /
+  // job-result endpoints can enforce ownership (a job must only be readable by
+  // the identity that created it). setJobStatus merges over `current`, so these
+  // owner fields survive every later status update.
   await setJobStatus(env, jobId, 'queued', {
     job_id:      jobId,
     module,
     target,
     priority,
-    identity:    authCtx.identity,
+    user_id:     authCtx.user_id || null,
+    identity:    authCtx.identity || null,
     tier:        authCtx.tier || 'FREE',
     created_at:  new Date().toISOString(),
   });
@@ -171,7 +181,7 @@ export async function enqueueScanJob(env, jobData, authCtx = {}) {
   });
 
   // Mark dedup
-  await markDedup(env, module, target, jobId);
+  await markDedup(env, module, target, jobId, dedupScope);
 
   // Enqueue to Cloudflare Queue
   if (env?.SCAN_QUEUE) {

@@ -12,6 +12,22 @@ import { inspectForAttacks, sanitizeString } from '../middleware/security.js';
 
 const VALID_MODULES = ['domain','ai','redteam','identity','compliance'];
 
+// ─── Job ownership ────────────────────────────────────────────────────────────
+// A job (and its scan result) may only be read by the identity that created it.
+// Without this, any caller could read another customer's scan result by job_id
+// (cross-tenant IDOR). Match on user_id when present, else the stored identity;
+// fail closed if neither is known. Return 404 (not 403) so job existence isn't
+// leaked to a probing attacker.
+function jobOwnedBy(job, authCtx = {}) {
+  if (!job) return false;
+  if (authCtx.isAdmin === true) return true;
+  if (job.user_id) return !!authCtx.user_id && job.user_id === authCtx.user_id;
+  if (job.identity && job.identity !== 'anonymous') {
+    return !!authCtx.identity && job.identity === authCtx.identity;
+  }
+  return false;
+}
+
 // ─── POST /api/scan/async/:module ─────────────────────────────────────────────
 export async function handleAsyncScan(request, env, authCtx, module) {
   if (!VALID_MODULES.includes(module)) {
@@ -69,7 +85,7 @@ export async function handleJobStatus(request, env, authCtx, jobId) {
   }
 
   const job = await getJobStatus(env, jobId);
-  if (!job) {
+  if (!job || !jobOwnedBy(job, authCtx)) {
     return Response.json({
       error:  'Job not found',
       hint:   'Jobs expire 24h after completion. Re-run the scan if needed.',
@@ -126,7 +142,7 @@ export async function handleJobResult(request, env, authCtx, jobId) {
   }
 
   const job = await getJobStatus(env, jobId);
-  if (!job) {
+  if (!job || !jobOwnedBy(job, authCtx)) {
     return Response.json({ error: 'Job not found', job_id: jobId }, { status: 404 });
   }
 
