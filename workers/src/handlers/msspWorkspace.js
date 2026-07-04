@@ -293,9 +293,14 @@ export async function handleUpdateCustomer(request, env, authCtx, customerId) {
   const setValues = Object.values(updates);
 
   try {
-    await env.SECURITY_HUB_DB.prepare(
+    const r = await env.SECURITY_HUB_DB.prepare(
       `UPDATE mssp_customers SET ${fields} WHERE (id = ? OR org_slug = ?) AND partner_id = ?`
     ).bind(...setValues, customerId, customerId, scope).run();
+    // No row matched under this partner's scope → the customer isn't theirs (or
+    // doesn't exist). Return 404 (matching delete/suspend/archive) instead of a
+    // misleading success, so an integrator can't believe a cross-tenant update
+    // "worked". The WHERE clause already prevents any actual cross-tenant write.
+    if (!r?.meta?.changes) return Response.json({ error: 'Customer not found' }, { status: 404 });
     return Response.json({ success: true });
   } catch (e) {
     return Response.json({ success: false, error: e.message }, { status: 500 });
