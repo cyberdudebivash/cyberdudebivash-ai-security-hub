@@ -27,6 +27,7 @@
 | Implementation | `IMPLEMENTATION_PLAYBOOK.md` | Verified onboarding path, tier planning, SSO setup, integrations, self-host bootstrap, cutover checklist |
 | Support | `SUPPORT_PLAYBOOK.md` | Ticket taxonomy with verified diagnostics, error contract, escalation ladder |
 | Customer success | `CUSTOMER_SUCCESS_PLAYBOOK.md` | Measured value milestones, segment adoption paths, renewal/expansion signals |
+| SEO & global visibility | `SEO_VISIBILITY_PLAYBOOK.md` | Discovery layer: what code guarantees (head structure, JSON-LD, OG previews, sitemaps — locked by `scripts/seo-structure-lock.mjs`) + owner actions (Search Console, preview-cache purges, entity presence) |
 | Engineering standards + gates | `docs/ENGINEERING_STANDARDS.md` | Conventions (§1–6), Product Council gate (§7), Customer Adoption Rule (§8), release lifecycle (§9), Verifiable-Statement Rule (§10), **Production Truth Law (§11)**, governance operating system CEAP/CIP/CORB/CAB + Council (§12), **Standing Engineering Directive — customer outcomes only (§13, final)** |
 | KPI dashboard (the only scoreboard) | `KPI_DASHBOARD.md` | Outcome metrics only (onboarding, TTFV, incident rate, MTTD/MTTR, regression rate, doc accuracy, deploy/drill success, blocker aging; CSAT/renewal honestly UNKNOWN) — reviewed weekly by CORB |
 | Continuous assurance (CEAP) | `scripts/ceap-sweep.mjs` + `.github/workflows/ceap-assurance.yml` | 13-check customer-lifecycle sweep against live production, scheduled every 6 h; a FAIL is a production incident |

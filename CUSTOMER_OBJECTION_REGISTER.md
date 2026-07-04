@@ -172,14 +172,28 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 | **Owner actions (no code can close)** | In Search Console (already verified): submit/refresh `sitemap.xml` and request indexing of the homepage. Complete the Google Business Profile: link `https://cyberdudebivash.in` as the website, add phone, photos, and the exact legal name so Google can merge the entities. Register the site in Bing Webmaster Tools (imports from Search Console in one click). Knowledge panels additionally require third-party corroboration (LinkedIn company page, GitHub org profile, press/directory listings matching the same name/address) and **crawl time — typically days to weeks**; no tag can force it. |
 | **Verification status** | Code fixes verified at the release gate (live JSON-LD parses, no rating markup served, legal entity present). Rich-result appearance itself is **owner + time**; re-check via Google's Rich Results Test after deploy and again after re-indexing. |
 
+## OBJ-10 — Discovery follow-up: all SEO metadata was structurally outside the document `<head>` · RESOLVED (code) / re-crawl = owner + time
+
+| Field | Detail |
+|-------|--------|
+| **Objection** | Continuation of OBJ-09: after its fixes deployed, search results still showed no rich listing and link previews remained unreliable (owner re-reported, 2026-07-04). |
+| **Persona** | Every prospect at the **Discovery** stage. |
+| **Business impact** | Same as OBJ-09 — discovery caps the funnel. Also explains why OBJ-09's correct markup was not being honored. |
+| **Root cause (audited production-first)** | `frontend/index.html` contained a premature **`</head></html>`** (~line 486) left over from a UX-layer injection: the document head — and the *document itself* — closed before a single Open Graph tag, Twitter Card tag, or JSON-LD block was emitted. All of OBJ-09's structured data was technically present but sat outside `<head>` and outside `</html>`, where Google's rich-result parser and most link-preview crawlers (WhatsApp, LinkedIn, Slack, Telegram) do not reliably read it. The file also never re-closed `</html>` at the end. Eleven additional public sitemap-listed pages (`upgrade`, `agent-threats`, `attack-library`, `api-docs`, `intel-hub`, `ai-governance-frameworks`, `gadgets`, `privacy-policy`, `refund-policy`, `terms-of-service`, `sitemap`) had **no OG/Twitter markup at all**, and three had no canonical. |
+| **Corrective action** | Homepage structure repaired: single `</head>` now closes after all metadata, immediately before `<body>`; final `</html>` restored; verified with a real HTML parser (html→head(og:title…)→body, properly nested). OG + Twitter Card + canonical + description injected on all 11 pages (CRLF preserved where original files used it). Organization JSON-LD enriched: official contact `contact@cyberdudebivash.in` + `contactPoint` (support/sales), `sameAs` extended (Medium, cyberdudebivash.com, blog), `knowsAbout` topics. Sitemap `lastmod` refreshed for every touched page. Locked by **`scripts/seo-structure-lock.mjs`** (22 public pages × structure/metadata/JSON-LD checks — also caught and fixed missing meta descriptions on `services` and `tools`). |
+| **Owner actions (no code can close)** | After deploy: Search Console → URL Inspection → Request Indexing for `/`; purge stale preview caches (Facebook Sharing Debugger "Scrape Again", LinkedIn Post Inspector, Telegram @WebpageBot); complete Bing Webmaster + Google Business Profile alignment. Full list: `SEO_VISIBILITY_PLAYBOOK.md`. |
+| **Verification status** | Structure lock ALL GREEN (22 pages); OBJ-09 lock still green (5/5); full workers suite 1316/1316. Live re-verification of served `<head>` required after the next deploy; rich-result appearance remains owner + crawl time. |
+
 ---
 
 ## Trend (post-GA operations cycle, build `34cd6c5`)
 
-Lifetime: **9 objections — 7 RESOLVED (regression-locked), 1 ACCEPTED
-boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09 (discovery) is the first
-**owner-reported real-world** objection — exactly the Voice-of-Customer
-intake CEAP was built for. The first full post-GA lifecycle
+Lifetime: **10 objections — 8 RESOLVED (regression-locked), 1 ACCEPTED
+boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the
+first **owner-reported real-world** objections — exactly the Voice-of-Customer
+intake CEAP was built for. OBJ-10 shows why re-observation matters: OBJ-09's
+markup was correct but structurally unreadable, caught only because the owner
+re-checked production. The first full post-GA lifecycle
 pass (onboarding → scan → report → AI → org → upgrade-to-payment-gate → key
 rotation → recovery → offboarding, all live) surfaced **zero new
 objections** — the first cycle with no new product defect. All open friction
