@@ -501,7 +501,26 @@ export async function handleDeleteAccount(request, env, authCtx) {
   ).bind(anonEmail, userId).run();
 
   await revokeAllUserTokens(env.DB, userId).catch(() => {});
-  await env.DB.prepare(`DELETE FROM api_keys WHERE user_id = ?`).bind(userId).run().catch(() => {});
 
-  return Response.json({ success: true, message: 'Account deleted. You have been signed out.' });
+  // GDPR right-to-erasure: purge the user's personal, non-legally-retained data
+  // keyed by user_id, not just the (now-anonymized) users row. Previously these
+  // survived deletion — the user's scan targets/findings, async job records,
+  // generated reports, and (most sensitively) their MFA/TOTP secret. Each is
+  // fault-isolated so a missing table can't abort the erasure. Payments /
+  // GST invoices are intentionally RETAINED (statutory tax-record retention).
+  const purge = ['api_keys', 'scan_history', 'scan_jobs', 'report_jobs', 'mfa_secrets'];
+  const purged = {};
+  for (const table of purge) {
+    try {
+      const r = await env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(userId).run();
+      purged[table] = r?.meta?.changes ?? 0;
+    } catch { purged[table] = 'skipped'; }
+  }
+
+  return Response.json({
+    success: true,
+    message: 'Account deleted. Your personal data has been erased and you have been signed out.',
+    erased: purged,
+    retained: 'Payment/GST invoice records are retained where required by tax law (anonymized where possible).',
+  });
 }
