@@ -359,3 +359,37 @@ Council is the monthly portfolio view.)
 
 **Measurement:** progress is tracked exclusively by the outcome metrics in
 `KPI_DASHBOARD.md` — never by feature counts, commit counts, or test counts.
+
+## 13. Standing Engineering Directive (owner-issued, 2026-07-04 — final)
+
+Issued by the owner as the permanent measurement rule binding every program
+in §12. The governance architecture is hereby **declared complete**: no new
+phases, no new frameworks — every future feature, customer request,
+deployment, incident, and business decision flows through CEAP + CIP + CORB
++ CAB + Product Council.
+
+**Effective immediately, the engineering organization is not measured by
+commits, deployments, features, or tests. Engineering success is measured
+only by customer outcomes.**
+
+Every engineering cycle must improve at least one measurable customer
+outcome — e.g. reduced onboarding time, operational risk, support effort,
+deployment complexity, or customer confusion; improved AI trust, platform
+reliability, customer confidence, documentation accuracy, operational
+visibility, or business value. A change that improves no measurable
+customer outcome does not receive implementation priority.
+
+Precedence rules (absolute):
+
+1. **Customer evidence outranks engineering intuition.**
+2. **Production evidence outranks internal assumptions** (§11).
+3. **Operational simplicity outranks unnecessary complexity.**
+4. **Long-term maintainability outranks short-term convenience.**
+
+The platform evolves through disciplined iteration, never periodic
+reinvention. The KPI Dashboard (`KPI_DASHBOARD.md`) is the management tool;
+its UNKNOWN values are filled by generating real customer evidence, never by
+estimation. The organization's present priorities are business initiatives,
+not prompts: first paying customer; CEAP against real (not simulated)
+customer activity; real Voice of Customer into the Product Council; closure
+of the owner-controlled blockers (GA-O1…O5) as business work.
