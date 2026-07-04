@@ -143,3 +143,36 @@ ship twice.
 - **One dead function** confirmed via static analysis of `index.js`:
   `detectAnomaly()` is defined but never called from any route. Zero
   production impact; left in place rather than deleted speculatively.
+
+## 7. The Product Council gate (permanent, Phase VI)
+
+Adopted 2026-07-04 as a permanent owner-directed rule, marking the
+transition from a bug-fixing mindset to a Product Council mindset. Every
+proposed feature, architectural change, or marketing claim must answer
+four questions **before** implementation:
+
+1. **Does it solve a verified customer problem?** Verified means evidence:
+   a support issue, a usage signal, a live-production observation, a
+   procurement blocker — not an assumption about what customers might want.
+2. **Can we implement and maintain it reliably?** Including the ongoing
+   maintenance cost, not just the initial build.
+3. **Can we demonstrate its value with evidence?** If the value can't be
+   measured or shown, it can't be claimed — the same honesty standard the
+   platform applies to its security intelligence applies to its roadmap.
+4. **Will it make the platform stronger six months from now?** Work that
+   only looks good this week fails this question.
+
+If the answer to any of the four is "no" or "we don't know yet", the work
+is **reconsidered or deferred** — recorded (in the Production Health
+Scorecard's action queue or the risk register) rather than silently
+dropped, but not built.
+
+This gate sits *in front of* the existing release-governance reviews (code,
+architecture, security, performance, customer impact, regression,
+deployment, rollback, evidence). Passing tests has never been sufficient
+for release; from Phase VI on, having an idea is no longer sufficient for
+implementation.
+
+How this interacts with the rest of this document: sections 1–6 govern
+*how* code is written once approved. Section 7 governs *whether* it gets
+written at all.

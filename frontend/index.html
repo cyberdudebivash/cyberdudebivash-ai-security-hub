@@ -1063,8 +1063,8 @@ a{color:var(--accent);text-decoration:none}
 </div>
 <span class="soc-sep" style="margin-left:auto">|</span>
 <div class="soc-indicator" id="soc-threat-level" title="Global threat level">
-<span class="soc-dot red" id="soc-threat-dot"></span>
-<span id="soc-threat-label" style="color:#f59e0b;font-weight:700">THREAT: HIGH</span>
+<span class="soc-dot yellow" id="soc-threat-dot"></span>
+<span id="soc-threat-label" style="color:#94a3b8;font-weight:700">THREAT: —</span>
 </div>
 <span class="soc-sep">|</span>
 <div class="soc-indicator">
@@ -1519,7 +1519,7 @@ a{color:var(--accent);text-decoration:none}
 <span onclick="refreshDashboardMetrics()" style="color:var(--accent);cursor:pointer">↻ Refresh</span>
 </div>
 <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:30px;padding:5px 14px;font-size:10px;font-weight:800">
-<span style="color:#ef4444">⚠️</span><span style="color:#fca5a5">THREAT: <span id="dash-threat-level" style="color:#ef4444">HIGH</span></span>
+<span style="color:#ef4444">⚠️</span><span style="color:#fca5a5">THREAT: <span id="dash-threat-level" style="color:#94a3b8">—</span></span>
 </div>
 <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:30px;padding:5px 14px;font-size:10px;font-weight:800;color:#00d4ff">
           🧠 MYTHOS AI ACTIVE
@@ -1737,7 +1737,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="soc-rail-sep"></div>
 <div class="soc-rail-item"><span class="soc-dot yellow" id="soc-rail-ai-dot"></span><span>AI ENGINE</span></div>
 <div class="soc-rail-sep"></div>
-<div class="soc-rail-item soc-rail-threat" id="soc-rail-threat-level"><span class="soc-dot red" style="animation:pulse 1s infinite"></span><span id="soc-rail-threat-lbl">THREAT: HIGH</span></div>
+<div class="soc-rail-item soc-rail-threat" id="soc-rail-threat-level"><span class="soc-dot yellow" id="soc-rail-threat-dot"></span><span id="soc-rail-threat-lbl">THREAT: —</span></div>
 <div class="soc-rail-sep"></div>
 <div class="soc-rail-item" style="margin-left:auto"><span id="soc-rail-time" style="color:var(--text-dim);font-size:10px">--:-- UTC</span></div>
 </div>
@@ -13382,7 +13382,7 @@ async function fetchIntelSummary(force = false) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     _INTEL.summary      = data;
-    _INTEL.threat_level = data.platform_threat_level || 'HIGH';
+    _INTEL.threat_level = data.platform_threat_level || null;
     _INTEL.last_fetch   = now;
     updateThreatLevelUI(data.platform_threat_level);
     return data;
@@ -13391,21 +13391,31 @@ async function fetchIntelSummary(force = false) {
   }
 }
 
-// ─── Update Threat Level in SOC Bar ─────────────────────────────────────────
+// ─── Update Threat Level — SINGLE SOURCE OF TRUTH ───────────────────────────
+// The ONLY writer for every global-threat-level display on the page. The value
+// is the server-computed platform_threat_level; no UI site may recompute or
+// hardcode its own level (2026-07-04: the page showed MODERATE, HIGH and
+// CRITICAL simultaneously — top bar from the API, command-center header
+// hardcoded, SOC rail recomputed from the 8 visible feed items).
 function updateThreatLevelUI(level) {
-  const dot   = document.getElementById('soc-threat-dot');
-  const label = document.getElementById('soc-threat-label');
-  if (!dot || !label) return;
   const map = {
     CRITICAL: { dot: 'red',    color: '#ef4444', text: 'THREAT: CRITICAL' },
     HIGH:     { dot: 'red',    color: '#f59e0b', text: 'THREAT: HIGH' },
     MODERATE: { dot: 'yellow', color: '#f59e0b', text: 'THREAT: MODERATE' },
     LOW:      { dot: 'green',  color: '#10b981', text: 'THREAT: LOW' },
   };
-  const cfg = map[level] || map.HIGH;
-  dot.className         = `soc-dot ${cfg.dot}`;
-  label.textContent     = cfg.text;
-  label.style.color     = cfg.color;
+  // Unknown/missing level renders an honest placeholder, never a made-up HIGH.
+  const cfg = map[level] || { dot: 'yellow', color: '#94a3b8', text: 'THREAT: —' };
+  const dot   = document.getElementById('soc-threat-dot');
+  const label = document.getElementById('soc-threat-label');
+  if (dot)   dot.className     = `soc-dot ${cfg.dot}`;
+  if (label) { label.textContent = cfg.text; label.style.color = cfg.color; }
+  const dashLevel = document.getElementById('dash-threat-level');
+  if (dashLevel) { dashLevel.textContent = map[level] ? level : '—'; dashLevel.style.color = cfg.color; }
+  const railDot = document.getElementById('soc-rail-threat-dot');
+  const railLbl = document.getElementById('soc-rail-threat-lbl');
+  if (railDot) railDot.className = `soc-dot ${cfg.dot}`;
+  if (railLbl) railLbl.textContent = cfg.text;
 }
 
 // ─── ALERT MODE — risk-based UI behavior ────────────────────────────────────
@@ -14883,7 +14893,7 @@ window.proceedUpgrade=function(){closeUpgradeModal();if(typeof startSubscription
 window._socThreats=[];window._socSelectedThreat=null;
 var SEED_THREATS=[{id:'CVE-2024-3400',severity:'CRITICAL',cvss:10.0,title:'PAN-OS GlobalProtect OS Command Injection',kev:true,apt:'UTA0218'},{id:'CVE-2024-21762',severity:'CRITICAL',cvss:9.6,title:'Fortinet FortiOS SSL-VPN Out-of-Bound Write',kev:true,apt:'APT28'},{id:'CVE-2024-27198',severity:'CRITICAL',cvss:9.8,title:'JetBrains TeamCity Auth Bypass - Full Takeover',kev:true,apt:'APT29'},{id:'CVE-2024-1709',severity:'CRITICAL',cvss:10.0,title:'ConnectWise ScreenConnect Auth Bypass',kev:true,apt:'Various'},{id:'CVE-2024-21893',severity:'HIGH',cvss:8.2,title:'Ivanti Connect Secure SSRF Auth Bypass',kev:true,apt:'UNC5221'},{id:'CVE-2023-34362',severity:'CRITICAL',cvss:9.8,title:'MOVEit Transfer SQL Injection - Cl0p',kev:true,apt:'Cl0p'},{id:'CVE-2023-4966',severity:'CRITICAL',cvss:9.4,title:'Citrix Bleed NetScaler Session Token Leak',kev:true,apt:'APT29'},{id:'CVE-2021-44228',severity:'CRITICAL',cvss:10.0,title:'Log4Shell JNDI Injection - Widespread',kev:true,apt:'Multiple APTs'}];
 window.socLoadThreatFeed=async function(){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='<div class="soc-skel"></div><div class="soc-skel"></div><div class="soc-skel"></div>';logSOC('Fetching live CVE threat feed...','sys','info');var threats=[];try{var r=await fetch('/api/threat-intel/live?limit=20');var d=await r.json();var raw=[];if(Array.isArray(d.actively_exploited)&&d.actively_exploited.length){raw=d.actively_exploited.slice(0,8).map(function(c){return{id:c.cve_id||c.id,severity:'CRITICAL',cvss:c.cvss_score||9.0,title:(c.vulnerability_name||c.vulnerabilityName||c.product||c.cve_id||'').slice(0,90),kev:true,apt:'CISA KEV'};});}if(Array.isArray(d.critical_cves)&&d.critical_cves.length){raw=[...raw,...d.critical_cves.slice(0,6).map(function(c){return{id:c.id,severity:c.severity||'CRITICAL',cvss:c.score||9.0,title:(c.description||c.id||'').slice(0,90),kev:false,apt:'NVD'};})];}if(Array.isArray(d.high_cves)&&d.high_cves.length){raw=[...raw,...d.high_cves.slice(0,4).map(function(c){return{id:c.id,severity:'HIGH',cvss:c.score||7.5,title:(c.description||c.id||'').slice(0,90),kev:false,apt:'NVD'};})];}if(raw.length){var seen=new Set();threats=raw.filter(function(t){if(!t.id||seen.has(t.id))return false;seen.add(t.id);return true;}).slice(0,12);}if(!threats.length)threats=d.threats||d.cves||d.data||[];}catch(e){}if(!threats.length){feed.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:16px;text-align:center">Live threat feed loading — refreshes automatically every 5 min</div>';logSOC('Live feed unavailable — retrying shortly','warn','warn');return;}renderThreatFeed(threats);if(typeof d!=='undefined'&&d&&d.freshness)renderFreshnessContract('soc-feed-freshness',d.freshness);logSOC(threats.length+' threats loaded - '+threats.filter(function(t){return t.severity==='CRITICAL'||t.cvss>=9;}).length+' CRITICAL','ok','ok');};
-function renderThreatFeed(threats){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='';window._socThreats=threats;threats.forEach(function(t,idx){var sev=t.severity||(t.cvss>=9?'CRITICAL':t.cvss>=7?'HIGH':'MEDIUM');var item=document.createElement('div');item.className='soc-threat-item sev-'+sev;item.onclick=function(){socSelectThreat(t,item);};item.innerHTML='<div style="flex:1;min-width:0"><div class="soc-threat-cve">'+(t.id||t.cve_id||'CVE-UNKNOWN')+'</div><div class="soc-threat-title">'+(t.title||t.description||'Threat')+'</div><div class="soc-threat-meta"><span class="soc-sev-chip '+sev+'">'+sev+'</span><span class="soc-cvss-chip">CVSS:'+(t.cvss||'N/A')+'</span>'+(t.kev||t.is_kev?'<span class="soc-kev-chip">KEV</span>':'')+'</div></div>';feed.appendChild(item);});setEl('soc-feed-count',threats.length+' threats active');var crit=threats.filter(function(t){return(t.severity||'')==='CRITICAL'||(t.cvss||0)>=9;}).length;var kev=threats.filter(function(t){return t.kev||t.is_kev;}).length;setEl('soc-cve-active',threats.length);setEl('soc-kev-live',kev);setEl('soc-exploited',crit);var risk=Math.max(20,Math.min(95,50+crit*5+kev*3));setEl('socRiskScore',risk);var ring=document.getElementById('socRiskRing');if(ring){ring.style.strokeDashoffset=188*(1-risk/100);ring.style.stroke=risk>75?'#ef4444':risk>50?'#f59e0b':'#10b981';}var rl=document.getElementById('soc-rail-threat-lbl');if(rl)rl.textContent='THREAT: '+(crit>=3?'CRITICAL':crit>=1?'HIGH':'ELEVATED');}
+function renderThreatFeed(threats){var feed=document.getElementById('socThreatFeed');if(!feed)return;feed.innerHTML='';window._socThreats=threats;threats.forEach(function(t,idx){var sev=t.severity||(t.cvss>=9?'CRITICAL':t.cvss>=7?'HIGH':'MEDIUM');var item=document.createElement('div');item.className='soc-threat-item sev-'+sev;item.onclick=function(){socSelectThreat(t,item);};item.innerHTML='<div style="flex:1;min-width:0"><div class="soc-threat-cve">'+(t.id||t.cve_id||'CVE-UNKNOWN')+'</div><div class="soc-threat-title">'+(t.title||t.description||'Threat')+'</div><div class="soc-threat-meta"><span class="soc-sev-chip '+sev+'">'+sev+'</span><span class="soc-cvss-chip">CVSS:'+(t.cvss||'N/A')+'</span>'+(t.kev||t.is_kev?'<span class="soc-kev-chip">KEV</span>':'')+'</div></div>';feed.appendChild(item);});setEl('soc-feed-count',threats.length+' threats active');var crit=threats.filter(function(t){return(t.severity||'')==='CRITICAL'||(t.cvss||0)>=9;}).length;var kev=threats.filter(function(t){return t.kev||t.is_kev;}).length;setEl('soc-cve-active',threats.length);setEl('soc-kev-live',kev);setEl('soc-exploited',crit);var risk=Math.max(20,Math.min(95,50+crit*5+kev*3));setEl('socRiskScore',risk);var ring=document.getElementById('socRiskRing');if(ring){ring.style.strokeDashoffset=188*(1-risk/100);ring.style.stroke=risk>75?'#ef4444':risk>50?'#f59e0b':'#10b981';}}
 
 /* AI VERDICT */
 window.socSelectThreat=async function(threat,el){document.querySelectorAll('.soc-threat-item').forEach(function(i){i.classList.remove('active');});if(el)el.classList.add('active');window._socSelectedThreat=threat;var cveId=threat.id||threat.cve_id||'Unknown';var sev=threat.severity||(threat.cvss>=9?'CRITICAL':'HIGH');logSOC('Selected: '+cveId+' - '+sev+' - running AI analysis','ai','ai');document.getElementById('socSelectedThreat').style.display='none';document.getElementById('socAIVerdict').style.display='none';document.getElementById('socAILoading').style.display='block';var verdict=null;
