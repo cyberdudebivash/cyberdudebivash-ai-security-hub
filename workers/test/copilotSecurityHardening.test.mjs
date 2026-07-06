@@ -35,7 +35,10 @@ describe('detectPromptInjectionSignal — telemetry heuristic', () => {
 
 describe('redactSecrets — output secret redaction', () => {
   it('redacts an AWS access key id', () => {
-    expect(redactSecrets('Found key AKIAABCDEFGHIJKLMNOP in the repo')).toBe('Found key [REDACTED-AWS-ACCESS-KEY] in the repo');
+    // gitleaks:allow — fabricated fixture (not a real credential), shaped to match
+    // the aws-access-token detection rule on purpose so this test proves the redaction.
+    const fake = 'AKIA' + 'ABCDEFGHIJKLMNOP'; // gitleaks:allow
+    expect(redactSecrets(`Found key ${fake} in the repo`)).toBe('Found key [REDACTED-AWS-ACCESS-KEY] in the repo');
   });
 
   it('redacts a Bearer token', () => {
