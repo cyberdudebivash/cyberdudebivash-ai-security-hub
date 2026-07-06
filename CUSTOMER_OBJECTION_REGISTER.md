@@ -214,21 +214,42 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 
 ---
 
-## Trend (CEAP continuous cycle, build `b493d871` + IR-3 fix)
+## OBJ-13 — "The footer's API Docs link, on every page that has it, goes to a dead page." · RESOLVED (code) / live verification = pending deploy
 
-Lifetime: **12 objections — 10 RESOLVED (regression-locked), 1 ACCEPTED
-boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the
-first **owner-reported real-world** objections — exactly the Voice-of-Customer
-intake CEAP was built for. OBJ-10 shows why re-observation matters: OBJ-09's
-markup was correct but structurally unreadable, caught only because the owner
-re-checked production. OBJ-12 is the first objection **detected by monitoring
-before any human** — the CEAP sweep flagged the broken scan funnel ~11 minutes
-after the regressing deploy (IR-3). Detection is trending the right way:
-customer-reported → owner-reported → machine-detected. The first full post-GA lifecycle
-pass (onboarding → scan → report → AI → org → upgrade-to-payment-gate → key
-rotation → recovery → offboarding, all live) surfaced **zero new
-objections** — the first cycle with no new product defect. All open friction
-is now organizational (owner actions GA-O1…O5), none code-closable.
+| Field | Detail |
+|-------|--------|
+| **Objection** | The "📡 API Docs" footer link — present on the homepage and six other public pages (about, contact, services, tools, booking, intel) — pointed to `/api` (no trailing slash) and 404'd in live production, even though a complete, working API documentation page already existed at `/api-docs`. |
+| **Persona** | Developer / integrator / technical evaluator on any of seven public pages — the footer is the most-repeated, always-present entry point into API docs. |
+| **Business impact** | A dead link on the single most-repeated developer-facing CTA on the site. Anyone clicking "API Docs" from any of seven pages hit the same 404, with no obvious path to the real documentation. |
+| **Classification** | **Product** (broken link) — found by direct navigation-link verification of the live homepage this cycle, not carried over from any prior audit. |
+| **Root cause** | This Worker's Cloudflare zone route is `cyberdudebivash.in/api/*`, which only matches paths beginning `/api/` — it does not match the bare `/api` with no trailing slash. That exact request falls through to a different, stale responder outside this codebase (confirmed live: its `x-powered-by` header reports `v14.0`, not the deployed `v40.0`), which serves a generic branded 404. The code's own `GET /api` handler (`apiInfoResponse()` in `workers/src/index.js`) is correct and reachable at `/api/` (trailing slash) — it was simply never reachable at the exact URL the footer linked to. This is a Cloudflare dashboard route-pattern gap, not a bug introduced by this codebase, and no code fix can change the route pattern itself (`wrangler.toml` explicitly documents that route as dashboard-managed, outside CI's token scope). |
+| **Corrective action** | Repointed the footer link on all seven affected pages (`frontend/{index,about,contact,services,tools,booking,intel}.html`) from `/api` to `/api-docs` — the real, working, human-readable documentation page every one of those pages already shipped alongside the broken link. Left `ciso-hub.html`'s pre-existing `/api-docs.html` link alone: it 308-redirects to the same canonical page and matches every other `.html`-suffixed link already in that page's nav — not a defect. |
+| **Resolution evidence** | Regression-locked by `workers/test/footerApiDocsLink.test.mjs` (2 tests: no public page uses the dead bare `/api` href; every "API Docs"-labeled link resolves to a real docs page) — full suite 1,457/1,457 green, 140 files; SEO structure lock still 22/22 green (unaffected). **Not yet live:** this fix is committed on branch, not yet merged/deployed — the production footer links still 404 until this ships. Live re-verification (all seven links → `/api-docs` → 200) is the closing evidence, same discipline as every other entry in this register. |
+
+---
+
+## Trend (CEAP continuous cycle, build `b493d871` + IR-3 fix; OBJ-13 fixed in code, same cycle)
+
+Lifetime: **13 objections — 11 RESOLVED (10 regression-locked and live,
+1 regression-locked pending deploy), 1 ACCEPTED boundary (OBJ-06), 1 OPEN
+owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the first **owner-reported
+real-world** objections — exactly the Voice-of-Customer intake CEAP was built
+for. OBJ-10 shows why re-observation matters: OBJ-09's markup was correct but
+structurally unreadable, caught only because the owner re-checked production.
+OBJ-12 is the first objection **detected by monitoring before any human** —
+the CEAP sweep flagged the broken scan funnel ~11 minutes after the
+regressing deploy (IR-3). OBJ-13 was found by directly re-walking the live
+customer journey (homepage navigation links) rather than assuming prior
+audits still hold — the same production-first discipline that caught
+OBJ-09/OBJ-10. Detection is trending the right way: customer-reported →
+owner-reported → machine-detected → and now continuous self-audit of the
+live site. The first full post-GA lifecycle pass (onboarding → scan → report
+→ AI → org → upgrade-to-payment-gate → key rotation → recovery →
+offboarding, all live) surfaced **zero new objections** — the first cycle
+with no new product defect; OBJ-13 was found by a *different* method
+(link/navigation sweep, not the lifecycle API contract sweep), which is why
+it wasn't caught earlier. All open friction beyond OBJ-13 (pending deploy) is
+now organizational (owner actions GA-O1…O5), none code-closable.
 Recurrence check: no RESOLVED objection has re-observed behavior.
 
 ## Update protocol
