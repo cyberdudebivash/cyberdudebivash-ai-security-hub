@@ -9,6 +9,7 @@ import {
   handleMarketplaceProduct,
   handleMarketplaceCheckout,
   handleMarketplaceVerify,
+  handleMarketplaceDownload,
   handleMyMarketplacePurchases,
   MARKETPLACE_CATALOG,
 } from '../src/handlers/marketplaceCheckoutHandler.js';
@@ -22,8 +23,10 @@ async function hmac(secret, message) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function makeEnv(seedPurchases = []) {
+function makeEnv(seedPurchases = [], seedUsers = []) {
   const purchases = new Map(seedPurchases.map(p => [p.razorpay_order_id, { ...p }]));
+  const users = new Map(seedUsers.map(u => [u.email, { ...u }]));
+  const apiKeys = new Map();
   const kvStore = new Map();
   const env = {
     RAZORPAY_KEY_ID: 'rzp_test_key',
@@ -39,6 +42,13 @@ function makeEnv(seedPurchases = []) {
             }
             if (/SELECT \* FROM marketplace_purchases WHERE razorpay_order_id/.test(sql)) {
               return purchases.get(bound[0]) || null;
+            }
+            if (/SELECT \* FROM marketplace_purchases WHERE access_token/.test(sql)) {
+              return [...purchases.values()].find(p => p.access_token === bound[0]) || null;
+            }
+            if (/SELECT id FROM users WHERE email/.test(sql)) {
+              const u = users.get(bound[0]);
+              return u ? { id: u.id } : null;
             }
             return null;
           },
@@ -62,18 +72,34 @@ function makeEnv(seedPurchases = []) {
               }
               return { success: true };
             }
+            if (/INSERT INTO users/.test(sql)) {
+              const [id, email] = bound;
+              users.set(email, { id, email });
+              return { success: true };
+            }
+            if (/INSERT INTO api_keys/.test(sql)) {
+              const [id, user_id, key_hash, key_prefix, label, tier] = bound;
+              apiKeys.set(id, { id, user_id, key_hash, key_prefix, label, tier, expires_at: null });
+              return { success: true };
+            }
+            if (/UPDATE api_keys SET expires_at/.test(sql)) {
+              const [expires_at, id] = bound;
+              const k = apiKeys.get(id);
+              if (k) k.expires_at = expires_at;
+              return { success: true };
+            }
             return { success: true };
           },
           async all() { return { results: [] }; },
         };
       },
     },
-    KV: {
+    SECURITY_HUB_KV: {
       async put(k, v, opts) { kvStore.set(k, v); return true; },
       async get(k) { return kvStore.get(k) ?? null; },
     },
   };
-  return { env, purchases, kvStore };
+  return { env, purchases, users, apiKeys, kvStore };
 }
 
 function req(body) {
@@ -204,5 +230,116 @@ describe('marketplace purchase history — requires authentication', () => {
     const { env } = makeEnv();
     const res = await handleMyMarketplacePurchases(new Request('https://x/api/marketplace/my-purchases'), env, {});
     expect(res.status).toBe(401);
+  });
+});
+
+describe('marketplace download — the route that never existed (2026-07-06 audit)', () => {
+  // handleMarketplaceVerify has always returned
+  // `download_url: /api/marketplace/download/${accessToken}`, but no route
+  // for it existed anywhere — every verified purchase across all 12 catalog
+  // products dead-ended on a live 404. These lock the real fix per category.
+
+  it('400s a too-short token', async () => {
+    const { env } = makeEnv();
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/short'), env, 'short');
+    expect(res.status).toBe(400);
+  });
+
+  it('404s a well-formed but unknown access token', async () => {
+    const { env } = makeEnv();
+    const token = '0'.repeat(32);
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + token), env, token);
+    expect(res.status).toBe(404);
+  });
+
+  it('410s an expired access token', async () => {
+    const { env } = makeEnv([{
+      id: 'mp_exp', razorpay_order_id: 'order_exp', product_id: 'pb-ransomware-ir',
+      product_name: 'x', category: 'playbook', status: 'paid',
+      access_token: 'a'.repeat(32), access_expires_at: new Date(Date.now() - 86400000).toISOString(),
+      buyer_email: 'b@x.com',
+    }]);
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'a'.repeat(32)), env, 'a'.repeat(32));
+    expect(res.status).toBe(410);
+  });
+
+  it('403s if the order was never actually paid', async () => {
+    const { env } = makeEnv([{
+      id: 'mp_unpaid', razorpay_order_id: 'order_unpaid', product_id: 'pb-ransomware-ir',
+      product_name: 'x', category: 'playbook', status: 'pending',
+      access_token: 'b'.repeat(32), buyer_email: 'b@x.com',
+    }]);
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'b'.repeat(32)), env, 'b'.repeat(32));
+    expect(res.status).toBe(403);
+  });
+
+  it('detection_pack/playbook: honestly confirms the paid order for manual fulfillment (no fabricated rule content)', async () => {
+    const { env } = makeEnv([{
+      id: 'mp_pb', razorpay_order_id: 'order_pb', product_id: 'pb-ransomware-ir',
+      product_name: 'Ransomware IR Playbook', category: 'playbook', status: 'paid',
+      access_token: 'c'.repeat(32), access_expires_at: new Date(Date.now() + 86400000).toISOString(),
+      buyer_email: 'buyer@x.com',
+    }]);
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'c'.repeat(32)), env, 'c'.repeat(32));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.delivery).toBe('manual_pending');
+    expect(body.message).toContain('buyer@x.com');
+  });
+
+  it('intelligence_report: generates real content via the live CTI engine, not a static file', async () => {
+    const { env } = makeEnv([{
+      id: 'mp_ir', razorpay_order_id: 'order_ir', product_id: 'ir-q2-2025-threat',
+      product_name: 'Q2 2025 Threat Report', category: 'intelligence_report', status: 'paid',
+      access_token: 'd'.repeat(32), access_expires_at: new Date(Date.now() + 86400000).toISOString(),
+      buyer_email: 'buyer@x.com',
+    }]);
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'd'.repeat(32)), env, 'd'.repeat(32));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.delivery).toBe('report');
+    expect(body.report).toBeTruthy();
+  });
+
+  it('compliance_pack: generates real gap-analysis content via the live compliance engine', async () => {
+    const { env } = makeEnv([{
+      id: 'mp_cp', razorpay_order_id: 'order_cp', product_id: 'cp-nist-csf-2',
+      product_name: 'NIST CSF Starter Pack', category: 'compliance_pack', status: 'paid',
+      access_token: 'e'.repeat(32), access_expires_at: new Date(Date.now() + 86400000).toISOString(),
+      buyer_email: 'buyer@x.com',
+    }]);
+    const res = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'e'.repeat(32)), env, 'e'.repeat(32));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.delivery).toBe('report');
+    expect(body.report).toBeTruthy();
+  });
+
+  it('api_key: mints a real functional API key for a new buyer and is idempotent on retry', async () => {
+    const { env, apiKeys, kvStore } = makeEnv([{
+      id: 'mp_key', razorpay_order_id: 'order_key', product_id: 'aa-threat-hunter',
+      product_name: 'AI Threat Hunting Agent', category: 'ai_agent', status: 'paid',
+      access_token: 'f'.repeat(32), access_expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+      buyer_email: 'newbuyer@x.com', user_id: null,
+    }]);
+    const res1 = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'f'.repeat(32)), env, 'f'.repeat(32));
+    expect(res1.status).toBe(200);
+    const body1 = await res1.json();
+    expect(body1.success).toBe(true);
+    expect(body1.delivery).toBe('api_key');
+    expect(body1.api_key).toBeTruthy();
+    expect(body1.already_issued).toBeFalsy();
+    expect(apiKeys.size).toBe(1);
+    expect(kvStore.has(`marketplace:apikey_issued:${'f'.repeat(32)}`)).toBe(true);
+
+    // Retry must NOT mint a second key — the raw key is only ever shown once.
+    const res2 = await handleMarketplaceDownload(new Request('https://x/api/marketplace/download/' + 'f'.repeat(32)), env, 'f'.repeat(32));
+    expect(res2.status).toBe(200);
+    const body2 = await res2.json();
+    expect(body2.already_issued).toBe(true);
+    expect(apiKeys.size).toBe(1);
   });
 });

@@ -45,6 +45,21 @@ function genId(prefix) {
   return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
+// ─── Auth ───────────────────────────────────────────────────────────────────
+// Every request below used to go out with no Authorization header at all, so
+// the backend's auth resolver always fell through to its anonymous
+// IP-fallback branch (tier: 'FREE') regardless of who was actually logged
+// in — a paying customer using this widget on their own dashboard got the
+// exact same 5 msgs/day, 24/58-tool experience as an anonymous visitor.
+// god-mode.html's own inline chat already attaches this correctly; mirrored
+// here for every fetch call site. (2026-07-06 revenue-mechanisms audit, P1-6.)
+function authHeaders(extra) {
+  let token = '';
+  try { token = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || ''; } catch (e) {}
+  const base = extra || {};
+  return token ? Object.assign({}, base, { Authorization: 'Bearer ' + token }) : base;
+}
+
 // ─── localStorage helpers (fail-open — private browsing / quota errors) ────
 function lsGet(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
@@ -471,7 +486,7 @@ function initWidget() {
       return capsCache;
     }
     try {
-      const res = await fetch(`${API_BASE}/api/copilot/capabilities`);
+      const res = await fetch(`${API_BASE}/api/copilot/capabilities`, { headers: authHeaders() });
       if (!res.ok) throw new Error('bad status');
       const data = await res.json();
       capsCache = data;
@@ -514,7 +529,7 @@ function initWidget() {
     showTyping();
     try {
       const res = await fetch(`${API_BASE}/api/copilot/quick-action`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ skill: qa.skill }),
       });
       const data = await res.json();
@@ -627,7 +642,7 @@ function initWidget() {
     }
 
     const res = await fetch(`${API_BASE}/api/copilot/chat/stream`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ message: trimmed, session_id: state.sessionId }),
     });
     if (!res.ok || !res.body) throw new Error('stream_unavailable');
@@ -681,7 +696,7 @@ function initWidget() {
     showTyping();
     try {
       const res = await fetch(`${API_BASE}/api/copilot/chat`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ message: trimmed, session_id: state.sessionId }),
       });
       const data = await res.json();
@@ -778,7 +793,7 @@ function initWidget() {
     toggleHistory(false);
     // Reconcile with server session (covers cache misses / other-device history)
     try {
-      const res = await fetch(`${API_BASE}/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`);
+      const res = await fetch(`${API_BASE}/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`, { headers: authHeaders() });
       const data = await res.json();
       if (Array.isArray(data.messages) && data.messages.length > state.messages.length) {
         state.messages = data.messages;
@@ -792,7 +807,7 @@ function initWidget() {
     const list = getSessionsIndex().filter(s => s.id !== sessionId);
     saveSessionsIndex(list);
     try { localStorage.removeItem(LS_MSGS_PREFIX + sessionId); } catch {}
-    fetch(`${API_BASE}/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`${API_BASE}/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`, { method: 'DELETE', headers: authHeaders() }).catch(() => {});
     if (sessionId === state.sessionId) startNewChat();
     else renderHistory();
   }

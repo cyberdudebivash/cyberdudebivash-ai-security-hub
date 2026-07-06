@@ -474,6 +474,7 @@ import {
   handleMarketplaceProduct,
   handleMarketplaceCheckout,
   handleMarketplaceVerify,
+  handleMarketplaceDownload,
   handleMyMarketplacePurchases,
   handleMarketplaceObservability,
 } from './handlers/marketplaceCheckoutHandler.js';
@@ -5416,6 +5417,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/marketplace/verify' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleMarketplaceVerify(request, env, authCtx || {}), request));
+    }
+    if (path.startsWith('/api/marketplace/download/') && method === 'GET') {
+      const accessToken = path.replace('/api/marketplace/download/', '');
+      return withSecurityHeaders(withCors(await handleMarketplaceDownload(request, env, accessToken), request));
     }
     if (path === '/api/marketplace/my-purchases' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);

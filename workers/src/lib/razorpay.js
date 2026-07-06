@@ -27,6 +27,29 @@ export const MODULE_PRICES = {
   defense:        { amount: 0,       label: '',         name: 'Defense Solution'              },
 };
 
+// ─── One-time package/assessment products (amount in paise) ──────────────────
+// Server-side allowlist for every fixed-price CTA across the marketing pages
+// (security-assessment.html, ai-security-assessment.html, ciso-hub.html,
+// mcp-security.html). The client sends only a product_id; the amount actually
+// charged always comes from this table, never from the page.
+export const PACKAGE_PRICES = {
+  SECURITY_ASSESSMENT:        { amount: 999900,   label: '₹9,999',    name: 'Full Security Assessment' },
+  PROFESSIONAL_ASSESSMENT:    { amount: 2499900,  label: '₹24,999',   name: 'Professional Security Assessment' },
+  ENTERPRISE_ASSESSMENT:      { amount: 4999900,  label: '₹49,999',   name: 'Enterprise Security Assessment' },
+  AI_SECURITY_ASSESSMENT:     { amount: 4999900,  label: '₹49,999',   name: 'Enterprise AI Security Assessment' },
+  OWASP_LLM_ASSESSMENT:       { amount: 2499900,  label: '₹24,999',   name: 'OWASP LLM Top 10 Assessment' },
+  AI_GOVERNANCE_ASSESSMENT:   { amount: 4999900,  label: '₹49,999',   name: 'AI Governance Center Assessment' },
+  AI_RED_TEAM:                { amount: 9999900,  label: '₹99,999',   name: 'AI Red Team Platform' },
+  MCP_SECURITY_REVIEW:        { amount: 2499900,  label: '₹24,999',   name: 'MCP Security Review' },
+  AI_AGENT_SECURITY:          { amount: 3499900,  label: '₹34,999',   name: 'AI Agent Security Assessment' },
+  RAG_SECURITY_ASSESSMENT:    { amount: 1999900,  label: '₹19,999',   name: 'RAG Security Assessment' },
+  AI_SECURITY_STARTER:        { amount: 4999900,  label: '₹49,999',   name: 'AI Security Starter' },
+  AI_SECURITY_PROFESSIONAL:   { amount: 9999900,  label: '₹99,999',   name: 'AI Security Professional' },
+  ENTERPRISE_AI_SUITE:        { amount: 19999900, label: '₹1,99,999', name: 'Enterprise AI Security Suite' },
+  MCP_SECURITY_REPORT:        { amount: 99900,    label: '₹999',      name: 'MCP Security Full Report' },
+  MCP_ENTERPRISE_ASSESSMENT:  { amount: 2499900,  label: '₹24,999',   name: 'MCP Enterprise Security Assessment' },
+};
+
 // Subscription plan pricing (amount in paise)
 export const SUBSCRIPTION_PRICES = {
   STARTER:    { amount: 49900,   label: '₹499',    period: 'monthly', name: 'Starter Plan'    },

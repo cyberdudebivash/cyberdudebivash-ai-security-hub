@@ -600,8 +600,12 @@ function openModal(title, desc, price) {
 }
 
 function triggerModalPayment() {
-  closeModal();
-  openReportCheckout(_modalPayTitle, _modalPayPrice);
+  // cdbSentinelBuy() reads _smCurrentType/_smCurrentTitle/_smCurrentPrice
+  // (set by openModal() before this button is shown) and posts to the
+  // purpose-built /api/sentinel/purchase + /verify pair — the same route
+  // this modal's CTA must use, rather than the generic checkout modal, which
+  // has no price entry for these per-report product types.
+  cdbSentinelBuy();
 }
 
 function closeModal() { document.getElementById('purchase-modal').classList.remove('open'); }
@@ -1025,16 +1029,6 @@ function openPlanCheckout(tier, price) {
   }
 }
 
-// Trigger Razorpay for report purchases instead of redirecting to pricing page
-function openReportCheckout(title, priceInr) {
-  if (typeof window.CDB_CHECKOUT_MODAL !== 'undefined') {
-    window.CDB_CHECKOUT_MODAL.open({ amount: priceInr, tierName: 'INTEL_REPORT', productLabel: title });
-  } else if (typeof window.openPayment === 'function') {
-    window.openPayment('INTEL_REPORT', priceInr, title);
-  } else {
-    window.location.href = '/upgrade.html';
-  }
-}
 
 function paintPlans(grid, plans) {
   grid.innerHTML = plans.map(p => {

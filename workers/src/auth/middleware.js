@@ -102,17 +102,30 @@ async function resolveFromApiKey(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') ||
              request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
 
+  // keyRow.tier is a frozen snapshot written once at key-creation time.
+  // resolveApiKeyFromDB's own SQL already joins the account's CURRENT plan
+  // as keyRow.user_tier — previously discarded. Using the frozen column
+  // meant a customer who upgraded (or downgraded) their subscription kept
+  // the OLD tier's limits/features on every already-issued API key with no
+  // documented way to fix it short of rotating the key — while the site's
+  // own marketing copy (index.html) promises keys "inherit your account
+  // plan automatically." Use the live tier instead, the same way a JWT
+  // session already self-heals on every /api/auth/refresh.
+  // (2026-07-06 revenue-mechanisms audit.)
+  const effectiveTier = keyRow.user_tier || keyRow.tier;
+  const effectiveLimits = TIER_LIMITS[effectiveTier] || TIER_LIMITS.FREE;
+
   return {
     authenticated: true,
     method:        'api_key',
     identity:      `key:${keyRow.key_prefix}`,
     user_id:       keyRow.user_id,
     email:         keyRow.email,
-    tier:          keyRow.tier,
-    limits:        TIER_LIMITS[keyRow.tier] || TIER_LIMITS.FREE,
-    label:         `${keyRow.tier} API Key`,
+    tier:          effectiveTier,
+    limits:        effectiveLimits,
+    label:         `${effectiveTier} API Key`,
     key_id:        keyRow.id,
-    daily_limit:   keyRow.daily_limit,
+    daily_limit:   effectiveLimits.daily_limit,
     ip,
     _key_row:      keyRow, // internal — used for quota check
   };

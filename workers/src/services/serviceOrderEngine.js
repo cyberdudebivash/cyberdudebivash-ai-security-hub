@@ -56,7 +56,16 @@ function generateReportToken() {
 }
 
 // ── Create order ──────────────────────────────────────────────────────────────
-export async function createServiceOrder(env, body) {
+// authCtx is required to decide whether this caller may trigger a real,
+// billable assessment engine run for free. Previously this endpoint had no
+// payment or auth gate at all: any caller (including anonymous) could POST
+// here and get a full paid assessment (ai_security_enterprise, threat_hunting,
+// etc.) auto-dispatched immediately — payment_status stayed 'pending' forever
+// since nothing anywhere in the codebase ever flips it to 'paid'. Fixed by
+// only auto-dispatching for callers who are already a paying subscriber or
+// admin; everyone else gets an honest, recorded, non-dispatched order routed
+// to manual sales follow-up (2026-07-06 revenue-mechanisms audit, P0-3).
+export async function createServiceOrder(env, body, authCtx = {}, ctx = null) {
   const {
     ref_id, customer_name, customer_email, customer_phone,
     company, company_size, target_domain, target_industry,
@@ -87,6 +96,14 @@ export async function createServiceOrder(env, body) {
   const orderId     = crypto.randomUUID();
   const reportToken = generateReportToken();
 
+  // A paying subscriber (or admin) may trigger the automated engine as an
+  // account benefit; there is no public checkout for this catalog yet (see
+  // the commercial-readiness audit), so anonymous/FREE callers are recorded
+  // but not dispatched — no free paid-assessment runs.
+  const isPayingCaller = authCtx?.isAdmin === true
+    || ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(authCtx?.tier);
+  const canAutoDispatch = svc.delivery_type === 'automated' && svc.automated_engine && isPayingCaller;
+
   await env.DB.prepare(
     `INSERT INTO service_orders
      (id, ref_id, customer_name, customer_email, customer_phone,
@@ -99,18 +116,19 @@ export async function createServiceOrder(env, body) {
     company || null, company_size || null, target_domain || null, target_industry || 'General',
     requirements || null, JSON.stringify(inputs),
     'pending', payment_method,
-    svc.price_inr, 'new', reportToken,
+    svc.price_inr, canAutoDispatch ? 'in_progress' : 'new', reportToken,
     source, utm_source || null
   ).run();
 
-  // Auto-dispatch if service is automated (or skip payment for demo)
   let autoStarted = false;
-  if (svc.delivery_type === 'automated' && svc.automated_engine) {
+  if (canAutoDispatch) {
     autoStarted = true;
-    // Fire-and-forget (no ctx.waitUntil here — caller wraps with ctx if available)
-    dispatchAssessment(env, svc.automated_engine, inputs, orderId).catch(e => {
+    const dispatchPromise = dispatchAssessment(env, svc.automated_engine, inputs, orderId).catch(e => {
       console.error('[ServiceOrder] Auto-dispatch error:', svc.automated_engine, e.message);
     });
+    // Keep the worker alive for the dispatch when a request context is
+    // available, rather than a bare unawaited fire-and-forget.
+    if (ctx?.waitUntil) ctx.waitUntil(dispatchPromise);
   }
 
   return {
@@ -127,7 +145,9 @@ export async function createServiceOrder(env, body) {
     auto_started:   autoStarted,
     message:        autoStarted
       ? 'Assessment started. Retrieve your report at /api/services/report/{report_token} in a few seconds.'
-      : `Order created. Manual service — our team will contact ${customer_email} within ${svc.delivery_hours}h.`,
+      : svc.delivery_type === 'automated'
+        ? `Order received. This assessment requires an active paid plan or a completed purchase — our team will follow up with ${customer_email} to arrange payment within ${svc.delivery_hours || 24}h.`
+        : `Order created. Manual service — our team will contact ${customer_email} within ${svc.delivery_hours}h.`,
   };
 }
 
