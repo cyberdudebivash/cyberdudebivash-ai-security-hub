@@ -153,6 +153,25 @@ function withAuthAliases(ctx) {
       const uid = ctx.user_id ?? ctx.userId;
       if (uid) ctx.org_id = `u:${uid}`;
     }
+    // ── Role (root fix) ──────────────────────────────────────────────────────
+    // authCtx.role was never populated anywhere in the entire auth layer — no
+    // JWT claim, no DB column — yet dozens of handlers across the codebase
+    // (msspTenantPlatform.js, socCases.js, platformMetricsAuthority.js,
+    // revenueMetrics.js, globalSearch.js, notificationPlatform.js,
+    // workflowAutomation.js, productAnalytics.js, whiteLabelMSSP.js,
+    // reliabilityEngineering.js, customerSuccess.js, and the dozen or so
+    // handlers index.js forwards `role: authCtx.role` into, among others) gate
+    // on `authCtx.role === 'admin'` / `'mssp_admin'` / `.includes(role)`. Every
+    // one of those checks was permanently false for every caller, including
+    // real admins — not a per-file bug, a missing field at the source. Derived
+    // live here (never stored/stale) from the two mechanisms that already
+    // work: the ADMIN_KEY bypass, and a real paying MSSP-tier subscription.
+    // Regular customer tiers intentionally get no role — callers that gate on
+    // `.includes(role) || .includes(tier)` fall through to the tier check,
+    // which already works correctly. (2026-07-06 revenue-mechanisms audit, P1-4.)
+    if (ctx.role === undefined) {
+      ctx.role = ctx.isAdmin === true ? 'admin' : ctx.tier === 'MSSP' ? 'mssp_admin' : undefined;
+    }
   }
   return ctx;
 }

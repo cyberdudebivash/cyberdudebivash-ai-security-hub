@@ -76,7 +76,7 @@ describe('reportingEngine — MSSP report type', () => {
   it('renders an explanatory body when no customer_id is supplied', async () => {
     const env = { DB: makeDB(), KV: makeKV() };
     const html = await createAndDownloadHTML(
-      env, { role: 'mssp_admin', tier: 'enterprise', userId: 'partner-A', org_id: 'org-A' },
+      env, { tier: 'MSSP', userId: 'partner-A', org_id: 'org-A' },
       { type: 'MSSP', config: {} },
     );
     expect(html).toContain('No managed tenant specified');
@@ -95,7 +95,7 @@ describe('reportingEngine — MSSP report type', () => {
       KV: makeKV(),
     };
     const html = await createAndDownloadHTML(
-      env, { role: 'mssp_admin', tier: 'enterprise', userId: 'partner-A', org_id: 'org-A' },
+      env, { tier: 'MSSP', userId: 'partner-A', org_id: 'org-A' },
       { type: 'MSSP', config: { customer_id: 'acme' } },
     );
     expect(html).toContain('Acme Corp');
@@ -114,7 +114,7 @@ describe('reportingEngine — MSSP report type', () => {
       KV: makeKV(),
     };
     const html = await createAndDownloadHTML(
-      env, { role: 'mssp_admin', tier: 'enterprise', userId: 'partner-B', org_id: 'org-B' },
+      env, { tier: 'MSSP', userId: 'partner-B', org_id: 'org-B' },
       { type: 'MSSP', config: { customer_id: 'acme' } },
     );
     expect(html).not.toContain('Acme Corp');

@@ -311,8 +311,11 @@ export async function logSuspicious(env, request, reason) {
 // Ensures a user cannot access resources belonging to a different org/tenant.
 export function assertTenantAccess(authCtx, resourceOwnerId, resourceOrgId) {
   if (!authCtx || authCtx.tier === 'IP') return false; // unauthenticated
-  // ENTERPRISE admin bypass
-  if (authCtx.role === 'ADMIN' && authCtx.tier === 'ENTERPRISE') return true;
+  // Platform-owner admin bypass. Previously compared authCtx.role to the
+  // literal 'ADMIN' (uppercase) — a field never populated anywhere in the
+  // auth layer, so this bypass never actually fired for anyone, including
+  // real admins. isAdmin is the platform's real owner-bypass signal.
+  if (authCtx.isAdmin === true) return true;
   // Direct owner match
   if (resourceOwnerId && authCtx.userId === resourceOwnerId) return true;
   // Org member match

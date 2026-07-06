@@ -317,7 +317,11 @@ export async function handleVerifyEnterprisePayment(request, env, authCtx) {
 
 // ─── GET /api/enterprise/stats — admin dashboard stats ───────────────────────
 export async function handleEnterpriseStats(request, env, authCtx) {
-  if (authCtx?.role !== 'admin') return json({ error: 'Admin only' }, 403);
+  // authCtx.role is never populated anywhere (no JWT claim, no DB column) —
+  // this was a permanent 403 for everyone, including the real admin.
+  // isAdmin is the platform's actual owner-bypass mechanism (ADMIN_KEY).
+  // (2026-07-06 revenue-mechanisms audit, P1-4.)
+  if (authCtx?.isAdmin !== true) return json({ error: 'Admin only' }, 403);
   try {
     const [total, byStatus, recent] = await Promise.all([
       env.DB.prepare(
