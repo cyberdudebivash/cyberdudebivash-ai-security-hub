@@ -1522,8 +1522,16 @@ export async function routeRequest(request, env, ctx, requestId) {
       }
     }
     // Internal back-office owner-only gate (integrations config, revenue engine, etc.)
+    // 'white-label' was removed from this prefix list: /api/white-label/theme's
+    // own doc comment says GET is "any auth" (a customer's own org branding) and
+    // PUT/DELETE/:orgId are 'mssp_admin|admin' — but this blanket regex forced
+    // owner-only on all four, so no real customer could ever reach the one
+    // customer-usable branding endpoint the Partner/White-label product
+    // actually has. whiteLabelMSSP.js's own requireRole() already does the
+    // real, now-correctly-functioning role check (authCtx.role is populated —
+    // see auth/middleware.js). (2026-07-06 revenue-mechanisms audit, P2-9.)
     if (
-      /^\/api\/(integrations|org-memory|workflows|white-label|revenue|monetize)(\/|$)/.test(path) ||
+      /^\/api\/(integrations|org-memory|workflows|revenue|monetize)(\/|$)/.test(path) ||
       path === '/api/funnel/metrics' ||
       path === '/api/funnel/event' ||
       path === '/api/affiliate/stats'
