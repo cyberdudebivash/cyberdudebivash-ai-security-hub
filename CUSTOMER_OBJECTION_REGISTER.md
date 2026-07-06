@@ -214,7 +214,7 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 
 ---
 
-## OBJ-13 — "A lot of your internal links go to dead pages — Privacy, Terms, Dashboard, API Docs, Sign in…" · RESOLVED (code) / live verification = pending deploy
+## OBJ-13 — "A lot of your internal links go to dead pages — Privacy, Terms, Dashboard, API Docs, Sign in…" · RESOLVED
 
 | Field | Detail |
 |-------|--------|
@@ -224,7 +224,7 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 | **Classification** | **Product** (broken links) — found by a direct, full-site link crawl of live production this cycle, not carried over from any prior audit. |
 | **Root cause** | Two distinct causes: (a) the bare `/api` 404s because this Worker's Cloudflare zone route (`cyberdudebivash.in/api/*`) only matches paths with a trailing slash — see the original analysis below; (b) every other instance is a plain stale/wrong href — a footer or nav snippet was copy-pasted across many pages with a shorthand path (`/privacy`, `/terms`, `/dashboard`, `/login`, `/compliance`, `/cve-hub`, `/customer-success`, `/keys`, `/zero-trust`, `/mssp-dashboard.html`) that never matched the page's real filename (`/privacy-policy`, `/terms-of-service`, `/user-dashboard`, `/compliance-management`, `/cve/`, `/customer-success-dashboard`, `/zero-trust-security`, `/mssp-command-center.html`) and was never corrected when the real pages were built or renamed. |
 | **Corrective action** | Repointed all 38 link instances to their real, verified-working (HTTP 200 or a 308 to 200) destinations across 22 files. Left `ciso-hub.html`'s pre-existing `/api-docs.html` link alone (308-redirects correctly, consistent with every other `.html`-suffixed link in that page's nav — not a defect). **Explicitly NOT fixed — no corresponding page exists, left as found rather than guessed:** `sitemap.html` still lists `/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, and `/enterprise/contacts`, none of which resolve to any page in `frontend/`; `/mssp-workspace` (sitemap.html) and `/ai-governance-dashboard.html` (ai-governance-pdf.html) are the same — no plausible real target was found, so per the Verifiable-Statement Rule these are recorded as an open, unresolved gap rather than repointed to a guess. |
-| **Resolution evidence** | Post-fix re-crawl of every internal href across all 78 pages against live production confirms only the six explicitly-unfixed paths above (plus `/ai-governance-dashboard.html`) remain broken — everything else resolves. Regression-locked by `workers/test/deadInternalLinks.test.mjs` (15 tests, one per dead pattern found) — full suite 1,470/1,470 green, 140 files; SEO structure lock 22/22 green (unaffected). **Not yet live:** committed on branch, not yet merged/deployed — production still serves the dead links until this ships. Live re-verification (every fixed link → 200) is the closing evidence, same discipline as every other entry in this register. |
+| **Resolution evidence** | Regression-locked by `workers/test/deadInternalLinks.test.mjs` (15 tests, one per dead pattern found) — full suite 1,470/1,470 green, 140 files; SEO structure lock 22/22 green (unaffected). Merged to `main` (`3c099d8`) and deployed 2026-07-06 18:12 UTC (`deploy.yml` run `28813011718`, conclusion success). **Live-verified same day:** `curl` against `https://cyberdudebivash.in` confirms `/api/version` reports `commit: 3c099d8`; all nine real destination pages (`/privacy-policy`, `/terms-of-service`, `/user-dashboard`, `/api-docs`, `/cve/`, `/compliance-management`, `/customer-success-dashboard`, `/zero-trust-security`, `/mssp-command-center`) return 200; spot-checked source pages (homepage, ai-security, sitemap, threat-hunting) serve the corrected hrefs in their live HTML, not just at the destination. A fresh full-site link re-crawl shows only the seven explicitly-unfixed paths still 404 (unchanged, as expected). Fresh `ceap-sweep.mjs` run same day: 15/15 green on `3c099d8`. |
 | **Still open (not code-closable today)** | `/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, `/enterprise/contacts`, `/mssp-workspace` on `sitemap.html`, and `/ai-governance-dashboard.html` on `ai-governance-pdf.html` — these reference features or pages that do not exist in `frontend/` today under any name this audit could find. Fixing them means either building the missing page or a product decision to remove the sitemap entry; either is a larger decision than a link-destination correction and is left for a follow-up cycle. |
 
 <details>
@@ -235,11 +235,10 @@ The "📡 API Docs" footer link on the homepage and six other public pages (abou
 
 ---
 
-## Trend (CEAP continuous cycle, build `b493d871` + IR-3 fix; OBJ-13 fixed in code, same cycle)
+## Trend (CEAP continuous cycle, build `3c099d8` + OBJ-13 fix, live)
 
-Lifetime: **13 objections — 11 RESOLVED (10 regression-locked and live,
-1 regression-locked pending deploy), 1 ACCEPTED boundary (OBJ-06), 1 OPEN
-owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the first **owner-reported
+Lifetime: **13 objections — 11 RESOLVED (all regression-locked and live),
+1 ACCEPTED boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the first **owner-reported
 real-world** objections — exactly the Voice-of-Customer intake CEAP was built
 for. OBJ-10 shows why re-observation matters: OBJ-09's markup was correct but
 structurally unreadable, caught only because the owner re-checked production.

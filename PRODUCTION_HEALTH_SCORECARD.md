@@ -113,9 +113,14 @@
 > `CUSTOMER_OBJECTION_REGISTER.md` OBJ-13. Everything else this edition
 > re-confirmed rather than changed: a fresh CEAP sweep run (15/15 green)
 > verified IR-3's scan-token fix and the full paying-customer lifecycle are
-> live and healthy on commit `6c24abb`; the four GA gates remain owner-action
-> and unchanged. **Not yet deployed:** committed on branch only — see the
-> Action Queue.
+> live and healthy on commit `6c24abb`. **Deployed and live-verified same
+> day:** merged to `main` (`3c099d8`, PR #64), CI green end-to-end
+> (unit/E2E/Lighthouse/accessibility/bundle-size/security), `deploy.yml` run
+> `28813011718` completed successfully at 18:12 UTC. Live re-check confirms
+> `/api/version` reports `3c099d8`, all nine real destination pages return
+> 200, spot-checked source pages serve the corrected hrefs, and a second
+> fresh CEAP sweep is 15/15 green on `3c099d8`. The four GA gates remain
+> owner-action and unchanged.
 >
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
@@ -166,8 +171,8 @@
   pages) and Dashboard upgrade CTAs (6 pages) — see OBJ-13. Repointed all 38
   to real, working pages; 7 further references to pages that don't exist
   anywhere in the codebase were left unfixed rather than guessed. Locked by
-  `workers/test/deadInternalLinks.test.mjs` (15 tests). On branch, pending
-  release.
+  `workers/test/deadInternalLinks.test.mjs` (15 tests). Merged, deployed, and
+  live-verified same day (commit `3c099d8`, `deploy.yml` run `28813011718`).
 
 ## 2. Security — GOOD ▲
 
@@ -323,7 +328,7 @@
 | ✅ Code shipped | CI-1 alerting half — `error-rate-alert.mjs`/`.yml`, 12 unit tests, full suite green | Engineering | Live-verification pending: owner to confirm `CLOUDFLARE_API_TOKEN` Analytics:Read scope; first scheduled run is the closing evidence |
 | ✅ Code shipped | CI-2 schema-drift check — `d1-schema-diff.mjs`/`.yml`, 19 unit tests incl. RC-B1 regression + real-file parse check, full suite green | Engineering | Live-verification pending: first scheduled 03:40 UTC run against production is the closing evidence |
 | ✅ Done | Monday 05:00 UTC restore drill — first run green 2026-07-06 (run `28779799461`), R-06 closed | Engineering | Closed 2026-07-06 — reliability evidence requirement satisfied |
-| ✅ Code shipped | OBJ-13 — 38 dead internal link instances (22 pages: Privacy/Terms, Dashboard, API Docs, Sign in, MSSP Dashboard, sitemap) repointed to real pages, regression-locked | Engineering | Live-verification pending: merge + deploy, then re-check all fixed links return 200 |
+| ✅ Done | OBJ-13 — 38 dead internal link instances (22 pages: Privacy/Terms, Dashboard, API Docs, Sign in, MSSP Dashboard, sitemap) repointed to real pages, regression-locked | Engineering | Closed 2026-07-06 — merged, deployed (`3c099d8`), all fixed links confirmed 200 live |
 | P3 | 7 sitemap/nav entries reference pages that don't exist anywhere in the codebase (`/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, `/enterprise/contacts`, `/mssp-workspace`, `/ai-governance-dashboard.html`) | Product + Engineering | Open — needs a product decision (build the page vs. remove the entry), not a link fix |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
