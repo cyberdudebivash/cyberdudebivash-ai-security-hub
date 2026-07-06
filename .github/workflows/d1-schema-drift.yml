@@ -1,0 +1,119 @@
+# =============================================================================
+# CYBERDUDEBIVASH AI Security Hub — Nightly D1 Schema Drift Check
+# =============================================================================
+# Closes CI-2 (OPERATIONAL_EXCELLENCE_REPORT.md §7): "Nightly prod-schema
+# export → CI diff vs schema_bootstrap.sql — would have caught RC-B1 class
+# before ship." RC-B1 was a live column-name mismatch (scan_history.created_at
+# vs the canonical scanned_at) that 500'd the org dashboard in production
+# while a green 1,300-test suite saw nothing, because the lab schema silently
+# disagreed with production.
+#
+# Nightly, this exports the live D1 database's actual CREATE TABLE statements
+# and diffs them against the committed workers/schema_bootstrap.sql (table
+# existence + column-name sets — see scripts/d1-schema-diff.mjs for why that
+# file, and why column names only, not types/constraints). Any drift means
+# production has silently diverged from the tracked reference — exactly the
+# blind spot RC-B1 exploited.
+#
+# Uses the same CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets as
+# deploy.yml / d1-backup.yml. Offset from d1-backup.yml's 02:30 UTC run so
+# both don't contend for the same D1 database at once.
+# =============================================================================
+
+name: D1 Schema Drift Check
+
+on:
+  schedule:
+    - cron: "40 3 * * *" # 03:40 UTC nightly — after the 02:30 backup
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: d1-schema-drift
+  cancel-in-progress: false
+
+env:
+  D1_DATABASE_NAME: "cyberdudebivash-security-hub"
+  NODE_VERSION: "24"
+
+jobs:
+  check:
+    name: Diff live D1 schema against workers/schema_bootstrap.sql
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Install Wrangler
+        working-directory: workers
+        run: npm ci --prefer-offline
+
+      - name: Export live schema (table + column definitions only, read-only)
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler d1 execute "${{ env.D1_DATABASE_NAME }}" \
+            --remote \
+            --json \
+            --command "SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name" \
+            > /tmp/live-schema.json
+
+      - name: Run the diff
+        id: diff
+        shell: bash
+        run: |
+          set +e
+          node scripts/d1-schema-diff.mjs /tmp/live-schema.json workers/schema_bootstrap.sql | tee /tmp/schema-diff.out
+          code=${PIPESTATUS[0]}
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          {
+            echo "## D1 schema drift check"
+            echo '```'
+            cat /tmp/schema-diff.out
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or refresh the drift issue (DRIFT only)
+        if: steps.diff.outputs.code == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          title="🟠 D1 schema drift: production disagrees with workers/schema_bootstrap.sql"
+          now=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          detail=$(cat /tmp/schema-diff.out)
+          body=$(printf '%s\n\n%s\n\n%s\n\n%s' \
+            "The nightly schema-drift check found production's live schema disagreeing with the committed reference at ${now}." \
+            "$detail" \
+            "Run: ${run_url}" \
+            "This is the exact blind spot behind RC-B1 (PHASE_IX_RELEASE_CANDIDATE_REPORT.md): a column renamed in one place and not the other, invisible to the test suite because the lab schema silently disagreed with production. Regenerate workers/schema_bootstrap.sql via scripts/lab-bootstrap-d1.mjs --dump-bootstrap if production is correct, or open a gated migration via db-migrate.yml if the reference is correct. This issue auto-refreshes while drift persists; close it once a clean run confirms parity.")
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "D1 schema drift in:title" --json number --jq '.[0].number' || true)
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Still drifting at ${now} — run ${run_url}"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi
+
+      - name: Fail the run on non-OK result (drives owner notification)
+        if: steps.diff.outputs.code != '0'
+        run: |
+          if [ "${{ steps.diff.outputs.code }}" = "2" ]; then
+            echo "::error::Schema-drift check is misconfigured or the live export was unreadable/empty — check CLOUDFLARE_API_TOKEN scope and the wrangler d1 execute query."
+          else
+            echo "::error::Live D1 schema has drifted from workers/schema_bootstrap.sql."
+          fi
+          exit 1
