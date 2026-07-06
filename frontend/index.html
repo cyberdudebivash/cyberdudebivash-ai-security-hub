@@ -9516,11 +9516,26 @@ async function executeScan(module, payload) {
 
   setLoading(module, true, scanMsgs[module]);
 
+  // Domain scan requires a fresh, single-use scan token (P1 abuse-prevention
+  // gate). Fetched just-in-time, not cached: tokens are single-use and expire
+  // in 5 minutes. If issuance fails for any reason, proceed without one —
+  // the backend returns a clear, actionable 403 rather than a silent break.
+  let scanTokenHeaders = {};
+  if (module === 'domain') {
+    try {
+      const tokRes = await safeFetch('/api/scan/token', { method: 'POST' });
+      if (tokRes.ok) {
+        const tokData = await tokRes.json();
+        if (tokData?.token) scanTokenHeaders = { 'X-Scan-Token': tokData.token };
+      }
+    } catch {}
+  }
+
   try {
     // Use safeFetch: multi-endpoint fallback + exponential backoff + 8s timeout
     const resp = await safeFetch(endpoints[module], {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...scanTokenHeaders },
       body: JSON.stringify(payload),
     });
     const data = await resp.json();

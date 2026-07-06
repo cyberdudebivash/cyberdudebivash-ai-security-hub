@@ -929,6 +929,18 @@ async function runSyncPipeline(request, env, routeKey, route) {
   const authCtx  = await resolveAuthV5(request, env);
   if (!authCtx.authenticated) return unauthorized(authCtx.error || 'invalid');
 
+  // P1: scan-token verification — prevents abuse-queue flooding on the public
+  // domain-scan entry point specifically (the free, anonymous conversion
+  // funnel). Scoped away from api_key/admin_key callers: they're already
+  // identified and quota-gated by key, and requiring a browser-style token
+  // first would break legitimate programmatic API integrations. JWT-logged-in
+  // and anonymous browser callers are both still gated — the frontend
+  // supplies a token for either case (executeScan() in index.html).
+  if (routeKey === 'POST /api/scan/domain' && authCtx.method !== 'api_key' && authCtx.method !== 'admin_key') {
+    const tokenCheck = await verifyScanToken(request, env);
+    if (!tokenCheck.valid) return scanTokenError(tokenCheck.reason);
+  }
+
   // Monthly scan quota enforcement for STARTER plan (backend gate)
   if (authCtx.tier === 'STARTER') {
     const monthlyCheck = await checkMonthlyQuota(env, {
