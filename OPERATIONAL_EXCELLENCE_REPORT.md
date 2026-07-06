@@ -46,7 +46,7 @@ and it is still an excellent first-session experience.
 | Restore drill | **Armed, never yet run** — first schedule fires Monday 05:00 UTC; manual dispatch attempted by this board and denied (integration lacks `workflow_dispatch` permission — owner-only). Restore script itself is regression-tested both directions (`workers/test/restoreDrill.test.mjs`) | ARMED / FIRST RUN PENDING |
 | Deploy discipline | 7 consecutive green gated deploys today (#618–#624), each: test gate → deploy → post-deploy smoke; three releases this cycle went through the identical path with zero manual intervention | OPERATING |
 | Rollback | Documented (`DEPLOY.md`); mechanism is the same pipeline (fast-forward to a known-good commit) — exercised implicitly by every deploy; no live rollback has been needed post-GA | DOCUMENTED, UNEXERCISED LIVE |
-| Detection | External probe (availability) + post-deploy smoke (deploy sanity) + **CEAP synthetic customer sweep every 6 h** (`ceap-assurance.yml` running `scripts/ceap-sweep.mjs`: 13 lifecycle checks incl. the exact IR-1/IR-2 journeys; a FAIL = production incident). Error-rate alerting/APM still absent — CEAP catches journey breakage within 6 h, not error spikes between sweeps | PARTIALLY CLOSED (journey half); CI-1 (alerting half) remains |
+| Detection | External probe (availability) + post-deploy smoke (deploy sanity) + **CEAP synthetic customer sweep every 6 h** (`ceap-assurance.yml` running `scripts/ceap-sweep.mjs`: 13 lifecycle checks incl. the exact IR-1/IR-2 journeys; a FAIL = production incident) + **Workers error-rate alert every 15 min** (`error-rate-alert.yml`, code shipped + unit-tested this cycle, CI-1) — CEAP catches journey breakage within 6 h, the new alert targets runtime-error spikes between sweeps but has no live-traffic run yet | JOURNEY HALF OPERATING; ALERTING HALF (CI-1) CODE SHIPPED + TESTED, LIVE-VERIFICATION PENDING |
 
 ## 3. Support documentation accuracy audit
 
@@ -107,7 +107,7 @@ failures — nothing in monitoring would have caught either. That is why CI-1
 
 | ID | Item | Why | Priority |
 |----|------|-----|----------|
-| CI-1 | Error-rate alerting on 5xx spikes (Workers analytics/logpush) | Both production incidents were customer-first detections. **Partially addressed (CEAP cycle 1):** the 6-hourly synthetic customer sweep now auto-detects journey regressions (would have caught IR-1); error-*rate* alerting between sweeps still open | **P1 (remaining half)** |
+| CI-1 | Error-rate alerting on 5xx spikes (Workers analytics/logpush) | Both production incidents were customer-first detections. **Code shipped this cycle:** `scripts/error-rate-alert.mjs` + `.github/workflows/error-rate-alert.yml` poll Cloudflare's GraphQL Analytics API every 15 min for the Workers runtime error rate between the 6-hourly CEAP sweeps (which cover journey regressions and would have caught IR-1), and file/refresh a pinned incident issue on a real spike. Unit-tested in `workers/test/errorRateAlert.test.mjs` (12 tests: threshold math incl. exact-boundary, sample-size gating against quiet-period false positives, retry-then-fail, malformed/GraphQL-error responses) — full suite green (135 files / 1,414 tests), no regressions. **Known limitation (stated, not assumed away):** measures Workers runtime exceptions / exceeded CPU-or-memory, not deliberately-returned 5xx JSON from the app's own try/catch paths — full HTTP-status parity needs the zone-level `httpRequestsAdaptiveGroups` dataset + a real zone tag, not yet wired. **Owner action still open:** confirm `CLOUDFLARE_API_TOKEN` carries Account `Analytics:Read`; the first scheduled run against live traffic is the still-outstanding live-verification evidence (code evidence only so far) | **P2 (code shipped + tested; live-verification and zone-level HTTP-status parity remain)** |
 | CI-2 | Nightly prod-schema export → CI diff vs `schema_bootstrap.sql` | Would have caught RC-B1 class before ship | P2 |
 | CI-3 | First restore drill (Monday's scheduled run) — then weekly cadence review | Backup trust requires restore proof | P2 (automatic) |
 | CI-4 | `X-RateLimit-*` headers on burst-path 429s (parity with daily path) | Body is authoritative today; header parity helps API clients | P3 |
@@ -133,9 +133,14 @@ The organization operated the platform through a full post-GA cycle with no
 new customer-facing defect, three same-day gated releases in the prior
 cycles, running backups and probes, accurate support documentation (two
 precision fixes made this cycle), and a payment rail verified to the last
-step before money moves. The two structural weaknesses are unchanged and
-honestly held: **detection depends on customers/audits rather than
-alerting** (CI-1), and **the support organization is one person** (GA-O3).
-Both are visible on the GA Blocker Board with owners. Until the first paying
-customer arrives, the highest-value operational act remains GA-O1: one real
-payment through the now-verified order flow.
+step before money moves. Of the two structural weaknesses previously held
+open, one moved this cycle: **detection depended on customers/audits rather
+than alerting** (CI-1) for both lifetime incidents — a 15-minute Workers
+error-rate alert shipped and passed 12 unit tests plus the full 1,414-test
+suite this cycle, but has no live-production run yet, so treat detection as
+still customer/audit-first until the owner confirms the token's Analytics
+scope and a first real run is observed. **The support organization is one
+person** (GA-O3), unchanged. Both are visible on the GA Blocker Board with
+owners. Until the first paying customer arrives, the highest-value
+operational act remains GA-O1: one real payment through the now-verified
+order flow.

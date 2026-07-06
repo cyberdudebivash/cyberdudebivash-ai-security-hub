@@ -14,7 +14,7 @@
 | Customer onboarding success rate | 100% simulated (100/100 orgs; every live RC/GA/CEAP journey since) · **no real customers yet** | Phase VIII harness; CEAP sweep step 2 | Per CEAP sweep (6 h) |
 | Time to first value (TTFV) | **~7 s** live cold scan (first request → scan result); 0.4 s warm-cache lab | Post-GA lifecycle pass; CEAP sweep timings | Per CEAP sweep |
 | Production incident rate | 2 lifetime (IR-1, IR-2), **0 since GA** | Incident Review Register (`OPERATIONAL_EXCELLENCE_REPORT.md` §4) | Per incident |
-| Mean time to detect (MTTD) | Historically customer/audit-first (unbounded); **now bounded ≤ 6 h** for journey regressions by the CEAP sweep; error-rate spikes between sweeps still unbounded (CI-1) | `ceap-assurance.yml` schedule | Weekly (CORB) |
+| Mean time to detect (MTTD) | Historically customer/audit-first (unbounded); **bounded ≤ 6 h** for journey regressions by the CEAP sweep; **bounded ≤ 15 min** for Workers runtime-error spikes by the new `error-rate-alert.yml` (CI-1) — code shipped + unit-tested this cycle (12/12 tests, full suite 1,414/1,414 green), **first live-production run is still-open evidence**; deliberately-returned 5xx from caught application errors remain outside both signals (stated limitation, not silently assumed away) | `ceap-assurance.yml` + `error-rate-alert.yml` schedules | Weekly (CORB) |
 | Mean time to recover (MTTR) | **Same-day** for both lifetime incidents (found → root-caused → fixed → locked → deployed → live-verified within hours) | IR-1/IR-2 records; deploy timestamps | Per incident |
 | Customer satisfaction (CSAT) | **UNKNOWN — no real customers** | — | When real customers exist |
 | Renewal rate | **UNKNOWN — no real customers** | — | When real customers exist |
