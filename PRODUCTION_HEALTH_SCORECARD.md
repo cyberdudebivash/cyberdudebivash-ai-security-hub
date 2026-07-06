@@ -5,7 +5,7 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 7 · **Date:** 2026-07-04 · **Production commit:** `534bf14`; CEAP cycle 1
+> **Edition:** 8 · **Date:** 2026-07-06 · **Last deployed production commit:** `534bf14`; CEAP cycle 1 (Edition 8 is code + test evidence, not yet deployed — see below)
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
@@ -58,6 +58,23 @@
 > codified (`docs/ENGINEERING_STANDARDS.md` §10): every customer-facing
 > statement stays continuously verifiable against production, or is
 > withdrawn.
+> **Edition 8 (CI-1 alerting, same day):** Shipped the alerting half of CI-1.
+> `scripts/error-rate-alert.mjs` + `.github/workflows/error-rate-alert.yml`
+> poll Cloudflare's GraphQL Analytics API every 15 min for the Workers
+> runtime error rate between CEAP sweeps, filing/refreshing a pinned incident
+> issue on a real spike (same pattern as `external-uptime-probe.yml`).
+> Unit-tested (`workers/test/errorRateAlert.test.mjs`, 12 tests: threshold
+> math incl. exact-boundary, sample-size gating against quiet-period false
+> positives, retry-then-fail, malformed/GraphQL-error responses) — full
+> suite 1,414 tests / 135 files green, no regressions. **Known limitation:**
+> measures Workers runtime exceptions / exceeded CPU-or-memory, not
+> deliberately-returned 5xx from the app's own try/catch paths — full
+> HTTP-status parity needs the zone-level `httpRequestsAdaptiveGroups`
+> dataset + a real zone tag (not wired; future work if the owner wants full
+> parity). **Not yet live-verified:** this is code + test evidence only —
+> the first scheduled run against real production traffic, and confirmation
+> that `CLOUDFLARE_API_TOKEN` carries Account `Analytics:Read`, are both
+> still-outstanding, owner-observable evidence.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.
@@ -253,6 +270,7 @@
 | ✅ Done | Metric contradiction audit: KEV trend no longer fabricates "0 critical, 0 KEV" for absent fields; products split into "Marketplace Solutions" (defense/stats) vs "generated across MYTHOS runs · N published" (mythos/status); MYTHOS v4.0/12-phase labels aligned to deployed v5.0/16-phase everywhere | — | Closed 2026-07-04, regression-locked |
 | ✅ Done | **Found in audit:** customer notifications were fabricated from `/api/seed/threats` (PRNG demo; first 3 events always CRITICAL) — poller now reads the real NVD/KEV feed with per-CVE dedupe; all `/api/seed/*` responses now self-declare `synthetic: true` | — | Closed 2026-07-04 |
 | ✅ Done | **Found in audit:** `user-dashboard.html` shipped with a committed tool-download banner BEFORE `<!DOCTYPE html>` (visible to every logged-in customer, forced quirks mode) — stripped; doctype lock added for all key pages | — | Closed 2026-07-04 |
+| ✅ Code shipped | CI-1 alerting half — `error-rate-alert.mjs`/`.yml`, 12 unit tests, full suite green | Engineering | Live-verification pending: owner to confirm `CLOUDFLARE_API_TOKEN` Analytics:Read scope; first scheduled run is the closing evidence |
 | P1 | Watch Monday 05:00 UTC restore drill; green closes R-06, red is S1 | Engineering | PASSED — reliability evidence requirement |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
