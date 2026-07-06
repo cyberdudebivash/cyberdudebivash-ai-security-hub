@@ -478,7 +478,18 @@
         this._startSubscriptionCheckout(opts);
         return;
       }
-      // Non-subscription products (reports, etc.) — unchanged legacy path.
+      // One-time report purchases (domain/ai/redteam/identity/compliance) go
+      // through the same canonical create-order → Razorpay → verify flow as
+      // subscriptions, for the same reason: the legacy `new Razorpay({amount})`
+      // call below carried no order_id, so a captured payment had no `payments`
+      // row to match against and no report was ever generated automatically.
+      if (opts.module) {
+        this._startReportCheckout(opts);
+        return;
+      }
+      // Legacy path — only reachable if a caller sets neither opts.module nor a
+      // subscription tierName. Kept as a last-resort so a stray/unknown product
+      // still gets a payment ID a human can act on, rather than a hard failure.
       const key = (window.CONFIG && window.CONFIG.RAZORPAY_KEY_ID) || '';
       if (!key || !window.Razorpay) {
         alert('Card payment not configured. Please use UPI, Bank Wire, or PayPal.');
@@ -565,6 +576,84 @@
       }
     },
 
+    async _startReportCheckout(opts) {
+      const target = (opts.target || '').trim();
+      if (!target) {
+        alert('Missing scan target for this report. Please contact support@cyberdudebivash.com.');
+        return;
+      }
+      let email = '';
+      try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        email = (window.prompt('Enter your email to receive your report:') || '').trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+          alert('A valid email address is required to deliver your report.');
+          return;
+        }
+        try { localStorage.setItem('cdb_email', email); } catch (e) {}
+      }
+
+      try {
+        const oRes = await fetch('/api/payment/create-order', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ module: opts.module, target, email }),
+        });
+        const order = await oRes.json().catch(() => ({}));
+        if (!oRes.ok || !order.order_id || !order.key_id) {
+          alert('Could not start checkout. Please use UPI, Bank Wire, or PayPal, or contact support@cyberdudebivash.com.');
+          return;
+        }
+
+        await this._loadRazorpaySdk();
+        this.close();
+
+        new window.Razorpay({
+          key:         order.key_id,
+          amount:      order.amount,
+          currency:    order.currency || 'INR',
+          name:        'CYBERDUDEBIVASH PVT LTD',
+          description: opts.productLabel || order.report_name || 'Security Report',
+          order_id:    order.order_id,
+          prefill:     { email },
+          handler:     async (rp) => {
+            try {
+              const vRes = await fetch('/api/payment/verify', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id:   rp.razorpay_order_id,
+                  razorpay_payment_id: rp.razorpay_payment_id,
+                  razorpay_signature:  rp.razorpay_signature,
+                  module: opts.module, target, email,
+                }),
+              });
+              const vData = await vRes.json().catch(() => ({}));
+              this._onReportPaymentComplete(rp, vRes.ok && vData.success, vData);
+            } catch (e) {
+              this._onReportPaymentComplete(rp, false, {});
+            }
+          },
+          modal: { ondismiss: () => {} },
+        }).open();
+      } catch (e) {
+        alert('Could not start checkout. Please use UPI, Bank Wire, or PayPal, or contact support@cyberdudebivash.com.');
+      }
+    },
+
+    _onReportPaymentComplete(resp, verified, data) {
+      this.close();
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;top:20px;right:20px;max-width:360px;background:#00ff88;color:#000;padding:14px 22px;border-radius:12px;font-weight:900;font-size:14px;z-index:999999;box-shadow:0 8px 30px rgba(0,255,136,.3)';
+      if (verified && data.download_url) {
+        toast.innerHTML = `✅ Payment verified — your report is ready.<br><a href="${data.download_url}" style="color:#000;text-decoration:underline">Download it now</a>`;
+      } else {
+        toast.textContent = verified
+          ? (data.message || '✅ Payment successful!')
+          : `✅ Payment received (ID: ${resp.razorpay_payment_id}). If your report doesn't arrive within a few minutes, contact support@cyberdudebivash.com with this payment ID.`;
+      }
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), verified ? 15000 : 20000);
+    },
+
     _onRazorpaySuccess(resp, verified, message) {
       this.close();
       // Show success toast
@@ -594,12 +683,15 @@
 
   window.CDB_CHECKOUT_MODAL.openReport = function(reportType, target) {
     const geo    = getGeo();
-    const amount = (geo.matrix.reports && geo.matrix.reports[reportType])
+    const module = (reportType || 'domain').toLowerCase();
+    const amount = (geo.matrix.reports && geo.matrix.reports[module])
                    || (geo.countryCode === 'IN' ? 999 : 12);
     this.open({
       amount,
-      tierName:     'REPORT_' + (reportType || 'domain').toUpperCase(),
-      productLabel: (reportType ? reportType.toUpperCase() : 'Domain') + ' Security Report' + (target ? ` — ${target}` : ''),
+      module,
+      target:       target || '',
+      tierName:     'REPORT_' + module.toUpperCase(),
+      productLabel: module.toUpperCase() + ' Security Report' + (target ? ` — ${target}` : ''),
     });
   };
 

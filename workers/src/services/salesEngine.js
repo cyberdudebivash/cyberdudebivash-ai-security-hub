@@ -361,16 +361,48 @@ export async function getOutreachQueue(env, { status = 'draft', limit = 20 } = {
 }
 
 /**
- * Mark outreach as sent
+ * Approve + send a drafted outreach item (one-click human approval, not
+ * auto-send — runSalesPipeline only ever drafts and stores; nothing sends
+ * until an authenticated owner explicitly calls this, via POST
+ * /api/growth/sales/outreach/:id/send, after reviewing it through GET
+ * /api/growth/sales/outreach). Previously this only flipped the DB status
+ * column — no email was ever actually sent, so the "sent" outreach queue
+ * was not evidence of anything reaching a real inbox. Found during the
+ * 2026-07-06 revenue-mechanisms audit.
  */
 export async function markOutreachSent(env, outreachId) {
   try {
+    const row = await env.DB.prepare(
+      `SELECT email, subject, body, status FROM sales_outreach WHERE id = ?`
+    ).bind(outreachId).first();
+
+    if (!row) return { success: false, error: 'Outreach item not found' };
+    if (row.status === 'sent') return { success: true, already_sent: true };
+    if (!row.email || !row.subject || !row.body) {
+      return { success: false, error: 'Outreach item is missing email/subject/body — cannot send' };
+    }
+
+    const { sendEmail } = await import('./emailEngine.js');
+    const sendResult = await sendEmail(env, {
+      to:      row.email,
+      subject: row.subject,
+      html:    row.body.replace(/\n/g, '<br>'),
+      text:    row.body,
+    });
+    // sendEmail() never throws — it catches its own provider errors and
+    // returns { success: false, ... } instead. Must check this explicitly;
+    // otherwise a failed send still gets marked 'sent' below.
+    if (!sendResult?.success) {
+      return { success: false, error: `Send failed: ${sendResult?.error || sendResult?.provider || 'unknown provider error'}` };
+    }
+
     await env.DB.prepare(`
       UPDATE sales_outreach SET status = 'sent', sent_at = datetime('now')
       WHERE id = ?
     `).bind(outreachId).run();
-    return { success: true };
+    return { success: true, sent: true, provider: sendResult.provider };
   } catch (err) {
+    console.error('[salesEngine] markOutreachSent error:', err.message);
     return { success: false, error: err.message };
   }
 }

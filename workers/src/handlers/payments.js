@@ -109,17 +109,14 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     const planKey = (body.plan || target || 'STARTER').toUpperCase();
     price = SUBSCRIPTION_PRICES[planKey] || SUBSCRIPTION_PRICES['STARTER'];
   } else if (module === 'defense') {
-    // Defense marketplace: items have catalog-defined prices sent by the platform
-    // checkout UI. Validate the minimum to reject obviously manipulated values.
-    const rawInr = Number(body.price_inr) || 0;
-    if (!body.price_inr || rawInr <= 0) {
-      return Response.json({ error: 'price_inr is required for defense solutions' }, { status: 400 });
-    }
-    price = {
-      amount: Math.round(rawInr * 100),
-      label:  '₹' + rawInr.toLocaleString('en-IN'),
-      name:   body.solution_title || 'Defense Solution',
-    };
+    // Defense marketplace purchases go through handlers/marketplaceCheckoutHandler.js
+    // (catalog-validated server-side pricing) — this endpoint never fulfills a
+    // 'defense' module (handleVerifyPayment rejects it; it's in neither
+    // SCAN_HANDLERS nor NON_SCAN_MODULES below). A client-controlled price was
+    // previously trusted here (body.price_inr) with no frontend caller and no
+    // way to ever complete the purchase — removed rather than left as a latent
+    // attack surface for a future regression (2026-07-06 revenue-mechanisms audit).
+    return Response.json({ error: 'Invalid module: defense solutions are purchased via /api/marketplace/checkout' }, { status: 400 });
   } else {
     // All fixed-price modules (domain, ai, redteam, identity, compliance,
     // assessment, threat_intel, red_team): server-side price only.

@@ -40,28 +40,40 @@ async function buildRevenueMetrics(db) {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
   const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString();
 
-  // ── Plan counts from subscriptions / users ─────────────────────────────
-  let planCounts = { free: 0, pro: 0, enterprise: 0, total: 0 };
+  // ── Plan counts from users.tier ──────────────────────────────────────────
+  // FIX (2026-07-06 revenue-mechanisms audit): this queried a `users.plan`
+  // column with lowercase values ('pro','enterprise') that has never existed
+  // — the real, live schema (workers/schema_bootstrap.sql) is `users.tier`
+  // with uppercase values ('FREE','STARTER','PRO','ENTERPRISE','MSSP'), the
+  // exact column /api/payment/verify actually writes on a real purchase
+  // (handlers/payments.js handleVerifyPayment). The old query threw on every
+  // call, was silently swallowed by the catch below, and left pro/enterprise
+  // counts at 0 forever — this dashboard would report ₹0 MRR even with real
+  // paying customers. STARTER and MSSP tiers were also never counted at all.
+  let planCounts = { free: 0, starter: 0, pro: 0, enterprise: 0, mssp: 0, total: 0 };
   let newThisMonth = 0;
   let churnedThisMonth = 0;
 
   try {
-    // Try subscriptions table first (Stripe/Razorpay subscription records)
     const subQuery = await db.prepare(`
       SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN plan = 'free'       OR plan IS NULL THEN 1 ELSE 0 END) as free_count,
-        SUM(CASE WHEN plan = 'pro'        THEN 1 ELSE 0 END) as pro_count,
-        SUM(CASE WHEN plan = 'enterprise' THEN 1 ELSE 0 END) as ent_count
+        SUM(CASE WHEN tier = 'FREE'       OR tier IS NULL THEN 1 ELSE 0 END) as free_count,
+        SUM(CASE WHEN tier = 'STARTER'    THEN 1 ELSE 0 END) as starter_count,
+        SUM(CASE WHEN tier = 'PRO'        THEN 1 ELSE 0 END) as pro_count,
+        SUM(CASE WHEN tier = 'ENTERPRISE' THEN 1 ELSE 0 END) as ent_count,
+        SUM(CASE WHEN tier = 'MSSP'       THEN 1 ELSE 0 END) as mssp_count
       FROM users
       WHERE status = 'active' OR status IS NULL
     `).first();
 
     if (subQuery) {
-      planCounts.free       = subQuery.free_count || 0;
-      planCounts.pro        = subQuery.pro_count  || 0;
-      planCounts.enterprise = subQuery.ent_count  || 0;
-      planCounts.total      = subQuery.total      || 0;
+      planCounts.free       = subQuery.free_count    || 0;
+      planCounts.starter    = subQuery.starter_count || 0;
+      planCounts.pro        = subQuery.pro_count     || 0;
+      planCounts.enterprise = subQuery.ent_count     || 0;
+      planCounts.mssp       = subQuery.mssp_count    || 0;
+      planCounts.total      = subQuery.total         || 0;
     }
   } catch (_) {
     // users table might have different schema — use safe defaults
@@ -74,7 +86,7 @@ async function buildRevenueMetrics(db) {
   // ── New subscribers this month ─────────────────────────────────────────
   try {
     const newQ = await db.prepare(
-      `SELECT COUNT(*) as cnt FROM users WHERE created_at >= ? AND (plan = 'pro' OR plan = 'enterprise')`
+      `SELECT COUNT(*) as cnt FROM users WHERE created_at >= ? AND tier IN ('STARTER','PRO','ENTERPRISE','MSSP')`
     ).bind(startOfMonth).first();
     newThisMonth = newQ?.cnt || 0;
   } catch (_) {}
@@ -84,16 +96,18 @@ async function buildRevenueMetrics(db) {
   const STARTER_PRICE_INR    = 499;
   const PRO_PRICE_INR        = 1499;
   const ENTERPRISE_PRICE_INR = 4999;
-  const mrr_inr  = (planCounts.starter || 0) * STARTER_PRICE_INR
-                 + (planCounts.pro      || 0) * PRO_PRICE_INR
-                 + (planCounts.enterprise || 0) * ENTERPRISE_PRICE_INR;
+  const MSSP_PRICE_INR       = 9999;
+  const mrr_inr  = planCounts.starter    * STARTER_PRICE_INR
+                 + planCounts.pro        * PRO_PRICE_INR
+                 + planCounts.enterprise * ENTERPRISE_PRICE_INR
+                 + planCounts.mssp       * MSSP_PRICE_INR;
   // Keep legacy _cents fields as INR paise for any callers that divide by 100
   const mrr_cents  = mrr_inr * 100;
   const arr_cents  = mrr_cents * 12;
-  const arpu_cents = planCounts.total > 0 ? Math.round(mrr_cents / Math.max((planCounts.starter||0) + (planCounts.pro||0) + (planCounts.enterprise||0), 1)) : 0;
+  const paying     = planCounts.starter + planCounts.pro + planCounts.enterprise + planCounts.mssp;
+  const arpu_cents = paying > 0 ? Math.round(mrr_cents / paying) : 0;
 
   // ── Conversion rates ────────────────────────────────────────────────────
-  const paying = planCounts.pro + planCounts.enterprise;
   const convFreeToAny     = planCounts.total > 0 ? ((paying / planCounts.total) * 100).toFixed(1) : '0.0';
   const convProToEnterprise = planCounts.pro > 0 ? ((planCounts.enterprise / planCounts.pro) * 100).toFixed(1) : '0.0';
 
@@ -149,8 +163,10 @@ async function buildRevenueMetrics(db) {
     // Subscribers
     total_subscribers:         planCounts.total,
     free_users:                planCounts.free,
+    starter_users:             planCounts.starter,
     pro_users:                 planCounts.pro,
     enterprise_users:          planCounts.enterprise,
+    mssp_users:                planCounts.mssp,
     paying_subscribers:        paying,
     new_this_month:            newThisMonth,
     churned_this_month:        churnedThisMonth,

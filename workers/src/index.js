@@ -3995,18 +3995,31 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleGetLeads(request, env), request));
     }
 
-    // POST /api/growth/sales/run — run enterprise sales pipeline
+    // POST /api/growth/sales/run — run enterprise sales pipeline (owner only:
+    // reads lead PII and drafts cold outreach; was unauthenticated until the
+    // 2026-07-06 revenue-mechanisms audit — same gate as /api/payment/admin/*)
     if (path === '/api/growth/sales/run' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleRunSalesPipeline(request, env), request));
     }
 
-    // GET /api/growth/sales/outreach — get outreach queue
+    // GET /api/growth/sales/outreach — get outreach queue (owner only: exposes
+    // lead emails/names and drafted cold-outreach content — real PII)
     if (path === '/api/growth/sales/outreach' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       return withSecurityHeaders(withCors(await handleGetOutreach(request, env), request));
     }
 
-    // POST /api/growth/sales/outreach/:id/send — mark sent
+    // POST /api/growth/sales/outreach/:id/send — approve + actually send the
+    // drafted outreach email (owner only: this now sends real email via
+    // sendEmail() — see salesEngine.js markOutreachSent — so an unauthenticated
+    // caller would otherwise be able to make the platform send arbitrary
+    // pre-drafted emails from its own domain)
     if (path.match(/^\/api\/growth\/sales\/outreach\/[^/]+\/send$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       const outreachId = path.split('/')[5];
       return withSecurityHeaders(withCors(await handleMarkOutreachSent(request, env, null, outreachId), request));
     }
