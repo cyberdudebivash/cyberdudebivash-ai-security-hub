@@ -357,6 +357,16 @@ export async function handlePublicFeeds(request, env, path) {
 
   // FREE (anonymous) → edge-cached gated responses. Cache key carries the FREE
   // tier so a paid response can never leak into the shared cache.
+  // The pricing matrix advertises FREE limits (100/day, 10/min per IP) — they
+  // must be enforced, not just printed (scale-sim evidence, OBJ-11: 15 rapid
+  // anonymous calls all returned 200). Enforcement happens at the origin;
+  // CDN-edge cache hits never reach this code, which is fine — the limit
+  // protects origin cost and keeps the sold tier boundaries truthful.
+  // Fail-open on KV outage per accepted risk R-14.
+  {
+    const rl = await enforceDailyLimit(env, ent, ent.identity);
+    if (!rl.allowed) return rateLimited(rl);
+  }
   switch (path) {
     case '/api/feed.json':                return cachedJson('feed:public:free:v4',    300, () => buildFeed(env, ent, reqLimit));
     case '/api/v1/intel/latest.json':     return cachedJson('feed:latest:free:v4',    300, () => buildLatest(env, ent, reqLimit));

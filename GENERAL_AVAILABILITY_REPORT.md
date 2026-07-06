@@ -74,7 +74,7 @@ round-trip (needs `RESEND_API_KEY` set in production).
 | Scan → report lifecycle | **GA APPROVED** | Live-verified incl. cache-HIT path; regression-locked |
 | AI analyze (grounded threat correlation) | **GA APPROVED** | Live-verified: confidence, attack chain, MITRE, honest 400s; fabrication-refusal locked |
 | AI simulate / forecast (paid gates) | **GA APPROVED** | 402 with plan named, verified across phases |
-| Pricing & entitlement truth | **GA APPROVED** | Single source of truth; advertised == enforced; locked |
+| Pricing & entitlement truth | **GA APPROVED** | Single source of truth; advertised == enforced; locked. *Evidence extended 2026-07-06 (OBJ-11): the anonymous free-feed branch was found unenforced by a 100-org scale simulation and aligned to the promise the same cycle — certification retained per §10.3 transparent revision.* |
 | API key lifecycle (issue / rotate / revoke / usage) | **GA APPROVED** | Full lifecycle live-verified this phase |
 | Organizations: create / members / RBAC / dashboard / scan history | **GA APPROVED** | Full admin loop live-verified this phase; RC-B1 fix verified at Phase IX gate |
 | Rate limiting & quota degradation | **GA APPROVED WITH DOCUMENTED LIMITATIONS** | Graceful, honest 429s; FREE tier not SOC-volume by design |

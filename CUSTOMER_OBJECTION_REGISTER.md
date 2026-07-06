@@ -186,9 +186,23 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 
 ---
 
+## OBJ-11 — "Your pricing sells free-tier API limits, but we measured none being enforced." · RESOLVED
+
+| Field | Detail |
+|-------|--------|
+| **Objection** | A cost-conscious integrator load-tested the keyless free intel feeds and found the advertised FREEMIUM limits ("100 requests/day · 10 req/min", printed on the pricing page **and** in machine-readable `pricing.json`) enforced nowhere: 15 rapid anonymous calls to `/api/v1/intel/kev.json` all returned 200. |
+| **Persona** | Procurement / MSSP integrator validating advertised tier boundaries (100-org scale simulation, 2026-07-06, executed over HTTP against a lab runtime of the deployed build). |
+| **Business impact** | Advertised tier boundaries read as fiction — undermines pricing credibility and the platform's advertised==enforced certification; unlimited anonymous scraping of the origin. |
+| **Classification** | **Product** (enforcement gap). This evidence contradicted the Phase X "Pricing & entitlement truth — advertised == enforced" certification for the anonymous branch; per standards §10.3 the certification's evidence is extended transparently, not silently. |
+| **Root cause** | `handlePublicFeeds` enforced `enforceDailyLimit` (both windows) on keyed/paid calls and on STIX, but the anonymous FREE branch served straight from the shared cache without ever calling the limiter. |
+| **Corrective action** | The anonymous branch now enforces the advertised per-IP limits at the origin (`workers/src/handlers/publicFeeds.js`) — same shared limiter, fail-open on KV outage per accepted R-14; CDN-edge cache hits are unaffected (they never reach the origin and cost nothing). `pricing.json` stays exempt: customers must always be able to read pricing. Additionally, the enforced **scan** burst rates (2/5/20/60 per min) are now printed on every pricing card and test-bound to the middleware constants, and the pricing intro states that one subscription covers both the platform plans and the intel API (§8.6: limits disclosed before they bite). Trust Center now links the CAIQ-lite security questionnaire pack (procurement discoverability). |
+| **Resolution evidence** | Re-run after fix: 10×200 → 429 with the advertised message. Locked by `workers/test/feedLimitsReportExpiry.test.mjs` (burst enforced, fail-open preserved, pricing exempt, copy==constants). Same simulation also verified positives: 100/100 org onboardings (signup p50 318ms / p99 742ms local), exemplary 429/409 bodies, and added the first-ever locks for the report-expiry lifecycle (expired→410, unknown→404 with retention hint). |
+
+---
+
 ## Trend (post-GA operations cycle, build `34cd6c5`)
 
-Lifetime: **10 objections — 8 RESOLVED (regression-locked), 1 ACCEPTED
+Lifetime: **11 objections — 9 RESOLVED (regression-locked), 1 ACCEPTED
 boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the
 first **owner-reported real-world** objections — exactly the Voice-of-Customer
 intake CEAP was built for. OBJ-10 shows why re-observation matters: OBJ-09's
