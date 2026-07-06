@@ -38,6 +38,11 @@ Allow: /api/ai-security/threat-feed
 Allow: /api/mcp-security/threats
 Allow: /api/vibe-code/patterns
 
+# Allow public RSS/Atom/JSON feeds (served by the worker on this domain)
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+
 # ── Google-specific rules ─────────────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
@@ -117,6 +122,10 @@ Sitemap: https://cyberdudebivash.in/sitemap-services.xml
 Sitemap: https://cyberdudebivash.in/sitemap-api.xml
 
 # ── RSS & Atom Feeds ─────────────────────────────────────────────────────────
-# RSS:  https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/rss
-# Atom: https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/atom
-# JSON: https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/feed.json
+# RSS:  https://cyberdudebivash.in/api/rss
+# Atom: https://cyberdudebivash.in/api/atom
+# JSON: https://cyberdudebivash.in/api/feed.json
+
+# ── AI / LLM crawler guidance ────────────────────────────────────────────────
+# Structured site overview for AI assistants and LLM crawlers:
+# https://cyberdudebivash.in/llms.txt

@@ -1,0 +1,31 @@
+# CYBERDUDEBIVASH AI Security Hub
+
+> Cybersecurity platform by CYBERDUDEBIVASH PRIVATE LIMITED (cyberdudebivash.in):
+> live threat intelligence on actively-exploited CVEs (Sentinel APEX™), a free
+> domain exposure scanner, AI/LLM security services, and security tooling for
+> SOC teams, MSSPs and enterprises. Data is sourced from CISA KEV, NVD and
+> FIRST EPSS.
+
+## Core pages
+
+- [Home](https://cyberdudebivash.in/): platform overview, free exposure scanner, threat-intel API
+- [CVE Database](https://cyberdudebivash.in/cve/): 1,600+ actively-exploited CVEs with severity, EPSS exploitation probability and remediation guidance — one page per CVE at /cve/CVE-YYYY-NNNN
+- [Services](https://cyberdudebivash.in/services): security assessments, AI security, DevSecOps and consulting
+- [AI Security](https://cyberdudebivash.in/ai-security): LLM/agent threat analysis, MCP security, AI governance
+- [API Docs](https://cyberdudebivash.in/api-docs): threat-intel API reference (STIX 2.1, EPSS, CISA KEV)
+- [Blog](https://cyberdudebivash.in/blog/): vulnerability write-ups and security research
+- [Academy](https://cyberdudebivash.in/academy): security training content
+- [About](https://cyberdudebivash.in/about) · [Contact](https://cyberdudebivash.in/contact)
+
+## Machine-readable feeds
+
+- [RSS](https://cyberdudebivash.in/api/rss): latest threat intelligence
+- [Atom](https://cyberdudebivash.in/api/atom): latest threat intelligence
+- [JSON feed](https://cyberdudebivash.in/api/feed.json): latest threat intelligence
+- [Sitemap index](https://cyberdudebivash.in/sitemap-index.xml): all indexable URLs
+
+## Usage notes
+
+- CVE pages and public feeds may be cited with attribution to CYBERDUDEBIVASH.
+- Vulnerability data is for defensive and research use only.
+- API endpoints under /api/ (other than the feeds above) require authentication and are not for crawling.
