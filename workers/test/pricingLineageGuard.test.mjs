@@ -29,6 +29,18 @@ function proPriceInr(src) {
 
 const CANONICAL_PRO = 1499;
 
+// Extracts a named key's numeric value from a `reports: Object.freeze({ name: N, ... })` block.
+function reportPriceRupees(src, name) {
+  const m = src.match(new RegExp(`reports:\\s*Object\\.freeze\\(\\{[^}]*?\\b${name}:\\s*(\\d+)`, 's'));
+  return m ? Number(m[1]) : null;
+}
+
+// Extracts MODULE_PRICES[name].amount (paise) from razorpay.js, converted to rupees.
+function modulePriceRupees(src, name) {
+  const m = src.match(new RegExp(`\\b${name}:\\s*\\{\\s*amount:\\s*(\\d+)`, 's'));
+  return m ? Number(m[1]) / 100 : null;
+}
+
 describe('pricing lineage — one canonical PRO price across all sources', () => {
   it('checkout source of truth (auth/apiKeys.js TIER_LIMITS) is ₹1,499', () => {
     expect(proPriceInr(read('src/auth/apiKeys.js'))).toBe(CANONICAL_PRO);
@@ -55,4 +67,29 @@ describe('pricing lineage — one canonical PRO price across all sources', () =>
     const m = src.match(/required_tier:\s*'PRO'[^}]*?price_inr:\s*'([^']+)'/s);
     expect(m && m[1]).toBe('₹1,499/mo');
   });
+});
+
+/* FINDING (2026-07-06 revenue-mechanisms audit): frontend/assets/geo-currency-
+ * router.js's report prices (shown on every "Unlock Full Report" button pre-
+ * checkout, and used by checkout-modal.js to build the Razorpay charge) had
+ * drifted from workers/src/lib/razorpay.js MODULE_PRICES — the actual amount
+ * charged. Domain matched (₹999) by coincidence; ai showed ₹999 but charged
+ * ₹2,499, redteam showed ₹999 but charged ₹4,999, identity/compliance showed
+ * ₹999 but charged ₹799/₹499. A customer could be shown one price and
+ * charged another on the highest-intent screen in the funnel — fixed by
+ * aligning the displayed matrix to MODULE_PRICES. This guard fails CI if
+ * they drift apart again. */
+describe('pricing lineage — report prices shown pre-checkout match what Razorpay actually charges', () => {
+  const razorpaySrc = read('src/lib/razorpay.js');
+  const geoRouterSrc = readFileSync(resolve(root, '../frontend/assets/geo-currency-router.js'), 'utf8');
+
+  for (const reportModule of ['domain', 'ai', 'redteam', 'identity', 'compliance']) {
+    it(`${reportModule} report: displayed INR price equals the charged price`, () => {
+      const charged   = modulePriceRupees(razorpaySrc, reportModule);
+      const displayed = reportPriceRupees(geoRouterSrc, reportModule);
+      expect(charged, `MODULE_PRICES.${reportModule} not found in razorpay.js`).not.toBe(null);
+      expect(displayed, `reports.${reportModule} not found in geo-currency-router.js`).not.toBe(null);
+      expect(displayed).toBe(charged);
+    });
+  }
 });

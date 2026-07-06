@@ -25,12 +25,17 @@
         ENTERPRISE: Object.freeze({ monthly: 4999, annual: 49990,  label: 'Enterprise' }),
         MSSP:       Object.freeze({ monthly: 9999, annual: 99990,  label: 'MSSP Command' }),
       }),
+      // Must match workers/src/lib/razorpay.js MODULE_PRICES exactly — these are
+      // the amounts actually charged via /api/payment/create-order. A mismatch
+      // here means the price shown pre-checkout differs from what Razorpay
+      // charges, which is exactly the class of bug this comment now guards
+      // against (found during the revenue-mechanisms audit, 2026-07-06).
       reports: Object.freeze({
         domain:     999,
-        ai:         999,
-        redteam:    999,
-        compliance: 999,
-        identity:   999,
+        ai:         2499,
+        redteam:    4999,
+        compliance: 499,
+        identity:   799,
         cloudsec:   999,
         darkscan:   999,
         appsec:     999,
@@ -49,12 +54,15 @@
         ENTERPRISE: Object.freeze({ monthly: 59,  annual: 590,  label: 'Enterprise' }),
         MSSP:       Object.freeze({ monthly: 119, annual: 1190, label: 'MSSP Command' }),
       }),
+      // Converted at the same ~83:1 INR:USD ratio already used by the plan
+      // prices above (e.g. STARTER ₹499/$6, PRO ₹1499/$19) — see the INR
+      // matrix's `reports` comment for why these must track MODULE_PRICES.
       reports: Object.freeze({
         domain:     12,
-        ai:         12,
-        redteam:    12,
-        compliance: 12,
-        identity:   12,
+        ai:         30,
+        redteam:    60,
+        compliance: 6,
+        identity:   10,
         cloudsec:   12,
         darkscan:   12,
         appsec:     12,

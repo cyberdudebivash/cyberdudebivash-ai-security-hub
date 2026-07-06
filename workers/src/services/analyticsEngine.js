@@ -9,6 +9,7 @@ const PLAN_MRR = {
   starter:    499,
   pro:        1499,
   enterprise: 4999,
+  mssp:       9999,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,21 +22,29 @@ const PLAN_MRR = {
  * @returns {object} { mrr, arr, by_plan }
  */
 export async function computeMRR(env) {
+  // FIX (2026-07-06 revenue-mechanisms audit): this queried leads.plan, but no
+  // path in the real checkout flow (handlers/payments.js handleVerifyPayment)
+  // ever writes leads.plan on a purchase — it updates users.tier instead. This
+  // function would report ₹0 MRR indefinitely regardless of real conversions.
+  // Reads from users.tier now, the same column the payment path actually
+  // writes (see handlers/revenueMetrics.js buildRevenueMetrics for the sibling
+  // fix — same root cause, different dashboard).
   try {
     const result = await env.DB.prepare(`
-      SELECT plan, COUNT(*) as count
-      FROM leads
-      WHERE plan != 'free'
-      GROUP BY plan
+      SELECT tier, COUNT(*) as count
+      FROM users
+      WHERE tier IS NOT NULL AND tier != 'FREE' AND (status = 'active' OR status IS NULL)
+      GROUP BY tier
     `).all();
 
     let mrr = 0;
     const byPlan = {};
 
     for (const row of (result.results || [])) {
-      const planMRR = (PLAN_MRR[row.plan] || 0) * row.count;
+      const planKey = (row.tier || '').toLowerCase();
+      const planMRR = (PLAN_MRR[planKey] || 0) * row.count;
       mrr += planMRR;
-      byPlan[row.plan] = { customers: row.count, mrr: planMRR };
+      byPlan[planKey] = { customers: row.count, mrr: planMRR };
     }
 
     return {
