@@ -1379,13 +1379,55 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                 return;
             }
 
-            // Submit to API — only show success if the API confirms receipt
-            let apiOk = false;
+            // Submit to the real sales pipeline — only show success if the demo
+            // booking is actually confirmed. /api/leads/capture is a different
+            // feature (pre-results email gate: {email, scan_id, module}); it
+            // doesn't accept or store any of this form's fields, and this form
+            // sent it `workEmail` where that handler reads `email`, so every
+            // booking attempt 400'd (this page's error handling was already
+            // correct — it just had nowhere real to succeed against).
+            // /api/sales/leads scores and files the lead in the CRM pipeline;
+            // /api/sales/demo/book actually reserves the slot. Lead creation is
+            // best-effort enrichment — the slot booking is the real promise made
+            // on this page, so that alone gates success.
+            const preferredSlot = `${formData.preferredDate} ${formData.preferredTime}`.trim();
+            let leadId = null;
             try {
-                const response = await fetch('/api/leads/capture', {
+                const leadRes = await fetch('/api/sales/leads', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify({
+                        name: formData.fullName,
+                        email: formData.workEmail,
+                        company: formData.companyName,
+                        phone: formData.phone,
+                        role: formData.jobTitle,
+                        sector: formData.industry,
+                        company_size: formData.companySize,
+                        budget_range: formData.budget,
+                        urgency: formData.urgency,
+                        message: formData.challenge,
+                        source: 'demo_booking_form',
+                    }),
+                    signal: AbortSignal.timeout(10000)
+                });
+                const leadData = await leadRes.json().catch(() => ({}));
+                if (leadRes.ok && leadData.lead_id) leadId = leadData.lead_id;
+            } catch (error) { /* best-effort CRM enrichment — booking below is what matters */ }
+
+            let apiOk = false;
+            try {
+                const response = await fetch('/api/sales/demo/book', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lead_id: leadId,
+                        name: formData.fullName,
+                        email: formData.workEmail,
+                        company: formData.companyName,
+                        preferred_slot: preferredSlot,
+                        use_case: formData.challenge,
+                    }),
                     signal: AbortSignal.timeout(10000)
                 });
                 apiOk = response.ok;

@@ -20,6 +20,8 @@ const read = (p) => readFileSync(resolve(__dirname, p), 'utf8');
 
 const INDEX   = read('../../frontend/index.html');
 const TRUST   = read('../../frontend/trust-center.html');
+const CONTACT = read('../../frontend/contact.html');
+const BOOKING = read('../../frontend/booking.html');
 const MARKET  = read('../../frontend/sentinel-apex-marketplace.html');
 const SUBPROC = read('../../SUB_PROCESSOR_LIST.md');
 const ROUTER  = read('../src/core/aiProviderRouter.js');
@@ -240,5 +242,100 @@ describe('GET /api/trust-center (enterprisePortalHandlers) — no fabricated com
   it('platform_uptime is not a hardcoded marketing percentage', async () => {
     const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
     expect(body.platform_stats.platform_uptime).not.toBe('99.9%+ (Cloudflare edge)');
+  });
+
+  // Commercial-readiness sweep (2026-07-06): trust_signals is a second,
+  // separately-authored claims list in the same response as subprocessors.
+  // The Groq-not-Anthropic fix above locked subprocessors but missed this
+  // array — it still asserted "All AI processing via Anthropic API", which
+  // directly contradicts subprocessors ("Groq (primary...)") in the very
+  // same JSON payload, and contradicts wrangler.toml's own note that
+  // ANTHROPIC_API_KEY is not used at all. Locks both halves so a future
+  // provider-lineup edit can't silently re-diverge the two lists.
+  it('trust_signals does not claim exclusive/sole use of Anthropic', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    const signals = body.trust_signals.join(' ');
+    expect(signals).not.toContain('All AI processing via Anthropic API');
+  });
+
+  it('trust_signals AI claim is consistent with the subprocessors list (Groq primary)', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    const aiSignal = body.trust_signals.find(s => /AI/i.test(s));
+    expect(aiSignal).toMatch(/Groq/);
+  });
+
+  it('policies_url and security_url point to real, reachable paths — not the dead /privacy shorthand or the intel. subdomain', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    expect(body.policies_url).not.toBe('https://cyberdudebivash.in/privacy');
+    expect(body.policies_url).toBe('https://cyberdudebivash.in/privacy-policy');
+    expect(body.security_url).not.toContain('intel.cyberdudebivash.com');
+    expect(body.security_url).toBe('https://cyberdudebivash.in/api/security-center');
+  });
+});
+
+describe('contact.html — the sales/support form never claims success it did not achieve', () => {
+  // Commercial-readiness sweep (2026-07-06): the form posted to
+  // /api/leads/capture (a different feature — a pre-results email gate
+  // expecting {email, scan_id, module}) with a field named workEmail where
+  // that handler reads `email`, so every submission 400'd. The success
+  // banner + ticket number were shown unconditionally — fetch() only
+  // rejects on network failure, never on 4xx/5xx — so the inquiry was
+  // silently lost while the customer was told it succeeded. Locks: it now
+  // posts to the real /api/enterprise/inquire with matching field names,
+  // and only shows success when the response actually says so.
+  it('does not post to /api/leads/capture (wrong feature: pre-results email gate, not a sales inquiry)', () => {
+    expect(CONTACT).not.toContain("fetch('/api/leads/capture'");
+  });
+
+  it('posts to /api/enterprise/inquire with field names that handler actually reads', () => {
+    expect(CONTACT).toContain("fetch('/api/enterprise/inquire'");
+    const block = CONTACT.slice(CONTACT.indexOf("fetch('/api/enterprise/inquire'"), CONTACT.indexOf("delivered = response.ok"));
+    expect(block).toContain('company: formData.company');
+    expect(block).toContain('email: formData.workEmail');
+  });
+
+  it('gates the success confirmation on the response actually succeeding', () => {
+    expect(CONTACT).toMatch(/delivered\s*=\s*response\.ok\s*&&\s*data\.success\s*===\s*true/);
+    expect(CONTACT).not.toContain('Show success confirmation regardless of API response');
+  });
+
+  it('shows an honest, actionable failure state with a direct fallback contact', () => {
+    expect(CONTACT).toContain('Message not delivered');
+    expect(CONTACT).toContain('wa.me/918179881447');
+    expect(CONTACT).toContain('mailto:contact@cyberdudebivash.in');
+  });
+});
+
+describe('booking.html — demo booking actually reaches the real sales pipeline', () => {
+  // Commercial-readiness sweep (2026-07-06): this form's failure handling was
+  // already correct (only shows success on response.ok) — but it posted to
+  // /api/leads/capture, which expects {email, scan_id, module} and reads
+  // `email` where this form sent `workEmail`. Every booking attempt 400'd,
+  // so every visitor who tried to book a demo was shown the honest-but-total
+  // failure message. Purpose-built endpoints already exist and are wired in
+  // index.js: /api/sales/leads (CRM lead w/ ICP scoring) and
+  // /api/sales/demo/book (the actual slot reservation). Locks both halves.
+  it('does not post to /api/leads/capture (wrong feature: pre-results email gate, not a CRM lead)', () => {
+    expect(BOOKING).not.toContain("fetch('/api/leads/capture'");
+  });
+
+  it('files a CRM lead via /api/sales/leads with field names that handler actually reads', () => {
+    expect(BOOKING).toContain("fetch('/api/sales/leads'");
+    const block = BOOKING.slice(BOOKING.indexOf("fetch('/api/sales/leads'"), BOOKING.indexOf("fetch('/api/sales/demo/book'"));
+    expect(block).toContain('email: formData.workEmail');
+    expect(block).toContain('company: formData.companyName');
+  });
+
+  it('books the actual slot via /api/sales/demo/book with the required fields', () => {
+    expect(BOOKING).toContain("fetch('/api/sales/demo/book'");
+    const block = BOOKING.slice(BOOKING.indexOf("fetch('/api/sales/demo/book'"));
+    expect(block).toContain('preferred_slot: preferredSlot');
+    expect(block).toContain('email: formData.workEmail');
+  });
+
+  it('still only shows success when the booking response actually confirms it', () => {
+    // The pre-existing, already-correct gate — must survive the endpoint swap.
+    expect(BOOKING).toMatch(/apiOk\s*=\s*response\.ok/);
+    expect(BOOKING).toContain('Show success only on confirmed API receipt');
   });
 });

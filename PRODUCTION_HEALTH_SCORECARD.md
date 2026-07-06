@@ -122,6 +122,36 @@
 > fresh CEAP sweep is 15/15 green on `3c099d8`. The four GA gates remain
 > owner-action and unchanged.
 >
+> **Edition 11 (customer-journey functional sweep, same day):** extended the
+> audit from "does the link resolve" to "does the feature actually do what
+> it claims" — functionally drove Trust Center, Contact, and Book-a-Demo
+> rather than just checking they load. Found the two most severe defects of
+> this program to date: **both the Contact form and the Book-a-Demo form
+> had been failing on every single submission**, wired to
+> `/api/leads/capture` (a different feature — a pre-scan-results email gate)
+> instead of the purpose-built endpoints already routed and waiting
+> (`/api/enterprise/inquire`; `/api/sales/leads` + `/api/sales/demo/book`).
+> The contact form's bug was worse than the booking form's: it showed a
+> fake "✅ Message Sent!" confirmation with a ticket number on every
+> failure (`fetch()` doesn't throw on 4xx/5xx), so customers believed their
+> inquiry went through while it was silently lost; the booking form at
+> least told the truth (100% honest "Submission failed"), just with no
+> working path forward. Both now reach the real backend, and the contact
+> form's success claim is gated on an actual confirmed response. Separately,
+> found the Trust Center's own live API (`/api/trust-center`) asserting a
+> trust signal — "All AI processing via Anthropic API" — that directly
+> contradicted its own subprocessors list three lines below (Groq primary)
+> and `wrangler.toml`'s explicit no-Anthropic-dependency note, plus two
+> dead reference URLs (`policies_url`, `security_url`). Fixed all three;
+> flagged one further inconsistency (data residency: the page says
+> "India-region preference," the API says "Singapore primary") as needing
+> owner confirmation of the actual Cloudflare region config rather than
+> guessing which is correct. Regression-locked
+> (`workers/test/truthClaims.test.mjs`, 14 new tests); full suite
+> 1,481/1,481 green, SEO structure lock 22/22 green. Full record:
+> `CUSTOMER_OBJECTION_REGISTER.md` OBJ-14, OBJ-15. **Not yet deployed:**
+> committed on branch only — see the Action Queue.
+>
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.
@@ -306,6 +336,15 @@
   155 scans, 0 purchases, ₹0 revenue, 0 solutions sold. Pricing, GST
   invoicing, Razorpay integration, proposal engine, and affiliate program
   are built; none has processed a real transaction.
+- **Found & fixed this cycle (Edition 11):** the Contact and Book-a-Demo
+  forms — the two most direct paths from prospect to pipeline — had been
+  failing on every submission since at least this audit's ability to
+  detect it (wrong backend endpoint; see OBJ-14). Given 1,257 recorded
+  sessions and marketing effort driving prospects to these pages, this was
+  very likely losing real inbound interest silently for some unknown prior
+  period — a customer-acquisition leak with no error visible anywhere
+  short of reading the handler code, which is exactly how it went
+  undetected. Fixed and regression-locked; on branch, pending release.
 - **Known risks:** the four GA gates from the Global Release Decision are
   unchanged and all owner-action: (1) one live payment end-to-end, (2) one
   live SSO IdP round-trip, (3) external SLA measurement + definition
@@ -330,6 +369,9 @@
 | ✅ Done | Monday 05:00 UTC restore drill — first run green 2026-07-06 (run `28779799461`), R-06 closed | Engineering | Closed 2026-07-06 — reliability evidence requirement satisfied |
 | ✅ Done | OBJ-13 — 38 dead internal link instances (22 pages: Privacy/Terms, Dashboard, API Docs, Sign in, MSSP Dashboard, sitemap) repointed to real pages, regression-locked | Engineering | Closed 2026-07-06 — merged, deployed (`3c099d8`), all fixed links confirmed 200 live |
 | P3 | 7 sitemap/nav entries reference pages that don't exist anywhere in the codebase (`/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, `/enterprise/contacts`, `/mssp-workspace`, `/ai-governance-dashboard.html`) | Product + Engineering | Open — needs a product decision (build the page vs. remove the entry), not a link fix |
+| ✅ Code shipped | OBJ-14 — Contact + Book-a-Demo forms repointed from the wrong lead-gate endpoint to the real `/api/enterprise/inquire` and `/api/sales/leads`+`/api/sales/demo/book`; contact form's fake unconditional success confirmation fixed to gate on a real response | Engineering | Live-verification pending: merge + deploy, then submit both forms live and confirm a real lead/booking is created |
+| ✅ Code shipped | OBJ-15 — Trust Center API's false "Anthropic-exclusive" trust signal corrected to match the real Groq-primary provider lineup; `policies_url`/`security_url` repointed to real, reachable pages | Engineering | Live-verification pending: merge + deploy, then confirm `/api/trust-center` serves the corrected fields |
+| P3 | OBJ-15 sub-finding: `platform_overview.data_residency` ("Singapore primary") contradicts the Trust Center page's own copy ("India-region preference") | Owner | Open — needs confirmation of the actual Cloudflare D1/KV region configuration; not guessed or code-fixed |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
 | P3 | One live payment end-to-end (GA gate 1) | Owner | PASSED — blocks all commercial evidence |
