@@ -114,7 +114,7 @@ export function authError(type = 'missing') {
     ...(messages[type] || messages.missing),
     plan: 'FREE',
     upgrade_url: UPGRADE_URL,
-    docs: 'https://cyberdudebivash.in/docs',
+    docs: 'https://cyberdudebivash.in/api-docs', // '/docs' doesn't exist (confirmed live 404)
     contact: CONTACT_EMAIL,
   }, { status: 401 });
 }

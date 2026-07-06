@@ -264,7 +264,7 @@ export function unauthorized(reason = 'missing') {
     ...(msgs[reason] || msgs.missing),
     upgrade_url: UPGRADE_URL,
     contact:     CONTACT_EMAIL,
-    docs:        'https://cyberdudebivash.in/docs',
+    docs:        'https://cyberdudebivash.in/api-docs', // '/docs' doesn't exist (confirmed live 404)
   }, { status: 401 });
 }
 

@@ -32,7 +32,7 @@ export async function handleReportDownload(request, env, authCtx = {}) {
     return Response.json({
       error: 'Report not found',
       hint: 'Reports expire after 7 days. Re-run the scan to generate a new report.',
-      docs: 'https://cyberdudebivash.in/docs',
+      docs: 'https://cyberdudebivash.in/api-docs', // '/docs' doesn't exist (confirmed live 404)
     }, { status: 404 });
   }
 

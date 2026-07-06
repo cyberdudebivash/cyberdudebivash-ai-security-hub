@@ -139,7 +139,6 @@ export async function handleSignup(request, env) {
         <ul style="color:#94a3b8;padding-left:20px;line-height:1.8">
           <li>Explore <a href="https://cyberdudebivash.in" style="color:#7c3aed">cyberdudebivash.in</a></li>
           <li>API docs: <a href="https://cyberdudebivash.in/api-docs.html" style="color:#7c3aed">Full API Reference</a></li>
-          <li>Onboarding guide: <a href="https://cyberdudebivash.in/enterprise-onboarding.html" style="color:#7c3aed">Enterprise Guide</a></li>
           <li>Support: <a href="mailto:support@cyberdudebivash.in" style="color:#7c3aed">support@cyberdudebivash.in</a></li>
         </ul>
         <p style="color:#475569;font-size:12px;margin-top:32px;border-top:1px solid #2d2d4e;padding-top:16px">
