@@ -1,8 +1,22 @@
 /**
  * Academy Marketplace Handler
- * GET  /api/academy/catalog       — list all courses
- * POST /api/academy/purchase      — create Razorpay order
- * POST /api/academy/verify        — verify payment + grant access + notify founder
+ * GET  /api/academy/catalog              — list all courses
+ * POST /api/academy/purchase             — create Razorpay order
+ * POST /api/academy/verify               — verify payment + grant access + notify founder
+ * GET  /api/academy/access               — check a buyer's own fulfillment status
+ * GET  /api/academy/orders               — admin: list pending (undelivered) orders
+ * POST /api/academy/orders/:id/delivered — admin: mark an order delivered
+ *
+ * Fulfillment is manual (course materials are sent by a human, not an
+ * automated LMS) — that part is an acknowledged, honest limitation, not a
+ * bug to paper over with fabricated content. What WAS a real bug: the access
+ * grant this file writes to KV was never read back by anything, and if the
+ * founder-alert email silently failed to send, a fully paid order left no
+ * trace anywhere — the customer paid and nothing, ever, would surface that
+ * fact. Fixed by recording every paid order in D1 regardless of email
+ * outcome, and adding real endpoints to check and close out fulfillment
+ * instead of "sent an email and hoped."
+ * (2026-07-06 revenue-mechanisms audit, P2-8.)
  */
 
 const FOUNDER_EMAIL = 'bivash@cyberdudebivash.com';
@@ -147,13 +161,41 @@ export async function handleVerifyAcademy(request, env) {
        .run().catch(e => console.warn('[Academy] D1 error:', e.message));
     }
 
-    // KV access grant (365 days)
+    // KV access grant (365 days) — fast lookup for handleAcademyAccessStatus
     const accessKey = `access:academy:${product_id}:${email || razorpay_payment_id}`;
     await env.SECURITY_HUB_KV?.put(accessKey, JSON.stringify({
       granted_at: new Date().toISOString(),
       payment_id: razorpay_payment_id,
       course_name: course.name,
     }), { expirationTtl: 365 * 86400 }).catch(() => {});
+
+    // Durable fulfillment record — written unconditionally, before the
+    // fire-and-forget founder-alert email below is even attempted. If that
+    // email silently fails (previously the ONLY delivery-tracking
+    // mechanism), this row is what lets /api/academy/orders and a human
+    // still find and close out the order, instead of it vanishing with the
+    // customer having paid for nothing.
+    if (env.DB) {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS academy_orders (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          product_name TEXT NOT NULL,
+          email TEXT,
+          payment_id TEXT NOT NULL,
+          order_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending_delivery',
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          delivered_at TEXT
+        )
+      `).run().catch(() => {});
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO academy_orders
+          (id, product_id, product_name, email, payment_id, order_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending_delivery')
+      `).bind(purchaseId, product_id, course.name, email || null, razorpay_payment_id, razorpay_order_id)
+        .run().catch(e => console.warn('[Academy] academy_orders insert error:', e.message));
+    }
 
     // Fire-and-forget: GST invoice + customer confirmation + founder delivery alert
     Promise.all([
@@ -216,4 +258,80 @@ ${includesList}
   } catch (err) {
     return json({ success: false, error: err.message }, 500);
   }
+}
+
+// GET /api/academy/access?email=&product_id= — a buyer checking whether
+// their own purchase went through and whether materials have been sent yet.
+// This is the read side of the access grant handleVerifyAcademy writes to
+// KV — previously nothing anywhere ever read it back.
+export async function handleAcademyAccessStatus(request, env) {
+  const url = new URL(request.url);
+  const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+  const productId = (url.searchParams.get('product_id') || '').trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return json({ success: false, error: 'Valid email required' }, 400);
+  }
+  if (!ACADEMY_CATALOG[productId]) {
+    return json({ success: false, error: 'Course not found' }, 404);
+  }
+
+  const accessKey = `access:academy:${productId}:${email}`;
+  const kvRaw = await env.SECURITY_HUB_KV?.get(accessKey).catch(() => null);
+
+  let order = null;
+  if (env.DB) {
+    order = await env.DB.prepare(
+      `SELECT status, created_at, delivered_at FROM academy_orders
+       WHERE product_id = ? AND email = ? ORDER BY created_at DESC LIMIT 1`
+    ).bind(productId, email).first().catch(() => null);
+  }
+
+  if (!kvRaw && !order) {
+    return json({ success: false, access_granted: false, error: 'No purchase found for this email/course' }, 404);
+  }
+
+  return json({
+    success: true,
+    access_granted: true,
+    product_name: ACADEMY_CATALOG[productId].name,
+    status: order?.status || 'pending_delivery',
+    purchased_at: order?.created_at || (kvRaw ? JSON.parse(kvRaw).granted_at : null),
+    delivered_at: order?.delivered_at || null,
+    message: order?.status === 'delivered'
+      ? 'Your course materials have been delivered — check your inbox.'
+      : 'Your purchase is confirmed. Materials are sent by our team within 24 hours of payment.',
+  });
+}
+
+// GET /api/academy/orders — admin: list undelivered orders so none can be
+// silently missed if the founder-alert email fails or is overlooked.
+export async function handleListAcademyOrders(request, env, authCtx = {}) {
+  if (authCtx.isAdmin !== true) return json({ success: false, error: 'Admin only' }, 403);
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status') || 'pending_delivery';
+  if (!env.DB) return json({ success: true, orders: [] });
+
+  const rows = await env.DB.prepare(
+    `SELECT id, product_id, product_name, email, payment_id, order_id, status, created_at, delivered_at
+     FROM academy_orders WHERE status = ? ORDER BY created_at ASC LIMIT 200`
+  ).bind(status).all().catch(() => ({ results: [] }));
+
+  return json({ success: true, count: (rows.results || []).length, orders: rows.results || [] });
+}
+
+// POST /api/academy/orders/:id/delivered — admin: close out fulfillment
+// once course materials have actually been sent.
+export async function handleMarkAcademyDelivered(request, env, authCtx = {}, orderId) {
+  if (authCtx.isAdmin !== true) return json({ success: false, error: 'Admin only' }, 403);
+  if (!env.DB) return json({ success: false, error: 'Database unavailable' }, 503);
+
+  const result = await env.DB.prepare(
+    `UPDATE academy_orders SET status = 'delivered', delivered_at = datetime('now')
+     WHERE id = ? AND status != 'delivered'`
+  ).bind(orderId).run().catch(() => null);
+
+  if (!result || result.meta?.changes === 0) {
+    return json({ success: false, error: 'Order not found or already delivered' }, 404);
+  }
+  return json({ success: true, order_id: orderId, status: 'delivered' });
 }

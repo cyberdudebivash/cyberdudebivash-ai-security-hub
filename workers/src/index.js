@@ -6387,6 +6387,27 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleVerifyAcademy(request, env), request));
     }
 
+    // GET /api/academy/access — buyer checks their own fulfillment status (public)
+    if (path === '/api/academy/access' && method === 'GET') {
+      const { handleAcademyAccessStatus } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleAcademyAccessStatus(request, env), request));
+    }
+
+    // GET /api/academy/orders — admin: list undelivered orders
+    if (path === '/api/academy/orders' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleListAcademyOrders } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleListAcademyOrders(request, env, authCtx), request));
+    }
+
+    // POST /api/academy/orders/:id/delivered — admin: close out fulfillment
+    if (path.match(/^\/api\/academy\/orders\/([^/]+)\/delivered$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const orderId = path.match(/^\/api\/academy\/orders\/([^/]+)\/delivered$/)[1];
+      const { handleMarkAcademyDelivered } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleMarkAcademyDelivered(request, env, authCtx, orderId), request));
+    }
+
     // GET /api/global/mssp — MSSP tier info + pricing (public)
     if (path === '/api/global/mssp' && method === 'GET') {
       const { handleGetMSSPInfo } = await import('./services/globalScale.js');
