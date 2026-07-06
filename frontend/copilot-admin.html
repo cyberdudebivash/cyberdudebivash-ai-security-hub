@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX Copilot Admin — CYBERDUDEBIVASH AI Security Hub</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#08080f;--surface:#0d0d1f;--surface2:#131327;--border:rgba(255,255,255,.08);
+    --accent:#00d4ff;--accent2:#8b5cf6;--text:#e2e8f0;--muted:#94a3b8;--dim:#64748b;
+    --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  }
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:100}
+  header h1{font-size:15px;font-weight:900;color:var(--accent);letter-spacing:.5px}
+  .badge{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+  #auth-status{margin-left:auto;font-size:12px;color:var(--muted)}
+  main{max-width:960px;margin:0 auto;padding:28px 20px}
+
+  #auth-gate{display:flex;align-items:center;justify-content:center;min-height:70vh}
+  .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:380px;width:100%;text-align:center}
+  .auth-card h2{font-size:17px;font-weight:900;margin-bottom:8px}
+  .auth-card p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+  .inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-size:13px;outline:none}
+  .inp:focus{border-color:rgba(0,212,255,.4)}
+  .btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#04101a;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-top:10px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .err{margin-top:10px;font-size:12px;color:#fca5a5}
+
+  #dashboard{display:none}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px}
+  .card h2{font-size:14px;font-weight:800;margin-bottom:4px}
+  .card .sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+  textarea{width:100%;min-height:110px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
+  textarea:focus{outline:none;border-color:rgba(0,212,255,.4)}
+  .row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .stat{font-size:11px;color:var(--muted)} /* --dim (#64748b) only hits 4.03:1 on this bg — fails WCAG AA 4.5:1 */
+
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead th{text-align:left;padding:8px 6px;color:var(--muted);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+  tbody td{padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  .tool-name{font-family:monospace;font-size:11.5px;color:var(--text)}
+  .ro-badge{font-size:9px;color:var(--green);border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.1);padding:1px 6px;border-radius:10px;margin-left:6px}
+  .tier-chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--muted);cursor:pointer;margin-right:8px;user-select:none}
+  .tier-chip input{accent-color:var(--accent)}
+  .override-badge{font-size:9px;color:var(--yellow);border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.1);padding:1px 6px;border-radius:10px}
+  .search{margin-bottom:10px}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.5);transition:transform .3s ease;z-index:200}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  #toast.ok{color:var(--green)}
+  #toast.bad{color:var(--red)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ APEX Copilot Admin</h1>
+  <span class="badge">Internal</span>
+  <span id="auth-status">Not authenticated</span>
+</header>
+
+<main>
+  <div id="auth-gate">
+    <div class="auth-card">
+      <div style="font-size:36px;margin-bottom:10px">🔐</div>
+      <h2>Admin Authentication</h2>
+      <p>Enter your admin key to manage the copilot's system-prompt addendum and per-tool tier gates — changes apply live, no deploy required.</p>
+      <input id="secret-inp" class="inp" type="password" placeholder="Admin key (x-api-key)" onkeydown="if(event.key==='Enter')login()">
+      <button class="btn" onclick="login()">Authenticate →</button>
+      <div id="auth-err" class="err" style="display:none"></div>
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="card">
+      <h2>System Prompt Addendum</h2>
+      <div class="sub">Appended to APEX's system prompt on every turn, on top of the hardcoded base prompt. Use this for time-sensitive guidance (e.g. "mention our new SOC2 report") without a code deploy.</div>
+      <textarea id="addendum-input" maxlength="4000" placeholder="e.g. Always mention the Q3 SOC2 Type II report when asked about compliance."></textarea>
+      <div class="row">
+        <button class="btn" style="width:auto" onclick="saveAddendum()">Save addendum</button>
+        <span class="stat" id="addendum-count">0 / 4000</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tool Tier Gates</h2>
+      <div class="sub">Override which subscription tiers can invoke each tool. Unchecked-all reverts to the platform default for that tool. Read-only tools are safe to open widely; write tools should stay gated.</div>
+      <input id="tool-search" class="inp search" type="text" placeholder="Filter tools by name…" oninput="renderTools()">
+      <div style="max-height:520px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Tool</th><th>FREE</th><th>STARTER</th><th>PRO</th><th>TEAM</th><th>ENTERPRISE</th><th>MSSP</th></tr></thead>
+          <tbody id="tools-tbody"></tbody>
+        </table>
+      </div>
+      <div class="row">
+        <button class="btn" style="width:auto" onclick="saveOverrides()">Save tier overrides</button>
+        <span class="stat" id="overrides-count">0 overrides pending</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const TIERS = ['FREE','STARTER','PRO','TEAM','ENTERPRISE','MSSP'];
+let SECRET = localStorage.getItem('cdb_admin_key') || '';
+let capabilities = [];   // from /api/copilot/capabilities — for readOnly flag + default tiers
+let config = { system_prompt_addendum: '', tool_tier_overrides: {} };
+let pendingOverrides = {}; // toolName -> array|null, only entries the admin actually touched this session
+
+function toast(msg, cls) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = cls || '';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'x-api-key': SECRET, ...(opts.headers || {}) },
+  });
+  if (res.status === 403) { logout(); throw new Error('Invalid admin key'); }
+  return res;
+}
+
+function login() {
+  const s = document.getElementById('secret-inp')?.value?.trim();
+  if (!s) return;
+  SECRET = s;
+  localStorage.setItem('cdb_admin_key', s);
+  load();
+}
+function logout() {
+  SECRET = '';
+  localStorage.removeItem('cdb_admin_key');
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('auth-status').textContent = 'Not authenticated';
+}
+
+async function load() {
+  try {
+    const [capRes, cfgRes] = await Promise.all([
+      apiFetch('/api/copilot/capabilities'),
+      apiFetch('/api/copilot/admin/config'),
+    ]);
+    if (!capRes.ok || !cfgRes.ok) throw new Error('Failed to load');
+    const capBody = await capRes.json();
+    const cfgBody = await cfgRes.json();
+    capabilities = capBody.data.capabilities || [];
+    config = cfgBody.data.config || config;
+    pendingOverrides = {};
+
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('auth-status').textContent = `✅ Authenticated · ${capabilities.length} tools`;
+
+    document.getElementById('addendum-input').value = config.system_prompt_addendum || '';
+    updateAddendumCount();
+    renderTools();
+  } catch (e) {
+    if (e.message === 'Invalid admin key') {
+      document.getElementById('auth-err').textContent = '❌ Invalid admin key';
+      document.getElementById('auth-err').style.display = 'block';
+    } else {
+      toast(`⚠️ ${e.message}`, 'bad');
+    }
+  }
+}
+
+function updateAddendumCount() {
+  const v = document.getElementById('addendum-input').value;
+  document.getElementById('addendum-count').textContent = `${v.length} / 4000`;
+}
+document.addEventListener('input', (e) => { if (e.target.id === 'addendum-input') updateAddendumCount(); });
+
+function effectiveTiers(tool) {
+  const override = config.tool_tier_overrides?.[tool.name];
+  return override !== undefined ? override : tool.tiers;
+}
+
+function renderTools() {
+  const q = (document.getElementById('tool-search').value || '').toLowerCase();
+  const tbody = document.getElementById('tools-tbody');
+  tbody.innerHTML = '';
+  capabilities
+    .filter(t => t.name.toLowerCase().includes(q))
+    .forEach(t => {
+      const tr = document.createElement('tr');
+      const current = pendingOverrides[t.name] !== undefined ? pendingOverrides[t.name] : effectiveTiers(t);
+      const isOverridden = config.tool_tier_overrides?.[t.name] !== undefined;
+      const nameCell = document.createElement('td');
+      nameCell.innerHTML = `<span class="tool-name">${t.name}</span>`
+        + (t.read_only ? '<span class="ro-badge">read-only</span>' : '')
+        + (isOverridden ? '<span class="override-badge" style="margin-left:6px">override</span>' : '');
+      tr.appendChild(nameCell);
+
+      TIERS.forEach(tier => {
+        const td = document.createElement('td');
+        const checked = !current || current.includes(tier);
+        td.innerHTML = `<label class="tier-chip"><input type="checkbox" ${checked ? 'checked' : ''} data-tool="${t.name}" data-tier="${tier}" aria-label="${tier} tier for ${t.name}"></label>`;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+  tbody.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => onTierToggle(cb.dataset.tool, cb.dataset.tier));
+  });
+}
+
+function onTierToggle(toolName, tier) {
+  const tool = capabilities.find(t => t.name === toolName);
+  const base = pendingOverrides[toolName] !== undefined ? pendingOverrides[toolName] : effectiveTiers(tool);
+  const asSet = new Set(base || TIERS); // null (no restriction) behaves as "all tiers checked"
+  if (asSet.has(tier)) asSet.delete(tier); else asSet.add(tier);
+  // All 6 checked == no restriction == null; matches how the backend interprets tiers:null.
+  pendingOverrides[toolName] = asSet.size === TIERS.length ? null : TIERS.filter(t => asSet.has(t));
+  document.getElementById('overrides-count').textContent = `${Object.keys(pendingOverrides).length} override(s) pending`;
+}
+
+async function saveAddendum() {
+  const val = document.getElementById('addendum-input').value;
+  try {
+    const res = await apiFetch('/api/copilot/admin/config', { method: 'PUT', body: JSON.stringify({ system_prompt_addendum: val }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body?.error || 'Save failed');
+    config = body.data.config;
+    toast('✅ System prompt addendum saved — takes effect on the next message', 'ok');
+  } catch (e) { toast(`⚠️ ${e.message}`, 'bad'); }
+}
+
+async function saveOverrides() {
+  if (!Object.keys(pendingOverrides).length) { toast('No changes to save', 'bad'); return; }
+  try {
+    const res = await apiFetch('/api/copilot/admin/config', { method: 'PUT', body: JSON.stringify({ tool_tier_overrides: pendingOverrides }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body?.error || 'Save failed');
+    config = body.data.config;
+    pendingOverrides = {};
+    document.getElementById('overrides-count').textContent = '0 overrides pending';
+    renderTools();
+    toast('✅ Tier overrides saved — takes effect on the next message', 'ok');
+  } catch (e) { toast(`⚠️ ${e.message}`, 'bad'); }
+}
+
+if (SECRET) load();
+</script>
+<script src="/assets/copilot-widget.js" defer></script>
+</body>
+</html>

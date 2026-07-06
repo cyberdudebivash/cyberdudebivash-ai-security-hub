@@ -116,10 +116,13 @@ import { runAIThreatRadar } from './services/aiThreatRadar.js';
 // ── v36.0 AI SECURITY COPILOT (APEX — God Mode Orchestrator) ─────────────────
 import {
   handleCopilotChat,
+  handleCopilotChatStream,
   handleGetCopilotSession,
   handleDeleteCopilotSession,
   handleCopilotQuickAction,
   handleCopilotCapabilities,
+  handleCopilotAdminConfigGet,
+  handleCopilotAdminConfigPut,
 } from './handlers/aiSecurityCopilot.js';
 
 // ── v41.0 CISCO ENTERPRISE MANDATE — SSO, DPDP, GST INVOICE ─────────────────
@@ -7457,6 +7460,18 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path === '/api/copilot/chat' && method === 'POST') {
     return withSecurityHeaders(withCors(await handleCopilotChat(request, env, authCtx), request));
+  }
+  // SSE stream — returned unwrapped (matches handleSOCEventStream's convention):
+  // the handler sets its own CORS/event-stream headers, and wrapping a
+  // ReadableStream body in more Response layers is unnecessary risk for no gain.
+  if (path === '/api/copilot/chat/stream' && (method === 'POST' || method === 'OPTIONS')) {
+    return handleCopilotChatStream(request, env, authCtx);
+  }
+  if (path === '/api/copilot/admin/config' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleCopilotAdminConfigGet(request, env, authCtx), request));
+  }
+  if (path === '/api/copilot/admin/config' && method === 'PUT') {
+    return withSecurityHeaders(withCors(await handleCopilotAdminConfigPut(request, env, authCtx), request));
   }
   if (path === '/api/copilot/session' && method === 'GET') {
     return withSecurityHeaders(withCors(await handleGetCopilotSession(request, env, authCtx), request));

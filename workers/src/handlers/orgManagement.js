@@ -25,7 +25,7 @@ const ORG_PLAN_LIMITS = {
   ENTERPRISE: { max_members: -1, max_daily_scans: -1,   max_monitors: -1, api_keys: -1 },
 };
 
-const ROLE_PERMISSIONS = {
+export const ROLE_PERMISSIONS = {
   OWNER:    ['all'],
   ADMIN:    ['read','write','invite','delete_content','manage_monitors'],
   ANALYST:  ['read','write','create_scans'],

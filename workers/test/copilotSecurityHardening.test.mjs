@@ -187,9 +187,20 @@ describe('TOOL_REGISTRY — sales/support/growth tools wired for the copilot', (
     expect(ticket.input_schema.required).toEqual(expect.arrayContaining(['subject', 'description']));
   });
 
-  it('does not expose the paid assessment-booking (payment/checkout) flow as a copilot tool', () => {
+  it('exposes a read-only assessment quote but never a payment/checkout-creating tool', () => {
+    // get_assessment_quote is safe: it returns pricing info only, no side effects.
+    const quote = TOOL_REGISTRY.find(t => t.name === 'get_assessment_quote');
+    expect(quote).toBeTruthy();
+    expect(quote.readOnly).toBe(true);
+    // No tool may create a Razorpay order / booking — that stays a human-only,
+    // explicit-confirmation action outside the LLM's reach.
     expect(names).not.toContain('book_security_assessment');
-    expect(names.some(n => /assessment/i.test(n))).toBe(false);
+    expect(names).not.toContain('book_assessment');
+    const assessmentTools = names.filter(n => /assessment/i.test(n));
+    expect(assessmentTools).toEqual(['get_assessment_quote']);
+    for (const n of assessmentTools) {
+      expect(TOOL_REGISTRY.find(t => t.name === n).readOnly).toBe(true);
+    }
   });
 
   it('every tool has a unique name', () => {

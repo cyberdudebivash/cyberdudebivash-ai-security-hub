@@ -54,7 +54,7 @@
  *   GET    /api/copilot/capabilities  — skill catalogue + live provider status
  */
 
-import { ok, badRequest } from '../lib/response.js';
+import { ok, badRequest, fail } from '../lib/response.js';
 import { PROVIDERS, PROVIDER_CONFIG, routeAICall } from '../core/aiProviderRouter.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -994,10 +994,46 @@ export const TOOL_REGISTRY = [
     },
     tiers: null, readOnly: false,
   },
+
+  // ── Multi-Agent Orchestration ─────────────────────────────────────────────
+  // Composes with the platform's existing, independently-tested multi-agent
+  // SOC system (multiAgentSOC.js — 9 specialist agents + fan-out/fan-in
+  // synthesis) rather than reimplementing agent orchestration inside the copilot.
+  {
+    name: 'run_multi_agent_analysis',
+    description: 'Dispatch a multi-agent SOC analysis for broad, multi-angle security questions a single tool cannot answer (e.g. "give me a full risk assessment of this vendor" or "analyze this incident from every angle"). Runs up to 9 parallel specialist agents — CVE intel, IOC hunter, SIEM defender, threat hunter, IR playbook, compliance guardian, red team, zero-trust sentinel — then fuses their findings into one synthesized executive risk brief.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task:   { type: 'string', description: 'The security question or scenario to analyze (required)' },
+        agents: {
+          type: 'array',
+          items: { type: 'string', enum: ['cve_intel','ioc_hunter','siem_defender','threat_hunter','ir_playbook','compliance_guardian','red_team','zero_trust_sentinel'] },
+          description: 'Specific specialists to run (omit to auto-select based on the task)',
+        },
+      },
+      required: ['task'],
+    },
+    tiers: ['PRO','TEAM','ENTERPRISE','MSSP'], readOnly: true,
+  },
+
+  // ── Assessment Quote (read-only — payment requires explicit human confirmation) ──
+  {
+    name: 'get_assessment_quote',
+    description: 'Get pricing and turnaround details for the paid Security Assessment product (Standard/Premium/Enterprise). Read-only — this does NOT create an order, book anything, or charge the user. If the user wants to proceed, tell them a "Book & Pay" button will appear for them to click themselves — you can never complete a purchase on their behalf.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        plan: { type: 'string', enum: ['standard', 'premium', 'enterprise'], description: 'Plan to quote (default standard)' },
+      },
+      required: [],
+    },
+    tiers: null, readOnly: true,
+  },
 ];
 
 // ─── System prompt builder ─────────────────────────────────────────────────────
-function buildSystemPrompt(tier, authCtx, provider, model, taskType) {
+function buildSystemPrompt(tier, authCtx, provider, model, taskType, configOverrides) {
   const isAdmin = authCtx?.isAdmin;
   const isPro   = ['PRO','TEAM','ENTERPRISE','MSSP'].includes(tier);
 
@@ -1076,7 +1112,9 @@ You orchestrate the CYBERDUDEBIVASH AI Security Hub through natural language. Yo
 
 ${isPro
   ? '## God Mode Active\nChain tool calls autonomously. Execute multi-step orchestration without waiting for user confirmation when the intent is unambiguous. Deliver complete, actionable outcomes.'
-  : '## Standard Mode\nDestructive/write operations (SOC pipeline, SIEM deploy, red team) require PRO+. Full read access to threat intel, CVE intelligence, platform metrics, and governance analysis.'}`;
+  : '## Standard Mode\nDestructive/write operations (SOC pipeline, SIEM deploy, red team) require PRO+. Full read access to threat intel, CVE intelligence, platform metrics, and governance analysis.'}${
+  configOverrides?.system_prompt_addendum ? `\n\n## Admin-Configured Addendum\n${configOverrides.system_prompt_addendum}` : ''
+}`;
 }
 
 // ─── Session management ────────────────────────────────────────────────────────
@@ -1179,6 +1217,50 @@ export async function writeCopilotAuditLog(env, { userId, tier, sessionId, taskT
       JSON.stringify({ tier, task_type: taskType, flagged: !!flagged, latency_ms: latencyMs, tools_used: toolsUsed || [] }),
     ).run();
   } catch { /* best-effort — never block the chat response on audit-log availability */ }
+}
+
+// ─── Org-role RBAC (layered on top of tier gating, not a replacement for it) ──
+// resolveAuthV5 (workers/src/auth/middleware.js) does not surface per-org roles —
+// only tier/isAdmin. This queries org_members directly, the same table and
+// permission taxonomy orgManagement.js already enforces elsewhere, so the copilot
+// doesn't invent a second, inconsistent role model. Fails OPEN (no restriction)
+// when the caller has no org membership row, preserving today's tier-only
+// behaviour for personal/non-org accounts — this is additive, not a new gate
+// that could lock out existing users.
+const ROLE_RANK = { OWNER: 4, ADMIN: 3, ANALYST: 2, MEMBER: 1, VIEWER: 0 };
+
+export async function resolveOrgRole(env, authCtx, requestedOrgId) {
+  const db = env.SECURITY_HUB_DB || env.DB;
+  const userId = authCtx?.user_id || authCtx?.userId;
+  if (!db || !userId) return null;
+  try {
+    if (requestedOrgId) {
+      const row = await db.prepare(
+        `SELECT role FROM org_members WHERE org_id = ? AND user_id = ? AND status = 'active'`
+      ).bind(requestedOrgId, userId).first();
+      return row?.role || null;
+    }
+    // No org specified — take the highest-privilege role across all active memberships.
+    const rows = await db.prepare(
+      `SELECT role FROM org_members WHERE user_id = ? AND status = 'active'`
+    ).bind(userId).all();
+    const roles = (rows?.results || []).map(r => r.role).filter(Boolean);
+    if (!roles.length) return null;
+    return roles.reduce((best, r) => (ROLE_RANK[r] ?? -1) > (ROLE_RANK[best] ?? -1) ? r : best, roles[0]);
+  } catch { return null; }
+}
+
+// A role may run a tool only if its ROLE_PERMISSIONS (orgManagement.js) include
+// 'all' or 'write' — matching write access exactly as the rest of the platform
+// defines it — or the tool is read-only, which every role (including VIEWER) may use.
+export async function filterToolsByRole(env, authCtx, tools, requestedOrgId) {
+  const role = await resolveOrgRole(env, authCtx, requestedOrgId);
+  if (!role) return { tools, role: null }; // no org context — tier gating already applied
+  const { ROLE_PERMISSIONS } = await import('./orgManagement.js');
+  const perms = ROLE_PERMISSIONS[role] || [];
+  const canWrite = perms.includes('all') || perms.includes('write');
+  if (canWrite) return { tools, role };
+  return { tools: tools.filter(t => t.readOnly !== false), role };
 }
 
 // ─── Tool telemetry ────────────────────────────────────────────────────────────
@@ -1773,6 +1855,30 @@ async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId)
         return (await handleSupport(req, env, authCtx, '/api/support/ticket', 'POST')).json();
       }
 
+      // ── Multi-Agent Orchestration ────────────────────────────────────────────
+      case 'run_multi_agent_analysis': {
+        const { handleAgentsRun } = await import('./multiAgentSOC.js');
+        if (!toolInput.task) return { error: 'task is required.' };
+        const req = new Request('https://internal/api/agents/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: toolInput.task, agents: toolInput.agents }),
+        });
+        return (await handleAgentsRun(req, env, authCtx)).json();
+      }
+
+      // ── Assessment Quote ──────────────────────────────────────────────────────
+      case 'get_assessment_quote': {
+        const { ASSESSMENT_PLANS } = await import('./assessmentBooking.js');
+        const plan = (toolInput.plan || 'standard').toLowerCase();
+        const info = ASSESSMENT_PLANS[plan];
+        if (!info) return { error: `Unknown plan "${plan}". Valid: standard, premium, enterprise.` };
+        return {
+          plan, ...info,
+          note: 'Read-only quote — no order created, nothing charged. A "Book & Pay" button will appear for the user to click themselves.',
+        };
+      }
+
       default:
         return { error: `Unknown skill: ${toolName}` };
     }
@@ -1818,6 +1924,31 @@ export function redactSecrets(text) {
   return out;
 }
 
+// ─── Suggested actions (structured side-channel, never LLM-authored) ─────────
+// The assistant's final "message" is free-text prose synthesised by the LLM —
+// never a payment trigger. Money-moving actions (booking a paid assessment)
+// must always be a deliberate, human click on a real button, never something an
+// LLM can chain into on its own. This inspects which tools actually ran this
+// turn and, for tools whose result implies a follow-up action, emits a small
+// structured action the widget can render as a button — the human clicks it,
+// and it calls the platform's existing, already-tested checkout flow directly
+// (window.cdbBookAssessment / /booking.html), never a copilot-invented one.
+export function buildSuggestedActions(toolsCalled) {
+  const actions = [];
+  for (const call of toolsCalled || []) {
+    if (call.name === 'get_assessment_quote' && call.result && !call.result.error) {
+      actions.push({
+        type:      'book_assessment',
+        label:     `Book ${call.result.label || 'Assessment'} — ₹${call.result.price_inr}`,
+        plan:      call.result.plan,
+        price_inr: call.result.price_inr,
+        delivery_h: call.result.delivery_h,
+      });
+    }
+  }
+  return actions;
+}
+
 // ─── Provider availability check ──────────────────────────────────────────────
 function isProviderAvailable(env, provider) {
   const cfg = PROVIDER_CONFIG[provider];
@@ -1826,10 +1957,125 @@ function isProviderAvailable(env, provider) {
   return !!env[cfg.envKey];
 }
 
+// ─── Structured/JSON-mode output (opt-in, additive post-processing) ──────────
+// Runs as a SEPARATE call after the normal prose answer is already generated —
+// the core tool-orchestration path above is completely untouched by this, so a
+// provider rejecting response_format (some models don't support it) can only
+// ever return null here, never break the main chat response.
+export async function generateStructuredOutput(env, provider, model, proseAnswer, schemaHint) {
+  const cfg = PROVIDER_CONFIG[provider];
+  const apiKey = env[cfg?.envKey];
+  if (!cfg || !apiKey || !proseAnswer) return null;
+
+  const instruction = `Convert the following security-copilot answer into a single JSON object`
+    + (schemaHint ? ` matching this shape: ${schemaHint}` : ' with keys: "summary" (string), "key_points" (string array), "severity" (one of CRITICAL/HIGH/MEDIUM/LOW/INFO/null), "recommended_actions" (string array)')
+    + `. Output ONLY the JSON object — no markdown fences, no commentary.\n\nAnswer:\n${proseAnswer.slice(0, 6000)}`;
+
+  try {
+    const res = await fetch(cfg.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`,
+        ...(provider === PROVIDERS.OPENROUTER ? { 'HTTP-Referer': 'https://cyberdudebivash.in', 'X-Title': 'APEX Security Copilot' } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: instruction }],
+        max_tokens: 1024,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null; // provider rejected response_format or errored — fail open
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch { return null; }
+}
+
 // ─── Get candidate list for this task × complexity ────────────────────────────
 function getCandidates(task_type, complexity) {
   const matrix = ROUTING_MATRIX[task_type] || ROUTING_MATRIX.general;
   return matrix[complexity] || matrix.standard || matrix.simple;
+}
+
+// ─── True token streaming — direct-answer fast path only ──────────────────────
+// Real, provider-level SSE streaming (stream:true), relaying content deltas the
+// instant they arrive. If the model starts a tool call mid-stream, the partial
+// stream is aborted and { needsTools: true } is returned — the caller falls back
+// to the existing, unmodified, battle-tested orchestrateChat()/runToolLoop() for
+// the tool-calling case. This function never reimplements tool-calling itself,
+// so it can only ever add a faster path, never regress the reliable one.
+export async function streamDirectAnswer(env, provider, model, systemPrompt, messages, tools, maxTokens, onDelta) {
+  const cfg    = PROVIDER_CONFIG[provider];
+  const apiKey = env[cfg?.envKey];
+  if (!cfg || !apiKey) return { ok: false };
+
+  const oaiTools = tools.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }));
+  const extraHeaders = provider === PROVIDERS.OPENROUTER
+    ? { 'HTTP-Referer': 'https://cyberdudebivash.in', 'X-Title': 'APEX Security Copilot' }
+    : {};
+
+  let res;
+  try {
+    res = await fetch(cfg.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, ...extraHeaders },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })),
+        ],
+        tools: oaiTools,
+        tool_choice: 'auto',
+        max_tokens: maxTokens,
+        temperature: 0.25,
+        stream: true,
+      }),
+      signal: AbortSignal.timeout(cfg.timeout_ms || 28000),
+    });
+  } catch { return { ok: false }; }
+
+  if (!res.ok || !res.body) return { ok: false };
+
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '', fullText = '', sawToolCall = false, modelUsed = model;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        let chunk;
+        try { chunk = JSON.parse(payload); } catch { continue; }
+        modelUsed = chunk.model || modelUsed;
+        const delta = chunk.choices?.[0]?.delta;
+        if (!delta) continue;
+        if (delta.tool_calls?.length) { sawToolCall = true; break; }
+        if (delta.content) { fullText += delta.content; onDelta(delta.content); }
+      }
+      if (sawToolCall) break;
+    }
+  } catch {
+    try { await reader.cancel(); } catch {}
+    return { ok: false };
+  }
+
+  if (sawToolCall) { try { await reader.cancel(); } catch {} return { ok: false, needsTools: true }; }
+  if (!fullText) return { ok: false };
+  return { ok: true, content: fullText, model: modelUsed, provider };
 }
 
 // ─── Reasoning pre-pass (R1-class models, no tool calling needed) ─────────────
@@ -1876,7 +2122,7 @@ Keep analysis concise (max 400 words). This will be used as context for the resp
 }
 
 // ─── OpenAI-compat agentic tool-calling loop ───────────────────────────────────
-async function runToolLoop(env, provider, model, systemPrompt, messages, tools, maxTokens, authCtx, userId, sessionId) {
+async function runToolLoop(env, provider, model, systemPrompt, messages, tools, maxTokens, authCtx, userId, sessionId, onEvent = () => {}) {
   const cfg     = PROVIDER_CONFIG[provider];
   const apiKey  = env[cfg.envKey];
 
@@ -1899,8 +2145,10 @@ async function runToolLoop(env, provider, model, systemPrompt, messages, tools, 
   ];
 
   let totalTokensIn = 0, totalTokensOut = 0;
+  const toolsCalled = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    onEvent('status', { stage: 'provider_call', message: `Analyzing with ${provider}/${model}…`, round });
     const res = await fetch(cfg.endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, ...extraHeaders },
@@ -1941,6 +2189,7 @@ async function runToolLoop(env, provider, model, systemPrompt, messages, tools, 
         model:    data.model || model,
         provider,
         usage:    { input: totalTokensIn, output: totalTokensOut },
+        tools_called: toolsCalled,
       };
     }
 
@@ -1948,10 +2197,13 @@ async function runToolLoop(env, provider, model, systemPrompt, messages, tools, 
     workingMsgs.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
 
     // Execute tools in parallel
+    for (const tc of msg.tool_calls) onEvent('status', { stage: 'tool_call', tool: tc.function?.name, message: `Calling ${tc.function?.name}…` });
     const toolResults = await Promise.all(msg.tool_calls.map(async tc => {
       let args = {};
       try { args = JSON.parse(tc.function?.arguments || '{}'); } catch {}
       const result = await executeTool(tc.function?.name, args, env, authCtx, userId, sessionId);
+      toolsCalled.push({ name: tc.function?.name, args, result });
+      onEvent('status', { stage: 'tool_result', tool: tc.function?.name, message: `${tc.function?.name} complete` });
       return {
         role:         'tool',
         tool_call_id: tc.id,
@@ -1968,6 +2220,7 @@ async function runToolLoop(env, provider, model, systemPrompt, messages, tools, 
     model,
     provider,
     usage:    { input: totalTokensIn, output: totalTokensOut },
+    tools_called: toolsCalled,
   };
 }
 
@@ -1990,13 +2243,14 @@ async function runCFAIFallback(env, systemPrompt, messages) {
     model:    MODELS.CF_LLAMA,
     provider: PROVIDERS.CF_AI,
     usage:    { input: 0, output: 0 },
+    tools_called: [],
   };
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
 // MAIN ORCHESTRATOR
 // ════════════════════════════════════════════════════════════════════════════════
-async function orchestrateChat(env, tier, authCtx, messages, availableTools, maxTokens, userId, sessionId) {
+async function orchestrateChat(env, tier, authCtx, messages, availableTools, maxTokens, userId, sessionId, onEvent = () => {}, configOverrides = null) {
   const lastMsg    = messages[messages.length - 1]?.content || '';
   const { task_type, complexity } = classifyQuery(lastMsg);
   const candidates = getCandidates(task_type, complexity);
@@ -2011,7 +2265,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
     if (!isProviderAvailable(env, provider)) continue;
     if (provider === PROVIDERS.CF_AI) continue; // CF AI handled as last resort below
 
-    const systemPmt = buildSystemPrompt(tier, authCtx, provider, model, task_type);
+    const systemPmt = buildSystemPrompt(tier, authCtx, provider, model, task_type, configOverrides);
 
     try {
       // Reasoning pre-pass for complex queries on R1-style models
@@ -2026,13 +2280,13 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
           ];
           const toolCandidate = candidates.find(c => c.p === provider && c.tools);
           if (toolCandidate) {
-            return await runToolLoop(env, provider, toolCandidate.m, buildSystemPrompt(tier, authCtx, provider, toolCandidate.m, task_type), augmentedMessages, availableTools, maxTokens, authCtx, userId, sessionId);
+            return await runToolLoop(env, provider, toolCandidate.m, buildSystemPrompt(tier, authCtx, provider, toolCandidate.m, task_type, configOverrides), augmentedMessages, availableTools, maxTokens, authCtx, userId, sessionId, onEvent);
           }
         }
       }
 
       if (useTools) {
-        return await runToolLoop(env, provider, model, systemPmt, augmentedMessages, availableTools, maxTokens, authCtx, userId, sessionId);
+        return await runToolLoop(env, provider, model, systemPmt, augmentedMessages, availableTools, maxTokens, authCtx, userId, sessionId, onEvent);
       }
     } catch (err) {
       lastError = err;
@@ -2047,7 +2301,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
           const cfg    = PROVIDER_CONFIG[provider];
           const apiKey = env[cfg?.envKey];
           if (!apiKey) throw new Error('no key');
-          const systemPmt2 = buildSystemPrompt(tier, authCtx, provider, model, task_type);
+          const systemPmt2 = buildSystemPrompt(tier, authCtx, provider, model, task_type, configOverrides);
           const res = await fetch(cfg.endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`,
@@ -2073,6 +2327,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
               model,
               provider,
               usage: data.usage || {},
+              tools_called: [],
             };
           }
         } catch (textErr) {
@@ -2121,7 +2376,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
       const data = JSON.parse(body);
       const text = data.choices?.[0]?.message?.content || '';
       if (text) {
-        return { content: text + '\n\n> Running in basic mode. Tool orchestration temporarily unavailable.', model: lr.model, provider: lr.provider, usage: data.usage || {} };
+        return { content: text + '\n\n> Running in basic mode. Tool orchestration temporarily unavailable.', model: lr.model, provider: lr.provider, usage: data.usage || {}, tools_called: [] };
       }
     } catch (e) {
       console.error(`[APEX last-resort] ${lr.provider} failed: ${e.message}`);
@@ -2132,7 +2387,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
   let cfAiError;
   if (isProviderAvailable(env, PROVIDERS.CF_AI)) {
     try {
-      const systemPmt = buildSystemPrompt(tier, authCtx, PROVIDERS.CF_AI, MODELS.CF_LLAMA, task_type);
+      const systemPmt = buildSystemPrompt(tier, authCtx, PROVIDERS.CF_AI, MODELS.CF_LLAMA, task_type, configOverrides);
       return await runCFAIFallback(env, systemPmt, messages);
     } catch (e) {
       cfAiError = e;
@@ -2146,6 +2401,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
     provider: 'none',
     error:    true,
     support:  'support@cyberdudebivash.in',
+    tools_called: [],
   };
 }
 
@@ -2195,45 +2451,46 @@ export async function buildCveGrounding(env, message) {
 }
 
 /** POST /api/copilot/chat */
-export async function handleCopilotChat(request, env, authCtx) {
-  if (request.method !== 'POST') return badRequest(request, 'Use POST');
+// ─── Shared turn setup (used by both the JSON and SSE-streaming chat endpoints) ──
+// Centralising this means a fix to quota/RBAC/grounding logic automatically
+// applies to both endpoints instead of needing to be kept in sync by hand.
+// ─── Admin-configurable prompt/routing (KV-backed, hot-reloadable, no deploy) ──
+// Everything the copilot uses today (system prompt, tool tier gates) is a
+// hardcoded JS constant — changing it requires a full deploy. This lets an
+// admin adjust a system-prompt addendum and per-tool tier overrides live via
+// GET/PUT /api/copilot/admin/config, with the hardcoded TOOL_REGISTRY/prompt
+// as the always-available fallback if no override is set or KV is unavailable.
+const COPILOT_CONFIG_KEY = 'copilot:config:overrides';
+const DEFAULT_COPILOT_CONFIG = { system_prompt_addendum: '', tool_tier_overrides: {} };
 
-  let body;
-  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
+export async function getCopilotConfig(env) {
+  if (!env.SECURITY_HUB_KV) return DEFAULT_COPILOT_CONFIG;
+  try {
+    const raw = await env.SECURITY_HUB_KV.get(COPILOT_CONFIG_KEY, { type: 'json' });
+    return raw ? { ...DEFAULT_COPILOT_CONFIG, ...raw } : DEFAULT_COPILOT_CONFIG;
+  } catch { return DEFAULT_COPILOT_CONFIG; }
+}
 
+async function prepareChatTurn(env, authCtx, body) {
   const userMessage = (body.message || '').trim();
-  if (!userMessage)             return badRequest(request, 'message is required');
-  if (userMessage.length > 5000) return badRequest(request, 'message too long (max 5000 chars)');
+  if (!userMessage)              return { error: 'message is required' };
+  if (userMessage.length > 5000) return { error: 'message too long (max 5000 chars)' };
 
   const userId    = authCtx?.userId || authCtx?.email || authCtx?.ip || 'anonymous';
   const tier      = (authCtx?.tier || 'FREE').toUpperCase();
   const sessionId = ((body.session_id || '') + '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'default';
   const maxTokens = Math.min(body.max_tokens || 2048, ['ENTERPRISE','MSSP','TEAM'].includes(tier) ? 4096 : ['PRO'].includes(tier) ? 3072 : 1024);
 
-  // Burst limit (per minute) — independent of, and checked before, the daily quota
   const burst = await checkBurstLimit(env, userId, tier);
   if (!burst.ok) {
-    return ok(request, {
-      error:       'rate_limit_exceeded',
-      message:     `Too many messages — limit is ${burst.limit}/minute for ${tier} tier. Please slow down.`,
-      retry_after: 60,
-      upgrade_url: 'https://cyberdudebivash.in/#pricing',
-    });
+    return { softError: { error: 'rate_limit_exceeded', message: `Too many messages — limit is ${burst.limit}/minute for ${tier} tier. Please slow down.`, retry_after: 60, upgrade_url: 'https://cyberdudebivash.in/#pricing' } };
   }
 
-  // Quota
   const quota = await checkDailyQuota(env, userId, tier);
   if (!quota.ok) {
-    return ok(request, {
-      error:       'daily_quota_exceeded',
-      message:     `Daily limit of ${quota.limit} messages reached for ${tier} tier. Upgrade to PRO for 200/day or ENTERPRISE for unlimited.`,
-      quota,
-      upgrade_url: 'https://cyberdudebivash.in/#pricing',
-    });
+    return { softError: { error: 'daily_quota_exceeded', message: `Daily limit of ${quota.limit} messages reached for ${tier} tier. Upgrade to PRO for 200/day or ENTERPRISE for unlimited.`, quota, upgrade_url: 'https://cyberdudebivash.in/#pricing' } };
   }
 
-  // Prompt-injection/jailbreak telemetry (observability only — see the
-  // always-on "Untrusted Content Policy" in buildSystemPrompt for the actual defense)
   const injectionFlagged = detectPromptInjectionSignal(userMessage);
   if (injectionFlagged && env.SECURITY_HUB_KV) {
     const key = `copilot:injection_flags:${new Date().toISOString().slice(0,10)}`;
@@ -2242,10 +2499,23 @@ export async function handleCopilotChat(request, env, authCtx) {
       .catch(() => {});
   }
 
-  // Filter tools by tier
-  const availableTools = TOOL_REGISTRY.filter(t => !t.tiers || t.tiers.includes(tier) || authCtx?.isAdmin);
+  // Admin-configurable overrides (KV, hot-reloadable) — falls back to the
+  // hardcoded TOOL_REGISTRY.tiers when no override is set for a given tool.
+  const configOverrides = await getCopilotConfig(env);
+  const effectiveTiers = (tool) => {
+    const override = configOverrides.tool_tier_overrides?.[tool.name];
+    return override !== undefined ? override : tool.tiers;
+  };
 
-  // Load + optionally compact session
+  // Tier gate (admin-overridable), then org-role RBAC gate on top (fails open
+  // with no org membership).
+  let availableTools = TOOL_REGISTRY.filter(t => {
+    const tiers = effectiveTiers(t);
+    return !tiers || tiers.includes(tier) || authCtx?.isAdmin;
+  });
+  const roleFilter = await filterToolsByRole(env, authCtx, availableTools, body.org_id);
+  availableTools = roleFilter.tools;
+
   let session = await loadSession(env, userId, sessionId);
   session     = await compactSession(env, session, tier);
 
@@ -2259,25 +2529,46 @@ export async function handleCopilotChat(request, env, authCtx) {
   const llmUserContent = cveGrounding ? `${cveGrounding}\n\nUser question: ${userMessage}` : userMessage;
   const conversationMessages = [...session.messages, { role: 'user', content: llmUserContent }];
 
-  // Orchestrate
+  return {
+    userMessage, userId, tier, sessionId, maxTokens, quota, injectionFlagged,
+    availableTools, orgRole: roleFilter.role, session, conversationMessages, configOverrides,
+  };
+}
+
+function finalizeTurn(session, userMessage, response) {
+  response.content = redactSecrets(response.content);
+  session.messages = [...session.messages, { role: 'user', content: userMessage }, { role: 'assistant', content: response.content }];
+  session.turns = (session.turns || 0) + 1;
+  return response;
+}
+
+/** POST /api/copilot/chat */
+export async function handleCopilotChat(request, env, authCtx) {
+  if (request.method !== 'POST') return badRequest(request, 'Use POST');
+
+  let body;
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
+
+  const turn = await prepareChatTurn(env, authCtx, body);
+  if (turn.error) return badRequest(request, turn.error);
+  if (turn.softError) return ok(request, turn.softError);
+
+  const { userMessage, userId, tier, sessionId, maxTokens, quota, injectionFlagged, availableTools, session, conversationMessages, configOverrides } = turn;
+
   const t0       = Date.now();
-  const response = await orchestrateChat(env, tier, authCtx, conversationMessages, availableTools, maxTokens, userId, sessionId);
+  const response = await orchestrateChat(env, tier, authCtx, conversationMessages, availableTools, maxTokens, userId, sessionId, () => {}, configOverrides);
   const latencyMs = Date.now() - t0;
 
-  // Defense-in-depth: strip any high-confidence secret patterns before the
-  // response is persisted or shown to the user.
-  response.content = redactSecrets(response.content);
-
-  // Persist session
-  session.messages = [
-    ...session.messages,
-    { role: 'user',      content: userMessage },
-    { role: 'assistant', content: response.content },
-  ];
-  session.turns = (session.turns || 0) + 1;
+  finalizeTurn(session, userMessage, response);
   await saveSession(env, userId, sessionId, session);
 
-  writeCopilotAuditLog(env, { userId, tier, sessionId, taskType: classifyQuery(userMessage).task_type, flagged: injectionFlagged, latencyMs }).catch(() => {});
+  const toolsUsed = (response.tools_called || []).map(t => t.name);
+  writeCopilotAuditLog(env, { userId, tier, sessionId, taskType: classifyQuery(userMessage).task_type, flagged: injectionFlagged, latencyMs, toolsUsed }).catch(() => {});
+
+  let structuredOutput = null;
+  if (body.structured && response.provider && response.provider !== 'none') {
+    structuredOutput = await generateStructuredOutput(env, response.provider, response.model, response.content, body.schema_hint);
+  }
 
   return ok(request, {
     session_id:      sessionId,
@@ -2292,8 +2583,112 @@ export async function handleCopilotChat(request, env, authCtx) {
       limit:     quota.limit,
       remaining: quota.limit ? quota.limit - quota.used : null,
     },
-    tools_available: availableTools.length,
-    timestamp:       new Date().toISOString(),
+    tools_available:   availableTools.length,
+    suggested_actions: buildSuggestedActions(response.tools_called),
+    structured:        structuredOutput,
+    timestamp:         new Date().toISOString(),
+  });
+}
+
+/** POST /api/copilot/chat/stream — SSE variant. Real token streaming for direct
+ * answers; falls back to the existing, unmodified orchestrateChat() (with live
+ * tool-call progress events) whenever the model needs a tool. */
+export async function handleCopilotChatStream(request, env, authCtx) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: {
+      'Access-Control-Allow-Origin':  '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }});
+  }
+  if (request.method !== 'POST') return badRequest(request, 'Use POST');
+
+  let body;
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
+
+  const { readable, writable } = new TransformStream();
+  const writer  = writable.getWriter();
+  const encoder = new TextEncoder();
+  let closed = false;
+  const send = async (eventType, data) => {
+    if (closed) return;
+    try { await writer.write(encoder.encode(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { closed = true; }
+  };
+  request.signal?.addEventListener('abort', () => { closed = true; writer.close().catch(() => {}); });
+
+  (async () => {
+    try {
+      const turn = await prepareChatTurn(env, authCtx, body);
+      if (turn.error)     { await send('error', { error: 'bad_request', message: turn.error }); return; }
+      if (turn.softError) { await send('error', turn.softError); return; }
+
+      const { userMessage, userId, tier, sessionId, maxTokens, quota, injectionFlagged, availableTools, session, conversationMessages, configOverrides } = turn;
+
+      await send('status', { stage: 'classify', message: 'Reading your question…' });
+
+      const lastMsg = conversationMessages[conversationMessages.length - 1]?.content || '';
+      const { task_type, complexity } = classifyQuery(lastMsg);
+      const primary = getCandidates(task_type, complexity).find(c => isProviderAvailable(env, c.p) && c.p !== PROVIDERS.CF_AI);
+
+      const t0 = Date.now();
+      let response = null;
+
+      if (primary) {
+        const systemPmt = buildSystemPrompt(tier, authCtx, primary.p, primary.m, task_type, configOverrides);
+        await send('status', { stage: 'provider_call', message: `Analyzing with ${primary.p}/${primary.m}…` });
+        const streamed = await streamDirectAnswer(env, primary.p, primary.m, systemPmt, conversationMessages, availableTools, maxTokens, (delta) => { send('delta', { text: delta }); });
+        if (streamed.ok) {
+          response = { content: streamed.content, model: streamed.model, provider: streamed.provider, usage: {}, tools_called: [] };
+        } else if (streamed.needsTools) {
+          await send('status', { stage: 'tools_needed', message: 'This needs a tool lookup — running full orchestration…' });
+        }
+      }
+
+      if (!response) {
+        const onEvent = (type, data) => { send(type, data); };
+        response = await orchestrateChat(env, tier, authCtx, conversationMessages, availableTools, maxTokens, userId, sessionId, onEvent, configOverrides);
+        // Full orchestration wasn't streamed token-by-token — reveal it in
+        // small chunks so the client still sees progressive delivery.
+        const text = response.content || '';
+        const CHUNK = 48;
+        for (let i = 0; i < text.length; i += CHUNK) await send('delta', { text: text.slice(i, i + CHUNK) });
+      }
+
+      const latencyMs = Date.now() - t0;
+      finalizeTurn(session, userMessage, response);
+      await saveSession(env, userId, sessionId, session);
+
+      const toolsUsed = (response.tools_called || []).map(t => t.name);
+      writeCopilotAuditLog(env, { userId, tier, sessionId, taskType: task_type, flagged: injectionFlagged, latencyMs, toolsUsed }).catch(() => {});
+
+      await send('done', {
+        session_id: sessionId,
+        model: response.model,
+        provider: response.provider,
+        tier,
+        latency_ms: latencyMs,
+        turn: session.turns,
+        quota: { used: quota.used, limit: quota.limit, remaining: quota.limit ? quota.limit - quota.used : null },
+        suggested_actions: buildSuggestedActions(response.tools_called),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      await send('error', { error: 'stream_failed', message: e?.message || 'unknown error' });
+    } finally {
+      closed = true;
+      await writer.close().catch(() => {});
+    }
+  })();
+
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      'Content-Type':      'text/event-stream; charset=utf-8',
+      'Cache-Control':      'no-cache, no-store, must-revalidate',
+      'Connection':         'keep-alive',
+      'X-Accel-Buffering':  'no',
+      'Access-Control-Allow-Origin': '*',
+    },
   });
 }
 
@@ -2353,6 +2748,59 @@ export async function handleCopilotQuickAction(request, env, authCtx) {
 }
 
 /** GET /api/copilot/capabilities */
+/** GET /api/copilot/admin/config — admin-only, view current prompt/routing overrides */
+export async function handleCopilotAdminConfigGet(request, env, authCtx) {
+  if (!authCtx?.isAdmin) return fail(request, 'Admin access required', 403, 'ERR_FORBIDDEN');
+  const config = await getCopilotConfig(env);
+  return ok(request, {
+    config,
+    defaults: DEFAULT_COPILOT_CONFIG,
+    valid_tool_names: TOOL_REGISTRY.map(t => t.name),
+    valid_tiers: ['FREE','STARTER','PRO','TEAM','ENTERPRISE','MSSP'],
+  });
+}
+
+/** PUT /api/copilot/admin/config — admin-only, hot-update prompt/routing without a deploy */
+export async function handleCopilotAdminConfigPut(request, env, authCtx) {
+  if (!authCtx?.isAdmin) return fail(request, 'Admin access required', 403, 'ERR_FORBIDDEN');
+  if (request.method !== 'PUT') return badRequest(request, 'Use PUT');
+  if (!env.SECURITY_HUB_KV) return fail(request, 'KV not configured — cannot persist config', 503, 'ERR_UNAVAILABLE');
+
+  let body;
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
+
+  const current = await getCopilotConfig(env);
+  const next = { ...current };
+
+  if (typeof body.system_prompt_addendum === 'string') {
+    if (body.system_prompt_addendum.length > 4000) return badRequest(request, 'system_prompt_addendum too long (max 4000 chars)');
+    next.system_prompt_addendum = body.system_prompt_addendum;
+  }
+
+  if (body.tool_tier_overrides && typeof body.tool_tier_overrides === 'object') {
+    const validNames = new Set(TOOL_REGISTRY.map(t => t.name));
+    const validTiers = new Set(['FREE','STARTER','PRO','TEAM','ENTERPRISE','MSSP']);
+    const merged = { ...current.tool_tier_overrides };
+    for (const [toolName, tiers] of Object.entries(body.tool_tier_overrides)) {
+      if (!validNames.has(toolName)) return badRequest(request, `Unknown tool: ${toolName}`);
+      if (tiers !== null && (!Array.isArray(tiers) || !tiers.every(t => validTiers.has(t)))) {
+        return badRequest(request, `tool_tier_overrides.${toolName} must be null (no restriction) or an array of valid tiers`);
+      }
+      merged[toolName] = tiers;
+    }
+    next.tool_tier_overrides = merged;
+  }
+
+  await env.SECURITY_HUB_KV.put(COPILOT_CONFIG_KEY, JSON.stringify(next));
+
+  writeCopilotAuditLog(env, {
+    userId: authCtx?.userId || authCtx?.user_id || 'admin', tier: 'ENTERPRISE', sessionId: 'admin-config',
+    taskType: 'admin_config_update', flagged: false, latencyMs: 0, toolsUsed: [],
+  }).catch(() => {});
+
+  return ok(request, { updated: true, config: next });
+}
+
 export async function handleCopilotCapabilities(request, env, authCtx) {
   const tier = (authCtx?.tier || 'FREE').toUpperCase();
 

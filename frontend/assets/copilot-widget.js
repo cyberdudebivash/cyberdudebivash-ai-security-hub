@@ -6,7 +6,8 @@
  * Drop-in include, no build step, no dependencies:
  *   <script src="/assets/copilot-widget.js" defer></script>
  *
- * Keyboard: Ctrl/Cmd+K opens/closes · Esc closes (or exits fullscreen first) · Enter sends
+ * Keyboard: Ctrl/Cmd+K opens the command palette (search commands or ask APEX
+ * directly) · Esc closes (or exits fullscreen first) · Enter sends
  */
 (function CDB_COPILOT_WIDGET() {
 'use strict';
@@ -187,6 +188,15 @@ function injectStyles() {
 .cdb-cp-bubble pre{ background:rgba(0,0,0,.3); padding:8px 10px; border-radius:8px; overflow-x:auto; font-size:11px; margin:4px 0; }
 .cdb-cp-meta{ font-size:10px; color:var(--cdb-cp-text-muted); padding:0 3px; }
 
+.cdb-cp-status-line{ font-size:12px; color:var(--cdb-cp-text-muted); font-style:italic; }
+
+.cdb-cp-actions-row{ display:flex; flex-wrap:wrap; gap:8px; align-self:flex-start; max-width:88%; }
+.cdb-cp-action-btn{
+  background:linear-gradient(135deg, var(--cdb-cp-accent), var(--cdb-cp-accent2)); border:none; color:#04101a;
+  padding:9px 16px; border-radius:9px; font-size:12px; font-weight:800; cursor:pointer; transition:opacity .15s;
+}
+.cdb-cp-action-btn:hover{ opacity:.9; }
+
 .cdb-cp-typing{ display:flex; gap:4px; padding:12px 13px; }
 .cdb-cp-typing span{ width:6px; height:6px; border-radius:50%; background:var(--cdb-cp-text-dim); animation:cdb-cp-bounce 1.1s infinite ease-in-out; }
 .cdb-cp-typing span:nth-child(2){ animation-delay:.15s; }
@@ -232,6 +242,37 @@ function injectStyles() {
 .cdb-cp-upgrade-link{ color:var(--cdb-cp-accent); font-weight:700; }
 
 .cdb-cp-sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+/* ── Command palette (⌘K) — a real searchable command list, distinct from the
+   chat widget itself. Linear/Raycast-style: centered overlay, fuzzy filter,
+   arrow-key navigation, Enter executes, Esc closes. ── */
+#cdb-cmdk-overlay{
+  position:fixed; inset:0; z-index:99990; background:rgba(5,5,15,.65); backdrop-filter:blur(4px);
+  display:none; align-items:flex-start; justify-content:center; padding-top:12vh;
+}
+#cdb-cmdk-overlay.cdb-cp-open{ display:flex; }
+#cdb-cmdk-modal{
+  width:min(560px, calc(100vw - 32px)); max-height:60vh; background:var(--cdb-cp-bg);
+  border:1px solid var(--cdb-cp-border); border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.6);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#cdb-cmdk-input{
+  width:100%; border:none; border-bottom:1px solid var(--cdb-cp-border); background:transparent; color:var(--cdb-cp-text);
+  padding:16px 18px; font-size:15px; font-family:inherit;
+}
+#cdb-cmdk-input:focus{ outline:none; }
+#cdb-cmdk-input::placeholder{ color:var(--cdb-cp-text-dim); }
+#cdb-cmdk-list{ overflow-y:auto; padding:6px; }
+.cdb-cmdk-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer;
+  font-size:13px; color:var(--cdb-cp-text-muted);
+}
+.cdb-cmdk-item.cdb-cmdk-active{ background:rgba(0,212,255,.09); color:var(--cdb-cp-text); }
+.cdb-cmdk-item-icon{ opacity:.7; flex-shrink:0; width:16px; height:16px; }
+.cdb-cmdk-item-icon svg{ width:16px; height:16px; fill:currentColor; }
+.cdb-cmdk-item-hint{ margin-left:auto; font-size:10px; color:var(--cdb-cp-text-muted); }
+.cdb-cmdk-empty{ padding:16px; text-align:center; font-size:12px; color:var(--cdb-cp-text-dim); }
+.cdb-cmdk-footer{ padding:8px 14px; border-top:1px solid var(--cdb-cp-border); font-size:10px; color:var(--cdb-cp-text-muted); display:flex; gap:14px; }
 `;
   document.head.appendChild(s);
 }
@@ -262,11 +303,34 @@ function renderMarkdownLite(text) {
   return html;
 }
 
+// ─── Command palette (⌘K) ───────────────────────────────────────────────────
+const ICON_SEARCH  = '<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>';
+const ICON_ASK     = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2zm0-3.5V14h-2v-1.25c0-.5.2-1 .6-1.4l1.13-1.14A1.5 1.5 0 1 0 9 9.5H7a3.5 3.5 0 1 1 6.7 1.4l-1.13 1.14a.5.5 0 0 0-.57.46z"/></svg>';
+const ICON_LINK    = '<svg viewBox="0 0 24 24"><path d="M3.9 12a5 5 0 0 1 5-5H12v2H8.9a3 3 0 0 0 0 6H12v2H8.9a5 5 0 0 1-5-5zm7.1-1h4v2h-4zm2.1-4H16a5 5 0 0 1 0 10h-2.9v-2H16a3 3 0 0 0 0-6h-2.9z"/></svg>';
+
+function buildCommandPaletteDom() {
+  const overlay = document.createElement('div');
+  overlay.id = 'cdb-cmdk-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Command palette');
+  overlay.innerHTML = `
+    <div id="cdb-cmdk-modal">
+      <label for="cdb-cmdk-input" class="cdb-cp-sr-only">Search commands or ask APEX</label>
+      <input id="cdb-cmdk-input" type="text" autocomplete="off" placeholder="Search commands, or type a question for APEX…">
+      <div id="cdb-cmdk-list" role="listbox" aria-label="Commands"></div>
+      <div class="cdb-cmdk-footer"><span>↑↓ navigate</span><span>↵ select</span><span>esc close</span></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
 function buildDom() {
   const fab = document.createElement('button');
   fab.id = 'cdb-copilot-fab';
   fab.type = 'button';
-  fab.setAttribute('aria-label', 'Open APEX AI Security Copilot (Ctrl+K)');
+  fab.setAttribute('aria-label', 'Open APEX AI Security Copilot');
   fab.innerHTML = ICONS.chat + '<span class="cdb-cp-badge" aria-hidden="true"></span>';
 
   const panel = document.createElement('div');
@@ -439,6 +503,12 @@ function initWidget() {
 
   async function runQuickAction(qa) {
     if (state.busy) return;
+    // First real message in a fresh session becomes its history title — same
+    // rule sendMessage applies, so a session isn't silently left out of history
+    // just because its first turn happened to be a quick action.
+    if (!state.messages.length) {
+      upsertSessionMeta(state.sessionId, { title: qa.label });
+    }
     setBusy(true);
     pushMessage({ role: 'user', content: qa.label });
     showTyping();
@@ -454,6 +524,7 @@ function initWidget() {
       } else {
         const pretty = '```\n' + JSON.stringify(data.result, null, 2).slice(0, 3000) + '\n```';
         pushMessage({ role: 'assistant', content: pretty, meta: qa.skill });
+        upsertSessionMeta(state.sessionId, {});
       }
     } catch {
       hideTyping();
@@ -476,22 +547,138 @@ function initWidget() {
     els.input.disabled = busy;
   }
 
-  async function sendMessage(text) {
-    const trimmed = (text || '').trim();
-    if (!trimmed || state.busy) return;
+  // ─── Suggested actions (structured side-channel — never triggers payment itself) ──
+  // The backend only ever SUGGESTS an action here; creating a Razorpay order still
+  // requires this explicit human click, which calls the platform's existing,
+  // already-tested checkout flow directly (window.cdbBookAssessment / /booking.html).
+  function renderSuggestedActions(actions) {
+    if (!actions || !actions.length) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'cdb-cp-actions-row';
+    actions.forEach(a => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cdb-cp-action-btn';
+      btn.textContent = a.label;
+      btn.addEventListener('click', () => {
+        if (a.type === 'book_assessment') {
+          if (typeof window.cdbBookAssessment === 'function') {
+            window.cdbBookAssessment();
+          } else {
+            window.open('/booking.html?service=assessment', '_blank', 'noopener');
+          }
+        }
+      });
+      wrap.appendChild(btn);
+    });
+    els.messages.appendChild(wrap);
+    scrollToBottom();
+  }
 
-    // First real message in a fresh session becomes its history title.
-    if (!state.messages.length) {
-      upsertSessionMeta(state.sessionId, { title: trimmed.slice(0, 60) });
+  // ─── Streaming chat (SSE) with graceful fallback to the JSON endpoint ──────
+  async function parseSSEStream(response, handlers) {
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const blocks = buf.split('\n\n');
+      buf = blocks.pop(); // keep incomplete trailing block
+      for (const block of blocks) {
+        const eventLine = block.split('\n').find(l => l.startsWith('event:'));
+        const dataLine  = block.split('\n').find(l => l.startsWith('data:'));
+        if (!eventLine || !dataLine) continue;
+        const type = eventLine.slice(6).trim();
+        let data;
+        try { data = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+        handlers[type]?.(data);
+      }
+    }
+  }
+
+  async function sendMessageStreaming(trimmed) {
+    let assistantText = '';
+    let sawDelta = false;
+    let statusRow = null;
+
+    function ensureStatusRow(message) {
+      if (!statusRow) {
+        statusRow = document.createElement('div');
+        statusRow.className = 'cdb-cp-msg cdb-cp-assistant';
+        statusRow.innerHTML = '<div class="cdb-cp-bubble cdb-cp-status-line"></div>';
+        els.messages.appendChild(statusRow);
+      }
+      statusRow.querySelector('.cdb-cp-status-line').textContent = message;
+      scrollToBottom();
+    }
+    function ensureAssistantRow() {
+      if (statusRow) { statusRow.remove(); statusRow = null; }
+      let row = document.getElementById('cdb-cp-streaming-row');
+      if (!row) {
+        row = document.createElement('div');
+        row.id = 'cdb-cp-streaming-row';
+        row.className = 'cdb-cp-msg cdb-cp-assistant';
+        row.innerHTML = '<div class="cdb-cp-bubble"></div>';
+        els.messages.appendChild(row);
+      }
+      return row;
     }
 
-    els.input.value = '';
-    autoGrow();
-    state.lastUserMessage = trimmed;
-    pushMessage({ role: 'user', content: trimmed });
-    setBusy(true);
-    showTyping();
+    const res = await fetch(`${API_BASE}/api/copilot/chat/stream`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: trimmed, session_id: state.sessionId }),
+    });
+    if (!res.ok || !res.body) throw new Error('stream_unavailable');
 
+    let finalMeta = null, suggestedActions = [], softError = null;
+    await parseSSEStream(res, {
+      status: (d) => ensureStatusRow(d.message || 'Working…'),
+      delta: (d) => {
+        sawDelta = true;
+        assistantText += d.text || '';
+        const row = ensureAssistantRow();
+        row.querySelector('.cdb-cp-bubble').innerHTML = renderMarkdownLite(assistantText);
+        scrollToBottom();
+      },
+      done: (d) => { finalMeta = d; suggestedActions = d.suggested_actions || []; },
+      error: (d) => { softError = d; },
+    });
+
+    if (statusRow) { statusRow.remove(); statusRow = null; }
+
+    if (softError) {
+      if (softError.error === 'daily_quota_exceeded') {
+        pushMessage({ role: 'system', content: `${softError.message} <a class="cdb-cp-upgrade-link" href="${softError.upgrade_url || '/#pricing'}">Upgrade →</a>` });
+      } else {
+        pushMessage({ role: 'system', content: softError.message || 'APEX hit an error — please try again.' });
+      }
+      const row = document.getElementById('cdb-cp-streaming-row');
+      if (row) row.remove();
+      return;
+    }
+
+    if (!sawDelta || !assistantText) throw new Error('empty_stream');
+
+    // Commit the streamed row into normal message state (so it persists/caches like any other message).
+    const row = document.getElementById('cdb-cp-streaming-row');
+    if (row) row.removeAttribute('id');
+    const meta = finalMeta?.provider ? `${finalMeta.provider} · ${finalMeta.model}` : undefined;
+    state.messages.push({ role: 'assistant', content: assistantText, meta });
+    saveCachedMessages(state.sessionId, state.messages);
+    if (meta && row) {
+      const metaEl = document.createElement('div');
+      metaEl.className = 'cdb-cp-meta';
+      metaEl.textContent = meta;
+      row.appendChild(metaEl);
+    }
+    renderSuggestedActions(suggestedActions);
+    upsertSessionMeta(state.sessionId, {});
+  }
+
+  async function sendMessageJSON(trimmed) {
+    showTyping();
     try {
       const res = await fetch(`${API_BASE}/api/copilot/chat`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -506,17 +693,45 @@ function initWidget() {
         pushMessage({ role: 'system', content: data.message || 'Too many messages — please slow down.' });
       } else if (data.message) {
         pushMessage({ role: 'assistant', content: data.message, meta: data.provider ? `${data.provider} · ${data.model}` : undefined });
+        renderSuggestedActions(data.suggested_actions);
         upsertSessionMeta(state.sessionId, {});
       } else {
         pushMessage({ role: 'system', content: 'APEX did not return a response. Please try again.' });
       }
     } catch {
       hideTyping();
-      pushMessage({
-        role: 'system',
-        content: 'Network error — could not reach APEX. Your message was not lost; press send to retry.',
-      });
+      pushMessage({ role: 'system', content: 'Network error — could not reach APEX. Your message was not lost; press send to retry.' });
       els.input.value = trimmed; // let the user resend without retyping
+    }
+  }
+
+  async function sendMessage(text) {
+    const trimmed = (text || '').trim();
+    if (!trimmed || state.busy) return;
+
+    // First real message in a fresh session becomes its history title.
+    if (!state.messages.length) {
+      upsertSessionMeta(state.sessionId, { title: trimmed.slice(0, 60) });
+    }
+
+    els.input.value = '';
+    autoGrow();
+    state.lastUserMessage = trimmed;
+    pushMessage({ role: 'user', content: trimmed });
+    setBusy(true);
+
+    try {
+      if (window.ReadableStream) {
+        await sendMessageStreaming(trimmed);
+      } else {
+        await sendMessageJSON(trimmed);
+      }
+    } catch {
+      // Streaming failed (network hiccup, endpoint unavailable, empty stream) —
+      // fall back to the plain JSON endpoint rather than leaving the user stuck.
+      const leftover = document.getElementById('cdb-cp-streaming-row');
+      if (leftover) leftover.remove();
+      await sendMessageJSON(trimmed);
     } finally {
       setBusy(false);
       els.input.focus();
@@ -664,11 +879,99 @@ function initWidget() {
     }
   });
 
+  // ─── Command palette (⌘K) — a real searchable command list ────────────────
+  const cmdkOverlay = buildCommandPaletteDom();
+  const cmdkInput   = cmdkOverlay.querySelector('#cdb-cmdk-input');
+  const cmdkList    = cmdkOverlay.querySelector('#cdb-cmdk-list');
+  let cmdkActive = 0;
+
+  function baseCommands() {
+    const cmds = [
+      { label: 'Open APEX Chat', hint: 'chat', icon: ICON_ASK, run: () => openPanel() },
+      { label: 'New chat', hint: 'chat', icon: ICON_ASK, run: () => { openPanel(); startNewChat(); } },
+    ];
+    QUICK_ACTIONS.forEach(qa => cmds.push({
+      label: qa.label, hint: 'quick action', icon: ICON_ASK,
+      run: () => { openPanel(); runQuickAction(qa); },
+    }));
+    cmds.push({ label: 'Book a demo', hint: 'navigate', icon: ICON_LINK, run: () => { window.location.href = '/booking.html'; } });
+    cmds.push({ label: 'View pricing', hint: 'navigate', icon: ICON_LINK, run: () => {
+      if (document.getElementById('pricing')) document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+      else window.location.href = '/#pricing';
+    } });
+    return cmds;
+  }
+
+  function filterCommands(query) {
+    const q = query.trim();
+    const base = baseCommands();
+    const matches = q
+      ? base.filter(c => c.label.toLowerCase().includes(q.toLowerCase()))
+      : base;
+    if (q) {
+      matches.push({ label: `Ask APEX: "${q}"`, hint: 'send', icon: ICON_ASK, run: () => { openPanel(); sendMessage(q); } });
+    }
+    return matches;
+  }
+
+  function renderCmdk() {
+    const cmds = filterCommands(cmdkInput.value);
+    cmdkActive = Math.min(cmdkActive, Math.max(cmds.length - 1, 0));
+    cmdkList.innerHTML = '';
+    if (!cmds.length) {
+      cmdkList.innerHTML = '<div class="cdb-cmdk-empty">No matching commands.</div>';
+      return;
+    }
+    cmds.forEach((c, i) => {
+      const item = document.createElement('div');
+      item.className = 'cdb-cmdk-item' + (i === cmdkActive ? ' cdb-cmdk-active' : '');
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', String(i === cmdkActive));
+      item.innerHTML = `<span class="cdb-cmdk-item-icon">${c.icon}</span><span>${escapeHtml(c.label)}</span><span class="cdb-cmdk-item-hint">${c.hint}</span>`;
+      // Hover only toggles the active class on existing nodes — never rebuilds
+      // the list here. A full renderCmdk() on mouseenter would replace the very
+      // node under the cursor mid-hover, which can make a click land on a
+      // stale/detached element (this actually broke automated clicks in testing).
+      item.addEventListener('mouseenter', () => {
+        if (cmdkActive === i) return;
+        const prev = cmdkList.querySelector('.cdb-cmdk-item.cdb-cmdk-active');
+        if (prev) { prev.classList.remove('cdb-cmdk-active'); prev.setAttribute('aria-selected', 'false'); }
+        item.classList.add('cdb-cmdk-active');
+        item.setAttribute('aria-selected', 'true');
+        cmdkActive = i;
+      });
+      item.addEventListener('click', () => { closeCmdk(); c.run(); });
+      cmdkList.appendChild(item);
+    });
+  }
+
+  function openCmdk() {
+    if (state.open) closePanel();
+    cmdkOverlay.classList.add('cdb-cp-open');
+    cmdkInput.value = '';
+    cmdkActive = 0;
+    renderCmdk();
+    setTimeout(() => cmdkInput.focus(), 30);
+  }
+  function closeCmdk() {
+    cmdkOverlay.classList.remove('cdb-cp-open');
+  }
+
+  cmdkInput.addEventListener('input', () => { cmdkActive = 0; renderCmdk(); });
+  cmdkInput.addEventListener('keydown', (e) => {
+    const cmds = filterCommands(cmdkInput.value);
+    if (e.key === 'ArrowDown') { e.preventDefault(); cmdkActive = Math.min(cmdkActive + 1, cmds.length - 1); renderCmdk(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); cmdkActive = Math.max(cmdkActive - 1, 0); renderCmdk(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const c = cmds[cmdkActive]; if (c) { closeCmdk(); c.run(); } }
+    else if (e.key === 'Escape') { e.preventDefault(); closeCmdk(); }
+  });
+  cmdkOverlay.addEventListener('click', (e) => { if (e.target === cmdkOverlay) closeCmdk(); });
+
   document.addEventListener('keydown', (e) => {
     const isK = e.key === 'k' || e.key === 'K';
     if (isK && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      state.open ? closePanel() : openPanel();
+      cmdkOverlay.classList.contains('cdb-cp-open') ? closeCmdk() : openCmdk();
     }
   });
 

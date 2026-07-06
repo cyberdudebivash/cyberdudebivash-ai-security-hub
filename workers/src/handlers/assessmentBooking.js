@@ -23,7 +23,7 @@ function json(data, status = 200) {
 }
 function err(msg, status = 400) { return json({ success: false, error: msg }, status); }
 
-const ASSESSMENT_PLANS = {
+export const ASSESSMENT_PLANS = {
   standard:   { price_inr: 9999,  label: 'Standard Assessment',   delivery_h: 72  },
   premium:    { price_inr: 19999, label: 'Premium Assessment',    delivery_h: 48  },
   enterprise: { price_inr: 49999, label: 'Enterprise Assessment', delivery_h: 24  },
