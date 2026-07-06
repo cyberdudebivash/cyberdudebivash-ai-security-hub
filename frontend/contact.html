@@ -1393,23 +1393,59 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
             submissions.push(formData);
             localStorage.setItem('contactSubmissions', JSON.stringify(submissions));
 
-            // Attempt to send to API
+            // Send to the real enterprise-inquiry endpoint. /api/leads/capture is a
+            // different feature (pre-results email gate: {email, scan_id, module}) —
+            // it doesn't accept or store name/phone/subject/message, and this form
+            // was sending it a field it doesn't even read (workEmail vs its `email`),
+            // so every submission 400'd invisibly. /api/enterprise/inquire is built
+            // for exactly this shape (company, name, email, message) and actually
+            // persists the lead.
+            const composedMessage = [
+                `Subject: ${formData.subject} (priority: ${formData.priority})`,
+                formData.phone ? `Phone/WhatsApp: ${formData.phone}` : null,
+                formData.hasEvidence ? 'Has screenshots/logs to share (will be sent after contact).' : null,
+                '',
+                formData.message,
+            ].filter(Boolean).join('\n');
+
+            let delivered = false;
             try {
-                const response = await fetch('/api/leads/capture', {
+                const response = await fetch('/api/enterprise/inquire', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify({
+                        company: formData.company,
+                        name: formData.fullName,
+                        email: formData.workEmail,
+                        message: composedMessage,
+                    })
                 });
+                const data = await response.json().catch(() => ({}));
+                delivered = response.ok && data.success === true;
             } catch (error) {
-                // API endpoint offline, stored locally
+                delivered = false;
             }
 
-            // Show success confirmation regardless of API response
-            const ticketNumber = 'CDB-' + new Date().getFullYear() + '-' + crypto.randomUUID().slice(0,8).toUpperCase();
-            document.getElementById('ticketNumber').textContent = ticketNumber;
-            document.getElementById('confirmationCard').classList.add('show');
+            // Only claim success if the message was actually delivered — showing a
+            // ticket number regardless of API response silently loses inquiries.
+            const confirmationCard = document.getElementById('confirmationCard');
+            if (delivered) {
+                const ticketNumber = 'CDB-' + new Date().getFullYear() + '-' + crypto.randomUUID().slice(0,8).toUpperCase();
+                confirmationCard.style.borderColor = '';
+                confirmationCard.innerHTML = '<h3>✅ Message Sent!</h3>' +
+                    '<p>We\'ll respond within 2-4 hours. Check your email and WhatsApp.</p>' +
+                    '<div class="ticket-number">Ticket: <span id="ticketNumber">' + ticketNumber + '</span></div>';
+            } else {
+                confirmationCard.style.borderColor = 'var(--danger)';
+                confirmationCard.innerHTML = '<h3 style="color:var(--danger)">⚠️ Message not delivered</h3>' +
+                    '<p>We could not deliver your message right now. Please reach us directly on ' +
+                    '<a href="https://wa.me/918179881447" target="_blank">WhatsApp</a> or email ' +
+                    '<a href="mailto:contact@cyberdudebivash.in">contact@cyberdudebivash.in</a> — ' +
+                    'your message has been saved in this browser so you can copy it across.</p>';
+            }
+            confirmationCard.classList.add('show');
 
             // Reset form
             document.getElementById('contactForm').reset();
