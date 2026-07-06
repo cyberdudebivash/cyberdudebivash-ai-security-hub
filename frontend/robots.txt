@@ -44,9 +44,18 @@ Allow: /api/atom
 Allow: /api/feed.json
 
 # ── Google-specific rules ─────────────────────────────────────────────────────
+# NOTE: a crawler that matches a named group ignores the "User-agent: *" group
+# entirely, so every public /api/* feed exception must be repeated in each
+# named group below (longest-match: Allow /api/rss beats Disallow /api/).
 User-agent: Googlebot
 Allow: /
 Allow: /og-image.png
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 Crawl-delay: 2
 
@@ -59,6 +68,12 @@ Allow: /public/assets/
 # ── Bing ──────────────────────────────────────────────────────────────────────
 User-agent: Bingbot
 Allow: /
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 Crawl-delay: 5
 
@@ -89,11 +104,23 @@ Allow: /blog/
 Allow: /cve/
 Allow: /intel
 Allow: /api-docs
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 Disallow: /admin-payments
 
 User-agent: Google-Extended
 Allow: /
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 Disallow: /admin-payments
 
@@ -101,16 +128,34 @@ User-agent: PerplexityBot
 Allow: /
 Allow: /blog/
 Allow: /cve/
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 
 User-agent: ClaudeBot
 Allow: /
 Allow: /blog/
 Allow: /cve/
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 
 User-agent: Applebot
 Allow: /
+Allow: /api/rss
+Allow: /api/atom
+Allow: /api/feed.json
+Allow: /api/ai-security/threat-feed
+Allow: /api/mcp-security/threats
+Allow: /api/vibe-code/patterns
 Disallow: /api/
 
 # ── Sitemaps ──────────────────────────────────────────────────────────────────

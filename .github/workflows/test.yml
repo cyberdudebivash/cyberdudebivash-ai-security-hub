@@ -53,6 +53,19 @@ jobs:
           done
           echo "All critical security headers present."
 
+  seo-lock:
+    name: SEO Structure & Meta Lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24" }
+      - name: Public-page structure lock (head/OG/JSON-LD placement)
+        run: node scripts/seo-structure-lock.mjs
+      - name: CVE meta integrity (no truncated/missing/inconsistent tags)
+        run: node scripts/repair-cve-meta.mjs --check
+
   # ── Accessibility (required) ─────────────────────────────────────────────
   a11y:
     name: Accessibility (axe)
