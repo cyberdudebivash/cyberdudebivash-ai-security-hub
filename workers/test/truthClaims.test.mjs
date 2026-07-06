@@ -23,6 +23,7 @@ const TRUST   = read('../../frontend/trust-center.html');
 const MARKET  = read('../../frontend/sentinel-apex-marketplace.html');
 const SUBPROC = read('../../SUB_PROCESSOR_LIST.md');
 const ROUTER  = read('../src/core/aiProviderRouter.js');
+const SEARCH_JS = read('../../frontend/global-search-v2.js');
 
 import { handleTrustCenter as handleEnterpriseTrustCenter } from '../src/handlers/enterprisePortalHandlers.js';
 
@@ -173,6 +174,36 @@ describe('index.html — Recent Scans badges reflect real severity, not static H
     expect(INDEX).toContain('bEl.textContent = rl');
     // The empty-row fill loop must reset the badge too.
     expect(INDEX).toMatch(/No recent scans[\s\S]{0,200}bEl\.textContent = '—'/);
+  });
+});
+
+describe('global search — real backend is actually reachable from the live page', () => {
+  // globalSearch.js (a real, D1-backed, unit-tested /api/search handler) had
+  // no live path to it: its only frontend consumer was never <script>-included
+  // anywhere, and that consumer's own DOM-readiness gate (#cdb-nav-actions)
+  // was produced by a second script that was ALSO never included anywhere.
+  // Locks both halves of the fix so this can't silently regress back to dark.
+  it('index.html includes the global-search script', () => {
+    expect(INDEX).toMatch(/<script src="\/global-search-v2\.js"/);
+  });
+
+  it('the nav-actions container carries the id global-search-v2.js waits for', () => {
+    expect(INDEX).toMatch(/class="nav-actions"\s+id="cdb-nav-actions"/);
+  });
+
+  it('a visible, labeled search trigger exists in the nav', () => {
+    expect(INDEX).toContain('id="cdb-search-trigger"');
+    expect(INDEX).toMatch(/aria-label="Search/);
+  });
+
+  it('the search UI is a hidden-by-default modal, not a permanently-docked bar (this page\'s top chrome is already full)', () => {
+    expect(SEARCH_JS).toContain("modal.style.cssText = 'display:none");
+    expect(SEARCH_JS).not.toMatch(/position:fixed;top:12px/);
+  });
+
+  it('exposes a stable open hook for the nav trigger and the Cmd/Ctrl+K shortcut', () => {
+    expect(SEARCH_JS).toContain('window.CDB_SEARCH_V2_OPEN = openModal');
+    expect(SEARCH_JS).toMatch(/e\.metaKey \|\| e\.ctrlKey/);
   });
 });
 

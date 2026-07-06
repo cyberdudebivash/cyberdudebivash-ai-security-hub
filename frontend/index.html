@@ -1131,7 +1131,9 @@ a{color:var(--accent);text-decoration:none}
 <a class="nav-cta" data-section="enterprise" href="#enterprise" onclick="cdbNavigate('enterprise');return false" style="background:linear-gradient(135deg,#00d4ff,#6366f1)!important;color:#000!important;font-weight:800!important;box-shadow:0 0 20px rgba(0,212,255,.3)!important">⚡ Book Demo</a>
 </div>
 <!-- Right actions: Notification Bell + Hamburger -->
-<div class="nav-actions" style="display:flex;align-items:center;gap:10px">
+<div class="nav-actions" id="cdb-nav-actions" style="display:flex;align-items:center;gap:10px">
+<!-- Global Search Trigger -->
+<button aria-label="Search (Ctrl/Cmd+K)" id="cdb-search-trigger" title="Search (Ctrl/Cmd+K)" style="background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.15);color:var(--text-muted);width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s">🔍</button>
 <!-- Notification Bell -->
 <div class="cdb-notif-bell-wrap" id="cdb-notif-wrap" style="position:relative">
 <button aria-label="Notifications" id="cdb-notif-bell" onclick="CDB_NOTIF.toggle()" style="background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.15);color:var(--text-muted);width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;position:relative">
@@ -23611,6 +23613,7 @@ function v21TriggerUrgencyPayment(){
   setInterval(load,5*60*1000);
 })();
 </script>
+<script src="/global-search-v2.js" defer></script>
 <script src="/assets/copilot-widget.js" defer></script>
 </body>
 </html>
