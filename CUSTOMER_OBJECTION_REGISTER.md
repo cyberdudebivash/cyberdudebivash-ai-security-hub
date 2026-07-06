@@ -182,7 +182,7 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 | **Root cause (audited production-first)** | `frontend/index.html` contained a premature **`</head></html>`** (~line 486) left over from a UX-layer injection: the document head — and the *document itself* — closed before a single Open Graph tag, Twitter Card tag, or JSON-LD block was emitted. All of OBJ-09's structured data was technically present but sat outside `<head>` and outside `</html>`, where Google's rich-result parser and most link-preview crawlers (WhatsApp, LinkedIn, Slack, Telegram) do not reliably read it. The file also never re-closed `</html>` at the end. Eleven additional public sitemap-listed pages (`upgrade`, `agent-threats`, `attack-library`, `api-docs`, `intel-hub`, `ai-governance-frameworks`, `gadgets`, `privacy-policy`, `refund-policy`, `terms-of-service`, `sitemap`) had **no OG/Twitter markup at all**, and three had no canonical. |
 | **Corrective action** | Homepage structure repaired: single `</head>` now closes after all metadata, immediately before `<body>`; final `</html>` restored; verified with a real HTML parser (html→head(og:title…)→body, properly nested). OG + Twitter Card + canonical + description injected on all 11 pages (CRLF preserved where original files used it). Organization JSON-LD enriched: official contact `contact@cyberdudebivash.in` + `contactPoint` (support/sales), `sameAs` extended (Medium, cyberdudebivash.com, blog), `knowsAbout` topics. Sitemap `lastmod` refreshed for every touched page. Locked by **`scripts/seo-structure-lock.mjs`** (22 public pages × structure/metadata/JSON-LD checks — also caught and fixed missing meta descriptions on `services` and `tools`). |
 | **Owner actions (no code can close)** | After deploy: Search Console → URL Inspection → Request Indexing for `/`; purge stale preview caches (Facebook Sharing Debugger "Scrape Again", LinkedIn Post Inspector, Telegram @WebpageBot); complete Bing Webmaster + Google Business Profile alignment. Full list: `SEO_VISIBILITY_PLAYBOOK.md`. |
-| **Verification status** | Structure lock ALL GREEN (22 pages); OBJ-09 lock still green (5/5); full workers suite 1316/1316. Live re-verification of served `<head>` required after the next deploy; rich-result appearance remains owner + crawl time. |
+| **Verification status** | Structure lock ALL GREEN (22 pages); OBJ-09 lock still green (5/5). **Live re-verification complete (2026-07-06, build `b493d871`):** served homepage has canonical/OG/Twitter/JSON-LD all **inside `<head>`** (byte-position checked), zero premature `</html>` before metadata, exactly one `</html>`; `/upgrade` now serves 12 OG tags; OBJ-09 truth markup confirmed live on apex **and** www (3/3 runs: no rating markup, `legalName` + full JAJPUR ROAD address served). One transient anomaly recorded: for a few minutes post-deploy the bare `/` served a stale pre-fix copy while other paths were current (Pages propagation); it self-resolved and the CEAP sweep now asserts homepage SEO truth every 6 h from the crawler's vantage. Rich-result appearance remains owner + crawl time. |
 
 ---
 
@@ -200,14 +200,31 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 
 ---
 
-## Trend (post-GA operations cycle, build `34cd6c5`)
+## OBJ-12 — "I'm signed in and every scan says my token was already used." · RESOLVED
 
-Lifetime: **11 objections — 9 RESOLVED (regression-locked), 1 ACCEPTED
+| Field | Detail |
+|-------|--------|
+| **Objection** | A logged-in customer clicks Scan and gets `403 — scan_token_invalid / token_already_used_or_expired` on a token their browser obtained **seconds earlier and never used**. The free conversion funnel — the platform's front door — fails for JWT users. API-key integrators were unaffected (exempt by design). |
+| **Persona** | Every browser-based user at the evaluation moment; detected synthetically by the CEAP sweep before any real customer hit it. |
+| **Business impact** | Funnel-breaking: the first product action fails with an accusatory error ("already used") that reads as the customer's fault. |
+| **Classification** | **Product (distributed-state defect)** — introduced with the scan-token anti-abuse enforcement (`b493d871`). |
+| **Root cause** | The single-use burn required read-your-write consistency from **eventually-consistent Workers KV**: verification's `kv.get` of the nonce record could not yet see issuance's unawaited `kv.put` (different invocation/edge cache), so a missing record was treated as proof of reuse. The test suite's perfectly-consistent KV mock masked it — the IR-1 lab-masking class, KV edition. |
+| **Corrective action** | `verifyScanToken` now fails **open** on a missing record (the HMAC proves the platform issued the token; TTL and IP-binding still enforce) and writes the replay tombstone itself with a full-validity-window TTL; only a visible `used` tombstone — a definite replay — rejects. CEAP sweep now exercises both real contracts (JWT + token handshake; `x-api-key` exempt path). Playbooks updated to state the contract. |
+| **Resolution evidence** | Locked by two eventual-consistency tests in `scanTokenEngine.test.mjs` (valid-when-record-invisible; replay-still-rejected-via-tombstone) — the pre-fix code fails both. Live production re-verification at the release gate (JWT+token scan → 200 with `scan_id`, report 201). Full incident record: IR-3 in `OPERATIONAL_EXCELLENCE_REPORT.md` §4 — **first monitoring-first detection** (CEAP sweep, ~11 min after the regressing deploy). |
+
+---
+
+## Trend (CEAP continuous cycle, build `b493d871` + IR-3 fix)
+
+Lifetime: **12 objections — 10 RESOLVED (regression-locked), 1 ACCEPTED
 boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the
 first **owner-reported real-world** objections — exactly the Voice-of-Customer
 intake CEAP was built for. OBJ-10 shows why re-observation matters: OBJ-09's
 markup was correct but structurally unreadable, caught only because the owner
-re-checked production. The first full post-GA lifecycle
+re-checked production. OBJ-12 is the first objection **detected by monitoring
+before any human** — the CEAP sweep flagged the broken scan funnel ~11 minutes
+after the regressing deploy (IR-3). Detection is trending the right way:
+customer-reported → owner-reported → machine-detected. The first full post-GA lifecycle
 pass (onboarding → scan → report → AI → org → upgrade-to-payment-gate → key
 rotation → recovery → offboarding, all live) surfaced **zero new
 objections** — the first cycle with no new product defect. All open friction

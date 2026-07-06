@@ -141,6 +141,32 @@ describe('verifyScanToken', () => {
     const result = await verifyScanToken(scanReqWithToken(token, '1.2.3.4'), brokenEnv);
     expect(result.valid).toBe(true);
   });
+
+  // ── IR-3 lock: Workers KV eventual consistency ─────────────────────────────
+  // Live incident (2026-07-06, caught by the CEAP sweep ~11 min after deploy):
+  // every first-use JWT browser scan 403'd `token_already_used_or_expired`
+  // because verify's kv.get() could not yet see issue's unawaited kv.put()
+  // (different invocation / edge cache — KV is eventually consistent). The
+  // perfectly-consistent kvStub in this file masked it. A missing record must
+  // fail OPEN (the HMAC proves issuance; TTL + IP bind it); only a visible
+  // used tombstone proves replay.
+  it('accepts a cryptographically valid token whose issuance record is not yet visible in KV (eventual consistency)', async () => {
+    const issueEnv = { SECURITY_HUB_KV: kvStub() };
+    const token = await getToken(issueEnv, '1.2.3.4');
+    const verifyEnv = { SECURITY_HUB_KV: kvStub() }; // fresh store: put not propagated
+    const result = await verifyScanToken(scanReqWithToken(token, '1.2.3.4'), verifyEnv);
+    expect(result.valid).toBe(true);
+  });
+
+  it('still rejects replay after an eventual-consistency first use (tombstone written by verify itself)', async () => {
+    const issueEnv  = { SECURITY_HUB_KV: kvStub() };
+    const token = await getToken(issueEnv, '1.2.3.4');
+    const verifyEnv = { SECURITY_HUB_KV: kvStub() };
+    expect((await verifyScanToken(scanReqWithToken(token, '1.2.3.4'), verifyEnv)).valid).toBe(true);
+    const replay = await verifyScanToken(scanReqWithToken(token, '1.2.3.4'), verifyEnv);
+    expect(replay.valid).toBe(false);
+    expect(replay.reason).toBe('token_already_used');
+  });
 });
 
 describe('scanTokenError', () => {

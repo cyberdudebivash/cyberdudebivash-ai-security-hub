@@ -53,6 +53,15 @@ session-token scan does not). Dashboard/session activity appears in
 `GET /api/history` instead. Both views are correct — they answer different
 questions.
 
+### "Scan says my token is invalid / already used"
+Domain scans from a **session (JWT)** require the anti-abuse handshake:
+`POST /api/scan/token` → send as `X-Scan-Token` (single-use, 5-min TTL,
+IP-bound). The dashboard UI does this automatically; **API-key callers are
+exempt** — integrators should use `x-api-key`. A first-use token rejected as
+`token_already_used_or_expired` was IR-3 (KV eventual consistency, fixed +
+locked); if it recurs, escalate with the `request_id`
+(locks: `scanTokenEngine.test.mjs` eventual-consistency pair).
+
 ### "My report says the scan doesn't exist" (422)
 Historic S1 (Phase VIII, fixed): body `scan_id` must equal the `X-Scan-ID`
 header. If a 422 recurs with matching ids inside the retention window

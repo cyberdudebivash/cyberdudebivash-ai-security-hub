@@ -159,19 +159,32 @@ export async function verifyScanToken(request, env) {
     return { valid: false, reason: 'ip_mismatch' };
   }
 
-  // ── Single-use burn (KV) ──────────────────────────────────────────────────
+  // ── Single-use burn (KV, best-effort) ─────────────────────────────────────
+  // Workers KV is EVENTUALLY consistent: the nonce record written by
+  // issueScanToken() (an unawaited put, possibly on another edge cache) is
+  // not guaranteed visible here seconds later. A missing record therefore
+  // does NOT prove reuse — the HMAC already proves this token was issued by
+  // us, the TTL bounds it, and the IP hash binds it. Treat "record not
+  // found" like the existing "KV unavailable" branch (fail open) and write
+  // the burn tombstone ourselves; only a record explicitly marked used — a
+  // definite, visible replay — rejects. The tombstone must outlive the
+  // token's whole validity window, or a replay after tombstone expiry would
+  // pass as "not found → open". (Found live by the CEAP sweep: every JWT
+  // browser scan 403'd token_already_used_or_expired on FIRST use; the
+  // perfectly-consistent KV mock in tests had masked it.)
   const kv = env.SECURITY_HUB_KV;
   if (kv) {
     const kvKey = `${TOKEN_KV_PREFIX}${nonce}`;
     try {
       const raw = await kv.get(kvKey);
-      if (!raw) return { valid: false, reason: 'token_already_used_or_expired' };
-      const rec = JSON.parse(raw);
-      if (rec.used)    return { valid: false, reason: 'token_already_used' };
-
-      // Burn immediately
-      await kv.put(kvKey, JSON.stringify({ ...rec, used: true }),
-        { expirationTtl: 30 });  // keep tombstone for 30s to prevent replay race
+      if (raw) {
+        const rec = JSON.parse(raw);
+        if (rec.used) return { valid: false, reason: 'token_already_used' };
+      }
+      // Burn immediately — also creates the tombstone when the issue-side
+      // write hasn't propagated to this edge yet.
+      await kv.put(kvKey, JSON.stringify({ ipHash, issuedAt, used: true }),
+        { expirationTtl: TOKEN_TTL_SEC });
     } catch {
       // KV unavailable — fall through (fail-open for availability, log for monitoring)
       console.warn('[ScanToken] KV unavailable during burn — allowing request');

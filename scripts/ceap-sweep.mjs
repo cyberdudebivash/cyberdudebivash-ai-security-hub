@@ -55,12 +55,22 @@ await step('entitlements truthful', 200, async () => {
   return { status: ok ? r.status : 599, note: `reports=${d.features?.reports} ai=${d.features?.ai_analyze} apiV1=${d.features?.api_access}` };
 });
 
-await step('domain scan (id contract)', 200, async () => {
-  const r = await fetch(`${BASE}/api/scan/domain`, { method: 'POST', headers: H, body: JSON.stringify({ domain: 'iana.org' }) });
+await step('domain scan (browser contract: token handshake)', 200, async () => {
+  // Real browser flow (index.html executeScan): POST /api/scan/token, then
+  // scan with X-Scan-Token. IR-3 locked the KV eventual-consistency fail-open.
+  const tokRes = await fetch(`${BASE}/api/scan/token`, { method: 'POST' });
+  const tok = (await tokRes.json()).token;
+  const r = await fetch(`${BASE}/api/scan/domain`, { method: 'POST', headers: { ...H, 'X-Scan-Token': tok || '' }, body: JSON.stringify({ domain: 'iana.org' }) });
   scan = await r.json();
   const hdr = r.headers.get('X-Scan-ID');
-  const ok = scan.scan_id && (!hdr || hdr === scan.scan_id);
-  return { status: ok ? r.status : 598, note: `scan_id=${(scan.scan_id || '').slice(0, 14)} header_match=${!hdr || hdr === scan.scan_id}` };
+  const ok = tokRes.status === 200 && scan.scan_id && (!hdr || hdr === scan.scan_id);
+  return { status: ok ? r.status : 598, note: `token=${tokRes.status} scan_id=${(scan.scan_id || '').slice(0, 14)} reason=${scan.reason || '-'}` };
+});
+
+await step('domain scan (integrator contract: x-api-key exempt)', 200, async () => {
+  const r = await fetch(`${BASE}/api/scan/domain`, { method: 'POST', headers: { ...J, 'x-api-key': su.api_key }, body: JSON.stringify({ domain: 'example.com' }) });
+  const s = await r.json();
+  return { status: s.scan_id ? r.status : 591, note: `scan_id=${(s.scan_id || '').slice(0, 14)}` };
 });
 
 await step('report generate (IR-1 class)', 201, async () => {
@@ -119,6 +129,23 @@ await step('offboarding + lockout', 200, async () => {
   const r = await fetch(`${BASE}/api/auth/delete-account`, { method: 'DELETE', headers: H });
   const login = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: J, body: JSON.stringify({ email, password }) });
   return { status: login.status === 401 ? r.status : 593, note: `post_delete_login=${login.status}` };
+});
+
+// Homepage SEO truth (OBJ-09/OBJ-10 class): the discovery incidents showed the
+// LIVE homepage can diverge from the deployed artifact (stale-root propagation)
+// and that metadata can be structurally invisible (premature </head>). Assert
+// from the crawler's vantage: truthful Organization markup, no fabricated
+// review markup, metadata inside <head>, and the preview image reachable.
+await step('homepage SEO truth (OBJ-09/10)', 200, async () => {
+  const r = await fetch(`${BASE}/`, { headers: { Accept: 'text/html' } });
+  const html = await r.text();
+  const headClose = html.indexOf('</head>');
+  const ldInHead = html.indexOf('application/ld+json') > -1 && html.indexOf('application/ld+json') < headClose;
+  const ogInHead = html.indexOf('property="og:') > -1 && html.indexOf('property="og:') < headClose;
+  const truthful = html.includes('"legalName": "CYBERDUDEBIVASH PRIVATE LIMITED"') && !html.includes('AggregateRating');
+  const ogImg = await fetch(`${BASE}/og-image-v2.png`, { method: 'HEAD' });
+  const ok = ldInHead && ogInHead && truthful && ogImg.status === 200;
+  return { status: ok ? r.status : 592, note: `ld_in_head=${ldInHead} og_in_head=${ogInHead} truthful=${truthful} og_image=${ogImg.status}` };
 });
 
 console.log(`\nCEAP sweep — ${BASE} — ${new Date().toISOString()}\n`);

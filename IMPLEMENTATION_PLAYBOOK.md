@@ -12,7 +12,7 @@
 |------|--------|-------------------|
 | 1 | `POST /api/auth/signup` (email, password, full_name) | 201; returns session token **and** an auto-issued API key (`api_key` + `api_key_note` + `next_steps`) — save the key now, it is shown once |
 | 2 | Review plan + entitlements: `GET /api/user/plan` | Advertised features equal enforcement (regression-locked) |
-| 3 | First scan: `POST /api/scan` (or dashboard UI) | Result includes `scan_id` == `X-Scan-ID` header; unmeasurable targets return `grade: null`, `risk: UNKNOWN` — the platform does not fabricate |
+| 3 | First scan — dashboard UI (handles the anti-abuse handshake automatically), or programmatically: with your API key `POST /api/scan/domain` + `x-api-key` header (**exempt** from the scan token); with a session JWT you must first `POST /api/scan/token` and send the result as `X-Scan-Token` (single-use, 5-min TTL, IP-bound) | Result includes `scan_id` == `X-Scan-ID` header; unmeasurable targets return `grade: null`, `risk: UNKNOWN` — the platform does not fabricate |
 | 4 | First report: `POST /api/report/generate` with that `scan_id` | 201 + download URL; works for cached (repeat) domains too |
 | 5 | AI insight: `POST /api/ai/analyze` | Available on FREE; `simulate`/`forecast` require PRO (402 names the plan) |
 | 6 | Create the organization: `POST /api/orgs` | 201 with org id, slug, plan limits |
