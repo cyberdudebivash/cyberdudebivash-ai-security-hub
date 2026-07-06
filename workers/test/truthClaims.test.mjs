@@ -24,6 +24,27 @@ const MARKET  = read('../../frontend/sentinel-apex-marketplace.html');
 const SUBPROC = read('../../SUB_PROCESSOR_LIST.md');
 const ROUTER  = read('../src/core/aiProviderRouter.js');
 
+import { handleTrustCenter as handleEnterpriseTrustCenter } from '../src/handlers/enterprisePortalHandlers.js';
+
+// Permissive D1/KV stubs — this suite only cares about response *content*,
+// not the underlying metric numbers (those are covered by
+// trustMetricsContract.test.mjs).
+function stubEnv() {
+  const row = { cnt: 0, v: 0, checks: 0, ok_checks: 0 };
+  return {
+    DB: {
+      prepare() {
+        return {
+          bind() { return this; },
+          async first(col) { return col ? row[col] : row; },
+          async all() { return { results: [] }; },
+        };
+      },
+    },
+    SECURITY_HUB_KV: { async get() { return null; }, async put() {} },
+  };
+}
+
 describe('index.html — Security Transparency block tells the truth', () => {
   it('no longer claims zero data collection on scan targets (scan_history stores them)', () => {
     expect(INDEX).not.toContain('Zero data collection on scan targets');
@@ -152,5 +173,41 @@ describe('index.html — Recent Scans badges reflect real severity, not static H
     expect(INDEX).toContain('bEl.textContent = rl');
     // The empty-row fill loop must reset the badge too.
     expect(INDEX).toMatch(/No recent scans[\s\S]{0,200}bEl\.textContent = '—'/);
+  });
+});
+
+describe('GET /api/trust-center (enterprisePortalHandlers) — no fabricated compliance claims', () => {
+  // This route (not /api/trust/center) is the one frontend/trust-center.html
+  // actually fetches. It used to assert a specific false SOC 2/ISO 27001 audit
+  // timeline and a hardcoded uptime figure — this locks the fix so a second,
+  // divergent trust-center handler can never drift back into fabrication.
+  const req = new Request('https://cyberdudebivash.in/api/trust-center');
+
+  it('never claims a SOC 2 audit is in progress or scheduled for a specific quarter', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    const soc2 = body.compliance_status.frameworks.find(f => f.framework === 'SOC 2 Type II');
+    expect(soc2.status).not.toBe('In Progress');
+    expect(soc2.evidence).not.toMatch(/Q[1-4]\s*20\d\d/);
+  });
+
+  it('never claims an ISO 27001 gap assessment was completed', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    const iso = body.compliance_status.frameworks.find(f => f.framework === 'ISO 27001');
+    expect(iso.evidence).not.toBe('Gap assessment completed');
+  });
+
+  it('does not expose a certifications_planned field with fabricated dates', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    expect(body.compliance_status.certifications_planned).toBeUndefined();
+  });
+
+  it('names Groq, not only Anthropic, as the primary AI sub-processor', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    expect(body.privacy_practices.subprocessors.join(' ')).toContain('Groq');
+  });
+
+  it('platform_uptime is not a hardcoded marketing percentage', async () => {
+    const body = await (await handleEnterpriseTrustCenter(req, stubEnv(), {})).json();
+    expect(body.platform_stats.platform_uptime).not.toBe('99.9%+ (Cloudflare edge)');
   });
 });

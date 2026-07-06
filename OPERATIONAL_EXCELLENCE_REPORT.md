@@ -45,7 +45,7 @@ and it is still an excellent first-session experience.
 | External uptime probe | `external-uptime-probe.yml` 5 scheduled runs, latest **success** (17:18 UTC today) | OPERATING |
 | Restore drill | **Armed, never yet run** — first schedule fires Monday 05:00 UTC; manual dispatch attempted by this board and denied (integration lacks `workflow_dispatch` permission — owner-only). Restore script itself is regression-tested both directions (`workers/test/restoreDrill.test.mjs`) | ARMED / FIRST RUN PENDING |
 | Deploy discipline | 7 consecutive green gated deploys today (#618–#624), each: test gate → deploy → post-deploy smoke; three releases this cycle went through the identical path with zero manual intervention | OPERATING |
-| Rollback | Documented (`DEPLOY_RECOVERY_RUNBOOK.md`); mechanism is the same pipeline (fast-forward to a known-good commit) — exercised implicitly by every deploy; no live rollback has been needed post-GA | DOCUMENTED, UNEXERCISED LIVE |
+| Rollback | Documented (`DEPLOY.md`); mechanism is the same pipeline (fast-forward to a known-good commit) — exercised implicitly by every deploy; no live rollback has been needed post-GA | DOCUMENTED, UNEXERCISED LIVE |
 | Detection | External probe (availability) + post-deploy smoke (deploy sanity) + **CEAP synthetic customer sweep every 6 h** (`ceap-assurance.yml` running `scripts/ceap-sweep.mjs`: 13 lifecycle checks incl. the exact IR-1/IR-2 journeys; a FAIL = production incident). Error-rate alerting/APM still absent — CEAP catches journey breakage within 6 h, not error spikes between sweeps | PARTIALLY CLOSED (journey half); CI-1 (alerting half) remains |
 
 ## 3. Support documentation accuracy audit
