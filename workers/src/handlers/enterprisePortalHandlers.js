@@ -12,6 +12,7 @@
  */
 
 import { callClaude } from '../core/mythosAIProvider.js';
+import { handleTrustMetrics } from './trustCenter.js';
 
 function ok(data, status = 200) { return Response.json(data, { status }); }
 
@@ -53,6 +54,16 @@ async function getLivePlatformMetrics(env) {
 export async function handleTrustCenter(request, env, authCtx) {
   const m = await getLivePlatformMetrics(env);
 
+  // Real, measured uptime (same source as /api/trust/center) — never a
+  // marketing percentage. Falls back to an honest "not measured" label
+  // rather than asserting a number nothing backs.
+  let uptimeLabel = 'Not yet independently measured (Cloudflare edge network)';
+  try {
+    const metricsRes = await handleTrustMetrics(request, env);
+    const { metrics } = await metricsRes.json();
+    if (typeof metrics?.uptime_pct === 'number') uptimeLabel = `${metrics.uptime_pct}% (measured, trailing 30 days)`;
+  } catch { /* keep the honest default above */ }
+
   return ok({
     success:    true,
     service:    'CDB-TRUST-001',
@@ -87,21 +98,31 @@ export async function handleTrustCenter(request, env, authCtx) {
       data_not_collected:   'No PII from scan targets, no tracking pixels, no third-party analytics',
       data_retention:       'Account data retained until deletion; scan results retained 90 days',
       data_deletion:        'Account deletion available via support — all data purged within 30 days',
-      subprocessors:        ['Cloudflare (infrastructure)', 'Anthropic (AI processing — no training on your data)', 'Razorpay (payment processing)'],
-      ai_data_policy:       'AI prompts sent to Anthropic API are NOT used for model training (Anthropic API terms)',
+      subprocessors:        [
+        'Cloudflare (infrastructure — Workers, D1, KV, CDN, DDoS protection)',
+        'Groq (primary AI/LLM inference)',
+        'Cloudflare Workers AI, DeepSeek, OpenRouter, Together AI, Anthropic (AI/LLM inference fallbacks, used only if the primary provider is unavailable — none train on your data)',
+        'Razorpay (payment processing)',
+        'Telegram (internal admin alerts only — no customer data)',
+      ],
+      ai_data_policy:       'AI prompts are routed to whichever configured provider is available (see Sub-Processor List); none train on your data',
     },
 
+    // Compliance claims must never exceed real, verified status — no auditor
+    // is currently engaged for SOC 2 or ISO 27001 (GENERAL_AVAILABILITY_REPORT.md
+    // GA-O4). Mirrors trustCenter.js's honest framing; do not reintroduce
+    // "In Progress"/dated certification claims without a named third-party
+    // engagement as evidence.
     compliance_status: {
       frameworks: [
         { framework: 'OWASP Top 10',        status: 'Implemented',    evidence: 'Input validation, parameterized queries, auth hardening' },
         { framework: 'OWASP LLM Top 10',    status: 'Implemented',    evidence: 'AI SPM product suite — full assessment available' },
         { framework: 'NIST CSF 2.0',        status: 'Aligned',        evidence: 'Identify/Protect/Detect/Respond/Recover controls active' },
-        { framework: 'SOC 2 Type II',        status: 'In Progress',    evidence: 'Controls implemented; formal audit Q3 2026' },
-        { framework: 'ISO 27001',            status: 'Planning',       evidence: 'Gap assessment completed' },
+        { framework: 'SOC 2 Type II',        status: 'Planning',      evidence: 'Security controls implemented; no third-party SOC 2 audit engaged yet' },
+        { framework: 'ISO 27001',            status: 'Planning',      evidence: 'ISO 27001 controls referenced in security architecture; formal certification not yet started' },
         { framework: 'GDPR',                 status: 'Aligned',        evidence: 'Data minimization, consent, deletion rights implemented' },
         { framework: 'CCPA',                 status: 'Aligned',        evidence: 'Privacy policy + data deletion rights available' },
       ],
-      certifications_planned: ['SOC 2 Type II — Q3 2026', 'ISO 27001 — Q4 2026'],
     },
 
     vulnerability_disclosure: {
@@ -117,7 +138,7 @@ export async function handleTrustCenter(request, env, authCtx) {
       threat_actors_tracked: m.threat_actors,
       cves_in_database:    m.cves_tracked,
       ai_defense_tools:    m.mythos_tools,
-      platform_uptime:     '99.9%+ (Cloudflare edge)',
+      platform_uptime:     uptimeLabel,
     },
 
     trust_signals: [

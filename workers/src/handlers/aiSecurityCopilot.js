@@ -1275,7 +1275,7 @@ async function logToolCall(env, toolName, userId, sessionId) {
 }
 
 // ─── Tool executor ─────────────────────────────────────────────────────────────
-async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId) {
+export async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId) {
   // Fire-and-forget telemetry
   logToolCall(env, toolName, userId, sessionId).catch(() => {});
 
@@ -1632,7 +1632,12 @@ async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId)
         const { handleInvestigationSummary } = await import('./socInvestigations.js');
         const caseId = toolInput.case_id || '';
         const req = new Request(`https://internal/api/soc/inv/${caseId}/summary`, { method: 'GET' });
-        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user', org_id: authCtx?.orgId || 'default' };
+        // authCtx already carries the real org_id (snake_case) — do not
+        // restate it under the camelCase `orgId` key here, that field is
+        // never set and previously silently rescoped every copilot-mediated
+        // SOC lookup to a shared 'default' tenant (same bug class middleware.js
+        // withAuthAliases() already fixed for the direct HTTP route).
+        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user' };
         return (await handleInvestigationSummary(req, env)).json();
       }
 
@@ -1644,7 +1649,12 @@ async function executeTool(toolName, toolInput, env, authCtx, userId, sessionId)
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason: toolInput.reason, assignee_id: toolInput.assignee_id }),
         });
-        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user', org_id: authCtx?.orgId || 'default' };
+        // authCtx already carries the real org_id (snake_case) — do not
+        // restate it under the camelCase `orgId` key here, that field is
+        // never set and previously silently rescoped every copilot-mediated
+        // SOC lookup to a shared 'default' tenant (same bug class middleware.js
+        // withAuthAliases() already fixed for the direct HTTP route).
+        req.user = { ...authCtx, authenticated: true, role: authCtx?.isAdmin ? 'admin' : 'user' };
         return (await handleEscalateCase(req, env)).json();
       }
 

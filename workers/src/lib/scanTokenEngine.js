@@ -147,8 +147,13 @@ export async function verifyScanToken(request, env) {
   if (!sigOk) return { valid: false, reason: 'invalid_signature' };
 
   // ── IP binding check ──────────────────────────────────────────────────────
+  // Fallback must match issueScanToken()'s exactly ('unknown', not '') — a
+  // divergent fallback here hashes to a different value than the one baked
+  // into the token, so every caller lacking CF-Connecting-IP would get a
+  // false ip_mismatch. Only caught now because this function was never
+  // actually called from anywhere before this gate went live.
   const callerIP     = request.headers.get('CF-Connecting-IP') ||
-                       request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || '';
+                       request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
   const callerIPHash = hashIP(callerIP);
   if (callerIPHash !== ipHash) {
     return { valid: false, reason: 'ip_mismatch' };

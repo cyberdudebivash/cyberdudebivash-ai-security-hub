@@ -19,8 +19,14 @@ import {
   buildSuggestedActions,
   handleCopilotQuickAction,
   handleCopilotChatStream,
+  executeTool,
   TOOL_REGISTRY,
 } from '../src/handlers/aiSecurityCopilot.js';
+
+vi.mock('../src/handlers/socInvestigations.js', () => ({
+  handleInvestigationSummary: vi.fn(async (req) => Response.json({ received_org_id: req.user.org_id })),
+  handleEscalateCase:         vi.fn(async (req) => Response.json({ received_org_id: req.user.org_id })),
+}));
 
 function sseBody(lines) {
   const encoder = new TextEncoder();
@@ -376,5 +382,27 @@ describe('handleCopilotChatStream — SSE endpoint smoke test', () => {
     const res = await handleCopilotChatStream(req, env, { tier: 'FREE', userId });
     const events = await collectSSE(res);
     expect(events.some(e => e.type === 'error' && e.data.error === 'rate_limit_exceeded')).toBe(true);
+  });
+});
+
+describe('executeTool — SOC tool dispatch preserves the caller\'s real org_id', () => {
+  // Regression lock: get_soc_investigation/escalate_soc_case used to build an
+  // internal request with `org_id: authCtx?.orgId || 'default'` — `orgId`
+  // (camelCase) is never set anywhere, so every copilot-mediated SOC lookup
+  // was silently rescoped to a shared 'default' tenant regardless of the
+  // caller's real org — the same leak class middleware.js's withAuthAliases()
+  // already fixed once for the direct HTTP route.
+  const realAuthCtx = { org_id: 'u:real-org-123', user_id: 'u1', isAdmin: false };
+
+  it('get_soc_investigation passes the real org_id through, not "default"', async () => {
+    const result = await executeTool('get_soc_investigation', { case_id: 'c1' }, {}, realAuthCtx, 'u1', 'sess1');
+    expect(result.received_org_id).toBe('u:real-org-123');
+    expect(result.received_org_id).not.toBe('default');
+  });
+
+  it('escalate_soc_case passes the real org_id through, not "default"', async () => {
+    const result = await executeTool('escalate_soc_case', { case_id: 'c1', reason: 'test' }, {}, realAuthCtx, 'u1', 'sess1');
+    expect(result.received_org_id).toBe('u:real-org-123');
+    expect(result.received_org_id).not.toBe('default');
   });
 });

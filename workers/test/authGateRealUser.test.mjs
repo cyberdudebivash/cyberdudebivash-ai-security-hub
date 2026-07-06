@@ -76,11 +76,43 @@ describe('migrated route gates — anonymous callers get 401', () => {
   });
 
   it('the anonymous scan funnel is NOT gated (free-tier product entry point)', async () => {
+    // Anonymous callers must be able to obtain a scan token AND complete a scan
+    // without ever authenticating — the P1 scan-token gate (runSyncPipeline)
+    // must share one env/KV across both calls, exactly like production.
+    const sharedEnv = env();
+    const tokRes = await worker.fetch(new Request('https://cyberdudebivash.in/api/scan/token', { method: 'POST' }), sharedEnv, ctxStub());
+    expect(tokRes.status).toBe(200);
+    const { token } = await tokRes.json();
+    expect(token).toBeTruthy();
+
+    const res = await worker.fetch(new Request('https://cyberdudebivash.in/api/scan/domain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Scan-Token': token },
+      body: JSON.stringify({ domain: 'example.com' }),
+    }), sharedEnv, ctxStub());
+    // Must never be 401 (auth) or the scan-token 403 — anonymous scanning,
+    // now token-gated against abuse, is still the deliberate FREE funnel once
+    // a fresh token is presented.
+    expect(res.status).not.toBe(401);
+    if (res.status === 403) expect((await res.json()).error).not.toBe('scan_token_invalid');
+  });
+
+  it('anonymous scan WITHOUT a token is rejected with a clear, actionable error (P1 abuse gate)', async () => {
     const res = await anon('/api/scan/domain', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: 'example.com' }),
     });
-    // Must never be 401 — anonymous scanning is the deliberate FREE funnel.
-    expect(res.status).not.toBe(401);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe('scan_token_invalid');
+    expect(body.reason).toBe('missing_scan_token');
+    expect(body.hint).toMatch(/scan\/token/);
+  });
+
+  it('api_key callers are exempt from the scan-token gate (already identified + quota-gated)', async () => {
+    const res = await worker.fetch(new Request('https://cyberdudebivash.in/api/scan/domain', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': 'test-admin-key-123' }, body: JSON.stringify({ domain: 'example.com' }),
+    }), env({ ADMIN_KEY: 'test-admin-key-123' }), ctxStub());
+    if (res.status === 403) expect((await res.json()).error).not.toBe('scan_token_invalid');
   });
 });
 
