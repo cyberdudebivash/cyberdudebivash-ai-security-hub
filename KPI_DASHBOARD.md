@@ -24,7 +24,7 @@
 | Documentation accuracy | Audited against live production; 2 imprecisions found and corrected in the last audit (429 headers, key-usage semantics); 0 known open drifts | OER §3 audit table | Per ops cycle |
 | AI confidence calibration | **UNKNOWN** — confidence is reported (e.g. 94) and grounding/honesty are regression-locked, but no calibration eval harness exists (backlog E-4) | `mythosAnalystGrounding`, live analyze probes | When eval harness ships |
 | Deployment success rate | **100% recent window** — 9 consecutive green gated deploys (#618–#626), incl. 5 same-day releases through test→deploy→smoke | GitHub Actions deploy.yml history | Per deploy |
-| Recovery drill success rate | **UNKNOWN — first drill has never run**; scheduled Monday 05:00 UTC; restore script regression-tested both directions | `d1-restore-drill.yml` (0 runs); `restoreDrill.test.mjs` | Weekly (scheduled) |
+| Recovery drill success rate | **100% (1/1)** — first scheduled run (2026-07-06 08:56 UTC) restored the latest real nightly backup artifact and passed integrity + table-count checks in 26s; restore script regression-tested both directions | `d1-restore-drill.yml` run #1 (`28779799461`, all 7 steps green); `restoreDrill.test.mjs` | Weekly (scheduled) |
 | Release blocker aging | 5 open blockers (GA-O1…O5), **all owner-action, all aged 0 days** (opened 2026-07-04); 0 open code-level blockers | GA Blocker Board (`GENERAL_AVAILABILITY_REPORT.md` §5) | Weekly (CORB) |
 
 ## Reading this dashboard
