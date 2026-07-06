@@ -147,7 +147,7 @@ footer{text-align:center;padding:32px;color:var(--muted);font-size:12px;border-t
   <div>
     <!-- Auth warning (shown if 401) -->
     <div class="auth-warn" id="auth-warn">
-      ⚠️ <strong>Authentication required.</strong> Please <a href="/login" style="color:var(--yellow);font-weight:700">sign in</a> or provide an API key to use the Multi-Agent SOC.
+      ⚠️ <strong>Authentication required.</strong> Please <a href="/user-dashboard.html" style="color:var(--yellow);font-weight:700">sign in</a> or provide an API key to use the Multi-Agent SOC.
     </div>
 
     <div class="task-box">
@@ -388,7 +388,7 @@ function handleUnauth() {
   document.getElementById('auth-warn').style.display = 'block';
   document.getElementById('results-container').innerHTML = `
     <div style="padding:20px;color:var(--yellow);background:rgba(250,204,21,.06);border:1px solid rgba(250,204,21,.2);border-radius:10px;font-size:13px">
-      ⚠️ Authentication required. <a href="/login" style="color:var(--yellow);font-weight:700">Sign in</a> to use the Multi-Agent SOC.
+      ⚠️ Authentication required. <a href="/user-dashboard.html" style="color:var(--yellow);font-weight:700">Sign in</a> to use the Multi-Agent SOC.
     </div>`;
 }
 

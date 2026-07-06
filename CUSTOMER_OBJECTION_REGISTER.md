@@ -214,21 +214,49 @@ Phase X GA Board (verified against **live production**, build `bf12e10`):
 
 ---
 
-## Trend (CEAP continuous cycle, build `b493d871` + IR-3 fix)
+## OBJ-13 — "A lot of your internal links go to dead pages — Privacy, Terms, Dashboard, API Docs, Sign in…" · RESOLVED (code) / live verification = pending deploy
 
-Lifetime: **12 objections — 10 RESOLVED (regression-locked), 1 ACCEPTED
-boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the
-first **owner-reported real-world** objections — exactly the Voice-of-Customer
-intake CEAP was built for. OBJ-10 shows why re-observation matters: OBJ-09's
-markup was correct but structurally unreadable, caught only because the owner
-re-checked production. OBJ-12 is the first objection **detected by monitoring
-before any human** — the CEAP sweep flagged the broken scan funnel ~11 minutes
-after the regressing deploy (IR-3). Detection is trending the right way:
-customer-reported → owner-reported → machine-detected. The first full post-GA lifecycle
-pass (onboarding → scan → report → AI → org → upgrade-to-payment-gate → key
-rotation → recovery → offboarding, all live) surfaced **zero new
-objections** — the first cycle with no new product defect. All open friction
-is now organizational (owner actions GA-O1…O5), none code-closable.
+| Field | Detail |
+|-------|--------|
+| **Objection** | A systematic crawl of every internal `href` across all 78 `frontend/*.html` pages against live production found **20 unique dead destination paths**, appearing as **38 individual link instances across 22 pages**. The two highest-impact clusters: (1) the footer "Privacy"/"Terms" links — a security vendor's own legal/trust pages — 404'd on five public marketing pages plus both checkout-consent checkboxes on the MSSP onboarding page; (2) "Dashboard"/upgrade CTAs 404'd on six pages (cloud-security, compliance-management, security-automation, threat-hunting, billing-portal, enterprise-kpi-dashboard). Smaller instances: the footer "📡 API Docs" link (7 pages, see below), "Sign in" on soc-agents.html (2 places), "Go to MSSP Dashboard" on mssp-onboarding.html (2 places), and four entries on the site's own `sitemap.html` (Compliance Center, CVE Database ×2, Customer Success, Manage API Keys). |
+| **Persona** | Every visitor across 22 public pages; procurement/legal reviewers specifically for the Privacy/Terms links; developers for API Docs; any returning user for Dashboard/Sign-in. |
+| **Business impact** | For a security vendor, a dead Privacy Policy / Terms of Service link at the exact moment a procurement or legal reviewer checks it is a direct trust failure — the same class of concern as OBJ-05 (compliance trust), but self-inflicted and code-fixable rather than requiring a real attestation. The Dashboard CTAs are revenue-adjacent (they're the "Upgrade →" / "Get Full Report →" / "Open SOAR dashboard →" calls to action on service pages) — each one that 404s is a lost upgrade path. |
+| **Classification** | **Product** (broken links) — found by a direct, full-site link crawl of live production this cycle, not carried over from any prior audit. |
+| **Root cause** | Two distinct causes: (a) the bare `/api` 404s because this Worker's Cloudflare zone route (`cyberdudebivash.in/api/*`) only matches paths with a trailing slash — see the original analysis below; (b) every other instance is a plain stale/wrong href — a footer or nav snippet was copy-pasted across many pages with a shorthand path (`/privacy`, `/terms`, `/dashboard`, `/login`, `/compliance`, `/cve-hub`, `/customer-success`, `/keys`, `/zero-trust`, `/mssp-dashboard.html`) that never matched the page's real filename (`/privacy-policy`, `/terms-of-service`, `/user-dashboard`, `/compliance-management`, `/cve/`, `/customer-success-dashboard`, `/zero-trust-security`, `/mssp-command-center.html`) and was never corrected when the real pages were built or renamed. |
+| **Corrective action** | Repointed all 38 link instances to their real, verified-working (HTTP 200 or a 308 to 200) destinations across 22 files. Left `ciso-hub.html`'s pre-existing `/api-docs.html` link alone (308-redirects correctly, consistent with every other `.html`-suffixed link in that page's nav — not a defect). **Explicitly NOT fixed — no corresponding page exists, left as found rather than guessed:** `sitemap.html` still lists `/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, and `/enterprise/contacts`, none of which resolve to any page in `frontend/`; `/mssp-workspace` (sitemap.html) and `/ai-governance-dashboard.html` (ai-governance-pdf.html) are the same — no plausible real target was found, so per the Verifiable-Statement Rule these are recorded as an open, unresolved gap rather than repointed to a guess. |
+| **Resolution evidence** | Post-fix re-crawl of every internal href across all 78 pages against live production confirms only the six explicitly-unfixed paths above (plus `/ai-governance-dashboard.html`) remain broken — everything else resolves. Regression-locked by `workers/test/deadInternalLinks.test.mjs` (15 tests, one per dead pattern found) — full suite 1,470/1,470 green, 140 files; SEO structure lock 22/22 green (unaffected). **Not yet live:** committed on branch, not yet merged/deployed — production still serves the dead links until this ships. Live re-verification (every fixed link → 200) is the closing evidence, same discipline as every other entry in this register. |
+| **Still open (not code-closable today)** | `/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, `/enterprise/contacts`, `/mssp-workspace` on `sitemap.html`, and `/ai-governance-dashboard.html` on `ai-governance-pdf.html` — these reference features or pages that do not exist in `frontend/` today under any name this audit could find. Fixing them means either building the missing page or a product decision to remove the sitemap entry; either is a larger decision than a link-destination correction and is left for a follow-up cycle. |
+
+<details>
+<summary>Original finding: the footer "📡 API Docs" link (7 pages) — folded into OBJ-13 above</summary>
+
+The "📡 API Docs" footer link on the homepage and six other public pages (about, contact, services, tools, booking, intel) pointed to `/api` (no trailing slash) and 404'd, even though a complete, working API documentation page already existed at `/api-docs`. Root cause: this Worker's Cloudflare zone route is `cyberdudebivash.in/api/*`, which only matches paths beginning `/api/` — it does not match the bare `/api`. That exact request falls through to a different, stale responder outside this codebase (confirmed live: its `x-powered-by` header reports `v14.0`, not the deployed `v40.0`), serving a generic branded 404. The code's own `GET /api` handler (`apiInfoResponse()` in `workers/src/index.js`) is correct and reachable at `/api/` (trailing slash) — it was simply never reachable at the exact URL the footer used. This is a Cloudflare dashboard route-pattern gap; no code fix can change the route pattern itself (`wrangler.toml` documents that route as dashboard-managed, outside CI's token scope). Fixed by repointing all seven links to `/api-docs`.
+</details>
+
+---
+
+## Trend (CEAP continuous cycle, build `b493d871` + IR-3 fix; OBJ-13 fixed in code, same cycle)
+
+Lifetime: **13 objections — 11 RESOLVED (10 regression-locked and live,
+1 regression-locked pending deploy), 1 ACCEPTED boundary (OBJ-06), 1 OPEN
+owner (OBJ-05)**. OBJ-09/OBJ-10 (discovery) are the first **owner-reported
+real-world** objections — exactly the Voice-of-Customer intake CEAP was built
+for. OBJ-10 shows why re-observation matters: OBJ-09's markup was correct but
+structurally unreadable, caught only because the owner re-checked production.
+OBJ-12 is the first objection **detected by monitoring before any human** —
+the CEAP sweep flagged the broken scan funnel ~11 minutes after the
+regressing deploy (IR-3). OBJ-13 was found by directly re-walking the live
+customer journey (homepage navigation links) rather than assuming prior
+audits still hold — the same production-first discipline that caught
+OBJ-09/OBJ-10. Detection is trending the right way: customer-reported →
+owner-reported → machine-detected → and now continuous self-audit of the
+live site. The first full post-GA lifecycle pass (onboarding → scan → report
+→ AI → org → upgrade-to-payment-gate → key rotation → recovery →
+offboarding, all live) surfaced **zero new objections** — the first cycle
+with no new product defect; OBJ-13 was found by a *different* method
+(link/navigation sweep, not the lifecycle API contract sweep), which is why
+it wasn't caught earlier. All open friction beyond OBJ-13 (pending deploy) is
+now organizational (owner actions GA-O1…O5), none code-closable.
 Recurrence check: no RESOLVED objection has re-observed behavior.
 
 ## Update protocol

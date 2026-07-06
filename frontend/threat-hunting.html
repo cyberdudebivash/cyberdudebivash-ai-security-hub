@@ -133,7 +133,7 @@ async function thRunHunt() {
       + '<span style="color:#94a3b8">Total findings: ' + (d.result_count||0) + '</span></div>'
       + '<div style="font-family:monospace;font-size:.8rem;color:#64748b;border-top:1px solid var(--border,#334155);padding-top:10px">'
       + 'Session: ' + (d.session_id||'hunt_live') + ' · Lang: ' + ((d.lang||'kql').toUpperCase()) + ' · ' + new Date().toLocaleTimeString() + '</div>'
-      + '<p style="color:#94a3b8;margin-top:8px;font-size:.82rem">✅ Hunt executed against live MITRE ATT&CK threat model. Connect your SIEM at <a href="/dashboard" style="color:var(--accent,#7c3aed)">CYBERDUDEBIVASH Dashboard</a> to run against real telemetry.</p></div>';
+      + '<p style="color:#94a3b8;margin-top:8px;font-size:.82rem">✅ Hunt executed against live MITRE ATT&CK threat model. Connect your SIEM at <a href="/user-dashboard" style="color:var(--accent,#7c3aed)">CYBERDUDEBIVASH Dashboard</a> to run against real telemetry.</p></div>';
   } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
   btn.disabled = false; btn.textContent = 'Execute Hunt →';
 }

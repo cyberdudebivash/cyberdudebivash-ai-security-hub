@@ -137,7 +137,7 @@ async function cmRunAssessment() {
       + '</div>'
       + '<div style="font-size:.8rem;color:#94a3b8;border-top:1px solid var(--border,#334155);padding-top:10px">'
       + 'Framework: ' + (d.framework||framework) + ' · Domain: ' + domain + ' · Method: ' + (d.assessment_method||'gap_analysis')
-      + '</div><p style="color:#94a3b8;margin-top:8px;font-size:.8rem">✅ Full gap report with remediation roadmap available on Pro plan · <a href="/dashboard" style="color:var(--accent,#7c3aed)">Upgrade →</a></p></div>';
+      + '</div><p style="color:#94a3b8;margin-top:8px;font-size:.8rem">✅ Full gap report with remediation roadmap available on Pro plan · <a href="/user-dashboard" style="color:var(--accent,#7c3aed)">Upgrade →</a></p></div>';
   } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
   btn.disabled = false; btn.textContent = 'Run Assessment →';
 }

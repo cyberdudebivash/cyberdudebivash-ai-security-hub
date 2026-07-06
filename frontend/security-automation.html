@@ -121,7 +121,7 @@ async function saGenerateRule() {
     out.innerHTML = '<div style="background:var(--bg,#0f172a);border-radius:8px;padding:16px;border:1px solid var(--border,#334155)">'
       + '<div style="margin-bottom:8px;font-weight:600;color:var(--text,#e2e8f0)">' + cve + ' — ' + platform.toUpperCase() + ' Detection Rule</div>'
       + '<pre style="font-family:monospace;font-size:.75rem;color:#a5f3fc;white-space:pre-wrap;overflow-x:auto;max-height:220px;overflow-y:auto">' + ruleText.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>'
-      + '<p style="color:#94a3b8;margin-top:8px;font-size:.8rem">✅ Production-ready rule generated · Copy and import into your SIEM · <a href="/dashboard" style="color:var(--accent,#7c3aed)">Open SOAR dashboard →</a></p></div>';
+      + '<p style="color:#94a3b8;margin-top:8px;font-size:.8rem">✅ Production-ready rule generated · Copy and import into your SIEM · <a href="/user-dashboard" style="color:var(--accent,#7c3aed)">Open SOAR dashboard →</a></p></div>';
   } catch(e) { out.innerHTML = '<span style="color:#ef4444">Error: ' + e.message + '</span>'; }
   btn.disabled = false; btn.textContent = 'Generate Rule →';
 }
