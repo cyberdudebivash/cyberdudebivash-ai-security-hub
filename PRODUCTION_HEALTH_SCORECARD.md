@@ -5,7 +5,7 @@
 > actions. Trends are relative to the previous edition. Nothing here is
 > asserted without evidence — unknown is written as unknown.
 >
-> **Edition:** 8 · **Date:** 2026-07-06 · **Last deployed production commit:** `534bf14`; CEAP cycle 1 (Edition 8 is code + test evidence, not yet deployed — see below)
+> **Edition:** 9 · **Date:** 2026-07-06 · **Last deployed production commit:** `534bf14`; CEAP cycle 1 (Editions 8-9 are code + test evidence, not yet deployed — see below)
 > Edition 2 (same day): cycle-2 truth audit executed — fabricated customer
 > notifications eliminated, seed endpoints labeled synthetic, attestation
 > badges reworded, MYTHOS labels aligned to the deployed engine, and a
@@ -75,6 +75,22 @@
 > the first scheduled run against real production traffic, and confirmation
 > that `CLOUDFLARE_API_TOKEN` carries Account `Analytics:Read`, are both
 > still-outstanding, owner-observable evidence.
+> **Edition 9 (CI-2 schema drift, same day):** Shipped the second CIP item:
+> nightly D1 schema-drift detection, the exact class behind IR-1/RC-B1 (a
+> column renamed in production without the committed reference following, or
+> vice versa — invisible to a green test suite because the lab schema
+> silently disagreed with production). `scripts/d1-schema-diff.mjs` parses
+> live CREATE TABLE statements (via `wrangler d1 execute --json`) and the
+> committed `workers/schema_bootstrap.sql`, diffing table existence and
+> column-name sets. `.github/workflows/d1-schema-drift.yml` runs it nightly
+> at 03:40 UTC, filing/refreshing a pinned issue on real drift. 19 unit tests
+> (`workers/test/d1SchemaDiff.test.mjs`) include the RC-B1 scenario itself
+> and a parse-correctness check against the real 227-table
+> `schema_bootstrap.sql` — every table parses with a non-empty column set,
+> spot-verified by hand against 3 tables. Full suite 136 files / 1,433 tests
+> green. **Not yet live-verified:** same caveat as Edition 8 — first
+> scheduled run against the real production database is still-outstanding,
+> owner-observable evidence.
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.
@@ -271,6 +287,7 @@
 | ✅ Done | **Found in audit:** customer notifications were fabricated from `/api/seed/threats` (PRNG demo; first 3 events always CRITICAL) — poller now reads the real NVD/KEV feed with per-CVE dedupe; all `/api/seed/*` responses now self-declare `synthetic: true` | — | Closed 2026-07-04 |
 | ✅ Done | **Found in audit:** `user-dashboard.html` shipped with a committed tool-download banner BEFORE `<!DOCTYPE html>` (visible to every logged-in customer, forced quirks mode) — stripped; doctype lock added for all key pages | — | Closed 2026-07-04 |
 | ✅ Code shipped | CI-1 alerting half — `error-rate-alert.mjs`/`.yml`, 12 unit tests, full suite green | Engineering | Live-verification pending: owner to confirm `CLOUDFLARE_API_TOKEN` Analytics:Read scope; first scheduled run is the closing evidence |
+| ✅ Code shipped | CI-2 schema-drift check — `d1-schema-diff.mjs`/`.yml`, 19 unit tests incl. RC-B1 regression + real-file parse check, full suite green | Engineering | Live-verification pending: first scheduled 03:40 UTC run against production is the closing evidence |
 | P1 | Watch Monday 05:00 UTC restore drill; green closes R-06, red is S1 | Engineering | PASSED — reliability evidence requirement |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
