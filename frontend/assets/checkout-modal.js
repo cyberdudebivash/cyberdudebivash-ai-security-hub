@@ -478,6 +478,15 @@
         this._startSubscriptionCheckout(opts);
         return;
       }
+      // Several pages pass a '<PLAN>_PLAN' tierName (e.g. 'PRO_PLAN') for the
+      // same four subscription plans instead of the bare name — strip the
+      // suffix and route through the real subscription flow rather than
+      // falling through to the one-time-product path below.
+      const strippedTier = String(opts.tierName || '').toUpperCase().replace(/_PLAN$/, '');
+      if (/_PLAN$/i.test(opts.tierName || '') && SUBSCRIPTION_PLANS.has(strippedTier)) {
+        this._startSubscriptionCheckout({ ...opts, tierName: strippedTier });
+        return;
+      }
       // One-time report purchases (domain/ai/redteam/identity/compliance) go
       // through the same canonical create-order → Razorpay → verify flow as
       // subscriptions, for the same reason: the legacy `new Razorpay({amount})`
@@ -487,24 +496,21 @@
         this._startReportCheckout(opts);
         return;
       }
-      // Legacy path — only reachable if a caller sets neither opts.module nor a
-      // subscription tierName. Kept as a last-resort so a stray/unknown product
-      // still gets a payment ID a human can act on, rather than a hard failure.
-      const key = (window.CONFIG && window.CONFIG.RAZORPAY_KEY_ID) || '';
-      if (!key || !window.Razorpay) {
-        alert('Card payment not configured. Please use UPI, Bank Wire, or PayPal.');
+      // Every other named product (marketing-page assessments/reports/suites)
+      // must still go through a real server-verified order — there is no safe
+      // "legacy" fallback that skips order creation. Route it through the
+      // generic 'package' module, keyed by product_id: the server looks the
+      // price up from PACKAGE_PRICES (workers/src/lib/razorpay.js) — the
+      // amount this modal displays is never trusted for the actual charge.
+      // A caller that used to reach the removed client-only `new Razorpay(...)`
+      // branch here previously produced a real charge with no order_id and no
+      // `payments` row at all (found in the 2026-07-06 revenue-mechanisms
+      // audit) — that branch has been removed rather than patched per-caller.
+      if (opts.tierName) {
+        this._startReportCheckout({ ...opts, module: 'package', productId: opts.tierName });
         return;
       }
-      const geo = getGeo();
-      new window.Razorpay({
-        key,
-        amount:      opts.amount * (geo.countryCode === 'IN' ? 100 : 1),
-        currency:    geo.matrix.currency || 'INR',
-        name:        'CYBERDUDEBIVASH PVT LTD',
-        description: opts.productLabel || 'Security Report',
-        handler:     r => this._onRazorpaySuccess(r),
-        modal:       { ondismiss: () => {} },
-      }).open();
+      alert('This item is not configured for checkout. Please contact support@cyberdudebivash.com.');
     },
 
     _loadRazorpaySdk() {
@@ -577,11 +583,6 @@
     },
 
     async _startReportCheckout(opts) {
-      const target = (opts.target || '').trim();
-      if (!target) {
-        alert('Missing scan target for this report. Please contact support@cyberdudebivash.com.');
-        return;
-      }
       let email = '';
       try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
@@ -592,11 +593,19 @@
         }
         try { localStorage.setItem('cdb_email', email); } catch (e) {}
       }
+      // Scan-style reports (domain/ai/redteam/...) pass a real domain/org as
+      // opts.target. One-time packages (module: 'package') have no such
+      // target — the paying customer's email is the order's identifier
+      // instead, the same convention subscription checkout already uses.
+      const target = (opts.target || '').trim() || email;
+
+      const body = { module: opts.module, target, email };
+      if (opts.productId) body.product_id = opts.productId;
 
       try {
         const oRes = await fetch('/api/payment/create-order', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ module: opts.module, target, email }),
+          body: JSON.stringify(body),
         });
         const order = await oRes.json().catch(() => ({}));
         if (!oRes.ok || !order.order_id || !order.key_id) {
@@ -617,14 +626,16 @@
           prefill:     { email },
           handler:     async (rp) => {
             try {
+              const vBody = {
+                razorpay_order_id:   rp.razorpay_order_id,
+                razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature:  rp.razorpay_signature,
+                module: opts.module, target, email,
+              };
+              if (opts.productId) vBody.product_id = opts.productId;
               const vRes = await fetch('/api/payment/verify', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpay_order_id:   rp.razorpay_order_id,
-                  razorpay_payment_id: rp.razorpay_payment_id,
-                  razorpay_signature:  rp.razorpay_signature,
-                  module: opts.module, target, email,
-                }),
+                body: JSON.stringify(vBody),
               });
               const vData = await vRes.json().catch(() => ({}));
               this._onReportPaymentComplete(rp, vRes.ok && vData.success, vData);

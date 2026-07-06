@@ -87,16 +87,34 @@ const REPORT_TEMPLATES = [
 function genJobId() { return 'rpt_' + Date.now().toString(36) + '_' + crypto.randomUUID().slice(0, 8); }
 function genToken() { return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, ''); }
 
+// `available_to`/`roles` arrays mix two things that used to both be broken:
+// lowercase tier names ('pro','enterprise') compared against req.user.tier,
+// which is UPPERCASE by DB CHECK constraint (schema_master.sql) — so the
+// tier check never matched anyone, even genuine paying customers — and
+// role names ('admin','mssp_admin') compared against req.user.role, which
+// is never populated anywhere in the codebase (no JWT claim, no DB column)
+// — so that check never matched anyone either, including real admins. This
+// made every report type and the whole scheduling feature 100% unreachable
+// at every tier. Fixed to compare tiers case-insensitively and to resolve
+// the two role concepts onto mechanisms that actually exist: 'admin' means
+// the platform-owner ADMIN_KEY bypass (isAdmin), 'mssp_admin' means a real
+// paying MSSP-tier customer. (2026-07-06 revenue-mechanisms audit, P2-7.)
+function hasAccess(allowList, req) {
+  if (!req?.user) return false;
+  if (req.user.isAdmin === true) return true;
+  const tier = String(req.user.tier || '').toUpperCase();
+  if (allowList.includes('mssp_admin') && tier === 'MSSP') return true;
+  return allowList.some(entry => entry.toUpperCase() === tier);
+}
+
 function requireRole(req, roles) {
-  if (!req.user) return false;
-  return roles.includes(req.user.role) || roles.includes(req.user.tier);
+  return hasAccess(roles, req);
 }
 
 function canAccessReportType(type, req) {
   const tpl = REPORT_TEMPLATES.find(t => t.type === type);
   if (!tpl) return false;
-  if (!req.user) return false;
-  return tpl.available_to.includes(req.user.role) || tpl.available_to.includes(req.user.tier);
+  return hasAccess(tpl.available_to, req);
 }
 
 /**
@@ -808,16 +826,14 @@ export async function handleDownloadReport(req, env, jobId) {
 export async function handleReportTemplates(req, env) {
   if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-  const available = REPORT_TEMPLATES.filter(t =>
-    t.available_to.includes(req.user.role) || t.available_to.includes(req.user.tier)
-  );
+  const available = REPORT_TEMPLATES.filter(t => hasAccess(t.available_to, req));
 
   return Response.json({ templates: available, total: available.length });
 }
 
 export async function handleScheduleReport(req, env) {
   if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 });
-  if (!['admin', 'mssp_admin', 'enterprise'].includes(req.user.role) && !['enterprise'].includes(req.user.tier)) {
+  if (!hasAccess(['admin', 'mssp_admin', 'enterprise'], req)) {
     return Response.json({ error: 'Enterprise plan required for scheduled reports' }, { status: 403 });
   }
 

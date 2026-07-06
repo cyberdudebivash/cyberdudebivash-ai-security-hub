@@ -20,8 +20,16 @@ import { isRealUser } from '../auth/middleware.js';
 
 const nanoid = (n = 21) => crypto.randomUUID().replace(/-/g, '').slice(0, n);
 
+// authCtx.role was never populated anywhere in the codebase (no JWT claim,
+// no DB column) — this check was permanently false for every caller,
+// including real admins, making the entire MSSP workspace unreachable.
+// Every handler below already scopes its queries to partnerScope(authCtx)
+// (the caller's own user id), so "mssp_admin" here really means "a real,
+// paying MSSP-tier customer managing their own roster" — the doc comment's
+// "own-org views" case — with the platform-owner ADMIN_KEY bypass covering
+// the "cross-customer" support case. (2026-07-06 revenue-mechanisms audit, P1-4.)
 function requireMSSPAdmin(authCtx) {
-  return authCtx?.role === 'admin' || authCtx?.role === 'mssp_admin';
+  return authCtx?.isAdmin === true || authCtx?.tier === 'MSSP';
 }
 
 function requireAuth(authCtx) {

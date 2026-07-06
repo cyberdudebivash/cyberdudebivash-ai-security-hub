@@ -13,6 +13,7 @@
 
 import {
   MODULE_PRICES,
+  PACKAGE_PRICES,
   SUBSCRIPTION_PRICES,
   createRazorpayOrder,
   verifyPaymentSignature,
@@ -83,10 +84,20 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   try { body = await request.json(); }
   catch { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
 
-  const { module, target, scan_id, email } = body;
+  const { module, target, scan_id, email, product_id } = body;
 
-  // Validate module
-  if (!module || !MODULE_PRICES[module]) {
+  // Validate module. 'package' is a distinct one-time-product namespace
+  // (marketing-page assessments/reports) priced from PACKAGE_PRICES by
+  // product_id rather than from MODULE_PRICES by module name.
+  const packageId = String(product_id || '').toUpperCase();
+  if (module === 'package') {
+    if (!PACKAGE_PRICES[packageId]) {
+      return Response.json({
+        error: 'Invalid product_id',
+        valid: Object.keys(PACKAGE_PRICES),
+      }, { status: 400 });
+    }
+  } else if (!module || !MODULE_PRICES[module]) {
     return Response.json({
       error:   'Invalid module',
       valid:   Object.keys(MODULE_PRICES),
@@ -98,9 +109,10 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     return Response.json({ error: 'target is required (domain name or org name)' }, { status: 400 });
   }
 
-  // ── Compute request-scoped price — MODULE_PRICES is a read-only constant.
-  // Never mutate the shared module-level object: that would let one request's
-  // user-supplied price bleed into concurrent or subsequent requests.
+  // ── Compute request-scoped price — MODULE_PRICES/PACKAGE_PRICES are
+  // read-only constants. Never mutate the shared module-level object: that
+  // would let one request's user-supplied price bleed into concurrent or
+  // subsequent requests.
   let price;
 
   if (module === 'subscription') {
@@ -108,6 +120,10 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     // body.plan is used as a key lookup — the price value comes from the table, not the client.
     const planKey = (body.plan || target || 'STARTER').toUpperCase();
     price = SUBSCRIPTION_PRICES[planKey] || SUBSCRIPTION_PRICES['STARTER'];
+  } else if (module === 'package') {
+    // One-time marketing-page product: price comes from PACKAGE_PRICES by
+    // product_id only — body.price_inr / amount are never trusted.
+    price = PACKAGE_PRICES[packageId];
   } else if (module === 'defense') {
     // Defense marketplace purchases go through handlers/marketplaceCheckoutHandler.js
     // (catalog-validated server-side pricing) — this endpoint never fulfills a
@@ -178,7 +194,9 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   // Store pending payment record in D1
   if (env.DB) {
     const paymentId = crypto.randomUUID?.() || Date.now().toString(36);
-    const planLabel = module === 'subscription' ? (body.plan || 'STARTER').toUpperCase() : 'pay_per_report';
+    const planLabel = module === 'subscription' ? (body.plan || 'STARTER').toUpperCase()
+                     : module === 'package'      ? packageId
+                     : 'pay_per_report';
     const payerEmail = email || authCtx.email || null;
     // MSSP revenue-share attribution: if this paying customer was onboarded by an
     // MSSP partner (mssp_customers.contact_email match), stamp it now so the
@@ -235,6 +253,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     target,
     scan_id,
     email,
+    product_id,
     utm_source   = '',
     utm_medium   = '',
     utm_campaign = '',
@@ -256,13 +275,16 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
   if (!/^[a-fA-F0-9]{64}$/.test(razorpay_signature)) {
     return Response.json({ error: 'Invalid razorpay_signature format' }, { status: 400 });
   }
-  // Non-scan fulfillment modules (assessment and subscription) are handled separately below
-  const NON_SCAN_MODULES = ['assessment', 'subscription'];
+  // Non-scan fulfillment modules (assessment, package and subscription) are handled separately below
+  const NON_SCAN_MODULES = ['assessment', 'package', 'subscription'];
   if (!module || (!SCAN_HANDLERS[module] && !NON_SCAN_MODULES.includes(module))) {
     return Response.json({
       error: 'Invalid module',
       valid: [...Object.keys(SCAN_HANDLERS), ...NON_SCAN_MODULES],
     }, { status: 400 });
+  }
+  if (module === 'package' && !PACKAGE_PRICES[String(product_id || '').toUpperCase()]) {
+    return Response.json({ error: 'Invalid product_id' }, { status: 400 });
   }
   if (!target || typeof target !== 'string') {
     return Response.json({ error: 'target is required' }, { status: 400 });
@@ -302,11 +324,19 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     });
   }
 
-  // ─── Assessment: confirm payment + trigger lifecycle — no scan step needed ───
-  if (module === 'assessment') {
+  // ─── Assessment / package: confirm payment + trigger lifecycle — no scan step needed ───
+  // Covers both the legacy bare 'assessment' module and the generic 'package'
+  // module used by every marketing-page one-time product (product_id-keyed,
+  // priced from PACKAGE_PRICES — see razorpay.js).
+  if (module === 'assessment' || module === 'package') {
+    const productDef     = module === 'package'
+      ? PACKAGE_PRICES[String(product_id || '').toUpperCase()]
+      : MODULE_PRICES['assessment'];
+    const productLabel   = module === 'package' ? String(product_id).toUpperCase() : 'SECURITY_ASSESSMENT';
+    const productName    = productDef?.name || 'Security Assessment';
     const accessToken    = generateAccessToken();
     const confirmedEmail = email || authCtx.email || null;
-    const priceInr       = Math.round((MODULE_PRICES['assessment']?.amount || 0) / 100);
+    const priceInr       = Math.round((productDef?.amount || 0) / 100);
     const expiresAt      = new Date(Date.now() + 90 * 86400000).toISOString();
 
     if (env.DB) {
@@ -319,26 +349,26 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       if (paidRow?.partner_id && paidRow?.id) {
         recordRevenueShare(env, {
           paymentId: paidRow.id, partnerId: paidRow.partner_id,
-          grossAmountPaise: paidRow.amount, customerEmail: confirmedEmail, module: 'assessment',
+          grossAmountPaise: paidRow.amount, customerEmail: confirmedEmail, module,
         }).catch(e => console.error('[Verify] Revenue share record failed:', e.message));
       }
     }
     if (env.SECURITY_HUB_KV) {
       await env.SECURITY_HUB_KV.put(`assessment_access:${accessToken}`, JSON.stringify({
-        order_id: razorpay_order_id, email: confirmedEmail, target, activated: Date.now(),
+        order_id: razorpay_order_id, email: confirmedEmail, target, product: productLabel, activated: Date.now(),
       }), { expirationTtl: 90 * 86400 }).catch(() => {});
     }
     Promise.all([
       confirmedEmail
         ? sendPurchaseConfirmation(env, {
-            to: confirmedEmail, productName: MODULE_PRICES['assessment']?.name || 'Full Security Assessment',
+            to: confirmedEmail, productName,
             amountInr: priceInr, paymentId: razorpay_payment_id, accessExpires: expiresAt,
           }).catch(() => {})
         : Promise.resolve(),
       confirmedEmail
         ? triggerPostPurchase(env, {
-            email: confirmedEmail, product: 'SECURITY_ASSESSMENT',
-            product_name: MODULE_PRICES['assessment']?.name || 'Full Security Assessment',
+            email: confirmedEmail, product: productLabel,
+            product_name: productName,
             amount_inr: priceInr, event_type: 'delivery_activated',
             source: utm_source || 'direct', payment_id: razorpay_payment_id,
             meta: { utm_medium, utm_campaign, target },
@@ -347,7 +377,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     ]).catch(() => {});
     return Response.json({
       success: true, token: accessToken,
-      message: '✅ Assessment payment confirmed. Our team will contact you within 24 hours to schedule your assessment.',
+      message: `✅ ${productName} payment confirmed. Our team will contact you within 24–72 hours to schedule delivery.`,
       payment_id: razorpay_payment_id,
     });
   }

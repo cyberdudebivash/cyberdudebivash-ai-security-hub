@@ -102,17 +102,30 @@ async function resolveFromApiKey(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') ||
              request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
 
+  // keyRow.tier is a frozen snapshot written once at key-creation time.
+  // resolveApiKeyFromDB's own SQL already joins the account's CURRENT plan
+  // as keyRow.user_tier — previously discarded. Using the frozen column
+  // meant a customer who upgraded (or downgraded) their subscription kept
+  // the OLD tier's limits/features on every already-issued API key with no
+  // documented way to fix it short of rotating the key — while the site's
+  // own marketing copy (index.html) promises keys "inherit your account
+  // plan automatically." Use the live tier instead, the same way a JWT
+  // session already self-heals on every /api/auth/refresh.
+  // (2026-07-06 revenue-mechanisms audit.)
+  const effectiveTier = keyRow.user_tier || keyRow.tier;
+  const effectiveLimits = TIER_LIMITS[effectiveTier] || TIER_LIMITS.FREE;
+
   return {
     authenticated: true,
     method:        'api_key',
     identity:      `key:${keyRow.key_prefix}`,
     user_id:       keyRow.user_id,
     email:         keyRow.email,
-    tier:          keyRow.tier,
-    limits:        TIER_LIMITS[keyRow.tier] || TIER_LIMITS.FREE,
-    label:         `${keyRow.tier} API Key`,
+    tier:          effectiveTier,
+    limits:        effectiveLimits,
+    label:         `${effectiveTier} API Key`,
     key_id:        keyRow.id,
-    daily_limit:   keyRow.daily_limit,
+    daily_limit:   effectiveLimits.daily_limit,
     ip,
     _key_row:      keyRow, // internal — used for quota check
   };
@@ -139,6 +152,25 @@ function withAuthAliases(ctx) {
     if (ctx.org_id == null && ctx.authenticated) {
       const uid = ctx.user_id ?? ctx.userId;
       if (uid) ctx.org_id = `u:${uid}`;
+    }
+    // ── Role (root fix) ──────────────────────────────────────────────────────
+    // authCtx.role was never populated anywhere in the entire auth layer — no
+    // JWT claim, no DB column — yet dozens of handlers across the codebase
+    // (msspTenantPlatform.js, socCases.js, platformMetricsAuthority.js,
+    // revenueMetrics.js, globalSearch.js, notificationPlatform.js,
+    // workflowAutomation.js, productAnalytics.js, whiteLabelMSSP.js,
+    // reliabilityEngineering.js, customerSuccess.js, and the dozen or so
+    // handlers index.js forwards `role: authCtx.role` into, among others) gate
+    // on `authCtx.role === 'admin'` / `'mssp_admin'` / `.includes(role)`. Every
+    // one of those checks was permanently false for every caller, including
+    // real admins — not a per-file bug, a missing field at the source. Derived
+    // live here (never stored/stale) from the two mechanisms that already
+    // work: the ADMIN_KEY bypass, and a real paying MSSP-tier subscription.
+    // Regular customer tiers intentionally get no role — callers that gate on
+    // `.includes(role) || .includes(tier)` fall through to the tier check,
+    // which already works correctly. (2026-07-06 revenue-mechanisms audit, P1-4.)
+    if (ctx.role === undefined) {
+      ctx.role = ctx.isAdmin === true ? 'admin' : ctx.tier === 'MSSP' ? 'mssp_admin' : undefined;
     }
   }
   return ctx;
@@ -232,7 +264,7 @@ export function unauthorized(reason = 'missing') {
     ...(msgs[reason] || msgs.missing),
     upgrade_url: UPGRADE_URL,
     contact:     CONTACT_EMAIL,
-    docs:        'https://cyberdudebivash.in/docs',
+    docs:        'https://cyberdudebivash.in/api-docs', // '/docs' doesn't exist (confirmed live 404)
   }, { status: 401 });
 }
 

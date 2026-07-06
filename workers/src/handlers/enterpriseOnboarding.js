@@ -99,7 +99,6 @@ export async function handleEnterpriseOnboarding(request, env, authCtx) {
         FREE:       'Community support only',
       }[tier] || 'Contact sales@cyberdudebivash.in',
       docs:            'https://cyberdudebivash.in/api-docs.html',
-      onboarding_docs: 'https://cyberdudebivash.in/enterprise-onboarding.html',
       status_page:     'GET /api/health',
     },
     meta: { timestamp: new Date().toISOString(), version: PLATFORM_VERSION },

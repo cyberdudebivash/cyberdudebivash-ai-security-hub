@@ -26,6 +26,12 @@ const MARKET  = read('../../frontend/sentinel-apex-marketplace.html');
 const SUBPROC = read('../../SUB_PROCESSOR_LIST.md');
 const ROUTER  = read('../src/core/aiProviderRouter.js');
 const SEARCH_JS = read('../../frontend/global-search-v2.js');
+const CHECKOUT_MODAL   = read('../../frontend/assets/checkout-modal.js');
+const COPILOT_WIDGET    = read('../../frontend/assets/copilot-widget.js');
+const SEC_ASSESSMENT   = read('../../frontend/security-assessment.html');
+const AI_ASSESSMENT    = read('../../frontend/ai-security-assessment.html');
+const PAYMENTS_HANDLER = read('../src/handlers/payments.js');
+const RAZORPAY_LIB     = read('../src/lib/razorpay.js');
 
 import { handleTrustCenter as handleEnterpriseTrustCenter } from '../src/handlers/enterprisePortalHandlers.js';
 
@@ -337,5 +343,166 @@ describe('booking.html — demo booking actually reaches the real sales pipeline
     // The pre-existing, already-correct gate — must survive the endpoint swap.
     expect(BOOKING).toMatch(/apiOk\s*=\s*response\.ok/);
     expect(BOOKING).toContain('Show success only on confirmed API receipt');
+  });
+});
+
+describe('checkout-modal.js — every priced CTA creates a real, server-verified order', () => {
+  // Commercial-readiness audit (2026-07-06): every "Book Assessment" button on
+  // security-assessment.html/ai-security-assessment.html (plus ciso-hub.html,
+  // mcp-security.html) called CDB_CHECKOUT_MODAL.open() with a tierName but no
+  // module — triggerRazorpay() then fell through to a client-only
+  // `new Razorpay({amount})` with no order_id and no verify call. A real
+  // charge could fire with zero backend order record. Locks that this
+  // dangerous fallback is gone and every named product is routed through a
+  // real order-create → verify flow instead.
+  it('no longer constructs a bare client-only Razorpay charge with no order_id', () => {
+    const trigger = CHECKOUT_MODAL.slice(
+      CHECKOUT_MODAL.indexOf('triggerRazorpay()'),
+      CHECKOUT_MODAL.indexOf('_loadRazorpaySdk()'),
+    );
+    expect(trigger).not.toMatch(/new\s+window\.Razorpay\(\{\s*\n?\s*key,/);
+    expect(trigger).not.toContain('amount:      opts.amount *');
+  });
+
+  it('treats any unrecognized tierName as a real, order-verified package purchase', () => {
+    const trigger = CHECKOUT_MODAL.slice(
+      CHECKOUT_MODAL.indexOf('triggerRazorpay()'),
+      CHECKOUT_MODAL.indexOf('_loadRazorpaySdk()'),
+    );
+    expect(trigger).toContain("module: 'package'");
+    expect(trigger).toContain('productId: opts.tierName');
+  });
+
+  it('strips a "_PLAN" suffix and routes it through the real subscription flow', () => {
+    const trigger = CHECKOUT_MODAL.slice(
+      CHECKOUT_MODAL.indexOf('triggerRazorpay()'),
+      CHECKOUT_MODAL.indexOf('_loadRazorpaySdk()'),
+    );
+    expect(trigger).toMatch(/replace\(\/_PLAN\$\/, ''\)/);
+    expect(trigger).toContain('_startSubscriptionCheckout({ ...opts, tierName: strippedTier })');
+  });
+
+  it('_startReportCheckout falls back the order target to the collected email for non-scan packages', () => {
+    const block = CHECKOUT_MODAL.slice(CHECKOUT_MODAL.indexOf('_startReportCheckout(opts)'));
+    expect(block).toContain("const target = (opts.target || '').trim() || email;");
+  });
+
+  it('_startReportCheckout forwards product_id to both create-order and verify', () => {
+    const block = CHECKOUT_MODAL.slice(
+      CHECKOUT_MODAL.indexOf('_startReportCheckout(opts)'),
+      CHECKOUT_MODAL.indexOf('_onReportPaymentComplete'),
+    );
+    expect(block.match(/if \(opts\.productId\)/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('index.html — homepage MYTHOS checkout no longer fires an unreconcilable charge', () => {
+  // The homepage's separate "MYTHOS" checkout widget built its own
+  // `new Razorpay({amount})` with no order_id and no notes carrying
+  // plan/tenant — /api/mythos/checkout/initialize never creates a Razorpay
+  // order at all, so nothing (not even the async webhook) could ever
+  // reconcile a captured charge to a plan. The handler then showed a fake
+  // "activates within 2 minutes" toast unconditionally. Locks that rzpPay()
+  // now delegates to the real, verified subscription checkout instead.
+  it('rzpPay() no longer builds a bare Razorpay object with a fake unconditional success toast', () => {
+    const fn = INDEX.slice(INDEX.indexOf('function rzpPay()'), INDEX.indexOf('function showToast'));
+    expect(fn).not.toContain("showToast('✅ Payment successful! Your plan activates within 2 minutes.', 'success')");
+    expect(fn).not.toMatch(/key:\s*_rzpKeyId/);
+  });
+
+  it('rzpPay() delegates to the real CDB_CHECKOUT_MODAL subscription flow', () => {
+    const fn = INDEX.slice(INDEX.indexOf('function rzpPay()'), INDEX.indexOf('function showToast'));
+    expect(fn).toContain('window.CDB_CHECKOUT_MODAL.open({');
+  });
+});
+
+describe('sentinel-apex-marketplace.html — CVE/intel report purchases use the real order flow', () => {
+  // The modal's "Proceed to Payment" CTA called triggerModalPayment(), which
+  // opened the shared checkout modal with tierName:'INTEL_REPORT' — an
+  // unrecognized product that fell into the same legacy no-order-id bypass.
+  // The purpose-built, already-correct /api/sentinel/purchase + /verify flow
+  // (cdbSentinelBuy) sat right next to it, unused. Locks the fix.
+  it('triggerModalPayment() calls the real, order-verified cdbSentinelBuy()', () => {
+    const fn = MARKET.slice(MARKET.indexOf('function triggerModalPayment()'), MARKET.indexOf('function closeModal()'));
+    expect(fn).toContain('cdbSentinelBuy()');
+    expect(fn).not.toContain('openReportCheckout');
+  });
+
+  it('the now-dead openReportCheckout legacy wrapper was removed rather than left unreachable', () => {
+    expect(MARKET).not.toContain('function openReportCheckout(');
+  });
+
+  it('openPlanCheckout()\'s "_PLAN"-suffixed tierName is still safely handled (stripped centrally by checkout-modal.js)', () => {
+    const fn = MARKET.slice(MARKET.indexOf('function openPlanCheckout('), MARKET.indexOf('function paintPlans('));
+    expect(fn).toContain("tier + '_PLAN'");
+  });
+});
+
+describe('copilot-widget.js — the site-wide chat widget proves who is asking', () => {
+  // Embedded on user-dashboard.html and ~20 other pages, none of this
+  // widget's fetch calls attached Authorization/x-api-key — every
+  // conversation through it resolved through the backend's anonymous
+  // IP-fallback auth branch (tier: FREE, always), silently capping every
+  // paying customer at the free tier on their own dashboard. Locks that all
+  // 6 call sites now attach the stored session token.
+  it('defines a shared authHeaders() helper that reads the real session token', () => {
+    expect(COPILOT_WIDGET).toContain('function authHeaders(');
+    expect(COPILOT_WIDGET).toContain("localStorage.getItem('cdb_token')");
+  });
+
+  it('every /api/copilot/* fetch call site attaches authHeaders()', () => {
+    const callSites = [
+      '/api/copilot/capabilities`, { headers: authHeaders() }',
+      "/api/copilot/quick-action`, {\n        method: 'POST', headers: authHeaders(",
+      "/api/copilot/chat/stream`, {\n      method: 'POST', headers: authHeaders(",
+      "/api/copilot/chat`, {\n        method: 'POST', headers: authHeaders(",
+      '/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`, { headers: authHeaders() }',
+      "/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`, { method: 'DELETE', headers: authHeaders() }",
+    ];
+    for (const snippet of callSites) {
+      expect(COPILOT_WIDGET).toContain(snippet);
+    }
+  });
+
+  it('no /api/copilot/* fetch call is left without a headers option', () => {
+    const calls = COPILOT_WIDGET.match(/fetch\(`\$\{API_BASE\}\/api\/copilot\/[^;]*?\);/gs) || [];
+    expect(calls.length).toBeGreaterThanOrEqual(6);
+    for (const call of calls) {
+      expect(call).toContain('authHeaders(');
+    }
+  });
+});
+
+describe('razorpay.js / payments.js — one-time marketing-page products are server-priced', () => {
+  // PACKAGE_PRICES is the server-side allowlist checkout-modal.js's 'package'
+  // module resolves against — the client-displayed amount is never trusted.
+  it('PACKAGE_PRICES covers every product_id used by the assessment pages', () => {
+    for (const id of ['SECURITY_ASSESSMENT', 'PROFESSIONAL_ASSESSMENT', 'ENTERPRISE_ASSESSMENT']) {
+      expect(SEC_ASSESSMENT).toContain(`openPayment('${id}'`);
+      expect(RAZORPAY_LIB).toContain(`${id}:`);
+    }
+    for (const id of [
+      'AI_SECURITY_ASSESSMENT', 'OWASP_LLM_ASSESSMENT', 'AI_GOVERNANCE_ASSESSMENT',
+      'AI_RED_TEAM', 'MCP_SECURITY_REVIEW', 'AI_AGENT_SECURITY', 'RAG_SECURITY_ASSESSMENT',
+      'AI_SECURITY_STARTER', 'AI_SECURITY_PROFESSIONAL', 'ENTERPRISE_AI_SUITE',
+    ]) {
+      expect(AI_ASSESSMENT).toContain(`openPayment('${id}'`);
+      expect(RAZORPAY_LIB).toContain(`${id}:`);
+    }
+  });
+
+  it('handleCreateOrder validates product_id against PACKAGE_PRICES for module "package"', () => {
+    const fn = PAYMENTS_HANDLER.slice(
+      PAYMENTS_HANDLER.indexOf('export async function handleCreateOrder'),
+      PAYMENTS_HANDLER.indexOf('export async function handleVerifyPayment'),
+    );
+    expect(fn).toContain("if (!PACKAGE_PRICES[packageId])");
+    expect(fn).toContain('price = PACKAGE_PRICES[packageId]');
+  });
+
+  it('handleVerifyPayment fulfills "package" the same safe way as "assessment" (no scan step, payment confirmed only after HMAC verify)', () => {
+    const fn = PAYMENTS_HANDLER.slice(PAYMENTS_HANDLER.indexOf('export async function handleVerifyPayment'));
+    expect(fn).toContain("NON_SCAN_MODULES = ['assessment', 'package', 'subscription']");
+    expect(fn).toContain("if (module === 'assessment' || module === 'package')");
   });
 });

@@ -10,7 +10,6 @@ import {
   updateOrderStatus,
   getServiceCatalog,
   triggerManualAssessment,
-  dispatchAssessment,
 } from '../services/serviceOrderEngine.js';
 
 // ── Original 10 engines ───────────────────────────────────────────────────────
@@ -104,26 +103,14 @@ export async function handleGetService(request, env, authCtx, refId) {
 // ── POST /api/services/orders — create order ──────────────────────────────────
 export async function handleCreateOrder(request, env, authCtx, ctx) {
   const body = await parseBody(request);
-  const result = await createServiceOrder(env, body);
+  // createServiceOrder itself decides (from authCtx) whether this caller may
+  // trigger a real automated-engine run, and — via ctx.waitUntil — is the
+  // single place that dispatches it. A second, independent dispatch call
+  // used to live here too, running every automated assessment twice on each
+  // order (duplicate MYTHOS-enrichment AI cost and duplicate
+  // service_assessments rows) — removed rather than left as dead-weight cost.
+  const result = await createServiceOrder(env, body, authCtx, ctx);
   if (result.error) return err(result.error, result.status || 400);
-
-  // If automated engine, background-dispatch with ctx
-  if (result.auto_started && body.ref_id) {
-    const svc = await env.DB.prepare('SELECT automated_engine FROM services WHERE ref_id=?')
-      .bind(body.ref_id).first().catch(() => null);
-    if (svc?.automated_engine && ctx?.waitUntil) {
-      const inputs = {
-        ...(typeof body.assessment_inputs === 'string' ? JSON.parse(body.assessment_inputs || '{}') : (body.assessment_inputs || {})),
-        domain:         body.target_domain,
-        target_domain:  body.target_domain,
-        industry:       body.target_industry || 'General',
-      };
-      const promise = dispatchAssessment(env, svc.automated_engine, inputs, result.order_id)
-        .catch(e => console.error('[ServiceHandlers] dispatch error:', e.message));
-      ctx.waitUntil(promise);
-    }
-  }
-
   return ok(result, 201);
 }
 

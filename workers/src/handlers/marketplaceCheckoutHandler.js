@@ -28,6 +28,10 @@ import {
   generateAccessToken,
 } from '../lib/razorpay.js';
 import { sendPurchaseConfirmation } from '../services/emailEngine.js';
+import { createApiKey } from '../auth/apiKeys.js';
+import { hashPassword } from '../auth/password.js';
+import { generateThreatIntelReport } from '../services/ctiReportEngine.js';
+import { runComplianceAssessment } from '../services/complianceEngine.js';
 
 // ── Server-Side Product Catalog (prices in paise = INR × 100) ────────────────
 // NEVER accept product pricing from the client — all prices defined here only
@@ -464,7 +468,7 @@ export async function handleMarketplaceVerify(req, env, authCtx) {
   `).bind(razorpay_payment_id, accessToken, expiresAt, purchase.id).run();
 
   // Store access token in KV for fast validation (30-day TTL)
-  await env.KV?.put(
+  await env.SECURITY_HUB_KV?.put(
     `marketplace:access:${accessToken}`,
     JSON.stringify({ product_id: purchase.product_id, product_name: purchase.product_name,
       category: purchase.category, buyer_email: purchase.buyer_email,
@@ -492,6 +496,157 @@ export async function handleMarketplaceVerify(req, env, authCtx) {
     access_expires_at: expiresAt,
     license_days: licenseDays,
     delivery: product?.delivery || 'instant',
+  });
+}
+
+/**
+ * GET /api/marketplace/download/:accessToken
+ *
+ * Was completely missing — handleMarketplaceVerify has always returned
+ * `download_url: /api/marketplace/download/${accessToken}`, but no route
+ * for it existed anywhere in the codebase (confirmed by reading the full
+ * route table; live-tested 404). Every one of the 12 catalog products
+ * dead-ended after a fully verified payment. (2026-07-06 revenue-mechanisms
+ * audit.)
+ *
+ * Delivery differs by category:
+ *   - api_key (AI Security Agents): mints a real, functional platform API
+ *     key scoped to the license window — issued once per purchase.
+ *   - intelligence_report / compliance_pack: generated live from the same
+ *     real, CISA KEV/NVD-backed engines used elsewhere on the platform
+ *     (ctiReportEngine.js / complianceEngine.js) — not a static file.
+ *   - detection_pack / playbook: no automated rule/playbook-authoring
+ *     engine exists yet. Rather than fabricate "847 Sigma rules" content
+ *     that hasn't actually been authored and validated (dangerous for a
+ *     security product), this honestly confirms the paid order and routes
+ *     to manual fulfillment — the same acknowledged pattern already used
+ *     for Academy and Consulting deliverables. Flagged as follow-up work
+ *     requiring real security-research investment, not a bug fix.
+ */
+export async function handleMarketplaceDownload(req, env, accessToken) {
+  const token = (accessToken || '').toString().replace(/[^a-f0-9]/gi, '').slice(0, 128);
+  if (!token || token.length < 16) {
+    return Response.json({ error: 'Invalid access token' }, { status: 400 });
+  }
+
+  // Fast KV lookup first, D1 is authoritative for status/expiry either way.
+  let kvMeta = null;
+  if (env.SECURITY_HUB_KV) {
+    const raw = await env.SECURITY_HUB_KV.get(`marketplace:access:${token}`).catch(() => null);
+    if (raw) kvMeta = JSON.parse(raw);
+  }
+  const purchase = await env.DB.prepare(
+    `SELECT * FROM marketplace_purchases WHERE access_token = ? LIMIT 1`
+  ).bind(token).first().catch(() => null);
+
+  if (!purchase && !kvMeta) {
+    return Response.json({
+      error: 'Access token not found or invalid.',
+      support: 'support@cyberdudebivash.com',
+    }, { status: 404 });
+  }
+  if (purchase && purchase.status !== 'paid') {
+    return Response.json({ error: 'Payment not verified for this order.' }, { status: 403 });
+  }
+
+  const expiresAt = purchase?.access_expires_at || kvMeta?.expires_at;
+  if (expiresAt && new Date(expiresAt) < new Date()) {
+    return Response.json({
+      error: 'This download link has expired.',
+      expired_at: expiresAt,
+      support: 'support@cyberdudebivash.com',
+    }, { status: 410 });
+  }
+
+  const productId   = purchase?.product_id || kvMeta?.product_id;
+  const buyerEmail  = purchase?.buyer_email || kvMeta?.buyer_email;
+  const product     = MARKETPLACE_CATALOG[productId];
+  if (!product) {
+    return Response.json({
+      error: 'Product no longer available. Contact support with your order reference.',
+      purchase_id: purchase?.id || null,
+      support: 'support@cyberdudebivash.com',
+    }, { status: 404 });
+  }
+
+  // ── API-key delivery (AI Security Agents) ────────────────────────────────
+  if (product.delivery === 'api_key') {
+    // Idempotent: the raw key is only ever shown once, at first issuance —
+    // repeat calls to this endpoint must not silently mint a fresh key.
+    const alreadyIssued = env.SECURITY_HUB_KV
+      ? await env.SECURITY_HUB_KV.get(`marketplace:apikey_issued:${token}`).catch(() => null)
+      : null;
+    if (alreadyIssued) {
+      return Response.json({
+        success: true, delivery: 'api_key', already_issued: true,
+        message: 'Your API key for this purchase was already issued and is only ever shown once. Contact support@cyberdudebivash.com with your order reference to rotate it if lost.',
+        purchase_id: purchase?.id || null,
+        product: product.name,
+      });
+    }
+
+    let userId = purchase?.user_id || null;
+    if (!userId && buyerEmail) {
+      const existingUser = await env.DB.prepare(`SELECT id FROM users WHERE email = ?`).bind(buyerEmail).first().catch(() => null);
+      if (existingUser?.id) {
+        userId = existingUser.id;
+      } else {
+        const newId = crypto.randomUUID();
+        const { hash, salt } = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
+        const inserted = await env.DB.prepare(
+          `INSERT INTO users (id, email, password_hash, password_salt, tier, status, created_at)
+           VALUES (?, ?, ?, ?, 'FREE', 'active', datetime('now'))`
+        ).bind(newId, buyerEmail, hash, salt).run().catch(() => null);
+        if (inserted) userId = newId;
+      }
+    }
+    if (!userId) {
+      return Response.json({
+        error: 'Could not provision your API key automatically. Contact support@cyberdudebivash.com with your order reference.',
+        purchase_id: purchase?.id || null,
+      }, { status: 500 });
+    }
+
+    const issued = await createApiKey(env.DB, userId, 'ENTERPRISE', product.name);
+    if (expiresAt) {
+      await env.DB.prepare(`UPDATE api_keys SET expires_at = ? WHERE id = ?`)
+        .bind(expiresAt, issued.id).run().catch(() => {});
+    }
+    if (env.SECURITY_HUB_KV) {
+      await env.SECURITY_HUB_KV.put(`marketplace:apikey_issued:${token}`, issued.id, { expirationTtl: 400 * 86400 }).catch(() => {});
+    }
+
+    return Response.json({
+      success: true, delivery: 'api_key',
+      api_key: issued.raw_key,
+      key_prefix: issued.prefix,
+      expires_at: expiresAt || null,
+      product: product.name,
+      message: `Your ${product.name} API key is ready — save it now, it will not be shown again.`,
+      docs_url: 'https://cyberdudebivash.in/api-docs',
+    });
+  }
+
+  // ── Live-generated content — the same real engines used elsewhere on the
+  // platform, not a static/fabricated file ─────────────────────────────────
+  if (product.category === 'intelligence_report') {
+    const report = await generateThreatIntelReport(env, '', 'General', purchase?.id || null);
+    return Response.json({ success: true, delivery: 'report', product: product.name, report });
+  }
+  if (product.category === 'compliance_pack') {
+    const report = await runComplianceAssessment(env, {}, purchase?.id || null);
+    return Response.json({ success: true, delivery: 'report', product: product.name, report });
+  }
+
+  // ── Detection packs & playbooks: no automated authoring engine exists for
+  // this category yet — acknowledge the paid order honestly rather than
+  // fabricate rule/playbook content. Same manual-fulfillment pattern already
+  // used for Academy and Consulting deliverables.
+  return Response.json({
+    success: true, delivery: 'manual_pending',
+    message: `Your order for "${product.name}" is confirmed and is being finalized by our security research team. It will be emailed to ${buyerEmail || 'your registered email'} within 24 hours.`,
+    purchase_id: purchase?.id || null,
+    support: 'support@cyberdudebivash.com',
   });
 }
 
@@ -545,7 +700,7 @@ export async function handleMarketplaceObservability(req, env) {
   };
 
   try { await env.DB.prepare('SELECT 1 FROM users LIMIT 1').run(); checks.db_accessible = true; } catch {}
-  try { await env.KV?.put('marketplace:health', '1', { expirationTtl: 10 }); checks.kv_accessible = true; } catch {}
+  try { await env.SECURITY_HUB_KV?.put('marketplace:health', '1', { expirationTtl: 10 }); checks.kv_accessible = true; } catch {}
   try { await env.DB.prepare('SELECT 1 FROM marketplace_purchases LIMIT 1').run(); checks.marketplace_purchases_table = true; } catch {}
 
   const allPass = checks.catalog_loaded && checks.db_accessible && checks.kv_accessible;
@@ -561,6 +716,7 @@ export async function handleMarketplaceObservability(req, env) {
       'GET  /api/marketplace/catalog/:productId',
       'POST /api/marketplace/checkout',
       'POST /api/marketplace/verify',
+      'GET  /api/marketplace/download/:accessToken',
       'GET  /api/marketplace/my-purchases',
       'GET  /api/marketplace/observability',
     ],

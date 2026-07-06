@@ -96,8 +96,12 @@ export async function handleGetAuditLog(request, env, authCtx) {
           // Apply filters
           if (type   && !entry.type?.startsWith(type))   continue;
           if (actor  && entry.actor !== actor)            continue;
-          // Enforce tenant isolation: non-admin users only see their own events
-          if (authCtx.role !== 'ADMIN' && authCtx.tier !== 'ENTERPRISE') {
+          // Enforce tenant isolation: non-admin users only see their own events.
+          // Previously compared authCtx.role to the literal 'ADMIN'
+          // (uppercase) — never populated anywhere in the auth layer, so this
+          // bypass never fired for real admins either. isAdmin is the actual
+          // owner-bypass signal.
+          if (authCtx.isAdmin !== true && authCtx.tier !== 'ENTERPRISE') {
             if (entry.actor !== authCtx.identity && entry.org_id !== authCtx.orgId) continue;
           }
           entries.push(entry);

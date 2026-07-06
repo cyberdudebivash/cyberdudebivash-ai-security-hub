@@ -183,7 +183,10 @@ export async function handleJoin(request, env, authCtx = {}) {
     referral_url: affiliate.referral_url,
     tier:         'AFFILIATE',
     commission:   TIERS.AFFILIATE.commission_pct + '% on first year of referred plan value',
-    dashboard_url:'https://cyberdudebivash.in/affiliate-hub',
+    // '/affiliate-hub' doesn't exist (confirmed live 404) — the real UI is
+    // the #affiliate-hub section on the homepage (2026-07-06
+    // revenue-mechanisms audit, P2-7).
+    dashboard_url:'https://cyberdudebivash.in/#affiliate-hub',
   });
 }
 

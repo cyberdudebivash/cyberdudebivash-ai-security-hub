@@ -291,12 +291,19 @@ export async function handleMsspVerify(request, env) {
       tier_name:    tier.name,
       clients_limit: tier.clients === -1 ? 'Unlimited' : tier.clients,
       margin:       tier.margin,
-      dashboard_url: '/mssp-dashboard.html',
+      // /mssp-dashboard.html does not exist (confirmed live 404) — a
+      // dedicated MSSP partner workspace UI hasn't been built yet. Rather
+      // than point to a dead page, be honest about the real next step: use
+      // the already-working, tier-gated API directly (GET /api/mssp/customers,
+      // /api/mssp/overview), or wait for the account manager call.
+      // (2026-07-06 revenue-mechanisms audit, P2-7.)
+      dashboard_url: null,
+      api_base_url:  '/api/mssp/overview',
       api_docs_url:  '/developer-onboarding.html',
       support_email: 'mssp@cyberdudebivash.com',
       activated_at:  now,
       next_steps: [
-        'Log in to your MSSP dashboard',
+        'A dedicated MSSP dashboard UI is being finalized — for now, manage your account via the API (GET /api/mssp/overview, /api/mssp/customers)',
         'Configure white-label branding (Silver/Gold)',
         'Add your first client account',
         'Generate API keys for your integration',
@@ -405,11 +412,14 @@ export async function handleMsspTrial(request, env) {
       company_name: company_name.trim(),
       tier_id:      'trial',
       clients_limit: 3,
-      dashboard_url: '/mssp-dashboard.html',
+      // /mssp-dashboard.html does not exist — see the note in
+      // handleMsspVerify above (2026-07-06 revenue-mechanisms audit, P2-7).
+      dashboard_url: null,
+      api_base_url:  '/api/mssp/overview',
       upgrade_url:   '/mssp-onboarding.html#pricing',
       message:       `${TRIAL_DAYS}-day MSSP trial activated. No credit card required. Upgrade anytime.`,
       next_steps: [
-        'Access your MSSP dashboard',
+        'A dedicated MSSP dashboard UI is being finalized — for now, manage your account via the API (GET /api/mssp/overview, /api/mssp/customers)',
         'Add up to 3 client accounts',
         'Generate white-label reports',
         'Upgrade before trial ends to keep your data',

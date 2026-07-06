@@ -774,6 +774,55 @@ jobs:
           fi
           exit 0
 
+      # ── P21.0: Marketplace checkout -> verify -> download actually work ──
+      # (2026-07-06 revenue-mechanisms audit, P3-10) — this workflow used to
+      # only prove the catalog was reachable. It never caught that
+      # /api/marketplace/download/:accessToken did not exist anywhere in the
+      # codebase, so every verified purchase across all 12 products
+      # dead-ended in production undetected. These probes use safe,
+      # no-side-effect payloads (an unknown product_id, a garbage Razorpay
+      # signature, a bogus access token) — no real order or charge is ever
+      # created — but they prove each route exists and behaves correctly,
+      # not just that the catalog page loads.
+      - name: Smoke Test P21.0 — Marketplace checkout/verify/download routes exist
+        id: marketplace_flow
+        continue-on-error: true
+        run: |
+          set +e
+          API_URL="${{ steps.resolve.outputs.api_url }}"
+
+          echo "🔍 Probing: POST ${API_URL}/api/marketplace/checkout (unknown product — expect 404, not a route-missing error)"
+          CHECKOUT_CODE=$(curl -s -o /tmp/mkt_checkout.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"product_id":"ci-smoke-nonexistent","email":"ci-smoke@cyberdudebivash.in"}' \
+            "${API_URL}/api/marketplace/checkout" 2>/dev/null)
+          echo "checkout_status=${CHECKOUT_CODE:-000}" >> "$GITHUB_OUTPUT"
+          [ "${CHECKOUT_CODE}" = "404" ] && echo "✅ checkout route live, rejects unknown product correctly" \
+            || echo "⚠️  checkout returned ${CHECKOUT_CODE:-no response} (expected 404)"
+
+          echo "🔍 Probing: POST ${API_URL}/api/marketplace/verify (garbage signature — expect 400, not a route-missing error)"
+          VERIFY_CODE=$(curl -s -o /tmp/mkt_verify.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"razorpay_order_id":"order_ci_smoke_00000000","razorpay_payment_id":"pay_ci_smoke_00000000","razorpay_signature":"0000000000000000000000000000000000000000000000000000000000000000"}' \
+            "${API_URL}/api/marketplace/verify" 2>/dev/null)
+          echo "verify_status=${VERIFY_CODE:-000}" >> "$GITHUB_OUTPUT"
+          [ "${VERIFY_CODE}" = "400" ] && echo "✅ verify route live, rejects invalid signature correctly" \
+            || echo "⚠️  verify returned ${VERIFY_CODE:-no response} (expected 400)"
+
+          echo "🔍 Probing: GET ${API_URL}/api/marketplace/download/:token (bogus token — expect 404 'not found', not 'route not found')"
+          DOWNLOAD_CODE=$(curl -s -o /tmp/mkt_download.json -w "%{http_code}" \
+            --max-time 10 --connect-timeout 8 --retry 2 \
+            "${API_URL}/api/marketplace/download/ci0000000000000000000000000000000000000000000000000000000000000000" 2>/dev/null)
+          echo "download_status=${DOWNLOAD_CODE:-000}" >> "$GITHUB_OUTPUT"
+          if [ "${DOWNLOAD_CODE}" = "404" ] && ! grep -q "route not found" /tmp/mkt_download.json 2>/dev/null; then
+            echo "✅ download route live, rejects unknown token correctly (not a missing-route 404)"
+          else
+            echo "⚠️  download returned ${DOWNLOAD_CODE:-no response} — check /tmp/mkt_download.json for a route-missing error"
+          fi
+          exit 0
+
       # ── P22.0: AI Governance PDF Export Engine ────────────────────────────
       - name: Smoke Test P22.0 — AI Governance PDF Observability
         id: ai_gov_pdf
@@ -857,6 +906,9 @@ jobs:
             echo "| \`/api/mythos/status\` | \`${{ steps.mythos_status.outputs.mythos_status_code || 'N/A' }}\` | MYTHOS Orchestrator |"
             echo "| **P21–P23 Monetization Engines** | | |"
             echo "| \`/api/marketplace/catalog\` | \`${{ steps.marketplace.outputs.marketplace_status || 'N/A' }}\` | P21.0 Marketplace Checkout |"
+            echo "| \`/api/marketplace/checkout\` | \`${{ steps.marketplace_flow.outputs.checkout_status || 'N/A' }}\` | P21.0 checkout rejects unknown product (expect 404) |"
+            echo "| \`/api/marketplace/verify\` | \`${{ steps.marketplace_flow.outputs.verify_status || 'N/A' }}\` | P21.0 verify rejects bad signature (expect 400) |"
+            echo "| \`/api/marketplace/download/:token\` | \`${{ steps.marketplace_flow.outputs.download_status || 'N/A' }}\` | P21.0 download route exists (expect 404 not-found, not route-missing) |"
             echo "| \`/api/ai-governance/pdf/observability\` | \`${{ steps.ai_gov_pdf.outputs.ai_gov_pdf_status || 'N/A' }}\` | P22.0 AI Governance PDF |"
             echo "| \`/api/mssp/onboarding/tiers\` | \`${{ steps.mssp_onboarding.outputs.mssp_onboarding_status || 'N/A' }}\` | P23.0 MSSP Onboarding |"
             echo ""

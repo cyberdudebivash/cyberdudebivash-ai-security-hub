@@ -22893,24 +22893,27 @@ function v21TriggerUrgencyPayment(){
   }
 
   function rzpPay() {
-    if (!window.Razorpay) {
-      showToast('Razorpay not loaded — please refresh and try again.', 'warn');
+    // This rail used to build `new Razorpay({amount, ...})` directly with no
+    // order_id and no notes carrying plan/tenant — Razorpay would capture a
+    // real charge, but nothing server-side (webhook included) could ever
+    // reconcile it to a plan, and the handler below unconditionally showed a
+    // fake "activates within 2 minutes" toast regardless of what actually
+    // happened. Delegate to the real, verified subscription checkout
+    // (order-create → Razorpay → HMAC-verified activate) used everywhere else
+    // on the site instead of duplicating a second, broken payment path.
+    // Found in the 2026-07-06 revenue-mechanisms audit.
+    if (!window.CDB_CHECKOUT_MODAL) {
+      showToast('Checkout is still loading — please try again in a moment.', 'warn');
       return;
     }
-    const amountINR = PRICING_INR[_currentPlan] || 1499;
-    const rzp = new window.Razorpay({
-      key:         _rzpKeyId || '',
-      amount:      amountINR * 100,
-      currency:    'INR',
-      name:        'CYBERDUDEBIVASH PVT LTD',
-      description: `SENTINEL APEX ${_currentPlan.toUpperCase()} SUBSCRIPTION`,
-      handler: function(res) {
-        close();
-        showToast('✅ Payment successful! Your plan activates within 2 minutes.', 'success');
-      },
-      modal: { ondismiss: function() { showToast('Payment cancelled.', 'info'); } },
+    close();
+    const plan   = _currentPlan.toUpperCase();
+    const amount = _pricing[_currentPlan] || _pricing.pro;
+    window.CDB_CHECKOUT_MODAL.open({
+      amount,
+      tierName:     plan,
+      productLabel: `SENTINEL APEX ${plan} SUBSCRIPTION`,
     });
-    rzp.open();
   }
 
   function showToast(msg, type) {

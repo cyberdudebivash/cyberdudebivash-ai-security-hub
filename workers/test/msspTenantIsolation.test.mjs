@@ -25,8 +25,13 @@ function makeRealD1() {
   }; };
   return { _sqlite: sqlite, prepare: wrap };
 }
-const partnerA = { authenticated: true, userId: 'pA', role: 'mssp_admin' };
-const partnerB = { authenticated: true, userId: 'pB', role: 'mssp_admin' };
+// A real authenticated MSSP-tier customer's authCtx carries tier: 'MSSP'
+// (resolveAuthV5) — requireMSSPAdmin() gates on that, not on a bare
+// role: 'mssp_admin' string (authCtx.role is never populated by a real
+// resolver call with that literal value; see auth/middleware.js's role
+// derivation, 2026-07-06 revenue-mechanisms audit P1-4).
+const partnerA = { authenticated: true, userId: 'pA', tier: 'MSSP' };
+const partnerB = { authenticated: true, userId: 'pB', tier: 'MSSP' };
 const req = (method = 'GET', bodyObj) => new Request('https://x/api/mssp/customers/cust1', {
   method, headers: { 'Content-Type': 'application/json' }, body: bodyObj ? JSON.stringify(bodyObj) : undefined,
 });

@@ -295,7 +295,10 @@ function buildProposalDocument(lead, packageId, customizations = {}) {
       'Onboarding begins within 24 hours of payment confirmation',
     ],
 
-    accept_url:  `https://cyberdudebivash.in/proposal/accept?id=PROP_ID`,
+    // '/proposal/accept' does not exist — no online e-signature/acceptance
+    // flow is built (next_steps above already directs to DocuSign or
+    // equivalent for signing). contact_url is the one real next step.
+    // (2026-07-06 revenue-mechanisms audit, P2-7.)
     contact_url: 'https://cyberdudebivash.in/contact',
     status:      'DRAFT',
   };
@@ -342,7 +345,6 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
   const sequentialProposalNumber = `CDB-${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, '0')}-${String(seqNum).padStart(4, '0')}`;
 
   const doc      = buildProposalDocument(lead, package_id, { discount_pct, setup_fee, payment_terms, proposal_number: sequentialProposalNumber });
-  doc.accept_url = `https://cyberdudebivash.in/proposal/accept?id=${propId}`;
   doc.notes      = notes;
   doc.lead_id    = lead_id;
 

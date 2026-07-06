@@ -474,6 +474,7 @@ import {
   handleMarketplaceProduct,
   handleMarketplaceCheckout,
   handleMarketplaceVerify,
+  handleMarketplaceDownload,
   handleMyMarketplacePurchases,
   handleMarketplaceObservability,
 } from './handlers/marketplaceCheckoutHandler.js';
@@ -1521,8 +1522,16 @@ export async function routeRequest(request, env, ctx, requestId) {
       }
     }
     // Internal back-office owner-only gate (integrations config, revenue engine, etc.)
+    // 'white-label' was removed from this prefix list: /api/white-label/theme's
+    // own doc comment says GET is "any auth" (a customer's own org branding) and
+    // PUT/DELETE/:orgId are 'mssp_admin|admin' — but this blanket regex forced
+    // owner-only on all four, so no real customer could ever reach the one
+    // customer-usable branding endpoint the Partner/White-label product
+    // actually has. whiteLabelMSSP.js's own requireRole() already does the
+    // real, now-correctly-functioning role check (authCtx.role is populated —
+    // see auth/middleware.js). (2026-07-06 revenue-mechanisms audit, P2-9.)
     if (
-      /^\/api\/(integrations|org-memory|workflows|white-label|revenue|monetize)(\/|$)/.test(path) ||
+      /^\/api\/(integrations|org-memory|workflows|revenue|monetize)(\/|$)/.test(path) ||
       path === '/api/funnel/metrics' ||
       path === '/api/funnel/event' ||
       path === '/api/affiliate/stats'
@@ -5417,6 +5426,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       return withSecurityHeaders(withCors(await handleMarketplaceVerify(request, env, authCtx || {}), request));
     }
+    if (path.startsWith('/api/marketplace/download/') && method === 'GET') {
+      const accessToken = path.replace('/api/marketplace/download/', '');
+      return withSecurityHeaders(withCors(await handleMarketplaceDownload(request, env, accessToken), request));
+    }
     if (path === '/api/marketplace/my-purchases' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);
       if (authCtx) request.user = authCtx;
@@ -6380,6 +6393,27 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/academy/verify' && method === 'POST') {
       const { handleVerifyAcademy } = await import('./handlers/academyMarketplace.js');
       return withSecurityHeaders(withCors(await handleVerifyAcademy(request, env), request));
+    }
+
+    // GET /api/academy/access — buyer checks their own fulfillment status (public)
+    if (path === '/api/academy/access' && method === 'GET') {
+      const { handleAcademyAccessStatus } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleAcademyAccessStatus(request, env), request));
+    }
+
+    // GET /api/academy/orders — admin: list undelivered orders
+    if (path === '/api/academy/orders' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleListAcademyOrders } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleListAcademyOrders(request, env, authCtx), request));
+    }
+
+    // POST /api/academy/orders/:id/delivered — admin: close out fulfillment
+    if (path.match(/^\/api\/academy\/orders\/([^/]+)\/delivered$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const orderId = path.match(/^\/api\/academy\/orders\/([^/]+)\/delivered$/)[1];
+      const { handleMarkAcademyDelivered } = await import('./handlers/academyMarketplace.js');
+      return withSecurityHeaders(withCors(await handleMarkAcademyDelivered(request, env, authCtx, orderId), request));
     }
 
     // GET /api/global/mssp — MSSP tier info + pricing (public)

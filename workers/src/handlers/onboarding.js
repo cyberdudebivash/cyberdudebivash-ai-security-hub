@@ -136,7 +136,11 @@ async function handleWelcome(request, env, authCtx) {
     },
     checklist,
     platform_url: 'https://intel.cyberdudebivash.com',
-    dashboard_url: 'https://intel.cyberdudebivash.com/user-dashboard.html',
+    // intel.cyberdudebivash.com is a real, separate live site, but it has no
+    // /user-dashboard.html of its own (confirmed live 404) — the real user
+    // dashboard is on the main platform domain.
+    // (2026-07-06 revenue-mechanisms audit, P2-7.)
+    dashboard_url: 'https://cyberdudebivash.in/user-dashboard',
   });
 }
 

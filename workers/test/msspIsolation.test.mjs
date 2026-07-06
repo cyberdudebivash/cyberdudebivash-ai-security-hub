@@ -61,8 +61,8 @@ function makeDB() {
   return { db, customers };
 }
 
-const partnerA = { authenticated: true, role: 'mssp_admin', userId: 'partner-A' };
-const partnerB = { authenticated: true, role: 'mssp_admin', userId: 'partner-B' };
+const partnerA = { authenticated: true, tier: 'MSSP', userId: 'partner-A' };
+const partnerB = { authenticated: true, tier: 'MSSP', userId: 'partner-B' };
 
 function jsonReq(url, method = 'GET', body) {
   return new Request(url, {
@@ -111,7 +111,7 @@ describe('MSSP tenant isolation', () => {
   it('no partner scope fails closed — empty list, no leak', async () => {
     await seedForA(env);
     const res = await handleListCustomers(
-      jsonReq('https://x/api/mssp/customers'), env, { authenticated: true, role: 'mssp_admin' });
+      jsonReq('https://x/api/mssp/customers'), env, { authenticated: true, tier: 'MSSP' });
     const body = await res.json();
     expect(body.customers.length).toBe(0);
   });
