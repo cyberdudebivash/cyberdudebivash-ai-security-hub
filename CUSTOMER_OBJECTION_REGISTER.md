@@ -235,7 +235,7 @@ The "📡 API Docs" footer link on the homepage and six other public pages (abou
 
 ---
 
-## OBJ-14 — "I filled out your Contact / Book a Demo form — did it actually go anywhere?" · RESOLVED (code) / live verification = pending deploy
+## OBJ-14 — "I filled out your Contact / Book a Demo form — did it actually go anywhere?" · RESOLVED
 
 | Field | Detail |
 |-------|--------|
@@ -245,11 +245,11 @@ The "📡 API Docs" footer link on the homepage and six other public pages (abou
 | **Classification** | **Product** (integration defect — wrong endpoint, not a business-logic bug) — found by functionally driving both forms this cycle (submitting real-shaped requests and reading the actual backend code each form calls), not a link check. |
 | **Root cause** | Both forms were wired to `/api/leads/capture`, which is unrelated to either form's actual purpose and doesn't store name/phone/company/subject/message/preferred-slot even when the email field is fixed. Purpose-built endpoints already exist and are routed in `index.js` but were never connected to these forms: `POST /api/enterprise/inquire` (company/name/email/message — matches the contact form's intent) and `POST /api/sales/leads` + `POST /api/sales/demo/book` (the actual CRM lead-scoring + demo-slot-reservation pipeline the booking form's rich fields were clearly designed for). |
 | **Corrective action** | `frontend/contact.html`: repointed to `/api/enterprise/inquire` with correct field names (`company`, `name`, `email`, and a composed `message` folding in phone/subject/priority/evidence-flag so no information is lost); fixed the success gate to require `response.ok && data.success === true`; added an honest failure state with a direct WhatsApp/email fallback (previously nonexistent). `frontend/booking.html`: files a CRM lead via `/api/sales/leads` (best-effort — the primary promise is the slot, not the CRM score) then reserves the slot via `/api/sales/demo/book` with the composed `preferred_slot`; kept the page's pre-existing, already-correct `response.ok` gate. |
-| **Resolution evidence** | Regression-locked in `workers/test/truthClaims.test.mjs` (8 new tests: neither form posts to `/api/leads/capture`; both post to the correct endpoint with field names those handlers actually read; success is still gated on a real confirmed response; the contact form has an honest failure state). Both new routes confirmed live and reachable via safe validation-path requests (missing required fields → clean 400, no test data written to production). Full suite 1,481/1,481 green, 140 files; SEO structure lock 22/22 green. **Not yet live:** committed on branch, not yet merged/deployed — production forms still fail until this ships. |
+| **Resolution evidence** | Regression-locked in `workers/test/truthClaims.test.mjs` (8 new tests: neither form posts to `/api/leads/capture`; both post to the correct endpoint with field names those handlers actually read; success is still gated on a real confirmed response; the contact form has an honest failure state). Full suite 1,481/1,481 green, 140 files; SEO structure lock 22/22 green. Merged to `main` (`3bd891f`, PR #65) and deployed 2026-07-06 18:42 UTC (`deploy.yml` run `28814844058`, conclusion success). **Live-verified same day:** `/api/version` reports `commit: 3bd891f`; the served `/contact` page's submit handler calls `fetch('/api/enterprise/inquire'...)` and `/booking`'s calls `fetch('/api/sales/leads'...)` + `fetch('/api/sales/demo/book'...)` — confirmed in the live-served HTML, not just the source; all three endpoints confirmed live via safe validation-path requests (missing required fields → clean 400, no test data written to production). Fresh `ceap-sweep.mjs` run same day: 15/15 green on `3bd891f`. |
 
 ---
 
-## OBJ-15 — "Your Trust Center says 'nothing fabricated' — but your own API contradicts itself." · RESOLVED (partial) / live verification = pending deploy
+## OBJ-15 — "Your Trust Center says 'nothing fabricated' — but your own API contradicts itself." · RESOLVED (partial — one sub-finding open, owner)
 
 | Field | Detail |
 |-------|--------|
@@ -259,17 +259,16 @@ The "📡 API Docs" footer link on the homepage and six other public pages (abou
 | **Classification** | **Product** (truth-claim regression) — found by functionally exercising the Trust Center's live data source, not just checking that the page loads. A prior cycle had already fixed the adjacent `subprocessors` list to correctly name Groq (locked by an existing test) but missed this separate `trust_signals` array, which is why the contradiction survived undetected. |
 | **Root cause** | `trust_signals` in `workers/src/handlers/enterprisePortalHandlers.js` was authored separately from `subprocessors` and never updated when the AI provider lineup changed to Groq-primary. `policies_url`/`security_url` were hardcoded to shorthand/legacy paths that never matched the real page slug (`/privacy-policy`) or the primary domain (the `intel.` subdomain doesn't serve `/api/security-center`; `cyberdudebivash.in` does). |
 | **Corrective action** | Trust signal reworded to `'Multi-provider AI inference (Groq primary, automatic fallback) — no self-hosted models'` — consistent with `subprocessors` and `wrangler.toml`. `policies_url` → `https://cyberdudebivash.in/privacy-policy`; `security_url` → `https://cyberdudebivash.in/api/security-center` (confirmed live, returns a real vulnerability-disclosure policy document). |
-| **Resolution evidence** | Regression-locked in `workers/test/truthClaims.test.mjs` (3 new tests in the existing `GET /api/trust-center` block: no exclusive-Anthropic claim; the AI trust signal names Groq; both URL fields point to real, reachable paths). Full suite 1,481/1,481 green. **Not yet live:** committed on branch, not yet merged/deployed. |
+| **Resolution evidence** | Regression-locked in `workers/test/truthClaims.test.mjs` (3 new tests in the existing `GET /api/trust-center` block: no exclusive-Anthropic claim; the AI trust signal names Groq; both URL fields point to real, reachable paths). Full suite 1,481/1,481 green. Merged and deployed with OBJ-14 (`3bd891f`, PR #65, `deploy.yml` run `28814844058`). **Live-verified same day:** `curl https://cyberdudebivash.in/api/trust-center` confirms `trust_signals` now reads "Multi-provider AI inference (Groq primary, automatic fallback) — no self-hosted models", `policies_url` is `https://cyberdudebivash.in/privacy-policy`, and `security_url` is `https://cyberdudebivash.in/api/security-center`. |
 | **Still open (not code-fixed)** | `platform_overview.data_residency` in the same API response ("APAC (Singapore primary), configurable for Enterprise") contradicts the static Trust Center page copy ("Edge-deployed globally with **India-region data preference**"). This is real infrastructure configuration (actual Cloudflare D1/KV region), not something derivable from source code — rather than guess which claim is accurate, this is flagged for the owner to confirm against the actual account configuration. Not rendered on the visible page today (the frontend JS doesn't read this field), but it is live in the public API response. |
 
 ---
 
-## Trend (CEAP continuous cycle, build `3c099d8` + OBJ-13 live; OBJ-14/15 fixed in code, same cycle)
+## Trend (CEAP continuous cycle, build `3bd891f`, all live)
 
-Lifetime: **15 objections — 12 RESOLVED and live, 1 RESOLVED (code, pending
-deploy: OBJ-14), 1 RESOLVED partial (code, pending deploy: OBJ-15, one
-sub-finding still open/owner), 1 ACCEPTED boundary (OBJ-06), 1 OPEN owner
-(OBJ-05)**. OBJ-14 is the highest-severity finding to date by direct customer
+Lifetime: **15 objections — 14 RESOLVED and live (13 fully closed, 1 —
+OBJ-15 — partial with one sub-finding still open/owner), 1 ACCEPTED
+boundary (OBJ-06), 1 OPEN owner (OBJ-05)**. OBJ-14 is the highest-severity finding to date by direct customer
 impact: both primary sales/demo-booking forms had been silently or honestly
 failing on literally every submission. OBJ-09/OBJ-10 (discovery) are the first **owner-reported
 real-world** objections — exactly the Voice-of-Customer intake CEAP was built
@@ -292,9 +291,8 @@ method (link crawl, then direct functional exercise of specific pages) than
 the lifecycle API contract sweep CEAP runs, which is why none were caught
 earlier — the lifecycle sweep proves the API contracts behave; it never
 drove these particular frontend forms end-to-end. All open friction beyond
-OBJ-13/14/15 (pending deploy) and the OBJ-15 data-residency sub-finding
-(owner confirmation needed) is organizational (owner actions GA-O1…O5), none
-code-closable.
+the OBJ-15 data-residency sub-finding (owner confirmation needed) is
+organizational (owner actions GA-O1…O5), none code-closable.
 Recurrence check: no RESOLVED objection has re-observed behavior.
 
 ## Update protocol

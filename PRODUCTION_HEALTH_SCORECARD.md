@@ -149,8 +149,16 @@
 > guessing which is correct. Regression-locked
 > (`workers/test/truthClaims.test.mjs`, 14 new tests); full suite
 > 1,481/1,481 green, SEO structure lock 22/22 green. Full record:
-> `CUSTOMER_OBJECTION_REGISTER.md` OBJ-14, OBJ-15. **Not yet deployed:**
-> committed on branch only — see the Action Queue.
+> `CUSTOMER_OBJECTION_REGISTER.md` OBJ-14, OBJ-15. **Deployed and
+> live-verified same day:** merged to `main` (`3bd891f`, PR #65), CI green
+> end-to-end, `deploy.yml` run `28814844058` completed successfully.
+> Live re-check confirms `/api/version` reports `3bd891f`; `/contact` and
+> `/booking` serve the corrected `fetch()` calls in their live HTML;
+> `/api/enterprise/inquire`, `/api/sales/leads`, and `/api/sales/demo/book`
+> all confirmed reachable (safe validation-path requests, no test data
+> written); `/api/trust-center` serves the corrected `trust_signals`,
+> `policies_url`, and `security_url`; a second fresh CEAP sweep is 15/15
+> green on `3bd891f`.
 >
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
@@ -344,7 +352,9 @@
   very likely losing real inbound interest silently for some unknown prior
   period — a customer-acquisition leak with no error visible anywhere
   short of reading the handler code, which is exactly how it went
-  undetected. Fixed and regression-locked; on branch, pending release.
+  undetected. Fixed, regression-locked, merged, deployed (`3bd891f`), and
+  live-verified same day: both forms confirmed serving the corrected
+  endpoints in production.
 - **Known risks:** the four GA gates from the Global Release Decision are
   unchanged and all owner-action: (1) one live payment end-to-end, (2) one
   live SSO IdP round-trip, (3) external SLA measurement + definition
@@ -369,8 +379,8 @@
 | ✅ Done | Monday 05:00 UTC restore drill — first run green 2026-07-06 (run `28779799461`), R-06 closed | Engineering | Closed 2026-07-06 — reliability evidence requirement satisfied |
 | ✅ Done | OBJ-13 — 38 dead internal link instances (22 pages: Privacy/Terms, Dashboard, API Docs, Sign in, MSSP Dashboard, sitemap) repointed to real pages, regression-locked | Engineering | Closed 2026-07-06 — merged, deployed (`3c099d8`), all fixed links confirmed 200 live |
 | P3 | 7 sitemap/nav entries reference pages that don't exist anywhere in the codebase (`/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, `/enterprise/contacts`, `/mssp-workspace`, `/ai-governance-dashboard.html`) | Product + Engineering | Open — needs a product decision (build the page vs. remove the entry), not a link fix |
-| ✅ Code shipped | OBJ-14 — Contact + Book-a-Demo forms repointed from the wrong lead-gate endpoint to the real `/api/enterprise/inquire` and `/api/sales/leads`+`/api/sales/demo/book`; contact form's fake unconditional success confirmation fixed to gate on a real response | Engineering | Live-verification pending: merge + deploy, then submit both forms live and confirm a real lead/booking is created |
-| ✅ Code shipped | OBJ-15 — Trust Center API's false "Anthropic-exclusive" trust signal corrected to match the real Groq-primary provider lineup; `policies_url`/`security_url` repointed to real, reachable pages | Engineering | Live-verification pending: merge + deploy, then confirm `/api/trust-center` serves the corrected fields |
+| ✅ Done | OBJ-14 — Contact + Book-a-Demo forms repointed from the wrong lead-gate endpoint to the real `/api/enterprise/inquire` and `/api/sales/leads`+`/api/sales/demo/book`; contact form's fake unconditional success confirmation fixed to gate on a real response | Engineering | Closed 2026-07-06 — merged, deployed (`3bd891f`), both forms confirmed live-serving the correct endpoints, all three routes confirmed reachable |
+| ✅ Done | OBJ-15 — Trust Center API's false "Anthropic-exclusive" trust signal corrected to match the real Groq-primary provider lineup; `policies_url`/`security_url` repointed to real, reachable pages | Engineering | Closed 2026-07-06 — merged, deployed (`3bd891f`), `/api/trust-center` confirmed serving the corrected fields live |
 | P3 | OBJ-15 sub-finding: `platform_overview.data_residency` ("Singapore primary") contradicts the Trust Center page's own copy ("India-region preference") | Owner | Open — needs confirmation of the actual Cloudflare D1/KV region configuration; not guessed or code-fixed |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
