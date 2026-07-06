@@ -92,21 +92,30 @@
 > scheduled run against the real production database is still-outstanding,
 > owner-observable evidence.
 > **Edition 10 (commercial-readiness continuation, same day):** re-walked the
-> live customer journey directly (homepage navigation links) rather than
-> assuming prior editions' findings still hold. Found and fixed one real
-> defect: the "📡 API Docs" footer link on seven public pages (index, about,
-> contact, services, tools, booking, intel) pointed to `/api` — a bare path
-> that 404s because the Worker's Cloudflare route (`cyberdudebivash.in/api/*`)
-> only matches paths with a trailing slash; the request instead falls through
-> to a stale non-Worker responder. Repointed all seven to the already-working
-> `/api-docs` page. Regression-locked (`workers/test/footerApiDocsLink.test.mjs`,
-> 2 tests); full suite 1,457/1,457 green, SEO structure lock 22/22 green.
-> Full record: `CUSTOMER_OBJECTION_REGISTER.md` OBJ-13. Everything else this
-> edition re-confirmed rather than changed: a fresh CEAP sweep run (15/15
-> green) verified IR-3's scan-token fix and the full paying-customer lifecycle
-> are live and healthy on commit `6c24abb`; the four GA gates remain
-> owner-action and unchanged. **Not yet deployed:** committed on branch only —
-> see the Action Queue.
+> live customer journey directly (a full internal-link crawl of all 78 public
+> pages against production) rather than assuming prior editions' findings
+> still hold. Found 20 unique dead destination paths (38 link instances
+> across 22 pages) — most were the right word/slug but the wrong exact path.
+> The two highest-impact clusters: the footer "Privacy"/"Terms" links (a
+> security vendor's own legal/trust pages) 404'd on five public pages plus
+> both MSSP-onboarding consent checkboxes, and "Dashboard"/upgrade CTAs
+> 404'd on six pages. Also fixed: the footer "📡 API Docs" link (7 pages,
+> `/api` 404s because the Worker's Cloudflare route `cyberdudebivash.in/api/*`
+> only matches paths with a trailing slash), "Sign in" (soc-agents.html, 2
+> places), "Go to MSSP Dashboard" (mssp-onboarding.html, 2 places), and four
+> `sitemap.html` entries. Repointed all 38 instances to real, verified-working
+> pages. **Left unfixed, explicitly not guessed:** 6 further `sitemap.html`
+> entries and 1 more elsewhere reference pages that do not exist anywhere in
+> `frontend/` under any name this audit could find — recorded as an open gap
+> rather than repointed to a guess. Regression-locked
+> (`workers/test/deadInternalLinks.test.mjs`, 15 tests); full suite
+> 1,470/1,470 green, SEO structure lock 22/22 green. Full record:
+> `CUSTOMER_OBJECTION_REGISTER.md` OBJ-13. Everything else this edition
+> re-confirmed rather than changed: a fresh CEAP sweep run (15/15 green)
+> verified IR-3's scan-token fix and the full paying-customer lifecycle are
+> live and healthy on commit `6c24abb`; the four GA gates remain owner-action
+> and unchanged. **Not yet deployed:** committed on branch only — see the
+> Action Queue.
 >
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
@@ -151,11 +160,14 @@
   MYTHOS GOD MODE header "v4.0" vs source label "v5.0".
 - **Recommended action:** verify each candidate against code, fix the ones
   that are real single-truth violations (same class as the threat level).
-- **Found & fixed this cycle (2026-07-06, Edition 10):** the "📡 API Docs"
-  footer link 404'd on seven public pages (dead bare `/api`, Cloudflare route
-  trailing-slash mismatch — see OBJ-13). Repointed to the working `/api-docs`
-  page; locked by `workers/test/footerApiDocsLink.test.mjs`. On branch,
-  pending release.
+- **Found & fixed this cycle (2026-07-06, Edition 10):** a full internal-link
+  crawl of every public page found 20 unique dead destination paths (38 link
+  instances, 22 pages) — most prominently the footer Privacy/Terms links (5
+  pages) and Dashboard upgrade CTAs (6 pages) — see OBJ-13. Repointed all 38
+  to real, working pages; 7 further references to pages that don't exist
+  anywhere in the codebase were left unfixed rather than guessed. Locked by
+  `workers/test/deadInternalLinks.test.mjs` (15 tests). On branch, pending
+  release.
 
 ## 2. Security — GOOD ▲
 
@@ -311,7 +323,8 @@
 | ✅ Code shipped | CI-1 alerting half — `error-rate-alert.mjs`/`.yml`, 12 unit tests, full suite green | Engineering | Live-verification pending: owner to confirm `CLOUDFLARE_API_TOKEN` Analytics:Read scope; first scheduled run is the closing evidence |
 | ✅ Code shipped | CI-2 schema-drift check — `d1-schema-diff.mjs`/`.yml`, 19 unit tests incl. RC-B1 regression + real-file parse check, full suite green | Engineering | Live-verification pending: first scheduled 03:40 UTC run against production is the closing evidence |
 | ✅ Done | Monday 05:00 UTC restore drill — first run green 2026-07-06 (run `28779799461`), R-06 closed | Engineering | Closed 2026-07-06 — reliability evidence requirement satisfied |
-| ✅ Code shipped | OBJ-13 — dead "API Docs" footer link (7 pages) repointed to `/api-docs`, regression-locked | Engineering | Live-verification pending: merge + deploy, then re-check all 7 links return 200 |
+| ✅ Code shipped | OBJ-13 — 38 dead internal link instances (22 pages: Privacy/Terms, Dashboard, API Docs, Sign in, MSSP Dashboard, sitemap) repointed to real pages, regression-locked | Engineering | Live-verification pending: merge + deploy, then re-check all fixed links return 200 |
+| P3 | 7 sitemap/nav entries reference pages that don't exist anywhere in the codebase (`/affiliate-hub`, `/developer-portal`, `/enterprise/welcome`, `/enterprise/onboarding`, `/enterprise/contacts`, `/mssp-workspace`, `/ai-governance-dashboard.html`) | Product + Engineering | Open — needs a product decision (build the page vs. remove the entry), not a link fix |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
 | P3 | One live payment end-to-end (GA gate 1) | Owner | PASSED — blocks all commercial evidence |
