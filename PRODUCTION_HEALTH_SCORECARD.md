@@ -101,7 +101,7 @@
 |---|-----------|-------|-------|----------------|
 | 1 | Product Quality | **GOOD** | ▲ | 1,300 tests/126 files green; Phase VIII fixed 3 customer-visible scale defects (scan→report 422, pricing drift, entitlement display) |
 | 2 | Security | **GOOD** | ▲ | Phase IV/V security blockers closed; gitleaks + security-headers CI; no SOC 2 attestation (organizational) |
-| 3 | Reliability | **GOOD** | ▲ | 30 consecutive green deploys; external probe live; restore drill armed (first run pending) |
+| 3 | Reliability | **GOOD** | ▲ | 30 consecutive green deploys; external probe live; restore drill first run green 2026-07-06 (R-06 closed) |
 | 4 | Performance | **GOOD (directional)** | ▬ | p50 44ms/p99 131ms local; bundle 1.32MB vs 2.5MB gate; no production APM yet |
 | 5 | Scalability | **GOOD (directional)** | ▲ | 100 orgs / 10 archetypes onboarded cleanly (0 errors); tenant isolation held; sustained-load throttling graceful by-design. Still unproven against real production concurrency |
 | 6 | Maintainability | **ADEQUATE** | ▲ | Standards doc + envelope for new code; 71% of legacy routes still unwrapped (accepted, migrating opportunistically) |
@@ -251,8 +251,8 @@
 
 ## 10. Operational Readiness — GOOD ▲
 
-- **Evidence:** nightly backups (2/2 green), weekly restore drill armed,
-  15-min-requested external probe live, deploy pipeline gated with
+- **Evidence:** nightly backups (2/2 green), weekly restore drill first run
+  green (2026-07-06, R-06 closed), 15-min-requested external probe live, deploy pipeline gated with
   post-deploy smoke + version verification, incident/DR runbooks published,
   risk register maintained with owners.
 - **Known risks:** **R-10 single-operator on-call (bus factor 1)** is now the
@@ -288,7 +288,7 @@
 | ✅ Done | **Found in audit:** `user-dashboard.html` shipped with a committed tool-download banner BEFORE `<!DOCTYPE html>` (visible to every logged-in customer, forced quirks mode) — stripped; doctype lock added for all key pages | — | Closed 2026-07-04 |
 | ✅ Code shipped | CI-1 alerting half — `error-rate-alert.mjs`/`.yml`, 12 unit tests, full suite green | Engineering | Live-verification pending: owner to confirm `CLOUDFLARE_API_TOKEN` Analytics:Read scope; first scheduled run is the closing evidence |
 | ✅ Code shipped | CI-2 schema-drift check — `d1-schema-diff.mjs`/`.yml`, 19 unit tests incl. RC-B1 regression + real-file parse check, full suite green | Engineering | Live-verification pending: first scheduled 03:40 UTC run against production is the closing evidence |
-| P1 | Watch Monday 05:00 UTC restore drill; green closes R-06, red is S1 | Engineering | PASSED — reliability evidence requirement |
+| ✅ Done | Monday 05:00 UTC restore drill — first run green 2026-07-06 (run `28779799461`), R-06 closed | Engineering | Closed 2026-07-06 — reliability evidence requirement satisfied |
 | P2 | Measure probe firing density over 48h; add Cloudflare Healthcheck if ~hourly | Owner + Eng | PASSED — outage-detection latency unknown |
 | P3 | Lightweight AI grounding eval harness | Engineering | Q2/Q3 need design before commit |
 | P3 | One live payment end-to-end (GA gate 1) | Owner | PASSED — blocks all commercial evidence |

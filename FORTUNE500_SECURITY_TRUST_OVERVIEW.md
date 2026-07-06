@@ -41,7 +41,7 @@ This document does **not** claim SOC2 or ISO27001 **certification**. Certificati
 | Data export (customer self-service) | ✅ Implemented | R2-backed report download with signed, time-limited tokens |
 | Data deletion | ⚠️ Partial | `DELETE /api/account` exists. Retention policy: scan reports retained in R2 for 90 days post-account deletion; D1 user rows deleted immediately on account deletion; no formal SLA in an executed customer contract yet (DPA template drafted — see `DATA_PROCESSING_AGREEMENT_TEMPLATE.md`) |
 | Backup | ✅ Implemented | Cloudflare D1 automated daily backups (platform-managed) |
-| Backup restore drill | ❌ Not yet | No documented restore test has been executed |
+| Backup restore drill | ✅ Implemented | Automated weekly drill against the real nightly backup artifact (`d1-restore-drill.yml`); first scheduled run passed 2026-07-06 (integrity check + table-count verification, all steps green) |
 
 ## 3. Application Security
 
