@@ -7450,7 +7450,8 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   // ── v36: AI SECURITY COPILOT — APEX God Mode Orchestrator ─────────────────
   // Full-spectrum AI security orchestration via natural language.
   // Tier-routed across Groq / DeepSeek / OpenRouter — zero Anthropic dependency.
-  // Tool registry: 19 skills covering threat intel, SOC, SIEM, red team, etc.
+  // Tool registry: 56 skills covering threat intel, SOC, SIEM, red team,
+  // sales/support/demo-booking, etc. — see aiSecurityCopilot.js TOOL_REGISTRY.
   if (path === '/api/copilot/capabilities' && method === 'GET') {
     return withSecurityHeaders(withCors(await handleCopilotCapabilities(request, env, authCtx), request));
   }
