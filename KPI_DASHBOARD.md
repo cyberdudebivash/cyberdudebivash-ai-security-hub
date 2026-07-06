@@ -20,7 +20,7 @@
 | Renewal rate | **UNKNOWN — no real customers** | — | When real customers exist |
 | Expansion rate | **UNKNOWN — no real customers** | — | When real customers exist |
 | Support resolution time | **UNKNOWN — no real tickets**; playbook diagnostics verified accurate against production | Support-doc accuracy audit (OER §3) | Per ops cycle |
-| Regression rate | **0** — no RESOLVED objection or locked defect has re-observed behavior | Objection Register recurrence check; 1,381-test suite green | Per CEAP sweep + suite |
+| Regression rate | **0** — no RESOLVED objection or locked defect has re-observed behavior | Objection Register recurrence check; 1,402-test suite green | Per CEAP sweep + suite |
 | Documentation accuracy | Audited against live production; 2 imprecisions found and corrected in the last audit (429 headers, key-usage semantics); 0 known open drifts | OER §3 audit table | Per ops cycle |
 | AI confidence calibration | **UNKNOWN** — confidence is reported (e.g. 94) and grounding/honesty are regression-locked, but no calibration eval harness exists (backlog E-4) | `mythosAnalystGrounding`, live analyze probes | When eval harness ships |
 | Deployment success rate | **100% recent window** — 9 consecutive green gated deploys (#618–#626), incl. 5 same-day releases through test→deploy→smoke | GitHub Actions deploy.yml history | Per deploy |
