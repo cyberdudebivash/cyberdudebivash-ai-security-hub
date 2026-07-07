@@ -8,6 +8,7 @@
 import { verifyJWT, extractBearerToken } from './jwt.js';
 import { resolveApiKeyFromDB, trackApiKeyUsage, checkDailyQuota, TIER_LIMITS } from './apiKeys.js';
 import { resolvePartnerSession } from '../handlers/partnerAuth.js';
+import { resolveStaffSession } from '../handlers/staffAuth.js';
 
 export const UPGRADE_URL   = 'https://cyberdudebivash.in/#pricing';
 export const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
@@ -228,6 +229,10 @@ export async function resolveAuthV5(request, env) {
   // 1.5. Try MSSP partner session (magic-link login — handlers/partnerAuth.js)
   const partnerCtx = await resolvePartnerSession(request, env).catch(() => null);
   if (partnerCtx) return withAuthAliases(partnerCtx);
+
+  // 1.6. Try platform staff session (magic-link login — handlers/staffAuth.js)
+  const staffCtx = await resolveStaffSession(request, env).catch(() => null);
+  if (staffCtx) return withAuthAliases(staffCtx);
 
   // 2. Try API key (service/developer access)
   const keyCtx = await resolveFromApiKey(request, env);

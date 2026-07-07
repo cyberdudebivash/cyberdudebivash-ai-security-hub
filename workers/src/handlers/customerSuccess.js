@@ -50,9 +50,19 @@ const PLAYBOOKS = [
 
 function genId() { return 'cs_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-function requireRole(req, roles) {
+// RBAC-0: 'admin' also now accepts a real, multi-user Platform Admin / Super
+// Admin staff session (auth/rbac.js isPlatformAdmin) — not just the ADMIN_KEY
+// bypass, which is the only thing req.user.role==='admin' could mean before.
+// Purely additive: every existing pass condition (role==='admin'/'mssp_admin')
+// still passes via the same fast-path, unchanged.
+async function requireRole(req, roles, env) {
   if (!req.user) return false;
-  return roles.includes(req.user.role) || roles.includes(req.user.tier);
+  if (roles.includes(req.user.role) || roles.includes(req.user.tier)) return true;
+  if (roles.includes('admin')) {
+    const { isPlatformAdmin } = await import('../auth/rbac.js');
+    return isPlatformAdmin(req.user, env);
+  }
+  return false;
 }
 
 /**
@@ -186,7 +196,7 @@ export async function handleCustomerHealth(req, env) {
 }
 
 export async function handleCustomerHealthByOrg(req, env, orgId) {
-  if (!requireRole(req, ['admin', 'mssp_admin'])) {
+  if (!(await requireRole(req, ['admin', 'mssp_admin'], env))) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 
@@ -197,7 +207,7 @@ export async function handleCustomerHealthByOrg(req, env, orgId) {
 }
 
 export async function handleCustomerSuccessOverview(req, env) {
-  if (!requireRole(req, ['admin'])) {
+  if (!(await requireRole(req, ['admin'], env))) {
     return Response.json({ error: 'Admin required' }, { status: 403 });
   }
 
@@ -233,7 +243,7 @@ export async function handleCustomerSuccessOverview(req, env) {
 }
 
 export async function handleRefreshHealthScores(req, env) {
-  if (!requireRole(req, ['admin'])) {
+  if (!(await requireRole(req, ['admin'], env))) {
     return Response.json({ error: 'Admin required' }, { status: 403 });
   }
 

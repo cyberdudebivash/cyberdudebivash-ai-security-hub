@@ -259,16 +259,9 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
 </head>
 <body>
 
-<!-- Owner Gate Modal -->
-<div class="gate-overlay" id="gateOverlay">
-  <div class="gate-box">
-    <span class="gate-icon">🔒</span>
-    <div class="gate-title">Partner Ops — Restricted</div>
-    <p class="gate-sub">MSSP Command Center is an internal-only dashboard. Enter the owner password to continue.</p>
-    <input type="password" class="gate-input" id="gateInput" placeholder="••••••••••••••••••" autocomplete="current-password">
-    <div class="gate-err" id="gateErr"></div>
-    <button class="btn btn-purple" style="width:100%;justify-content:center" onclick="checkGate()">Unlock Dashboard</button>
-  </div>
+<!-- Staff Gate Modal (real session auth — see assets/staff-auth.js) -->
+<div class="gate-overlay" id="gateOverlay" style="display:none">
+  <div class="gate-box" id="gateBox"></div>
 </div>
 
 <!-- Ticker -->
@@ -647,35 +640,19 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
   </div>
 </footer>
 
+<script src="/assets/staff-auth.js"></script>
 <script>
 const API_BASE = 'https://cyberdudebivash.in';
 
-// ── OWNER GATE ──────────────────────────────────────────────────────────────
-(function() {
-  const GATE_PASS = 'cyberdudebivash2024admin';
-  const overlay = document.getElementById('gateOverlay');
-  if (localStorage.getItem('cdb_owner') === 'true') {
-    overlay.style.display = 'none';
-    return;
-  }
-  overlay.style.display = 'flex';
-  document.getElementById('gateInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') checkGate();
-  });
-  window.checkGate = function() {
-    const val = document.getElementById('gateInput').value;
-    const err = document.getElementById('gateErr');
-    if (val === GATE_PASS) {
-      localStorage.setItem('cdb_owner', 'true');
-      overlay.style.display = 'none';
-      loadAll();
-    } else {
-      err.textContent = 'Incorrect password. Try again.';
-      document.getElementById('gateInput').value = '';
-      document.getElementById('gateInput').focus();
-    }
-  };
-})();
+// ── STAFF GATE — real, server-verified session auth (assets/staff-auth.js) ──
+// Replaces the previous hardcoded shared password. See workers/src/handlers/
+// staffAuth.js for the backend; POST /api/staff/login sends a magic link,
+// verified here via CDB_STAFF_AUTH.guard() before the dashboard ever renders.
+CDB_STAFF_AUTH.guard(
+  document.getElementById('gateOverlay'),
+  document.getElementById('gateBox'),
+  () => loadAll()
+);
 
 // ── HELPERS ─────────────────────────────────────────────────────────────────
 function fmtINR(val) {
@@ -697,9 +674,7 @@ function showToast(msg, type) {
   t._tid = setTimeout(() => { t.className = 'toast'; }, 3500);
 }
 async function apiFetch(path) {
-  const r = await fetch(API_BASE + path, {
-    headers: { 'X-Owner-Key': localStorage.getItem('cdb_owner') || '' }
-  });
+  const r = await CDB_STAFF_AUTH.authFetch(API_BASE + path);
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
@@ -716,7 +691,7 @@ function loadAll() {
   loadRevTrend();
   loadExpOpps();
 }
-if (localStorage.getItem('cdb_owner') === 'true') loadAll();
+// loadAll() is now triggered by CDB_STAFF_AUTH.guard()'s onUnlocked callback above.
 
 // ── 1. MSSP KPI METRICS ──────────────────────────────────────────────────────
 async function loadMsspMetrics() {
@@ -878,9 +853,8 @@ async function submitPartner() {
     return;
   }
   try {
-    const r = await fetch(API_BASE + '/api/mssp/partners', {
+    const r = await CDB_STAFF_AUTH.authFetch(API_BASE + '/api/mssp/partners', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Owner-Key': 'true' },
       body: JSON.stringify({ company, contact, tier, contract_value: Number(contract_value)||0, email, notes })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);

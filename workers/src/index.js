@@ -3083,24 +3083,39 @@ export async function routeRequest(request, env, ctx, requestId) {
       request.user = authCtx;
       return withSecurityHeaders(withCors(await handleIngestEvent(request, env), request));
     }
+    // RBAC-0: this file's own header comment claims growth/funnel/adoption/prune
+    // are admin-only, but nothing enforced it — any caller could read growth
+    // KPIs and funnel/adoption analytics, or prune stored events. Now enforced.
     if (path === '/api/analytics/p3/growth' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:analytics:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleGrowthMetrics(request, env), request));
     }
     if (path === '/api/analytics/p3/funnel' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:analytics:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleConversionFunnel(request, env), request));
     }
     if (path === '/api/analytics/p3/adoption' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:analytics:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleFeatureAdoption(request, env), request));
     }
     if (path === '/api/analytics/p3/prune' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       request.user = authCtx;
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:analytics:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handlePruneEvents(request, env), request));
     }
 
@@ -7584,8 +7599,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
 
   // v20.0 GOD MODE: EXECUTIVE COMMAND CENTER PRO (FAIR, Board, ROI)
+  // RBAC-0: this catch-all previously had NO auth check at all — not even
+  // resolveAuthV5 was called — exposing FAIR risk modeling, breach-cost
+  // calculations, and board reports to anonymous callers. Gated to the same
+  // bar as the sibling executiveRiskHandlers.js routes on this same prefix
+  // (Platform Admin or PRO/ENTERPRISE tier).
   if (path.startsWith('/api/executive/')) {
-    return handleExecutiveCommandCenter(request, env);
+    const _execCtx = await resolveAuthV5(request, env).catch(() => ({}));
+    const { requireCan } = await import('./auth/rbac.js');
+    const _execTierOk = ['PRO', 'ENTERPRISE', 'MSSP'].includes((_execCtx.tier || '').toUpperCase());
+    if (!_execTierOk) {
+      const deny = await requireCan(_execCtx, env, 'admin:analytics:read', 'Executive Command Center requires a PRO/ENTERPRISE plan or platform admin access.');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
+    }
+    return withSecurityHeaders(withCors(await handleExecutiveCommandCenter(request, env), request));
   }
 
   if (path === '/api/ceo/dashboard' || path === '/api/ceo/dashboard/kpis') {
@@ -7921,6 +7948,45 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/partners/resolve-domain' && method === 'GET') {
       const { handleResolvePartnerDomain } = await import('./handlers/partnerDomains.js');
       return withSecurityHeaders(withCors(await handleResolvePartnerDomain(request, env), request));
+    }
+
+    // ── Platform staff auth (magic-link login) — handlers/staffAuth.js ────────
+    // RBAC-0: real, multi-user Platform Admin / Super Admin login, replacing
+    // the hardcoded shared password that used to gate mssp-command-center.html,
+    // revenue-command-center.html, and proposal-generator.html.
+    if (path === '/api/staff/login' && method === 'POST') {
+      const { handleStaffLoginRequest } = await import('./handlers/staffAuth.js');
+      return withSecurityHeaders(withCors(await handleStaffLoginRequest(request, env), request));
+    }
+    if (path === '/api/staff/verify' && method === 'POST') {
+      const { handleStaffLoginVerify } = await import('./handlers/staffAuth.js');
+      return withSecurityHeaders(withCors(await handleStaffLoginVerify(request, env), request));
+    }
+    if (path === '/api/staff/logout' && method === 'POST') {
+      const { handleStaffLogout } = await import('./handlers/staffAuth.js');
+      return withSecurityHeaders(withCors(await handleStaffLogout(request, env), request));
+    }
+    if (path === '/api/staff/me' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleStaffMe } = await import('./handlers/staffAuth.js');
+      return withSecurityHeaders(withCors(await handleStaffMe(request, env, authCtx), request));
+    }
+
+    // ── Platform role management (Super Admin only) — auth/rbac.js ────────────
+    if (path === '/api/admin/roles' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleListRoles } = await import('./auth/rbac.js');
+      return withSecurityHeaders(withCors(await handleListRoles(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/roles/grant' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleGrantRole } = await import('./auth/rbac.js');
+      return withSecurityHeaders(withCors(await handleGrantRole(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/roles/revoke' && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleRevokeRole } = await import('./auth/rbac.js');
+      return withSecurityHeaders(withCors(await handleRevokeRole(request, env, authCtx), request));
     }
 
     // GET /api/mssp/expansion-opps — Partners eligible for tier upgrade

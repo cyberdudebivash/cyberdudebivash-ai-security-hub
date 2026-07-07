@@ -41,9 +41,15 @@ function htmlReportResponse(html, filename) {
   });
 }
 
-function enterpriseOnly(authCtx) {
+// RBAC-0: also accepts a real Platform Admin / Super Admin staff session
+// (auth/rbac.js isPlatformAdmin), not just the ADMIN_KEY bypass or a paying
+// ENTERPRISE subscriber. Purely additive — both existing pass conditions
+// (isAdmin, tier==='ENTERPRISE') are unchanged.
+async function enterpriseOnly(authCtx, env) {
   if (authCtx?.isAdmin) return null;
   if (authCtx?.tier === 'ENTERPRISE') return null;
+  const { isPlatformAdmin } = await import('../auth/rbac.js');
+  if (await isPlatformAdmin(authCtx, env)) return null;
   return ok({ success: false, error: 'Executive Risk Platform requires ENTERPRISE plan', upgrade: 'https://tools.cyberdudebivash.com/#pricing', features: ['Board-ready risk briefs', 'Quarterly risk forecasting', 'Peer benchmarking', 'Regulatory exposure analysis', 'PDF board reports'] }, 403);
 }
 
@@ -96,7 +102,7 @@ async function fetchCVEKPIs(env) {
 // ENDPOINT 1: POST /api/executive/risk-brief — Board-Level Risk Brief
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleExecutiveRiskBrief(request, env, authCtx) {
-  const gate = enterpriseOnly(authCtx);
+  const gate = await enterpriseOnly(authCtx, env);
   if (gate) return gate;
 
   const body    = await request.json().catch(() => ({}));
@@ -232,7 +238,10 @@ Write 3-4 paragraphs covering: (1) Current risk posture and trending, (2) Top 3 
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleExecutiveDashboard(request, env, authCtx) {
   if (!authCtx?.isAdmin && !['PRO','ENTERPRISE'].includes(authCtx?.tier)) {
-    return ok({ success: false, error: 'Executive dashboard requires PRO or ENTERPRISE plan', upgrade: 'https://tools.cyberdudebivash.com/#pricing' }, 403);
+    const { isPlatformAdmin } = await import('../auth/rbac.js');
+    if (!(await isPlatformAdmin(authCtx, env))) {
+      return ok({ success: false, error: 'Executive dashboard requires PRO or ENTERPRISE plan', upgrade: 'https://tools.cyberdudebivash.com/#pricing' }, 403);
+    }
   }
 
   const [kpis, cveKpis] = await Promise.all([fetchPlatformKPIs(env), fetchCVEKPIs(env)]);
@@ -301,7 +310,7 @@ export async function handleExecutiveDashboard(request, env, authCtx) {
 // ENDPOINT 3: POST /api/executive/forecast — 90-Day Risk Forecast
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleExecutiveForecast(request, env, authCtx) {
-  const gate = enterpriseOnly(authCtx);
+  const gate = await enterpriseOnly(authCtx, env);
   if (gate) return gate;
 
   const body   = await request.json().catch(() => ({}));
@@ -402,7 +411,7 @@ Cover: (1) threat trends over the forecast horizon, (2) sector-specific risk dri
 // ENDPOINT 4: POST /api/executive/board-report — Full Board Report Data
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleBoardReport(request, env, authCtx) {
-  const gate = enterpriseOnly(authCtx);
+  const gate = await enterpriseOnly(authCtx, env);
   if (gate) return gate;
 
   const body   = await request.json().catch(() => ({}));
@@ -582,7 +591,7 @@ function buildEvidenceList(action, allVulns) {
 }
 
 export async function handlePlaybookRecommendations(request, env, authCtx) {
-  const gate = enterpriseOnly(authCtx);
+  const gate = await enterpriseOnly(authCtx, env);
   if (gate) return gate;
 
   const body   = await request.json().catch(() => ({}));
