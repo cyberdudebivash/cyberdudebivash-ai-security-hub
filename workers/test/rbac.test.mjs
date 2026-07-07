@@ -13,6 +13,7 @@ import {
 
 function makeEnv({ users = [], roles = [] } = {}) {
   const usersById = new Map(users.map(u => [u.id, u]));
+  const usersByEmail = new Map(users.map(u => [u.email, u]));
   const roleRows = [...roles]; // [{user_id, role}]
   const kv = new Map();
 
@@ -25,6 +26,9 @@ function makeEnv({ users = [], roles = [] } = {}) {
           async first() {
             if (/SELECT id, email FROM users WHERE id/.test(sql)) {
               return usersById.get(b[0]) || null;
+            }
+            if (/FROM users WHERE email/.test(sql)) {
+              return usersByEmail.get(b[0]) || null;
             }
             return null;
           },
@@ -212,5 +216,61 @@ describe('Role management endpoints — Super Admin only', () => {
     expect(ok.status).toBe(200);
     const body = await ok.json();
     expect(body.roles.length).toBe(1);
+  });
+});
+
+describe('Grant/revoke by email — admin-portal.html operator UX', () => {
+  it('grants a role by email (case-insensitive) when user_id is not known', async () => {
+    const env = makeEnv({ users: [{ id: 'u11', email: 'ops@x.com' }] });
+    const req = new Request('https://x', { method: 'POST', body: JSON.stringify({ email: 'OPS@x.com', role: 'ADMIN' }) });
+    const res = await handleGrantRole(req, env, { isAdmin: true, email: 'owner@x.com' });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user_id).toBe('u11');
+    expect(body.email).toBe('ops@x.com');
+    expect(await getPlatformRoles(env, 'u11')).toEqual(['ADMIN']);
+  });
+
+  it('rejects granting by email to a nonexistent address', async () => {
+    const env = makeEnv();
+    const req = new Request('https://x', { method: 'POST', body: JSON.stringify({ email: 'ghost@x.com', role: 'ADMIN' }) });
+    const res = await handleGrantRole(req, env, { isAdmin: true });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects a grant request with neither user_id nor email', async () => {
+    const env = makeEnv();
+    const req = new Request('https://x', { method: 'POST', body: JSON.stringify({ role: 'ADMIN' }) });
+    const res = await handleGrantRole(req, env, { isAdmin: true });
+    expect(res.status).toBe(400);
+  });
+
+  it('a non-super-admin cannot grant a role by email either', async () => {
+    const env = makeEnv({ users: [{ id: 'u13', email: 'target@x.com' }] });
+    const req = new Request('https://x', { method: 'POST', body: JSON.stringify({ email: 'target@x.com', role: 'ADMIN' }) });
+    const res = await handleGrantRole(req, env, { tier: 'FREE' });
+    expect(res.status).toBe(403);
+  });
+
+  it('revokes a role by email', async () => {
+    const env = makeEnv({ users: [{ id: 'u12', email: 'ops2@x.com' }], roles: [{ user_id: 'u12', role: 'ADMIN' }] });
+    const req = new Request('https://x', { method: 'DELETE', body: JSON.stringify({ email: 'ops2@x.com', role: 'ADMIN' }) });
+    const res = await handleRevokeRole(req, env, { isAdmin: true });
+    expect(res.status).toBe(200);
+    expect(await getPlatformRoles(env, 'u12')).toEqual([]);
+  });
+
+  it('rejects revoking by an unknown email', async () => {
+    const env = makeEnv();
+    const req = new Request('https://x', { method: 'DELETE', body: JSON.stringify({ email: 'ghost2@x.com', role: 'ADMIN' }) });
+    const res = await handleRevokeRole(req, env, { isAdmin: true });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects a revoke request with neither user_id nor email', async () => {
+    const env = makeEnv();
+    const req = new Request('https://x', { method: 'DELETE', body: JSON.stringify({ role: 'ADMIN' }) });
+    const res = await handleRevokeRole(req, env, { isAdmin: true });
+    expect(res.status).toBe(400);
   });
 });

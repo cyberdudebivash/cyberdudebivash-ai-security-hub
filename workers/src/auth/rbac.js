@@ -128,40 +128,52 @@ export async function requireCan(authCtx, env, permission, message) {
 // ── Role management (Super Admin only) ──────────────────────────────────────
 const GRANTABLE_ROLES = ['SUPERADMIN', 'ADMIN', 'SOC_ANALYST', 'THREAT_HUNTER', 'VIEWER', 'API_USER'];
 
-// POST /api/admin/roles/grant  { user_id, role }
+// POST /api/admin/roles/grant  { user_id, role } OR { email, role }
+// admin-portal.html only ever has an operator's email on hand, not their
+// internal user_id — email is resolved to a user_id here. The user_id path
+// is untouched (same query, same shape) when user_id is provided.
 export async function handleGrantRole(request, env, authCtx) {
   const deny = await requireCan(authCtx, env, 'admin:roles:manage');
   if (deny) return deny;
   if (!env.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
 
   const body = await request.json().catch(() => ({}));
-  const { user_id, role } = body;
-  if (!user_id || !GRANTABLE_ROLES.includes(role)) {
-    return Response.json({ error: `user_id and a valid role required (${GRANTABLE_ROLES.join('|')})` }, { status: 400 });
+  const { user_id, email, role } = body;
+  if ((!user_id && !email) || !GRANTABLE_ROLES.includes(role)) {
+    return Response.json({ error: `user_id or email, and a valid role required (${GRANTABLE_ROLES.join('|')})` }, { status: 400 });
   }
 
-  const target = await env.DB.prepare(`SELECT id, email FROM users WHERE id = ?`).bind(user_id).first().catch(() => null);
+  const target = user_id
+    ? await env.DB.prepare(`SELECT id, email FROM users WHERE id = ?`).bind(user_id).first().catch(() => null)
+    : await env.DB.prepare(`SELECT id, email FROM users WHERE email = ?`).bind(String(email).toLowerCase().trim()).first().catch(() => null);
   if (!target) return Response.json({ error: 'No such user' }, { status: 404 });
 
   await env.DB.prepare(
     `INSERT INTO user_roles (user_id, role, granted_by) VALUES (?, ?, ?)
      ON CONFLICT(user_id, role) DO UPDATE SET granted_by = excluded.granted_by, granted_at = datetime('now')`
-  ).bind(user_id, role, authCtx.email || authCtx.identity || 'unknown').run();
+  ).bind(target.id, role, authCtx.email || authCtx.identity || 'unknown').run();
 
-  await invalidatePlatformRoleCache(env, user_id);
+  await invalidatePlatformRoleCache(env, target.id);
 
-  return Response.json({ success: true, user_id, email: target.email, role, granted_by: authCtx.email || authCtx.identity });
+  return Response.json({ success: true, user_id: target.id, email: target.email, role, granted_by: authCtx.email || authCtx.identity });
 }
 
-// DELETE /api/admin/roles/revoke  { user_id, role }
+// DELETE /api/admin/roles/revoke  { user_id, role } OR { email, role }
+// Same email-resolution addition as handleGrantRole above; the user_id path
+// (direct delete, no existence check) is unchanged.
 export async function handleRevokeRole(request, env, authCtx) {
   const deny = await requireCan(authCtx, env, 'admin:roles:manage');
   if (deny) return deny;
   if (!env.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
 
   const body = await request.json().catch(() => ({}));
-  const { user_id, role } = body;
-  if (!user_id || !role) return Response.json({ error: 'user_id and role required' }, { status: 400 });
+  let { user_id, email, role } = body;
+  if (!user_id && email) {
+    const target = await env.DB.prepare(`SELECT id FROM users WHERE email = ?`).bind(String(email).toLowerCase().trim()).first().catch(() => null);
+    if (!target) return Response.json({ error: 'No such user' }, { status: 404 });
+    user_id = target.id;
+  }
+  if (!user_id || !role) return Response.json({ error: 'user_id or email, and role required' }, { status: 400 });
 
   await env.DB.prepare(`DELETE FROM user_roles WHERE user_id = ? AND role = ?`).bind(user_id, role).run();
   await invalidatePlatformRoleCache(env, user_id);
