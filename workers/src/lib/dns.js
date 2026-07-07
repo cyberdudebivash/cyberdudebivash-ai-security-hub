@@ -199,7 +199,7 @@ async function checkCAA(domain) {
 }
 
 // ─── TXT Records (raw) ───────────────────────────────────────────────────────
-async function getTXTRecords(domain) {
+export async function getTXTRecords(domain) {
   const resp = await dohQuery(domain, 'TXT');
   return extractRecords(resp, 16);
 }

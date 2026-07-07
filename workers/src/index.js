@@ -7902,6 +7902,27 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handlePartnerMe(request, env, authCtx), request));
     }
 
+    // ── MSSP partner custom-domain verification — handlers/partnerDomains.js ──
+    if (path === '/api/partners/domain/request' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleRequestPartnerDomain } = await import('./handlers/partnerDomains.js');
+      return withSecurityHeaders(withCors(await handleRequestPartnerDomain(request, env, authCtx), request));
+    }
+    if (path === '/api/partners/domain/verify' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleVerifyPartnerDomain } = await import('./handlers/partnerDomains.js');
+      return withSecurityHeaders(withCors(await handleVerifyPartnerDomain(request, env, authCtx), request));
+    }
+    if (path === '/api/partners/domain/status' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handlePartnerDomainStatus } = await import('./handlers/partnerDomains.js');
+      return withSecurityHeaders(withCors(await handlePartnerDomainStatus(request, env, authCtx), request));
+    }
+    if (path === '/api/partners/resolve-domain' && method === 'GET') {
+      const { handleResolvePartnerDomain } = await import('./handlers/partnerDomains.js');
+      return withSecurityHeaders(withCors(await handleResolvePartnerDomain(request, env), request));
+    }
+
     // GET /api/mssp/expansion-opps — Partners eligible for tier upgrade
     if (path === '/api/mssp/expansion-opps' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
