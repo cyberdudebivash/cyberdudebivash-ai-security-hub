@@ -9,13 +9,18 @@
 #    ├── lint-workers      → Cloudflare Workers JS validation
 #    ├── lint-ai-core      → Python syntax + smoke tests
 #    ├── lint-frontend     → HTML structure validation
-#    └── structure-check   → Required file presence
+#    ├── structure-check   → Required file presence
+#    └── dependency-audit  → pip-audit + npm audit, fails on HIGH/CRITICAL CVEs
+#          (split out of security-scan below — a real CVE in a dependency
+#          must be able to block a deploy; it could not before this job existed)
 #
 #  ADVISORY (report-only, never block deployment):
 #    └── security-scan
-#          ├── secret-detection   (false-positive-safe regex, excludes node_modules)
-#          ├── python-audit       (pip-audit for Python dependency CVEs)
-#          └── node-audit         (npm audit for JS dependency CVEs)
+#          ├── secret-detection      (regex heuristic — has a documented false-
+#          │                          positive history, e.g. "risk-based" matching
+#          │                          a key pattern; not reliable enough to gate on)
+#          ├── .env-file-check       (heuristic file-presence check)
+#          └── sensitive-pattern-scan (broader regex heuristic, same FP risk)
 #
 # ROOT CAUSE OF PRIOR FAILURE (fixed here):
 #   The committed grep pattern "sk-[a-zA-Z0-9]" matched the substring "sk-b"
@@ -373,16 +378,119 @@ jobs:
           echo "- Required HTML markers ✅" >> "$GITHUB_STEP_SUMMARY"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 4 · Basic Security Scan  [ADVISORY — never blocks deployment]
+# JOB 4 · Dependency Vulnerability Audit  [Node.js REQUIRED, Python advisory]
+# ─────────────────────────────────────────────────────────────────────────────
+# Split out of the advisory security-scan job below: unlike the regex-based
+# secret/pattern heuristics (which have a documented false-positive history),
+# npm audit reports real, named CVEs against workers/ — the actual deployed
+# Cloudflare Worker — and a HIGH/CRITICAL hit here now blocks the deploy via
+# ci-gate, which it previously could not do. The Python side (root
+# requirements.txt, the non-deployed FastAPI service under Dockerfile/
+# start.py) stays advisory within this same job — see the inline comment on
+# that step for the verified reasons why.
+# ─────────────────────────────────────────────────────────────────────────────
+  dependency-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Advisory, not required, within this otherwise-required job — two
+      # reasons, verified directly rather than assumed:
+      #  1. The pinned installed pip-audit (2.10.1) has no --severity flag at
+      #     all; the old invocation below would have been a CLI usage error
+      #     (exit 2) on every run, silently absorbed by the job-level
+      #     continue-on-error this logic used to live under. Fixed to a valid
+      #     invocation, but "fails on every CVE, any severity" is a much
+      #     blunter instrument than npm audit's --audit-level=high, and this
+      #     requirements.txt (root, not ai-core/ as the old path assumed —
+      #     that path never existed, so this check silently no-op'd before)
+      #     currently has 29 real findings across 7 packages.
+      #  2. This requirements.txt belongs to the FastAPI service under
+      #     Dockerfile/start.py — confirmed not wired into any CI/CD deploy
+      #     target (no docker build/push step anywhere in .github/workflows),
+      #     unlike workers/, which is the actual live production system. A
+      #     real fix here means bumping starlette/python-multipart/
+      #     python-jose/cryptography across major versions with a fragile,
+      #     documented compatibility pin (see the fastapi/starlette comment
+      #     above) that needs its own test pass — tracked as a follow-up, not
+      #     silently declared clean.
+      - name: "[Advisory] Python dependency audit (pip-audit)"
+        continue-on-error: true
+        run: |
+          echo "━━━ Python CVE Audit ━━━"
+          pip install pip-audit --quiet
+
+          if [ -f requirements.txt ]; then
+            echo "Auditing requirements.txt..."
+            pip-audit -r requirements.txt \
+              --ignore-vuln PYSEC-2022-237 \
+              --format markdown \
+              --output /tmp/pip_audit.md || true
+            echo "### Python Dependency Audit (advisory — see comment above)" >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/pip_audit.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || \
+              echo "No vulnerabilities detected." >> "$GITHUB_STEP_SUMMARY"
+            pip-audit -r requirements.txt --ignore-vuln PYSEC-2022-237
+          else
+            echo "ℹ️  No requirements.txt — skipping Python CVE audit"
+            echo "### Python Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
+            echo "Skipped (no requirements.txt found)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "Python dependency audit complete (advisory)"
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Node.js dependency audit (npm audit) — fails on HIGH/CRITICAL
+        working-directory: workers
+        run: |
+          echo "━━━ Node.js CVE Audit ━━━"
+          npm ci --prefer-offline --quiet
+
+          npm audit --json > /tmp/npm_audit.json 2>/dev/null || true
+
+          if npm audit --audit-level=high 2>&1 | tee /tmp/npm_audit.txt | grep -qE "high|critical"; then
+            echo "⚠️  HIGH/CRITICAL Node.js vulnerabilities detected:"
+            cat /tmp/npm_audit.txt
+            echo "### ⚠️ Node.js Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
+            echo "HIGH/CRITICAL vulnerabilities found. Run \`npm audit fix\` locally." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "✅ Node.js audit PASSED — no high/critical vulnerabilities"
+          echo "### ✅ Node.js Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "No HIGH/CRITICAL vulnerabilities detected." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Dependency Vulnerability Audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "This job is REQUIRED — a HIGH/CRITICAL CVE blocks deployment." >> "$GITHUB_STEP_SUMMARY"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 4b · Basic Security Scan  [ADVISORY — never blocks deployment]
 # ─────────────────────────────────────────────────────────────────────────────
 # ALL steps use continue-on-error: true.
 # Failures are surfaced as warnings in the job summary, not pipeline failures.
 #
-# KEY FIXES vs the broken committed version:
-#   • Pattern requires 20+ char suffix → eliminates "risk-based" false positives
-#   • Excludes node_modules, .git, .wrangler, dist, build, generated_app
-#   • Each sub-scan is independently advisory
-#   • pip-audit + npm audit for real CVE detection
+# These are regex/heuristic checks (secret patterns, .env presence) with a
+# documented false-positive history (e.g. "risk-based authentication" matching
+# a key-shaped pattern) — not reliable enough to block a deploy on their own.
+# Real dependency CVEs are handled by the separate, required dependency-audit
+# job above.
 # ─────────────────────────────────────────────────────────────────────────────
   security-scan:
     name: Security Scan (Advisory)
@@ -469,72 +577,9 @@ jobs:
           echo "### ✅ .env File Check" >> "$GITHUB_STEP_SUMMARY"
           echo "No committed .env files detected." >> "$GITHUB_STEP_SUMMARY"
 
-      # ── 4c. Python Dependency Audit ───────────────────────────────────────
-      - name: Setup Python 3.11 (for audit)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: "[Advisory] Python dependency audit (pip-audit)"
-        continue-on-error: true
-        run: |
-          echo "━━━ Python CVE Audit ━━━"
-          pip install pip-audit --quiet
-
-          if [ -f ai-core/requirements.txt ]; then
-            echo "Auditing ai-core/requirements.txt..."
-            pip-audit -r ai-core/requirements.txt \
-              --ignore-vuln PYSEC-2022-237 \
-              --format markdown \
-              --output /tmp/pip_audit.md \
-              2>/dev/null || true
-            echo "### Python Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
-            cat /tmp/pip_audit.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || \
-              echo "No vulnerabilities detected." >> "$GITHUB_STEP_SUMMARY"
-            pip-audit -r ai-core/requirements.txt --severity high 2>/dev/null || {
-              echo "⚠️  HIGH/CRITICAL Python vulnerabilities found — review required"
-              exit 1
-            }
-          else
-            echo "ℹ️  No requirements.txt — skipping Python CVE audit"
-            echo "### Python Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
-            echo "Skipped (no requirements.txt found)." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          echo "✅ Python dependency audit complete"
-
-      # ── 4d. Node.js Dependency Audit ─────────────────────────────────────
-      - name: Setup Node.js 24 (for audit)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-
-      - name: "[Advisory] Node.js dependency audit (npm audit)"
-        continue-on-error: true
-        working-directory: workers
-        run: |
-          echo "━━━ Node.js CVE Audit ━━━"
-          npm ci --prefer-offline --quiet 2>/dev/null || npm install --quiet
-          echo ""
-
-          # Run full audit and capture output
-          npm audit --json 2>/dev/null > /tmp/npm_audit.json || true
-
-          # Only fail on HIGH or CRITICAL vulnerabilities
-          HIGH_CRITICAL=$(npm audit --audit-level=high 2>&1 || true)
-          if echo "$HIGH_CRITICAL" | grep -qE "high|critical"; then
-            echo "⚠️  HIGH/CRITICAL Node.js vulnerabilities detected:"
-            npm audit --audit-level=high 2>/dev/null || true
-            echo "### ⚠️ Node.js Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
-            echo "HIGH/CRITICAL vulnerabilities found. Run \`npm audit fix\` locally." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-          echo "✅ Node.js audit PASSED — no high/critical vulnerabilities"
-          echo "### ✅ Node.js Dependency Audit" >> "$GITHUB_STEP_SUMMARY"
-          echo "No HIGH/CRITICAL vulnerabilities detected." >> "$GITHUB_STEP_SUMMARY"
-
-      # ── 4e. Sensitive Pattern Scan (broader) ──────────────────────────────
+      # ── 4c. Sensitive Pattern Scan (broader) ──────────────────────────────
+      # Dependency CVE auditing (pip-audit/npm audit) now lives in the
+      # required dependency-audit job above — not duplicated here.
       - name: "[Advisory] Scan for additional sensitive patterns"
         continue-on-error: true
         run: |
@@ -651,7 +696,10 @@ jobs:
       - verify-runtime-integrity
       - lint-frontend
       - structure-check
-    # security-scan is intentionally excluded from needs — it is advisory only
+      - dependency-audit
+    # security-scan is intentionally excluded from needs — its remaining
+    # checks (secret/pattern regex heuristics) have a documented false-
+    # positive history; dependency-audit (real, named CVEs) is required above.
 
     steps:
       - name: All required jobs passed
@@ -665,7 +713,8 @@ jobs:
           echo "║  ✅ Verify Runtime Integrity (compile+import)     ║"
           echo "║  ✅ Validate Frontend HTML                        ║"
           echo "║  ✅ Validate Folder Structure                     ║"
-          echo "║  ℹ️  Security Scan — Advisory (see scan job)      ║"
+          echo "║  ✅ Dependency Vulnerability Audit                ║"
+          echo "║  ℹ️  Security Scan (patterns) — Advisory          ║"
           echo "╚══════════════════════════════════════════════════╝"
           echo "  Commit : ${{ github.sha }}"
           echo "  Branch : ${{ github.ref_name }}"
@@ -684,7 +733,8 @@ jobs:
           echo "| Verify Runtime Integrity | ✅ Passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Validate Frontend HTML | ✅ Passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Validate Folder Structure | ✅ Passed |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Security Scan | ℹ️ Advisory |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency Vulnerability Audit | ✅ Passed |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Security Scan (patterns) | ℹ️ Advisory |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "**Branch:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
