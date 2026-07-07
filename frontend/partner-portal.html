@@ -142,7 +142,7 @@ async function verifyMagicToken(token) {
     setSession(data.session_token);
     history.replaceState({}, '', location.pathname); // scrub the one-time token out of the URL/history
     renderDashboardShell(data.partner);
-    loadRevenue(); loadCustomers(); loadBranding();
+    loadRevenue(); loadCustomers(); loadBranding(); loadDomainStatus();
   } catch (err) {
     renderLogin(err.message);
   }
@@ -237,23 +237,24 @@ function renderDashboardShell(partner) {
 
       <div class="card">
         <div class="card-title">White-Label Branding</div>
-        <div class="card-subtitle">Your logo, colors, and domain — shown to your own clients.</div>
+        <div class="card-subtitle">Your logo, colors, and support contact — shown to your own clients.</div>
         <div class="two-col">
           <div>
             <div class="form-group"><label>Brand Name</label><input id="brand-name" type="text" placeholder="Your Security Firm" /></div>
             <div class="form-group"><label>Primary Color</label><input id="brand-color" type="color" value="#00d4ff" /></div>
-            <div class="form-group"><label>Support Email</label><input id="brand-support-email" type="email" placeholder="support@yourfirm.com" /></div>
           </div>
           <div>
             <div class="form-group"><label>Logo URL (https only)</label><input id="brand-logo" type="url" placeholder="https://yourfirm.com/logo.png" /></div>
-            <div class="form-group">
-              <label>Custom Domain</label>
-              <input id="brand-domain" type="text" placeholder="portal.yourfirm.com" />
-              <div class="caveat">Custom-domain routing (DNS + TLS) is being rolled out — saving a domain here records your request but does not yet serve live traffic on it. Your portal remains reachable at this URL either way.</div>
-            </div>
+            <div class="form-group"><label>Support Email</label><input id="brand-support-email" type="email" placeholder="support@yourfirm.com" /></div>
           </div>
         </div>
         <button class="btn btn-primary" onclick="saveBranding()">Save Branding</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Custom Domain</div>
+        <div class="card-subtitle">Prove you own a domain by publishing a DNS TXT record — the first real step toward serving your branded portal there.</div>
+        <div id="domain-section"><div class="empty-row">Loading…</div></div>
       </div>
     </div>`;
 }
@@ -264,7 +265,7 @@ async function loadDashboard() {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Could not load your account');
     renderDashboardShell(data.partner);
-    loadRevenue(); loadCustomers(); loadBranding();
+    loadRevenue(); loadCustomers(); loadBranding(); loadDomainStatus();
   } catch (err) {
     if (err.message !== 'session_expired') renderLogin(err.message);
   }
@@ -343,7 +344,6 @@ async function loadBranding() {
     document.getElementById('brand-color').value = theme.primary_color || '#00d4ff';
     document.getElementById('brand-support-email').value = theme.support_email || '';
     document.getElementById('brand-logo').value = theme.logo_url || '';
-    document.getElementById('brand-domain').value = theme.custom_domain || '';
   } catch (err) {
     // non-fatal — form just stays at defaults
   }
@@ -355,13 +355,75 @@ async function saveBranding() {
     primary_color: document.getElementById('brand-color').value || undefined,
     support_email: document.getElementById('brand-support-email').value.trim() || undefined,
     logo_url: document.getElementById('brand-logo').value.trim() || undefined,
-    custom_domain: document.getElementById('brand-domain').value.trim() || undefined,
   };
   try {
     const res = await authFetch('/api/white-label/theme', { method: 'PUT', body: JSON.stringify(body) });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Could not save branding');
     toast('Branding saved.');
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+// ── Custom domain verification ───────────────────────────────────────────────
+async function loadDomainStatus() {
+  try {
+    const res = await authFetch('/api/partners/domain/status');
+    const data = await res.json();
+    const domains = (data.domains || []);
+    const latest = domains[0];
+    renderDomainSection(latest);
+  } catch (err) {
+    if (err.message !== 'session_expired') document.getElementById('domain-section').innerHTML = '<div class="empty-row">Unable to load domain status.</div>';
+  }
+}
+
+function renderDomainSection(entry) {
+  const el = document.getElementById('domain-section');
+  if (!entry) {
+    el.innerHTML = `
+      <div class="form-group"><label>Domain</label><input id="domain-input" type="text" placeholder="portal.yourfirm.com" /></div>
+      <button class="btn btn-primary" onclick="requestDomain()">Request Verification</button>`;
+    return;
+  }
+  if (entry.status === 'verified') {
+    el.innerHTML = `
+      <div><span class="badge badge-active">VERIFIED</span> <strong>${entry.domain}</strong></div>
+      <div class="caveat" style="margin-top:10px">Domain ownership verified. Live traffic routing on this domain additionally requires Cloudflare for SaaS custom-hostname activation, which our team completes manually per partner — contact mssp@cyberdudebivash.com to finish activation.</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div><span class="badge badge-pending">PENDING VERIFICATION</span> <strong>${entry.domain}</strong></div>
+    <div class="caveat">Add a DNS TXT record at <code>_cdb-challenge.${entry.domain}</code> with the value we emailed/showed you when you requested this, then click Check Verification. DNS changes can take up to 24-48 hours to propagate.</div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="verifyDomain('${entry.domain}')">Check Verification</button>
+      <button class="btn btn-outline" onclick="renderDomainSection(null)">Use a different domain</button>
+    </div>`;
+}
+
+async function requestDomain() {
+  const domain = document.getElementById('domain-input').value.trim();
+  if (!domain) { toast('Enter a domain first.'); return; }
+  try {
+    const res = await authFetch('/api/partners/domain/request', { method: 'POST', body: JSON.stringify({ domain }) });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not start domain verification');
+    document.getElementById('domain-section').innerHTML = `
+      <div><span class="badge badge-pending">PENDING VERIFICATION</span> <strong>${data.domain}</strong></div>
+      <div class="caveat">Add a DNS TXT record at <code>${data.verification.host}</code> with this value:<br><code>${data.verification.value}</code><br>${data.instructions}</div>
+      <div style="margin-top:10px"><button class="btn btn-primary" onclick="verifyDomain('${data.domain}')">Check Verification</button></div>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+async function verifyDomain(domain) {
+  try {
+    const res = await authFetch('/api/partners/domain/verify', { method: 'POST', body: JSON.stringify({ domain }) });
+    const data = await res.json();
+    if (data.status === 'verified') { toast('Domain verified!'); loadDomainStatus(); }
+    else toast(data.error || 'Not verified yet — DNS may still be propagating.');
   } catch (err) {
     if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
   }
