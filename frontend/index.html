@@ -14483,10 +14483,16 @@ window.cdbNavigate = function(sectionId) {
     return;
   }
 
-  // OWNER GATE: never force-reveal owner-internal tooling (proposal-gen,
-  // growth-analytics, CRM) for non-owners — even via a crafted #hash or stale link.
-  if (el.getAttribute('data-auth-gate') === 'owner' &&
-      !(window.CDB_AUTH && window.CDB_AUTH.isOwner)) {
+  // AUTH GATE: never force-reveal a gated section for a visitor who doesn't
+  // satisfy it — even via a crafted #hash, a bookmarked link, or clicking a
+  // nav tab that's always visible (Sales/Affiliate). This used to only check
+  // data-auth-gate="owner"; data-auth-gate="true" sections (executive-hub,
+  // autonomous-soc, affiliate-hub) fell through into the force-reveal below
+  // with no auth check at all — closed as part of the anonymous-exposure audit.
+  var _gateAttr = el.getAttribute('data-auth-gate');
+  var _auth     = window.CDB_AUTH || {};
+  var _authed   = !!(_auth.isAuthenticated || _auth.isOwner);
+  if ((_gateAttr === 'owner' && !_auth.isOwner) || (_gateAttr === 'true' && !_authed)) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     _currentSection = 'hero';
     history.pushState({ section: 'hero' }, '', '#home');

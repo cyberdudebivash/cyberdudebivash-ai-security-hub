@@ -4004,18 +4004,33 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleUpgradeLead(request, env), request));
     }
 
-    // GET /api/growth/analytics — revenue dashboard (admin, no strict auth for now)
+    // GET /api/growth/analytics — revenue dashboard (admin). Was unauthenticated
+    // ("no strict auth for now") — closed as part of the anonymous-exposure audit.
     if (path === '/api/growth/analytics' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleRevenueDashboard(request, env), request));
     }
 
-    // GET /api/growth/funnel — funnel conversion metrics (admin)
+    // GET /api/growth/funnel — funnel conversion metrics + hot-lead list (admin).
+    // Was fully unauthenticated — closed as part of the anonymous-exposure audit.
     if (path === '/api/growth/funnel' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleFunnelDashboard(request, env), request));
     }
 
-    // GET /api/growth/leads — lead list (admin)
+    // GET /api/growth/leads — lead list, real PII (admin). Was fully
+    // unauthenticated — closed as part of the anonymous-exposure audit.
     if (path === '/api/growth/leads' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleGetLeads(request, env), request));
     }
 
@@ -4196,9 +4211,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ─── CISO COMMAND CENTER ────────────────────────────────────────────────
-    // GET /api/ciso/metrics — full CISO dashboard payload
+    // GET /api/ciso/metrics — full CISO dashboard payload: platform-wide MRR/ARR,
+    // compliance score, incident list, security ROI. Was fully unauthenticated —
+    // closed as part of the anonymous-exposure audit.
     if (path === '/api/ciso/metrics' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleGetCISOMetrics(request, env, authCtx), request));
     }
     // GET /api/ciso/posture — security posture scorecard
@@ -5845,8 +5865,15 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleCEOView(request, env, authCtx), request));
     }
+    // GET /api/executive/dashboard — the CISO/Executive Command Center's
+    // backing route (platform-wide MRR/ARR/paying-customers KPIs). Had no auth
+    // check at all, unlike every sibling route in this block — closed as part
+    // of the anonymous-exposure audit.
     if (path === '/api/executive/dashboard' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleGetDashboard(request, env, authCtx), request));
     }
     if (path === '/api/executive/mrr' && method === 'GET') {
@@ -7086,8 +7113,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleVisitorLive(request, env), request));
     }
 
-    // GET /api/visitor/stats — aggregate country + total visitor stats (admin)
+    // GET /api/visitor/stats — aggregate country + total visitor stats (admin).
+    // Was fully unauthenticated — closed as part of the anonymous-exposure audit.
     if (path === '/api/visitor/stats' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:analytics:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleVisitorStats(request, env), request));
     }
 
@@ -7388,8 +7420,14 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleGetSolutions(request, env, {}), request));
     }
 
-    // GET /api/gtm/funnel-dashboard → alias (frontend GTM module calls this)
+    // GET /api/gtm/funnel-dashboard → alias (frontend GTM module calls this).
+    // Same handler/exposure as /api/growth/funnel above — was fully
+    // unauthenticated, closed as part of the anonymous-exposure audit.
     if (path === '/api/gtm/funnel-dashboard' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleFunnelDashboard(request, env), request));
     }
 
