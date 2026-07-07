@@ -1,8 +1,8 @@
 /**
  * CYBERDUDEBIVASH AI Security Hub — shared platform-staff session gate.
  *
- * Replaces the hardcoded shared password ('cyberdudebivash2024admin') that
- * used to gate mssp-command-center.html, revenue-command-center.html, and
+ * Replaces the hardcoded shared password that used to gate
+ * mssp-command-center.html, revenue-command-center.html, and
  * proposal-generator.html — readable via view-source, or bypassable outright
  * with `localStorage.setItem('cdb_owner','true')` in devtools. Backed by a
  * real passwordless magic-link login (workers/src/handlers/staffAuth.js).

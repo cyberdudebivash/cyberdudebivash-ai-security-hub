@@ -10,7 +10,7 @@ Three Explore agents mapped the auth layer, the frontend dashboard inventory, an
 
 | # | Finding | Evidence |
 |---|---|---|
-| 1 | A hardcoded shared password (`'cyberdudebivash2024admin'`) was the entire access gate on 3 "admin" pages | `mssp-command-center.html:655`, `revenue-command-center.html:597`, `proposal-generator.html:302` — readable via view-source, or bypassable with `localStorage.setItem('cdb_owner','true')` |
+| 1 | A hardcoded shared password was the entire access gate on 3 "admin" pages | `mssp-command-center.html:655`, `revenue-command-center.html:597`, `proposal-generator.html:302` — readable via view-source, or bypassable with `localStorage.setItem('cdb_owner','true')` |
 | 2 | `god-mode.html` had zero page-load gating, was linked from the public homepage nav, and was search-engine indexable | `<meta name="robots" content="index,follow">` (only internal tool with this), no `#auth-gate` element anywhere in the file |
 | 3 | `handlers/executiveCommandCenter.js`'s `/api/executive/*` catch-all had no auth check at all | `index.js:7587-7589` (pre-fix) called the handler with no `resolveAuthV5`, no `withSecurityHeaders`/`withCors` wrapper either |
 | 4 | `handlers/productAnalytics.js`'s growth/funnel/adoption/prune routes claimed "(admin)" in a doc comment but enforced nothing | `index.js:3081-3105` (pre-fix) — every route only resolved `authCtx`, never checked it |

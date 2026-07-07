@@ -3,8 +3,8 @@
 //
 // Real platform-staff authentication — passwordless magic-link login for
 // Platform Administrators / Super Administrators, replacing the hardcoded
-// shared password ('cyberdudebivash2024admin') that was the entire access
-// gate on mssp-command-center.html, revenue-command-center.html, and
+// shared password that was the entire access gate on
+// mssp-command-center.html, revenue-command-center.html, and
 // proposal-generator.html — readable via view-source, or bypassable outright
 // with `localStorage.setItem('cdb_owner','true')` in devtools. Modeled
 // directly on the proven, already-tested handlers/partnerAuth.js pattern:

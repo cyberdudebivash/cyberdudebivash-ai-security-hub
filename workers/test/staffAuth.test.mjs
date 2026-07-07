@@ -1,5 +1,5 @@
 /* Regression tests — real platform-staff login (RBAC-0), replacing the
- * hardcoded shared password ('cyberdudebivash2024admin') that used to gate
+ * hardcoded shared password that used to gate
  * mssp-command-center.html, revenue-command-center.html, and
  * proposal-generator.html. Modeled directly on partnerAuth.test.mjs's
  * conventions — same anti-enumeration, single-use-token, and session-
