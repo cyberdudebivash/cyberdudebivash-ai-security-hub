@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
   last_login_at   TEXT,
   login_count     INTEGER NOT NULL DEFAULT 0
+,
+  google_id TEXT,
+  avatar_url TEXT
 );
 
 -- From: schema_v8.sql
@@ -59,8 +62,16 @@ CREATE TABLE IF NOT EXISTS api_keys (
   active        INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
   created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
   last_used_at  TEXT,
-  expires_at    TEXT
+  expires_at    TEXT,
+  email         TEXT,
+  api_key       TEXT,
+  revoked       INTEGER NOT NULL DEFAULT 0,
+  org_id        TEXT NOT NULL DEFAULT 'default',
+  status        TEXT NOT NULL DEFAULT 'ACTIVE'
 );
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
 
 -- From: schema.sql
 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -87,6 +98,13 @@ CREATE TABLE IF NOT EXISTS scan_jobs (
   user_id     TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+,
+  identity      TEXT    NOT NULL,
+  priority      INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  started_at    TEXT,
+  completed_at  TEXT,
+  r2_key        TEXT
 );
 
 -- From: schema_v8.sql
@@ -450,6 +468,11 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   properties_json TEXT DEFAULT '{}',
   ip_country     TEXT,
   occurred_at    TEXT NOT NULL DEFAULT (datetime('now'))
+,
+  module       TEXT,
+  ip           TEXT,
+  metadata     TEXT,
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
 -- From: schema_v12.sql
@@ -635,6 +658,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
   status          TEXT DEFAULT 'ok',
   metadata        TEXT DEFAULT '{}',
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+,
+  details    TEXT DEFAULT '{}',
+  severity   TEXT NOT NULL DEFAULT 'info'
+               CHECK (severity IN ('info','warn','critical'))
 );
 
 -- From: schema_v12.sql
@@ -1031,6 +1058,39 @@ CREATE TABLE IF NOT EXISTS crm_leads (
   demo_at INTEGER, converted INTEGER NOT NULL DEFAULT 0, converted_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch()), metadata TEXT DEFAULT '{}'
+,
+  title            TEXT,
+  phone            TEXT,
+  linkedin_url     TEXT,
+  website          TEXT,
+  source_detail    TEXT,
+  stage            TEXT NOT NULL DEFAULT 'NEW' CHECK(stage IN (
+    'NEW', 'QUALIFIED', 'DEMO_BOOKED', 'DEMO_DONE',
+    'PROPOSAL_SENT', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST', 'CHURNED'
+  )),
+  stage_updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  compliance_need  TEXT,
+  budget_signal    TEXT CHECK(budget_signal IN (
+    'none', 'low', 'medium', 'high', 'enterprise'
+  )),
+  urgency_signal   TEXT CHECK(urgency_signal IN (
+    'low', 'medium', 'high', 'critical'
+  )),
+  deal_value_inr   INTEGER DEFAULT 0,
+  plan_interest    TEXT,
+  trial_started    INTEGER NOT NULL DEFAULT 0,
+  owner_notes      TEXT,
+  last_contacted_at TEXT,
+  next_follow_up_at TEXT,
+  email_opened_count INTEGER NOT NULL DEFAULT 0,
+  email_click_count  INTEGER NOT NULL DEFAULT 0,
+  scan_count         INTEGER NOT NULL DEFAULT 0,
+  tags             TEXT DEFAULT '[]',
+  utm_source       TEXT,
+  utm_medium       TEXT,
+  utm_campaign     TEXT,
+  ip_address       TEXT,
+  country          TEXT
 );
 
 -- From: schema_v15.sql
@@ -1314,6 +1374,14 @@ CREATE TABLE IF NOT EXISTS defense_purchases (
   download_expires  TEXT,
   created_at        TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+,
+  razorpay_order_id TEXT,
+  razorpay_payment_id TEXT,
+  amount_usd        INTEGER,
+  currency          TEXT NOT NULL DEFAULT 'INR',
+  access_key        TEXT,
+  access_expires_at TEXT,
+  ip_country        TEXT
 );
 
 -- From: schema_v22_production_fix.sql
@@ -1381,6 +1449,11 @@ CREATE TABLE IF NOT EXISTS email_sequences (
   enrolled_at     TEXT DEFAULT (datetime('now')),
   next_send_at    TEXT,
   last_sent_at    TEXT
+,
+  step INTEGER,
+  scheduled_at TEXT,
+  created_at TEXT,
+  stage TEXT
 );
 
 -- From: schema_gtm_only.sql
@@ -1391,6 +1464,8 @@ CREATE TABLE IF NOT EXISTS email_tracking (
   step        INTEGER DEFAULT 0,
   event       TEXT NOT NULL,
   created_at  TEXT DEFAULT (datetime('now'))
+,
+  metadata TEXT DEFAULT '{}'
 );
 
 -- From: schema_v10.sql
@@ -1446,6 +1521,9 @@ CREATE TABLE IF NOT EXISTS funnel_events (
   stage       TEXT NOT NULL,
   meta        TEXT DEFAULT '{}',
   created_at  TEXT DEFAULT (datetime('now'))
+,
+  event_type TEXT,
+  metadata TEXT
 );
 
 -- From: schema_v38_governor.sql
@@ -1636,6 +1714,22 @@ CREATE TABLE IF NOT EXISTS leads (
   converted_at    TEXT,
   created_at      TEXT DEFAULT (datetime('now')),
   updated_at      TEXT DEFAULT (datetime('now'))
+,
+  score INTEGER DEFAULT 0,
+  stage TEXT DEFAULT 'new',
+  last_activity TEXT,
+  notes TEXT,
+  company TEXT,
+  ip TEXT,
+  country TEXT,
+  converted INTEGER DEFAULT 0,
+  unsubscribed INTEGER DEFAULT 0,
+  unsubscribed_at TEXT,
+  drip_sequence TEXT,
+  drip_step INTEGER DEFAULT 0,
+  drip_enrolled_at TEXT,
+  last_scan_at TEXT,
+  metadata TEXT DEFAULT '{}'
 );
 
 -- From: schema_v27.sql
@@ -1660,6 +1754,8 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   ip_address  TEXT,
   success     INTEGER NOT NULL DEFAULT 0,
   attempted_at TEXT   NOT NULL DEFAULT (datetime('now'))
+,
+  attempt_time INTEGER NOT NULL
 );
 
 -- From: schema_mcp_learning.sql
@@ -1925,6 +2021,28 @@ CREATE TABLE IF NOT EXISTS mssp_clients (
   domain TEXT, sector TEXT, contact_email TEXT, status TEXT NOT NULL DEFAULT 'active',
   open_alerts INTEGER NOT NULL DEFAULT 0, last_scan_at INTEGER,
   onboarded_at INTEGER NOT NULL DEFAULT (unixepoch()), metadata TEXT DEFAULT '{}'
+,
+  mssp_user_id    TEXT NOT NULL,
+  client_name     TEXT NOT NULL,
+  client_domain   TEXT,
+  client_email    TEXT,
+  contact_name    TEXT,
+  industry        TEXT,
+  employee_count  INTEGER,
+  plan            TEXT DEFAULT 'STARTER',
+  mrr_inr         INTEGER DEFAULT 0,
+  health_score    INTEGER DEFAULT 70,
+  risk_score      INTEGER DEFAULT 30,
+  sla_tier        TEXT DEFAULT 'standard' CHECK(sla_tier IN ('standard','priority','critical')),
+  white_label_domain TEXT,
+  white_label_name TEXT,
+  open_incidents  INTEGER DEFAULT 0,
+  critical_findings INTEGER DEFAULT 0,
+  compliance_score INTEGER DEFAULT 50,
+  tags            TEXT DEFAULT '[]',
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- From: schema_phase2.sql
@@ -2285,6 +2403,8 @@ CREATE TABLE IF NOT EXISTS platform_metrics (
   value_int   INTEGER,
   value_text  TEXT,
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+,
+  value_real REAL
 );
 
 -- From: schema_phase4.sql
@@ -2344,6 +2464,17 @@ CREATE TABLE IF NOT EXISTS proposals (
   html_content TEXT, pdf_url TEXT, total_inr REAL NOT NULL DEFAULT 0,
   gst_inr REAL NOT NULL DEFAULT 0, sent_at INTEGER, viewed_at INTEGER, accepted_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()), metadata TEXT DEFAULT '{}'
+,
+  lead_id          TEXT    REFERENCES crm_leads(id) ON DELETE SET NULL,
+  title            TEXT    NOT NULL,
+  client_name      TEXT    NOT NULL,
+  client_email     TEXT    NOT NULL,
+  client_company   TEXT    NOT NULL,
+  tier_recommended TEXT    NOT NULL,
+  deal_value_inr   INTEGER,
+  valid_until      TEXT,
+  responded_at     TEXT,
+  updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
 -- From: schema_v23_tables.sql
@@ -2614,6 +2745,11 @@ CREATE TABLE IF NOT EXISTS sales_outreach (
   status          TEXT DEFAULT 'draft',
   sent_at         TEXT,
   created_at      TEXT DEFAULT (datetime('now'))
+,
+  company TEXT,
+  message TEXT,
+  stage TEXT DEFAULT 'draft',
+  response TEXT
 );
 
 -- From: schema_v24_ZERO_ERRORS.sql
@@ -2739,6 +2875,8 @@ CREATE TABLE IF NOT EXISTS service_assessments (
   started_at          TEXT,
   completed_at        TEXT,
   created_at          TEXT DEFAULT (datetime('now')),
+  mythos_enriched INTEGER DEFAULT 0,
+  mythos_confidence INTEGER DEFAULT 0,
   FOREIGN KEY (order_id) REFERENCES service_orders(id) ON DELETE CASCADE
 );
 
@@ -3068,6 +3206,21 @@ CREATE TABLE IF NOT EXISTS threat_intel (
   confidence      REAL    NOT NULL DEFAULT 0.5,
   ingested_at     TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+,
+  cvss REAL,
+  source_url TEXT,
+  exploit_status TEXT,
+  known_ransomware INTEGER DEFAULT 0,
+  tags TEXT DEFAULT '[]',
+  iocs TEXT DEFAULT '[]',
+  affected_products TEXT DEFAULT '[]',
+  weakness_types TEXT DEFAULT '[]',
+  enriched INTEGER DEFAULT 0,
+  epss_score REAL,
+  epss_percentile REAL,
+  actively_exploited INTEGER DEFAULT 0,
+  exploit_available INTEGER DEFAULT 0,
+  created_at TEXT
 );
 
 -- From: schema_v8.sql
@@ -3149,6 +3302,10 @@ CREATE TABLE IF NOT EXISTS trust_metrics_cache (
   id          TEXT PRIMARY KEY DEFAULT 'singleton',
   uptime_pct  REAL NOT NULL DEFAULT 99.9,
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+,
+  scans      INTEGER NOT NULL DEFAULT 0,
+  cves       INTEGER NOT NULL DEFAULT 0,
+  customers  INTEGER NOT NULL DEFAULT 0
 );
 
 -- From: schema_v27.sql
@@ -4516,21 +4673,11 @@ CREATE TABLE IF NOT EXISTS developer_webhooks (
 CREATE INDEX IF NOT EXISTS idx_developer_webhooks_org ON developer_webhooks(org_id);
 CREATE INDEX IF NOT EXISTS idx_developer_webhooks_status ON developer_webhooks(status);
 
--- api_keys table extends existing (add if not exist)
-CREATE TABLE IF NOT EXISTS api_keys (
-  id TEXT PRIMARY KEY,
-  org_id TEXT NOT NULL DEFAULT 'default',
-  name TEXT NOT NULL DEFAULT 'Default Key',
-  key_hash TEXT NOT NULL,
-  scopes TEXT DEFAULT '["read"]',
-  expires_at TEXT,
-  status TEXT NOT NULL DEFAULT 'ACTIVE',
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
-CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
+-- api_keys was redefined here as a second CREATE TABLE IF NOT EXISTS, which
+-- silently no-ops against the earlier definition (line ~53) — production
+-- never actually gained this block's own name/scopes columns. Consolidated
+-- into the original definition above (2026-07-07 documentation-parity pass);
+-- see that block for the real, current api_keys shape.
 
 -- ============================================================================
 -- v20.0 GOD MODE: EXECUTIVE COMMAND CENTER TABLES
@@ -4569,3 +4716,200 @@ CREATE TABLE IF NOT EXISTS executive_reports (
 
 CREATE INDEX IF NOT EXISTS idx_executive_reports_org ON executive_reports(org_id);
 CREATE INDEX IF NOT EXISTS idx_executive_reports_type ON executive_reports(report_type);
+
+-- =============================================================================
+-- Documentation-parity pass (2026-07-07) — tables confirmed live in production
+-- (verified via a full wrangler d1 export, see PR history) with no prior
+-- definition in any tracked schema file. Documentation only: these tables
+-- already exist in production and are left untouched; this brings
+-- schema_master.sql (and its schema_bootstrap.sql derivative) into agreement
+-- with reality so the nightly D1 Schema Drift Check stops false-flagging them.
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS customer_assets (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  org_id TEXT,
+  asset_type TEXT NOT NULL,
+  asset_value TEXT NOT NULL,
+  label TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS customer_profiles (
+  id TEXT PRIMARY KEY,
+  org_id TEXT,
+  org_name TEXT,
+  industry TEXT,
+  country TEXT,
+  org_size TEXT,
+  technology_stack TEXT DEFAULT '[]',
+  cloud_providers TEXT DEFAULT '[]',
+  business_critical_assets TEXT DEFAULT '[]',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS global_intel (
+  intel_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  summary TEXT,
+  url TEXT,
+  source TEXT,
+  source_name TEXT,
+  category TEXT,
+  region TEXT,
+  severity TEXT,
+  threat_score INTEGER DEFAULT 0,
+  is_breaking INTEGER DEFAULT 0,
+  cve_ids TEXT DEFAULT '[]',
+  actors TEXT DEFAULT '[]',
+  malware TEXT DEFAULT '[]',
+  iocs TEXT DEFAULT '[]',
+  tags TEXT DEFAULT '[]',
+  published_at TEXT,
+  ingested_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS marketplace_purchases (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  product_id TEXT NOT NULL,
+  product_name TEXT,
+  category TEXT,
+  amount INTEGER NOT NULL,
+  currency TEXT DEFAULT 'INR',
+  razorpay_order_id TEXT,
+  razorpay_payment_id TEXT,
+  status TEXT DEFAULT 'pending',
+  access_token TEXT,
+  access_expires_at TEXT,
+  buyer_email TEXT,
+  buyer_name TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  paid_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mssp_onboarding_checkouts (
+  id TEXT PRIMARY KEY,
+  order_id TEXT,
+  tier_id TEXT,
+  email TEXT,
+  company_name TEXT,
+  contact_name TEXT,
+  phone TEXT,
+  website TEXT,
+  clients_estimate INTEGER,
+  amount_paise INTEGER,
+  currency TEXT,
+  status TEXT DEFAULT 'pending',
+  partner_id TEXT,
+  created_at TEXT,
+  paid_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mssp_onboarding_partners (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE,
+  company_name TEXT,
+  contact_name TEXT,
+  phone TEXT,
+  website TEXT,
+  tier_id TEXT,
+  clients_limit INTEGER,
+  margin_pct TEXT,
+  status TEXT DEFAULT 'active',
+  access_token TEXT,
+  razorpay_order_id TEXT,
+  razorpay_payment_id TEXT,
+  trial_ends_at TEXT,
+  activated_at TEXT,
+  created_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mssp_tenants (
+  id TEXT PRIMARY KEY,
+  partner_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  domain TEXT,
+  plan TEXT NOT NULL DEFAULT 'ENTERPRISE',
+  status TEXT NOT NULL DEFAULT 'active',
+  contact_name TEXT,
+  contact_email TEXT,
+  api_key TEXT,
+  config_json TEXT,
+  seats INTEGER DEFAULT 10,
+  monthly_fee_inr INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS org_teams (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  email TEXT,
+  role TEXT NOT NULL DEFAULT 'VIEWER',
+  invited_by TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(org_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS org_webhooks (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
+  url TEXT NOT NULL,
+  events TEXT NOT NULL DEFAULT '[]',
+  secret TEXT,
+  active INTEGER DEFAULT 1,
+  retry_count INTEGER DEFAULT 0,
+  last_triggered TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS platform_health_checks (
+  id TEXT PRIMARY KEY,
+  overall_status TEXT NOT NULL DEFAULT 'UNKNOWN',
+  passing INTEGER NOT NULL DEFAULT 0,
+  failing INTEGER NOT NULL DEFAULT 0,
+  duration_ms INTEGER,
+  results_json TEXT,
+  checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS scans (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  target TEXT NOT NULL,
+  status TEXT NOT NULL,
+  risk_score INTEGER,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES "users"(id)
+);
+
+CREATE TABLE IF NOT EXISTS scheduled_reports (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
+  frequency TEXT NOT NULL DEFAULT 'weekly',
+  email TEXT NOT NULL,
+  format TEXT NOT NULL DEFAULT 'html',
+  active INTEGER DEFAULT 1,
+  last_sent TEXT,
+  next_send TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS webhook_delivery_log (
+  id TEXT PRIMARY KEY,
+  webhook_id TEXT NOT NULL,
+  org_id TEXT,
+  event_type TEXT NOT NULL,
+  payload_hash TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempt INTEGER DEFAULT 1,
+  response_code INTEGER,
+  error_msg TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
