@@ -361,6 +361,10 @@ export async function handleListReports(request, env, authCtx = {}) {
 
 // ── GET /api/executive/report/:id ────────────────────────────────────────────
 export async function handleGetReport(request, env, authCtx = {}) {
+  const tier = authCtx?.tier || 'FREE';
+  if (tier === 'FREE') {
+    return fail(request, 'Report access requires PRO or higher', 403, 'PLAN_REQUIRED');
+  }
   const orgId    = getOrgId(authCtx);
   const url      = new URL(request.url);
   const reportId = url.pathname.split('/').pop();

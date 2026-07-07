@@ -191,9 +191,12 @@ export async function handleJoin(request, env, authCtx = {}) {
 }
 
 // ── GET /api/affiliate/status ─────────────────────────────────────────────────
+// The `?email=` fallback below used to let anyone who knew (or guessed) an
+// affiliate's email pull their referral code/stats/earnings with zero
+// authentication — closed as part of the anonymous-exposure audit. Only a
+// real authenticated session may resolve the caller's own affiliate record.
 export async function handleGetStatus(request, env, authCtx = {}) {
-  const url    = new URL(request.url);
-  const userId = authCtx?.userId || url.searchParams.get('email');
+  const userId = authCtx?.userId;
   if (!userId)  return fail(request, 'Not authenticated', 401, 'UNAUTHORIZED');
 
   const aff = await loadAffiliate(env, userId);
