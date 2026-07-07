@@ -7,6 +7,7 @@
 
 import { verifyJWT, extractBearerToken } from './jwt.js';
 import { resolveApiKeyFromDB, trackApiKeyUsage, checkDailyQuota, TIER_LIMITS } from './apiKeys.js';
+import { resolvePartnerSession } from '../handlers/partnerAuth.js';
 
 export const UPGRADE_URL   = 'https://cyberdudebivash.in/#pricing';
 export const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
@@ -140,6 +141,7 @@ function withAuthAliases(ctx) {
   if (ctx && typeof ctx === 'object') {
     if (ctx.userId === undefined) ctx.userId = ctx.user_id ?? null;
     if (ctx.keyId  === undefined) ctx.keyId  = ctx.key_id  ?? null;
+    if (ctx.partnerId !== undefined && ctx.partner_id === undefined) ctx.partner_id = ctx.partnerId;
     // ── Tenant isolation (root fix) ──────────────────────────────────────────
     // ~15 handlers scope customer data with `authCtx.org_id || 'default'`. Because
     // resolveAuthV5 never set org_id, EVERY authenticated user collapsed into one
@@ -169,8 +171,18 @@ function withAuthAliases(ctx) {
     // Regular customer tiers intentionally get no role — callers that gate on
     // `.includes(role) || .includes(tier)` fall through to the tier check,
     // which already works correctly. (2026-07-06 revenue-mechanisms audit, P1-4.)
+    // A partner-session principal (see handlers/partnerAuth.js) is neither
+    // an admin nor a paying MSSP-tier subscriber (a distinct concept — see
+    // resolveFromApiKey above) — it's the reseller/partner identity itself,
+    // scoped to its own mssp_partners row. Kept as its own role rather than
+    // aliased onto 'mssp_admin' so partner-scoped endpoints (task: partner
+    // infra) can gate on `role === 'partner'` precisely instead of
+    // accidentally granting a partner session admin-wide MSSP visibility.
     if (ctx.role === undefined) {
-      ctx.role = ctx.isAdmin === true ? 'admin' : ctx.tier === 'MSSP' ? 'mssp_admin' : undefined;
+      ctx.role = ctx.isAdmin === true ? 'admin'
+        : ctx.tier === 'MSSP' ? 'mssp_admin'
+        : ctx.partnerId ? 'partner'
+        : undefined;
     }
   }
   return ctx;
@@ -206,6 +218,10 @@ export async function resolveAuthV5(request, env) {
   // 1. Try JWT (authenticated user)
   const jwtCtx = await resolveFromJWT(request, env);
   if (jwtCtx) return withAuthAliases(jwtCtx);
+
+  // 1.5. Try MSSP partner session (magic-link login — handlers/partnerAuth.js)
+  const partnerCtx = await resolvePartnerSession(request, env).catch(() => null);
+  if (partnerCtx) return withAuthAliases(partnerCtx);
 
   // 2. Try API key (service/developer access)
   const keyCtx = await resolveFromApiKey(request, env);
