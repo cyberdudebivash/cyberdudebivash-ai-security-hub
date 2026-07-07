@@ -53,7 +53,13 @@ const COMPANY_INFO = {
   platform: {
     infrastructure: 'Cloudflare Workers + D1 (SQLite) + KV Storage',
     uptime_sla:     '99.9%',
-    data_residency: 'Cloudflare edge — India region preference',
+    // Matches the platform's own disclosed answer in
+    // docs/SECURITY_QUESTIONNAIRE_PACK.md — previously this file, and two
+    // other locations in enterprisePortalHandlers.js, each asserted a
+    // different specific region/jurisdiction with no infrastructure config
+    // (wrangler.toml has no D1 jurisdiction/region binding) to back any of
+    // them. State the real, honest limitation instead.
+    data_residency: 'Cloudflare global edge network — no dedicated regional jurisdiction pinning configured today (disclosed limitation for regulated buyers)',
     security:       'JWT auth, rate limiting, OWASP input validation, audit logging',
     open_source:    'Threat intel feeds: github.com/cyberdudebivash/cyberdudebivash-ai-security-hub',
   },

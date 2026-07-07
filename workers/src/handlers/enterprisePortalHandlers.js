@@ -76,7 +76,11 @@ export async function handleTrustCenter(request, env, authCtx) {
       founded:      2024,
       headquarters: 'India',
       infrastructure: 'Cloudflare Global Edge Network (300+ cities, 100+ countries)',
-      data_residency: 'APAC (Singapore primary), configurable for Enterprise',
+      // Matches docs/SECURITY_QUESTIONNAIRE_PACK.md's disclosed answer — this
+      // and a second field further down this file each previously asserted a
+      // different specific region with no infrastructure config to back
+      // either (wrangler.toml has no D1 jurisdiction/region binding).
+      data_residency: 'Cloudflare global edge network — no dedicated regional jurisdiction pinning configured today (disclosed limitation for regulated buyers)',
       uptime_sla:     '99.9% (Enterprise SLA available)',
     },
 
@@ -520,7 +524,7 @@ export async function handleEnterpriseSalesKit(request, env, authCtx) {
       cves_tracked:         `${m.cves_tracked}+`,
       mythos_tools:         `${m.mythos_tools}+ autonomous defense tools`,
       sla:                  '99.9% uptime',
-      data_residency:       'APAC, US, EU (configurable)',
+      data_residency:       'Cloudflare global edge network — no dedicated regional jurisdiction pinning configured today (disclosed limitation for regulated buyers)',
       integrations:         ['SIEM (Splunk, Sentinel)', 'Slack', 'Telegram', 'JIRA', 'ServiceNow', 'REST API'],
     },
 
