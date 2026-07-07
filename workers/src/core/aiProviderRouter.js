@@ -288,13 +288,19 @@ async function callAnthropicDirect(apiKey, {
 }
 
 // ── Cloudflare Workers AI client ──────────────────────────────────────────────
-async function callCFAI(ai, { model, system, prompt, max_tokens = 400 }) {
+async function callCFAI(ai, { model, system, prompt, max_tokens = 400, timeout_ms = 20000 }) {
   if (!ai) throw new Error('[CF AI] env.AI binding not available');
   const messages = [];
   if (system) messages.push({ role: 'system', content: system });
   messages.push({ role: 'user', content: prompt });
 
-  const resp    = await ai.run(model, { messages, max_tokens });
+  // ai.run() takes no AbortSignal — race it against a timer so a stalled call
+  // can't itself blow routeAICall's overall deadline the way an un-timed-out
+  // fetch() would (the same class of bug this file was just fixed for).
+  const resp = await Promise.race([
+    ai.run(model, { messages, max_tokens }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('[CF AI] timed out')), timeout_ms)),
+  ]);
   const content = resp?.response || '';
   if (!content) throw new Error('[CF AI] Empty response');
   return { content, model, input_tokens: 0, output_tokens: 0 };
@@ -318,7 +324,7 @@ async function dispatchToProvider(provider, env, { system, prompt, max_tokens, t
   let raw;
 
   if (provider === PROVIDERS.CF_AI) {
-    raw = await callCFAI(env?.AI, { model, system, prompt, max_tokens: cappedTokens });
+    raw = await callCFAI(env?.AI, { model, system, prompt, max_tokens: cappedTokens, timeout_ms: effectiveTimeout });
 
   } else if (provider === PROVIDERS.ANTHROPIC) {
     const apiKey = env?.[cfg.envKey];

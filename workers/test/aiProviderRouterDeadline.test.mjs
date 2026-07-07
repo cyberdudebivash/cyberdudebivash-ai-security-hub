@@ -48,17 +48,23 @@ describe('routeAICall — overall deadline budget across the provider fallback c
       opts.signal.addEventListener('abort', () => reject(new Error('The operation was aborted')));
     })));
 
+    // Deliberately above the loop's own "remaining < 1000ms isn't worth a real
+    // attempt" cutoff, so this exercises an actual bounded Groq attempt (which
+    // aborts at ~deadline_ms) rather than bailing out before ever dispatching.
+    const DEADLINE = 1500;
     const start = Date.now();
     const result = await routeAICall(envWithGroqAndDeepseek(), {
       prompt: 'test prompt', task_type: 'executive', max_tokens: 50,
-      deadline_ms: 300, // small budget so the test runs fast; behavior scales identically at 12000ms
+      deadline_ms: DEADLINE,
     });
     const elapsed = Date.now() - start;
 
     expect(result).toBeNull();
     // Pre-fix this would take Groq's full 20s timeout, then DeepSeek's 25s
-    // (45s+) before giving up. Post-fix it must stay close to deadline_ms.
-    expect(elapsed).toBeLessThan(2000);
+    // (45s+) before giving up. Post-fix it must stay near DEADLINE, not pile
+    // up a second provider attempt on top.
+    expect(elapsed).toBeGreaterThanOrEqual(DEADLINE - 50);
+    expect(elapsed).toBeLessThan(DEADLINE + 1000);
   });
 
   it('never asks a provider to wait longer than its own configured ceiling', async () => {
@@ -79,5 +85,24 @@ describe('routeAICall — overall deadline budget across the provider fallback c
 
     expect(result?.content).toBe('ok');
     expect(seenTimeouts[0]).toBe('object'); // a real AbortSignal was attached
+  });
+
+  it('CF AI (env.AI binding, no native AbortSignal support) is also bounded by the deadline', async () => {
+    // env.AI.run() takes no signal — a stalled binding call used to be able to
+    // hang routeAICall (and callCFAI specifically) indefinitely. Simulate
+    // that with a promise that never resolves on its own; task_type
+    // 'assessment' puts CF_AI first in the chain.
+    const stalledAI = { run: () => new Promise(() => {}) };
+
+    const DEADLINE = 1500;
+    const start = Date.now();
+    const result = await routeAICall({ AI: stalledAI }, {
+      prompt: 'test', task_type: 'assessment', max_tokens: 50, deadline_ms: DEADLINE,
+    });
+    const elapsed = Date.now() - start;
+
+    expect(result).toBeNull();
+    expect(elapsed).toBeGreaterThanOrEqual(DEADLINE - 50);
+    expect(elapsed).toBeLessThan(DEADLINE + 1000);
   });
 });
