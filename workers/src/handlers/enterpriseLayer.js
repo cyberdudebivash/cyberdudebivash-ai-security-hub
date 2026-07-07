@@ -238,6 +238,7 @@ export async function handleOrderReport(request, env, authCtx) {
             receipt:  orderId,
             notes:    { enterprise_order_id: id, package_id, company: company_name, email },
           }),
+          signal: AbortSignal.timeout(8000),
         });
         if (r.ok) razorpayOrderId = (await r.json()).id;
       } catch {}

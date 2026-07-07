@@ -364,6 +364,7 @@ export async function handleUpgradeInitiate(request, env, authCtx) {
         receipt,
         notes: { user_id: userId, from_plan: currentTier, to_plan: newPlan },
       }),
+      signal: AbortSignal.timeout(8000),
     });
     if (r.ok) razorpayOrderId = (await r.json()).id;
   }

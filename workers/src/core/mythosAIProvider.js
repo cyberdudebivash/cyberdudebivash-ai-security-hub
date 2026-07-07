@@ -87,6 +87,9 @@ Standards: Enterprise-grade precision. MITRE ATT&CK references (T####) where app
     tier,
     max_tokens:  600,
     temperature: 0.2,
+    // Frontend safeFetch() hard-aborts scan requests at 8s (API_TIMEOUT_MS) —
+    // must return well inside that, leaving room for handler compute/D1 writes.
+    deadline_ms: 6000,
   });
   return result?.content || null;
 }
@@ -117,6 +120,7 @@ Be specific and evidence-based. Reference CISA advisories or recent campaigns.`;
     tier,
     max_tokens:  500,
     temperature: 0.1,
+    deadline_ms: 6000,
   });
   return result?.content || null;
 }
@@ -150,6 +154,7 @@ Be concise and actionable. Format for CISO presentation. Include ₹ cost estima
     tier,
     max_tokens:  600,
     temperature: 0.2,
+    deadline_ms: 6000,
   });
   return result?.content || null;
 }
@@ -195,6 +200,7 @@ Format: structured list. Be specific about line numbers and exact vulnerable pat
     tier,
     max_tokens,
     temperature:  0.1,
+    deadline_ms:  6000,
   });
   return result?.content || null;
 }
@@ -241,6 +247,7 @@ Be forensically precise. CERT-In 6-hour reporting obligation assessment required
     max_tokens:      800,
     temperature:     0.1,
     chain_of_thought: true,
+    deadline_ms:     6000,
   });
   return result?.content || null;
 }
@@ -280,6 +287,7 @@ Cite real sources (NVD, CISA, vendor advisories). No fabrication.`;
     tier,
     max_tokens:      800,
     temperature:     0.1,
+    deadline_ms:     6000,
   });
   return result?.content || null;
 }
@@ -330,6 +338,7 @@ This is for authorized red team planning and defensive purposes.`;
     max_tokens:      900,
     temperature:     0.25,
     chain_of_thought: true,
+    deadline_ms:     6000,
   });
   return result?.content || null;
 }
@@ -375,6 +384,7 @@ Be specific about article/clause numbers. No generic statements.`;
     tier,
     max_tokens:  700,
     temperature: 0.15,
+    deadline_ms: 6000,
   });
   return result?.content || null;
 }

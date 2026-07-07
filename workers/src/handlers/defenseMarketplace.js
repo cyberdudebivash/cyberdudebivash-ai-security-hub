@@ -207,6 +207,7 @@ export async function handleInitiatePurchase(request, env, authCtx, solutionId) 
           receipt: receiptId,
           notes: { solution_id: solutionId, product: row.title, category: row.category },
         }),
+        signal: AbortSignal.timeout(8000),
       });
       if (rzpResp.ok) {
         const rzpData = await rzpResp.json();

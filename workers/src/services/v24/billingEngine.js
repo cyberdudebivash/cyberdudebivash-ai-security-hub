@@ -220,6 +220,7 @@ export async function createPayPalOrder(env, params) {
       method: 'POST',
       headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(8000),
     });
     const { access_token } = await tokenResp.json();
 
@@ -242,6 +243,7 @@ export async function createPayPalOrder(env, params) {
           shipping_preference: 'NO_SHIPPING',
         },
       }),
+      signal: AbortSignal.timeout(8000),
     });
     const order = await orderResp.json();
     const approveUrl = order.links?.find(l => l.rel === 'approve')?.href;
@@ -257,12 +259,14 @@ export async function capturePayPalOrder(db, env, orderId) {
       method: 'POST',
       headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(8000),
     });
     const { access_token } = await tokenResp.json();
 
     const captureResp = await fetch(`${PAYPAL_API}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(8000),
     });
     const result = await captureResp.json();
     const capture = result.purchase_units?.[0]?.payments?.captures?.[0];

@@ -98,6 +98,7 @@ export async function handleGoogleCallback(request, env) {
         redirect_uri:  CALLBACK_URL,
         grant_type:    'authorization_code',
       }),
+      signal: AbortSignal.timeout(8000),
     });
     if (!tokenRes.ok) {
       const txt = await tokenRes.text();
@@ -113,6 +114,7 @@ export async function handleGoogleCallback(request, env) {
   try {
     const uiRes = await fetch(GOOGLE_USERINFO, {
       headers: { Authorization: `Bearer ${googleTokens.access_token}` },
+      signal: AbortSignal.timeout(8000),
     });
     if (!uiRes.ok) throw new Error('userinfo_fetch_failed');
     googleUser = await uiRes.json();

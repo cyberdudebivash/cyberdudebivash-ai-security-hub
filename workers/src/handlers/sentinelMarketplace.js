@@ -48,6 +48,7 @@ export async function handleSentinelPurchase(request, env) {
           receipt: `sa_${(product_type || 'report').slice(0, 10)}_${Date.now()}`,
           notes: { product_type, product_title: title, email },
         }),
+        signal: AbortSignal.timeout(8000),
       });
       if (r.ok) razorpayOrderId = (await r.json()).id;
     }

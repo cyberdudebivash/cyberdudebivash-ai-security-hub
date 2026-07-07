@@ -309,6 +309,7 @@ export async function handlePurchaseCompliancePack(request, env, authCtx) {
           receipt: `comp_${pack_id}_${Date.now()}`,
           notes:   { pack_id, email },
         }),
+        signal: AbortSignal.timeout(8000),
       });
       if (r.ok) razorpayOrderId = (await r.json()).id;
     }
