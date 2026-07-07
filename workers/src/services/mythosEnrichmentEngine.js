@@ -105,6 +105,12 @@ Enterprise-grade precision. MITRE ATT&CK references where applicable. No generic
       tier:        tier || 'PRO',
       max_tokens:  500,
       temperature: 0.2,
+      // Every scan module (identity/redteam/ai/compliance/etc.) awaits this
+      // synchronously and the frontend's safeFetch() hard-aborts the whole
+      // scan request at 8s (API_TIMEOUT_MS, index.html) — this must return
+      // (or give up) well inside that, leaving room for the rest of the
+      // handler (engine compute + D1 writes) and network/edge overhead.
+      deadline_ms: 6000,
     });
 
     return result ? { content: result.content, provider: result.provider, model: result.model } : null;

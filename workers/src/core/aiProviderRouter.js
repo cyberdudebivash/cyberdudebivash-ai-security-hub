@@ -288,20 +288,26 @@ async function callAnthropicDirect(apiKey, {
 }
 
 // ── Cloudflare Workers AI client ──────────────────────────────────────────────
-async function callCFAI(ai, { model, system, prompt, max_tokens = 400 }) {
+async function callCFAI(ai, { model, system, prompt, max_tokens = 400, timeout_ms = 20000 }) {
   if (!ai) throw new Error('[CF AI] env.AI binding not available');
   const messages = [];
   if (system) messages.push({ role: 'system', content: system });
   messages.push({ role: 'user', content: prompt });
 
-  const resp    = await ai.run(model, { messages, max_tokens });
+  // ai.run() takes no AbortSignal — race it against a timer so a stalled call
+  // can't itself blow routeAICall's overall deadline the way an un-timed-out
+  // fetch() would (the same class of bug this file was just fixed for).
+  const resp = await Promise.race([
+    ai.run(model, { messages, max_tokens }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('[CF AI] timed out')), timeout_ms)),
+  ]);
   const content = resp?.response || '';
   if (!content) throw new Error('[CF AI] Empty response');
   return { content, model, input_tokens: 0, output_tokens: 0 };
 }
 
 // ── Per-provider dispatch with model-key resolution ───────────────────────────
-async function dispatchToProvider(provider, env, { system, prompt, max_tokens, temperature, tier, modelKey }) {
+async function dispatchToProvider(provider, env, { system, prompt, max_tokens, temperature, tier, modelKey, timeout_ms }) {
   const cfg = PROVIDER_CONFIG[provider];
   const t0  = Date.now();
 
@@ -311,16 +317,19 @@ async function dispatchToProvider(provider, env, { system, prompt, max_tokens, t
     : (cfg.models[modelKey] ? modelKey : 'default');
   const model = cfg.models[resolvedKey] || cfg.models.default;
 
-  const cappedTokens = Math.min(max_tokens, cfg.max_tokens_cap);
+  const cappedTokens    = Math.min(max_tokens, cfg.max_tokens_cap);
+  // Caller-supplied timeout_ms (derived from routeAICall's overall deadline) never
+  // extends a provider's own configured ceiling — it can only shorten it.
+  const effectiveTimeout = Math.min(cfg.timeout_ms, timeout_ms ?? cfg.timeout_ms);
   let raw;
 
   if (provider === PROVIDERS.CF_AI) {
-    raw = await callCFAI(env?.AI, { model, system, prompt, max_tokens: cappedTokens });
+    raw = await callCFAI(env?.AI, { model, system, prompt, max_tokens: cappedTokens, timeout_ms: effectiveTimeout });
 
   } else if (provider === PROVIDERS.ANTHROPIC) {
     const apiKey = env?.[cfg.envKey];
     if (!apiKey) throw new Error('[Anthropic] ANTHROPIC_API_KEY not configured');
-    raw = await callAnthropicDirect(apiKey, { model, system, prompt, max_tokens: cappedTokens, temperature, timeout_ms: cfg.timeout_ms });
+    raw = await callAnthropicDirect(apiKey, { model, system, prompt, max_tokens: cappedTokens, temperature, timeout_ms: effectiveTimeout });
 
   } else {
     const apiKey = env?.[cfg.envKey];
@@ -332,7 +341,7 @@ async function dispatchToProvider(provider, env, { system, prompt, max_tokens, t
     }
     raw = await callOpenAICompat(cfg.endpoint, apiKey, {
       model, system, prompt, max_tokens: cappedTokens, temperature,
-      timeout_ms: cfg.timeout_ms, extra_headers: extra,
+      timeout_ms: effectiveTimeout, extra_headers: extra,
     });
   }
 
@@ -375,6 +384,16 @@ function getConfiguredProviders(env) {
  * @param {number}  [opts.temperature]   — 0=deterministic (default 0.3)
  * @param {boolean} [opts.json_mode]     — Append JSON instruction
  * @param {boolean} [opts.chain_of_thought] — Prepend CoT reasoning instruction
+ * @param {number}  [opts.deadline_ms]   — Overall wall-clock budget (default 12000) across
+ *                                         every provider attempt combined. Each per-provider
+ *                                         config timeout (20-30s) is a ceiling for that one
+ *                                         attempt, not a bound on the whole call — without this,
+ *                                         a chain of slow/failing providers could pile up past a
+ *                                         minute before falling back. Every call site here
+ *                                         already treats a null return as "no AI enrichment
+ *                                         available" and degrades gracefully, so bounding the
+ *                                         worst case only affects the degraded path, never the
+ *                                         happy path.
  * @returns {Promise<{content,model,source,provider,tokens,latency_ms}|null>}
  */
 export async function routeAICall(env, {
@@ -386,6 +405,7 @@ export async function routeAICall(env, {
   temperature     = 0.3,
   json_mode       = false,
   chain_of_thought = false,
+  deadline_ms     = 12000,
 }) {
   if (!prompt) return null;
 
@@ -410,8 +430,16 @@ export async function routeAICall(env, {
     return null;
   }
 
+  const callStart = Date.now();
   let lastError;
   for (const provider of candidateOrder) {
+    const remaining = deadline_ms - (Date.now() - callStart);
+    // Less than 1s left in the budget isn't enough for a real attempt — stop
+    // rather than fire a request that's virtually guaranteed to be cut off.
+    if (remaining < 1000) {
+      lastError = lastError || new Error(`AI router deadline (${deadline_ms}ms) exhausted before any provider was tried`);
+      break;
+    }
     try {
       const result = await dispatchToProvider(provider, env, {
         system: fullSystem,
@@ -420,6 +448,7 @@ export async function routeAICall(env, {
         temperature,
         tier,
         modelKey: routing.modelKey,
+        timeout_ms: remaining,
       });
       console.log(`[APEX NEXUS] ${task_type} → ${provider} (${result.model}) ${result.latency_ms}ms`);
       return result;
