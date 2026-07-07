@@ -13,10 +13,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { parseSchema, diffSchemas, extractLiveSql } from '../../scripts/d1-schema-diff.mjs';
+import { parseSchema, diffSchemas, extractLiveSql, loadAcceptedDrift } from '../../scripts/d1-schema-diff.mjs';
 
 const SCRIPT = resolve(import.meta.dirname, '../../scripts/d1-schema-diff.mjs');
 const REAL_BOOTSTRAP = resolve(import.meta.dirname, '../schema_bootstrap.sql');
+const REAL_ACCEPTED_DRIFT = resolve(import.meta.dirname, '../schema_drift_accepted.json');
 
 const FIXTURE_SCHEMA = `
 -- a header comment, like schema_bootstrap.sql's own
@@ -138,6 +139,117 @@ describe('diffSchemas', () => {
   });
 });
 
+describe('loadAcceptedDrift', () => {
+  it('parses an {accepted: [...]} shape into Map<table, Set<column>>', () => {
+    const map = loadAcceptedDrift(JSON.stringify({
+      accepted: [{ table: 'Alert_Log', column: 'Alert_Type', reason: 'belongs to a different table' }],
+    }));
+    expect(map.get('alert_log')).toEqual(new Set(['alert_type'])); // lowercased, matching parseSchema's own convention
+  });
+
+  it('also accepts a bare array shape', () => {
+    const map = loadAcceptedDrift(JSON.stringify([{ table: 'a', column: 'b', reason: 'r' }]));
+    expect(map.get('a')).toEqual(new Set(['b']));
+  });
+
+  it('merges multiple columns for the same table into one Set', () => {
+    const map = loadAcceptedDrift(JSON.stringify({
+      accepted: [
+        { table: 'crm_leads', column: 'urgency', reason: 'r1' },
+        { table: 'crm_leads', column: 'metadata', reason: 'r2' },
+      ],
+    }));
+    expect(map.get('crm_leads')).toEqual(new Set(['urgency', 'metadata']));
+  });
+
+  it('rejects an entry missing a reason — an allowlist entry must be justified, not just asserted', () => {
+    expect(() => loadAcceptedDrift(JSON.stringify({ accepted: [{ table: 'a', column: 'b' }] }))).toThrow(/missing table\/column\/reason/);
+  });
+
+  it('rejects an entry missing table or column', () => {
+    expect(() => loadAcceptedDrift(JSON.stringify({ accepted: [{ column: 'b', reason: 'r' }] }))).toThrow(/missing table\/column\/reason/);
+    expect(() => loadAcceptedDrift(JSON.stringify({ accepted: [{ table: 'a', reason: 'r' }] }))).toThrow(/missing table\/column\/reason/);
+  });
+
+  it('rejects a shape that is neither an array nor {accepted: [...]}', () => {
+    expect(() => loadAcceptedDrift(JSON.stringify({ foo: 'bar' }))).toThrow(/must be a JSON array/);
+  });
+
+  it('parses cleanly against the real workers/schema_drift_accepted.json, and every entry is well-formed', () => {
+    const real = readFileSync(REAL_ACCEPTED_DRIFT, 'utf8');
+    const map = loadAcceptedDrift(real); // throws on any malformed entry — the assertion IS that this doesn't throw
+    expect(map.size).toBeGreaterThan(0);
+  });
+});
+
+describe('diffSchemas — accepted-drift allowlist', () => {
+  it('excludes an allowlisted onlyInReference column from columnDrift/hasDrift, but still reports it under acceptedDrift', () => {
+    const ref = parseSchema('CREATE TABLE alert_log (id TEXT, alert_type TEXT);');
+    const live = parseSchema('CREATE TABLE alert_log (id TEXT);');
+    const accepted = loadAcceptedDrift(JSON.stringify({ accepted: [{ table: 'alert_log', column: 'alert_type', reason: 'dead' }] }));
+    const result = diffSchemas(live, ref, accepted);
+    expect(result.hasDrift).toBe(false);
+    expect(result.columnDrift).toEqual([]);
+    expect(result.acceptedDrift).toEqual([{ table: 'alert_log', columns: ['alert_type'] }]);
+  });
+
+  it('still flags a NON-allowlisted onlyInReference column on the same table as real drift', () => {
+    const ref = parseSchema('CREATE TABLE alert_log (id TEXT, alert_type TEXT, brand_new_col TEXT);');
+    const live = parseSchema('CREATE TABLE alert_log (id TEXT);');
+    const accepted = loadAcceptedDrift(JSON.stringify({ accepted: [{ table: 'alert_log', column: 'alert_type', reason: 'dead' }] }));
+    const result = diffSchemas(live, ref, accepted);
+    expect(result.hasDrift).toBe(true);
+    expect(result.columnDrift).toEqual([{ table: 'alert_log', onlyInReference: ['brand_new_col'], onlyInLive: [] }]);
+  });
+
+  it('never lets the allowlist suppress onlyInLive (production-has-undocumented-column) drift, even on a name collision', () => {
+    // Same table+column name is allowlisted on the onlyInReference side, but
+    // here it shows up as onlyInLive instead — must NOT be suppressed, since
+    // that direction always means the reference is stale, never "known dead".
+    const ref = parseSchema('CREATE TABLE t (id TEXT);');
+    const live = parseSchema('CREATE TABLE t (id TEXT, alert_type TEXT);');
+    const accepted = loadAcceptedDrift(JSON.stringify({ accepted: [{ table: 't', column: 'alert_type', reason: 'irrelevant here' }] }));
+    const result = diffSchemas(live, ref, accepted);
+    expect(result.hasDrift).toBe(true);
+    expect(result.columnDrift).toEqual([{ table: 't', onlyInReference: [], onlyInLive: ['alert_type'] }]);
+  });
+
+  it('defaults to an empty allowlist (no third argument) — unchanged, strict behavior', () => {
+    const ref = parseSchema('CREATE TABLE a (id TEXT, gone TEXT);');
+    const live = parseSchema('CREATE TABLE a (id TEXT);');
+    const result = diffSchemas(live, ref);
+    expect(result.hasDrift).toBe(true);
+    expect(result.acceptedDrift).toEqual([]);
+  });
+
+  it('a table with only allowlisted drift does not appear in columnDrift at all', () => {
+    const ref = parseSchema('CREATE TABLE cti_actors (id TEXT, active_since TEXT);');
+    const live = parseSchema('CREATE TABLE cti_actors (id TEXT);');
+    const accepted = loadAcceptedDrift(JSON.stringify({ accepted: [{ table: 'cti_actors', column: 'active_since', reason: 'dead' }] }));
+    const result = diffSchemas(live, ref, accepted);
+    expect(result.columnDrift.find((d) => d.table === 'cti_actors')).toBeUndefined();
+  });
+
+  it('the real accepted-drift file resolves the real schema_bootstrap.sql\'s known-dead columns to zero drift, standalone', () => {
+    // Directly exercises the exact scenario that caused the CI failure this
+    // allowlist was built to fix: a live export missing ONLY the 29 audited
+    // dead columns (and nothing else) must now report zero drift.
+    const referenceTables = parseSchema(readFileSync(REAL_BOOTSTRAP, 'utf8'));
+    const accepted = loadAcceptedDrift(readFileSync(REAL_ACCEPTED_DRIFT, 'utf8'));
+    // Build a "live" schema equal to the reference minus every allowlisted column.
+    const liveTables = new Map();
+    for (const [table, cols] of referenceTables) {
+      const deadCols = accepted.get(table) || new Set();
+      liveTables.set(table, new Set([...cols].filter((c) => !deadCols.has(c))));
+    }
+    const result = diffSchemas(liveTables, referenceTables, accepted);
+    expect(result.hasDrift).toBe(false);
+    expect(result.acceptedDrift.reduce((n, a) => n + a.columns.length, 0)).toBe(
+      [...accepted.values()].reduce((n, s) => n + s.size, 0)
+    );
+  });
+});
+
 describe('extractLiveSql (wrangler --json shape)', () => {
   it('unwraps [{ results: [{sql, ...}] }] into concatenated CREATE TABLE text', () => {
     const wranglerJson = [{ results: [{ name: 'a', sql: 'CREATE TABLE a (id TEXT);' }, { name: 'b', sql: 'CREATE TABLE b (id TEXT);' }], success: true }];
@@ -218,5 +330,39 @@ describe('CLI entry point (file I/O only — no network)', () => {
     const { code, stdout } = run([liveFile]); // no reference arg — exercises the default path
     expect(code).toBe(0);
     expect(stdout).toContain('"status":"OK"');
+  });
+
+  it('defaults the accepted-drift file to workers/schema_drift_accepted.json and exits 0 when live is missing only allowlisted columns', () => {
+    const referenceTables = parseSchema(readFileSync(REAL_BOOTSTRAP, 'utf8'));
+    const accepted = loadAcceptedDrift(readFileSync(REAL_ACCEPTED_DRIFT, 'utf8'));
+    const liveSqlRows = [...referenceTables.entries()].map(([name, cols]) => {
+      const deadCols = accepted.get(name) || new Set();
+      const liveCols = [...cols].filter((c) => !deadCols.has(c));
+      return { sql: `CREATE TABLE ${name} (${liveCols.map((c) => `${c} TEXT`).join(', ')})` };
+    });
+    const liveFile = join(dir, 'live-minus-accepted-drift.json');
+    writeFileSync(liveFile, JSON.stringify([{ results: liveSqlRows }]));
+    const { code, stdout } = run([liveFile]); // no reference/accepted-drift args — exercises both default paths
+    expect(code).toBe(0);
+    expect(stdout).toContain('"status":"OK"');
+    expect(stdout).toContain('ACCEPTED DRIFT');
+  });
+
+  it('still exits 1 when live is missing an allowlisted column\'s TABLE plus one genuinely new column elsewhere', () => {
+    const referenceTables = parseSchema(readFileSync(REAL_BOOTSTRAP, 'utf8'));
+    const accepted = loadAcceptedDrift(readFileSync(REAL_ACCEPTED_DRIFT, 'utf8'));
+    const liveSqlRows = [...referenceTables.entries()].map(([name, cols]) => {
+      const deadCols = accepted.get(name) || new Set();
+      let liveCols = [...cols].filter((c) => !deadCols.has(c));
+      if (name === 'users') liveCols = liveCols.filter((c) => c !== 'email'); // simulate one real, unexpected regression
+      return { sql: `CREATE TABLE ${name} (${liveCols.map((c) => `${c} TEXT`).join(', ')})` };
+    });
+    const liveFile = join(dir, 'live-minus-accepted-plus-real-drift.json');
+    writeFileSync(liveFile, JSON.stringify([{ results: liveSqlRows }]));
+    const { code, stdout } = run([liveFile]);
+    expect(code).toBe(1);
+    expect(stdout).toContain('"status":"DRIFT"');
+    expect(stdout).toContain('users');
+    expect(stdout).toContain('email');
   });
 });
