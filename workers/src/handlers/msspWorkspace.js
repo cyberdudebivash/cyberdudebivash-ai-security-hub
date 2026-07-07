@@ -28,8 +28,12 @@ const nanoid = (n = 21) => crypto.randomUUID().replace(/-/g, '').slice(0, n);
 // paying MSSP-tier customer managing their own roster" — the doc comment's
 // "own-org views" case — with the platform-owner ADMIN_KEY bypass covering
 // the "cross-customer" support case. (2026-07-06 revenue-mechanisms audit, P1-4.)
+// A real MSSP partner session (handlers/partnerAuth.js, role: 'partner') is
+// the SAME "own-org view" case — a partner managing their own client
+// roster — so it's admitted here too. partnerScope() below is what actually
+// keeps it isolated to that partner's own rows.
 function requireMSSPAdmin(authCtx) {
-  return authCtx?.isAdmin === true || authCtx?.tier === 'MSSP';
+  return authCtx?.isAdmin === true || authCtx?.tier === 'MSSP' || authCtx?.role === 'partner';
 }
 
 function requireAuth(authCtx) {
@@ -37,8 +41,14 @@ function requireAuth(authCtx) {
 }
 
 // ─── Per-partner isolation scope ──────────────────────────────────────────────────────
+// A real partner session's authCtx.partnerId IS the mssp_partners.id /
+// mssp_customers.partner_id value directly (see msspOnboardingHandler.js's
+// linkMsspPartnerRecord) — the correct, canonical scope. Falls back to the
+// legacy behavior (the caller's own user id) for an MSSP-tier user account
+// authenticated via JWT/API key, which predates partner sessions and stamps
+// its own user id as partner_id at customer-creation time.
 function partnerScope(authCtx) {
-  return authCtx?.userId ?? authCtx?.user_id ?? null;
+  return authCtx?.partnerId ?? authCtx?.userId ?? authCtx?.user_id ?? null;
 }
 
 function emptyList(limit, offset) {

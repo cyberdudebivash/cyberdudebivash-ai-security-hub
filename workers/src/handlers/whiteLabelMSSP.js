@@ -57,6 +57,16 @@ function requireRole(req, roles) {
   return roles.includes(req.user.role) || roles.includes(req.user.tier);
 }
 
+// A logged-in MSSP partner (handlers/partnerAuth.js) managing their own
+// white-label branding is exactly the intended "own-org" use case this file's
+// header comment describes — not a platform-admin action. Kept as its own
+// helper so callers are explicit about which surfaces a plain 'partner'
+// session may reach (its own org's theme) vs the platform-owner-only ones.
+function requireRoleOrPartner(req, roles) {
+  if (req.user?.role === 'partner') return true;
+  return requireRole(req, roles);
+}
+
 export async function handleGetTheme(req, env) {
   const orgId = req.user?.org_id || 'default';
   const cacheKey = `tenant_theme_${orgId}`;
@@ -75,7 +85,7 @@ export async function handleGetTheme(req, env) {
 }
 
 export async function handleUpdateTheme(req, env) {
-  if (!requireRole(req, ['admin', 'mssp_admin'])) {
+  if (!requireRoleOrPartner(req, ['admin', 'mssp_admin'])) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 
@@ -104,7 +114,7 @@ export async function handleUpdateTheme(req, env) {
 }
 
 export async function handleDeleteTheme(req, env) {
-  if (!requireRole(req, ['admin', 'mssp_admin'])) {
+  if (!requireRoleOrPartner(req, ['admin', 'mssp_admin'])) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 
@@ -116,7 +126,13 @@ export async function handleDeleteTheme(req, env) {
 }
 
 export async function handleGetThemeByOrg(req, env, orgId) {
-  if (!requireRole(req, ['admin', 'mssp_admin'])) {
+  // A partner may fetch this way only for their OWN org — unlike
+  // handleUpdateTheme/handleDeleteTheme (which always act on the caller's own
+  // org_id already), this route takes an arbitrary :orgId, so blanket
+  // 'partner' access here would let one partner read another partner's
+  // branding.
+  const isOwnOrg = req.user?.role === 'partner' && req.user?.org_id === orgId;
+  if (!isOwnOrg && !requireRole(req, ['admin', 'mssp_admin'])) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 

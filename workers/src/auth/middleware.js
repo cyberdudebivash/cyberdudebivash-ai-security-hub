@@ -152,8 +152,14 @@ function withAuthAliases(ctx) {
     // its own 'default' applies. Nothing seeds shared 'default' data, so this only
     // tightens isolation — it never hides another tenant's rows.
     if (ctx.org_id == null && ctx.authenticated) {
+      // A partner session (handlers/partnerAuth.js) has no user_id at all
+      // (mssp_partners is a separate identity from `users`), so without this
+      // branch every partner session fell through to the shared 'default'
+      // tenant below — collapsing every partner's white-label theme onto one
+      // shared row. Give each partner its own stable namespace instead.
       const uid = ctx.user_id ?? ctx.userId;
-      if (uid) ctx.org_id = `u:${uid}`;
+      if (ctx.partnerId) ctx.org_id = `partner:${ctx.partnerId}`;
+      else if (uid) ctx.org_id = `u:${uid}`;
     }
     // ── Role (root fix) ──────────────────────────────────────────────────────
     // authCtx.role was never populated anywhere in the entire auth layer — no
