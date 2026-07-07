@@ -23,11 +23,25 @@
  * behavior (operational simplicity outranks unnecessary complexity, per the
  * Standing Engineering Directive, docs/ENGINEERING_STANDARDS.md §13).
  *
- * Usage: node scripts/d1-schema-diff.mjs <live-schema.json> [reference-file]
+ * Usage: node scripts/d1-schema-diff.mjs <live-schema.json> [reference-file] [accepted-drift-file]
  *   <live-schema.json> is the captured output of:
  *     wrangler d1 execute <db> --remote --json \
  *       --command "SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name"
  *   [reference-file] defaults to workers/schema_bootstrap.sql
+ *   [accepted-drift-file] defaults to workers/schema_drift_accepted.json
+ *
+ * Some reference-documents-a-column-production-doesn't-have drift is
+ * deliberate, not a bug: a full code audit can confirm a column is dead (see
+ * PR #74) and choose to leave production as-is rather than add unused schema.
+ * Treating that as a permanent build failure trains everyone to ignore red —
+ * the real failure mode this whole check exists to prevent. Each such column
+ * gets one exact, reasoned entry in workers/schema_drift_accepted.json; only
+ * those exact table.column pairs are excluded from hasDrift, and they still
+ * print under "ACCEPTED DRIFT" so the exception stays visible, not silent.
+ * This only ever applies to the reference-has-it/production-doesn't direction
+ * (onlyInReference) — a column production has that the reference doesn't
+ * (onlyInLive) always means the reference is stale and must be fixed there,
+ * never allowlisted.
  *
  * Exit codes: 0 no drift · 1 drift found · 2 misconfigured/bad input (never
  * silently reported as "no drift" — an empty or malformed live read is a
@@ -147,10 +161,42 @@ export function parseSchema(sqlText) {
   return tables;
 }
 
-/** Diffs a live schema Map against a reference schema Map (both from parseSchema). */
-export function diffSchemas(liveTables, referenceTables) {
+/** Parses the accepted-drift allowlist (workers/schema_drift_accepted.json) into
+ * Map<lowercased table, Set<lowercased column>>. Every entry must carry table,
+ * column, and reason — an unreasoned entry is rejected rather than silently
+ * accepted, since this file exists to record audited exceptions, not to be a
+ * quiet way to suppress the checker. */
+export function loadAcceptedDrift(jsonText) {
+  const parsed = JSON.parse(jsonText);
+  const entries = Array.isArray(parsed) ? parsed : parsed.accepted;
+  if (!Array.isArray(entries)) {
+    throw new Error('accepted-drift file must be a JSON array, or an object with an "accepted" array');
+  }
+  const map = new Map();
+  for (const e of entries) {
+    if (!e || typeof e.table !== 'string' || typeof e.column !== 'string' || !e.reason) {
+      throw new Error(`accepted-drift entry missing table/column/reason: ${JSON.stringify(e)}`);
+    }
+    const t = e.table.toLowerCase();
+    const c = e.column.toLowerCase();
+    if (!map.has(t)) map.set(t, new Set());
+    map.get(t).add(c);
+  }
+  return map;
+}
+
+/** Diffs a live schema Map against a reference schema Map (both from parseSchema).
+ * acceptedDrift (Map<table, Set<column>>, from loadAcceptedDrift) lets specific,
+ * already-audited "reference has it, production doesn't" columns be excluded
+ * from onlyInReference/hasDrift — they still surface in the separate
+ * acceptedDrift result field for visibility, just don't fail the build. Only
+ * ever filters onlyInReference; onlyInLive (production has something
+ * undocumented) is never suppressed this way — that direction always means the
+ * reference itself is out of date and should be fixed, not allowlisted. */
+export function diffSchemas(liveTables, referenceTables, acceptedDrift = new Map()) {
   const missingInLive = [];
   const columnDrift = [];
+  const acceptedDriftFound = [];
 
   for (const [name, refCols] of referenceTables) {
     const liveCols = liveTables.get(name);
@@ -158,21 +204,29 @@ export function diffSchemas(liveTables, referenceTables) {
       missingInLive.push(name);
       continue;
     }
-    const onlyInReference = [...refCols].filter((c) => !liveCols.has(c)).sort();
+    const acceptedCols = acceptedDrift.get(name) || new Set();
+    const onlyInReferenceAll = [...refCols].filter((c) => !liveCols.has(c)).sort();
+    const onlyInReference = onlyInReferenceAll.filter((c) => !acceptedCols.has(c));
+    const accepted = onlyInReferenceAll.filter((c) => acceptedCols.has(c));
     const onlyInLive = [...liveCols].filter((c) => !refCols.has(c)).sort();
     if (onlyInReference.length || onlyInLive.length) {
       columnDrift.push({ table: name, onlyInReference, onlyInLive });
+    }
+    if (accepted.length) {
+      acceptedDriftFound.push({ table: name, columns: accepted });
     }
   }
 
   const undocumentedInLive = [...liveTables.keys()].filter((name) => !referenceTables.has(name)).sort();
   columnDrift.sort((a, b) => a.table.localeCompare(b.table));
   missingInLive.sort();
+  acceptedDriftFound.sort((a, b) => a.table.localeCompare(b.table));
 
   return {
     missingInLive,
     undocumentedInLive,
     columnDrift,
+    acceptedDrift: acceptedDriftFound,
     hasDrift: missingInLive.length > 0 || undocumentedInLive.length > 0 || columnDrift.length > 0,
   };
 }
@@ -193,9 +247,10 @@ const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv
 if (isMain) {
   const liveJsonPath = process.argv[2];
   const referencePath = process.argv[3] || resolve(import.meta.dirname, '../workers/schema_bootstrap.sql');
+  const acceptedDriftPath = process.argv[4] || resolve(import.meta.dirname, '../workers/schema_drift_accepted.json');
 
   if (!liveJsonPath) {
-    console.log('SCHEMA_DIFF_RESULT {"status":"CONFIG_ERROR","reason":"usage: node scripts/d1-schema-diff.mjs <live-schema.json> [reference-file]"}');
+    console.log('SCHEMA_DIFF_RESULT {"status":"CONFIG_ERROR","reason":"usage: node scripts/d1-schema-diff.mjs <live-schema.json> [reference-file] [accepted-drift-file]"}');
     process.exit(2);
   }
 
@@ -206,6 +261,19 @@ if (isMain) {
   } catch (e) {
     console.log(`SCHEMA_DIFF_RESULT ${JSON.stringify({ status: 'CONFIG_ERROR', reason: e.message })}`);
     process.exit(2);
+  }
+
+  // A missing allowlist file is fine (nothing accepted yet); a malformed one
+  // is a config error, same as a malformed reference or live export — never
+  // silently fall back to "no allowlist" on a file that exists but is broken.
+  let acceptedDrift = new Map();
+  try {
+    acceptedDrift = loadAcceptedDrift(readFileSync(acceptedDriftPath, 'utf8'));
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      console.log(`SCHEMA_DIFF_RESULT ${JSON.stringify({ status: 'CONFIG_ERROR', reason: `accepted-drift file: ${e.message}` })}`);
+      process.exit(2);
+    }
   }
 
   let liveSql;
@@ -226,8 +294,13 @@ if (isMain) {
     process.exit(2);
   }
 
-  const result = diffSchemas(liveTables, referenceTables);
+  const result = diffSchemas(liveTables, referenceTables, acceptedDrift);
   console.log(`SCHEMA_DIFF_RESULT ${JSON.stringify({ status: result.hasDrift ? 'DRIFT' : 'OK', ...result })}`);
+
+  if (result.acceptedDrift.length) {
+    console.log(`ACCEPTED DRIFT (audited, documented in ${acceptedDriftPath}, does not fail the build): ${result.acceptedDrift.length} table(s)`);
+    for (const a of result.acceptedDrift) console.log(`   ${a.table}: [${a.columns.join(', ')}]`);
+  }
 
   if (result.hasDrift) {
     console.log(
