@@ -57,7 +57,7 @@ Three Explore agents mapped the auth layer, the frontend dashboard inventory, an
 ## 5. Outstanding — explicitly not done this phase
 
 1. **Enterprise, Sales, and Affiliate dashboards** are not rebuilt/segmented this phase — they continue to work exactly as before (tier/owner-gated), just not restructured into the modular, per-widget `requiredRole`/`requiredPermission`/`featureFlag` architecture the full mandate describes.
-2. **No dedicated Platform Administrator dashboard page exists yet** — the role, permission checks, and grant/revoke API are real and tested, but there is no UI surface for an `ADMIN` (non-super) staff member beyond what `isPlatformAdmin()` already unlocks on `executiveCommandCenter`/`productAnalytics`.
+2. ~~No dedicated Platform Administrator dashboard page exists yet~~ — **done, see §6.** `frontend/admin-portal.html` now exists (role grant/revoke UI, Super-Admin-only). A plain `ADMIN` (non-super) staff member still has no *additional* UI beyond what `isPlatformAdmin()` already unlocks on `executiveCommandCenter`/`productAnalytics` — that remains outstanding.
 3. **`org_members` vs. `org_team_members`** — two structurally similar but separate per-org membership tables exist (`orgManagement.js` vs. `enterpriseAutomation.js`); not consolidated this phase.
 4. **`aiSecurityCopilot.js`'s independent `resolveOrgRole()`/`ROLE_RANK`** — a third, separate org-role resolution system; not touched.
 5. **The dead `'TEAM'` tier reference** (`index.js:1516`) and the **`authCtx.orgId` vs. `org_id` field-name mismatch** in `auditLog.js` — both pre-existing, both noted, neither fixed this phase.
@@ -65,3 +65,19 @@ Three Explore agents mapped the auth layer, the frontend dashboard inventory, an
 7. **Live production verification** of every fix (§3) is a PR-merge-and-deploy step that happens after this report is written, following the same branch → PR → CI → merge → deploy → live-curl-verify protocol already used for the Partner/White-label infra phase in this session.
 
 This phase is a foundation, not a finish line — do not read §2 as "RBAC is done." The next phase, per the mandate's own priority order, should extend Platform Admin/Super Admin into an actual dashboard page (parity with the now-real permission model), before moving on to Enterprise/Sales/Affiliate dashboard segmentation.
+
+## 6. Update — 2026-07-07: Platform Admin Portal + email-based grant
+
+**What prompted this:** `handlers/staffAuth.js`'s magic-link email already pointed to `/admin-portal.html` (`PORTAL_BASE_URL + '/admin-portal.html?token=...'`) — that page did not exist, so every staff login link 404'd. This closes that gap and completes the "next phase" priority named above.
+
+| # | Gap | Fix | Lock |
+|---|---|---|---|
+| 1 | `admin-portal.html` referenced by the login email but never built | New page: reuses the `staff-auth.js` gate and the `mssp-command-center.html` CSS/layout convention (same `:root` tokens, nav, KPI cards, data-table). Shows the signed-in staff member's own roles (`GET /api/staff/me`), a grant/revoke-by-email form, and the full granted-roles audit table (`GET /api/admin/roles`). A plain `ADMIN` session (not `SUPERADMIN`) gets a "Super Admin required" empty-state instead of a raw 403, since `admin:roles:manage` is super-admin-only by design (§ permission registry in `auth/rbac.js`). | Headless Chromium: anonymous → gate renders login form; mocked `SUPERADMIN` session → dashboard + table render (2 rows, 0 console/page errors); mocked plain-`ADMIN` session → graceful degradation notice, 0 uncaught JS errors — all three states manually verified, screenshots retained in session scratchpad (not committed) |
+| 2 | `handleGrantRole`/`handleRevokeRole` only accepted `user_id` | Both now also accept `email` (case-insensitive lookup against `users`), additive only — the pre-existing `user_id` code path is byte-for-byte unchanged | `rbac.test.mjs` (+7 tests: grant/revoke by email, case-insensitivity, unknown email, missing identifier both directions, non-super-admin denial by email) |
+| 3 | New console undiscoverable | Added an "Admin" nav-links entry to `mssp-command-center.html`, `revenue-command-center.html`, and `proposal-generator.html` (the 3 pre-existing staff-gated pages), pointing to `/admin-portal.html` | Visual only — no test needed |
+
+**Verification:** Full suite **157 files / 1638 tests passing** (1631 baseline + 7 new), zero regressions. `npm run lint` (index.js import smoke check) clean. Direct `node --check` on the new page's inline script clean. Headless Chromium (Playwright, ad hoc — not added to the repo's own e2e suite) confirmed all three UI states as above.
+
+**Outstanding, unchanged from §5:** items 1, 3, 4, 5, 6 above are untouched by this update. Item 7 (live production verification) still applies to *this* update too — as of this writing it is pushed to `claude/enterprise-rbac-continuation-i8sfto` but **not yet merged or deployed**; the live-curl-verify step against `cyberdudebivash.in` is outstanding until that happens. Do not read this section as live-verified.
+
+**Next**, per the mandate's own priority order: Enterprise, Sales, and Affiliate dashboard segmentation (§5.1) is now the highest-priority remaining item from the original mandate.
