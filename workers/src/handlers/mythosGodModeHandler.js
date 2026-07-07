@@ -18,6 +18,7 @@ import {
   getGodModeReport,
 } from '../services/mythosGodMode.js';
 import { buildFreshnessContract } from '../lib/contracts.js';
+import { isValidAdminKey } from '../auth/middleware.js';
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -27,9 +28,7 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 // ── POST /api/mythos/god-mode/run ─────────────────────────────────────────────
 export async function handleGodModeRun(request, env, authCtx, ctx) {
   // Auth: accept ADMIN_KEY directly or ENTERPRISE tier
-  const apiKey  = request.headers.get('x-api-key') || request.headers.get('X-Api-Key') || '';
-  const isAdmin = (env.ADMIN_KEY && apiKey === env.ADMIN_KEY) ||
-                  authCtx?.tier === 'ENTERPRISE';
+  const isAdmin = isValidAdminKey(request, env) || authCtx?.tier === 'ENTERPRISE';
   if (!isAdmin) {
     return json({ success: false, error: 'Admin access required' }, 403);
   }

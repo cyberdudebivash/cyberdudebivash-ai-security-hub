@@ -14,6 +14,7 @@ import { runMythosOrchestration, getMythosStatus, getMythosJob } from '../servic
 import { validateArtifact }  from '../services/validationEngine.js';
 import { analyzeIntel }      from '../agents/intelAgent.js';
 import { buildTaskPlan }     from '../agents/plannerAgent.js';
+import { isValidAdminKey }   from '../auth/middleware.js';
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -22,8 +23,7 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 // ── POST /api/mythos/run ──────────────────────────────────────────────────────
 export async function handleMythosRun(request, env, authCtx) {
   // Auth: admin (full access) | ENTERPRISE/MSSP (up to 5 items/day) | others → 403
-  const apiKey  = request.headers.get('x-api-key') || request.headers.get('X-Api-Key') || '';
-  const isAdmin = (env.ADMIN_KEY && apiKey === env.ADMIN_KEY) || authCtx?.role === 'admin';
+  const isAdmin = isValidAdminKey(request, env) || authCtx?.role === 'admin';
   const tier    = (authCtx?.tier || '').toUpperCase();
   const isPaidEnterprise = isAdmin || tier === 'ENTERPRISE' || tier === 'MSSP';
 

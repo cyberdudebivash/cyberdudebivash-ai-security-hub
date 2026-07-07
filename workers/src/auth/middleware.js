@@ -295,6 +295,25 @@ export function unauthorized(reason = 'missing') {
   }, { status: 401 });
 }
 
+// ─── Shared ADMIN_KEY comparison ──────────────────────────────────────────────
+// Four handlers (revenueFeatures.js, mythosGodModeHandler.js, pipelineHealth.js,
+// mythosHandler.js) bypass resolveAuthV5() entirely and each independently
+// re-implemented `apiKey === env.ADMIN_KEY` against a slightly different
+// header set — the exact re-implementation-in-N-places risk that made the
+// prior ADMIN_KEY leak harder to remediate consistently. One place, one
+// comparison, superset of every header any of the four previously accepted
+// (so no existing caller of any of them breaks).
+export function isValidAdminKey(request, env) {
+  if (!env.ADMIN_KEY) return false;
+  const provided =
+    request.headers.get('x-api-key') ||
+    request.headers.get('x-admin-key') ||
+    request.headers.get('x-admin-secret') ||
+    request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') ||
+    '';
+  return provided === env.ADMIN_KEY;
+}
+
 // ─── Real-principal check ─────────────────────────────────────────────────────
 // resolveAuthV5 sets `authenticated: true` even for the anonymous IP-fallback
 // tier (user_id === null), so `authCtx.authenticated` means "not an invalid
