@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partner Portal — CYBERDUDEBIVASH® SENTINEL APEX</title>
+<meta name="description" content="MSSP Partner Portal — manage your clients, track your revenue share, and configure white-label branding.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cyberdudebivash.in/partner-portal.html">
+<style>
+  :root {
+    --bg: #0d0d1a; --surface: #12121f; --surface2: #1a1a2e;
+    --border: rgba(255,255,255,0.08); --accent: #00d4ff; --accent2: #7c3aed;
+    --text: #e0e0e0; --muted: #888; --success: #22c55e; --warn: #f59e0b; --danger: #ef4444;
+    --gold: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 12pt; font-weight: 900; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
+  .logo span { color: var(--text); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .tier-badge { background: rgba(0,212,255,0.1); border: 1px solid var(--accent); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 9pt; font-weight: 700; }
+
+  .btn { padding: 11px 24px; border-radius: 8px; font-size: 10.5pt; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00b8d9; }
+  .btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-block { width: 100%; justify-content: center; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px; }
+  .center-wrap { max-width: 420px; margin: 80px auto; padding: 0 20px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+  .card-title { font-size: 12pt; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+  .card-subtitle { color: var(--muted); font-size: 9.5pt; margin-bottom: 18px; }
+
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: 9pt; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  input, select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 11pt; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+  input[type="color"] { padding: 4px; height: 42px; cursor: pointer; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 8px; }
+  .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .stat-val { font-size: 18pt; font-weight: 900; color: var(--accent); }
+  .stat-lbl { font-size: 8.5pt; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  th { text-align: left; color: var(--muted); font-size: 8.5pt; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .empty-row { text-align: center; color: var(--muted); padding: 24px; font-size: 10pt; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 8.5pt; font-weight: 700; }
+  .badge-active { background: rgba(34,197,94,0.12); color: var(--success); }
+  .badge-trial { background: rgba(245,158,11,0.12); color: var(--warn); }
+  .badge-pending { background: rgba(136,136,136,0.12); color: var(--muted); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a2e; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 10.5pt; display: none; z-index: 9999; }
+  #toast.show { display: block; }
+
+  .caveat { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 12px 14px; font-size: 9.5pt; color: #fbbf24; margin-top: 8px; }
+  .spinner { text-align: center; padding: 60px; color: var(--muted); }
+</style>
+<!-- CDB UX layer (auto-injected, zero-regression) -->
+  <link rel="stylesheet" href="/assets/cdb-ui-polish.css">
+  <link rel="stylesheet" href="/assets/cdb-mobile-responsive.css">
+  <link rel="stylesheet" href="/assets/cdb-ux-upgrade.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">CYBERDUDEBIVASH® <span>PARTNER PORTAL</span></div>
+  <div class="header-right" id="header-right"></div>
+</header>
+
+<div id="app"><div class="spinner">Loading…</div></div>
+<div id="toast"></div>
+
+<script>
+const SESSION_KEY = 'cdb_partner_session';
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function getSession() { return localStorage.getItem(SESSION_KEY); }
+function setSession(token) { localStorage.setItem(SESSION_KEY, token); }
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+async function authFetch(path, opts = {}) {
+  const token = getSession();
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}), Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    clearSession();
+    renderLogin('Your session expired. Please log in again.');
+    throw new Error('session_expired');
+  }
+  return res;
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+(async function boot() {
+  const params = new URLSearchParams(location.search);
+  const magicToken = params.get('token');
+
+  if (magicToken) {
+    await verifyMagicToken(magicToken);
+    return;
+  }
+
+  const existing = getSession();
+  if (existing) {
+    await loadDashboard();
+  } else {
+    renderLogin();
+  }
+})();
+
+async function verifyMagicToken(token) {
+  document.getElementById('app').innerHTML = '<div class="spinner">Verifying your login link…</div>';
+  try {
+    const res = await fetch('/api/partners/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'This login link is invalid or has expired.');
+
+    setSession(data.session_token);
+    history.replaceState({}, '', location.pathname); // scrub the one-time token out of the URL/history
+    renderDashboardShell(data.partner);
+    loadRevenue(); loadCustomers(); loadBranding();
+  } catch (err) {
+    renderLogin(err.message);
+  }
+}
+
+// ── Login view ──────────────────────────────────────────────────────────────
+function renderLogin(message) {
+  document.getElementById('header-right').innerHTML = '';
+  document.getElementById('app').innerHTML = `
+    <div class="center-wrap">
+      <div class="card">
+        <div class="card-title">Partner Login</div>
+        <div class="card-subtitle">Enter your registered partner email — we'll send you a secure one-time login link. No password needed.</div>
+        ${message ? `<div class="caveat">${message}</div>` : ''}
+        <div class="form-group" style="margin-top:16px">
+          <label>Business Email</label>
+          <input id="login-email" type="email" placeholder="you@yoursecurityfirm.com" />
+        </div>
+        <button class="btn btn-primary btn-block" id="login-btn" onclick="requestLoginLink()">Send Login Link →</button>
+        <div id="login-status" style="margin-top:14px;font-size:9.5pt;color:var(--muted);text-align:center"></div>
+        <div style="text-align:center;margin-top:18px;font-size:9.5pt">
+          Not a partner yet? <a href="/mssp-onboarding.html" style="color:var(--accent)">Start a free trial →</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function requestLoginLink() {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) { toast('Enter your email first.'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await fetch('/api/partners/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    document.getElementById('login-status').textContent = data.message || 'If that email belongs to a registered MSSP partner account, a login link has been sent.';
+  } catch (err) {
+    toast('Something went wrong — try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Login Link →';
+  }
+}
+
+// ── Dashboard shell ──────────────────────────────────────────────────────────
+function tierBadgeClass(status) {
+  if (status === 'active') return 'badge-active';
+  if (status === 'trial') return 'badge-trial';
+  return 'badge-pending';
+}
+
+function renderDashboardShell(partner) {
+  document.getElementById('header-right').innerHTML = `
+    <span class="tier-badge">${partner.tier || 'PARTNER'}</span>
+    <button class="btn btn-outline" onclick="logout()">Log Out</button>`;
+
+  document.getElementById('app').innerHTML = `
+    <div class="wrap">
+      <div class="card">
+        <div class="card-title">${partner.brand_name || partner.company}
+          <span class="badge ${tierBadgeClass(partner.status)}">${(partner.status || '').toUpperCase()}</span>
+        </div>
+        <div class="card-subtitle">${partner.email} · ${partner.plan || partner.tier} plan</div>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="stat-val">${partner.client_count ?? 0}</div><div class="stat-lbl">Clients</div></div>
+          <div class="stat-box"><div class="stat-val">${partner.max_clients >= 999999 ? '∞' : (partner.max_clients ?? '—')}</div><div class="stat-lbl">Client Limit</div></div>
+          <div class="stat-box"><div class="stat-val">${partner.margin_pct != null ? partner.margin_pct + '%' : '—'}</div><div class="stat-lbl">Revenue Share</div></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Revenue Share Ledger</div>
+          <div class="card-subtitle">Your share of every payment from a client you own.</div>
+          <div class="stat-grid" id="revenue-stats"><div class="empty-row">Loading…</div></div>
+          <table id="revenue-table" style="margin-top:12px"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Your Clients <button class="btn btn-outline" style="padding:6px 14px;font-size:9pt" onclick="toggleAddCustomer()">+ Add Client</button></div>
+          <div class="card-subtitle">Client accounts you own and bill.</div>
+          <div id="add-customer-form" style="display:none;margin-bottom:16px;padding:14px;background:var(--surface2);border-radius:8px">
+            <div class="form-group"><label>Organization Name</label><input id="new-cust-name" type="text" placeholder="Client Company Ltd" /></div>
+            <div class="form-group"><label>Contact Email</label><input id="new-cust-email" type="email" placeholder="security@client.com" /></div>
+            <button class="btn btn-primary btn-block" onclick="createCustomer()">Add Client</button>
+          </div>
+          <table id="customers-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">White-Label Branding</div>
+        <div class="card-subtitle">Your logo, colors, and domain — shown to your own clients.</div>
+        <div class="two-col">
+          <div>
+            <div class="form-group"><label>Brand Name</label><input id="brand-name" type="text" placeholder="Your Security Firm" /></div>
+            <div class="form-group"><label>Primary Color</label><input id="brand-color" type="color" value="#00d4ff" /></div>
+            <div class="form-group"><label>Support Email</label><input id="brand-support-email" type="email" placeholder="support@yourfirm.com" /></div>
+          </div>
+          <div>
+            <div class="form-group"><label>Logo URL (https only)</label><input id="brand-logo" type="url" placeholder="https://yourfirm.com/logo.png" /></div>
+            <div class="form-group">
+              <label>Custom Domain</label>
+              <input id="brand-domain" type="text" placeholder="portal.yourfirm.com" />
+              <div class="caveat">Custom-domain routing (DNS + TLS) is being rolled out — saving a domain here records your request but does not yet serve live traffic on it. Your portal remains reachable at this URL either way.</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveBranding()">Save Branding</button>
+      </div>
+    </div>`;
+}
+
+async function loadDashboard() {
+  try {
+    const res = await authFetch('/api/partners/me');
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not load your account');
+    renderDashboardShell(data.partner);
+    loadRevenue(); loadCustomers(); loadBranding();
+  } catch (err) {
+    if (err.message !== 'session_expired') renderLogin(err.message);
+  }
+}
+
+// ── Revenue ──────────────────────────────────────────────────────────────────
+async function loadRevenue() {
+  try {
+    const res = await authFetch('/api/mssp/revenue');
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load revenue');
+
+    const t = data.totals || {};
+    document.getElementById('revenue-stats').innerHTML = `
+      <div class="stat-box"><div class="stat-val">₹${((t.total_gross_paise||0)/100).toLocaleString('en-IN')}</div><div class="stat-lbl">Total Processed</div></div>
+      <div class="stat-box"><div class="stat-val">₹${((t.total_partner_earnings_paise||0)/100).toLocaleString('en-IN')}</div><div class="stat-lbl">Your Earnings</div></div>
+      <div class="stat-box"><div class="stat-val">₹${((t.pending_payout_paise||0)/100).toLocaleString('en-IN')}</div><div class="stat-lbl">Pending Payout</div></div>`;
+
+    const rows = (data.ledger || []).slice(0, 10);
+    const tbody = rows.length
+      ? rows.map(r => `<tr><td>${r.customer_email || '—'}</td><td>${r.module || '—'}</td><td>₹${(r.partner_share_paise/100).toLocaleString('en-IN')}</td><td><span class="badge ${r.status === 'paid_out' ? 'badge-active' : 'badge-pending'}">${r.status}</span></td></tr>`).join('')
+      : '<tr><td class="empty-row" colspan="4">No revenue recorded yet — it appears automatically once one of your clients pays.</td></tr>';
+    document.getElementById('revenue-table').innerHTML = `<thead><tr><th>Client</th><th>Product</th><th>Your Share</th><th>Status</th></tr></thead><tbody>${tbody}</tbody>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') document.getElementById('revenue-table').innerHTML = '<tbody><tr><td class="empty-row">Unable to load revenue.</td></tr></tbody>';
+  }
+}
+
+// ── Customers ────────────────────────────────────────────────────────────────
+function toggleAddCustomer() {
+  const el = document.getElementById('add-customer-form');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadCustomers() {
+  try {
+    const res = await authFetch('/api/mssp/customers');
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load clients');
+
+    const rows = data.customers || [];
+    const tbody = rows.length
+      ? rows.map(c => `<tr><td>${c.org_name}</td><td>${c.tier || '—'}</td><td><span class="badge badge-active">${c.status}</span></td></tr>`).join('')
+      : '<tr><td class="empty-row" colspan="3">No clients yet — add your first one above.</td></tr>';
+    document.getElementById('customers-table').innerHTML = `<thead><tr><th>Organization</th><th>Tier</th><th>Status</th></tr></thead><tbody>${tbody}</tbody>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') document.getElementById('customers-table').innerHTML = '<tbody><tr><td class="empty-row">Unable to load clients.</td></tr></tbody>';
+  }
+}
+
+async function createCustomer() {
+  const org_name = document.getElementById('new-cust-name').value.trim();
+  const contact_email = document.getElementById('new-cust-email').value.trim();
+  if (!org_name) { toast('Organization name is required.'); return; }
+  try {
+    const res = await authFetch('/api/mssp/customers', { method: 'POST', body: JSON.stringify({ org_name, contact_email }) });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not add client');
+    toast('Client added.');
+    document.getElementById('new-cust-name').value = '';
+    document.getElementById('new-cust-email').value = '';
+    toggleAddCustomer();
+    loadCustomers();
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+// ── Branding ─────────────────────────────────────────────────────────────────
+async function loadBranding() {
+  try {
+    const res = await authFetch('/api/white-label/theme');
+    const data = await res.json();
+    const theme = data.theme || {};
+    document.getElementById('brand-name').value = theme.brand_name === 'CYBERDUDEBIVASH®' ? '' : (theme.brand_name || '');
+    document.getElementById('brand-color').value = theme.primary_color || '#00d4ff';
+    document.getElementById('brand-support-email').value = theme.support_email || '';
+    document.getElementById('brand-logo').value = theme.logo_url || '';
+    document.getElementById('brand-domain').value = theme.custom_domain || '';
+  } catch (err) {
+    // non-fatal — form just stays at defaults
+  }
+}
+
+async function saveBranding() {
+  const body = {
+    brand_name: document.getElementById('brand-name').value.trim() || undefined,
+    primary_color: document.getElementById('brand-color').value || undefined,
+    support_email: document.getElementById('brand-support-email').value.trim() || undefined,
+    logo_url: document.getElementById('brand-logo').value.trim() || undefined,
+    custom_domain: document.getElementById('brand-domain').value.trim() || undefined,
+  };
+  try {
+    const res = await authFetch('/api/white-label/theme', { method: 'PUT', body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not save branding');
+    toast('Branding saved.');
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+async function logout() {
+  try { await authFetch('/api/partners/logout', { method: 'POST' }); } catch (_) {}
+  clearSession();
+  renderLogin();
+}
+</script>
+<script src="/assets/copilot-widget.js" defer></script>
+</body>
+</html>

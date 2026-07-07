@@ -7883,6 +7883,25 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMsspRevenueTrend(request, env), request));
     }
 
+    // ── MSSP partner self-serve auth (magic-link login) — handlers/partnerAuth.js ──
+    if (path === '/api/partners/login' && method === 'POST') {
+      const { handlePartnerLoginRequest } = await import('./handlers/partnerAuth.js');
+      return withSecurityHeaders(withCors(await handlePartnerLoginRequest(request, env), request));
+    }
+    if (path === '/api/partners/verify' && method === 'POST') {
+      const { handlePartnerLoginVerify } = await import('./handlers/partnerAuth.js');
+      return withSecurityHeaders(withCors(await handlePartnerLoginVerify(request, env), request));
+    }
+    if (path === '/api/partners/logout' && method === 'POST') {
+      const { handlePartnerLogout } = await import('./handlers/partnerAuth.js');
+      return withSecurityHeaders(withCors(await handlePartnerLogout(request, env), request));
+    }
+    if (path === '/api/partners/me' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handlePartnerMe } = await import('./handlers/partnerAuth.js');
+      return withSecurityHeaders(withCors(await handlePartnerMe(request, env, authCtx), request));
+    }
+
     // GET /api/mssp/expansion-opps — Partners eligible for tier upgrade
     if (path === '/api/mssp/expansion-opps' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));

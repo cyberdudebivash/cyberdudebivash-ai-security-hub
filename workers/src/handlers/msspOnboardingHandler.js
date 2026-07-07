@@ -44,6 +44,80 @@ function getTierAmountPaise(tierId) {
   return tier.price_inr * 100; // paise
 }
 
+// ── Link to the canonical mssp_partners entity ────────────────────────────
+// mssp_onboarding_partners (this file) is the self-serve checkout/trial
+// record. mssp_partners (schema_master.sql) is the entity every OTHER MSSP
+// surface reads from — the revenue-share ledger (msspRevenue.js), the admin
+// command center (msspOps.js), and the funnel dashboards (index.js,
+// revenueKPI.js). Before this, a self-serve signup only ever wrote to
+// mssp_onboarding_partners, so a real paying partner never showed up in any
+// of those surfaces and could never own a customer or earn a revenue share —
+// the two tables were structurally disconnected identities for the same
+// partner. Same `id` in both tables by design, matching how
+// resolvePartnerIdForEmail()/recordRevenueShare() in msspRevenue.js expect
+// mssp_customers.partner_id and mssp_revenue_ledger.partner_id to reference
+// mssp_partners.id directly. Best-effort: mirrors the "never throws into the
+// payment webhook path" invariant from msspRevenue.js — a failure here must
+// not block partner activation, since payment/trial provisioning already
+// succeeded via mssp_onboarding_partners above.
+async function linkMsspPartnerRecord(env, { partnerId, email, companyName, tierId, marginPct, maxClients, status, sourceLabel }) {
+  try {
+    // Table already exists in production (schema_master.sql), but this file's
+    // other tables are all self-bootstrapping (see header note above) — match
+    // that pattern so this also works against a D1 instance that hasn't run
+    // the full migration yet.
+    await env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS mssp_partners (
+        id            TEXT PRIMARY KEY,
+        company       TEXT NOT NULL DEFAULT '',
+        contact_email TEXT NOT NULL UNIQUE,
+        tier          TEXT NOT NULL DEFAULT 'RESELLER',
+        plan          TEXT NOT NULL DEFAULT 'reseller',
+        brand_name    TEXT,
+        custom_domain TEXT,
+        primary_color TEXT DEFAULT '#00d4ff',
+        api_key       TEXT UNIQUE,
+        client_count  INTEGER NOT NULL DEFAULT 0,
+        max_clients   INTEGER NOT NULL DEFAULT 10,
+        margin_pct    REAL NOT NULL DEFAULT 20.0,
+        status        TEXT NOT NULL DEFAULT 'pending',
+        onboarded_at  INTEGER,
+        created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+        metadata      TEXT DEFAULT '{}'
+      )`
+    ).run();
+
+    // Reuse an existing row's id/api_key if this email already has one —
+    // e.g. a trial that later converts to paid must not orphan the partner's
+    // existing api_key or revenue-ledger history under a second id.
+    const existing = await env.DB.prepare(
+      `SELECT id, api_key FROM mssp_partners WHERE contact_email=?`
+    ).bind(email).first().catch(() => null);
+
+    const resolvedId = existing?.id || partnerId;
+    const apiKey = existing?.api_key || ('cdb_mssp_' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').slice(0, 8));
+    const nowUnix = Math.floor(Date.now() / 1000);
+
+    await env.DB.prepare(
+      `INSERT INTO mssp_partners
+        (id, company, contact_email, tier, plan, api_key, client_count, max_clients, margin_pct, status, onboarded_at, created_at, metadata)
+       VALUES (?,?,?,?,?,?,0,?,?,?,?,?,?)
+       ON CONFLICT(contact_email) DO UPDATE SET
+         tier=excluded.tier, plan=excluded.plan, max_clients=excluded.max_clients,
+         margin_pct=excluded.margin_pct, status=excluded.status, onboarded_at=excluded.onboarded_at`
+    ).bind(
+      resolvedId, companyName, email, String(tierId).toUpperCase(), tierId, apiKey,
+      maxClients, marginPct, status, nowUnix, nowUnix,
+      JSON.stringify({ source: sourceLabel, onboarding_partner_id: partnerId })
+    ).run();
+
+    return resolvedId;
+  } catch (e) {
+    console.error('[MSSP Onboarding] linkMsspPartnerRecord failed (non-fatal):', e.message);
+    return partnerId;
+  }
+}
+
 // ── GET /api/mssp/onboarding/tiers ────────────────────────────────────────
 export async function handleMsspTiers(request, env) {
   const tiers = Object.values(MSSP_TIERS).map(t => ({
@@ -216,7 +290,17 @@ export async function handleMsspVerify(request, env) {
     }
 
     const tier       = MSSP_TIERS[checkout.tier_id] || {};
-    const partnerId  = `mssp-${Date.now()}-${crypto.randomUUID().slice(0,8)}`;
+    // Reuse the existing partner id if this email already has an
+    // mssp_onboarding_partners row (e.g. a tier upgrade — a second checkout
+    // for an email that's already active). The INSERT below is
+    // ON CONFLICT(email) DO UPDATE, which does NOT touch `id`, so generating
+    // a fresh id here on every verify would silently diverge from the id
+    // actually stored in the row — breaking the KV token/partner-state keys
+    // below and orphaning the linked mssp_partners row from a stale id.
+    const existingOnboardingPartner = await env.DB.prepare(
+      'SELECT id FROM mssp_onboarding_partners WHERE email=?'
+    ).bind(checkout.email).first().catch(() => null);
+    const partnerId  = existingOnboardingPartner?.id || `mssp-${Date.now()}-${crypto.randomUUID().slice(0,8)}`;
     const accessToken = generateAccessToken();
     const now        = new Date().toISOString();
 
@@ -251,6 +335,18 @@ export async function handleMsspVerify(request, env) {
     await env.DB.prepare(
       'UPDATE mssp_onboarding_checkouts SET status=?, partner_id=?, paid_at=? WHERE order_id=?'
     ).bind('paid', partnerId, now, razorpay_order_id).run();
+
+    // Link the canonical mssp_partners entity — see linkMsspPartnerRecord() above.
+    await linkMsspPartnerRecord(env, {
+      partnerId,
+      email: checkout.email,
+      companyName: checkout.company_name,
+      tierId: checkout.tier_id,
+      marginPct: parseFloat(tier.margin) || 20,
+      maxClients: tier.clients === -1 ? 999999 : (tier.clients ?? 10),
+      status: 'active',
+      sourceLabel: 'mssp_onboarding_v23',
+    });
 
     // Store KV onboarding state (90-day)
     await env.KV.put(
@@ -375,6 +471,18 @@ export async function handleMsspTrial(request, env) {
       'reseller', 3, '0%',
       'trial', accessToken, trialEndsAt, now.toISOString(), now.toISOString()
     ).run();
+
+    // Link the canonical mssp_partners entity — see linkMsspPartnerRecord() above.
+    await linkMsspPartnerRecord(env, {
+      partnerId,
+      email: email.toLowerCase().trim(),
+      companyName: company_name.trim(),
+      tierId: 'reseller',
+      marginPct: 0,
+      maxClients: 3,
+      status: 'trial',
+      sourceLabel: 'mssp_trial_v23',
+    });
 
     // KV rate limit + email dedup
     await env.KV.put(ipKey, String(ipCount + 1), { expirationTtl: 86400 });

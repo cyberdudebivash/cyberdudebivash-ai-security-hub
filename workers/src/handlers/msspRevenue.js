@@ -115,18 +115,25 @@ export async function recordRevenueShare(env, { paymentId, partnerId, grossAmoun
   }
 }
 
-// GET /api/mssp/revenue?partner_id=... — owner views one partner's ledger + totals.
-// NOTE: there is no partner self-serve login in this platform yet (mssp_partners.api_key
-// exists in schema but nothing validates it against incoming requests — confirmed during
-// audit). Until that self-serve auth is built, partner revenue visibility is owner-gated,
-// same as every other MSSP admin route in this codebase (requireOwner below).
+// GET /api/mssp/revenue?partner_id=... — the owner can view any partner's ledger
+// (via ?partner_id=); a logged-in partner (handlers/partnerAuth.js, real magic-link
+// session — see auth/middleware.js resolvePartnerSession) can only ever see their
+// OWN ledger, ignoring any ?partner_id= they might pass.
 export async function handleGetPartnerRevenue(request, env, authCtx = {}, requireOwner) {
   if (!env.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
-  if (!requireOwner(authCtx, env)) return Response.json({ error: 'This resource is restricted to the platform owner.' }, { status: 403 });
 
   const url0 = new URL(request.url);
-  const partnerId = url0.searchParams.get('partner_id');
-  if (!partnerId) return Response.json({ error: 'partner_id query param required' }, { status: 400 });
+  const owner = requireOwner(authCtx, env);
+
+  let partnerId;
+  if (owner) {
+    partnerId = url0.searchParams.get('partner_id');
+    if (!partnerId) return Response.json({ error: 'partner_id query param required' }, { status: 400 });
+  } else if (authCtx.partnerId) {
+    partnerId = authCtx.partnerId;
+  } else {
+    return Response.json({ error: 'This resource is restricted to the platform owner or a logged-in partner.' }, { status: 403 });
+  }
 
   try {
     await ensureRevenueTables(env.DB);
