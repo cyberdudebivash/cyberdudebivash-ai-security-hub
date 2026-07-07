@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>God Mode — CYBERDUDEBIVASH AI Security Hub</title>
 <meta name="description" content="MYTHOS GOD MODE v5.0 — autonomous 16-phase AI security orchestrator. Live CISO intel, compliance posture, AI security posture (ASPM), and SOAR hunt-pack dashboard.">
-<meta name="robots" content="index,follow">
+<meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://cyberdudebivash.in/god-mode">
 <meta property="og:title" content="MYTHOS God Mode — CYBERDUDEBIVASH AI Security Hub">
 <meta property="og:description" content="Autonomous 16-phase AI security orchestrator: CISO intel, compliance posture, ASPM, and SOAR hunt packs.">
@@ -134,6 +134,13 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:20px;text-alig
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
 
+<!-- ── STAFF GATE (real session auth — see assets/staff-auth.js) ──────────────
+     RBAC-0: this page previously had NO gate at all — the full autonomous
+     orchestrator UI rendered unconditionally to any visitor. -->
+<div id="gateOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(6,6,20,.96);align-items:center;justify-content:center;padding:20px">
+  <div id="gateBox" style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:36px;max-width:400px;width:100%;text-align:center"></div>
+</div>
+
 <header class="topbar">
   <div class="brand">
     <h1>MYTHOS <span>GOD MODE</span></h1>
@@ -244,6 +251,7 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:20px;text-alig
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<script src="/assets/staff-auth.js"></script>
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────
 // Served from cyberdudebivash.in where the Worker owns the /api/* route, so a
@@ -787,10 +795,32 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
+// RBAC-0: God Mode is BOTH a paying ENTERPRISE/MSSP customer feature
+// (triggerRun() above already requires a real ENTERPRISE/MSSP JWT or admin
+// key server-side) AND something platform staff need to view — it is NOT
+// staff-only. The previous complete absence of any page-load gate meant an
+// anonymous/FREE-tier visitor (and search engines — see the robots meta fix)
+// saw the full live orchestrator dashboard shell regardless. Show it
+// immediately for an ENTERPRISE/MSSP customer or a real staff session;
+// everyone else gets an upgrade prompt instead of a login form, since most
+// visitors here are legitimately non-staff.
 document.addEventListener('DOMContentLoaded', () => {
   $('refreshBtn').addEventListener('click', () => { toast('Refreshing…'); refreshAll(); });
   $('triggerBtn').addEventListener('click', triggerRun);
-  refreshAll();
+
+  const tier = getUserTier();
+  if (['ENTERPRISE', 'MSSP'].includes(tier)) { refreshAll(); return; }
+
+  const overlay = document.getElementById('gateOverlay');
+  const box = document.getElementById('gateBox');
+  box.innerHTML = `
+    <div style="font-size:36px;margin-bottom:12px">⚡</div>
+    <h2 style="color:#fff;font-size:20px;font-weight:900;margin-bottom:8px">MYTHOS God Mode — ENTERPRISE Feature</h2>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;line-height:1.6">Autonomous 16-phase orchestration is included with the ENTERPRISE and MSSP plans. Platform staff can also sign in below.</p>
+    <a href="/#pricing" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:800;padding:12px;border-radius:8px;text-decoration:none;margin-bottom:14px">Upgrade to ENTERPRISE →</a>
+    <div id="staffLoginArea" style="border-top:1px solid var(--border2);padding-top:16px"></div>`;
+
+  CDB_STAFF_AUTH.guard(overlay, document.getElementById('staffLoginArea'), () => refreshAll());
 });
 // Pause polling while the tab is hidden; resume on focus.
 document.addEventListener('visibilitychange', () => {

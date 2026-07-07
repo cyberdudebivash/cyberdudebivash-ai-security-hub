@@ -30,15 +30,23 @@ function calcErrorBudget(slaTarget) {
   return { total_minutes: allowedDowntime, sla_pct: slaTarget };
 }
 
-function requireRole(req, roles) {
+// RBAC-0: 'admin' also now accepts a real, multi-user Platform Admin / Super
+// Admin staff session (auth/rbac.js isPlatformAdmin), not just the ADMIN_KEY
+// bypass. Purely additive — every existing pass condition is unchanged.
+async function requireRole(req, roles, env) {
   if (!req.user) return false;
-  return roles.includes(req.user.role) || roles.includes(req.user.tier);
+  if (roles.includes(req.user.role) || roles.includes(req.user.tier)) return true;
+  if (roles.includes('admin')) {
+    const { isPlatformAdmin } = await import('../auth/rbac.js');
+    return isPlatformAdmin(req.user, env);
+  }
+  return false;
 }
 
 function genId() { return 'rel_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
 export async function handleSLAReport(req, env) {
-  if (!requireRole(req, ['admin', 'mssp_admin', 'enterprise'])) {
+  if (!(await requireRole(req, ['admin', 'mssp_admin', 'enterprise'], env))) {
     return Response.json({ error: 'Enterprise plan required' }, { status: 403 });
   }
 
@@ -87,7 +95,7 @@ export async function handleSLAReport(req, env) {
 }
 
 export async function handleErrorBudget(req, env) {
-  if (!requireRole(req, ['admin'])) {
+  if (!(await requireRole(req, ['admin'], env))) {
     return Response.json({ error: 'Admin required' }, { status: 403 });
   }
 
@@ -112,7 +120,7 @@ export async function handleErrorBudget(req, env) {
 }
 
 export async function handleCapacityMetrics(req, env) {
-  if (!requireRole(req, ['admin'])) {
+  if (!(await requireRole(req, ['admin'], env))) {
     return Response.json({ error: 'Admin required' }, { status: 403 });
   }
 
@@ -158,7 +166,7 @@ export async function handleCapacityMetrics(req, env) {
 }
 
 export async function handleListIncidents(req, env) {
-  if (!requireRole(req, ['admin', 'enterprise'])) {
+  if (!(await requireRole(req, ['admin', 'enterprise'], env))) {
     return Response.json({ error: 'Enterprise plan required' }, { status: 403 });
   }
 
@@ -172,7 +180,7 @@ export async function handleListIncidents(req, env) {
 }
 
 export async function handleCreateIncident(req, env) {
-  if (!requireRole(req, ['admin'])) {
+  if (!(await requireRole(req, ['admin'], env))) {
     return Response.json({ error: 'Admin required' }, { status: 403 });
   }
 

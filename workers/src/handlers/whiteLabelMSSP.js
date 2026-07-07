@@ -52,9 +52,17 @@ function sanitizeTheme(input) {
   return out;
 }
 
-function requireRole(req, roles) {
+// RBAC-0: 'admin' also now accepts a real, multi-user Platform Admin / Super
+// Admin staff session (auth/rbac.js isPlatformAdmin), not just the ADMIN_KEY
+// bypass. Purely additive — every existing pass condition is unchanged.
+async function requireRole(req, roles, env) {
   if (!req.user) return false;
-  return roles.includes(req.user.role) || roles.includes(req.user.tier);
+  if (roles.includes(req.user.role) || roles.includes(req.user.tier)) return true;
+  if (roles.includes('admin')) {
+    const { isPlatformAdmin } = await import('../auth/rbac.js');
+    return isPlatformAdmin(req.user, env);
+  }
+  return false;
 }
 
 // A logged-in MSSP partner (handlers/partnerAuth.js) managing their own
@@ -62,9 +70,9 @@ function requireRole(req, roles) {
 // header comment describes — not a platform-admin action. Kept as its own
 // helper so callers are explicit about which surfaces a plain 'partner'
 // session may reach (its own org's theme) vs the platform-owner-only ones.
-function requireRoleOrPartner(req, roles) {
+async function requireRoleOrPartner(req, roles, env) {
   if (req.user?.role === 'partner') return true;
-  return requireRole(req, roles);
+  return requireRole(req, roles, env);
 }
 
 export async function handleGetTheme(req, env) {
@@ -85,7 +93,7 @@ export async function handleGetTheme(req, env) {
 }
 
 export async function handleUpdateTheme(req, env) {
-  if (!requireRoleOrPartner(req, ['admin', 'mssp_admin'])) {
+  if (!(await requireRoleOrPartner(req, ['admin', 'mssp_admin'], env))) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 
@@ -114,7 +122,7 @@ export async function handleUpdateTheme(req, env) {
 }
 
 export async function handleDeleteTheme(req, env) {
-  if (!requireRoleOrPartner(req, ['admin', 'mssp_admin'])) {
+  if (!(await requireRoleOrPartner(req, ['admin', 'mssp_admin'], env))) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 
@@ -132,7 +140,7 @@ export async function handleGetThemeByOrg(req, env, orgId) {
   // 'partner' access here would let one partner read another partner's
   // branding.
   const isOwnOrg = req.user?.role === 'partner' && req.user?.org_id === orgId;
-  if (!isOwnOrg && !requireRole(req, ['admin', 'mssp_admin'])) {
+  if (!isOwnOrg && !(await requireRole(req, ['admin', 'mssp_admin'], env))) {
     return Response.json({ error: 'MSSP Admin required' }, { status: 403 });
   }
 

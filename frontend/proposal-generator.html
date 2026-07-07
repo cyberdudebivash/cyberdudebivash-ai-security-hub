@@ -131,16 +131,9 @@ a{color:var(--accent);text-decoration:none}
 </head>
 <body>
 
-<!-- ── OWNER GATE ── -->
-<div id="gateOverlay" class="gate-overlay">
-  <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:12px">🔐</div>
-    <h2>Internal Access Only</h2>
-    <p>This tool is restricted to CYBERDUDEBIVASH® team members. Enter your access code to continue.</p>
-    <input id="gateInput" class="gate-input" type="password" placeholder="Enter access code" onkeydown="if(event.key==='Enter')checkGate()">
-    <button class="gate-btn" onclick="checkGate()">Unlock →</button>
-    <div id="gateError" class="gate-error" style="display:none">Incorrect code. Contact contact@cyberdudebivash.in</div>
-  </div>
+<!-- ── STAFF GATE (real session auth — see assets/staff-auth.js) ── -->
+<div id="gateOverlay" class="gate-overlay" style="display:none">
+  <div class="gate-box" id="gateBox"></div>
 </div>
 
 <!-- ── NAV ── -->
@@ -289,24 +282,14 @@ a{color:var(--accent);text-decoration:none}
 
 </div>
 
+<script src="/assets/staff-auth.js"></script>
 <script>
-/* ── OWNER GATE ── */
-(function() {
-  if (localStorage.getItem('cdb_owner') === 'true') {
-    document.getElementById('gateOverlay').style.display = 'none';
-  }
-})();
-
-function checkGate() {
-  const val = document.getElementById('gateInput').value;
-  if (val === 'cyberdudebivash2024admin') {
-    localStorage.setItem('cdb_owner', 'true');
-    document.getElementById('gateOverlay').style.display = 'none';
-  } else {
-    document.getElementById('gateError').style.display = 'block';
-    document.getElementById('gateInput').value = '';
-  }
-}
+/* ── STAFF GATE — real, server-verified session auth (assets/staff-auth.js) ── */
+CDB_STAFF_AUTH.guard(
+  document.getElementById('gateOverlay'),
+  document.getElementById('gateBox'),
+  () => {}
+);
 
 /* ── SERVICES CONFIG ── */
 const SERVICE_SETS = {
