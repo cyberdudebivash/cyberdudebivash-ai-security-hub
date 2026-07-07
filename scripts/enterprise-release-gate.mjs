@@ -137,14 +137,20 @@ async function main() {
 
   // ── B2. CISO Command Center / MSSP / SOC — route-collision & auth-header
   //        regression checks (added after the executive-dashboard route
-  //        collision and wrong-auth-header bugs found in this release) ──────
+  //        collision and wrong-auth-header bugs found in this release).
+  //        /api/executive/dashboard was subsequently RBAC-gated to
+  //        admin:business:read (#73 anonymous-exposure audit) since it
+  //        carries live MRR/ARR/paying-customer counts — an unauthenticated
+  //        release-gate run can no longer see the KPI shape itself, so this
+  //        now asserts the gate holds and no business data leaks through it,
+  //        instead of asserting the pre-#73 (insecure) 200 response ────────
   {
     const r = await fetchJSON('/api/executive/dashboard');
-    record('CISO Hub', 'GET /api/executive/dashboard returns the CISO KPI shape (not the shadowed risk-platform shape)', 'blocker',
-      r.status === 200 && r.body?.success === true && !!r.body?.data?.kpis && !!r.body?.data?.risk_summary,
-      `status=${r.status} keys=${JSON.stringify(Object.keys(r.body?.data || {}))}`);
-    record('CISO Hub', 'GET /api/executive/dashboard is not the old shadowed shape (no top-level security_kpis)', 'blocker',
-      !r.body?.security_kpis, `has_security_kpis=${!!r.body?.security_kpis}`);
+    record('CISO Hub', 'GET /api/executive/dashboard rejects an anonymous caller cleanly (admin:business:read gate, #73)', 'blocker',
+      r.status === 403, `status=${r.status}`);
+    record('CISO Hub', 'GET /api/executive/dashboard does not leak KPI/MRR/ARR/security_kpis data to an anonymous caller', 'blocker',
+      !r.body?.data?.kpis && !r.body?.data?.revenue && !r.body?.security_kpis,
+      `keys=${JSON.stringify(Object.keys(r.body?.data || {}))}`);
   }
   {
     const r = await fetchJSON('/api/executive/risk-dashboard');
