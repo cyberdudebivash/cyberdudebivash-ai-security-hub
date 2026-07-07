@@ -125,7 +125,7 @@ function columnNameFromClause(clause) {
   return m ? m[1].toLowerCase() : null;
 }
 
-/** Parses every `CREATE TABLE [IF NOT EXISTS] name (...)` in sqlText into a Map<lowercased table name, Set<lowercased column name>>. */
+/** Parses every `CREATE TABLE [IF NOT EXISTS] name (...)` in sqlText into a Map<lowercased table name, Set<lowercased column name>>. Skips `sqlite_%`/`_cf_%` tables — SQLite/D1-internal system tables that scripts/lab-bootstrap-d1.mjs already excludes when generating schema_bootstrap.sql (its own --dump-bootstrap query filters both prefixes), so a live export that includes them must be filtered the same way or they permanently false-positive as "undocumented". */
 export function parseSchema(sqlText) {
   const cleaned = sqlText.replace(/--[^\n]*/g, '');
   const tables = new Map();
@@ -135,6 +135,10 @@ export function parseSchema(sqlText) {
     const name = m[1].toLowerCase();
     const openParenIdx = re.lastIndex - 1;
     const closeIdx = skipBalancedParens(cleaned, openParenIdx);
+    if (name.startsWith('sqlite_') || name.startsWith('_cf_')) {
+      re.lastIndex = closeIdx;
+      continue;
+    }
     const body = cleaned.slice(openParenIdx + 1, closeIdx - 1);
     const columns = new Set(splitTopLevelClauses(body).map(columnNameFromClause).filter(Boolean));
     tables.set(name, columns);

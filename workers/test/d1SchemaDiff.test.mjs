@@ -72,6 +72,19 @@ describe('parseSchema', () => {
     expect([...tables.keys()]).toEqual(['real_one']);
   });
 
+  it('excludes sqlite_%/_cf_% system tables, matching lab-bootstrap-d1.mjs\'s own --dump-bootstrap filter', () => {
+    // A live export always contains SQLite's own sqlite_sequence (auto-created
+    // by any AUTOINCREMENT column) and D1-internal _cf_kv — neither is ever
+    // written by application schema, and schema_bootstrap.sql's generator
+    // already drops both (name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%').
+    // Without the same filter here, those two tables would permanently
+    // false-positive as "undocumented in live" on every run, forever.
+    const tables = parseSchema(
+      "CREATE TABLE real_one (id TEXT);\nCREATE TABLE sqlite_sequence(name,seq);\nCREATE TABLE _cf_kv (key TEXT, value TEXT);"
+    );
+    expect([...tables.keys()]).toEqual(['real_one']);
+  });
+
   it('parses cleanly (>0 tables, no thrown error) against the real schema_bootstrap.sql', () => {
     const real = readFileSync(REAL_BOOTSTRAP, 'utf8');
     const tables = parseSchema(real);
