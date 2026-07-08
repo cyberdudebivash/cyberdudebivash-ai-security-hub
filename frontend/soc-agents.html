@@ -235,6 +235,16 @@ const AGENTS_DEF = [
   { id:'risk_synthesizer',    name:'Risk Synthesizer Agent',    icon:'🧠', description:'Fuses all specialist outputs into an executive risk brief with priority action plan.' },
 ];
 
+// risk_synthesizer is not a parallel specialist — the backend always runs it
+// separately, after the batch, over the OTHER agents' real outputs (runSynthesis()
+// in multiAgentSOC.js), and that result renders in the dedicated synthesis-card
+// below. Including it in the requested `agents` array additionally runs it inside
+// the parallel batch too, with no other agents' outputs to synthesize yet — a
+// wasted AI call that produces a low-value duplicate card on every run. Excluded
+// from the run/stream chip selector and payload; still available standalone via
+// the dispatch dropdown, which uses the full AGENTS_DEF list unchanged.
+const RUNNABLE_AGENTS = AGENTS_DEF.filter(a => a.id !== 'risk_synthesizer');
+
 // ── Auth helper — reads x-api-key from localStorage if present ────────────────
 function authHeaders() {
   const key = localStorage.getItem('cdb_api_key') || localStorage.getItem('apiKey') || localStorage.getItem('masoc_api_key');
@@ -262,11 +272,11 @@ function setRunning(state) {
 // ── Build agent chip selector & dispatch dropdown ─────────────────────────────
 function buildUI() {
   const chips = document.getElementById('agent-chips');
-  chips.innerHTML = AGENTS_DEF.map(a => `
+  chips.innerHTML = RUNNABLE_AGENTS.map(a => `
     <span class="agent-chip selected" data-id="${a.id}" onclick="toggleAgent('${a.id}',this)" title="${a.description}">
       ${a.icon} ${a.name.replace(' Agent','').replace(' Sentinel','').replace(' Guardian','')}
     </span>`).join('');
-  AGENTS_DEF.forEach(a => selectedAgents.add(a.id));
+  RUNNABLE_AGENTS.forEach(a => selectedAgents.add(a.id));
 
   const sel = document.getElementById('dispatch-agent');
   AGENTS_DEF.forEach(a => {
@@ -400,7 +410,7 @@ async function runStream() {
   setRunning(true);
 
   clearResults();
-  const agents = selectedAgents.size > 0 ? [...selectedAgents] : AGENTS_DEF.map(a => a.id);
+  const agents = selectedAgents.size > 0 ? [...selectedAgents] : RUNNABLE_AGENTS.map(a => a.id);
   const rc = document.getElementById('results-container');
   rc.innerHTML = `
     <div style="margin-bottom:16px;padding:12px 16px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:13px;color:#818cf8">
@@ -525,7 +535,7 @@ async function runParallel() {
   setRunning(true);
 
   clearResults();
-  const agents = selectedAgents.size > 0 ? [...selectedAgents] : AGENTS_DEF.map(a => a.id);
+  const agents = selectedAgents.size > 0 ? [...selectedAgents] : RUNNABLE_AGENTS.map(a => a.id);
   const rc = document.getElementById('results-container');
   rc.innerHTML = `
     <div style="margin-bottom:16px;padding:14px 16px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:13px;color:#818cf8">
