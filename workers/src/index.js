@@ -2786,6 +2786,16 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleEnterpriseContacts(request, env, authCtx), request));
     }
     if (path === '/api/enterprise/capability' && method === 'GET') {
+      // P1 fix: this block referenced the bare identifier `authCtx` without its
+      // own local declaration (every sibling route above declares one). Because
+      // `routeRequest()` later declares `const authCtx = ...` at module scope
+      // (the shared "v28+ enterprise & scanner routes" context, ~line 7503) with
+      // no intervening block scope, that declaration is hoisted for this entire
+      // function — putting every earlier bare reference to `authCtx`, including
+      // this one, in the temporal dead zone. Result: "Cannot access 'authCtx'
+      // before initialization" on every request to this endpoint. Fixed by
+      // declaring authCtx locally, exactly like every neighboring route.
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
       const { handleEnterpriseCapability } = await import('./handlers/enterprisePortalHandlers.js');
       return withSecurityHeaders(withCors(await handleEnterpriseCapability(request, env, authCtx), request));
     }
