@@ -10,40 +10,40 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T13:14:34.704Z
-Capabilities catalogued: 31
+Generated: 2026-07-08T13:17:30.300Z
+Capabilities catalogued: 35
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 77.4% |
-| Frontend | 48.4% |
-| Parity (backend **and** frontend both exist) | 45.2% |
+| Backend | 77.1% |
+| Frontend | 45.7% |
+| Parity (backend **and** frontend both exist) | 42.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 7 | Broken customer journey |
-| High | P2 | 10 | Backend exists, frontend missing |
+| Critical | P1 | 8 | Broken customer journey |
+| High | P2 | 12 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 5 | No test coverage |
-| Low | P7 | 6 | Documentation missing |
+| Low | P7 | 7 | Documentation missing |
 
-**Rollup:** Critical 7 · High 10 · Medium 3 · Low 11
+**Rollup:** Critical 8 · High 12 · Medium 3 · Low 12
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 6 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 4 | Backend exists, zero frontend surface |
-| Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 7 | Priority P1 |
+| Hidden features | 7 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 5 | Backend exists, zero frontend surface |
+| Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
+| Broken journeys | 8 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -93,6 +93,15 @@ complete", "bug free", or "guaranteed".
 | CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### notifications (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-NOTIF-001 | Multi-Channel Notification Preferences & Delivery Log | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-NOTIF-002 | In-App Notification Bell | ✓ | ✗ | ✓ | NOT READY | P1 |
+| CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-NOTIF-004 | Transactional & Lifecycle Email Engine | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
 ### organizations (1 capability)
 
