@@ -153,10 +153,11 @@ export async function handleGetSolution(request, env, authCtx, solutionId) {
     if (authCtx?.userId || authCtx?.email) {
       const accessKey = `access:defense:${solutionId}:${authCtx.userId || authCtx.email}`;
       const access    = await env.SECURITY_HUB_KV?.get(accessKey);
-      // authCtx.plan is never actually set anywhere in the auth layer — the
-      // real field is authCtx.tier. Real ENTERPRISE customers previously
-      // never got the blanket-access bypass this line intends.
-      hasAccess = !!access || (authCtx.tier || '').toUpperCase() === 'ENTERPRISE';
+      // Correction (same session): index.js's call site passes a narrowed
+      // { userId, plan, email } object, not the full authCtx — tier-only
+      // checking broke this for that route. Check both shapes.
+      const tier = (authCtx.tier || authCtx.plan || '').toUpperCase();
+      hasAccess = !!access || tier === 'ENTERPRISE';
     }
 
     // Increment view count
