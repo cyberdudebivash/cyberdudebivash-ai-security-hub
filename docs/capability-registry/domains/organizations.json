@@ -1,0 +1,63 @@
+[
+  {
+    "id": "CAP-ORG-001",
+    "domain": "organizations",
+    "name": "Organization Management",
+    "description": "Create, list, view, update, and delete organizations; invite members; assign/update member roles; view org-scoped scan history and dashboard.",
+    "backend": {
+      "handlers": ["workers/src/handlers/orgManagement.js"],
+      "entry_points": [
+        "handleCreateOrg", "handleListOrgs", "handleGetOrg", "handleOrgDashboard",
+        "handleInviteMember", "handleUpdateMemberRole", "handleRemoveMember",
+        "handleOrgScans", "handleUpdateOrg", "handleDeleteOrg"
+      ],
+      "routes_sampled": [
+        { "path": "/api/orgs", "method": "POST", "evidence": "workers/src/index.js:3543" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "grep -rl \"/api/orgs\" frontend/*.html returns 0 matches (independently re-verified 2026-07-08, in addition to the original 2026-07-08 Phase 0 audit finding in docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:208). Zero create/select/invite/switch UI exists anywhere in the frontend."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry anywhere links to any organization page, because no organization page exists."
+    },
+    "auth_enforced": true,
+    "rbac": {
+      "enforced": true,
+      "permissions": ["OWNER:all", "ADMIN:read,write,invite,delete_content,manage_monitors", "ANALYST:read,write,create_scans", "MEMBER:read,create_scans", "VIEWER:read"]
+    },
+    "subscription_gated": "unknown",
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/orgRbacIsolation.test.mjs and workers/test/phase9OrgDashboardSchema.test.mjs both import directly from workers/src/handlers/orgManagement.js (handleInviteMember/handleUpdateMemberRole/handleRemoveMember, and handleOrgDashboard/handleOrgScans respectively) — confirmed by direct import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
+      { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/orgManagement.js read directly (10 exported handle* functions + ROLE_PERMISSIONS confirmed); frontend/*.html grepped for '/api/orgs' (0 matches, independently re-run). Backend additionally has dynamic_api evidence via scripts/ceap-sweep.mjs:92-101, which calls POST /api/orgs, GET /api/orgs/{id}/dashboard, GET /api/orgs/{id}/scans directly via fetch every 6h — real, valid confirmation the API works, but zero evidence about frontend/UI, which this entry's frontend/navigation fields establish separately via static code inspection."
+    },
+    "contradicts_doc": [
+      {
+        "file": "GENERAL_AVAILABILITY_REPORT.md",
+        "line": 79,
+        "claim": "Organizations: create / members / RBAC / dashboard / scan history | GA APPROVED | Full admin loop live-verified this phase; RC-B1 fix verified at Phase IX gate",
+        "correction": "The \"live-verified\" evidence behind this claim is scripts/ceap-sweep.mjs, which calls the API directly (dynamic_api). No dynamic_browser (real customer, real page) verification exists or was possible: zero frontend pages call any /api/orgs* endpoint. Corrected status: NOT READY (backend-only, P2). This is the specific mistake this registry's verification.method field exists to make structurally impossible going forward."
+      }
+    ],
+    "notes": "Highest-value single gap identified across the whole platform: full, working, RBAC-enforced backend with a complete admin loop, and precisely zero customer-facing UI. Building the frontend for this capability is a separate, future implementation program — this entry's job is to make the gap visible, evidenced, and correctly prioritized, not to close it."
+  }
+]
