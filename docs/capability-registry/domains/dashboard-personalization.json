@@ -1,1 +1,135 @@
-[]
+[
+  {
+    "id": "CAP-DASH-001",
+    "domain": "dashboard-personalization",
+    "name": "CISO Hub Metrics (Risk Posture, Compliance, Incidents)",
+    "description": "Enterprise-tier customer-facing security posture dashboard: risk score, compliance status, incident register, CVE exposure, and a PDF board report.",
+    "backend": {
+      "handlers": ["workers/src/handlers/cisoMetrics.js"],
+      "entry_points": [
+        "handleGetCISOMetrics", "handleGetCISOPosture", "handleGetIncidents", "handleCreateIncident",
+        "handleUpdateIncident", "handleGetComplianceStatus", "handleGetRiskRegister",
+        "handleGetCISOReport", "handleExportCisoPdf"
+      ],
+      "routes_sampled": [
+        { "path": "/api/ciso/metrics", "method": "GET", "evidence": "workers/src/index.js:4303" },
+        { "path": "/api/ciso/posture", "method": "GET", "evidence": "workers/src/index.js:4308" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "broken"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/user-dashboard.html", "frontend/index.html"],
+      "status": "broken",
+      "evidence": "frontend/user-dashboard.html:2251-2265 (loadCisoMetrics()) correctly calls GET /api/ciso/metrics and correctly unwraps the {success,data,error} response envelope (its own comment at :2260-2262 explicitly documents doing this, unlike the systemic bug found elsewhere in this registry) — the frontend side of this integration is done right. The defect is server-side: workers/src/index.js:4300-4303 gates /api/ciso/metrics behind requireCan(authCtx, env, 'admin:business:read'), and workers/src/auth/rbac.js:101 defines that exact permission as isSuperAdmin-only ('business-critical, super-admin only', per its own inline comment) — satisfiable only by the platform owner, the ADMIN_KEY bypass, or a user with a granted SUPERADMIN role. No paying customer on any plan, including Enterprise/MSSP, can ever satisfy this. Because loadCisoMetrics() treats a non-ok response as 'no data' rather than an error (falling back to a zeroed default object silently), every real customer sees an all-zero CISO dashboard indefinitely, with no error message explaining why. By contrast, the sibling GET /api/ciso/posture route (workers/src/index.js:4307-4310) has no permission check at all and would work for any authenticated user. Independently confirmed 2026-07-08 by reading the permission definition, the route gate, and the frontend call site directly."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/user-dashboard.html:852 sidebar nav-item (data-page=\"ciso\") reaches this page; frontend/index.html:19986-19991 also surfaces a homepage 'Executive Hub' widget that fetches the same endpoint."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["admin:business:read"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/cisoMetrics.js directly. No test asserts that a PRO/ENTERPRISE-tier (non-staff) customer can successfully call GET /api/ciso/metrics — the exact scenario that is currently broken."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/auth/rbac.js:99-104 (PERMISSIONS registry) read directly; workers/src/index.js:4300-4310 read directly; frontend/user-dashboard.html:2251-2265 read directly and confirmed the envelope-unwrap is correct, isolating the defect to the server-side permission gate."
+    },
+    "contradicts_doc": [],
+    "notes": "A previously-uncatalogued, currently-live defect, not a wiring gap: the frontend is correctly built and correctly calls the real endpoint, but the endpoint's own access-control gate excludes the entire paying customer base it was built for. auth/rbac.js:101's own comment describes admin:business:read as intended for 'revenue/CRM/proposals — business-critical, super-admin only,' which strongly suggests this permission constant was reused on the customer-facing CISO route by mistake rather than by design, since the sibling /api/executive/ prefix route (CAP-DASH-002) correctly uses a tier-inclusive permission for a very similar audience. Recommended fix (not applied in this pass, since it changes an access-control boundary and deserves its own reviewed change): gate /api/ciso/metrics the same way the /api/executive/ prefix route gates itself — PRO/ENTERPRISE/MSSP tier OR platform admin — rather than SUPERADMIN-only."
+  },
+  {
+    "id": "CAP-DASH-002",
+    "domain": "dashboard-personalization",
+    "name": "Executive Hub / Command Center",
+    "description": "Platform-wide MRR/ARR/paying-customer KPIs and a richer FAIR-risk/board-report Executive Command Center, for Enterprise-tier customers and platform admins.",
+    "backend": {
+      "handlers": ["workers/src/handlers/executiveRiskHandlers.js", "workers/src/handlers/executiveCommandCenter.js"],
+      "entry_points": ["handleGetDashboard", "handleExecutiveCommandCenter"],
+      "routes_sampled": [
+        { "path": "/api/executive/dashboard", "method": "GET", "evidence": "workers/src/index.js:5953" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "broken"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "broken",
+      "evidence": "frontend/index.html's cdbExecLoad() (around :19986-19991) calls GET /api/executive/dashboard as part of its 'Executive Hub' widget. That exact-match route (workers/src/index.js:5953-5958) is registered BEFORE the separate /api/executive/ prefix-dispatched route that backs handleExecutiveCommandCenter (workers/src/index.js:7726-7734), so the router serves it via handleGetDashboard, gated by requireCan(authCtx, env, 'admin:business:read') — the identical SUPERADMIN-only permission documented as broken for the customer base in CAP-DASH-001. No customer on any plan can load real data here either. In sharp contrast, the prefix-dispatched /api/executive/ block (workers/src/index.js:7726-7729) correctly allows any PRO/ENTERPRISE/MSSP-tier customer OR a platform admin (['PRO','ENTERPRISE','MSSP'].includes(tier) as an explicit OR-path around the RBAC check) — the two sibling 'executive' routes are inconsistently gated by two different rules, one customer-inclusive and one staff-only. Independently confirmed 2026-07-08 by reading both route blocks directly and confirming which one the frontend actually reaches first."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Embedded in frontend/index.html's homepage; cdbExecLoad() is the trigger function for this widget."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["admin:business:read"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/executiveCommandCenterGate.test.mjs (run directly as part of this pass's full-suite check) tests the /api/executive/* catch-all's gating (anonymous rejected, FREE-tier rejected, ADMIN_KEY admitted) — but that test targets the prefix-dispatched handleExecutiveCommandCenter block, not the earlier exact-match /api/executive/dashboard route this widget actually calls, so it would not catch the defect described above."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/index.js:5949-5958 and :7726-7734 both read directly to confirm dispatch order and confirm the two blocks use genuinely different gating logic, not a shared code path."
+    },
+    "notes": "Same root cause and same recommended fix as CAP-DASH-001 — align /api/executive/dashboard's gate with its own sibling /api/executive/ prefix route's tier-inclusive pattern, as a deliberate, reviewed access-control change rather than a drive-by fix in this registry pass."
+  },
+  {
+    "id": "CAP-DASH-003",
+    "domain": "dashboard-personalization",
+    "name": "Product & Growth Analytics (Funnel, Feature Adoption)",
+    "description": "Internal growth-metrics API: conversion funnel, feature-adoption tracking, and event ingestion for product analytics.",
+    "backend": {
+      "handlers": ["workers/src/handlers/productAnalytics.js"],
+      "entry_points": ["handleIngestEvent", "handleGrowthMetrics", "handleConversionFunnel", "handleFeatureAdoption", "handlePruneEvents"],
+      "routes_sampled": [
+        { "path": "/api/analytics/p3/growth", "method": "GET", "evidence": "workers/src/index.js:3165" },
+        { "path": "/api/analytics/p3/funnel", "method": "GET", "evidence": "workers/src/index.js:3173" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide search for /api/analytics/p3/ returns zero matches anywhere in frontend/. This handler's routes correctly use the tier-inclusive admin:analytics:read permission (workers/src/index.js:3168, satisfiable by a platform admin, unlike CAP-DASH-001/002's admin:business:read), but no page calls any of them. Verified 2026-07-08."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry calls this handler's routes because no page does." },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["admin:analytics:read"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/productAnalytics.js directly."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/productAnalytics.js exports enumerated; workers/src/index.js:3165-3195 route registrations and gate read directly; frontend/ searched exhaustively for any caller."
+    },
+    "notes": "Unlike CAP-DASH-001/002, this is a straightforward backend-only orphan (correct, sensible RBAC gate, simply no UI) rather than a broken-despite-correct-wiring case. The dashboard/role-personalization gap tracked by docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md's Domain 6 ('same finding as Domain 3 — no real personalization, only upsell overlays') is registered once, under docs/capability-registry/domains/rbac.json's CAP-RBAC-002, and not duplicated here."
+  }
+]

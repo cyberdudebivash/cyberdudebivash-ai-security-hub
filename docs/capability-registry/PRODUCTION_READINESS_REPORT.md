@@ -10,40 +10,40 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T13:17:30.300Z
-Capabilities catalogued: 35
+Generated: 2026-07-08T13:22:38.959Z
+Capabilities catalogued: 40
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 77.1% |
-| Frontend | 45.7% |
-| Parity (backend **and** frontend both exist) | 42.9% |
+| Backend | 75% |
+| Frontend | 42.5% |
+| Parity (backend **and** frontend both exist) | 40% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 8 | Broken customer journey |
-| High | P2 | 12 | Backend exists, frontend missing |
+| Critical | P1 | 11 | Broken customer journey |
+| High | P2 | 13 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 5 | No test coverage |
+| Low | P6 | 6 | No test coverage |
 | Low | P7 | 7 | Documentation missing |
 
-**Rollup:** Critical 8 · High 12 · Medium 3 · Low 12
+**Rollup:** Critical 11 · High 13 · Medium 3 · Low 13
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 7 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 5 | Backend exists, zero frontend surface |
+| Hidden features | 8 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 6 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 8 | Priority P1 |
+| Broken journeys | 11 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -54,6 +54,13 @@ the fixed vocabulary from `docs/ENGINEERING_STANDARDS.md` §9 — never "100%
 complete", "bug free", or "guaranteed".
 
 ## Capabilities by Domain
+
+### academy (2 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-ACAD-001 | Training Academy: Course Purchase, Verification & Access | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-ACAD-002 | Homepage Course Buy Buttons | ✓ | ✗ | ✓ | NOT READY | P1 |
 
 ### affiliate-partner (2 capabilities)
 
@@ -78,6 +85,14 @@ complete", "bug free", or "guaranteed".
 | CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ◐ | ✗ | ✗ | NOT READY | P2 |
 | CAP-PORTAL-004 | Support Ticket System | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### dashboard-personalization (3 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-DASH-001 | CISO Hub Metrics (Risk Posture, Compliance, Incidents) | ✗ | ✗ | ✓ | NOT READY | P1 |
+| CAP-DASH-002 | Executive Hub / Command Center | ✗ | ✗ | ✓ | NOT READY | P1 |
+| CAP-DASH-003 | Product & Growth Analytics (Funnel, Feature Adoption) | ✓ | ✗ | ✗ | NOT READY | P2 |
 
 ### identity (1 capability)
 

@@ -1,1 +1,90 @@
-[]
+[
+  {
+    "id": "CAP-ACAD-001",
+    "domain": "academy",
+    "name": "Training Academy: Course Purchase, Verification & Access",
+    "description": "Dedicated course-catalog page letting a customer buy a training course/bundle (SOC Playbook, AI Security Bundle, OSINT Starter, Python Automation Pack, Ultimate Bundle) via Razorpay, with post-payment verification and access-status tracking.",
+    "backend": {
+      "handlers": ["workers/src/handlers/academyMarketplace.js"],
+      "entry_points": [
+        "handleListAcademy", "handlePurchaseAcademy", "handleVerifyAcademy",
+        "handleAcademyAccessStatus", "handleListAcademyOrders", "handleMarkAcademyDelivered"
+      ],
+      "routes_sampled": [
+        { "path": "/api/academy/purchase", "method": "POST", "evidence": "workers/src/index.js:6510" },
+        { "path": "/api/academy/verify", "method": "POST", "evidence": "workers/src/index.js:6516" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/academy.html"],
+      "status": "exists",
+      "evidence": "frontend/academy.html's purchase (:899-907) and verify (:923-933) calls were read field-by-field against workers/src/handlers/academyMarketplace.js:83,125's expected body shapes and :104-115,252-258's response shapes — every field name matches exactly, and that page reads .success/.order directly (raw fetch(), not routed through the buggy shared helper documented elsewhere in this registry), so this specific flow is correctly wired. A missing-Razorpay-key edge case correctly falls back to a WhatsApp manual-purchase path rather than showing a false success. Independently confirmed 2026-07-08. GET /api/academy/catalog, /api/academy/access, /api/academy/orders, and the mark-delivered route have zero frontend callers found anywhere (the catalog shown on that page and on frontend/index.html is hand-duplicated static HTML, not fetched from the API)."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/academy.html is cross-linked from at least 9 other pages: frontend/index.html, frontend/tools.html, frontend/booking.html, frontend/services.html, frontend/intel.html, frontend/contact.html, frontend/about.html, frontend/user-dashboard.html, and frontend/assets/global.js — not an orphan, though it is not in the homepage's primary top nav bar (frontend/index.html:1134-1146), only in secondary pill-rows, footer, and page-card grids."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/academyFulfillment.test.mjs imports handlePurchaseAcademy/handleVerifyAcademy/handleAcademyAccessStatus/handleListAcademyOrders/handleMarkAcademyDelivered/ACADEMY_CATALOG directly. handleListAcademy (the catalog GET) is not covered by this or any other test file found."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/academyMarketplace.js read directly in full; frontend/academy.html:875-949 read directly and cross-checked field-by-field against the handler."
+    },
+    "notes": "The best-verified purchase flow found in this pass, precisely because it doesn't use the platform's shared (buggy) fetch helper. Fulfillment is manual, not automated — see CAP-ACAD-002's notes for the homepage's contradictory 'instant delivery' marketing claim."
+  },
+  {
+    "id": "CAP-ACAD-002",
+    "domain": "academy",
+    "name": "Homepage Course Buy Buttons",
+    "description": "'Get Ultimate Bundle' and dynamic 'Start Learning' buy buttons embedded directly on the homepage, intended as a shortcut past the dedicated academy page.",
+    "backend": {
+      "handlers": ["workers/src/handlers/academyMarketplace.js"],
+      "entry_points": ["handlePurchaseAcademy"],
+      "routes_sampled": [],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "broken",
+      "evidence": "frontend/index.html:5358 ('Get Ultimate Bundle — ₹1,999') and :10050 (dynamic 'Start Learning' upsell) both call if (window.CDB_PAY) CDB_PAY.open(...). frontend/index.html never defines CDB_PAY itself (grepped for the assignment pattern, 0 matches) and never loads frontend/assets/global.js, the only file that assigns window.CDB_PAY (frontend/assets/global.js:226) outside of inline definitions on other pages: frontend/academy.html, frontend/tools.html, frontend/booking.html, frontend/soc-dashboard.html, frontend/intel.html, and frontend/user-dashboard.html — none of which frontend/index.html loads. So on the homepage, window.CDB_PAY is undefined, the if (window.CDB_PAY) guard is always false, and both buttons silently do nothing on click — no network request is made at all, not even to a wrong endpoint. Independently confirmed 2026-07-08 by reading the button handlers and grepping for every CDB_PAY definition site."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Embedded directly in frontend/index.html's homepage body content."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test covers frontend/index.html's inline buy-button click handlers or asserts window.CDB_PAY is defined on that page."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/index.html:5358,10050 read directly; its <script src=...> tags enumerated and confirmed frontend/assets/global.js is not among them; every window.CDB_PAY assignment site in the repo grepped and confirmed none apply to that page."
+    },
+    "notes": "A different root cause from the p4Api envelope bug documented elsewhere in this registry (CAP-CRM-001/CAP-AFF-001) — this is a missing script include, not a response-shape mismatch, and it fails silently with zero network activity, which would make it invisible to server-side monitoring/logs. Separately, and independent of this bug: frontend/index.html:5361's marketing copy ('Instant delivery — download links emailed immediately after purchase') is contradicted by the handler's own documentation (workers/src/handlers/academyMarketplace.js:10-11: 'Fulfillment is manual... not an automated LMS') and by workers/src/services/emailEngine.js:1394-1457's sendPurchaseConfirmation, which never includes a download URL and instead tells the customer to log in to access their purchase. The four course 'mini card' links elsewhere on the homepage (frontend/index.html:5365-5388) are plain navigation links to CAP-ACAD-001's working academy.html flow, not buy buttons, and are unaffected by this defect."
+  }
+]
