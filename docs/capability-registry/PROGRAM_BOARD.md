@@ -34,28 +34,26 @@ commercial-billing, customer-portal, dashboard-personalization, identity,
 masoc, mssp, navigation, notifications, organizations, production-readiness,
 rbac, sales-crm, sentinel-apex-marketplace.
 
-## ⚠ Open critical finding surfaced by this effort, not yet remediated
+## ✅ Critical finding remediated (was open, see history below)
 
-**CAP-MASOC-001** (`docs/capability-registry/domains/masoc.json`): none of
-the 4 Multi-Agent SOC routes (`/api/agents/run`, `/api/agents/stream`,
-`/api/agents/status`, `/api/agents/dispatch/:id`) gate on `isRealUser()` —
-`resolveAuthV5`'s IP-fallback sets `authenticated: true` for anonymous
-callers, so **unauthenticated requests can invoke compute-expensive
-parallel AI-agent orchestration**, with only a 5-req/min KV rate limit as a
-control. This is a live production gap, independently re-verified this
-session (not just carried over from the registry entry), not a documentation
-gap — it should not wait behind further registry-population waves. It was
-deliberately **not fixed in this session**: the fix belongs in its own
-CAB-reviewed change (own commit, own regression test, own review of
-interaction with the existing rate limiter and the separately-gated
-Copilot-mediated path to the same capability — see the entry's `notes` field
-for the full analysis), not bundled into a process/documentation PR.
-Recommend this be picked up as a dedicated fix before or alongside Wave 2.
+**CAP-MASOC-001** (`docs/capability-registry/domains/masoc.json`): **FIXED
+2026-07-08**, as its own dedicated change per this board's prior
+recommendation (own commit, own regression test). `/api/agents/run`,
+`/api/agents/stream`, and `/api/agents/dispatch/:id` now gate on
+`isRealUser(authCtx)` before running — the same established pattern used at
+30+ other routes in `workers/src/index.js` — closing the path that let
+unauthenticated requests invoke compute-expensive parallel AI-agent
+orchestration behind only a 5-req/min KV rate limit. `/api/agents/status`
+was deliberately left open (read-only, no compute cost, embedded
+unauthenticated in the public SOC dashboard widget). Regression coverage:
+`workers/test/authGateRealUser.test.mjs`. Full suite green: 177 files / 1862
+tests. See the registry entry's `verification.evidence` for full detail.
 
-Two lower-severity, also-unfixed findings on the same capability (SSE CORS
+Two lower-severity findings on the same capability remain unfixed (SSE CORS
 narrower than the real production origin allowlist; a frontend
 default-selection bug that silently duplicates one agent's AI call every
-run) are detailed in the same registry entry's `notes` field.
+run) — detailed in the same registry entry's `notes` field. Neither is a
+security gate; both are out of scope for this fix.
 
 ## Remaining Work Register
 
