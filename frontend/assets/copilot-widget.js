@@ -541,8 +541,9 @@ function initWidget() {
         pushMessage({ role: 'assistant', content: pretty, meta: qa.skill });
         upsertSessionMeta(state.sessionId, {});
       }
-    } catch {
+    } catch (err) {
       hideTyping();
+      console.error('[APEX Copilot] runQuickAction failed:', err);
       pushMessage({ role: 'system', content: 'Network error — could not reach APEX. Please try again.' });
     } finally {
       setBusy(false);
@@ -713,8 +714,9 @@ function initWidget() {
       } else {
         pushMessage({ role: 'system', content: 'APEX did not return a response. Please try again.' });
       }
-    } catch {
+    } catch (err) {
       hideTyping();
+      console.error('[APEX Copilot] sendMessageJSON failed:', err);
       pushMessage({ role: 'system', content: 'Network error — could not reach APEX. Your message was not lost; press send to retry.' });
       els.input.value = trimmed; // let the user resend without retyping
     }
@@ -741,9 +743,12 @@ function initWidget() {
       } else {
         await sendMessageJSON(trimmed);
       }
-    } catch {
+    } catch (err) {
       // Streaming failed (network hiccup, endpoint unavailable, empty stream) —
       // fall back to the plain JSON endpoint rather than leaving the user stuck.
+      // Logged (not swallowed) so a real failure is diagnosable from the
+      // browser console instead of only ever showing a generic message.
+      console.error('[APEX Copilot] streaming failed, falling back to JSON:', err);
       const leftover = document.getElementById('cdb-cp-streaming-row');
       if (leftover) leftover.remove();
       await sendMessageJSON(trimmed);
