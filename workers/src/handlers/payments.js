@@ -32,7 +32,7 @@ import { resolvePartnerIdForEmail, recordRevenueShare } from './msspRevenue.js';
 import { hashPassword } from '../auth/password.js';
 import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
 import { logSystemError } from '../lib/errorLog.js';
-import { validateCoupon, applyDiscount, recordCouponUsage, finalizeCouponRedemption } from '../lib/coupons.js';
+import { validateCoupon, computeDiscountedAmount, recordCouponUsage, finalizeCouponRedemption } from '../lib/coupons.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -149,15 +149,19 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   // invalid/expired/exhausted code fails the request outright rather than
   // silently charging full price, so a customer knows to fix/remove it.
   const planKeyForCoupon = module === 'subscription' ? (body.plan || target || 'STARTER').toUpperCase() : null;
+  const couponEmail = email || authCtx.email || null;
   let finalAmount = price.amount;
   let couponApplied = null;
   if (body.coupon_code) {
-    const couponCheck = await validateCoupon(env, body.coupon_code, module, planKeyForCoupon);
+    const couponCheck = await validateCoupon(env, body.coupon_code, {
+      module, planKey: planKeyForCoupon, authCtx, email: couponEmail,
+      amountPaise: price.amount, ip: request.headers.get('CF-Connecting-IP'),
+    });
     if (!couponCheck.valid) {
       return Response.json({ error: couponCheck.error, code: 'INVALID_COUPON' }, { status: 400 });
     }
-    finalAmount = applyDiscount(price.amount, couponCheck.discount_pct);
-    couponApplied = { code: couponCheck.code, discount_pct: couponCheck.discount_pct };
+    finalAmount = computeDiscountedAmount(price.amount, couponCheck);
+    couponApplied = { code: couponCheck.code, discount_type: couponCheck.discountType, discount_pct: couponCheck.discount_pct };
   }
 
   // Check for existing unpaid order for same target+module+amount (prevent double
@@ -216,6 +220,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     await recordCouponUsage(env, {
       razorpayOrderId: razorOrder.id, code: couponApplied.code, module,
       originalAmount: price.amount, discountedAmount: finalAmount,
+      email: couponEmail, userId: authCtx.user_id || null,
     }).catch(e => console.error('[Payments] recordCouponUsage failed:', e.message));
   }
 

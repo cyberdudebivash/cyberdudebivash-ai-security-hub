@@ -2937,11 +2937,52 @@ export async function routeRequest(request, env, ctx, requestId) {
       const { handleAdminCreateCoupon } = await import('./lib/coupons.js');
       return withSecurityHeaders(withCors(await handleAdminCreateCoupon(request, env, authCtx), request));
     }
+    if (path === '/api/admin/coupons/validate' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const { handleAdminValidateCoupon } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminValidateCoupon(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)\/redemptions$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const code = path.split('/')[4];
+      const { handleAdminListRedemptions } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminListRedemptions(request, env, authCtx, code), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)\/redemptions\/([^/]+)\/revoke$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const orderId = path.split('/')[6];
+      const { handleAdminRevokeRedemption } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminRevokeRedemption(request, env, authCtx, orderId), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)\/disable$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const code = path.split('/')[4];
+      const { handleAdminSetCouponActive } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminSetCouponActive(request, env, authCtx, code, false), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)\/enable$/) && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const code = path.split('/')[4];
+      const { handleAdminSetCouponActive } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminSetCouponActive(request, env, authCtx, code, true), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const code = path.split('/').pop();
+      const { handleAdminGetCoupon } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminGetCoupon(request, env, authCtx, code), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)$/) && method === 'PUT') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const code = path.split('/').pop();
+      const { handleAdminUpdateCoupon } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminUpdateCoupon(request, env, authCtx, code), request));
+    }
     if (path.match(/^\/api\/admin\/coupons\/([^/]+)$/) && method === 'DELETE') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       const code = path.split('/').pop();
-      const { handleAdminDeactivateCoupon } = await import('./lib/coupons.js');
-      return withSecurityHeaders(withCors(await handleAdminDeactivateCoupon(request, env, authCtx, code), request));
+      const { handleAdminDeleteCoupon } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminDeleteCoupon(request, env, authCtx, code), request));
     }
 
     // Legacy Platform Observability
