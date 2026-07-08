@@ -1,1 +1,153 @@
-[]
+[
+  {
+    "id": "CAP-PROD-001",
+    "domain": "production-readiness",
+    "name": "CI Quality & Security Gates (Headers, Accessibility, Performance, Dependencies, Secrets, E2E)",
+    "description": "Pre-merge automated gates: security response headers, WCAG accessibility (axe), Lighthouse performance budgets, npm/pip dependency vulnerability audit, gitleaks secret scanning, Playwright E2E smoke, and a worker bundle-size ceiling.",
+    "backend": {
+      "handlers": [
+        ".github/workflows/test.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/gitleaks.yml"
+      ],
+      "entry_points": [
+        "unit-tests", "header-assert (Security Header Assertions)", "seo-lock",
+        "accessibility (axe)", "lighthouse", "e2e-smoke (Playwright)", "bundle-size",
+        "dependency-audit (npm/pip)", "gitleaks", "registry-validate (advisory)"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Not applicable — this is CI/process infrastructure, not a customer- or admin-facing capability with a UI."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "Not applicable — no page exists to link to."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "Each gate is itself a real, non-mocked check: .github/workflows/test.yml:39-56 (header-assert reads frontend/_headers and asserts required security headers are present), :69-131 (axe-core CLI + Lighthouse CI run against a real local build, not a stub), :158-178 (Playwright E2E smoke against the running app); .github/workflows/gitleaks.yml runs gitleaks/gitleaks-action@v2 against full git history on every push/PR, non-zero exit fails the job; .github/workflows/ci.yml:457 runs `npm audit`, failing on HIGH/CRITICAL findings."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": ".github/workflows/test.yml read in full (7 jobs, each commented '(required)' at :24,38,69,131,158,174); .github/workflows/gitleaks.yml read in full; .github/workflows/ci.yml job list enumerated (grep for job-name/name: lines, 12 jobs incl. Dependency Vulnerability Audit and the advisory Capability Registry Validation job this program added). Searched for GitGuardian across .github/ — zero references found."
+    },
+    "notes": "Corrects docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:239's claim that this cluster is enforced via a single list including 'GitGuardian' — no GitGuardian workflow, action, or config file exists anywhere in this repository (grepped .github/ for 'gitguardian'/'ggshield', 0 matches). It is possible GitGuardian is configured as a GitHub App/webhook integration at the repository-settings level, which would be invisible to a code-only audit — this entry does not assert GitGuardian is absent from the account's actual protection, only that no in-repo evidence of it exists, correcting the prior document's implication that it's a workflow file like its siblings. Separately, whether these jobs are wired into GitHub branch-protection as merge-blocking required checks (a repository-settings fact, not a git-tracked one) could not be verified from repository content alone — each job's own internal logic does fail non-zero on violation (real enforcement if invoked), which is the documented limitation behind the operational_status here rather than a functional defect."
+  },
+  {
+    "id": "CAP-PROD-002",
+    "domain": "production-readiness",
+    "name": "Rate Limiting & Structured Request-ID Correlation",
+    "description": "Per-endpoint, tier-aware rate limiting with cost accounting, and a global error boundary that tags every request/response/log line with a correlation ID.",
+    "backend": {
+      "handlers": ["workers/src/middleware/rateLimit.js", "workers/src/index.js"],
+      "entry_points": [
+        "checkRateLimitV2", "checkRateLimitCost", "rateLimitResponse", "injectRateLimitHeaders"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Not applicable — this is transport-layer/observability infrastructure, not a UI-facing capability."
+    },
+    "navigation": { "discoverable": false, "evidence": "Not applicable." },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": true,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "Global request-ID correlation is genuinely covered: workers/test/globalErrorBoundary.test.mjs:23 imports the real worker from workers/src/index.js and :75 asserts a caller-supplied correlation ID is echoed back in the response body's request_id field. Rate limiting itself is not: the only related test, workers/test/globalIntelMonetization.test.mjs:14, mocks checkRateLimitV2 to always return {allowed:true} rather than exercising the real tier-based cost/limit logic in workers/src/middleware/rateLimit.js — grepped workers/test/*.mjs for any direct import of that module, 0 matches."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/middleware/rateLimit.js read in full (4 exported functions); workers/src/index.js grepped for 'rateLimit' (6 call sites, confirming real usage, not dead code); workers/src/index.js:8532-8546 read directly for request-ID generation/propagation; workers/test/*.mjs grepped for direct imports of workers/src/middleware/rateLimit.js and for request_id/requestId references."
+    },
+    "notes": "subscription_gated: true reflects that rate limits are tier-differentiated (ENDPOINT_COST / per-tier limits in workers/src/middleware/rateLimit.js), not that the middleware itself requires a subscription to run. The concrete, actionable gap is test coverage of the real rate-limiting arithmetic (tier limits, cost accounting, KV counter behavior) — every existing reference to it in tests mocks it away rather than exercising it, so a regression in the actual limit/cost logic would not be caught by the current suite."
+  },
+  {
+    "id": "CAP-PROD-003",
+    "domain": "production-readiness",
+    "name": "Distributed Tracing / APM",
+    "description": "Cross-service distributed tracing and application performance monitoring (span-level latency breakdown, error tracking with stack-trace aggregation, service dependency mapping).",
+    "backend": {
+      "handlers": [],
+      "entry_points": [],
+      "routes_sampled": [],
+      "routes_fully_enumerated": true,
+      "status": "missing"
+    },
+    "frontend": { "surface_type": "none", "pages": [], "status": "missing", "evidence": "No implementation exists to have a frontend." },
+    "navigation": { "discoverable": false, "evidence": "Not applicable." },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": { "has_tests": false, "evidence": "Nothing to test — no implementation exists." },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "grepped workers/src/ and workers/package.json case-insensitively for 'sentry', 'datadog', 'opentelemetry', '@opentelemetry' — zero matches, 2026-07-08. Unchanged from docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:241."
+    },
+    "notes": "The platform does have real structured logging and per-request correlation (CAP-PROD-002) and a merged audit trail (CAP-ADMIN-001) — this entry specifically tracks span-level tracing/APM, which is a distinct, larger capability that genuinely does not exist yet, not a discoverability or wiring gap."
+  },
+  {
+    "id": "CAP-PROD-004",
+    "domain": "production-readiness",
+    "name": "Consolidated OWASP ASVS / API Security Top-10 Checklist",
+    "description": "A single, consolidated audit artifact mapping this platform's actual controls against the OWASP Application Security Verification Standard and/or OWASP API Security Top 10, so the coverage claim can be checked in one place instead of inferred from scattered individual controls.",
+    "backend": { "handlers": [], "entry_points": [], "routes_sampled": [], "routes_fully_enumerated": true, "status": "missing" },
+    "frontend": { "surface_type": "none", "pages": [], "status": "missing", "evidence": "Not applicable — this is a documentation artifact, not a runtime capability." },
+    "navigation": { "discoverable": false, "evidence": "Not applicable." },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": { "has_tests": false, "evidence": "Not applicable — a documentation artifact, not code." },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "find docs/ for filenames matching *asvs*/*owasp*checklist*/*api-top-10* and case-insensitive grep for 'ASVS' across docs/*.md — the only hit is docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md's own prose mentioning the standard, not a checklist artifact. Unchanged from docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:242."
+    },
+    "notes": "Individual controls this checklist would need to reference already exist and are independently verified elsewhere in this registry (RBAC: CAP-RBAC-001; rate limiting: CAP-PROD-002; security headers: CAP-PROD-001; audit logging: CAP-ADMIN-001) — the gap is specifically the absence of one consolidated mapping document an auditor or enterprise prospect could review, not missing security controls."
+  }
+]
