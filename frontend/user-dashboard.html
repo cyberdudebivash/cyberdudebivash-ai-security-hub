@@ -2217,19 +2217,23 @@
       // a misleading "Upgrade to PRO" message regardless of actual plan).
       const res = await apiFetch('/api/customer/payments?limit=20');
       const tbody = document.getElementById('payment-history');
-      const repTbody = document.getElementById('reports-table');
       if (!res.ok) {
-        tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Unable to load payment history.</td></tr>`;
-        repTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Unable to load payment history.</td></tr>`;
         return;
       }
       const d = await res.json();
       const payments = d.payments || [];
       if (!payments.length) {
-        tbody.innerHTML    = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No payments yet.</td></tr>`;
-        repTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No payments yet.</td></tr>`;
         return;
       }
+      // NOTE: this used to also render into #reports-table (the "My Reports"
+      // page), racing with loadUserReports() below — whichever of the two
+      // independent fetches resolved last silently won, so the reports page
+      // could show either data source depending on timing. loadUserReports()
+      // is the dedicated, more complete implementation for that table
+      // (proper primary/fallback sources, expiry handling, download flow) —
+      // this function now only owns #payment-history.
       tbody.innerHTML = payments.map(p => `
         <tr>
           <td style="font-size:.8rem;color:var(--muted)">${fmtDate(p.created_at)}</td>
@@ -2239,15 +2243,6 @@
           <td>${p.report_url ? `<a href="${p.report_url}" target="_blank" class="btn btn-outline btn-sm">Download</a>` : '—'}</td>
         </tr>
       `).join('');
-      repTbody.innerHTML = payments.filter(p => p.report_url).map(p => `
-        <tr>
-          <td><span class="badge badge-blue">${p.module || '—'}</span></td>
-          <td style="font-family:var(--mono);font-size:.8rem">${p.target || '—'}</td>
-          <td>₹${((p.amount || 0)/100).toLocaleString()}</td>
-          <td style="color:var(--muted);font-size:.8rem">${fmtDate(p.expires_at || p.created_at)}</td>
-          <td><a href="${p.report_url}" target="_blank" class="btn btn-primary btn-sm">⬇ Download</a></td>
-        </tr>
-      `).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No paid reports yet.</td></tr>`;
     } catch (e) { console.error('loadPayments:', e); }
   }
 
@@ -3561,7 +3556,12 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   async function loadMyTools() {
     const token = localStorage.getItem('cdb_token');
-    const tier  = localStorage.getItem('cdb_tier') || 'FREE';
+    // Tier gating must come from the authenticated _plan state (loaded via
+    // /api/user/plan in loadPlan()), not localStorage — a client-editable
+    // 'cdb_tier' value let anyone unlock every tool card in devtools by
+    // setting localStorage.cdb_tier = 'ENTERPRISE'. Real scan execution was
+    // still enforced server-side, but the UI itself was trivially spoofable.
+    const tier  = _plan?.plan || 'FREE';
 
     // Stat bar
     const quota = PLAN_QUOTA[tier] || PLAN_QUOTA.FREE;

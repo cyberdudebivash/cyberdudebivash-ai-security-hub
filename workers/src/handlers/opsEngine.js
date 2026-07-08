@@ -346,11 +346,38 @@ export async function handleAdminAudit(req, env, authCtx) {
         try {
           const entry = JSON.parse(raw);
           if (type && !entry.type?.startsWith(type)) continue;
-          entries.push(entry);
+          entries.push({ ...entry, source: 'kv' });
         } catch {}
       }
     } catch {}
   }
+
+  // This admin view previously only ever saw events written via
+  // writeOpsAudit() (KV). Enterprise SSO logins/config changes
+  // (enterpriseSsoHandler.js) and AI copilot sessions (aiSecurityCopilot.js)
+  // write straight to the D1 audit_log table instead and were completely
+  // invisible here — an admin reviewing "the audit log" would never see an
+  // SSO reconfiguration. Merge both trails.
+  const db = env.SECURITY_HUB_DB || env.DB;
+  if (db) {
+    try {
+      const { results } = await db.prepare(
+        `SELECT id, user_id, action, resource, resource_id, status, metadata, details, created_at
+         FROM audit_log WHERE created_at >= ? AND created_at < ? ORDER BY created_at DESC LIMIT ?`
+      ).bind(`${date} 00:00:00`, `${date} 23:59:59`, limit * 2).all();
+      for (const row of (results || [])) {
+        if (type && !row.action?.startsWith(type)) continue;
+        let parsedDetails = {};
+        try { parsedDetails = JSON.parse(row.metadata || row.details || '{}'); } catch {}
+        entries.push({
+          id: row.id, type: row.action, actor: row.user_id, resource: row.resource || null,
+          action: row.resource_id || row.action, outcome: row.status || 'ok',
+          details: parsedDetails, timestamp: row.created_at, source: 'd1',
+        });
+      }
+    } catch {}
+  }
+
   entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   return Response.json({ date, total: entries.length, entries: entries.slice(0, limit), filter_type: type || null });
 }
