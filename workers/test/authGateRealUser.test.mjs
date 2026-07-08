@@ -62,6 +62,9 @@ describe('migrated route gates — anonymous callers get 401', () => {
     ['GET',  '/api/ciso/incidents'],          // CISO incidents
     ['GET',  '/api/hunt/sessions'],           // threat hunting sessions
     ['GET',  '/api/zero-trust/anomalies'],    // zero trust
+    ['POST', '/api/agents/run'],              // MASOC — parallel 9-agent orchestration
+    ['POST', '/api/agents/stream'],           // MASOC — SSE streaming variant
+    ['POST', '/api/agents/dispatch/cve_intel'], // MASOC — single-agent dispatch
   ];
   for (const [method, path] of cases) {
     it(`anonymous ${method} ${path} → 401`, async () => {
@@ -128,6 +131,33 @@ describe('migrated route gates — real principals pass', () => {
   it('admin key passes /api/billing/usage (no 401)', async () => {
     const res = await admin('/api/billing/usage');
     expect(res.status).not.toBe(401);
+  });
+  it('admin key passes /api/agents/run (no 401)', async () => {
+    const res = await admin('/api/agents/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'assess CVE-2024-3400 risk' }),
+    });
+    expect(res.status).not.toBe(401);
+  });
+  it('admin key passes /api/agents/dispatch/cve_intel (no 401)', async () => {
+    const res = await admin('/api/agents/dispatch/cve_intel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'assess CVE-2024-3400 risk' }),
+    });
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe('MASOC (/api/agents/*) — auth-gate fix (P0 finding CAP-MASOC-001)', () => {
+  // run/stream/dispatch trigger real parallel AI-agent orchestration and are
+  // covered by the shared "anonymous callers get 401" / "real principals pass"
+  // blocks above. status is deliberately excluded from those blocks — it must
+  // stay open, as asserted here.
+  it('anonymous GET /api/agents/status is NOT gated (public read-only widget)', async () => {
+    const res = await anon('/api/agents/status');
+    expect(res.status).not.toBe(401);
+    const body = await res.json();
+    expect(body.success).toBe(true);
   });
 });
 

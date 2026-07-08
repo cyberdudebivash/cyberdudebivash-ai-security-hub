@@ -1942,18 +1942,28 @@ export async function routeRequest(request, env, ctx, requestId) {
       const { handleAgentsStatus } = await import('./handlers/multiAgentSOC.js');
       return withSecurityHeaders(withCors(await handleAgentsStatus(request, env, authCtx), request));
     }
+    // run/stream/dispatch trigger compute-expensive parallel AI-agent orchestration
+    // (9 agents × real provider calls) and must require a real logged-in principal —
+    // resolveAuthV5's IP-fallback branch sets authenticated:true for every anonymous
+    // caller (see isRealUser's doc comment in auth/middleware.js), so gating on
+    // `.authenticated` let anonymous traffic run the full pipeline behind only a
+    // 5-req/min KV rate limiter. status stays open: read-only registry/health info,
+    // embedded unauthenticated in the public SOC dashboard widget (soc-dashboard.html).
     if (path === '/api/agents/run' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const { handleAgentsRun } = await import('./handlers/multiAgentSOC.js');
       return withSecurityHeaders(withCors(await handleAgentsRun(request, env, authCtx), request));
     }
     if (path === '/api/agents/stream' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const { handleAgentsStream } = await import('./handlers/multiAgentSOC.js');
       return handleAgentsStream(request, env, authCtx, ctx); // SSE — ctx for waitUntil
     }
     if (path.startsWith('/api/agents/dispatch/') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       const agentId = path.split('/')[4];
       const { handleAgentDispatch } = await import('./handlers/multiAgentSOC.js');
       return withSecurityHeaders(withCors(await handleAgentDispatch(request, env, authCtx, agentId), request));
