@@ -1,1 +1,53 @@
-[]
+[
+  {
+    "id": "CAP-MASOC-001",
+    "domain": "masoc",
+    "name": "Multi-Agent SOC — 9 Parallel AI Security Agents",
+    "description": "APEX Multi-Agent SOC: 9 specialist AI agents (CVE Intel, IOC Hunter, SIEM Defender, Threat Hunter, IR Playbook, Compliance Guardian, Red Team, Zero Trust Sentinel, Risk Synthesizer) dispatched in parallel against a free-text task, with CVE/KEV/IOC context enrichment, real-time SSE streaming, and an executive risk-synthesis brief.",
+    "backend": {
+      "handlers": ["workers/src/handlers/multiAgentSOC.js"],
+      "entry_points": [
+        "classifyTask", "fetchCVEContext", "fetchKEVStatus", "fetchIOCContext",
+        "runAgent", "handleAgentsRun", "handleAgentsStream", "handleAgentDispatch", "handleAgentsStatus"
+      ],
+      "routes_sampled": [
+        { "path": "/api/agents/status", "method": "GET", "evidence": "workers/src/index.js:1940" },
+        { "path": "/api/agents/run", "method": "POST", "evidence": "workers/src/index.js:1945" },
+        { "path": "/api/agents/stream", "method": "POST", "evidence": "workers/src/index.js:1950" },
+        { "path": "/api/agents/dispatch/{agent_id}", "method": "POST", "evidence": "workers/src/index.js:1955-1958 (path.startsWith prefix dispatch, agent_id read via path.split('/')[4])" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/soc-agents.html"],
+      "status": "exists",
+      "evidence": "frontend/soc-agents.html calls all 4 routes directly (fetch('/api/agents/stream') :427, fetch('/api/agents/run') :542, fetch('/api/agents/dispatch/...') :627,674, fetch('/api/agents/status') :699). frontend/index.html does NOT call any /api/agents/* route directly (0 matches) — it only links out to /soc-agents from the primary desktop nav (frontend/index.html:1142), mobile drawer (:1183), a homepage feature card (:5599-5609), and the flagship products grid (:5645). 6 other pages (frontend/mssp.html, frontend/god-mode.html, frontend/ai-red-team.html, frontend/soc-operations.html, frontend/attack-surface-management.html, frontend/threat-hunting.html, frontend/vulnerability-management.html) also link to /soc-agents; frontend/soc-dashboard.html and frontend/enterprise-portal.html embed only the GET /api/agents/status widget, not run/stream/dispatch."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Prominent placement in the primary desktop nav (frontend/index.html:1142, styled as a pill) and mobile drawer (:1183), plus a homepage feature card and 8 other product pages' cross-links. The /soc-agents target resolves via Cloudflare Pages' native Clean-URL lookup (frontend/_redirects, no explicit rewrite needed) to the real, present frontend/soc-agents.html — confirmed not a dead CTA."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/multiAgentSOC.test.mjs:32-40 imports classifyTask, fetchCVEContext, fetchKEVStatus, fetchIOCContext, runAgent, handleAgentsStatus, handleAgentsRun, handleAgentDispatch directly from workers/src/handlers/multiAgentSOC.js — 7 of 9 entry_points have real describe()-block coverage. handleAgentsStream (the SSE handler) is imported by nothing and has zero tests anywhere under workers/test/ (confirmed by grep). fetchIOCContext is imported at line 35 but never called in any it() block — imported, not exercised. workers/test/copilotAdvancedCapabilities.test.mjs:287-318 tests the AI-Copilot's use of this capability but does so against a full vi.doMock() of workers/src/handlers/multiAgentSOC.js, not the real module."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P4",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/index.js:1938-1960 read directly (all 4 route blocks); workers/src/handlers/multiAgentSOC.js read in full (740 lines) and grepped for 401/unauthorized/isRealUser/authenticated (0 matches); workers/src/auth/middleware.js:240-253 (resolveAuthV5's IP-fallback branch) and :317-327 (isRealUser's own doc comment warning that authenticated:true does not mean logged-in) read directly and independently confirm the missing gate; workers/src/handlers/multiAgentSOC.js:640-643 (SSE CORS check) and workers/src/middleware/cors.js PROD_ORIGINS (6 entries) read directly and independently confirm the CORS mismatch; frontend/soc-agents.html read for default agent-selection behavior."
+    },
+    "notes": "Highest-value finding: none of the 4 MASOC routes gate on isRealUser(authCtx) or check authCtx.authenticated before running — resolveAuthV5's IP-fallback branch sets authenticated:true for every anonymous caller (workers/src/auth/middleware.js's own comment: 'authenticated: true means not-an-invalid-API-key, NOT logged in'), and 30+ other routes in workers/src/index.js do gate on isRealUser (e.g. :2054,3358,4050) including the MFA block immediately above this one (:1917). The only real control on these 4 routes is a 5-runs/min KV rate limiter keyed by user_id/key_id/IP (workers/src/handlers/multiAgentSOC.js:176-199, fail-closed if KV is unavailable) — meaning anyone, unauthenticated, can invoke compute-expensive parallel AI-agent orchestration. This directly contradicts a SEPARATE, correctly-gated path to the same capability: workers/src/handlers/aiSecurityCopilot.js:1008,1861-1868,2718 exposes the same functionality as a Copilot tool restricted to PRO/TEAM/ENTERPRISE/MSSP tiers, actively enforced. subscription_gated is recorded as false here because it describes THIS capability's own 4 direct routes, which are unconditionally open — the Copilot-mediated path's separate tier gate doesn't change that. Two further confirmed-but-not-fixed bugs (left as findings, not remediated in this pass — both touch either live CORS behavior or frontend state logic, judged too architecturally consequential to change without confirming intent): (1) handleAgentsStream (workers/src/handlers/multiAgentSOC.js:640-643) hand-rolls its own CORS check instead of using the shared withCors() the other 3 routes use, and its check is narrower than the real 6-origin PROD_ORIGINS allowlist (workers/src/middleware/cors.js) — 3 of 6 valid production origins (cyberdudebivash.pages.dev, tools.cyberdudebivash.com, intel.cyberdudebivash.com) would have SSE streaming silently rejected by the browser while the JSON/status routes keep working fine from the same origin. (2) frontend/soc-agents.html defaults to selecting all 9 agents including risk_synthesizer (:226-236,269) and both its run paths always send a non-empty agents array (:403,528), so the page's own label text ('all selected = auto-routing by task classifier', :157) is unreachable — classifyTask() is never invoked from this page — and because risk_synthesizer runs once standalone inside the parallel batch (with only CVE/KEV/IOC context, contradicting its own system prompt's expectation of other agents' findings) AND again correctly via the separate synthesis step, every default run burns an extra AI call on a low-value duplicate card. Minor/cosmetic: handleAgentsStatus (:697-702) checks only 4 of the 6 env keys workers/src/core/aiProviderRouter.js actually routes through (missing TOGETHER_API_KEY, ANTHROPIC_API_KEY), understating the 'X/4 providers active' stat — Groq/DeepSeek/CF AI (the 3 the UI copy names) are all genuinely called via real HTTP requests, confirmed in workers/src/core/aiProviderRouter.js."
+  }
+]
