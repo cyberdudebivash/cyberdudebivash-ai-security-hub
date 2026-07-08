@@ -4011,7 +4011,12 @@ export async function routeRequest(request, env, ctx, requestId) {
       const { requireCan } = await import('./auth/rbac.js');
       const deny = await requireCan(authCtx, env, 'admin:business:read');
       if (deny) return withSecurityHeaders(withCors(deny, request));
-      return withSecurityHeaders(withCors(await handleRevenueDashboard(request, env), request));
+      // handleRevenueDashboard(request, env, authCtx) takes authCtx as a 3rd
+      // arg for its own internal requirePlan() gate — this call site never
+      // passed it, so that internal gate always saw authCtx===undefined and
+      // returned 401 even for callers the requireCan() RBAC check above just
+      // admitted.
+      return withSecurityHeaders(withCors(await handleRevenueDashboard(request, env, authCtx), request));
     }
 
     // GET /api/growth/funnel — funnel conversion metrics + hot-lead list (admin).

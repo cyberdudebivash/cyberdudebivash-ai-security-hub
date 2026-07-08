@@ -44,18 +44,23 @@ function err(message, status = 400, code = 'ERR') {
 
 // Plan gating helper
 //
-// `authCtx.plan` and `authCtx.role` are never actually set anywhere in the
-// auth layer (verified: no auth/*.js file assigns either on any authCtx it
-// returns) — the real subscription field is `authCtx.tier`
-// ('FREE'/'STARTER'/'PRO'/'ENTERPRISE'/'MSSP', uppercase), and the real
-// admin field is `authCtx.isAdmin`. Every route below gated on requirePlan()
-// has been unreachable to every real paying customer since it was written —
-// a real ENTERPRISE customer's authCtx.tier==='ENTERPRISE' never matched
-// authCtx.plan===undefined.
+// Correction (same session): the first pass here checked authCtx.tier/
+// isAdmin only, on the theory that authCtx.plan/role are never set anywhere.
+// True for a *directly-constructed* authCtx, but wrong for two of this
+// function's three real callers: index.js's /api/monetize/churn-risk and
+// /api/funnel/metrics routes pass a narrowed object — { userId, plan:
+// authCtx.tier?.toLowerCase(), role: authCtx.role } — not the full authCtx,
+// and authCtx.role is itself correctly derived by withAuthAliases()
+// (auth/middleware.js) from isAdmin/tier/partnerId (2026-07-06 revenue-
+// mechanisms audit, P1-4) before that narrowing happens. The tier-only
+// version broke those two routes for every real customer, live in
+// production, until this fix. Checking both shapes makes this correct
+// regardless of which caller passes which one.
 function requirePlan(authCtx, ...plans) {
   if (!authCtx?.userId) return 'UNAUTHENTICATED';
-  if (authCtx.isAdmin === true) return null; // admin bypasses all gates
-  if (!plans.includes((authCtx.tier || '').toLowerCase())) return 'PLAN_REQUIRED';
+  if (authCtx.isAdmin === true || authCtx.role === 'admin') return null; // admin bypasses all gates
+  const tier = (authCtx.tier || authCtx.plan || '').toLowerCase();
+  if (!plans.includes(tier)) return 'PLAN_REQUIRED';
   return null;
 }
 
@@ -231,9 +236,12 @@ export async function handleChurnRisk(request, env, authCtx) {
   }
 
   try {
-    // If admin, can request any user
-    const url    = new URL(request.url);
-    const target = (authCtx?.isAdmin === true && url.searchParams.get('user_id')) || authCtx.userId;
+    // If admin, can request any user. This route is called via index.js with
+    // a narrowed { userId, plan, role } object, not the full authCtx — check
+    // both admin signals (see requirePlan()'s comment above).
+    const url     = new URL(request.url);
+    const isAdmin = authCtx?.isAdmin === true || authCtx?.role === 'admin';
+    const target  = (isAdmin && url.searchParams.get('user_id')) || authCtx.userId;
 
     const profile   = await getUserBehaviorProfile(env, target);
     const churnRisk = analyzeChurnRisk(profile);
@@ -321,9 +329,9 @@ export async function handleFunnelEvent(request, env, authCtx) {
 
 export async function handleFunnelMetrics(request, env, authCtx) {
   const gate = requirePlan(authCtx, 'enterprise');
-  // requirePlan() already returns null (no gate) for authCtx.isAdmin===true,
-  // so this is redundant now — kept for clarity, not for correctness.
-  if (gate && authCtx?.isAdmin !== true) {
+  // requirePlan() already returns null (no gate) for a real admin (either
+  // shape — see its comment), so this is redundant now — kept for clarity.
+  if (gate && authCtx?.isAdmin !== true && authCtx?.role !== 'admin') {
     return err(gate === 'UNAUTHENTICATED' ? 'Auth required' : 'ENTERPRISE required', gate === 'UNAUTHENTICATED' ? 401 : 403, gate);
   }
 

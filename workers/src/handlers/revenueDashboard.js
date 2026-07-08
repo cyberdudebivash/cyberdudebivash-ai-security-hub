@@ -37,13 +37,16 @@ function err(msg, status = 400, code = 'ERR') {
 
 export async function handleEnhancedDashboard(request, env, authCtx) {
   // Require PRO or ENTERPRISE (or admin)
-  // authCtx.plan and authCtx.role are never actually set anywhere in the
-  // auth layer — the real fields are authCtx.tier and authCtx.isAdmin. This
-  // gate previously blocked every real PRO/ENTERPRISE customer AND every
-  // admin, unconditionally.
-  const plan = (authCtx?.tier || 'free').toLowerCase();
+  // Correction (same session): index.js's /api/revenue/dashboard/enhanced
+  // route passes a narrowed { userId, plan, role } object, not the full
+  // authCtx — checking tier/isAdmin only (this function's first-pass fix)
+  // broke this route for every real customer, live in production, until
+  // this fix. authCtx.role is itself correctly derived by withAuthAliases()
+  // (auth/middleware.js, 2026-07-06 revenue-mechanisms audit P1-4) before
+  // that narrowing happens, so checking both shapes is correct either way.
+  const plan = (authCtx?.tier || authCtx?.plan || 'free').toLowerCase();
   if (!authCtx?.userId) return err('Authentication required', 401, 'UNAUTHENTICATED');
-  if (!['pro', 'enterprise'].includes(plan) && authCtx?.isAdmin !== true) {
+  if (!['pro', 'enterprise'].includes(plan) && authCtx?.isAdmin !== true && authCtx?.role !== 'admin') {
     return err('PRO or ENTERPRISE plan required', 403, 'PLAN_REQUIRED');
   }
 
@@ -434,10 +437,11 @@ export async function handleEnhancedDashboard(request, env, authCtx) {
 
 export async function handleRevenueTrends(request, env, authCtx) {
   if (!authCtx?.userId) return err('Authentication required', 401, 'UNAUTHENTICATED');
-  // Same fix as handleEnhancedDashboard above — authCtx.plan/role are never
-  // set; this previously blocked every real PRO/ENTERPRISE customer and
-  // every admin, unconditionally.
-  if (!['pro','enterprise'].includes((authCtx?.tier || '').toLowerCase()) && authCtx?.isAdmin !== true) {
+  // See handleEnhancedDashboard's comment above — this route also receives
+  // index.js's narrowed { userId, plan, role } object, so both field shapes
+  // need to be checked.
+  const tier = (authCtx?.tier || authCtx?.plan || '').toLowerCase();
+  if (!['pro','enterprise'].includes(tier) && authCtx?.isAdmin !== true && authCtx?.role !== 'admin') {
     return err('PRO+ required', 403, 'PLAN_REQUIRED');
   }
 
