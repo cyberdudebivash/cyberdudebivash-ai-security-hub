@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T12:55:36.133Z
-Capabilities catalogued: 7
+Generated: 2026-07-08T12:58:05.670Z
+Capabilities catalogued: 11
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 92.9% |
-| Frontend | 42.9% |
-| Parity (backend **and** frontend both exist) | 42.9% |
+| Backend | 81.8% |
+| Frontend | 45.5% |
+| Parity (backend **and** frontend both exist) | 45.5% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -27,14 +27,14 @@ Capabilities catalogued: 7
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 1 | Broken customer journey |
-| High | P2 | 2 | Backend exists, frontend missing |
+| High | P2 | 4 | Backend exists, frontend missing |
 | Medium | P3 | 0 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 0 | No test coverage |
-| Low | P7 | 3 | Documentation missing |
+| Low | P7 | 5 | Documentation missing |
 
-**Rollup:** Critical 1 · High 2 · Medium 1 · Low 3
+**Rollup:** Critical 1 · High 4 · Medium 1 · Low 5
 
 ## Structural Findings
 
@@ -62,6 +62,15 @@ complete", "bug free", or "guaranteed".
 | CAP-BILL-001 | Coupon Redemption at Checkout | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-BILL-002 | Coupon Administration | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-BILL-003 | Subscription Plans & Billing Portal | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+
+### customer-portal (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-PORTAL-001 | Profile & Security Settings | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ◐ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PORTAL-004 | Support Ticket System | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### identity (1 capability)
 
