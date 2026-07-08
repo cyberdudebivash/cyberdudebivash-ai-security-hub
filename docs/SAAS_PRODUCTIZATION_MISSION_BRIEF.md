@@ -150,6 +150,99 @@ head start, not a substitute for the audit.
 
 ---
 
+## 3B. PHASE 0 AUDIT RESULTS (completed 2026-07-08)
+
+The audit below was performed against this repository as it stood on
+2026-07-08 (commit `0d07c6b7`). **This section is now the authoritative gap
+matrix — Section 5's per-domain notes should be read as superseded by the
+specific findings here where they overlap.**
+
+### Quick wins — fix independently of the wider program
+
+These are small, isolated, high-value fixes that don't require the identity/
+org/dashboard rearchitecture below. Recommend doing these first, each as its
+own tiny PR:
+
+1. **Broken MSSP partner onboarding link (customer-facing dead end).**
+   `workers/src/services/emailEngine.js:747,761` sends every newly onboarded
+   MSSP partner a welcome email linking to `${BASE_URL}/mssp-command-center`.
+   That page (`frontend/mssp-command-center.html:652`) is gated by
+   `CDB_STAFF_AUTH.guard()`, which per `workers/src/handlers/staffAuth.js:13-19`
+   only accepts the platform-owner email or internal `user_roles` rows —
+   **an external MSSP partner can never log into the page their welcome
+   email sends them to.** The correct destination,
+   `frontend/partner-portal.html` (magic-link partner auth, real branding/
+   domain/revenue/client features), is never linked from onboarding at all.
+   Fix: point the onboarding email at `partner-portal.html`.
+2. **Client-spoofable feature lock.** `frontend/user-dashboard.html:3564`
+   reads the user's plan tier from `localStorage.getItem('cdb_tier')` to
+   decide which "My Tools" cards are unlocked (`:3598`), instead of the
+   authenticated `_plan` state fetched from the backend. Trivially bypassed
+   in devtools. (Real scan execution presumably still enforces server-side —
+   verify this before treating it as cosmetic-only.)
+3. **Race condition on the Reports page.** Two independent functions
+   (`loadPayments()` and `loadUserReports()`, `frontend/user-dashboard.html:2220`
+   and `:3633`) both write into the same `#reports-table` element on page
+   load — whichever resolves last silently wins.
+4. **Audit-log blind spot.** The "Audit Log" tab admins actually see
+   (`GET /api/admin/audit` → `frontend/ops-dashboard.html:503`) reads a KV
+   trail (`writeOpsAudit()`, `opsEngine.js:124-137`) that is entirely
+   separate from the real D1 `audit_log` table SSO config changes
+   (`enterpriseSsoHandler.js:314`) and AI-copilot actions
+   (`aiSecurityCopilot.js:1203`) actually write to. An admin reviewing "the
+   audit log" today would never see an SSO reconfiguration. Fix: either
+   point `handleAdminAudit()` at the real `audit_log` table, or merge both
+   trails into one read path.
+
+### Gap Matrix
+
+| # | Domain | Sub-capability | Status | Evidence | Gap |
+|---|---|---|---|---|---|
+| 1 | Identity | Login/signup/MFA/password-reset backend | **Exists** | `handlers/auth.js`, `handlers/mfa.js` | — |
+| 1 | Identity | Login/signup frontend entry point on main site | **Broken** | `frontend/index.html:13152-13157` dead-end modal; real form buried in `user-dashboard.html:747`, only linked via small footer link | No discoverable nav entry point |
+| 1 | Identity | Google OAuth (consumer) | **Exists, unlinked** | `handlers/googleAuth.js`, real callback at `frontend/auth/callback.html` | Zero frontend pages link to it — fully built, invisible |
+| 1 | Identity | Enterprise SSO (Azure AD / Okta / generic OIDC) | **Exists — but duplicated** | `handlers/enterpriseSsoHandler.js` (KV-config) AND `handlers/ssoAuth.js` (D1 `sso_configs`) — two parallel implementations of the same capability | Reconcile into one, don't build a third |
+| 1 | Identity | SAML | **Missing** | Both SSO paths are OIDC-only | Real gap if a customer specifically requires SAML |
+| 1 | Identity | Session list / per-session revoke | **Missing** | Only blanket "revoke all sessions" exists (`auth.js:508-512,605-610`) | No enumerable session list in UI or API |
+| 2 | Organization | Backend CRUD (create/list/get/dashboard/invite/roles/remove/scans/update/delete) | **Exists** | `handlers/orgManagement.js` (10 handlers), routed `index.js:3543-3597` | — |
+| 2 | Organization | Any frontend UI | **Missing** | Zero matches for `/api/orgs` anywhere in `frontend/` | 100% API-only; no create/select/invite/switch UI exists at all |
+| 3 | RBAC | Backend enforcement | **Exists** | `auth/rbac.js` `can()`/`requireCan()`, fail-closed, audited across 159+ handlers this session | — |
+| 3 | RBAC | Frontend feature-gating by role/plan | **Broken (cosmetic only)** | `user-dashboard.html:837-902` sidebar renders all modules to all users; only isolated upsell banners/button-blocks exist (`:2257,2461,2479,2509,3007`), keyed on plan, not role at all | Not real gating — UX polish over a fully-exposed nav, plus one spoofable client-side tier read (Quick Win #2) |
+| 4 | Lifecycle | End-to-end wiring signup→org→plan→payment→dashboard | **Partial** | Every node exists individually (Section 3 findings); org-creation step has no UI (Domain 2) | The chain breaks specifically at organization creation/selection |
+| 5 | Commercial | Coupons | **Exists** | Full CRUD + redemption engine, shipped 2026-07-08 | — |
+| 5 | Commercial | Subscriptions/billing/invoices | **Exists** | `handlers/subscription.js`, `services/v24/billingEngine.js`, `billing-portal.html` (real UI: cancel/upgrade/usage/invoices) | — |
+| 5 | Commercial | Payment-failed customer notification | **Exists** | Shipped 2026-07-08 (`sendPaymentFailedEmail`) | — |
+| 6 | Dashboard architecture | Plan/role-personalized rendering | **Missing (see Domain 3)** | Same finding as Domain 3 — no real personalization, only upsell overlays | Highest-value fix in the whole program |
+| 7 | Navigation | Server-driven, role/plan/feature-flag-based nav | **Missing** | No `/api/nav` endpoint anywhere; nav is static HTML (`index.html:1123-1195`, `user-dashboard.html:805-901`) plus hardcoded client-side JS arrays for owner-only items (`index.html:20196-20307`) | Feature flags exist server-side (`opsEngine.js`) but nothing consumes them for nav |
+| 8 | Notifications | Email + DLQ + retry | **Exists** | Shipped 2026-07-08 | — |
+| 8 | Notifications | Generic multi-channel dispatcher (Slack/Teams/webhook/in-app) | **Exists, undersold** | `handlers/notificationPlatform.js` — real Slack/Teams webhook delivery, wired to real events (`CHURN_RISK_ALERT`, MSSP/developer onboarding) | No frontend UI lets a user configure their Slack/Teams webhook (`PUT /api/notifications/preferences` unused by any page) |
+| 8 | Notifications | SMS | **Missing** | No provider integration anywhere | — |
+| 8 | Notifications | Real WhatsApp (Business/Cloud API) | **Missing** | Every WhatsApp reference is a `wa.me` click-to-chat link, not a send API | — |
+| 8 | Notifications | Push notifications | **Missing** | No web-push/FCM/APNs anywhere | — |
+| 8 | Notifications | In-app notification center | **Partial, disconnected** | Real backend (`notification_log`, wired to real events) exists; but both frontend "bell" UIs (`index.html` SOC alerts feed, `user-dashboard.html` client-only array) read from unrelated sources, never `notification_log` | Backend and frontend built independently, never connected |
+| 8 | Notifications | Developer webhooks | **Partial, duplicated** | `developer_webhooks` (CRUD + manual test only, 9-event catalog not wired to any dispatcher) vs. separate `org_webhooks`/`webhook_delivery_log` (`enterpriseAutomation.js`) | Two competing schemas; neither fires automatically on real events |
+| 9 | Customer Portal | Profile/password/MFA | **Exists** | `user-dashboard.html:2778-2945` | — |
+| 9 | Customer Portal | API key management | **Exists** | `user-dashboard.html:1258-1300,2173,2201` | — |
+| 9 | Customer Portal | Billing/invoices/subscription mgmt | **Exists** | `user-dashboard.html:2708-2775`, `billing-portal.html` | — |
+| 9 | Customer Portal | Scan history / reports | **Exists, buggy** | See Quick Win #3 (race condition) | — |
+| 9 | Customer Portal | Session management UI | **Missing** | See Domain 1 | — |
+| 9 | Customer Portal | Support ticket system | **Missing** | Only static `mailto:` links found | — |
+| 10 | MSSP Platform | Tenant isolation backend | **Exists** | `handlers/msspTenantPlatform.js` (18 handlers), audited/fixed earlier this session | — |
+| 10 | MSSP Platform | Partner self-service portal | **Exists, orphaned** | `frontend/partner-portal.html` — real branding/domain/revenue/client features | Never linked from onboarding (Quick Win #1) |
+| 10 | MSSP Platform | Multi-tenant sub-account dashboards (per-client drill-down) | **Partial** | Backend fully built (`msspTenantPlatform.js` dashboard/hierarchy/sub-tenants/billing/usage endpoints); zero frontend calls any of them | Only the coarse client list/create is wired |
+| 10 | MSSP Platform | Delegated admin permissions (MSSP staff sub-accounts) | **Missing** | No route, handler, or UI reference found | — |
+| 11 | Administration | Coupons admin | **Exists** | Full CRUD, no UI (API-only) | — |
+| 11 | Administration | Users/Organizations/Marketplace/Academy/Affiliate/CRM/Support admin routes | **Missing** | Zero `/api/admin/*` routes for any of these areas | Real gap — these areas have no admin surface at all, not even API-only |
+| 11 | Administration | Feature flags | **Exists, inconsistent naming** | `GET/PUT /api/ops/flags` (`opsEngine.js`) — works, but breaks the `/api/admin/*` naming convention used everywhere else | — |
+| 11 | Administration | Audit logs | **Broken** | See Quick Win #4 | — |
+| 11 | Administration | Admin frontend coverage | **Partial** | `ops-dashboard.html` + `admin-portal.html` (roles) cover ~7 of ~35 admin routes; the rest (including all of coupons admin) are API-only | — |
+| 12 | Production Readiness | Security headers / accessibility / Lighthouse / dependency scanning / secret scanning | **Exists** | Enforced as required CI gates (`Security Header Assertions`, `Accessibility (axe)`, `Lighthouse CI`, `Dependency Vulnerability Audit`, `gitleaks`, `GitGuardian`) | — |
+| 12 | Production Readiness | Rate limiting / structured request-ID logging | **Exists** | `middleware/rateLimit.js`; global error boundary + request-ID correlation | — |
+| 12 | Production Readiness | Distributed tracing / APM | **Missing** | No Sentry/Datadog/OpenTelemetry anywhere | — |
+| 12 | Production Readiness | Formal OWASP ASVS/API-Top-10 checklist audit | **Not verified** | Individual controls exist (headers, rate limiting, RBAC) but no consolidated checklist artifact found | Worth producing one, not necessarily worth new controls |
+
+---
+
 ## 4. CUSTOMER LIFECYCLE (target state)
 
 ```
