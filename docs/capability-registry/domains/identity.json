@@ -1,0 +1,58 @@
+[
+  {
+    "id": "CAP-IDN-001",
+    "domain": "identity",
+    "name": "Login / Sign-in Entry Point",
+    "description": "Discoverable, working sign-in path from the main site for an existing customer to authenticate.",
+    "backend": {
+      "handlers": ["workers/src/handlers/auth.js"],
+      "entry_points": [
+        "handleSignup", "handleLogin", "handleRefresh", "handleLogout",
+        "handleGetProfile", "handleUpdateProfile", "handleAlertConfig", "handleTestAlert",
+        "handleChangePassword", "handleForgotPassword", "handleResetPassword", "handleDeleteAccount"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "modal",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "broken",
+      "evidence": "frontend/index.html:13154-13157 — the only 'Sign In' surface reachable from the homepage is a dead-end modal ('Sign In Required') whose only control is an OK button that removes the modal (onclick=\"document.getElementById('_monitor-modal')?.remove()\"); it does not link anywhere. The real, working login form (#login-overlay, 'Sign in to your account') exists at frontend/user-dashboard.html:747, confirmed present and functional, but is reachable only via a small footer link, not from primary navigation. Both facts independently re-verified 2026-07-08 (in addition to docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:202)."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No header/primary-nav entry links to frontend/user-dashboard.html's login overlay; only a small dim footer link does."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/gdprAccountDeletion.test.mjs, workers/test/emailWiringTask3Phase1.test.mjs, and workers/test/phase10PasswordReset.test.mjs all import directly from workers/src/handlers/auth.js — confirmed by direct import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
+      { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/auth.js read directly (12 exported handle* functions confirmed); frontend/index.html:13148-13160 and frontend/user-dashboard.html:744-750 read directly and independently re-confirmed to match the described dead-end-modal / buried-form pattern."
+    },
+    "contradicts_doc": [
+      {
+        "file": "GENERAL_AVAILABILITY_REPORT.md",
+        "line": 70,
+        "claim": "Auth: signup / login / session / logout / change-password | GA APPROVED | Live-verified incl. negative paths across Phases IX–X",
+        "correction": "\"Live-verified\" here means the API endpoints were exercised directly (dynamic_api), not that a customer can find and use the login form from the production site. The homepage's only visible sign-in affordance is a dead-end modal; the real, working form is reachable only via a small footer link. Corrected status: NOT READY (P1 — this is a broken customer journey, not merely an undiscovered feature, because it is literally the entry point to every other capability on the platform)."
+      }
+    ],
+    "notes": "Classified P1 rather than P2 because this is the single entry point every other authenticated capability depends on — a customer who cannot find sign-in cannot reach anything else, regardless of how complete the rest of the platform is."
+  }
+]

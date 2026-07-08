@@ -623,6 +623,47 @@ jobs:
           echo "Review warnings and remediate before next production release." >> "$GITHUB_STEP_SUMMARY"
 
 # ─────────────────────────────────────────────────────────────────────────────
+# JOB 4c · Capability Registry Validation  [ADVISORY — never blocks deployment]
+# ─────────────────────────────────────────────────────────────────────────────
+# CEAP instrument (docs/ENGINEERING_STANDARDS.md §10/§12) — validates
+# docs/capability-registry/domains/*.json: schema conformance, every cited
+# file:line resolves, and the specific rule that would have caught the false
+# "Organizations: GA APPROVED" claim in GENERAL_AVAILABILITY_REPORT.md
+# (operational_status: GA APPROVED requires frontend+nav+journey evidence,
+# not just a passing API check — see scripts/registry/validate.mjs).
+#
+# Launched ADVISORY-first (continue-on-error, excluded from ci-gate's needs),
+# matching how dependency-audit itself started advisory before graduating to
+# required once proven stable — this is new, day-one tooling and should earn
+# required status over a few real cycles, not claim it immediately. Runs on
+# every push/PR like every other job in this file (no per-job path filter —
+# operational simplicity per the Standing Engineering Directive, §13; the
+# check itself takes seconds).
+# ─────────────────────────────────────────────────────────────────────────────
+  registry-validate:
+    name: Capability Registry Validation (Advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Validate capability registry
+        run: |
+          echo "━━━ Capability Registry Validation ━━━"
+          node scripts/registry/validate.mjs
+          echo ""
+          echo "### Capability Registry Validation (Advisory)" >> "$GITHUB_STEP_SUMMARY"
+          echo "See docs/capability-registry/SCHEMA.md for the schema and rationale." >> "$GITHUB_STEP_SUMMARY"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # JOB 5 · Validate Folder Structure  [REQUIRED]
 # ─────────────────────────────────────────────────────────────────────────────
   structure-check:

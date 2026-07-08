@@ -67,7 +67,7 @@ round-trip (needs `RESEND_API_KEY` set in production).
 
 | Capability | GA decision | Basis |
 |-----------|-------------|-------|
-| Auth: signup / login / session / logout / change-password | **GA APPROVED** | Live-verified incl. negative paths across Phases IX–X |
+| Auth: signup / login / session / logout / change-password | **NOT READY** *(corrected 2026-07-08, was: GA APPROVED)* | Prior basis ("live-verified incl. negative paths") was API-level (`dynamic_api`) — real, but never a browser-driven check of whether a customer can find sign-in. `frontend/index.html`'s only homepage sign-in affordance is a dead-end modal (OK button removes it, links nowhere); the real, working login form exists but is reachable only via a small footer link on `frontend/user-dashboard.html`, not primary navigation. Corrected per `docs/ENGINEERING_STANDARDS.md` §10.3 transparent revision — see `docs/capability-registry/domains/identity.json` (CAP-IDN-001) for full evidence. |
 | **Credential recovery (forgot/reset password)** | **GA APPROVED WITH DOCUMENTED LIMITATIONS** | Flow + UI + locks verified; email *delivery* awaits owner inbox round-trip (RESEND_API_KEY) |
 | Account deletion / offboarding (GDPR/DPDP) | **GA APPROVED** | Erasure receipt + immediate credential death, live-verified repeatedly |
 | Domain scanning + measurement honesty | **GA APPROVED** | Live-verified; honesty (null grade / UNKNOWN) locked |
@@ -76,7 +76,7 @@ round-trip (needs `RESEND_API_KEY` set in production).
 | AI simulate / forecast (paid gates) | **GA APPROVED** | 402 with plan named, verified across phases |
 | Pricing & entitlement truth | **GA APPROVED** | Single source of truth; advertised == enforced; locked. *Evidence extended 2026-07-06 (OBJ-11): the anonymous free-feed branch was found unenforced by a 100-org scale simulation and aligned to the promise the same cycle — certification retained per §10.3 transparent revision.* |
 | API key lifecycle (issue / rotate / revoke / usage) | **GA APPROVED** | Full lifecycle live-verified this phase |
-| Organizations: create / members / RBAC / dashboard / scan history | **GA APPROVED** | Full admin loop live-verified this phase; RC-B1 fix verified at Phase IX gate |
+| Organizations: create / members / RBAC / dashboard / scan history | **NOT READY** *(corrected 2026-07-08, was: GA APPROVED)* | Prior basis ("full admin loop live-verified") was `scripts/ceap-sweep.mjs` calling `/api/orgs*` directly (`dynamic_api`) — real, but API-only. Zero frontend pages call any `/api/orgs*` endpoint; no UI exists to create, view, join, or manage an organization. Backend (RBAC, CRUD, RC-B1 fix) remains genuinely solid — this is a frontend gap, not a backend regression. Corrected per `docs/ENGINEERING_STANDARDS.md` §10.3 transparent revision — see `docs/capability-registry/domains/organizations.json` (CAP-ORG-001) for full evidence. |
 | Rate limiting & quota degradation | **GA APPROVED WITH DOCUMENTED LIMITATIONS** | Graceful, honest 429s; FREE tier not SOC-volume by design |
 | SSO (OIDC / enterprise) | **PILOT ONLY** | Surface live; no live-IdP round-trip (owner) |
 | Billing / payments / subscription lifecycle | **PILOT ONLY** | Surfaces implemented + locked; **zero live payments ever** (owner) |
