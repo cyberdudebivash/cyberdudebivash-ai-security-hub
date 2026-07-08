@@ -15,8 +15,17 @@
  * minimumPurchase, metadata, a validate-without-checkout endpoint, a
  * redemption audit trail + revocation, and IP-based abuse detection against
  * invalid-coupon guessing. */
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
+
+// finalizeCouponRedemption fires a (non-awaited) coupon-redeemed confirmation
+// email (Task 3 Phase 1) whenever a redemption row has an email — several
+// tests below use one. Mock it out so this file never makes a real network
+// call to Resend/MailChannels.
+vi.mock('../src/services/emailEngine.js', () => ({
+  sendCouponRedeemedEmail: vi.fn(async () => ({ success: true, provider: 'mock' })),
+}));
+
 import {
   validateCoupon, applyDiscount, computeDiscountedAmount, recordCouponUsage,
   finalizeCouponRedemption, revokeRedemption,
@@ -146,6 +155,29 @@ describe('validateCoupon', () => {
     await finalizeCouponRedemption(env, 'o1');
     expect((await validateCoupon(env, 'ONCE', { module: 'domain', email: 'a@x.com' })).valid).toBe(false);
     expect((await validateCoupon(env, 'ONCE', { module: 'domain', email: 'b@x.com' })).valid).toBe(true);
+  });
+
+  it('finalizeCouponRedemption sends a redemption confirmation email when the redemption has an email on file (Task 3 Phase 1)', async () => {
+    const { sendCouponRedeemedEmail } = await import('../src/services/emailEngine.js');
+    vi.mocked(sendCouponRedeemedEmail).mockClear();
+    await createCoupon(env, { code: 'MAILME', discountType: 'percentage', discountValue: 30 });
+    await recordCouponUsage(env, { razorpayOrderId: 'o_mail', code: 'MAILME', email: 'mailme@x.com', module: 'subscription', originalAmount: 1000, discountedAmount: 700 });
+    await finalizeCouponRedemption(env, 'o_mail');
+    expect(sendCouponRedeemedEmail).toHaveBeenCalledTimes(1);
+    const [, args] = sendCouponRedeemedEmail.mock.calls[0];
+    expect(args.to).toBe('mailme@x.com');
+    expect(args.code).toBe('MAILME');
+    expect(args.discountLabel).toBe('30% off');
+    expect(args.finalAmountInr).toBe(7);
+  });
+
+  it('finalizeCouponRedemption does not attempt to email when the redemption has no email on file', async () => {
+    const { sendCouponRedeemedEmail } = await import('../src/services/emailEngine.js');
+    vi.mocked(sendCouponRedeemedEmail).mockClear();
+    await createCoupon(env, { code: 'NOMAIL' });
+    await recordCouponUsage(env, { razorpayOrderId: 'o_nomail', code: 'NOMAIL', originalAmount: 1000, discountedAmount: 800 });
+    await finalizeCouponRedemption(env, 'o_nomail');
+    expect(sendCouponRedeemedEmail).not.toHaveBeenCalled();
   });
 
   it('IP abuse detection: blocks after repeated invalid-coupon attempts from the same IP', async () => {

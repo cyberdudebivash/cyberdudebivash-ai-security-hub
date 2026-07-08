@@ -44,6 +44,7 @@
  */
 
 import { ok, fail } from './response.js';
+import { sendCouponRedeemedEmail } from '../services/emailEngine.js';
 
 // No module-level "ready" cache here (unlike msspRevenue.js's
 // _revenueTablesReady): every statement below is already an idempotent
@@ -284,7 +285,7 @@ export async function finalizeCouponRedemption(env, razorpayOrderId) {
   try {
     await ensureCouponTables(env.DB);
     const redemption = await env.DB.prepare(
-      `SELECT code FROM coupon_redemptions WHERE razorpay_order_id = ? AND status = 'pending'`
+      `SELECT code, email, module, discounted_amount FROM coupon_redemptions WHERE razorpay_order_id = ? AND status = 'pending'`
     ).bind(razorpayOrderId).first().catch(() => null);
     if (!redemption) return;
 
@@ -295,6 +296,25 @@ export async function finalizeCouponRedemption(env, razorpayOrderId) {
       await env.DB.prepare(
         `UPDATE discount_coupons SET redeemed_count = redeemed_count + 1 WHERE code = ?`
       ).bind(redemption.code).run();
+
+      // Confirmation email — previously this transition was entirely silent
+      // to the customer. Non-blocking: a failed/slow send must never affect
+      // payment verification, which is why this isn't awaited.
+      if (redemption.email) {
+        const coupon = await env.DB.prepare(
+          `SELECT discount_type, discount_value, discount_pct FROM discount_coupons WHERE code = ?`
+        ).bind(redemption.code).first().catch(() => null);
+        const discountLabel = coupon
+          ? (coupon.discount_type === 'fixed' ? `₹${coupon.discount_value} off` : `${coupon.discount_value ?? coupon.discount_pct ?? 0}% off`)
+          : redemption.code;
+        sendCouponRedeemedEmail(env, {
+          to: redemption.email,
+          code: redemption.code,
+          discountLabel,
+          productName: redemption.module ? redemption.module.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null,
+          finalAmountInr: redemption.discounted_amount != null ? Math.round(redemption.discounted_amount / 100) : null,
+        }).catch(() => {});
+      }
     }
   } catch (e) {
     console.error('[Coupons] finalizeCouponRedemption failed (non-fatal):', e.message);
