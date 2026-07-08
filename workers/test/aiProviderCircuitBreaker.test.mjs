@@ -28,6 +28,9 @@ import {
   PROVIDERS,
   isProviderCircuitOpen,
   recordProviderFailure,
+  getCircuitBreakerState,
+  getAllCircuitBreakerStates,
+  getProviderHealthStatus,
   routeAICall,
 } from '../src/core/aiProviderRouter.js';
 import { orchestrateChat, TOOL_REGISTRY } from '../src/handlers/aiSecurityCopilot.js';
@@ -216,5 +219,90 @@ describe('orchestrateChat — fallback chain efficiency', () => {
 
     await orchestrateChat(env, 'FREE', {}, messages, tools, 512, 'u1', 's1');
     expect(await isProviderCircuitOpen(env, PROVIDERS.GROQ)).toBe(true);
+  });
+});
+
+// ── 5. Circuit-breaker state visibility (GET /api/ai/providers/status) ────
+describe('getCircuitBreakerState / getAllCircuitBreakerStates', () => {
+  it('reports closed when nothing has tripped', async () => {
+    const env = { SECURITY_HUB_KV: fakeKV() };
+    expect(await getCircuitBreakerState(env, PROVIDERS.DEEPSEEK)).toEqual({ open: false });
+  });
+
+  it('reports full detail after a real trip via recordProviderFailure', async () => {
+    const kv = fakeKV();
+    const env = { SECURITY_HUB_KV: kv };
+    const before = Date.now();
+    await recordProviderFailure(env, PROVIDERS.DEEPSEEK, 402);
+
+    const state = await getCircuitBreakerState(env, PROVIDERS.DEEPSEEK);
+    expect(state.open).toBe(true);
+    expect(state.status).toBe(402);
+    expect(new Date(state.trippedAt).getTime()).toBeGreaterThanOrEqual(before);
+    expect(state.ttlRemainingS).toBeGreaterThan(295); // just tripped, TTL is 300s
+    expect(state.ttlRemainingS).toBeLessThanOrEqual(300);
+  });
+
+  it('still reports open (without detail) for a legacy pre-detail record, matching isProviderCircuitOpen', async () => {
+    // A circuit tripped by a prior deploy (which wrote the literal string
+    // '1', not JSON) must not be silently treated as closed by the newer
+    // detail-reading code — open/closed has exactly one source of truth
+    // (key existence), detail is optional on top.
+    const env = { SECURITY_HUB_KV: fakeKV({ [`ai_circuit_breaker:${PROVIDERS.DEEPSEEK}`]: '1' }) };
+    expect(await isProviderCircuitOpen(env, PROVIDERS.DEEPSEEK)).toBe(true);
+    const state = await getCircuitBreakerState(env, PROVIDERS.DEEPSEEK);
+    expect(state.open).toBe(true);
+    expect(state.trippedAt).toBeNull();
+  });
+
+  it('fails open (closed-looking) on no KV or a KV read error', async () => {
+    expect(await getCircuitBreakerState({}, PROVIDERS.DEEPSEEK)).toEqual({ open: false });
+    const throwingKV = { get: () => { throw new Error('KV down'); } };
+    expect(await getCircuitBreakerState({ SECURITY_HUB_KV: throwingKV }, PROVIDERS.DEEPSEEK)).toEqual({ open: false });
+  });
+
+  it('never reports Cloudflare Workers AI as open, even if a stray key existed for it', async () => {
+    const env = { SECURITY_HUB_KV: fakeKV({ [`ai_circuit_breaker:${PROVIDERS.CF_AI}`]: '1' }) };
+    expect(await getCircuitBreakerState(env, PROVIDERS.CF_AI)).toEqual({ open: false });
+  });
+
+  it('getAllCircuitBreakerStates covers every provider except CF AI, individually', async () => {
+    const kv = fakeKV();
+    const env = { SECURITY_HUB_KV: kv };
+    await recordProviderFailure(env, PROVIDERS.DEEPSEEK, 402);
+
+    const all = await getAllCircuitBreakerStates(env);
+    expect(Object.keys(all).sort()).toEqual(
+      Object.values(PROVIDERS).filter(p => p !== PROVIDERS.CF_AI).sort()
+    );
+    expect(all[PROVIDERS.DEEPSEEK].open).toBe(true);
+    expect(all[PROVIDERS.GROQ].open).toBe(false);
+  });
+});
+
+// ── 6. Integration: circuit state surfaces in the real health-status response ──
+describe('getProviderHealthStatus — includes circuit_breaker state per provider', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('shows circuit_breaker.open:true for a provider real traffic has quarantined, alongside its fresh probe result', async () => {
+    const kv = fakeKV();
+    const env = { GROQ_API_KEY: 'gk', DEEPSEEK_API_KEY: 'dk', SECURITY_HUB_KV: kv };
+    await recordProviderFailure(env, PROVIDERS.DEEPSEEK, 402); // simulate a real prior customer-traffic failure
+
+    // The health check itself always live-probes regardless of breaker state
+    // (that's the point of a health check) — deepseek's probe happens to
+    // succeed here, on purpose, to prove circuit_breaker is independent
+    // information layered on top of the probe result, not a replacement for it.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: 'APEX NEXUS ONLINE' } }], model: 'm', usage: {},
+    }), { status: 200 })));
+
+    const health = await getProviderHealthStatus(env);
+
+    expect(health.providers[PROVIDERS.DEEPSEEK].status).toBe('healthy'); // fresh probe succeeded
+    expect(health.providers[PROVIDERS.DEEPSEEK].circuit_breaker.open).toBe(true); // but still quarantined from real traffic
+    expect(health.providers[PROVIDERS.DEEPSEEK].circuit_breaker.status).toBe(402);
+    expect(health.providers[PROVIDERS.GROQ].circuit_breaker.open).toBe(false);
+    expect(health.providers[PROVIDERS.CF_AI].circuit_breaker).toBeUndefined(); // never gated, not included
   });
 });

@@ -68,7 +68,7 @@ export async function isProviderCircuitOpen(env, provider) {
   if (provider === PROVIDERS.CF_AI) return false;
   if (!env?.SECURITY_HUB_KV) return false;
   try {
-    return (await env.SECURITY_HUB_KV.get(circuitKey(provider))) === '1';
+    return (await env.SECURITY_HUB_KV.get(circuitKey(provider))) !== null;
   } catch { return false; }
 }
 
@@ -77,9 +77,40 @@ export async function recordProviderFailure(env, provider, status) {
   if (!NON_RETRYABLE_STATUSES.has(status)) return;
   if (!env?.SECURITY_HUB_KV) return;
   try {
-    await env.SECURITY_HUB_KV.put(circuitKey(provider), '1', { expirationTtl: CIRCUIT_BREAKER_TTL_S });
+    const record = JSON.stringify({ trippedAt: Date.now(), status, ttlSeconds: CIRCUIT_BREAKER_TTL_S });
+    await env.SECURITY_HUB_KV.put(circuitKey(provider), record, { expirationTtl: CIRCUIT_BREAKER_TTL_S });
     console.error(`[APEX NEXUS Circuit Breaker] ${provider} tripped (HTTP ${status}) — skipping for ${CIRCUIT_BREAKER_TTL_S}s or until next TTL re-probe.`);
   } catch { /* best-effort only */ }
+}
+
+// ── Circuit-breaker state visibility (feeds GET /api/ai/providers/status and
+// the get_ai_providers_status Copilot skill — see aiSecurityCopilot.js) ──────
+export async function getCircuitBreakerState(env, provider) {
+  if (provider === PROVIDERS.CF_AI || !env?.SECURITY_HUB_KV) return { open: false };
+  try {
+    const raw = await env.SECURITY_HUB_KV.get(circuitKey(provider));
+    if (raw === null) return { open: false };
+    // The key's mere existence is the source of truth for "open" — matches
+    // isProviderCircuitOpen exactly, so this function can never disagree
+    // with the routing decision. JSON parsing only adds optional detail on
+    // top; a value written by a pre-detail deploy (plain '1') or any other
+    // malformed record still correctly reports open, just without detail,
+    // rather than being silently (and wrongly) treated as closed.
+    try {
+      const { trippedAt, status, ttlSeconds } = JSON.parse(raw);
+      if (typeof trippedAt === 'number' && typeof ttlSeconds === 'number') {
+        const ttlRemainingS = Math.max(0, Math.round(trippedAt / 1000 + ttlSeconds - Date.now() / 1000));
+        return { open: true, trippedAt: new Date(trippedAt).toISOString(), status, ttlRemainingS };
+      }
+    } catch { /* legacy or malformed value below */ }
+    return { open: true, trippedAt: null, status: null, ttlRemainingS: null };
+  } catch { return { open: false }; } // fail open — a KV read error never blocks visibility or routing
+}
+
+export async function getAllCircuitBreakerStates(env) {
+  const providers = Object.values(PROVIDERS).filter(p => p !== PROVIDERS.CF_AI);
+  const entries = await Promise.all(providers.map(async (p) => [p, await getCircuitBreakerState(env, p)]));
+  return Object.fromEntries(entries);
 }
 
 export const PROVIDER_CONFIG = {
@@ -575,6 +606,19 @@ export async function getProviderHealthStatus(env) {
   });
 
   await Promise.allSettled(checks);
+
+  // Circuit-breaker state is separate from (and can legitimately disagree
+  // with) the live probe above: `status` reflects a fresh ping made just
+  // now; `circuit_breaker` reflects whether *real customer traffic* is
+  // currently being routed around this provider because of a past failure
+  // that hasn't aged out yet. Both are useful — e.g. a provider can probe
+  // healthy again while still being avoided for the rest of its TTL window
+  // as a safety margin, or fail a probe before real traffic has tripped the
+  // breaker at all.
+  const circuitStates = await getAllCircuitBreakerStates(env);
+  for (const [provider, state] of Object.entries(circuitStates)) {
+    if (results[provider]) results[provider].circuit_breaker = state;
+  }
 
   const healthy   = Object.values(results).filter(r => r.status === 'healthy').length;
   const total     = Object.keys(results).length;
