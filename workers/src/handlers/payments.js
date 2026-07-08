@@ -32,6 +32,7 @@ import { resolvePartnerIdForEmail, recordRevenueShare } from './msspRevenue.js';
 import { hashPassword } from '../auth/password.js';
 import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
 import { logSystemError } from '../lib/errorLog.js';
+import { validateCoupon, applyDiscount, recordCouponUsage, finalizeCouponRedemption } from '../lib/coupons.js';
 
 // ─── Handlers for each scan module (run at ENTERPRISE tier for full data) ────
 import { handleDomainScan }    from './domain.js';
@@ -142,31 +143,51 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   const receipt = generateReceiptId();
   const ip      = request.headers.get('CF-Connecting-IP') || 'unknown';
 
+  // ── Optional discount coupon — server-authoritative. body.coupon_code is
+  // the only client input; the discount percentage and eligibility always
+  // come from discount_coupons (lib/coupons.js), never the client. An
+  // invalid/expired/exhausted code fails the request outright rather than
+  // silently charging full price, so a customer knows to fix/remove it.
+  const planKeyForCoupon = module === 'subscription' ? (body.plan || target || 'STARTER').toUpperCase() : null;
+  let finalAmount = price.amount;
+  let couponApplied = null;
+  if (body.coupon_code) {
+    const couponCheck = await validateCoupon(env, body.coupon_code, module, planKeyForCoupon);
+    if (!couponCheck.valid) {
+      return Response.json({ error: couponCheck.error, code: 'INVALID_COUPON' }, { status: 400 });
+    }
+    finalAmount = applyDiscount(price.amount, couponCheck.discount_pct);
+    couponApplied = { code: couponCheck.code, discount_pct: couponCheck.discount_pct };
+  }
+
   // Check for existing unpaid order for same target+module+amount (prevent double
   // charges). MUST also match amount: module='subscription' covers every plan
   // tier (STARTER/PRO/ENTERPRISE/MSSP), so matching on module+target alone would
   // return a cheaper/older plan's real Razorpay order_id while displaying the
   // newly-requested (different-priced) plan's label — the Razorpay popup driven
   // by that reused order_id would then charge the OLD amount, not what's shown.
+  // Matching on the post-coupon amount is deliberate: a retry with a different
+  // (or removed) coupon must not reuse an order priced for a different coupon.
   if (env.DB) {
     const existingOrder = await env.DB.prepare(
       `SELECT id, razorpay_order_id, status FROM payments
        WHERE module = ? AND target = ? AND amount = ? AND status = 'pending'
        AND created_at > datetime('now', '-30 minutes')
        LIMIT 1`
-    ).bind(module, target.toLowerCase(), price.amount).first().catch(() => null);
+    ).bind(module, target.toLowerCase(), finalAmount).first().catch(() => null);
 
     if (existingOrder?.razorpay_order_id) {
       // Return existing order instead of creating a new one
       return Response.json({
         order_id:  existingOrder.razorpay_order_id,
         key_id:    env.RAZORPAY_KEY_ID || '',
-        amount:    price.amount,
+        amount:    finalAmount,
         currency:  'INR',
         module,
         target,
         price_label: price.label,
         report_name: price.name,
+        coupon:    couponApplied,
         existing:  true,
       });
     }
@@ -176,9 +197,9 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   let razorOrder;
   try {
     razorOrder = await createRazorpayOrder(env, {
-      amount:  price.amount,
+      amount:  finalAmount,
       receipt,
-      notes:   { module, target, scan_id: scan_id || '', platform: 'cyberdudebivash' },
+      notes:   { module, target, scan_id: scan_id || '', platform: 'cyberdudebivash', coupon: couponApplied?.code || '' },
     });
   } catch (err) {
     console.error('[Payments] Order creation failed:', err.message, 'module:', module, 'target:', target);
@@ -189,6 +210,13 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       error:    'Payment gateway error. Please try again.',
       fallback: `Contact contact@cyberdudebivash.in to complete purchase.`,
     }, { status: 502 });
+  }
+
+  if (couponApplied) {
+    await recordCouponUsage(env, {
+      razorpayOrderId: razorOrder.id, code: couponApplied.code, module,
+      originalAmount: price.amount, discountedAmount: finalAmount,
+    }).catch(e => console.error('[Payments] recordCouponUsage failed:', e.message));
   }
 
   // Store pending payment record in D1
@@ -211,7 +239,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
       scan_id || null,
       module,
       target.toLowerCase(),
-      price.amount,
+      finalAmount,
       razorOrder.id,
       planLabel,
       ip,
@@ -221,7 +249,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
 
     await trackEvent(env, 'payment_initiated', module, authCtx.user_id, ip, {
       razorpay_order_id: razorOrder.id,
-      amount: price.amount,
+      amount: finalAmount,
       target,
     });
   }
@@ -229,12 +257,13 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   return Response.json({
     order_id:    razorOrder.id,
     key_id:      env.RAZORPAY_KEY_ID || '',
-    amount:      price.amount,
+    amount:      finalAmount,
     currency:    'INR',
     module,
     target,
     price_label: price.label,
     report_name: price.name,
+    coupon:      couponApplied,
     receipt,
   });
 }
@@ -343,6 +372,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
       await env.DB.prepare(
         `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
       ).bind(razorpay_payment_id, razorpay_signature, accessToken, razorpay_order_id).run().catch(() => {});
+      finalizeCouponRedemption(env, razorpay_order_id).catch(() => {});
       const paidRow = await env.DB.prepare(
         `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
       ).bind(razorpay_order_id).first().catch(() => null);
@@ -470,6 +500,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
           utm_campaign || null,
         ),
       ]).catch((e) => console.error('[Payments] D1 batch (payments+subscriptions) failed', razorpay_payment_id, e?.message));
+      finalizeCouponRedemption(env, razorpay_order_id).catch(() => {});
 
       const paidRow = await env.DB.prepare(
         `SELECT id, partner_id, amount FROM payments WHERE razorpay_order_id = ? LIMIT 1`
@@ -646,6 +677,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         expiresAt,
       ),
     ]).catch(e => console.error('[Payments] D1 update failed:', e.message));
+    finalizeCouponRedemption(env, razorpay_order_id).catch(() => {});
 
     const paidRow = await env.DB.prepare(
       `SELECT id, partner_id, amount, email FROM payments WHERE razorpay_order_id = ? LIMIT 1`
@@ -889,6 +921,14 @@ export async function handleRazorpayWebhook(request, env) {
   if (type === 'payment.captured' || type === 'order.paid') {
     const orderId   = payload.order_id;
     const paymentId = payload.id;
+
+    // Single place every successful payment passes through regardless of
+    // which module/flow initiated it (report purchase, subscription,
+    // package) — finalize any coupon redemption count here rather than
+    // duplicating this call in every /verify branch. Idempotent (see
+    // finalizeCouponRedemption's pending->redeemed guard), so double
+    // delivery of this webhook event is also safe.
+    finalizeCouponRedemption(env, orderId).catch(() => {});
 
     if (env.DB && orderId) {
       // Fetch payment record including email/module for lifecycle trigger
