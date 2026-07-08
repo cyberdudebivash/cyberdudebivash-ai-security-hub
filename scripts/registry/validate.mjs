@@ -154,7 +154,11 @@ function validateEntry(entry, relFile) {
   }
 }
 
-const FILE_LINE_RE = /([A-Za-z0-9_./-]+\.(?:js|mjs|html|md|json))(?::(\d+))?/g;
+// Longer/more-specific extensions must precede shorter ones that are a
+// literal prefix of them (json starts with "js") — regex alternation takes
+// the first alternative that matches, so "js" before "json" in the list
+// would truncate every ".json" citation to a nonexistent ".js" file.
+const FILE_LINE_RE = /([A-Za-z0-9_./-]+\.(?:mjs|json|js|html|md))(?::(\d+))?/g;
 
 function checkEvidenceResolves(id, relFile, evidenceStr) {
   let m;
