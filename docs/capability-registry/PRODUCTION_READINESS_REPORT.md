@@ -10,31 +10,31 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T17:56:25.493Z
-Capabilities catalogued: 50
+Generated: 2026-07-08T18:32:25.780Z
+Capabilities catalogued: 54
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 72% |
+| Backend | 69.4% |
 | Frontend | 38% |
-| Parity (backend **and** frontend both exist) | 36% |
+| Parity (backend **and** frontend both exist) | 35.2% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 11 | Broken customer journey |
+| Critical | P1 | 14 | Broken customer journey |
 | High | P2 | 16 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 2 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 10 | No test coverage |
-| Low | P7 | 9 | Documentation missing |
+| Low | P7 | 10 | Documentation missing |
 
-**Rollup:** Critical 11 · High 16 · Medium 4 · Low 19
+**Rollup:** Critical 14 · High 16 · Medium 4 · Low 20
 
 ## Structural Findings
 
@@ -43,7 +43,7 @@ Capabilities catalogued: 50
 | Hidden features | 13 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 10 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 11 | Priority P1 |
+| Broken journeys | 14 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -102,6 +102,15 @@ complete", "bug free", or "guaranteed".
 | CAP-DASH-001 | CISO Hub Metrics (Risk Posture, Compliance, Incidents) | ✗ | ✗ | ✓ | NOT READY | P1 |
 | CAP-DASH-002 | Executive Hub / Command Center | ✗ | ✗ | ✓ | NOT READY | P1 |
 | CAP-DASH-003 | Product & Growth Analytics (Funnel, Feature Adoption) | ✓ | ✗ | ✗ | NOT READY | P2 |
+
+### developer-portal-apikeys (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-DEVPORTAL-001 | API Key Management (canonical) | ✓ | ✓ | ✓ | PILOT ONLY | P7 |
+| CAP-DEVPORTAL-002 | Self-Service Automation API Keys | ✗ | ✗ | ✓ | BLOCKED | P1 |
+| CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ◐ | ◐ | ✗ | BLOCKED | P1 |
+| CAP-DEVPORTAL-004 | Growth/Plan API Key Provisioning | ✗ | ✗ | ✗ | BLOCKED | P1 |
 
 ### identity (1 capability)
 
