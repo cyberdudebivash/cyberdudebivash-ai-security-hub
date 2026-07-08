@@ -153,7 +153,7 @@
   </div>
 
   <div class="hero-stats">
-    <div class="hero-stat"><div class="val" id="partner-count">—</div><div class="lbl">Active Partners</div></div>
+    <div class="hero-stat"><div class="val">Up to 50%</div><div class="lbl">Partner Margin</div></div>
     <div class="hero-stat"><div class="val">3</div><div class="lbl">Partner Tiers</div></div>
     <div class="hero-stat"><div class="val">14</div><div class="lbl">Day Free Trial</div></div>
     <div class="hero-stat"><div class="val">99.9%</div><div class="lbl">SLA Uptime</div></div>
@@ -377,10 +377,6 @@ async function loadTiers() {
   try {
     const res  = await fetch(`${API}/tiers`);
     const data = await res.json();
-
-    if (data.partner_count) {
-      document.getElementById('partner-count').textContent = data.partner_count + '+';
-    }
 
     const grid = document.getElementById('tier-grid');
     grid.innerHTML = (data.tiers || []).map(t => {

@@ -5020,7 +5020,14 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </section>
 <!-- ══════════════════════════ PHASE 4: AFFILIATE HUB ══════════════════════════ -->
-<section data-auth-gate="true" data-section-id="affiliate-hub-2" id="affiliate-hub" style="display:none;background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)">
+<!-- Public by design: handleJoin() (affiliateSystem.js) takes no platform auth
+     — it's meant for external marketers/bloggers who are not existing logged-in
+     customers — and this section manages its own localStorage-based identity
+     (p4_aff_user_id), independent of platform login. A prior "anonymous-exposure
+     audit" gated this the same as genuinely-internal sections (dashboard,
+     executive-hub, autonomous-soc), which made the affiliate programme
+     invisible to the only audience that could ever join it. -->
+<section data-section-id="affiliate-hub-2" id="affiliate-hub" style="background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)">
 <div style="max-width:1400px;margin:0 auto">
 <div style="text-align:center;margin-bottom:56px">
 <span style="display:inline-block;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:16px">Partner &amp; Affiliate Program</span>
