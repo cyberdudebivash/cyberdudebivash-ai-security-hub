@@ -10,31 +10,31 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T13:10:58.229Z
-Capabilities catalogued: 23
+Generated: 2026-07-08T13:12:19.618Z
+Capabilities catalogued: 25
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 78.3% |
-| Frontend | 41.3% |
-| Parity (backend **and** frontend both exist) | 39.1% |
+| Backend | 80% |
+| Frontend | 42% |
+| Parity (backend **and** frontend both exist) | 40% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 5 | Broken customer journey |
+| Critical | P1 | 6 | Broken customer journey |
 | High | P2 | 9 | Backend exists, frontend missing |
 | Medium | P3 | 1 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 1 | No test coverage |
+| Low | P6 | 2 | No test coverage |
 | Low | P7 | 6 | Documentation missing |
 
-**Rollup:** Critical 5 · High 9 · Medium 2 · Low 7
+**Rollup:** Critical 6 · High 9 · Medium 2 · Low 8
 
 ## Structural Findings
 
@@ -43,7 +43,7 @@ Capabilities catalogued: 23
 | Hidden features | 6 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 4 | Backend exists, zero frontend surface |
 | Duplicate systems | 2 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 5 | Priority P1 |
+| Broken journeys | 6 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -54,6 +54,13 @@ the fixed vocabulary from `docs/ENGINEERING_STANDARDS.md` §9 — never "100%
 complete", "bug free", or "guaranteed".
 
 ## Capabilities by Domain
+
+### affiliate-partner (2 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-AFF-001 | Affiliate Program: Join, Status, Payout, Leaderboard | ✓ | ✗ | ✓ | NOT READY | P1 |
+| CAP-AFF-002 | Outbound Sponsor/Affiliate Click Tracking | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 
 ### commercial-billing (3 capabilities)
 
