@@ -122,7 +122,7 @@ async function enrichIP(ioc, env) {
   try {
     const res = await fetch(
       `https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(ioc)}&maxAgeInDays=90&verbose`,
-      { headers: { Key: apiKey, Accept: 'application/json' }, cf: { cacheTtl: 3600 } }
+      { headers: { Key: apiKey, Accept: 'application/json' }, cf: { cacheTtl: 3600 }, signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) {
       return buildVerdict(ioc, 'ipv4', { source: 'abuseipdb', http_status: res.status,
@@ -172,7 +172,7 @@ async function enrichDomain(ioc, env) {
 
   try {
     const res = await fetch(`https://www.virustotal.com/api/v3/domains/${encodeURIComponent(ioc)}`, {
-      headers: { 'x-apikey': apiKey }, cf: { cacheTtl: 3600 }
+      headers: { 'x-apikey': apiKey }, cf: { cacheTtl: 3600 }, signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
       return buildVerdict(ioc, 'domain', { source: 'virustotal', http_status: res.status,
@@ -223,6 +223,7 @@ async function enrichHash(ioc, type, env) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    `query=get_info&hash=${encodeURIComponent(ioc)}`,
       cf:      { cacheTtl: 3600 },
+      signal:  AbortSignal.timeout(8000),
     });
     if (!res.ok) {
       return buildVerdict(ioc, type, { source: 'malwarebazaar', http_status: res.status,
@@ -288,7 +289,7 @@ async function enrichURL(ioc, env) {
     // VT URL lookup uses base64url of the URL as identifier
     const urlId = btoa(ioc).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     const res = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
-      headers: { 'x-apikey': apiKey }, cf: { cacheTtl: 3600 }
+      headers: { 'x-apikey': apiKey }, cf: { cacheTtl: 3600 }, signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
       return buildVerdict(ioc, 'url', { source: 'virustotal', http_status: res.status,

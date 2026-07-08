@@ -1056,6 +1056,18 @@ a{color:var(--accent);text-decoration:none}
 </script>
 <!-- Global Error Banner (hidden by default, shown by error boundary) -->
 <div id="global-error-banner" onclick="this.style.display='none'" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(239,68,68,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;text-align:center;backdrop-filter:blur(4px);cursor:pointer"></div>
+<!-- Cookie Consent Banner — hidden by default; shown by cdbInitConsentGate()
+     only when no prior choice is stored. Analytics/session-replay scripts
+     (GA4, Microsoft Clarity) do not load until "Accept" is clicked. -->
+<div aria-label="Cookie consent" id="cdb-cookie-consent" role="dialog" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#0f1420;border-top:1px solid rgba(0,212,255,.25);padding:16px 20px;box-shadow:0 -4px 24px rgba(0,0,0,.4);flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between">
+<div style="flex:1;min-width:240px;font-size:13px;line-height:1.5;color:#cbd5e1">
+🍪 We use essential cookies to run this platform. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) to understand usage. See our <a href="#" onclick="CDB_LEGAL.show('cookies');return false;" style="color:#00d4ff">Cookie Policy</a>.
+</div>
+<div style="display:flex;gap:10px;flex-shrink:0">
+<button onclick="cdbSetCookieConsent('rejected')" style="padding:9px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#cbd5e1;font-size:13px;font-weight:600;cursor:pointer">Reject non-essential</button>
+<button onclick="cdbSetCookieConsent('accepted')" style="padding:9px 16px;border-radius:6px;border:none;background:#00d4ff;color:#04121a;font-size:13px;font-weight:700;cursor:pointer">Accept</button>
+</div>
+</div>
 <!-- Announcement Bar v11 -->
 <div aria-label="Site Announcement" class="ann-bar" role="region" style="overflow:hidden;padding:7px 0">
 <span class="ann-marquee">
@@ -7731,6 +7743,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <a class="v14-footer-link" href="/sentinel-apex-marketplace.html">🛡 Marketplace</a>
 <a class="v14-footer-link-dim" href="/user-dashboard.html">📊 Dashboard</a>
 <a class="v14-footer-link-dim" href="/api-docs" target="_blank">📡 API Docs</a>
+<a class="v14-footer-link-dim" href="/status" target="_blank">🟢 System Status</a>
 </div>
 </div>
 <!-- Pages col -->
@@ -8254,9 +8267,13 @@ function trackAffiliate(program, linkId) {
   } catch {}
 }
 
-// ─── Google Analytics 4 — Fire page_view + custom events ─────────────────────
-// Replace G-XXXXXXXXXX with your GA4 Measurement ID
-(function initGA4() {
+// ─── Google Analytics 4 + Microsoft Clarity — consent-gated ──────────────────
+// The Cookie Policy modal (CDB_LEGAL 'cookies' body, below) states: "We use
+// essential cookies for authentication only. No third-party advertising
+// cookies." Both of these are third-party analytics/session-replay scripts —
+// they must not load until the visitor has actually accepted them via the
+// consent banner (#cdb-cookie-consent). See cdbInitConsentGate() below.
+function cdbLoadGA4() {
   const GA4_ID = 'G-E78VH3NJS6';
   if (!GA4_ID || GA4_ID === 'G-XXXXXXXXXX') return; // skip if not configured
   const s = document.createElement('script');
@@ -8272,14 +8289,52 @@ function trackAffiliate(program, linkId) {
     send_page_view: true,
     allow_ad_personalization_signals: false, // GDPR-friendly default
   });
-})();
+}
 
-// ─── Microsoft Clarity — session replay + heatmaps ───────────────────────────
-(function(c,l,a,r,i,t,y){
-  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-})(window, document, "clarity", "script", "xf1wpk7u1x");
+function cdbLoadClarity() {
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "xf1wpk7u1x");
+}
+
+// ─── Cookie consent gate ──────────────────────────────────────────────────────
+const CDB_CONSENT_KEY = 'cdb_cookie_consent'; // 'accepted' | 'rejected'
+
+function cdbLoadAnalyticsIfConsented() {
+  try {
+    if (localStorage.getItem(CDB_CONSENT_KEY) === 'accepted') {
+      cdbLoadGA4();
+      cdbLoadClarity();
+    }
+  } catch {}
+}
+
+function cdbSetCookieConsent(choice) {
+  try { localStorage.setItem(CDB_CONSENT_KEY, choice); } catch {}
+  const banner = document.getElementById('cdb-cookie-consent');
+  if (banner) banner.style.display = 'none';
+  if (choice === 'accepted') { cdbLoadGA4(); cdbLoadClarity(); }
+}
+window.cdbSetCookieConsent = cdbSetCookieConsent;
+
+function cdbInitConsentGate() {
+  let stored = null;
+  try { stored = localStorage.getItem(CDB_CONSENT_KEY); } catch {}
+  if (!stored) {
+    const banner = document.getElementById('cdb-cookie-consent');
+    if (banner) banner.style.display = 'flex';
+  } else if (stored === 'accepted') {
+    cdbLoadGA4();
+    cdbLoadClarity();
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', cdbInitConsentGate);
+} else {
+  cdbInitConsentGate();
+}
 
 // ─── Version Init — version.json first, /api/version fallback ───────────────
 // Priority order:

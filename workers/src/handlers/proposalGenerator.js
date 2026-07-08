@@ -170,7 +170,7 @@ function calculateROI(lead, packageId) {
 }
 
 // ── Proposal document builder ─────────────────────────────────────────────────
-function buildProposalDocument(lead, packageId, customizations = {}) {
+export function buildProposalDocument(lead, packageId, customizations = {}, env = {}) {
   const pkg = ENTERPRISE_PACKAGES[packageId] || ENTERPRISE_PACKAGES.PROFESSIONAL;
   const roi = calculateROI(lead, packageId);
   const now = new Date();
@@ -272,8 +272,16 @@ function buildProposalDocument(lead, packageId, customizations = {}) {
       support_response:   pkg.id === 'ENTERPRISE_SHIELD' ? '1 hour' : pkg.id === 'PROFESSIONAL' ? '4 hours' : '24 hours',
       support_channels:   ['Email', 'Dedicated Slack channel', pkg.id !== 'STARTER_PLUS' ? 'Phone' : null].filter(Boolean),
       data_retention:     '12 months',
-      data_residency:     'India (Cloudflare India PoP)',
-      security_compliance:['SOC 2 Type II (in progress)', 'ISO 27001 (in progress)', 'DPDP Act compliant'],
+      // Matches docs/SECURITY_QUESTIONNAIRE_PACK.md's disclosed answer, not a
+      // region no infrastructure config actually pins to (wrangler.toml has
+      // no D1 jurisdiction/region binding).
+      data_residency:     'Cloudflare global edge network — no dedicated regional jurisdiction pinning configured today (disclosed limitation for regulated buyers)',
+      // "SOC 2 Type II (in progress)" / "ISO 27001 (in progress)" were false —
+      // trustCenter.js's certifications list is honestly empty (no
+      // certification process has actually started). This is a generated
+      // sales proposal handed to prospective customers; it cannot claim a
+      // process that isn't real.
+      security_compliance:['No formal third-party certifications yet (SOC 2 / ISO 27001 roadmap available on request)', 'DPDP Act compliant'],
     },
 
     // Terms
@@ -344,7 +352,7 @@ export async function handleGenerateProposal(request, env, authCtx = {}) {
   const now2 = new Date();
   const sequentialProposalNumber = `CDB-${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, '0')}-${String(seqNum).padStart(4, '0')}`;
 
-  const doc      = buildProposalDocument(lead, package_id, { discount_pct, setup_fee, payment_terms, proposal_number: sequentialProposalNumber });
+  const doc      = buildProposalDocument(lead, package_id, { discount_pct, setup_fee, payment_terms, proposal_number: sequentialProposalNumber }, env);
   doc.notes      = notes;
   doc.lead_id    = lead_id;
 

@@ -472,6 +472,7 @@ export async function handleCheckoutInitiate(request, env, authCtx) {
             email:    email || '',
           },
         }),
+        signal: AbortSignal.timeout(8000),
       });
 
       if (rpRes.ok) {

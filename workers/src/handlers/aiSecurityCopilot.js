@@ -56,6 +56,12 @@
 
 import { ok, badRequest, fail } from '../lib/response.js';
 import { PROVIDERS, PROVIDER_CONFIG, routeAICall } from '../core/aiProviderRouter.js';
+import { detectPromptInjectionSignal, redactSecrets } from '../lib/promptSafety.js';
+
+// Re-exported for backward compatibility — implementations now live in
+// lib/promptSafety.js so mythosAIProvider.js and other AI-generation call
+// sites can share them instead of re-implementing.
+export { detectPromptInjectionSignal, redactSecrets };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SESSION_TTL      = 86400;   // 24h KV TTL
@@ -337,22 +343,7 @@ function classifyQuery(message) {
 // this only flags a message for logging/monitoring. The actual defense is
 // structural: the always-on "Untrusted Content Policy" in buildSystemPrompt()
 // plus frameToolOutput() delimiting retrieved data — see both below.
-const INJECTION_SIGNAL_PATTERNS = [
-  /ignore (all |any )?(previous|prior|above|earlier) instructions/i,
-  /disregard (your|the) (system|previous) prompt/i,
-  /you are (now|no longer) (DAN|a jailbroken|an unfiltered|unrestricted)/i,
-  /reveal (your|the) (system prompt|instructions|hidden prompt)/i,
-  /act as (if you (have|had) no|an? ai (with no|without) restrictions)/i,
-  /pretend (you have|to have) no (content policy|guidelines|restrictions)/i,
-  /\bDAN mode\b/i,
-  /developer mode\s*(enabled|on)?/i,
-  /bypass (your|the|all) (safety|content|security) (filters?|policy|restrictions)/i,
-  /respond only with|from now on you (must|will) (only|always)/i,
-];
-
-export function detectPromptInjectionSignal(message) {
-  return INJECTION_SIGNAL_PATTERNS.some(re => re.test(message));
-}
+// Implementation: lib/promptSafety.js (imported above, re-exported for callers).
 
 // ─── Tool registry ─────────────────────────────────────────────────────────────
 export const TOOL_REGISTRY = [
@@ -1916,23 +1907,7 @@ export function frameToolOutput(toolName, result) {
 }
 
 // ─── Output secret redaction (defense in depth) ───────────────────────────────
-// Narrow, high-confidence patterns only — broad redaction risks corrupting
-// legitimate security content (e.g. a CVE PoC snippet). This is a last-resort
-// net, not a substitute for keeping secrets out of tool output in the first place.
-const SECRET_PATTERNS = [
-  [/\bAKIA[0-9A-Z]{16}\b/g,                              '[REDACTED-AWS-ACCESS-KEY]'],
-  [/\bxox[baprs]-[0-9A-Za-z-]{10,}\b/g,                   '[REDACTED-SLACK-TOKEN]'],
-  [/\bBearer\s+[A-Za-z0-9._-]{20,}\b/g,                   'Bearer [REDACTED-TOKEN]'],
-  [/-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]+?-----END (RSA |EC |OPENSSH )?PRIVATE KEY-----/g, '[REDACTED-PRIVATE-KEY]'],
-  [/\bsk-[A-Za-z0-9]{20,}\b/g,                            '[REDACTED-API-KEY]'],
-];
-
-export function redactSecrets(text) {
-  if (typeof text !== 'string' || !text) return text;
-  let out = text;
-  for (const [pattern, replacement] of SECRET_PATTERNS) out = out.replace(pattern, replacement);
-  return out;
-}
+// Implementation: lib/promptSafety.js (imported above, re-exported for callers).
 
 // ─── Suggested actions (structured side-channel, never LLM-authored) ─────────
 // The assistant's final "message" is free-text prose synthesised by the LLM —

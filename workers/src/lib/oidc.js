@@ -55,7 +55,9 @@ export async function discoverOIDC(issuer, kv) {
     if (cached) return cached;
   }
 
-  const resp = await fetch(`${normalizedIssuer}/.well-known/openid-configuration`);
+  const resp = await fetch(`${normalizedIssuer}/.well-known/openid-configuration`, {
+    signal: AbortSignal.timeout(8000),
+  });
   if (!resp.ok) throw new Error(`OIDC discovery failed for ${normalizedIssuer}: HTTP ${resp.status}`);
   const doc = await resp.json();
 
@@ -74,7 +76,7 @@ async function getJWKS(jwksUri, kv) {
     const cached = await kv.get(cacheKey, 'json').catch(() => null);
     if (cached) return cached;
   }
-  const resp = await fetch(jwksUri);
+  const resp = await fetch(jwksUri, { signal: AbortSignal.timeout(8000) });
   if (!resp.ok) throw new Error(`JWKS fetch failed: HTTP ${resp.status}`);
   const jwks = await resp.json();
   if (kv) await kv.put(cacheKey, JSON.stringify(jwks), { expirationTtl: JWKS_CACHE_TTL }).catch(() => {});
@@ -111,6 +113,7 @@ export async function exchangeCode(discovery, { clientId, clientSecret, redirect
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
+    signal:  AbortSignal.timeout(8000),
   });
   if (!resp.ok) {
     const txt = await resp.text().catch(() => '');

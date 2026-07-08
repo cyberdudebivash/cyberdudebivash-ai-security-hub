@@ -17,15 +17,14 @@
  */
 import { buildFreshnessContract, PIPELINE_STATUS } from '../lib/contracts.js';
 import { getGodModeStatus } from '../services/mythosGodMode.js';
+import { isValidAdminKey } from '../auth/middleware.js';
 
 async function safe(fn, fallback = null) {
   try { return await fn(); } catch { return fallback; }
 }
 
 export async function handlePipelineHealth(request, env) {
-  const adminKey = request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key');
-  const isAdmin  = adminKey && env.ADMIN_KEY && adminKey === env.ADMIN_KEY;
-  if (!isAdmin) {
+  if (!isValidAdminKey(request, env)) {
     return Response.json({ success: false, error: 'Admin access required', hint: 'Provide x-admin-key header' }, { status: 403 });
   }
 

@@ -31,6 +31,7 @@ import {
   checkAIProviderHealth as routerHealthCheck,
   PROVIDERS,
 } from './aiProviderRouter.js';
+import { UNTRUSTED_INPUT_POLICY, frameUntrustedInput, redactSecrets } from '../lib/promptSafety.js';
 
 // ── Model registry (kept for backward compat) ─────────────────────────────────
 export const CLAUDE_MODELS = {
@@ -65,14 +66,14 @@ export async function generateExecutiveNarrative(env, {
 
   const prompt = `Generate a 3-paragraph enterprise security intelligence brief for:
 
-Target: ${target || 'the assessed system'}
+Target: ${frameUntrustedInput('target', target || 'the assessed system')}
 Service: ${service_name}
 Risk Score: ${riskScore}/100 (${riskLevel})
 Industry/Sector: ${sector}
-${extra_context ? `Context: ${extra_context}` : ''}
+${extra_context ? `Context: ${frameUntrustedInput('extra_context', extra_context)}` : ''}
 
 Key findings:
-${topFindings || '• Assessment complete — findings prioritized below'}
+${frameUntrustedInput('findings', topFindings || '• Assessment complete — findings prioritized below')}
 
 Requirements:
 Paragraph 1: Executive threat posture summary — current risk level, business exposure, immediate urgency (2-3 sentences). Include estimated financial impact in ₹ for Indian context.
@@ -83,12 +84,16 @@ Standards: Enterprise-grade precision. MITRE ATT&CK references (T####) where app
 
   const result = await routeAICall(env, {
     prompt,
+    system:      UNTRUSTED_INPUT_POLICY,
     task_type:   'executive',
     tier,
     max_tokens:  600,
     temperature: 0.2,
+    // Frontend safeFetch() hard-aborts scan requests at 8s (API_TIMEOUT_MS) —
+    // must return well inside that, leaving room for handler compute/D1 writes.
+    deadline_ms: 6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ── AI threat actor attribution ────────────────────────────────────────────────
@@ -99,8 +104,9 @@ export async function generateThreatAttribution(env, {
 }) {
   if (findings.length === 0) return null;
 
+  const findingsBlock = findings.slice(0, 5).map(f => `• ${f.title}: ${(f.description||'').slice(0,80)}`).join('\n');
   const prompt = `Based on these security findings in the ${sector} sector:
-${findings.slice(0, 5).map(f => `• ${f.title}: ${(f.description||'').slice(0,80)}`).join('\n')}
+${frameUntrustedInput('findings', findingsBlock)}
 
 Identify the top 2-3 most likely threat actors or attack campaigns relevant to these findings. For each provide:
 - Threat actor name (include nation-state attribution if applicable)
@@ -113,12 +119,14 @@ Be specific and evidence-based. Reference CISA advisories or recent campaigns.`;
 
   const result = await routeAICall(env, {
     prompt,
+    system:      UNTRUSTED_INPUT_POLICY,
     task_type:   'threat_intel',
     tier,
     max_tokens:  500,
     temperature: 0.1,
+    deadline_ms: 6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ── Remediation narrative ──────────────────────────────────────────────────────
@@ -132,9 +140,10 @@ export async function generateRemediationNarrative(env, {
   if (findings.length === 0) return null;
 
   const critHigh = findings.filter(f => ['CRITICAL','HIGH'].includes(f.severity)).slice(0, 5);
-  const prompt = `For ${org} in the ${sector} sector with risk score ${riskScore}/100, provide a structured remediation narrative for these ${critHigh.length} critical/high findings:
+  const findingsBlock = critHigh.map((f, i) => `${i+1}. [${f.severity}] ${f.title}\n   Remediation hint: ${(f.remediation||f.description||'').slice(0,100)}`).join('\n');
+  const prompt = `For ${frameUntrustedInput('org', org)} in the ${sector} sector with risk score ${riskScore}/100, provide a structured remediation narrative for these ${critHigh.length} critical/high findings:
 
-${critHigh.map((f, i) => `${i+1}. [${f.severity}] ${f.title}\n   Remediation hint: ${(f.remediation||f.description||'').slice(0,100)}`).join('\n')}
+${frameUntrustedInput('findings', findingsBlock)}
 
 Provide:
 1. Immediate actions (24-48h) — specific, executable steps with owner assignment
@@ -146,12 +155,14 @@ Be concise and actionable. Format for CISO presentation. Include ₹ cost estima
 
   const result = await routeAICall(env, {
     prompt,
+    system:      UNTRUSTED_INPUT_POLICY,
     task_type:   'executive',
     tier,
     max_tokens:  600,
     temperature: 0.2,
+    deadline_ms: 6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -168,10 +179,8 @@ export async function analyzeCodeSecurity(env, {
 
   const prompt = `Perform a thorough security code review for this ${language} code:
 
-${context ? `Context: ${context}\n\n` : ''}
-\`\`\`${language}
-${code.slice(0, 2000)}
-\`\`\`
+${context ? `Context: ${frameUntrustedInput('context', context)}\n\n` : ''}
+${frameUntrustedInput('code', '```' + language + '\n' + code.slice(0, 2000) + '\n```')}
 
 Analyze for:
 1. OWASP Top 10 vulnerabilities (injection, broken auth, XSS, CSRF, insecure deserialization, etc.)
@@ -191,12 +200,14 @@ Format: structured list. Be specific about line numbers and exact vulnerable pat
 
   const result = await routeAICall(env, {
     prompt,
+    system:       UNTRUSTED_INPUT_POLICY,
     task_type:    'code_review',
     tier,
     max_tokens,
     temperature:  0.1,
+    deadline_ms:  6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -214,14 +225,14 @@ export async function investigateForensics(env, {
 
   const prompt = `You are APEX NEXUS forensic investigator. Analyze this security incident:
 
-Incident Type: ${incident_type}
-Affected Systems: ${affected_systems.join(', ') || 'Unknown'}
+Incident Type: ${frameUntrustedInput('incident_type', incident_type)}
+Affected Systems: ${frameUntrustedInput('affected_systems', affected_systems.join(', ') || 'Unknown')}
 
 Indicators of Compromise (IOCs):
-${iocs || '• No IOCs provided'}
+${frameUntrustedInput('iocs', iocs || '• No IOCs provided')}
 
 Timeline Events:
-${events || '• No timeline provided'}
+${frameUntrustedInput('timeline', events || '• No timeline provided')}
 
 Provide:
 1. Attack vector analysis — how did the attacker gain initial access?
@@ -236,13 +247,15 @@ Be forensically precise. CERT-In 6-hour reporting obligation assessment required
 
   const result = await routeAICall(env, {
     prompt,
+    system:          UNTRUSTED_INPUT_POLICY,
     task_type:       'forensics',
     tier,
     max_tokens:      800,
     temperature:     0.1,
     chain_of_thought: true,
+    deadline_ms:     6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -259,7 +272,7 @@ export async function researchCVE(env, {
   const prompt = `Provide deep threat intelligence analysis for ${cve_id}:
 
 CVSS Score: ${cvss_score || 'Unknown'}
-Description: ${description.slice(0, 300) || 'Not provided'}
+Description: ${frameUntrustedInput('description', description.slice(0, 300) || 'Not provided')}
 
 Research and provide:
 1. Vulnerability technical details — root cause, attack vector, prerequisites
@@ -276,12 +289,14 @@ Cite real sources (NVD, CISA, vendor advisories). No fabrication.`;
 
   const result = await routeAICall(env, {
     prompt,
+    system:          UNTRUSTED_INPUT_POLICY,
     task_type:       'threat_intel',
     tier,
     max_tokens:      800,
     temperature:     0.1,
+    deadline_ms:     6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -301,13 +316,13 @@ export async function simulateRedTeam(env, {
 
   const prompt = `You are an elite red team operator. Simulate an attack scenario against:
 
-Target: ${target_profile?.name || 'unnamed organization'}
-Sector: ${target_profile?.sector || 'technology'}
-Tech Stack: ${target_profile?.tech_stack || 'unknown'}
+Target: ${frameUntrustedInput('target_name', target_profile?.name || 'unnamed organization')}
+Sector: ${frameUntrustedInput('target_sector', target_profile?.sector || 'technology')}
+Tech Stack: ${frameUntrustedInput('target_tech_stack', target_profile?.tech_stack || 'unknown')}
 Scope: ${scope}
 
 Known vulnerabilities:
-${topVulns || '• No specific vulnerabilities provided — simulate common attack surface'}
+${frameUntrustedInput('findings', topVulns || '• No specific vulnerabilities provided — simulate common attack surface')}
 
 Design a realistic attack scenario:
 1. Reconnaissance approach (OSINT sources, scanning methodology)
@@ -325,13 +340,15 @@ This is for authorized red team planning and defensive purposes.`;
 
   const result = await routeAICall(env, {
     prompt,
+    system:          UNTRUSTED_INPUT_POLICY,
     task_type:       'red_team',
     tier,
     max_tokens:      900,
     temperature:     0.25,
     chain_of_thought: true,
+    deadline_ms:     6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -346,14 +363,14 @@ export async function generateComplianceNarrative(env, {
 }) {
   const critCount = findings.filter(f => f.severity === 'CRITICAL').length;
 
-  const prompt = `As APEX NEXUS compliance analyst, generate a compliance gap assessment narrative for a ${org_type}:
+  const prompt = `As APEX NEXUS compliance analyst, generate a compliance gap assessment narrative for a ${frameUntrustedInput('org_type', org_type)}:
 
 Risk Score: ${risk_score}/100
 Critical Findings: ${critCount}
 Frameworks in scope: ${frameworks.join(', ')}
 
 Key findings:
-${findings.slice(0, 5).map(f => `• [${f.severity}] ${f.title}`).join('\n') || '• No findings provided'}
+${frameUntrustedInput('findings', findings.slice(0, 5).map(f => `• [${f.severity}] ${f.title}`).join('\n') || '• No findings provided')}
 
 For each applicable framework, provide:
 1. Current compliance posture (estimate %)
@@ -371,12 +388,14 @@ Be specific about article/clause numbers. No generic statements.`;
 
   const result = await routeAICall(env, {
     prompt,
+    system:      UNTRUSTED_INPUT_POLICY,
     task_type:   'compliance_audit',
     tier,
     max_tokens:  700,
     temperature: 0.15,
+    deadline_ms: 6000,
   });
-  return result?.content || null;
+  return result?.content ? redactSecrets(result.content) : null;
 }
 
 // ── Health check ──────────────────────────────────────────────────────────────

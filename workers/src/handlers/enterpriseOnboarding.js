@@ -6,6 +6,8 @@
  * GET  /api/enterprise/contacts     → dedicated enterprise support contacts + SLA
  */
 
+import { PRICING_CONFIG } from '../config/pricingConfig.js';
+
 const PLATFORM_VERSION = '40.0.0';
 
 const ENTERPRISE_CONTACTS = {
@@ -177,12 +179,15 @@ export async function handleEnterpriseWelcome(request, env) {
         gst_invoicing:        'Auto GST invoices — IGST/CGST/SGST, SAC 998313, ITC-eligible',
         api_economy:          'Versioned REST API (v1), x-api-key auth, unlimited ENTERPRISE quota',
       },
+      // Sourced from config/pricingConfig.js (the platform's declared "immutable
+      // source of truth") instead of a hand-typed copy — all 4 paid figures
+      // here had drifted from the real, currently-charged amounts.
       pricing: {
         free:       '₹0 — 3 scans/day, 5 CVEs',
-        starter:    '₹999/mo — 25 scans, AI analysis, PDF reports',
-        pro:        '₹2,999/mo — Unlimited scans, Full AI Suite, SIEM export, DPDP',
-        enterprise: '₹25,000/mo — MSSP white-label, 4h SLA, dedicated account manager',
-        mssp:       '₹75,000/mo — Full white-label platform, revenue share (60/40)',
+        starter:    `${PRICING_CONFIG.plans.STARTER.label} — 50 scans, AI analysis, PDF reports`,
+        pro:        `${PRICING_CONFIG.plans.PRO.label} — Unlimited scans, Full AI Suite, SIEM export, DPDP`,
+        enterprise: `${PRICING_CONFIG.plans.ENTERPRISE.label} — dedicated support, unlimited scans, 20 API keys`,
+        mssp:       `${PRICING_CONFIG.plans.MSSP.label} — multi-tenant SOC, unlimited scans and API keys`,
         annual:     '20% discount on annual billing for all paid plans',
       },
       compliance: ['DPDP Act 2023 (India)', 'OWASP API Top 10', 'Zero Trust Architecture'],

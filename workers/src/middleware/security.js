@@ -42,7 +42,10 @@ const POWERED_BY_HEADERS = {
   'X-Powered-By':    'CYBERDUDEBIVASH AI Security Hub v40.0',
   'X-API-Version':   '40.0.0',
   'X-Security-Hub':  'cyberdudebivash.in',
-  'X-Zero-Trust':    'enforced',
+  // X-Zero-Trust: enforced was removed — it asserted a Zero Trust architecture
+  // that doesn't exist in this codebase (RBAC covers a handful of handlers,
+  // authorization is still largely a single-key/owner-email bypass). Don't
+  // claim controls a technical buyer's review would find aren't there.
   'X-Platform':      'AI-Native Cyber Defense | Enterprise-Grade Intelligence',
   'X-Support':       'support@cyberdudebivash.in | SLA: enterprise@cyberdudebivash.in',
 };

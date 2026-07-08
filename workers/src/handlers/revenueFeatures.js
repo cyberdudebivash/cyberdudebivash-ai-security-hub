@@ -30,6 +30,7 @@
  */
 
 import { enrichIOC, enrichIOCBatch }               from '../services/iocEnrichmentEngine.js';
+import { isValidAdminKey }                          from '../auth/middleware.js';
 import { runASMScan, getASMReport }                 from '../services/asmEngine.js';
 import { runBrandScan, generateTyposquattingVariants } from '../services/brandProtectionEngine.js';
 import {
@@ -469,9 +470,7 @@ export async function handleAttributeIOC(request, env, authCtx) {
 }
 
 export async function handleSeedThreatActors(request, env, authCtx) {
-  const apiKey  = request.headers.get('x-api-key') || '';
-  const isAdmin = (env.ADMIN_KEY && apiKey === env.ADMIN_KEY);
-  if (!isAdmin) return json({ success: false, error: 'Admin access required' }, 403);
+  if (!isValidAdminKey(request, env)) return json({ success: false, error: 'Admin access required' }, 403);
 
   try {
     const result = await seedThreatActors(env);

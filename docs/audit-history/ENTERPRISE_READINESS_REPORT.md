@@ -2,6 +2,17 @@
 **Phase D Deliverable** | **Version:** v1.0 | **Date:** 2026-06-11  
 **Commit:** `8d26b01` | **Worker:** `c300530c-b710-45a6-9148-c36ca5f1f4b9`
 
+> **⚠️ SUPERSEDED (2026-07-07):** This is a point-in-time snapshot, kept
+> as-is for the historical record — it is not edited retroactively. The
+> "SOC 2 Type II — In Progress, formal audit Q3 2026" and "ISO 27001 —
+> Planning" claims below never had a certification process actually behind
+> them and are **false as of this note**. The current, live, honest answer
+> lives in code (`workers/src/handlers/trustCenter.js`'s `certifications: []`
+> — no certifications obtained, none in progress) and is disclosed
+> consistently in `FORTUNE500_SECURITY_TRUST_OVERVIEW.md` and
+> `docs/SECURITY_QUESTIONNAIRE_PACK.md`. Do not cite this report's compliance
+> matrix in any customer-facing context.
+
 ---
 
 ## Executive Summary

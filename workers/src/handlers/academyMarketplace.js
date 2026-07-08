@@ -96,6 +96,7 @@ export async function handlePurchaseAcademy(request, env) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${btoa(`${rzKey}:${rzSecret}`)}` },
         body: JSON.stringify({ amount, currency: 'INR', receipt: `acad_${product_id}_${Date.now()}`, notes: { product_id, email } }),
+        signal: AbortSignal.timeout(8000),
       });
       if (r.ok) razorpayOrderId = (await r.json()).id;
     }

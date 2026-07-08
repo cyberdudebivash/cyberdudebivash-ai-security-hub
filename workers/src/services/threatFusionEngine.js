@@ -201,7 +201,9 @@ export async function shodanLookup(target) {
     let ip = target;
     if (!/^\d+\.\d+\.\d+\.\d+$/.test(target)) {
       try {
-        const dnsResp = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(target)}&type=A`);
+        const dnsResp = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(target)}&type=A`, {
+          signal: AbortSignal.timeout(5000),
+        });
         const dnsData = await dnsResp.json();
         ip = dnsData.Answer?.[0]?.data || target;
       } catch { ip = target; }

@@ -323,6 +323,7 @@ async function createRazorpaySubscription(env, tierKey, def, email, tenantId) {
       // handler to apply the tier upgrade to the right account.
       notes:    { plan: tierKey, email: email || '', tenant_id: tenantId, platform: 'cyberdudebivash.in' },
     }),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!res.ok) {

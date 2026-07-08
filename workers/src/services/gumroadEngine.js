@@ -89,6 +89,7 @@ export async function verifyGumroadLicense(env, productPermalink, licenseKey) {
         license_key:       licenseKey,
         increment_uses_count: 'false',
       }),
+      signal: AbortSignal.timeout(8000),
     });
 
     const data = await resp.json();

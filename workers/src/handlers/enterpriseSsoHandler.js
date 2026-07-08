@@ -46,6 +46,7 @@ async function discoverOIDC(discoveryUrl) {
     const res = await fetch(discoveryUrl, {
       headers: { Accept: 'application/json' },
       cf: { cacheTtl: 3600 },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -229,6 +230,7 @@ export async function handleEnterpriseSSoCallback(request, env) {
         client_id:     config.client_id,
         client_secret: config.client_secret,
       }).toString(),
+      signal: AbortSignal.timeout(8000),
     });
     if (!tokenRes.ok) {
       const errText = await tokenRes.text().catch(() => 'token_exchange_failed');
@@ -245,6 +247,7 @@ export async function handleEnterpriseSSoCallback(request, env) {
     const userInfoEndpoint = discovery.userinfo_endpoint;
     const uiRes = await fetch(userInfoEndpoint, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      signal: AbortSignal.timeout(8000),
     });
     userInfo = uiRes.ok ? await uiRes.json() : {};
   } catch {
