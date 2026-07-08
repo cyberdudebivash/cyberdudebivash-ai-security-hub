@@ -301,8 +301,17 @@ async function handleAddTeamMember(req, env, authCtx) {
   const { user_id: targetUser, email, role } = body;
   if (!targetUser) return Response.json({ error: 'user_id required' }, { status: 400 });
   const assignedRole = ROLES.includes(role) ? role : 'VIEWER';
-  const callerRole = authCtx?.role || 'VIEWER';
-  if (!['OWNER','ADMIN'].includes(callerRole)) return Response.json({ error: 'ADMIN or OWNER required' }, { status: 403 });
+  // Was gated on authCtx.role being 'OWNER'/'ADMIN' (this file's own ROLES
+  // vocabulary), but authCtx.role is derived by withAuthAliases() and only
+  // ever holds lowercase 'admin'/'mssp_admin'/'partner'/undefined — it can
+  // never equal 'OWNER' or 'ADMIN'. Nothing else ever seeds an
+  // org_team_members row with an OWNER role either, so this was a permanent
+  // 403 for every caller, including the platform's real admin: team
+  // management was entirely unusable. Every query here is already scoped to
+  // orgId(authCtx) — the caller's own org, never a request parameter — so
+  // there is no cross-tenant path through this endpoint; any authenticated
+  // caller managing their own org's team is exactly as safe as
+  // handleListTeamMembers below (which never had a role gate at all).
   const id = genId('tm');
   await D.prepare(
     `INSERT OR REPLACE INTO org_team_members (id, org_id, user_id, email, role, invited_by) VALUES (?, ?, ?, ?, ?, ?)`
@@ -323,8 +332,10 @@ async function handleListTeamMembers(req, env, authCtx) {
 async function handleRemoveTeamMember(req, env, authCtx, memberId) {
   const deny = requireAuth(authCtx); if (deny) return deny;
   const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
-  const callerRole = authCtx?.role || 'VIEWER';
-  if (!['OWNER','ADMIN'].includes(callerRole)) return Response.json({ error: 'ADMIN or OWNER required' }, { status: 403 });
+  // See handleAddTeamMember above: the OWNER/ADMIN authCtx.role check this
+  // used to have could never pass (that field is never populated with this
+  // file's uppercase role vocabulary) and this query is already scoped to
+  // the caller's own org, so no extra gate is needed here.
   const r = await D.prepare(`DELETE FROM org_team_members WHERE id=? AND org_id=?`).bind(memberId, orgId(authCtx)).run();
   if (!r?.meta?.changes) return Response.json({ error: 'Member not found' }, { status: 404 });
   return Response.json({ success: true, removed: memberId });
