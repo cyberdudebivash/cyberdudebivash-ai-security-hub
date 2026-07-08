@@ -5982,6 +5982,15 @@ window.cdbBookAssessment = async function() {
 <span id="current-plan-pct" style="font-size:11px;color:var(--text-muted)"></span>
 </div>
 </div>
+<!-- Coupon code -->
+<div style="text-align:center;margin-bottom:24px">
+<a href="javascript:void(0)" onclick="cdbToggleCouponInput()" id="coupon-toggle-link" style="color:var(--accent);font-size:12px;font-weight:700;text-decoration:underline">Have a coupon code?</a>
+<div id="coupon-input-row" style="display:none;margin-top:10px;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap">
+<input type="text" id="coupon-code-input" placeholder="Enter coupon code" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;color:var(--text);font-size:13px;text-transform:uppercase;width:180px" maxlength="32">
+<button onclick="cdbApplyCoupon()" style="background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);color:var(--accent);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Apply</button>
+<span id="coupon-status" style="font-size:12px"></span>
+</div>
+</div>
 <!-- 4-column plan grid -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:32px">
 <!-- FREEMIUM -->
@@ -11014,6 +11023,29 @@ const PLAN_INFO = {
   ENTERPRISE: { label: 'Enterprise', price: '₹4,999', amount: 499900, color: '#f59e0b', emoji: '🏢', desc: 'Multi-user · 20 API Keys · Dedicated Support' },
 };
 
+window.cdbToggleCouponInput = function() {
+  const row  = document.getElementById('coupon-input-row');
+  const link = document.getElementById('coupon-toggle-link');
+  if (!row) return;
+  const showing = row.style.display === 'flex';
+  row.style.display = showing ? 'none' : 'flex';
+  if (link) link.style.display = showing ? '' : 'none';
+};
+
+// Applied at checkout time (cdbStartSubscriptionAuto) — validated server-side
+// in handleCreateOrder; this is just capturing what the customer typed, never
+// computing a discount client-side.
+window.cdbApplyCoupon = function() {
+  const input  = document.getElementById('coupon-code-input');
+  const status = document.getElementById('coupon-status');
+  const code   = (input?.value || '').trim().toUpperCase();
+  window.CDB_COUPON_CODE = code || null;
+  if (status) {
+    status.style.color = code ? '#10b981' : '#94a3b8';
+    status.textContent = code ? ('✓ "' + code + '" will be applied at checkout') : '';
+  }
+};
+
 function openSubModal() {
   const overlay = document.getElementById('sub-modal-overlay');
   if (overlay) overlay.style.display = 'flex';
@@ -11048,11 +11080,22 @@ async function cdbStartSubscriptionAuto(planKey) {
         plan: planKey,
         email,
         amount_inr: plan.price_inr,
+        coupon_code: window.CDB_COUPON_CODE || undefined,
       }),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      // A bad/expired/exhausted coupon must not silently fall through to
+      // manual payment (full price, no discount) — tell the customer and
+      // let them retry without it, exactly like any other checkout error.
+      if (err?.code === 'INVALID_COUPON') {
+        if (btn) { btn.textContent = origText; btn.disabled = false; }
+        const status = document.getElementById('coupon-status');
+        if (status) { status.style.color = '#f87171'; status.textContent = '✗ ' + (err.error || 'Invalid coupon'); }
+        else alert(err.error || 'Invalid coupon code');
+        return;
+      }
       // Graceful fallback to manual payment if gateway not configured yet
       if (err?.fallback || res.status === 502) {
         console.warn('[CDB] Razorpay not configured — falling back to manual payment');

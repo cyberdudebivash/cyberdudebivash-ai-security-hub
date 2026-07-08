@@ -2916,6 +2916,24 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleOpsReport(request, env, authCtx), request));
     }
 
+    // Discount coupons — server-authoritative, applied in payments.js handleCreateOrder
+    if (path === '/api/admin/coupons' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const { handleAdminListCoupons } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminListCoupons(request, env, authCtx), request));
+    }
+    if (path === '/api/admin/coupons' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const { handleAdminCreateCoupon } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminCreateCoupon(request, env, authCtx), request));
+    }
+    if (path.match(/^\/api\/admin\/coupons\/([^/]+)$/) && method === 'DELETE') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const code = path.split('/').pop();
+      const { handleAdminDeactivateCoupon } = await import('./lib/coupons.js');
+      return withSecurityHeaders(withCors(await handleAdminDeactivateCoupon(request, env, authCtx, code), request));
+    }
+
     // Legacy Platform Observability
     if (path === '/api/platform/health/deep' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
