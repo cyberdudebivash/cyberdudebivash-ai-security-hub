@@ -268,7 +268,7 @@ import {
   handleLinkedInToday, handleRunLinkedIn,
 } from './handlers/growth.js';
 import { runLinkedInAutomation }  from './services/upsellEngine.js';
-import { runDripAutomation }   from './services/emailEngine.js';
+import { runDripAutomation, runEmailDlqRetry }   from './services/emailEngine.js';
 import { runSalesPipeline }    from './services/salesEngine.js';
 import { runContentAutomation as runContentPipeline } from './services/contentEngine.js';
 
@@ -2983,6 +2983,13 @@ export async function routeRequest(request, env, ctx, requestId) {
       const code = path.split('/').pop();
       const { handleAdminDeleteCoupon } = await import('./lib/coupons.js');
       return withSecurityHeaders(withCors(await handleAdminDeleteCoupon(request, env, authCtx, code), request));
+    }
+
+    // Email DLQ — ops visibility into undeliverable emails (Task 3 Phase 1)
+    if (path === '/api/admin/email-dlq' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
+      const { handleAdminListEmailDlq } = await import('./services/emailEngine.js');
+      return withSecurityHeaders(withCors(await handleAdminListEmailDlq(request, env, authCtx), request));
     }
 
     // Legacy Platform Observability
@@ -8832,6 +8839,12 @@ ctx.waitUntil(
         // 1. Run email drip automation (send due sequence emails)
         const dripResult = await runDripAutomation(env);
         console.log('[CRON] GTM Drip Emails:', JSON.stringify(dripResult));
+
+        // 1b. Retry emails that failed on every provider (Task 3 Phase 1 DLQ)
+        const dlqResult = await runEmailDlqRetry(env);
+        if (dlqResult.retried > 0) {
+          console.log('[CRON] Email DLQ Retry:', JSON.stringify(dlqResult));
+        }
 
         // 2. Run enterprise sales pipeline (detect + generate outreach)
 

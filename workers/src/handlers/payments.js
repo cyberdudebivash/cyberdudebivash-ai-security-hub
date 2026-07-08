@@ -24,7 +24,7 @@ import {
 import { generateHTMLReport } from '../lib/htmlReport.js';
 import { buildReport }        from '../lib/reportEngine.js';
 import { trackEvent }         from './analytics.js';
-import { sendPurchaseConfirmation } from '../services/emailEngine.js';
+import { sendPurchaseConfirmation, sendPaymentFailedEmail } from '../services/emailEngine.js';
 import { createInvoice }            from '../services/v24/billingEngine.js';
 import { triggerPostPurchase }      from '../services/lifecycleEngine.js';
 import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
@@ -1083,6 +1083,7 @@ export async function handleRazorpayWebhook(request, env) {
           `SELECT id, email, amount, module FROM payments WHERE razorpay_order_id = ? LIMIT 1`
         ).bind(orderId).first().catch(() => null);
         if (pRow) {
+          const reason = payload.error?.description || 'payment_failed';
           await env.DB.prepare(
             `INSERT OR IGNORE INTO payment_recovery
              (id, payment_id, order_id, email, amount_inr, reason, status, max_attempts, next_retry_at, created_at)
@@ -1091,9 +1092,20 @@ export async function handleRazorpayWebhook(request, env) {
             'pr_' + Date.now().toString(36),
             pRow.id, orderId, pRow.email || '',
             Math.round((pRow.amount || 0) / 100),
-            payload.error?.description || 'payment_failed',
+            reason,
           ).run().catch((e) => console.error('[Webhook] payment_recovery insert error', e?.message));
           console.log('[Webhook] payment.failed → recovery seeded for', orderId, pRow.email);
+
+          // Notify the customer — previously this webhook was entirely silent
+          // to the customer beyond the recovery row.
+          if (pRow.email) {
+            const productName = MODULE_PRICES[pRow.module]?.name || PACKAGE_PRICES[pRow.module]?.name
+              || (pRow.module ? pRow.module.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null);
+            sendPaymentFailedEmail(env, {
+              to: pRow.email, productName,
+              amountInr: Math.round((pRow.amount || 0) / 100), reason,
+            }).catch(() => {});
+          }
         }
       } catch (e) {
         console.error('[Webhook] payment.failed recovery pipeline error', e?.message);

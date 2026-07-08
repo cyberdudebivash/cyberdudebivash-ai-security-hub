@@ -18,7 +18,7 @@ import { parseBody } from '../middleware/validation.js';
 import { inspectForAttacks } from '../middleware/security.js';
 import { sendTestAlert } from '../lib/alerts.js';
 import { issueMFAChallenge } from './mfa.js';
-import { sendEmail } from '../services/emailEngine.js';
+import { sendEmail, sendSuspiciousLoginEmail } from '../services/emailEngine.js';
 
 const CONTACT_EMAIL = 'contact@cyberdudebivash.in';
 const PLATFORM_URL  = 'https://tools.cyberdudebivash.com';
@@ -252,7 +252,28 @@ export async function handleLogin(request, env) {
   // Issue tokens
   const accessToken = await createAccessToken(user, env.JWT_SECRET);
   const refreshData = await createRefreshToken();
+
+  // Suspicious-login detection: compare this request's IP against the most
+  // recent known IP for this user (refresh_tokens.ip_address is already
+  // recorded on every login — no schema change needed). Only alerts when a
+  // prior session exists and the IP genuinely changed; never blocks login.
+  // Note: MFA-protected logins return earlier above before a real session is
+  // issued, so this check only covers non-MFA accounts in this phase.
+  const priorSession = await env.DB.prepare(
+    `SELECT ip_address FROM refresh_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(user.id).first().catch(() => null);
+
   await storeRefreshToken(env.DB, user.id, refreshData, ip, getUA(request));
+
+  if (priorSession?.ip_address && priorSession.ip_address !== 'unknown' && ip !== 'unknown' && priorSession.ip_address !== ip) {
+    sendSuspiciousLoginEmail(env, {
+      to: user.email,
+      ip,
+      country: request.headers.get('CF-IPCountry') || 'Unknown',
+      userAgent: getUA(request),
+      previousIp: priorSession.ip_address,
+    }).catch(() => {});
+  }
 
   return Response.json({
     success:       true,

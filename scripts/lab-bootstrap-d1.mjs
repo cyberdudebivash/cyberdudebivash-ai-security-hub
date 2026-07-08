@@ -70,6 +70,7 @@ const REPLAY = [
   'schema_revenue_autopilot.sql',
   join('migrations', 'phase2_soc_mssp_safe.sql'),
   'schema_coupons.sql',
+  'schema_email_dlq.sql',
 ];
 
 // Split SQL into statements: semicolons end statements except inside

@@ -3,7 +3,7 @@
 // GTM Growth Engine Phase 3: Automated 4-Day Drip Sequence
 // ═══════════════════════════════════════════════════════════════════════════
 
-
+import { ok, fail } from '../lib/response.js';
 
 // ── Sequence configuration ───────────────────────────────────────────────────
 export const DRIP_SEQUENCES = {
@@ -72,6 +72,36 @@ const BASE_URL     = 'https://cyberdudebivash.in';
 const TOOLS_URL    = 'https://tools.cyberdudebivash.com';
 const UPGRADE_URL  = `${BASE_URL}/pricing`;
 const UNSUBSCRIBE_URL = `${BASE_URL}/unsubscribe`;
+
+// ── Shared HTML layout (Task 3 Phase 1) ─────────────────────────────────────
+// New templates should build their body HTML and pass it here instead of
+// hand-rolling the DOCTYPE/table/header boilerplate every template below
+// this comment still repeats individually. The existing templates are
+// intentionally NOT migrated to this helper — they're already shipped,
+// revenue-facing emails, and this environment has no way to render/screenshot
+// an HTML email to verify a refactor didn't introduce a visual regression.
+// New event types added going forward should use this helper.
+export function renderEmailLayout({ headerGradient = 'linear-gradient(135deg,#1e40af,#7c3aed)', headerTitle, headerSubtitle = '', bodyHtml }) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0e1a">
+<tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937;overflow:hidden">
+  <tr><td style="background:${headerGradient};padding:32px 40px;text-align:center">
+    <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.5px">${headerTitle}</div>
+    ${headerSubtitle ? `<div style="font-size:14px;color:#bfdbfe;margin-top:6px">${headerSubtitle}</div>` : ''}
+  </td></tr>
+  <tr><td style="padding:40px">
+    ${bodyHtml}
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EMAIL TEMPLATES
@@ -1105,6 +1135,115 @@ export async function sendEmail(env, { to, subject, html, text, replyTo = REPLY_
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DEAD LETTER QUEUE (Task 3 Phase 1)
+// ─────────────────────────────────────────────────────────────────────────────
+// Before this, a send that failed on both Resend and MailChannels was only
+// ever console.error'd — the email content was gone with no way to inspect
+// or redeliver it. sendEmailWithRetry() persists that failure to email_dlq
+// instead, and runEmailDlqRetry() (cron-driven, alongside runDripAutomation)
+// re-attempts pending rows with a bounded retry count.
+async function ensureEmailDlqTable(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS email_dlq (
+    id              TEXT PRIMARY KEY,
+    to_email        TEXT NOT NULL,
+    subject         TEXT NOT NULL,
+    html            TEXT NOT NULL,
+    text            TEXT,
+    event_type      TEXT NOT NULL DEFAULT 'generic',
+    attempts        INTEGER NOT NULL DEFAULT 1,
+    last_error      TEXT,
+    status          TEXT NOT NULL DEFAULT 'pending_retry',
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    last_attempt_at TEXT,
+    resolved_at     TEXT
+  )`).run();
+}
+
+const MAX_DLQ_ATTEMPTS = 5;
+
+/**
+ * Send an email; on total failure (every provider in sendEmail's cascade
+ * failed), persist it to email_dlq for a later cron retry instead of
+ * silently dropping it. Same call signature as sendEmail() plus an optional
+ * eventType tag for DLQ/admin visibility.
+ */
+export async function sendEmailWithRetry(env, { to, subject, html, text, replyTo, eventType = 'generic' }) {
+  const result = await sendEmail(env, { to, subject, html, text, replyTo });
+  if (result.success || !env?.DB) return result;
+
+  try {
+    await ensureEmailDlqTable(env.DB);
+    await env.DB.prepare(`
+      INSERT INTO email_dlq (id, to_email, subject, html, text, event_type, attempts, last_error, status, created_at, last_attempt_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'pending_retry', datetime('now'), datetime('now'))
+    `).bind(
+      crypto.randomUUID(), to, subject, html, text || '', eventType,
+      result.error || `provider=${result.provider}${result.status ? ' status=' + result.status : ''}`,
+    ).run();
+  } catch (e) {
+    console.error('[emailEngine] DLQ insert failed:', e.message);
+  }
+  return result;
+}
+
+/**
+ * Cron-driven DLQ sweep — retries pending_retry rows, marks them recovered
+ * or (after MAX_DLQ_ATTEMPTS) failed_permanent.
+ */
+export async function runEmailDlqRetry(env, limit = 20) {
+  if (!env?.DB) return { retried: 0, recovered: 0, permanentlyFailed: 0 };
+  await ensureEmailDlqTable(env.DB).catch(() => {});
+
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM email_dlq WHERE status = 'pending_retry' ORDER BY created_at ASC LIMIT ?`
+  ).bind(limit).all().catch(() => ({ results: [] }));
+
+  const out = { retried: 0, recovered: 0, permanentlyFailed: 0 };
+  for (const row of results || []) {
+    out.retried++;
+    const result = await sendEmail(env, { to: row.to_email, subject: row.subject, html: row.html, text: row.text });
+    if (result.success) {
+      out.recovered++;
+      await env.DB.prepare(
+        `UPDATE email_dlq SET status = 'recovered', resolved_at = datetime('now') WHERE id = ?`
+      ).bind(row.id).run().catch(() => {});
+      continue;
+    }
+    const attempts = (row.attempts || 1) + 1;
+    const lastError = result.error || `provider=${result.provider}${result.status ? ' status=' + result.status : ''}`;
+    if (attempts >= MAX_DLQ_ATTEMPTS) {
+      out.permanentlyFailed++;
+      await env.DB.prepare(
+        `UPDATE email_dlq SET status = 'failed_permanent', attempts = ?, last_error = ?, last_attempt_at = datetime('now') WHERE id = ?`
+      ).bind(attempts, lastError, row.id).run().catch(() => {});
+    } else {
+      await env.DB.prepare(
+        `UPDATE email_dlq SET attempts = ?, last_error = ?, last_attempt_at = datetime('now') WHERE id = ?`
+      ).bind(attempts, lastError, row.id).run().catch(() => {});
+    }
+  }
+  return out;
+}
+
+// ── GET /api/admin/email-dlq — ops visibility into undeliverable emails ────
+export async function handleAdminListEmailDlq(request, env, authCtx) {
+  if (authCtx?.isAdmin !== true) return fail(request, 'Admin access required', 403, 'ADMIN_ONLY');
+  if (!env.DB) return ok(request, { rows: [] });
+  await ensureEmailDlqTable(env.DB).catch(() => {});
+
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status');
+  const limit = Math.min(parseInt(url.searchParams.get('limit'), 10) || 50, 200);
+
+  const query = status
+    ? env.DB.prepare(`SELECT id, to_email, subject, event_type, attempts, last_error, status, created_at, last_attempt_at, resolved_at FROM email_dlq WHERE status = ? ORDER BY created_at DESC LIMIT ?`).bind(status, limit)
+    : env.DB.prepare(`SELECT id, to_email, subject, event_type, attempts, last_error, status, created_at, last_attempt_at, resolved_at FROM email_dlq ORDER BY created_at DESC LIMIT ?`).bind(limit);
+
+  const { results } = await query.all().catch(() => ({ results: [] }));
+  return ok(request, { rows: results || [], count: (results || []).length });
+}
+
 /**
  * Track email open/click event
  */
@@ -1315,10 +1454,119 @@ export async function sendPurchaseConfirmation(env, {
 </table>
 </body></html>`;
 
-  return sendEmail(env, {
+  return sendEmailWithRetry(env, {
     to,
     subject,
     html,
     text: `Purchase Confirmed: ${productName}\nAmount: ₹${gstInclusive}\nPayment ID: ${paymentId}\n\n${downloadUrl ? `Download: ${BASE_URL}${downloadUrl}` : 'Access your purchase at ' + BASE_URL}\n\nCYBERDUDEBIVASH PRIVATE LIMITED · GST: 21ARKPN8270G1ZP`,
+    eventType: 'purchase_confirmation',
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TASK 3 PHASE 1 — NEW EVENT TYPES (previously silent to the customer)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Payment failed — the Razorpay webhook already seeds a payment_recovery row
+ * on payment.failed (handlers/payments.js) but never told the customer.
+ * No charge occurred; this is purely informational + a retry nudge.
+ */
+export async function sendPaymentFailedEmail(env, { to, productName, amountInr, reason }) {
+  if (!to) return { success: false, reason: 'missing_params' };
+
+  const subject = `⚠️ Payment Failed — ${productName || 'Your Order'} | CYBERDUDEBIVASH`;
+  const bodyHtml = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#f1f5f9">Payment Didn't Go Through</h2>
+    <p style="margin:0 0 20px;color:#94a3b8;font-size:15px">We couldn't process your payment for <strong style="color:#e2e8f0">${productName || 'your order'}</strong>${amountInr ? ` (₹${Number(amountInr).toLocaleString('en-IN')})` : ''}.</p>
+    <div style="background:#1a0808;border:1px solid #ef4444;border-radius:8px;padding:16px;margin-bottom:24px">
+      <p style="margin:0;color:#fca5a5;font-size:14px">${reason ? String(reason).slice(0, 200) : 'The payment provider declined this transaction.'}</p>
+    </div>
+    <p style="color:#94a3b8;font-size:14px;line-height:1.7">No charge was made — nothing on your account was affected. You can try again anytime.</p>
+    <div style="text-align:center;margin:28px 0">
+      <a href="${BASE_URL}/pricing" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Try Again →</a>
+    </div>
+    <hr style="border:none;border-top:1px solid #1f2937;margin:28px 0">
+    <p style="color:#6b7280;font-size:13px;margin:0">Questions? Reply to this email or WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong></p>`;
+
+  const html = renderEmailLayout({
+    headerGradient: 'linear-gradient(135deg,#7c1d1d,#1e40af)',
+    headerTitle: '⚠️ Payment Failed',
+    bodyHtml,
+  });
+  const text = `Payment failed for ${productName || 'your order'}${amountInr ? ` (₹${amountInr})` : ''}.\nReason: ${reason || 'declined by payment provider'}\n\nNo charge was made. Try again: ${BASE_URL}/pricing`;
+
+  return sendEmailWithRetry(env, { to, subject, html, text, eventType: 'payment_failed' });
+}
+
+/**
+ * Coupon redeemed confirmation — fired from lib/coupons.js
+ * finalizeCouponRedemption() on the pending→redeemed transition.
+ */
+export async function sendCouponRedeemedEmail(env, { to, code, discountLabel, productName, finalAmountInr }) {
+  if (!to || !code) return { success: false, reason: 'missing_params' };
+
+  const subject = `✅ Coupon ${code} Applied — ${productName || 'Your Order'} | CYBERDUDEBIVASH`;
+  const bodyHtml = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#f1f5f9">Your Discount Was Applied</h2>
+    <p style="margin:0 0 20px;color:#94a3b8;font-size:15px">Coupon <strong style="color:#e2e8f0">${code}</strong> was successfully redeemed on <strong style="color:#e2e8f0">${productName || 'your order'}</strong>.</p>
+    <div style="background:#0d1a14;border:1px solid #10b981;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center">
+      <div style="font-size:13px;color:#6ee7b7;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Discount Applied</div>
+      <div style="font-size:24px;font-weight:800;color:#10b981">${discountLabel || code}</div>
+      ${finalAmountInr != null ? `<div style="font-size:13px;color:#6b7280;margin-top:6px">You paid: ₹${Number(finalAmountInr).toLocaleString('en-IN')}</div>` : ''}
+    </div>
+    <hr style="border:none;border-top:1px solid #1f2937;margin:28px 0">
+    <p style="color:#6b7280;font-size:13px;margin:0">Questions? Reply to this email or WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong></p>`;
+
+  const html = renderEmailLayout({
+    headerGradient: 'linear-gradient(135deg,#065f46,#047857)',
+    headerTitle: '✅ Coupon Applied',
+    bodyHtml,
+  });
+  const text = `Coupon ${code} applied to ${productName || 'your order'}.\nDiscount: ${discountLabel || code}${finalAmountInr != null ? `\nYou paid: ₹${finalAmountInr}` : ''}`;
+
+  return sendEmailWithRetry(env, { to, subject, html, text, eventType: 'coupon_redeemed' });
+}
+
+/**
+ * Suspicious login alert — fired from handlers/auth.js handleLogin() when
+ * the current request IP differs from the account's most recent known IP
+ * (from refresh_tokens.ip_address). Never blocks the login itself.
+ */
+export async function sendSuspiciousLoginEmail(env, { to, ip, country, userAgent, previousIp }) {
+  if (!to) return { success: false, reason: 'missing_params' };
+
+  const subject = `🔐 New Sign-In to Your CYBERDUDEBIVASH Account`;
+  const bodyHtml = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#f1f5f9">New Sign-In Detected</h2>
+    <p style="margin:0 0 20px;color:#94a3b8;font-size:15px">Your account was just accessed from a location we haven't seen before.</p>
+    <div style="background:#1f2937;border-radius:8px;padding:20px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding-bottom:10px;margin-bottom:10px">
+        <span style="color:#94a3b8;font-size:13px">IP Address</span>
+        <span style="color:#e2e8f0;font-size:13px">${ip || 'unknown'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding-bottom:10px;margin-bottom:10px">
+        <span style="color:#94a3b8;font-size:13px">Approx. Location</span>
+        <span style="color:#e2e8f0;font-size:13px">${country || 'Unknown'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:#94a3b8;font-size:13px">Device</span>
+        <span style="color:#e2e8f0;font-size:13px;text-align:right;max-width:320px">${(userAgent || 'Unknown').slice(0, 80)}</span>
+      </div>
+    </div>
+    <p style="color:#94a3b8;font-size:14px;line-height:1.7">If this was you, no action is needed. If you don't recognize this sign-in, change your password immediately and contact us.</p>
+    <div style="text-align:center;margin:28px 0">
+      <a href="${BASE_URL}/user-dashboard" style="display:inline-block;background:linear-gradient(135deg,#dc2626,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">Review Account Activity →</a>
+    </div>
+    <hr style="border:none;border-top:1px solid #1f2937;margin:28px 0">
+    <p style="color:#6b7280;font-size:13px;margin:0">Not you? Contact us immediately: WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong> or contact@cyberdudebivash.in</p>`;
+
+  const html = renderEmailLayout({
+    headerGradient: 'linear-gradient(135deg,#7c1d1d,#4a1d96)',
+    headerTitle: '🔐 New Sign-In Alert',
+    bodyHtml,
+  });
+  const text = `New sign-in to your CYBERDUDEBIVASH account.\nIP: ${ip || 'unknown'}${previousIp ? ` (previous: ${previousIp})` : ''}\nLocation: ${country || 'Unknown'}\nDevice: ${(userAgent || 'Unknown').slice(0, 80)}\n\nIf this wasn't you, change your password immediately and contact contact@cyberdudebivash.in`;
+
+  return sendEmailWithRetry(env, { to, subject, html, text, eventType: 'suspicious_login' });
 }
