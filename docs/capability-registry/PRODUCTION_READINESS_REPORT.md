@@ -10,31 +10,31 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T13:12:19.618Z
-Capabilities catalogued: 25
+Generated: 2026-07-08T13:14:34.704Z
+Capabilities catalogued: 31
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 80% |
-| Frontend | 42% |
-| Parity (backend **and** frontend both exist) | 40% |
+| Backend | 77.4% |
+| Frontend | 48.4% |
+| Parity (backend **and** frontend both exist) | 45.2% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 6 | Broken customer journey |
-| High | P2 | 9 | Backend exists, frontend missing |
-| Medium | P3 | 1 | Backend+frontend exist, navigation missing |
+| Critical | P1 | 7 | Broken customer journey |
+| High | P2 | 10 | Backend exists, frontend missing |
+| Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 2 | No test coverage |
+| Low | P6 | 5 | No test coverage |
 | Low | P7 | 6 | Documentation missing |
 
-**Rollup:** Critical 6 · High 9 · Medium 2 · Low 8
+**Rollup:** Critical 7 · High 10 · Medium 3 · Low 11
 
 ## Structural Findings
 
@@ -42,8 +42,8 @@ Capabilities catalogued: 25
 |---|---|---|
 | Hidden features | 6 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 4 | Backend exists, zero frontend surface |
-| Duplicate systems | 2 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 6 | Priority P1 |
+| Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
+| Broken journeys | 7 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -119,6 +119,17 @@ complete", "bug free", or "guaranteed".
 | CAP-CRM-006 | Security Assessment Booking | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ◐ | ✓ | NOT READY | P1 |
 | CAP-CRM-008 | Growth & Revenue Automation Suite | ✓ | ✗ | ✗ | NOT READY | P2 |
+
+### sentinel-apex-marketplace (6 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-MKT-001 | Sentinel APEX Defense Solutions Storefront | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-MKT-002 | Marketplace Catalog & Checkout (Generic) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P3 |
+| CAP-MKT-003 | Sentinel-Specific Purchase Flow | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-MKT-004 | Security Tools Marketplace | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✗ | ◐ | ✓ | NOT READY | P1 |
+| CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ---
 *Regenerate with `node scripts/registry/generate-report.mjs` after any

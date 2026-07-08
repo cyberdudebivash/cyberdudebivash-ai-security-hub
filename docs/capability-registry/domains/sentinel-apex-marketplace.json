@@ -1,1 +1,272 @@
-[]
+[
+  {
+    "id": "CAP-MKT-001",
+    "domain": "sentinel-apex-marketplace",
+    "name": "Sentinel APEX Defense Solutions Storefront",
+    "description": "The platform's flagship defense-product storefront (Sigma rules, YARA rules, firewall scripts, IR playbooks) generated from live CVE intelligence, with a full Razorpay purchase-and-verify flow.",
+    "backend": {
+      "handlers": ["workers/src/handlers/defenseMarketplace.js", "workers/src/handlers/defenseSeed.js"],
+      "entry_points": [
+        "handleGetSolutions", "handleGetFeatured", "handleGetSolution", "handleInitiatePurchase",
+        "handleVerifyPurchase", "handleGenerateSolutions", "handleGetMarketplaceStats", "handleGetFOMO",
+        "handleCustomSolutionRequest", "seedDefenseSolutions"
+      ],
+      "routes_sampled": [
+        { "path": "/api/defense/solutions", "method": "GET", "evidence": "workers/src/index.js:4677" },
+        { "path": "/api/defense/purchase/{id}", "method": "POST", "evidence": "workers/src/index.js:5014" },
+        { "path": "/api/defense/verify/{id}", "method": "POST", "evidence": "workers/src/index.js:5022" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "The live product-card storefront ('Sentinel APEX Defense Solutions' heading) lives at frontend/index.html:2864-2921 with category filters matching workers/src/handlers/defenseSeed.js's seed categories (firewall_script, sigma_rule, yara_rule, ids_signature, ir_playbook, threat_hunt_pack, python_scanner). Full purchase trace confirmed end-to-end: the Unlock button (frontend/index.html:3121-3123 or the modal's :3431) calls dsPurchase(), which opens an email-capture step and then calls initiatePayment() (frontend/index.html:3230-3329), which POSTs to /api/defense/purchase/{id} (:3266-3270) and, on Razorpay success, POSTs to /api/defense/verify/{id} (:3300-3309) — both routes resolve to this handler's functions exactly. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Linked from the mobile nav drawer ('🛡 Defense Marketplace', frontend/index.html:1186) plus multiple in-page CTA/scroll links. One caveat: the whole storefront section carries inline style=\"display:none\" and only becomes visible via a client-side cdbApplyGates() check (frontend/index.html:434-440) gated on localStorage having both cdb_token and cdb_email (or isOwner) — an anonymous, signed-out visitor does not see this section rendered until that client-side condition passes. Whether cdbApplyGates() runs automatically on page load for a logged-out visitor (revealing nothing, correctly) versus hiding an otherwise-crawlable section from search/first-time visitors was not fully traced in this pass."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/revenuePlanFieldFix.test.mjs imports handleGetSolution directly from workers/src/handlers/defenseMarketplace.js — confirmed by import-statement grep. The other 8 exports (including the purchase/verify pair the live Unlock flow depends on) have no dedicated import-based test found in this pass."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "Full click-trace performed via direct code read: workers/src/handlers/defenseMarketplace.js's 9 exports enumerated; frontend/index.html:2864-3431 read directly to confirm the Unlock-to-purchase-to-verify chain resolves to this handler at every step, not a different one."
+    },
+    "notes": "This is the platform's most convincingly end-to-end-verified marketplace capability found in this pass — real UI, real click trace, real matching backend, confirmed by direct code read rather than inference from route existence alone. A dynamic_browser pass (actually clicking through a test purchase) is the natural next step to upgrade this to a fully verified GA claim. handleGetFeatured has no confirmed frontend caller; handleGenerateSolutions is an admin-only generation trigger, not a customer path."
+  },
+  {
+    "id": "CAP-MKT-002",
+    "domain": "sentinel-apex-marketplace",
+    "name": "Marketplace Catalog & Checkout (Generic)",
+    "description": "General-purpose marketplace catalog browsing, checkout, and purchase-verification flow used by the dedicated marketplace checkout page.",
+    "backend": {
+      "handlers": ["workers/src/handlers/marketplaceCheckoutHandler.js"],
+      "entry_points": [
+        "handleMarketplaceCatalog", "handleMarketplaceProduct", "handleMarketplaceCheckout",
+        "handleMarketplaceVerify", "handleMarketplaceDownload", "handleMyMarketplacePurchases",
+        "handleMarketplaceObservability"
+      ],
+      "routes_sampled": [
+        { "path": "/api/marketplace/catalog", "method": "GET", "evidence": "workers/src/index.js:5530" },
+        { "path": "/api/marketplace/checkout", "method": "POST", "evidence": "workers/src/index.js:5537" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/marketplace-checkout.html"],
+      "status": "exists",
+      "evidence": "frontend/marketplace-checkout.html:182 (catalog/:id), :291 (checkout), :347 (verify) call this handler's routes directly, matching field-for-field. frontend/sentinel-apex-marketplace.html:879 also calls the catalog route for its category-filtered listing. No frontend caller found for handleMarketplaceDownload, handleMyMarketplacePurchases, or handleMarketplaceObservability. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/marketplace-checkout.html is linked from frontend/ai-governance-pdf.html:128, frontend/mssp-onboarding.html:140, and frontend/sentinel-apex-marketplace.html (product-card / 'Open Marketplace' links)."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/marketplaceCheckoutHandler.test.mjs imports handleMarketplaceCatalog/handleMarketplaceProduct/handleMarketplaceCheckout/handleMarketplaceVerify/handleMarketplaceDownload/handleMyMarketplacePurchases/MARKETPLACE_CATALOG directly — the most test-covered handler found across this whole domain."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P3",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/marketplaceCheckoutHandler.js exports enumerated; workers/src/index.js:5530-5556 route registrations read directly; frontend/marketplace-checkout.html cross-checked against each route."
+    },
+    "notes": "P3 reflects handleMyMarketplacePurchases and handleMarketplaceObservability having no confirmed frontend caller (a 'my purchases' history view a customer would likely expect but cannot currently reach), not a defect in the core catalog/checkout/verify path, which is real and well-tested."
+  },
+  {
+    "id": "CAP-MKT-003",
+    "domain": "sentinel-apex-marketplace",
+    "name": "Sentinel-Specific Purchase Flow",
+    "description": "A purpose-built purchase/verify pair for Sentinel APEX product types that the generic marketplace checkout modal has no price entry for.",
+    "backend": {
+      "handlers": ["workers/src/handlers/sentinelMarketplace.js"],
+      "entry_points": ["handleSentinelPurchase", "handleSentinelVerify"],
+      "routes_sampled": [
+        { "path": "/api/sentinel/purchase", "method": "POST", "evidence": "workers/src/index.js:6474" },
+        { "path": "/api/sentinel/verify", "method": "POST", "evidence": "workers/src/index.js:6480" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/sentinel-apex-marketplace.html"],
+      "status": "exists",
+      "evidence": "frontend/sentinel-apex-marketplace.html:663 (purchase) and :689 (verify) call these routes directly, with an explanatory code comment at :605-607 stating this purpose-built pair exists because the generic checkout modal has no price entry for these product types. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/sentinel-apex-marketplace.html is linked from frontend/ciso-hub.html (3 locations), frontend/index.html (4 locations), frontend/user-dashboard.html (6 locations), and frontend/marketplace-checkout.html — not an orphan."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/sentinelMarketplace.js directly."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/sentinelMarketplace.js read directly (2 exports); frontend/sentinel-apex-marketplace.html:663,689,605-607 read directly."
+    },
+    "notes": "No actionable gap beyond missing tests. Widely linked, real, working code path."
+  },
+  {
+    "id": "CAP-MKT-004",
+    "domain": "sentinel-apex-marketplace",
+    "name": "Security Tools Marketplace",
+    "description": "Instant-checkout purchase flow for individual security tools (distinct from defense solutions and the generic marketplace), used consistently across multiple pages.",
+    "backend": {
+      "handlers": ["workers/src/handlers/toolsMarketplace.js"],
+      "entry_points": ["handleListTools", "handlePurchaseTool", "handleVerifyTool"],
+      "routes_sampled": [
+        { "path": "/api/tools/catalog", "method": "GET", "evidence": "workers/src/index.js:6486" },
+        { "path": "/api/tools/purchase", "method": "POST", "evidence": "workers/src/index.js:6492" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/tools.html", "frontend/index.html", "frontend/user-dashboard.html", "frontend/intel.html"],
+      "status": "exists",
+      "evidence": "All 3 routes are called consistently from frontend/tools.html:1432,1658,1682, frontend/index.html:6935,6952 (with a comment at :6918 describing 'instant Razorpay checkout wired to /api/tools/purchase + /api/tools/verify'), frontend/user-dashboard.html:4205,4224, and frontend/intel.html:2371,2390. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/tools.html and frontend/intel.html are each linked from at least 8 other pages including frontend/index.html — not orphans."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/toolsMarketplace.js directly, despite being the most widely-consumed handler (4 distinct pages) found in this domain."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/toolsMarketplace.js read directly (3 exports); all 4 consuming frontend pages grepped for the 3 route paths and cross-checked."
+    },
+    "notes": "Real, consistently-implemented, multi-page purchase flow with a real gap: zero test coverage despite being the most widely used handler in this domain."
+  },
+  {
+    "id": "CAP-MKT-005",
+    "domain": "sentinel-apex-marketplace",
+    "name": "Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator)",
+    "description": "A single internal mega-handler covering marketplace subscriptions, entitlements, order history, trials, an ROI calculator, and plan comparison — plus three routes (catalog, product, checkout) that duplicate CAP-MKT-002 and are structurally unreachable.",
+    "backend": {
+      "handlers": ["workers/src/handlers/sentinelApexMarketplace.js"],
+      "entry_points": ["handleMarketplace"],
+      "routes_sampled": [
+        { "path": "/api/marketplace/orders", "method": "GET", "evidence": "workers/src/index.js:7453" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "duplicate"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "partial",
+      "evidence": "workers/src/handlers/sentinelApexMarketplace.js exports one dispatcher function, handleMarketplace, containing 15 internal sub-routes reached via workers/src/index.js:7453-7457's prefix dispatch (if (path.startsWith('/api/marketplace/'))). Critical structural defect: this prefix dispatcher sits AFTER workers/src/handlers/marketplaceCheckoutHandler.js's exact-match routes for the same three paths (workers/src/index.js:5530-5556, catalog/catalog-by-id/checkout) — since the router returns on first match, this file's internal handleGetCatalog/handleGetProduct/handleCheckout implementations for those exact paths are permanently unreachable in production. The other, non-shadowed sub-routes (purchase, webhook, subscribe, subscriptions, cancel, orders, entitlements, trial, roi-calculator, compare) do execute. Of those, frontend/user-dashboard.html calls /api/marketplace/orders (:4270), /api/marketplace/entitlements (:4271,4391), /api/marketplace/subscriptions (:4339), and /api/marketplace/cancel (:4379). No frontend caller found for /api/marketplace/purchase, /webhook, /subscribe, /subscriptions/{id}/upgrade, /trial, /roi-calculator, or /compare. Verified 2026-07-08 by reading both route-registration blocks directly and confirming the sequential if-chain's return-on-first-match behavior in workers/src/index.js."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/user-dashboard.html is a primary, well-linked page; the specific sub-routes it calls are reachable through it."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/marketplaceWebhook.test.mjs imports handleMarketplace directly from workers/src/handlers/sentinelApexMarketplace.js — but since it imports the function directly rather than going through the real router, it would not detect the route-shadowing defect described above (that defect only manifests via workers/src/index.js's actual dispatch order)."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/index.js read directly at both the shadowing block (5530-5556) and the shadowed block (7453-7457) to confirm dispatch order and return-on-first-match semantics; workers/src/handlers/sentinelApexMarketplace.js's internal dispatch (:1060-1137) read directly to enumerate all 15 sub-actions."
+    },
+    "contradicts_doc": [],
+    "notes": "backend.status is \"duplicate\" specifically for the shadowed catalog/product/checkout trio — CAP-MKT-002 (marketplaceCheckoutHandler.js) is the implementation that actually runs for those three paths; this file's versions are dead code. Priority P1 reflects that dead, unreachable production code for a payment-adjacent path is a correctness risk (e.g. future maintainers editing the wrong copy, believing it's live) even though no customer-visible journey is currently broken by it — the live paths happen to be served correctly by the other handler. Recommend either deleting the shadowed branches from this file or reordering the router, as a deliberate decision rather than leaving two silently-diverging implementations in place."
+  },
+  {
+    "id": "CAP-MKT-006",
+    "domain": "sentinel-apex-marketplace",
+    "name": "Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk)",
+    "description": "A REST API surface for programmatic IOC enrichment, CVE detail, threat-actor lookup, TTP mapping, and risk scoring.",
+    "backend": {
+      "handlers": ["workers/src/handlers/intelAPIHandlers.js"],
+      "entry_points": ["handleIntelIOC", "handleIntelCVE", "handleIntelActor", "handleIntelTTP", "handleIntelRisk"],
+      "routes_sampled": [
+        { "path": "/api/intel/ioc", "method": "GET", "evidence": "workers/src/index.js:5142" },
+        { "path": "/api/intel/cve", "method": "GET", "evidence": "workers/src/index.js:5146" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "duplicate"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Zero matches anywhere in frontend/*.html for the exact paths /api/intel/ioc, /api/intel/cve, /api/intel/actor, /api/intel/threat-actors, or /api/intel/ttp. Frontend calls that look superficially related — frontend/intel-hub.html:550 (/api/intel/actors, plural) and frontend/threat-intel-workbench.html (/api/intel/risk-queue, /api/intel/risk-score/{id}, /api/intel/cve-brief/{id}, /api/intel/actors, /api/intel/actor/{id}) — are different paths registered to a different handler, workers/src/handlers/threatIntelPro.js, via a separate dispatch block (workers/src/index.js:5164-5186). Verified 2026-07-08 by reading both registration blocks directly."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry calls this handler's actual routes because no page does." },
+    "auth_enforced": "unknown",
+    "rbac": { "enforced": "unknown", "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/intelRateLimitEnforcement.test.mjs imports handleIntelIOC directly from workers/src/handlers/intelAPIHandlers.js. Note: workers/test/honestCopy.test.mjs separately reads this same file as raw text (not a module import) to assert a pricing-flag string is present — a text-scan check, not a behavioral test, and not double-counted as coverage here."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/intelAPIHandlers.js exports enumerated; workers/src/index.js:5142-5186 read directly to confirm this handler's 5 routes and the separate workers/src/handlers/threatIntelPro.js dispatch block are genuinely distinct registrations, not aliases of each other."
+    },
+    "notes": "backend.status is \"duplicate\": a real, live, frontend-consumed threat-intel API surface already exists under near-identical naming in workers/src/handlers/threatIntelPro.js (covered in docs/capability-registry/domains/threat-hunting-intel.json) — this file appears to be an earlier or parallel implementation of the same concept that no frontend page was ever wired to. Worth a reconciliation decision rather than building new UI against this one."
+  }
+]
