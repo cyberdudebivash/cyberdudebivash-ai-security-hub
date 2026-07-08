@@ -39,6 +39,49 @@ export const PROVIDERS = {
   ANTHROPIC:   'anthropic',
 };
 
+// ════════════════════════════════════════════════════════════════════════════
+// CIRCUIT BREAKER — P0 2026-07-08: DeepSeek returning HTTP 402 (Insufficient
+// Balance) on every call sat first in several task-routing chains, so every
+// affected request paid the full latency of a doomed attempt before falling
+// back. A definitive account-level error (bad/revoked key, exhausted
+// billing) will not succeed on retry until a human fixes the account —
+// unlike a 429 (often clears in seconds) or a 5xx/timeout (transient infra),
+// which are deliberately NOT tripped here so normal retry/fallback still
+// applies to those.
+//
+// KV-backed (env.SECURITY_HUB_KV) so the breaker is shared across
+// invocations, and short-TTL so it self-heals automatically on the next
+// probe after the account issue is fixed — no code change or redeploy
+// needed once e.g. a provider's balance is topped up. Fails open: any
+// missing/erroring KV never blocks a call, it just means this one request
+// doesn't benefit from the breaker.
+//
+// Cloudflare Workers AI is intentionally never gated by this breaker — it's
+// the guaranteed, no-billing last resort every other fallback funnels to,
+// and must never be skippable.
+// ════════════════════════════════════════════════════════════════════════════
+const CIRCUIT_BREAKER_TTL_S = 300; // 5 min
+const circuitKey = (provider) => `ai_circuit_breaker:${provider}`;
+const NON_RETRYABLE_STATUSES = new Set([401, 402, 403]);
+
+export async function isProviderCircuitOpen(env, provider) {
+  if (provider === PROVIDERS.CF_AI) return false;
+  if (!env?.SECURITY_HUB_KV) return false;
+  try {
+    return (await env.SECURITY_HUB_KV.get(circuitKey(provider))) === '1';
+  } catch { return false; }
+}
+
+export async function recordProviderFailure(env, provider, status) {
+  if (provider === PROVIDERS.CF_AI) return;
+  if (!NON_RETRYABLE_STATUSES.has(status)) return;
+  if (!env?.SECURITY_HUB_KV) return;
+  try {
+    await env.SECURITY_HUB_KV.put(circuitKey(provider), '1', { expirationTtl: CIRCUIT_BREAKER_TTL_S });
+    console.error(`[APEX NEXUS Circuit Breaker] ${provider} tripped (HTTP ${status}) — skipping for ${CIRCUIT_BREAKER_TTL_S}s or until next TTL re-probe.`);
+  } catch { /* best-effort only */ }
+}
+
 export const PROVIDER_CONFIG = {
   [PROVIDERS.GROQ]: {
     endpoint:    'https://api.groq.com/openai/v1/chat/completions',
@@ -229,7 +272,9 @@ async function callOpenAICompat(endpoint, apiKey, {
 
   if (!response.ok) {
     const err = await response.text().catch(() => response.statusText);
-    throw new Error(`[${endpoint}] ${response.status}: ${err.slice(0, 200)}`);
+    const e = new Error(`[${endpoint}] ${response.status}: ${err.slice(0, 200)}`);
+    e.status = response.status;
+    throw e;
   }
 
   const data    = await response.json();
@@ -272,7 +317,9 @@ async function callAnthropicDirect(apiKey, {
 
   if (!response.ok) {
     const err = await response.text().catch(() => response.statusText);
-    throw new Error(`[Anthropic] ${response.status}: ${err.slice(0, 200)}`);
+    const e = new Error(`[Anthropic] ${response.status}: ${err.slice(0, 200)}`);
+    e.status = response.status;
+    throw e;
   }
 
   const data    = await response.json();
@@ -440,6 +487,11 @@ export async function routeAICall(env, {
       lastError = lastError || new Error(`AI router deadline (${deadline_ms}ms) exhausted before any provider was tried`);
       break;
     }
+    if (await isProviderCircuitOpen(env, provider)) {
+      lastError = new Error(`${provider} circuit breaker open (recent non-retryable failure) — skipped without a network call`);
+      console.warn(`[APEX NEXUS] ${provider} skipped for ${task_type}: circuit breaker open`);
+      continue;
+    }
     try {
       const result = await dispatchToProvider(provider, env, {
         system: fullSystem,
@@ -454,6 +506,7 @@ export async function routeAICall(env, {
       return result;
     } catch (err) {
       lastError = err;
+      await recordProviderFailure(env, provider, err.status);
       console.warn(`[APEX NEXUS] ${provider} failed for ${task_type}: ${err.message}`);
     }
   }

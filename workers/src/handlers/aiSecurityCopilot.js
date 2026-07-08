@@ -55,7 +55,7 @@
  */
 
 import { ok, badRequest, fail } from '../lib/response.js';
-import { PROVIDERS, PROVIDER_CONFIG, routeAICall } from '../core/aiProviderRouter.js';
+import { PROVIDERS, PROVIDER_CONFIG, routeAICall, isProviderCircuitOpen, recordProviderFailure } from '../core/aiProviderRouter.js';
 import { detectPromptInjectionSignal, redactSecrets } from '../lib/promptSafety.js';
 
 // Re-exported for backward compatibility — implementations now live in
@@ -2151,7 +2151,9 @@ async function runToolLoop(env, provider, model, systemPrompt, messages, tools, 
 
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      throw new Error(`${provider}/${model} ${res.status}: ${txt.slice(0, 250)}`);
+      const e = new Error(`${provider}/${model} ${res.status}: ${txt.slice(0, 250)}`);
+      e.status = res.status;
+      throw e;
     }
 
     const data   = await res.json();
@@ -2235,10 +2237,22 @@ async function runCFAIFallback(env, systemPrompt, messages) {
 // ════════════════════════════════════════════════════════════════════════════════
 // MAIN ORCHESTRATOR
 // ════════════════════════════════════════════════════════════════════════════════
-async function orchestrateChat(env, tier, authCtx, messages, availableTools, maxTokens, userId, sessionId, onEvent = () => {}, configOverrides = null) {
+export async function orchestrateChat(env, tier, authCtx, messages, availableTools, maxTokens, userId, sessionId, onEvent = () => {}, configOverrides = null) {
   const lastMsg    = messages[messages.length - 1]?.content || '';
   const { task_type, complexity } = classifyQuery(lastMsg);
   const candidates = getCandidates(task_type, complexity);
+
+  // Overall wall-clock budget across every fallback attempt combined (mirrors
+  // routeAICall's deadline_ms pattern). Without this, a chain of slow/failing
+  // providers -- especially a provider stuck retrying past the point a fast
+  // circuit-breaker skip would have caught it -- can pile up well past what
+  // any client, corporate proxy, or edge platform will wait on a single
+  // request, which is indistinguishable from "Network error" to the caller.
+  // CF AI (fast, no billing failure mode) always still gets its turn below
+  // regardless of this deadline -- it's the guaranteed final attempt.
+  const ORCHESTRATE_DEADLINE_MS = 25000;
+  const orchestrateStart = Date.now();
+  const deadlineExceeded = () => Date.now() - orchestrateStart > ORCHESTRATE_DEADLINE_MS;
 
   // Walk the candidate list, skip unavailable providers
   let lastError;
@@ -2249,6 +2263,11 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
 
     if (!isProviderAvailable(env, provider)) continue;
     if (provider === PROVIDERS.CF_AI) continue; // CF AI handled as last resort below
+    if (deadlineExceeded()) break;
+    if (await isProviderCircuitOpen(env, provider)) {
+      lastError = new Error(`${provider} circuit breaker open (recent non-retryable failure)`);
+      continue;
+    }
 
     const systemPmt = buildSystemPrompt(tier, authCtx, provider, model, task_type, configOverrides);
 
@@ -2275,12 +2294,15 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
       }
     } catch (err) {
       lastError = err;
+      await recordProviderFailure(env, provider, err.status);
       console.warn(`[APEX] ${provider}/${model} tool-loop failed: ${err.message}`);
 
       // Tool-calling failed — try a plain text completion to the same provider
       // before moving on. This handles cases where tool schemas are rejected
       // but the provider can still answer security questions without tools.
-      if (!triedProviders.has(provider)) {
+      // Skipped if that same failure just tripped the circuit breaker above
+      // (a definitive account error won't succeed on a same-provider retry).
+      if (!triedProviders.has(provider) && !(await isProviderCircuitOpen(env, provider))) {
         triedProviders.add(provider);
         try {
           const cfg    = PROVIDER_CONFIG[provider];
@@ -2303,7 +2325,11 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
             }),
             signal: AbortSignal.timeout(20000),
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res.ok) {
+            const e = new Error(`HTTP ${res.status}`);
+            e.status = res.status;
+            throw e;
+          }
           const data = await res.json();
           const text = data.choices?.[0]?.message?.content || '';
           if (text) {
@@ -2316,6 +2342,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
             };
           }
         } catch (textErr) {
+          await recordProviderFailure(env, provider, textErr.status);
           console.warn(`[APEX] ${provider} text-fallback also failed: ${textErr.message}`);
         }
       }
@@ -2333,6 +2360,14 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
   for (const lr of lastResortCandidates) {
     const apiKey = env[lr.key];
     if (!apiKey) continue;
+    // Already failed for this provider earlier in this same request (main
+    // loop and/or its text-fallback) -- retrying it a third time here only
+    // adds latency for an outcome we already know. Also honor the
+    // cross-request circuit breaker so a provider known to be down (e.g.
+    // DeepSeek's billing failure) isn't retried at all until it self-heals.
+    if (triedProviders.has(lr.provider)) continue;
+    if (deadlineExceeded()) break;
+    if (await isProviderCircuitOpen(env, lr.provider)) continue;
     try {
       const res = await fetch(lr.endpoint, {
         method: 'POST',
@@ -2356,6 +2391,7 @@ async function orchestrateChat(env, tier, authCtx, messages, availableTools, max
       const body = await res.text();
       if (!res.ok) {
         console.error(`[APEX last-resort] ${lr.provider}/${lr.model} HTTP ${res.status}: ${body.slice(0, 200)}`);
+        await recordProviderFailure(env, lr.provider, res.status);
         continue;
       }
       const data = JSON.parse(body);
