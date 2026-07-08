@@ -1,1 +1,45 @@
-[]
+[
+  {
+    "id": "CAP-NAV-001",
+    "domain": "navigation",
+    "name": "Server-Driven Navigation Engine (role/plan/feature-flag-based)",
+    "description": "Dynamic navigation generation that varies which nav items a visitor sees based on their authentication state, subscription plan, role, and active feature flags, rather than a fixed nav rendered identically to everyone.",
+    "backend": {
+      "handlers": [],
+      "entry_points": [],
+      "routes_sampled": [],
+      "routes_fully_enumerated": true,
+      "status": "missing"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": ["frontend/index.html", "frontend/user-dashboard.html"],
+      "status": "missing",
+      "evidence": "No /api/nav (or similarly named) endpoint exists anywhere in workers/src/index.js (grepped for the literal string '/api/nav', 0 matches). frontend/index.html's main nav (<nav id=\"main-nav\">, frontend/index.html:1123-1195, including the MASOC and GOD MODE top-level links) is static HTML rendered identically for every visitor, confirmed by reading the block directly. The one plan-aware mechanism on the page, initFeatureGating()/applyFeatureGates() (frontend/index.html:15052-15053), fetches GET /api/user/plan and only adds a lock-overlay to elements carrying a data-requires-plan=\"PRO\"/\"ENTERPRISE\" attribute (addGateOverlay, frontend/index.html:15054) — a content-level gate, not nav-level hide/show. That attribute is used exactly once in the entire 23,735-line file (grep -c, 2026-07-08) and zero times inside the nav block itself. Server-side feature flags do exist (workers/src/handlers/opsEngine.js's ops_feature_flags table, /api/ops/flags) but are read only by the staff-only frontend/ops-dashboard.html console (grepped every frontend/*.html for 'ops/flags' — single match) — no customer-facing page reads a feature flag to alter its own nav or UI. Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:216 Gap Matrix row (Domain 7), re-confirmed unchanged 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "Not applicable in the literal sense (there is no separate nav-engine page to discover) — the finding is that the nav a customer already sees is not personalized to them, not that a personalization feature is hidden."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No server-side nav-generation code exists to test. initFeatureGating/applyFeatureGates are inline page JS, not an importable module — no test file references them."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/index.js grepped for '/api/nav' (0 matches); frontend/index.html:1123-1195 (main nav), :15052-15054 (feature-gating mechanism), and :1179-1230 (mobile drawer) read directly; frontend/*.html grepped for 'data-requires-plan' (1 total, 0 in nav) and 'ops/flags' (1 file, frontend/ops-dashboard.html only)."
+    },
+    "notes": "Distinct from CAP-RBAC-002 (Role/Plan-Based Frontend Feature Gating), which tracks the same root cause specifically inside frontend/user-dashboard.html's authenticated sidebar (~20 nav-items, none role/plan-gated) — cross-reference that entry rather than duplicating it here. This entry covers the broader mechanism gap: there is no server-driven nav concept anywhere on the platform, public or authenticated, and MASOC/GOD MODE — both prominent, plausibly paid-tier features per the live dashboard — are top-level nav links visible to every anonymous visitor with no plan-based visibility logic (server-side enforcement at the destination page/API was not evaluated as part of this entry; it is a navigation-discoverability finding, not an authorization finding). Secondary finding: frontend/index.html's mobile drawer (:1179 onward) is a second, separately hand-maintained static link list rather than a JS-generated clone of the desktop nav (:1123-1195) — the two have already partially diverged (e.g. the mobile drawer includes a direct 'Home'/'Dashboard' shortcut and an expanded MASOC label not present in the desktop version), a real drift risk for whoever edits one list and forgets the other, independent of the larger personalization gap."
+  }
+]

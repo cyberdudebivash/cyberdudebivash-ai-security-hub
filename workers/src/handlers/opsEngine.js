@@ -197,8 +197,8 @@ async function handleGetFeatureFlags(req, env, authCtx) {
 }
 
 async function handleSetFeatureFlag(req, env, authCtx) {
+  const denied = assertAdmin(authCtx); if (denied) return denied;
   const tier = (authCtx.tier || '').toUpperCase();
-  if (!['ADMIN', 'OWNER'].includes(tier)) return Response.json({ error: 'Admin required' }, { status: 403 });
   let body;
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const { user_id, flag_name, enabled, tier_required, note, expires_at } = body;

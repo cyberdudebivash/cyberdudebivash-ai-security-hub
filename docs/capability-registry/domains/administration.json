@@ -1,1 +1,209 @@
-[]
+[
+  {
+    "id": "CAP-ADMIN-001",
+    "domain": "administration",
+    "name": "Ops Admin Console — Business & Platform Visibility",
+    "description": "Staff-facing console for customer/usage/subscription visibility, in-app notification broadcast, live ops metrics, feature-flag management, and the merged audit-log trail.",
+    "backend": {
+      "handlers": ["workers/src/handlers/opsEngine.js"],
+      "entry_points": [
+        "handleAdminCustomers", "handleAdminUsage", "handleAdminSubscriptions",
+        "handleAdminNotifications", "handleOpsMetrics", "handleGetFeatureFlags",
+        "handleSetFeatureFlag", "handleAdminAudit"
+      ],
+      "routes_sampled": [
+        { "path": "/api/admin/customers", "method": "GET", "evidence": "workers/src/handlers/opsEngine.js:518, dispatched via handleOpsRoute" },
+        { "path": "/api/admin/audit", "method": "GET", "evidence": "workers/src/handlers/opsEngine.js:521" },
+        { "path": "/api/ops/flags", "method": "PUT", "evidence": "workers/src/handlers/opsEngine.js:513" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/ops-dashboard.html"],
+      "status": "exists",
+      "evidence": "frontend/ops-dashboard.html calls /api/admin/audit, /api/admin/customers, /api/admin/notifications, /api/admin/subscriptions, /api/admin/usage, /api/ops/flags, and /api/ops/metrics directly (grepped for /api/(admin|ops)/ path literals, verified 2026-07-08)."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "Repo-wide grep for the string 'frontend/ops-dashboard.html' across every other frontend/*.html file returns zero matches — no page links to it. Unlike its sibling staff tools (frontend/admin-portal.html, frontend/mssp-command-center.html), this page has no CDB_STAFF_AUTH.guard() and no self-declared 'internal staff tool' banner; it instead gates itself with a manually-entered key stored in sessionStorage.getItem('ops_api_key') (frontend/ops-dashboard.html:295), with real enforcement happening server-side per request via workers/src/handlers/opsEngine.js's isAdmin/assertAdmin checks. The page shell itself is reachable by anyone who knows the URL (no session guard), which is architecturally weaker than the other two staff consoles even though every underlying API call is independently authorized. Not yet added to docs/capability-registry/exceptions.json's accepted-orphan list — that file explicitly still lists frontend/ops-dashboard.html as unconfirmed pending a dynamic_browser check, and this pass did not perform one."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["isAdmin"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": true, "mechanism": "ops/flags" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "Only 2 of 8 entry_points have real test coverage: handleAdminAudit (workers/test/adminAuditMerge.test.mjs, pre-existing) and handleSetFeatureFlag (workers/test/opsFeatureFlags.test.mjs, added this pass — see notes). handleAdminCustomers, handleAdminUsage, handleAdminSubscriptions, handleAdminNotifications, and handleOpsMetrics have zero test files importing them (grepped workers/test/*.mjs for each function name, 2026-07-08)."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/opsEngine.js read in full; workers/src/index.js:6437-6441 read to confirm the prefix-dispatch mechanism (path.startsWith('/api/ops/') or one of 4 specific /api/admin/* prefixes -> handleOpsRoute); frontend/ops-dashboard.html grepped for API call sites and auth mechanism; workers/test/*.mjs grepped per function name for real import-statement coverage."
+    },
+    "notes": "Found and fixed a real bug in this pass: handleSetFeatureFlag (PUT /api/ops/flags) gated on `['ADMIN','OWNER'].includes((authCtx.tier||'').toUpperCase())`. Nothing in this codebase ever sets authCtx.tier to the literal string 'ADMIN' or 'OWNER' — tier always holds a subscription plan (FREE/STARTER/PRO/ENTERPRISE/MSSP), confirmed by reading every path that constructs authCtx in workers/src/auth/middleware.js, including the ADMIN_KEY bypass (which sets tier:'ENTERPRISE', not 'ADMIN'). The file's own established helper, assertAdmin() (used by handleAdminCustomers and every other handleAdmin* sibling in workers/src/handlers/opsEngine.js), correctly ORs authCtx.isAdmin with the same dead tier-string fallback — handleSetFeatureFlag alone reinvented a broken subset of that check and dropped the isAdmin half, making the feature-flag write path unreachable for every caller, including real admins, since the capability shipped. Now calls assertAdmin() directly, matching every sibling handler. 4 new regression tests added (workers/test/opsFeatureFlags.test.mjs); full suite 1835/1835 passing. Separately: whether ops-dashboard.html's weaker (no session-guard) exposure pattern vs. its sibling staff tools is intentional or an oversight was not determined this pass — flagged for a future dynamic_browser/access-control review rather than asserted either way."
+  },
+  {
+    "id": "CAP-ADMIN-002",
+    "domain": "administration",
+    "name": "Platform Infrastructure Ops APIs (Incidents, Maintenance, Deployments, SSO Config, Email Health, Data Seeding)",
+    "description": "Owner/admin-only backend tooling for status-page incident and maintenance-window management, deployment history recording, an ops report/dashboard rollup, enterprise SSO per-org configuration, email-delivery-health/DLQ visibility, and one-off threat-intel data bootstrap/backfill.",
+    "backend": {
+      "handlers": [
+        "workers/src/handlers/eop/incidents.js",
+        "workers/src/handlers/eop/deployments.js",
+        "workers/src/handlers/eop/opsReport.js",
+        "workers/src/services/emailEngine.js",
+        "workers/src/handlers/ssoAuth.js"
+      ],
+      "entry_points": [
+        "handleAdminIncidentCreate", "handleAdminIncidentUpdate", "handleAdminIncidentTimelineAdd",
+        "handleAdminMaintenanceCreate", "handleAdminMaintenanceUpdate",
+        "handleDeploymentRecord", "handleDeploymentsList",
+        "handleOpsDashboard", "handleOpsReport",
+        "handleAdminListEmailDlq",
+        "handleSSOConfigGet", "handleSSOConfigUpsert", "handleSSOConfigDelete"
+      ],
+      "routes_sampled": [
+        { "path": "/api/admin/incidents", "method": "POST", "evidence": "workers/src/index.js:2886" },
+        { "path": "/api/admin/maintenance", "method": "POST", "evidence": "workers/src/index.js:2901" },
+        { "path": "/api/admin/deployments", "method": "GET", "evidence": "workers/src/index.js:2915" },
+        { "path": "/api/admin/ops/dashboard", "method": "GET", "evidence": "workers/src/index.js:2920" },
+        { "path": "/api/admin/email-dlq", "method": "GET", "evidence": "workers/src/index.js:2989" },
+        { "path": "/api/admin/sso/config", "method": "GET", "evidence": "workers/src/index.js:1931-1937" },
+        { "path": "/api/admin/email-health", "method": "GET", "evidence": "workers/src/index.js:2625" },
+        { "path": "/api/admin/bootstrap", "method": "POST", "evidence": "workers/src/index.js:4955" },
+        { "path": "/api/admin/backfill", "method": "POST", "evidence": "workers/src/index.js:4982" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide grep across every frontend/*.html for /api/admin/(deployments|incidents|maintenance|email-dlq|email-health|sso/config|ops/dashboard|ops/report|backfill|bootstrap) returns zero matches. No page anywhere — including frontend/ops-dashboard.html and frontend/admin-portal.html — calls any route in this cluster."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry anywhere links to a page for this capability, because no such page exists."
+    },
+    "auth_enforced": true,
+    "rbac": {
+      "enforced": true,
+      "permissions": ["isOwner", "isAdmin", "isAdminAuthorized(ADMIN_TOKEN bearer)"]
+    },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "Only handleAdminListEmailDlq has real test coverage (workers/test/emailDlqAndTemplates.test.mjs:20,152-179, confirmed by direct import-statement grep). The other 12 entry_points — incidents, maintenance, deployments, ops dashboard/report, and all 3 SSO-config handlers — have zero test files importing them anywhere under workers/test/."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "Each handler file read directly (workers/src/handlers/eop/incidents.js:106-107,197 confirmed isOwner() gate; workers/src/handlers/eop/deployments.js:21-22 confirmed isOwner(); workers/src/handlers/eop/opsReport.js:14-15 confirmed isOwner(); workers/src/services/emailEngine.js:1230-1231 confirmed authCtx?.isAdmin check; workers/src/handlers/ssoAuth.js:192-193,232-233,247-248 confirmed isOwner() on all 3 SSO-config handlers); workers/src/index.js route blocks at each cited line read directly to confirm no separate frontend-facing entry point; workers/test/*.mjs grepped per function name."
+    },
+    "notes": "Whether this cluster genuinely needs a UI is a product decision, not an obvious gap the way Coupon Administration (CAP-BILL-002) was — incident/maintenance/deployment tracking and SSO config are plausibly meant for direct API/script use by the platform owner rather than a console. The concrete, actionable finding here is test coverage, not missing UI: 12 of 13 entry_points guard real production behavior (incident/status-page state, SSO credentials, deployment history) with zero regression tests. /api/admin/bootstrap and /api/admin/backfill additionally use a distinct auth mechanism (isAdminAuthorized — a constant-time ADMIN_TOKEN bearer comparison, workers/src/auth/middleware.js:306-314) rather than isOwner/isAdmin, included here because they are the same shape (staff-only, zero frontend) rather than because they share a handler file."
+  },
+  {
+    "id": "CAP-ADMIN-003",
+    "domain": "administration",
+    "name": "Owner-Only Revenue & Growth Business-Intelligence APIs",
+    "description": "Single-operator business-intelligence endpoints for daily/weekly/monthly revenue review: MRR/ARR/CAC/LTV scorecards, acquisition funnel KPIs, 30/60/90-day pipeline forecasting, and infrastructure revenue-processing certification.",
+    "backend": {
+      "handlers": ["workers/src/index.js"],
+      "entry_points": [
+        "(inline route blocks — no separate handler module; each implemented directly in the index.js if-chain, not an exported function)"
+      ],
+      "routes_sampled": [
+        { "path": "/api/admin/revenue-certification", "method": "GET", "evidence": "workers/src/index.js:2301-2304" },
+        { "path": "/api/admin/revenue-proof", "method": "GET", "evidence": "workers/src/index.js:2406-2409" },
+        { "path": "/api/admin/executive-scorecard", "method": "GET", "evidence": "workers/src/index.js:2515-2518" },
+        { "path": "/api/admin/acquisition-scorecard", "method": "GET", "evidence": "workers/src/index.js:8127-8129" },
+        { "path": "/api/admin/weekly-report", "method": "GET", "evidence": "workers/src/index.js:8204-8206" },
+        { "path": "/api/admin/pipeline-forecast", "method": "GET", "evidence": "workers/src/index.js:8309-8312" },
+        { "path": "/api/admin/monthly-review", "method": "GET", "evidence": "workers/src/index.js:8360-8362" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide grep across every frontend/*.html for any of these 7 route paths returns zero matches. Distinct from CAP-DASH-001 (CISO Hub, /api/ciso/*) and CAP-DASH-002 (Executive Hub, /api/executive/dashboard) — no route-path overlap confirmed by comparing route lists directly."
+    },
+    "navigation": { "discoverable": false, "evidence": "No page exists to link to." },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["isOwner"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "Grepped workers/test/*.mjs for all 7 route-path strings — zero matches. None of this cluster's revenue/MRR/ARR/pipeline-forecast calculation logic has any regression test."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "Each of the 7 route blocks read directly at the cited line ranges; every one opens with `if (!isOwner(authCtx, env)) return forbidden()` before touching env.DB, confirmed by direct code read, not inference from comments."
+    },
+    "notes": "By design, single-operator-only (matches SCHEMA.md's own framing of 'domain' as a tag, not a person, for this business) — not a customer-facing gap, and API-only is plausibly intentional (a CEO/CRO reviewing their own numbers via curl/a personal script, per the in-code comments at index.js:2515-2517 and :8204-8205). The actionable finding is test coverage: these endpoints compute the business's actual MRR/ARR/pipeline-forecast figures with zero regression tests protecting that arithmetic from silent drift."
+  },
+  {
+    "id": "CAP-ADMIN-004",
+    "domain": "administration",
+    "name": "Missing Admin Surfaces — Users, Organizations, Marketplace, Academy, Affiliate, CRM, Support",
+    "description": "Staff administration for the customer-facing Users, Organizations, Marketplace, Academy, Affiliate, CRM/leads, and Support-ticket domains — no backend route or frontend page exists for any of them.",
+    "backend": {
+      "handlers": [],
+      "entry_points": [],
+      "routes_sampled": [],
+      "routes_fully_enumerated": true,
+      "status": "missing"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Re-verified 2026-07-08 (originally documented docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:235 Gap Matrix Domain 11): grepped the full /api/admin/* route inventory in workers/src/index.js (36 distinct paths) for any users/orgs/organizations/marketplace/academy/affiliate/crm/support/leads/tickets segment — zero matches. This gap is unchanged since the mission brief was written, despite substantial registry-population work landing in the interim across Organizations, RBAC, MSSP, Sales/CRM, Affiliate/Partner, and Academy domains — none of that work added a staff admin surface for its own area."
+    },
+    "navigation": { "discoverable": false, "evidence": "No page exists to link to." },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": { "has_tests": false, "evidence": "Nothing to test — no implementation exists." },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "grep -oE for /api/admin/(users|orgs|organizations|marketplace|academy|affiliate|crm|support|leads|tickets)[a-zA-Z0-9/_:-]* across workers/src/index.js returns zero matches, 2026-07-08."
+    },
+    "notes": "A genuine, real gap, not a wiring/discoverability issue like most of the rest of this domain — the backend simply does not exist for any of these 7 areas. Staff currently have no way to, e.g., disable a customer's account, edit an organization, moderate a marketplace listing, manage academy enrollment, review an affiliate application, or work a support ticket, other than direct database access."
+  }
+]
