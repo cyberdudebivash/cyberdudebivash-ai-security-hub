@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T12:51:36.879Z
-Capabilities catalogued: 4
+Generated: 2026-07-08T12:55:36.133Z
+Capabilities catalogued: 7
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 87.5% |
-| Frontend | 25% |
-| Parity (backend **and** frontend both exist) | 25% |
+| Backend | 92.9% |
+| Frontend | 42.9% |
+| Parity (backend **and** frontend both exist) | 42.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -27,21 +27,21 @@ Capabilities catalogued: 4
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 1 | Broken customer journey |
-| High | P2 | 1 | Backend exists, frontend missing |
+| High | P2 | 2 | Backend exists, frontend missing |
 | Medium | P3 | 0 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 0 | No test coverage |
-| Low | P7 | 1 | Documentation missing |
+| Low | P7 | 3 | Documentation missing |
 
-**Rollup:** Critical 1 · High 1 · Medium 1 · Low 1
+**Rollup:** Critical 1 · High 2 · Medium 1 · Low 3
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 3 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 1 | Backend exists, zero frontend surface |
+| Hidden features | 4 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 2 | Backend exists, zero frontend surface |
 | Duplicate systems | 0 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 1 | Priority P1 |
 
@@ -54,6 +54,14 @@ the fixed vocabulary from `docs/ENGINEERING_STANDARDS.md` §9 — never "100%
 complete", "bug free", or "guaranteed".
 
 ## Capabilities by Domain
+
+### commercial-billing (3 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-BILL-001 | Coupon Redemption at Checkout | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-BILL-002 | Coupon Administration | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-BILL-003 | Subscription Plans & Billing Portal | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
 ### identity (1 capability)
 
