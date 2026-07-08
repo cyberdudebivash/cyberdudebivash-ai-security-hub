@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T13:22:38.959Z
-Capabilities catalogued: 40
+Generated: 2026-07-08T14:30:56.619Z
+Capabilities catalogued: 50
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 75% |
-| Frontend | 42.5% |
-| Parity (backend **and** frontend both exist) | 40% |
+| Backend | 72% |
+| Frontend | 38% |
+| Parity (backend **and** frontend both exist) | 36% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -27,21 +27,21 @@ Capabilities catalogued: 40
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 11 | Broken customer journey |
-| High | P2 | 13 | Backend exists, frontend missing |
+| High | P2 | 16 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 1 | RBAC not enforced |
+| Medium | P4 | 2 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 6 | No test coverage |
-| Low | P7 | 7 | Documentation missing |
+| Low | P6 | 10 | No test coverage |
+| Low | P7 | 9 | Documentation missing |
 
-**Rollup:** Critical 11 · High 13 · Medium 3 · Low 13
+**Rollup:** Critical 11 · High 16 · Medium 4 · Low 19
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 8 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 6 | Backend exists, zero frontend surface |
+| Hidden features | 13 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 10 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 11 | Priority P1 |
 
@@ -61,6 +61,15 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-ACAD-001 | Training Academy: Course Purchase, Verification & Access | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-ACAD-002 | Homepage Course Buy Buttons | ✓ | ✗ | ✓ | NOT READY | P1 |
+
+### administration (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-ADMIN-001 | Ops Admin Console — Business & Platform Visibility | ✓ | ✓ | ✗ | NOT READY | P6 |
+| CAP-ADMIN-002 | Platform Infrastructure Ops APIs (Incidents, Maintenance, Deployments, SSO Config, Email Health, Data Seeding) | ✓ | ✗ | ✗ | NOT READY | P6 |
+| CAP-ADMIN-003 | Owner-Only Revenue & Growth Business-Intelligence APIs | ✓ | ✗ | ✗ | NOT READY | P6 |
+| CAP-ADMIN-004 | Missing Admin Surfaces — Users, Organizations, Marketplace, Academy, Affiliate, CRM, Support | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### affiliate-partner (2 capabilities)
 
@@ -100,6 +109,12 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✗ | ✗ | NOT READY | P1 |
 
+### masoc (1 capability)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-MASOC-001 | Multi-Agent SOC — 9 Parallel AI Security Agents | ✓ | ✓ | ✓ | NOT READY | P4 |
+
 ### mssp (4 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
@@ -108,6 +123,12 @@ complete", "bug free", or "guaranteed".
 | CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### navigation (1 capability)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-NAV-001 | Server-Driven Navigation Engine (role/plan/feature-flag-based) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### notifications (4 capabilities)
 
@@ -123,6 +144,15 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-ORG-001 | Organization Management | ✓ | ✗ | ✗ | NOT READY | P2 |
+
+### production-readiness (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-PROD-001 | CI Quality & Security Gates (Headers, Accessibility, Performance, Dependencies, Secrets, E2E) | ✓ | ✗ | ✗ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-PROD-002 | Rate Limiting & Structured Request-ID Correlation | ✓ | ✗ | ✗ | NOT READY | P6 |
+| CAP-PROD-003 | Distributed Tracing / APM | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PROD-004 | Consolidated OWASP ASVS / API Security Top-10 Checklist | ✗ | ✗ | ✗ | NOT READY | P7 |
 
 ### rbac (2 capabilities)
 
