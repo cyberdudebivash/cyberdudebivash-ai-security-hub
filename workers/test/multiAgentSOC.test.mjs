@@ -36,6 +36,7 @@ import {
   runAgent,
   handleAgentsStatus,
   handleAgentsRun,
+  handleAgentsStream,
   handleAgentDispatch,
 } from '../src/handlers/multiAgentSOC.js';
 
@@ -473,5 +474,49 @@ describe('handleAgentDispatch()', () => {
       const resp = await handleAgentDispatch(req, fakeEnv(), fakeAuth, id);
       expect(resp.status).toBe(200);
     }
+  });
+});
+
+// ── handleAgentsStream — SSE CORS ────────────────────────────────────────────────
+// Regression coverage for the fix: handleAgentsStream previously hand-rolled its own
+// CORS check (`origin.endsWith('.cyberdudebivash.in')`) instead of using the shared
+// production-origin allowlist (workers/src/middleware/cors.js), silently rejecting 3
+// of 6 real production origins for SSE streaming. Now uses corsHeaders() like every
+// other route.
+describe('handleAgentsStream() — SSE CORS', () => {
+  function ctxStub() {
+    return { waitUntil: (p) => { Promise.resolve(p).catch(() => {}); } };
+  }
+  function makeStreamRequest(origin) {
+    const json = JSON.stringify({ message: 'quick platform health check' });
+    return new Request('https://cyberdudebivash.in/api/agents/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'Content-Length': String(new TextEncoder().encode(json).byteLength),
+        ...(origin ? { Origin: origin } : {}),
+      },
+      body: json,
+    });
+  }
+
+  it.each([
+    'https://cyberdudebivash.pages.dev',
+    'https://tools.cyberdudebivash.com',
+    'https://intel.cyberdudebivash.com',
+  ])('reflects %s — a real production origin previously rejected by the hand-rolled check', async (origin) => {
+    const res = await handleAgentsStream(makeStreamRequest(origin), fakeEnv(), fakeAuth, ctxStub());
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+  });
+
+  it('still reflects the primary platform origin', async () => {
+    const res = await handleAgentsStream(makeStreamRequest('https://cyberdudebivash.in'), fakeEnv(), fakeAuth, ctxStub());
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://cyberdudebivash.in');
+  });
+
+  it('falls back to the primary origin for an unrecognized origin (fail closed)', async () => {
+    const res = await handleAgentsStream(makeStreamRequest('https://evil.example.com'), fakeEnv(), fakeAuth, ctxStub());
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://cyberdudebivash.in');
   });
 });
