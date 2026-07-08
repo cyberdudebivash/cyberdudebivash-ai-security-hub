@@ -49,11 +49,23 @@ unauthenticated in the public SOC dashboard widget). Regression coverage:
 `workers/test/authGateRealUser.test.mjs`. Full suite green: 177 files / 1862
 tests. See the registry entry's `verification.evidence` for full detail.
 
-Two lower-severity findings on the same capability remain unfixed (SSE CORS
-narrower than the real production origin allowlist; a frontend
-default-selection bug that silently duplicates one agent's AI call every
-run) — detailed in the same registry entry's `notes` field. Neither is a
-security gate; both are out of scope for this fix.
+A second, lower-severity finding on the same capability is now **also
+FIXED** (2026-07-08, separate commit): `handleAgentsStream`'s SSE response
+hand-rolled its own CORS check narrower than the real 6-origin
+`PROD_ORIGINS` allowlist, silently breaking SSE streaming for 3 of 6 real
+production origins (`cyberdudebivash.pages.dev`, `tools.cyberdudebivash.com`,
+`intel.cyberdudebivash.com`) while the JSON/status routes on the same
+capability worked fine. Now uses the shared `corsHeaders()` from
+`workers/src/middleware/cors.js`, same pattern as every other route.
+Regression coverage: `workers/test/multiAgentSOC.test.mjs`'s new
+`handleAgentsStream() — SSE CORS` block. Full suite green: 177 files / 1867
+tests.
+
+One low-severity finding remains unfixed on this capability (out of scope
+for both fixes above): a frontend default-selection bug in
+`frontend/soc-agents.html` that silently duplicates one agent's AI call
+every run — detailed in the registry entry's `notes` field. Not a security
+gate.
 
 ## Remaining Work Register
 

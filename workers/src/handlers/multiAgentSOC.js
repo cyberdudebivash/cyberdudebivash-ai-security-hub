@@ -18,6 +18,7 @@
  */
 
 import { routeAICall } from '../core/aiProviderRouter.js';
+import { corsHeaders } from '../middleware/cors.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MASOC_VERSION       = '2.0';
@@ -636,20 +637,23 @@ export async function handleAgentsStream(request, env, authCtx, ctx) {
     void runAll();
   }
 
-  // Restrict CORS to platform origin for SSE (not wildcard)
-  const origin = request.headers.get('Origin') || '';
-  const allowedOrigin = origin === PLATFORM_ORIGIN || origin.endsWith('.cyberdudebivash.in')
-    ? origin : PLATFORM_ORIGIN;
+  // CORS: use the shared production-origin allowlist (workers/src/middleware/cors.js)
+  // instead of a hand-rolled `.endsWith('.cyberdudebivash.in')` check — that check
+  // silently rejected 3 of 6 real production origins (cyberdudebivash.pages.dev,
+  // tools.cyberdudebivash.com, intel.cyberdudebivash.com), so SSE streaming was
+  // browser-CORS-blocked from those origins while the JSON/status MASOC routes
+  // (already on withCors()) kept working fine from the same origin.
+  const cors = corsHeaders(request, env);
 
   return new Response(readable, {
     status: 200,
     headers: {
-      'Content-Type':                'text/event-stream; charset=utf-8',
-      'Cache-Control':               'no-cache, no-store',
-      'Connection':                  'keep-alive',
-      'X-Accel-Buffering':           'no',
-      'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Credentials': 'true',
+      'Content-Type':                     'text/event-stream; charset=utf-8',
+      'Cache-Control':                    'no-cache, no-store',
+      'Connection':                       'keep-alive',
+      'X-Accel-Buffering':                'no',
+      'Access-Control-Allow-Origin':      cors['Access-Control-Allow-Origin'],
+      'Access-Control-Allow-Credentials': cors['Access-Control-Allow-Credentials'],
     },
   });
 }
