@@ -1,1 +1,177 @@
-[]
+[
+  {
+    "id": "CAP-PORTAL-001",
+    "domain": "customer-portal",
+    "name": "Profile & Security Settings",
+    "description": "View/update profile, change password, and set up/manage multi-factor authentication from within the authenticated dashboard.",
+    "backend": {
+      "handlers": ["workers/src/handlers/auth.js", "workers/src/handlers/mfa.js"],
+      "entry_points": ["handleUpdateProfile", "handleChangePassword"],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "frontend/user-dashboard.html:1595 (Update Password button), 1602-1607 (MFA status badge + setup body), 2798-2823 (changePassword(), calling POST /api/auth/change-password), 2825+ (MFA setup flow) — all read directly, verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/user-dashboard.html:897 sidebar nav-item (data-page=\"settings\") reaches this page section."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/phase10PasswordReset.test.mjs, workers/test/mfaEnforcementRegression.test.mjs, and workers/test/gdprAccountDeletion.test.mjs import directly from workers/src/handlers/auth.js — confirmed by import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/user-dashboard.html:1595-1607,2798-2825 read directly; workers/test/phase10PasswordReset.test.mjs and workers/test/mfaEnforcementRegression.test.mjs import statements confirmed."
+    },
+    "notes": "No actionable gap found in this pass. P7 assigned by elimination (no P1-P6 condition applies)."
+  },
+  {
+    "id": "CAP-PORTAL-002",
+    "domain": "customer-portal",
+    "name": "Scan History & Reports",
+    "description": "View past scans/purchased reports with expiry and re-download.",
+    "backend": {
+      "handlers": ["workers/src/handlers/payments.js"],
+      "entry_points": [],
+      "routes_sampled": [
+        { "path": "/api/customer/payments", "method": "GET", "evidence": "workers/src/index.js:5500" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "frontend/user-dashboard.html:3700-3722 (loadUserReports()) renders the reports table with module/target/price/expiry/download columns and is wired to fire on nav to the reports page or on load if already active. As of commit 67f6b924 (PR #97 quick-win fix), this function is the sole owner of #reports-table — the previous race condition against loadPayments() (both functions writing the same DOM element, whichever resolved last silently won) was removed by scoping loadPayments() to #payment-history only. Independently re-confirmed 2026-07-08: no other function in the file references #reports-table."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/user-dashboard.html:846 sidebar nav-item (data-page=\"reports\")."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/billingPortal.test.mjs and workers/test/commercialPlatform.test.mjs reference report_url/customer payments behavior (confirmed by grep for these terms; both test the payments/billing data shape this page consumes)."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/user-dashboard.html:3700-3722 read directly and cross-checked against the PR #97 diff (git show 67f6b924) to confirm the previously-documented race condition is actually fixed in current code, not just claimed fixed."
+    },
+    "notes": "This entry supersedes docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:227's 'Exists, buggy' status — the bug it references (Quick Win #3) was fixed in commit 67f6b924, after the mission brief was written. No actionable gap found now; P7 by elimination."
+  },
+  {
+    "id": "CAP-PORTAL-003",
+    "domain": "customer-portal",
+    "name": "Session Management (Active Sessions / Per-Session Revoke)",
+    "description": "Let a customer see which devices/sessions are currently signed in and revoke an individual session, rather than only being able to sign out everywhere at once.",
+    "backend": {
+      "handlers": ["workers/src/handlers/auth.js"],
+      "entry_points": ["revokeAllUserTokens"],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "partial"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "No page in frontend/*.html renders a session/device list. Only a blanket revoke-all-sessions side-effect exists, triggered automatically by password change (workers/src/handlers/auth.js:508-510) and password reset (workers/src/handlers/auth.js:604-606) — there is no user-facing 'sign out this device' control anywhere."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry anywhere links to a session-management page, because no such page exists."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file targets a per-session list/revoke endpoint, because none exists; revokeAllUserTokens is exercised only incidentally within the password-change/reset test files (workers/test/phase10PasswordReset.test.mjs)."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/auth.js:508-510,604-606 read directly; refresh_tokens table schema referenced in docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:99 tracks ip_address/user_agent per session, which is the data a real session list would need, but no GET endpoint exposes it and no query for it was found in workers/src/handlers/auth.js."
+    },
+    "notes": "Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md Domain 1 (Identity) and Domain 9 (Customer Portal) rows, which both flag this as the same gap — registered once here (portal-facing framing) rather than duplicated into identity.json. The underlying refresh_tokens table already has the per-session columns a fix would need; this is a wiring/UI gap, not a data-model gap."
+  },
+  {
+    "id": "CAP-PORTAL-004",
+    "domain": "customer-portal",
+    "name": "Support Ticket System",
+    "description": "In-product support ticket submission and tracking, as opposed to routing every support request through email.",
+    "backend": {
+      "handlers": [],
+      "entry_points": [],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "missing"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "frontend/user-dashboard.html:2720 and :4161 are the only 'support' touchpoints found, and both are static mailto: links (mailto:enterprise@cyberdudebivash.in and mailto:support@cyberdudebivash.com respectively) — no in-product ticket form, ticket list, or ticket-status API exists anywhere in the repo."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry links to a support/ticketing page because none exists; the mailto: links are inline text, not nav items."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file references a ticket/support-case handler, because none exists."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
+      { "path": "SUPPORT_PLAYBOOK.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "Case-insensitive search for 'support ticket' and 'mailto:' across frontend/user-dashboard.html; no handler file in workers/src/handlers/ named or grepped for ticket-related exports."
+    },
+    "notes": "Confirms docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:229's 'Missing — only static mailto: links found' finding exactly as written; no change since that audit. SUPPORT_PLAYBOOK.md documents the operational process for handling support over email/WhatsApp, which is the current real workflow — this entry tracks the absence of in-product tooling, not an absence of any support process at all."
+  }
+]

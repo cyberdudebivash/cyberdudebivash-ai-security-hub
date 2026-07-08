@@ -97,12 +97,12 @@ function validateEntry(entry, relFile) {
   req(typeof f.evidence === 'string' && f.evidence.length > 0, 'frontend.evidence must be a non-empty string');
 
   const n = entry.navigation || {};
-  req(typeof n.discoverable === 'boolean', 'navigation.discoverable must be boolean');
+  req(typeof n.discoverable === 'boolean' || n.discoverable === 'unknown', 'navigation.discoverable must be boolean or "unknown"');
 
-  req(typeof entry.auth_enforced === 'boolean', 'auth_enforced must be boolean');
+  req(typeof entry.auth_enforced === 'boolean' || entry.auth_enforced === 'unknown', 'auth_enforced must be boolean or "unknown"');
 
   const r = entry.rbac || {};
-  req(typeof r.enforced === 'boolean', 'rbac.enforced must be boolean');
+  req(typeof r.enforced === 'boolean' || r.enforced === 'unknown', 'rbac.enforced must be boolean or "unknown"');
   req(Array.isArray(r.permissions), 'rbac.permissions must be an array');
 
   req(typeof entry.subscription_gated === 'boolean' || entry.subscription_gated === 'unknown', 'subscription_gated must be boolean or "unknown"');
@@ -154,7 +154,11 @@ function validateEntry(entry, relFile) {
   }
 }
 
-const FILE_LINE_RE = /([A-Za-z0-9_./-]+\.(?:js|mjs|html|md|json))(?::(\d+))?/g;
+// Longer/more-specific extensions must precede shorter ones that are a
+// literal prefix of them (json starts with "js") — regex alternation takes
+// the first alternative that matches, so "js" before "json" in the list
+// would truncate every ".json" citation to a nonexistent ".js" file.
+const FILE_LINE_RE = /([A-Za-z0-9_./-]+\.(?:mjs|json|js|html|md))(?::(\d+))?/g;
 
 function checkEvidenceResolves(id, relFile, evidenceStr) {
   let m;

@@ -1,1 +1,98 @@
-[]
+[
+  {
+    "id": "CAP-RBAC-001",
+    "domain": "rbac",
+    "name": "Platform Staff Role Management",
+    "description": "Grant/revoke/list Platform Administrator and Super Administrator roles for internal staff, backed by the user_roles table, replacing the single-owner-email/ADMIN_KEY-only path with real multi-user admin accounts.",
+    "backend": {
+      "handlers": ["workers/src/auth/rbac.js"],
+      "entry_points": [
+        "getPlatformRoles", "isSuperAdmin", "isPlatformAdmin", "can", "requireCan",
+        "handleGrantRole", "handleRevokeRole", "handleListRoles"
+      ],
+      "routes_sampled": [
+        { "path": "/api/admin/roles", "method": "GET", "evidence": "workers/src/index.js:8095" },
+        { "path": "/api/admin/roles/grant", "method": "POST", "evidence": "workers/src/index.js:8100" },
+        { "path": "/api/admin/roles/revoke", "method": "DELETE", "evidence": "workers/src/index.js:8105" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/admin-portal.html"],
+      "status": "exists",
+      "evidence": "frontend/admin-portal.html:365-369 (grantRole()) and its sibling revokeRole() call CDB_STAFF_AUTH.authFetch against /api/admin/roles/grant and /api/admin/roles/revoke; the page renders a grant/revoke form (:349-359) and a granted-roles table (:256-262), verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "frontend/admin-portal.html:272 self-declares 'Internal platform staff tool. Not indexed, not linked from any public page. Access requires a verified staff session.' Independently confirmed not linked from any customer-facing page — a repo-wide search for references to this page across frontend/*.html returns only staff-tool cross-links (frontend/proposal-generator.html, frontend/revenue-command-center.html, frontend/mssp-command-center.html). Non-discoverability from customer nav is by design, not a defect; see the accepted exception recorded in docs/capability-registry/exceptions.json."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["admin:roles:manage"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/rbac.test.mjs:9-12 imports getPlatformRoles/isSuperAdmin/isPlatformAdmin/can/requireCan/handleGrantRole/handleRevokeRole/handleListRoles directly from workers/src/auth/rbac.js — confirmed by direct import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/auth/rbac.js and frontend/admin-portal.html read directly; workers/src/index.js:8095-8105 grepped for route registration; workers/test/rbac.test.mjs import statements confirmed."
+    },
+    "notes": "This is a staff-only internal tool, not a customer-facing capability — customer_journey_complete and the GA vocabulary don't map cleanly onto it (there is no 'customer journey' to browser-verify). No actionable gap was found: backend, frontend, RBAC, and tests all check out for its actual (staff) audience. Priority P7 assigned by elimination (lowest-severity bucket) since none of P1-P6's conditions apply, not because documentation is thin."
+  },
+  {
+    "id": "CAP-RBAC-002",
+    "domain": "rbac",
+    "name": "Role/Plan-Based Frontend Feature Gating",
+    "description": "Hide, disable, or otherwise adapt dashboard navigation and modules based on the authenticated customer's role and subscription plan, instead of rendering every module to every signed-in user regardless of entitlement.",
+    "backend": {
+      "handlers": ["workers/src/index.js"],
+      "entry_points": [],
+      "routes_sampled": [
+        { "path": "/api/user/plan", "method": "GET", "evidence": "workers/src/index.js:3656" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "partial"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "broken",
+      "evidence": "frontend/user-dashboard.html:834-901 — the entire sidebar (<aside class=\"sidebar\">, 8 sections, ~20 nav-items covering Scans/Reports/ThreatGraph/CISO/AI Analysis/Trainings/Deliveries/My Tools/Sentinel APEX/Subscriptions/API Usage/Developer/Billing/Settings) renders unconditionally via static HTML — no role or plan check gates which nav-items appear. The only entitlement-aware UI found is isolated upsell banners/button-blocks inside individual pages (grep for tier-conditional rendering matches only scattered spots, not the sidebar itself). Independently re-confirmed 2026-07-08; matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:210 Gap Matrix row (Domain 3), which remains accurate — PR #97's quick-win fix (commit 67f6b924) corrected a related but narrower bug (My Tools' unlock logic reading a spoofable localStorage tier instead of the authenticated _plan state) and did not touch sidebar-level gating."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "The sidebar itself is the navigation; the gap is that it does not vary by role/plan, not that it's unreachable."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports frontend/user-dashboard.html's sidebar-rendering code (it is inline HTML/JS, not an importable module); no server-side nav/entitlement test exists because no server-side nav generation exists."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P4",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/user-dashboard.html:834-901 read directly; workers/src/auth/rbac.js's PERMISSIONS registry (lines 99-104) read to confirm it defines platform-staff permissions only (admin:analytics:read, admin:business:read, admin:roles:manage, admin:infra:operate) and has no customer-facing role/plan predicate consumed by any frontend page."
+    },
+    "contradicts_doc": [],
+    "notes": "The highest-value, still-open finding from the Phase 0 audit's Domain 3/6 analysis: a customer on the FREE plan and a customer on ENTERPRISE see an identical sidebar. RBAC backend enforcement on individual API calls is real (see CAP-ORG-001, CAP-RBAC-001, and the platform-staff PERMISSIONS registry) — this entry specifically tracks the missing frontend layer that would make the UI itself reflect what a given user can actually do, which is a separate, larger implementation effort than this registry's scope (cataloguing, not closing, the gap)."
+  }
+]

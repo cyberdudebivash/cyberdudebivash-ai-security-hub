@@ -1,1 +1,149 @@
-[]
+[
+  {
+    "id": "CAP-BILL-001",
+    "domain": "commercial-billing",
+    "name": "Coupon Redemption at Checkout",
+    "description": "Customer-facing coupon code entry on the pricing/checkout flow, with server-authoritative validation and discount application (expiry, per-user/total caps, enterprise-only, first-purchase-only, minimum-purchase, abuse rate-limiting).",
+    "backend": {
+      "handlers": ["workers/src/lib/coupons.js", "workers/src/handlers/payments.js"],
+      "entry_points": [
+        "validateCoupon", "applyDiscount", "computeDiscountedAmount",
+        "recordCouponUsage", "finalizeCouponRedemption", "revokeRedemption", "handleCreateOrder"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "frontend/index.html:5985-5991 renders a 'Have a coupon code?' toggle, a coupon-code input, and an Apply button on the pricing section; frontend/index.html:11026-11089 (cdbToggleCouponInput/cdbApplyCoupon) sends the code as coupon_code on order creation and surfaces validation errors so a bad/expired/exhausted coupon does not silently fall through — verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Embedded directly in the public pricing section of frontend/index.html, which is the platform's primary landing page."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/couponSystem.test.mjs exercises the redemption engine in workers/src/lib/coupons.js directly (confirmed by file presence and naming; import statement matches the module under test)."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/lib/coupons.js (16 exported functions incl. 8 handleAdmin* — see CAP-BILL-002) read directly; workers/src/handlers/payments.js:83 handleCreateOrder confirmed to accept an unauthenticated authCtx ({} default) so anonymous checkout with a coupon is possible; frontend/index.html:5985-5991,11026-11089 read directly."
+    },
+    "notes": "customer_journey_complete is false only because no dynamic_browser (real click-through) pass has been run yet, not because of a known defect — static evidence for this capability is unusually strong (server-authoritative validation, real UI, real tests). A dynamic_browser pass is the natural next step to upgrade this to a fully verified GA claim."
+  },
+  {
+    "id": "CAP-BILL-002",
+    "domain": "commercial-billing",
+    "name": "Coupon Administration",
+    "description": "Staff creation, editing, activation/deactivation, and redemption-audit of discount coupons.",
+    "backend": {
+      "handlers": ["workers/src/lib/coupons.js"],
+      "entry_points": [
+        "handleAdminListCoupons", "handleAdminGetCoupon", "handleAdminCreateCoupon",
+        "handleAdminUpdateCoupon", "handleAdminDeleteCoupon", "handleAdminSetCouponActive",
+        "handleAdminDeactivateCoupon", "handleAdminValidateCoupon",
+        "handleAdminListRedemptions", "handleAdminRevokeRedemption"
+      ],
+      "routes_sampled": [
+        { "path": "/api/admin/coupons", "method": "GET", "evidence": "workers/src/index.js:2930" },
+        { "path": "/api/admin/coupons", "method": "POST", "evidence": "workers/src/index.js:2935" },
+        { "path": "/api/admin/coupons/{id}", "method": "PUT", "evidence": "workers/src/index.js:2975" },
+        { "path": "/api/admin/coupons/{id}", "method": "DELETE", "evidence": "workers/src/index.js:2981" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Case-insensitive search for the string 'coupon' in frontend/admin-portal.html and frontend/ops-dashboard.html — the platform's two staff/admin consoles — returns zero matches. No page anywhere calls any /api/admin/coupons* route. Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:234 Gap Matrix row (Domain 11): 'Coupons admin: Exists, no UI (API-only)', independently re-confirmed 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry anywhere links to a coupon-admin page, because no coupon-admin page exists."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["isAdmin"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/couponSystem.test.mjs — same test file as CAP-BILL-001; covers the workers/src/lib/coupons.js module the handleAdmin* functions live in."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/lib/coupons.js:378,389,399,456,514,530,562,574 each read directly — every handleAdmin* function opens with `if (authCtx?.isAdmin !== true) return fail(request, 'Admin access required', 403, 'ADMIN_ONLY')`, the legacy isAdmin flag rather than the newer permission registry in workers/src/auth/rbac.js, but a real, enforced gate. workers/src/index.js:2930-2984 grepped for /api/admin/coupons* route registrations; frontend/admin-portal.html and frontend/ops-dashboard.html grepped case-insensitively for 'coupon' (0 matches)."
+    },
+    "notes": "Authorization is real (isAdmin-gated on every handler) — the gap is purely the missing UI. Whoever builds the admin UI for this should consider migrating the gate to workers/src/auth/rbac.js's admin:business:read/admin:infra:operate permissions for consistency with CAP-RBAC-001, but that is a cleanup opportunity, not a defect."
+  },
+  {
+    "id": "CAP-BILL-003",
+    "domain": "commercial-billing",
+    "name": "Subscription Plans & Billing Portal",
+    "description": "View current plan/usage, upgrade/downgrade subscription, view invoices and payment history, and receive payment-failure notifications.",
+    "backend": {
+      "handlers": ["workers/src/handlers/subscription.js", "workers/src/services/v24/billingEngine.js", "workers/src/services/emailEngine.js"],
+      "entry_points": [
+        "handleGetUserPlan", "handleCreateSubscription", "handleActivateSubscription",
+        "handleGetPlans", "checkMonthlyQuota", "sendPaymentFailedEmail"
+      ],
+      "routes_sampled": [
+        { "path": "/api/user/plan", "method": "GET", "evidence": "workers/src/index.js:3656" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/billing-portal.html", "frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "frontend/billing-portal.html (563 lines) implements cancel/upgrade/usage/invoices; reachable from frontend/user-dashboard.html:2769, which navigates the browser to that page, wired to the sidebar's Billing nav-item (frontend/user-dashboard.html:894-896). Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/user-dashboard.html:894-896 sidebar nav-item (data-page=\"billing\") links to the billing flow, which forwards to frontend/billing-portal.html."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/userPlanKeyLimit.test.mjs and workers/test/monthlyQuota.test.mjs import from workers/src/handlers/subscription.js; workers/test/emailWiringTask3Phase1.test.mjs covers workers/src/services/emailEngine.js, which workers/src/handlers/payments.js:1104 calls (sendPaymentFailedEmail) on a failed Razorpay payment webhook — confirmed by direct import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/billing-portal.html and frontend/user-dashboard.html:2760-2775,894-896 read directly; workers/src/handlers/subscription.js exports enumerated; workers/src/handlers/payments.js:1104 read to confirm sendPaymentFailedEmail is actually invoked, not just defined."
+    },
+    "notes": "No actionable gap found in this pass (backend, frontend, navigation, tests, and docs all check out) — P7 assigned by elimination, not because documentation is thin. Two items remain explicitly unverified rather than confirmed either way: renewal/dunning cron completeness and usage-based/API billing enforcement completeness (docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:126). Flagged here for a future verification cycle rather than asserted working or broken."
+  }
+]

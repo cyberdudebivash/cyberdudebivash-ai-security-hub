@@ -1,1 +1,347 @@
-[]
+[
+  {
+    "id": "CAP-CRM-001",
+    "domain": "sales-crm",
+    "name": "Homepage Enterprise Inquiry & Book-Demo Widgets",
+    "description": "Embedded homepage forms letting a prospect submit an enterprise sales inquiry (ICP-scored) or book a live demo, without leaving the landing page.",
+    "backend": {
+      "handlers": ["workers/src/handlers/salesPipeline.js"],
+      "entry_points": ["handleCreateLead", "handleBookDemo"],
+      "routes_sampled": [
+        { "path": "/api/sales/leads", "method": "POST", "evidence": "workers/src/index.js:6020" },
+        { "path": "/api/sales/demo/book", "method": "POST", "evidence": "workers/src/index.js:6053" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "broken",
+      "evidence": "Two independent, confirmed defects guarantee both homepage forms fail on every submission. (1) Field-name mismatch: workers/src/handlers/salesPipeline.js:106 destructures {name, email, company} from the request body and returns 400 MISSING_FIELDS if any is missing (:108-110); frontend/index.html:20442-20444's p4CreateLead() sends {contact_name, contact_email, company_name} instead — none of the required keys are ever present. Independently confirmed 2026-07-08 by reading both sides directly. Similarly, handleBookDemo (workers/src/handlers/salesPipeline.js:344-345) requires {email, preferred_slot}; frontend/index.html:20501's p4BookDemo() sends {slot_id} instead of preferred_slot. (2) Response-envelope mismatch: every backend response is wrapped by ok()/fail() (workers/src/lib/response.js:16-38) as {success, data, error, timestamp}; frontend/index.html:20277-20287's shared p4Api() helper parses the raw fetch response as JSON with no .data unwrap, so the parsed object is the full envelope, not the payload. Both success checks (if (d.lead), frontend/index.html:20447; if (d.booking)/d.booking.booking_ref, frontend/index.html:20504,20506) check keys that do not exist at any level of a real response (handleCreateLead returns flat lead_id/icp_score/priority; handleBookDemo returns flat booked/booking_id/slot/meet_link, both nested one level under data by the envelope). Even if the field-name bug were fixed, the success branch would still never fire."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Both forms are embedded directly in frontend/index.html, the platform's primary landing page."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "Repo-wide search for an import from workers/src/handlers/salesPipeline.js under workers/test/**/*.mjs returns zero direct-import matches. workers/test/copilotSalesSupportTools.test.mjs exercises related behavior only indirectly through workers/src/handlers/aiSecurityCopilot.js, per that file's own header comment — it does not import or unit-test that handler itself, and would not catch this bug (it does not submit through the homepage's field names)."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/salesPipeline.js:100-111,340-348 read directly; frontend/index.html:20277-20287,20440-20456,20487-20511 read directly; workers/src/lib/response.js:16-38 read directly to confirm the envelope shape independently of the discovering agent's report."
+    },
+    "notes": "Two independent, revenue-critical top-of-funnel forms on the primary landing page have never worked and would fail 100% of submissions — every prospect who fills either form sees a failure message regardless of what they enter. This is a strong P1 candidate for immediate remediation outside this registry program's own scope (the fix touches several JS functions across a large inline script block and deserves its own focused, carefully-tested change, not a rushed fix bundled into registry population). See CAP-CRM-003 for a working alternative that reaches the same backend correctly."
+  },
+  {
+    "id": "CAP-CRM-002",
+    "domain": "sales-crm",
+    "name": "Dedicated Booking Page (Lead Capture + Demo Booking)",
+    "description": "A separate, dedicated booking page that correctly captures a sales lead and books a demo slot against the same backend the homepage widgets (CAP-CRM-001) fail to reach correctly.",
+    "backend": {
+      "handlers": ["workers/src/handlers/salesPipeline.js"],
+      "entry_points": ["handleCreateLead", "handleBookDemo"],
+      "routes_sampled": [
+        { "path": "/api/sales/leads", "method": "POST", "evidence": "workers/src/index.js:6020" },
+        { "path": "/api/sales/demo/book", "method": "POST", "evidence": "workers/src/index.js:6053" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/booking.html"],
+      "status": "exists",
+      "evidence": "frontend/booking.html:1396-1411 posts to /api/sales/leads with name/email/company/phone/role/sector — matching workers/src/handlers/salesPipeline.js:106's required fields exactly — and :1420-1430 posts to /api/sales/demo/book with preferred_slot, matching handleBookDemo's requirement. Both check response.ok and the real flat field names (leadData.lead_id) rather than a nonexistent nested key. frontend/booking.html:1382-1392 contains a comment documenting that this page previously had the same class of bug (posting to /api/leads/capture with a workEmail field the handler didn't read) and was fixed to call the CRM routes directly with matching field names — verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": "unknown",
+      "evidence": "Not established in this pass whether frontend/booking.html is linked from primary navigation or only reachable via direct URL/campaign links — needs a follow-up nav-crawl check."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/salesPipeline.js directly (see CAP-CRM-001); this working page has no direct regression coverage either, despite being the only currently-functional caller of these two routes."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P3",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/booking.html:1382-1430 read directly and cross-checked field-by-field against workers/src/handlers/salesPipeline.js:100-111,340-348."
+    },
+    "notes": "priority P3 reflects the unresolved navigation-discoverability question, not a functional defect — the page itself works correctly. Marking navigation.discoverable as 'unknown' rather than guessing true/false, per this registry's evidence discipline; a dynamic_browser nav-crawl would resolve this in one pass."
+  },
+  {
+    "id": "CAP-CRM-003",
+    "domain": "sales-crm",
+    "name": "Customer Personalized Risk Radar & Asset Inventory",
+    "description": "Authenticated customer-facing dashboard showing a personalized risk radar, organization risk posture, and a self-managed asset inventory (register/list/delete monitored assets).",
+    "backend": {
+      "handlers": ["workers/src/handlers/customerIntel.js"],
+      "entry_points": [
+        "handleGetProfile", "handleUpdateProfile", "handleGetPersonalizedRadar",
+        "handleGetOrgRisk", "handleGetAssets", "handleRegisterAsset", "handleDeleteAsset", "handleGetReport"
+      ],
+      "routes_sampled": [
+        { "path": "/api/customer/radar", "method": "GET", "evidence": "workers/src/index.js:6376" },
+        { "path": "/api/customer/assets", "method": "GET", "evidence": "workers/src/index.js:6388" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/customer-dashboard.html"],
+      "status": "exists",
+      "evidence": "frontend/customer-dashboard.html calls all 8 exported routes with matching field names — e.g. asset registration POST body {asset_type,asset_value,label} (:585) matches workers/src/handlers/customerIntel.js:478-482 exactly. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": "unknown",
+      "evidence": "Not established in this pass whether frontend/customer-dashboard.html is linked from primary navigation or from the main frontend/user-dashboard.html — needs a follow-up nav-crawl check; these are two separate pages that were not compared for overlap/duplication in this pass."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/customerIntel.js directly."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/customerIntel.js exports enumerated; frontend/customer-dashboard.html cross-checked against all 8 routes."
+    },
+    "notes": "Whether this page duplicates or complements frontend/user-dashboard.html's own scan-history/risk features is an open question worth a follow-up pass — flagging rather than asserting either way."
+  },
+  {
+    "id": "CAP-CRM-004",
+    "domain": "sales-crm",
+    "name": "Customer Success Health Scoring",
+    "description": "Backend health-score computation for customer-success tracking (churn risk, engagement) — distinct from the similarly-named CAP-CRM-005 capability that is actually wired to the frontend page named for this concept.",
+    "backend": {
+      "handlers": ["workers/src/handlers/customerSuccess.js"],
+      "entry_points": [
+        "handleCustomerHealth", "handleCustomerHealthByOrg", "handleCustomerSuccessOverview",
+        "handleRefreshHealthScores", "handleCustomerSuccessPlaybooks"
+      ],
+      "routes_sampled": [
+        { "path": "/api/customer-success/health", "method": "GET", "evidence": "workers/src/index.js:3008" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "duplicate"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide search (all frontend file types, not just .html) for any /api/customer-success/* path returns zero matches. frontend/customer-success-dashboard.html — despite its name closely matching this handler's route prefix — does not call it at all; it calls /api/customer/success/score (frontend/customer-success-dashboard.html:547), which workers/src/index.js:5432-5434 routes to a completely different file, workers/src/handlers/commercialPlatformHandler.js's handleCustomerSuccessScore. Verified 2026-07-08."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry calls this handler's routes because no page does." },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["requireRole (customerSuccess.js internal gate)"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/customerSuccess.js directly. workers/test/authRoleDerivation.test.mjs mentions the file only in a header comment describing a previously-fixed, unrelated authCtx.role bug — it does not exercise this handler's actual endpoints."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/customerSuccess.js exports and route registrations read directly; frontend/customer-success-dashboard.html read directly and confirmed to call a different handler entirely."
+    },
+    "notes": "backend.status is \"duplicate\" because a real, currently-used 'customer success score' concept already exists and is wired (commercialPlatformHandler.js's handleCustomerSuccessScore, consumed by customer-success-dashboard.html) — this file appears to be an earlier or parallel implementation of the same idea that was never connected to any UI. Worth a reconciliation decision (retire one, or merge) rather than building a UI for this one on top of an already-served concept."
+  },
+  {
+    "id": "CAP-CRM-005",
+    "domain": "sales-crm",
+    "name": "Proposal Generation",
+    "description": "Generate a branded sales proposal document for a prospect from a service package and lead context.",
+    "backend": {
+      "handlers": ["workers/src/handlers/proposalGenerator.js"],
+      "entry_points": [
+        "buildProposalDocument", "handleGenerateProposal", "handleListProposals", "handleGetProposal",
+        "handleMarkProposalSent", "handleAcceptProposal", "handleRejectProposal", "handleGetPackages"
+      ],
+      "routes_sampled": [
+        { "path": "/api/proposals/generate", "method": "POST", "evidence": "workers/src/index.js:6108" },
+        { "path": "/api/proposals", "method": "GET", "evidence": "workers/src/index.js:6113" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html", "frontend/proposal-generator.html"],
+      "status": "broken",
+      "evidence": "Two disconnected frontend surfaces, both failing to use this backend correctly. (1) frontend/index.html's p4GenerateProposal() (:20690-20692) sends {client_company, client_contact, client_email, sector, org_size, package_id, challenges}, but handleGenerateProposal requires lead_id (workers/src/handlers/proposalGenerator.js:326,331, MISSING_LEAD error) which is never sent — guaranteed failure; its success check if (d.proposal), frontend/index.html:20694, also can't match given the unwrapped-envelope bug described in CAP-CRM-001. p4LoadProposals() checks d.proposals, frontend/index.html:20710, also always undefined, so the widget permanently shows 'No proposals generated yet.' regardless of actual data (frontend/index.html:20712). (2) frontend/proposal-generator.html is a real, complete, 735-line page — but it is entirely client-side: it builds proposal HTML in-browser from hardcoded package/pricing tables and offers a browser-print 'download', with zero fetch calls anywhere in the file (confirmed by grep) — functionally disconnected from this backend entirely. It is staff-internal (CDB_STAFF_AUTH.guard()-gated, labeled 'Internal Tool · Team Only', excluded from search indexing via robots.txt), not customer-facing."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/proposal-generator.html is linked from frontend/revenue-command-center.html:501 and frontend/mssp-command-center.html:541 (both staff-only pages); the broken homepage widget is embedded directly in frontend/index.html."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["isOwner (proposals routes gated owner-only per workers/src/index.js)"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/proposalBola.test.mjs imports handleListProposals/handleGetProposal/handleMarkProposalSent/handleAcceptProposal/handleRejectProposal directly; workers/test/proposalGeneratorHonestClaims.test.mjs imports buildProposalDocument directly — confirmed by import-statement grep, 2026-07-08. Neither test submits through the homepage widget's field names, so neither would catch the CAP-CRM-001-style bug described above."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/proposalGenerator.js exports and required fields read directly; frontend/index.html:20690-20712 and frontend/proposal-generator.html (grepped for fetch(, 0 matches) read directly."
+    },
+    "notes": "A working, tested backend API for proposal generation exists, but neither of its two frontend touchpoints actually uses it: the public-facing one is broken (wrong fields + envelope bug), and the functional one (proposal-generator.html) reimplements the entire feature client-side instead of calling the API. This is real duplicate effort, not just a gap — worth a deliberate decision on which implementation to keep."
+  },
+  {
+    "id": "CAP-CRM-006",
+    "domain": "sales-crm",
+    "name": "Security Assessment Booking",
+    "description": "Dedicated booking flow for the ₹9,999 Security Assessment service package, with plan definitions, confirmation, and status tracking.",
+    "backend": {
+      "handlers": ["workers/src/handlers/assessmentBooking.js"],
+      "entry_points": ["handleBookAssessment", "handleConfirmAssessment", "handleGetAssessment", "handleListAssessments", "handleUpdateAssessmentStatus"],
+      "routes_sampled": [],
+      "routes_fully_enumerated": true,
+      "status": "duplicate"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide search (all file types) for /api/assessments returns zero matches anywhere in frontend/. The homepage's 'Book a Free Consultation' form has a package option literally priced 'Security Assessment — ₹9,999' (frontend/index.html:6432) that happens to match ASSESSMENT_PLANS.standard.price_inr = 9999 in workers/src/handlers/assessmentBooking.js:27, but that form's submit handler, submitEnterpriseV10(), posts to POST /api/enterprise/book (frontend/index.html:6853), which workers/src/index.js:6302-6305 routes to a different file entirely, handleBookConsultation in workers/src/handlers/enterpriseLayer.js. Verified 2026-07-08 — this handler has no live caller."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry calls this handler's routes because no page does." },
+    "auth_enforced": "unknown",
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": { "has_tests": false, "evidence": "No test file imports workers/src/handlers/assessmentBooking.js directly." },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/assessmentBooking.js read directly; frontend/index.html:6420-6853 read directly and traced to confirm the actual submit path goes to a different handler."
+    },
+    "notes": "backend.status is \"duplicate\": the real, currently-booked Security Assessment flow is handleBookConsultation in enterpriseLayer.js, not this file. This appears to be an earlier or parallel implementation that was superseded without being removed."
+  },
+  {
+    "id": "CAP-CRM-007",
+    "domain": "sales-crm",
+    "name": "Conversion Trigger & Funnel Tracking",
+    "description": "Behavioral event tracking and dynamic upsell/paywall/CTA triggers driven by customer usage patterns.",
+    "backend": {
+      "handlers": ["workers/src/handlers/conversionTriggers.js"],
+      "entry_points": ["handleRecordEvent", "handleGetTriggers", "handleGetPaywall", "handleDismissTrigger", "handleGetFunnel", "handleGetCTA", "handleRetarget", "handleGetBundleOffer", "handleGetUrgency"],
+      "routes_sampled": [
+        { "path": "/api/conversion/event", "method": "POST", "evidence": "workers/src/index.js:6168" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "partial",
+      "evidence": "frontend/index.html calls all 6 of this handler's routes (:20890,20913,20949,20972,20988,21006) via the same unwrapped p4Post/p4Get helper described in CAP-CRM-001, so the envelope-mismatch bug applies here too. Additionally, several parameter names don't match: the frontend sends event_type (:20890) but handleRecordEvent reads event (workers/src/handlers/conversionTriggers.js:235); several calls send user_id but the backend only ever reads authCtx?.userId or a session_id field/query param, never user_id (workers/src/handlers/conversionTriggers.js:236,267,335); the paywall call sends feature_id (:20972) but handleGetPaywall reads a feature query param and 400s without it (workers/src/handlers/conversionTriggers.js:297,300). The CTA call's plan/context params (:20988) do match the backend exactly (workers/src/handlers/conversionTriggers.js:381-382), so that one path likely works modulo the envelope bug."
+    },
+    "navigation": { "discoverable": true, "evidence": "Embedded directly in frontend/index.html." },
+    "auth_enforced": false,
+    "rbac": { "enforced": true, "permissions": ["isOwner (handleGetFunnel only, workers/src/index.js:6186)"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": { "has_tests": false, "evidence": "No test file imports workers/src/handlers/conversionTriggers.js directly." },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/conversionTriggers.js required-field reads compared line-by-line against frontend/index.html's 6 call sites."
+    },
+    "notes": "Marked partial rather than fully broken because at least one path (CTA) has matching field names — the envelope bug (CAP-CRM-001) is the one defect common to all 6, and would need fixing regardless of the per-endpoint field-name issues."
+  },
+  {
+    "id": "CAP-CRM-008",
+    "domain": "sales-crm",
+    "name": "Growth & Revenue Automation Suite",
+    "description": "27-function backend covering email capture, sales-pipeline automation, outreach, content automation, drip campaigns, API-key provisioning, billing callbacks, revenue dashboards, upsell tracking, and LinkedIn automation.",
+    "backend": {
+      "handlers": ["workers/src/handlers/growth.js"],
+      "entry_points": [
+        "handleEmailCapture", "handleScanEvent", "handleUpgradeCheck", "handleFunnelDashboard", "handleGetLeads",
+        "handleRunSalesPipeline", "handleGetOutreach", "handleMarkOutreachSent", "handleRunContentAutomation",
+        "handleGetContentQueue", "handleRunDrip", "handleEmailTrack", "handleProvisionApiKey", "handleGetApiUsage",
+        "handleBillingCallback", "handleCreatePaymentLink", "handleRevenueDashboard", "handleUpgradeLead",
+        "handleGetRegionContext", "handleGlobalDashboard", "handleEvaluateUpsell", "handleUpsellConverted",
+        "handleUpsellMetrics", "handleFeatureWall", "handleGetPricing", "handleLinkedInToday", "handleRunLinkedIn"
+      ],
+      "routes_sampled": [
+        { "path": "/api/growth/capture", "method": "POST", "evidence": "workers/src/index.js:4064" },
+        { "path": "/api/growth/pricing", "method": "GET", "evidence": "workers/src/index.js:4380" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide search across every file under frontend/ (all file types) for any /api/growth/* path, or /api/billing/callback, or /api/billing/create-link, returns zero matches. All 27 exported functions — including customer-facing-sounding ones (pricing, feature walls, API-key provisioning, revenue dashboard) — currently have zero frontend callers. Verified 2026-07-08."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry calls any of this handler's routes because no page does." },
+    "auth_enforced": "unknown",
+    "rbac": { "enforced": "unknown", "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/growth.js directly. workers/test/growthSalesOutreach.test.mjs imports markOutreachSent from a different file (workers/src/services/salesEngine.js) and exercises this handler's routes only indirectly by importing the full app router (workers/src/index.js) — not a direct unit test of this handler."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/growth.js's 27 exports enumerated; workers/src/index.js:4063-4392 grepped for /api/growth/* registrations; frontend/ searched exhaustively for any caller."
+    },
+    "notes": "The single largest backend-only orphan surface found in this domain by function count. auth_enforced/rbac.enforced marked unknown rather than asserted — with 27 functions, individually confirming each one's gate was out of scope for this pass; flagged honestly rather than assumed."
+  }
+]

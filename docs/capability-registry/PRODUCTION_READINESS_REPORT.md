@@ -10,40 +10,40 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T11:04:26.150Z
-Capabilities catalogued: 2
+Generated: 2026-07-08T13:22:38.959Z
+Capabilities catalogued: 40
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 100% |
-| Frontend | 0% |
-| Parity (backend **and** frontend both exist) | 0% |
+| Backend | 75% |
+| Frontend | 42.5% |
+| Parity (backend **and** frontend both exist) | 40% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 1 | Broken customer journey |
-| High | P2 | 1 | Backend exists, frontend missing |
-| Medium | P3 | 0 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 0 | RBAC not enforced |
+| Critical | P1 | 11 | Broken customer journey |
+| High | P2 | 13 | Backend exists, frontend missing |
+| Medium | P3 | 2 | Backend+frontend exist, navigation missing |
+| Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 0 | No test coverage |
-| Low | P7 | 0 | Documentation missing |
+| Low | P6 | 6 | No test coverage |
+| Low | P7 | 7 | Documentation missing |
 
-**Rollup:** Critical 1 · High 1 · Medium 0 · Low 0
+**Rollup:** Critical 11 · High 13 · Medium 3 · Low 13
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 2 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 1 | Backend exists, zero frontend surface |
-| Duplicate systems | 0 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 1 | Priority P1 |
+| Hidden features | 8 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 6 | Backend exists, zero frontend surface |
+| Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
+| Broken journeys | 11 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -55,17 +55,105 @@ complete", "bug free", or "guaranteed".
 
 ## Capabilities by Domain
 
+### academy (2 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-ACAD-001 | Training Academy: Course Purchase, Verification & Access | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-ACAD-002 | Homepage Course Buy Buttons | ✓ | ✗ | ✓ | NOT READY | P1 |
+
+### affiliate-partner (2 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-AFF-001 | Affiliate Program: Join, Status, Payout, Leaderboard | ✓ | ✗ | ✓ | NOT READY | P1 |
+| CAP-AFF-002 | Outbound Sponsor/Affiliate Click Tracking | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+
+### commercial-billing (3 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-BILL-001 | Coupon Redemption at Checkout | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-BILL-002 | Coupon Administration | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-BILL-003 | Subscription Plans & Billing Portal | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+
+### customer-portal (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-PORTAL-001 | Profile & Security Settings | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ◐ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PORTAL-004 | Support Ticket System | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### dashboard-personalization (3 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-DASH-001 | CISO Hub Metrics (Risk Posture, Compliance, Incidents) | ✗ | ✗ | ✓ | NOT READY | P1 |
+| CAP-DASH-002 | Executive Hub / Command Center | ✗ | ✗ | ✓ | NOT READY | P1 |
+| CAP-DASH-003 | Product & Growth Analytics (Funnel, Feature Adoption) | ✓ | ✗ | ✗ | NOT READY | P2 |
+
 ### identity (1 capability)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✗ | ✗ | NOT READY | P1 |
 
+### mssp (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-MSSP-001 | MSSP Partner Onboarding (Checkout / Free Trial → Portal Access) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
+| CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### notifications (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-NOTIF-001 | Multi-Channel Notification Preferences & Delivery Log | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-NOTIF-002 | In-App Notification Bell | ✓ | ✗ | ✓ | NOT READY | P1 |
+| CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-NOTIF-004 | Transactional & Lifecycle Email Engine | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+
 ### organizations (1 capability)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-ORG-001 | Organization Management | ✓ | ✗ | ✗ | NOT READY | P2 |
+
+### rbac (2 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-RBAC-001 | Platform Staff Role Management | ✓ | ✓ | ✗ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-RBAC-002 | Role/Plan-Based Frontend Feature Gating | ◐ | ✗ | ✓ | NOT READY | P4 |
+
+### sales-crm (8 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-CRM-001 | Homepage Enterprise Inquiry & Book-Demo Widgets | ✓ | ✗ | ✓ | NOT READY | P1 |
+| CAP-CRM-002 | Dedicated Booking Page (Lead Capture + Demo Booking) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P3 |
+| CAP-CRM-003 | Customer Personalized Risk Radar & Asset Inventory | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-CRM-004 | Customer Success Health Scoring | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-CRM-005 | Proposal Generation | ✓ | ✗ | ✓ | NOT READY | P1 |
+| CAP-CRM-006 | Security Assessment Booking | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ◐ | ✓ | NOT READY | P1 |
+| CAP-CRM-008 | Growth & Revenue Automation Suite | ✓ | ✗ | ✗ | NOT READY | P2 |
+
+### sentinel-apex-marketplace (6 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-MKT-001 | Sentinel APEX Defense Solutions Storefront | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-MKT-002 | Marketplace Catalog & Checkout (Generic) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P3 |
+| CAP-MKT-003 | Sentinel-Specific Purchase Flow | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-MKT-004 | Security Tools Marketplace | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✗ | ◐ | ✓ | NOT READY | P1 |
+| CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ---
 *Regenerate with `node scripts/registry/generate-report.mjs` after any

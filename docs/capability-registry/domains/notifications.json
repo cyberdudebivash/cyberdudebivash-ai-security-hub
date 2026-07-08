@@ -1,1 +1,171 @@
-[]
+[
+  {
+    "id": "CAP-NOTIF-001",
+    "domain": "notifications",
+    "name": "Multi-Channel Notification Preferences & Delivery Log",
+    "description": "Per-user notification preferences (which channels/events to receive) and a delivery history log, backing a real Slack/Teams webhook dispatcher wired to platform events like churn-risk alerts.",
+    "backend": {
+      "handlers": ["workers/src/handlers/notificationPlatform.js"],
+      "entry_points": ["handleGetPreferences", "handleUpdatePreferences", "handleNotificationLog", "handleTestNotification", "handleAdminSendNotification"],
+      "routes_sampled": [
+        { "path": "/api/notifications/preferences", "method": "GET", "evidence": "workers/src/index.js:3199" },
+        { "path": "/api/notifications/preferences", "method": "PUT", "evidence": "workers/src/index.js:3204" },
+        { "path": "/api/notifications/log", "method": "GET", "evidence": "workers/src/index.js:3209" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "Repo-wide search across frontend/*.html for 'notifications/preferences' returns zero matches — no page lets a customer view or change their notification channel preferences, even though the backend for it is real and wired to actual events (per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:218's Domain 8 Gap Matrix row: 'real Slack/Teams webhook delivery, wired to real events (CHURN_RISK_ALERT, MSSP/developer onboarding)'). Independently re-confirmed 2026-07-08."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry links to a notification-preferences page because none exists." },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports workers/src/handlers/notificationPlatform.js directly."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/notificationPlatform.js:6-9 (route doc-comment) and its 5 exports read directly; workers/src/index.js:3199-3222 route registrations confirmed; frontend/*.html searched for any caller."
+    },
+    "notes": "The backend delivery mechanism (Slack/Teams webhooks firing on real events) already works and is undersold, not broken — the gap is purely that no customer can configure it, matching the mission brief's own framing exactly."
+  },
+  {
+    "id": "CAP-NOTIF-002",
+    "domain": "notifications",
+    "name": "In-App Notification Bell",
+    "description": "A homepage bell icon showing a badge count and dropdown of recent alerts.",
+    "backend": {
+      "handlers": ["workers/src/handlers/notificationPlatform.js"],
+      "entry_points": ["handleNotificationLog"],
+      "routes_sampled": [
+        { "path": "/api/notifications/log", "method": "GET", "evidence": "workers/src/index.js:3209" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "broken",
+      "evidence": "A real, functional bell UI exists (frontend/index.html:1152-1160, id=cdb-notif-bell) with badge/unread tracking and rendering logic (CDB_NOTIF, defined at frontend/index.html:15942 onward). But its data-fetch function, _fetch() (around frontend/index.html:15982-16000), calls GET /api/v1/alerts?limit=20&resolved=false and GET /api/realtime/stats — the platform's live CVE/threat-intel feed — never GET /api/notifications/log, the customer's own notification_log-backed history that CAP-NOTIF-001's backend maintains. A customer's own billing/org/security notifications (the actual point of the log this handler manages) never appear in the one bell UI on the platform; the bell shows global threat intel instead. Independently confirmed 2026-07-08 by reading the fetch implementation directly, matching docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222's Domain 8 finding ('Backend and frontend built independently, never connected')."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "The bell icon is in frontend/index.html's primary header, always visible."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test covers the CDB_NOTIF frontend object (inline page JS, not an importable module) or asserts it calls the correct backend endpoint."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/index.html:1152-1160,15942-16010 read directly to confirm the bell's actual data source; workers/src/handlers/notificationPlatform.js:176 (handleNotificationLog) read to confirm what it actually returns, and confirmed no frontend code calls it."
+    },
+    "notes": "Classified P1 (not merely undiscovered, but actively misleading): a customer sees a working-looking notification bell and reasonably assumes it reflects their account activity; it doesn't. This is a distinct capability from frontend/user-dashboard.html's own separate, unrelated client-only alert array, which docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222 also flags as disconnected from notification_log — not independently re-verified in this pass, flagged as a related open item."
+  },
+  {
+    "id": "CAP-NOTIF-003",
+    "domain": "notifications",
+    "name": "Outbound Webhooks (Developer + Organization)",
+    "description": "Let a customer register a webhook URL to receive real-time event notifications — two separate, competing implementations exist.",
+    "backend": {
+      "handlers": ["workers/src/handlers/developerPortal.js", "workers/src/handlers/enterpriseAutomation.js"],
+      "entry_points": [],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "duplicate"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "workers/src/handlers/developerPortal.js:856-904 implements full CRUD plus a manual test-fire against a developer_webhooks table (9-event catalog per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:223), but that catalog is not wired to any automatic dispatcher — webhooks only ever fire when a user manually clicks test. Separately, workers/src/handlers/enterpriseAutomation.js:22-243 implements a second, independent schema (org_webhooks plus a webhook_delivery_log audit table) that DOES fire automatically on matching events (:231-243), but is a completely separate table/code path from the developer_webhooks system — a customer using one system has no visibility into or relationship with the other. No frontend page was found calling either system's CRUD endpoints in this pass. Verified 2026-07-08 by reading both files' SQL directly."
+    },
+    "navigation": { "discoverable": false, "evidence": "No nav entry calls either webhook system's routes because no page does." },
+    "auth_enforced": "unknown",
+    "rbac": { "enforced": "unknown", "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test file imports the webhook-specific functions from either workers/src/handlers/developerPortal.js or workers/src/handlers/enterpriseAutomation.js directly in a way targeting this feature specifically."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/developerPortal.js:856-904 and workers/src/handlers/enterpriseAutomation.js:22-243 read directly, confirming two distinct table schemas and confirming which one actually auto-fires on events."
+    },
+    "notes": "backend.status is \"duplicate\" — this is real, unreconciled architectural duplication (not a wiring gap): two schemas, two code paths, one manual-only, one automatic-only, with no frontend for either. Reconciling into one system is a prerequisite for building any UI, not a follow-on task."
+  },
+  {
+    "id": "CAP-NOTIF-004",
+    "domain": "notifications",
+    "name": "Transactional & Lifecycle Email Engine",
+    "description": "Branded transactional email (signup, password reset, payment confirmation/failure, coupon redemption, suspicious login) plus multi-step drip sequences, with provider fallback and a dead-letter queue for failed sends.",
+    "backend": {
+      "handlers": ["workers/src/services/emailEngine.js"],
+      "entry_points": ["sendPaymentFailedEmail", "sendPurchaseConfirmation"],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "exists",
+      "evidence": "This capability's customer surface is the inbox, not a page — evidence is that real triggers call it from real customer actions: workers/src/handlers/payments.js:1104 calls sendPaymentFailedEmail on a failed webhook; per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:127-134, the engine implements 9 drip sequences, 20+ branded templates, a Resend-to-MailChannels provider fallback cascade, cron-driven retry, and a dead-letter queue (email_dlq table) with bounded retry, shipped 2026-07-08."
+    },
+    "navigation": { "discoverable": true, "evidence": "N/A (delivered via email, not a navigable page); triggered automatically by real account/payment events." },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import from workers/src/services/emailEngine.js — confirmed by import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/payments.js:1104 read directly to confirm a real trigger exists (not just a defined-but-uncalled function, the exact class of mistake this registry exists to prevent); workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import statements confirmed."
+    },
+    "notes": "No actionable gap found in this pass. Genuinely missing multi-channel expansions (SMS, real WhatsApp Business API send, push) are tracked as their own gaps in the platform's product backlog rather than as defects in this working capability — this entry covers only what emailEngine.js itself does, which it does correctly."
+  }
+]

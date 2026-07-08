@@ -1,5 +1,18 @@
 {
   "_comment": "Deliberately-accepted registry findings — mirrors the pattern in workers/schema_drift_accepted.json. Every entry here is a gap the registry's mechanical checks would otherwise flag, confirmed by a concrete code/product audit to be intentional rather than a defect (e.g. a page that is correctly admin-only and therefore correctly unreachable from customer-facing navigation). Adding an entry here does not change the product; it only changes what future registry passes treat as expected rather than as new drift. Never add an entry here without a concrete reason tied to an actual audit — this file must not become a way to silence real gaps.",
-  "orphan_pages_accepted": [],
-  "note": "Population pending: 11 frontend pages were found unreachable from any navigation during the 2026-07-08 investigation (404.html expected; partner-portal.html already confirmed a real bug and fixed separately; the remaining 9 — billing-portal.html, copilot-admin.html, decision-dashboard.html, enterprise-dashboard.html, enterprise-kpi-dashboard.html, gadgets.html, ops-dashboard.html, revenue-intelligence-dashboard.html, security-fabric-dashboard.html — are unconfirmed and must not be assumed intentional. Each needs a dynamic_browser check (real click-through / access-control read) before being added here as an accepted exception; until then they remain open findings in the relevant domain registry entries, not silently excluded."
+  "orphan_pages_accepted": [
+    {
+      "page": "frontend/admin-portal.html",
+      "reason": "Self-declared internal platform-staff tool: 'Internal platform staff tool. Not indexed, not linked from any public page. Access requires a verified staff session.' (frontend/admin-portal.html:272). Gated by CDB_STAFF_AUTH.guard() (magic-link staff session, see workers/src/handlers/staffAuth.js), not by any customer-facing auth. Confirmed not linked from any customer-facing page; only cross-linked from sibling staff tools (proposal-generator.html, revenue-command-center.html, mssp-command-center.html).",
+      "reference": "docs/capability-registry/domains/rbac.json (CAP-RBAC-001)",
+      "verified": "2026-07-08"
+    },
+    {
+      "page": "frontend/mssp-command-center.html",
+      "reason": "Self-declared internal tool: meta description 'Internal MSSP Partner Command Center'; contains internal-only deal-minimum/contract-pricing notes explicitly marked 'Do not share externally without authorization' (frontend/mssp-command-center.html:479). Gated by the same CDB_STAFF_AUTH.guard() pattern as admin-portal.html. Not linked from any customer-facing page — only from sibling staff tools (admin-portal.html, proposal-generator.html, revenue-command-center.html) and, until this pass, incorrectly from frontend/mssp-onboarding.html's post-checkout/post-trial buttons (a real bug, now fixed — see docs/capability-registry/domains/mssp.json CAP-MSSP-001).",
+      "reference": "docs/capability-registry/domains/mssp.json (CAP-MSSP-001)",
+      "verified": "2026-07-08"
+    }
+  ],
+  "note": "Population pending for the remaining unconfirmed orphan pages found during the 2026-07-08 investigation. Resolved since: 404.html (expected); partner-portal.html (real bug, fixed separately); admin-portal.html and mssp-command-center.html (confirmed intentional, accepted above); billing-portal.html (confirmed NOT an orphan — reachable via frontend/user-dashboard.html:2769's Billing nav-item, see docs/capability-registry/domains/commercial-billing.json CAP-BILL-003). Still unconfirmed — copilot-admin.html, decision-dashboard.html, enterprise-dashboard.html, enterprise-kpi-dashboard.html, gadgets.html, ops-dashboard.html, revenue-intelligence-dashboard.html, security-fabric-dashboard.html — and must not be assumed intentional. Each needs a dynamic_browser check (real click-through / access-control read) before being added here as an accepted exception; until then they remain open findings in the relevant domain registry entries, not silently excluded."
 }

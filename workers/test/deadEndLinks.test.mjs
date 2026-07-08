@@ -19,6 +19,7 @@ const ONBOARDING        = read('../src/handlers/onboarding.js');
 const REPORT_HANDLER    = read('../src/handlers/report.js');
 const AUTH_MIDDLEWARE   = read('../src/auth/middleware.js');
 const MW_AUTH           = read('../src/middleware/auth.js');
+const MSSP_ONBOARDING_PAGE = read('../../frontend/mssp-onboarding.html');
 
 describe('dead-end links removed from onboarding/checkout responses', () => {
   it('MSSP onboarding no longer promises a /mssp-dashboard.html that does not exist', () => {
@@ -58,5 +59,16 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
     expect(MW_AUTH).not.toMatch(/docs:\s*'https:\/\/cyberdudebivash\.in\/docs'/);
     expect(AUTH_MIDDLEWARE).toContain('https://cyberdudebivash.in/api-docs');
     expect(MW_AUTH).toContain('https://cyberdudebivash.in/api-docs');
+  });
+
+  it('MSSP onboarding "Go to MSSP Dashboard" buttons (post-payment and post-trial) point at the real partner self-service portal, not the staff-only command center', () => {
+    // frontend/mssp-command-center.html is gated by CDB_STAFF_AUTH.guard(),
+    // which only accepts the platform-owner email or an internal user_roles
+    // row (see workers/src/handlers/staffAuth.js) — a brand-new external
+    // MSSP partner can never pass it. Commit 67f6b924 fixed this exact
+    // pattern in the onboarding welcome email; this page's own post-checkout
+    // and post-trial buttons pointed at the same dead end and were missed.
+    expect(MSSP_ONBOARDING_PAGE).not.toContain('/mssp-command-center.html');
+    expect(MSSP_ONBOARDING_PAGE.match(/href="\/partner-portal\.html"/g) || []).toHaveLength(2);
   });
 });

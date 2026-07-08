@@ -1,1 +1,195 @@
-[]
+[
+  {
+    "id": "CAP-MSSP-001",
+    "domain": "mssp",
+    "name": "MSSP Partner Onboarding (Checkout / Free Trial → Portal Access)",
+    "description": "Public signup flow for a new MSSP reseller partner (paid checkout or free trial), issuing partner credentials and routing the new partner to their self-service portal.",
+    "backend": {
+      "handlers": ["workers/src/handlers/msspOnboardingHandler.js", "workers/src/handlers/partnerAuth.js"],
+      "entry_points": [
+        "handleMsspTiers", "handleMsspCheckout", "handleMsspVerify", "handleMsspTrial",
+        "handleMsspOnboardingStatus", "handleMsspOnboardingObservability",
+        "handlePartnerLoginRequest", "handlePartnerLoginVerify", "handlePartnerLogout", "handlePartnerMe"
+      ],
+      "routes_sampled": [
+        { "path": "/api/partners/login", "method": "POST", "evidence": "workers/src/index.js:8033" },
+        { "path": "/api/partners/verify", "method": "POST", "evidence": "workers/src/index.js:8037" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/mssp-onboarding.html", "frontend/partner-portal.html"],
+      "status": "exists",
+      "evidence": "frontend/mssp-onboarding.html is a real, unguarded public signup page (meta description explicitly invites external partners; grepped for CDB_STAFF_AUTH — 0 matches) offering a paid checkout (initiatePayment(), around line 292) and a free trial (startTrial(), around line 351). frontend/partner-portal.html:135,179 calls POST /api/partners/verify and /api/partners/login for magic-link authentication. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/mssp-onboarding.html is the intended entry point for prospective partners; frontend/partner-portal.html is linked from it post-fix (see notes) and from workers/src/services/emailEngine.js:747,761's welcome email."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/msspOnboardingHandler.test.mjs imports from workers/src/handlers/msspOnboardingHandler.js; workers/test/msspPartnerIdentityLink.test.mjs and workers/test/msspPartnerSessionScoping.test.mjs cover workers/src/handlers/partnerAuth.js session behavior; workers/test/deadEndLinks.test.mjs now includes a regression test (added 2026-07-08) asserting frontend/mssp-onboarding.html never again links to the staff-only command center page — confirmed by direct import/content grep."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/mssp-onboarding.html read directly in full; workers/src/handlers/msspOnboardingHandler.js and workers/src/handlers/partnerAuth.js exports enumerated; workers/test/deadEndLinks.test.mjs run directly post-fix (9/9 passing) plus full suite (1831/1831 passing, up from 1830 — one new test added)."
+    },
+    "contradicts_doc": [
+      {
+        "file": "frontend/mssp-onboarding.html",
+        "line": 312,
+        "claim": "Both the post-payment success card and the post-free-trial success card linked 'Go to MSSP Dashboard' to the staff-only command center page.",
+        "correction": "frontend/mssp-command-center.html is gated by CDB_STAFF_AUTH.guard() (magic-link staff session that only accepts the platform owner or an internal user_roles row — see workers/src/handlers/staffAuth.js) — a brand-new external MSSP partner could never pass it. This is the same defect commit 67f6b924 fixed in the onboarding welcome EMAIL (templateMsspDay0); this page's own buttons pointed at the identical dead end and were not covered by that fix. FIXED in this pass (2026-07-08): both links now point to frontend/partner-portal.html, the real magic-link partner self-service portal, matching the email's destination. A dead-end regression test was added to workers/test/deadEndLinks.test.mjs."
+      }
+    ],
+    "notes": "Priority kept at P1 despite being fixed in this same pass — the registry records what was found and corrected, not just the end state, so the severity of the original defect (a brand-new paying customer hitting a dead end on their very first post-checkout click) remains visible in the historical record. operational_status reflects the NOW-current, fixed state. A dynamic_browser pass confirming the fixed journey end-to-end in a real browser is the natural next verification step."
+  },
+  {
+    "id": "CAP-MSSP-002",
+    "domain": "mssp",
+    "name": "Partner Revenue, Client Roster & White-Label Branding",
+    "description": "Self-service views for an onboarded MSSP partner: revenue/commission tracking, coarse client list and creation, white-label theme configuration, and custom-domain request/verification.",
+    "backend": {
+      "handlers": ["workers/src/handlers/msspRevenue.js", "workers/src/handlers/whiteLabelMSSP.js", "workers/src/handlers/partnerDomains.js"],
+      "entry_points": ["handleGetTheme", "handleUpdateTheme", "handleDeleteTheme", "handleGetThemeByOrg"],
+      "routes_sampled": [
+        { "path": "/api/mssp/revenue", "method": "GET", "evidence": "workers/src/index.js:8012" },
+        { "path": "/api/mssp/customers", "method": "GET", "evidence": "workers/src/index.js:2729" },
+        { "path": "/api/mssp/customers", "method": "POST", "evidence": "workers/src/index.js:2733" },
+        { "path": "/api/white-label/theme", "method": "GET", "evidence": "workers/src/index.js:3134" },
+        { "path": "/api/partners/domain/status", "method": "GET", "evidence": "workers/src/index.js:8062" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/partner-portal.html"],
+      "status": "exists",
+      "evidence": "frontend/partner-portal.html:264-433 (authFetch calls) confirmed to call /api/partners/me, /api/mssp/revenue, /api/mssp/customers (GET+POST), /api/white-label/theme (GET+PUT), /api/partners/domain/status, /api/partners/domain/request, /api/partners/domain/verify, and /api/partners/logout — a real, fairly complete self-service surface. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Same entry point as CAP-MSSP-001 — frontend/partner-portal.html, now correctly linked from onboarding."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/msspRevenueShare.test.mjs and workers/test/whiteLabelPartnerScoping.test.mjs import from workers/src/handlers/msspRevenue.js and workers/src/handlers/whiteLabelMSSP.js respectively — confirmed by import-statement grep, 2026-07-08."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "frontend/partner-portal.html read directly in full (440 lines); workers/src/index.js grepped for each API path that page calls, confirming all resolve to a real registered route."
+    },
+    "notes": "No actionable gap found in this pass; P7 by elimination. This is the coarse client list/create only — see CAP-MSSP-003 for the deeper per-client drill-down, which is a separate, larger gap."
+  },
+  {
+    "id": "CAP-MSSP-003",
+    "domain": "mssp",
+    "name": "Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys)",
+    "description": "Let an MSSP partner drill into an individual client's dashboard, sub-tenant hierarchy, ticket routing rules, per-client API keys, and per-client billing/usage — not just see a coarse client list.",
+    "backend": {
+      "handlers": ["workers/src/handlers/msspTenantPlatform.js"],
+      "entry_points": [
+        "handleListCustomerLabels", "handleAddCustomerLabel", "handleRemoveCustomerLabel",
+        "handleCustomerDashboard", "handleListSubTenants", "handleCreateSubTenant", "handleGetHierarchy",
+        "handleGetNotifPrefs", "handleSetNotifPrefs", "handleListTicketRules", "handleCreateTicketRule",
+        "handleDeleteTicketRule", "handleListCustomerAPIKeys", "handleGenerateCustomerAPIKey",
+        "handleRevokeCustomerAPIKey", "handleGetTenantBilling", "handleGetTenantUsage", "handleMsspTenantRoute"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "frontend/partner-portal.html (the only partner-facing self-service page) was read in full: it calls /api/mssp/customers (list/create only) and /api/mssp/revenue, but none of the 17 other exported handlers in workers/src/handlers/msspTenantPlatform.js (dashboard, sub-tenant hierarchy, per-client notification prefs, ticket routing rules, per-client API keys, per-client billing/usage) are referenced anywhere in frontend/*.html. Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:232 Gap Matrix row (Domain 10): 'Partial — Backend fully built; zero frontend calls any of them. Only the coarse client list/create is wired', independently re-confirmed 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry links to a per-client drill-down page because no such page exists."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/msspTenantIsolation.test.mjs and workers/test/msspIsolation.test.mjs import directly from workers/src/handlers/msspTenantPlatform.js — the backend is well-tested even though no UI consumes it."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/msspTenantPlatform.js read directly (881 lines, 18 exported functions); frontend/partner-portal.html cross-checked line-by-line against every one of those export names (0 matches beyond the customers list/create pair already captured in CAP-MSSP-002)."
+    },
+    "notes": "This is the single largest backend-vs-frontend gap found in the MSSP domain: a genuinely fully-built, well-tested, 18-handler tenant management system with a customer-facing surface that wires up only 2 of those handlers."
+  },
+  {
+    "id": "CAP-MSSP-004",
+    "domain": "mssp",
+    "name": "Delegated Admin Permissions (MSSP Staff Sub-Accounts)",
+    "description": "Let an MSSP partner grant limited, scoped access to their own staff (e.g., a support technician who can view but not bill), rather than every login sharing one partner-level credential.",
+    "backend": {
+      "handlers": [],
+      "entry_points": [],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "missing"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "No route, handler, or UI reference for partner-staff sub-accounts was found anywhere in workers/src/handlers/ or frontend/*.html. Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:233 Gap Matrix row (Domain 10) exactly, independently re-confirmed 2026-07-08 (no new handler or route matching this description has been added since)."
+    },
+    "navigation": { "discoverable": false, "evidence": "N/A — no capability exists to navigate to." },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": { "has_tests": false, "evidence": "No test references delegated partner-staff permissions, because no implementation exists." },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "Repo-wide grep for partner-staff/sub-account/delegated-admin patterns across workers/src/handlers/ and frontend/*.html returned nothing beyond the existing (single-credential) partner and MSSP-owner roles already captured in CAP-MSSP-001/002."
+    },
+    "notes": "No implementation found at all — this is a genuine backend gap, not a wiring gap (unlike CAP-MSSP-003)."
+  }
+]

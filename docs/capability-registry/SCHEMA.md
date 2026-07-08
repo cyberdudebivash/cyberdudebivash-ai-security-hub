@@ -98,13 +98,13 @@ route — see §3 for why). Required shape:
   },
 
   "navigation": {
-    "discoverable": false,
+    "discoverable": false,  // boolean | "unknown" — see note below
     "evidence": "no nav entry links to any org page"
   },
 
-  "auth_enforced": true,
-  "rbac": { "enforced": true, "permissions": ["org:create", "org:manage"] },
-  "subscription_gated": false,
+  "auth_enforced": true,   // boolean | "unknown"
+  "rbac": { "enforced": true, "permissions": ["org:create", "org:manage"] },  // enforced: boolean | "unknown"
+  "subscription_gated": false,  // boolean | "unknown"
 
   "feature_flag": {
     "present": false,
@@ -159,6 +159,19 @@ route — see §3 for why). Required shape:
   "notes": "Free-text. Use for anything the structured fields can't express."
 }
 ```
+
+### 2.1 The `"unknown"` value
+
+`subscription_gated`, `navigation.discoverable`, `auth_enforced`, and
+`rbac.enforced` each additionally accept the literal string `"unknown"`
+instead of a boolean. Use it when a genuine, good-faith check was made but
+did not reach a confident answer (e.g. "checking every one of a 27-function
+handler's individual auth gates was out of scope for this pass") — never as
+a default or a way to avoid checking. `"unknown"` still fails the
+`operational_status: "GA APPROVED"` mechanical rule (§5.5) exactly like
+`false` does, so it can never be used to smuggle an ungated capability past
+that check. Prefer resolving to a real `true`/`false` whenever the evidence
+supports it; reach for `"unknown"` only when it doesn't.
 
 ## 3. Why capability-level, not route-level
 

@@ -1,1 +1,95 @@
-[]
+[
+  {
+    "id": "CAP-AFF-001",
+    "domain": "affiliate-partner",
+    "name": "Affiliate Program: Join, Status, Payout, Leaderboard",
+    "description": "Customer-recruits-customer referral program (Affiliate 10% -> Partner 15% -> Reseller 20% -> Strategic 25% commission tiers) with join form, status/earnings dashboard, payout requests, and a public leaderboard, embedded on the homepage.",
+    "backend": {
+      "handlers": ["workers/src/handlers/affiliateSystem.js"],
+      "entry_points": [
+        "handleJoin", "handleGetStatus", "handleGetDashboard", "recordReferralConversion",
+        "attributeReferral", "handleTrackReferral", "handleGetLeaderboard", "handleGetTiers",
+        "handleRequestPayout", "handleGetReferrals"
+      ],
+      "routes_sampled": [
+        { "path": "/api/affiliate/join", "method": "POST", "evidence": "workers/src/index.js:6137" },
+        { "path": "/api/affiliate/status", "method": "GET", "evidence": "workers/src/index.js:6141" },
+        { "path": "/api/affiliate/payout/request", "method": "POST", "evidence": "workers/src/index.js:6162" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "broken",
+      "evidence": "A real, embedded 'Join Affiliate Program' form and 'Affiliate Dashboard' exist at frontend/index.html:5090-5154 inside <section id=\"affiliate-hub\">, calling real backend routes through a shared p4Api() fetch wrapper (frontend/index.html:20277-20287). That wrapper never unwraps the {success,data,error} envelope every backend response is wrapped in by ok()/fail() (workers/src/lib/response.js:16-38) — the same root-cause bug documented in docs/capability-registry/domains/sales-crm.json's CAP-CRM-001. Concretely: handleJoin's real success payload (workers/src/handlers/affiliateSystem.js:180-190) has no affiliate key at any level, but frontend/index.html:20753 checks if (d.affiliate) — always false, so a customer whose affiliate account was actually created server-side sees '✗ Join failed.' every time (frontend/index.html:20756-20758's error branch, using the fallback text since d.error is null). The status check has a second, independent defect: handleGetStatus requires a real authenticated authCtx.userId and 401s without one (workers/src/handlers/affiliateSystem.js:199-200), but frontend/index.html:20819 calls it with a ?user_id= query parameter the handler never reads — status polling cannot work via any code path. handleRequestPayout (frontend/index.html:20849, checking d.requested) and handleGetLeaderboard (frontend/index.html:20864, checking d.leaderboard) have the same envelope-unwrap defect. All four call sites independently confirmed 2026-07-08 by direct read of both the handler and the frontend code, cross-checked against workers/src/lib/response.js's documented envelope shape."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Reached via a same-page anchor nav tab (href=\"#affiliate-hub\") at frontend/index.html:1215,7066,20300. Separately, frontend/sitemap.html:222 links a bare /affiliate-hub path (without the /# prefix workers/test/deadEndLinks.test.mjs locks in as correct elsewhere in this same file) — not live-tested in this pass, flagged as an unresolved loose end rather than asserted broken or working."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/referralAttribution.test.mjs imports handleJoin/handleTrackReferral/handleGetLeaderboard/recordReferralConversion/attributeReferral directly; workers/test/anonymousExposureAudit.test.mjs imports handleGetStatus directly. None of these tests submit through the homepage's actual p4Api() call path, so none would catch the envelope-unwrap or user_id-vs-authCtx bugs described above — they test the handler in isolation, which behaves correctly on its own terms."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/handlers/affiliateSystem.js read directly (10 exports, response payload shapes for handleJoin/handleGetStatus/handleGetLeaderboard/handleRequestPayout read line-by-line); frontend/index.html:20277-20287,20745-20870 read directly; workers/src/lib/response.js:16-38 read directly to independently confirm the envelope shape."
+    },
+    "notes": "A second, independent revenue-program journey (alongside sales-crm's CAP-CRM-001/005/007) broken by the exact same shared root cause (frontend/index.html's unwrapped p4Api() helper) plus program-specific defects on top. Given how many distinct capabilities this one root cause breaks (affiliate join/status/payout/leaderboard, sales lead capture, demo booking, proposal generation, conversion triggers), fixing the shared envelope-unwrap bug once is likely the single highest-leverage frontend fix available on this platform — flagged prominently for prioritization outside this registry program's own scope. MSSP/reseller white-label partnering is a genuinely separate backend system (D1-based, /api/partners/* prefix, mssp_partners table) from this KV-based /api/affiliate/* program — see docs/capability-registry/domains/mssp.json for that capability, not duplicated here despite overlapping tier-name vocabulary (this program's own Reseller tier is even labeled with a 'White-label option' perk, which appears to be marketing language only — no code path connects it to the real MSSP white-label system in workers/src/handlers/whiteLabelMSSP.js)."
+  },
+  {
+    "id": "CAP-AFF-002",
+    "domain": "affiliate-partner",
+    "name": "Outbound Sponsor/Affiliate Click Tracking",
+    "description": "Fire-and-forget click tracking for outbound sponsor links (Hack The Box, TryHackMe, Udemy, NordVPN) shown on the homepage, plus an aggregate stats view — a separate, unrelated system from CAP-AFF-001's inbound referral program despite the shared word 'affiliate'.",
+    "backend": {
+      "handlers": ["workers/src/index.js", "workers/src/handlers/revenue.js"],
+      "entry_points": ["handleAffiliateStats"],
+      "routes_sampled": [
+        { "path": "/api/affiliate/click", "method": "POST", "evidence": "workers/src/index.js:4447" },
+        { "path": "/api/affiliate/stats", "method": "GET", "evidence": "workers/src/index.js:4656" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "frontend/index.html:8263-8270 (trackAffiliate()) fires a non-blocking POST to /api/affiliate/click with {program, link_id, ...} on outbound sponsor-link clicks, matching workers/src/index.js:4447-4460's handler, which inserts into a dedicated affiliate_clicks D1 table and always returns 204 regardless of outcome (by design, per its own comment) — no response-body parsing on the frontend side, so the envelope-unwrap defect affecting CAP-AFF-001 does not apply here. Verified 2026-07-08."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "The sponsor links this tracks are embedded directly in frontend/index.html's homepage content."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "This is an inline route in workers/src/index.js, not a separate handler file; no test file targets /api/affiliate/click or handleAffiliateStats directly."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-08",
+      "evidence": "workers/src/index.js:4440-4462,4654-4660 and frontend/index.html:8262-8270 read directly."
+    },
+    "notes": "Small, working, low-risk capability (fire-and-forget analytics, no customer-visible success/failure state to get wrong). P6 reflects the absence of any test, not a known defect. Naming collision with CAP-AFF-001 (both use the word 'affiliate' under the same /api/affiliate/ prefix) is worth a future rename for clarity, but is not itself a functional bug."
+  }
+]
