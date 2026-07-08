@@ -744,7 +744,7 @@ function templateMsspDay0(lead, meta = {}) {
   <p style="color:#94a3b8;font-size:15px;line-height:1.7">Your MSSP partner account has been created. You can now provision clients, customize your white-label portal, and start earning margin on every deployment.</p>
   <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
     <div style="font-size:13px;color:#38bdf8;font-weight:600;margin-bottom:12px">YOUR NEXT 3 ACTIONS</div>
-    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>1. Access MSSP Portal:</strong> <a href="${BASE_URL}/mssp-command-center" style="color:#38bdf8">cyberdudebivash.in/mssp-command-center</a></p>
+    <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>1. Access MSSP Portal:</strong> <a href="${BASE_URL}/partner-portal" style="color:#38bdf8">cyberdudebivash.in/partner-portal</a> — enter this email to get a one-time login link, no password needed</p>
     <p style="margin:0 0 8px;color:#e2e8f0;font-size:14px"><strong>2. Set up white-label:</strong> Add your brand name, domain, and primary color</p>
     <p style="margin:0;color:#e2e8f0;font-size:14px"><strong>3. Onboard your first client:</strong> Use your Partner API key to provision client accounts</p>
   </div>
@@ -758,7 +758,7 @@ function templateMsspDay0(lead, meta = {}) {
   <p style="color:#6b7280;font-size:13px">Questions? WhatsApp <strong style="color:#94a3b8">+91 81798 81447</strong> or email contact@cyberdudebivash.in</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
-  return { subject, html, text: `Welcome to CYBERDUDEBIVASH MSSP Program, ${company}!\n\nYour ${tier} account is ready.\nAccess portal: ${BASE_URL}/mssp-command-center\n\nQuestions: WhatsApp +91 81798 81447` };
+  return { subject, html, text: `Welcome to CYBERDUDEBIVASH MSSP Program, ${company}!\n\nYour ${tier} account is ready.\nAccess portal: ${BASE_URL}/partner-portal (enter this email for a one-time login link)\n\nQuestions: WhatsApp +91 81798 81447` };
 }
 
 function templateMsspDay3(lead, meta = {}) {
