@@ -488,7 +488,9 @@ function initWidget() {
     try {
       const res = await fetch(`${API_BASE}/api/copilot/capabilities`, { headers: authHeaders() });
       if (!res.ok) throw new Error('bad status');
-      const data = await res.json();
+      // Same envelope-unwrap fix as runQuickAction/sendMessageJSON.
+      const envelope = await res.json();
+      const data = envelope.data || {};
       capsCache = data;
       lsSet(LS_CAPS_CACHE, { _cachedAt: Date.now(), data });
       updateStatus(true);
@@ -532,9 +534,19 @@ function initWidget() {
         method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ skill: qa.skill }),
       });
-      const data = await res.json();
+      // Every response goes through lib/response.js's ok()/fail() helpers,
+      // which always wrap the real payload one level down as `.data`
+      // (top-level `.error` is reserved for hard request-level failures —
+      // see lib/response.js's own header comment for the exact contract).
+      // Reading fields straight off the envelope instead of unwrapping it
+      // first made this crash on every single call, success or not — see
+      // the P0 2026-07-08 investigation this fixes.
+      const envelope = await res.json();
+      const data = envelope.data || {};
       hideTyping();
-      if (data.error) {
+      if (envelope.error) {
+        pushMessage({ role: 'system', content: envelope.error });
+      } else if (data.error) {
         pushMessage({ role: 'system', content: data.message || data.error });
       } else {
         const pretty = '```\n' + JSON.stringify(data.result, null, 2).slice(0, 3000) + '\n```';
@@ -700,10 +712,14 @@ function initWidget() {
         method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ message: trimmed, session_id: state.sessionId }),
       });
-      const data = await res.json();
+      // Same envelope-unwrap fix as runQuickAction — see the comment there.
+      const envelope = await res.json();
+      const data = envelope.data || {};
       hideTyping();
 
-      if (data.error === 'daily_quota_exceeded') {
+      if (envelope.error) {
+        pushMessage({ role: 'system', content: envelope.error });
+      } else if (data.error === 'daily_quota_exceeded') {
         pushMessage({ role: 'system', content: `${data.message} <a class="cdb-cp-upgrade-link" href="${data.upgrade_url || '/#pricing'}">Upgrade →</a>` });
       } else if (data.error === 'rate_limit_exceeded') {
         pushMessage({ role: 'system', content: data.message || 'Too many messages — please slow down.' });
@@ -799,7 +815,11 @@ function initWidget() {
     // Reconcile with server session (covers cache misses / other-device history)
     try {
       const res = await fetch(`${API_BASE}/api/copilot/session?session_id=${encodeURIComponent(sessionId)}`, { headers: authHeaders() });
-      const data = await res.json();
+      // Same envelope-unwrap fix as runQuickAction/sendMessageJSON — this
+      // silently never fired before (data.messages was always undefined),
+      // so server-side session history never actually reconciled.
+      const envelope = await res.json();
+      const data = envelope.data || {};
       if (Array.isArray(data.messages) && data.messages.length > state.messages.length) {
         state.messages = data.messages;
         saveCachedMessages(sessionId, state.messages);
