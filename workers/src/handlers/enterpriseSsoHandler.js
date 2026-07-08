@@ -23,6 +23,7 @@
  */
 
 import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
+import { isOwner } from '../auth/middleware.js';
 
 const STATE_TTL   = 600; // 10 min
 const KV_SSO_PFX  = 'enterprise_sso:org:';
@@ -325,8 +326,13 @@ export async function handleEnterpriseSSoCallback(request, env) {
 
 // ── POST /api/auth/enterprise/configure — owner only ─────────────────────────
 export async function handleEnterpriseSSoConfigure(request, env, authCtx) {
-  // Must be owner
-  if (!authCtx?.isOwner && authCtx?.email !== 'iambivash.bn@gmail.com') {
+  // Must be owner. `authCtx.isOwner` is not a real field anywhere in the auth
+  // layer (the real check is the isOwner(authCtx, env) function — ADMIN_KEY
+  // bypass or a configured OWNER_EMAILS match) — this endpoint has been
+  // reachable only via the exact hardcoded email below since it was written.
+  // Added the real isOwner() check alongside it: strictly additive, the
+  // hardcoded email still works exactly as before.
+  if (!isOwner(authCtx, env) && authCtx?.email !== 'iambivash.bn@gmail.com') {
     return Response.json({ error: 'Owner access required.' }, { status: 403 });
   }
 
