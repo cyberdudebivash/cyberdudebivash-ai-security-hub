@@ -64,9 +64,13 @@ export async function handleHealthV2(request, env) {
 
 // ─── Phase 2: Detailed ops diagnostics (admin-only) ──────────────────────────
 export async function handleHealthDetailed(request, env, authCtx) {
-  if (!authCtx?.authenticated || authCtx?.tier !== 'ENTERPRISE' && !authCtx?.admin) {
+  // `authCtx.admin` (no "is" prefix) is never set anywhere — the real field
+  // is `authCtx.isAdmin`. Not a live gap in practice: every admin path
+  // (ADMIN_KEY, RBAC SUPERADMIN) also sets tier: 'ENTERPRISE', which already
+  // passes the primary condition below — but fixing for correctness/clarity.
+  if (!authCtx?.authenticated || authCtx?.tier !== 'ENTERPRISE' && !authCtx?.isAdmin) {
     // Allow owner + admin; block public
-    const isOwner = authCtx?.admin ||
+    const isOwner = authCtx?.isAdmin ||
       (env.OWNER_EMAIL && authCtx?.email === env.OWNER_EMAIL);
     if (!isOwner) {
       return Response.json({ error: 'Admin access required' }, { status: 403 });

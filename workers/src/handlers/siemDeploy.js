@@ -13,7 +13,6 @@
  */
 
 import { ok, fail } from '../lib/response.js';
-import { isRealUser } from '../auth/middleware.js';
 
 // ── Supported integration platforms ──────────────────────────────────────────
 export const INTEGRATION_PLATFORMS = {
@@ -352,11 +351,16 @@ async function deployToEndpoint(platformId, config, payload) {
 }
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
-// SIEM integration management is restricted to admin/owner. The outer router
-// gate at /api/integrations already enforces this via isOwner(); these checks
-// are a second layer of defense so the handlers are safe if called directly.
+// SIEM integration config is a single global, per-platform record (KV key
+// `siem_integration:config:{platform}`) — it is CyberDudeBivash's own
+// Splunk/Sentinel/PagerDuty/etc. webhook, not scoped per customer. It must be
+// admin/owner only. This was previously dead code (defined, never called) and
+// even the router itself never gated /api/integrations/* — any unauthenticated
+// request could overwrite webhook/token config, trigger outbound deploys
+// (SSRF-capable), or delete a configured integration. Fixed to actually
+// require authCtx.isAdmin and wired into every state-changing handler below.
 function requireAdmin(request, authCtx) {
-  if (!authCtx?.isAdmin && !isRealUser(authCtx)) {
+  if (authCtx?.isAdmin !== true) {
     return fail(request, 'Admin access required for SIEM integration management', 403, 'ADMIN_ONLY');
   }
   return null;
@@ -396,6 +400,7 @@ export async function handleListIntegrations(request, env, authCtx = {}) {
 
 // ── POST /api/integrations/configure ─────────────────────────────────────────
 export async function handleConfigure(request, env, authCtx = {}) {
+  const denied = requireAdmin(request, authCtx); if (denied) return denied;
   let body = {};
   try { body = await request.json(); } catch {}
 
@@ -440,6 +445,7 @@ export async function handleConfigure(request, env, authCtx = {}) {
 
 // ── POST /api/integrations/deploy ─────────────────────────────────────────────
 export async function handleDeploy(request, env, authCtx = {}) {
+  const denied = requireAdmin(request, authCtx); if (denied) return denied;
   let body = {};
   try { body = await request.json(); } catch {}
 
@@ -515,6 +521,7 @@ export async function handleDeploy(request, env, authCtx = {}) {
 
 // ── POST /api/integrations/test ───────────────────────────────────────────────
 export async function handleTestIntegration(request, env, authCtx = {}) {
+  const denied = requireAdmin(request, authCtx); if (denied) return denied;
   let body = {};
   try { body = await request.json(); } catch {}
 
@@ -562,6 +569,7 @@ export async function handleDeployLog(request, env, authCtx = {}) {
 
 // ── DELETE /api/integrations/:platform ───────────────────────────────────────
 export async function handleDeleteIntegration(request, env, authCtx = {}) {
+  const denied = requireAdmin(request, authCtx); if (denied) return denied;
   const url      = new URL(request.url);
   const platform = url.pathname.split('/').pop();
 

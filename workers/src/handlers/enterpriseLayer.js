@@ -318,11 +318,16 @@ export async function handleVerifyEnterprisePayment(request, env, authCtx) {
 
 // ─── GET /api/enterprise/stats — admin dashboard stats ───────────────────────
 export async function handleEnterpriseStats(request, env, authCtx) {
-  // authCtx.role is never populated anywhere (no JWT claim, no DB column) —
-  // this was a permanent 403 for everyone, including the real admin.
-  // isAdmin is the platform's actual owner-bypass mechanism (ADMIN_KEY).
-  // (2026-07-06 revenue-mechanisms audit, P1-4.)
-  if (authCtx?.isAdmin !== true) return json({ error: 'Admin only' }, 403);
+  // Correction: the prior fix here (P1-4, 2026-07-06) changed this to check
+  // isAdmin, on the theory that authCtx.role is never populated. True in
+  // general, but wrong for this route's actual call site — index.js's GET
+  // /api/enterprise/stats route passes a narrowed { userId, role } object,
+  // not the full authCtx, and authCtx.role IS correctly derived by
+  // withAuthAliases() before that narrowing happens (same P1-4 audit).
+  // isAdmin-only checking has made this route return 403 for literally
+  // everyone, including the real admin, since that prior fix shipped.
+  // Checking both shapes is correct regardless of which caller passes which.
+  if (authCtx?.isAdmin !== true && authCtx?.role !== 'admin') return json({ error: 'Admin only' }, 403);
   try {
     const [total, byStatus, recent] = await Promise.all([
       env.DB.prepare(
