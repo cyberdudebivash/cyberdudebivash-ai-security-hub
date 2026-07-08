@@ -21,8 +21,16 @@ function partnerScope(authCtx) {
   return authCtx?.userId ?? authCtx?.user_id ?? null;
 }
 
+// `authCtx.role` is never actually set to 'admin' or 'mssp_admin' anywhere in
+// the auth layer (verified: no auth/*.js file sets either value) — this gate
+// was unreachable by anyone, including the platform owner via ADMIN_KEY,
+// since that bypass sets `isAdmin: true`, not `role`. Every one of the 18
+// handlers below already scopes its D1 queries to partnerScope(authCtx)
+// (authCtx.userId, JWT-verified) with parent/customer ownership checked
+// before any read or write — safe to open to real paying MSSP-tier
+// customers, not just staff.
 function requireMSSPAdmin(authCtx) {
-  return authCtx?.role === 'admin' || authCtx?.role === 'mssp_admin';
+  return authCtx?.isAdmin === true || (authCtx?.tier || '').toUpperCase() === 'MSSP';
 }
 
 let _tenantTablesReady = false;
