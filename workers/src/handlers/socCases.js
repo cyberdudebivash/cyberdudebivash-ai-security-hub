@@ -18,8 +18,12 @@ export function tenantKey(authCtx = {}) {
   return uid ? `u:${uid}` : 'default';
 }
 
+// `authCtx.role` is never actually set to 'admin' or 'mssp_admin' anywhere in
+// the auth layer, so this was previously unreachable — fail-safe (only ever
+// widens a privileged caller's cross-tenant view), not fail-open, so no live
+// exposure, but staff/RBAC sessions couldn't use the oversight view either.
 function isPrivileged(authCtx = {}) {
-  return authCtx.role === 'admin' || authCtx.role === 'mssp_admin';
+  return authCtx.isAdmin === true || authCtx.role === 'mssp_admin';
 }
 
 // Confirms a case belongs to the caller's tenant before a mutation; returns a

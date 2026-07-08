@@ -153,7 +153,10 @@ export async function handleGetSolution(request, env, authCtx, solutionId) {
     if (authCtx?.userId || authCtx?.email) {
       const accessKey = `access:defense:${solutionId}:${authCtx.userId || authCtx.email}`;
       const access    = await env.SECURITY_HUB_KV?.get(accessKey);
-      hasAccess = !!access || authCtx.plan === 'enterprise';
+      // authCtx.plan is never actually set anywhere in the auth layer — the
+      // real field is authCtx.tier. Real ENTERPRISE customers previously
+      // never got the blanket-access bypass this line intends.
+      hasAccess = !!access || (authCtx.tier || '').toUpperCase() === 'ENTERPRISE';
     }
 
     // Increment view count

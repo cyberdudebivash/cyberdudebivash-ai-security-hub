@@ -38,8 +38,16 @@ function err(msg, status = 400, code = 'ERR') {
 async function parseBody(req) {
   try { return await req.json(); } catch { return {}; }
 }
+// Neither `authCtx.role` nor `authCtx.plan` is ever actually set anywhere in
+// the auth layer — this gate was unreachable by anyone, including the
+// platform owner via ADMIN_KEY (which sets `isAdmin: true`, not `role` or
+// `plan`). Every route gated by this is a staff-only operational task
+// (license issuance, payment-recovery job trigger, renewal queue, aggregate
+// revenue reporting, incident posting, release-notes seeding) — genuinely
+// admin-only, not something a paying customer should trigger, so no tier
+// bypass is added here (contrast msspTenantPlatform.js's requireMSSPAdmin()).
 function isAdmin(authCtx) {
-  return authCtx?.role === 'admin' || authCtx?.plan === 'ENTERPRISE';
+  return authCtx?.isAdmin === true;
 }
 
 export async function handleV24(request, env, authCtx, path, method) {

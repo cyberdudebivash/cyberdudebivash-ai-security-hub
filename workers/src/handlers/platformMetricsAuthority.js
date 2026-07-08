@@ -23,8 +23,11 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// `authCtx.role` is never actually set to 'admin' anywhere in the auth layer
+// — this gate was unreachable by anyone, including the platform owner via
+// ADMIN_KEY (which sets `isAdmin: true`, not `role`).
 function requireAdmin(authCtx) {
-  return authCtx?.role === 'admin';
+  return authCtx?.isAdmin === true;
 }
 
 function requireAuth(authCtx) {
