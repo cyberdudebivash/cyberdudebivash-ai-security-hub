@@ -10,40 +10,40 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T12:58:05.670Z
-Capabilities catalogued: 11
+Generated: 2026-07-08T13:05:59.471Z
+Capabilities catalogued: 15
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 81.8% |
-| Frontend | 45.5% |
-| Parity (backend **and** frontend both exist) | 45.5% |
+| Backend | 80% |
+| Frontend | 46.7% |
+| Parity (backend **and** frontend both exist) | 46.7% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 1 | Broken customer journey |
-| High | P2 | 4 | Backend exists, frontend missing |
+| Critical | P1 | 2 | Broken customer journey |
+| High | P2 | 6 | Backend exists, frontend missing |
 | Medium | P3 | 0 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 1 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 0 | No test coverage |
-| Low | P7 | 5 | Documentation missing |
+| Low | P7 | 6 | Documentation missing |
 
-**Rollup:** Critical 1 · High 4 · Medium 1 · Low 5
+**Rollup:** Critical 2 · High 6 · Medium 1 · Low 6
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 4 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 2 | Backend exists, zero frontend surface |
+| Hidden features | 5 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 3 | Backend exists, zero frontend surface |
 | Duplicate systems | 0 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 1 | Priority P1 |
+| Broken journeys | 2 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -77,6 +77,15 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✗ | ✗ | NOT READY | P1 |
+
+### mssp (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-MSSP-001 | MSSP Partner Onboarding (Checkout / Free Trial → Portal Access) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
+| CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### organizations (1 capability)
 
