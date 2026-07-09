@@ -2255,7 +2255,10 @@
       document.getElementById('stat-keys').textContent = keys.length;
       renderKeys(keys);
 
-      const keyLimit = _plan?.plan?.key_limit || 2;
+      // _plan.plan is the tier STRING ('FREE'/'PRO'/...), not an object — .key_limit
+      // on it was always undefined, silently falling back to 2 for every account.
+      // The real field is _plan.key_limit (set correctly by loadPlan()).
+      const keyLimit = _plan?.key_limit || 2;
       if (keys.length >= keyLimit) document.getElementById('key-limit-warn').style.display = 'block';
     } catch (e) { console.error('loadKeys:', e); }
   }
@@ -2573,7 +2576,10 @@
   }
 
   function exportCisoPDF() {
-    const plan = _plan?.plan || 'free';
+    // _plan.plan is genuinely uppercase ('FREE'/'PRO'/...) — comparing it against
+    // a lowercase literal below never matched, so this gate silently never fired
+    // for anyone. Normalize once here rather than rewrite the comparison.
+    const plan = (_plan?.plan || 'FREE').toLowerCase();
     if (plan==='free') { showToast('PDF requires Pro or Enterprise plan.','err'); showPage('billing',null); return; }
     showToast('Generating board report…');
     // Backend renders a print-ready HTML document (there is no PDF library in
@@ -2591,15 +2597,18 @@
   let _aiStreaming = false;
 
   function initAiPage() {
-    const plan = _plan?.plan || 'free';
-    if (plan === 'free') {
-      document.getElementById('ai-upsell').style.display = 'flex';
-      document.getElementById('ai-submit-btn').disabled = true;
-      document.getElementById('ai-submit-btn').title = 'Upgrade to Pro to use AI Analysis';
-    }
-    // Credits badge
-    const credits = plan === 'enterprise' ? '∞' : plan === 'pro' ? (_plan?.ai_queries_remaining ?? 100) : 0;
-    document.getElementById('ai-credits-badge').textContent = credits + ' queries left';
+    // POST /api/ai/analyze is intentionally NOT plan-gated for any tier — see
+    // workers/test/aiBrainEntitlementGate.test.mjs ("analyze is STARTER-tier;
+    // must not 402 on plan"), unlike /api/ai/simulate and /api/ai/forecast which
+    // really are PRO+. A FREE-tier upsell block used to live here, but its plan
+    // comparison used a lowercase literal against the real uppercase tier value
+    // so it never actually fired — production behavior was already "never
+    // blocked," which happens to be correct. Removed rather than "fixed" to
+    // correctly block FREE users, since that would contradict the tested
+    // contract. Also removed the adjacent "queries left" credits counter: it
+    // read _plan.ai_queries_remaining, a field GET /api/user/plan never
+    // returns, so it always displayed 0 regardless of real tier — this endpoint
+    // has no real per-tier quota to enforce or display.
 
     // Populate scan context dropdown
     const sel = document.getElementById('ai-scan-select');
@@ -2622,12 +2631,8 @@
 
   async function submitAiAnalysis() {
     if (_aiStreaming) return;
-    const plan = _plan?.plan || 'free';
-    if (plan === 'free') {
-      showToast('AI Analysis requires Pro or Enterprise plan.', 'err');
-      showPage('billing', null);
-      return;
-    }
+    // No plan gate here — see initAiPage()'s comment above; POST /api/ai/analyze
+    // is intentionally available to every tier including FREE.
     const prompt = document.getElementById('ai-prompt-input').value.trim();
     if (!prompt) { showToast('Enter a prompt first.', 'err'); return; }
 
@@ -2723,10 +2728,6 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       if (_aiHistory.length > 20) _aiHistory.pop();
       sessionStorage.setItem('ai_history', JSON.stringify(_aiHistory));
       renderAiHistory();
-      // Decrement credits badge
-      const badgeEl = document.getElementById('ai-credits-badge');
-      const cur = parseInt(badgeEl.textContent) || 0;
-      if (!isNaN(cur)) badgeEl.textContent = Math.max(0, cur - 1) + ' queries left';
     }
   }
 
@@ -2785,7 +2786,10 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   // ── Billing JS ───────────────────────────────────────────────────────────────
   function syncPlanCards() {
-    const current = _plan?.plan || 'free';
+    // _plan.plan is uppercase from the backend; this section's own convention
+    // (DOM ids below, selectPlan()) is lowercase — normalize once here instead
+    // of rewriting every comparison/id.
+    const current = (_plan?.plan || 'FREE').toLowerCase();
     const planMap = { free:'plan-card-free', pro:'plan-card-pro', enterprise:'plan-card-enterprise' };
 
     // Reset all cards
@@ -2820,7 +2824,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   }
 
   async function selectPlan(plan) {
-    const current = _plan?.plan || 'free';
+    const current = (_plan?.plan || 'FREE').toLowerCase();
     if (plan === current) { showToast('You are already on this plan.'); return; }
 
     if (plan === 'free') {
@@ -3656,14 +3660,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   // ══════════════════════════════════════════════════════════════════════════════
 
   const TOOL_CATALOG = [
-    { id: 'domain',     name: 'Domain Security Scanner',   icon: '🌐', desc: 'TLS, DNS, WHOIS, Security Headers deep scan', tiers: ['FREE','STARTER','PRO','ENTERPRISE'], path: '/#domain' },
-    { id: 'ai',         name: 'AI Threat Analyzer',        icon: '🤖', desc: 'AI-powered threat surface analysis', tiers: ['STARTER','PRO','ENTERPRISE'], path: '/#ai' },
-    { id: 'redteam',    name: 'Red Team Simulator',        icon: '🔴', desc: 'ATT&CK-based attack path simulation', tiers: ['PRO','ENTERPRISE'], path: '/#redteam' },
-    { id: 'identity',   name: 'Identity Risk Scanner',     icon: '👤', desc: 'Credential exposure & breach detection', tiers: ['STARTER','PRO','ENTERPRISE'], path: '/#identity' },
-    { id: 'compliance', name: 'Compliance Auditor',        icon: '📋', desc: 'PCI DSS, HIPAA, SOC2, ISO 27001 check', tiers: ['PRO','ENTERPRISE'], path: '/#compliance' },
-    { id: 'darkscan',   name: 'Dark Web Intelligence',     icon: '🕵️', desc: 'Dark web exposure and leak monitoring', tiers: ['ENTERPRISE'], path: '/#darkscan' },
-    { id: 'cloudsec',   name: 'Cloud Security Auditor',    icon: '☁️', desc: 'AWS/GCP/Azure misconfiguration scanner', tiers: ['PRO','ENTERPRISE'], path: '/#cloudsec' },
-    { id: 'appsec',     name: 'Application Security',      icon: '🔒', desc: 'OWASP Top 10 vulnerability scanner', tiers: ['PRO','ENTERPRISE'], path: '/#appsec' },
+    { id: 'domain',     name: 'Domain Security Scanner',   icon: '🌐', desc: 'TLS, DNS, WHOIS, Security Headers deep scan', tiers: ['FREE','STARTER','PRO','ENTERPRISE','MSSP'], path: '/#domain' },
+    { id: 'ai',         name: 'AI Threat Analyzer',        icon: '🤖', desc: 'AI-powered threat surface analysis', tiers: ['STARTER','PRO','ENTERPRISE','MSSP'], path: '/#ai' },
+    { id: 'redteam',    name: 'Red Team Simulator',        icon: '🔴', desc: 'ATT&CK-based attack path simulation', tiers: ['PRO','ENTERPRISE','MSSP'], path: '/#redteam' },
+    { id: 'identity',   name: 'Identity Risk Scanner',     icon: '👤', desc: 'Credential exposure & breach detection', tiers: ['STARTER','PRO','ENTERPRISE','MSSP'], path: '/#identity' },
+    { id: 'compliance', name: 'Compliance Auditor',        icon: '📋', desc: 'PCI DSS, HIPAA, SOC2, ISO 27001 check', tiers: ['PRO','ENTERPRISE','MSSP'], path: '/#compliance' },
+    { id: 'darkscan',   name: 'Dark Web Intelligence',     icon: '🕵️', desc: 'Dark web exposure and leak monitoring', tiers: ['ENTERPRISE','MSSP'], path: '/#darkscan' },
+    { id: 'cloudsec',   name: 'Cloud Security Auditor',    icon: '☁️', desc: 'AWS/GCP/Azure misconfiguration scanner', tiers: ['PRO','ENTERPRISE','MSSP'], path: '/#cloudsec' },
+    { id: 'appsec',     name: 'Application Security',      icon: '🔒', desc: 'OWASP Top 10 vulnerability scanner', tiers: ['PRO','ENTERPRISE','MSSP'], path: '/#appsec' },
   ];
 
   const PLAN_QUOTA = {
@@ -3671,6 +3675,13 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     STARTER:    { monthly: 50,   daily: 10,  keys: 3,  api: true  },
     PRO:        { monthly: 500,  daily: 50,  keys: 10, api: true  },
     ENTERPRISE: { monthly: 9999, daily: 999, keys: 50, api: true  },
+    // Mirrors backend TIER_LIMITS.MSSP (workers/src/auth/apiKeys.js) — same
+    // effectively-unlimited scan/daily limits as ENTERPRISE plus a higher real
+    // api_keys cap (-1/unlimited vs ENTERPRISE's 20). Was previously absent here,
+    // so MSSP customers fell back to PLAN_QUOTA.FREE and TOOL_CATALOG.tiers
+    // lists that never included 'MSSP' — every tool showed locked and quota
+    // showed FREE-tier numbers despite MSSP being the platform's top tier.
+    MSSP:       { monthly: 9999, daily: 999, keys: 999, api: true  },
   };
 
   async function loadMyTools() {
