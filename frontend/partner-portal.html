@@ -68,6 +68,21 @@
 
   .caveat { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 12px 14px; font-size: 9.5pt; color: #fbbf24; margin-top: 8px; }
   .spinner { text-align: center; padding: 60px; color: var(--muted); }
+
+  .clickable-row { cursor: pointer; }
+  .clickable-row:hover td { background: var(--surface2); }
+
+  .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .tab-btn { background: none; border: none; color: var(--muted); padding: 10px 16px; font-size: 9.5pt; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; width: 420px; max-width: 92vw; }
+  .modal-box .card-title { margin-bottom: 4px; }
+  .key-reveal { font-family: 'Courier New', monospace; font-size: 10pt; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; word-break: break-all; color: var(--success); margin: 12px 0; }
 </style>
 <!-- CDB UX layer (auto-injected, zero-regression) -->
   <link rel="stylesheet" href="/assets/cdb-ui-polish.css">
@@ -83,6 +98,35 @@
 
 <div id="app"><div class="spinner">Loading…</div></div>
 <div id="toast"></div>
+
+<!-- Generate API Key -->
+<div class="modal-overlay" id="modal-generate-key">
+  <div class="modal-box">
+    <div class="card-title">Generate API Key</div>
+    <div class="card-subtitle">Issued to this client, scoped to their own data only.</div>
+    <div class="form-group"><label>Key Name</label><input id="new-key-name" type="text" placeholder="e.g. SIEM Integration" /></div>
+    <div id="key-generate-result" style="display:none">
+      <div class="caveat">Copy this key now — it cannot be shown again.</div>
+      <div class="key-reveal" id="key-generate-value"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeModal('modal-generate-key')" id="key-generate-close">Cancel</button>
+      <button class="btn btn-primary" onclick="generateClientApiKey()" id="key-generate-btn">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Revoke API Key confirm -->
+<div class="modal-overlay" id="modal-revoke-key">
+  <div class="modal-box">
+    <div class="card-title" style="color:var(--danger)">Revoke API Key?</div>
+    <div class="card-subtitle">Any integration using this key will stop working immediately. This cannot be undone.</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeModal('modal-revoke-key')">Cancel</button>
+      <button class="btn btn-primary" style="background:var(--danger);color:#fff" onclick="revokeClientApiKeyConfirmed()">Yes, Revoke</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SESSION_KEY = 'cdb_partner_session';
@@ -300,17 +344,19 @@ function toggleAddCustomer() {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
+let _customers = [];
+
 async function loadCustomers() {
   try {
     const res = await authFetch('/api/mssp/customers');
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load clients');
 
-    const rows = data.customers || [];
-    const tbody = rows.length
-      ? rows.map(c => `<tr><td>${c.org_name}</td><td>${c.tier || '—'}</td><td><span class="badge badge-active">${c.status}</span></td></tr>`).join('')
-      : '<tr><td class="empty-row" colspan="3">No clients yet — add your first one above.</td></tr>';
-    document.getElementById('customers-table').innerHTML = `<thead><tr><th>Organization</th><th>Tier</th><th>Status</th></tr></thead><tbody>${tbody}</tbody>`;
+    _customers = data.customers || [];
+    const tbody = _customers.length
+      ? _customers.map(c => `<tr class="clickable-row" onclick="openClientDetail('${c.id}')"><td>${c.org_name}</td><td>${c.tier || '—'}</td><td><span class="badge badge-active">${c.status}</span></td><td style="text-align:right;color:var(--muted)">View →</td></tr>`).join('')
+      : '<tr><td class="empty-row" colspan="4">No clients yet — add your first one above.</td></tr>';
+    document.getElementById('customers-table').innerHTML = `<thead><tr><th>Organization</th><th>Tier</th><th>Status</th><th></th></tr></thead><tbody>${tbody}</tbody>`;
   } catch (err) {
     if (err.message !== 'session_expired') document.getElementById('customers-table').innerHTML = '<tbody><tr><td class="empty-row">Unable to load clients.</td></tr></tbody>';
   }
@@ -331,6 +377,248 @@ async function createCustomer() {
     loadCustomers();
   } catch (err) {
     if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+// ── Modal helpers ────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Client drill-down ────────────────────────────────────────────────────────
+let _currentClientId = null;
+let _revokeKeyTarget = null;
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+async function openClientDetail(customerId) {
+  _currentClientId = customerId;
+  const cached = _customers.find(c => c.id === customerId);
+  document.getElementById('app').innerHTML = `
+    <div class="wrap">
+      <button class="btn btn-outline" onclick="loadDashboard()" style="margin-bottom:16px">← Back to Dashboard</button>
+      <div class="card">
+        <div class="card-title" id="client-detail-name">${cached ? esc(cached.org_name) : 'Loading…'}</div>
+        <div class="card-subtitle" id="client-detail-sub">${cached ? esc(cached.tier || '') : ''}</div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="overview" onclick="switchClientTab('overview')">Overview</button>
+          <button class="tab-btn" data-tab="subtenants" onclick="switchClientTab('subtenants')">Sub-Tenants</button>
+          <button class="tab-btn" data-tab="apikeys" onclick="switchClientTab('apikeys')">API Keys</button>
+          <button class="tab-btn" data-tab="billing" onclick="switchClientTab('billing')">Billing &amp; Usage</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-overview">
+          <div class="stat-grid" id="client-overview-stats"><div class="empty-row">Loading…</div></div>
+          <div style="margin-top:16px" id="client-overview-labels"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-subtenants">
+          <div class="card-title" style="font-size:10.5pt">Sub-Tenants <button class="btn btn-outline" style="padding:6px 14px;font-size:9pt" onclick="toggleAddSubTenant()">+ Add Sub-Tenant</button></div>
+          <div id="add-subtenant-form" style="display:none;margin-bottom:16px;padding:14px;background:var(--surface2);border-radius:8px">
+            <div class="form-group"><label>Organization Name</label><input id="new-sub-name" type="text" placeholder="Sub-tenant name" /></div>
+            <button class="btn btn-primary btn-block" onclick="createSubTenant()">Add Sub-Tenant</button>
+          </div>
+          <table id="subtenants-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+        </div>
+
+        <div class="tab-panel" id="tab-apikeys">
+          <div class="card-title" style="font-size:10.5pt">API Keys <button class="btn btn-outline" style="padding:6px 14px;font-size:9pt" onclick="openGenerateKeyModal()">+ Generate Key</button></div>
+          <table id="apikeys-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+        </div>
+
+        <div class="tab-panel" id="tab-billing">
+          <div class="card-title" style="font-size:10.5pt">Usage (Last 30 Days)</div>
+          <div class="stat-grid" id="client-usage-stats"><div class="empty-row">Loading…</div></div>
+          <div class="card-title" style="font-size:10.5pt;margin-top:20px">Billing History</div>
+          <table id="billing-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>`;
+
+  loadClientOverview(customerId);
+}
+
+function switchClientTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'subtenants') loadClientSubTenants(_currentClientId);
+  else if (tab === 'apikeys') loadClientApiKeys(_currentClientId);
+  else if (tab === 'billing') loadClientBilling(_currentClientId);
+}
+
+async function loadClientOverview(customerId) {
+  const statsEl = document.getElementById('client-overview-stats');
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/dashboard`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load client dashboard');
+
+    document.getElementById('client-detail-name').textContent = data.customer.org_name;
+    document.getElementById('client-detail-sub').textContent = `${data.customer.tier || '—'} · ${data.customer.status || '—'}`;
+
+    statsEl.innerHTML = `
+      <div class="stat-box"><div class="stat-val">${data.security_posture?.risk_score ?? '—'}</div><div class="stat-lbl">Risk Score</div></div>
+      <div class="stat-box"><div class="stat-val">${data.security_posture?.compliance_score ?? '—'}</div><div class="stat-lbl">Compliance Score</div></div>
+      <div class="stat-box"><div class="stat-val">${data.scans?.total ?? 0}</div><div class="stat-lbl">Scans</div></div>
+      <div class="stat-box"><div class="stat-val">${data.scans?.critical ?? 0}</div><div class="stat-lbl">Critical Findings</div></div>
+      <div class="stat-box"><div class="stat-val">${data.assets?.total ?? 0}</div><div class="stat-lbl">Assets</div></div>
+      <div class="stat-box"><div class="stat-val">${data.sub_tenants?.total ?? 0}</div><div class="stat-lbl">Sub-Tenants</div></div>`;
+
+    const labels = data.labels || [];
+    document.getElementById('client-overview-labels').innerHTML = labels.length
+      ? labels.map(l => `<span class="badge badge-pending" style="margin-right:6px">${esc(l)}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:9.5pt">No labels yet.</span>';
+  } catch (err) {
+    if (err.message !== 'session_expired') statsEl.innerHTML = '<div class="empty-row">Unable to load client dashboard.</div>';
+  }
+}
+
+function toggleAddSubTenant() {
+  const el = document.getElementById('add-subtenant-form');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadClientSubTenants(customerId) {
+  const tbody = document.getElementById('subtenants-table');
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/sub-tenants`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load sub-tenants');
+    const rows = data.sub_tenants || [];
+    tbody.innerHTML = `<thead><tr><th>Name</th><th>Tier</th><th>Status</th><th>Risk</th></tr></thead><tbody>${
+      rows.length
+        ? rows.map(s => `<tr><td>${esc(s.org_name)}</td><td>${esc(s.tier || '—')}</td><td><span class="badge badge-active">${esc(s.status)}</span></td><td>${s.risk_score ?? '—'}</td></tr>`).join('')
+        : '<tr><td class="empty-row" colspan="4">No sub-tenants yet.</td></tr>'
+    }</tbody>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') tbody.innerHTML = '<tbody><tr><td class="empty-row">Unable to load sub-tenants.</td></tr></tbody>';
+  }
+}
+
+async function createSubTenant() {
+  const org_name = document.getElementById('new-sub-name').value.trim();
+  if (!org_name) { toast('Name is required.'); return; }
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(_currentClientId)}/sub-tenants`, {
+      method: 'POST', body: JSON.stringify({ org_name }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not create sub-tenant');
+    toast('Sub-tenant added.');
+    document.getElementById('new-sub-name').value = '';
+    toggleAddSubTenant();
+    loadClientSubTenants(_currentClientId);
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+async function loadClientApiKeys(customerId) {
+  const tbody = document.getElementById('apikeys-table');
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/api-keys`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load API keys');
+    const rows = data.keys || [];
+    tbody.innerHTML = `<thead><tr><th>Name</th><th>Prefix</th><th>Status</th><th></th></tr></thead><tbody>${
+      rows.length
+        ? rows.map(k => `<tr><td>${esc(k.name)}</td><td style="font-family:'Courier New',monospace">${esc(k.key_prefix)}…</td><td><span class="badge ${k.status === 'active' ? 'badge-active' : 'badge-pending'}">${esc(k.status)}</span></td><td style="text-align:right">${k.status === 'active' ? `<button class="btn btn-outline" style="padding:5px 12px;font-size:8.5pt;color:var(--danger)" onclick="confirmRevokeApiKey('${k.id}')">Revoke</button>` : ''}</td></tr>`).join('')
+        : '<tr><td class="empty-row" colspan="4">No API keys issued to this client yet.</td></tr>'
+    }</tbody>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') tbody.innerHTML = '<tbody><tr><td class="empty-row">Unable to load API keys.</td></tr></tbody>';
+  }
+}
+
+function openGenerateKeyModal() {
+  document.getElementById('new-key-name').value = '';
+  document.getElementById('key-generate-result').style.display = 'none';
+  document.getElementById('new-key-name').style.display = 'block';
+  document.getElementById('key-generate-btn').style.display = 'inline-flex';
+  document.getElementById('key-generate-close').textContent = 'Cancel';
+  openModal('modal-generate-key');
+}
+
+async function generateClientApiKey() {
+  const name = document.getElementById('new-key-name').value.trim();
+  if (!name) { toast('Key name is required.'); return; }
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(_currentClientId)}/api-keys`, {
+      method: 'POST', body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not generate key');
+    document.getElementById('new-key-name').style.display = 'none';
+    document.getElementById('key-generate-btn').style.display = 'none';
+    document.getElementById('key-generate-close').textContent = 'Done';
+    document.getElementById('key-generate-result').style.display = 'block';
+    document.getElementById('key-generate-value').textContent = data.key;
+    loadClientApiKeys(_currentClientId);
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+function confirmRevokeApiKey(keyId) {
+  _revokeKeyTarget = keyId;
+  openModal('modal-revoke-key');
+}
+
+async function revokeClientApiKeyConfirmed() {
+  if (!_revokeKeyTarget) return;
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(_currentClientId)}/api-keys/${encodeURIComponent(_revokeKeyTarget)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not revoke key');
+    toast('Key revoked.');
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  } finally {
+    closeModal('modal-revoke-key');
+    loadClientApiKeys(_currentClientId);
+  }
+}
+
+async function loadClientBilling(customerId) {
+  const statsEl = document.getElementById('client-usage-stats');
+  const tbody   = document.getElementById('billing-table');
+  try {
+    const [usageRes, billingRes] = await Promise.all([
+      authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/usage`),
+      authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/billing`),
+    ]);
+    const usage   = await usageRes.json();
+    const billing = await billingRes.json();
+
+    if (usageRes.ok && usage.success) {
+      statsEl.innerHTML = `
+        <div class="stat-box"><div class="stat-val">${usage.api_usage?.calls_30d ?? 0}</div><div class="stat-lbl">API Calls (30d)</div></div>
+        <div class="stat-box"><div class="stat-val">${usage.api_usage?.calls_today ?? 0}</div><div class="stat-lbl">API Calls Today</div></div>
+        <div class="stat-box"><div class="stat-val">${usage.scan_usage?.total_30d ?? 0}</div><div class="stat-lbl">Scans (30d)</div></div>
+        <div class="stat-box"><div class="stat-val">${usage.assets?.registered ?? 0}</div><div class="stat-lbl">Registered Assets</div></div>`;
+    } else {
+      statsEl.innerHTML = '<div class="empty-row">Unable to load usage.</div>';
+    }
+
+    if (billingRes.ok && billing.success) {
+      const rows = billing.history || [];
+      tbody.innerHTML = `<thead><tr><th>Period</th><th>API Calls</th><th>Scans</th><th>Reports</th></tr></thead><tbody>${
+        rows.length
+          ? rows.map(h => `<tr><td>${esc(h.period_start)} – ${esc(h.period_end)}</td><td>${h.api_calls ?? 0}</td><td>${h.scans_run ?? 0}</td><td>${h.report_count ?? 0}</td></tr>`).join('')
+          : '<tr><td class="empty-row" colspan="4">No billing history yet.</td></tr>'
+      }</tbody>`;
+    } else {
+      tbody.innerHTML = '<tbody><tr><td class="empty-row">Unable to load billing history.</td></tr></tbody>';
+    }
+  } catch (err) {
+    if (err.message !== 'session_expired') {
+      statsEl.innerHTML = '<div class="empty-row">Unable to load usage.</div>';
+      tbody.innerHTML = '<tbody><tr><td class="empty-row">Unable to load billing history.</td></tr></tbody>';
+    }
   }
 }
 

@@ -125,35 +125,36 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "frontend/partner-portal.html (the only partner-facing self-service page) was read in full: it calls /api/mssp/customers (list/create only) and /api/mssp/revenue, but none of the 17 other exported handlers in workers/src/handlers/msspTenantPlatform.js (dashboard, sub-tenant hierarchy, per-client notification prefs, ticket routing rules, per-client API keys, per-client billing/usage) are referenced anywhere in frontend/*.html. Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:232 Gap Matrix row (Domain 10): 'Partial — Backend fully built; zero frontend calls any of them. Only the coarse client list/create is wired', independently re-confirmed 2026-07-08."
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/partner-portal.html"],
+      "status": "partial",
+      "evidence": "MOSTLY FIXED 2026-07-09. Root cause was two-layered, not just a missing UI: (1) frontend/partner-portal.html discarded c.id/c.org_slug when rendering the client list, so there was no stable key to drill into even if a UI existed; (2) more critically, workers/src/handlers/msspTenantPlatform.js's requireMSSPAdmin()/partnerScope() never recognized a real MSSP partner session (workers/src/handlers/partnerAuth.js magic-link login resolves to authCtx.role==='partner'/authCtx.partnerId with userId/user_id both null) — only authCtx.isAdmin or a JWT/API-key user whose own tier is literally 'MSSP'. Every one of the 18 handlers in this file would have 403'd for every real partner, even a UI built exactly to the documented contract — confirmed by direct code read before writing any frontend, not assumed. Fixed the backend gate first (mirroring the identical, already-proven-safe pattern in the sibling workers/src/handlers/msspWorkspace.js, which is why the 2 already-wired handlers worked while these 16 did not), then built the UI: client rows are now clickable, opening a drill-down with Overview/Sub-Tenants/API Keys/Billing & Usage tabs, wiring 8 of the remaining 16 handlers (handleCustomerDashboard, handleListSubTenants, handleCreateSubTenant, handleListCustomerAPIKeys, handleGenerateCustomerAPIKey, handleRevokeCustomerAPIKey, handleGetTenantBilling, handleGetTenantUsage). Deliberately NOT wired: Notification Preferences (handleGetNotifPrefs/handleSetNotifPrefs — a 5-channel x 12-event settings matrix) and Ticket Routing Rules (handleListTicketRules/handleCreateTicketRule/handleDeleteTicketRule) — the latter is partner-wide, not customer-scoped, and nesting it under one specific client's drill-down would mislead a partner into thinking a rule only applies to that client; both disclosed as known remaining gaps rather than rushed in or mislabeled. Also NOT wired: handleListCustomerLabels/handleAddCustomerLabel/handleRemoveCustomerLabel (the Overview tab displays labels read-only from the dashboard payload, but adding/removing one has no UI yet) and handleGetHierarchy (the parent/child tree view — handleListSubTenants alone covers the flat child list shown)."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No nav entry links to a per-client drill-down page because no such page exists."
+      "discoverable": true,
+      "evidence": "Every row in the existing, already-discoverable 'Your Clients' table on frontend/partner-portal.html is now a real entry point — no new nav needed since the coarse list itself (CAP-MSSP-002, already GA) was already the correct landing surface."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": { "enforced": true, "permissions": ["requireMSSPAdmin: isAdmin, tier==='MSSP', or role==='partner' (fixed this pass)"] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/msspTenantIsolation.test.mjs and workers/test/msspIsolation.test.mjs import directly from workers/src/handlers/msspTenantPlatform.js — the backend is well-tested even though no UI consumes it."
+      "evidence": "CORRECTED 2026-07-09: the prior version of this field claimed workers/test/msspTenantIsolation.test.mjs and workers/test/msspIsolation.test.mjs import directly from workers/src/handlers/msspTenantPlatform.js — independently re-verified false; both import exclusively from the sibling workers/src/handlers/msspWorkspace.js (confirmed by direct import-statement read). The real, pre-existing coverage of workers/src/handlers/msspTenantPlatform.js is workers/test/deadAdminChecksRestored.test.mjs (4 of 18 handlers, the legacy tier:'MSSP' JWT-user identity only). New this pass: workers/test/msspPartnerSessionTenantPlatform.test.mjs (12 tests) — proves the real partner-session identity (shaped exactly like resolvePartnerSession()'s actual output, not a simplified stand-in) can now reach its own data across dashboard/sub-tenants/api-keys/labels, that cross-partner isolation still holds for this identity (a spoofed userId cannot override the server-derived partnerId), and that the legacy tier:'MSSP' path is unaffected by the fix — using the same real in-memory SQLite pattern as the existing isolation tests. Plus workers/test/partnerPortalClientDrilldown.test.mjs (11 tests, frontend, new) — cross-checks frontend/partner-portal.html against workers/src/index.js and workers/src/handlers/msspTenantPlatform.js directly. Independently re-verified live via a real headless-Chromium Playwright session: full click-through (client list → drill-down → all 4 tabs → sub-tenant creation → API key generation with one-time plaintext reveal → key revocation → back to dashboard), 17/17 checks, zero uncaught JS exceptions. axe-core scan: zero new violations introduced (the one flagged violation is on the pre-existing, unmodified dashboard shell, present before navigating to any new view)."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/msspTenantPlatform.js read directly (881 lines, 18 exported functions); frontend/partner-portal.html cross-checked line-by-line against every one of those export names (0 matches beyond the customers list/create pair already captured in CAP-MSSP-002)."
+      "last_verified": "2026-07-09",
+      "evidence": "FIXED 2026-07-09 (own commit, own regression tests, backend gate fix + frontend build together since the frontend has no customer value without the fix). workers/src/handlers/msspTenantPlatform.js and its sibling workers/src/handlers/msspWorkspace.js both read directly and diffed to confirm the exact, already-proven-safe pattern to mirror before touching any auth-gating code. frontend/partner-portal.html read in full (previously 440 lines) before editing. Dynamic: real headless-Chromium Playwright session against the changed file served locally, mocking the full backend contract — 17/17 checks. Full backend suite green: 185 files / 1967 tests (184/1956 baseline + 11 new frontend-contract tests; the backend gate fix itself added 12 more, landing at 184 from the 183/1944 baseline before this wave). scripts/seo-structure-lock.mjs: all 22 pages green (unaffected — frontend/partner-portal.html is noindex/nofollow, not part of the public SEO surface)."
     },
-    "notes": "This is the single largest backend-vs-frontend gap found in the MSSP domain: a genuinely fully-built, well-tested, 18-handler tenant management system with a customer-facing surface that wires up only 2 of those handlers."
+    "contradicts_doc": [],
+    "notes": "Was the single largest backend-vs-frontend gap in the MSSP domain, but the deeper issue was a broken auth gate hiding behind what looked like a pure frontend gap — verified before assuming: read the actual authCtx shape a real partner session produces, confirmed it would 403 against the documented contract, and fixed that first rather than building a UI that would have silently failed for every real customer in production. Fixed as two tightly-coupled, minimally-disruptive changes: the backend fix mirrors an already-shipped, already-safe pattern from a sibling file (zero new security design, just closing a gap where one file didn't get the same fix its sibling did); the frontend reuses frontend/partner-portal.html's exact existing CSS/JS conventions, introducing only a tab-bar and a lightweight modal system where none existed before (needed for the one-time API-key-reveal UX, which has no safe way to be re-shown after generation). Known, deliberately disclosed remaining gaps: Notification Preferences and Ticket Routing Rules UIs (the latter needs a product decision on where it belongs — partner-wide settings, not per-client — before it should be built at all), label add/remove UI, and the parent/child hierarchy tree view (handleGetHierarchy) beyond the flat sub-tenant list already shown."
   },
   {
     "id": "CAP-MSSP-004",
