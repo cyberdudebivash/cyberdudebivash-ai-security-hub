@@ -17,13 +17,13 @@
     },
     "frontend": {
       "surface_type": "modal",
-      "pages": ["frontend/user-dashboard.html"],
-      "status": "broken",
-      "evidence": "frontend/index.html:13154-13157 — the only 'Sign In' surface reachable from the homepage is a dead-end modal ('Sign In Required') whose only control is an OK button that removes the modal (onclick=\"document.getElementById('_monitor-modal')?.remove()\"); it does not link anywhere. The real, working login form (#login-overlay, 'Sign in to your account') exists at frontend/user-dashboard.html:747, confirmed present and functional, but is reachable only via a small footer link, not from primary navigation. Both facts independently re-verified 2026-07-08 (in addition to docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:202)."
+      "pages": ["frontend/index.html", "frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09. frontend/index.html's cdbApplyGates() (the same idempotent function that already injected a 'Dashboard' nav link for authenticated visitors) now has the previously-missing else-branch: a logged-out visitor gets a real 'Sign In' link injected into both #cdb-nav-actions (desktop) and #nav-mobile-drawer (mobile), pointing at frontend/user-dashboard.html — whose #login-overlay shows automatically whenever no valid session token is present (frontend/user-dashboard.html:1997-2003). The link is removed again on the cdb:login event so it never lingers post-login (verified live via Playwright: link present when logged out, absent + Dashboard link present after simulated login). The dead-end 'Sign In Required' modal (createMonitorModal(), formerly frontend/index.html:13154-13157) now has a working 'Sign In' button that navigates to frontend/user-dashboard.html, plus a separate 'Cancel' button preserving the original dismiss behavior."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No header/primary-nav entry links to frontend/user-dashboard.html's login overlay; only a small dim footer link does."
+      "discoverable": true,
+      "evidence": "Sign In is now a real, visible, correctly-labeled nav entry on both desktop (#cdb-nav-actions) and mobile (#nav-mobile-drawer) for any logged-out visitor — dynamically injected by cdbApplyGates(), same mechanism/reliability as the pre-existing authenticated-user Dashboard link."
     },
     "auth_enforced": true,
     "rbac": { "enforced": false, "permissions": [] },
@@ -31,28 +31,28 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/gdprAccountDeletion.test.mjs, workers/test/emailWiringTask3Phase1.test.mjs, and workers/test/phase10PasswordReset.test.mjs all import directly from workers/src/handlers/auth.js — confirmed by direct import-statement grep, 2026-07-08."
+      "evidence": "workers/test/homepageSignInPath.test.mjs (2026-07-09, new) — 3 tests reading frontend/index.html directly (same convention as workers/test/autoSocToggleGuard.test.mjs): the Sign In link is injected for logged-out visitors on both desktop and mobile, it is removed again once authenticated, and the dead-end modal's button now navigates to the login page while the dismiss/Cancel path still exists. Plus the pre-existing workers/test/gdprAccountDeletion.test.mjs, workers/test/emailWiringTask3Phase1.test.mjs, and workers/test/phase10PasswordReset.test.mjs (backend handlers, unchanged)."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
       { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P1",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/auth.js read directly (12 exported handle* functions confirmed); frontend/index.html:13148-13160 and frontend/user-dashboard.html:744-750 read directly and independently re-confirmed to match the described dead-end-modal / buried-form pattern."
+      "last_verified": "2026-07-09",
+      "evidence": "FIXED 2026-07-09 (own commit, own regression tests). frontend/index.html read directly; both the cdbApplyGates() fix and the createMonitorModal() fix independently re-verified with a real headless-Chromium Playwright session (not just static grep) run against the changed file served locally: confirmed the Sign In link renders with correct text/href on both desktop and mobile, confirmed it disappears and the Dashboard link appears after a simulated cdb:login event (no stale UI, no regression to the existing authenticated-user path), confirmed the modal renders a working 'Sign In' button plus 'Cancel'; zero uncaught JS errors during the whole session. Full backend suite green: 180 files / 1902 tests. scripts/seo-structure-lock.mjs: all 22 pages green (unaffected)."
     },
     "contradicts_doc": [
       {
         "file": "GENERAL_AVAILABILITY_REPORT.md",
         "line": 70,
         "claim": "Auth: signup / login / session / logout / change-password | GA APPROVED | Live-verified incl. negative paths across Phases IX–X",
-        "correction": "\"Live-verified\" here means the API endpoints were exercised directly (dynamic_api), not that a customer can find and use the login form from the production site. The homepage's only visible sign-in affordance is a dead-end modal; the real, working form is reachable only via a small footer link. Corrected status: NOT READY (P1 — this is a broken customer journey, not merely an undiscovered feature, because it is literally the entry point to every other capability on the platform)."
+        "correction": "\"Live-verified\" here means the API endpoints were exercised directly (dynamic_api), not that a customer could find and use the login form from the production site — the dead-end-modal / buried-footer-link finding this correction described is now fixed (2026-07-09). customer_journey_complete stays false pending a real dynamic_browser verification pass against production, not because the fix itself is in doubt."
       }
     ],
-    "notes": "Classified P1 rather than P2 because this is the single entry point every other authenticated capability depends on — a customer who cannot find sign-in cannot reach anything else, regardless of how complete the rest of the platform is."
+    "notes": "Classified P1 rather than P2 because this is the single entry point every other authenticated capability depends on — a customer who cannot find sign-in cannot reach anything else, regardless of how complete the rest of the platform is. Fixed as a minimally-disruptive, additive change: the existing authenticated-user Dashboard-link mechanism and the in-page #dashboard section (both already working) were left completely untouched — only the missing logged-out case was added, following the codebase's own established idempotent-injection pattern rather than introducing a new one."
   }
 ]
