@@ -40,7 +40,7 @@ bcrypt>=4.1.0
 aiokafka>=0.11.0
 
 # Data
-orjson>=3.10.0
+orjson>=3.11.9
 
 # Testing
 pytest>=8.2.0
