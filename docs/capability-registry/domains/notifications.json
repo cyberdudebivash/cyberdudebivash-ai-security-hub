@@ -60,8 +60,8 @@
     "frontend": {
       "surface_type": "embedded_widget",
       "pages": ["frontend/index.html"],
-      "status": "broken",
-      "evidence": "A real, functional bell UI exists (frontend/index.html:1152-1160, id=cdb-notif-bell) with badge/unread tracking and rendering logic (CDB_NOTIF, defined at frontend/index.html:15942 onward). But its data-fetch function, _fetch() (around frontend/index.html:15982-16000), calls GET /api/v1/alerts?limit=20&resolved=false and GET /api/realtime/stats — the platform's live CVE/threat-intel feed — never GET /api/notifications/log, the customer's own notification_log-backed history that CAP-NOTIF-001's backend maintains. A customer's own billing/org/security notifications (the actual point of the log this handler manages) never appear in the one bell UI on the platform; the bell shows global threat intel instead. Independently confirmed 2026-07-08 by reading the fetch implementation directly, matching docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222's Domain 8 finding ('Backend and frontend built independently, never connected')."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09. CDB_NOTIF's _fetch() (frontend/index.html, in the CDB_NOTIF IIFE) was rewired from GET /api/v1/alerts + GET /api/realtime/stats (global threat intel, plus a _synthesizeAlerts() fallback that fabricated fake 'personal' alerts from platform-wide CVE counts — both removed) to GET /api/notifications/log, the customer's own notification_log-backed history CAP-NOTIF-001's backend maintains. Maps the real response shape ({log:[{id,channel,event_type,subject,status,sent_at,created_at}],total}) to the existing render item (subject -> title, channel -> description). Gated on the same JWT presence check (_authToken(), reading the pre-existing cdb_v13_jwt key) the module already used for its Authorization header, so a signed-out visitor gets an honest '🔒 Sign in to see your notifications' empty state instead of either a crash or someone else's-looking data — matches the real backend, which requires a resolved session (workers/src/index.js:3241-3244 sets request.user via resolveAuthV5) and otherwise degrades gracefully rather than 401ing. Verified live via Playwright: signed-out state shows the sign-in message; signed-in state (mocked GET /api/notifications/log) renders the real subject line and no longer shows any global-threat-intel content."
     },
     "navigation": {
       "discoverable": true,
@@ -73,20 +73,21 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": false,
-      "evidence": "No test covers the CDB_NOTIF frontend object (inline page JS, not an importable module) or asserts it calls the correct backend endpoint."
+      "evidence": "No committed automated test covers the CDB_NOTIF frontend object (inline page JS, not an importable module). Verified this pass via an ad-hoc Playwright click-through (not committed to the repo) against contract-accurate mocked responses; not a permanent regression lock — a real gap, flagged as a follow-up (e.g. a committed Playwright/browser test suite) rather than fixed in this pass."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "frontend/index.html:1152-1160,15942-16010 read directly to confirm the bell's actual data source; workers/src/handlers/notificationPlatform.js:176 (handleNotificationLog) read to confirm what it actually returns, and confirmed no frontend code calls it."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-09",
+      "evidence": "Source fix read directly against workers/src/handlers/notificationPlatform.js:176-190's real handleNotificationLog response shape. Playwright click-through of the real frontend/index.html confirmed: (1) signed-out visitors see an honest sign-in prompt with zero network call to a protected endpoint; (2) a signed-in session (simulated JWT, mocked GET /api/notifications/log response shaped exactly like the real handler's SQL SELECT columns) renders the real subject as the item title and no longer shows the old fabricated CVE-count alerts. Full backend suite (188 files/2012 tests) green post-fix — this was a frontend-only change. NOT YET verified against the live deployed backend/D1 notification_log table — customer_journey_complete stays false pending a post-merge production smoke test with a real account that has notification_log rows."
     },
-    "notes": "Classified P1 (not merely undiscovered, but actively misleading): a customer sees a working-looking notification bell and reasonably assumes it reflects their account activity; it doesn't. This is a distinct capability from frontend/user-dashboard.html's own separate, unrelated client-only alert array, which docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222 also flags as disconnected from notification_log — not independently re-verified in this pass, flagged as a related open item."
+    "contradicts_doc": [],
+    "notes": "Distinct from frontend/user-dashboard.html's own separate, unrelated client-only alert array, which docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222 also flags as disconnected from notification_log — not addressed in this pass, remains a related open item. Two adjacent accessibility defects surfaced and fixed in the same pass while touching this widget: (1) the severity-badge palette's LOW tier fell through to MEDIUM's cyan background tint while keeping distinct gray text (3.44:1 contrast, failing WCAG AA) — given its own tint plus the page's existing --text-muted color (7.08:1); (2) the shared p4Toast() helper appended plain divs with no ARIA live region, silent to screen readers — now role=\"status\" aria-live=\"polite\". Both verified via axe-core (zero WCAG2A/AA violations in the notification panel post-fix)."
   },
   {
     "id": "CAP-NOTIF-003",

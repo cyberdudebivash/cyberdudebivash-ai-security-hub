@@ -5050,13 +5050,19 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </section>
 <!-- ══════════════════════════ PHASE 4: AFFILIATE HUB ══════════════════════════ -->
-<!-- Public by design: handleJoin() (affiliateSystem.js) takes no platform auth
-     — it's meant for external marketers/bloggers who are not existing logged-in
-     customers — and this section manages its own localStorage-based identity
-     (p4_aff_user_id), independent of platform login. A prior "anonymous-exposure
-     audit" gated this the same as genuinely-internal sections (dashboard,
-     executive-hub, autonomous-soc), which made the affiliate programme
-     invisible to the only audience that could ever join it. -->
+<!-- Join is public by design: handleJoin() (affiliateSystem.js) takes no
+     platform auth — it's meant for external marketers/bloggers who are not
+     existing logged-in customers, identified by authCtx.userId if signed in
+     or by their email otherwise. Status/payout are different: they require a
+     real authenticated session (authCtx.userId via resolveAuthV5) — a prior
+     "anonymous-exposure audit" removed the old `?email=` lookup because it let
+     anyone who knew/guessed an affiliate's email pull their stats and
+     earnings with zero authentication (IDOR). That fix was correct and is not
+     reverted here. Net effect: any visitor can join; only a signed-in
+     customer can self-serve check status or request a payout in-page today.
+     A non-customer external affiliate must go through support to view status
+     — tracked as a follow-up (e.g. a private per-affiliate lookup token),
+     not solved by this fix. -->
 <section data-section-id="affiliate-hub-2" id="affiliate-hub" style="background:linear-gradient(180deg,#050510 0%,#030308 100%);padding:80px 20px;border-top:1px solid rgba(168,85,247,.15)">
 <div style="max-width:1400px;margin:0 auto">
 <div style="text-align:center;margin-bottom:56px">
@@ -5385,7 +5391,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <span style="font-size:14px;color:rgba(255,255,255,.72);text-decoration:line-through">₹3,996</span>
 <span style="font-size:12px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:4px 10px;color:#ff8888;font-weight:800">SAVE ₹1,997</span>
 </div>
-<button onclick="if(window.CDB_PAY)CDB_PAY.open('ULTIMATE_BUNDLE_2026',1999,'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026')" style="width:100%;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:14px;font-weight:900;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
+<button onclick="if(typeof CDB_PAYMENT!=='undefined')CDB_PAYMENT.open({product:'ULTIMATE_BUNDLE_2026',productLabel:'🏆 CYBERDUDEBIVASH Ultimate Bundle 2026',amountLabel:'₹1,999',amount:'₹1,999'})" style="width:100%;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:14px;font-weight:900;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
         🚀 Get Ultimate Bundle — ₹1,999
       </button>
 <div style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,.72)">⚡ Instant delivery — download links emailed immediately after purchase</div>
@@ -10077,7 +10083,7 @@ function _buildTrainingUpsell(module, score, level) {
         <div style="font-size:12px;color:rgba(255,255,255,.72);line-height:1.6;margin-bottom:12px">${course.desc}</div>
         <div style="font-size:11px;color:rgba(255,255,255,.72);margin-bottom:14px">🔒 Instant PDF delivery · Secure payment</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button onclick="if(window.CDB_PAY)CDB_PAY.open('${course.id}',${course.price},'${course.label.replace(/'/g,"\\'")}')" style="background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:900;cursor:pointer;transition:all .2s;white-space:nowrap">
+          <button onclick="if(typeof CDB_PAYMENT!=='undefined')CDB_PAYMENT.open({product:'${course.id}',productLabel:'${course.label.replace(/'/g,"\\'")}',amountLabel:'₹'+${course.price},amount:'₹'+${course.price}})" style="background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:900;cursor:pointer;transition:all .2s;white-space:nowrap">
             🔓 Start Learning — ₹${course.price}
           </button>
           <a href="/academy.html#bundle" style="font-size:12px;color:#00ffcc;font-weight:700;text-decoration:none;white-space:nowrap">🏆 Get All Courses ₹1,999 →</a>
@@ -15976,6 +15982,7 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
   let _alerts = [];
   let _readIds = new Set(JSON.parse(stored('notif_read')||'[]'));
   let _timer = null;
+  let _signedIn = false;
 
   function _badge(n){
     const b = document.getElementById('cdb-notif-badge');
@@ -15984,10 +15991,21 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
     else      { b.style.display='none'; }
   }
 
+  // Text/background pairs verified ≥4.5:1 WCAG AA contrast against the
+  // notification panel's rgba(8,8,20,.98) surface at the .12-alpha badge
+  // background actually rendered below (LOW previously fell through to
+  // MEDIUM's cyan tint while keeping #6b7280 text — 3.44:1, failing AA).
+  const SEV_STYLE = {
+    CRITICAL: { color:'#ef4444', bg:'239,68,68'   },
+    HIGH:     { color:'#f59e0b', bg:'245,158,11'  },
+    MEDIUM:   { color:'#00d4ff', bg:'0,212,255'   },
+    LOW:      { color:'#94a3b8', bg:'107,114,128' }, // --text-muted, own tint (not MEDIUM's)
+  };
+
   function _renderItem(a){
     const isUnread = !_readIds.has(a.id||a.title);
     const sev = a.severity||a.risk_level||'MEDIUM';
-    const sevColor = {CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#00d4ff',LOW:'#6b7280'}[sev]||'#6b7280';
+    const { color: sevColor, bg: sevBg } = SEV_STYLE[sev] || SEV_STYLE.LOW;
     const timeAgo = a.created_at ? _ago(a.created_at) : '';
     return `<div class="cdb-notif-item cdb-notif-sev-${sev}${isUnread?' unread':''}"
       onclick="CDB_NOTIF.markRead('${a.id||a.title}')" data-nid="${a.id||a.title}">
@@ -15996,7 +16014,7 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
         <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.85);line-height:1.35;margin-bottom:2px">${_esc(a.title||a.cve_id||a.type||'Alert')}</div>
         <div style="font-size:10px;color:rgba(255,255,255,.72);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(a.description||a.summary||a.message||'')}</div>
         <div style="display:flex;gap:6px;margin-top:4px;align-items:center">
-          <span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(${sev==='CRITICAL'?'239,68,68':sev==='HIGH'?'245,158,11':'0,212,255'},.12);color:${sevColor}">${sev}</span>
+          <span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(${sevBg},.12);color:${sevColor}">${sev}</span>
           ${timeAgo ? `<span style="font-size:9px;color:rgba(255,255,255,.72)">${timeAgo}</span>` : ''}
         </div>
       </div>
@@ -16017,22 +16035,25 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
 
   async function _fetch(){
     try{
-      const [alertsRes, statsRes] = await Promise.allSettled([
-        fetch(API+'/api/v1/alerts?limit=20&resolved=false', {
-          headers: _authHeaders()
-        }),
-        fetch(API+'/api/realtime/stats')
-      ]);
-
-      if(alertsRes.status==='fulfilled' && alertsRes.value.ok){
-        const j = await alertsRes.value.json();
-        _alerts = (j.alerts||j.results||j.data||[]).slice(0,20);
+      _signedIn = !!_authToken();
+      if(!_signedIn){
+        _alerts = [];
+        _badge(0);
+        if(_open) _render();
+        return;
+      }
+      const res = await fetch(API+'/api/notifications/log?limit=20', { headers: _authHeaders() });
+      if(res.ok){
+        const j = await res.json();
+        _alerts = (j.log||[]).map(n => ({
+          id: n.id,
+          title: n.subject || n.event_type || 'Notification',
+          description: n.channel ? `via ${n.channel}` : '',
+          created_at: n.sent_at || n.created_at,
+        }));
       } else {
-        // Fallback: synthesize from threat intel stats
-        if(statsRes.status==='fulfilled' && statsRes.value.ok){
-          const s = await statsRes.value.json();
-          _alerts = _synthesizeAlerts(s);
-        }
+        if(res.status === 401) _signedIn = false;
+        _alerts = [];
       }
 
       const unread = _alerts.filter(a => !_readIds.has(a.id||a.title)).length;
@@ -16041,28 +16062,24 @@ const CDB_NOTIF = window.CDB_NOTIF = (() => {
     }catch(e){ /* silent — non-critical */ }
   }
 
-  function _synthesizeAlerts(stats){
-    const alerts = [];
-    if(stats.critical_cves > 0){
-      alerts.push({id:'syn_crit_cve',title:`${stats.critical_cves} Critical CVEs Active`,description:'Immediate patching required — CISA KEV cross-referenced',severity:'CRITICAL',created_at:new Date().toISOString()});
-    }
-    if(stats.active_threats > 0){
-      alerts.push({id:'syn_threats',title:`${stats.active_threats} Active Threat Indicators`,description:'Sentinel APEX threat correlation active',severity:'HIGH',created_at:new Date(Date.now()-3600000).toISOString()});
-    }
-    alerts.push({id:'syn_sentinel',title:'Sentinel APEX: Feed Synchronized',description:'CVE ingestion pipeline nominal — Cloudflare edge operational',severity:'LOW',created_at:new Date(Date.now()-7200000).toISOString()});
-    return alerts;
+  function _authToken(){
+    return stored('jwt')||sessionStorage.getItem('cdb_jwt')||'';
   }
 
   function _authHeaders(){
-    const tok = stored('jwt')||sessionStorage.getItem('cdb_jwt')||'';
+    const tok = _authToken();
     return tok ? {Authorization:'Bearer '+tok} : {};
   }
 
   function _render(){
     const el = document.getElementById('cdb-notif-list');
     if(!el) return;
+    if(!_signedIn){
+      el.innerHTML='<div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.72);font-size:12px">🔒 Sign in to see your notifications</div>';
+      return;
+    }
     if(!_alerts.length){
-      el.innerHTML='<div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.72);font-size:12px">✅ No active alerts</div>';
+      el.innerHTML='<div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,.72);font-size:12px">✅ No notifications</div>';
       return;
     }
     el.innerHTML = _alerts.map(_renderItem).join('');
@@ -20315,7 +20332,19 @@ function p4Api(path, opts) {
   if (tok && !headers['Authorization']) headers['Authorization'] = 'Bearer ' + tok;
   return fetch(API + path, Object.assign({}, opts, { headers: headers }))
     .then(function(r) { return r.json(); })
-    .catch(function(e) { return { error: e.message }; });
+    .then(function(j) {
+      // Every route in this module wraps its response as {success,data,error,
+      // timestamp} (ok()/fail() in workers/src/lib/response.js). Flatten data's
+      // fields onto the top level so callers can read real field names directly
+      // (e.g. d.lead_id) instead of the envelope (d.data.lead_id), while keeping
+      // success/error/code visible for callers that already check them.
+      if (j && typeof j === 'object' && 'success' in j) {
+        return Object.assign({}, (j.data && typeof j.data === 'object') ? j.data : {},
+          { success: j.success, error: j.error, code: j.code });
+      }
+      return j;
+    })
+    .catch(function(e) { return { error: e.message, success: false }; });
 }
 
 function p4Post(path, body) {
@@ -20323,6 +20352,13 @@ function p4Post(path, body) {
 }
 
 function p4Get(path) { return p4Api(path); }
+
+// Same token p4Api() itself already attaches as an Authorization header on
+// every call — affiliate status/payout require a real authenticated session
+// server-side (authCtx.userId via resolveAuthV5), not a client-supplied ID.
+function p4HasSession() {
+  return !!(localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token'));
+}
 
 /* ── Nav injection ─────────────────────────────────────────────────────── */
 function p4InjectNav() {
@@ -20472,14 +20508,15 @@ window.p4CreateLead = function() {
   if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Submitting inquiry…'; }
 
   p4Post('/api/sales/leads', {
-    contact_name: name, contact_email: email, company_name: company,
-    contact_title: title, sector: sector, company_size: size,
-    annual_budget: budget, urgency: urgency, phone: phone, notes: notes
+    name: name, email: email, company: company,
+    role: title, sector: sector, company_size: size,
+    budget_range: budget, urgency: urgency, phone: phone, message: notes
   }).then(function(d) {
-    if (d.lead) {
+    if (d.success && d.lead_id) {
       resEl.style.color = '#10b981';
-      resEl.innerHTML = '✅ Inquiry submitted! ICP Score: <strong>' + (d.lead.icp_score || '—') + '/100</strong> · Est. Deal Value: <strong>₹' + ((d.lead.estimated_deal_value_inr || 0).toLocaleString('en-IN')) + '</strong>';
-      p4RecordBehaviorEvent('enterprise_inquiry', { score: d.lead.icp_score });
+      resEl.innerHTML = '✅ ' + (d.message || 'Inquiry submitted!') +
+        (d.icp_score != null ? ' · ICP Score: <strong>' + d.icp_score + '/100</strong> · Priority: <strong>' + d.priority + '</strong>' : '');
+      p4RecordBehaviorEvent('enterprise_inquiry', { score: d.icp_score });
       setTimeout(p4LoadPipeline, 800);
     } else {
       resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Submission failed.');
@@ -20507,8 +20544,8 @@ function p4LoadDemoSlots() {
     var html = '<div style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto">';
     d.slots.slice(0, 6).forEach(function(s) {
       html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">' +
-        '<input type="radio" name="p4-demo-slot" value="' + s.slot_id + '" style="accent-color:#6366f1">' +
-        '<span style="font-size:12px;color:#94a3b8">' + s.display + '</span>' +
+        '<input type="radio" name="p4-demo-slot" value="' + s.slot + '" style="accent-color:#6366f1">' +
+        '<span style="font-size:12px;color:#94a3b8">' + s.label + '</span>' +
         '</label>';
     });
     html += '</div>';
@@ -20531,11 +20568,11 @@ window.p4BookDemo = function() {
   if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Booking demo…'; }
 
   p4Post('/api/sales/demo/book', {
-    slot_id: slotEl.value, name: name, email: email, company: company, phone: phone
+    preferred_slot: slotEl.value, name: name, email: email, company: company, phone: phone
   }).then(function(d) {
-    if (d.booking) {
+    if (d.success && d.booked) {
       resEl.style.color = '#10b981';
-      resEl.textContent = '✅ Demo confirmed! Ref: ' + d.booking.booking_ref + ' — Check your email.';
+      resEl.textContent = '✅ ' + (d.message || ('Demo confirmed! Ref: ' + d.booking_id + ' — Check your email.'));
     } else {
       resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Booking failed.');
     }
@@ -20719,11 +20756,23 @@ window.p4GenerateProposal = function() {
   }
   if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Generating enterprise proposal…'; }
 
-  p4Post('/api/proposals/generate', {
-    client_company: company, client_contact: contact, client_email: email,
-    sector: sector, org_size: size, package_id: pkg, challenges: challenges
+  // handleGenerateProposal requires an existing lead_id — it builds the
+  // proposal document from a stored lead record, not from freeform fields —
+  // so create/attach the lead first, then generate against it. Two real
+  // backend calls behind one owner click.
+  p4Post('/api/sales/leads', {
+    name: contact, email: email, company: company, sector: sector, company_size: size, message: challenges
+  }).then(function(leadRes) {
+    if (!leadRes.success || !leadRes.lead_id) {
+      resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (leadRes.error || 'Could not create lead record for this proposal.');
+      return;
+    }
+    return p4Post('/api/proposals/generate', {
+      lead_id: leadRes.lead_id, package_id: pkg, notes: challenges
+    });
   }).then(function(d) {
-    if (d.proposal) {
+    if (!d) return; // lead-creation step already reported its own error above
+    if (d.success && d.proposal) {
       var p = d.proposal;
       resEl.style.color = '#10b981';
       resEl.innerHTML = '✅ Proposal <strong>' + p.proposal_number + '</strong> generated! ' +
@@ -20736,7 +20785,7 @@ window.p4GenerateProposal = function() {
   });
 };
 
-function p4LoadProposals() {
+window.p4LoadProposals = function() {
   var el = document.getElementById('p4-proposals-list');
   if (!el) return;
   p4Get('/api/proposals').then(function(d) {
@@ -20747,48 +20796,48 @@ function p4LoadProposals() {
     var html = '';
     d.proposals.slice(0, 8).forEach(function(p) {
       var status = p.status || 'DRAFT';
+      var propNum = (p.metadata && p.metadata.proposal_number) || '';
       html += '<div class="p4-proposal-item">' +
         '<span class="p4-prop-status p4-prop-' + status + '">' + status + '</span>' +
         '<div style="flex:1">' +
-          '<div style="font-size:13px;font-weight:600;color:#e2e8f0">' + (p.client_company || '—') + '</div>' +
-          '<div style="font-size:11px;color:#64748b">' + (p.proposal_number || '') + ' · ' + (p.package_id || '') + '</div>' +
+          '<div style="font-size:13px;font-weight:600;color:#e2e8f0">' + (p.company || '—') + '</div>' +
+          '<div style="font-size:11px;color:#64748b">' + propNum + ' · ' + (p.package_id || '') + '</div>' +
         '</div>' +
         '<div style="text-align:right">' +
-          '<div style="font-size:13px;font-weight:700;color:#10b981">₹' + ((p.total_inr || 0).toLocaleString('en-IN')) + '</div>' +
-          '<div style="font-size:10px;color:#64748b">' + (p.roi_multiplier || '—') + 'x ROI</div>' +
+          '<div style="font-size:13px;font-weight:700;color:#10b981">₹' + ((p.value_inr || 0).toLocaleString('en-IN')) + '</div>' +
         '</div>' +
         '</div>';
     });
     el.innerHTML = html;
   });
-}
+};
 
 /* ══════════════════════════════════════════════════════════════════════════
    AFFILIATE SYSTEM
    ══════════════════════════════════════════════════════════════════════════ */
 
-var P4_AFF_USER_ID = null;
-
 window.p4JoinAffiliate = function() {
   var name    = (document.getElementById('p4-aff-name')    || {}).value || '';
   var email   = (document.getElementById('p4-aff-email')   || {}).value || '';
-  var company = (document.getElementById('p4-aff-company') || {}).value || '';
-  var type    = (document.getElementById('p4-aff-type')    || {}).value || 'individual';
 
   if (!name || !email) {
     p4Toast('⚠ Name and email are required.', '#f87171'); return;
   }
   p4Toast('⏳ Joining affiliate program…', '#94a3b8');
 
-  var userId = 'aff_' + email.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  P4_AFF_USER_ID = userId;
-  p4Post('/api/affiliate/join', {
-    user_id: userId, name: name, email: email, company: company, affiliate_type: type
-  }).then(function(d) {
-    if (d.affiliate) {
-      localStorage.setItem('p4_aff_user_id', userId);
-      p4RenderAffStatus(d.affiliate);
-      p4Toast('✅ Welcome to the Affiliate Program!', '#10b981');
+  // handleJoin only reads {name,email,website,how_promote,audience_size,
+  // platform_type} — it derives its own identity key (authCtx.userId if
+  // signed in, else the email itself) and always starts new joins at the
+  // base AFFILIATE tier server-side; there is no client-supplied user_id.
+  p4Post('/api/affiliate/join', { name: name, email: email }).then(function(d) {
+    if (d.success && (d.registered || d.already_registered)) {
+      localStorage.setItem('p4_aff_email', email);
+      p4Toast(d.already_registered ? '✅ Welcome back — loading your affiliate status…' : '✅ Welcome to the Affiliate Program!', '#10b981');
+      if (p4HasSession()) {
+        setTimeout(p4LoadAffStatus, 400); // real, full record over the authenticated status endpoint
+      } else {
+        p4RenderAffStatus({ tier: d.tier || 'AFFILIATE', referral_url: d.referral_url, tier_details: {}, stats: {} });
+      }
     } else {
       p4Toast('✗ ' + (d.error || 'Join failed.'), '#f87171');
     }
@@ -20802,6 +20851,13 @@ function p4RenderAffStatus(aff) {
   if (joinPanel) joinPanel.style.display = 'none';
   statusPanel.style.display = 'block';
 
+  // handleGetStatus returns {ref_code,referral_url,tier,tier_details,
+  // next_tier,stats,status} — stats (total_referrals, conversions,
+  // total_commission_earned_inr, pending_payout_inr, ...) is a nested object,
+  // and commission is tier_details.commission_pct (already a 0–100 number,
+  // e.g. 10 = "10%"), not a top-level commission_rate decimal.
+  var stats = aff.stats || {};
+  var commissionPct = aff.tier_details && aff.tier_details.commission_pct;
   var tierColors = { AFFILIATE: '#94a3b8', PARTNER: '#10b981', RESELLER: '#818cf8', STRATEGIC: '#f59e0b' };
   var tc = tierColors[aff.tier] || '#94a3b8';
 
@@ -20809,7 +20865,7 @@ function p4RenderAffStatus(aff) {
     '<div style="text-align:center;margin-bottom:20px">' +
       '<div style="font-size:12px;color:#64748b;margin-bottom:4px">CURRENT TIER</div>' +
       '<div style="font-size:28px;font-weight:800;color:' + tc + '">' + aff.tier + '</div>' +
-      '<div style="font-size:14px;color:#64748b">' + (aff.commission_rate * 100).toFixed(0) + '% Commission</div>' +
+      (commissionPct != null ? '<div style="font-size:14px;color:#64748b">' + commissionPct + '% Commission</div>' : '') +
     '</div>' +
     '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:12px">' +
       '<div style="font-size:11px;color:#a855f7;font-weight:600;margin-bottom:6px">REFERRAL LINK</div>' +
@@ -20820,21 +20876,21 @@ function p4RenderAffStatus(aff) {
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
       '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;text-align:center">' +
-        '<div style="font-size:16px;font-weight:700;color:#a855f7">' + (aff.total_referrals || 0) + '</div>' +
+        '<div style="font-size:16px;font-weight:700;color:#a855f7">' + (stats.total_referrals || 0) + '</div>' +
         '<div style="font-size:10px;color:#64748b">Referrals</div>' +
       '</div>' +
       '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;text-align:center">' +
-        '<div style="font-size:16px;font-weight:700;color:#10b981">₹' + (aff.total_earned_inr || 0).toLocaleString('en-IN') + '</div>' +
+        '<div style="font-size:16px;font-weight:700;color:#10b981">₹' + (stats.total_commission_earned_inr || 0).toLocaleString('en-IN') + '</div>' +
         '<div style="font-size:10px;color:#64748b">Earned</div>' +
       '</div>' +
     '</div>';
 
   // Update dashboard panel
   var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-  set('p4-aff-referrals',  aff.total_referrals  || 0);
-  set('p4-aff-conversions', aff.total_conversions || 0);
-  set('p4-aff-earnings',   '₹' + (aff.total_earned_inr || 0).toLocaleString('en-IN'));
-  set('p4-aff-pending',    '₹' + (aff.pending_payout_inr || 0).toLocaleString('en-IN'));
+  set('p4-aff-referrals',  stats.total_referrals || 0);
+  set('p4-aff-conversions', stats.conversions || 0);
+  set('p4-aff-earnings',   '₹' + (stats.total_commission_earned_inr || 0).toLocaleString('en-IN'));
+  set('p4-aff-pending',    '₹' + (stats.pending_payout_inr || 0).toLocaleString('en-IN'));
 
   var linkBox = document.getElementById('p4-aff-ref-link-box');
   var linkEl  = document.getElementById('p4-aff-ref-link');
@@ -20845,18 +20901,19 @@ function p4RenderAffStatus(aff) {
 }
 
 window.p4LoadAffStatus = function() {
-  var userId = P4_AFF_USER_ID || localStorage.getItem('p4_aff_user_id');
-  if (!userId) { p4Toast('⚠ No affiliate account found. Please join first.', '#f87171'); return; }
-  P4_AFF_USER_ID = userId;
-  p4Get('/api/affiliate/status?user_id=' + userId).then(function(d) {
-    if (d.affiliate) { p4RenderAffStatus(d.affiliate); }
-    else { p4Toast('Account not found.', '#f87171'); }
+  // handleGetStatus requires a real authenticated session (authCtx.userId
+  // via resolveAuthV5) — a ?user_id= query param is never read server-side
+  // (closed as part of the anonymous-exposure audit). p4Api() already
+  // attaches the real session's Authorization header automatically.
+  if (!p4HasSession()) { p4Toast('⚠ Sign in to view your affiliate status.', '#f87171'); return; }
+  p4Get('/api/affiliate/status').then(function(d) {
+    if (d.success && d.ref_code) { p4RenderAffStatus(d); }
+    else { p4Toast('✗ ' + (d.error || 'Could not load affiliate status.'), '#f87171'); }
   });
 };
 
 function p4InitAffDashboard() {
-  var userId = localStorage.getItem('p4_aff_user_id');
-  if (userId) { P4_AFF_USER_ID = userId; p4LoadAffStatus(); }
+  if (p4HasSession()) { p4LoadAffStatus(); }
 }
 
 window.p4CopyRefLink = function() {
@@ -20870,17 +20927,18 @@ window.p4CopyText = function(text) {
 };
 
 window.p4RequestPayout = function() {
-  var userId = P4_AFF_USER_ID || localStorage.getItem('p4_aff_user_id');
-  if (!userId) { p4Toast('⚠ No affiliate account.', '#f87171'); return; }
+  // Same real-session requirement as status — handleRequestPayout also
+  // resolves the caller from authCtx.userId, never a client-supplied ID.
+  if (!p4HasSession()) { p4Toast('⚠ Sign in to request a payout.', '#f87171'); return; }
   var resEl = document.getElementById('p4-payout-result');
   if (resEl) { resEl.style.display = 'block'; resEl.style.color = '#94a3b8'; resEl.textContent = '⏳ Processing payout request…'; }
   // Real backend is /api/affiliate/payout/request (workers/src/handlers/
   // affiliateSystem.js handleRequestPayout) — /api/affiliate/payout never
   // existed. Its response is also flat ({requested, amount_inr}), not nested
   // under a `payout` object.
-  p4Post('/api/affiliate/payout/request', { user_id: userId, method: 'bank_transfer' }).then(function(d) {
+  p4Post('/api/affiliate/payout/request', { method: 'bank_transfer' }).then(function(d) {
     if (resEl) {
-      if (d.requested) {
+      if (d.success && d.requested) {
         resEl.style.color = '#10b981'; resEl.textContent = '✅ Payout ₹' + (d.amount_inr || 0).toLocaleString('en-IN') + ' requested!';
       } else {
         resEl.style.color = '#f87171'; resEl.textContent = '✗ ' + (d.error || 'Payout failed.');
@@ -20901,11 +20959,14 @@ window.p4LoadLeaderboard = function() {
     d.leaderboard.forEach(function(entry, i) {
       var rank = i + 1;
       var rankCls = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+      // handleGetLeaderboard deliberately never returns a per-affiliate
+      // earnings figure (privacy) — only name/tier/badge/masked ref_code.
+      // Showing a fabricated always-₹0 amount here was misleading; the
+      // real badge emoji it does return was unused until now.
       html += '<div class="p4-lb-row">' +
         '<div class="p4-lb-rank ' + rankCls + '">' + (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank) + '</div>' +
         '<div class="p4-lb-name">' + (entry.name || 'Anonymous') + '</div>' +
-        '<span class="p4-lb-tier">' + (entry.tier || 'AFFILIATE') + '</span>' +
-        '<div class="p4-lb-earnings">₹' + ((entry.total_earned_inr || 0).toLocaleString('en-IN')) + '</div>' +
+        '<span class="p4-lb-tier">' + (entry.badge ? entry.badge + ' ' : '') + (entry.tier || 'AFFILIATE') + '</span>' +
         '</div>';
     });
     el.innerHTML = html;
@@ -21093,6 +21154,8 @@ function p4InitCounters() {
 /* ── Toast Notification ─────────────────────────────────────────────────── */
 function p4Toast(msg, color) {
   var el = document.createElement('div');
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
   el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
     'background:#0f0f1a;border:1px solid ' + (color || '#6366f1') + ';border-radius:10px;' +
     'color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;' +

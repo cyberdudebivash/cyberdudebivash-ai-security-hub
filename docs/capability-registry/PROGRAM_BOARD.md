@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, CAP-ADMIN-004 fix — Staff Admin Console: Users + Organizations oversight, 4th and last of the enterprise-readiness program)
+## Current status (2026-07-09, 7-capability fix sprint — CAP-DASH-001/002, CAP-NOTIF-002, CAP-ACAD-002, CAP-CRM-001/005, CAP-AFF-001, recovered from an uncommitted prior session)
 
 | Metric | Value | Source |
 |---|---|---|
@@ -18,11 +18,11 @@ registry-population session.
 | Domains empty (stubs) | 4 | see Remaining Work Register |
 | Capabilities registered | 56 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 187 files / 2002 tests passing | `npx vitest run`, run 2026-07-09 (includes 35 new tests for CAP-ADMIN-004: 20 backend RBAC/business-logic, 15 frontend route/permission/injection-safety contract) |
+| Worker test suite | 188 files / 2012 tests passing | `npx vitest run`, run 2026-07-09 (includes 10 new tests: `cisoExecutiveDashboardTierGate.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 75.9% / 47.3% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 75% / 46.4% / 41.1% before this fix — CAP-ADMIN-004 backend+frontend status: missing → partial) |
-| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session with mocked API responses against the changed file, not a `dynamic_browser` pass against production) |
-| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged this pass: CAP-ADMIN-004 stays P2 (still `PILOT ONLY`, not GA — Marketplace/Academy/Affiliate/CRM/Support admin surfaces, organization suspension (needs a schema migration), and a production `dynamic_browser` pass all remain); see remediation sections below |
+| Backend / Frontend / Parity | 79.5% / 59.8% / 53.6% | `PRODUCTION_READINESS_REPORT.md` (up from 75.9% / 47.3% / 41.1% before this fix) |
+| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — this pass used real Playwright click-throughs of the actual pages (not `dynamic_api`), but against contract-accurate mocked network responses, not a live deployed backend — `customer_journey_complete` intentionally left `false` on all 7 entries pending a post-merge production smoke test |
+| Gaps by severity | Critical 9 · High 16 · Medium 4 · Low 27 | `PRODUCTION_READINESS_REPORT.md` — Critical (P1) dropped 16 → 9, exactly the 7 capabilities fixed this session; see remediation section below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -188,6 +188,210 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: 7 capabilities (CAP-DASH-001/002, CAP-NOTIF-002, CAP-ACAD-002, CAP-CRM-001/005, CAP-AFF-001), recovered from an uncommitted prior session
+
+- **Trigger:** the user supplied a transcript of a prior session that had
+  performed an RC-readiness synthesis (using this same registry as its
+  evidence base, correctly declining to build a new audit-framework per
+  `docs/ENGINEERING_STANDARDS.md` §13), identified these same 7 broken P1
+  customer journeys, and had begun fixing them — then hit a hard usage-limit
+  cutoff mid-fix, with a screenshot showing a PR #114 as "Merged."
+- **Recovery (mandatory, per `EXECUTION_PROCEDURE.md` §3, done before any
+  new work):** `git log` showed PR #114's actual content was CAP-ADMIN-004
+  (Staff Admin Console — a *different*, already-completed initiative; the
+  transcript's own text confirms this, referencing it only as "the same
+  discipline as the Staff Admin Console work," i.e. prior, unrelated
+  context). No commit after `d6396b1` (#114) existed on `main` or any
+  branch. Direct grep of the current tree confirmed the specific fixes
+  narrated in the transcript were **not present** — `frontend/index.html`'s
+  buy buttons still called the never-defined `CDB_PAY`, and the capability
+  registry (generated earlier the same day the transcript describes,
+  2026-07-09T13:28Z) still showed all 7 capabilities as `NOT READY`/P1 with
+  `frontend.status: broken`. Per `EXECUTION_PROCEDURE.md`'s own rule ("if it
+  isn't in git, it didn't happen, no matter how confidently it was
+  described"), all 7 fixes were redone from scratch against the current
+  tree — the transcript was treated as a high-quality *investigation lead*
+  (which capability, which file, which root-cause hypothesis), not as
+  evidence that any code change existed.
+- **Root causes, independently re-verified against current code (not
+  assumed from the transcript) via the registry's own existing evidence in
+  `dashboard-personalization.json`, `notifications.json`, `academy.json`,
+  `sales-crm.json`, `affiliate-partner.json` — all dated 2026-07-08, one day
+  stale but line-number-accurate enough to locate the real, current code
+  precisely:**
+  - **CAP-DASH-001 / CAP-DASH-002:** `GET /api/ciso/metrics` and the
+    exact-match `GET /api/executive/dashboard` were both gated
+    `requireCan(authCtx, env, 'admin:business:read')` — SUPERADMIN-only
+    (`workers/src/auth/rbac.js:101`) — excluding every paying customer.
+    Their own sibling `/api/executive/` prefix-dispatched block
+    (`workers/src/index.js` ~7766) already used a proven, tier-inclusive
+    pattern in production. A shared root cause, one fix pattern, two routes.
+  - **CAP-NOTIF-002:** the homepage notification bell's `_fetch()` called
+    `GET /api/v1/alerts` + `GET /api/realtime/stats` (global CVE/threat
+    intel, plus a `_synthesizeAlerts()` fallback fabricating fake "personal"
+    alerts from platform-wide counts) — never `GET /api/notifications/log`,
+    the customer's own notification history.
+  - **CAP-ACAD-002:** both homepage buy buttons called
+    `if(window.CDB_PAY)CDB_PAY.open(id,price,label)` — `CDB_PAY` is never
+    defined anywhere reachable from `frontend/index.html`.
+  - **CAP-CRM-001 / CAP-CRM-005 / CAP-AFF-001:** a shared root cause — the
+    Phase 4 Revenue Engine's `p4Api()` helper never unwrapped the
+    `{success,data,error,timestamp}` envelope every backend route returns
+    (`workers/src/lib/response.js`'s `ok()`/`fail()`) — plus per-capability
+    field-name mismatches on top (lead/demo-booking field names; proposal
+    generation never sending the required `lead_id`; affiliate status/payout
+    calling a `?user_id=`/body `user_id` the backend never reads).
+- **Fix:**
+  - **RBAC (backend, `workers/src/index.js`):** both routes re-gated to the
+    same tier-inclusive bar as their proven sibling:
+    `['PRO','ENTERPRISE','MSSP'].includes(tier)` OR
+    `requireCan(..., 'admin:analytics:read')`. Zero changes to any other
+    CISO/executive route (not reported broken, left untouched).
+  - **Notification bell (`frontend/index.html`):** `_fetch()` rewired to
+    `GET /api/notifications/log`, mapped to the render item (`subject`→
+    title, `channel`→description); the dead `_synthesizeAlerts()` fallback
+    deleted entirely (a personal-notification bell should never fabricate
+    global-stat-derived content). Gated on the page's own existing JWT
+    presence check so a signed-out visitor sees an honest "sign in" message
+    instead of a crash, an error, or someone else's-looking data.
+  - **Buy buttons:** repointed to the page's own real, already-working
+    `CDB_PAYMENT` object (options-object signature, matching the file's
+    other ~15 working call sites). **Self-caught defect:** the first attempt
+    copied the original code's `if(window.X)` guard style verbatim
+    (`if(window.CDB_PAYMENT)`) — also always false, since `CDB_PAYMENT` is a
+    bare top-level `const`, never assigned to `window`, same underlying
+    class of bug as the original defect. Caught by the Playwright
+    verification run itself (not by static review) and corrected to the
+    `typeof CDB_PAYMENT!=='undefined'` guard the file's other working call
+    sites already use.
+  - **`p4Api()` envelope fix (shared):** flattens `data`'s fields onto the
+    top level while preserving `success`/`error`/`code`, so existing
+    failure-path checks (which read the top-level `error` field, already
+    correct even before this fix) keep working while success-path field
+    access now resolves. Fixes CAP-CRM-001/005/AFF-001 in one change, plus
+    incidentally CAP-CRM-007 (Conversion Triggers, not in scope this pass —
+    see its `notes` for an honest partial-credit update) and
+    CAP-CRM-005/`p4LoadPackages()`'s silent fallback-to-static-data bug.
+  - **Lead/demo booking:** field names corrected to the real backend
+    contract; a second, previously-uncatalogued bug found in the same flow
+    (`p4LoadDemoSlots()` read `s.slot_id`/`s.display`, but
+    `GET /api/sales/demo/slots` returns `{slot,label}` — meaning even a
+    field-name-correct booking submission would have sent a permanently
+    blank `preferred_slot`) was also fixed.
+  - **Proposal generation:** since `handleGenerateProposal` requires an
+    existing `lead_id` (builds the document from a stored lead record, not
+    freeform fields) and the form collects no lead selector, `p4GenerateProposal()`
+    now chains two already-fixed real endpoints — `POST /api/sales/leads`
+    first, then `POST /api/proposals/generate` with the returned `lead_id`
+    — rather than inventing a new backend contract. A second,
+    previously-uncatalogued bug: the "↻ Refresh" button's
+    `onclick="p4LoadProposals()"` called a function with no `window.`
+    prefix (IIFE-private) — a real click would have thrown `ReferenceError`
+    — found via a systematic cross-reference of every `onclick="p4*("`
+    call site in the file against every window-exposed vs. IIFE-private
+    `p4*` function definition (one genuine hit; all other `p4*` onclick
+    targets confirmed correctly exposed).
+  - **Affiliate join/status/payout/leaderboard:** join fixed to the real
+    field names (`{name,email}` — `handleJoin` never reads a client-supplied
+    `user_id`/`company`/`affiliate_type`). Status/payout: the old
+    `?user_id=`/body `user_id` was dead code — `handleGetStatus`/
+    `handleRequestPayout` only ever resolve identity from a real
+    `authCtx.userId`, by design (a prior anonymous-exposure/IDOR fix closed
+    the old `?email=` lookup precisely because it let anyone who
+    knew/guessed an affiliate's email pull their stats — correctly **not
+    reverted** here). Rewired to gate on a real client-side session-token
+    check before calling, so a signed-out visitor fails fast with an honest
+    message instead of a doomed network call. `p4RenderAffStatus()` itself
+    had further uncatalogued field-mapping bugs against the real
+    `handleGetStatus` shape (`aff.commission_rate`/`aff.total_referrals`/
+    `aff.total_earned_inr`/`aff.pending_payout_inr` never existed at any
+    level of a real response) — fixed to `tier_details.commission_pct` and
+    `stats.{total_referrals,conversions,total_commission_earned_inr,pending_payout_inr}`.
+    Leaderboard: `handleGetLeaderboard` deliberately never returns a
+    per-affiliate earnings figure (privacy) — the fabricated always-₹0
+    "earnings" line was removed and replaced with the real, previously
+    unused `badge` field. A stale HTML comment describing the old,
+    non-functional `p4_aff_user_id` localStorage identity scheme was
+    corrected to describe the real, current design (join is public by
+    design; status/payout correctly require a real session; a non-customer
+    external affiliate currently has no in-page self-serve status check —
+    disclosed as a genuine follow-up, not silently worked around by
+    reopening the closed IDOR).
+  - **Accessibility (found and fixed while touching the bell/toast code,
+    not part of the original 7 but directly adjacent):** the severity-badge
+    palette's LOW tier fell through to MEDIUM's cyan background tint while
+    keeping distinct gray text — computed contrast 3.44:1, failing WCAG AA
+    (needs ≥4.5:1 for small text); fixed with its own tint plus the page's
+    existing `--text-muted` token (7.08:1, verified by direct WCAG relative-
+    luminance calculation, not eyeballed). The shared `p4Toast()` helper
+    appended plain `<div>`s with no ARIA live region — silent to screen
+    readers; added `role="status" aria-live="polite"`.
+- **Verification:**
+  - All 38 real inline `<script>` blocks in `frontend/index.html`
+    (excluding JSON-LD) syntax-checked clean (`node --check`) before and
+    after every round of edits.
+  - Full backend suite green throughout: 188 files / 2012 tests (187/2002
+    baseline + 1 new file/10 tests).
+  - Real headless-Chromium Playwright session against the actual page
+    (served locally; cookie-consent banner suppressed via `addInitScript`
+    to avoid blocking actionability checks, matching a returning-visitor
+    scenario) with network responses mocked to match each real handler's
+    verified source-code response shape exactly (not guessed) — **20/21
+    checks pass**. The one non-pass is `console.error` noise from an
+    unrelated, unmodified file (`dashboard-live.js`, dated before this
+    session) whose `EventSource` call can't be satisfied by the test's
+    simple JSON catch-all mock — confirmed unrelated to any of the 7 fixes
+    by direct source grep before accepting it as a known mock-environment
+    limitation rather than chasing it further.
+  - axe-core WCAG2A/AA scan of the populated notification panel: zero
+    violations post-fix.
+  - **`customer_journey_complete` intentionally left `false` on all 7
+    registry entries** despite the `dynamic_browser` verification method —
+    per `docs/ENGINEERING_STANDARDS.md` §11 (Production Truth Law, "only
+    observed production behaviour establishes reality"), a Playwright
+    click-through against contract-accurate *mocks* is not the same as
+    live deployed production, and this session has no deploy access. Each
+    entry's `verification.evidence` states this distinction explicitly
+    rather than overclaiming.
+- **Tests:** `workers/test/cisoExecutiveDashboardTierGate.test.mjs` (new,
+  10 tests — real PRO/ENTERPRISE-tier admission via an `api_keys`-row DB
+  mock matching the established `whiteLabelThemeGate.test.mjs` pattern,
+  FREE-tier and anonymous still rejected, ADMIN_KEY bypass still admitted,
+  for both routes). The 5 frontend-only fixes have **no committed,
+  permanent regression test** — the Playwright verification used this pass
+  was an ad-hoc scratch script, not added to the repository (would require
+  a real infrastructure decision: adding `playwright`/`axe-core` as
+  devDependencies and wiring browser-based tests into CI, which is bigger
+  than this bug-fix task's scope) — flagged as a real, honest gap in each
+  entry's `test_coverage.evidence` rather than silently claimed as covered.
+- **Registry:** all 7 entries updated in place (not new IDs) — `frontend.status`
+  `broken → exists`, `operational_status` `NOT READY → GA APPROVED WITH
+  DOCUMENTED LIMITATIONS`, `priority` `P1 → P6` (5 entries, no committed
+  test) or `P7` (CAP-DASH-001/002, which do have a committed test — no
+  test-coverage gap, residual gap is documentation/live-verification only).
+  `customer_journey_complete` stays `false` on all 7 (see above).
+  CAP-CRM-007 (Conversion Triggers, sharing the `p4Api()` envelope root
+  cause but with its own separate, unaddressed field-name bugs) got an
+  honest `notes` update only — envelope portion now fixed as a side effect,
+  status/priority intentionally unchanged since it wasn't in scope this
+  pass. `PRODUCTION_READINESS_REPORT.md` regenerated (backend 75.9%→79.5%,
+  frontend 47.3%→59.8%, parity 41.1%→53.6%, Critical/P1 16→9). Validator:
+  56 IDs, 0 failures, 0 warnings (one round-trip needed: an evidence string
+  cited `proposalGenerator.js:326` without its directory prefix, which the
+  validator correctly rejects as a nonexistent repo-root file — fixed to
+  the full `workers/src/handlers/proposalGenerator.js:326` path).
+- **Next:** a committed, CI-wired Playwright/axe-core regression suite for
+  the Phase 4 Revenue Engine (lead/demo/proposal/affiliate/notification
+  flows) would close the `test_coverage` gap disclosed above — an
+  infrastructure decision for the owner, not assumed here. A post-merge
+  production smoke test (real PRO-tier account sees non-zero CISO data;
+  real lead/demo/proposal/affiliate submissions succeed against the live
+  deployed backend) would close `customer_journey_complete` on all 7
+  entries. CAP-CRM-007's own field-name bugs (event_type/user_id/feature_id
+  mismatches, separate from the envelope bug fixed here) remain open. The
+  4 domains not yet in this program are unchanged from before this session
+  (see Remaining Work Register).
 
 ### 2026-07-09 — Fix sprint: CAP-ADMIN-004 (Staff Admin Console: Users + Organizations oversight), 4th and last of the 4-initiative enterprise-readiness program
 
