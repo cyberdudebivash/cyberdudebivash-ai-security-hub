@@ -462,6 +462,36 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         dashLink.textContent = 'Dashboard';
         navLinks.insertBefore(dashLink, navLinks.firstChild);
       }
+      // cdbApplyGates() re-runs on the cdb:login event without a page
+      // reload (SPA-style) — remove any Sign In link injected while this
+      // visitor was still logged out, so it doesn't linger post-login.
+      document.querySelectorAll('[data-auth-section="signin"]').forEach(function(el){ el.remove(); });
+    } else {
+      // CAP-IDN-001: logged-out visitors had no working "Sign In" path at
+      // all from the homepage — the only prior surface was a dead-end modal
+      // whose button just closed itself. The real login form lives at
+      // /user-dashboard.html's #login-overlay (shown automatically whenever
+      // no valid session token is present). Mirrors the authenticated-user
+      // Dashboard-link injection above; same idempotent insert-once guard.
+      var navActions = document.getElementById('cdb-nav-actions');
+      if (navActions && !navActions.querySelector('[data-auth-section="signin"]')) {
+        var signInLink = document.createElement('a');
+        signInLink.href = '/user-dashboard.html';
+        signInLink.setAttribute('data-auth-section', 'signin');
+        signInLink.textContent = 'Sign In';
+        signInLink.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-muted);padding:8px 14px;border-radius:8px;border:1px solid rgba(0,212,255,.2);white-space:nowrap;text-decoration:none';
+        navActions.insertBefore(signInLink, navActions.firstChild);
+      }
+      var mobileDrawer = document.getElementById('nav-mobile-drawer');
+      if (mobileDrawer && !mobileDrawer.querySelector('[data-auth-section="signin"]')) {
+        var signInLinkMobile = document.createElement('a');
+        signInLinkMobile.href = '/user-dashboard.html';
+        signInLinkMobile.setAttribute('data-auth-section', 'signin');
+        signInLinkMobile.setAttribute('tabindex', '-1');
+        signInLinkMobile.textContent = '🔑 Sign In';
+        signInLinkMobile.style.cssText = 'background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(99,102,241,.1));border-color:rgba(0,212,255,.35);color:#00d4ff;font-weight:800';
+        mobileDrawer.insertBefore(signInLinkMobile, mobileDrawer.firstChild);
+      }
     }
   };
 
@@ -13154,8 +13184,10 @@ async function createMonitorModal() {
       <div style="font-size:36px;margin-bottom:12px">🔒</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:8px">Sign In Required</div>
       <div style="font-size:13px;color:rgba(255,255,255,.72);margin-bottom:20px">Please sign in to create monitoring configurations.</div>
+      <button onclick="location.href='/user-dashboard.html'"
+        style="background:var(--accent);border:none;color:#000;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer;margin-right:8px">Sign In</button>
       <button onclick="document.getElementById('_monitor-modal')?.remove()"
-        style="background:var(--accent);border:none;color:#000;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer">OK</button>
+        style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.72);padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer">Cancel</button>
     </div>` : needsScan ? `
     <div style="background:#0f0f23;border:1px solid rgba(245,158,11,.3);border-radius:16px;padding:32px;max-width:400px;width:100%;text-align:center">
       <div style="font-size:36px;margin-bottom:12px">🔍</div>

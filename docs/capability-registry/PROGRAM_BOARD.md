@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, CAP-DEVPORTAL-002/003/004 fix sprint)
+## Current status (2026-07-09, CAP-IDN-001 fix — homepage Sign In dead end)
 
 | Metric | Value | Source |
 |---|---|---|
@@ -18,11 +18,11 @@ registry-population session.
 | Domains empty (stubs) | 4 | see Remaining Work Register |
 | Capabilities registered | 54 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 179 files / 1899 tests passing | `npx vitest run`, run 2026-07-09 (includes 12 new tests for this sprint + apiKeyHashing.test.mjs corrections) |
+| Worker test suite | 180 files / 1902 tests passing | `npx vitest run`, run 2026-07-09 (includes 3 new tests for CAP-IDN-001) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 74.1% / 39.8% / 37% | `PRODUCTION_READINESS_REPORT.md` (up from 69.4% / 38% / 35.2% — CAP-DEVPORTAL-002/003/004 backend now correct, -002's rotate button now functional) |
-| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry |
-| Gaps by severity | Critical 14 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged: priority reflects `customer_journey_complete`/`dynamic_browser` status, not fixed this pass; see remediation section below |
+| Backend / Frontend / Parity | 74.1% / 41.7% / 38.9% | `PRODUCTION_READINESS_REPORT.md` (up from 69.4% / 38% / 35.2% at the start of the day — CAP-DEVPORTAL-002/003/004 and CAP-IDN-001 fixes) |
+| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production — see CAP-IDN-001's verification.evidence) |
+| Gaps by severity | Critical 14 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged: priority reflects `customer_journey_complete`/`dynamic_browser` status, not fixed this pass; see remediation sections below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -36,6 +36,25 @@ organizations, production-readiness, rbac, sales-crm,
 sentinel-apex-marketplace.
 
 ## ✅ Critical finding remediated (was open, see history below)
+
+**CAP-IDN-001** (`docs/capability-registry/domains/identity.json`): **FIXED
+2026-07-09**. The homepage's only "Sign In" surface was a dead-end modal
+(button just closed itself, went nowhere); the real, working login form
+existed but was reachable only via a small dim footer link, not primary
+navigation — confirmed still true live immediately before the fix. Extended
+the existing, already-proven `cdbApplyGates()` pattern (which already
+injected a "Dashboard" link for authenticated visitors) with the symmetric
+"not authenticated" branch: a real "Sign In" link now appears in both
+desktop nav and the mobile drawer for logged-out visitors, pointing at
+`frontend/user-dashboard.html`'s login overlay. The dead-end modal's button
+now navigates there too, with a separate "Cancel" preserving the original
+dismiss behavior. Purely additive — the existing authenticated-user
+Dashboard link and in-page `#dashboard` section were left untouched, and a
+Playwright session confirmed the Sign In link correctly disappears (no
+stale UI) after a simulated login while the Dashboard link correctly
+appears, so nothing already working regressed. Regression coverage:
+`workers/test/homepageSignInPath.test.mjs` (3 tests). Full suite green: 180
+files / 1902 tests.
 
 **CAP-MASOC-001** (`docs/capability-registry/domains/masoc.json`): **FIXED
 2026-07-08**, as its own dedicated change per this board's prior
@@ -136,6 +155,53 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: CAP-IDN-001 (homepage Sign In dead end)
+
+- **Trigger:** user adopted a standing "Global Production Release Governance"
+  operating mode for the session. Per its own "verify first, don't guess"
+  principle, checked the single most severe-looking open item in
+  `PRODUCTION_READINESS_REPORT.md` (P1, no frontend) before proposing any
+  backlog — re-verified live against current code rather than trusting the
+  2026-07-08 registry timestamp.
+- **Root cause, confirmed live:** `frontend/index.html`'s homepage "Sign In
+  Required" modal (`createMonitorModal()`) had exactly one button, whose
+  only behavior was to remove itself — no link anywhere. The real login
+  form (`#login-overlay`) exists and works at `frontend/user-dashboard.html`,
+  but nothing in primary navigation points to it (only a footer link styled
+  `v14-footer-link-dim`). Traced the mechanism precisely: `cdbApplyGates()`
+  already had a working, idempotent "inject Dashboard link for authenticated
+  visitors" pattern — the symmetric "not authenticated → inject Sign In
+  link" branch was simply never written.
+- **Fix:** extended `cdbApplyGates()` with the missing else-branch (desktop
+  `#cdb-nav-actions` + mobile `#nav-mobile-drawer`, both →
+  `/user-dashboard.html`), with cleanup on the `cdb:login` event so the link
+  never lingers post-login. Fixed the modal's dead-end button to navigate
+  there too, adding a separate "Cancel" button so the original dismiss
+  capability is preserved (backward compatible, not just replaced).
+- **Verification:** real headless-Chromium Playwright session against the
+  changed file (served locally via `python3 -m http.server`, since
+  `frontend/` is a no-build-step static site) — confirmed the Sign In link
+  renders correctly on both desktop and mobile, confirmed it disappears and
+  the Dashboard link appears after a simulated `cdb:login` event (proving
+  zero regression to the already-working authenticated path), confirmed the
+  modal's new buttons render with correct text, zero uncaught JS errors.
+  Also ran `scripts/seo-structure-lock.mjs` locally (22/22 pages green,
+  unaffected) since `tests/e2e/smoke.spec.mjs` intentionally targets live
+  production (no `SMOKE_BASE` override in CI) and would give a false signal
+  against a not-yet-deployed fix.
+- **Tests:** `workers/test/homepageSignInPath.test.mjs` (new, 3 tests,
+  reads `frontend/index.html` directly — same convention as
+  `workers/test/autoSocToggleGuard.test.mjs`). Full suite green: 180 files
+  / 1902 tests.
+- **Registry:** `identity.json`'s CAP-IDN-001 updated with fix evidence;
+  `PRODUCTION_READINESS_REPORT.md` regenerated (frontend 39.8% → 41.7%,
+  parity 37% → 38.9%). Validator: 0 failures, 0 warnings.
+- **Not done this pass:** the other 13 P1 "Critical" items in the readiness
+  report have not been individually live-reverified; `customer_journey_complete`
+  stays `false` pending a real `dynamic_browser` pass against production
+  (this fix used a local static-file-server Playwright session, not a
+  production browser click-through).
 
 ### 2026-07-09 — Fix sprint: CAP-DEVPORTAL-002/003/004
 

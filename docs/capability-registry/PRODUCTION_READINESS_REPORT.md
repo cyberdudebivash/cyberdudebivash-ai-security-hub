@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T08:41:17.878Z
+Generated: 2026-07-09T09:20:42.914Z
 Capabilities catalogued: 54
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 54
 | Dimension | % |
 |---|---|
 | Backend | 74.1% |
-| Frontend | 39.8% |
-| Parity (backend **and** frontend both exist) | 37% |
+| Frontend | 41.7% |
+| Parity (backend **and** frontend both exist) | 38.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -40,7 +40,7 @@ Capabilities catalogued: 54
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 15 | Backend exists, but not discoverable via navigation |
+| Hidden features | 14 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 11 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 14 | Priority P1 |
@@ -116,7 +116,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✗ | ✗ | NOT READY | P1 |
+| CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
 
 ### masoc (1 capability)
 
