@@ -185,7 +185,7 @@ import {
   handleForgotPassword, handleResetPassword,
 } from './handlers/auth.js';
 import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage, handleRotateKey } from './handlers/apikeys.js';
-import { handleAsyncScan, handleJobStatus, handleJobResult, handleD1History } from './handlers/jobs.js';
+import { handleAsyncScan, handleJobStatus, handleJobResult, handleJobInsights, handleD1History } from './handlers/jobs.js';
 
 // ─── New v7.0 handlers ────────────────────────────────────────────────────────
 import {
@@ -1292,7 +1292,7 @@ function apiInfoResponse() {
       'POST /api/ai/forecast':       'Risk forecast → exploitation likelihood + time-to-breach + financial impact',
       // v42.0 — Enterprise Onboarding & Support
       'GET  /api/enterprise/welcome':     'Platform capabilities overview for new enterprise customers (public)',
-      'GET  /api/enterprise/onboarding':  'Personalized quickstart guide for authenticated enterprise users',
+      'GET  /api/enterprise/onboarding':  'Personalized quickstart guide (default guide for anonymous callers, tailored once authenticated)',
       'POST /api/enterprise/onboarding':  'Save onboarding profile (use_case, org_name, team_size) → personalized steps',
       'GET  /api/enterprise/contacts':    'Dedicated support contacts, escalation matrix, SLA information',
       // V10.0 — Subscription SaaS Engine
@@ -1316,15 +1316,15 @@ function apiInfoResponse() {
       // V8.0 — Version
       'GET  /api/version':           'Live platform version + build metadata',
       // Admin
-      'GET  /api/admin/analytics':   'Platform analytics (ENTERPRISE only)',
-      'GET  /api/admin/api-usage':   'API metering + latency stats (ENTERPRISE only)',
+      'GET  /api/admin/analytics':   'Platform analytics (platform owner only — internal)',
+      'GET  /api/admin/api-usage':   'API metering + latency stats (platform owner only — internal)',
       // V8.1 — SIEM Export
       'GET  /api/export/siem':       'SIEM export capabilities + format list (public)',
       'POST /api/export/siem':       'Export threat data — JSON/CEF/STIX/Sigma/CSV (PRO+)',
       'GET  /api/export/siem/stream':'Streaming NDJSON export for Logstash/Fluentd (ENTERPRISE)',
       // V8.1 — Real-Time Feed (SSE)
       'GET  /api/realtime/feed':     'SSE live threat alert stream (PRO/ENTERPRISE)',
-      'GET  /api/realtime/posture':  'Defense posture snapshot JSON (authenticated)',
+      'GET  /api/realtime/posture':  'Defense posture snapshot JSON (public — aggregate, non-user-specific data)',
       'GET  /api/realtime/stats':    'Live platform stats (public)',
       // V8.1 — Gumroad Revenue Engine
       'POST /api/webhooks/gumroad':  'Gumroad purchase webhook (HMAC verified)',
@@ -2250,9 +2250,27 @@ export async function routeRequest(request, env, ctx, requestId) {
     //               Content Engine, Org Management
     // ══════════════════════════════════════════════════════════════════════════
 
-    // ── AI Cyber Brain: insights from scan result ─────────────────────────────
-    if (path === '/api/insights' && method === 'POST') {
+    // ── AI Cyber Brain: insights for a completed async job ─────────────────────
+    // Documented since v8.0 as `GET /api/insights/:jobId` but never wired (404 in
+    // production — found in an API-surface audit). Reuses the same job-ownership
+    // guard as GET /api/jobs/:id/result.
+    if (path.startsWith('/api/insights/') && method === 'GET') {
+      const jobId   = path.split('/')[3];
       const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleJobInsights(request, env, authCtx, jobId), request));
+    }
+
+    // ── AI Cyber Brain: insights from scan result ─────────────────────────────
+    // Public by design (matches its documentation and the free scan-results UI
+    // in frontend/index.html) — not tier-gated. But the caller supplies scan_result
+    // directly rather than referencing an already-completed scan, so unlike every
+    // other AI-brain route this has no natural cost control; rate-limit it the
+    // same way the legitimate scan endpoints already are (checkRateLimitV2),
+    // scoped per authenticated identity or IP so anonymous FREE use keeps working.
+    if (path === '/api/insights' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', identity: `ip:${request.headers.get('CF-Connecting-IP') || 'unknown'}` }));
+      const rl = await checkRateLimitV2(env, authCtx, 'insights');
+      if (!rl.allowed) return withSecurityHeaders(withCors(rateLimitResponse(rl, 'insights'), request));
       try {
         const body = await request.json();
         const { scan_result, module, target } = body;
@@ -2267,8 +2285,12 @@ export async function routeRequest(request, env, ctx, requestId) {
     }
 
     // ── Attack Graph: D3-ready graph from scan result ─────────────────────────
+    // Same rationale as /api/insights above — public by design, rate-limited
+    // instead of tier-gated so the free scan-results UI keeps working.
     if (path === '/api/attack-graph' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env);
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE', identity: `ip:${request.headers.get('CF-Connecting-IP') || 'unknown'}` }));
+      const rl = await checkRateLimitV2(env, authCtx, 'attack-graph');
+      if (!rl.allowed) return withSecurityHeaders(withCors(rateLimitResponse(rl, 'attack-graph'), request));
       try {
         const body = await request.json();
         const { scan_result, module } = body;
@@ -3515,14 +3537,22 @@ export async function routeRequest(request, env, ctx, requestId) {
       const monitorId = path.split('/')[3];
       return withSecurityHeaders(withCors(await handleMonitorHistory(request, env, authCtx, monitorId), request));
     }
-    if (path.match(/^\/api\/monitors\/[^/]+\/run$/) && method === 'POST') {
+    // /trigger is the path documented in the public API since v8.0; /run is the
+    // originally-shipped path frontend/automation-dashboard.html and existing
+    // integrations already call. Both wired to the same handler — found 404ing
+    // as documented in an API-surface audit; kept /run live rather than
+    // renaming it out from under existing callers.
+    if (path.match(/^\/api\/monitors\/[^/]+\/(run|trigger)$/) && method === 'POST') {
       const authCtx   = await resolveAuthV5(request, env);
       const monitorId = path.split('/')[3];
       return withSecurityHeaders(withCors(await handleTriggerMonitor(request, env, authCtx, monitorId), request));
     }
 
     // ── Content & Distribution Engine ─────────────────────────────────────────
-    if (path === '/api/content' && method === 'POST') {
+    // /generate is the path documented in the public API since v8.0 (found
+    // 404ing in an API-surface audit); bare /api/content POST is the
+    // originally-shipped path. Both wired to the same handler.
+    if ((path === '/api/content' || path === '/api/content/generate') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleGenerateContent(request, env, authCtx), request));
     }
