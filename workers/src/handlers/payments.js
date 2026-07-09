@@ -1082,6 +1082,24 @@ export async function handleRazorpayWebhook(request, env) {
                VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))`
             ).bind(newUserId, grantEmail, hash, salt, payRow.plan).run();
             console.log('[Webhook] Fallback account+tier created:', grantEmail, '->', payRow.plan);
+
+            // This account's password is a random UUID the customer was never
+            // told — sendPurchaseConfirmation below just says "log in", which
+            // is a dead end with no credential they've ever set. Reuse the
+            // real, already-shipped forgot-password flow (auth.js) to send a
+            // working set-your-password link immediately, instead of leaving
+            // them to discover "Forgot password?" on their own with no reason
+            // to think that's what a fresh purchase requires.
+            import('./auth.js').then(({ handleForgotPassword }) =>
+              handleForgotPassword(
+                new Request('https://internal/api/auth/forgot-password', {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body:    JSON.stringify({ email: grantEmail }),
+                }),
+                env,
+              )
+            ).catch(e => console.error('[Webhook] Set-password email dispatch failed:', e?.message));
           }
 
           // Backfill payments.email so this order's real payer is visible to
