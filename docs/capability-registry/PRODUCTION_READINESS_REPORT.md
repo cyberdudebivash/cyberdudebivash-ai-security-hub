@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T15:55:13.763Z
-Capabilities catalogued: 56
+Generated: 2026-07-09T20:35:14.369Z
+Capabilities catalogued: 66
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 79.5% |
-| Frontend | 59.8% |
-| Parity (backend **and** frontend both exist) | 53.6% |
+| Backend | 82.6% |
+| Frontend | 65.9% |
+| Parity (backend **and** frontend both exist) | 60.6% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -31,10 +31,10 @@ Capabilities catalogued: 56
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 2 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 15 | No test coverage |
+| Low | P6 | 25 | No test coverage |
 | Low | P7 | 12 | Documentation missing |
 
-**Rollup:** Critical 9 · High 16 · Medium 4 · Low 27
+**Rollup:** Critical 9 · High 16 · Medium 4 · Low 37
 
 ## Structural Findings
 
@@ -184,6 +184,21 @@ complete", "bug free", or "guaranteed".
 | CAP-CRM-006 | Security Assessment Booking | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ◐ | ✓ | NOT READY | P1 |
 | CAP-CRM-008 | Growth & Revenue Automation Suite | ✓ | ✗ | ✗ | NOT READY | P2 |
+
+### security-scanners (10 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-SCAN-001 | Domain Vulnerability Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-002 | AI Security Scanner (OWASP LLM Top 10) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-003 | Red Team Simulation | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-004 | Identity & Zero Trust Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-005 | Compliance Report Generator | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-006 | Cloud Security Posture Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-007 | Dark Web Exposure Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-008 | AppSec / DAST Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-009 | MCP Security Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-SCAN-010 | Vibe Code Security Scanner | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 
 ### sentinel-apex-marketplace (6 capabilities)
 

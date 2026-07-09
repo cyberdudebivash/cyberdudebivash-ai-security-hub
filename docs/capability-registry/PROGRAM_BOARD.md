@@ -162,23 +162,26 @@ board's prior recommendation.
 
 ## Remaining Work Register
 
-4 domains are still empty stubs (`[]`):
+3 domains are still empty stubs (`[]`):
 
 | Domain | File | Status |
 |---|---|---|
 | Threat Hunting / Intel | `threat-hunting-intel.json` | Not started |
 | MYTHOS / God Mode | `mythos-godmode.json` | Not started |
-| Security Scanners | `security-scanners.json` | Not started |
 | Compliance Store | `compliance-store.json` | Not started |
+
+Security Scanners populated 2026-07-09 (10 capabilities, CAP-SCAN-001..010) —
+see session log below.
 
 ## Proposed wave plan
 
 - **Wave 2 — Developer Portal / API Keys.** ✅ DONE (2026-07-08) — see
   session log above; its 3 findings are now also fixed (see remediation
   section above).
-- **Wave 3 — Threat Hunting/Intel + Security Scanners.** Two domains,
-  grouped only if the next session has room to spare after one — otherwise
-  run them as separate waves.
+- **Wave 3a — Security Scanners.** ✅ DONE (2026-07-09) — see session log
+  below. Threat Hunting/Intel (originally grouped with it as Wave 3) split
+  out as its own wave per this file's own splitting rule.
+- **Wave 3b — Threat Hunting/Intel.** Next recommended wave.
 - **Wave 4 — MYTHOS/God Mode + Compliance Store.**
 - **CAP-DEVPORTAL-002/003/004 fixes.** ✅ DONE (2026-07-09) — see remediation
   section above. Not registry waves; normal CAB-reviewed product fixes, same
@@ -188,6 +191,113 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Wave 3a: Security Scanners
+
+- **Trigger:** user requested continuation of the capability-registry
+  process (offered as the recommended alternative to a sprawling, unbounded
+  "audit + rebuild everything" mega-prompt that would have duplicated this
+  existing registry and violated `docs/ENGINEERING_STANDARDS.md` §13's
+  no-new-frameworks rule).
+- **Recovery (mandatory, per `EXECUTION_PROCEDURE.md` §3, done before any
+  new work):** `git fetch` + `git rev-parse` confirmed local `main` was
+  behind `origin/main` (PR #140 had just merged as squash commit `c33bdf2`).
+  `git rebase origin/main` hit conflicts replaying the pre-squash commits —
+  diagnosed as the multi-commit squash-merge edge case (git's patch-id
+  equivalence check can't match N individual commits against one combined
+  squash commit), confirmed via `git diff <old-tip> origin/main --stat`
+  returning empty (byte-identical trees), resolved with
+  `git reset --hard origin/main` on the own feature branch (zero data loss,
+  verified before acting). `git ls-remote origin` checked for stray
+  in-flight registry work: `claude/capability-registry-recovery-elpx1n` and
+  `claude/capability-registry-resume-ldqytt` (both dated 2026-07-08) exist
+  but their commit content (MASOC, Production Readiness, Navigation,
+  Administration, Academy, Dashboard/Personalization, Notifications,
+  Sentinel APEX/Marketplace, Affiliate/Partner, Sales/CRM domain
+  population) is already reflected in the current `PROGRAM_BOARD.md`
+  Remaining Work Register (which listed only 4 stub domains) — nothing to
+  recover from them. Two other stray branches
+  (`claude/subscription-tier-webhook-fix`, `fix/instant-checkout-revenue`)
+  are weeks-stale (last touched 2026-06-17/24) and unrelated.
+- **Plan:** Wave 3 was originally proposed as "Threat Hunting/Intel +
+  Security Scanners" together. Split per this file's own rule ("grouped
+  only if room to spare... otherwise separate waves") given this was
+  already a long session with substantial prior context. Chose Security
+  Scanners over Threat Hunting/Intel: it's the core product surface (the
+  10 scan modules customers actually pay for) and this session had just
+  independently fixed and deeply verified the exact auth-header bug
+  affecting all 10 of them, giving high-confidence, low-rediscovery-cost
+  ground truth to work from.
+- **Execute:** `node scripts/registry/extract-handlers.mjs --json` for
+  ground truth, cross-referenced against `workers/src/index.js` routing
+  and direct handler reads. Populated `domains/security-scanners.json`
+  with 10 entries (CAP-SCAN-001..010: Domain, AI Security, Red Team,
+  Identity, Compliance, Cloud Security, Dark Web, AppSec, MCP Security,
+  Vibe Code).
+- **Findings (real, independently verified against current code):**
+  - All 10 modules funnel through 3 frontend call sites
+    (`executeScan()`/`runMCPScan()`/`runVibeCodeScan()`) — the exact 3
+    sites this session's earlier fix (PR #140) added JWT-forwarding to.
+  - Tier-gating strategy differs by module, previously undocumented in one
+    place: domain/AI are free-accessible (soft, IP-rate-limited resp.
+    preview-truncated); redteam/identity/compliance are STARTER+ hard-gated
+    via a shared quota check in `runSyncPipeline`
+    (`workers/src/index.js:946`); cloud-security/dark-web/appsec are PRO+
+    hard-gated via an in-handler tier check
+    (`workers/src/handlers/serviceHandlers.js`); MCP Security and Vibe Code
+    are deliberately free/unrestricted (MCP) or soft-gated via
+    `applyTierGate()` (Vibe Code) — confirmed intentional (marketing
+    positioning), not gaps.
+  - **Severity distinction for the already-shipped auth-header fix**: for
+    the PRO+ hard-gated modules (cloud-security/dark-web/appsec), the
+    pre-fix impact was a complete 403 lockout of every paying PRO+
+    customer (not degradation to free-tier limits like the other 7) —
+    `authCtx?.tier` could never resolve above `FREE` with no Authorization
+    header sent, and these three handlers hard-reject anything below PRO.
+  - **New, previously-uncatalogued gap**: 3 of the 10 modules have zero
+    test coverage — `handleCloudSecurityScan`, `handleMCPSecurityScan`,
+    `handleVibeCodeScan` (confirmed via grep across
+    `workers/test/**/*.mjs`, 0 matches each). Vibe Code is the largest
+    untested surface (4 dedicated source files: scanner/engine/rules/util).
+- **Fix:** None required this wave — the underlying auth-header bug these
+  findings mostly document was already fixed and merged (PR #140) earlier
+  in this same session. This wave is pure registry population +
+  documentation of the differential severity/gating findings above, plus
+  identification of the 3-module test-coverage gap as a real, separate,
+  not-yet-fixed follow-up.
+- **Verification:**
+  - `node scripts/registry/validate.mjs` — 21 domain files, 66 unique
+    capability IDs (56 + 10 new), zero hard failures, zero warnings.
+  - `node scripts/registry/generate-report.mjs` — regenerated
+    `PRODUCTION_READINESS_REPORT.md` (66 capabilities / 18 domains),
+    spot-checked the new `security-scanners` section renders correctly.
+  - Full backend suite: 190 files / 2025 tests pass (unchanged from
+    pre-wave baseline — expected, this wave is documentation-only, no
+    handler/frontend code touched).
+  - `customer_journey_complete` left `false` on all 10 entries per
+    `docs/ENGINEERING_STANDARDS.md` §11 (Production Truth Law) — 3 entries
+    use `verification.method: "dynamic_browser"` (real headless-Chromium
+    Playwright sessions run earlier this session against a locally-served
+    build with mocked backend responses, confirming the JWT-forwarding fix
+    specifically) but per the same convention already established at
+    CAP-IDN-001, a mocked-response local Playwright run is not equivalent
+    to live production and does not by itself justify
+    `customer_journey_complete: true` or `operational_status: GA APPROVED`.
+- **Tests:** No new test files this wave (registry population only). The
+  3-module test-coverage gap identified above (CAP-SCAN-006/009/010) is
+  flagged as a recommended follow-up, not fixed in this pass.
+- **Remaining in this domain:** None — all 10 capabilities in Security
+  Scanners are now registered. Wave complete.
+- **Risks / follow-ups surfaced:**
+  - 3 scan modules (Cloud Security, MCP Security, Vibe Code) have zero
+    regression tests — recommend a follow-up pass adding tier-gate tests
+    matching the `cisoExecutiveDashboardTierGate.test.mjs` pattern.
+  - `runSyncPipeline`'s STARTER-only quota check
+    (`workers/src/index.js:946`) is a single point of failure for 3 of the
+    10 modules' tier gating (redteam/identity/compliance) — worth a
+    dedicated regression test locking that specific gate, distinct from
+    the auth-header fix's own tests.
+- **Next recommended wave:** Wave 3b (Threat Hunting/Intel).
 
 ### 2026-07-09 — Fix sprint: 7 capabilities (CAP-DASH-001/002, CAP-NOTIF-002, CAP-ACAD-002, CAP-CRM-001/005, CAP-AFF-001), recovered from an uncommitted prior session
 
