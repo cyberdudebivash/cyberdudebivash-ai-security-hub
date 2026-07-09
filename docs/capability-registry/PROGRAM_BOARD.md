@@ -9,20 +9,20 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, CAP-IDN-001 fix — homepage Sign In dead end)
+## Current status (2026-07-09, CAP-IDN-002/003 fix — signup entry point + MFA login completion)
 
 | Metric | Value | Source |
 |---|---|---|
 | Domain files | 21 | `docs/capability-registry/domains/*.json` |
 | Domains populated | 17 | see list below |
 | Domains empty (stubs) | 4 | see Remaining Work Register |
-| Capabilities registered | 54 | `node scripts/registry/validate.mjs` |
+| Capabilities registered | 56 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 180 files / 1902 tests passing | `npx vitest run`, run 2026-07-09 (includes 3 new tests for CAP-IDN-001) |
+| Worker test suite | 181 files / 1916 tests passing | `npx vitest run`, run 2026-07-09 (includes 13 new tests for CAP-IDN-002/003) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 74.1% / 41.7% / 38.9% | `PRODUCTION_READINESS_REPORT.md` (up from 69.4% / 38% / 35.2% at the start of the day — CAP-DEVPORTAL-002/003/004 and CAP-IDN-001 fixes) |
-| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production — see CAP-IDN-001's verification.evidence) |
-| Gaps by severity | Critical 14 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged: priority reflects `customer_journey_complete`/`dynamic_browser` status, not fixed this pass; see remediation sections below |
+| Backend / Frontend / Parity | 75% / 43.8% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 74.1% / 41.7% / 38.9% before this fix — CAP-IDN-002 signup + CAP-IDN-003 MFA login completion) |
+| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production — see CAP-IDN-002/003's verification.evidence) |
+| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — Critical rose 14→16 because the registry now catalogues 2 more P1 identity capabilities (both already fixed this pass, still counted `PILOT ONLY` pending a `dynamic_browser` pass against production); see remediation sections below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -36,6 +36,39 @@ organizations, production-readiness, rbac, sales-crm,
 sentinel-apex-marketplace.
 
 ## ✅ Critical finding remediated (was open, see history below)
+
+**CAP-IDN-002 / CAP-IDN-003** (`docs/capability-registry/domains/identity.json`):
+**FIXED 2026-07-09**. Live Microsoft customer escalation: a prospective
+customer with no existing credentials clicking "No account? Get started
+free" on the login overlay (`frontend/user-dashboard.html`) was sent to
+`href="/"` — the homepage — with **no signup form anywhere on the site**.
+`POST /api/auth/signup` (`handleSignup`) was already a complete,
+production-grade implementation (password hashing, duplicate-email check,
+rollback-on-partial-failure, welcome email, auto-provisioned first API
+key); zero frontend code anywhere called it (exhaustive grep, 0 matches).
+Fixed by adding a real `#signup-view` to the existing login overlay and a
+`doSignup()` mirroring `doLogin()`'s exact pattern — no backend changes.
+While tracing `doLogin()` to build this, also found and fixed **CAP-IDN-003**:
+`doLogin()` never checked the backend's `mfa_required` response, so any
+customer with 2FA enabled silently failed to complete login (fell through
+to the success path with an `undefined` token, then got bounced back to
+the login screen with no explanation) — `POST /api/auth/mfa/authenticate`
+already existed and was already tested, nothing in the frontend ever called
+it. Fixed with an `#mfa-view` + `doMfaVerify()`, same pattern. Both fixes
+are purely additive — zero changes to any backend handler, zero changes to
+the existing login/forgot/reset views. Live Playwright verification: full
+signup happy-path and duplicate-email error-path, MFA-required login
+routing to the code-entry view with no token stored mid-challenge, plain
+non-MFA login proven unaffected, forgot-password view-switching proven
+unaffected. axe-core scan found and fixed one real new WCAG issue
+(`link-in-text-block` on the new "Sign in" link — added
+`text-decoration:underline`, applied symmetrically to the pre-existing
+"Get started free" link too); all other flagged violations are a
+pre-existing, site-wide `--muted` color-contrast issue confirmed identical
+on the untouched `login-view`/`forgot-view` baseline (out of scope for this
+fix — flagged as a follow-up in the registry entry's `notes`). Regression
+coverage: `workers/test/userDashboardSignupAndMfa.test.mjs` (13 tests).
+Full suite green: 181 files / 1916 tests.
 
 **CAP-IDN-001** (`docs/capability-registry/domains/identity.json`): **FIXED
 2026-07-09**. The homepage's only "Sign In" surface was a dead-end modal
@@ -155,6 +188,112 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: CAP-IDN-002 (signup entry point) + CAP-IDN-003 (MFA login completion)
+
+- **Trigger:** live Microsoft customer escalation, reported the same day as
+  the CAP-IDN-001 fixes below: "when a new user or customer trying to sign
+  up when they dont have any existing login credentials available - this
+  sign up functionalities does not work - this simply returns to the home
+  page." Resumed a session that had hit a usage-limit interruption before
+  this escalation could be investigated.
+- **Recovery:** fetched `origin`, confirmed local branch already sat exactly
+  on `origin/main` (`a2885bf`, includes the merged PR #108 and #109
+  CAP-IDN-001 fixes) — no rebase needed before starting.
+- **Root cause, confirmed live:** grepped `frontend/user-dashboard.html` and
+  found `No account? <a href="/">Get started free</a>` — matches the
+  screenshot in the escalation exactly (the link just returns to the
+  homepage). Broader grep across all of `frontend/` for
+  `api/auth/signup`/`doSignup`/`signup-view`/any signup modal id returned
+  **zero matches anywhere on the site**. Read `workers/src/handlers/auth.js`
+  and confirmed `POST /api/auth/signup` (`handleSignup`) was already a
+  complete, tested, production-grade implementation, correctly routed in
+  `workers/src/index.js` — the backend was never the problem; no frontend
+  surface had ever been built to call it. Separately, while reading
+  `doLogin()` to model the new `doSignup()` on it, noticed it never
+  branches on `d.mfa_required` — traced `handleLogin()` and confirmed it
+  really does return `{mfa_required:true, mfa_challenge_token}` with HTTP
+  200 (no `access_token`) whenever MFA is enabled, which `doLogin()` was
+  silently mistreating as a successful login. `POST /api/auth/mfa/authenticate`
+  was already built and already covered by `workers/test/mfaAuthGate.test.mjs`
+  — again, a missing frontend consumer of a working backend capability, not
+  a backend gap.
+- **Explicitly ruled out as in-scope:** the existing "forgot password" /
+  "reset password" flow already works end-to-end via a secure, single-use,
+  30-minute email link (`handleForgotPassword`/`handleResetPassword`) — a
+  legitimate, common pattern, not a bug, so left untouched. No numeric-code
+  email/SMS "OTP" delivery mechanism exists anywhere in the codebase beyond
+  authenticator-app TOTP (a different concept); building one would be new
+  infrastructure requiring a provider decision, not a bug fix, so it was not
+  invented here — flagged instead of built blind, per this board's
+  standing "never assume production infra" rule.
+- **Fix:** additive only, both changes confined to
+  `frontend/user-dashboard.html`'s existing `#login-overlay`:
+  - Added `#signup-view` (name/email/company/password, same
+    `.form-group`/`.form-label`/`.form-input` markup as the pre-existing
+    views) and `doSignup()`, byte-for-byte mirroring `doLogin()`'s
+    fetch/error/spinner structure, posting to the existing, unmodified
+    `/api/auth/signup`. "Get started free" now calls
+    `showAuthView('signup-view')` instead of navigating away; a symmetric
+    "Already have an account? Sign in" link was added to return.
+  - Added `#mfa-view` (6-digit code field) and `doMfaVerify()`, same
+    pattern, posting to the existing, unmodified
+    `/api/auth/mfa/authenticate`. `doLogin()` now checks `d.mfa_required`
+    and routes there *before* trusting the response as a login success,
+    storing no token until the second factor is verified.
+  - Extended `showAuthView()`'s view list to include both new views.
+  - Zero changes to any backend handler, zero changes to the existing
+    login/forgot/reset views' markup or behavior.
+- **Verification:**
+  - `node --check`-equivalent syntax parse of all 3 inline `<script>`
+    blocks: clean.
+  - `scripts/seo-structure-lock.mjs`: 22/22 pages green (unaffected —
+    change is entirely below `<body>`, outside `<head>`).
+  - Real headless-Chromium Playwright session against the changed file
+    (served locally via `python3 -m http.server`, mocking
+    `/api/auth/signup`, `/api/auth/login`, `/api/auth/mfa/authenticate`,
+    `/api/auth/me`): 18/18 checks passed — signup happy path (correct POST
+    body, tokens stored, overlay hidden), signup duplicate-email error
+    path (backend message surfaced, no false-positive login), MFA-required
+    login correctly routes to the code view with **zero token stored
+    mid-challenge** (previously: silently treated as logged in), MFA
+    verify completes login with the real token, plain non-MFA login proven
+    unaffected, forgot-password view-switching proven unaffected. Zero
+    uncaught JS exceptions.
+  - `axe-core` WCAG2A/AA scan (installed fresh this session; not a repo
+    dependency) run against all five auth views: found and fixed one
+    genuinely new issue — `link-in-text-block` on the new "Sign in" link,
+    resolved with `text-decoration:underline`, applied symmetrically to
+    the pre-existing "Get started free" link for visual consistency. All
+    remaining flagged violations are the pre-existing, site-wide `--muted`
+    color-contrast issue (#64748b on #111827, 3.72:1 vs the 4.5:1 AA
+    minimum), confirmed identical on the untouched `login-view`/
+    `forgot-view` baseline via isolated before/after axe runs — real, but
+    out of scope for an auth-flow fix; noted as a follow-up in the registry
+    entry rather than redesigned here.
+- **Tests:** `workers/test/userDashboardSignupAndMfa.test.mjs` (new, 13
+  tests, static-parse convention matching `userDashboardAuthContract.test.mjs`
+  — cross-checks `frontend/user-dashboard.html` against
+  `workers/src/index.js`, `workers/src/handlers/auth.js`, and
+  `workers/src/handlers/mfa.js` so the frontend can never again silently
+  drift from the routes the backend actually serves). Full suite green:
+  181 files / 1916 tests (180/1903 baseline + 1 new file/13 tests) — run
+  twice, once immediately after the axe-driven underline fix, to confirm
+  zero regressions from either change.
+- **Registry:** `identity.json` gained `CAP-IDN-002` (Sign-Up / Account
+  Creation Entry Point, P1) and `CAP-IDN-003` (MFA Second-Factor Login
+  Completion, P1); `PRODUCTION_READINESS_REPORT.md` regenerated (backend
+  74.1%→75%, frontend 41.7%→43.8%, parity 38.9%→41.1%). Validator: 56
+  capability IDs, 0 failures, 0 warnings.
+- **Not done this pass:** the rest of the P1–P7 backlog was not
+  re-audited; `customer_journey_complete` stays `false` on both new
+  entries pending a real `dynamic_browser` pass against production (this
+  fix used a local static-file-server Playwright session, not a production
+  browser click-through). "Post-login features" (scans, reports, API keys,
+  billing, MFA setup, etc.) were confirmed already built and already
+  covered by prior audit waves per this board's history — not re-audited
+  here since the customer escalation was specifically about signup, not
+  the dashboard behind it.
 
 ### 2026-07-09 — CAP-IDN-001 follow-up: third dead end found and fixed
 

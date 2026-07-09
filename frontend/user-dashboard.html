@@ -769,7 +769,35 @@
         <a href="#" onclick="showAuthView('forgot-view');return false">Forgot password?</a>
       </p>
       <p style="text-align:center;margin-top:6px;font-size:.83rem;color:var(--muted)">
-        No account? <a href="/">Get started free</a>
+        No account? <a href="#" onclick="showAuthView('signup-view');return false" style="text-decoration:underline">Get started free</a>
+      </p>
+    </div>
+
+    <div id="signup-view" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Full name</label>
+        <input id="signup-name" class="form-input" type="text" placeholder="Jane Doe" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input id="signup-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input id="signup-company" class="form-input" type="text" placeholder="Acme Inc." autocomplete="organization" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input id="signup-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="new-password" />
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">At least 8 characters, with 3 of: uppercase, lowercase, digit, special character.</div>
+      </div>
+      <div id="signup-err" class="alert alert-error" style="display:none"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doSignup()">
+        <span id="signup-spinner" style="display:none" class="spinner"></span>
+        Create free account
+      </button>
+      <p style="text-align:center;margin-top:10px;font-size:.83rem;color:var(--muted)">
+        Already have an account? <a href="#" onclick="showAuthView('login-view');return false" style="text-decoration:underline">Sign in</a>
       </p>
     </div>
 
@@ -792,6 +820,22 @@
       </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doResetPassword()">Set new password</button>
       <div id="reset-msg" class="alert" style="display:none;margin-top:12px"></div>
+      <p style="text-align:center;margin-top:10px;font-size:.83rem">
+        <a href="#" onclick="showAuthView('login-view');return false">← Back to sign in</a>
+      </p>
+    </div>
+
+    <div id="mfa-view" style="display:none">
+      <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px">Enter the 6-digit code from your authenticator app.</p>
+      <div class="form-group">
+        <label class="form-label">Authentication code</label>
+        <input id="mfa-code" class="form-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" autocomplete="one-time-code" maxlength="6" />
+      </div>
+      <div id="mfa-err" class="alert alert-error" style="display:none"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doMfaVerify()">
+        <span id="mfa-spinner" style="display:none" class="spinner"></span>
+        Verify
+      </button>
       <p style="text-align:center;margin-top:10px;font-size:.83rem">
         <a href="#" onclick="showAuthView('login-view');return false">← Back to sign in</a>
       </p>
@@ -1865,6 +1909,7 @@
   let _plan  = null;
   let _allScans = [];
   let _revokeTarget = null;
+  let _mfaChallengeToken = null;
 
   // ── Auth helpers ────────────────────────────────────────────────────────────
   function saveTokens(access, refresh) {
@@ -1918,6 +1963,11 @@
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Login failed');
+      if (d.mfa_required) {
+        _mfaChallengeToken = d.mfa_challenge_token;
+        showAuthView('mfa-view');
+        return;
+      }
       _token = d.access_token;
       _user  = d.user;
       saveTokens(_token, d.refresh_token);
@@ -1935,9 +1985,45 @@
     if (e.key === 'Enter') doLogin();
   });
 
+  // ── Sign up ─────────────────────────────────────────────────────────────────
+  async function doSignup() {
+    const name    = document.getElementById('signup-name').value.trim();
+    const email   = document.getElementById('signup-email').value.trim();
+    const company = document.getElementById('signup-company').value.trim();
+    const pass    = document.getElementById('signup-pass').value;
+    const errEl   = document.getElementById('signup-err');
+    const spin    = document.getElementById('signup-spinner');
+    errEl.style.display = 'none';
+    if (!email || !pass) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return; }
+    spin.style.display = 'inline-block';
+    try {
+      const res = await fetch(API_BASE + '/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass, full_name: name, company }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Sign up failed');
+      _token = d.access_token;
+      _user  = d.user;
+      saveTokens(_token, d.refresh_token);
+      document.getElementById('login-overlay').style.display = 'none';
+      initDashboard();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    } finally {
+      spin.style.display = 'none';
+    }
+  }
+
+  document.getElementById('signup-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSignup();
+  });
+
   // ── Credential recovery ──────────────────────────────────────────────────────
   function showAuthView(id) {
-    for (const v of ['login-view', 'forgot-view', 'reset-view']) {
+    for (const v of ['login-view', 'signup-view', 'forgot-view', 'reset-view', 'mfa-view']) {
       document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
     }
     document.getElementById('login-err').style.display = 'none';
@@ -1986,6 +2072,39 @@
       msgEl.className = 'alert alert-error'; msgEl.textContent = e.message; msgEl.style.display = 'block';
     }
   }
+
+  // ── MFA challenge (second factor at login) ─────────────────────────────────
+  async function doMfaVerify() {
+    const code  = document.getElementById('mfa-code').value.trim();
+    const errEl = document.getElementById('mfa-err');
+    const spin  = document.getElementById('mfa-spinner');
+    errEl.style.display = 'none';
+    if (!code) { errEl.textContent = 'Enter your 6-digit code.'; errEl.style.display = 'block'; return; }
+    spin.style.display = 'inline-block';
+    try {
+      const res = await fetch(API_BASE + '/api/auth/mfa/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mfa_challenge_token: _mfaChallengeToken, totp_code: code }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Verification failed');
+      _token = d.access_token;
+      _user  = d.user;
+      saveTokens(_token, d.refresh_token);
+      document.getElementById('login-overlay').style.display = 'none';
+      initDashboard();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    } finally {
+      spin.style.display = 'none';
+    }
+  }
+
+  document.getElementById('mfa-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doMfaVerify();
+  });
 
   if (new URLSearchParams(location.search).get('reset_token')) {
     showAuthView('reset-view');

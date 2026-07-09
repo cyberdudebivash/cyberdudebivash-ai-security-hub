@@ -10,23 +10,23 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T09:44:59.519Z
-Capabilities catalogued: 54
+Generated: 2026-07-09T10:41:40.834Z
+Capabilities catalogued: 56
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 74.1% |
-| Frontend | 41.7% |
-| Parity (backend **and** frontend both exist) | 38.9% |
+| Backend | 75% |
+| Frontend | 43.8% |
+| Parity (backend **and** frontend both exist) | 41.1% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 14 | Broken customer journey |
+| Critical | P1 | 16 | Broken customer journey |
 | High | P2 | 16 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 2 | RBAC not enforced |
@@ -34,7 +34,7 @@ Capabilities catalogued: 54
 | Low | P6 | 10 | No test coverage |
 | Low | P7 | 10 | Documentation missing |
 
-**Rollup:** Critical 14 · High 16 · Medium 4 · Low 20
+**Rollup:** Critical 16 · High 16 · Medium 4 · Low 20
 
 ## Structural Findings
 
@@ -43,7 +43,7 @@ Capabilities catalogued: 54
 | Hidden features | 14 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 11 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 14 | Priority P1 |
+| Broken journeys | 16 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -112,11 +112,13 @@ complete", "bug free", or "guaranteed".
 | CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ✓ | ◐ | ✗ | PILOT ONLY | P1 |
 | CAP-DEVPORTAL-004 | Growth/Plan API Key Provisioning | ✓ | ✗ | ✗ | BLOCKED | P1 |
 
-### identity (1 capability)
+### identity (3 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
+| CAP-IDN-002 | Sign-Up / Account Creation Entry Point | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
+| CAP-IDN-003 | MFA Second-Factor Login Completion | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
 
 ### masoc (1 capability)
 
