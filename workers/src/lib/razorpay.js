@@ -48,6 +48,11 @@ export const PACKAGE_PRICES = {
   ENTERPRISE_AI_SUITE:        { amount: 19999900, label: '₹1,99,999', name: 'Enterprise AI Security Suite' },
   MCP_SECURITY_REPORT:        { amount: 99900,    label: '₹999',      name: 'MCP Security Full Report' },
   MCP_ENTERPRISE_ASSESSMENT:  { amount: 2499900,  label: '₹24,999',   name: 'MCP Enterprise Security Assessment' },
+  // 2026-07-10: homepage Enterprise & MSSP Solutions section ("Threat Intel
+  // Report" card) — same ₹14,999 one-time price already sold via
+  // MODULE_PRICES.threat_intel, added here too so the same product can be
+  // ordered through the generic package/product_id checkout path.
+  THREAT_INTEL_REPORT:        { amount: 1499900,  label: '₹14,999',   name: 'Threat Intelligence Report' },
 };
 
 // Subscription plan pricing (amount in paise)

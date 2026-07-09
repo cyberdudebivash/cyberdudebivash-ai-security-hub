@@ -3,8 +3,28 @@
  * /api/subscription/checkout). Regression coverage for the bug where a
  * captured subscription payment never updated users.tier because the
  * webhook only knew about the per-report `payments` table. */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { handleRazorpayWebhook } from '../src/handlers/payments.js';
+import { handleForgotPassword } from '../src/handlers/auth.js';
+
+// vi.mock factories are hoisted above imports and can't close over top-level
+// test-file variables — vi.hoisted() is the sanctioned way to share a mutable
+// record between the factory and the assertions below.
+const forgotPasswordCalls = vi.hoisted(() => ({ lastEmail: null }));
+
+vi.mock('../src/handlers/auth.js', () => ({
+  handleForgotPassword: vi.fn(async (request) => {
+    // Request bodies are single-read streams — capture the parsed email here
+    // rather than re-reading `request` from the assertion afterward.
+    const body = await request.json();
+    forgotPasswordCalls.lastEmail = body.email;
+    return Response.json({ success: true });
+  }),
+}));
+
+// The dispatch is a detached (unawaited) promise chain — give its microtasks
+// a turn to run before asserting on the mock.
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const WEBHOOK_SECRET = 'whsec_test_12345';
 
@@ -20,8 +40,9 @@ async function sign(secret, body) {
 function memDB({ paymentsRow = null, userRow = null } = {}) {
   const tierUpdates = [];
   const usersCreated = [];
+  const paymentsEmailBackfills = [];
   return {
-    tierUpdates, usersCreated,
+    tierUpdates, usersCreated, paymentsEmailBackfills,
     prepare(sql) {
       return {
         _sql: sql, _b: [],
@@ -37,6 +58,9 @@ function memDB({ paymentsRow = null, userRow = null } = {}) {
           }
           if (/INSERT INTO users/i.test(this._sql)) {
             usersCreated.push({ email: this._b[1], tier: this._b[4] });
+          }
+          if (/UPDATE payments SET email/i.test(this._sql)) {
+            paymentsEmailBackfills.push({ email: this._b[0], orderId: this._b[1] });
           }
           return { success: true };
         },
@@ -171,5 +195,105 @@ describe('handleRazorpayWebhook — fallback subscription grant (real checkout f
     expect(res.status).toBe(200);
     expect(db.tierUpdates).toHaveLength(0);
     expect(db.usersCreated).toHaveLength(0);
+  });
+});
+
+/* Regression coverage — 2026-07-10 production incident (pay_TBVXv75Tgm2Gla,
+ * order paid via UPI QR scan, ₹499 Starter). Root cause: a visitor who lands
+ * straight on pricing (no prior free-scan lead-capture, not logged in) has no
+ * cdb_email in localStorage, so /api/payment/create-order writes the pending
+ * `payments` row with email=NULL. The synchronous /api/payments/verify call
+ * never ran (browser closed before Razorpay's success handler fired), so this
+ * webhook fallback was the only remaining path to grant the tier — and it
+ * required payRow.email, which was NULL, so it silently no-opped. The captured
+ * payment settled to the merchant normally; the customer was simply never
+ * upgraded, with no error anywhere in the logs. Razorpay's own checkout form
+ * still collects the payer's email regardless of login state, so it is always
+ * present on the webhook's payment.entity payload — this is what the fix reads
+ * instead of assuming payments.email is populated. */
+describe('handleRazorpayWebhook — fallback grant when payments.email is NULL (guest checkout)', () => {
+  it('grants the tier using the Razorpay payload email and backfills payments.email', async () => {
+    const db = memDB({
+      paymentsRow: { module: 'subscription', plan: 'STARTER', email: null, status: 'pending' },
+      userRow:     null,
+    });
+    const env = { RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET, DB: db };
+    const request = await webhookRequest({
+      id: 'evt_8', event: 'payment.captured',
+      payload: { payment: { entity: {
+        id: 'pay_8', order_id: 'order_8',
+        email: 'guest@example.com', contact: '+919999999999',
+        notes: { module: 'subscription', target: 'starter' },
+      } } },
+    });
+
+    const res = await handleRazorpayWebhook(request, env);
+    expect(res.status).toBe(200);
+    expect(db.usersCreated).toEqual([{ email: 'guest@example.com', tier: 'STARTER' }]);
+    expect(db.paymentsEmailBackfills).toEqual([{ email: 'guest@example.com', orderId: 'order_8' }]);
+  });
+
+  it('dispatches a real set-your-password link for a freshly-created account — not just a generic "log in" email that dead-ends', async () => {
+    vi.mocked(handleForgotPassword).mockClear();
+    const db = memDB({
+      paymentsRow: { module: 'subscription', plan: 'STARTER', email: null, status: 'pending' },
+      userRow:     null,
+    });
+    const env = { RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET, DB: db };
+    const request = await webhookRequest({
+      id: 'evt_8b', event: 'payment.captured',
+      payload: { payment: { entity: {
+        id: 'pay_8b', order_id: 'order_8b', email: 'freshbuyer@example.com',
+        notes: { module: 'subscription', target: 'starter' },
+      } } },
+    });
+
+    await handleRazorpayWebhook(request, env);
+    await flush();
+    expect(handleForgotPassword).toHaveBeenCalledTimes(1);
+    expect(forgotPasswordCalls.lastEmail).toBe('freshbuyer@example.com');
+  });
+
+  it('upgrades an existing account by the payload email when payments.email is NULL', async () => {
+    vi.mocked(handleForgotPassword).mockClear();
+    const db = memDB({
+      paymentsRow: { module: 'subscription', plan: 'PRO', email: null, status: 'pending' },
+      userRow:     { id: 'usr_3', tier: 'FREE' },
+    });
+    const env = { RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET, DB: db };
+    const request = await webhookRequest({
+      id: 'evt_9', event: 'payment.captured',
+      payload: { payment: { entity: {
+        id: 'pay_9', order_id: 'order_9', email: 'returning@example.com',
+        notes: { module: 'subscription', target: 'pro' },
+      } } },
+    });
+
+    const res = await handleRazorpayWebhook(request, env);
+    await flush();
+    expect(res.status).toBe(200);
+    expect(db.tierUpdates).toEqual([{ tier: 'PRO', userId: 'usr_3' }]);
+    // An existing account already has real credentials — must NOT get a
+    // "reset your password" email just for being upgraded.
+    expect(handleForgotPassword).not.toHaveBeenCalled();
+  });
+
+  it('still does not grant anything if neither payments.email nor the payload carries an email', async () => {
+    const db = memDB({
+      paymentsRow: { module: 'subscription', plan: 'STARTER', email: null, status: 'pending' },
+      userRow:     null,
+    });
+    const env = { RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET, DB: db };
+    const request = await webhookRequest({
+      id: 'evt_10', event: 'payment.captured',
+      payload: { payment: { entity: {
+        id: 'pay_10', order_id: 'order_10', notes: { module: 'subscription', target: 'starter' },
+      } } },
+    });
+
+    const res = await handleRazorpayWebhook(request, env);
+    expect(res.status).toBe(200);
+    expect(db.usersCreated).toHaveLength(0);
+    expect(db.tierUpdates).toHaveLength(0);
   });
 });
