@@ -353,4 +353,41 @@ describe('Payment status BOLA — information disclosure prevention', () => {
     expect(body).not.toHaveProperty('amount_paise');
     expect(body).not.toHaveProperty('download_url');
   });
+
+  // Account-linked orders: an API-surface audit found every other order/key/job
+  // lookup in this codebase enforces ownership except this one. Anonymous/guest
+  // checkouts (no user_id on the row) intentionally stay pollable by anyone
+  // holding the opaque order_id — that's the pre-existing, deliberate public
+  // polling design tested above and must not regress.
+  describe('account-linked orders are only readable by their owner', () => {
+    const LINKED_ROW = { ...PAID_ROW, user_id: 'alice' };
+
+    it('the owner (alice) can read their own linked order (200)', async () => {
+      const env = { DB: makeDB(LINKED_ROW) };
+      const req = makeRequest('/api/payments/status/order_test123', 'GET');
+      const res = await handlePaymentStatus(req, env, { ...ANON_CTX, user_id: 'alice' });
+      expect(res.status).toBe(200);
+    });
+
+    it('a different logged-in user (bob) gets 404, not the order', async () => {
+      const env = { DB: makeDB(LINKED_ROW) };
+      const req = makeRequest('/api/payments/status/order_test123', 'GET');
+      const res = await handlePaymentStatus(req, env, { ...ANON_CTX, user_id: 'bob' });
+      expect(res.status).toBe(404);
+    });
+
+    it('an anonymous caller gets 404 for a linked order (no user_id to match)', async () => {
+      const env = { DB: makeDB(LINKED_ROW) };
+      const req = makeRequest('/api/payments/status/order_test123', 'GET');
+      const res = await handlePaymentStatus(req, env, ANON_CTX);
+      expect(res.status).toBe(404);
+    });
+
+    it('an anonymous/guest order (no user_id on the row) stays publicly pollable', async () => {
+      const env = { DB: makeDB(PAID_ROW) }; // PAID_ROW has no user_id
+      const req = makeRequest('/api/payments/status/order_test123', 'GET');
+      const res = await handlePaymentStatus(req, env, ANON_CTX);
+      expect(res.status).toBe(200);
+    });
+  });
 });

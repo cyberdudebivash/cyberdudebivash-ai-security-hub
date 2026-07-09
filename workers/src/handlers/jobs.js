@@ -3,12 +3,14 @@
  * POST /api/scan/async/:module — enqueue scan job, return job_id immediately
  * GET  /api/jobs/:job_id       — poll job status
  * GET  /api/jobs/:job_id/result — retrieve full scan result
+ * GET  /api/insights/:job_id   — AI narrative + MITRE mapping for a completed job
  */
 
 import { enqueueScanJob, getJobStatus } from '../lib/queue.js';
 import { getResultByJobId }             from '../lib/r2.js';
 import { validateDomain, parseBody }    from '../middleware/validation.js';
 import { inspectForAttacks, sanitizeString } from '../middleware/security.js';
+import { generateAIInsights }           from '../lib/aiBrain.js';
 
 const VALID_MODULES = ['domain','ai','redteam','identity','compliance'];
 
@@ -182,6 +184,54 @@ export async function handleJobResult(request, env, authCtx, jobId) {
     retrieved_at: new Date().toISOString(),
     scan_result: scanResult,
   }, { status: 200, headers: { 'X-Job-ID': jobId } });
+}
+
+// ─── GET /api/insights/:job_id — AI narrative for a completed job ────────────
+// Documented in the public API since v8.0 but never wired (404 in production —
+// found in an API-surface audit). Reuses the same ownership guard as
+// handleJobResult() so this can't become a second scan_result IDOR path: the
+// scan_result is pulled from the job's own stored result, never taken from the
+// request body.
+export async function handleJobInsights(request, env, authCtx, jobId) {
+  if (!jobId || jobId.length < 6) {
+    return Response.json({ error: 'Invalid job ID' }, { status: 400 });
+  }
+
+  const job = await getJobStatus(env, jobId);
+  if (!job || !jobOwnedBy(job, authCtx)) {
+    return Response.json({ error: 'Job not found', job_id: jobId }, { status: 404 });
+  }
+
+  if (job.status !== 'completed') {
+    return Response.json({
+      error:    job.status === 'failed' ? 'Scan job failed' : 'Result not ready',
+      status:   job.status,
+      job_id:   jobId,
+      poll_url: `/api/jobs/${jobId}`,
+    }, { status: job.status === 'failed' ? 500 : 202 });
+  }
+
+  const scanResult = await getResultByJobId(env, jobId);
+  if (!scanResult) {
+    return Response.json({
+      error:  'Result unavailable',
+      hint:   'Result may have expired (24h TTL). Re-run the scan.',
+      job_id: jobId,
+    }, { status: 410 });
+  }
+
+  try {
+    const insights = await generateAIInsights(scanResult, job.module, env);
+    return Response.json({
+      success:      true,
+      job_id:       jobId,
+      module:       job.module,
+      target:       job.target,
+      insights,
+    }, { status: 200, headers: { 'X-Job-ID': jobId } });
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
 }
 
 // ─── GET /api/history (D1-backed, authenticated users) ───────────────────────

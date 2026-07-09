@@ -849,11 +849,22 @@ export async function handlePaymentStatus(request, env, authCtx = {}) {
 
   if (env.DB) {
     const row = await env.DB.prepare(
-      `SELECT module, target, status, paid_at, created_at
+      `SELECT module, target, status, paid_at, created_at, user_id
        FROM payments WHERE razorpay_order_id = ? LIMIT 1`
     ).bind(orderId).first().catch(() => null);
 
     if (!row) return Response.json({ error: 'Order not found' }, { status: 404 });
+
+    // Anonymous/guest checkouts (row.user_id NULL) stay pollable by anyone
+    // holding the opaque order_id — the intentional public-polling design this
+    // endpoint documents above (no report_token/amount ever exposed either way).
+    // An order that IS linked to an account may only be polled by that same
+    // account, closing the one gap a full audit of this codebase's order/key/job
+    // lookups found: every sibling lookup already enforces ownership, this one
+    // didn't for the account-linked case.
+    if (row.user_id && row.user_id !== (authCtx?.user_id ?? null)) {
+      return Response.json({ error: 'Order not found' }, { status: 404 });
+    }
 
     return Response.json({
       order_id:   orderId,

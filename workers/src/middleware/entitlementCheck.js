@@ -38,7 +38,11 @@ export const FEATURES = {
 const TIER_IMPLICIT_FEATURES = {
   FREE:       [FEATURES.API_ACCESS],
   STARTER:    [FEATURES.API_ACCESS, FEATURES.THREAT_FEED_FULL, FEATURES.DASHBOARD_PRO],
-  PRO:        [FEATURES.API_ACCESS, FEATURES.THREAT_FEED_FULL, FEATURES.DASHBOARD_PRO, FEATURES.AI_PREDICTIONS, FEATURES.ACTOR_ATTRIBUTION, FEATURES.REPORT_DOWNLOAD, FEATURES.PDF_REPORTS, FEATURES.STIX_21_EXPORT],
+  // SIEM_WEBHOOK included here to match what's actually sold: the pricing page's
+  // feature-comparison table and the public API docs (POST /api/export/siem)
+  // both advertise SIEM Integration as included at PRO — see the fix note below
+  // buildUpgradePayload's UPGRADE_MAP for the corresponding CTA-target correction.
+  PRO:        [FEATURES.API_ACCESS, FEATURES.THREAT_FEED_FULL, FEATURES.DASHBOARD_PRO, FEATURES.AI_PREDICTIONS, FEATURES.ACTOR_ATTRIBUTION, FEATURES.REPORT_DOWNLOAD, FEATURES.PDF_REPORTS, FEATURES.STIX_21_EXPORT, FEATURES.SIEM_WEBHOOK],
   TEAM:       [FEATURES.API_ACCESS, FEATURES.THREAT_FEED_FULL, FEATURES.DASHBOARD_PRO, FEATURES.AI_PREDICTIONS, FEATURES.ACTOR_ATTRIBUTION, FEATURES.REPORT_DOWNLOAD, FEATURES.PDF_REPORTS, FEATURES.STIX_21_EXPORT, FEATURES.SIEM_WEBHOOK, FEATURES.KILL_CHAIN_MAPPING, FEATURES.MULTI_SEAT],
   ENTERPRISE: Object.values(FEATURES),
   MSSP:       Object.values(FEATURES),
@@ -150,16 +154,21 @@ export function buildUpgradePayload(feature, currentTier = 'FREE') {
   //     from the ORPHANED handlers/monetizationV2.js PLANS, which no customer UI
   //     calls). A customer hitting a feature gate saw ₹2,999 but checkout charges
   //     ₹1,499 — a price contradiction. CTAs now quote the charged price.
-  //  2) SIEM_WEBHOOK / KILL_CHAIN_MAPPING required tier 'TEAM' — a tier that is
-  //     NOT purchasable (billing sells FREE/STARTER/PRO/ENTERPRISE/MSSP). The
-  //     features are granted at ENTERPRISE (TIER_IMPLICIT_FEATURES.ENTERPRISE =
-  //     all), so the CTA now correctly directs the customer to ENTERPRISE.
+  //  2) SIEM_WEBHOOK required tier 'TEAM' — a tier that is NOT purchasable
+  //     (billing sells FREE/STARTER/PRO/ENTERPRISE/MSSP) — so this CTA used to
+  //     point to ENTERPRISE even though the pricing page's own feature-comparison
+  //     table and the public API docs (POST /api/export/siem) both advertise SIEM
+  //     Integration as included at PRO. Fixed at the source (SIEM_WEBHOOK added
+  //     to TIER_IMPLICIT_FEATURES.PRO above) — this CTA now points to the tier
+  //     that actually unlocks it, honoring what customers were told they'd get.
+  //     KILL_CHAIN_MAPPING is unused elsewhere in the codebase (no handler checks
+  //     it) so its ENTERPRISE-only CTA is unchanged — nothing live depends on it.
   const PRO   = { required_tier: 'PRO',        price_usd: '$18/mo', price_inr: '₹1,499/mo' };
   const ENT   = { required_tier: 'ENTERPRISE', price_usd: '$60/mo', price_inr: '₹4,999/mo' };
   const UPGRADE_MAP = {
     [FEATURES.THREAT_FEED_FULL]:   PRO,
     [FEATURES.STIX_21_EXPORT]:     PRO,
-    [FEATURES.SIEM_WEBHOOK]:       ENT,
+    [FEATURES.SIEM_WEBHOOK]:       PRO,
     [FEATURES.KILL_CHAIN_MAPPING]: ENT,
     [FEATURES.ACTOR_ATTRIBUTION]:  PRO,
     [FEATURES.AI_PREDICTIONS]:     PRO,
