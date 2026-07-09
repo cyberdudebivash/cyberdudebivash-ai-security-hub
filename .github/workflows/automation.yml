@@ -93,7 +93,7 @@ permissions:
 env:
   PYTHON_VERSION: '3.12'
   # ── Primary hardcoded fallback (always valid — no secret dependency) ──────
-  PRIMARY_WORKERS_URL:  "https://cyberdudebivash-security-hub.workers.dev"
+  PRIMARY_WORKERS_URL:  "https://cyberdudebivash-security-hub.iambivash-bn.workers.dev"
   SECONDARY_PAGES_URL:  "https://cyberdudebivash-security-hub.pages.dev"
   TERTIARY_DOMAIN_URL:  "https://cyberdudebivash.in"
   INTEL_FEED_URL:       "https://intel.cyberdudebivash.com"

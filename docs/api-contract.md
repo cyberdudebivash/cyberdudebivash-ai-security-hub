@@ -1,6 +1,6 @@
 # CYBERDUDEBIVASH AI Security Hub — API Contract (v40)
 
-**Base URL:** `https://cyberdudebivash.in` (fallback origin: `https://cyberdudebivash-security-hub.workers.dev`)
+**Base URL:** `https://cyberdudebivash.in` (fallback origin: `https://cyberdudebivash-security-hub.iambivash-bn.workers.dev`)
 **Interactive docs:** https://cyberdudebivash.in/api-docs · **Endpoint directory:** `GET /api`
 **Superseded:** the previous v3.0 contract in this file described the retired deterministic-engine era (workers.dev base URL, 5 req/day FREE, ₹9,999 PRO) and no longer matched the platform — flagged NEEDS REMEDIATION in `docs/audit-history/PHASE4_GLOBAL_RELEASE_DECISION_2026-07.md` (#16) and replaced by this document.
 

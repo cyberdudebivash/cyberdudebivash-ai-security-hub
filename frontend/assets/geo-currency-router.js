@@ -100,7 +100,7 @@
 
   function fetchAndCacheCountry() {
     const api = (window.CONFIG && window.CONFIG.API_BASE)
-      || 'https://cyberdudebivash-security-hub.workers.dev';
+      || 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev';
     fetch(api + '/api/geo', { credentials: 'omit' })
       .then(r => r.json())
       .then(d => {

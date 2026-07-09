@@ -809,7 +809,7 @@ jobs:
       - name: "Probe /api/platform/health (advisory)"
         run: |
           PRIMARY="https://cyberdudebivash.in/api/platform/health"
-          FALLBACK="https://cyberdudebivash-security-hub.workers.dev/api/platform/health"
+          FALLBACK="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/platform/health"
           OK=false STATUS="" USED=""
 
           for URL in "$PRIMARY" "$FALLBACK"; do

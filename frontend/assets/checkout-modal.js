@@ -37,7 +37,7 @@
       BNB: '',
     },
     API_BASE: (window.CONFIG && window.CONFIG.API_BASE)
-              || 'https://cyberdudebivash-security-hub.workers.dev',
+              || 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev',
   };
 
   let _merchantLoaded = false;

@@ -408,7 +408,7 @@ export async function handleSentinelStatus(request, env) {
     service:       'Sentinel APEX',
     status:        lastRun ? 'operational' : 'initializing',
     last_run:      lastRun,
-    feed_url:      'https://cyberdudebivash-security-hub.workers.dev/api/sentinel/feed',
+    feed_url:      'https://cyberdudebivash.in/api/sentinel/feed',
     telegram:      'https://t.me/cyberdudebivashSentinelApex',
     refresh_every: '30 minutes (cache) / 6 hours (full cron re-index)',
     sources:       ['NIST NVD CVE API v2', 'CISA Known Exploited Vulnerabilities', 'ThreatFox (abuse.ch) — live IOCs'],

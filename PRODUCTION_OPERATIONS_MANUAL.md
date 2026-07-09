@@ -9,7 +9,7 @@
 
 | Layer | Technology | Name / binding |
 |---|---|---|
-| API | Cloudflare Worker (`workers/src/index.js`, entry `workers/index.ts`) | route `cyberdudebivash.in/api/*` (dashboard-managed — see risk R-17) + `cyberdudebivash-security-hub.workers.dev` |
+| API | Cloudflare Worker (`workers/src/index.js`, entry `workers/index.ts`) | route `cyberdudebivash.in/api/*` (dashboard-managed — see risk R-17) + `cyberdudebivash-security-hub.iambivash-bn.workers.dev` |
 | Frontend | Cloudflare Pages (static, no build step) | `cyberdudebivash-security-hub.pages.dev` → `cyberdudebivash.in` |
 | Database | Cloudflare D1 (SQLite, 216 tables) | `SECURITY_HUB_DB` / `cyberdudebivash-security-hub` |
 | Cache / counters / job status | Cloudflare KV | `SECURITY_HUB_KV` |

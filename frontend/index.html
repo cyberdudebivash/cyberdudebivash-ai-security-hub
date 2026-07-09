@@ -826,7 +826,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
      Preload: eliminates LCP delays for OG image + critical CSS
      ═══════════════════════════════════════════════════════════════════════════ -->
 <!-- Critical preconnects (must be before any fetch to these origins) -->
-<link crossorigin="" href="https://cyberdudebivash-security-hub.workers.dev" rel="preconnect"/>
+<link crossorigin="" href="https://cyberdudebivash-security-hub.iambivash-bn.workers.dev" rel="preconnect"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://pagead2.googlesyndication.com" rel="dns-prefetch"/>
@@ -8446,8 +8446,8 @@ const TELEGRAM_URL = CONFIG.TELEGRAM_URL;
 
 // ─── Multi-Endpoint Fallback Config ─────────────────────────────────────────
 const API_ENDPOINTS = [
-  CONFIG.API_BASE,                                            // primary: cyberdudebivash.in
-  'https://cyberdudebivash-security-hub.workers.dev',        // fallback: workers.dev
+  CONFIG.API_BASE,                                                       // primary: cyberdudebivash.in
+  'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev',      // fallback: workers.dev (real account subdomain — bare *.workers.dev without it doesn't resolve)
 ];
 const API_TIMEOUT_MS = 8000;    // 8s hard timeout per attempt
 const API_RETRY_DELAYS = [0, 2000, 5000]; // immediate, 2s, 5s (3 total attempts)
@@ -11598,7 +11598,7 @@ async function renderRecentActivity() {
     if (!pill) return;
     const apiBase = (typeof window.API_BASE === 'string' ? window.API_BASE : null)
       || localStorage.getItem('cdb_api_base')
-      || (location.hostname.endsWith('cyberdudebivash.in') ? '' : 'https://cyberdudebivash-security-hub.workers.dev');
+      || (location.hostname.endsWith('cyberdudebivash.in') ? '' : 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev');
     fetch(apiBase + '/api/mythos/god-mode/status', { headers: { Accept: 'application/json' } })
       .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(b) {
@@ -14014,7 +14014,7 @@ window.addEventListener('load', () => {
   'use strict';
 
   // ── Config ──────────────────────────────────────────────────────────────
-  const API  = window.CONFIG?.API_BASE || 'https://cyberdudebivash-security-hub.workers.dev';
+  const API  = window.CONFIG?.API_BASE || 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev';
   const AUTH = (() => {
     try { return JSON.parse(localStorage.getItem('cdb_auth') || '{}'); } catch { return {}; }
   })();
@@ -15930,7 +15930,7 @@ if(document.readyState==='loading'){
 (function(){
 'use strict';
 
-const API = (typeof API_BASE !== 'undefined' ? API_BASE : '') || 'https://cyberdudebivash-security-hub.workers.dev';
+const API = (typeof API_BASE !== 'undefined' ? API_BASE : '') || 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev';
 const V13_KEY = 'cdb_v13_';
 const stored = k => localStorage.getItem(V13_KEY+k);
 const store  = (k,v) => { try { localStorage.setItem(V13_KEY+k,v); } catch(e){} };
@@ -19730,7 +19730,7 @@ function renderPipeline(stages) {
 (function() {
 'use strict';
 
-var P3_API = (window.CDB_API_BASE || 'https://ai-security-hub.cyberdudebivash.workers.dev');
+var P3_API = (window.CDB_API_BASE || CONFIG.API_BASE);
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function p3Req(path, method, body) {
