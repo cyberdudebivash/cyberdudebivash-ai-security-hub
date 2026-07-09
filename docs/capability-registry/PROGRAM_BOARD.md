@@ -156,6 +156,29 @@ board's prior recommendation.
 
 ## Session log (most recent first)
 
+### 2026-07-09 — CAP-IDN-001 follow-up: third dead end found and fixed
+
+Same-day, before PR #108 (the fix below) had merged: user reported a live
+production escalation — scanning a domain after a scan-token reuse showed
+"Access denied: ... Please log in to continue," and clicking "log in" landed
+back on the homepage with no login form, escalated as a possible missing
+login feature entirely. Investigated before touching anything:
+`frontend/index.html:9657`'s 403-error "log in" link called
+`showModal('loginModal')` — an id that never existed anywhere in the file
+(grep-confirmed 0 matches; `showModal()` itself is not broken, e.g.
+`showModal('leadModal')` elsewhere correctly targets a real element). This
+is a **third, independent instance of the same CAP-IDN-001 bug class**, not
+evidence the login system itself is missing — the working login system was
+already confirmed and tested in the fix below. Did not build a duplicate
+login panel; replaced the dead `onclick` with a real
+`href="/user-dashboard.html"` anchor, matching the same evidence-based,
+minimally-disruptive pattern as the other two fixes. Re-verified live via
+Playwright (isolated the correct anchor among now-multiple same-target
+links on the page, confirmed no stray `onclick`). Added as a 4th test to
+`workers/test/homepageSignInPath.test.mjs`; added as a second commit on the
+same PR #108 branch (same root cause, same capability, still unmerged at
+the time). Full suite green: 180 files / 1902 tests.
+
 ### 2026-07-09 — Fix sprint: CAP-IDN-001 (homepage Sign In dead end)
 
 - **Trigger:** user adopted a standing "Global Production Release Governance"
