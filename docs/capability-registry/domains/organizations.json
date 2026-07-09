@@ -18,14 +18,14 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "grep -rl \"/api/orgs\" frontend/*.html returns 0 matches (independently re-verified 2026-07-08, in addition to the original 2026-07-08 Phase 0 audit finding in docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:208). Zero create/select/invite/switch UI exists anywhere in the frontend."
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "partial",
+      "evidence": "MOSTLY FIXED 2026-07-09. Added a new #page-orgs (list view + detail view: dashboard stats, members table, settings, danger zone) plus 4 modals (create/invite/remove-confirm/delete-confirm) to frontend/user-dashboard.html, wired to the existing, unmodified backend. Confirmed before building that no near-miss page existed under frontend/enterprise*.html (frontend/enterprise-dashboard.html is a threat-intel feed, frontend/enterprise-portal.html is SSO/SIEM integration docs, frontend/enterprise-kpi-dashboard.html is CDB's own internal revenue analytics, frontend/enterprise-security.html is marketing copy — none call any /api/orgs route), so this was a clean build with no duplication. 9 of 10 backend handlers now have a real UI consumer: handleCreateOrg, handleListOrgs, handleGetOrg, handleOrgDashboard, handleInviteMember, handleUpdateMemberRole, handleRemoveMember, handleUpdateOrg, handleDeleteOrg. Deliberately NOT wired: handleOrgScans (org-wide scan history) — the detail view surfaces the dashboard's 5-scan recent-activity summary but not a full paginated org scan-history browser; left as a known, disclosed remaining gap rather than overclaiming completeness."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No nav entry anywhere links to any organization page, because no organization page exists."
+      "discoverable": true,
+      "evidence": "New 'Organizations' nav-item in a new 'Team' sidebar section (frontend/user-dashboard.html), visible to every signed-in customer regardless of whether they currently belong to an org — the list view's empty state offers 'Create Organization' directly, since a brand-new signup account has zero orgs and there was previously no discoverable path to create one at all."
     },
     "auth_enforced": true,
     "rbac": {
@@ -36,28 +36,28 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/orgRbacIsolation.test.mjs and workers/test/phase9OrgDashboardSchema.test.mjs both import directly from workers/src/handlers/orgManagement.js (handleInviteMember/handleUpdateMemberRole/handleRemoveMember, and handleOrgDashboard/handleOrgScans respectively) — confirmed by direct import-statement grep, 2026-07-08."
+      "evidence": "workers/test/orgRbacIsolation.test.mjs and workers/test/phase9OrgDashboardSchema.test.mjs (backend, pre-existing, unchanged) plus workers/test/userDashboardOrgManagement.test.mjs (2026-07-09, new, 17 tests) — cross-checks the new frontend against workers/src/index.js and workers/src/handlers/orgManagement.js directly: every API call uses the real route/method/field names (including the org_id-vs-id and slug-vs-UUID gotchas the backend contract has), and the client-side RBAC surfaced in the UI (who sees Invite/Settings/Danger-Zone, who gets a role dropdown, who can remove/leave) matches the backend's actual enforcement exactly, not just visually. Independently re-verified live via a real headless-Chromium Playwright session — 27/27 checks across 3 scenarios: full OWNER lifecycle (empty state → create → detail view with live dashboard stats → invite → change a member's role → remove a member → save settings → back to list), and a dedicated MEMBER-role permission-boundary check confirming a non-owner sees zero management controls and only 'Leave' (never 'Remove') on their own row. axe-core WCAG2A/AA scan found and fixed two real new issues (a critical 'label' violation on the settings form's Name field — added proper for/id pairing rather than the weaker placeholder-as-fallback pattern used elsewhere in this file — and a critical 'select-name' violation on the dynamically-generated per-member role dropdown — added aria-label); remaining flagged violations are the same pre-existing, site-wide '--muted'/'.badge-gray'/'.btn-danger' color-contrast issue already documented as out-of-scope on CAP-IDN-002 and CAP-RBAC-002."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
       { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/orgManagement.js read directly (10 exported handle* functions + ROLE_PERMISSIONS confirmed); frontend/*.html grepped for '/api/orgs' (0 matches, independently re-run). Backend additionally has dynamic_api evidence via scripts/ceap-sweep.mjs:92-101, which calls POST /api/orgs, GET /api/orgs/{id}/dashboard, GET /api/orgs/{id}/scans directly via fetch every 6h — real, valid confirmation the API works, but zero evidence about frontend/UI, which this entry's frontend/navigation fields establish separately via static code inspection."
+      "last_verified": "2026-07-09",
+      "evidence": "FIXED 2026-07-09 (own commit, own regression tests). workers/src/handlers/orgManagement.js re-read in full to confirm every request/response field name and RBAC rule before writing any UI code (org_id from POST /api/orgs vs id from GET /api/orgs/:id; GET /api/orgs/:id resolves slug-or-id but GET /api/orgs/:id/dashboard requires the real UUID; the documented zero-member dashboard response shape with no summary key). Dynamic: real headless-Chromium Playwright session against the changed file served locally, mocking the full backend contract per RBAC role (OWNER and MEMBER) — 27/27 checks. Full backend suite green: 183 files / 1944 tests (182/1927 baseline + 1 new file/17 tests). scripts/seo-structure-lock.mjs: all 22 pages green (unaffected). customer_journey_complete stays false and operational_status is PILOT ONLY (not GA) pending a real dynamic_browser verification pass against production, and because handleOrgScans remains unwired — not because the shipped part is in doubt."
     },
     "contradicts_doc": [
       {
         "file": "GENERAL_AVAILABILITY_REPORT.md",
         "line": 79,
         "claim": "Organizations: create / members / RBAC / dashboard / scan history | GA APPROVED | Full admin loop live-verified this phase; RC-B1 fix verified at Phase IX gate",
-        "correction": "The \"live-verified\" evidence behind this claim is scripts/ceap-sweep.mjs, which calls the API directly (dynamic_api). No dynamic_browser (real customer, real page) verification exists or was possible: zero frontend pages call any /api/orgs* endpoint. Corrected status: NOT READY (backend-only, P2). This is the specific mistake this registry's verification.method field exists to make structurally impossible going forward."
+        "correction": "The original \"live-verified\" evidence behind this claim was scripts/ceap-sweep.mjs, which calls the API directly (dynamic_api) — no dynamic_browser verification existed, and no frontend page called any /api/orgs* endpoint at all, until this fix (2026-07-09). A real UI now exists for create/list/view/update/delete-org and invite/update-role/remove-member, but NOT for org-wide scan history (handleOrgScans remains unwired) and no production dynamic_browser pass has been performed — so 'GA APPROVED... scan history' specifically remains inaccurate; the rest of the claim is now much closer to true but still unverified against live production."
       }
     ],
-    "notes": "Highest-value single gap identified across the whole platform: full, working, RBAC-enforced backend with a complete admin loop, and precisely zero customer-facing UI. Building the frontend for this capability is a separate, future implementation program — this entry's job is to make the gap visible, evidenced, and correctly prioritized, not to close it."
+    "notes": "Was the highest-value single gap identified across the whole platform: full, working, RBAC-enforced backend with a complete admin loop, and precisely zero customer-facing UI. Fixed as a minimally-disruptive, additive build: zero changes to the existing, working orgManagement.js backend; a new sidebar section and page reusing the dashboard's exact existing markup/CSS/JS conventions (form-group/modal/card/table patterns) rather than introducing a new design language. Client-side permission checks were derived directly from the backend's own enforcement code (read first, then mirrored), not guessed at, and independently regression-tested against both. Known, deliberately disclosed remaining gap: org-wide scan history (handleOrgScans) has no UI yet — the detail view's dashboard summary covers the 5 most recent scans but not a full paginated browser; a reasonable next increment, not bundled into this pass to keep the change reviewable."
   }
 ]
