@@ -9654,7 +9654,7 @@ async function executeScan(module, payload) {
           () => runScan(module)
         );
       } else if (resp.status === 403) {
-        showErrorState(module, `Access denied: ${msg}. Please <a href="#" onclick="showModal('loginModal')" style="color:var(--accent)">log in</a> to continue.`);
+        showErrorState(module, `Access denied: ${msg}. Please <a href="/user-dashboard.html" style="color:var(--accent)">log in</a> to continue.`);
       } else if (resp.status >= 500) {
         showErrorState(module, `Server error (${resp.status}): ${msg}. Our team has been notified.`, () => runScan(module));
       } else {
