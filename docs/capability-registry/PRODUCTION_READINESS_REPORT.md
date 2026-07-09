@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T11:46:39.622Z
+Generated: 2026-07-09T12:20:27.615Z
 Capabilities catalogued: 56
 
 ## Overall Completion
@@ -18,7 +18,7 @@ Capabilities catalogued: 56
 | Dimension | % |
 |---|---|
 | Backend | 75% |
-| Frontend | 44.6% |
+| Frontend | 46.4% |
 | Parity (backend **and** frontend both exist) | 41.1% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
@@ -40,8 +40,8 @@ Capabilities catalogued: 56
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 14 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 11 | Backend exists, zero frontend surface |
+| Hidden features | 12 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 9 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 16 | Priority P1 |
 
@@ -132,7 +132,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-MSSP-001 | MSSP Partner Onboarding (Checkout / Free Trial → Portal Access) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
 | CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
 | CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### navigation (1 capability)
@@ -154,7 +154,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-ORG-001 | Organization Management | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-ORG-001 | Organization Management | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
 
 ### production-readiness (4 capabilities)
 

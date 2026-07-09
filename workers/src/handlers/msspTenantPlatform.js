@@ -17,20 +17,32 @@
 
 const nanoid = (n = 21) => crypto.randomUUID().replace(/-/g, '').slice(0, n);
 
+// A real MSSP partner session (workers/src/handlers/partnerAuth.js, magic-link
+// login) resolves to authCtx.partnerId with authCtx.userId/user_id both null
+// (see workers/src/auth/middleware.js's resolvePartnerSession + withAuthAliases,
+// which derives role:'partner' from partnerId) — was previously unreachable
+// here, since userId was the only scope this function checked. Every one of
+// the 18 handlers below already child-scopes its D1 queries by whatever this
+// returns, so a null/undefined scope already fails closed (empty results, not
+// a leak) rather than being unsafe — this just makes the real, paying partner
+// identity resolve like it already does in the sibling workers/src/handlers/
+// msspWorkspace.js (which backs the 2 already-wired /api/mssp/customers
+// handlers), instead of only the legacy JWT-user-with-tier-MSSP identity.
 function partnerScope(authCtx) {
-  return authCtx?.userId ?? authCtx?.user_id ?? null;
+  return authCtx?.partnerId ?? authCtx?.userId ?? authCtx?.user_id ?? null;
 }
 
-// `authCtx.role` is never actually set to 'admin' or 'mssp_admin' anywhere in
-// the auth layer (verified: no auth/*.js file sets either value) — this gate
-// was unreachable by anyone, including the platform owner via ADMIN_KEY,
-// since that bypass sets `isAdmin: true`, not `role`. Every one of the 18
-// handlers below already scopes its D1 queries to partnerScope(authCtx)
-// (authCtx.userId, JWT-verified) with parent/customer ownership checked
-// before any read or write — safe to open to real paying MSSP-tier
-// customers, not just staff.
+// Previously only admitted authCtx.isAdmin or tier==='MSSP' (a JWT/API-key
+// user whose own subscription tier is literally 'MSSP') — never
+// authCtx.role==='partner', the identity partner-portal.html's magic-link
+// session actually produces. That meant every one of this file's 18 handlers
+// 403'd for every real MSSP reseller partner, even on their own data, while
+// the 2 handlers in msspWorkspace.js (the only ones partner-portal.html
+// currently calls) worked, because that sibling file's requireMSSPAdmin
+// already included role==='partner' (see its own comment, 2026-07-06 revenue-
+// mechanisms audit). Mirrors that same, already-shipped, already-safe fix.
 function requireMSSPAdmin(authCtx) {
-  return authCtx?.isAdmin === true || (authCtx?.tier || '').toUpperCase() === 'MSSP';
+  return authCtx?.isAdmin === true || (authCtx?.tier || '').toUpperCase() === 'MSSP' || authCtx?.role === 'partner';
 }
 
 let _tenantTablesReady = false;

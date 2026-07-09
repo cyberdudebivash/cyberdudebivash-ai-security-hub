@@ -883,6 +883,12 @@
       </div>
     </div>
     <div class="sidebar-section">
+      <div class="sidebar-label">Team</div>
+      <div class="nav-item" data-page="orgs" onclick="showPage('orgs',this);loadOrgs()">
+        <span class="nav-icon">🏢</span> Organizations
+      </div>
+    </div>
+    <div class="sidebar-section">
       <div class="sidebar-label">Intelligence</div>
       <div class="nav-item" data-page="scans" onclick="showPage('scans',this)">
         <span class="nav-icon">🔍</span> Scan History
@@ -1019,6 +1025,102 @@
           </div>
           <div class="usage-bar"><div class="usage-fill" id="usage-fill" style="width:0%"></div></div>
           <p style="font-size:.75rem;color:var(--muted);margin-top:8px">Resets at midnight UTC</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ORGANIZATIONS ══ -->
+    <div id="page-orgs" class="page">
+      <div id="orgs-list-view">
+        <div class="page-title">Organizations</div>
+        <div class="page-subtitle">Create a team, invite members, and view org-wide security posture</div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Your Organizations</span>
+            <button class="btn btn-primary btn-sm" onclick="openCreateOrgModal()">+ Create Organization</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Plan</th><th>Your Role</th><th>Members</th><th></th></tr>
+              </thead>
+              <tbody id="orgs-table">
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="org-detail-view" style="display:none">
+        <button class="btn-ghost" onclick="showOrgList()" style="margin-bottom:12px">← Back to Organizations</button>
+        <div class="page-title" id="org-detail-name">—</div>
+        <div class="page-subtitle">
+          <span class="badge badge-blue" id="org-detail-plan">—</span>
+          <span id="org-detail-role"></span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Scans (30d)</div>
+            <div class="stat-value" id="org-stat-scans">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Critical Findings</div>
+            <div class="stat-value" id="org-stat-critical">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Risk Score</div>
+            <div class="stat-value" id="org-stat-risk">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active Monitors</div>
+            <div class="stat-value" id="org-stat-monitors">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Members</span>
+            <button class="btn btn-primary btn-sm" id="org-invite-btn" style="display:none" onclick="openInviteModal()">+ Invite Member</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>
+              </thead>
+              <tbody id="org-members-table">
+                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" id="org-settings-card" style="display:none">
+          <div class="card-header"><span class="card-title">Organization Settings</span></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label" for="org-name-input">Name</label>
+              <input id="org-name-input" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="org-domain-input">Domain</label>
+              <input id="org-domain-input" class="form-input" placeholder="acme.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="org-industry-input">Industry</label>
+              <input id="org-industry-input" class="form-input" placeholder="Financial Services" />
+            </div>
+            <button class="btn btn-primary" onclick="saveOrgSettings()">Save Changes</button>
+          </div>
+        </div>
+
+        <div class="card" id="org-danger-card" style="display:none;border-color:rgba(239,68,68,.3)">
+          <div class="card-header"><span class="card-title" style="color:var(--danger)">Danger Zone</span></div>
+          <div class="card-body">
+            <p style="color:var(--muted);font-size:.85rem;margin-bottom:12px">Deleting an organization removes it and its member associations permanently. This cannot be undone.</p>
+            <button class="btn btn-danger" onclick="confirmDeleteOrg()">Delete Organization</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1893,6 +1995,82 @@
   </div>
 </div>
 
+<!-- Create Organization -->
+<div class="modal-overlay" id="modal-create-org">
+  <div class="modal">
+    <div class="modal-title">🏢 Create Organization</div>
+    <div class="form-group">
+      <label class="form-label">Organization Name</label>
+      <input id="new-org-name" class="form-input" placeholder="Acme Inc." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Industry <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+      <input id="new-org-industry" class="form-input" placeholder="Financial Services" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Domain <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+      <input id="new-org-domain" class="form-input" placeholder="acme.com" />
+    </div>
+    <div id="create-org-err" class="alert alert-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-create-org')">Cancel</button>
+      <button class="btn btn-primary" onclick="createOrg()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite Member -->
+<div class="modal-overlay" id="modal-invite-member">
+  <div class="modal">
+    <div class="modal-title">✉️ Invite Member</div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px">The person must already have a CYBERDUDEBIVASH account.</p>
+    <div class="form-group">
+      <label class="form-label">Email address</label>
+      <input id="invite-email" class="form-input" type="email" placeholder="teammate@company.com" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Role</label>
+      <select id="invite-role" class="form-input">
+        <option value="ADMIN">Admin — manage members &amp; settings</option>
+        <option value="ANALYST">Analyst — run scans, view &amp; edit</option>
+        <option value="MEMBER" selected>Member — run scans, view</option>
+        <option value="VIEWER">Viewer — view only</option>
+      </select>
+    </div>
+    <div id="invite-member-err" class="alert alert-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-invite-member')">Cancel</button>
+      <button class="btn btn-primary" onclick="inviteMember()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Member -->
+<div class="modal-overlay" id="modal-remove-member">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--danger)">⚠️ Remove Member?</div>
+    <p id="remove-member-text" style="font-size:.88rem;color:var(--muted)"></p>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-remove-member')">Cancel</button>
+      <button class="btn btn-danger" onclick="removeMemberConfirmed()">Yes, Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Organization -->
+<div class="modal-overlay" id="modal-delete-org">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--danger)">⚠️ Delete Organization?</div>
+    <p style="font-size:.88rem;color:var(--muted)">
+      This will permanently delete "<strong id="delete-org-name" style="color:var(--text)"></strong>" and remove all member associations. This cannot be undone.
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-delete-org')">Cancel</button>
+      <button class="btn btn-danger" onclick="deleteOrgConfirmed()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -2329,6 +2507,273 @@
       showToast('Key revoked.');
       loadKeys();
     } catch (e) { showToast(e.message, 'err'); }
+  }
+
+  // ── Organizations ───────────────────────────────────────────────────────────
+  let _orgs = [];
+  let _currentOrg = null;          // full GET /api/orgs/:id response
+  let _removeMemberTarget = null;  // { orgId, userId }
+
+  function orgEsc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function orgRoleBadge(role) {
+    const cls = { OWNER: 'badge-purple', ADMIN: 'badge-blue', ANALYST: 'badge-green', MEMBER: 'badge-gray', VIEWER: 'badge-gray' }[role] || 'badge-gray';
+    return `<span class="badge ${cls}">${orgEsc(role)}</span>`;
+  }
+
+  async function loadOrgs() {
+    const tbody = document.getElementById('orgs-table');
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Loading organizations…</td></tr>`;
+    try {
+      const res = await apiFetch('/api/orgs');
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load organizations');
+      _orgs = d.organizations || [];
+      if (!_orgs.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px">
+          <div style="color:var(--muted);font-size:.9rem;margin-bottom:12px">No organizations yet. Create one to invite your team and see org-wide security posture.</div>
+        </td></tr>`;
+        return;
+      }
+      tbody.innerHTML = _orgs.map(o => `
+        <tr>
+          <td style="font-weight:600">${orgEsc(o.name)}</td>
+          <td><span class="badge badge-blue">${orgEsc(o.plan)}</span></td>
+          <td>${orgRoleBadge(o.role)}</td>
+          <td>${orgEsc(o.member_count)}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="openOrgDetail('${o.id}')">View →</button></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Could not load organizations. ${orgEsc(e.message)}</td></tr>`;
+    }
+  }
+
+  function openCreateOrgModal() {
+    document.getElementById('new-org-name').value = '';
+    document.getElementById('new-org-industry').value = '';
+    document.getElementById('new-org-domain').value = '';
+    document.getElementById('create-org-err').style.display = 'none';
+    openModal('modal-create-org');
+  }
+
+  async function createOrg() {
+    const name     = document.getElementById('new-org-name').value.trim();
+    const industry = document.getElementById('new-org-industry').value.trim();
+    const domain   = document.getElementById('new-org-domain').value.trim();
+    const errEl    = document.getElementById('create-org-err');
+    errEl.style.display = 'none';
+    if (!name || name.length < 2) { errEl.textContent = 'Name must be at least 2 characters.'; errEl.style.display = 'block'; return; }
+    try {
+      const res = await apiFetch('/api/orgs', {
+        method: 'POST',
+        body: JSON.stringify({ name, industry: industry || undefined, domain: domain || undefined }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to create organization');
+      closeModal('modal-create-org');
+      showToast(`Organization "${name}" created.`);
+      await loadOrgs();
+      openOrgDetail(d.org_id);
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  }
+
+  function showOrgList() {
+    document.getElementById('org-detail-view').style.display = 'none';
+    document.getElementById('orgs-list-view').style.display  = 'block';
+    _currentOrg = null;
+  }
+
+  async function openOrgDetail(orgId) {
+    document.getElementById('orgs-list-view').style.display  = 'none';
+    document.getElementById('org-detail-view').style.display = 'block';
+    document.getElementById('org-detail-name').textContent   = 'Loading…';
+    document.getElementById('org-members-table').innerHTML   = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Loading…</td></tr>`;
+    try {
+      const res = await apiFetch('/api/orgs/' + encodeURIComponent(orgId));
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load organization');
+      _currentOrg = d;
+      renderOrgDetail(d);
+      // handleOrgDashboard requires the real UUID (unlike GET /api/orgs/:id,
+      // it does not resolve a slug) — d.id (from the raw organizations row
+      // spread into the response) is always the real id, not the slug.
+      loadOrgDashboard(d.id);
+    } catch (e) {
+      showToast(e.message, 'err');
+      showOrgList();
+    }
+  }
+
+  function renderOrgDetail(org) {
+    document.getElementById('org-detail-name').textContent = org.name;
+    document.getElementById('org-detail-plan').textContent = org.plan;
+    document.getElementById('org-detail-role').innerHTML   = orgRoleBadge(org.your_role);
+
+    const canManage = ['OWNER', 'ADMIN'].includes(org.your_role);
+    const isOwner   = org.your_role === 'OWNER';
+
+    document.getElementById('org-invite-btn').style.display    = canManage ? 'inline-flex' : 'none';
+    document.getElementById('org-settings-card').style.display = canManage ? 'block' : 'none';
+    document.getElementById('org-danger-card').style.display   = isOwner ? 'block' : 'none';
+
+    if (canManage) {
+      document.getElementById('org-name-input').value     = org.name || '';
+      document.getElementById('org-domain-input').value   = org.domain || '';
+      document.getElementById('org-industry-input').value = org.industry || '';
+    }
+
+    const members = org.members || [];
+    document.getElementById('org-members-table').innerHTML = members.map(m => {
+      const isSelf = _user && m.user_id === _user.id;
+      const memberLabel = orgEsc(m.full_name || m.email || m.user_id);
+      const roleControl = (isOwner && m.role !== 'OWNER')
+        ? `<select class="form-input" style="width:auto;display:inline-block;padding:4px 8px;font-size:.78rem;margin-right:6px" aria-label="Change role for ${memberLabel}" onchange="updateMemberRole('${org.id}','${m.user_id}',this.value)">
+             ${['ADMIN','ANALYST','MEMBER','VIEWER'].map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${r}</option>`).join('')}
+           </select>`
+        : '';
+      const removeControl = ((canManage || isSelf) && m.role !== 'OWNER')
+        ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:rgba(239,68,68,.4)" onclick="confirmRemoveMember('${org.id}','${m.user_id}','${orgEsc(m.full_name || m.email || m.user_id).replace(/'/g, "\\'")}')">${isSelf ? 'Leave' : 'Remove'}</button>`
+        : '';
+      return `
+        <tr>
+          <td>${orgEsc(m.full_name || '—')}</td>
+          <td>${orgEsc(m.email || '—')}</td>
+          <td>${orgRoleBadge(m.role)}</td>
+          <td>${roleControl}${removeControl}</td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No members yet.</td></tr>';
+  }
+
+  async function loadOrgDashboard(orgId) {
+    try {
+      const res = await apiFetch('/api/orgs/' + encodeURIComponent(orgId) + '/dashboard');
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      // Zero-member orgs return a differently-shaped payload with no `summary`
+      // key (handleOrgDashboard's documented gotcha) — degrade to zeros
+      // rather than throwing/leaving stale "—" placeholders.
+      const s = d.summary || {};
+      document.getElementById('org-stat-scans').textContent    = s.total_scans_30d ?? 0;
+      document.getElementById('org-stat-critical').textContent = s.critical_count_30d ?? 0;
+      document.getElementById('org-stat-risk').textContent     = s.avg_risk_score ?? '—';
+      document.getElementById('org-stat-monitors').textContent = s.active_monitors ?? 0;
+    } catch (e) {
+      // Non-fatal — the member list/settings above are still usable.
+    }
+  }
+
+  function openInviteModal() {
+    document.getElementById('invite-email').value = '';
+    document.getElementById('invite-role').value   = 'MEMBER';
+    document.getElementById('invite-member-err').style.display = 'none';
+    openModal('modal-invite-member');
+  }
+
+  async function inviteMember() {
+    const email = document.getElementById('invite-email').value.trim();
+    const role  = document.getElementById('invite-role').value;
+    const errEl = document.getElementById('invite-member-err');
+    errEl.style.display = 'none';
+    if (!email) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; return; }
+    try {
+      const res = await apiFetch('/api/orgs/' + encodeURIComponent(_currentOrg.id) + '/members', {
+        method: 'POST',
+        body: JSON.stringify({ email, role }),
+      });
+      const d = await res.json();
+      // handleInviteMember returns success:false (not just a non-2xx status)
+      // when no account exists for that email — both must be checked.
+      if (!res.ok || d.success === false) throw new Error(d.message || d.error || 'Invite failed');
+      closeModal('modal-invite-member');
+      showToast(d.message || 'Member invited.');
+      openOrgDetail(_currentOrg.id);
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  }
+
+  async function updateMemberRole(orgId, userId, role) {
+    try {
+      const res = await apiFetch(`/api/orgs/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ role }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to update role');
+      showToast('Role updated.');
+    } catch (e) {
+      showToast(e.message, 'err');
+    } finally {
+      openOrgDetail(orgId);
+    }
+  }
+
+  function confirmRemoveMember(orgId, userId, name) {
+    _removeMemberTarget = { orgId, userId };
+    document.getElementById('remove-member-text').textContent = `Remove ${name} from this organization?`;
+    openModal('modal-remove-member');
+  }
+
+  async function removeMemberConfirmed() {
+    if (!_removeMemberTarget) return;
+    const { orgId, userId } = _removeMemberTarget;
+    try {
+      const res = await apiFetch(`/api/orgs/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to remove member');
+      showToast('Member removed.');
+    } catch (e) {
+      showToast(e.message, 'err');
+    } finally {
+      closeModal('modal-remove-member');
+      openOrgDetail(orgId);
+    }
+  }
+
+  async function saveOrgSettings() {
+    const name     = document.getElementById('org-name-input').value.trim();
+    const domain   = document.getElementById('org-domain-input').value.trim();
+    const industry = document.getElementById('org-industry-input').value.trim();
+    try {
+      const res = await apiFetch('/api/orgs/' + encodeURIComponent(_currentOrg.id), {
+        method: 'PUT',
+        body: JSON.stringify({ name: name || undefined, domain: domain || undefined, industry: industry || undefined }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to update organization');
+      showToast('Organization updated.');
+      openOrgDetail(_currentOrg.id);
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
+  function confirmDeleteOrg() {
+    document.getElementById('delete-org-name').textContent = _currentOrg?.name || '';
+    openModal('modal-delete-org');
+  }
+
+  async function deleteOrgConfirmed() {
+    if (!_currentOrg) return;
+    try {
+      const res = await apiFetch('/api/orgs/' + encodeURIComponent(_currentOrg.id), { method: 'DELETE' });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to delete organization');
+      showToast('Organization deleted.');
+      closeModal('modal-delete-org');
+      showOrgList();
+      loadOrgs();
+    } catch (e) {
+      showToast(e.message, 'err');
+      closeModal('modal-delete-org');
+    }
   }
 
   // ── Payments ─────────────────────────────────────────────────────────────────

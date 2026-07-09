@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, CAP-RBAC-002 fix — tier-gating case bugs + MSSP support)
+## Current status (2026-07-09, CAP-MSSP-003 fix — MSSP per-client drill-down + partner-session auth-gate fix)
 
 | Metric | Value | Source |
 |---|---|---|
@@ -18,11 +18,11 @@ registry-population session.
 | Domains empty (stubs) | 4 | see Remaining Work Register |
 | Capabilities registered | 56 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 182 files / 1927 tests passing | `npx vitest run`, run 2026-07-09 (includes 11 new tests for CAP-RBAC-002) |
+| Worker test suite | 185 files / 1967 tests passing | `npx vitest run`, run 2026-07-09 (includes 23 new tests for CAP-MSSP-003: 12 backend auth-gate, 11 frontend contract) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 75% / 44.6% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 75% / 43.8% / 41.1% before this fix — CAP-RBAC-002 frontend status: broken → partial) |
+| Backend / Frontend / Parity | 75% / 46.4% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 75% / 45.5% / 41.1% before this fix — CAP-MSSP-003 frontend status: missing → partial) |
 | Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production) |
-| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged this pass: CAP-RBAC-002 stays P4 (still `PILOT ONLY`, not closed — org-role gating remains entirely unwired); see remediation sections below |
+| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged this pass: CAP-MSSP-003 stays P2 (still `PILOT ONLY`, not GA — notification prefs, ticket rules, label management, hierarchy view, and a production `dynamic_browser` pass remain); see remediation sections below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -188,6 +188,168 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: CAP-MSSP-003 (MSSP per-client drill-down + partner-session auth-gate fix), 3rd of a 4-initiative enterprise-readiness program
+
+- **Trigger:** continuation of the 4-initiative program. Research for this
+  item had already been done in parallel during the CAP-RBAC-002 wave and
+  surfaced a blocking finding that changed the shape of this fix before any
+  code was written.
+- **Root cause, confirmed by direct code read (not assumed from the research
+  pass):** two layers. (1) `frontend/partner-portal.html`'s client list threw
+  away `c.id`/`c.org_slug` after fetching them — no stable key to drill into
+  even with a UI. (2) The real blocker: `workers/src/handlers/
+  msspTenantPlatform.js`'s `requireMSSPAdmin()`/`partnerScope()` never
+  recognized a real MSSP partner session. `resolvePartnerSession()`
+  (`workers/src/auth/middleware.js`) resolves a magic-link partner login to
+  `{ partnerId, userId: null, user_id: null, tier: 'RESELLER'|..., role:
+  'partner' }` — `requireMSSPAdmin()` only checked `isAdmin` and
+  `tier==='MSSP'` (a JWT/API-key user whose own subscription happens to be
+  literally MSSP-tier, a *different* identity), so every one of the 18
+  handlers in this file 403'd for every real partner. Confirmed the sibling
+  `workers/src/handlers/msspWorkspace.js` (which backs the 2 already-wired
+  handlers, `GET`/`POST /api/mssp/customers`) was already fixed for exactly
+  this case, with its own explanatory comment dated 2026-07-06 — this file
+  just never received the same fix. Building a frontend against the
+  documented contract, as originally planned, would have shipped a feature
+  that silently failed for every real customer in production.
+- **Fix (backend, done first):** mirrored the identical, already-proven-safe
+  pattern from `msspWorkspace.js` into `msspTenantPlatform.js`:
+  `requireMSSPAdmin()` now also admits `authCtx?.role === 'partner'`;
+  `partnerScope()` now checks `authCtx?.partnerId` first, falling back to
+  `userId`/`user_id` for the legacy JWT-tier-MSSP identity. Zero handler
+  bodies changed — both functions are called by all 18 handlers, so this one
+  surgical, 2-function change fixes every one of them at once. Verified this
+  doesn't weaken anything: anonymous and plain-authenticated-non-partner
+  callers are still 403'd; a spoofed `userId` cannot override the
+  server-derived `partnerId`; the legacy `tier:'MSSP'` path is unaffected.
+- **Fix (frontend):** client rows in `frontend/partner-portal.html` are now
+  clickable, opening a drill-down view with 4 tabs — Overview (dashboard
+  stats + labels, read-only), Sub-Tenants (list + create), API Keys (list +
+  generate with a one-time plaintext reveal + revoke), Billing & Usage
+  (30-day usage stats + billing-period history) — wiring 8 of the remaining
+  16 handlers. Introduced a lightweight tab-bar and modal system (this file
+  had neither), reusing its existing card/stat-box/badge/table CSS exactly.
+  **Deliberately NOT wired**, disclosed rather than hidden: Notification
+  Preferences (a 5-channel × 12-event settings matrix) and Ticket Routing
+  Rules (confirmed **partner-wide, not customer-scoped** — nesting it under
+  one client's drill-down would mislead a partner into thinking a rule only
+  applies there; needs a product decision on where it belongs before it's
+  built at all), label add/remove, and the parent/child hierarchy tree view
+  beyond the flat sub-tenant list already shown.
+- **Verification:** inline `<script>` syntax check clean. Real
+  headless-Chromium Playwright session, mocking the full backend contract —
+  **17/17 checks**: dashboard → client list → drill-down → all 4 tabs →
+  create a sub-tenant → generate an API key with the plaintext shown exactly
+  once → revoke a key → back to dashboard. Zero uncaught JS exceptions.
+  axe-core scan: zero new violations (the one flagged violation is on the
+  pre-existing, unmodified dashboard shell, present before navigating to any
+  new view — out of scope, same as the pattern documented on CAP-IDN-002/
+  CAP-RBAC-002/CAP-ORG-001).
+- **Tests:** `workers/test/msspPartnerSessionTenantPlatform.test.mjs` (new,
+  12 tests, real in-memory SQLite, same convention as the existing
+  `deadAdminChecksRestored.test.mjs`) — proves the real partner-session
+  identity (shaped exactly like the real middleware's output, not a
+  simplified stand-in) can now reach its own data, that cross-partner
+  isolation still holds for it, and that the legacy identity is unaffected.
+  `workers/test/partnerPortalClientDrilldown.test.mjs` (new, 11 tests,
+  frontend, cross-checks against `index.js` and `msspTenantPlatform.js`
+  directly). Full suite green: 185 files / 1967 tests (184/1956 after the
+  backend-only fix, 185/1967 after the frontend — 183/1944 baseline + 12
+  backend + 11 frontend).
+- **Registry:** `mssp.json`'s `CAP-MSSP-003` updated — `frontend.status`
+  `missing → partial`, `navigation.discoverable` `false → true`,
+  `operational_status` `NOT READY → PILOT ONLY`, full fix evidence
+  including the auth-gate root cause. Also **corrected a pre-existing
+  inaccuracy** found while updating this entry: its `test_coverage` field
+  previously claimed `msspTenantIsolation.test.mjs`/`msspIsolation.test.mjs`
+  import from `msspTenantPlatform.js` — independently re-verified false,
+  both import exclusively from the sibling `msspWorkspace.js`; corrected to
+  cite the real pre-existing coverage (`deadAdminChecksRestored.test.mjs`,
+  4 of 18 handlers, legacy identity only). `PRODUCTION_READINESS_REPORT.md`
+  regenerated (frontend 45.5% → 46.4%). Validator: 56 IDs, 0 failures, 0
+  warnings (same bare-filename-citation round-trip as CAP-ORG-001 — fixed).
+- **Next:** Staff Admin Console for user/org lifecycle (4th and last of the
+  program) — new backend surface, most security-sensitive, done last and
+  most carefully per the original risk-ascending sequencing decision.
+
+### 2026-07-09 — Fix sprint: CAP-ORG-001 (Organization Management UI), 2nd of a 4-initiative enterprise-readiness program
+
+- **Trigger:** continuation of the 4-initiative program agreed after the
+  CAP-RBAC-002 fix (below). This was the customer's and this board's
+  independent top recommendation: registry's own prior wording called it
+  "the highest-value single gap identified across the whole platform" — a
+  complete, RBAC-enforced, tested backend with precisely zero customer-facing
+  UI, and a brand-new signup account had no org and no way to create one.
+- **Recovery/research done ahead of coding (previous session, reused here):**
+  a dedicated research pass had already confirmed no near-miss page existed
+  under `frontend/enterprise*.html` (checked all 4: threat-intel feed, SSO/SIEM
+  docs, CDB's own internal revenue KPIs, marketing copy — none call
+  `/api/orgs`) and had extracted the complete, exact request/response contract
+  for all 10 backend handlers, including two easy-to-miss gotchas: the create
+  response field is `org_id`, not `id`; `GET /api/orgs/:id/dashboard` requires
+  the real UUID (unlike `GET /api/orgs/:id`, which resolves a slug), and its
+  zero-member response is a differently-shaped payload with no `summary` key.
+- **Fix:** added `#page-orgs` to `frontend/user-dashboard.html` — a list view
+  (empty-state "Create Organization" CTA + org table) and a detail view
+  (dashboard stat tiles, members table, settings form, danger zone), plus 4
+  modals (create/invite/remove-confirm/delete-confirm), all reusing the
+  page's existing form/card/table/modal CSS and JS conventions exactly. New
+  "Team" sidebar section. Client-side RBAC was derived directly from
+  `orgManagement.js`'s own enforcement code, not guessed: only OWNER/ADMIN
+  see the Invite button and Settings card; only OWNER sees the Danger Zone
+  or a per-member role dropdown; OWNER/ADMIN/the member themself can
+  remove/leave; the OWNER's own row never offers a role-change or
+  remove/leave control (matching the backend's `role != 'OWNER'` guards).
+  Zero backend changes. Deliberately left `handleOrgScans` (org-wide scan
+  history) unwired rather than rushed — disclosed as a known remaining gap.
+- **Verification:** inline `<script>` syntax check clean (3/3 blocks).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green. Real headless-Chromium
+  Playwright session, mocking the full backend contract per role — **27/27
+  checks** across 3 scenarios: full OWNER lifecycle (empty state → create →
+  detail view with live dashboard stats → invite → change a member's role →
+  remove a member → save settings → back to list, with the newly-created org
+  now appearing in the list), and a dedicated MEMBER-role boundary check
+  (zero management controls visible, only "Leave" — never "Remove" — on
+  their own row, no action at all available on the other OWNER's row). Zero
+  uncaught JS exceptions.
+- **axe-core scan found and fixed 2 real new issues** (both `critical`
+  severity, not the usual pre-existing `color-contrast` noise): a `label`
+  violation on the settings form's Name field (fixed with proper `for`/`id`
+  pairing — root-caused precisely: the pre-existing login/signup fields
+  pass this same axe rule only because they happen to have a `placeholder`
+  attribute, which HTML-AAM's accessible-name fallback accepts as a weak
+  substitute; this new field had neither a real label nor a placeholder, so
+  it had zero accessible name at all — fixed with the *stronger* pattern
+  rather than copying the weaker pre-existing one), and a `select-name`
+  violation on the dynamically-generated per-member role `<select>` (fixed
+  with `aria-label`). Remaining flagged violations are the same pre-existing,
+  site-wide `--muted`/`.badge-gray`/`.btn-danger` color-contrast issue
+  already documented as out-of-scope on CAP-IDN-002 and CAP-RBAC-002 — every
+  class involved was reused, not newly introduced.
+- **Tests:** `workers/test/userDashboardOrgManagement.test.mjs` (new, 17
+  tests) — cross-checks the frontend against `workers/src/index.js` and
+  `workers/src/handlers/orgManagement.js` directly (exact route/field names,
+  the `org_id`-vs-`id` and slug-vs-UUID gotchas, and that the client RBAC
+  literally matches the backend's role checks). Full suite green: 183 files
+  / 1944 tests (182/1927 baseline + 1 new file/17 tests).
+- **Registry:** `organizations.json`'s `CAP-ORG-001` updated — `frontend.status`
+  `missing → partial`, `navigation.discoverable` `false → true`,
+  `operational_status` `NOT READY → PILOT ONLY`, full fix evidence, and the
+  `GENERAL_AVAILABILITY_REPORT.md` correction narrowed (scan-history UI and
+  a production verification pass are the specifically-still-inaccurate
+  parts, not the whole "GA APPROVED" claim). Stays P2 (not closed):
+  `handleOrgScans` remains unwired, and `customer_journey_complete` stays
+  `false` pending a real `dynamic_browser` pass. `PRODUCTION_READINESS_REPORT.md`
+  regenerated (frontend 44.6% → 45.5%). Validator: 56 IDs, 0 failures, 0
+  warnings (one round-trip needed: initial evidence text cited
+  `enterprise-dashboard.html` etc. as bare filenames, which the validator
+  correctly rejects — fixed to the required `frontend/enterprise-dashboard.html`
+  full-path form).
+- **Next:** MSSP per-client drill-down (3rd of 4). Research already done in
+  the same prior session surfaced a **blocking backend finding** for that
+  one — see the CAP-RBAC-002 entry below for detail — so that fix starts
+  with a small backend auth-gate change, not frontend work.
 
 ### 2026-07-09 — Fix sprint: CAP-RBAC-002 (tier-gating case bugs + MSSP support), part of a 4-initiative enterprise-readiness program
 
