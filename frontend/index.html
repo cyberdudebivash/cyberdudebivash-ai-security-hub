@@ -11204,8 +11204,43 @@ async function cdbStartSubscriptionAuto(planKey) {
         }
       },
       modal: {
-        ondismiss: function() {
+        // 2026-07-10 (real customer incident): the Razorpay success `handler`
+        // above only fires if the SDK detects payment completion *before* the
+        // checkout window closes. UPI payments confirmed by scanning a QR code
+        // are settled out-of-band (a different app) and Razorpay must poll to
+        // detect them — if that confirmation lags, the checkout can report
+        // "dismissed" even though the customer's bank/UPI app already shows
+        // the debit as successful. This previously did nothing but reset the
+        // button, leaving a customer who really did pay with zero feedback
+        // and no way to know whether their money went anywhere. Now: check
+        // the order's real server-side status before saying anything, rather
+        // than assuming success or failure.
+        ondismiss: async function() {
           if (btn) { btn.textContent = origText; btn.disabled = false; }
+          const orderId = order.order_id;
+          let paid = false;
+          for (let attempt = 0; attempt < 3 && !paid; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 3000));
+            try {
+              const statusRes = await fetch('/api/payments/status/' + encodeURIComponent(orderId));
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData.status === 'paid') { paid = true; break; }
+              }
+            } catch (e) { console.error('[CDB] Payment status check failed:', e); }
+          }
+          if (paid) {
+            if (typeof SUBSCRIPTION !== 'undefined') SUBSCRIPTION.fetch();
+            if (typeof TOAST !== 'undefined') {
+              TOAST.success('Payment received and your ' + plan.label + ' plan is being activated. If it doesn\'t show as active within a few minutes, refresh the page or log in again.', 'Payment Confirmed');
+            } else {
+              alert('Payment received — your ' + plan.label + ' plan is being activated. If it doesn\'t show as active shortly, refresh the page or log in again.');
+            }
+          } else {
+            const msg = 'Checkout was closed before payment could be confirmed. If you completed a payment, it can take a minute to process — wait and refresh, or contact support@cyberdudebivash.com with this order reference: ' + orderId;
+            if (typeof TOAST !== 'undefined') TOAST.info ? TOAST.info(msg, 'Checkout Closed') : TOAST.error(msg, 'Checkout Closed');
+            else alert(msg);
+          }
         }
       }
     };
