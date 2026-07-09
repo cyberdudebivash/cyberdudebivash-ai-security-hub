@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, CAP-MSSP-003 fix — MSSP per-client drill-down + partner-session auth-gate fix)
+## Current status (2026-07-09, CAP-ADMIN-004 fix — Staff Admin Console: Users + Organizations oversight, 4th and last of the enterprise-readiness program)
 
 | Metric | Value | Source |
 |---|---|---|
@@ -18,11 +18,11 @@ registry-population session.
 | Domains empty (stubs) | 4 | see Remaining Work Register |
 | Capabilities registered | 56 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 185 files / 1967 tests passing | `npx vitest run`, run 2026-07-09 (includes 23 new tests for CAP-MSSP-003: 12 backend auth-gate, 11 frontend contract) |
+| Worker test suite | 187 files / 2002 tests passing | `npx vitest run`, run 2026-07-09 (includes 35 new tests for CAP-ADMIN-004: 20 backend RBAC/business-logic, 15 frontend route/permission/injection-safety contract) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 75% / 46.4% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 75% / 45.5% / 41.1% before this fix — CAP-MSSP-003 frontend status: missing → partial) |
-| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production) |
-| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged this pass: CAP-MSSP-003 stays P2 (still `PILOT ONLY`, not GA — notification prefs, ticket rules, label management, hierarchy view, and a production `dynamic_browser` pass remain); see remediation sections below |
+| Backend / Frontend / Parity | 75.9% / 47.3% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 75% / 46.4% / 41.1% before this fix — CAP-ADMIN-004 backend+frontend status: missing → partial) |
+| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session with mocked API responses against the changed file, not a `dynamic_browser` pass against production) |
+| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged this pass: CAP-ADMIN-004 stays P2 (still `PILOT ONLY`, not GA — Marketplace/Academy/Affiliate/CRM/Support admin surfaces, organization suspension (needs a schema migration), and a production `dynamic_browser` pass all remain); see remediation sections below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -188,6 +188,126 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: CAP-ADMIN-004 (Staff Admin Console: Users + Organizations oversight), 4th and last of the 4-initiative enterprise-readiness program
+
+- **Trigger:** direct continuation of the 4-initiative program. This is the
+  most security-sensitive of the four — a new backend surface granting staff
+  destructive/PII-visible power over customer accounts — deliberately
+  sequenced last, after re-confirming the codebase's RBAC/audit patterns
+  across three lower-risk builds first (CAP-RBAC-002, CAP-ORG-001,
+  CAP-MSSP-003).
+- **Recovery note:** the prior session's implementation of this exact item
+  was in progress (backend handler, RBAC keys, routes, and a partial
+  `admin-portal.html` edit) when a usage-limit cutoff ended that session
+  mid-work. None of it was ever committed — confirmed directly (`git log`,
+  `grep` for the handler filename, and the capability registry, which still
+  showed `CAP-ADMIN-004` as `"status": "missing"` with zero handlers). Per
+  `EXECUTION_PROCEDURE.md`'s own rule ("if it isn't in git, it didn't
+  happen, no matter how confidently it was described"), this was rebuilt
+  from scratch against the current tree rather than assumed to exist.
+- **Scope decision:** `CAP-ADMIN-004` as originally registered spans 7
+  areas (Users, Organizations, Marketplace, Academy, Affiliate, CRM,
+  Support). Only Users and Organizations map to the customer's actual
+  "user lifecycle" ask; the other 5 remain explicitly out of scope and the
+  registry entry still reflects them as missing.
+- **Root cause / design basis, confirmed by direct code read:**
+  `users.status` already exists in schema (`active|suspended|unverified`)
+  **and** is already fully enforced end-to-end — `handlers/auth.js`'s
+  `handleLogin` already rejects any non-`'active'` user with 403 "Account
+  suspended" — so "disable a customer account" only needed a control plane
+  wired onto enforcement that was already live, the same "backend built, no
+  door" bug class as the rest of this program, just inverted. By contrast,
+  `organizations` has no `status`/`suspended` column (confirmed against
+  `workers/schema_master.sql`), so org suspension is genuinely not
+  representable without a schema migration — not built, and disclosed
+  rather than invented.
+- **Fix (backend):** new `workers/src/handlers/staffUserOrgAdmin.js` —
+  `handleListUsers`/`handleGetUserAdmin`/`handleUpdateUserStatus` (search,
+  view, suspend/reactivate) and `handleListOrgsAdmin`/`handleGetOrgAdmin`
+  (view-only org oversight, with member list). Two new `auth/rbac.js`
+  permission keys, matching the file's existing least-privilege pattern:
+  `admin:users:manage` (Super Admin only — PII + account mutation) and
+  `admin:orgs:read` (Platform Admin — view-only, lower bar). Suspending a
+  user both flips `users.status` and revokes every outstanding refresh
+  token via the existing `auth/jwt.js` `revokeAllUserTokens` (the same
+  helper "log out everywhere" and password-change already use) — otherwise
+  a suspension would only take effect on the session's natural expiry, not
+  immediately. Routes registered in `index.js` immediately after the
+  existing `/api/admin/roles*` block, matching its exact dynamic-import
+  style.
+- **Fix (frontend):** two new sections in the existing staff console
+  `frontend/admin-portal.html` (no new page) — "Customer Accounts" and
+  "Organization Oversight" — plus two detail modals, introducing this
+  file's first modal system (it had none; modelled on the sibling
+  `partner-portal.html` convention). Both sections gracefully degrade to a
+  restricted-access message on 403, mirroring the existing
+  `loadRoles()`/`renderGrantForm()` pattern exactly. While in the file,
+  fixed a real **pre-existing unescaped-innerHTML-injection** bug in
+  `loadRoles()` (raw `${r.email}`/`${r.role}`/`${r.granted_by}`/
+  `${r.granted_at}` spliced directly into table rows, plus an inline
+  `onclick` built by partially-escaping a value into a single-quoted JS
+  string embedded in an HTML attribute — safe from neither an HTML
+  injection nor an attribute-breakout with a crafted role/email). Fixed by
+  adding an `esc()` helper (matching `partner-portal.html`'s DOM-based
+  pattern) and switching the revoke button to `data-*` attributes read via
+  `this.dataset`, which need only ordinary HTML-attribute escaping instead
+  of the harder double-context (JS-string-inside-HTML-attribute) escaping
+  the original code never did correctly.
+- **Verification:** full backend suite green before AND after the frontend
+  work (zero regressions at each step). Live headless-Chromium Playwright
+  session against a local static server with mocked `/api/admin/*`
+  responses — a SUPERADMIN session (search, view, suspend, reactivate,
+  org drill-down — 21/21 checks) and a plain ADMIN session (Users
+  correctly shows the Super-Admin-only restricted state; Organizations
+  still works at its lower permission bar) — zero uncaught JS exceptions
+  in either. axe-core scan on both new sections and both new modals found
+  one real new issue — `scrollable-region-focusable` on the two modal
+  member/org tables, which genuinely overflow inside the narrower modal
+  box unlike the full-width page tables — fixed with `tabindex="0"` +
+  `aria-label`. Remaining violations (`color-contrast`,
+  `landmark-one-main`, `region`, `select-name`) confirmed pre-existing on
+  untouched parts of the same page (verified each traces to a class or
+  structural pattern — `--text-dim`, `.data-table th`, missing `<main>` —
+  that already existed before this change), not introduced by this fix.
+- **Tests:** `workers/test/staffUserOrgAdmin.test.mjs` (20, backend — RBAC
+  gating per permission tier including the ADMIN-vs-SUPERADMIN boundary,
+  search, suspend/reactivate incl. refresh-token revocation and audit-log
+  write, unchanged-status no-op, org member listing) and
+  `workers/test/adminPortalStaffOversightContract.test.mjs` (15, frontend —
+  route/permission contract against the real backend, plus a named
+  regression guard locking in the `loadRoles()` injection fix and
+  `esc()`-wrapping on every new render path so it can't silently regress).
+  Full suite green: 187 files / 2002 tests.
+- **Registry:** `administration.json`'s `CAP-ADMIN-004` updated in place
+  (not a new ID, matching the CAP-ORG-001/CAP-MSSP-003 precedent) —
+  backend/frontend `missing` → `partial`, `navigation.discoverable` →
+  `true`, `rbac.enforced` → `true`, `operational_status` `NOT READY` →
+  `PILOT ONLY`. `verification.method` recorded as `static` (not
+  `dynamic_browser`) to match the CAP-ORG-001 precedent — that field is
+  reserved for a live-production pass, not a local mocked-route Playwright
+  session, even though a real browser was used. Validator: 56 IDs, 0
+  failures, 0 warnings.
+- **Also fixed this session, before this item:** CI on `main` was red
+  after the CAP-ORG-001/CAP-MSSP-003 merge (PR #112) — Secret Scan,
+  Test & Quality Gate, and CI — Lint & Validate all showed failures.
+  Root-caused from GitHub Actions job timestamps (not assumed): 12 jobs
+  across those 3 workflows never got a runner for ~28 minutes then were
+  all cancelled within the same few seconds — a runner-concurrency-pool
+  starvation event, not a code regression (every job that *did* get a
+  runner passed cleanly). Fixed the one real, permanent gap it surfaced —
+  `.github/workflows/gitleaks.yml` was the only CI-adjacent workflow with
+  no `concurrency` group, unlike every sibling workflow — in PR #113.
+  Could not trigger a re-run of the stuck runs directly (GitHub API
+  returned 403, insufficient Actions-write permission on this session's
+  GitHub App) — flagged for the repo owner to re-run manually.
+- **Next:** none remaining in this 4-initiative program. Follow-on work
+  disclosed but explicitly out of scope this pass: Marketplace/Academy/
+  Affiliate/CRM/Support staff admin surfaces (the other 5 areas of
+  `CAP-ADMIN-004`), organization suspension (needs an `organizations`
+  schema migration), delegated/scoped MSSP staff admin, in-product support
+  tickets, and a production `dynamic_browser` verification pass across
+  every capability in the registry.
 
 ### 2026-07-09 — Fix sprint: CAP-MSSP-003 (MSSP per-client drill-down + partner-session auth-gate fix), 3rd of a 4-initiative enterprise-readiness program
 

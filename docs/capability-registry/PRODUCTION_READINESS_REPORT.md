@@ -10,15 +10,15 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T12:20:27.615Z
+Generated: 2026-07-09T13:28:18.261Z
 Capabilities catalogued: 56
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 75% |
-| Frontend | 46.4% |
+| Backend | 75.9% |
+| Frontend | 47.3% |
 | Parity (backend **and** frontend both exist) | 41.1% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
@@ -69,7 +69,7 @@ complete", "bug free", or "guaranteed".
 | CAP-ADMIN-001 | Ops Admin Console — Business & Platform Visibility | ✓ | ✓ | ✗ | NOT READY | P6 |
 | CAP-ADMIN-002 | Platform Infrastructure Ops APIs (Incidents, Maintenance, Deployments, SSO Config, Email Health, Data Seeding) | ✓ | ✗ | ✗ | NOT READY | P6 |
 | CAP-ADMIN-003 | Owner-Only Revenue & Growth Business-Intelligence APIs | ✓ | ✗ | ✗ | NOT READY | P6 |
-| CAP-ADMIN-004 | Missing Admin Surfaces — Users, Organizations, Marketplace, Academy, Affiliate, CRM, Support | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-ADMIN-004 | Admin Surfaces — Users, Organizations (done); Marketplace, Academy, Affiliate, CRM, Support (missing) | ◐ | ◐ | ✓ | PILOT ONLY | P2 |
 
 ### affiliate-partner (2 capabilities)
 

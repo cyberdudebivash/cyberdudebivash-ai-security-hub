@@ -101,6 +101,8 @@ export const PERMISSIONS = {
   'admin:business:read':   (ctx, env) => isSuperAdmin(ctx, env),   // revenue/CRM/proposals — business-critical, super-admin only
   'admin:roles:manage':    (ctx, env) => isSuperAdmin(ctx, env),   // grant/revoke platform roles
   'admin:infra:operate':   (ctx, env) => isSuperAdmin(ctx, env),   // god-mode / autonomous orchestration
+  'admin:users:manage':    (ctx, env) => isSuperAdmin(ctx, env),   // view + suspend/reactivate individual customer accounts — PII-sensitive, super-admin only
+  'admin:orgs:read':       (ctx, env) => isPlatformAdmin(ctx, env), // staff oversight of any organization — view-only, no suspend (no status column yet)
 };
 
 export async function can(authCtx, env, permission) {
