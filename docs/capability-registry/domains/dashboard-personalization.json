@@ -12,41 +12,41 @@
         "handleGetCISOReport", "handleExportCisoPdf"
       ],
       "routes_sampled": [
-        { "path": "/api/ciso/metrics", "method": "GET", "evidence": "workers/src/index.js:4303" },
-        { "path": "/api/ciso/posture", "method": "GET", "evidence": "workers/src/index.js:4308" }
+        { "path": "/api/ciso/metrics", "method": "GET", "evidence": "workers/src/index.js:4338" },
+        { "path": "/api/ciso/posture", "method": "GET", "evidence": "workers/src/index.js:4346" }
       ],
       "routes_fully_enumerated": false,
-      "status": "broken"
+      "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
       "pages": ["frontend/user-dashboard.html", "frontend/index.html"],
-      "status": "broken",
-      "evidence": "frontend/user-dashboard.html:2251-2265 (loadCisoMetrics()) correctly calls GET /api/ciso/metrics and correctly unwraps the {success,data,error} response envelope (its own comment at :2260-2262 explicitly documents doing this, unlike the systemic bug found elsewhere in this registry) — the frontend side of this integration is done right. The defect is server-side: workers/src/index.js:4300-4303 gates /api/ciso/metrics behind requireCan(authCtx, env, 'admin:business:read'), and workers/src/auth/rbac.js:101 defines that exact permission as isSuperAdmin-only ('business-critical, super-admin only', per its own inline comment) — satisfiable only by the platform owner, the ADMIN_KEY bypass, or a user with a granted SUPERADMIN role. No paying customer on any plan, including Enterprise/MSSP, can ever satisfy this. Because loadCisoMetrics() treats a non-ok response as 'no data' rather than an error (falling back to a zeroed default object silently), every real customer sees an all-zero CISO dashboard indefinitely, with no error message explaining why. By contrast, the sibling GET /api/ciso/posture route (workers/src/index.js:4307-4310) has no permission check at all and would work for any authenticated user. Independently confirmed 2026-07-08 by reading the permission definition, the route gate, and the frontend call site directly."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09. workers/src/index.js:4338-4351 (GET /api/ciso/metrics) was gated behind requireCan(authCtx, env, 'admin:business:read') (workers/src/auth/rbac.js:101, isSuperAdmin-only), excluding every paying customer. Aligned to the same tier-inclusive bar the sibling /api/executive/ prefix route already used in production (workers/src/index.js ~7766): ['PRO','ENTERPRISE','MSSP'].includes(tier) OR requireCan(..., 'admin:analytics:read') (isPlatformAdmin, workers/src/auth/rbac.js:100). frontend/user-dashboard.html:2251-2265's loadCisoMetrics() was already correctly built (correct endpoint, correct envelope unwrap) — no frontend change was needed; the defect was purely the server-side gate. Regression-locked by workers/test/cisoExecutiveDashboardTierGate.test.mjs (10 tests: real PRO/ENTERPRISE tier admitted, FREE tier and anonymous still rejected 403, ADMIN_KEY bypass still admitted) — full suite 188 files/2012 tests green post-fix."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "frontend/user-dashboard.html:852 sidebar nav-item (data-page=\"ciso\") reaches this page; frontend/index.html:19986-19991 also surfaces a homepage 'Executive Hub' widget that fetches the same endpoint."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["admin:business:read"] },
+    "rbac": { "enforced": true, "permissions": ["admin:analytics:read (or PRO/ENTERPRISE/MSSP tier)"] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No test file imports workers/src/handlers/cisoMetrics.js directly. No test asserts that a PRO/ENTERPRISE-tier (non-staff) customer can successfully call GET /api/ciso/metrics — the exact scenario that is currently broken."
+      "has_tests": true,
+      "evidence": "workers/test/cisoExecutiveDashboardTierGate.test.mjs (new, 2026-07-09) imports and exercises worker.fetch against GET /api/ciso/metrics directly, asserting PRO/ENTERPRISE tier admission and FREE/anonymous rejection via a real api_keys-row DB mock — the exact scenario that was previously untested and broken."
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/auth/rbac.js:99-104 (PERMISSIONS registry) read directly; workers/src/index.js:4300-4310 read directly; frontend/user-dashboard.html:2251-2265 read directly and confirmed the envelope-unwrap is correct, isolating the defect to the server-side permission gate."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-09",
+      "evidence": "Fix verified at three layers: (1) source read of the corrected gate against the already-proven sibling pattern; (2) workers/test/cisoExecutiveDashboardTierGate.test.mjs — real PRO/ENTERPRISE tier requests reach the handler and get 200, FREE/anonymous still get 403, full pre-existing suite (188 files/2012 tests) stays green; (3) a Playwright click-through of the real frontend/user-dashboard.html against contract-accurate mocked responses (shape verified against handleGetCISOMetrics source) confirmed the pre-existing frontend call/render logic. NOT YET verified against the live deployed Cloudflare Worker + D1 (no deploy access from this session) — customer_journey_complete stays false until a post-merge production smoke-test confirms a real PRO-tier account sees non-zero CISO data end-to-end."
     },
     "contradicts_doc": [],
-    "notes": "A previously-uncatalogued, currently-live defect, not a wiring gap: the frontend is correctly built and correctly calls the real endpoint, but the endpoint's own access-control gate excludes the entire paying customer base it was built for. auth/rbac.js:101's own comment describes admin:business:read as intended for 'revenue/CRM/proposals — business-critical, super-admin only,' which strongly suggests this permission constant was reused on the customer-facing CISO route by mistake rather than by design, since the sibling /api/executive/ prefix route (CAP-DASH-002) correctly uses a tier-inclusive permission for a very similar audience. Recommended fix (not applied in this pass, since it changes an access-control boundary and deserves its own reviewed change): gate /api/ciso/metrics the same way the /api/executive/ prefix route gates itself — PRO/ENTERPRISE/MSSP tier OR platform admin — rather than SUPERADMIN-only."
+    "notes": "Fix applied 2026-07-09 exactly as recommended in the prior pass's notes: gated /api/ciso/metrics the same way the /api/executive/ prefix route gates itself. The other CISO routes (posture/incidents/compliance-status/risk-register/report/export-pdf) were left untouched — they already have no permission check (open to any authenticated user) and were not reported as broken."
   },
   {
     "id": "CAP-DASH-002",
@@ -57,39 +57,39 @@
       "handlers": ["workers/src/handlers/executiveRiskHandlers.js", "workers/src/handlers/executiveCommandCenter.js"],
       "entry_points": ["handleGetDashboard", "handleExecutiveCommandCenter"],
       "routes_sampled": [
-        { "path": "/api/executive/dashboard", "method": "GET", "evidence": "workers/src/index.js:5953" }
+        { "path": "/api/executive/dashboard", "method": "GET", "evidence": "workers/src/index.js:5993" }
       ],
       "routes_fully_enumerated": false,
-      "status": "broken"
+      "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
       "pages": ["frontend/index.html"],
-      "status": "broken",
-      "evidence": "frontend/index.html's cdbExecLoad() (around :19986-19991) calls GET /api/executive/dashboard as part of its 'Executive Hub' widget. That exact-match route (workers/src/index.js:5953-5958) is registered BEFORE the separate /api/executive/ prefix-dispatched route that backs handleExecutiveCommandCenter (workers/src/index.js:7726-7734), so the router serves it via handleGetDashboard, gated by requireCan(authCtx, env, 'admin:business:read') — the identical SUPERADMIN-only permission documented as broken for the customer base in CAP-DASH-001. No customer on any plan can load real data here either. In sharp contrast, the prefix-dispatched /api/executive/ block (workers/src/index.js:7726-7729) correctly allows any PRO/ENTERPRISE/MSSP-tier customer OR a platform admin (['PRO','ENTERPRISE','MSSP'].includes(tier) as an explicit OR-path around the RBAC check) — the two sibling 'executive' routes are inconsistently gated by two different rules, one customer-inclusive and one staff-only. Independently confirmed 2026-07-08 by reading both route blocks directly and confirming which one the frontend actually reaches first."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09. The exact-match GET /api/executive/dashboard route (workers/src/index.js:5993-6004, registered before the prefix-dispatched /api/executive/ block at ~7766) was gated by the same SUPERADMIN-only requireCan(authCtx, env, 'admin:business:read') documented as broken in CAP-DASH-001. Aligned to the identical tier-inclusive pattern already proven in production by its own sibling prefix block: ['PRO','ENTERPRISE','MSSP'].includes(tier) OR requireCan(..., 'admin:analytics:read'). cdbExecLoad() (frontend/index.html ~19986-19991) needed no change — it already called the right endpoint. Regression-locked by workers/test/cisoExecutiveDashboardTierGate.test.mjs (same file covers both CAP-DASH-001 and CAP-DASH-002, 10 tests total)."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "Embedded in frontend/index.html's homepage; cdbExecLoad() is the trigger function for this widget."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["admin:business:read"] },
+    "rbac": { "enforced": true, "permissions": ["admin:analytics:read (or PRO/ENTERPRISE/MSSP tier)"] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/executiveCommandCenterGate.test.mjs (run directly as part of this pass's full-suite check) tests the /api/executive/* catch-all's gating (anonymous rejected, FREE-tier rejected, ADMIN_KEY admitted) — but that test targets the prefix-dispatched handleExecutiveCommandCenter block, not the earlier exact-match /api/executive/dashboard route this widget actually calls, so it would not catch the defect described above."
+      "evidence": "workers/test/cisoExecutiveDashboardTierGate.test.mjs (new, 2026-07-09) now directly exercises GET /api/executive/dashboard (the exact-match route this widget actually calls, previously untested — workers/test/executiveCommandCenterGate.test.mjs only ever covered the separate prefix-dispatched block). Real PRO/ENTERPRISE tier admission and FREE/anonymous rejection both asserted."
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/index.js:5949-5958 and :7726-7734 both read directly to confirm dispatch order and confirm the two blocks use genuinely different gating logic, not a shared code path."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-09",
+      "evidence": "Same three-layer verification as CAP-DASH-001 (source read, new regression test, Playwright click-through against contract-accurate mocks). NOT YET verified against live deployed production — customer_journey_complete stays false pending a post-merge smoke test."
     },
-    "notes": "Same root cause and same recommended fix as CAP-DASH-001 — align /api/executive/dashboard's gate with its own sibling /api/executive/ prefix route's tier-inclusive pattern, as a deliberate, reviewed access-control change rather than a drive-by fix in this registry pass."
+    "notes": "Fixed together with CAP-DASH-001 in the same change, exactly as recommended: aligned /api/executive/dashboard's gate with its own sibling /api/executive/ prefix route's tier-inclusive pattern."
   },
   {
     "id": "CAP-DASH-003",

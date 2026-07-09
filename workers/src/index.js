@@ -4338,8 +4338,16 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/ciso/metrics' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       const { requireCan } = await import('./auth/rbac.js');
-      const deny = await requireCan(authCtx, env, 'admin:business:read');
-      if (deny) return withSecurityHeaders(withCors(deny, request));
+      // CAP-DASH-001 fix: was gated 'admin:business:read' (SUPERADMIN-only),
+      // excluding every paying customer this dashboard is built for. Aligned
+      // to the same tier-inclusive bar as the sibling /api/executive/ prefix
+      // route (workers/src/index.js ~7766): PRO/ENTERPRISE/MSSP tier OR
+      // platform admin.
+      const _cisoTierOk = ['PRO', 'ENTERPRISE', 'MSSP'].includes((authCtx.tier || '').toUpperCase());
+      if (!_cisoTierOk) {
+        const deny = await requireCan(authCtx, env, 'admin:analytics:read', 'CISO Hub requires a PRO/ENTERPRISE/MSSP plan or platform admin access.');
+        if (deny) return withSecurityHeaders(withCors(deny, request));
+      }
       return withSecurityHeaders(withCors(await handleGetCISOMetrics(request, env, authCtx), request));
     }
     // GET /api/ciso/posture — security posture scorecard
@@ -5993,8 +6001,15 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     if (path === '/api/executive/dashboard' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
       const { requireCan } = await import('./auth/rbac.js');
-      const deny = await requireCan(authCtx, env, 'admin:business:read');
-      if (deny) return withSecurityHeaders(withCors(deny, request));
+      // CAP-DASH-002 fix: was gated 'admin:business:read' (SUPERADMIN-only),
+      // inconsistent with the sibling /api/executive/ prefix-dispatched block
+      // (workers/src/index.js ~7766) which correctly allows PRO/ENTERPRISE/MSSP
+      // tier OR platform admin. Aligned to the same bar.
+      const _execDashTierOk = ['PRO', 'ENTERPRISE', 'MSSP'].includes((authCtx.tier || '').toUpperCase());
+      if (!_execDashTierOk) {
+        const deny = await requireCan(authCtx, env, 'admin:analytics:read', 'Executive Command Center requires a PRO/ENTERPRISE/MSSP plan or platform admin access.');
+        if (deny) return withSecurityHeaders(withCors(deny, request));
+      }
       return withSecurityHeaders(withCors(await handleGetDashboard(request, env, authCtx), request));
     }
     if (path === '/api/executive/mrr' && method === 'GET') {

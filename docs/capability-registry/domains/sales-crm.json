@@ -17,8 +17,8 @@
     "frontend": {
       "surface_type": "embedded_widget",
       "pages": ["frontend/index.html"],
-      "status": "broken",
-      "evidence": "Two independent, confirmed defects guarantee both homepage forms fail on every submission. (1) Field-name mismatch: workers/src/handlers/salesPipeline.js:106 destructures {name, email, company} from the request body and returns 400 MISSING_FIELDS if any is missing (:108-110); frontend/index.html:20442-20444's p4CreateLead() sends {contact_name, contact_email, company_name} instead — none of the required keys are ever present. Independently confirmed 2026-07-08 by reading both sides directly. Similarly, handleBookDemo (workers/src/handlers/salesPipeline.js:344-345) requires {email, preferred_slot}; frontend/index.html:20501's p4BookDemo() sends {slot_id} instead of preferred_slot. (2) Response-envelope mismatch: every backend response is wrapped by ok()/fail() (workers/src/lib/response.js:16-38) as {success, data, error, timestamp}; frontend/index.html:20277-20287's shared p4Api() helper parses the raw fetch response as JSON with no .data unwrap, so the parsed object is the full envelope, not the payload. Both success checks (if (d.lead), frontend/index.html:20447; if (d.booking)/d.booking.booking_ref, frontend/index.html:20504,20506) check keys that do not exist at any level of a real response (handleCreateLead returns flat lead_id/icp_score/priority; handleBookDemo returns flat booked/booking_id/slot/meet_link, both nested one level under data by the envelope). Even if the field-name bug were fixed, the success branch would still never fire."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09. Both root causes corrected: (1) p4CreateLead() now sends {name,email,company,role,sector,company_size,budget_range,urgency,phone,message} matching handleCreateLead's real required/optional fields exactly (was {contact_name,contact_email,company_name,...}); p4BookDemo() now sends preferred_slot (was slot_id). (2) The shared p4Api() helper (frontend/index.html, Phase 4 Revenue Engine IIFE) now unwraps the {success,data,error,timestamp} envelope, flattening data's fields to the top level while preserving success/error/code — fixing this capability plus CAP-CRM-005 and CAP-AFF-001 in one change, since all three share the same helper. Success-check branches updated to the real flat field names (lead_id/icp_score/priority; booked/booking_id/slot/meet_link — the old code checked d.lead and d.booking.booking_ref, neither of which ever existed at any level of a real response). A third, previously-uncatalogued bug in the same flow was also found and fixed: p4LoadDemoSlots()'s slot picker rendered s.slot_id/s.display, but GET /api/sales/demo/slots actually returns {slot,label} — meaning even a field-name-correct booking submission would have sent an empty preferred_slot (blank radio value) forever; now reads s.slot/s.label. Playwright-verified end-to-end: lead submit sends the real field names and renders the real ICP score/priority; demo slot picker shows a real, non-blank slot value; demo booking sends preferred_slot and renders a real confirmation message."
     },
     "navigation": {
       "discoverable": true,
@@ -30,18 +30,18 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": false,
-      "evidence": "Repo-wide search for an import from workers/src/handlers/salesPipeline.js under workers/test/**/*.mjs returns zero direct-import matches. workers/test/copilotSalesSupportTools.test.mjs exercises related behavior only indirectly through workers/src/handlers/aiSecurityCopilot.js, per that file's own header comment — it does not import or unit-test that handler itself, and would not catch this bug (it does not submit through the homepage's field names)."
+      "evidence": "Repo-wide search for an import from workers/src/handlers/salesPipeline.js under workers/test/**/*.mjs still returns zero direct-import matches. Verified this pass via an ad-hoc Playwright click-through (not committed to the repo); a real gap, flagged as a follow-up rather than fixed in this pass."
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/salesPipeline.js:100-111,340-348 read directly; frontend/index.html:20277-20287,20440-20456,20487-20511 read directly; workers/src/lib/response.js:16-38 read directly to confirm the envelope shape independently of the discovering agent's report."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-09",
+      "evidence": "workers/src/handlers/salesPipeline.js re-read to confirm exact required/optional field names and response shapes. Playwright click-through of the real frontend/index.html (mocked network responses shaped exactly to the handler's real return values) confirmed both forms now send correct field names and render correct success messages using real response fields. Full backend suite (188 files/2012 tests) green — this was a frontend-only change plus the shared envelope fix. NOT YET verified against the live deployed backend — customer_journey_complete stays false pending a post-merge production smoke test with real lead/demo submissions."
     },
-    "notes": "Two independent, revenue-critical top-of-funnel forms on the primary landing page have never worked and would fail 100% of submissions — every prospect who fills either form sees a failure message regardless of what they enter. This is a strong P1 candidate for immediate remediation outside this registry program's own scope (the fix touches several JS functions across a large inline script block and deserves its own focused, carefully-tested change, not a rushed fix bundled into registry population). See CAP-CRM-003 for a working alternative that reaches the same backend correctly."
+    "notes": "Two independent, revenue-critical top-of-funnel forms on the primary landing page previously failed 100% of submissions. Fixed 2026-07-09: field names, response-envelope unwrap (shared with CAP-CRM-005/CAP-AFF-001), and a third latent slot-picker bug found during the fix (see frontend.evidence). See CAP-CRM-003 for a working alternative that reaches the same backend correctly, unaffected by any of this."
   },
   {
     "id": "CAP-CRM-002",
@@ -198,8 +198,8 @@
     "frontend": {
       "surface_type": "embedded_widget",
       "pages": ["frontend/index.html", "frontend/proposal-generator.html"],
-      "status": "broken",
-      "evidence": "Two disconnected frontend surfaces, both failing to use this backend correctly. (1) frontend/index.html's p4GenerateProposal() (:20690-20692) sends {client_company, client_contact, client_email, sector, org_size, package_id, challenges}, but handleGenerateProposal requires lead_id (workers/src/handlers/proposalGenerator.js:326,331, MISSING_LEAD error) which is never sent — guaranteed failure; its success check if (d.proposal), frontend/index.html:20694, also can't match given the unwrapped-envelope bug described in CAP-CRM-001. p4LoadProposals() checks d.proposals, frontend/index.html:20710, also always undefined, so the widget permanently shows 'No proposals generated yet.' regardless of actual data (frontend/index.html:20712). (2) frontend/proposal-generator.html is a real, complete, 735-line page — but it is entirely client-side: it builds proposal HTML in-browser from hardcoded package/pricing tables and offers a browser-print 'download', with zero fetch calls anywhere in the file (confirmed by grep) — functionally disconnected from this backend entirely. It is staff-internal (CDB_STAFF_AUTH.guard()-gated, labeled 'Internal Tool · Team Only', excluded from search indexing via robots.txt), not customer-facing."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09 for the frontend/index.html widget (this is an owner-only tool by design: data-auth-gate=\"owner\" hides the section for everyone but the owner, consistent with the backend's isOwner gate below — 'public-facing' in the original evidence referred to its location on the public homepage's DOM, not its reachability). p4GenerateProposal() previously sent {client_company,client_contact,client_email,sector,org_size,package_id,challenges} but handleGenerateProposal requires lead_id (workers/src/handlers/proposalGenerator.js:326,331, MISSING_LEAD) with no lead-selection field anywhere in the form. Since buildProposalDocument reads client.name/company/email/phone/sector/company_size/role straight from the stored lead record — exactly the fields handleCreateLead already populates from matching form fields — the fix chains the two already-fixed real endpoints: p4GenerateProposal() now POSTs to /api/sales/leads first (creating/attaching a lead from the form's own company/contact/email/sector/size fields), then POSTs to /api/proposals/generate with the returned lead_id + package_id + notes. Success/list rendering fixed to the real flat response fields (proposal.proposal_number, proposal.pricing.total_with_gst_inr, proposal.roi_analysis.roi_multiplier — these were already correct in the old code; only the envelope unwrap, shared with CAP-CRM-001/CAP-AFF-001, was needed there). p4LoadProposals() was reading p.client_company/p.proposal_number/p.total_inr/p.roi_multiplier; handleListProposals's real D1 row shape is {company, package_id, status, value_inr, metadata:{proposal_number}} with no per-row ROI figure at all (removed rather than showing a permanent fake value) — now reads p.company/p.metadata.proposal_number/p.value_inr. A separate bug found in the same pass: the 'Proposal History' panel's '↻ Refresh' button used onclick=\"p4LoadProposals()\", but that function had no window. prefix (IIFE-private) — a real user click would have thrown ReferenceError; now window.p4LoadProposals. frontend/proposal-generator.html (the separate staff-internal, entirely client-side reimplementation) is unchanged — real duplicate effort, still worth a deliberate keep-one decision, not addressed in this pass."
     },
     "navigation": {
       "discoverable": true,
@@ -211,18 +211,18 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/proposalBola.test.mjs imports handleListProposals/handleGetProposal/handleMarkProposalSent/handleAcceptProposal/handleRejectProposal directly; workers/test/proposalGeneratorHonestClaims.test.mjs imports buildProposalDocument directly — confirmed by import-statement grep, 2026-07-08. Neither test submits through the homepage widget's field names, so neither would catch the CAP-CRM-001-style bug described above."
+      "evidence": "workers/test/proposalBola.test.mjs and workers/test/proposalGeneratorHonestClaims.test.mjs unchanged, still cover the handler in isolation. The frontend chain (lead-create then generate) was verified this pass via an ad-hoc Playwright click-through (not committed to the repo) rather than a permanent regression test — a real gap, flagged as a follow-up."
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/proposalGenerator.js exports and required fields read directly; frontend/index.html:20690-20712 and frontend/proposal-generator.html (grepped for fetch(, 0 matches) read directly."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-09",
+      "evidence": "workers/src/handlers/proposalGenerator.js re-read (buildProposalDocument's lead-field reads, handleGenerateProposal's required lead_id, handleListProposals's real D1 row shape). Playwright click-through of the real frontend/index.html (mocked lead-create then mocked proposal-generate, both shaped exactly to the real handlers) confirmed the two-step chain fires correctly, the success message renders the real proposal number/pricing/ROI, and the history list renders real company/proposal-number/value fields. Full backend suite (188 files/2012 tests) green — this was a frontend-only change. NOT YET verified against the live deployed backend — customer_journey_complete stays false pending a post-merge production smoke test by the owner (the only real user of this gated tool)."
     },
-    "notes": "A working, tested backend API for proposal generation exists, but neither of its two frontend touchpoints actually uses it: the public-facing one is broken (wrong fields + envelope bug), and the functional one (proposal-generator.html) reimplements the entire feature client-side instead of calling the API. This is real duplicate effort, not just a gap — worth a deliberate decision on which implementation to keep."
+    "notes": "A working, tested backend API for proposal generation exists; the frontend/index.html owner-only widget now correctly chains lead-creation into proposal-generation and renders real response data (fixed 2026-07-09, including a separate ReferenceError-on-click bug in its own Refresh button). frontend/proposal-generator.html — a separate, staff-internal, entirely client-side reimplementation — is unchanged; real duplicate effort, still worth a deliberate keep-one decision, not addressed in this pass."
   },
   {
     "id": "CAP-CRM-006",
@@ -294,7 +294,7 @@
       "last_verified": "2026-07-08",
       "evidence": "workers/src/handlers/conversionTriggers.js required-field reads compared line-by-line against frontend/index.html's 6 call sites."
     },
-    "notes": "Marked partial rather than fully broken because at least one path (CTA) has matching field names — the envelope bug (CAP-CRM-001) is the one defect common to all 6, and would need fixing regardless of the per-endpoint field-name issues."
+    "notes": "Marked partial rather than fully broken because at least one path (CTA) has matching field names. UPDATE 2026-07-09: the shared p4Api() envelope-unwrap bug common to all 6 routes was fixed as part of the CAP-CRM-001/CAP-CRM-005/CAP-AFF-001 change (same helper). This capability's own separate, per-endpoint field-name mismatches (event_type-vs-event, user_id-vs-authCtx, feature_id-vs-feature) were NOT in scope for that fix and remain unverified/unaddressed — operational_status and priority intentionally left unchanged pending a dedicated pass on this capability specifically. The CTA path (already field-name-correct) should now work end-to-end; the other paths still need their field names fixed."
   },
   {
     "id": "CAP-CRM-008",

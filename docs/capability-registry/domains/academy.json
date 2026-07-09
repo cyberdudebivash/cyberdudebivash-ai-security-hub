@@ -61,8 +61,8 @@
     "frontend": {
       "surface_type": "embedded_widget",
       "pages": ["frontend/index.html"],
-      "status": "broken",
-      "evidence": "frontend/index.html:5358 ('Get Ultimate Bundle — ₹1,999') and :10050 (dynamic 'Start Learning' upsell) both call if (window.CDB_PAY) CDB_PAY.open(...). frontend/index.html never defines CDB_PAY itself (grepped for the assignment pattern, 0 matches) and never loads frontend/assets/global.js, the only file that assigns window.CDB_PAY (frontend/assets/global.js:226) outside of inline definitions on other pages: frontend/academy.html, frontend/tools.html, frontend/booking.html, frontend/soc-dashboard.html, frontend/intel.html, and frontend/user-dashboard.html — none of which frontend/index.html loads. So on the homepage, window.CDB_PAY is undefined, the if (window.CDB_PAY) guard is always false, and both buttons silently do nothing on click — no network request is made at all, not even to a wrong endpoint. Independently confirmed 2026-07-08 by reading the button handlers and grepping for every CDB_PAY definition site."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-09: repointed both buttons from the never-defined window.CDB_PAY to the page's own real, working CDB_PAYMENT object (options-object signature, typeof-guarded — matching the file's other working call sites; a first attempt using an `if(window.CDB_PAYMENT)` guard was itself always-false for the same underlying reason and was caught and corrected by the Playwright verification run). Live-verified: clicking the Ultimate Bundle button now calls CDB_PAYMENT.open with product='ULTIMATE_BUNDLE_2026', amountLabel='₹1,999'. PRIOR EVIDENCE (2026-07-08, root cause): frontend/index.html:5358 ('Get Ultimate Bundle — ₹1,999') and :10050 (dynamic 'Start Learning' upsell) both call if (window.CDB_PAY) CDB_PAY.open(...). frontend/index.html never defines CDB_PAY itself (grepped for the assignment pattern, 0 matches) and never loads frontend/assets/global.js, the only file that assigns window.CDB_PAY (frontend/assets/global.js:226) outside of inline definitions on other pages: frontend/academy.html, frontend/tools.html, frontend/booking.html, frontend/soc-dashboard.html, frontend/intel.html, and frontend/user-dashboard.html — none of which frontend/index.html loads. So on the homepage, window.CDB_PAY is undefined, the if (window.CDB_PAY) guard is always false, and both buttons silently do nothing on click — no network request is made at all, not even to a wrong endpoint. Independently confirmed 2026-07-08 by reading the button handlers and grepping for every CDB_PAY definition site."
     },
     "navigation": {
       "discoverable": true,
@@ -74,17 +74,17 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": false,
-      "evidence": "No test covers frontend/index.html's inline buy-button click handlers or asserts window.CDB_PAY is defined on that page."
+      "evidence": "No committed automated test covers frontend/index.html's inline buy-button click handlers. Verified this pass via an ad-hoc Playwright click-through (not committed to the repo); flagged as a follow-up rather than fixed in this pass."
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "frontend/index.html:5358,10050 read directly; its <script src=...> tags enumerated and confirmed frontend/assets/global.js is not among them; every window.CDB_PAY assignment site in the repo grepped and confirmed none apply to that page."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-09",
+      "evidence": "frontend/index.html read directly to confirm the fix and the corrected typeof-guard against the file's other working CDB_PAYMENT.open() call sites. Playwright click-through of the real page confirmed the button calls CDB_PAYMENT.open with the real product id and correctly formatted amount. NOT YET verified against the live deployed backend's payment-config/checkout flow — customer_journey_complete stays false pending a post-merge production smoke test."
     },
-    "notes": "A different root cause from the p4Api envelope bug documented elsewhere in this registry (CAP-CRM-001/CAP-AFF-001) — this is a missing script include, not a response-shape mismatch, and it fails silently with zero network activity, which would make it invisible to server-side monitoring/logs. Separately, and independent of this bug: frontend/index.html:5361's marketing copy ('Instant delivery — download links emailed immediately after purchase') is contradicted by the handler's own documentation (workers/src/handlers/academyMarketplace.js:10-11: 'Fulfillment is manual... not an automated LMS') and by workers/src/services/emailEngine.js:1394-1457's sendPurchaseConfirmation, which never includes a download URL and instead tells the customer to log in to access their purchase. The four course 'mini card' links elsewhere on the homepage (frontend/index.html:5365-5388) are plain navigation links to CAP-ACAD-001's working academy.html flow, not buy buttons, and are unaffected by this defect."
+    "notes": "A different root cause from the p4Api envelope bug documented elsewhere in this registry (CAP-CRM-001/CAP-AFF-001) — this was a wrong-object-reference bug, not a response-shape mismatch, and it failed silently with zero network activity even after a naive fix attempt (see the window.CDB_PAYMENT false-guard note above). Separately, and still NOT addressed in this pass (flagged, not fixed — a copywriting/business decision, not a wiring bug): frontend/index.html:5361's marketing copy ('Instant delivery — download links emailed immediately after purchase') is contradicted by the handler's own documentation (workers/src/handlers/academyMarketplace.js:10-11: 'Fulfillment is manual... not an automated LMS') and by workers/src/services/emailEngine.js:1394-1457's sendPurchaseConfirmation, which never includes a download URL and instead tells the customer to log in to access their purchase. The four course 'mini card' links elsewhere on the homepage (frontend/index.html:5365-5388) are plain navigation links to CAP-ACAD-001's working academy.html flow, not buy buttons, and are unaffected by this defect."
   }
 ]
