@@ -1,0 +1,66 @@
+# ============================================================================
+# Static analysis (SAST) gate — CodeQL.
+#
+# Verified 2026-07-09 (Enterprise Operations & Continuous Improvement cycle):
+# secret scanning (gitleaks.yml) and dependency auditing exist; no static
+# application security testing did. This closes that gap. Scans the two real
+# source trees confirmed present: the Cloudflare Workers backend
+# (workers/, plain ESM JavaScript) and the root-level Python services
+# (FastAPI/SQLAlchemy/auth stack per requirements.txt).
+#
+# Runs on push/PR to main plus a weekly schedule so drift introduced by a
+# dependency bump (not just new code) is still caught. Read-only — never
+# blocks a merge unless branch protection is separately configured to
+# require it.
+# ============================================================================
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "30 3 * * 1" # weekly, Monday 03:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+# Same lesson as gitleaks.yml (2026-07-09 runner-starvation incident): scope
+# concurrency per-ref so a burst of pushes can't pile up queued CodeQL runs.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

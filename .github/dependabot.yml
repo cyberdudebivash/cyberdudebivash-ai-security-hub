@@ -1,0 +1,56 @@
+# ============================================================================
+# Dependabot version updates.
+#
+# Verified 2026-07-09 (Enterprise Operations & Continuous Improvement cycle):
+# `npm audit` against workers/ found 0 vulnerabilities today, but nothing
+# was keeping that continuously true. This adds automated update PRs across
+# every real dependency surface confirmed present in this repo: the Workers
+# backend (npm), the root Python services (pip, requirements.txt), the
+# Dockerfile base images, and the GitHub Actions themselves (14 workflow
+# files pin third-party actions by tag).
+#
+# Weekly cadence, capped PR counts so this doesn't flood the queue that
+# starved gitleaks.yml on 2026-07-09 (see that workflow's own comment).
+# Security updates are opened by GitHub automatically regardless of this
+# schedule.
+# ============================================================================
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/workers"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"

@@ -160,6 +160,34 @@
 > `policies_url`, and `security_url`; a second fresh CEAP sweep is 15/15
 > green on `3bd891f`.
 >
+> **Edition 12 (Enterprise Operations & Continuous Improvement cycle,
+> 2026-07-09):** CORB review under the standing CEAP+CIP+CORB+CAB+Product
+> Council system (`docs/ENGINEERING_STANDARDS.md` §12–13) — no new
+> governance framework invented. Re-verified live rather than assumed:
+> production healthy on build `38e9225` (`/api/health` all components `ok`,
+> `/api/version` matches `main` HEAD, checked directly against
+> `cyberdudebivash.in`, not just via CI proxy); 0 open PRs, 0 open issues, 0
+> abandoned branches, 0 dependency vulnerabilities. **Closed two
+> long-standing "code shipped, live-verification pending" gaps with real
+> evidence:** CI-1 (error-rate alerting) has run clean 35 times on schedule
+> with its real check step confirmed executing, not silently skipped; CI-2
+> (schema-drift detection) already caught genuine drift on its first live
+> run and the fix held — logged as IR-4 (`OPERATIONAL_EXCELLENCE_REPORT.md`
+> §4). **New gap found and closed same cycle:** no CodeQL static-analysis
+> workflow and no Dependabot configuration existed anywhere in the repo
+> (verified by direct inspection of all 14 existing workflow files, not
+> assumed) — both added, scoped to the Workers JS backend, the root Python
+> services, the Dockerfile, and the Actions themselves. One non-incident
+> closed out: an External Uptime Probe run showing top-level `failure`
+> was, at job level, a clean `cancelled` run (concurrency guard superseding
+> an overlapping scheduled trigger) — confirmed via zero corresponding
+> outage issues filed and zero open issues repository-wide, not assumed
+> benign. Full evidence and release-scorecard mapping: the Enterprise
+> Release Readiness Board verdict compiled the same cycle. Governance
+> instruments this edition updates: this scorecard (Action Queue below),
+> `OPERATIONAL_EXCELLENCE_REPORT.md` (IR-4, CI-1/CI-2 closure),
+> `KPI_DASHBOARD.md` (MTTD, documentation-accuracy rows).
+>
 > **Governance:** every action in the queue below must pass the Product
 > Council gate (`docs/ENGINEERING_STANDARDS.md` §7), and every capability is now
 > judged by the §8 Customer Adoption Rule via the Customer Objection Register.
@@ -169,8 +197,8 @@
 | # | Dimension | State | Trend | One-line basis |
 |---|-----------|-------|-------|----------------|
 | 1 | Product Quality | **GOOD** | ▲ | 1,300 tests/126 files green; Phase VIII fixed 3 customer-visible scale defects (scan→report 422, pricing drift, entitlement display) |
-| 2 | Security | **GOOD** | ▲ | Phase IV/V security blockers closed; gitleaks + security-headers CI; no SOC 2 attestation (organizational) |
-| 3 | Reliability | **GOOD** | ▲ | 30 consecutive green deploys; external probe live; restore drill first run green 2026-07-06 (R-06 closed) |
+| 2 | Security | **GOOD** | ▲ | Phase IV/V security blockers closed; gitleaks + security-headers CI + CodeQL SAST (added 2026-07-09, JS/TS + Python) + Dependabot; no SOC 2 attestation (organizational) |
+| 3 | Reliability | **GOOD** | ▲ | 30+ consecutive green deploys; external probe live; restore drill first run green 2026-07-06 (R-06 closed); CI-1/CI-2 detection loops both live-verified 2026-07-09, CI-2 already proved itself on a real incident (IR-4) |
 | 4 | Performance | **GOOD (directional)** | ▬ | p50 44ms/p99 131ms local; bundle 1.32MB vs 2.5MB gate; no production APM yet |
 | 5 | Scalability | **GOOD (directional)** | ▲ | 100 orgs / 10 archetypes onboarded cleanly (0 errors); tenant isolation held; sustained-load throttling graceful by-design. Still unproven against real production concurrency |
 | 6 | Maintainability | **ADEQUATE** | ▲ | Standards doc + envelope for new code; 71% of legacy routes still unwrapped (accepted, migrating opportunistically) |
@@ -369,6 +397,9 @@
 
 | Priority | Action | Owner | Gate status |
 |----------|--------|-------|-------------|
+| ✅ Done | CodeQL static analysis + Dependabot version updates — neither existed anywhere in the repo (verified 2026-07-09); added `.github/workflows/codeql.yml` (JS/TS + Python) and `.github/dependabot.yml` (npm, pip, docker, github-actions) | Engineering | Closed 2026-07-09 |
+| ✅ Done | CI-1 (error-rate alerting) live-verification — 35 clean scheduled runs, real check step confirmed executing | Engineering | Closed 2026-07-09 — see Edition 12 |
+| ✅ Done | CI-2 (schema-drift detection) live-verification — caught real drift on first live run, fix confirmed held, logged as IR-4 | Engineering | Closed 2026-07-09 — see Edition 12 |
 | ✅ Done | Threat-level single-source fix — **released, deploy #618 green** | — | Closed 2026-07-04 |
 | ✅ Done | "SOC 2 Type II" badge audit — ticker + CISO-hub bar reworded to Aligned/Ready/Mapped; section badges & modals were already honest | — | Closed 2026-07-04, locked by `phase6TruthLocks.test.mjs` |
 | ✅ Done | Metric contradiction audit: KEV trend no longer fabricates "0 critical, 0 KEV" for absent fields; products split into "Marketplace Solutions" (defense/stats) vs "generated across MYTHOS runs · N published" (mythos/status); MYTHOS v4.0/12-phase labels aligned to deployed v5.0/16-phase everywhere | — | Closed 2026-07-04, regression-locked |
