@@ -16,7 +16,7 @@ Usage:
 
 Environment variables required:
   OPENAI_API_KEY         — for AI-generated content
-  WORKERS_API_URL        — e.g. https://cyberdudebivash-security-hub.workers.dev
+  WORKERS_API_URL        — e.g. https://cyberdudebivash-security-hub.iambivash-bn.workers.dev
   WORKERS_API_KEY        — your platform API key (ENTERPRISE tier)
   TELEGRAM_BOT_TOKEN     — for Telegram broadcast
   TELEGRAM_CHANNEL_ID    — Sentinel APEX channel ID
@@ -32,7 +32,7 @@ import requests
 from datetime import datetime, timezone
 
 # ── Config ────────────────────────────────────────────────────────────────────
-WORKERS_API_URL    = os.getenv("WORKERS_API_URL", "https://cyberdudebivash-security-hub.workers.dev")
+WORKERS_API_URL    = os.getenv("WORKERS_API_URL", "https://cyberdudebivash-security-hub.iambivash-bn.workers.dev")
 WORKERS_API_KEY    = os.getenv("WORKERS_API_KEY", "")
 OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL       = os.getenv("OPENAI_MODEL", "gpt-4o-mini")

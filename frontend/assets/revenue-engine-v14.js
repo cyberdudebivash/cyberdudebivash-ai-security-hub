@@ -22,7 +22,7 @@
 ══════════════════════════════════════════════════════════════════════ */
 const REV = {
   version: '14.0.0',
-  api: (window.CONFIG && window.CONFIG.API_BASE) || 'https://cyberdudebivash-security-hub.workers.dev',
+  api: (window.CONFIG && window.CONFIG.API_BASE) || 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev',
   storageKey: 'cdb_rev_engine_v14',
   // Payment amounts (paise) per module
   moduleAmounts: { domain:99900, ai:99900, redteam:99900, identity:99900, compliance:99900 },

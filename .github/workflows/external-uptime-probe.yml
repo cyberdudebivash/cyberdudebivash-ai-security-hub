@@ -44,7 +44,7 @@ jobs:
         id: probe
         run: |
           set +e
-          ENDPOINTS="https://cyberdudebivash.in/api/health https://cyberdudebivash-security-hub.workers.dev/api/health"
+          ENDPOINTS="https://cyberdudebivash.in/api/health https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/health"
           for attempt in 1 2 3; do
             for url in $ENDPOINTS; do
               code=$(curl -sS -m 20 -o /tmp/health.json -w "%{http_code}" "$url" 2>/tmp/curl.err)

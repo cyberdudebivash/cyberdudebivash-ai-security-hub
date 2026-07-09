@@ -756,7 +756,7 @@ function genIRPlaybook(cve, title, sev, cvss, tactics, prod, ips, domains, ts) {
 ### 1.1 Initial Alert Triage
 \`\`\`bash
 # Run CYBERDUDEBIVASH scanner against affected systems
-curl -X POST https://cyberdudebivash-security-hub.workers.dev/api/scan/domain \\
+curl -X POST https://cyberdudebivash.in/api/scan/domain \\
   -H "Content-Type: application/json" \\
   -d '{"domain": "YOUR_AFFECTED_DOMAIN", "scan_type": "comprehensive"}'
 
@@ -844,7 +844,7 @@ dpkg -l | grep ${prod.split(',')[0]?.toLowerCase().trim() || 'package-name'} || 
 rpm -qa | grep ${prod.split(',')[0]?.toLowerCase().trim() || 'package-name'}
 
 # Run post-patch vulnerability scan
-curl -X POST https://cyberdudebivash-security-hub.workers.dev/api/scan/domain \\
+curl -X POST https://cyberdudebivash.in/api/scan/domain \\
   -H "Content-Type: application/json" \\
   -d '{"domain": "YOUR_DOMAIN", "scan_type": "vulnerability"}'
 \`\`\`
@@ -1572,7 +1572,7 @@ ATTACK_PATTERNS = [
 class SentinelAPEXClient:
     """Client for CYBERDUDEBIVASH Sentinel APEX threat intelligence."""
 
-    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://cyberdudebivash-security-hub.workers.dev"):
+    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://cyberdudebivash.in"):
         self.api_key  = api_key
         self.base_url = base_url
         self._ioc_cache: Dict[str, bool] = {}

@@ -8,7 +8,7 @@
 #
 # SMOKE TEST PRIORITY ORDER:
 #   1. https://cyberdudebivash.in       ← PRIMARY  (custom domain, always first)
-#   2. https://cyberdudebivash-security-hub.workers.dev  ← SECONDARY (fallback)
+#   2. https://cyberdudebivash-security-hub.iambivash-bn.workers.dev  ← SECONDARY (fallback)
 #   3. https://cyberdudebivash-security-hub.pages.dev    ← TERTIARY  (pages fallback)
 #
 # VALIDATION GUARANTEE:
@@ -70,7 +70,7 @@ env:
   DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
   # ── Endpoint hierarchy (smoke test tries these in order) ─────────────────
   PRIMARY_URL:   "https://cyberdudebivash.in"
-  WORKERS_URL:   "https://cyberdudebivash-security-hub.workers.dev"
+  WORKERS_URL:   "https://cyberdudebivash-security-hub.iambivash-bn.workers.dev"
   FRONTEND_URL:  "https://cyberdudebivash-security-hub.pages.dev"
   # ── Smoke test tuning ────────────────────────────────────────────────────
   HEALTH_PATH:   "/api/health"
