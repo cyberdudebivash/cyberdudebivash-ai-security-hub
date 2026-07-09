@@ -15,6 +15,19 @@ on:
 permissions:
   contents: read
 
+# Prevents redundant concurrent scans on the same ref from piling up and
+# starving the account's shared runner-concurrency pool (root cause of the
+# 2026-07-09 incident: this job queued for ~19 minutes then was cancelled
+# before a runner ever picked it up, alongside several Test & Quality Gate
+# jobs, when a merge-triggered burst of jobs collided with this repo's very
+# high volume of scheduled workflows). Every other CI-adjacent workflow here
+# (test.yml, deploy.yml, automation.yml, external-uptime-probe.yml,
+# ceap-assurance.yml) already scopes concurrency this way — this file was
+# the one gap.
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gitleaks:
     name: gitleaks
