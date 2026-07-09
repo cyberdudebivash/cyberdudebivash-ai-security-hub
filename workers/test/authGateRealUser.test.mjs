@@ -9,9 +9,24 @@
  * Drives the real exported worker.fetch() so the actual route/gate wiring is
  * tested, across one representative route per migrated surface class.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import worker from '../src/index.js';
 import { isRealUser } from '../src/auth/middleware.js';
+
+// handleAgentsRun()/handleAgentDispatch() internally call fetchCVEContext(),
+// which hits real NVD/EPSS endpoints for any CVE-containing message (see
+// test/multiAgentSOC.test.mjs, which documents and stubs this same issue).
+// Without a stub, the two 'admin key passes /api/agents/*' tests below make
+// live network calls — in a network-variable CI runner the request blocks
+// until fetchCVEContext's internal 6000ms AbortSignal.timeout fires, which
+// exceeds vitest's 5000ms test timeout and causes an intermittent "Test
+// timed out" failure unrelated to the auth-gate behavior under test here.
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function kvStub() {
   const m = new Map();
