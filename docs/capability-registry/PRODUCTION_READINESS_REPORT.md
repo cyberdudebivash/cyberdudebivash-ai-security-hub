@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T10:41:40.834Z
+Generated: 2026-07-09T11:46:39.622Z
 Capabilities catalogued: 56
 
 ## Overall Completion
@@ -18,7 +18,7 @@ Capabilities catalogued: 56
 | Dimension | % |
 |---|---|
 | Backend | 75% |
-| Frontend | 43.8% |
+| Frontend | 44.6% |
 | Parity (backend **and** frontend both exist) | 41.1% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
@@ -170,7 +170,7 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-RBAC-001 | Platform Staff Role Management | ✓ | ✓ | ✗ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-RBAC-002 | Role/Plan-Based Frontend Feature Gating | ◐ | ✗ | ✓ | NOT READY | P4 |
+| CAP-RBAC-002 | Role/Plan-Based Frontend Feature Gating | ◐ | ◐ | ✓ | PILOT ONLY | P4 |
 
 ### sales-crm (8 capabilities)
 

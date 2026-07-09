@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, CAP-IDN-002/003 fix — signup entry point + MFA login completion)
+## Current status (2026-07-09, CAP-RBAC-002 fix — tier-gating case bugs + MSSP support)
 
 | Metric | Value | Source |
 |---|---|---|
@@ -18,11 +18,11 @@ registry-population session.
 | Domains empty (stubs) | 4 | see Remaining Work Register |
 | Capabilities registered | 56 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 181 files / 1916 tests passing | `npx vitest run`, run 2026-07-09 (includes 13 new tests for CAP-IDN-002/003) |
+| Worker test suite | 182 files / 1927 tests passing | `npx vitest run`, run 2026-07-09 (includes 11 new tests for CAP-RBAC-002) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 75% / 43.8% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 74.1% / 41.7% / 38.9% before this fix — CAP-IDN-002 signup + CAP-IDN-003 MFA login completion) |
-| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production — see CAP-IDN-002/003's verification.evidence) |
-| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — Critical rose 14→16 because the registry now catalogues 2 more P1 identity capabilities (both already fixed this pass, still counted `PILOT ONLY` pending a `dynamic_browser` pass against production); see remediation sections below |
+| Backend / Frontend / Parity | 75% / 44.6% / 41.1% | `PRODUCTION_READINESS_REPORT.md` (up from 75% / 43.8% / 41.1% before this fix — CAP-RBAC-002 frontend status: broken → partial) |
+| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry (this pass used a local headless-Chromium session against the changed file, not a `dynamic_browser` pass against production) |
+| Gaps by severity | Critical 16 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged this pass: CAP-RBAC-002 stays P4 (still `PILOT ONLY`, not closed — org-role gating remains entirely unwired); see remediation sections below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -188,6 +188,102 @@ board's prior recommendation.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: CAP-RBAC-002 (tier-gating case bugs + MSSP support), part of a 4-initiative enterprise-readiness program
+
+- **Trigger:** after CAP-IDN-002/003 shipped, the customer widened scope to a
+  full production-grade audit across every account type (admin, paid,
+  enterprise, MSSP) with zero-trust framing. Rather than build blind against
+  such a broad ask, ran an evidence-based audit of the RBAC/Administration/
+  MSSP/Organizations/Customer-Portal domains first (reading the existing
+  registry, not re-deriving it) and presented a prioritized, evidenced
+  backlog of 7 real gaps for the customer to choose from. Sequencing chosen
+  deliberately risk-ascending (smallest/safest first, newest backend surface
+  last): (1) this fix, (2) Organization Management UI, (3) MSSP drill-down,
+  (4) Staff Admin Console.
+- **Root cause, confirmed live:** while designing the sidebar fix, found
+  `GET /api/user/plan`'s real `plan` field is uppercase
+  (`'FREE'|'STARTER'|'PRO'|'ENTERPRISE'|'MSSP'`, confirmed against
+  `workers/src/auth/apiKeys.js`'s `TIER_LIMITS`/`PLAN_FEATURES` keys), but
+  `exportCisoPDF()`, `syncPlanCards()`, and `selectPlan()` in
+  `frontend/user-dashboard.html` compared it against lowercase literals —
+  gates that silently never fired for any real account (a paying PRO
+  customer's own billing card never showed as "current"; clicking "Upgrade
+  to Pro" while already Pro re-initiated payment instead of short-circuiting).
+  Also found `TOOL_CATALOG`/`PLAN_QUOTA` had zero `MSSP` entries despite MSSP
+  being a real, top-tier plan — MSSP customers saw every tool locked and
+  FREE-tier quota numbers. Also found `loadKeys()` reading
+  `_plan?.plan?.key_limit` (always `undefined` — `_plan.plan` is a string,
+  not an object) instead of `_plan?.key_limit`.
+- **Important negative finding — did NOT do what it looked like it should:**
+  `initAiPage()`/`submitAiAnalysis()` had the identical-looking case bug, but
+  "fixing" it would have been wrong. `workers/test/aiBrainEntitlementGate.test.mjs`
+  proves `POST /api/ai/analyze` is intentionally not plan-gated for *any*
+  tier (unlike `/api/ai/simulate`/`/api/ai/forecast`, which really are PRO+).
+  The case bug was accidentally masking an already-stale, already-incorrect
+  restriction — correcting the case would have reintroduced a real
+  regression, blocking FREE customers from a capability they're
+  contractually, test-verified entitled to. Removed the dead block (and its
+  adjacent fabricated "queries left" counter, which read a field
+  `GET /api/user/plan` never returns) instead of case-correcting it.
+- **Scope decision — did NOT hide sidebar nav-items by tier:** the original
+  framing ("sidebar should vary by plan/role") turned out to have no safe,
+  evidenced implementation. `PLAN_FEATURES`/`TIER_LIMITS` show every tier,
+  including FREE, has some real, legitimate access to every one of the 17
+  sidebar pages (e.g. FREE gets 1 real API key, not zero) — hiding a nav-item
+  would have been an unauthorized product guess risking a real regression
+  (a FREE customer's "API Keys" page disappearing despite them having a real
+  key to manage). Fixed the concrete, evidenced breakage instead of guessing
+  at new UI restrictions.
+- **Fix:** all changes confined to `frontend/user-dashboard.html`, zero
+  backend changes. Case-sensitivity fixes normalize the fetched tier value
+  once per function (`.toLowerCase()`) rather than rewriting every
+  comparison/DOM id. Added `'MSSP'` to every `TOOL_CATALOG` tier allow-list
+  that already included `'ENTERPRISE'`, plus a `PLAN_QUOTA.MSSP` entry.
+  Fixed `loadKeys()`'s field path. Removed the AI-analysis FREE-tier block
+  and credits counter.
+- **Verification:** inline `<script>` syntax check clean (3/3 blocks).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green. Real headless-Chromium
+  Playwright session against the changed file, mocking `/api/user/plan` per
+  tier — 8/8 checks: FREE tier confirmed unblocked on AI Analysis (0 JS
+  errors); MSSP tier confirmed showing all 8 tools UNLOCKED and the real
+  "9999/mo" quota (was: 0 tools, FREE quota); PRO tier confirmed showing
+  their billing card marked "current" with a "✓ Current Plan" button (was:
+  never, for any real account); a FREE-tier regression check confirmed
+  exactly 1 tool (not all 8) shows unlocked, proving the fix isn't
+  over-permissive. Zero uncaught JS exceptions across all scenarios.
+- **Tests:** `workers/test/userDashboardTierGating.test.mjs` (new, 11 tests) —
+  cross-checks the frontend against `workers/src/auth/apiKeys.js`'s
+  `PLAN_FEATURES`/`TIER_LIMITS` as the source of truth, and against
+  `workers/test/aiBrainEntitlementGate.test.mjs`'s proven contract before
+  asserting the AI-analysis block should be absent. Full suite green: 182
+  files / 1927 tests (181/1916 baseline + 1 new file/11 tests).
+- **Registry:** `rbac.json`'s `CAP-RBAC-002` updated — `frontend.status`
+  `broken → partial`, `operational_status` `NOT READY → PILOT ONLY`,
+  `subscription_gated` `false → true`, full fix evidence and an explicit
+  explanation of why nav-items were not hidden by tier. Stays P4 (not
+  closed): org-role gating (`OWNER`/`ADMIN`/`ANALYST`/`MEMBER`/`VIEWER`, see
+  `CAP-ORG-001`) remains entirely unwired into this page, correctly out of
+  scope until organization membership has a customer-facing UI at all — the
+  next item in this program. `PRODUCTION_READINESS_REPORT.md` regenerated
+  (frontend 43.8% → 44.6%). Validator: 56 IDs, 0 failures, 0 warnings.
+- **Research for the next two initiatives, done in parallel this session
+  (read-only, no code changes yet):** deep audits of
+  `workers/src/handlers/orgManagement.js` (full request/response contracts
+  for all 10 handlers, confirmed zero duplicate/near-miss page exists under
+  `frontend/enterprise*.html`, confirmed a brand-new signup account has zero
+  orgs and there's no "create your first org" flow anywhere) and
+  `workers/src/handlers/msspTenantPlatform.js` (full contract for all 18
+  handlers). The MSSP audit surfaced a **blocking backend finding**: every
+  one of the 16 not-yet-wired MSSP handlers would 403 for every real partner
+  session, because `requireMSSPAdmin()`/`partnerScope()` in
+  `msspTenantPlatform.js` were never updated to recognize the
+  `role:'partner'`/`partnerId`-based identity `partner-portal.html` actually
+  uses — unlike the sibling `msspWorkspace.js`, which was already fixed for
+  exactly this. Building frontend against the 16 handlers as originally
+  planned would have shipped a feature that silently fails for every real
+  customer; the MSSP initiative now needs a small backend auth-gate fix
+  first, before any frontend work.
 
 ### 2026-07-09 — Fix sprint: CAP-IDN-002 (signup entry point) + CAP-IDN-003 (MFA login completion)
 
