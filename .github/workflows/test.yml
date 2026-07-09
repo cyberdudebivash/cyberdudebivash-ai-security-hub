@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: workers } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "24", cache: "npm", cache-dependency-path: workers/package-lock.json }
       - run: npm ci || npm install
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Assert critical headers present in frontend/_headers
         run: |
           set -e
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: Public-page structure lock (head/OG/JSON-LD placement)
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: axe-core CLI scan of local build
@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: Run Lighthouse CI against local build
@@ -161,7 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
       - name: Playwright smoke
@@ -182,7 +182,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: workers } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "24", cache: "npm", cache-dependency-path: workers/package-lock.json }
       - run: npm ci || npm install
