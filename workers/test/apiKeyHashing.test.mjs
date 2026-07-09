@@ -20,16 +20,24 @@ function makeEnv() {
           bind(...a) { b = a; return this; },
           async run() {
             if (/INSERT INTO api_keys/.test(sql)) {
-              const i = rows.findIndex(r => r.email === b[1]);
-              const row = { api_key: b[3], email: b[1], plan: b[2], active: 1 };
-              if (i >= 0) rows[i] = row; else rows.push(row);
+              // (id, email, tier, api_key, key_hash, key_prefix, active, created_at)
+              rows.push({ id: b[0], email: b[1], tier: b[2], api_key: b[3], key_hash: b[4], key_prefix: b[5], active: 1 });
+            } else if (/UPDATE api_keys SET tier/.test(sql)) {
+              // (tier, api_key, key_hash, key_prefix, id)
+              const row = rows.find(r => r.id === b[4]);
+              if (row) Object.assign(row, { tier: b[0], api_key: b[1], key_hash: b[2], key_prefix: b[3] });
             }
           },
           async first() {
-            if (/SELECT email, plan FROM api_keys/.test(sql)) {
+            if (/SELECT id FROM api_keys WHERE email/.test(sql)) {
+              const [email] = b;
+              const r = rows.find(x => x.email === email && x.active === 1);
+              return r ? { id: r.id } : null;
+            }
+            if (/SELECT email, tier FROM api_keys/.test(sql)) {
               const [h, raw] = b;
               const r = rows.find(x => (x.api_key === h || x.api_key === raw) && x.active === 1);
-              return r ? { email: r.email, plan: r.plan } : null;
+              return r ? { email: r.email, tier: r.tier } : null;
             }
             return null;
           },
@@ -68,7 +76,7 @@ describe('sap_ API key hashing', () => {
   });
 
   it('still validates a legacy plaintext D1 row (transition, no KV)', async () => {
-    ctx.rows.push({ api_key: 'sap_LEGACYRAWKEY', email: 'old@b.com', plan: 'starter', active: 1 });
+    ctx.rows.push({ id: 'legacy-1', api_key: 'sap_LEGACYRAWKEY', email: 'old@b.com', tier: 'STARTER', active: 1 });
     const noKv = { ...ctx.env, SECURITY_HUB_KV: { async get() { return null; }, async put() {} } };
     const resolved = await resolveApiKey(noKv, 'sap_LEGACYRAWKEY');
     expect(resolved).toEqual({ email: 'old@b.com', plan: 'starter' });

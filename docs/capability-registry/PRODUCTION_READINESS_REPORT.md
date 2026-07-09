@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-08T18:32:25.780Z
+Generated: 2026-07-09T08:41:17.878Z
 Capabilities catalogued: 54
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 69.4% |
-| Frontend | 38% |
-| Parity (backend **and** frontend both exist) | 35.2% |
+| Backend | 74.1% |
+| Frontend | 39.8% |
+| Parity (backend **and** frontend both exist) | 37% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -40,8 +40,8 @@ Capabilities catalogued: 54
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 13 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 10 | Backend exists, zero frontend surface |
+| Hidden features | 15 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 11 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 14 | Priority P1 |
 
@@ -108,9 +108,9 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-DEVPORTAL-001 | API Key Management (canonical) | ✓ | ✓ | ✓ | PILOT ONLY | P7 |
-| CAP-DEVPORTAL-002 | Self-Service Automation API Keys | ✗ | ✗ | ✓ | BLOCKED | P1 |
-| CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ◐ | ◐ | ✗ | BLOCKED | P1 |
-| CAP-DEVPORTAL-004 | Growth/Plan API Key Provisioning | ✗ | ✗ | ✗ | BLOCKED | P1 |
+| CAP-DEVPORTAL-002 | Self-Service Automation API Keys | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
+| CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ✓ | ◐ | ✗ | PILOT ONLY | P1 |
+| CAP-DEVPORTAL-004 | Growth/Plan API Key Provisioning | ✓ | ✗ | ✗ | BLOCKED | P1 |
 
 ### identity (1 capability)
 

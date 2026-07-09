@@ -5,7 +5,7 @@
 
 // Canonical SHA-256 key hashing (shared with auth/apiKeys.js) — sap_ keys are
 // stored and matched as hashes, never plaintext.
-import { hashApiKey } from '../auth/apiKeys.js';
+import { hashApiKey, getKeyPrefix } from '../auth/apiKeys.js';
 
 // Mask a raw key for safe logging: keep the sap_ prefix + last 4 chars only.
 function maskKey(raw) {
@@ -82,12 +82,15 @@ export async function recordApiUsage(env, apiKey, email, endpoint, statusCode, l
     // KV not available — continue
   }
 
-  // ── D1 async log ──
+  // ── D1 async log ── (id is INTEGER PRIMARY KEY AUTOINCREMENT — never
+  // supply one; api_usage_log has no `api_key` or `weight` column, only
+  // `api_key_id` — the weighted counts above are what KV rate-limiting
+  // actually reads, this D1 row is a secondary audit-trail entry)
   try {
     await env.DB.prepare(`
-      INSERT INTO api_usage_log (id, api_key, email, endpoint, status_code, latency_ms, weight, logged_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).bind(crypto.randomUUID(), maskKey(apiKey), email || 'anon', endpoint, statusCode, latencyMs, weight).run();
+      INSERT INTO api_usage_log (api_key_id, email, endpoint, status_code, latency_ms, logged_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).bind(maskKey(apiKey), email || 'anon', endpoint, statusCode, latencyMs).run();
   } catch {
     // Non-blocking
   }
@@ -313,21 +316,34 @@ export async function provisionApiKey(env, email, plan) {
   const apiKey  = `sap_${crypto.randomUUID().replace(/-/g, '').slice(0, 32)}`;
   const now     = new Date().toISOString();
   const keyHash = await hashApiKey(apiKey);
+  const prefix  = getKeyPrefix(apiKey);
+  const tier    = (plan || 'starter').toUpperCase();
 
   try {
-    // Store the HASH in D1 — never the raw key (removes credential-dump exposure)
-    await env.DB.prepare(`
-      INSERT INTO api_keys (id, email, plan, api_key, active, created_at)
-      VALUES (?, ?, ?, ?, 1, ?)
-      ON CONFLICT(email) DO UPDATE SET
-        plan     = excluded.plan,
-        api_key  = excluded.api_key,
-        active   = 1,
-        updated_at = excluded.created_at
-    `).bind(crypto.randomUUID(), email, plan, keyHash, now).run();
+    // api_keys has no UNIQUE constraint on email — ON CONFLICT(email) here
+    // previously was rejected by SQLite outright (CAP-DEVPORTAL-004). Fixed
+    // without a schema migration: look up any existing active row for this
+    // email first, then UPDATE or INSERT explicitly. Also: `plan`/`updated_at`
+    // are not real columns (the table has `tier`, no `updated_at`), and
+    // `key_hash`/`key_prefix` are NOT NULL with no default — every INSERT
+    // must supply them or the row throws.
+    const existing = await env.DB.prepare(
+      `SELECT id FROM api_keys WHERE email = ? AND active = 1 LIMIT 1`
+    ).bind(email).first();
+
+    if (existing) {
+      await env.DB.prepare(
+        `UPDATE api_keys SET tier = ?, api_key = ?, key_hash = ?, key_prefix = ? WHERE id = ?`
+      ).bind(tier, keyHash, keyHash, prefix, existing.id).run();
+    } else {
+      await env.DB.prepare(`
+        INSERT INTO api_keys (id, email, tier, api_key, key_hash, key_prefix, active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+      `).bind(crypto.randomUUID(), email, tier, keyHash, keyHash, prefix, now).run();
+    }
 
     // Cache under the HASHED KV name (raw key never appears in the key-space)
-    await env.SECURITY_HUB_KV?.put(`apikey:${keyHash}`, JSON.stringify({ email, plan }), {
+    await env.SECURITY_HUB_KV?.put(`apikey:${keyHash}`, JSON.stringify({ email, plan: tier.toLowerCase() }), {
       expirationTtl: 60 * 60 * 24 * 365, // 1 year
     });
 
@@ -355,11 +371,12 @@ export async function resolveApiKey(env, apiKey) {
 
   // D1 fallback — match the hashed row (new) or a legacy plaintext row (transition)
   try {
-    const row = await env.DB.prepare(
-      `SELECT email, plan FROM api_keys WHERE api_key IN (?, ?) AND active = 1 LIMIT 1`
+    const dbRow = await env.DB.prepare(
+      `SELECT email, tier FROM api_keys WHERE api_key IN (?, ?) AND active = 1 LIMIT 1`
     ).bind(keyHash, apiKey).first();
 
-    if (row) {
+    if (dbRow) {
+      const row = { email: dbRow.email, plan: (dbRow.tier || '').toLowerCase() };
       // Re-cache under the hashed name so future lookups skip the legacy path
       await env.SECURITY_HUB_KV?.put(`apikey:${keyHash}`, JSON.stringify(row), {
         expirationTtl: 3600,
@@ -383,15 +400,19 @@ export async function getApiUsageSummary(env, email, plan) {
   monthStart.setHours(0, 0, 0, 0);
 
   try {
+    // api_usage_log has no `weight` column (each row is one logged call) —
+    // COUNT(*) gives an honest, if unweighted, call count rather than the
+    // previous COALESCE(SUM(weight)) query, which always threw "no such
+    // column: weight" and made this endpoint 500 on every call.
     const [monthTotal, dayTotal, endpointBreakdown] = await Promise.all([
       env.DB.prepare(`
-        SELECT COALESCE(SUM(weight), 0) as total
+        SELECT COUNT(*) as total
         FROM api_usage_log
         WHERE email = ? AND logged_at >= ?
       `).bind(email, monthStart.toISOString()).first(),
 
       env.DB.prepare(`
-        SELECT COALESCE(SUM(weight), 0) as total
+        SELECT COUNT(*) as total
         FROM api_usage_log
         WHERE email = ? AND logged_at >= date('now')
       `).bind(email).first(),
