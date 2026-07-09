@@ -7749,7 +7749,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
   // v20.0 GOD MODE: DEVELOPER PORTAL / API ECONOMY
   if (path.startsWith('/api/developer/')) {
-    return handleDeveloperPortal(request, env);
+    return handleDeveloperPortal(request, env, authCtx);
   }
 
   // P8.0-001: /api/openapi.json — top-level alias for /api/developer/openapi.json (same generator, zero duplication)

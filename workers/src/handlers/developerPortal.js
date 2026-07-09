@@ -4,7 +4,22 @@
 // Differentiator: FULL (CrowdStrike=Partial, Palo Alto=Partial, Wiz=None, SentinelOne=None)
 // Implements: API Explorer, SDK code generators, webhook catalog+test,
 //             rate-limit dashboard, changelog, interactive playground
+//
+// Key management (POST/GET/DELETE /api/developer/keys, POST .../rotate)
+// delegates entirely to the canonical, tested, ownership-scoped
+// implementation in handlers/apikeys.js (auth/apiKeys.js's createApiKey())
+// rather than reimplementing key issuance against this file's own
+// (previously drifted, schema-mismatched) INSERT statements — see
+// docs/capability-registry/domains/developer-portal-apikeys.json
+// (CAP-DEVPORTAL-003) for the fix rationale.
 // =============================================================================
+
+import { isRealUser } from '../auth/middleware.js';
+import { handleCreateKey, handleListKeys, handleRevokeKey, handleRotateKey } from './apikeys.js';
+
+function authRequired() {
+  return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+}
 
 // ─── API Catalog (core endpoints with full OpenAPI-style specs) ───────────────
 const API_CATALOG = [
@@ -192,10 +207,10 @@ const API_CATALOG = [
       { method:'GET', path:'/rate-limits/usage', summary:'Get current usage against rate limits', response_schema:{ currentPeriod:'object' } },
       { method:'GET', path:'/changelog', summary:'Platform changelog', query_params:{ limit:'integer', type:'string' }, response_schema:{ changelog:'array', latestVersion:'string' } },
       { method:'POST', path:'/playground/execute', summary:'Execute request in API playground', request_schema:{ endpoint:'string(required)', method:'string', payload:'object' }, response_schema:{ latencyMs:'integer', requestEchoed:'object' } },
-      { method:'POST', path:'/keys', summary:'Create developer API key', request_schema:{ name:'string', scopes:'array[string]', expires_in_days:'integer' }, response_schema:{ success:'boolean', id:'uuid', key:'string' } },
-      { method:'GET', path:'/keys', summary:'List developer API keys', response_schema:{ keys:'array' } },
-      { method:'DELETE', path:'/keys/{id}', summary:'Revoke developer API key', response_schema:{ success:'boolean' } },
-      { method:'POST', path:'/keys/{id}/rotate', summary:'Rotate developer API key', response_schema:{ success:'boolean', newKey:'string' } },
+      { method:'POST', path:'/keys', summary:'Create developer API key', auth:'required', request_schema:{ label:'string' }, response_schema:{ success:'boolean', key:'string (shown once)', prefix:'string', label:'string', tier:'string' } },
+      { method:'GET', path:'/keys', summary:'List developer API keys', auth:'required', response_schema:{ keys:'array', count:'integer', max_keys:'integer', tier_limits:'object' } },
+      { method:'DELETE', path:'/keys/{id}', summary:'Revoke developer API key', auth:'required', response_schema:{ success:'boolean', message:'string' } },
+      { method:'POST', path:'/keys/{id}/rotate', summary:'Rotate developer API key', auth:'required', response_schema:{ success:'boolean', key:'string (shown once)', key_id:'string' } },
       { method:'GET', path:'/openapi.json', summary:'OpenAPI 3.1 specification', description:'Full machine-readable spec for every documented endpoint in this catalog. Also aliased at /api/openapi.json.', response_schema:{} },
       { method:'GET', path:'/sdk/download/{language}', summary:'Download full SDK client', description:'Download a complete auto-generated multi-endpoint client library. Supported: python, javascript, typescript, go. Add ?raw=1 to get the raw source file.', response_schema:{ language:'string', filename:'string', install:'string', total_methods:'integer', total_groups:'integer', code:'string', download:'string' } },
       { method:'GET', path:'/postman.json', summary:'Postman Collection v2.1', description:'Download an importable Postman Collection containing every documented API endpoint with pre-filled authentication and example requests.', response_schema:{} },
@@ -265,7 +280,7 @@ const SDK_TEMPLATES = {
   python: (endpoint, baseUrl, apiKey) => `import requests
 
 API_KEY = "${apiKey || 'your-api-key'}"
-BASE_URL = "${baseUrl || 'https://your-worker.workers.dev'}"
+BASE_URL = "${baseUrl || 'https://cyberdudebivash.in'}"
 
 headers = {
     "Authorization": f"Bearer {API_KEY}",
@@ -289,7 +304,7 @@ result = response.json()
 print(result)
 `,
   javascript: (endpoint, baseUrl, apiKey) => `const API_KEY = "${apiKey || 'your-api-key'}";
-const BASE_URL = "${baseUrl || 'https://your-worker.workers.dev'}";
+const BASE_URL = "${baseUrl || 'https://cyberdudebivash.in'}";
 
 // ${endpoint.summary}
 const response = await fetch(\`\${BASE_URL}${endpoint.path}\`, {
@@ -305,7 +320,7 @@ const result = await response.json();
 console.log(result);
 `,
   typescript: (endpoint, baseUrl, apiKey) => `const API_KEY: string = "${apiKey || 'your-api-key'}";
-const BASE_URL: string = "${baseUrl || 'https://your-worker.workers.dev'}";
+const BASE_URL: string = "${baseUrl || 'https://cyberdudebivash.in'}";
 
 // ${endpoint.summary}
 const response = await fetch(\`\${BASE_URL}${endpoint.path}\`, {
@@ -330,7 +345,7 @@ import (
 )
 
 const apiKey = "${apiKey || 'your-api-key'}"
-const baseURL = "${baseUrl || 'https://your-worker.workers.dev'}"
+const baseURL = "${baseUrl || 'https://cyberdudebivash.in'}"
 
 func main() {
 	// ${endpoint.summary}
@@ -356,7 +371,7 @@ ${Object.entries(endpoint.request_schema || {}).map(([k, v]) => `\t\t"${k}": "<$
 `,
   curl: (endpoint, baseUrl, apiKey) => `# ${endpoint.summary}
 curl -X ${endpoint.method} \\
-  "${baseUrl || 'https://your-worker.workers.dev'}${endpoint.path}" \\
+  "${baseUrl || 'https://cyberdudebivash.in'}${endpoint.path}" \\
   -H "Authorization: Bearer ${apiKey || 'your-api-key'}" \\
   -H "Content-Type: application/json"${endpoint.method !== 'GET' ? ` \\
   -d '${JSON.stringify(Object.fromEntries(Object.entries(endpoint.request_schema || {}).map(([k, v]) => [k, `<${v}>`])))}' ` : ' '}
@@ -413,7 +428,7 @@ function buildPythonClient() {
     '',
     '',
     'class CyberDudeBivashClient:',
-    '    def __init__(self, api_key, base_url="https://your-worker.workers.dev"):',
+    '    def __init__(self, api_key, base_url="https://cyberdudebivash.in"):',
     '        self.api_key = api_key',
     '        self.base_url = base_url.rstrip("/")',
     '        self.session = requests.Session()',
@@ -449,7 +464,7 @@ function buildJavaScriptClient() {
     '// Auto-generated from the platform API registry. Do not hand-edit.',
     '',
     'export class CyberDudeBivashClient {',
-    '  constructor(apiKey, baseUrl = "https://your-worker.workers.dev") {',
+    '  constructor(apiKey, baseUrl = "https://cyberdudebivash.in") {',
     '    this.apiKey = apiKey;',
     '    this.baseUrl = baseUrl.replace(/\\/$/, "");',
     '  }',
@@ -495,7 +510,7 @@ function buildTypeScriptClient() {
     '  private apiKey: string;',
     '  private baseUrl: string;',
     '',
-    '  constructor(apiKey: string, baseUrl: string = "https://your-worker.workers.dev") {',
+    '  constructor(apiKey: string, baseUrl: string = "https://cyberdudebivash.in") {',
     '    this.apiKey = apiKey;',
     '    this.baseUrl = baseUrl.replace(/\\/$/, "");',
     '  }',
@@ -550,7 +565,7 @@ function buildGoClient() {
     '}',
     '',
     'func NewClient(apiKey string) *Client {',
-    '\treturn &Client{APIKey: apiKey, BaseURL: "https://your-worker.workers.dev", HTTP: &http.Client{}}',
+    '\treturn &Client{APIKey: apiKey, BaseURL: "https://cyberdudebivash.in", HTTP: &http.Client{}}',
     '}',
     '',
     'func (c *Client) request(method, path string, query map[string]string, body interface{}) (map[string]interface{}, error) {',
@@ -685,7 +700,7 @@ const CHANGELOG = [
 ];
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
-export async function handleDeveloperPortal(request, env) {
+export async function handleDeveloperPortal(request, env, authCtx) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
@@ -717,11 +732,25 @@ export async function handleDeveloperPortal(request, env) {
   // Interactive Playground
   if (path === '/api/developer/playground/execute' && method === 'POST') return playgroundExecute(request, env);
 
-  // API Key Management
-  if (path === '/api/developer/keys' && method === 'POST') return createAPIKey(request, env);
-  if (path === '/api/developer/keys' && method === 'GET') return listAPIKeys(request, env);
-  if (path.match(/^\/api\/developer\/keys\/[\w-]+$/) && method === 'DELETE') return revokeAPIKey(request, env);
-  if (path.match(/^\/api\/developer\/keys\/[\w-]+\/rotate$/) && method === 'POST') return rotateAPIKey(request, env);
+  // API Key Management — same keys, same accounts, same limits as the
+  // canonical POST /api/keys surface (handlers/apikeys.js); this is just a
+  // developer-portal-branded URL onto it, not a second key system.
+  if (path === '/api/developer/keys' && method === 'POST') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return handleCreateKey(request, env, authCtx);
+  }
+  if (path === '/api/developer/keys' && method === 'GET') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return handleListKeys(request, env, authCtx);
+  }
+  if (path.match(/^\/api\/developer\/keys\/[\w-]+$/) && method === 'DELETE') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return handleRevokeKey(request, env, authCtx, path.split('/').pop());
+  }
+  if (path.match(/^\/api\/developer\/keys\/[\w-]+\/rotate$/) && method === 'POST') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return handleRotateKey(request, env, authCtx, path.split('/').slice(-2, -1)[0]);
+  }
 
   // OpenAPI Spec
   if (path === '/api/developer/openapi.json' && method === 'GET') return getOpenAPISpec(request, env);
@@ -751,7 +780,7 @@ async function listEndpoints(request, env) {
   const totalEndpoints = catalog.reduce((s, g) => s + g.endpoints.length, 0);
   return jsonResp({ groups: catalog, totalGroups: catalog.length, totalEndpoints,
     tiers: ['FREE', 'STARTER', 'PRO', 'ENTERPRISE', 'ADMIN'],
-    baseUrl: 'https://your-worker.workers.dev',
+    baseUrl: 'https://cyberdudebivash.in',
     authentication: 'Bearer token in Authorization header or X-API-Key header'
   });
 }
@@ -968,57 +997,11 @@ async function playgroundExecute(request, env) {
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function createAPIKey(request, env) {
-  try {
-    const body = await request.json();
-    const id = crypto.randomUUID();
-    const key = 'cdb_' + crypto.randomUUID().replace(/-/g,'') + crypto.randomUUID().replace(/-/g,'').slice(0,16);
-    const now = new Date().toISOString();
-    const expiresAt = body.expires_in_days ? new Date(Date.now() + body.expires_in_days*86400000).toISOString() : null;
-    await env.DB.prepare(`INSERT INTO api_keys (id,org_id,name,key_hash,scopes,expires_at,status,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?)`)
-      .bind(id, body.org_id||'default', body.name||'Default Key',
-        await hashAPIKey(key), JSON.stringify(body.scopes||['read']), expiresAt, 'ACTIVE', now, now).run();
-    return jsonResp({ success:true, id, name:body.name, key, scopes:body.scopes||['read'], expiresAt,
-      warning:'Store this API key securely — it will not be shown again.',
-      usage:'Include as: Authorization: Bearer <key>  OR  X-API-Key: <key>'
-    }, 201);
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
-
-async function hashAPIKey(key) {
-  const enc = new TextEncoder();
-  const hashBuf = await crypto.subtle.digest('SHA-256', enc.encode(key));
-  return Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function listAPIKeys(request, env) {
-  try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
-    const { results } = await env.DB.prepare('SELECT id,org_id,name,scopes,expires_at,status,created_at FROM api_keys WHERE org_id=? AND status=? ORDER BY created_at DESC').bind(orgId,'ACTIVE').all();
-    return jsonResp({ keys:results.map(k=>({...k,scopes:JSON.parse(k.scopes||'[]')})), total:results.length });
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
-
-async function revokeAPIKey(request, env) {
-  const id = new URL(request.url).pathname.split('/').pop();
-  try {
-    await env.DB.prepare('UPDATE api_keys SET status=?,updated_at=? WHERE id=?').bind('REVOKED',new Date().toISOString(),id).run();
-    return jsonResp({ success:true, message:`API key ${id} revoked` });
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
-
-async function rotateAPIKey(request, env) {
-  const id = new URL(request.url).pathname.split('/').slice(-2,-1)[0];
-  try {
-    const existing = await env.DB.prepare('SELECT * FROM api_keys WHERE id=? AND status=?').bind(id,'ACTIVE').first();
-    if (!existing) return jsonResp({ error:'API key not found or already revoked' }, 404);
-    const newKey = 'cdb_' + crypto.randomUUID().replace(/-/g,'') + crypto.randomUUID().replace(/-/g,'').slice(0,16);
-    const now = new Date().toISOString();
-    await env.DB.prepare('UPDATE api_keys SET key_hash=?,updated_at=? WHERE id=?').bind(await hashAPIKey(newKey),now,id).run();
-    return jsonResp({ success:true, id, newKey, rotatedAt:now, warning:'Old key is now invalid. Store new key securely.' });
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
+// createAPIKey/listAPIKeys/revokeAPIKey/rotateAPIKey were removed 2026-07 —
+// they reimplemented key issuance against columns (name, scopes, updated_at)
+// that never existed in the live api_keys schema (every call 500'd) and had
+// no auth check at all. Key management now delegates to the canonical,
+// tested implementation — see the router above and handlers/apikeys.js.
 
 
 // ─── P8.0-007: Postman Collection Builder ────────────────────────────────────
@@ -1033,7 +1016,7 @@ async function getPostmanCollection(request, env) {
     },
     auth: { type: 'bearer', bearer: [{ key: 'token', value: '{{API_KEY}}', type: 'string' }] },
     variable: [
-      { key: 'BASE_URL', value: 'https://your-worker.workers.dev', type: 'string' },
+      { key: 'BASE_URL', value: 'https://cyberdudebivash.in', type: 'string' },
       { key: 'API_KEY', value: 'your-api-key-here', type: 'string' },
     ],
     item: API_CATALOG.map(group => ({
@@ -1097,10 +1080,10 @@ async function getQuickStart(request, env) {
   return jsonResp({
     title: 'CYBERDUDEBIVASH AI Security Hub — Quick Start Guide',
     version: '20.0.0',
-    baseUrl: 'https://your-worker.workers.dev',
+    baseUrl: 'https://cyberdudebivash.in',
     steps: [
       { step: 1, title: 'Get your API key', description: 'Create an API key via the self-service portal.', endpoint: 'POST /api/developer/keys', example: { name: 'My App', scopes: ['read', 'write'] }, note: 'Store your key securely — it will not be shown again.' },
-      { step: 2, title: 'Make your first request', description: 'Fetch the latest threat signals from the radar.', endpoint: 'GET /api/radar/latest', curl: 'curl -H "Authorization: Bearer <YOUR_API_KEY>" https://your-worker.workers.dev/api/radar/latest' },
+      { step: 2, title: 'Make your first request', description: 'Fetch the latest threat signals from the radar.', endpoint: 'GET /api/radar/latest', curl: 'curl -H "Authorization: Bearer <YOUR_API_KEY>" https://cyberdudebivash.in/api/radar/latest' },
       { step: 3, title: 'Explore the API catalog', description: 'Browse all available endpoints by group and tier.', endpoint: 'GET /api/developer/endpoints' },
       { step: 4, title: 'Download an SDK', description: 'Get a complete client library for your language.', endpoint: 'GET /api/developer/sdk/download/{language}', supported: ['python', 'javascript', 'typescript', 'go'] },
       { step: 5, title: 'Register a webhook', description: 'Receive real-time event notifications.', endpoint: 'POST /api/developer/webhooks/register', example: { url: 'https://your-server.com/webhook', events: ['threat.intelligence.new_ioc', 'vuln.critical_found'] } },
@@ -1117,8 +1100,8 @@ async function getAuthGuide(request, env) {
     title: 'Authentication Guide — CYBERDUDEBIVASH AI Security Hub',
     version: '20.0.0',
     methods: [
-      { name: 'Bearer Token', header: 'Authorization: Bearer <your-api-key>', description: 'Recommended. Pass your API key as a Bearer token in the Authorization header.', example_curl: 'curl -H "Authorization: Bearer cdb_your_key" https://your-worker.workers.dev/api/radar/latest' },
-      { name: 'API Key Header', header: 'X-API-Key: <your-api-key>', description: 'Alternative method. Pass your API key in the X-API-Key header.', example_curl: 'curl -H "X-API-Key: cdb_your_key" https://your-worker.workers.dev/api/radar/latest' },
+      { name: 'Bearer Token', header: 'Authorization: Bearer <your-api-key>', description: 'Recommended. Pass your API key as a Bearer token in the Authorization header.', example_curl: 'curl -H "Authorization: Bearer cdb_your_key" https://cyberdudebivash.in/api/radar/latest' },
+      { name: 'API Key Header', header: 'X-API-Key: <your-api-key>', description: 'Alternative method. Pass your API key in the X-API-Key header.', example_curl: 'curl -H "X-API-Key: cdb_your_key" https://cyberdudebivash.in/api/radar/latest' },
     ],
     key_management: { create: 'POST /api/developer/keys', list: 'GET /api/developer/keys', revoke: 'DELETE /api/developer/keys/{id}', rotate: 'POST /api/developer/keys/{id}/rotate', format: 'cdb_ prefix followed by 48 hex characters' },
     scopes: [
@@ -1216,13 +1199,13 @@ async function getEnterpriseExamples(request, env) {
         id: 'splunk-threat-export', title: 'Export threat intelligence to Splunk', category: 'siem_integration',
         description: 'Continuously export CVE signals and IOC data into Splunk for SIEM correlation.',
         steps: ['Configure Splunk connector: POST /api/integrations/configure (platform: splunk)', 'Test connection: POST /api/integrations/test', 'Export signals: GET /api/export/siem?format=cef&hours=24', 'Schedule via webhook: POST /api/developer/webhooks/register (event: threat.intelligence.new_ioc)'],
-        code_curl: 'curl -X POST https://your-worker.workers.dev/api/integrations/configure -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -d \'{"platform":"splunk","config":{"host":"splunk.company.com","token":"HEC_TOKEN","index":"security"}}\'',
+        code_curl: 'curl -X POST https://cyberdudebivash.in/api/integrations/configure -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -d \'{"platform":"splunk","config":{"host":"splunk.company.com","token":"HEC_TOKEN","index":"security"}}\'',
       },
       {
         id: 'ai-governance-workflow', title: 'Automate AI model risk governance', category: 'ai_governance',
         description: 'Register new AI models and automatically gate deployment based on EU AI Act risk score.',
         steps: ['Register model: POST /api/ai-governance/models', 'Get risk score: POST /api/ai-governance/risk-score', 'Check EU AI Act compliance: POST /api/ai-governance/compliance/eu-ai-act', 'Register critical risk webhook: POST /api/developer/webhooks/register (event: model.risk.critical)'],
-        code_python: 'import requests\nAPI_KEY = "cdb_your_key"\nBASE = "https://your-worker.workers.dev"\nheaders = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}\nmodel = requests.post(f"{BASE}/api/ai-governance/models", headers=headers, json={"name": "ProdEngine-v3", "version": "3.2.1", "model_type": "recommendation", "data_classification": "pii", "deployment_context": "production_customer_facing", "autonomy_level": "fully_autonomous", "impact_domain": "financial"}).json()\nprint(f"Risk Level: {model[\'riskAssessment\'][\'riskLevel\']}")'
+        code_python: 'import requests\nAPI_KEY = "cdb_your_key"\nBASE = "https://cyberdudebivash.in"\nheaders = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}\nmodel = requests.post(f"{BASE}/api/ai-governance/models", headers=headers, json={"name": "ProdEngine-v3", "version": "3.2.1", "model_type": "recommendation", "data_classification": "pii", "deployment_context": "production_customer_facing", "autonomy_level": "fully_autonomous", "impact_domain": "financial"}).json()\nprint(f"Risk Level: {model[\'riskAssessment\'][\'riskLevel\']}")'
       },
       {
         id: 'soc-case-automation', title: 'Automated SOC case creation on critical CVEs', category: 'soc_operations',
@@ -1239,7 +1222,7 @@ async function getEnterpriseExamples(request, env) {
         id: 'enterprise-pdf-report', title: 'Generate executive PDF threat report', category: 'soc_operations',
         description: 'Generate a board-ready executive PDF summarising the threat landscape for CISO reporting.',
         steps: ['Ensure ENTERPRISE tier subscription', 'Call: GET /api/export/siem?format=executive_pdf', 'Save response binary as .pdf'],
-        code_curl: 'curl "https://your-worker.workers.dev/api/export/siem?format=executive_pdf" -H "Authorization: Bearer $API_KEY" -o threat-report.pdf',
+        code_curl: 'curl "https://cyberdudebivash.in/api/export/siem?format=executive_pdf" -H "Authorization: Bearer $API_KEY" -o threat-report.pdf',
       },
     ],
     sdk_downloads: { python: '/api/developer/sdk/download/python?raw=1', javascript: '/api/developer/sdk/download/javascript?raw=1', typescript: '/api/developer/sdk/download/typescript?raw=1', go: '/api/developer/sdk/download/go?raw=1' },
@@ -1251,8 +1234,8 @@ async function getEnterpriseExamples(request, env) {
 export async function getOpenAPISpec(request, env) {
   const spec = {
     openapi:'3.1.0',
-    info:{ title:'CYBERDUDEBIVASH AI Security Hub API', version:'20.0.0', description:'Enterprise AI Security Platform — AI Governance, Red Team, SOC, CTI, Threat Hunting, CTEM, MSSP', contact:{ name:'CYBERDUDEBIVASH Support', url:'https://your-worker.workers.dev/api/developer' } },
-    servers:[{ url:'https://your-worker.workers.dev', description:'Production (Cloudflare Edge — 300+ PoPs)' }],
+    info:{ title:'CYBERDUDEBIVASH AI Security Hub API', version:'20.0.0', description:'Enterprise AI Security Platform — AI Governance, Red Team, SOC, CTI, Threat Hunting, CTEM, MSSP', contact:{ name:'CYBERDUDEBIVASH Support', url:'https://cyberdudebivash.in/api/developer' } },
+    servers:[{ url:'https://cyberdudebivash.in', description:'Production (Cloudflare Edge — 300+ PoPs)' }],
     security:[{ BearerAuth:[] },{ ApiKeyAuth:[] }],
     components:{ securitySchemes:{
       BearerAuth:{ type:'http', scheme:'bearer', bearerFormat:'JWT', description:'JWT token from /api/auth/token' },

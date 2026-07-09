@@ -299,15 +299,22 @@ export const handleEmailTrack = withErrorBoundary(async (request, env) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const handleProvisionApiKey = withErrorBoundary(async (request, env) => {
   const body  = await request.json().catch(() => ({}));
-  const { email, plan = 'starter' } = body;
+  const { email } = body;
 
   if (!email) return fail(request, 'email required', 400);
 
+  // CAP-DEVPORTAL-004: the caller-supplied `plan` field used to be trusted
+  // directly whenever no lead record existed yet, letting any unauthenticated
+  // caller mint an arbitrary-tier (including enterprise) key for any email
+  // they typed in. The plan is now only ever taken from the lead's own
+  // server-recorded value, which is set exclusively by the HMAC-verified
+  // Razorpay webhook (handlePaymentSuccess -> upgradeLead) — never from
+  // client input. No verified paid lead on file -> no key.
   const lead = await getLead(env, email);
-  const effectivePlan = lead?.plan || plan;
+  const effectivePlan = lead?.plan;
 
-  if (effectivePlan === 'free') {
-    return fail(request, 'API keys require Starter plan or above', 403);
+  if (!effectivePlan || effectivePlan === 'free') {
+    return fail(request, 'API keys require a verified Starter plan or above', 403);
   }
 
   const keyResult = await provisionApiKey(env, email, effectivePlan);

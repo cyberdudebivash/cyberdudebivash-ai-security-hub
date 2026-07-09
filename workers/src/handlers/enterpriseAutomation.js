@@ -11,7 +11,7 @@
  * P7.0-009  Enterprise Metrics     — /api/auto/metrics
  */
 
-import { createApiKey, listUserApiKeys, revokeApiKey, getKeyUsageSummary, TIER_LIMITS } from '../auth/apiKeys.js';
+import { createApiKey, listUserApiKeys, revokeApiKey, TIER_LIMITS } from '../auth/apiKeys.js';
 
 // ─── D1 bootstrap ──────────────────────────────
 let _autoTablesReady = false;
@@ -117,15 +117,45 @@ async function signPayload(secret, payload) {
 
 // ─── P7.0-001: API Key Self-Service ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+// Self-service key allowance by tier — mirrors TIER_LIMITS[...].api_keys
+// (auth/apiKeys.js), the same source the canonical POST /api/keys route
+// enforces against, so a customer sees one consistent limit regardless of
+// which of the two create-key surfaces they use.
+function maxSelfKeysForTier(tier) {
+  const n = TIER_LIMITS[tier]?.api_keys;
+  return (typeof n === 'number' && n >= 0) ? n : Infinity; // -1/undefined = unlimited
+}
+
 async function handleCreateSelfKey(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
   const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
   let body = {};
   try { body = await req.json(); } catch {}
   const label = (body.label || body.name || 'API Key').toString().slice(0, 60);
+  const tier  = userTier(authCtx);
   try {
-    const result = await createApiKey(D, userId(authCtx), orgId(authCtx), userTier(authCtx), label);
-    return Response.json(result, { status: 201 });
+    const maxKeys  = maxSelfKeysForTier(tier);
+    const existing = await listUserApiKeys(D, userId(authCtx));
+    const active   = existing.filter(k => k.active);
+    if (active.length >= maxKeys) {
+      return Response.json({
+        error: `Key limit reached (${maxKeys} keys for ${tier} tier)`,
+        hint:  'Revoke an existing key first, or upgrade your plan',
+        upgrade_url: '/#pricing',
+      }, { status: 409 });
+    }
+
+    const result = await createApiKey(D, userId(authCtx), tier, label);
+    return Response.json({
+      success: true,
+      message: 'API key generated. Save it now — this is the only time you will see the full key.',
+      key:     result.raw_key,   // shown ONCE — never retrievable again
+      id:      result.id,
+      prefix:  result.prefix,
+      label:   result.label,
+      tier:    result.tier,
+      limits:  TIER_LIMITS[result.tier] || TIER_LIMITS.FREE,
+    }, { status: 201 });
   } catch (e) {
     return Response.json({ error: e.message || 'Failed to create key' }, { status: 400 });
   }
@@ -133,13 +163,20 @@ async function handleCreateSelfKey(req, env, authCtx) {
 
 async function handleListSelfKeys(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
-  const D = db(env); if (!D) return Response.json({ keys: [] });
+  const D = db(env); if (!D) return Response.json({ keys: [], count: 0, max_keys: 0 });
+  const tier = userTier(authCtx);
   try {
-    const keys = await listUserApiKeys(D, userId(authCtx));
-    const summary = await getKeyUsageSummary(D, userId(authCtx)).catch(() => ({}));
-    return Response.json({ keys, usage_summary: summary, tier: userTier(authCtx), limits: TIER_LIMITS[userTier(authCtx)] || TIER_LIMITS.FREE });
+    const keys    = await listUserApiKeys(D, userId(authCtx));
+    const maxKeys = maxSelfKeysForTier(tier);
+    return Response.json({
+      keys,
+      count:    keys.filter(k => k.active).length,
+      max_keys: Number.isFinite(maxKeys) ? maxKeys : -1, // -1 = unlimited
+      tier,
+      limits:   TIER_LIMITS[tier] || TIER_LIMITS.FREE,
+    });
   } catch {
-    return Response.json({ keys: [] });
+    return Response.json({ keys: [], count: 0, max_keys: 0 });
   }
 }
 
@@ -147,10 +184,54 @@ async function handleRevokeSelfKey(req, env, authCtx, keyId) {
   const deny = requireAuth(authCtx); if (deny) return deny;
   const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
   try {
-    await revokeApiKey(D, keyId, userId(authCtx));
+    const revoked = await revokeApiKey(D, keyId, userId(authCtx));
+    if (!revoked) return Response.json({ error: 'Key not found or already revoked' }, { status: 404 });
     return Response.json({ success: true, revoked: keyId });
   } catch (e) {
     return Response.json({ error: e.message || 'Revocation failed' }, { status: 400 });
+  }
+}
+
+/**
+ * POST /api/self/keys/:id/rotate — atomic key rotation, mirrors the
+ * canonical handleRotateKey (handlers/apikeys.js): revoke the old key first
+ * (so rotation never trips the per-tier key limit), then issue a
+ * replacement on the caller's CURRENT tier with the same label.
+ */
+async function handleRotateSelfKey(req, env, authCtx, keyId) {
+  const deny = requireAuth(authCtx); if (deny) return deny;
+  const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
+  if (!keyId) return Response.json({ error: 'Key ID required' }, { status: 400 });
+
+  const existing = (await listUserApiKeys(D, userId(authCtx))).find(k => k.id === keyId);
+  if (!existing) return Response.json({ error: 'Key not found' }, { status: 404 });
+  if (!existing.active) {
+    return Response.json({ error: 'Key is already revoked — create a new key instead', hint: 'POST /api/self/keys' }, { status: 409 });
+  }
+
+  const revoked = await revokeApiKey(D, keyId, userId(authCtx));
+  if (!revoked) return Response.json({ error: 'Key not found or already revoked' }, { status: 404 });
+
+  try {
+    const tier   = userTier(authCtx);
+    const result = await createApiKey(D, userId(authCtx), tier, existing.label || 'Rotated Key');
+    return Response.json({
+      success:    true,
+      message:    'Key rotated. The old key is revoked immediately. Save the new key now — this is the only time you will see it.',
+      old_key_id: keyId,
+      key:        result.raw_key, // shown ONCE — never retrievable again
+      key_id:     result.id,
+      prefix:     result.prefix,
+      label:      result.label,
+      tier:       result.tier,
+      limits:     TIER_LIMITS[result.tier] || TIER_LIMITS.FREE,
+    }, { status: 201 });
+  } catch (e) {
+    return Response.json({
+      error:      'Rotation partially failed: the old key was revoked but the replacement could not be created. Create a new key with POST /api/self/keys.',
+      old_key_id: keyId,
+      detail:     e?.message,
+    }, { status: 500 });
   }
 }
 
@@ -811,6 +892,9 @@ export async function handleAutoRoute(req, env, authCtx, path, method) {
   // ─── P7.0-001: /api/self/* ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   if (path === '/api/self/keys' && method === 'GET')    return handleListSelfKeys(req, env, authCtx);
   if (path === '/api/self/keys' && method === 'POST')   return handleCreateSelfKey(req, env, authCtx);
+  if (path.startsWith('/api/self/keys/') && path.endsWith('/rotate') && method === 'POST') {
+    return handleRotateSelfKey(req, env, authCtx, path.split('/').slice(-2, -1)[0]);
+  }
   if (path.startsWith('/api/self/keys/') && method === 'DELETE') {
     return handleRevokeSelfKey(req, env, authCtx, path.split('/').pop());
   }

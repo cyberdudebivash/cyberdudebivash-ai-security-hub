@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-08, end of Wave 2 — Developer Portal / API Keys)
+## Current status (2026-07-09, CAP-DEVPORTAL-002/003/004 fix sprint)
 
 | Metric | Value | Source |
 |---|---|---|
@@ -17,12 +17,12 @@ registry-population session.
 | Domains populated | 17 | see list below |
 | Domains empty (stubs) | 4 | see Remaining Work Register |
 | Capabilities registered | 54 | `node scripts/registry/validate.mjs` |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-08 |
-| Worker test suite | 177 files / 1867 tests passing | `npx vitest run`, run 2026-07-08 (independently re-run this session, not carried over from a prior session's claim) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-08 |
-| Backend / Frontend / Parity | 69.4% / 38% / 35.2% | `PRODUCTION_READINESS_REPORT.md` |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
+| Worker test suite | 179 files / 1899 tests passing | `npx vitest run`, run 2026-07-09 (includes 12 new tests for this sprint + apiKeyHashing.test.mjs corrections) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
+| Backend / Frontend / Parity | 74.1% / 39.8% / 37% | `PRODUCTION_READINESS_REPORT.md` (up from 69.4% / 38% / 35.2% — CAP-DEVPORTAL-002/003/004 backend now correct, -002's rotate button now functional) |
 | Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — no `dynamic_browser` verification has been performed yet on any entry |
-| Gaps by severity | Critical 14 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` |
+| Gaps by severity | Critical 14 · High 16 · Medium 4 · Low 20 | `PRODUCTION_READINESS_REPORT.md` — unchanged: priority reflects `customer_journey_complete`/`dynamic_browser` status, not fixed this pass; see remediation section below |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -68,47 +68,45 @@ for both fixes above): a frontend default-selection bug in
 every run — detailed in the registry entry's `notes` field. Not a security
 gate.
 
-## ⚠ Open critical findings surfaced by Wave 2, not yet remediated
+## ✅ Wave 2 critical findings remediated (2026-07-09)
 
 **Developer Portal / API Keys domain** (`docs/capability-registry/domains/developer-portal-apikeys.json`):
-a prior (uncommitted, lost) session's claim of "4-5 parallel API-key
-systems" was independently re-verified this wave and confirmed accurate —
-5 independent create/list/revoke implementations exist across this domain
-plus the already-populated `mssp` domain. Three of four registered here are
-confirmed broken, each re-verified directly against live code (not carried
-over from the lost session's narration):
+all three findings surfaced by Wave 2 are **FIXED**, each as its own
+dedicated change with real regression tests (`workers/test/devPortalApiKeyFixes.test.mjs`,
+`workers/test/apiKeyHashing.test.mjs`), same treatment as CAP-MASOC-001 above:
 
 - **CAP-DEVPORTAL-002** (Self-Service Automation API Keys,
-  `workers/src/handlers/enterpriseAutomation.js:127`): a parameter-ordering
-  bug passes `orgId(authCtx)` where `createApiKey()`'s `userTier` parameter
-  is expected, so every self-service key created through
-  `frontend/automation-dashboard.html` — including for ENTERPRISE
-  customers — silently gets FREE-tier limits and a garbage label. The
-  rotate button on the same page has no matching backend route at all
-  (404 on every click). Zero test coverage.
+  `workers/src/handlers/enterpriseAutomation.js`): the parameter-ordering
+  bug is corrected (`createApiKey(D, userId(authCtx), userTier(authCtx), label)`),
+  a per-tier key limit now matches the canonical route, list now returns
+  `count`/`max_keys` (previously undefined), and a new `handleRotateSelfKey`
+  closes the missing rotate route (previously a guaranteed 404).
 - **CAP-DEVPORTAL-003** (Developer Portal key endpoints,
-  `workers/src/handlers/developerPortal.js:978`): `POST/GET/DELETE
-  /api/developer/keys*` insert/select columns (`name`, `scopes`,
-  `updated_at`) that do not exist in the live `api_keys` schema — a 500 on
-  every call, with **no auth check at all** on the route. These are the
-  exact endpoints this platform's own published OpenAPI spec and quickstart
-  guide document as onboarding step 1 ("Get your API key").
+  `workers/src/handlers/developerPortal.js`): the four broken local
+  reimplementations were deleted and the routes now delegate to the
+  canonical `workers/src/handlers/apikeys.js` handlers, gated on
+  `isRealUser(authCtx)` (previously no auth at all). Also fixed in the same
+  pass: 18 occurrences of a literal unfilled placeholder domain
+  (`your-worker.workers.dev`) across every SDK generator and the OpenAPI
+  spec's own declared server URL.
 - **CAP-DEVPORTAL-004** (Growth/Plan API Key Provisioning,
-  `workers/src/services/apiRevenueEngine.js:319`): the same bug class found
-  independently in a different file — `INSERT INTO api_keys` references a
-  non-existent `plan` column, omits two `NOT NULL` columns, and uses
-  `ON CONFLICT(email)` against a column with no UNIQUE constraint — three
-  independently sufficient reasons this always fails. Also unauthenticated
-  (only requires an `email` field, no ownership check).
+  `workers/src/services/apiRevenueEngine.js`, `workers/src/handlers/growth.js`):
+  the INSERT now supplies every real, required column and replaces the
+  invalid `ON CONFLICT(email)` with an explicit select-then-upsert; the
+  companion identity-escalation gap (any caller could mint an
+  arbitrary-tier key for any email) is closed — the tier is now taken only
+  from a lead's own server-recorded, webhook-verified plan, never client
+  input. **Residual gap, not fixed here:** `sap_`-prefixed keys still cannot
+  authenticate anywhere on the platform — `workers/src/middleware/auth.js`'s
+  request-time key resolver has no recognition path for this prefix at all,
+  a deeper issue outside the original finding's scope and requiring changes
+  to the platform's core auth resolver. See the registry entry's `notes`
+  for the full writeup; `operational_status` for this one entry stays
+  `BLOCKED` until that's addressed as its own reviewed follow-up.
 
-Deliberately **not fixed in this wave** — this was a registry-population
-pass (discover, map, verify, register), matching the same pattern already
-used for CAP-MASOC-001 above: document with full evidence here first, fix
-each as its own dedicated, bounded change afterward. See each entry's
-`verification.evidence` and `notes` for full detail and fix recommendations.
 CAP-DEVPORTAL-001 (the canonical, correctly-implemented API Key Management
-system) is healthy and is the recommended consolidation target for all
-three fixes.
+system) was the consolidation target used for -002 and -003, per this
+board's prior recommendation.
 
 ## Remaining Work Register
 
@@ -124,18 +122,72 @@ three fixes.
 ## Proposed wave plan
 
 - **Wave 2 — Developer Portal / API Keys.** ✅ DONE (2026-07-08) — see
-  session log and open findings above.
+  session log above; its 3 findings are now also fixed (see remediation
+  section above).
 - **Wave 3 — Threat Hunting/Intel + Security Scanners.** Two domains,
   grouped only if the next session has room to spare after one — otherwise
   run them as separate waves.
 - **Wave 4 — MYTHOS/God Mode + Compliance Store.**
-- Unscheduled — **CAP-DEVPORTAL-002/003/004 fixes** (see findings above).
-  Not registry waves; normal CAB-reviewed product fixes, same treatment as
-  the MASOC auth-gate fix was. Can run before, after, or between the domain
-  waves above — sequencing is a business call, not a registry-population
+- **CAP-DEVPORTAL-002/003/004 fixes.** ✅ DONE (2026-07-09) — see remediation
+  section above. Not registry waves; normal CAB-reviewed product fixes, same
+  treatment as the MASOC auth-gate fix was. Can run before, after, or
+  between the domain waves above — sequencing is a business call, not a
+  registry-population
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-09 — Fix sprint: CAP-DEVPORTAL-002/003/004
+
+- **Scope:** the three confirmed-broken findings documented by Wave 2
+  (2026-07-08), fixed as their own dedicated change per that wave's own
+  recommendation — same treatment as CAP-MASOC-001.
+- **CAP-DEVPORTAL-002** (`workers/src/handlers/enterpriseAutomation.js`):
+  fixed the `createApiKey` parameter-ordering bug, added the matching
+  per-tier key-limit enforcement, fixed the list response (`count`/`max_keys`
+  were previously undefined), and implemented the missing rotate route
+  (mirrors the canonical `handleRotateKey`'s atomic revoke-then-recreate).
+- **CAP-DEVPORTAL-003** (`workers/src/handlers/developerPortal.js`,
+  `workers/src/index.js`): deleted the four broken local reimplementations
+  and delegated to the canonical `handlers/apikeys.js`; threaded `authCtx`
+  through the router and gated all four key routes on `isRealUser`. Found
+  and fixed independently while in this file: 18 occurrences of a literal
+  unfilled placeholder domain (`your-worker.workers.dev`) across every SDK
+  generator and the OpenAPI spec's own declared server URL.
+- **CAP-DEVPORTAL-004** (`workers/src/services/apiRevenueEngine.js`,
+  `workers/src/handlers/growth.js`): fixed the INSERT's column list (real
+  NOT NULL columns supplied, `tier` not `plan`) and replaced the invalid
+  `ON CONFLICT(email)` with an explicit select-then-upsert (no schema
+  migration needed). Found and fixed independently in the same file:
+  `resolveApiKey`'s D1 fallback selected the same nonexistent `plan` column
+  (previously dead code — nothing calls this function's D1 path in
+  production, confirmed by a full grep); `recordApiUsage`'s usage-log
+  INSERT referenced nonexistent `api_key`/`weight` columns (also dead code,
+  never called); `getApiUsageSummary`'s three queries summed a `weight`
+  column that was never persisted (corrected to `COUNT(*)`). Closed the
+  actual identity-escalation gap in `handleProvisionApiKey`: the tier was
+  previously trusted from client input whenever no lead record existed,
+  letting any caller mint an arbitrary-tier key for any email; now taken
+  only from a lead's own server-recorded, webhook-verified plan.
+  **Residual, deliberately unfixed:** `sap_` keys still cannot authenticate
+  anywhere — `workers/src/middleware/auth.js`'s request-time key resolver
+  has no recognition path for this prefix, and a separate KV-naming
+  mismatch (hash vs raw) would break even a fast-path lookup if one
+  existed. Fixing this means touching the platform's core, every-request
+  auth resolver — out of proportion for this bounded fix and outside the
+  original finding's scope (which only examined the INSERT). Flagged as
+  its own follow-up in the registry entry's `notes`; `operational_status`
+  for this one entry honestly stays `BLOCKED`.
+- **Tests:** `workers/test/devPortalApiKeyFixes.test.mjs` (new, 12 tests,
+  real in-memory D1 via `node:sqlite` matching the live schema — not a
+  hand-rolled regex mock, precisely to catch the bug class being fixed).
+  `workers/test/apiKeyHashing.test.mjs` updated (its mock's SQL-matching
+  regex still referenced the now-fixed `plan` column; corrected to `tier`).
+  Full suite green: 179 files / 1899 tests.
+- **Registry:** all three entries' `status`/`operational_status`/
+  `test_coverage`/`verification`/`notes` updated with fix evidence;
+  `PRODUCTION_READINESS_REPORT.md` regenerated (backend 69.4% → 74.1%).
+  Validator: 0 failures, 0 warnings.
 
 ### 2026-07-08 — Wave 2: Developer Portal / API Keys
 
