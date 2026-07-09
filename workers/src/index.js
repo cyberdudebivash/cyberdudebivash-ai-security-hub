@@ -8148,6 +8148,36 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleRevokeRole(request, env, authCtx), request));
     }
 
+    // ── Staff oversight: customer Users + Organizations (CAP-ADMIN-004) — handlers/staffUserOrgAdmin.js ──
+    if (path === '/api/admin/users' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleListUsers } = await import('./handlers/staffUserOrgAdmin.js');
+      return withSecurityHeaders(withCors(await handleListUsers(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/admin/users/') && path.endsWith('/status') && method === 'PATCH') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const userId = path.split('/')[4]; // /api/admin/users/:id/status
+      const { handleUpdateUserStatus } = await import('./handlers/staffUserOrgAdmin.js');
+      return withSecurityHeaders(withCors(await handleUpdateUserStatus(request, env, authCtx, userId), request));
+    }
+    if (path.startsWith('/api/admin/users/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const userId = path.split('/')[4]; // /api/admin/users/:id
+      const { handleGetUserAdmin } = await import('./handlers/staffUserOrgAdmin.js');
+      return withSecurityHeaders(withCors(await handleGetUserAdmin(request, env, authCtx, userId), request));
+    }
+    if (path === '/api/admin/orgs' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { handleListOrgsAdmin } = await import('./handlers/staffUserOrgAdmin.js');
+      return withSecurityHeaders(withCors(await handleListOrgsAdmin(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/admin/orgs/') && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const orgId = path.split('/')[4]; // /api/admin/orgs/:id
+      const { handleGetOrgAdmin } = await import('./handlers/staffUserOrgAdmin.js');
+      return withSecurityHeaders(withCors(await handleGetOrgAdmin(request, env, authCtx, orgId), request));
+    }
+
     // GET /api/mssp/expansion-opps — Partners eligible for tier upgrade
     if (path === '/api/mssp/expansion-opps' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));

@@ -172,38 +172,50 @@
   {
     "id": "CAP-ADMIN-004",
     "domain": "administration",
-    "name": "Missing Admin Surfaces — Users, Organizations, Marketplace, Academy, Affiliate, CRM, Support",
-    "description": "Staff administration for the customer-facing Users, Organizations, Marketplace, Academy, Affiliate, CRM/leads, and Support-ticket domains — no backend route or frontend page exists for any of them.",
+    "name": "Admin Surfaces — Users, Organizations (done); Marketplace, Academy, Affiliate, CRM, Support (missing)",
+    "description": "Staff administration for the customer-facing Users, Organizations, Marketplace, Academy, Affiliate, CRM/leads, and Support-ticket domains. Users (view + suspend/reactivate a customer account) and Organizations (view-only oversight of any org) are now implemented; the other 5 areas remain a genuine gap.",
     "backend": {
-      "handlers": [],
-      "entry_points": [],
-      "routes_sampled": [],
+      "handlers": ["workers/src/handlers/staffUserOrgAdmin.js"],
+      "entry_points": [
+        "handleListUsers", "handleGetUserAdmin", "handleUpdateUserStatus",
+        "handleListOrgsAdmin", "handleGetOrgAdmin"
+      ],
+      "routes_sampled": [
+        { "path": "/api/admin/users", "method": "GET", "evidence": "workers/src/index.js:8152" },
+        { "path": "/api/admin/users/:id/status", "method": "PATCH", "evidence": "workers/src/index.js:8157" },
+        { "path": "/api/admin/users/:id", "method": "GET", "evidence": "workers/src/index.js:8163" },
+        { "path": "/api/admin/orgs", "method": "GET", "evidence": "workers/src/index.js:8169" },
+        { "path": "/api/admin/orgs/:id", "method": "GET", "evidence": "workers/src/index.js:8174" }
+      ],
       "routes_fully_enumerated": true,
-      "status": "missing"
+      "status": "partial"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Re-verified 2026-07-08 (originally documented docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:235 Gap Matrix Domain 11): grepped the full /api/admin/* route inventory in workers/src/index.js (36 distinct paths) for any users/orgs/organizations/marketplace/academy/affiliate/crm/support/leads/tickets segment — zero matches. This gap is unchanged since the mission brief was written, despite substantial registry-population work landing in the interim across Organizations, RBAC, MSSP, Sales/CRM, Affiliate/Partner, and Academy domains — none of that work added a staff admin surface for its own area."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/admin-portal.html"],
+      "status": "partial",
+      "evidence": "Two new sections added to the existing staff console frontend/admin-portal.html (not a new page): 'Customer Accounts' at frontend/admin-portal.html:280 and 'Organization Oversight' at frontend/admin-portal.html:300, plus two detail modals at frontend/admin-portal.html:327 and frontend/admin-portal.html:341. Marketplace/Academy/Affiliate/CRM/Support still have zero backend route or frontend page — re-verified 2026-07-09, grep -oE for /api/admin/(marketplace|academy|affiliate|crm|support|leads|tickets)[a-zA-Z0-9/_:-]* across workers/src/index.js still returns zero matches."
     },
-    "navigation": { "discoverable": false, "evidence": "No page exists to link to." },
-    "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "navigation": { "discoverable": true, "evidence": "Both new sections render on frontend/admin-portal.html, the same page staff already navigate to for role management — no separate link needed." },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["admin:users:manage", "admin:orgs:read"] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
-    "test_coverage": { "has_tests": false, "evidence": "Nothing to test — no implementation exists." },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/staffUserOrgAdmin.test.mjs (20 tests: RBAC gating per permission tier, search, suspend/reactivate incl. refresh-token revocation and audit-log write, org member listing) and workers/test/adminPortalStaffOversightContract.test.mjs (15 tests: frontend↔backend route/permission contract, plus a regression guard locking in the loadRoles() injection fix and esc()-wrapping on every new render path)."
+    },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "grep -oE for /api/admin/(users|orgs|organizations|marketplace|academy|affiliate|crm|support|leads|tickets)[a-zA-Z0-9/_:-]* across workers/src/index.js returns zero matches, 2026-07-08."
+      "last_verified": "2026-07-09",
+      "evidence": "Static route/permission/injection-safety contract locked in by workers/test/adminPortalStaffOversightContract.test.mjs. Additionally verified locally (not a production dynamic_browser pass) with a real headless-Chromium Playwright session against a local static server with mocked API responses: a SUPERADMIN session (users search/view/suspend/reactivate, org view — 21/21 checks) and a plain ADMIN session (users correctly shows Super-Admin-only restricted state; orgs still works at the lower permission bar). axe-core scan on both new sections and both new modals found and fixed one real new issue (scrollable-region-focusable on the two modal member/org tables); remaining violations (color-contrast, landmark-one-main, region, select-name) confirmed pre-existing on untouched parts of the same page, not introduced by this change."
     },
-    "notes": "A genuine, real gap, not a wiring/discoverability issue like most of the rest of this domain — the backend simply does not exist for any of these 7 areas. Staff currently have no way to, e.g., disable a customer's account, edit an organization, moderate a marketplace listing, manage academy enrollment, review an affiliate application, or work a support ticket, other than direct database access."
+    "notes": "Users + Organizations were the two sub-domains actually in scope for the 'user lifecycle' gap the customer named — Marketplace, Academy, Affiliate, CRM, and Support remain a genuine gap and are explicitly out of scope for this pass, same as when this entry was first written. Organization suspension specifically is NOT implemented: the organizations table has no status/suspended column (confirmed against workers/schema_master.sql), so it isn't representable without a schema migration; only view-only oversight was built. Suspending a user both flips users.status (already fully enforced at login — handlers/auth.js's handleLogin already rejected non-'active' users before this change) and revokes every outstanding refresh token via auth/jwt.js's revokeAllUserTokens, so a suspension takes effect immediately, not just on the next login attempt."
   }
 ]

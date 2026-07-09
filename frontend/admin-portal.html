@@ -115,6 +115,17 @@ a:hover{text-decoration:underline}
 .gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
 .gate-box{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;padding:36px;width:100%;max-width:420px;text-align:center}
 
+/* ── STAFF OVERSIGHT MODALS (Users / Organizations) ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:560px;max-width:96vw;max-height:86vh;overflow-y:auto}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin:16px 0}
+.detail-item{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text)}
+.badge-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:capitalize}
+.status-active{background:rgba(16,185,129,.12);color:var(--accent3);border:1px solid rgba(16,185,129,.25)}
+.status-suspended{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+.status-unverified{background:rgba(245,158,11,.12);color:var(--gold);border:1px solid rgba(245,158,11,.25)}
+
 /* ── BTNS ── */
 .btn{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;padding:11px 22px;border-radius:9px;border:none;cursor:pointer;transition:all .2s;text-decoration:none;white-space:nowrap}
 .btn:hover{text-decoration:none;transform:translateY(-1px)}
@@ -264,6 +275,46 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
     </div>
   </div>
 
+  <div class="divider"></div>
+
+  <!-- Customer Users (staff oversight) -->
+  <div class="section">
+    <div class="section-header flex">
+      <div>
+        <div class="section-tag tag-blue">USERS</div>
+        <h2 class="section-title">Customer Accounts</h2>
+        <p class="section-sub">Search any customer account. Suspending blocks login immediately and revokes any active session — see auth/rbac.js's <code>admin:users:manage</code>.</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadUsers()">↻ Refresh</button>
+    </div>
+    <div id="usersControlsWrap" style="margin-bottom:14px"></div>
+    <div class="data-table-wrap">
+      <div class="table-scroll" id="usersTableWrap">
+        <div class="table-empty">Loading customer accounts…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Organizations (staff oversight) -->
+  <div class="section">
+    <div class="section-header flex">
+      <div>
+        <div class="section-tag tag-blue">ORGANIZATIONS</div>
+        <h2 class="section-title">Organization Oversight</h2>
+        <p class="section-sub">View any organization's plan, owner, and members. Read-only — suspending an organization isn't available yet (no status column on <code>organizations</code>).</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadOrgsAdmin()">↻ Refresh</button>
+    </div>
+    <div id="orgsControlsWrap" style="margin-bottom:14px"></div>
+    <div class="data-table-wrap">
+      <div class="table-scroll" id="orgsTableWrap">
+        <div class="table-empty">Loading organizations…</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <footer>
@@ -272,6 +323,39 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
     <div class="footer-legal">Internal platform staff tool. Not indexed, not linked from any public page. Access requires a verified staff session — see workers/src/handlers/staffAuth.js and workers/src/auth/rbac.js.</div>
   </div>
 </footer>
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="modal-user-detail">
+  <div class="modal-box">
+    <div class="card-title" id="userDetailTitle">Customer Account</div>
+    <div class="card-sub" id="userDetailEmail">—</div>
+    <div class="detail-grid" id="userDetailFields"></div>
+    <div id="userDetailOrgsWrap"></div>
+    <div class="form-row" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user-detail')">Close</button>
+      <button class="btn btn-primary" id="userSuspendBtn" onclick="toggleUserStatus()">Suspend Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Organization Detail Modal -->
+<div class="modal-overlay" id="modal-org-detail">
+  <div class="modal-box" style="width:640px">
+    <div class="card-title" id="orgDetailTitle">Organization</div>
+    <div class="card-sub" id="orgDetailSlug">—</div>
+    <div class="detail-grid" id="orgDetailFields"></div>
+    <div class="card-sub" style="margin-top:16px;margin-bottom:8px;font-weight:800;color:#fff">Members</div>
+    <div class="table-scroll" style="max-height:280px" tabindex="0" aria-label="Organization members, scrollable">
+      <table class="data-table">
+        <thead><tr><th>Email</th><th>Role</th><th>Account Status</th></tr></thead>
+        <tbody id="orgDetailMembersBody"></tbody>
+      </table>
+    </div>
+    <div class="form-row" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-org-detail')">Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -292,6 +376,18 @@ async function apiFetch(path, opts) {
   return CDB_STAFF_AUTH.authFetch(API_BASE + path, opts);
 }
 
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
 // ── STAFF GATE — real, server-verified session auth (assets/staff-auth.js) ──
 // See workers/src/handlers/staffAuth.js for the backend; POST /api/staff/login
 // sends a magic link, verified here via CDB_STAFF_AUTH.guard() before the
@@ -299,7 +395,7 @@ async function apiFetch(path, opts) {
 CDB_STAFF_AUTH.guard(
   document.getElementById('gateOverlay'),
   document.getElementById('gateBox'),
-  (data) => { ME = data; renderSession(); loadRoles(); }
+  (data) => { ME = data; renderSession(); loadRoles(); loadUsers(); loadOrgsAdmin(); }
 );
 
 function renderSession() {
@@ -307,7 +403,7 @@ function renderSession() {
   document.getElementById('kpiEmail').style.fontSize = '14px';
   const roles = ME.roles || [];
   document.getElementById('kpiMyRoles').innerHTML = roles.length
-    ? roles.map(r => `<span class="role-badge ${roleClass(r)}" style="margin-right:4px">${r}</span>`).join('')
+    ? roles.map(r => `<span class="role-badge ${roleClass(r)}" style="margin-right:4px">${esc(r)}</span>`).join('')
     : '—';
   const canManage = roles.includes('SUPERADMIN');
   document.getElementById('kpiCanManage').textContent = canManage ? 'Enabled' : 'Super Admin only';
@@ -427,16 +523,212 @@ async function loadRoles() {
         <tbody>
           ${rows.map(r => `
             <tr>
-              <td>${r.email || r.user_id}</td>
-              <td><span class="role-badge ${roleClass(r.role)}">${r.role}</span></td>
-              <td>${r.granted_by || '—'}</td>
-              <td>${r.granted_at || '—'}</td>
-              <td><button class="action-link" onclick="revokeRoleFor('${(r.email || '').replace(/'/g, "\\'")}','${r.role}')">Revoke</button></td>
+              <td>${esc(r.email || r.user_id)}</td>
+              <td><span class="role-badge ${roleClass(r.role)}">${esc(r.role)}</span></td>
+              <td>${esc(r.granted_by || '—')}</td>
+              <td>${esc(r.granted_at || '—')}</td>
+              <td><button class="action-link" data-email="${esc(r.email || r.user_id || '')}" data-role="${esc(r.role)}" onclick="revokeRoleFor(this.dataset.email, this.dataset.role)">Revoke</button></td>
             </tr>`).join('')}
         </tbody>
       </table>` : '<div class="table-empty">No platform roles granted yet. Grant the first one above.</div>';
   } catch (err) {
     tableWrap.innerHTML = '<div class="table-empty">Unable to load granted roles.</div>';
+  }
+}
+
+// ── Customer Users (staff oversight, admin:users:manage — Super Admin only) ──
+let CURRENT_USER_DETAIL = null;
+
+function renderUsersControls(enabled) {
+  const wrap = document.getElementById('usersControlsWrap');
+  if (!enabled) {
+    wrap.innerHTML = '';
+    document.getElementById('usersTableWrap').innerHTML = '<div class="table-empty">Customer account oversight is Super-Admin-only.</div>';
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="form-row">
+      <input class="form-input" id="usersSearchInput" type="text" placeholder="Search by email, name, or company…" style="max-width:360px" onkeydown="if(event.key==='Enter')loadUsers()">
+      <button class="btn btn-ghost btn-sm" onclick="loadUsers()">Search</button>
+    </div>`;
+}
+
+async function loadUsers() {
+  const tableWrap = document.getElementById('usersTableWrap');
+  const q = (document.getElementById('usersSearchInput')?.value || '').trim();
+  try {
+    const res = await apiFetch('/api/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : ''));
+    if (res.status === 403) {
+      renderUsersControls(false);
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load users');
+
+    renderUsersControls(true);
+    const rows = data.users || [];
+    tableWrap.innerHTML = rows.length ? `
+      <table class="data-table">
+        <thead><tr><th>Email</th><th>Name</th><th>Company</th><th>Tier</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+        <tbody>
+          ${rows.map(u => `
+            <tr>
+              <td>${esc(u.email)}</td>
+              <td>${esc(u.full_name || '—')}</td>
+              <td>${esc(u.company || '—')}</td>
+              <td>${esc(u.tier)}</td>
+              <td><span class="badge-status status-${esc(u.status)}">${esc(u.status)}</span></td>
+              <td>${esc((u.created_at || '').slice(0, 10) || '—')}</td>
+              <td><button class="action-link" style="color:var(--accent)" data-id="${esc(u.id)}" onclick="openUserDetail(this.dataset.id)">View</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : '<div class="table-empty">No customer accounts match.</div>';
+  } catch (err) {
+    tableWrap.innerHTML = '<div class="table-empty">Unable to load customer accounts.</div>';
+  }
+}
+
+async function openUserDetail(userId) {
+  try {
+    const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load account');
+
+    CURRENT_USER_DETAIL = data.user;
+    document.getElementById('userDetailTitle').textContent = data.user.full_name || data.user.email;
+    document.getElementById('userDetailEmail').textContent = data.user.email;
+    document.getElementById('userDetailFields').innerHTML = `
+      <div class="detail-item"><span class="form-label">Company</span><span>${esc(data.user.company || '—')}</span></div>
+      <div class="detail-item"><span class="form-label">Tier</span><span>${esc(data.user.tier)}</span></div>
+      <div class="detail-item"><span class="form-label">Status</span><span class="badge-status status-${esc(data.user.status)}">${esc(data.user.status)}</span></div>
+      <div class="detail-item"><span class="form-label">Email Verified</span><span>${data.user.email_verified ? 'Yes' : 'No'}</span></div>
+      <div class="detail-item"><span class="form-label">Created</span><span>${esc((data.user.created_at || '').slice(0, 10) || '—')}</span></div>
+      <div class="detail-item"><span class="form-label">Last Login</span><span>${esc((data.user.last_login_at || '—').toString().slice(0, 16))}</span></div>`;
+
+    const orgs = data.organizations || [];
+    document.getElementById('userDetailOrgsWrap').innerHTML = orgs.length ? `
+      <div class="card-sub" style="margin-top:16px;margin-bottom:8px;font-weight:800;color:#fff">Organizations</div>
+      <div class="table-scroll" tabindex="0" aria-label="Organization memberships, scrollable">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Plan</th><th>Role</th></tr></thead>
+          <tbody>${orgs.map(o => `<tr><td>${esc(o.name)}</td><td>${esc(o.plan)}</td><td>${esc(o.role)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>` : '';
+
+    const btn = document.getElementById('userSuspendBtn');
+    const suspended = data.user.status === 'suspended';
+    btn.textContent = suspended ? 'Reactivate Account' : 'Suspend Account';
+    btn.style.background = suspended ? '' : 'linear-gradient(135deg,var(--danger),#b91c1c)';
+    btn.style.color = suspended ? '' : '#fff';
+
+    openModal('modal-user-detail');
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+async function toggleUserStatus() {
+  if (!CURRENT_USER_DETAIL) return;
+  const next = CURRENT_USER_DETAIL.status === 'suspended' ? 'active' : 'suspended';
+  if (!confirm(`${next === 'suspended' ? 'Suspend' : 'Reactivate'} ${CURRENT_USER_DETAIL.email}?`)) return;
+  const btn = document.getElementById('userSuspendBtn');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/admin/users/${encodeURIComponent(CURRENT_USER_DETAIL.id)}/status`, {
+      method: 'PATCH', body: JSON.stringify({ status: next }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Update failed');
+    showToast(`${CURRENT_USER_DETAIL.email} is now ${next}.`);
+    closeModal('modal-user-detail');
+    loadUsers();
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Organizations (staff oversight, admin:orgs:read — Admin+) ─────────────
+function renderOrgsControls(enabled) {
+  const wrap = document.getElementById('orgsControlsWrap');
+  if (!enabled) {
+    wrap.innerHTML = '';
+    document.getElementById('orgsTableWrap').innerHTML = '<div class="table-empty">Organization oversight requires Platform Administrator access.</div>';
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="form-row">
+      <input class="form-input" id="orgsSearchInput" type="text" placeholder="Search by organization name or slug…" style="max-width:360px" onkeydown="if(event.key==='Enter')loadOrgsAdmin()">
+      <button class="btn btn-ghost btn-sm" onclick="loadOrgsAdmin()">Search</button>
+    </div>`;
+}
+
+async function loadOrgsAdmin() {
+  const tableWrap = document.getElementById('orgsTableWrap');
+  const q = (document.getElementById('orgsSearchInput')?.value || '').trim();
+  try {
+    const res = await apiFetch('/api/admin/orgs' + (q ? `?q=${encodeURIComponent(q)}` : ''));
+    if (res.status === 403) {
+      renderOrgsControls(false);
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load organizations');
+
+    renderOrgsControls(true);
+    const rows = data.organizations || [];
+    tableWrap.innerHTML = rows.length ? `
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Slug</th><th>Plan</th><th>Owner</th><th>Members</th><th>Created</th><th>Action</th></tr></thead>
+        <tbody>
+          ${rows.map(o => `
+            <tr>
+              <td>${esc(o.name)}</td>
+              <td>${esc(o.slug)}</td>
+              <td>${esc(o.plan)}</td>
+              <td>${esc(o.owner_email || '—')}</td>
+              <td>${esc(o.member_count)}</td>
+              <td>${esc((o.created_at || '').slice(0, 10) || '—')}</td>
+              <td><button class="action-link" style="color:var(--accent)" data-id="${esc(o.id)}" onclick="openOrgDetail(this.dataset.id)">View</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : '<div class="table-empty">No organizations match.</div>';
+  } catch (err) {
+    tableWrap.innerHTML = '<div class="table-empty">Unable to load organizations.</div>';
+  }
+}
+
+async function openOrgDetail(orgId) {
+  try {
+    const res = await apiFetch(`/api/admin/orgs/${encodeURIComponent(orgId)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load organization');
+
+    const org = data.organization;
+    document.getElementById('orgDetailTitle').textContent = org.name;
+    document.getElementById('orgDetailSlug').textContent = org.slug;
+    document.getElementById('orgDetailFields').innerHTML = `
+      <div class="detail-item"><span class="form-label">Plan</span><span>${esc(org.plan)}</span></div>
+      <div class="detail-item"><span class="form-label">Owner</span><span>${esc(org.owner_email || '—')}</span></div>
+      <div class="detail-item"><span class="form-label">Max Members</span><span>${esc(org.max_members)}</span></div>
+      <div class="detail-item"><span class="form-label">Max Daily Scans</span><span>${esc(org.max_daily_scans)}</span></div>
+      <div class="detail-item"><span class="form-label">Industry</span><span>${esc(org.industry || '—')}</span></div>
+      <div class="detail-item"><span class="form-label">Created</span><span>${esc((org.created_at || '').slice(0, 10) || '—')}</span></div>`;
+
+    const members = data.members || [];
+    document.getElementById('orgDetailMembersBody').innerHTML = members.length
+      ? members.map(m => `
+          <tr>
+            <td>${esc(m.email)}</td>
+            <td><span class="role-badge role-other">${esc(m.role)}</span></td>
+            <td><span class="badge-status status-${esc(m.account_status)}">${esc(m.account_status)}</span></td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--text-dim)">No members.</td></tr>';
+
+    openModal('modal-org-detail');
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
   }
 }
 </script>
