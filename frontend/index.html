@@ -9257,7 +9257,10 @@ async function runMCPScan() {
   try {
     const resp = await safeFetch('/api/mcp-security/scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(SUBSCRIPTION.getToken() ? { 'Authorization': 'Bearer ' + SUBSCRIPTION.getToken() } : {}),
+      },
       body: JSON.stringify({ config, server_url: serverUrl || null, server_name: serverName }),
     });
     const data = await resp.json();
@@ -9418,7 +9421,10 @@ async function runVibeCodeScan() {
   try {
     const resp = await safeFetch('/api/vibe-code/scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(SUBSCRIPTION.getToken() ? { 'Authorization': 'Bearer ' + SUBSCRIPTION.getToken() } : {}),
+      },
       body: JSON.stringify({ code, language, source }),
     });
     const data = await resp.json();
@@ -9644,9 +9650,23 @@ async function executeScan(module, payload) {
 
   try {
     // Use safeFetch: multi-endpoint fallback + exponential backoff + 8s timeout
+    // 2026-07-10: this call never attached the logged-in user's JWT, so every
+    // scan request — from FREE visitors and paying STARTER/PRO/ENTERPRISE
+    // customers alike — hit the backend with no Authorization header.
+    // resolveAuthV5 (workers/src/auth/middleware.js) falls through to its
+    // anonymous IP-fallback tier whenever no credential is presented, so a
+    // paying customer's real tier/quota was never consulted here: they saw
+    // "Active Subscription: STARTER" in the plan badge (which correctly reads
+    // this same token via SUBSCRIPTION.fetch()) yet got rate-limited exactly
+    // like an anonymous FREE visitor the moment they actually ran a scan.
+    const _authToken = SUBSCRIPTION.getToken();
     const resp = await safeFetch(endpoints[module], {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...scanTokenHeaders },
+      headers: {
+        'Content-Type': 'application/json',
+        ...scanTokenHeaders,
+        ...(_authToken ? { 'Authorization': 'Bearer ' + _authToken } : {}),
+      },
       body: JSON.stringify(payload),
     });
     const data = await resp.json();
