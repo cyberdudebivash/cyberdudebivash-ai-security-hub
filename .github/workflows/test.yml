@@ -52,6 +52,30 @@ jobs:
             grep -q "$needle" "$H" || { echo "::error::missing header: $needle"; exit 1; }
           done
           echo "All critical security headers present."
+      - name: Assert CSP script-src actually allows every domain we load a <script> from
+        run: |
+          set -e
+          H=frontend/_headers
+          # 2026-07-09: found live in production — connect-src/frame-src/form-action
+          # correctly allowlisted Razorpay, but script-src (which gates loading
+          # https://checkout.razorpay.com/v1/checkout.js itself) did not. The browser
+          # silently CSP-blocked the SDK, so every automated-checkout attempt threw,
+          # was caught, and silently fell back to the manual-payment modal — on every
+          # page that offers Razorpay checkout (index.html, marketplace-checkout.html,
+          # user-dashboard.html). No test caught it because the prior check only
+          # asserted the header NAME exists, never its VALUE. Locking the specific
+          # domain a <script src="..."> tag in the frontend actually requests, not
+          # just "Razorpay is mentioned somewhere in the policy".
+          ENFORCED_CSP=$(grep '^  Content-Security-Policy:' "$H")
+          SCRIPT_SRC=$(echo "$ENFORCED_CSP" | grep -oE "script-src[^;]*")
+          echo "script-src: $SCRIPT_SRC"
+          DOMAINS=$(grep -ohE "https://[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]*checkout\.js" frontend/*.html frontend/assets/*.js 2>/dev/null \
+            | grep -oE "https://[a-zA-Z0-9.-]+" | sort -u)
+          for domain in $DOMAINS; do
+            echo "$SCRIPT_SRC" | grep -qF "$domain" || { echo "::error::a <script src=\"$domain/...checkout.js\"> tag exists in the frontend but '$domain' is not in the enforced CSP's script-src — the browser will silently block it"; exit 1; }
+          done
+          echo "$SCRIPT_SRC" | grep -qF "https://checkout.razorpay.com" || { echo "::error::script-src must allow https://checkout.razorpay.com (Razorpay Checkout SDK)"; exit 1; }
+          echo "CSP script-src covers every checkout-SDK domain actually referenced in the frontend ($DOMAINS)."
 
   seo-lock:
     name: SEO Structure & Meta Lock
