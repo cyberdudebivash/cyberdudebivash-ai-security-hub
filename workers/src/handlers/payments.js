@@ -1051,18 +1051,28 @@ export async function handleRazorpayWebhook(request, env) {
           `SELECT module, plan, email, status FROM payments WHERE razorpay_order_id = ? LIMIT 1`
         ).bind(orderId).first();
 
-        if (payRow?.module === 'subscription' && payRow.email &&
+        // 2026-07-10 incident (pay_TBVXv75Tgm2Gla): guest checkout — visitor had
+        // never run a free scan or logged in, so localStorage cdb_email was blank
+        // and /api/payments/create-order wrote this payments row with email=NULL.
+        // Razorpay's own checkout form still collected the payer's email, so the
+        // webhook payload carries it even though our row doesn't — same fallback
+        // this function already applies for the purchase-notification email above
+        // (line ~980), just missing here, which made this whole safety net a
+        // silent no-op for every subscription paid without a prior login/lead-capture.
+        const grantEmail = payRow?.email || payload.email || null;
+
+        if (payRow?.module === 'subscription' && grantEmail &&
             ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(payRow.plan)) {
           const existingUser = await env.DB.prepare(
             `SELECT id, tier FROM users WHERE email = ?`
-          ).bind(payRow.email).first();
+          ).bind(grantEmail).first();
 
           if (existingUser?.id) {
             if (existingUser.tier !== payRow.plan) {
               await env.DB.prepare(
                 `UPDATE users SET tier = ?, updated_at = datetime('now') WHERE id = ?`
               ).bind(payRow.plan, existingUser.id).run();
-              console.log('[Webhook] Fallback tier grant applied:', payRow.email, '->', payRow.plan);
+              console.log('[Webhook] Fallback tier grant applied:', grantEmail, '->', payRow.plan);
             }
           } else {
             const newUserId = crypto.randomUUID();
@@ -1070,8 +1080,16 @@ export async function handleRazorpayWebhook(request, env) {
             await env.DB.prepare(
               `INSERT INTO users (id, email, password_hash, password_salt, tier, status, created_at)
                VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))`
-            ).bind(newUserId, payRow.email, hash, salt, payRow.plan).run();
-            console.log('[Webhook] Fallback account+tier created:', payRow.email, '->', payRow.plan);
+            ).bind(newUserId, grantEmail, hash, salt, payRow.plan).run();
+            console.log('[Webhook] Fallback account+tier created:', grantEmail, '->', payRow.plan);
+          }
+
+          // Backfill payments.email so this order's real payer is visible to
+          // support tooling / future lookups, not just the tier grant above.
+          if (!payRow.email) {
+            await env.DB.prepare(
+              `UPDATE payments SET email = ? WHERE razorpay_order_id = ?`
+            ).bind(grantEmail, orderId).run().catch(() => {});
           }
         }
       } catch (e) {
