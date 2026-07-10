@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-10, production-readiness lifecycle — Wave 1: Customer Portal session management, CAP-PORTAL-003)
+## Current status (2026-07-10, production-readiness lifecycle — Wave 2: Payment/Subscription order-integrity + legacy-route consolidation)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,11 +28,11 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
-| Worker test suite | 191 files / 2038 tests passing | `npx vitest run`, run 2026-07-10 (includes 13 new tests: `userSessionManagement.test.mjs`) |
+| Worker test suite | 194 files / 2055 tests passing | `npx vitest run`, run 2026-07-10 (includes 12 new tests: `paymentVerifyOrderIntegrity.test.mjs` + `subscriptionLegacyRouteDelegation.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 |
-| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` |
-| Customer journeys browser-verified | 0% | no `dynamic_browser` (live production click-through) pass has been run against this fix; verification used real handler tests against an in-memory SQL engine, not a live browser session — `customer_journey_complete` stays `false` on CAP-PORTAL-003 pending that |
-| Gaps by severity | Critical 9 · High 15 · Medium 4 · Low 38 | `PRODUCTION_READINESS_REPORT.md` — P2 dropped by 1 (CAP-PORTAL-003 fixed → P6); P1/Critical unchanged this wave (CAP-PORTAL-003 was P2, not P1) |
+| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged this wave — a security/integrity hardening + code-consolidation fix, not a structural backend/frontend-existence change) |
+| Customer journeys browser-verified | 0% | no `dynamic_browser` (live production click-through) pass has been run against this fix; verification used real handler tests against an in-memory SQL engine, not a live browser session |
+| Gaps by severity | Critical 9 · High 15 · Medium 4 · Low 38 | `PRODUCTION_READINESS_REPORT.md` — unchanged this wave (see above) |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -201,6 +201,176 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-10 — Production-readiness lifecycle, Wave 2: Payment & Subscription Platform — order-integrity + legacy-route consolidation
+
+- **Trigger:** customer supplied a detailed "P0 Wave 2 — Enterprise Payment,
+  Subscription & Billing Platform" master prompt asking for a Phase 1 audit
+  of the complete payment/subscription lifecycle (buttons, APIs, webhooks,
+  Razorpay integration, manual-payment fallback) followed by implementation
+  of only the real gaps found, in one bounded wave — explicitly not a
+  rebuild, reusing existing architecture.
+- **Recovery:** `git status`/`git log` confirmed PR #143 (this branch's own
+  prior wave) had merged (squash) into `main`, and a sibling session's PR
+  #142 had also merged. Per the "already-merged PR" rule, restarted this
+  branch from `origin/main` (`git checkout -B <branch> origin/main`) rather
+  than stacking on stale history.
+- **Phase 1 audit (read-only, before any code changed):** read
+  `workers/src/handlers/payments.js` (1308 lines, the canonical path — order
+  creation, verify, webhook, manual-confirmation, report download, refund
+  reference), `workers/src/handlers/subscription.js` (473 lines), and
+  `workers/src/lib/razorpay.js` (165 lines) in full, plus targeted greps
+  across `workers/src/index.js`, `frontend/user-dashboard.html`, and every
+  other file referencing `handleCreateSubscription`/`handleActivateSubscription`.
+  Findings, classified per the master prompt's own taxonomy:
+  - **Implemented and production-ready:** order creation with coupon support
+    and duplicate-order prevention; signature verification (HMAC,
+    constant-time compare); webhook idempotency (D1 `INSERT OR IGNORE` on a
+    dedup ledger — atomic, not KV); webhook fallback tier-grant (the
+    2026-07-10 ₹499-incident fix from PR #140); `payment.failed` → recovery
+    pipeline + customer email; manual UPI/Bank/PayPal/Crypto confirmation
+    flow (admin + customer emails, plausible-looking-txn-ref validation);
+    refunds (`workers/src/handlers/v24Handler.js`, owner-gated, real
+    Razorpay refund API call); admin payment views (`GET
+    /api/payment(s)/admin/*` — list/stats/approve/reject, owner-gated,
+    covered by `workers/test/paymentAdminPanel.test.mjs`).
+  - **Implemented but broken (the two findings fixed this wave):** see
+    below.
+  - **Implemented but with no admin UI (real gap, not fixed this wave):**
+    refunds are API-only — no admin-portal page calls
+    `POST /api/admin/refunds`; `webhook_events` (the idempotency ledger) has
+    no admin-facing viewer.
+  - **Missing (real gap, not fixed this wave):** no customer-facing GET/
+    download endpoint for invoices/receipts (`createInvoice` in
+    `workers/src/services/v24/billingEngine.js` generates them, but delivery
+    is email-attachment-only — no billing-portal "download invoice" link
+    found).
+- **Finding 1 (P0, security/revenue-integrity) — payment/plan tampering in
+  `handleVerifyPayment`:** confirmed by direct code read, not assumed.
+  `POST /api/payments/verify` (the canonical, most-used verify endpoint)
+  determined WHAT to grant/deliver (subscription tier, package product,
+  scan-report module) from the client-resent `module`/`target`/`plan`/
+  `product_id` fields in the verify request body — never cross-checked
+  against the `payments` row's own server-set values from order-creation
+  time. The Razorpay signature only proves `razorpay_order_id` +
+  `razorpay_payment_id` are a genuine, linked pair; it says nothing about
+  which module/plan/product that order was actually priced for. Concretely:
+  a customer could create+pay for a ₹499 STARTER subscription order, then
+  call `/api/payments/verify` a second time with `plan:'MSSP'` (₹9,999/mo)
+  reusing the same genuinely-signed order — the signature check alone would
+  still pass, granting the top tier for the bottom price. The identical
+  pattern applied to `package`/`product_id` (cheap report → expensive
+  assessment) and to scan-report `module` (cheap module → expensive one).
+- **Fix 1:** `handleVerifyPayment` now does an authoritative D1 lookup
+  (`SELECT module, target, plan FROM payments WHERE razorpay_order_id = ?`)
+  immediately after signature-format validation and before any branch logic
+  runs; when a matching row exists, its `module`/`target`/`plan` override
+  the client-supplied values for the rest of the function (a single ~20-line
+  insertion, `module`/`target`/`product_id` changed from `const` to `let` in
+  the destructure). Client-supplied values remain the fallback only when no
+  D1 record exists (e.g. a DB outage) — harmless, since nothing this handler
+  does persists without D1 anyway, matching its existing fail-open posture
+  elsewhere. Zero behavior change for any legitimate caller (their own
+  resent values already match what's on file).
+- **Finding 2 (P0, reliability/data-integrity) — duplicate broken
+  subscription system still live:** `POST /api/subscription/create` /
+  `POST /api/subscription/activate` (`workers/src/handlers/subscription.js`
+  `handleCreateSubscription`/`handleActivateSubscription`) ran their own
+  parallel order-creation/verification logic, independent of the canonical
+  `payments.js` path. `handleActivateSubscription`'s D1 writes used column
+  names that don't exist in the live schema (`order_id`/`payment_id` vs. the
+  real `razorpay_order_id`/`razorpay_payment_id`; `processor`/`external_id`/
+  `activated_at` vs. the real `subscriptions` schema) — silently swallowed
+  by `.catch()`, so every activation attempt charged the customer and never
+  activated anything; `users.tier` was never touched at all. This is the
+  exact incident PR #142 (a sibling session, same day) found and fixed —
+  but PR #142 only repointed the one known frontend caller (the dashboard's
+  "Upgrade to Pro" button) at the canonical path; it explicitly disclosed
+  in its own PR description that the routes themselves were "left in place
+  (not deleted)... would still fail the same way if called directly." Those
+  routes were still live, still broken, and still publicly advertised in the
+  `/api` index (`GET /api` → `endpoints['POST /api/subscription/create']`)
+  for any other caller — an external integration, a future frontend
+  regression pointing back at this URL, or direct API use.
+- **Fix 2:** rather than delete the routes (backward compatibility is a
+  hard requirement per the master prompt's Implementation Rules), both
+  functions' internals were replaced with thin delegating wrappers over the
+  canonical, now-hardened `handleCreateOrder`/`handleVerifyPayment`
+  (`payments.js`), using an internal synthetic-`Request` delegation pattern
+  already established elsewhere in this exact file (`payments.js`'s own
+  scan-report branch calls `SCAN_HANDLERS[module](synReq, env, paidCtx)` the
+  same way) — not a new pattern invented for this fix. Old response shapes
+  (`plan`/`plan_name`/`session_token`/`features`/`message`) are preserved
+  alongside the new, previously-entirely-missing fields (`token`/
+  `refresh_token`/`user_id` — the actual JWT tier grant). The now-unused
+  `generateSubscriptionToken()` helper and the `razorpay.js` imports it
+  needed were removed as dead code. `index.js`'s route for
+  `/api/subscription/activate` now also resolves and passes `authCtx`
+  (previously omitted), matching the `/create` route and the canonical
+  `handleVerifyPayment(request, env, authCtx)` signature. This also means
+  these legacy routes automatically inherit Fix 1's tamper-resistance for
+  free, since they now funnel through the same hardened function — exactly
+  the "single reusable payment orchestration service" the master prompt's
+  Phase 3 asked for.
+- **Verification:** `node --check` clean on all 3 modified backend files.
+  Ran the 13 pre-existing payment/subscription-adjacent test files first
+  (109 tests) to confirm zero regressions before writing new tests — all
+  passed unchanged, including `paymentEntitlementE2E.test.mjs`'s existing
+  "STARTER purchase does NOT unlock the PRO-gated endpoint (no over-grant)"
+  test and `paymentAdminPanel.test.mjs`'s "the former duplicate: POSTing the
+  old manual-verify body shape to /api/payments/verify no longer verifies
+  anything." Confirmed `workers/test/subscriptionVerifyTierGrant.test.mjs`'s
+  mock D1 doesn't match the new authoritative-lookup query shape (its
+  `first()` mock only handles two specific SQL patterns), so it exercises
+  exactly the documented no-D1-record fallback path — explains why it still
+  passes unchanged and is not a false negative.
+- **Tests:** `workers/test/paymentVerifyOrderIntegrity.test.mjs` (new, 5
+  tests, real in-memory `node:sqlite` with the live `payments`/
+  `subscriptions`/`users`/`refresh_tokens` schema incl. the `partner_id`
+  column added by `schema_v47_mssp_revenue_share.sql`) — proves a
+  genuinely-paid STARTER order cannot be verified as MSSP, a cheap package
+  cannot be verified as an expensive one, a cheap scan module cannot be
+  verified as an expensive one, the legitimate matching-values flow is
+  unaffected, and the no-D1-record fallback preserves pre-fix behavior.
+  `workers/test/subscriptionLegacyRouteDelegation.test.mjs` (new, 7 tests) —
+  a full create→pay→activate round trip through the legacy routes now
+  proves a real `users.tier` grant + usable JWT (the exact thing PR #142
+  found completely missing), a tampered-plan activate attempt is neutralized
+  via the inherited order-integrity fix, invalid-plan/missing-email
+  rejections, and a route-wiring contract check against `index.js`. Full
+  backend suite green: 194 files / 2055 tests (192/2043 baseline —
+  independently re-verified via `git stash -u` + re-run before trusting the
+  number, rather than assumed from Wave 1's own log entry — + 2 new
+  files / 12 new tests, zero regressions).
+- **Registry:** `commercial-billing.json`'s `CAP-BILL-003` (Subscription
+  Plans & Billing Portal) updated in place with full fix evidence — stays
+  `GA APPROVED WITH DOCUMENTED LIMITATIONS`/P7 (the fix is a security/
+  integrity hardening + code consolidation, not a structural backend/
+  frontend-existence change, so its registry classification doesn't move),
+  `test_coverage` and `verification` extended, `notes` records both findings
+  and fixes plus the honestly-disclosed remaining gaps (refund admin UI,
+  webhook-events viewer, invoice/receipt download endpoint).
+  `PRODUCTION_READINESS_REPORT.md` regenerated (66 capabilities / 18
+  domains; percentages and gap counts unchanged this wave, as expected).
+  Validator: 66 IDs, 0 failures, 0 warnings, no round-trips needed this
+  time.
+- **Remaining in this domain:** refund admin UI, webhook-events admin
+  viewer, invoice/receipt customer-facing download endpoint — each
+  independently bounded, none fixed this pass (disclosed above, not silently
+  skipped).
+- **Risks / follow-ups surfaced:** none new beyond the disclosed gaps above.
+  The same synthetic-`Request` delegation pattern used here is now used in
+  three places in `payments.js`/`subscription.js` (scan-report branch,
+  `handleCreateSubscription`, `handleActivateSubscription`) — if a fourth
+  legacy/duplicate payment entry point is ever found, this is the
+  established, proven pattern to reuse rather than inventing another one.
+- **Next recommended wave:** owner's call between (a) the disclosed
+  commercial-billing gaps above (refund admin UI, webhook-events viewer,
+  invoice download), (b) continuing the Customer Management System P0 list
+  from Wave 1 (`CAP-PORTAL-004` Support Ticket System, change-email flow,
+  avatar upload), or (c) a live-production `dynamic_browser` verification
+  pass across everything fixed so far this lifecycle (Waves 1 and 2 both
+  still show `customer_journey_complete: false` pending this).
 
 ### 2026-07-10 — Production-readiness lifecycle, Wave 1: Customer Portal — Active Sessions (CAP-PORTAL-003)
 
