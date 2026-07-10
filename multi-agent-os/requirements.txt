@@ -32,7 +32,7 @@ prometheus-client>=0.20.0
 structlog>=24.2.0
 
 # Security
-PyJWT>=2.8.0
+PyJWT>=2.13.0
 cryptography>=42.0.0
 bcrypt>=4.1.0
 
