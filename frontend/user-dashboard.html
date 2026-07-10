@@ -1361,7 +1361,7 @@
           <div class="stat-value" id="mt-tier" style="font-size:1rem">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Scans Today</div>
+          <div class="stat-label">Scans This Month</div>
           <div class="stat-value" id="mt-scans-today">—</div>
         </div>
         <div class="stat-card">
@@ -4008,7 +4008,11 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   };
 
   async function loadMyTrainings() {
-    const token = localStorage.getItem('cdb_token');
+    // FIX: was reading localStorage 'cdb_token' — a key the real session
+    // never writes to (saveTokens() stores the live token under
+    // sessionStorage 'cdb_access'). Always null for a real logged-in
+    // customer, silently showing "sign in" even while authenticated.
+    const token = sessionStorage.getItem('cdb_access');
     const email = localStorage.getItem('cdb_email');
     if (!token && !email) {
       renderTrainingsEmpty('Sign in to view your training purchases.');
@@ -4150,7 +4154,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   // ══════════════════════════════════════════════════════════════════════════════
 
   async function loadMyDeliveries() {
-    const token = localStorage.getItem('cdb_token');
+    // FIX: see loadMyTrainings() above — the real session token lives in
+    // sessionStorage under 'cdb_access', never in localStorage 'cdb_token'.
+    const token = sessionStorage.getItem('cdb_access');
     const email = localStorage.getItem('cdb_email');
     const tbody = document.getElementById('deliveries-table');
 
@@ -4262,7 +4268,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   };
 
   async function loadMyTools() {
-    const token = localStorage.getItem('cdb_token');
+    // FIX: see loadMyTrainings() above — the real session token lives in
+    // sessionStorage under 'cdb_access', never in localStorage 'cdb_token'.
+    const token = sessionStorage.getItem('cdb_access');
     // Tier gating must come from the authenticated _plan state (loaded via
     // /api/user/plan in loadPlan()), not localStorage — a client-editable
     // 'cdb_tier' value let anyone unlock every tool card in devtools by
@@ -4292,7 +4300,11 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       ]);
       const planData = planRes?.ok ? await planRes.json().catch(() => null) : null;
       const keysData = keysRes?.ok ? await keysRes.json().catch(() => null) : null;
-      document.getElementById('mt-scans-today').textContent = planData?.usage?.today_count ?? '—';
+      // FIX: /api/user/plan reports usage.scans_used (a monthly counter, per
+      // usage.reset_date) — usage.today_count has never existed in the
+      // response shape, so this always fell back to '—' regardless of real
+      // usage. Label above corrected from "Scans Today" to match.
+      document.getElementById('mt-scans-today').textContent = planData?.usage?.scans_used ?? '—';
       document.getElementById('mt-keys').textContent        = keysData?.count ?? '—';
     } catch {
       document.getElementById('mt-scans-today').textContent = '—';
@@ -4338,7 +4350,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   // ══════════════════════════════════════════════════════════════════════════════
 
   async function loadUserReports() {
-    const token = localStorage.getItem('cdb_token');
+    // FIX: see loadMyTrainings() above — the real session token lives in
+    // sessionStorage under 'cdb_access', never in localStorage 'cdb_token'.
+    const token = sessionStorage.getItem('cdb_access');
     const email = localStorage.getItem('cdb_email');
     const tbody = document.getElementById('reports-table');
     if (!tbody) return;
@@ -4974,7 +4988,12 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   const APEX_API = '';
 
   function apexFetch(path, opts = {}) {
-    const token = localStorage.getItem('cdb_token') || localStorage.getItem('apex_token');
+    // FIX: 'cdb_token'/'apex_token' in localStorage are never written by the
+    // real login/signup flow (saveTokens() stores the live token under
+    // sessionStorage 'cdb_access') — every call here 401'd for a genuinely
+    // logged-in customer, silently blanking Intel Reports/Subscriptions/API
+    // Usage.
+    const token = sessionStorage.getItem('cdb_access');
     return fetch(APEX_API + path, {
       ...opts,
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}), ...(opts.headers || {}) },
@@ -4989,7 +5008,8 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   // ── Intel Reports ──────────────────────────────────────────────────────────
   window.loadIntelReports = async function() {
-    const token = localStorage.getItem('cdb_token');
+    // FIX: see apexFetch() above — real session token lives in sessionStorage.
+    const token = sessionStorage.getItem('cdb_access');
     if (!token) {
       document.getElementById('intel-reports-table').innerHTML =
         '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sign in to view your reports.</td></tr>';

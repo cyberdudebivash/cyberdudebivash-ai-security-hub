@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-10, P0 release blocker: Authentication Entry-Point Restoration — mobile nav overflow regression)
+## Current status (2026-07-10, P0: dashboard purchase-portal auth-token bug — 7 sections fixed)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,7 +28,7 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
-| Worker test suite | 197 files / 2071 tests passing | `npx vitest run`, run 2026-07-10 (includes 6 new tests: `homepageMobileNavOverflow.test.mjs`) |
+| Worker test suite | 198 files / 2077 tests passing | `npx vitest run`, run 2026-07-10 (includes 6 new tests: `dashboardPurchasePortalAuthFix.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
 | Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
 | Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
@@ -201,6 +201,74 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-10 — P0: 7 dashboard sections silently unauthenticated for every real customer
+
+- **Trigger:** customer asked for a systematic feature-by-feature audit of
+  `frontend/user-dashboard.html` ("test each and every button, field, form,
+  feature... find out all the gaps"), driven in a real Chromium browser.
+- **Method:** inventoried all 16 sidebar sections + ~100 onclick handlers by
+  reading the file, then drove a real headless-Chromium session (signup →
+  every section → cleanup) against live production. A broad sweep flagged
+  401s on My Tools/Subscriptions/API Usage that a normal 403 (paid-tier gate)
+  wouldn't produce — traced to the actual code rather than assumed.
+- **Root cause:** the real session token is written exclusively to
+  `sessionStorage['cdb_access']` (`saveTokens()`, called by
+  doLogin/doSignup/doMfaVerify). Six call sites across five functions
+  (`loadMyTrainings`, `loadMyDeliveries`, `loadMyTools`, `loadUserReports`,
+  `apexFetch` + `loadIntelReports`'s own guard) instead read
+  `localStorage.getItem('cdb_token')` — a key the dashboard's own login flow
+  never writes; it belongs to an unrelated flow (the homepage's anonymous
+  scan/lead-capture code + an OAuth callback page). Always null for a
+  customer who logged in normally, so My Trainings/My Purchases/My
+  Tools/My Reports/Intel Reports/Subscriptions/API Usage — 7 sections —
+  either showed "Sign in to view…" or 401'd, even while genuinely
+  authenticated.
+- **Second, independent bug found in the same pass:** `loadMyTools()`'s
+  "Scans Today" stat read `usage.today_count`, a field that has never
+  existed in `GET /api/user/plan`'s response (live-verified: the real field
+  is `usage.scans_used`, a **monthly** counter — the same field
+  `loadPlan()` already reads correctly for the Overview tab). Relabeled to
+  "Scans This Month" to match the data instead of inventing a fake daily
+  counter.
+- **Fix:** all 6 call sites now read `sessionStorage.getItem('cdb_access')`.
+  Verified live end-to-end (Playwright, route-intercepted to serve the fixed
+  file against the real backend): all 7 sections now render the correct
+  authenticated (empty-for-a-new-account) state and every affected endpoint
+  (`/api/user/plan`, `/api/keys`, `/api/user/reports`,
+  `/api/delivery/my-purchases`, `/api/marketplace/{orders,entitlements,
+  subscriptions}`) returns 200, not 401.
+- **Also ruled out as NOT a defect (worth recording so it isn't re-flagged):**
+  `/api/intel/actors`, `/api/intel/techniques`, `/api/intel/stix`,
+  `/api/taxii/collections` answer anonymous requests with real data —
+  initially looked like a broken-auth gap, but tracing the code
+  (`threatIntelPro.js`) shows this is a deliberate freemium tier: base
+  reference data (MITRE ATT&CK is public domain anyway) is open, while
+  `/api/taxii/collections/{ioc,actor}-feed/objects` and the bundled
+  actor/IOC content in `/api/intel/stix` correctly gate on
+  `tierAtLeast(authCtx, 'PRO'|'ENTERPRISE')` with clean 403+upgrade
+  responses. `/api/ioc/enrich` (the one hitting paid third-party APIs) is
+  properly rate-limited per user/IP (10/day FREE) via `checkAndTrackUsage()`.
+- **Commits this session:**
+  - `frontend/user-dashboard.html` — 6-site token-source fix + the
+    scans_used/label fix.
+  - `workers/test/dashboardPurchasePortalAuthFix.test.mjs` (new, 6 tests).
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings
+  (no registry entry cleanly matched this fix — same precedent as the
+  funnel-tracking/logout fix in the prior UAT wave — logged here instead).
+- **Tests:** 198 files / 2077 tests passing (full suite, up from 197/2071).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** the rest of the ~100 onclick handlers in this file
+  (Organizations, API Keys create/revoke, MFA setup, CISO exports, AI
+  Analysis submit, notification panel, session revoke, org invite/remove)
+  were inventoried (button/input counts captured per section) but not yet
+  individually exercised — recommend continuing the same systematic
+  button-by-button pass as the next wave.
+- **Next recommended wave:** continue the dashboard feature audit —
+  Organizations (create/invite/remove/delete), API Keys (create/revoke), MFA
+  setup, and the CISO export buttons (PDF/CSV/SVG) are the highest-value
+  next targets since they involve real state mutation, not just data
+  display.
 
 ### 2026-07-10 — P0 release blocker: Authentication Entry-Point Restoration (mobile nav overflow regression)
 
