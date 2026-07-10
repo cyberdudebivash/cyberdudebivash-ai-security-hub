@@ -107,7 +107,7 @@ jobs:
           echo "✅ Pre-migration backup captured"
 
       - name: Upload pre-migration backup (90-day retention)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pre-migration-${{ env.MIGRATION_STAMP }}
           path: /tmp/pre-migration-${{ env.MIGRATION_STAMP }}.sql.gz
