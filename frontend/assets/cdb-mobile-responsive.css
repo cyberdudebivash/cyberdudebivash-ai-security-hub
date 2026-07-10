@@ -231,3 +231,39 @@
     min-height: 44px;
   }
 }
+
+/* ══════════ HOMEPAGE TOP-NAV OVERFLOW — hamburger pushed off-screen ( ≤ 768px ) ══════════
+   CAP-IDN-001 regression. That fix (commit f3c38d0, 2026-07-09) correctly gave logged-out
+   visitors a working "Sign In" link, injecting it as a 4th child into #cdb-nav-actions
+   (search trigger + notification bell + hamburger toggle). This stylesheet predates that
+   change (2026-06-13) and never constrained that row, because at authoring time it only
+   held 3 fixed-size icon buttons that fit. The extra ~90px pill pushed the row's total
+   content past every common phone viewport — verified live in a real Chromium session at
+   320/360/375/390/414/428px: the hamburger toggle, and on narrower phones part of the
+   notification bell, rendered completely outside the reachable viewport (clipped, not
+   scrollable, by the `overflow-x: clip` rule above), making the mobile nav drawer
+   unreachable. Sign In itself stayed visible only because it's inserted as the FIRST
+   child — incidental, not a fix.
+   These rules reclaim width from the row itself; they touch nothing on desktop (≥769px)
+   and are a no-op on every other page, since #cdb-nav-actions / #nav-hamburger /
+   #cdb-search-trigger / #cdb-notif-bell only exist on frontend/index.html. */
+@media (max-width: 768px) {
+  nav#main-nav { padding: 0 12px !important; }
+  /* Cmd/Ctrl+K command palette has no keyboard to invoke it on a touchscreen. */
+  #cdb-search-trigger { display: none !important; }
+  #cdb-nav-actions { gap: 4px !important; }
+  #cdb-notif-bell, #nav-hamburger { width: 32px !important; height: 32px !important; padding: 0 !important; }
+  /* The JS-injected Sign In pill (frontend/index.html cdbApplyGates()) sets its own
+     inline font-size/padding — override with !important to compact it on phones. */
+  #cdb-nav-actions [data-auth-section="signin"] {
+    font-size: 11px !important;
+    padding: 6px 8px !important;
+  }
+}
+/* Narrowest real phones (e.g. iPhone SE 1st-gen, 320px). Both wordmark lines are kept —
+   only made more compact — branding is resized, never removed. */
+@media (max-width: 340px) {
+  a.nav-brand img { width: 22px !important; height: 22px !important; }
+  a.nav-brand { gap: 4px !important; }
+  a.nav-brand span:first-child { font-size: 11px !important; }
+}

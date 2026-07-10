@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-10, production-readiness lifecycle — Wave 3: Production Dashboard UAT, Wave 1 of the customer's own UAT split)
+## Current status (2026-07-10, P0 release blocker: Authentication Entry-Point Restoration — mobile nav overflow regression)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,10 +28,10 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
-| Worker test suite | 196 files / 2065 tests passing | `npx vitest run`, run 2026-07-10 (includes 10 new tests: `funnelEventPublicAccess.test.mjs` + `userDashboardLogoutViewReset.test.mjs`) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — no registry domain file touched, see session log) |
-| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave's fixes matched no existing registry entry cleanly; see session log) |
-| Customer journeys browser-verified | 0% (structurally) — but this wave is the first with a **real live-production headless-Chromium session**, not a mock | See session log: full signup→dashboard→nav→signout→relogin round trip driven against live production this wave, closing part of the `dynamic_browser` gap this metric has flagged since Wave 1 — not yet reflected in the registry's per-capability `verification.method` fields (no domain file touched this wave) |
+| Worker test suite | 197 files / 2071 tests passing | `npx vitest run`, run 2026-07-10 (includes 6 new tests: `homepageMobileNavOverflow.test.mjs`) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
+| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
+| Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
 | Gaps by severity | Critical 9 · High 15 · Medium 4 · Low 38 | `PRODUCTION_READINESS_REPORT.md` — unchanged this wave (see above) |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
@@ -201,6 +201,109 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-10 — P0 release blocker: Authentication Entry-Point Restoration (mobile nav overflow regression)
+
+- **Trigger:** customer supplied a "P0 Release Blocker — Authentication
+  Entrypoint Restoration" master prompt reporting that Login/Sign In was "no
+  longer consistently visible," treating it as a regression until proven
+  otherwise and demanding real-browser (not API/unit-test-only) verification
+  before any fix, plus a release gate that a brand-new user and an existing
+  customer must both complete the full auth journey on live production
+  without developer intervention.
+- **Audit first:** read `frontend/index.html`'s nav markup and the
+  `cdbApplyGates()` auth-gate IIFE (CAP-IDN-001) in full before writing any
+  code. Confirmed via a byte-level diff against a live fetch of
+  `https://cyberdudebivash.in/` that production already runs the exact code
+  at `main`'s tip (only difference: Cloudflare's automatic email-address
+  obfuscation) — ruled out stale-deployment and CDN/service-worker caching
+  as causes (`frontend/sw.js` already uses network-first for HTML, confirmed
+  correct). Ruled out CSP (script-src allows 'unsafe-inline') and the
+  orphaned, unreferenced `frontend/enterprise-ux.js` (zero `<script src>`
+  citations anywhere — dead code, left untouched, out of scope).
+- **Real browser evidence (root cause):** since this sandbox's Chromium
+  cannot reach the network directly (`net::ERR_CONNECTION_RESET` on every
+  external host — confirmed with a direct-nav test — while Node's own
+  `fetch()` can), built a `page.route()` relay so Chromium could drive the
+  REAL `https://cyberdudebivash.in/` with real cookies/CSP/origin intact.
+  Measured `#cdb-nav-actions` (search trigger + notification bell +
+  hamburger toggle, plus the CAP-IDN-001-injected Sign In pill) at
+  320/360/375/390/414/428px: its total content width was a **constant
+  424px regardless of viewport**, overflowing every one of those widths.
+  `frontend/assets/cdb-mobile-responsive.css` (authored 2026-06-13) never
+  constrained that row — it only held 3 fixed-size icon buttons at the time
+  and fit fine. CAP-IDN-001 (commit `f3c38d0`, 2026-07-09) later added a 4th,
+  ~90px child (the Sign In pill) to the same never-constrained row, 26 days
+  after this stylesheet was authored — tipping it into overflow. With
+  `overflow-x: clip` on `html`/`body` (added in the same file, for an
+  unrelated reason), the excess is silently clipped, not scrollable:
+  `#nav-hamburger` (and on narrower phones, part of the notification bell)
+  rendered completely outside the reachable viewport, making the mobile nav
+  drawer unreachable. Sign In itself stayed visible only incidentally,
+  because it's inserted as the row's first child — not by design, and not
+  guaranteed to survive any future addition to that row.
+- **Secondary hardening (found while reading the same function):**
+  `readAuth()` called `localStorage.getItem()` with no try/catch. Any
+  browser context where storage access throws (privacy-restricted in-app
+  webviews, storage disabled by device policy) aborted the entire
+  `initAuthGate()` IIFE before `window.cdbApplyGates` was even assigned —
+  silently deleting the Sign In injection, the Dashboard link, and owner
+  gates for that visitor, with no visible error. Verified live (Playwright,
+  `localStorage` getter forced to throw on every access, matching this
+  repo's real-browser-evidence convention) that both before and after: before
+  the fix `window.cdbApplyGates` never gets defined; after it, both
+  `window.cdbApplyGates` and the Sign In link still exist.
+- **Fix:** reclaimed width in `#cdb-nav-actions` itself — hid the
+  keyboard-only search trigger on touch (no keyboard to invoke Cmd/Ctrl+K on
+  a phone), tightened gaps, shrank the icon buttons and the injected Sign In
+  pill, lightly compacted the wordmark below 340px (both text lines kept,
+  just smaller — no branding removed). All rules scoped inside existing
+  `@media (max-width: 768px)` / `(max-width: 340px)` blocks in
+  `frontend/assets/cdb-mobile-responsive.css`, matching that file's own
+  documented zero-regression convention (desktop ≥769px untouched; the
+  targeted ids/classes only exist on `frontend/index.html`, so the other 85
+  pages loading this stylesheet are unaffected). Prototyped the exact CSS
+  live via `page.addStyleTag()` against the real production page (iterating
+  on measured bounding rects) before writing anything to the repo, then
+  re-verified the committed fix end-to-end by serving the modified files
+  locally against the real backend: hamburger click opens the drawer, Sign
+  In click navigates to `frontend/user-dashboard.html`, `#login-overlay`
+  renders visible and functional.
+- **Commits this session:**
+  - `frontend/assets/cdb-mobile-responsive.css` — mobile nav-actions overflow
+    fix (see above).
+  - `frontend/index.html` — `readAuth()` guarded with try/catch + safe
+    logged-out fallback.
+  - `workers/test/homepageMobileNavOverflow.test.mjs` (new, 6 tests) —
+    static-parse regression coverage for both fixes.
+  - `docs/capability-registry/domains/identity.json` — CAP-IDN-001's
+    `frontend`/`navigation`/`test_coverage`/`verification` evidence updated
+    in place with this regression + fix (no new capability ID minted — this
+    is a regression fix to an existing, already-registered capability, same
+    precedent as the funnel-tracking/logout-view-reset fixes in the prior
+    UAT wave).
+  - `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — regenerated.
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings.
+- **Tests:** 197 files / 2071 tests passing (full suite, up from 196/2065 —
+  exactly +1 file/+6 tests, reconciled). `scripts/seo-structure-lock.mjs`:
+  22/22 pages green (unaffected).
+- **Findings:** 2 confirmed, independently re-verified regressions — see
+  above. Both are narrow, dateable side effects of CAP-IDN-001 (the mobile
+  overflow) or a latent gap in the same function CAP-IDN-001 touched (the
+  unguarded storage read) — not a new architectural issue.
+- **Risks / follow-ups:** the other 85 pages that load
+  `cdb-mobile-responsive.css` have their own, structurally different nav
+  markup (grep-confirmed: `#cdb-nav-actions` / `#nav-hamburger` exist only in
+  `frontend/index.html`) and were NOT audited for their own mobile-nav
+  overflow risk in this bounded wave — recommend a dedicated pass if the
+  customer wants that guarantee site-wide rather than just on the homepage.
+  Six other `localStorage` call sites on the homepage (funnel/analytics
+  tracking, non-auth) remain unguarded — deliberately out of scope for an
+  auth-entrypoint-visibility fix; flagging rather than silently leaving out.
+- **Next recommended wave:** a dedicated mobile-nav-overflow sweep across the
+  other 85 pages sharing `cdb-mobile-responsive.css`, or continuing the
+  customer's own UAT wave plan (Wave 2: Free/Starter/Pro/Enterprise customer
+  dashboards) — owner's call.
 
 ### 2026-07-10 — Production-readiness lifecycle, Wave 3: Production Dashboard UAT (Wave 1 of the customer's own recommended UAT split — public site, signup, login, dashboard nav)
 

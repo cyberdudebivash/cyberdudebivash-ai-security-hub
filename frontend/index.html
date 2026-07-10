@@ -415,16 +415,26 @@ window.cdbTriggerReportPurchase = async function(module, target) {
   } catch (e) {}
 
   function readAuth() {
-    var email = localStorage.getItem('cdb_email');
-    var token = localStorage.getItem('cdb_token');
-    var tier  = localStorage.getItem('cdb_tier') || 'FREE';
-    return {
-      email: email,
-      tier: tier,
-      isAuthenticated: !!(token && email),
-      hasEmail: !!(email && email.indexOf('@') > -1),
-      isOwner: localStorage.getItem('cdb_owner') === '1'
-    };
+    // Some browser contexts (privacy-restricted in-app webviews, storage fully
+    // disabled by device policy) throw on ANY localStorage access. Without this
+    // guard, an exception here aborts the whole initAuthGate() IIFE before
+    // window.cdbApplyGates is even assigned — silently killing the Sign In
+    // injection, the Dashboard link, and owner gates for that visitor, with no
+    // visible error. Fail safe to a logged-out default instead.
+    try {
+      var email = localStorage.getItem('cdb_email');
+      var token = localStorage.getItem('cdb_token');
+      var tier  = localStorage.getItem('cdb_tier') || 'FREE';
+      return {
+        email: email,
+        tier: tier,
+        isAuthenticated: !!(token && email),
+        hasEmail: !!(email && email.indexOf('@') > -1),
+        isOwner: localStorage.getItem('cdb_owner') === '1'
+      };
+    } catch (e) {
+      return { email: null, tier: 'FREE', isAuthenticated: false, hasEmail: false, isOwner: false };
+    }
   }
 
   // Expose synchronously for any early consumer.
