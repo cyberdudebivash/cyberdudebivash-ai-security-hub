@@ -1743,6 +1743,23 @@
       </div>
 
       <div class="card" style="max-width:560px;margin-top:24px">
+        <div class="card-header"><span class="card-title">Active Sessions</span></div>
+        <div class="card-body" style="padding:24px">
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">
+            Devices and browsers currently signed in to your account. Sign out any session you don't recognize.
+          </p>
+          <table>
+            <thead><tr><th>Device</th><th>IP Address</th><th>Signed In</th><th></th></tr></thead>
+            <tbody id="sessions-list">
+              <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">
+                <span class="spinner"></span> Loading sessions…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:560px;margin-top:24px">
         <div class="card-header">
           <span class="card-title">🔐 Two-Factor Authentication (2FA)</span>
           <span id="mfa-badge" style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:rgba(148,163,184,.15);color:#94a3b8">…</span>
@@ -3420,6 +3437,81 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     }
   }
 
+  // ── Active Sessions (CAP-PORTAL-003) ────────────────────────────────────────
+  // Backed by /api/user/sessions (GET/DELETE) — see workers/src/handlers/auth.js
+  // handleListSessions/handleRevokeSession. refresh_tokens already tracked
+  // ip_address/user_agent/created_at per session; this is the first UI that
+  // surfaces it, plus a per-session revoke distinct from "sign out everywhere".
+  function sessEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  function sessDeviceLabel(ua) {
+    if (!ua) return 'Unknown device';
+    let os = 'Unknown OS';
+    if (/Windows/i.test(ua))            os = 'Windows';
+    else if (/Mac OS X|Macintosh/i.test(ua)) os = 'macOS';
+    else if (/Android/i.test(ua))       os = 'Android';
+    else if (/iPhone|iPad|iOS/i.test(ua)) os = 'iOS';
+    else if (/Linux/i.test(ua))         os = 'Linux';
+
+    let browser = 'Unknown browser';
+    if (/Edg\//i.test(ua))                              browser = 'Edge';
+    else if (/Chrome\//i.test(ua) && !/Chromium/i.test(ua)) browser = 'Chrome';
+    else if (/Firefox\//i.test(ua))                     browser = 'Firefox';
+    else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua))  browser = 'Safari';
+
+    return browser + ' on ' + os;
+  }
+
+  async function loadSessions() {
+    const tbody = document.getElementById('sessions-list');
+    if (!tbody) return;
+    try {
+      const refresh = sessionStorage.getItem('cdb_refresh') || '';
+      const res = await apiFetch('/api/user/sessions', {
+        headers: refresh ? { 'X-Session-Hint': refresh } : {},
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load sessions');
+      renderSessions(d.sessions || []);
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:16px">Could not load sessions.</td></tr>';
+    }
+  }
+
+  function renderSessions(sessions) {
+    const tbody = document.getElementById('sessions-list');
+    if (!tbody) return;
+    if (!sessions.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No active sessions found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = sessions.map(function(s) {
+      const badge  = s.is_current ? ' <span class="badge badge-green" style="margin-left:6px">This device</span>' : '';
+      const action = s.is_current
+        ? '<span style="color:var(--muted);font-size:12px">Current</span>'
+        : '<button class="btn btn-outline" style="padding:4px 10px;font-size:12px" data-session-id="' + sessEsc(s.id) + '" onclick="revokeSession(this.dataset.sessionId)">Sign out</button>';
+      return '<tr>'
+        + '<td>' + sessEsc(sessDeviceLabel(s.user_agent)) + badge + '</td>'
+        + '<td>' + sessEsc(s.ip_address || '—') + '</td>'
+        + '<td>' + sessEsc(fmtDate(s.created_at)) + '</td>'
+        + '<td style="text-align:right">' + action + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  async function revokeSession(id) {
+    if (!confirm('Sign out this session? That device will need to log in again.')) return;
+    try {
+      const res = await apiFetch('/api/user/sessions/' + encodeURIComponent(id), { method: 'DELETE' });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to sign out session');
+      showToast('Session signed out.');
+      loadSessions();
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
   // ── Two-Factor Authentication (2FA / TOTP) ──────────────────────────────────
   let _mfaSecret = null;
   function mfaMsg(kind, text) {
@@ -3851,8 +3943,10 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       const found = document.querySelector(`.nav-item[data-page="${id}"]`);
       if (found) found.classList.add('active');
     }
-    // Lazy-load the 2FA panel the first time the Settings page is opened.
+    // Lazy-load the 2FA panel + active-sessions list the first time the
+    // Settings page is opened.
     if (id === 'settings' && typeof loadMFAStatus === 'function') loadMFAStatus();
+    if (id === 'settings' && typeof loadSessions === 'function') loadSessions();
   }
 
   // ── Modals ───────────────────────────────────────────────────────────────────

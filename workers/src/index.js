@@ -183,6 +183,7 @@ import {
   handleGetProfile, handleUpdateProfile, handleAlertConfig, handleTestAlert,
   handleChangePassword, handleDeleteAccount,
   handleForgotPassword, handleResetPassword,
+  handleListSessions, handleRevokeSession,
 } from './handlers/auth.js';
 import { handleListKeys, handleCreateKey, handleRevokeKey, handleKeyUsage, handleRotateKey } from './handlers/apikeys.js';
 import { handleAsyncScan, handleJobStatus, handleJobResult, handleJobInsights, handleD1History } from './handlers/jobs.js';
@@ -1236,6 +1237,8 @@ function apiInfoResponse() {
       'PUT  /api/auth/profile':     'Update name, company, telegram_chat_id',
       'POST /api/auth/alerts':      'Configure Telegram + email alert rules',
       'POST /api/auth/test-alert':  'Fire a test alert to verify config',
+      'GET  /api/user/sessions':    'List your active sessions (device/IP/signed-in date)',
+      'DELETE /api/user/sessions/:id': 'Sign out one specific session/device',
       // API Keys
       'GET  /api/keys':             'List your API keys',
       'POST /api/keys':             'Generate new API key (shown once)',
@@ -2056,6 +2059,24 @@ export async function routeRequest(request, env, ctx, requestId) {
     if (path === '/api/auth/delete-account' && method === 'DELETE') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleDeleteAccount(request, env, authCtx), request));
+    }
+    // CAP-PORTAL-003 (customer-portal registry): a customer could sign out
+    // everywhere but never see or revoke one individual device/session — a
+    // real gap versus Stripe/GitHub/Notion-style account security pages.
+    // refresh_tokens already tracks ip_address/user_agent/created_at per row;
+    // this only exposes it and adds an ownership-scoped per-row revoke.
+    if (path === '/api/user/sessions' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
+      return withSecurityHeaders(withCors(await handleListSessions(request, env, authCtx), request));
+    }
+    if (path.startsWith('/api/user/sessions/') && method === 'DELETE') {
+      const sessionId = path.split('/')[4];
+      const authCtx   = await resolveAuthV5(request, env);
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
+      const res = await handleRevokeSession(request, env, authCtx, sessionId);
+      if (res.status === 200) auditLog(env, request, 'session.revoke', authCtx.user_id, { session_id: sessionId }).catch(() => {});
+      return withSecurityHeaders(withCors(res, request));
     }
 
     // ── API Key management ──────────────────────────────────────────────────

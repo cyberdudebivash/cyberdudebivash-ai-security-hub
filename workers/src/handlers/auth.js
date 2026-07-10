@@ -8,6 +8,8 @@
  * PUT  /api/auth/profile   — update profile (name, company, telegram_chat_id)
  * POST /api/auth/alerts    — configure alert settings
  * POST /api/auth/test-alert — fire a test alert
+ * GET    /api/user/sessions      — list this customer's active sessions
+ * DELETE /api/user/sessions/:id  — revoke a single session
  */
 
 import { hashPassword, verifyPassword, validatePasswordStrength, validateEmail } from '../auth/password.js';
@@ -660,4 +662,60 @@ export async function handleDeleteAccount(request, env, authCtx) {
     erased: purged,
     retained: 'Payment/GST invoice records are retained where required by tax law (anonymized where possible).',
   });
+}
+
+// ─── GET /api/user/sessions ───────────────────────────────────────────────────
+// Customer Portal / CAP-PORTAL-003: refresh_tokens has always carried
+// per-session ip_address/user_agent/created_at, but nothing ever exposed it to
+// the customer — the only self-service control was "sign out everywhere"
+// (handleLogout with all:true). Lists this customer's own active (non-revoked,
+// non-expired) sessions. An optional X-Session-Hint header — the caller's own
+// current refresh token, already held client-side, not a new privilege — lets
+// the response flag which row is "this device"; omitting it just means no row
+// is marked current.
+export async function handleListSessions(request, env, authCtx) {
+  if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+
+  const hint     = request.headers.get('X-Session-Hint') || '';
+  const hintHash = hint ? await hashToken(hint) : null;
+
+  const { results } = await env.DB.prepare(
+    `SELECT id, ip_address, user_agent, created_at, expires_at, token_hash
+     FROM refresh_tokens
+     WHERE user_id = ? AND revoked = 0 AND expires_at > datetime('now')
+     ORDER BY created_at DESC`
+  ).bind(authCtx.user_id).all();
+
+  const sessions = (results || []).map(r => ({
+    id:         r.id,
+    ip_address: r.ip_address || null,
+    user_agent: r.user_agent || null,
+    created_at: r.created_at,
+    expires_at: r.expires_at,
+    is_current: hintHash ? r.token_hash === hintHash : false,
+  }));
+
+  return Response.json({ success: true, sessions });
+}
+
+// ─── DELETE /api/user/sessions/:id ────────────────────────────────────────────
+// Revokes a single session by id — the "sign out this device" control
+// CAP-PORTAL-003 asks for, distinct from the existing blanket
+// revokeAllUserTokens (sign out everywhere). Ownership-scoped: a session id
+// belonging to another user's row 404s exactly like a nonexistent id, so this
+// can never be used to probe for or revoke someone else's session.
+export async function handleRevokeSession(request, env, authCtx, sessionId) {
+  if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+  if (!sessionId) return Response.json({ error: 'session id required' }, { status: 400 });
+
+  const row = await env.DB.prepare(
+    `SELECT id FROM refresh_tokens WHERE id = ? AND user_id = ? AND revoked = 0`
+  ).bind(sessionId, authCtx.user_id).first();
+  if (!row) return Response.json({ error: 'Session not found' }, { status: 404 });
+
+  await env.DB.prepare(`UPDATE refresh_tokens SET revoked = 1 WHERE id = ?`).bind(sessionId).run();
+
+  return Response.json({ success: true, message: 'Session signed out.' });
 }
