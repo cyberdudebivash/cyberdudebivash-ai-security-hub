@@ -183,7 +183,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           # No pip cache — ai-core uses stdlib only (hashlib, random, dataclasses, typing, datetime).
@@ -259,7 +259,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -399,7 +399,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
