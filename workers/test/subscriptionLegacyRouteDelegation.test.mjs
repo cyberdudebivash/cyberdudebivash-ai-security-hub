@@ -37,7 +37,13 @@ const RAZORPAY_KEY_SECRET = 'test_secret_key_for_hmac';
 const realFetch = globalThis.fetch;
 beforeEach(() => {
   globalThis.fetch = async (url, opts) => {
-    if (String(url).includes('api.razorpay.com')) {
+    // Real hostname check, not a substring match — `.includes('api.razorpay.com')`
+    // would also match an attacker-shaped URL like
+    // https://api.razorpay.com.evil.example/, which CodeQL correctly flags as
+    // incomplete URL substring sanitization even in test-only stub code.
+    let host = '';
+    try { host = new URL(String(url)).hostname; } catch {}
+    if (host === 'api.razorpay.com') {
       const reqBody = JSON.parse(opts.body);
       return new Response(JSON.stringify({
         id: 'order_' + Math.random().toString(36).slice(2, 14),
