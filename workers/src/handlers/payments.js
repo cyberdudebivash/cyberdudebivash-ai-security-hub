@@ -283,15 +283,15 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
-    module,
-    target,
     scan_id,
     email,
-    product_id,
     utm_source   = '',
     utm_medium   = '',
     utm_campaign = '',
   } = body;
+  // module/target/product_id are `let`, not `const` — see the authoritative
+  // order lookup below, which can override them.
+  let { module, target, product_id } = body;
 
   // Validate required fields
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -309,6 +309,36 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
   if (!/^[a-fA-F0-9]{64}$/.test(razorpay_signature)) {
     return Response.json({ error: 'Invalid razorpay_signature format' }, { status: 400 });
   }
+
+  // ── Authoritative order lookup — closes a payment/plan-tampering gap. The
+  // Razorpay signature only proves razorpay_order_id + razorpay_payment_id are
+  // a genuine, linked pair; it says nothing about WHICH module/plan/product
+  // that order was actually created (and priced) for. Every branch below used
+  // to trust the client's own module/target/plan/product_id fields resent to
+  // THIS endpoint, so a customer could create+pay for the cheapest product
+  // (e.g. a genuinely-signed ₹499 STARTER subscription order, or a ₹499
+  // compliance report) and then call verify a second time with a different,
+  // more expensive module/plan/product_id (e.g. MSSP ₹9,999/mo, or a ₹4,999
+  // redteam report) while reusing that same order — the signature check alone
+  // would still pass, since it doesn't cover these fields. Once the order
+  // exists in D1, its own stored module/target/plan (set once, server-side,
+  // in handleCreateOrder from the same price tables this function uses, and
+  // never re-derived from later client input) are authoritative; the
+  // client-supplied values are only used as a fallback when no D1 record
+  // exists (e.g. a DB outage) — harmless, because nothing this handler does
+  // persists without D1 anyway, matching its existing fail-open posture.
+  if (env.DB && razorpay_order_id) {
+    const orderRow = await env.DB.prepare(
+      `SELECT module, target, plan FROM payments WHERE razorpay_order_id = ? LIMIT 1`
+    ).bind(razorpay_order_id).first().catch(() => null);
+    if (orderRow) {
+      module = orderRow.module;
+      target = orderRow.target;
+      if (module === 'package')           product_id  = orderRow.plan;
+      else if (module === 'subscription') body.plan   = orderRow.plan;
+    }
+  }
+
   // Non-scan fulfillment modules (assessment, package and subscription) are handled separately below
   const NON_SCAN_MODULES = ['assessment', 'package', 'subscription'];
   if (!module || (!SCAN_HANDLERS[module] && !NON_SCAN_MODULES.includes(module))) {

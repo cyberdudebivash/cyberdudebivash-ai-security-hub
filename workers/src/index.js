@@ -3747,7 +3747,8 @@ export async function routeRequest(request, env, ctx, requestId) {
 
     // POST /api/subscription/activate → verify payment + activate plan session
     if (path === '/api/subscription/activate' && method === 'POST') {
-      return withSecurityHeaders(withCors(await handleActivateSubscription(request, env), request));
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleActivateSubscription(request, env, authCtx), request));
     }
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -5,8 +5,11 @@
  */
 
 import { TIER_LIMITS, PLAN_FEATURES, hasAccess, resolveApiKeyFromDB } from '../auth/apiKeys.js';
-import { createRazorpayOrder, generateReceiptId, verifyPaymentSignature } from '../lib/razorpay.js';
 import { corsHeaders } from '../middleware/cors.js';
+// handleCreateSubscription/handleActivateSubscription below delegate to these
+// rather than re-implementing order creation/verification — see their doc
+// comments for why (this used to be a second, broken parallel implementation).
+import { handleCreateOrder, handleVerifyPayment } from './payments.js';
 
 // ─── Subscription pricing (in paise = INR × 100) ─────────────────────────────
 // SSOT: These prices MUST match lib/razorpay.js SUBSCRIPTION_PRICES exactly.
@@ -167,218 +170,130 @@ export async function handleGetUserPlan(request, env, authCtx = null) {
 }
 
 // ─── POST /api/subscription/create ───────────────────────────────────────────
-// Creates a Razorpay order for the chosen plan, returns order_id for checkout
-export async function handleCreateSubscription(request, env) {
+// Compatibility shim over the canonical order-creation path
+// (handlers/payments.js handleCreateOrder). This function used to run its own
+// parallel Razorpay order-creation logic and cache the intent under a
+// sub_order: KV key that only handleActivateSubscription (below) understood —
+// a second, divergent order path from the one every other paid product on
+// the platform uses, invisible to the payments table (D1) that billing
+// history/admin views/webhooks all read from. Kept as its own route/function
+// (not deleted, per backward-compatibility requirements) so any existing
+// integration or cached frontend bundle calling POST /api/subscription/create
+// keeps working — it now produces a real, correctly-recorded payments row
+// via the same code path the pricing page's checkout uses, instead of a
+// KV-only one nothing else on the platform could see.
+export async function handleCreateSubscription(request, env, authCtx = {}) {
   const headers = corsHeaders(request);
-  try {
-    const body = await request.json().catch(() => ({}));
-    const { plan, email, name } = body;
+  let body;
+  try { body = await request.json(); } catch { body = {}; }
+  const { plan, email, name } = body;
 
-    const planKey  = (plan || '').toUpperCase();
-    const planInfo = SUBSCRIPTION_PLANS[planKey];
-    if (!planInfo) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid plan. Choose STARTER, PRO, or ENTERPRISE.' }), {
-        status: 400,
-        headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const receipt = generateReceiptId();
-    const notes   = {
-      plan:      planKey,
-      email:     email || '',
-      name:      name  || '',
-      type:      'subscription',
-      source:    'cyberdudebivash.in',
-    };
-
-    const order = await createRazorpayOrder(env, {
-      amount:   planInfo.amount,
-      currency: 'INR',
-      receipt,
-      notes,
-    });
-
-    // Cache order intent in KV (15 min TTL) for post-payment plan activation
-    if (env.KV) {
-      await env.KV.put(`sub_order:${order.id}`, JSON.stringify({
-        plan:    planKey,
-        email:   email || '',
-        name:    name  || '',
-        receipt,
-        created: Date.now(),
-      }), { expirationTtl: 900 });
-    }
-
-    return new Response(JSON.stringify({
-      success:    true,
-      order_id:   order.id,
-      key_id:     env.RAZORPAY_KEY_ID || '',   // required by frontend Razorpay checkout
-      amount:     planInfo.amount,
-      currency:   'INR',
-      plan:       planKey,
-      plan_name:  planInfo.name,
-      receipt,
-      notes,
-    }), { headers: { ...headers, 'Content-Type': 'application/json' } });
-  } catch (err) {
-    console.error('[Subscription] createRazorpayOrder failed', err?.message);
-    return new Response(JSON.stringify({ success: false, error: err.message }), {
-      status: 500,
-      headers: { ...headers, 'Content-Type': 'application/json' },
+  const planKey  = (plan || '').toUpperCase();
+  const planInfo = SUBSCRIPTION_PLANS[planKey];
+  if (!planInfo) {
+    return new Response(JSON.stringify({ success: false, error: 'Invalid plan. Choose STARTER, PRO, ENTERPRISE, or MSSP.' }), {
+      status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
+  if (!email || !String(email).includes('@')) {
+    return new Response(JSON.stringify({ success: false, error: 'A valid email is required to create a subscription order.' }), {
+      status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const syntheticReq = new Request('https://internal/api/payments/create-order', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ module: 'subscription', target: email, plan: planKey, email, name }),
+  });
+  const res  = await handleCreateOrder(syntheticReq, env, authCtx);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return new Response(JSON.stringify({ success: false, error: data.error || 'Order creation failed.' }), {
+      status: res.status, headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Old response shape (plan/plan_name/notes) preserved alongside the
+  // canonical fields, so neither an old nor a new caller breaks.
+  return new Response(JSON.stringify({
+    success:   true,
+    order_id:  data.order_id,
+    key_id:    data.key_id,
+    amount:    data.amount,
+    currency:  data.currency,
+    plan:      planKey,
+    plan_name: planInfo.name,
+    receipt:   data.receipt,
+    notes:     { plan: planKey, email, name: name || '', type: 'subscription', source: 'cyberdudebivash.in' },
+  }), { headers: { ...headers, 'Content-Type': 'application/json' } });
 }
 
 // ─── POST /api/subscription/activate ─────────────────────────────────────────
-// Called after Razorpay payment success — verifies signature, activates plan
-export async function handleActivateSubscription(request, env) {
+// Compatibility shim over the canonical, price-authoritative verify path
+// (handlers/payments.js handleVerifyPayment). The former implementation's
+// payments/subscriptions INSERTs used column names that don't exist in the
+// live D1 schema (order_id/payment_id vs the real razorpay_order_id/
+// razorpay_payment_id; processor/external_id/activated_at vs the real
+// schema) — silently swallowed by .catch(), so every activation attempt was
+// charged and never actually activated, and users.tier was never touched at
+// all (see PR #142's incident writeup). PR #142 fixed the one known frontend
+// caller (the dashboard's "Upgrade to Pro" button) by pointing it at the
+// canonical path directly; this closes the same gap at the route/handler
+// level too, so any other caller of this URL (an external integration, a
+// future frontend regression pointing back at this route, direct API use)
+// gets the same correct, tested behavior instead of the same silent failure.
+export async function handleActivateSubscription(request, env, authCtx = {}) {
   const headers = corsHeaders(request);
-  try {
-    const body = await request.json().catch(() => ({}));
-    const {
-      razorpay_order_id, razorpay_payment_id, razorpay_signature, email,
-      utm_source = '', utm_medium = '', utm_campaign = '',
-    } = body;
+  let body;
+  try { body = await request.json(); } catch { body = {}; }
+  const {
+    razorpay_order_id, razorpay_payment_id, razorpay_signature, email,
+    utm_source = '', utm_medium = '', utm_campaign = '',
+  } = body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing payment verification fields.' }), {
-        status: 400,
-        headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify HMAC signature
-    const valid = await verifyPaymentSignature(env, razorpay_order_id, razorpay_payment_id, razorpay_signature);
-    if (!valid) {
-      return new Response(JSON.stringify({ success: false, error: 'Payment signature verification failed.' }), {
-        status: 403,
-        headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Look up the order intent from KV
-    let orderMeta = null;
-    if (env.KV) {
-      orderMeta = await env.KV.get(`sub_order:${razorpay_order_id}`, 'json');
-    }
-
-    const plan      = orderMeta?.plan || 'STARTER';
-    const userEmail = email || orderMeta?.email || '';
-
-    // Generate 90-day session token for this subscription
-    const sessionToken = generateSubscriptionToken();
-    const expiresAt    = Date.now() + 90 * 24 * 60 * 60 * 1000; // 90 days
-
-    // D1 FIRST — source of truth for subscription state.
-    // KV is written only after D1 succeeds to prevent state divergence.
-    if (env.DB) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO payments
-         (order_id, payment_id, module, amount, currency, status, email, report_token, created_at)
-         VALUES (?, ?, ?, ?, 'INR', 'captured', ?, ?, datetime('now'))`
-      ).bind(
-        razorpay_order_id,
-        razorpay_payment_id,
-        `subscription:${plan}`,
-        SUBSCRIPTION_PLANS[plan]?.amount || 0,
-        userEmail,
-        sessionToken,
-      ).run().catch((e) => console.error('[subscription] payments D1 write failed', razorpay_payment_id, e?.message));
-
-      // Write to subscriptions table for renewal engine + lifecycle tracking
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO subscriptions
-         (id, email, plan, status, processor, external_id, price_inr, activated_at, expires_at, created_at)
-         VALUES (?, ?, ?, 'active', 'razorpay', ?, ?, datetime('now'), ?, datetime('now'))`
-      ).bind(
-        'sub_' + Date.now().toString(36),
-        userEmail || '',
-        plan,
-        razorpay_payment_id,
-        SUBSCRIPTION_PLANS[plan]?.price_inr || 499,
-        new Date(expiresAt).toISOString(),
-      ).run().catch((e) => console.error('[subscription] subscriptions D1 write failed', razorpay_payment_id, e?.message));
-    }
-
-    // KV session cache — written after D1 so we don't serve stale token if DB fails.
-    if (env.KV) {
-      await env.KV.put(`sub_session:${sessionToken}`, JSON.stringify({
-        plan,
-        email:      userEmail,
-        payment_id: razorpay_payment_id,
-        order_id:   razorpay_order_id,
-        activated:  Date.now(),
-        expires_at: expiresAt,
-      }), { expirationTtl: 90 * 24 * 3600 });
-
-      // Clean up the order intent
-      await env.KV.delete(`sub_order:${razorpay_order_id}`).catch(() => {});
-    }
-
-    // Fire-and-forget: GST invoice + plan activation email + lifecycle enrollment
-    const planDef = SUBSCRIPTION_PLANS[plan];
-    Promise.all([
-      (async () => {
-        try {
-          const { createInvoice } = await import('../services/v24/billingEngine.js');
-          if (env.DB && planDef?.price_inr) {
-            await createInvoice(env.DB, {
-              userId:      `sub_${sessionToken.slice(0, 16)}`,
-              email:       userEmail || 'noreply@buyer',
-              lineItems:   [{ description: `${planDef.name} Subscription (Monthly)`, amount_inr: planDef.price_inr, quantity: 1 }],
-              paymentId:   razorpay_payment_id,
-              paymentMethod: 'razorpay',
-            }, env);
-          }
-        } catch (e) { console.warn('[Subscription] invoice error:', e.message); }
-      })(),
-      (async () => {
-        try {
-          if (!userEmail) return;
-          const { sendPurchaseConfirmation } = await import('../services/emailEngine.js');
-          await sendPurchaseConfirmation(env, {
-            to:          userEmail,
-            productName: `${planDef?.name || plan} Plan (Monthly Subscription)`,
-            amountInr:   planDef?.price_inr || 0,
-            paymentId:   razorpay_payment_id,
-            accessExpires: new Date(expiresAt).toISOString(),
-          });
-        } catch (e) { console.warn('[Subscription] email error:', e.message); }
-      })(),
-      (async () => {
-        try {
-          if (!userEmail) return;
-          const { triggerPostPurchase } = await import('../services/lifecycleEngine.js');
-          await triggerPostPurchase(env, {
-            email:        userEmail,
-            product:      `SUBSCRIPTION_${plan}`,
-            product_name: `${planDef?.name || plan} Plan`,
-            amount_inr:   planDef?.price_inr || 0,
-            event_type:   'subscription_activated',
-            source:       utm_source || 'direct',
-            payment_id:   razorpay_payment_id,
-            plan,
-            meta:         { utm_medium, utm_campaign, session_token: sessionToken },
-          });
-        } catch (e) { console.warn('[Subscription] lifecycle error:', e.message); }
-      })(),
-    ]).catch(() => {});
-
-    return new Response(JSON.stringify({
-      success:       true,
-      plan,
-      session_token: sessionToken,
-      expires_at:    expiresAt,
-      features:      PLAN_FEATURES[plan] || PLAN_FEATURES.FREE,
-      message:       `${SUBSCRIPTION_PLANS[plan]?.name || plan} plan activated! Your token is saved for 90 days.`,
-    }), { headers: { ...headers, 'Content-Type': 'application/json' } });
-  } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: err.message }), {
-      status: 500,
-      headers: { ...headers, 'Content-Type': 'application/json' },
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return new Response(JSON.stringify({ success: false, error: 'Missing payment verification fields.' }), {
+      status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
+
+  // module/target sent here are only a fallback for the (rare) case where D1
+  // has no record of this order — handleVerifyPayment's own authoritative
+  // order lookup overrides them from the real payments row when one exists,
+  // so this shim cannot be used to activate a plan other than what was paid
+  // for, the same protection every other subscription entry point now has.
+  const syntheticReq = new Request('https://internal/api/payments/verify', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      razorpay_order_id, razorpay_payment_id, razorpay_signature,
+      module: 'subscription', target: email || 'unknown@cyberdudebivash.in', email,
+      utm_source, utm_medium, utm_campaign,
+    }),
+  });
+  const res  = await handleVerifyPayment(syntheticReq, env, authCtx);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return new Response(JSON.stringify({ success: false, error: data.error || 'Activation failed.' }), {
+      status: res.status, headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Old response shape (session_token/features/message) preserved; new
+  // fields (token/refresh_token/user_id — the actual JWT tier grant) added
+  // alongside so a caller upgrading to the real login flow can use them.
+  return new Response(JSON.stringify({
+    success:       true,
+    plan:          data.plan,
+    session_token: data.session_token,
+    expires_at:    data.expires_at,
+    token:         data.token,
+    refresh_token: data.refresh_token,
+    user_id:       data.user_id,
+    features:      PLAN_FEATURES[data.plan] || PLAN_FEATURES.FREE,
+    message:       data.message,
+  }), { headers: { ...headers, 'Content-Type': 'application/json' } });
 }
 
 // ─── GET /api/subscription/plans ─────────────────────────────────────────────
@@ -460,12 +375,6 @@ export async function checkMonthlyQuota(env, identity) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function generateSubscriptionToken() {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 function getMonthResetDate() {
   const now  = new Date();
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
