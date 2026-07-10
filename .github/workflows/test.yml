@@ -29,7 +29,7 @@ jobs:
     defaults: { run: { working-directory: workers } }
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: { node-version: "24", cache: "npm", cache-dependency-path: workers/package-lock.json }
       - run: npm ci || npm install
       - name: Run unit tests
@@ -83,7 +83,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: { node-version: "24" }
       - name: Public-page structure lock (head/OG/JSON-LD placement)
         run: node scripts/seo-structure-lock.mjs
@@ -97,7 +97,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: { node-version: "24" }
       - name: axe-core CLI scan of local build
         # Root-cause analysis of every failure mode this step defends against:
@@ -159,7 +159,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: { node-version: "24" }
       - name: Run Lighthouse CI against local build
         # Uses Python's built-in HTTP server — no serve package, no version drift.
@@ -186,7 +186,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: { node-version: "24" }
       - name: Playwright smoke
         run: |
@@ -207,7 +207,7 @@ jobs:
     defaults: { run: { working-directory: workers } }
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: { node-version: "24", cache: "npm", cache-dependency-path: workers/package-lock.json }
       - run: npm ci || npm install
       - name: Build bundle (wrangler dry-run) and enforce the gzip ceiling
