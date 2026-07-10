@@ -372,6 +372,44 @@ see session log below.
   pass across everything fixed so far this lifecycle (Waves 1 and 2 both
   still show `customer_journey_complete: false` pending this).
 
+**Post-merge addendum (2026-07-10, same day):** PR #144 merge and production
+rollout independently verified end-to-end before reporting this wave done:
+
+- All 32 check runs on the PR (required + advisory: CI Gate, Test & Quality
+  Gate/Unit Tests, CodeQL, gitleaks, GitGuardian, Lighthouse, axe, E2E Smoke,
+  Worker Bundle Size Gate, SEO lock, Security Header Assertions, Dependency
+  Audit, etc.) individually inspected via the Checks API, not assumed green
+  from a single combined status. One real finding: CodeQL flagged a new
+  high-severity "incomplete URL substring sanitization" alert
+  (`workers/test/subscriptionLegacyRouteDelegation.test.mjs:40` —
+  `url.includes('api.razorpay.com')` instead of a real hostname check, in
+  the new fetch-stub). Test-only code with no real attacker surface, but
+  fixed properly (parse the URL, compare `hostname` exactly) rather than
+  waved off, re-pushed, and re-verified clean (CodeQL conclusion
+  `success`) before merge — nothing was bypassed or force-merged.
+- Merged via squash (`2286b998`, matching this repo's established merge
+  convention). `Test & Quality Gate` on the merge commit: success.
+  `Deploy to Cloudflare` (run `29072659970`) on the merge commit: success,
+  completed 06:00:41 UTC.
+- Live production spot-check (direct `curl` against `cyberdudebivash.in`,
+  not assumed from CI alone): `POST /api/subscription/create` with no email
+  returns the new "A valid email is required..." 400 (didn't exist pre-fix);
+  with an invalid plan returns "...STARTER, PRO, ENTERPRISE, or MSSP." (the
+  pre-fix message omitted MSSP, so this exact wording is new-code-only
+  evidence); `POST /api/subscription/activate` and `POST /api/payments/verify`
+  both still reject malformed input correctly. This confirms the deployed
+  Worker is actually running the new code, not just that CI passed.
+- `commercial-billing.json`'s `CAP-BILL-003` `verification.method` upgraded
+  `static → dynamic_api` with this evidence; `customer_journey_complete`
+  correctly stays `false` (a `dynamic_api` spot-check is not a
+  `dynamic_browser` full purchase click-through — no real Razorpay payment
+  was made). Also corrected a stale figure caught while re-reading this
+  entry: its own notes cited "191/2038 baseline + 17 tests," which was
+  wrong arithmetic carried over from an earlier draft of the same session
+  log entry above (already fixed there) but not previously propagated to
+  this file — corrected to the same independently-verified 192/2043 + 12
+  new tests = 194/2055.
+
 ### 2026-07-10 — Production-readiness lifecycle, Wave 1: Customer Portal — Active Sessions (CAP-PORTAL-003)
 
 - **Trigger:** explicit priority change from the customer — stop
