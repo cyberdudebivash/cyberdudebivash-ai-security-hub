@@ -94,41 +94,44 @@
     "description": "Let a customer see which devices/sessions are currently signed in and revoke an individual session, rather than only being able to sign out everywhere at once.",
     "backend": {
       "handlers": ["workers/src/handlers/auth.js"],
-      "entry_points": ["revokeAllUserTokens"],
-      "routes_sampled": [],
-      "routes_fully_enumerated": false,
-      "status": "partial"
+      "entry_points": ["handleListSessions", "handleRevokeSession", "revokeAllUserTokens"],
+      "routes_sampled": [
+        { "path": "/api/user/sessions", "method": "GET", "evidence": "workers/src/index.js (auth routes block, immediately after /api/auth/delete-account)" },
+        { "path": "/api/user/sessions/{id}", "method": "DELETE", "evidence": "workers/src/index.js (same block)" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "No page in frontend/*.html renders a session/device list. Only a blanket revoke-all-sessions side-effect exists, triggered automatically by password change (workers/src/handlers/auth.js:508-510) and password reset (workers/src/handlers/auth.js:604-606) — there is no user-facing 'sign out this device' control anywhere."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-10 (production-readiness lifecycle wave 1). New 'Active Sessions' card added to #page-settings between Change Password and 2FA, table body #sessions-list. loadSessions() (lazy-loaded the first time Settings is opened, same pattern as loadMFAStatus()) calls GET /api/user/sessions with an X-Session-Hint header carrying the browser's own already-held refresh token (sessionStorage 'cdb_refresh') purely so the backend can flag which row is 'This device' — not a new privilege, the token is already held client-side and already usable at /api/auth/refresh. renderSessions() shows a device label parsed from user_agent (sessDeviceLabel()), IP, signed-in date, and a per-row 'Sign out' button (hidden for the current session) wired via a data-session-id attribute + revokeSession(this.dataset.sessionId) — not a string-interpolated onclick, deliberately following the CAP-ADMIN-004 fix's safer pattern even though session ids are server-generated hex (no actual injection vector) rather than the older, riskier convention."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No nav entry anywhere links to a session-management page, because no such page exists."
+      "discoverable": true,
+      "evidence": "Embedded in the existing, already-discoverable Settings page (data-page=\"settings\"), same sidebar nav-item as Change Password / 2FA."
     },
     "auth_enforced": true,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No test file targets a per-session list/revoke endpoint, because none exists; revokeAllUserTokens is exercised only incidentally within the password-change/reset test files (workers/test/phase10PasswordReset.test.mjs)."
+      "has_tests": true,
+      "evidence": "workers/test/userSessionManagement.test.mjs (new, 2026-07-10, 13 tests, real in-memory node:sqlite matching production schema, same convention as workers/test/phase10PasswordReset.test.mjs): lists only the caller's own active non-revoked non-expired sessions, flags the current session via X-Session-Hint without leaking token_hash to the client, returns the device/IP/created_at fields the UI renders, requires authentication on both routes, revokes an owned session, 404s (not silently succeeds) on another user's session id (IDOR-safe) and on an already-revoked/nonexistent id, plus a route+frontend contract check (workers/src/index.js registers both routes wired to the real handlers; frontend/user-dashboard.html calls the real endpoints, not a placeholder; the revoke button uses a data-attribute, not a string-interpolated onclick)."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P2",
+    "operational_status": "PILOT ONLY",
+    "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/auth.js:508-510,604-606 read directly; refresh_tokens table schema referenced in docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:99 tracks ip_address/user_agent per session, which is the data a real session list would need, but no GET endpoint exposes it and no query for it was found in workers/src/handlers/auth.js."
+      "last_verified": "2026-07-10",
+      "evidence": "FIXED 2026-07-10. workers/src/handlers/auth.js (handleListSessions/handleRevokeSession), workers/src/index.js (route registration + auditLog on revoke), frontend/user-dashboard.html (#page-settings card, loadSessions/renderSessions/revokeSession/sessDeviceLabel/sessEsc) all read directly. All 3 inline <script> blocks in frontend/user-dashboard.html syntax-checked clean (new Function(src)) before and after the change. Full backend suite green: 191 files / 2038 tests (190/2025 baseline + 1 new file/13 tests, zero regressions)."
     },
-    "notes": "Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md Domain 1 (Identity) and Domain 9 (Customer Portal) rows, which both flag this as the same gap — registered once here (portal-facing framing) rather than duplicated into identity.json. The underlying refresh_tokens table already has the per-session columns a fix would need; this is a wiring/UI gap, not a data-model gap."
+    "notes": "customer_journey_complete stays false pending a real dynamic_browser (live production click-through) pass — this fix used static evidence + a real in-memory-SQL-backed handler test, not a headless-Chromium session, per this registry's own Production Truth Law (docs/ENGINEERING_STANDARDS.md §11). Deliberately minimal scope, matching the capability's own description exactly: list + individual revoke only. NOT built in this pass (disclosed, not silently skipped): a 'sign out all other sessions' bulk action (would need a new backend function that excludes the caller's own current token, distinct from the existing revokeAllUserTokens which revokes literally everything including the caller); a 'last used' timestamp (refresh_tokens has no such column — created_at is the closest available proxy and is what's shown); geo/location display (would require an IP-geolocation dependency, out of scope for this fix). Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md Domain 1 (Identity) and Domain 9 (Customer Portal) rows, which both flagged this same gap before the fix."
   },
   {
     "id": "CAP-PORTAL-004",

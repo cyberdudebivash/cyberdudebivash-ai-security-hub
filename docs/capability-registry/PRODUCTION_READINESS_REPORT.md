@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-09T20:35:14.369Z
+Generated: 2026-07-10T04:40:58.282Z
 Capabilities catalogued: 66
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 82.6% |
-| Frontend | 65.9% |
-| Parity (backend **and** frontend both exist) | 60.6% |
+| Backend | 83.3% |
+| Frontend | 67.4% |
+| Parity (backend **and** frontend both exist) | 62.1% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -27,14 +27,14 @@ Capabilities catalogued: 66
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 9 | Broken customer journey |
-| High | P2 | 16 | Backend exists, frontend missing |
+| High | P2 | 15 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 2 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 25 | No test coverage |
+| Low | P6 | 26 | No test coverage |
 | Low | P7 | 12 | Documentation missing |
 
-**Rollup:** Critical 9 · High 16 · Medium 4 · Low 37
+**Rollup:** Critical 9 · High 15 · Medium 4 · Low 38
 
 ## Structural Findings
 
@@ -92,7 +92,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-PORTAL-001 | Profile & Security Settings | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ◐ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-PORTAL-004 | Support Ticket System | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### dashboard-personalization (3 capabilities)

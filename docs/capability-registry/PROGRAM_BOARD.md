@@ -9,31 +9,41 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-09, 7-capability fix sprint — CAP-DASH-001/002, CAP-NOTIF-002, CAP-ACAD-002, CAP-CRM-001/005, CAP-AFF-001, recovered from an uncommitted prior session)
+## Current status (2026-07-10, production-readiness lifecycle — Wave 1: Customer Portal session management, CAP-PORTAL-003)
+
+**Scope note (2026-07-10):** starting this date, sessions on this branch
+follow the customer's "production readiness lifecycle" priority (visitor →
+signup → … → retention) rather than continuing registry-population waves for
+their own sake. The registry, its bounded-wave discipline, and
+`docs/ENGINEERING_STANDARDS.md`'s CEAP/CIP/CORB/CAB architecture are still
+authoritative and are being reused as-is, not replaced — this file remains
+the single source of truth for what's catalogued and what's real, and every
+fix below still updates its capability entry in place rather than spawning a
+parallel tracking document.
 
 | Metric | Value | Source |
 |---|---|---|
 | Domain files | 21 | `docs/capability-registry/domains/*.json` |
-| Domains populated | 17 | see list below |
-| Domains empty (stubs) | 4 | see Remaining Work Register |
-| Capabilities registered | 56 | `node scripts/registry/validate.mjs` |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-09 |
-| Worker test suite | 188 files / 2012 tests passing | `npx vitest run`, run 2026-07-09 (includes 10 new tests: `cisoExecutiveDashboardTierGate.test.mjs`) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-09 |
-| Backend / Frontend / Parity | 79.5% / 59.8% / 53.6% | `PRODUCTION_READINESS_REPORT.md` (up from 75.9% / 47.3% / 41.1% before this fix) |
-| Customer journeys browser-verified | 0% | `PRODUCTION_READINESS_REPORT.md` — this pass used real Playwright click-throughs of the actual pages (not `dynamic_api`), but against contract-accurate mocked network responses, not a live deployed backend — `customer_journey_complete` intentionally left `false` on all 7 entries pending a post-merge production smoke test |
-| Gaps by severity | Critical 9 · High 16 · Medium 4 · Low 27 | `PRODUCTION_READINESS_REPORT.md` — Critical (P1) dropped 16 → 9, exactly the 7 capabilities fixed this session; see remediation section below |
+| Domains populated | 18 | see list below |
+| Domains empty (stubs) | 3 | see Remaining Work Register |
+| Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
+| Worker test suite | 191 files / 2038 tests passing | `npx vitest run`, run 2026-07-10 (includes 13 new tests: `userSessionManagement.test.mjs`) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 |
+| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` |
+| Customer journeys browser-verified | 0% | no `dynamic_browser` (live production click-through) pass has been run against this fix; verification used real handler tests against an in-memory SQL engine, not a live browser session — `customer_journey_complete` stays `false` on CAP-PORTAL-003 pending that |
+| Gaps by severity | Critical 9 · High 15 · Medium 4 · Low 38 | `PRODUCTION_READINESS_REPORT.md` — P2 dropped by 1 (CAP-PORTAL-003 fixed → P6); P1/Critical unchanged this wave (CAP-PORTAL-003 was P2, not P1) |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
 hand-copy its numbers here beyond the summary above, to avoid two sources of
 truth drifting apart.
 
-**Domains populated (17):** academy, administration, affiliate-partner,
+**Domains populated (18):** academy, administration, affiliate-partner,
 commercial-billing, customer-portal, dashboard-personalization,
 developer-portal-apikeys, identity, masoc, mssp, navigation, notifications,
 organizations, production-readiness, rbac, sales-crm,
-sentinel-apex-marketplace.
+sentinel-apex-marketplace, security-scanners.
 
 ## ✅ Critical finding remediated (was open, see history below)
 
@@ -191,6 +201,121 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-10 — Production-readiness lifecycle, Wave 1: Customer Portal — Active Sessions (CAP-PORTAL-003)
+
+- **Trigger:** explicit priority change from the customer — stop
+  registry-population-for-its-own-sake and instead audit/harden the complete
+  paying-customer lifecycle (signup → payment → subscription → dashboard →
+  billing → renewal → cancellation → support), using the existing registry as
+  the evidence base rather than re-auditing from scratch, and fixing real P0
+  gaps in small, tested, one-feature-area-per-session waves — the same
+  bounded-wave discipline this file already enforces, just re-pointed at
+  customer-facing fixes instead of documentation.
+- **Recovery:** `git status`/`git log` confirmed the branch was already
+  clean and current — PR #140 (payment-incident fixes) and PR #141 (Security
+  Scanners registry wave) were both merged and deployed in the prior session,
+  nothing left uncommitted to recover.
+- **Plan:** Read `PROGRAM_BOARD.md`, `customer-portal.json`, and
+  `identity.json` (already-catalogued evidence, not re-derived) to find a
+  real, well-scoped, still-open gap in Customer Management — the customer's
+  stated Wave 1 priority. `CAP-PORTAL-003` (Session Management) was the
+  clearest fit: NOT READY/P2, backend `partial`, frontend `missing`, and
+  matches the customer's explicit ask for "Sessions"/"Devices" in a
+  Stripe/GitHub/Notion/Cloudflare-style account security page — small enough
+  to fully finish, verify, and ship in one session (this file's own bounded-
+  wave rule), unlike the other 3 remaining stub domains or a Support Ticket
+  System (CAP-PORTAL-004, real but much larger net-new surface).
+- **Root cause, confirmed by direct code read:** `refresh_tokens` (schema:
+  `id, user_id, token_hash, expires_at, created_at, revoked, ip_address,
+  user_agent`) already tracked everything a session list needs, but no GET
+  endpoint ever exposed it and no per-row revoke existed — the only
+  self-service control was `POST /api/auth/logout {all:true}`
+  (`revokeAllUserTokens`), a blanket sign-out-everywhere with no way to see or
+  kick out one specific device.
+- **Fix (backend, `workers/src/handlers/auth.js` + `workers/src/index.js`):**
+  `handleListSessions` (GET `/api/user/sessions`) returns the caller's own
+  active (non-revoked, non-expired) sessions; an optional `X-Session-Hint`
+  header — the browser's own already-held refresh token, not a new privilege
+  — lets it flag which row is "this device" without ever returning
+  `token_hash` to the client. `handleRevokeSession` (DELETE
+  `/api/user/sessions/:id`) is ownership-scoped (`WHERE id=? AND user_id=?`)
+  so another user's session id 404s exactly like a nonexistent one — no
+  IDOR/enumeration oracle. Both routes gated on `isRealUser(authCtx)`,
+  registered in the existing auth-routes block immediately after
+  `/api/auth/delete-account`, same pattern as every neighboring route; revoke
+  is audit-logged via the existing `auditLog()` helper.
+- **Fix (frontend, `frontend/user-dashboard.html`):** new "Active Sessions"
+  card in the existing `#page-settings` (between Change Password and 2FA) —
+  a table (device parsed from `user_agent` via a small `sessDeviceLabel()`
+  heuristic, IP, signed-in date, "This device" badge, per-row "Sign out"
+  button hidden for the current session). Lazy-loaded the first time Settings
+  opens (`loadSessions()`), same pattern as the existing `loadMFAStatus()`
+  call. The revoke button uses a `data-session-id` attribute read via
+  `this.dataset` rather than a string-interpolated `onclick` — deliberately
+  matching the safer pattern this board's own CAP-ADMIN-004 fix established,
+  even though session ids here are server-generated hex (no actual injection
+  vector) rather than the riskier convention some older code in the repo
+  still uses.
+- **Deliberately not built this pass (disclosed, not silently skipped):** a
+  "sign out all other sessions" bulk action (needs a new backend function
+  that excludes the caller's own current token — `revokeAllUserTokens`
+  revokes literally everything including the caller, so reusing it here would
+  log the customer themselves out); a "last active" timestamp
+  (`refresh_tokens` has no such column — `created_at` is the closest existing
+  proxy and is what's shown); IP geolocation display (would add a new
+  dependency, out of scope for this fix).
+- **Verification:** all 3 inline `<script>` blocks in
+  `frontend/user-dashboard.html` re-parsed clean (`new Function(src)`) before
+  and after the change. `node --check` clean on both modified backend files.
+  Full backend suite green: 191 files / 2038 tests (190/2025 baseline + 1 new
+  file/13 tests, zero regressions).
+- **Tests:** `workers/test/userSessionManagement.test.mjs` (new, 13 tests,
+  real in-memory `node:sqlite` matching the production schema, same
+  convention as `workers/test/phase10PasswordReset.test.mjs`) — list scoping
+  (own sessions only, excludes revoked/expired/other-users'), the
+  `X-Session-Hint` current-session flag with no `token_hash` leak, the
+  device/IP/date fields the UI renders, auth-required on both routes, owned-
+  session revoke, ownership-scoped 404 on another user's session (IDOR
+  check), 404 on nonexistent/already-revoked ids, plus a route+frontend
+  contract check (routes really registered and wired; the frontend calls the
+  real endpoints, not a placeholder; the revoke button really uses the
+  data-attribute pattern, not a reintroduced string-interpolated `onclick`).
+- **Registry:** `customer-portal.json`'s `CAP-PORTAL-003` updated in place
+  (not a new ID) — `backend.status`/`frontend.status` `partial`/`missing` →
+  `exists`/`exists`, `navigation.discoverable` `false → true`,
+  `operational_status` `NOT READY → PILOT ONLY`, `priority` `P2 → P6` (fixed,
+  tested; only remaining gap is a live-production verification pass, same
+  P6/P7 convention as this file's other recent fixes).
+  `PRODUCTION_READINESS_REPORT.md` regenerated (66 capabilities / 18 domains;
+  backend 83.3%, frontend 67.4%, parity 62.1%; gaps Critical 9 · High 15 ·
+  Medium 4 · Low 38). Validator: 66 IDs, 0 failures, 0 warnings (one
+  round-trip needed: `test_coverage.evidence` prose cited bare `index.js`/
+  `user-dashboard.html` filenames without their repo-root directory prefix,
+  which the validator correctly rejects — fixed to the full
+  `workers/src/index.js`/`frontend/user-dashboard.html` form, same class of
+  fix as prior waves' round-trips). Also corrected this file's own "Current
+  status" header block, which had gone stale after Wave 3a (Security
+  Scanners) landed — it still showed 17/56 instead of 18/66 domains/
+  capabilities; the session log entry for that wave existed but the summary
+  header above it was never refreshed. Fixed as a 1-line-scope honest
+  correction while already touching this file, not a separate wave.
+- **Remaining in this domain:** none for CAP-PORTAL-003 itself. Sibling gap
+  `CAP-PORTAL-004` (Support Ticket System, still `NOT READY`/P2, only static
+  `mailto:` links) remains open — larger net-new surface, correctly out of
+  scope for this bounded wave.
+- **Risks / follow-ups surfaced:** none new. The "sign out all other
+  sessions" bulk action and IP-geolocation display noted above as
+  deliberately deferred, not forgotten.
+- **Next recommended wave:** continue the Customer Management System P0 list
+  — real remaining gaps identified this session but not yet fixed:
+  `CAP-PORTAL-004` (Support Ticket System — currently just `mailto:` links,
+  no in-product ticketing/history), a customer-facing "change email" flow
+  (no `handleChangeEmail`/`/api/auth/change-email` exists anywhere — email
+  changes are currently support-assisted only, per the Settings page's own
+  disclosed copy), and an avatar-upload capability (none exists outside the
+  Google-OAuth-provided avatar URL). Each is independently small enough to be
+  its own bounded wave.
 
 ### 2026-07-09 — Wave 3a: Security Scanners
 
