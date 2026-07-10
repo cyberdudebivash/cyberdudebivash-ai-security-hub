@@ -3293,15 +3293,46 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     // Pro upgrade — initiate Razorpay/payment flow
     showToast('Initiating upgrade to Pro…');
     try {
-      // Real backend is POST /api/subscription/create (workers/src/handlers/
-      // subscription.js handleCreateSubscription) — /api/billing/create-subscription
-      // never existed.
-      const res = await apiFetch('/api/subscription/create', {
+      // 2026-07-10: was POST /api/subscription/create (subscription.js
+      // handleCreateSubscription) — paired with the equally-broken
+      // /api/subscription/activate on the verify side (see
+      // handlePaymentSuccess). Routed onto the canonical order-creation path
+      // (payments.js handleCreateOrder) instead, matching the pricing page's
+      // already-tested automated checkout body shape exactly.
+      const upgradeEmail = (typeof _user !== 'undefined' && _user && _user.email) || localStorage.getItem('cdb_email') || '';
+      const res = await apiFetch('/api/payments/create-order', {
         method: 'POST',
-        body: JSON.stringify({ plan: 'pro' })
+        body: JSON.stringify({ module: 'subscription', plan: 'PRO', target: 'pro', email: upgradeEmail })
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Payment initiation failed');
+
+      // 2026-07-10: this button never loaded the Razorpay Checkout SDK
+      // itself — it only checked whether window.Razorpay already happened to
+      // be set. It always was, but not with the real SDK: assets/payment-
+      // modal.js installs a compat shim (`if (!window.Razorpay) window.Razorpay
+      // = function(opts){ return { open: () => CDB_PAYMENT.open(...) } }`)
+      // that loads on every page view and wins the "already defined" check
+      // every time, silently rerouting this button to the old manual-payment
+      // modal instead of throwing — worse than the "gateway unavailable"
+      // message it looked like it would show, since it never surfaced as an
+      // error at all. A `!window.Razorpay` guard can never see past that
+      // shim, so this loads the real SDK unconditionally (once per page
+      // load) — the real checkout.js unconditionally overwrites
+      // window.Razorpay with its own constructor on load, same as every
+      // other working checkout on this platform relies on (index.html's
+      // cdbLoadRazorpay(), checkout-modal.js's _loadRazorpaySdk(), this same
+      // file's own loadRzp() a few hundred lines below — scoped locally here
+      // since loadRzp() itself is private to a different IIFE).
+      if (!window.__cdbRealRzpLoaded) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          s.onload  = () => { window.__cdbRealRzpLoaded = true; resolve(); };
+          s.onerror = () => reject(new Error('Razorpay SDK failed to load'));
+          document.head.appendChild(s);
+        }).catch(() => {});
+      }
 
       if (d.payment_link) {
         window.location.href = d.payment_link;
@@ -4630,13 +4661,28 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       let verifyBody     = { ...paymentResp, module, target };
 
       if (type === 'subscription') {
-        // Real backend is POST /api/subscription/activate (workers/src/
-        // handlers/subscription.js handleActivateSubscription), which expects
-        // exactly the raw Razorpay checkout fields (razorpay_order_id,
-        // razorpay_payment_id, razorpay_signature) already in paymentResp —
-        // /api/billing/verify-payment never existed.
-        verifyEndpoint = '/api/subscription/activate';
-        verifyBody     = paymentResp;
+        // 2026-07-10: was POST /api/subscription/activate (workers/src/
+        // handlers/subscription.js handleActivateSubscription) — every write
+        // in that handler uses column names that don't exist in the live D1
+        // schema (payments.order_id/payment_id instead of
+        // razorpay_order_id/razorpay_payment_id, missing required `target`;
+        // subscriptions.processor/external_id/activated_at/expires_at instead
+        // of the real columns, missing required `user_id`) and it never
+        // touches users.tier at all, so every customer using this button was
+        // charged, shown "plan activated", and left on their old tier with
+        // no error anywhere. Routed onto the canonical, already-tested
+        // subscription path instead (payments.js handleVerifyPayment — the
+        // same one the pricing page's automated checkout uses) rather than
+        // patching the broken parallel implementation, which would just
+        // leave two systems to keep in sync.
+        const subEmail = (typeof _user !== 'undefined' && _user && _user.email) || localStorage.getItem('cdb_email') || '';
+        verifyBody = {
+          ...paymentResp,
+          module: 'subscription',
+          target: (plan || 'PRO').toLowerCase(),
+          plan:   plan || 'PRO',
+          email:  subEmail,
+        };
       }
 
       const res = await apiFetch(verifyEndpoint, {
@@ -4648,6 +4694,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       if (!res.ok) {
         showToast(d.error || 'Payment verification failed. Contact support.', 'err');
         return;
+      }
+
+      // handleVerifyPayment's subscription branch issues a real JWT (with the
+      // new tier baked in) plus a refresh token — without storing these, the
+      // rest of the platform (resolveAuthV5, every tier-gated feature) would
+      // still see the customer's old tier despite a successful charge.
+      if (type === 'subscription' && d.token) {
+        localStorage.setItem('cdb_token', d.token);
+        if (d.refresh_token) localStorage.setItem('cdb_refresh_token', d.refresh_token);
       }
 
       // Get MCP training recommendation — GOD MODE v16: use /mcp/control first
