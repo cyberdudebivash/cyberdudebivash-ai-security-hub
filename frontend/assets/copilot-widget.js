@@ -53,9 +53,22 @@ function genId(prefix) {
 // exact same 5 msgs/day, 24/58-tool experience as an anonymous visitor.
 // god-mode.html's own inline chat already attaches this correctly; mirrored
 // here for every fetch call site. (2026-07-06 revenue-mechanisms audit, P1-6.)
+//
+// That fix still missed one surface: frontend/user-dashboard.html — this
+// widget's own script tag is embedded there too — stores its real session
+// token under sessionStorage['cdb_access'] (see saveTokens()/loadToken()),
+// not either 'cdb_token' key. Every dashboard customer's copilot chat was
+// still silently anonymous. Checking cdb_access first fixes the dashboard
+// without touching the homepage/god-mode/intel-hub 'cdb_token' path above,
+// which those pages' own login flows genuinely use.
 function authHeaders(extra) {
   let token = '';
-  try { token = localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || ''; } catch (e) {}
+  try {
+    token = sessionStorage.getItem('cdb_access')
+      || localStorage.getItem('cdb_token')
+      || sessionStorage.getItem('cdb_token')
+      || '';
+  } catch (e) {}
   const base = extra || {};
   return token ? Object.assign({}, base, { Authorization: 'Bearer ' + token }) : base;
 }
@@ -290,6 +303,26 @@ function injectStyles() {
 .cdb-cmdk-footer{ padding:8px 14px; border-top:1px solid var(--cdb-cp-border); font-size:10px; color:var(--cdb-cp-text-muted); display:flex; gap:14px; }
 `;
   document.head.appendChild(s);
+
+  // frontend/user-dashboard.html runs a fixed-height left `.sidebar` whose own
+  // nav footer (API Usage, Settings) sits in this same bottom-left band — the
+  // FAB's z-index:99980 otherwise renders on top of, and can eat clicks meant
+  // for, those last nav links (confirmed via production screenshots on every
+  // dashboard section). No other page has a `.sidebar` element, and the
+  // dashboard hides it below 769px (its own mobile drawer takes over), so this
+  // only needs to move the FAB on wider viewports where the collision is real.
+  // Bottom-right is clear there: the only other fixed element in that corner
+  // is the dashboard's own #toast, a transient pill well below bottom:100px.
+  if (document.querySelector('.sidebar')) {
+    const override = document.createElement('style');
+    override.id = 'cdb-copilot-dashboard-override';
+    override.textContent = `
+@media (min-width:769px){
+  #cdb-copilot-fab{ left:auto; right:24px; bottom:100px; }
+  #cdb-copilot-panel{ left:auto; right:24px; bottom:170px; }
+}`;
+    document.head.appendChild(override);
+  }
 }
 
 // ─── Markup ─────────────────────────────────────────────────────────────────

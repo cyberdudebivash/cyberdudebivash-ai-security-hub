@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-10, P0: dashboard purchase-portal auth-token bug — 7 sections fixed)
+## Current status (2026-07-10, P1: APEX Copilot widget unauthenticated on dashboard + FAB/sidebar overlap — fixed)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,7 +28,7 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
-| Worker test suite | 198 files / 2077 tests passing | `npx vitest run`, run 2026-07-10 (includes 6 new tests: `dashboardPurchasePortalAuthFix.test.mjs`) |
+| Worker test suite | 202 files / 2096 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-10 (includes 7 new tests: `copilotWidgetDashboardFix.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
 | Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
 | Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
@@ -201,6 +201,93 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-10 — P1: APEX Copilot widget unauthenticated on the dashboard; FAB overlapped sidebar nav; dead AI-analysis badge removed
+
+- **Trigger:** customer asked for a fresh enterprise-buyer-lens audit of the
+  live dashboard ("review... as the Cisco Samsung Intel AMD Dell Google
+  customer... find out all existing gaps issues... 100% production stable
+  fix"), continuing the systematic feature sweep from the prior wave.
+- **Method:** re-examined the screenshots and captured console/network
+  errors from the prior wave's full 16-section sweep (still on disk) with
+  fresh eyes for anything beyond the auth-token bug already fixed, then read
+  every file referenced by what the screenshots showed, and re-verified live
+  against production with a targeted Playwright run (route-intercepted to
+  serve the locally fixed files against the real backend).
+- **Finding 1 (P1, sitewide reach):** `frontend/assets/copilot-widget.js` —
+  loaded on 250+ pages including `frontend/user-dashboard.html` — is the
+  platform's "APEX Security Copilot" chat. Its `authHeaders()` only checked
+  `localStorage`/`sessionStorage` key `cdb_token` (correct for
+  `index.html`/`god-mode.html`/`intel-hub.html`, which genuinely use that
+  key). But the dashboard's own login/signup overlay (`saveTokens()`) writes
+  the real session token to `sessionStorage['cdb_access']` only — the same
+  key class as the prior wave's fix, this time in a different file. Every
+  dashboard customer's copilot conversation silently went out with no
+  Authorization header, so the backend treated a paying customer identically
+  to an anonymous FREE-tier visitor. Live-verified before/after: the
+  `/api/copilot/capabilities` request carried no `Authorization` header
+  before the fix; after, it carries `Bearer <the real per-user JWT>` for a
+  freshly signed-up, still-in-session user.
+- **Finding 2 (P1, visual + likely click-stealing):** `#cdb-copilot-fab` is
+  fixed at `left:24/bottom:150` (deliberately chosen, per its own comment, to
+  clear the marketing homepage's bottom-right clutter). Nobody accounted for
+  `frontend/user-dashboard.html`'s own fixed-height `.sidebar`, whose last
+  nav items (API Usage, Settings) render in that exact band — confirmed via
+  8+ production screenshots across every dashboard section that the FAB's
+  `z-index:99980` sits visually on top of those nav links on every page,
+  every time.
+- **Finding 3 (cleanup, cosmetic):** the AI Analysis page's
+  `#ai-credits-badge` permanently read "— queries left" — dead markup left
+  behind after a prior wave removed the JS that used to populate it (per
+  that wave's own code comment: the backing field
+  `_plan.ai_queries_remaining` doesn't exist in `GET /api/user/plan`'s
+  response, so it always showed 0/blank regardless of real tier). The HTML
+  span was never removed, so every customer saw a permanent, meaningless
+  placeholder on a customer-facing panel.
+- **Fix:**
+  - `authHeaders()` now checks `sessionStorage.getItem('cdb_access')` first,
+    falling back to the existing `cdb_token` checks unchanged — purely
+    additive, zero risk to the homepage/god-mode/intel-hub paths that
+    genuinely rely on `cdb_token`.
+  - `injectStyles()` now detects `document.querySelector('.sidebar')`
+    (unique to `user-dashboard.html`) and injects a scoped override moving
+    the FAB/panel to `right:24px` at `min-width:769px` — matching the
+    sidebar's own `display:none` breakpoint exactly, so it only fires where
+    the collision is real. Bottom-right is clear there (the only other fixed
+    element, `#toast`, is a transient pill well below `bottom:100px`).
+  - Removed the dead `#ai-credits-badge` span outright.
+- **Verified live** (Playwright, route-intercepted to serve the fixed files
+  against the real backend, fresh signup): FAB renders at `right:24px`,
+  bounding-rect confirms it starts entirely clear of the sidebar's right
+  edge; opening the copilot panel sends `/api/copilot/capabilities` with a
+  real `Authorization: Bearer` header; `#ai-credits-badge` is gone from the
+  DOM. No new console errors (the 2 `ERR_BLOCKED_BY_CLIENT.Inspector` lines
+  are pre-existing sandbox noise, also present in the prior wave's baseline).
+- **Commits this session:**
+  - `frontend/assets/copilot-widget.js` — auth-key fix + dashboard FAB
+    override.
+  - `frontend/user-dashboard.html` — removed dead `#ai-credits-badge`.
+  - `workers/test/copilotWidgetDashboardFix.test.mjs` (new, 7 tests).
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings
+  (no registry entry cleanly matched this fix — same precedent as the prior
+  wave — logged here instead).
+- **Tests:** 202 files / 2096 tests passing (full suite, up from 198/2077).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green. Note: 2 E2E spec files
+  (`tests/e2e/smoke.spec.mjs`, `hardening/smoke.spec.mjs`) fail to import in
+  this local sandbox (`@playwright/test` not installed here) — pre-existing,
+  unrelated to this change; CI's dedicated E2E job runs these separately.
+- **Risks / follow-ups:** the copilot widget's `cdb_token`/`cdb_access` split
+  is a symptom of the platform running two parallel, independently-issued
+  session systems (the homepage's own login/purchase flow vs. the
+  dashboard's). Every other page that embeds this widget was re-checked only
+  for the specific collision found here, not exhaustively re-audited — worth
+  a follow-up grep for any other page-specific fixed-position elements that
+  might collide with the FAB the same way the dashboard sidebar did.
+- **Next recommended wave:** continue the dashboard feature audit —
+  Organizations (create/invite/remove/delete), API Keys (create/revoke), MFA
+  setup, and the CISO export buttons (PDF/CSV/SVG) are still the highest-value
+  next targets since they involve real state mutation, not just data display
+  (carried over from the prior wave, not yet started).
 
 ### 2026-07-10 — P0: 7 dashboard sections silently unauthenticated for every real customer
 
