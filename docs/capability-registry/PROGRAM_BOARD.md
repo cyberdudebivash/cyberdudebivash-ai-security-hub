@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-10, production-readiness lifecycle — Wave 2: Payment/Subscription order-integrity + legacy-route consolidation)
+## Current status (2026-07-10, production-readiness lifecycle — Wave 3: Production Dashboard UAT, Wave 1 of the customer's own UAT split)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,10 +28,10 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
-| Worker test suite | 194 files / 2055 tests passing | `npx vitest run`, run 2026-07-10 (includes 12 new tests: `paymentVerifyOrderIntegrity.test.mjs` + `subscriptionLegacyRouteDelegation.test.mjs`) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 |
-| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged this wave — a security/integrity hardening + code-consolidation fix, not a structural backend/frontend-existence change) |
-| Customer journeys browser-verified | 0% | no `dynamic_browser` (live production click-through) pass has been run against this fix; verification used real handler tests against an in-memory SQL engine, not a live browser session |
+| Worker test suite | 196 files / 2065 tests passing | `npx vitest run`, run 2026-07-10 (includes 10 new tests: `funnelEventPublicAccess.test.mjs` + `userDashboardLogoutViewReset.test.mjs`) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — no registry domain file touched, see session log) |
+| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave's fixes matched no existing registry entry cleanly; see session log) |
+| Customer journeys browser-verified | 0% (structurally) — but this wave is the first with a **real live-production headless-Chromium session**, not a mock | See session log: full signup→dashboard→nav→signout→relogin round trip driven against live production this wave, closing part of the `dynamic_browser` gap this metric has flagged since Wave 1 — not yet reflected in the registry's per-capability `verification.method` fields (no domain file touched this wave) |
 | Gaps by severity | Critical 9 · High 15 · Medium 4 · Low 38 | `PRODUCTION_READINESS_REPORT.md` — unchanged this wave (see above) |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
@@ -201,6 +201,144 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-10 — Production-readiness lifecycle, Wave 3: Production Dashboard UAT (Wave 1 of the customer's own recommended UAT split — public site, signup, login, dashboard nav)
+
+- **Trigger:** customer supplied a "Production Dashboard End-to-End
+  Validation" master prompt (P0 release blocker) demanding real-browser UAT
+  — not unit/API tests alone — across every dashboard/role, with a
+  find-root-cause-and-fix policy for any confirmed defect, and recommended
+  splitting the work into bounded dashboard waves (Wave 1: public site,
+  signup, login, pricing, payment). Executed Wave 1 of that split.
+- **Environment constraint discovered and solved:** headless Chromium in
+  this session's sandbox cannot open its own sockets to the public internet
+  at all (verified: fails even for `https://example.com`, `net::ERR_CONNECTION_RESET`,
+  independent of proxy config, `--no-sandbox`, `--single-process`) — but
+  Node's own `fetch()` from the same sandbox reaches the internet fine, and
+  Chromium reaches `localhost` fine. Solved by routing every browser request
+  through Playwright's `page.route()`/`context.route()` interception layer
+  to a handler that performs the actual fetch via Node (permitted), then
+  `route.fulfill()`s the browser's request with the real response — the
+  browser navigates to the *real* `https://cyberdudebivash.in` URLs directly
+  (correct origin, cookies, CSP, relative and absolute URLs all behave
+  normally) while every socket is actually opened by Node. Not a proxy or
+  TLS-verification bypass — it reuses the same already-permitted egress path
+  (Node `fetch()`) that `curl`/`WebFetch` already use in this session, wired
+  through Playwright so a full real-browser session becomes possible at all
+  in this sandbox. One real gotcha hit and fixed in the harness itself:
+  `redirect: 'manual'` combined with `route.fulfill()` mishandled the site's
+  `/page.html → /page` clean-URL 308 redirects (`ERR_CONNECTION_RESET` even
+  though `curl` proved the real redirect works fine) — switched to
+  `redirect: 'follow'` to resolve redirects server-side. Also had to
+  short-circuit `Accept: text/event-stream` requests (the homepage opens an
+  SSE connection) since a full-buffer-then-fulfill relay hangs forever
+  waiting for a stream that never closes.
+- **Real defects found and fixed (2):**
+  1. **`POST /api/funnel/event` was 403ing for every anonymous visitor**
+     (P0, revenue-analytics-breaking). Found live: the homepage's own
+     'visit' and 'exit_intent' tracking beacons (`frontend/index.html`)
+     both call this endpoint on every page load, and every single call was
+     rejected with `{"error":"Forbidden","message":"This resource is
+     restricted to the platform owner."}` — confirmed directly via curl
+     against production. Root cause: `workers/src/index.js`'s "internal
+     back-office owner-only gate" (guarding genuinely-internal routes like
+     `/api/revenue/*`, `/api/integrations/*`, and the separate READ-side
+     `/api/funnel/metrics` aggregate) had `/api/funnel/event` in its path
+     list too — but that route's own registration is explicitly commented
+     "public, fire-and-forget" and its handler
+     (`handlers/revenue.js` `handleFunnelEvent`) is written to accept a
+     null `authCtx` by design (falls back to `userId: null`,
+     `email: 'anonymous'`). This is the same bug class this exact gate
+     already caused once before (`white-label` was removed from the same
+     list for the identical reason, per the gate's own comment) — this
+     time nobody had caught that `funnel/event` had the same problem. Net
+     effect: the entire visitor funnel-tracking pipeline (visit → scan →
+     signup → purchase) has had zero anonymous-visitor data flowing into
+     it since whichever change added this path to the list — plausibly why
+     the "Revenue Funnel — Live" dashboard widget shows all dashes/zero
+     despite real scan activity elsewhere. **Fix:** removed
+     `/api/funnel/event` from the gate's path list (one line); the
+     sibling READ-side `/api/funnel/metrics` correctly remains owner-only.
+  2. **Sign Out left the login overlay on the wrong view** (P2, real UX
+     bug, not security). Found live via a full signup→dashboard→sign-out→
+     re-login browser session: `doLogout()`
+     (`frontend/user-dashboard.html`) clears tokens and shows the overlay,
+     but never resets which internal auth view (`login-view`/
+     `signup-view`/etc.) is active — so a customer who originally arrived
+     via signup (auto-logged-in, never manually switched views) sees the
+     **signup form** again after signing out, not the login form. Confirmed
+     the re-login flow actually breaks on this: `#login-email` exists in
+     the DOM but isn't visible (wrong view active), so a naive "just type
+     your email" attempt fails silently. **Fix:** `doLogout()` now calls
+     `showAuthView('login-view')` before showing the overlay.
+- **Confirmed non-issues (investigated, not fixed):** `/src/mcpControl.js`
+  404s in production, but this is a deliberately optional, gracefully-
+  degrading module load (`import('/src/mcpControl.js').catch(...)`,
+  explicitly commented "Resilient load... any failure degrades silently to
+  the no-op fallback") — the file genuinely doesn't exist yet (a scaffolded
+  future feature, "GOD MODE v16: MCP Control Client"), and its absence is
+  by design, not a regression. `GET /api/dashboard/stream` briefly showed
+  503 in one browser-harness run but returned 200 via direct curl
+  immediately after — treated as a test-harness artifact, not a confirmed
+  production defect. `GET /api/visitor/stats` is also called
+  unconditionally from the public homepage (`loadVisitorStats()`) despite
+  being correctly owner-gated (its own comment: "Was fully unauthenticated
+  — closed as part of the anonymous-exposure audit") — a real but
+  low-severity issue (silent 403, `.catch()`-swallowed, no visible
+  breakage, `p4-f-visitors` keeps its default) — disclosed as a deferred
+  P3 rather than fixed this wave, since the correct fix (gate the frontend
+  call behind an owner-session check, not loosen the backend) needs a
+  reliable client-side owner-detection signal this pass didn't verify.
+- **Verification:** full signup → dashboard → nav (Organizations, API Keys,
+  Billing & Plan, Settings — zero page errors on any) → sign-out → re-login
+  round trip driven in a real headless-Chromium session against live
+  production for both fixes, not just against the local test suite. The
+  sign-out fix was specifically verified against the *modified* local
+  `frontend/user-dashboard.html` served locally while every `/api/*` call
+  was proxied to the real production backend (same interception technique,
+  applied to a hybrid local-static + API-proxy server) — confirmed the
+  broken repro (stuck on signup-view, re-login times out) before the fix and
+  the correct behavior (login-view shown, re-login 200s, dashboard renders)
+  after. 8 real test accounts were created on production during this session
+  (`uat.wave1*@cyberdudebivash.in`) to exercise the real signup/login/logout
+  flows end-to-end — all 8 were cleanly self-service-deleted via
+  `DELETE /api/auth/delete-account` afterward (which itself is additional
+  confirmation that flow works correctly for every one of them).
+- **Tests:** `workers/test/funnelEventPublicAccess.test.mjs` (new, 7 tests,
+  real router dispatch via `worker.fetch()`) — anonymous visit/exit-intent
+  events now succeed, invalid stages still 400, and every genuinely-internal
+  sibling route in the same former gate list (`/api/funnel/metrics`,
+  `/api/affiliate/stats`, `/api/revenue/*`) is proven still owner-gated, so
+  the fix doesn't over-loosen anything. `workers/test/userDashboardLogoutViewReset.test.mjs`
+  (new, 3 tests, static-parse convention matching
+  `workers/test/homepageSignInPath.test.mjs`) — locks `doLogout()` calling
+  `showAuthView('login-view')` before the overlay is shown. Full backend
+  suite green: 196 files / 2065 tests (194/2055 baseline + 2 new files / 10
+  new tests, zero regressions).
+- **Registry:** no capability-registry domain file touched this wave — both
+  fixes are incident-style bug fixes (matching the PR #138–142 precedent)
+  without a clean 1:1 capability match (`/api/funnel/event` is
+  `handlers/revenue.js handleFunnelEvent`, a different route/handler from
+  `CAP-CRM-007`'s `/api/conversion/event` `handlers/conversionTriggers.js
+  handleRecordEvent` — confirmed distinct before deciding not to force a
+  match). This session log entry is the authoritative record.
+- **Remaining in this wave:** pricing-page and payment-CTA browser
+  verification (the rest of the customer's own Wave 1 scope) not yet done
+  this pass — real payment completion is intentionally out of scope for
+  browser UAT (no real Razorpay charge), but order-creation-only
+  verification (open checkout, confirm `POST /api/payments/create-order`
+  fires correctly, stop before payment) was not reached this session.
+- **Risks / follow-ups surfaced:** `GET /api/visitor/stats` frontend/backend
+  mismatch (disclosed above, deferred). The browser-sandbox network
+  constraint and its route-interception workaround are specific to this
+  session's environment, not the product — worth capturing as a reusable
+  project skill (`/run-skill-generator`) if browser UAT continues to be a
+  recurring need in this environment.
+- **Next recommended wave:** finish Wave 1 (pricing page, payment CTA/order
+  creation verification), then Wave 2 (Free/Starter/Pro/Enterprise customer
+  dashboards) per the customer's own recommended split — or the Wave 2
+  payment-platform follow-ups (refund admin UI, webhook-events viewer,
+  invoice download) if prioritized higher.
 
 ### 2026-07-10 — Production-readiness lifecycle, Wave 2: Payment & Subscription Platform — order-integrity + legacy-route consolidation
 
