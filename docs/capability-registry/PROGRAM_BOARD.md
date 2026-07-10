@@ -304,6 +304,22 @@ see session log below.
   other 85 pages sharing `cdb-mobile-responsive.css`, or continuing the
   customer's own UAT wave plan (Wave 2: Free/Starter/Pro/Enterprise customer
   dashboards) — owner's call.
+- **Production verification (post-merge addendum):** PR #147 merged
+  (squash `b5ca4073`). Confirmed all 32 checks green pre-merge (individually
+  inspected, not just combined status) and, on the merge commit: `Test &
+  Quality Gate`, `CI — Lint & Validate`, `Secret Scan (gitleaks)`, and
+  `CodeQL` all `success`; `Deploy to Cloudflare` run `29092316500` `success`
+  (2026-07-10T12:21:53Z). Live curl spot-check confirmed the deployed Worker
+  serves the new code, not the old broken path (`cdb-mobile-responsive.css`
+  contains the new "HOMEPAGE TOP-NAV OVERFLOW" rules; `frontend/index.html`
+  contains the guarded `readAuth()` catch block). Then re-ran the real
+  headless-Chromium check directly against `https://cyberdudebivash.in/` at
+  360px and 390px: hamburger, Sign In, and the notification bell all sit
+  fully inside the viewport, the hamburger click opens
+  `#nav-mobile-drawer` (`drawerOpen: true`), zero JS errors. This closes the
+  loop the customer's added release gate required — a brand-new/anonymous
+  visitor can find and use Sign In, on the live production site, in a real
+  browser, without developer intervention.
 
 ### 2026-07-10 — Production-readiness lifecycle, Wave 3: Production Dashboard UAT (Wave 1 of the customer's own recommended UAT split — public site, signup, login, dashboard nav)
 
