@@ -10,7 +10,7 @@
 # and broke `pip install -r requirements.txt` (Docker build failure).
 fastapi==0.115.3
 uvicorn[standard]==0.30.6
-python-multipart==0.0.9
+python-multipart==0.0.32
 starlette==0.41.3
 
 # ── AI / LLM ─────────────────────────────────────────────────
