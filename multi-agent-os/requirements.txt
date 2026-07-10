@@ -44,5 +44,5 @@ orjson>=3.11.9
 
 # Testing
 pytest>=8.2.0
-pytest-asyncio>=0.23.0
+pytest-asyncio>=1.4.0
 httpx>=0.28.1
