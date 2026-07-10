@@ -1533,10 +1533,22 @@ export async function routeRequest(request, env, ctx, requestId) {
     // actually has. whiteLabelMSSP.js's own requireRole() already does the
     // real, now-correctly-functioning role check (authCtx.role is populated —
     // see auth/middleware.js). (2026-07-06 revenue-mechanisms audit, P2-9.)
+    // 'funnel/event' removed for the same reason (P0 Wave 3 UAT, 2026-07-10):
+    // its own route registration below is explicitly commented "public,
+    // fire-and-forget" and handleFunnelEvent (handlers/revenue.js) is written
+    // to accept a null authCtx by design (userId falls back to null, email
+    // falls back to 'anonymous') — but this blanket owner-only gate ran first
+    // and 403'd it regardless, for every caller. Every real visitor's browser
+    // calls this exact endpoint on page load (frontend/index.html's funnel
+    // 'visit'/'exit_intent' tracking beacons) and every one has been silently
+    // 403ing since whichever pass added it to this list — the entire visitor
+    // funnel-tracking pipeline (visit → scan → signup → purchase) has had no
+    // anonymous-visitor data flowing into it. 'funnel/metrics' (the aggregate,
+    // dashboard-facing READ endpoint, a different route from 'funnel/event',
+    // the write-only tracking beacon) correctly stays owner-gated here.
     if (
       /^\/api\/(integrations|org-memory|workflows|revenue|monetize)(\/|$)/.test(path) ||
       path === '/api/funnel/metrics' ||
-      path === '/api/funnel/event' ||
       path === '/api/affiliate/stats'
     ) {
       const _ownerCtx = await resolveAuthV5(request, env).catch(() => ({}));

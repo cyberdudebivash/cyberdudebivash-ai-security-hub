@@ -2308,6 +2308,13 @@
   function doLogout() {
     clearTokens();
     _token = _user = _plan = null;
+    // Reset to the login view — without this, Sign Out re-shows whichever
+    // auth view (e.g. signup-view) was last active in this browser session,
+    // so a customer who originally arrived via signup and later signs out
+    // sees a "create account" form instead of "sign in" — confusing on a
+    // real dashboard, and wrong for a returning customer or the next person
+    // on a shared computer.
+    showAuthView('login-view');
     document.getElementById('login-overlay').style.display = 'flex';
   }
 
