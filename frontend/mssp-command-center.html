@@ -590,7 +590,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Contact Email</label>
+      <label class="form-label">Contact Email *</label>
       <input type="email" class="form-input" id="pEmail" placeholder="partner@example.com">
     </div>
     <div class="form-group">
@@ -849,14 +849,17 @@ async function submitPartner() {
   const contract_value = document.getElementById('pContractValue').value;
   const email = document.getElementById('pEmail').value.trim();
   const notes = document.getElementById('pNotes').value.trim();
-  if (!company || !contact) {
-    showToast('Company name and contact are required.', 'error');
+  if (!company || !contact || !email) {
+    showToast('Company name, contact, and email are required.', 'error');
     return;
   }
   try {
+    // Real backend (handleAddMsspPartner) requires contact_email specifically
+    // and drops any field it doesn't destructure — the previous plain
+    // `contact`/`email` names never matched, so every submission 400'd.
     const r = await CDB_STAFF_AUTH.authFetch(API_BASE + '/api/mssp/partners', {
       method: 'POST',
-      body: JSON.stringify({ company, contact, tier, contract_value: Number(contract_value)||0, email, notes })
+      body: JSON.stringify({ company, contact_name: contact, contact_email: email, tier, contract_value: Number(contract_value)||0, notes })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     closePartnerModal();

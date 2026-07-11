@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry four below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#3: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate, `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps, and `revenue-command-center.html`'s 6-of-8 broken panels (all on PR #184, still open). See the top 3 session-log entries below. 21 of the 24 backlog items remain, queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry five below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#4: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate, `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps, `revenue-command-center.html`'s 6-of-8 broken panels, and `mssp-command-center.html`'s Add Partner 400 bug (all on PR #184, still open). See the top 4 session-log entries below. 20 of the 24 backlog items remain, queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 224 files / 2342 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +15 tests this wave (`revenueCommandCenterPanelFixes.test.mjs`, 15 new). Baseline going into this wave was 223 files / 2327 tests (Tier-1 item #2) |
+| Worker test suite | 225 files / 2347 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +5 tests this wave (`msspAddPartnerFieldMismatch.test.mjs`, 5 new). Baseline going into this wave was 224 files / 2342 tests (Tier-1 item #3) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,56 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #4: mssp-command-center.html — Add Partner always 400'd
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #3.
+- **Re-verified against actual code:** `submitPartner()`
+  (`frontend/mssp-command-center.html`) posted
+  `{company, contact, tier, contract_value, email, notes}` to
+  `POST /api/mssp/partners`. The real handler
+  (`handleAddMsspPartner`, `workers/src/handlers/msspOps.js`) destructures
+  `{company, contact_email, tier, plan, brand_name, custom_domain,
+  primary_color, margin_pct}` and requires both `company` and
+  `contact_email` — the frontend's `email` field was never read under that
+  name, so `contact_email` was always empty and the `if (!company ||
+  !contact_email)` check 400'd on literally every submission.
+  `contact`/`contract_value`/`notes` were also silently dropped — no
+  matching destructured field existed for any of them.
+- **Fix:**
+  - `submitPartner()` now sends `contact_email`/`contact_name` (the real
+    field names), and its own client-side required-field check now
+    includes email (previously the "Contact Email" label had no `*` and
+    the form let you submit without it, guaranteeing a 400 even after the
+    field-name fix if left blank) — label corrected to "Contact Email *"
+    to match.
+  - `handleAddMsspPartner` now also accepts `contact_name`/`contract_value`/
+    `notes` and stores them in `mssp_partners.metadata` — a JSON column
+    already in `schema_bootstrap.sql`, provisioned for exactly this kind of
+    extensibility but never populated on insert. Confirmed this is real,
+    retrievable data, not a write-only stub: `handleListMsspPartners`
+    already `SELECT p.*`s every column including `metadata`. No schema
+    migration needed or performed.
+- **Deliberately not done in this pass:** surfacing `metadata`'s fields in
+  the partner table or `viewPartner()`'s detail view — the audit finding
+  was specifically about the 400 (a hard failure), not about the partner
+  list's displayed columns; adding new visible UI is a separate, smaller
+  follow-up now that the data is actually being captured.
+- **Tests:** new `test/msspAddPartnerFieldMismatch.test.mjs` (5 tests) —
+  backend: still 400s on missing `contact_email` (unchanged validation),
+  succeeds and correctly stores `contact_name`/`contract_value`/`notes` in
+  `metadata` on a valid submission; frontend: static source-parse
+  confirming `submitPartner` sends the real field names, requires email
+  client-side, and the label is marked required. Full suite green: 225
+  files / 2347 tests (baseline 224/2342 from Tier-1 item #3).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#3). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (20 of 24):** next up, in stated
+  order: `automation-dashboard.html`'s dead/wrong endpoints, then
+  `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, then the
+  rest of Tier 1 before Tier 2/3 (full original list in the audit entry
+  five below).
 
 ### 2026-07-11 — Tier-1 backlog item #3: revenue-command-center.html — 6 of 8 panels broken by response-shape mismatches
 
