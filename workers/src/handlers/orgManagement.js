@@ -17,7 +17,28 @@ import { isRealUser } from '../auth/middleware.js';
  *   DELETE /api/orgs/:id/members/:userId — remove member
  *   GET   /api/orgs/:id/scans            — org-wide scan history
  *   GET   /api/orgs/:id/monitors         — org-wide monitors
+ *   GET   /api/orgs/:id/audit            — org audit trail (OWNER/ADMIN only)
  */
+
+// ─── Org audit trail ──────────────────────────────────────────────────────────
+// Writes into the existing, shared D1 audit_log table (same table
+// aiSecurityCopilot.js's writeCopilotAuditLog() and enterpriseSsoHandler.js
+// already use, and the staff console's handleAdminAudit already merges into
+// its view) — no new table/migration needed. Every enterprise competitor
+// researched (CrowdStrike, SentinelOne, Palo Alto, ThreatConnect) documents
+// some form of admin-visible audit trail; this platform had a staff-only one
+// but nothing an org OWNER/ADMIN could see for their own organization — an
+// OWNER had no way to know who invited a member, changed a role, or removed
+// someone from their own org. Best-effort: never blocks the action it logs.
+async function writeOrgAuditLog(env, request, { userId, orgId, action, metadata = {} }) {
+  if (!env?.DB) return;
+  try {
+    await env.DB.prepare(
+      `INSERT INTO audit_log (user_id, action, resource, resource_id, status, metadata, created_at)
+       VALUES (?, ?, 'organization', ?, 'ok', ?, datetime('now'))`
+    ).bind(userId, action, orgId, JSON.stringify(metadata)).run();
+  } catch { /* audit logging must never block the org action itself */ }
+}
 
 const ORG_PLAN_LIMITS = {
   STARTER:    { max_members: 5,  max_daily_scans: 100, max_monitors: 5,  api_keys: 5  },
@@ -312,6 +333,11 @@ export async function handleInviteMember(request, env, authCtx, orgId) {
     VALUES (?,?,?,?,?,'active')
   `).bind(orgId, invitee.id, role, authCtx.userId, email).run();
 
+  await writeOrgAuditLog(env, request, {
+    userId: authCtx.userId, orgId, action: 'member_invited',
+    metadata: { invited_user_id: invitee.id, email, role },
+  });
+
   return Response.json({
     success: true,
     message: `${invitee.full_name || email} added to the organization as ${role}`,
@@ -348,6 +374,12 @@ export async function handleUpdateMemberRole(request, env, authCtx, orgId, targe
   ).bind(role, orgId, targetUserId).run();
 
   if (!result.meta?.changes) return Response.json({ error: 'Member not found' }, { status: 404 });
+
+  await writeOrgAuditLog(env, request, {
+    userId: authCtx.userId, orgId, action: 'member_role_changed',
+    metadata: { target_user_id: targetUserId, new_role: role },
+  });
+
   return Response.json({ success: true, message: `Member role updated to ${role}` });
 }
 
@@ -370,6 +402,12 @@ export async function handleRemoveMember(request, env, authCtx, orgId, targetUse
   ).bind(orgId, targetUserId).run();
 
   if (!result.meta?.changes) return Response.json({ error: 'Member not found or cannot remove OWNER' }, { status: 404 });
+
+  await writeOrgAuditLog(env, request, {
+    userId: authCtx.userId, orgId, action: isSelf ? 'member_left' : 'member_removed',
+    metadata: { target_user_id: targetUserId },
+  });
+
   return Response.json({ success: true, message: 'Member removed from organization' });
 }
 
@@ -411,6 +449,48 @@ export async function handleOrgScans(request, env, authCtx, orgId) {
   return Response.json({ scans: results || [], total: results?.length || 0, limit, offset });
 }
 
+// ─── Org audit trail ──────────────────────────────────────────────────────────
+export async function handleGetOrgAuditLog(request, env, authCtx, orgId) {
+  if (!isRealUser(authCtx)) {
+    return Response.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  // Same admin-only bar every researched competitor applies to audit visibility
+  // (CrowdStrike: regular users see only their own actions, admins see all) —
+  // matches this file's own existing OWNER/ADMIN bar for invite/update-org.
+  const membership = await env.DB.prepare(
+    `SELECT role FROM org_members WHERE org_id = ? AND user_id = ? AND status = 'active'`
+  ).bind(orgId, authCtx.userId).first();
+  if (!membership || !['OWNER','ADMIN'].includes(membership.role)) {
+    return Response.json({ error: 'Only OWNER or ADMIN can view the organization audit log' }, { status: 403 });
+  }
+
+  const url   = new URL(request.url);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 200);
+
+  const { results } = await env.DB.prepare(`
+    SELECT al.id, al.action, al.metadata, al.created_at,
+           al.user_id as actor_id, u.full_name as actor_name, u.email as actor_email
+    FROM audit_log al
+    LEFT JOIN users u ON u.id = al.user_id
+    WHERE al.resource = 'organization' AND al.resource_id = ?
+    ORDER BY al.created_at DESC
+    LIMIT ?
+  `).bind(orgId, limit).all();
+
+  const entries = (results || []).map(r => {
+    let metadata = {};
+    try { metadata = JSON.parse(r.metadata || '{}'); } catch {}
+    return {
+      id: r.id, action: r.action, created_at: r.created_at,
+      actor_id: r.actor_id, actor_name: r.actor_name, actor_email: r.actor_email,
+      metadata,
+    };
+  });
+
+  return Response.json({ org_id: orgId, entries, count: entries.length });
+}
+
 // ─── Update org settings ──────────────────────────────────────────────────────
 export async function handleUpdateOrg(request, env, authCtx, orgId) {
   if (!isRealUser(authCtx)) {
@@ -445,6 +525,11 @@ export async function handleUpdateOrg(request, env, authCtx, orgId) {
     `UPDATE organizations SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...params).run();
 
+  await writeOrgAuditLog(env, request, {
+    userId: authCtx.userId, orgId, action: 'org_updated',
+    metadata: { fields: Object.keys(body) },
+  });
+
   return Response.json({ success: true, message: 'Organization updated' });
 }
 
@@ -458,6 +543,11 @@ export async function handleDeleteOrg(request, env, authCtx, orgId) {
     `SELECT id, name FROM organizations WHERE id = ? AND owner_id = ?`
   ).bind(orgId, authCtx.userId).first();
   if (!org) return Response.json({ error: 'Organization not found or you are not the owner' }, { status: 404 });
+
+  await writeOrgAuditLog(env, request, {
+    userId: authCtx.userId, orgId, action: 'org_deleted',
+    metadata: { name: org.name },
+  });
 
   await env.DB.prepare(`DELETE FROM organizations WHERE id = ?`).bind(orgId).run();
   return Response.json({ success: true, message: `Organization "${org.name}" deleted` });

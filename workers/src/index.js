@@ -287,7 +287,7 @@ import {
   handleCreateOrg, handleListOrgs, handleGetOrg, handleUpdateOrg, handleDeleteOrg,
   handleOrgDashboard, handleInviteMember,
   handleUpdateMemberRole, handleRemoveMember,
-  handleOrgScans,
+  handleOrgScans, handleGetOrgAuditLog,
 } from './handlers/orgManagement.js';
 import { generateAIInsights } from './lib/aiBrain.js';
 import { buildAttackGraph }   from './lib/attackGraph.js';
@@ -3669,6 +3669,11 @@ export async function routeRequest(request, env, ctx, requestId) {
       const authCtx = await resolveAuthV5(request, env);
       const orgId   = path.split('/')[3];
       return withSecurityHeaders(withCors(await handleOrgScans(request, env, authCtx, orgId), request));
+    }
+    if (path.match(/^\/api\/orgs\/[^/]+\/audit$/) && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      const orgId   = path.split('/')[3];
+      return withSecurityHeaders(withCors(await handleGetOrgAuditLog(request, env, authCtx, orgId), request));
     }
 
     // ═══════════════════════════════════════════════════════════════════════
