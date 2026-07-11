@@ -323,6 +323,15 @@ see session log below.
   missing entirely, and — like the Threat Graph fix — would need a new
   schema migration prepared but left for the owner to apply via the gated
   workflow.
+- **Production verification (post-merge addendum):** PR #161 merged
+  (squash `c2cdd6a`). All 32 checks individually inspected green pre-merge.
+  Deploy confirmed live. Re-ran the full flow directly against
+  `https://cyberdudebivash.in` with zero mocking this time (the new
+  `/api/orgs/:id/audit` route now genuinely exists in production): created a
+  real org, updated its settings, called the live `/audit` endpoint directly
+  (200, 1 real entry, correct action/actor) and confirmed the real UI's
+  Activity Log card renders it correctly. Zero JS errors. Test account and
+  org cleaned up. Closes the loop for this wave's fix on live production.
 
 ### 2026-07-11 — P1: Threat Graph findings-persistence fix — code shipped as a safe no-op, ACTION NEEDED from the owner to activate
 
