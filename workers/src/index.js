@@ -5972,36 +5972,56 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ── PHASE 3: Autonomous Defense Engine ───────────────────────────────────
+    // None of these 8 routes checked isRealUser(authCtx) — same vulnerability
+    // class already fixed once in this file for MASOC (resolveAuthV5's
+    // IP-fallback branch sets authenticated:true for every anonymous caller),
+    // except worse here: an unauthenticated caller could change the platform's
+    // live defense mode, fabricate a "threat" to trigger a real AGGRESSIVE-mode
+    // auto-deploy to real target platforms (splunk/elastic/sentinel/webhook),
+    // or approve/rollback a real pending action. Unlike MASOC's status route,
+    // no route here has a legitimate public/unauthenticated caller — the only
+    // frontend consumer (frontend/index.html's #auto-defense section) is
+    // itself data-auth-gate="true" and never rendered for a logged-out visitor
+    // — so all 8, including the read-only GETs, are gated, not just the
+    // state-changing ones.
     if (path === '/api/defense-engine/mode' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleGetDefenseMode(request, env, authCtx), request));
     }
     if (path === '/api/defense-engine/mode' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleSetDefenseMode(request, env, authCtx), request));
     }
     if (path === '/api/defense-engine/execute' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleExecuteDefense(request, env, authCtx), request));
     }
     if (path === '/api/defense-engine/pending' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleGetPending(request, env, authCtx), request));
     }
     if (path.startsWith('/api/defense-engine/approve/') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleApprove(request, env, authCtx), request));
     }
     if (path.startsWith('/api/defense-engine/rollback/') && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleRollback(request, env, authCtx), request));
     }
     if (path === '/api/defense-engine/executions' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleGetExecutions(request, env, authCtx), request));
     }
     if (path === '/api/defense-engine/posture' && method === 'GET') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
       return withSecurityHeaders(withCors(await handleGetDefensePosture(request, env, authCtx), request));
     }
 
