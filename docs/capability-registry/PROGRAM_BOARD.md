@@ -9,7 +9,40 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, Backlog-sweep wave 2: CAP-MSSP-001 live-reverified against production (dead-end fix confirmed deployed, real non-mutating login-endpoint check); CAP-COMP-001 (found in wave 1's 3-domain audit) fixed — a compliance-pack nav link no longer leads to a hidden, auth-gated section for logged-out visitors. **Session resumed after a usage-limit cutoff mid-edit** (see EXECUTION_PROCEDURE.md §0 — the in-flight p4LoadFunnel edit was never committed and was not recoverable from git, so it was redone from scratch rather than resumed): CAP-CRM-007 (Conversion Trigger & Funnel Tracking) fixed — all 6 frontend call sites into conversionTriggers.js now match the real backend contract, including closing a paywall gate that failed OPEN for every feature/plan (zero live callers today, so zero current blast radius, but now correct before anything gets wired to it). Metrics table below updated for the CAP-CRM-007 fix only (frontend/parity % + test count) — priority fields are historical-severity records, not auto-derived from the now-fixed booleans, matching this session's established convention. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate. **Session resumed a second time after another usage-limit cutoff** (mid-check on PR #173's post-merge production deploy — confirmed landed cleanly, see session log): CAP-COMP-005 (Trust Center Compliance Framework Alignment) investigated per this wave's own selection process, but its registry diagnosis turned out to be wrong — the page was never actually unwired. Caught before shipping a bad "fix" that would have broken a working integration (full account in the session log entry below). The real bug found and fixed instead: a platform-metrics mislabeling bug affecting both the public Trust Center and the Enterprise Sales Kit sent to prospects. CAP-MKT-005's catalog-mismatch question and this wave's merge-workflow preference are both now with the owner, awaiting explicit input before continuing further.)
+## Current status (2026-07-11 — updated after a full recovery-and-continuation pass; see the top two session-log entries below for the detailed account of PRs #174–#179, and the entry immediately below those two for today's fix)
+
+**Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
+CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
+appended their own session-log entry below but never rolled the header
+summary forward, so it still named CAP-CRM-007 as the latest work and the
+metrics table below still read 211 files/2188 tests after the suite had
+already reached 217/2242. Corrected here; see session log for the full,
+unedited history of every wave in between (URL-hardcoding fix #177, GDPR
+claims reconciliation #176, dead catalog products #175, portal metrics
+mislabeling #174, admin/revenue dashboard gating + CISO paywall bypass #178,
+and the homepage `?owner=1` shell-reveal fix + 5-page self-correction #179).
+
+As of today: all of the above are shipped and merged. This session's own
+work (full account in the session log entry below) closed CAP-DEVPORTAL-004's
+last open item — `sap_`-prefixed growth/plan API keys minted via `POST
+/api/growth/api-key` could never authenticate anywhere on the platform
+(confirmed by reading the actual resolver, not the registry's prior
+description of it) — plus a second, independent stale-KV-on-rotation bug
+found while regression-testing the fix. `operational_status` for that entry
+moves from `BLOCKED` to `PILOT ONLY` (matching its CAP-DEVPORTAL-001/002/003
+siblings); its `priority` field stays `P1` untouched, per this file's
+established historical-severity convention. Metrics table below regenerated
+fresh via `node scripts/registry/generate-report.mjs` (2026-07-11) rather
+than hand-updated, per this file's own rule never to let the two drift.
+
+Also corrected: the "Remaining Work Register" and "Proposed wave plan"
+sections below were stale in the same way — both still described 3 domains
+(`threat-hunting-intel`, `mythos-godmode`, `compliance-store`) as unpopulated
+stubs and recommended them as the next wave, but the "Domains populated (21)"
+list two paragraphs above already correctly listed all 21 as populated, and
+the generated report confirms non-zero capability counts for all three
+(17/6/5 respectively) — that population work is done and was simply never
+removed from the register. See those two sections for the correction.
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -27,12 +60,12 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 211 files / 2188 tests passing | `npx vitest run`, run 2026-07-11 (+3 files / +19 tests since the CAP-CRM-007 entry above: `workers/test/wafOnAttributeFalsePositive.test.mjs` +7, `workers/test/marketplaceDeadCodeRemoval.test.mjs` +4, `workers/test/orgScansPagination.test.mjs` +8) |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after today's CAP-DEVPORTAL-004 entry update) |
+| Worker test suite | 217 files / 2247 tests passing | `npx vitest run`, run 2026-07-11 — +5 tests today (`workers/test/intelKeyResolution.test.mjs`'s new sap_-key describe block); the 211→217 file / 2188→2242 test growth in between happened across PRs #174–#179, never rolled into this row until now |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.5% / 65.3% / 60.0% | `PRODUCTION_READINESS_REPORT.md` — frontend/parity up from 64.7%/58.9%; CAP-ORG-001's frontend.status flipped partial→exists this session (last deferred handler wired) |
+| Backend / Frontend / Parity | 89.5% / 66.3% / 61.1% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — today's fix touched no backend/frontend/navigation booleans (CAP-DEVPORTAL-004's frontend was, and remains, intentionally `missing`; this was an auth-resolution bug, not a structural gap), so these % are unchanged by today's work — carried forward from PRs #174–#179 |
 | Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
-| Gaps by severity | Critical 10 · High 23 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md` — up from Critical 9 · High 15 · Medium 4 · Low 38 before this wave. The increase is the 3-domain audit doing its job: CAP-COMP-001 is 1 new Critical; CAP-COMP-002/004/005, CAP-MYTHOS-003, CAP-TIH-002/004/009/014 are 8 new High. None of the original 9 Critical/15 High items got worse — see session log |
+| Gaps by severity | Critical 9 · High 24 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — unchanged by today's fix (CAP-DEVPORTAL-004's `priority` stays `P1` untouched, per this file's historical-severity convention; only `operational_status` moved, which this rollup doesn't key on). Do not hand-diff this against the stale Critical-10/High-23 figures the row above previously showed — those predate PRs #174–#179 and were never reconciled; treat this run as the current baseline, not a delta from them |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -173,35 +206,145 @@ board's prior recommendation.
 
 ## Remaining Work Register
 
-3 domains are still empty stubs (`[]`):
-
-| Domain | File | Status |
-|---|---|---|
-| Threat Hunting / Intel | `threat-hunting-intel.json` | Not started |
-| MYTHOS / God Mode | `mythos-godmode.json` | Not started |
-| Compliance Store | `compliance-store.json` | Not started |
-
-Security Scanners populated 2026-07-09 (10 capabilities, CAP-SCAN-001..010) —
-see session log below.
+**Correction (2026-07-11):** this section said all 3 of the domains below
+were still empty, unstarted stubs, and the wave plan below it recommended
+populating them as the next two waves. Both were stale — all 3 were
+populated back on 2026-07-09 ("Backlog sweep, wave 1: 3-domain audit", see
+session log) with 5 (compliance-store), 6 (mythos-godmode), and 17
+(threat-hunting-intel) capabilities respectively, and the "Domains populated
+(21)" list above this section has correctly listed all 21 domains
+(including these 3) for several waves now. Nobody had removed the
+now-contradicting table below in the meantime. Registry population itself
+(all 21 domains, 95 capabilities) is **complete** — confirmed by
+`node scripts/registry/validate.mjs` (0 failures) and
+`PRODUCTION_READINESS_REPORT.md`'s per-domain capability counts. There is no
+remaining registry-population work; anything still open is a product/fix
+backlog item (see `PRODUCTION_READINESS_REPORT.md`'s gap tables and the
+session log below), not an unpopulated domain.
 
 ## Proposed wave plan
 
-- **Wave 2 — Developer Portal / API Keys.** ✅ DONE (2026-07-08) — see
-  session log above; its 3 findings are now also fixed (see remediation
-  section above).
-- **Wave 3a — Security Scanners.** ✅ DONE (2026-07-09) — see session log
-  below. Threat Hunting/Intel (originally grouped with it as Wave 3) split
-  out as its own wave per this file's own splitting rule.
-- **Wave 3b — Threat Hunting/Intel.** Next recommended wave.
-- **Wave 4 — MYTHOS/God Mode + Compliance Store.**
-- **CAP-DEVPORTAL-002/003/004 fixes.** ✅ DONE (2026-07-09) — see remediation
-  section above. Not registry waves; normal CAB-reviewed product fixes, same
-  treatment as the MASOC auth-gate fix was. Can run before, after, or
-  between the domain waves above — sequencing is a business call, not a
-  registry-population
-  dependency.
+Registry population (Waves 1–4, the domain-by-domain cataloguing effort) is
+**complete** — see the correction immediately above. Per the 2026-07-10
+scope note near the top of this file, sessions on this branch have since
+followed the customer's production-readiness-lifecycle priority instead of
+further registry waves for their own sake; that shift is working as intended
+and stays in effect. Recommended next steps, in the same spirit as the fixes
+already shipped under it:
+
+- Work the remaining real (non-historical, non-owner-blocked) gaps in
+  `PRODUCTION_READINESS_REPORT.md` — regenerate it first
+  (`node scripts/registry/generate-report.mjs`) rather than trusting any
+  cached copy, then re-verify each candidate by reading its actual code
+  before touching anything, per this file's own repeated lesson (5 false
+  positives were caught and corrected this way in the #178/#179 wave alone).
+- The one remaining owner-action item from an earlier wave: the Threat Graph
+  findings-persistence fix still needs the owner to run the gated D1 Schema
+  Migration workflow (`workers/schema_migration_scan_history_findings_2026_07.sql`)
+  to activate — code-complete, shipped as a safe no-op until then.
+- CAP-DEVPORTAL-002/003/004 fixes: ✅ DONE (2026-07-09, plus CAP-DEVPORTAL-004's
+  own residual sap_-key auth-resolution gap closed 2026-07-11) — see the
+  remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Recovery-and-continuation pass: PROGRAM_BOARD.md housekeeping (6-PR-stale header/register/wave-plan corrected) + CAP-DEVPORTAL-004's residual sap_-key auth gap closed
+
+- **Recovery (§3):** fresh session picking up after the prior one hit a
+  usage-limit cutoff. `git fetch origin main`, `git rev-parse HEAD` vs
+  `origin/main` (identical — this branch already contained PR #179's merge,
+  nothing to recover), `git ls-remote origin` (confirmed no stray unmerged
+  branch for this work; the many other `claude/*` branches listed are
+  unrelated prior efforts, out of scope, not touched). PR #179 itself
+  confirmed merged via the GitHub API (not just trusted from narration).
+- **Housekeeping found and fixed first:** `PROGRAM_BOARD.md`'s "Current
+  status" header, metrics table, "Remaining Work Register", and "Proposed
+  wave plan" had drifted 6 PRs stale (last rolled forward as of #172/#173) —
+  each of #174–#179 correctly appended its own session-log entry but never
+  updated the header, so it still named CAP-CRM-007 as the latest work, the
+  test count still read 211/2188 against an actual 217/2242, and the
+  register/wave-plan still described 3 already-populated domains
+  (`threat-hunting-intel`, `mythos-godmode`, `compliance-store`) as
+  unstarted stubs and recommended populating them as the next wave — they
+  were populated back on 2026-07-09. Corrected in place; see those sections
+  for the full explanation. This is a documentation-integrity fix only, zero
+  code changes, called out separately from the real fix below.
+- **Domains touched:** `developer-portal-apikeys` (code + registry entry).
+- **Real fix — CAP-DEVPORTAL-004's residual gap, closed:** the entry's own
+  `notes` field (written 2026-07-09) already documented that `sap_`-prefixed
+  growth/plan API keys — minted successfully via `POST /api/growth/api-key`
+  for a verified paid lead — could never authenticate anywhere on the
+  platform, and flagged it `BLOCKED` pending a dedicated follow-up. Traced
+  the actual call graph before touching anything (per this file's own
+  repeated lesson about verifying claims against code, not descriptions):
+  `workers/src/middleware/auth.js`'s `resolveApiKey()` had a KV fast-path
+  keyed by the *raw* incoming key and a D1 branch matching only `cdb_` —
+  neither recognized `sap_`, and separately `apiRevenueEngine.js`'s
+  `provisionApiKey` cached its KV entry under a *hashed* name the resolver
+  never looks up, so even the prefix-agnostic KV path would have missed.
+  Fixed with a new, additive third branch in that resolver that delegates to
+  `apiRevenueEngine.js`'s own `resolveApiKey(env, apiKey)` (hash-then-match
+  against its D1 rows) instead of duplicating the lookup, so key
+  rotation/revocation there is honored automatically — zero changes to the
+  existing KV/`cdb_`/IP-fallback branches.
+  - **Correcting the prior note's own severity claim:** it described
+    `workers/src/middleware/auth.js` as "the platform's core, request-path
+    authentication resolver used by every authenticated route." Grepping
+    every importer of that file shows exactly one consumer:
+    `workers/src/handlers/intelMonetization.js` (the premium `/api/v1`
+    threat-intel feed). The platform-wide session/user resolver every other
+    handler actually uses is the separate `workers/src/auth/middleware.js`
+    (`resolveAuthV5`) — untouched by this change. The fix's real blast
+    radius was the intel-monetization API surface only, not "every
+    authenticated route"; still verified with the full suite regardless.
+  - **Second, independent bug found while writing the rotation regression
+    test (not in the original finding):** `provisionApiKey`'s rotation path
+    (re-provisioning an email that already has an active key) updated the
+    D1 row's hash but never invalidated the *old* hash's KV cache entry —
+    once the new resolver branch above made that KV entry reachable for the
+    first time, a rotated-away key would have kept authenticating for up to
+    its 1-year TTL despite the D1 row now pointing at a different key. Fixed
+    in the same change: the old KV entry is now explicitly deleted on
+    rotation, wrapped in its own `try/catch` (not chained `.catch()`, which
+    doesn't help when `.delete` isn't a function at all rather than a
+    rejecting promise — caught this the hard way when it broke an
+    *existing* test via the outer function's catch-and-return-null) so a KV
+    binding lacking `.delete()` can't break provisioning itself.
+  - `operational_status` moves `BLOCKED` → `PILOT ONLY` (matching its
+    CAP-DEVPORTAL-001/002/003 siblings — no frontend surface by design,
+    unverified live external callers, but the backend now genuinely works
+    end-to-end). `priority` stays `P1`, untouched, per this file's
+    historical-severity convention. `customer_journey_complete` stays
+    `false` — proven correct against a real in-memory D1, not against live
+    production (no deploy access from this session, and no confirmed
+    external caller to verify against).
+- **Commits:** code fix (`workers/src/middleware/auth.js`,
+  `workers/src/services/apiRevenueEngine.js`) + new regression tests
+  (`workers/test/intelKeyResolution.test.mjs`) in one commit; registry entry
+  update (`docs/capability-registry/domains/developer-portal-apikeys.json`)
+  and this PROGRAM_BOARD.md correction in a second commit.
+- **Validator:** 0 failures, 0 warnings, 95 capabilities (unchanged count —
+  no new/removed capabilities, only CAP-DEVPORTAL-004's own fields updated).
+- **Tests:** full suite green, 217 files / 2247 tests (2242 + 5 new:
+  `intelKeyResolution.test.mjs`'s new sap_-key describe block — a freshly
+  provisioned key authenticates end-to-end at the correct tier via the same
+  `resolveAuth()` → `entitlementsFor()` chain the real intel API uses; a
+  STARTER-tier key resolves to STARTER rather than a silent FREE downgrade;
+  rotation invalidates the old key; an unprovisioned sap_-shaped key is
+  correctly rejected; the pre-existing cdb_/KV/IP-fallback branches in the
+  same file are unaffected). Also re-ran every directly-related existing
+  test file (`devPortalApiKeyFixes`, `apiKeyHashing`, `apiKeysActiveFilterFix`,
+  `apiKeyLiveTier`, `intelMonetization`, `intelRateLimitEnforcement`,
+  `phase2ContractDrift`) individually before the full run — all green.
+- **Risks / follow-ups surfaced:** none new. The Threat Graph
+  findings-persistence owner-action item from an earlier wave is still
+  outstanding (see Proposed wave plan above) — unrelated to this fix, not
+  touched.
+- **Next recommended wave:** per the corrected wave-plan section above —
+  work the next real, non-owner-blocked gap in a freshly regenerated
+  `PRODUCTION_READINESS_REPORT.md`, re-verifying each candidate against
+  actual code before treating any registry claim (including this file's own)
+  as true.
 
 ### 2026-07-11 — Access-control gap wave 2: index.html's `?owner=1` shell-reveal fixed (server-verified); self-correction on 5 pages the previous entry incorrectly flagged as needing the same fix
 
