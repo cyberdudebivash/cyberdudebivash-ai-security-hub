@@ -225,7 +225,7 @@
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "Embedded within #executive-hub, which itself had zero nav path prior to this same wave's fix (see the parallel executive-hub navigation fix in this PR) — now reachable via the injected 'Executive Hub' nav link for any authenticated user."
+      "evidence": "CORRECTED 2026-07-11, same day: this field originally claimed #executive-hub 'had zero nav path prior to this same wave's fix' — independently re-verified false. A pre-existing p3InjectNav() (frontend/index.html's Phase 3 Engine block) already injected a real nav link labeled 'CISO Hub' for #executive-hub; a static grep never found it because the link is built via document.createElement()/property assignment. That mechanism's real bug (now fixed): it ran unconditionally for every visitor, including logged-out ones who can never pass #executive-hub's own auth gate, and only targeted the desktop nav. Now reachable, correctly gated to authenticated visitors only, via the fixed p3InjectNav() (both desktop nav and mobile drawer) under its real, already-shipped 'CISO Hub' label — not the invented 'Executive Hub' label this field originally described, which was a redundant, now-removed duplicate injection."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:MSSP", "tier:ENTERPRISE"] },
