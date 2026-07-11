@@ -394,25 +394,32 @@ window.cdbTriggerReportPurchase = async function(module, target) {
 };
 </script>
 <!-- ═══ END v26 EMAIL CAPTURE GATE ═══ -->
+<script src="/assets/staff-auth.js"></script>
 <script>
-// ── v31 Auth Gate Controller (deferred reveal + owner gate) ──────────────────
+// ── v32 Auth Gate Controller (deferred reveal + server-verified owner gate) ──
 // FIX: the original IIFE ran during <head> parse — before <body> existed — so its
 // querySelectorAll() matched zero gated sections and revealed nothing for returning
 // authenticated users (the "gated sections missing after login" bug). We now:
-//   (a) bootstrap an owner flag from /?owner=1 (UI gate only; data APIs stay
-//       server-side protected),
-//   (b) expose window.CDB_AUTH synchronously, and
-//   (c) APPLY gates after the DOM is parsed, idempotently.
+//   (a) verify owner status server-side via the platform staff session
+//       (CDB_STAFF_AUTH — GET /api/staff/me); a URL flag or localStorage value
+//       alone is never trusted (this closed a real gap: `?owner=1` used to
+//       write localStorage.cdb_owner='1' directly and that alone revealed the
+//       CRM pipeline / proposal generator / growth-analytics sections below to
+//       anyone who typed the flag into the URL bar),
+//   (b) expose window.CDB_AUTH synchronously (isOwner defaults to false — a
+//       safe default — until verified), and
+//   (c) APPLY gates after the DOM is parsed, idempotently, then re-apply once
+//       owner verification resolves.
 // Member sections (data-auth-gate="true") reveal for any authed user. Owner-internal
 // tooling (data-auth-gate="owner": proposal-gen, growth-analytics, CRM) reveals ONLY
-// for the owner — never for prospects or regular customers.
+// for the server-verified owner — never for prospects or regular customers. Data APIs
+// backing these sections stay independently server-side protected regardless of what
+// this controller renders.
 (function initAuthGate() {
-  // Owner bootstrap: /?owner=1 marks this browser as owner; /?owner=0 clears it.
-  try {
-    var qp = new URLSearchParams(location.search);
-    if (qp.get('owner') === '1') localStorage.setItem('cdb_owner', '1');
-    else if (qp.get('owner') === '0') localStorage.removeItem('cdb_owner');
-  } catch (e) {}
+  // Real, server-verified owner flag — see verifyOwner() near the bottom of
+  // this IIFE. Starts false and flips true only after GET /api/staff/me
+  // confirms a real platform-staff session.
+  var ownerVerified = false;
 
   function readAuth() {
     // Some browser contexts (privacy-restricted in-app webviews, storage fully
@@ -430,7 +437,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         tier: tier,
         isAuthenticated: !!(token && email),
         hasEmail: !!(email && email.indexOf('@') > -1),
-        isOwner: localStorage.getItem('cdb_owner') === '1'
+        isOwner: ownerVerified
       };
     } catch (e) {
       return { email: null, tier: 'FREE', isAuthenticated: false, hasEmail: false, isOwner: false };
@@ -520,6 +527,33 @@ window.cdbTriggerReportPurchase = async function(module, target) {
     }
     window.cdbApplyGates();
   });
+
+  // ── Owner verification (server-side, real) ──────────────────────────────
+  // A session created by logging in on any staff-gated page (e.g.
+  // /admin-portal.html) is shared via localStorage across cyberdudebivash.in,
+  // so a verified owner sees the owner-only sections here automatically —
+  // `?owner=1` by itself no longer grants anything. `?owner=0` still logs the
+  // browser out of the owner view on demand, same as before.
+  function verifyOwner() {
+    if (!window.CDB_STAFF_AUTH) return;
+    try {
+      var qp = new URLSearchParams(location.search);
+      if (qp.get('owner') === '0') window.CDB_STAFF_AUTH.clearSession();
+    } catch (e) {}
+    if (!window.CDB_STAFF_AUTH.getSession()) return;
+    window.CDB_STAFF_AUTH.authFetch('/api/staff/me').then(function(res) {
+      if (res.ok) {
+        ownerVerified = true;
+      } else {
+        window.CDB_STAFF_AUTH.clearSession();
+      }
+    }).catch(function () {
+      // Network error: stay logged-out-safe, do not grant the owner view.
+    }).then(function () {
+      window.cdbApplyGates();
+    });
+  }
+  verifyOwner();
 })();
 </script>
 <!-- CDB UX layer (auto-injected, zero-regression) -->
@@ -4940,22 +4974,6 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div class="p4-metric-card"><div class="p4-metric-val" id="p4-m-won">—</div><div class="p4-metric-lbl">Deals Won</div></div>
 </div>
 </div><!-- /auth-gated internal CRM ops -->
-<script>
-/* Reveal the internal CRM/sales-ops block only for authenticated users (the owner).
-   Anonymous prospects must never see the vendor's own (empty) deal funnel — that
-   cost real signups. Self-contained + deterministic: the global head auth-gate runs
-   before <body> parses, so it cannot reveal body sections on a returning session;
-   this inline check runs after the element exists and toggles it reliably. */
-(function(){
-  try {
-    var isOwner = localStorage.getItem('cdb_owner') === '1';
-    if (isOwner) {
-      var w = document.querySelector('[data-section-id="crm-ops-internal"]');
-      if (w) w.style.display = '';
-    }
-  } catch (e) {}
-})();
-</script>
 </div>
 </section>
 <!-- ══════════════════════════ PHASE 4: PROPOSAL GENERATOR ══════════════════════════ -->

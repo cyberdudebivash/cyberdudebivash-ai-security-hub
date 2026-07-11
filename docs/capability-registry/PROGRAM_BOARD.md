@@ -203,6 +203,148 @@ see session log below.
 
 ## Session log (most recent first)
 
+### 2026-07-11 — Access-control gap wave 2: index.html's `?owner=1` shell-reveal fixed (server-verified); self-correction on 5 pages the previous entry incorrectly flagged as needing the same fix
+
+- **Continuation of the wave-1 entry directly below** — same customer
+  complaint, same investigation. Two things happened this wave: (1) the one
+  item from wave 1's own follow-up list that was a genuine, confirmed gap is
+  now fixed; (2) five other items on that same follow-up list were
+  independently re-verified and turned out to be **wrong** — those pages
+  were already correctly gated. Recorded here rather than silently editing
+  the wave-1 entry, so the record stays honest about what was actually
+  checked and when.
+- **Self-correction (read this before trusting any "needs a fix" claim in
+  the wave-1 entry's Risks/follow-ups list below):** re-verified all 5
+  flagged pages by reading their actual auth code, not just their names/
+  route comments:
+  - `admin-payments.html` — claimed to have "an orphaned, non-functional
+    auth mechanism" (`x-admin-secret` header supposedly never checked).
+    **Wrong.** `resolveAuthV5`'s step 0 (`workers/src/auth/middleware.js`)
+    checks `x-admin-secret` against `env.ADMIN_KEY` — a real secret
+    (`workers/wrangler.toml`: "rotate via: wrangler secret put ADMIN_KEY").
+    The dashboard (`#dashboard`) is `display:none` by default and the page's
+    own login flow works correctly against this real check.
+  - `ops-dashboard.html` / `copilot-admin.html` — claimed to use "an older
+    `window.prompt()`-for-admin-key pattern (weaker than the proven
+    session-based system)". **Wrong** — neither uses `window.prompt()`.
+    Both hide their main content by default (`#app{display:none}` /
+    `#dashboard{display:none}`) and `ops-dashboard.html`'s `doAuth()` makes a
+    real test call to `/api/admin/customers?limit=1` with the entered key,
+    checking for 401/403 before revealing anything or persisting the key.
+  - `decision-dashboard.html` / `security-fabric-dashboard.html` — claimed
+    to "need a different fix shape than `staff-auth.js` ... to stop
+    rendering their shell before a paying customer's own login completes."
+    **Wrong** — both already do exactly that: content is `display:none` by
+    default, and `doAuth()`/`authenticate()` call a real backend endpoint
+    (`/decision/summary` and `/api/auth/status` respectively) with the
+    entered key and only reveal the dashboard after a 2xx + a real
+    tier/authenticated check passes. These are correctly-implemented PAID-
+    CUSTOMER (PRO+) gates, not owner-only — correctly NOT using
+    `staff-auth.js`, which is platform-staff-only.
+  - Net effect: none of these 5 pages were touched this wave. No regression
+    risk introduced by leaving them alone — they were never broken.
+- **The one confirmed-real item, fixed:** `frontend/index.html` still had
+  the exact vulnerable pattern `staff-auth.js`'s own header comment
+  describes ("bypassable outright with
+  `localStorage.setItem('cdb_owner','true')` in devtools") — `?owner=1` in
+  the URL wrote `localStorage.cdb_owner='1'` directly, and `initAuthGate()`'s
+  `readAuth()` read that value straight back with zero server round-trip,
+  revealing 3 owner-only sections (`crm-ops-internal` CRM pipeline,
+  `proposal-gen`, `growth-analytics`). A second, fully redundant copy of the
+  same insecure check lived inline inside the `crm-ops-internal` div itself
+  (a leftover from before the head-IIFE timing bug was fixed), bypassing
+  even a same-file fix if not also removed.
+  - **Fixed:** `index.html` now loads `staff-auth.js` and gates all 3
+    sections behind a real, async `verifyOwner()` — `ownerVerified` starts
+    `false` (safe default) and flips `true` only after
+    `CDB_STAFF_AUTH.authFetch('/api/staff/me')` returns `res.ok` (the same
+    KV-backed, real-session check gating `revenue-intelligence-dashboard.html`
+    and `enterprise-kpi-dashboard.html` from wave 1). `cdbApplyGates()` then
+    re-runs to reveal the sections — every existing consumer of
+    `window.CDB_AUTH.isOwner` (the gate function itself, `cdbNavigate()`'s
+    direct-hash-navigation guard, and the floating nav-tab injector)
+    inherits the fix automatically since they all read the same flag. The
+    redundant inline duplicate-check script inside `crm-ops-internal` was
+    removed outright (dead weight even before this fix — the outer gate
+    already covered the same element via `data-auth-gate="owner"`).
+    `?owner=1` alone now does nothing; a real staff session (created once by
+    logging in on any staff-gated page, e.g. `/admin-portal.html` — shared
+    via `localStorage` across `cyberdudebivash.in`) is picked up
+    automatically on any subsequent homepage visit. `?owner=0` still clears
+    the session on demand.
+  - **Known minor limitation, not a security issue:** `p4InjectNav()` (a
+    second, separate floating-nav-pill injector, distinct from the
+    `data-owner-tab="1"` tabs the main gate already handles correctly) runs
+    once at `DOMContentLoaded` and isn't re-triggered when `verifyOwner()`
+    resolves afterward — a freshly-verified owner may need one page refresh
+    before its pills show the Proposals/Growth links. The actual gated
+    sections and their primary nav tabs reveal correctly without a refresh.
+    Pre-existing limitation (this nav injector was never wired to the
+    `cdb:login` re-apply event either); left as-is rather than refactoring
+    an unrelated, working nav mechanism to fix a cosmetic edge case.
+- **Verified:** new `workers/test/homepageOwnerGateVerification.test.mjs`
+  (10 tests) — confirms `staff-auth.js` loads before the gate controller;
+  confirms the `?owner=1` → `localStorage.setItem` bootstrap is gone;
+  confirms `isOwner` reads the verified closure variable, not localStorage;
+  confirms `verifyOwner()` only sets it true after a real `res.ok` from
+  `/api/staff/me` and always re-applies gates afterward; confirms `?owner=0`
+  still clears the session; confirms the redundant inline duplicate-check
+  script is gone while the section itself is untouched; confirms the other
+  owner-gated sections/nav tabs and the rest of `cdbApplyGates()`'s
+  responsibilities (member gate, plan badge, nav injection) are unaffected;
+  a regression guard re-reads `workers/src/handlers/staffAuth.js` and
+  `workers/src/index.js` to confirm `GET /api/staff/me` and
+  `resolveStaffSession()` are real, KV-backed, role-checked — not just
+  asserted. `node --check` on all 37 real (non-JSON-LD) inline `<script>`
+  blocks extracted from `index.html`: syntax valid. Full backend suite: 217
+  files / 2242 tests passing (up from 216/2232). `node
+  scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green (index.html's `<head>`
+  untouched by this fix).
+- **Commits this wave:** `frontend/index.html`, new test
+  `workers/test/homepageOwnerGateVerification.test.mjs`,
+  `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Wave 1's last open item, resolved — no fix needed:** `soc-dashboard.html`
+  and `enterprise-portal.html`, the two lower-confidence candidates flagged
+  but never deep-dived, were investigated by reading the full files and
+  cross-checking the backend routes they call:
+  - `enterprise-portal.html` — legitimately public marketing/integration-docs
+    content for prospective enterprise customers (SSO/SIEM/TAXII setup
+    steps, roadmap, "Book Integration Session" CTA). No `display:none`, no
+    auth code anywhere in the file. Its one API call
+    (`/api/enterprise/capability`) is intentionally public server-side
+    (`workers/src/index.js` ~line 2853: defaults to `{tier:'FREE'}` on auth
+    failure rather than blocking — a status/capability endpoint for
+    evaluators). Same category as `ciso-hub.html`; correctly left alone.
+  - `soc-dashboard.html` — this one is a real, customer-facing PAID product
+    surface (not admin/internal — has an "Upgrade Plan" link and a
+    plan-tier chip, i.e. freemium SaaS UX), and it does render its main
+    shell (sidebar, KPI cards, alert feed, posture ring, IOC table, attack
+    graph) unconditionally with no login wall. Its one internal
+    Enterprise-tier gate (`decision-gate` overlay) reads
+    `localStorage.getItem('cdb_plan')` client-side — spoofable, same
+    anti-pattern class as everything else this investigation has been
+    checking for. **But** the underlying data calls
+    (`workers/src/handlers/soc.js`: `handleGetAlerts` requires STARTER+,
+    `handleGetDecisions` requires `authCtx.tier === 'ENTERPRISE'`) derive
+    `authCtx.tier` exclusively from `resolveAuthV5()` — real credentials
+    only, never from anything client-supplied — so spoofing the localStorage
+    flag bypasses only the cosmetic overlay; the subsequent fetch still gets
+    a real server-side 403 and the visitor sees an empty/mock state, not
+    real data. No admin or customer data actually exposed. Correctly left
+    alone — this is a subscription paywall UX question (worth a future
+    product-polish pass: `loadAlerts()`/`loadDecisions()` could check
+    `r.ok` like `loadIOCs()` already does, to show "upgrade required"
+    instead of a misleading empty state), not the admin-access-control gap
+    the customer reported.
+  - Neither file has a `<meta name="robots">` tag. Correct/expected for
+    `enterprise-portal.html` (should be indexed, same as `ciso-hub.html`).
+    Absent on `soc-dashboard.html` too — low-severity since real data is
+    already server-gated regardless, but flagged for a future pass.
+  - **This closes out every item on wave 1's follow-up list** — 6 candidates
+    total, 1 genuine gap found and fixed (`index.html`), 5 false positives
+    corrected above, 0 new gaps found on the final 2.
+
 ### 2026-07-11 — Customer-reported access-control gap: admin/revenue dashboard shells rendered for any visitor; one real paid-feature bypass in the customer dashboard — wave 1 of the fix (highest-severity cases)
 
 - **Trigger:** a real customer complaint — admin-only sections (specifically
