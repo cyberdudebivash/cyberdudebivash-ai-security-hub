@@ -479,41 +479,20 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         dashLink.textContent = 'Dashboard';
         navLinks.insertBefore(dashLink, navLinks.firstChild);
       }
-      // Member-only sections (data-auth-gate="true") previously had no nav
-      // path at all — reachable only by already knowing the exact #hash.
-      // Same insert-once pattern as the Dashboard link above, in both
-      // desktop nav and the mobile drawer.
-      var memberLinks = [
-        { id: 'executive-hub',  label: 'Executive Hub'      },
-        { id: 'auto-defense',   label: 'Auto-Defense'       },
-        { id: 'data-dominance', label: 'Threat Confidence'  },
-      ];
-      var mobileDrawerEl = document.getElementById('nav-mobile-drawer');
-      // Anchor on whatever comes right after the Dashboard link (whether it
-      // was just created above or already existed from a prior call to this
-      // idempotent function), then chain each subsequent insert after the
-      // last one placed — insertBefore(x, firstChild) would otherwise land
-      // every item at the very front, rendering array order backwards.
-      var desktopDash = navLinks && navLinks.querySelector('[data-auth-section="dashboard"]');
-      var mobileDash  = mobileDrawerEl && mobileDrawerEl.querySelector('[data-auth-section="dashboard"]');
-      var afterEl = {
-        desktop: desktopDash ? desktopDash.nextSibling : (navLinks && navLinks.firstChild),
-        mobile:  mobileDash  ? mobileDash.nextSibling  : (mobileDrawerEl && mobileDrawerEl.firstChild),
-      };
-      memberLinks.forEach(function (m) {
-        [['desktop', navLinks], ['mobile', mobileDrawerEl]].forEach(function (pair) {
-          var key = pair[0], container = pair[1];
-          if (!container || container.querySelector('[data-auth-section="' + m.id + '"]')) return;
-          var link = document.createElement('a');
-          link.href = '#' + m.id;
-          link.setAttribute('data-auth-section', m.id);
-          link.setAttribute('onclick', "cdbNavigate('" + m.id + "');return false");
-          if (key === 'mobile') link.setAttribute('tabindex', '-1');
-          link.textContent = m.label;
-          container.insertBefore(link, afterEl[key]);
-          afterEl[key] = link.nextSibling;
-        });
-      });
+      // NOTE: executive-hub/auto-defense/data-dominance nav discoverability
+      // is handled by p3InjectNav() (Phase 3 Engine block, below in this
+      // file), NOT here — a redundant, differently-labeled version of this
+      // exact injection briefly lived in this spot but was removed: it
+      // duplicated p3InjectNav()'s pre-existing links (which this session's
+      // original investigation missed entirely, since they're created via
+      // createElement()/property assignment, not literal href="..." text a
+      // static grep can see) under different labels ("Auto-Defense" vs. the
+      // real, already-shipped "Defense", etc.), so an authenticated visitor
+      // would have seen each of the 3 sections listed twice. See
+      // p3InjectNav() for the real fix: it now gates on isAuthenticated
+      // (previously ran unconditionally for every visitor, including
+      // logged-out ones who could never pass the section's own auth gate)
+      // and injects into both desktop nav and the mobile drawer.
       // cdbApplyGates() re-runs on the cdb:login event without a page
       // reload (SPA-style) — remove any Sign In link injected while this
       // visitor was still logged out, so it doesn't linger post-login.
@@ -14732,9 +14711,9 @@ const CDB_SECTIONS = {
   'compliance-global': { label: 'Global Compliance',   navKey: 'compliance-global' },
   'why':               { label: 'Why Choose Us',       navKey: 'why'               },
   'monetization-zone': { label: 'Monetization',        navKey: 'monetization-zone' },
-  'executive-hub':     { label: 'Executive Hub',       navKey: 'executive-hub'    },
-  'auto-defense':      { label: 'Auto-Defense',        navKey: 'auto-defense'      },
-  'data-dominance':    { label: 'Threat Confidence',   navKey: 'data-dominance'    },
+  'executive-hub':     { label: 'CISO Hub',            navKey: 'executive-hub'    },
+  'auto-defense':      { label: 'Defense',             navKey: 'auto-defense'      },
+  'data-dominance':    { label: 'Data Intel',          navKey: 'data-dominance'    },
 };
 
 let _currentSection = 'hero';
@@ -20426,31 +20405,40 @@ window.cdbSaveWhitelabel = function() {
 };
 
 // ── Navigation injection ──────────────────────────────────────────────────────
+// FIXED 2026-07-11 (customer report: these links were visible to every
+// visitor, logged-out included, even though the 3 sections behind them are
+// data-auth-gate="true" and can never be shown to a logged-out visitor — a
+// nav item that always dead-ends for the visitor who can see it. Also only
+// ever targeted the desktop nav, leaving mobile with zero discoverability.)
 function p3InjectNav() {
-  // Target the desktop nav links div directly
-  var nav = document.getElementById('nav-links-desktop') ||
-            document.querySelector('.nav-links') ||
-            document.querySelector('nav ul');
-  if (!nav) return;
+  if (!(window.CDB_AUTH && window.CDB_AUTH.isAuthenticated)) return;
+  var nav          = document.getElementById('nav-links-desktop') ||
+                      document.querySelector('.nav-links') ||
+                      document.querySelector('nav ul');
+  var mobileDrawer = document.getElementById('nav-mobile-drawer');
   var items = [
     { href: '#auto-defense',   sectionId: 'auto-defense',   label: 'Defense' },
     { href: '#data-dominance', sectionId: 'data-dominance', label: 'Data Intel' },
     { href: '#executive-hub',  sectionId: 'executive-hub',  label: 'CISO Hub' },
   ];
-  items.forEach(function(item) {
-    // Skip if already injected
-    if (nav.querySelector('[data-p3nav="' + item.sectionId + '"]')) return;
-    var a = document.createElement('a');
-    a.href = item.href;
-    a.setAttribute('data-p3nav', item.sectionId);
-    a.setAttribute('data-section', item.sectionId);
-    a.textContent = item.label;
-    // Proper cdbNavigate click handler — shows auth-gated section + scrolls
-    a.addEventListener('click', function(e) {
-      e.preventDefault();
-      if (typeof cdbNavigate === 'function') cdbNavigate(item.sectionId);
+  [nav, mobileDrawer].forEach(function(container) {
+    if (!container) return;
+    items.forEach(function(item) {
+      // Skip if already injected
+      if (container.querySelector('[data-p3nav="' + item.sectionId + '"]')) return;
+      var a = document.createElement('a');
+      a.href = item.href;
+      a.setAttribute('data-p3nav', item.sectionId);
+      a.setAttribute('data-section', item.sectionId);
+      if (container === mobileDrawer) a.setAttribute('tabindex', '-1');
+      a.textContent = item.label;
+      // Proper cdbNavigate click handler — shows auth-gated section + scrolls
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (typeof cdbNavigate === 'function') cdbNavigate(item.sectionId);
+      });
+      container.appendChild(a);
     });
-    nav.appendChild(a);
   });
 }
 
@@ -20488,6 +20476,14 @@ if (document.readyState === 'loading') {
   p3InjectNav();
   p3SetupObserver();
 }
+
+// Re-run on login (SPA-style, no page reload) — same event initAuthGate's
+// cdbApplyGates() listens for, in this file's other IIFE. p3InjectNav() is
+// idempotent (data-p3nav insert-once guard) and now itself checks
+// window.CDB_AUTH.isAuthenticated, so calling it again post-login is what
+// actually makes these links appear for a visitor who logs in without
+// reloading the page.
+window.addEventListener('cdb:login', p3InjectNav);
 
 })(); // END PHASE 3 ENGINE
 </script>

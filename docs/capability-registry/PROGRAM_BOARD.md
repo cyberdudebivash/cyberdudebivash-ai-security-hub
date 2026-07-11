@@ -248,6 +248,74 @@ already shipped under it:
 
 ## Session log (most recent first)
 
+### 2026-07-11 — Self-correction, same day: the immediately-prior entry's "no nav link existed anywhere" claim was wrong; fixed the real bug instead
+
+- **What happened:** the customer reported "nothing changed" after the wave
+  documented in the entry immediately below shipped, prompting a re-check
+  rather than assuming the customer was simply looking in the wrong place.
+  That re-check found the immediately-prior entry's central claim — "no nav
+  link anywhere" pointed at `executive-hub`/`auto-defense`/`data-dominance` —
+  was independently re-verified **false**. A pre-existing `p3InjectNav()`
+  (`frontend/index.html`'s Phase 3 Engine block) already injected real nav
+  links for exactly these 3 sections, labeled "CISO Hub" / "Defense" / "Data
+  Intel". Neither this session's own grep-based investigation nor the
+  10-minute agent pass it commissioned found it, because the links are built
+  via `document.createElement()` + property assignment at runtime — never
+  present as literal `href="..."` text for a static search to find.
+- **What was actually wrong with `p3InjectNav()`** (now fixed): it ran
+  **unconditionally for every visitor**, including logged-out ones who can
+  never pass these sections' own `data-auth-gate="true"` — a nav item that
+  always dead-ends for the one visitor who can see it, explaining exactly
+  the "nothing changed, still not properly built" feeling reported — and it
+  only ever targeted the desktop nav, leaving mobile with zero
+  discoverability. Fixed: `p3InjectNav()` now gates on
+  `window.CDB_AUTH.isAuthenticated` and injects into both desktop nav and
+  the mobile drawer; re-runs on `cdb:login` (SPA-style, no reload) via a
+  same-closure listener, matching `cdbApplyGates()`'s established pattern.
+- **What was removed:** the prior entry's redundant, differently-labeled
+  injection added directly to `cdbApplyGates()` ("Executive Hub" /
+  "Auto-Defense" / "Threat Confidence") was deleted outright — it would have
+  shown each of the 3 sections **twice**, under two different names, for any
+  authenticated visitor (a real regression this correction catches before
+  its first customer-facing exposure to a logged-in user, since the prior
+  fix's own visible surface for logged-out visitors was unaffected — the
+  duplication only manifests once authenticated, which the customer's
+  logged-out screenshot could not have shown either way).
+- **What was corrected to match reality:** `CDB_SECTIONS`' labels now use
+  the real, already-shipped labels ("CISO Hub" / "Defense" / "Data Intel")
+  instead of the invented ones from the prior entry, so `_showGateNotice()`'s
+  message ("Sign in to view X.") now matches what the visitor actually
+  clicked instead of a different, internally-invented name for the same
+  section.
+- **Registry entries corrected in place** (not silently edited — both
+  `navigation.evidence` fields now say CORRECTED and explain what was wrong
+  and why): CAP-MASOC-002 (auto-defense) and CAP-MSSP-005 (executive-hub's
+  MSSP panel) had both cited the prior entry's false "zero nav path" claim.
+- **What remains true and unaffected by this correction:** the auto-defense
+  Engine's `isRealUser(authCtx)` auth-gate fix (a real, independently
+  verified security finding — anyone unauthenticated could previously
+  trigger a real automated defense action), the `#enterprise` button
+  un-shadowing fix, and the 3 dead/wrong-domain link fixes are all
+  completely unrelated to this correction and remain valid as shipped.
+- **Commits:** `frontend/index.html` (p3InjectNav fix, CDB_SECTIONS label
+  correction, redundant-injection removal), rewritten
+  `workers/test/homepageMemberSectionDiscoverability.test.mjs`, 2 corrected
+  registry entries, this PROGRAM_BOARD.md entry.
+- **Tests:** full suite green, 219 files / 2285 tests (net +4 vs. the prior
+  entry's 2281, from rewriting the one test file: 9 old tests replaced with
+  13 new ones covering the actual fix).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged —
+  correcting evidence text on 2 existing entries, no new/removed
+  capabilities).
+- **Lesson for future waves, stated plainly:** a static grep for
+  `href="#section-id"` cannot see nav links a script builds via
+  `createElement()` + property assignment at runtime. Before concluding "no
+  nav path exists anywhere" for anything, also grep for the section's raw id
+  string across `<script>` blocks (not just `href="` patterns) to catch
+  dynamically-constructed links — this exact gap is why the prior
+  investigation's conclusion was wrong despite being a genuinely thorough
+  pass by its own (insufficient) methodology.
+
 ### 2026-07-11 — Customer report "dashboard links aren't properly built" (11 homepage anchors) — investigated, premise mostly corrected, 5 real gaps fixed including one P0-class unauthenticated auto-defense control gap
 
 - **Customer's framing vs. reality:** asked to rebuild 11 homepage sections
