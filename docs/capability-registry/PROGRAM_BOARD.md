@@ -279,6 +279,25 @@ see session log below.
   deep-trace approach on other core flows (report generation/download,
   the actual Threat Graph/CISO Metrics population from a real scan's
   data) rather than attempting a shallow full-surface pass.
+- **Production verification (post-merge addendum):** PR #155 merged (squash
+  `a91449a`). All 32 checks individually inspected green pre-merge (CodeQL,
+  both CI Gate jobs, Lighthouse CI mobile, Analyze javascript-typescript/
+  python, Unit Tests/Vitest, E2E Smoke, Accessibility axe, SEO Structure
+  lock, gitleaks, GitGuardian, Dependency Audit, all lint/folder-structure/
+  registry-validation jobs — the two `Live Production Health Gate [main
+  only]` runs `skipped` as expected on a PR). Confirmed the deployed
+  `index.html` serves the fixed `_loadToken()` ordering via live `curl`.
+  Then re-ran the full cross-page flow directly against
+  `https://cyberdudebivash.in` with zero local-file substitution (a fresh
+  signup through `user-dashboard.html`, no route interception on the
+  homepage): `SUBSCRIPTION.getToken()` on the live homepage returned the
+  real `cdb_access` token issued at signup, and the live outgoing `POST
+  /api/scan/domain` request carried `Authorization: Bearer <that exact
+  token>`. Test account cleaned up via `DELETE /api/auth/delete-account`
+  (200). This closes the loop the customer's audit requested for this
+  specific finding — a dashboard-authenticated customer's login now
+  actually counts on the homepage, on the live production site, not just
+  in a pre-merge test.
 
 ### 2026-07-11 — Enhancement: homepage header/nav visual polish (premium glow treatment)
 
