@@ -39,7 +39,7 @@ const fe = readFileSync(resolve(root, '../frontend/index.html'), 'utf8');
 function fnBody(name) {
   const start = fe.indexOf(`function ${name}`);
   if (start === -1) return '';
-  return fe.slice(start, start + 4000);
+  return fe.slice(start, start + 5500);
 }
 
 describe('Homepage Sign In path (CAP-IDN-001)', () => {
