@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, enhancement: homepage header/nav visual polish — glowing Sign In CTA + SOC-2-style compliance badge ticker)
+## Current status (2026-07-11, P0: dashboard-authenticated customers ran homepage scans/AI analysis/feature-gates as anonymous — SUBSCRIPTION.getToken() key mismatch, fixed)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,7 +28,7 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 206 files / 2116 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 6 new tests: `homepageHeaderPremiumEnhancement.test.mjs`) |
+| Worker test suite | 206 files / 2118 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 2 new tests added to `scanRequestAuthHeader.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
 | Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
 | Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
@@ -201,6 +201,84 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — P0: dashboard-authenticated customers silently ran homepage scans as anonymous visitors
+
+- **Trigger:** customer asked for an end-to-end audit of the dashboard from
+  the perspective of a real threat-intel/SOC/cybersecurity customer —
+  "the way customers want, the way customers use" — covering every button,
+  form, and functionality, not just visuals.
+- **Method:** since the dashboard's own scan-triggering surface just
+  displays scan history/reports (the actual scan execution UI lives on the
+  homepage — `runScan()`/`executeScan()`), traced the real, most core
+  paid-product action a threat-intel customer takes: running a domain scan.
+  Verified the real backend directly first (plain Node `fetch`, no browser)
+  to rule out latency as a factor — a live scan of a real domain completed
+  in ~4s, well under the client's 8s timeout, confirming the backend itself
+  is healthy. Then drove the actual cross-page flow live: signed up via
+  `user-dashboard.html` (the platform's primary customer-facing auth
+  surface), then navigated to the homepage in the same browser and
+  inspected the real outgoing scan request's headers.
+- **Root cause:** the homepage's `SUBSCRIPTION` object (backing
+  `executeScan()`'s Authorization header, the plan badge, and every
+  `data-requires-plan` feature-gate check on the page) reads its session
+  token from `localStorage`/`sessionStorage` key `cdb_token` only — correct
+  for the homepage's own login/signup/OAuth-callback flows, which do write
+  that key. `user-dashboard.html`'s login/signup overlay writes the real
+  session token to `sessionStorage['cdb_access']` only. A customer who
+  authenticated through the dashboard and then used the homepage's scanner
+  had `SUBSCRIPTION.getToken()` return `null` — the exact same key-mismatch
+  bug already found and fixed twice this session (the copilot widget, the
+  org-invite email lookup), this time in the single shared function a prior
+  wave's `scanRequestAuthHeader.test.mjs` fix depends on (that fix correctly
+  attached `SUBSCRIPTION.getToken()` to the scan requests, but assumed the
+  function itself always resolves a real customer's token).
+- **Confirmed live, precisely:** `SUBSCRIPTION.getToken()` returned `null`
+  on the homepage for a dashboard-only-authenticated account; the real
+  outgoing `POST /api/scan/domain` request fired with no `Authorization`
+  header at all.
+- **Fix:** `SUBSCRIPTION`'s internal `_loadToken()` now checks
+  `sessionStorage.getItem('cdb_access')` first, falling back to its
+  existing `cdb_token` checks unchanged — purely additive, zero risk to the
+  homepage's own login/OAuth paths. Because every `SUBSCRIPTION.getToken()`
+  call site shares this one function, the fix simultaneously corrects scan
+  execution, the plan badge, and every feature-gate check on the page for
+  any customer whose only login was through the dashboard.
+- **Verified live** (Playwright, route-intercepted to serve the locally
+  fixed `index.html` against the real backend): `SUBSCRIPTION.getToken()`
+  now returns the customer's real `cdb_access` token; the real outgoing
+  `POST /api/scan/domain` request now carries `Authorization: Bearer
+  <that token>`.
+- **Test-methodology note:** two of my own test scripts produced false
+  leads before landing on this — `window.SUBSCRIPTION.getToken` (a
+  top-level `const` in a classic script never becomes a `window` property,
+  even though the bare identifier is globally reachable within the same
+  document — this only broke the test's check, not the app) and calling
+  `runScan()` without accounting for `leadCaptured` being a plain JS
+  variable read from `sessionStorage` once at page load, not re-read live —
+  setting the storage key after load did nothing; the fix was to set the
+  in-memory variable directly. Both are recorded here so they aren't
+  mistaken for app bugs if this area is revisited.
+- **Commits this session:** `frontend/index.html` (`_loadToken()` fix),
+  2 new tests added to `workers/test/scanRequestAuthHeader.test.mjs`.
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings
+  (no registry entry cleanly matched this fix — same precedent as recent
+  waves — logged here instead).
+- **Tests:** 206 files / 2118 tests passing (full suite, up from
+  206/2116). `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** this was a deep, targeted trace of one
+  high-leverage flow (scan execution) rather than the literal
+  "every button/field/link/form/panel" sweep requested — that scope is not
+  achievable with real rigor in a single pass. The same `cdb_token` vs
+  `cdb_access` split likely affects other homepage features gated on
+  `SUBSCRIPTION` that weren't individually exercised this session (AI
+  Analysis, Red Team, Compliance, Cloud Security, Dark Web, AppSec, MCP
+  Security, Vibe Code scan modules all route through the same
+  `executeScan()`, so they inherit this fix automatically — not
+  independently verified one-by-one). Recommend continuing with a similar
+  deep-trace approach on other core flows (report generation/download,
+  the actual Threat Graph/CISO Metrics population from a real scan's
+  data) rather than attempting a shallow full-surface pass.
 
 ### 2026-07-11 — Enhancement: homepage header/nav visual polish (premium glow treatment)
 
