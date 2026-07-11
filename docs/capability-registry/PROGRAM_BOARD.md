@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry nine below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#8 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, and `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 8 session-log entries below. 16 of the 24 backlog items remain (2 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry ten below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#9 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug, and `developer-onboarding.html`'s trial-key tier normalization bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 9 session-log entries below. 15 of the 24 backlog items remain (1 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 229 files / 2376 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +6 tests this wave (`userDashboardPurchasesEnvelopeFix.test.mjs`, 6 new). Baseline going into this wave was 228 files / 2370 tests (Tier-1 item #7) |
+| Worker test suite | 229 files / 2377 tests passing | `npx vitest run`, run 2026-07-11 — +1 test this wave, added to the existing `developerOnboardingHandler.test.mjs` (no new file — its `makeEnv()` mock already covered `handleTrialKeyRequest`; extended to also capture `daily_limit`/`monthly_limit` from the INSERT). Baseline going into this wave was 229 files / 2376 tests (Tier-1 item #8) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,63 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #9: developer-onboarding.html — trial-key tier normalization bug
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #8.
+- **Re-verified against actual code, traced through 3 files to the real
+  root cause:** `handleTrialKeyRequest`
+  (`workers/src/handlers/developerOnboardingHandler.js`) computes
+  `tier = normalizeTier(TRIAL_TIER)` where `TRIAL_TIER = 'COMMUNITY'`.
+  `normalizeTier()` (`subscriptionPaywallEngine.js`) correctly returns the
+  string `'COMMUNITY'` — the canonical modern tier vocabulary
+  (`COMMUNITY/PROFESSIONAL/TEAM/BUSINESS/ENTERPRISE`) this codebase is
+  migrating toward. That value is then passed straight into
+  `createApiKey(env.DB, userId, tier, ...)` (`auth/apiKeys.js`), whose
+  rate-limit lookup is `const limits = TIER_LIMITS[userTier] ||
+  TIER_LIMITS.FREE` — but `TIER_LIMITS` only had entries for the *legacy*
+  vocabulary (`FREE/STARTER/PRO/ENTERPRISE/MSSP`). `TIER_LIMITS['COMMUNITY']`
+  is `undefined`, so every trial key silently fell back to
+  `TIER_LIMITS.FREE` (5 req/day, 50/month) — baked into the key's
+  `daily_limit`/`monthly_limit` columns at creation time — contradicting
+  the 100 req/day this exact page advertises (meta description, pricing
+  table) and `SUBSCRIPTION_TIERS.COMMUNITY`'s own real definition
+  (100/day, 3,000/month, burst 5/min).
+- **This is the identical bug class `TIER_LIMITS`'s own comment already
+  documents being fixed once before:** "Missing entries here fall back to
+  TIER_LIMITS.FREE ... MSSP customers were silently rate-limited as FREE."
+  Same root cause, different missing tier.
+- **Fix:** added a `COMMUNITY` entry to `TIER_LIMITS`
+  (`daily_limit: 100, monthly_limit: 3000, burst_per_min: 5`, mirroring
+  `SUBSCRIPTION_TIERS.COMMUNITY` exactly; other fields — `price_inr`,
+  `scan_limit`, `api_keys`, `ai_access` — mirror `TIER_LIMITS.FREE`, since
+  `subscriptionPaywallEngine.js`'s own comments establish COMMUNITY as
+  the new name for the same free-tier concept:
+  `FREE: null, // resolved to COMMUNITY at runtime`). Purely additive —
+  no existing tier's values changed. `api_keys.tier` has no CHECK
+  constraint (confirmed against `schema_bootstrap.sql`; unlike
+  `users.tier`, which does and is why that INSERT correctly hardcodes the
+  literal `'FREE'` already), so storing `'COMMUNITY'` there was always
+  schema-safe — the bug was purely the missing rate-limit lookup entry.
+- **Not touched:** `TIER_LIMITS.FREE` itself (used by real non-trial FREE
+  signups elsewhere) — changing its value would be a much broader,
+  unrelated change outside this bug's scope.
+- **Tests:** extended the existing `test/developerOnboardingHandler.test.mjs`
+  (already covers `handleTrialKeyRequest` with a real mock D1/KV env) — its
+  `INSERT INTO api_keys` mock now also captures `daily_limit`/`monthly_limit`
+  (previously ignored), and a new test asserts a fresh trial key gets
+  `tier: 'COMMUNITY'`, `daily_limit: 100`, `monthly_limit: 3000` — not the
+  old FREE-fallback 5/50. All 16 pre-existing tests in that file still
+  pass unchanged. Full suite green: 229 files / 2377 tests (baseline
+  229/2376 from Tier-1 item #8 — no new test *file*, extended an existing
+  one).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#8). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (15 of 24):** next up: `tools.html`'s
+  marketplace field mismatches + Buy Now 404s (Tier-1 #10, the last Tier-1
+  item), then all of Tier 2/3 (full original list in the audit entry ten
+  below).
 
 ### 2026-07-11 — Tier-1 backlog item #8: user-dashboard.html — My Trainings/My Purchases envelope-unwrap bug (plus a third, previously unnamed tab with the identical bug)
 

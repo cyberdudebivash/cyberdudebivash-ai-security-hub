@@ -41,8 +41,8 @@ function makeEnv({ users = [], apiKeys = [], onboardingState = {} } = {}) {
 
             if (/INSERT INTO api_keys/.test(sql)) {
               // createApiKey(): (id, user_id, key_hash, key_prefix, label, tier, daily_limit, monthly_limit, active, created_at)
-              const [id, user_id, key_hash, key_prefix, label, tier] = b;
-              apiKeysByUserId.set(user_id, { id, user_id, key_hash, key_prefix, label, tier, active: 1 });
+              const [id, user_id, key_hash, key_prefix, label, tier, daily_limit, monthly_limit] = b;
+              apiKeysByUserId.set(user_id, { id, user_id, key_hash, key_prefix, label, tier, daily_limit, monthly_limit, active: 1 });
               return { success: true };
             }
 
@@ -166,6 +166,26 @@ describe('trial-key signup — validation and live-schema correctness', () => {
     expect(stored.password_hash).toBeTruthy(); // NOT NULL column — must be populated
     expect(stored.password_salt).toBeTruthy();
     expect(apiKeysByUserId.get(stored.id)).toBeTruthy();
+  });
+
+  // Regression: TIER_LIMITS (auth/apiKeys.js) had no 'COMMUNITY' entry —
+  // normalizeTier(TRIAL_TIER) resolves to the canonical 'COMMUNITY' label,
+  // but createApiKey()'s `TIER_LIMITS[userTier] || TIER_LIMITS.FREE` lookup
+  // silently fell back to FREE's 5 req/day for every trial key, contradicting
+  // the 100 req/day this page advertises (meta description, pricing table)
+  // and SUBSCRIPTION_TIERS.COMMUNITY's own real definition.
+  it('issues the trial key at the real 100 req/day COMMUNITY limit, not the 5 req/day FREE fallback', async () => {
+    const { env, usersByEmail, apiKeysByUserId } = makeEnv();
+    const res = await handleTrialKeyRequest(req('https://x/api/onboarding/trial-key', {
+      email: 'quota-check@acme.com', name: 'Quota Check', agree_terms: true,
+    }, { 'CF-Connecting-IP': '5.5.5.5' }), env);
+    expect(res.status).toBe(201);
+
+    const stored = usersByEmail.get('quota-check@acme.com');
+    const key = apiKeysByUserId.get(stored.id);
+    expect(key.tier).toBe('COMMUNITY');
+    expect(key.daily_limit).toBe(100);
+    expect(key.monthly_limit).toBe(3000);
   });
 
   it('returns the existing active key for an already-onboarded email instead of creating a duplicate', async () => {
