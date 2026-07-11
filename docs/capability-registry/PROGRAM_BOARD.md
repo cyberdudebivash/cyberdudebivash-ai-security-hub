@@ -203,6 +203,131 @@ see session log below.
 
 ## Session log (most recent first)
 
+### 2026-07-11 — Customer-reported access-control gap: admin/revenue dashboard shells rendered for any visitor; one real paid-feature bypass in the customer dashboard — wave 1 of the fix (highest-severity cases)
+
+- **Trigger:** a real customer complaint — admin-only sections (specifically
+  called out: revenue-related ones) visible to the public in the platform's
+  dashboard; paid-customer sections must be paid-customer-only; free
+  sections should stay public. Directive: match how Mandiant/CrowdStrike/
+  Recorded Future/ThreatConnect/IBM X-Force/Microsoft Sentinel handle this.
+- **Investigation, not assumption, before any fix — full account since the
+  eventual finding was more nuanced than the complaint's own framing:**
+  systematically checked (a) `frontend/user-dashboard.html` (the actual
+  day-to-day customer SPA — via a dedicated background investigation, since
+  it's the largest single surface) for any revenue/admin content or
+  role-detection mechanism, and (b) every standalone `admin`/`revenue`/
+  `executive`/`ops`/`kpi`/`decision`-named page (12 files) for its real
+  shell-gating and backend-authorization posture, reading actual handler
+  code rather than trusting route comments.
+- **Finding 1 — backend data authorization is sound.** Checked 6+ endpoint
+  families end-to-end by reading the real enforcement code, not just route
+  comments: `/api/platform/revenue-intelligence*` (`isOwner()`),
+  `/api/platform/kpi*` (`adminGuard()` + `ADMIN_TIERS={OWNER,ADMIN}` — real
+  special values, not purchasable plan tiers, confirmed by cross-reading
+  `PLAN_ORDER`), `/api/decision/*` (`checkTier()` +
+  `ALLOWED_TIERS={PRO,ENTERPRISE,MSSP,OWNER,ADMIN}` — a real paid-tier gate,
+  correctly rejecting FREE/anonymous), `/api/admin/customers`
+  (`assertAdmin()`), `/api/payment/admin/*` (`isOwner()`),
+  `/api/conversion/funnel` (`isOwner()` — the exact endpoint
+  `growth-analytics`'s `p4LoadFunnel()` calls, which this session's own
+  earlier CAP-CRM-007 fix touched for field names only; confirmed its
+  authorization was never weakened). Every one of these fails closed for
+  unauthorized/anonymous callers (`resolveAuthV5`'s own IP-fallback path
+  returns `tier:'FREE', email:null`, which every one of these gates
+  correctly rejects) — no active data breach found in the sample checked.
+- **Finding 2 — the real, confirmed gap is frontend shell exposure,
+  inconsistently fixed.** The platform already has a proven, secure pattern
+  for exactly this problem: `frontend/assets/staff-auth.js` — a real
+  magic-link, server-verified-session gate (`GET /api/staff/me` re-verified
+  before ever revealing the dashboard; never trusts a stored token alone).
+  Its own header comment documents that it replaced a real, previously-
+  shipped vulnerability class on 3 pages: a hardcoded shared password,
+  "readable via view-source, or bypassable outright with
+  `localStorage.setItem('cdb_owner','true')` in devtools." Confirmed 5
+  pages correctly use it (`admin-portal.html`, `god-mode.html`,
+  `mssp-command-center.html`, `revenue-command-center.html`,
+  `proposal-generator.html`) — but the fix was never extended platform-wide.
+  `revenue-intelligence-dashboard.html` and `enterprise-kpi-dashboard.html`
+  (the two clearest, most severe matches to the complaint — real
+  MRR/ARR/churn/NRR business metrics, backend-protected but zero frontend
+  gate) rendered their full shell — nav, section headers ("Churn Alerts",
+  "NRR Forecast", "Enterprise KPI") — to any visitor. **Also found, not
+  just inferred:** both used `credentials:'include'` (cookies) for their API
+  calls, but `resolveAuthV5` never checks cookies at all (only
+  `Authorization: Bearer`, API keys, or an anonymous IP-fallback) — meaning
+  these two pages were simultaneously publicly shell-visible **and**
+  completely non-functional for their real, legitimate owner user. Fixing
+  onto `staff-auth.js`'s real Bearer-token `authFetch()` fixes both problems
+  in the same change.
+- **Fixed (this wave — highest severity; more candidates queued, see
+  follow-ups):**
+  - `frontend/revenue-intelligence-dashboard.html`: added the proven
+    gate-overlay pattern (`staff-auth.js` include, `#gateOverlay`/`#gateBox`
+    markup, `CDB_STAFF_AUTH.guard()` wrapping all 4 data-load functions +
+    the 5-minute auto-refresh interval), replaced all 5
+    `credentials:'include'` calls with `CDB_STAFF_AUTH.authFetch()`.
+  - `frontend/enterprise-kpi-dashboard.html`: same treatment (1 data-load
+    function + auto-refresh interval); also added the `noindex,nofollow`
+    meta tag every other staff-gated page already carries (this one had
+    none at all — indexable by search engines until now).
+  - `frontend/user-dashboard.html`'s `loadCisoMetrics()` (CISO Executive
+    Metrics — a real PRO/ENTERPRISE/MSSP paid feature, confirmed backend-
+    gated): the free-tier branch showed an upsell banner but never
+    `return`ed early, so execution still reached the real API call (which
+    the backend correctly 403s) **and then** a client-side fallback that
+    recomputed an equivalent risk score / critical count / compliance % /
+    30-day trend chart directly from the customer's own already-loaded scan
+    history — completely bypassing the backend tier gate. A free-tier
+    customer got the full paid feature, just computed in the browser
+    instead of the backend, with only a cosmetic nag banner alongside it.
+    Fixed: free tier now shows the honest locked/empty state (reusing the
+    existing `data._empty` rendering path already used for "no scans yet")
+    and never fetches or approximates real metrics. PRO+ behavior
+    completely unchanged.
+- **Verified:** new `workers/test/adminRevenueShellGating.test.mjs` (11
+  tests): confirms both dashboards load `staff-auth.js` and gate all data
+  loading behind `CDB_STAFF_AUTH.guard()`; confirms zero remaining
+  `credentials:'include'` usage on either page; confirms the free-tier CISO
+  branch sets `_empty:true` and never reaches `apiFetch` or `_allScans`;
+  confirms the PRO+ path (real API call + scan-history fallback) is
+  unchanged; a regression guard directly re-reads `workers/src/index.js` to
+  confirm `/api/ciso/metrics`'s tier gate this whole fix depends on is real,
+  not just asserted. `node --check` on all 3 modified files' extracted
+  script blocks: syntax valid. Full backend suite: 216 files / 2232 tests
+  passing (up from 215/2221). `node scripts/registry/validate.mjs`: 0
+  failures, 0 warnings. `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Commits this session:** `frontend/revenue-intelligence-dashboard.html`,
+  `frontend/enterprise-kpi-dashboard.html`, `frontend/user-dashboard.html`
+  (CISO fix only), new test
+  `workers/test/adminRevenueShellGating.test.mjs`,
+  `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups — deliberately not all done in this same wave, to
+  keep this change bounded and reviewable; continuing immediately after:**
+  (1) `admin-payments.html` has its own login form but sends an
+  `x-admin-secret` header that `resolveAuthV5` never checks at all (the
+  real gate is `isOwner()`, Bearer-token-based) — an orphaned, non-
+  functional auth mechanism; the backend data is safe (fails closed) but
+  the page's own login flow doesn't actually work for its intended owner
+  user either. (2) `ops-dashboard.html` and `copilot-admin.html` use an
+  older `window.prompt()`-for-admin-key pattern (weaker than the proven
+  session-based system, though its target endpoints are backend-gated).
+  (3) `decision-dashboard.html` and `security-fabric-dashboard.html` are
+  real PAID-customer (not platform-owner) features with backend tier gates
+  already confirmed real — need a different fix shape than `staff-auth.js`
+  (which is platform-staff-only) to stop rendering their shell before a
+  paying customer's own login completes. (4) `index.html` itself still has
+  the exact `?owner=1` → `localStorage.cdb_owner` → UI-only-gate pattern
+  `staff-auth.js`'s own comment describes as the fixed vulnerability class
+  on 3 other pages — 3 sections (`crm-ops-internal`, `proposal-gen`,
+  `growth-analytics`) are revealable this way; their underlying data calls
+  were checked and are backend-protected, but the shell-exposure problem is
+  the same category as everything fixed in this wave. (5) Two lower-
+  confidence candidate pages flagged during investigation but not deep-
+  dived — `soc-dashboard.html`, `enterprise-portal.html` — need a quick
+  content check before deciding whether they need the same fix or are
+  already fine (unlike `ciso-hub.html`, confirmed to be a legitimately
+  public, search-indexed marketing/lead-gen page and correctly left alone).
+
 ### 2026-07-11 — Platform-wide API-wiring audit: confirmed correctly wired to cyberdudebivash.in end-to-end; fixed 2 real outliers
 
 - **Trigger:** the owner asked for a full check — is the entire platform,

@@ -3012,83 +3012,105 @@
 
   async function loadCisoMetrics() {
     const plan = _plan?.plan || 'free';
-    if (plan === 'free') document.getElementById('ciso-upsell').style.display = 'flex';
+    let data;
 
-    let data = { risk_score:0, critical_count:0, assets:0, mttr_days:0,
-                 compliance_pct:0, scans_30d:0, categories:{}, trend:[], cves:[], frameworks:[] };
-    let apiHasData = false;
-    try {
-      const res = await apiFetch('/api/ciso/metrics');
-      if (res.ok) {
-        const raw = await res.json();
-        // Unwrap standard { success, data, error } response envelope — the
-        // real metrics (risk_posture, kpis, platform, compliance_snapshot)
-        // are nested under .data, not at the top level.
-        const apiData = (raw && raw.success && raw.data) ? raw.data : raw;
-        if (apiData && apiData.risk_posture) {
-          data.risk_score     = apiData.risk_posture.composite_score ?? data.risk_score;
-          data.critical_count = apiData.risk_posture.critical_risks ?? data.critical_count;
-          data.mttr_days      = apiData.kpis?.mttr_hours != null ? +(apiData.kpis.mttr_hours / 24).toFixed(1) : data.mttr_days;
-          data.scans_30d      = apiData.platform?.scans_last_30d ?? data.scans_30d;
-          data.frameworks     = (apiData.compliance_snapshot || []).map(f => ({
-            name:  f.framework,
-            pct:   f.compliance_pct,
-            color: f.compliance_pct >= 80 ? '#10b981' : f.compliance_pct >= 60 ? '#f59e0b' : '#ef4444',
-          }));
-          if (data.frameworks.length) {
-            data.compliance_pct = Math.round(data.frameworks.reduce((a,f) => a + (f.pct || 0), 0) / data.frameworks.length);
-          }
-          apiHasData = true;
-        }
-      }
-    } catch (_) {}
-
-    // Registered assets = unique scan targets — always derived from real scan
-    // history when available, independent of whether the CISO API succeeded
-    // (that endpoint doesn't track an "assets" concept at all).
-    if (_allScans.length) data.assets = new Set(_allScans.map(s => s.target)).size;
-
-    if (!apiHasData && _allScans.length) {
-      const now = Date.now();
-      const s30 = _allScans.filter(s => (now - new Date(s.scanned_at)) < 30*86400*1000);
-      data.scans_30d = s30.length;
-      let tot = 0, crit = 0, cats = {};
-      _allScans.forEach(s => {
-        tot += (s.risk_score || 0);
-        (s.findings || []).forEach(f => {
-          if (f.severity === 'critical') crit++;
-          const c = s.module || 'other';
-          cats[c] = (cats[c] || 0) + (f.cvss || 5);
-          if (f.cve_id) data.cves.push({ cve_id:f.cve_id, cvss:f.cvss||'—',
-            severity:f.severity||'medium', asset:s.target, date:s.scanned_at, status:'Open' });
-        });
-      });
-      data.risk_score     = _allScans.length ? Math.round(tot / _allScans.length) : 0;
-      data.critical_count = crit;
-      data.categories     = cats;
-      data.mttr_days      = null; // computed from real incidents when available
-      data.compliance_pct = Math.max(30, 100 - data.risk_score);
-      const buckets = {};
-      _allScans.forEach(s => {
-        const k = new Date(s.scanned_at).toISOString().slice(0,10);
-        if (!buckets[k]) buckets[k] = { sum:0, cnt:0 };
-        buckets[k].sum += (s.risk_score||0); buckets[k].cnt++;
-      });
-      data.trend = Array.from({length:30}, (_,i) => {
-        const d = new Date(now - (29-i)*86400*1000), k = d.toISOString().slice(0,10);
-        return { date:k, score: buckets[k] ? Math.round(buckets[k].sum/buckets[k].cnt) : null };
-      });
-    }
-
-    if (!apiHasData && !data.assets) {
-      // No real backend data and no scan history — show honest empty state
-      // rather than fabricated demo data.
+    if (plan === 'free') {
+      // CISO Executive Metrics is a PRO/ENTERPRISE/MSSP feature (backend:
+      // GET /api/ciso/metrics requires one of those tiers or platform admin —
+      // see workers/src/index.js's _cisoTierOk check). Previously this branch
+      // only showed the upsell banner but never returned early, so execution
+      // fell through to the real API call (which the backend correctly 403s
+      // for free tier) AND THEN to a client-side fallback that recomputed an
+      // equivalent risk score / critical count / compliance % / trend chart
+      // directly from the customer's own already-loaded scan history — a
+      // free-tier account got the full paid feature, just computed in the
+      // browser instead of the backend, with only a cosmetic nag banner
+      // alongside it. Fixed: free tier now shows the honest locked/empty
+      // state and never fetches or approximates real metrics.
+      document.getElementById('ciso-upsell').style.display = 'flex';
       data = {
         risk_score: null, critical_count: 0, assets: 0, mttr_days: null,
         compliance_pct: null, scans_30d: 0,
         categories: {}, cves: [], frameworks: [], trend: [],
         _empty: true,
       };
+    } else {
+      data = { risk_score:0, critical_count:0, assets:0, mttr_days:0,
+                   compliance_pct:0, scans_30d:0, categories:{}, trend:[], cves:[], frameworks:[] };
+      let apiHasData = false;
+      try {
+        const res = await apiFetch('/api/ciso/metrics');
+        if (res.ok) {
+          const raw = await res.json();
+          // Unwrap standard { success, data, error } response envelope — the
+          // real metrics (risk_posture, kpis, platform, compliance_snapshot)
+          // are nested under .data, not at the top level.
+          const apiData = (raw && raw.success && raw.data) ? raw.data : raw;
+          if (apiData && apiData.risk_posture) {
+            data.risk_score     = apiData.risk_posture.composite_score ?? data.risk_score;
+            data.critical_count = apiData.risk_posture.critical_risks ?? data.critical_count;
+            data.mttr_days      = apiData.kpis?.mttr_hours != null ? +(apiData.kpis.mttr_hours / 24).toFixed(1) : data.mttr_days;
+            data.scans_30d      = apiData.platform?.scans_last_30d ?? data.scans_30d;
+            data.frameworks     = (apiData.compliance_snapshot || []).map(f => ({
+              name:  f.framework,
+              pct:   f.compliance_pct,
+              color: f.compliance_pct >= 80 ? '#10b981' : f.compliance_pct >= 60 ? '#f59e0b' : '#ef4444',
+            }));
+            if (data.frameworks.length) {
+              data.compliance_pct = Math.round(data.frameworks.reduce((a,f) => a + (f.pct || 0), 0) / data.frameworks.length);
+            }
+            apiHasData = true;
+          }
+        }
+      } catch (_) {}
+
+      // Registered assets = unique scan targets — always derived from real scan
+      // history when available, independent of whether the CISO API succeeded
+      // (that endpoint doesn't track an "assets" concept at all).
+      if (_allScans.length) data.assets = new Set(_allScans.map(s => s.target)).size;
+
+      if (!apiHasData && _allScans.length) {
+        const now = Date.now();
+        const s30 = _allScans.filter(s => (now - new Date(s.scanned_at)) < 30*86400*1000);
+        data.scans_30d = s30.length;
+        let tot = 0, crit = 0, cats = {};
+        _allScans.forEach(s => {
+          tot += (s.risk_score || 0);
+          (s.findings || []).forEach(f => {
+            if (f.severity === 'critical') crit++;
+            const c = s.module || 'other';
+            cats[c] = (cats[c] || 0) + (f.cvss || 5);
+            if (f.cve_id) data.cves.push({ cve_id:f.cve_id, cvss:f.cvss||'—',
+              severity:f.severity||'medium', asset:s.target, date:s.scanned_at, status:'Open' });
+          });
+        });
+        data.risk_score     = _allScans.length ? Math.round(tot / _allScans.length) : 0;
+        data.critical_count = crit;
+        data.categories     = cats;
+        data.mttr_days      = null; // computed from real incidents when available
+        data.compliance_pct = Math.max(30, 100 - data.risk_score);
+        const buckets = {};
+        _allScans.forEach(s => {
+          const k = new Date(s.scanned_at).toISOString().slice(0,10);
+          if (!buckets[k]) buckets[k] = { sum:0, cnt:0 };
+          buckets[k].sum += (s.risk_score||0); buckets[k].cnt++;
+        });
+        data.trend = Array.from({length:30}, (_,i) => {
+          const d = new Date(now - (29-i)*86400*1000), k = d.toISOString().slice(0,10);
+          return { date:k, score: buckets[k] ? Math.round(buckets[k].sum/buckets[k].cnt) : null };
+        });
+      }
+
+      if (!apiHasData && !data.assets) {
+        // No real backend data and no scan history — show honest empty state
+        // rather than fabricated demo data.
+        data = {
+          risk_score: null, critical_count: 0, assets: 0, mttr_days: null,
+          compliance_pct: null, scans_30d: 0,
+          categories: {}, cves: [], frameworks: [], trend: [],
+          _empty: true,
+        };
+      }
     }
     _cisoData = data;
 
