@@ -388,7 +388,32 @@ see session log below.
   `BLOCKED_PATTERNS` entry has the same unanchored-substring problem against
   the real 130-param surface (this pass only investigated the one pattern
   that live-blocked an actual request) — flagged, not done here, to keep
-  this fix bounded and reviewable.
+  this fix bounded and reviewable. Separately, and pre-existing (not
+  introduced or worsened by this fix): `inspectForAttacks()` matches against
+  the *raw, undecoded* `url.search` — a fully percent-encoded payload (e.g.
+  `%3D` instead of a literal `=`) never contains the literal characters any
+  pattern in this list looks for, so it passes through unblocked regardless
+  of anchoring. Confirmed live post-deploy (see addendum below) with a
+  fully-encoded vs. partially-encoded version of the same payload: only the
+  latter (literal `=`/`(`/`)`, the form the existing test suite already
+  covers) is blocked. A real, separate, structural WAF finding — worth its
+  own dedicated review (decode before inspecting, or match both forms), not
+  folded into this already-narrowly-scoped fix.
+- **Production verification (post-merge addendum):** PR #169 merged (squash
+  `73d5b91`) after resolving a real merge conflict correctly: `main` had
+  already advanced past this branch's base via #168's own squash-merge (the
+  pre-squash commit `a140098` was confirmed byte-for-byte tree-identical to
+  the resulting `main` tip `f8bfdb47`, then just the genuinely-new WAF commit
+  was rebased `--onto origin/main`, re-verified in full — 209 files/2176
+  tests, validator, SEO lock all green again — and force-pushed with
+  `--lease`, per this repo's own branch-discipline rule for exactly this
+  situation). All 32 checks green on the rebased commit, no review comments.
+  Deploy confirmed live: `GET /api/conversion/triggers?session_id=...` and
+  `GET /api/conversion/cta?context=...` both now return real 200s against
+  `https://cyberdudebivash-security-hub.iambivash-bn.workers.dev` (zero
+  mocking); a literal (non-fully-encoded) `<svg onload=alert(1)>` payload in
+  the same query string is still correctly rejected with the WAF 400,
+  confirming no real detection coverage was lost.
 
 ### 2026-07-11 — Backlog sweep, wave 2 addendum: CAP-COMP-001 post-deploy live verification + CI axe catch
 
