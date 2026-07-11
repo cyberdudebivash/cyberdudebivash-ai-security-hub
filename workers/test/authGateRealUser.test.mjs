@@ -80,6 +80,14 @@ describe('migrated route gates — anonymous callers get 401', () => {
     ['POST', '/api/agents/run'],              // MASOC — parallel 9-agent orchestration
     ['POST', '/api/agents/stream'],           // MASOC — SSE streaming variant
     ['POST', '/api/agents/dispatch/cve_intel'], // MASOC — single-agent dispatch
+    ['GET',  '/api/defense-engine/mode'],       // Auto-Defense — read config/mode
+    ['POST', '/api/defense-engine/mode'],       // Auto-Defense — change live defense mode
+    ['POST', '/api/defense-engine/execute'],    // Auto-Defense — trigger a real auto-response action
+    ['GET',  '/api/defense-engine/pending'],    // Auto-Defense — pending approvals queue
+    ['POST', '/api/defense-engine/approve/x'],  // Auto-Defense — approve + execute a pending action
+    ['POST', '/api/defense-engine/rollback/x'], // Auto-Defense — rollback an execution
+    ['GET',  '/api/defense-engine/executions'], // Auto-Defense — execution history
+    ['GET',  '/api/defense-engine/posture'],    // Auto-Defense — aggregate posture
   ];
   for (const [method, path] of cases) {
     it(`anonymous ${method} ${path} → 401`, async () => {
@@ -160,6 +168,49 @@ describe('migrated route gates — real principals pass', () => {
       body: JSON.stringify({ message: 'assess CVE-2024-3400 risk' }),
     });
     expect(res.status).not.toBe(401);
+  });
+  it('admin key passes GET /api/defense-engine/mode (no 401)', async () => {
+    const res = await admin('/api/defense-engine/mode');
+    expect(res.status).not.toBe(401);
+  });
+  it('admin key passes POST /api/defense-engine/mode (no 401)', async () => {
+    const res = await admin('/api/defense-engine/mode', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'SAFE' }),
+    });
+    expect(res.status).not.toBe(401);
+  });
+  it('admin key passes POST /api/defense-engine/execute (no 401)', async () => {
+    const res = await admin('/api/defense-engine/execute', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threat: { cvss: 9.8, cve_id: 'CVE-2024-9999' } }),
+    });
+    expect(res.status).not.toBe(401);
+  });
+  it('admin key passes POST /api/defense-engine/approve/:id (no 401 — 404 for a bogus id is fine, proves it reached business logic, not the auth gate)', async () => {
+    const res = await admin('/api/defense-engine/approve/does-not-exist', { method: 'POST' });
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe('Autonomous Defense Engine (/api/defense-engine/*) — auth-gate fix (found while registering this capability in the docs/capability-registry)', () => {
+  // Unlike MASOC's status route, no route here has a legitimate anonymous
+  // caller — the only frontend consumer (frontend/index.html's #auto-defense
+  // section) is itself data-auth-gate="true" and never rendered for a
+  // logged-out visitor — so every route, including the read-only GETs, is
+  // covered by the shared "anonymous callers get 401" / "real principals
+  // pass" blocks above; there is no "stays open" exception to assert here.
+  it('anonymous POST /api/defense-engine/execute cannot fabricate a threat to trigger a real auto-response action', async () => {
+    const res = await anon('/api/defense-engine/execute', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threat: { cvss: 9.8, cve_id: 'CVE-2024-9999' } }),
+    });
+    expect(res.status).toBe(401);
+  });
+  it('anonymous POST /api/defense-engine/mode cannot change the platform\'s live defense mode', async () => {
+    const res = await anon('/api/defense-engine/mode', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'AGGRESSIVE' }),
+    });
+    expect(res.status).toBe(401);
   });
 });
 

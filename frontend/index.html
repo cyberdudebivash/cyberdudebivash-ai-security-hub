@@ -479,6 +479,41 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         dashLink.textContent = 'Dashboard';
         navLinks.insertBefore(dashLink, navLinks.firstChild);
       }
+      // Member-only sections (data-auth-gate="true") previously had no nav
+      // path at all — reachable only by already knowing the exact #hash.
+      // Same insert-once pattern as the Dashboard link above, in both
+      // desktop nav and the mobile drawer.
+      var memberLinks = [
+        { id: 'executive-hub',  label: 'Executive Hub'      },
+        { id: 'auto-defense',   label: 'Auto-Defense'       },
+        { id: 'data-dominance', label: 'Threat Confidence'  },
+      ];
+      var mobileDrawerEl = document.getElementById('nav-mobile-drawer');
+      // Anchor on whatever comes right after the Dashboard link (whether it
+      // was just created above or already existed from a prior call to this
+      // idempotent function), then chain each subsequent insert after the
+      // last one placed — insertBefore(x, firstChild) would otherwise land
+      // every item at the very front, rendering array order backwards.
+      var desktopDash = navLinks && navLinks.querySelector('[data-auth-section="dashboard"]');
+      var mobileDash  = mobileDrawerEl && mobileDrawerEl.querySelector('[data-auth-section="dashboard"]');
+      var afterEl = {
+        desktop: desktopDash ? desktopDash.nextSibling : (navLinks && navLinks.firstChild),
+        mobile:  mobileDash  ? mobileDash.nextSibling  : (mobileDrawerEl && mobileDrawerEl.firstChild),
+      };
+      memberLinks.forEach(function (m) {
+        [['desktop', navLinks], ['mobile', mobileDrawerEl]].forEach(function (pair) {
+          var key = pair[0], container = pair[1];
+          if (!container || container.querySelector('[data-auth-section="' + m.id + '"]')) return;
+          var link = document.createElement('a');
+          link.href = '#' + m.id;
+          link.setAttribute('data-auth-section', m.id);
+          link.setAttribute('onclick', "cdbNavigate('" + m.id + "');return false");
+          if (key === 'mobile') link.setAttribute('tabindex', '-1');
+          link.textContent = m.label;
+          container.insertBefore(link, afterEl[key]);
+          afterEl[key] = link.nextSibling;
+        });
+      });
       // cdbApplyGates() re-runs on the cdb:login event without a page
       // reload (SPA-style) — remove any Sign In link injected while this
       // visitor was still logged out, so it doesn't linger post-login.
@@ -14697,6 +14732,9 @@ const CDB_SECTIONS = {
   'compliance-global': { label: 'Global Compliance',   navKey: 'compliance-global' },
   'why':               { label: 'Why Choose Us',       navKey: 'why'               },
   'monetization-zone': { label: 'Monetization',        navKey: 'monetization-zone' },
+  'executive-hub':     { label: 'Executive Hub',       navKey: 'executive-hub'    },
+  'auto-defense':      { label: 'Auto-Defense',        navKey: 'auto-defense'      },
+  'data-dominance':    { label: 'Threat Confidence',   navKey: 'data-dominance'    },
 };
 
 let _currentSection = 'hero';
@@ -14733,6 +14771,11 @@ window.cdbNavigate = function(sectionId) {
   var _auth     = window.CDB_AUTH || {};
   var _authed   = !!(_auth.isAuthenticated || _auth.isOwner);
   if ((_gateAttr === 'owner' && !_auth.isOwner) || (_gateAttr === 'true' && !_authed)) {
+    // Previously a silent bounce with zero feedback — a visitor clicking a
+    // real, working link (or a bookmarked/shared URL) to a gated section
+    // just landed back at the top of the homepage with no explanation,
+    // indistinguishable from a broken/nonexistent page.
+    _showGateNotice(_gateAttr === 'owner' ? 'owner' : 'auth', sectionId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     _currentSection = 'hero';
     history.pushState({ section: 'hero' }, '', '#home');
@@ -14761,6 +14804,38 @@ window.cdbNavigate = function(sectionId) {
   _updateNavState(sectionId);
   history.pushState({ section: sectionId }, '', '#' + sectionId);
 };
+
+// ── Gate notice: why cdbNavigate() just redirected to hero instead of the
+// requested section. Self-contained (no dependency on any other script
+// block's toast helper — this router IIFE runs independently of them).
+function _showGateNotice(kind, sectionId) {
+  var label = (CDB_SECTIONS[sectionId] || {}).label || sectionId;
+  var box = document.createElement('div');
+  box.setAttribute('role', 'status');
+  box.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);' +
+    'z-index:99999;background:rgba(15,23,42,.97);border:1px solid rgba(0,212,255,.35);' +
+    'color:#e2e8f0;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;' +
+    'box-shadow:0 8px 30px rgba(0,0,0,.45);display:flex;align-items:center;gap:12px;' +
+    'max-width:90vw;animation:p3SlideIn .25s ease-out';
+  var text = document.createElement('span');
+  text.textContent = kind === 'owner'
+    ? (label + ' is staff-only.')
+    : ('Sign in to view ' + label + '.');
+  box.appendChild(text);
+  if (kind !== 'owner') {
+    var link = document.createElement('a');
+    link.href = '/user-dashboard.html';
+    link.textContent = 'Sign in →';
+    link.style.cssText = 'color:#00d4ff;font-weight:800;text-decoration:none;white-space:nowrap;flex-shrink:0';
+    box.appendChild(link);
+  }
+  document.body.appendChild(box);
+  setTimeout(function () {
+    box.style.transition = 'opacity .3s';
+    box.style.opacity = '0';
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 300);
+  }, 4500);
+}
 
 // ── Update active nav state + breadcrumb ──────────────────────────────
 function _updateNavState(sectionId) {
@@ -22127,7 +22202,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-/* ── Intercept existing startSubscription / openEnterpriseBooking calls ──── */
+/* ── Intercept existing startSubscription calls ──────────────────────────── */
 window.startSubscription = function(plan) {
   // PRICING — SOURCE OF TRUTH (matches pricingConfig.js)
   var plans = {
@@ -22149,24 +22224,23 @@ window.startSubscription = function(plan) {
   window.openManualPayment(p.id, p.inr, p.label);
 };
 
-window.openEnterpriseBooking = function(pkg) {
-  // ENTERPRISE PACKAGE PRICING — SOURCE OF TRUTH (matches pricingConfig.js)
-  var pkgs = {
-    starter_enterprise:   { id: 'STARTER_PLUS_ANNUAL',  inr: 49900,   label: 'Starter Plus — ₹49,900/year (Annual)'           },
-    security_assessment:  { id: 'SECURITY_ASSESSMENT',  inr: 9999,    label: 'Security Assessment — ₹9,999'                   },
-    threat_intel_report:  { id: 'THREAT_INTEL_REPORT',  inr: 14999,   label: 'Threat Intelligence Report — ₹14,999'           },
-    mssp_white_label:     { id: 'MSSP_WHITE_LABEL',     inr: 49999,   label: 'MSSP White Label — ₹49,999/month'               },
-    annual_retainer:      { id: 'ANNUAL_RETAINER',      inr: 99999,   label: 'Annual Retainer — ₹99,999/year'                 },
-    mssp_command:         { id: 'MSSP_COMMAND',         inr: 1499900, label: 'MSSP Command Suite — ₹14,99,900/year'           },
-    enterprise_shield:    { id: 'ENTERPRISE_SHIELD',    inr: 499900,  label: 'Enterprise Shield — ₹4,99,900/year'             },
-  };
-  var p = pkgs[pkg] || pkgs['annual_retainer'];
-  window.openManualPayment(p.id, p.inr, p.label);
-};
-
-window.openMSSPApplication = function() {
-  window.openManualPayment('MSSP', 49999, 'MSSP Management Platform — ₹49,999/month');
-};
+// openEnterpriseBooking() and openMSSPApplication() are NOT redefined here.
+// They were previously (accidentally, per the comment above having only ever
+// intended to cover startSubscription) redefined in this exact spot to route
+// through the generic manual-payment modal — silently shadowing the earlier,
+// dedicated, real implementations above (the #enterprise-booking-modal /
+// #mssp-modal forms with real field capture, validation, and — for MSSP —
+// a genuine POST /api/global/mssp/apply submission). That also meant the two
+// functions' package-pricing maps had drifted independently: this removed
+// block's `starter_enterprise` key mapped to "Starter Plus — ₹49,900/year",
+// while the real, still-live definition above maps the same key to
+// "Security Assessment Report — ₹9,999" — a real customer-facing pricing
+// inconsistency that only ever showed the second, wrong one. Fixed by
+// deleting this override entirely so the dedicated modals above are what
+// actually run; nothing in this file called the removed functions with
+// arguments the earlier definitions can't already handle (only 3 call
+// sites total: openMSSPApplication() with no args, twice, and
+// openEnterpriseBooking('annual_retainer') once — all covered).
 
 window.showPaymentInstructions = function() {
   window.openManualPayment('PRO', 1499, 'Pro Plan — ₹1,499/month');

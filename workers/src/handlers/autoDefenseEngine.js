@@ -12,15 +12,24 @@
  *   require_active_exp — only fire if actively exploited in wild (default false)
  *   max_auto_deploys   — max auto-deploys per cron run (default 10)
  *
- * Endpoints:
- *   GET  /api/defense/mode            → get current mode + thresholds
- *   POST /api/defense/mode            → set mode + thresholds
- *   POST /api/defense/execute         → evaluate a threat and execute per mode
- *   GET  /api/defense/executions      → execution history (last 200)
- *   POST /api/defense/rollback/:id    → rollback a specific execution
- *   GET  /api/defense/posture         → aggregated defense posture
- *   POST /api/defense/approve/:id     → approve a pending ASSISTED action
- *   GET  /api/defense/pending         → list pending approvals (ASSISTED mode)
+ * Endpoints (actually wired in workers/src/index.js under /api/defense-engine/*
+ * — this docblock previously said /api/defense/* verbatim, a stale mismatch
+ * from an earlier route-prefix rename that was never caught since the
+ * frontend calls always used the real, current prefix; corrected here so
+ * this comment matches what's actually reachable):
+ *   GET  /api/defense-engine/mode            → get current mode + thresholds
+ *   POST /api/defense-engine/mode            → set mode + thresholds
+ *   POST /api/defense-engine/execute         → evaluate a threat and execute per mode
+ *   GET  /api/defense-engine/executions      → execution history (last 200)
+ *   POST /api/defense-engine/rollback/:id    → rollback a specific execution
+ *   GET  /api/defense-engine/posture         → aggregated defense posture
+ *   POST /api/defense-engine/approve/:id     → approve a pending ASSISTED action
+ *   GET  /api/defense-engine/pending         → list pending approvals (ASSISTED mode)
+ *
+ * Auth: every route above requires a real logged-in principal (isRealUser(),
+ * enforced at the index.js route level, not in this file) — the only
+ * frontend consumer (frontend/index.html's #auto-defense section) is itself
+ * data-auth-gate="true" and never rendered for a logged-out visitor.
  */
 
 import { ok, fail } from '../lib/response.js';

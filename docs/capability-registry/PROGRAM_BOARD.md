@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — updated after a full recovery-and-continuation pass; see the top two session-log entries below for the detailed account of PRs #174–#179, and the entry immediately below those two for today's fix)
+## Current status (2026-07-11 — latest wave closed a customer report about 11 homepage sections: 3 made properly reachable/explained instead of silently bouncing unqualified visitors, 2 mis-wired `#enterprise` buttons fixed, 3 dead/wrong-domain links fixed elsewhere, 2 registry gaps closed including a real unauthenticated-access gap in the Auto-Defense Engine — full account in the top session-log entry below. See the two entries below that for PRs #174–#179 and CAP-DEVPORTAL-004's sap_-key fix.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -59,13 +59,13 @@ parallel tracking document.
 | Domain files | 21 | `docs/capability-registry/domains/*.json` |
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
-| Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after today's CAP-DEVPORTAL-004 entry update) |
-| Worker test suite | 217 files / 2247 tests passing | `npx vitest run`, run 2026-07-11 — +5 tests today (`workers/test/intelKeyResolution.test.mjs`'s new sap_-key describe block); the 211→217 file / 2188→2242 test growth in between happened across PRs #174–#179, never rolled into this row until now |
+| Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
+| Worker test suite | 219 files / 2281 tests passing | `npx vitest run`, run 2026-07-11 — +34 tests this wave (9 + 8 + 13 + 3 new, 1 pre-existing test's fixed-size slice window widened after a legitimate code-length increase, not a logic regression) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.5% / 66.3% / 61.1% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — today's fix touched no backend/frontend/navigation booleans (CAP-DEVPORTAL-004's frontend was, and remains, intentionally `missing`; this was an auth-resolution bug, not a structural gap), so these % are unchanged by today's work — carried forward from PRs #174–#179 |
-| Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
-| Gaps by severity | Critical 9 · High 24 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — unchanged by today's fix (CAP-DEVPORTAL-004's `priority` stays `P1` untouched, per this file's historical-severity convention; only `operational_status` moved, which this rollup doesn't key on). Do not hand-diff this against the stale Critical-10/High-23 figures the row above previously showed — those predate PRs #174–#179 and were never reconciled; treat this run as the current baseline, not a delta from them |
+| Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
+| Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
+| Gaps by severity | Critical 9 · High 24 · Medium 13 · Low 51 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — Medium +1 (P4, CAP-MSSP-005's rbac.enforced:true but frontend partial nudges its own bucket) and Low +1 (P6, CAP-MASOC-002/CAP-MSSP-005 both carry real but incomplete test coverage) from the 2 new entries; Critical/High unchanged. Do not hand-diff against older rows in this table — each was already flagged non-comparable; treat this run as the current baseline |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -247,6 +247,124 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Customer report "dashboard links aren't properly built" (11 homepage anchors) — investigated, premise mostly corrected, 5 real gaps fixed including one P0-class unauthenticated auto-defense control gap
+
+- **Customer's framing vs. reality:** asked to rebuild 11 homepage sections
+  (`#trust-center`, `#intel-api`, `#home`, `#scanner`, `#auto-defense`,
+  `#data-dominance`, `#executive-hub`, `#enterprise`, `#affiliate-hub`,
+  `#enterprise-sales`, `#pricing`) from scratch as "not properly built."
+  A thorough investigation (full read of every named section, every
+  `fetch()`/`onclick` traced to its live handler, cross-referenced against
+  this registry) found **8 of 11 already have real, substantive content
+  wired to real, live backend routes** — rebuilding them would have
+  discarded working, tested code to fix a problem concentrated in a few
+  specific bugs. Presented the corrected picture to the owner rather than
+  executing the literal request; owner chose "fix the real bugs found,"
+  not a rebuild. This section documents what was actually fixed.
+- **1. Three sections invisible by default, indistinguishable from "not
+  built":** `auto-defense`, `data-dominance`, `executive-hub` are
+  `data-auth-gate="true"` + `display:none`. `cdbNavigate()`'s gate check
+  (confirmed directly, `frontend/index.html` ~14735) silently scrolled an
+  unqualified visitor back to hero with **zero explanation** — indistinguishable
+  from a dead link. Also: `CDB_SECTIONS` had no entries for any of the 3
+  (raw section-id fallback in breadcrumb/nav-state), and no nav link
+  anywhere pointed at them even for a correctly-authenticated visitor.
+  Fixed: `CDB_SECTIONS` now has real labels; a new `_showGateNotice()`
+  tells a bounced visitor why ("Sign in to view X." / "X is staff-only.")
+  instead of silently redirecting; `cdbApplyGates()` now injects nav links
+  for all 3 (desktop nav + mobile drawer) for any authenticated user,
+  mirroring the pre-existing Dashboard-link insertion pattern exactly.
+  Regression: `workers/test/homepageMemberSectionDiscoverability.test.mjs`
+  (9 new tests).
+- **2. `#enterprise` section: two functions silently shadowed by a later,
+  wrong redefinition.** `openMSSPApplication()` and `openEnterpriseBooking()`
+  were each defined twice — once as real, dedicated modals (`#mssp-modal`
+  with company/email capture → real `POST /api/global/mssp/apply`;
+  `#enterprise-booking-modal` → real payment collection via `CDB_PAYMENT`),
+  and again, much later, inside a "MANUAL PAYMENT SYSTEM" block whose own
+  comment said it existed to intercept `startSubscription` calls — it
+  named `openEnterpriseBooking` too, and (undocumented) also redefined
+  `openMSSPApplication`, even though neither the button text ("Apply as
+  MSSP Partner") nor the CAP-MSSP-001 registry entry's own history
+  supported that. Confirmed via `enterprisePackageCheckout.test.mjs`
+  (2026-07-10) that this was a real, independently-discovered bug pattern
+  in this exact section before (a card's button pointed at the wrong
+  priced package) — this was the same bug class, just in the two functions
+  that test didn't touch. The two later redefinitions also had their own
+  pricing map disagree with the first's for the same key (`starter_enterprise`
+  → ₹9,999 in one, ₹49,900 in the other) — a real pricing-mismatch risk,
+  simply never triggered because no current caller uses that key. Fixed:
+  deleted the shadowing redefinitions; `startSubscription` (a genuinely
+  separate, unrelated flow) untouched. Regression:
+  `workers/test/enterpriseMSSPButtonShadowingFix.test.mjs` (8 new tests).
+- **3. Three dead/wrong-domain links on OTHER dashboard-adjacent pages**
+  (found while confirming the "dashboard links here" premise — which
+  itself turned out to hold for only 1 of the 11 anchors from
+  `user-dashboard.html` specifically; these three are from other pages):
+  `ciso-hub.html`'s Enterprise Checkout fallback pointed at
+  `/upgrade.html#enterprise` (upgrade.html has no such anchor — fixed to
+  match its own sibling function's fallback, `/upgrade.html`, one function
+  below in the same file); `decision-dashboard.html`'s upgrade link used
+  `tools.cyberdudebivash.com` instead of `cyberdudebivash.in` (every other
+  reference in that file uses `.in` — same bug class as PR #177's
+  hardcoded-URL fix); `sitemap.html` linked the bare `/affiliate-hub`
+  (confirmed 404 — this exact bug class was already fixed once, in
+  `affiliateSystem.js`, and independently recurred here, uncaught by that
+  fix's own test since it only checked the one file). Regression: extended
+  the existing `workers/test/deadEndLinks.test.mjs` (3 new tests, same
+  thematic file).
+- **4. Two capability-registry gaps closed** — both found live-wired with
+  real routes but zero registry entry anywhere:
+  - **CAP-MASOC-002** (Auto-Defense Engine, `workers/src/handlers/autoDefenseEngine.js`,
+    8 routes): while documenting this, found **none of its 8 routes checked
+    `isRealUser(authCtx)`** — the identical vulnerability class already
+    fixed once for this domain's sibling CAP-MASOC-001, except worse here:
+    an unauthenticated caller could change the platform's live defense
+    mode, fabricate a `threat` object to trigger a real AGGRESSIVE-mode
+    auto-deploy to real target platforms (splunk/elastic/sentinel/webhook),
+    or approve/rollback a real pending action — not merely a compute-abuse
+    risk. Fixed in the same pass: all 8 routes (including the read-only
+    GETs — unlike CAP-MASOC-001's status route, no route here has a
+    legitimate anonymous caller, since the only frontend consumer is
+    itself `data-auth-gate="true"`) now gate on `isRealUser(authCtx)`,
+    the same established pattern used 30+ times elsewhere in
+    `workers/src/index.js`. Also fixed a stale docblock (said
+    `/api/defense/*`, actual live routes are `/api/defense-engine/*`).
+    Regression: extended `workers/test/authGateRealUser.test.mjs` (13 new
+    tests: 8 new "anonymous → 401" cases, 5 new "admin key passes" cases).
+  - **CAP-MSSP-005** (MSSP Client Portfolio + White-Label panel embedded in
+    `#executive-hub`, `workers/src/handlers/msspPanel.js`, 9 routes):
+    confirmed genuinely distinct from CAP-MSSP-002 (different handler
+    file, different KV namespace, different routes — `/api/mssp/clients`
+    vs. `/api/mssp/customers`, `/api/mssp/whitelabel` vs.
+    `/api/white-label/theme`) — two parallel, uncoordinated MSSP systems
+    now both catalogued, a future consolidation candidate not attempted
+    here. Confirmed properly tier-gated (`requireMSSP()`, MSSP/ENTERPRISE
+    only) — no auth gap here, unlike its sibling finding above. Flagged,
+    not fixed (out of scope for a cataloging pass): zero test coverage;
+    a possible shared-KV-bucket tenant collision if `authCtx` ever lacks
+    both `userId` and `orgId` for an MSSP-tier caller, not confirmed
+    reachable in practice.
+- **Commits:** homepage discoverability/enterprise-button fixes + tests;
+  dead-link fixes; auto-defense auth-gate fix + tests; registry entries
+  (CAP-MASOC-002, CAP-MSSP-005) + report regeneration; this PROGRAM_BOARD.md
+  entry.
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (+2:
+  CAP-MASOC-002, CAP-MSSP-005).
+- **Tests:** full suite green, 219 files / 2281 tests (2247 + 34 new: 9 +
+  8 + 13 + 3 + 1 pre-existing test's slice-window widened after a
+  legitimate code-length increase broke its fixed-size assumption, not a
+  logic regression).
+- **Risks / follow-ups surfaced, not fixed in this pass:** CAP-MSSP-005's
+  potential shared-bucket tenant collision (see above); zero test coverage
+  for 6 of CAP-MASOC-002's 8 entry points beyond the auth gate itself;
+  the two parallel uncoordinated MSSP systems (CAP-MSSP-002 vs. -005)
+  warrant a consolidation decision; `#trust-center`'s in-page anchor
+  duplicates a richer, separate standalone `trust-center.html` page — worth
+  deciding whether the anchor should deep-link there instead.
+- **Next recommended wave:** per the corrected wave-plan section above —
+  same discipline, next candidate.
 
 ### 2026-07-11 — Recovery-and-continuation pass: PROGRAM_BOARD.md housekeeping (6-PR-stale header/register/wave-plan corrected) + CAP-DEVPORTAL-004's residual sap_-key auth gap closed
 

@@ -20,6 +20,9 @@ const REPORT_HANDLER    = read('../src/handlers/report.js');
 const AUTH_MIDDLEWARE   = read('../src/auth/middleware.js');
 const MW_AUTH           = read('../src/middleware/auth.js');
 const MSSP_ONBOARDING_PAGE = read('../../frontend/mssp-onboarding.html');
+const CISO_HUB           = read('../../frontend/ciso-hub.html');
+const DECISION_DASHBOARD = read('../../frontend/decision-dashboard.html');
+const SITEMAP_PAGE       = read('../../frontend/sitemap.html');
 
 describe('dead-end links removed from onboarding/checkout responses', () => {
   it('MSSP onboarding no longer promises a /mssp-dashboard.html that does not exist', () => {
@@ -70,5 +73,22 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
     // and post-trial buttons pointed at the same dead end and were missed.
     expect(MSSP_ONBOARDING_PAGE).not.toContain('/mssp-command-center.html');
     expect(MSSP_ONBOARDING_PAGE.match(/href="\/partner-portal\.html"/g) || []).toHaveLength(2);
+  });
+
+  it('ciso-hub\'s Enterprise Checkout fallback no longer points at upgrade.html#enterprise (upgrade.html has no such anchor) — matches openPayment()\'s own fallback in the same file', () => {
+    expect(CISO_HUB).not.toContain("'/upgrade.html#enterprise'");
+    const idx = CISO_HUB.indexOf('function openEnterprise()');
+    expect(idx).toBeGreaterThan(-1);
+    expect(CISO_HUB.slice(idx, idx + 450)).toContain("window.location.href = '/upgrade.html';");
+  });
+
+  it('decision-dashboard\'s upgrade link points at cyberdudebivash.in, not the unrelated tools.cyberdudebivash.com subdomain (every other reference in this file uses cyberdudebivash.in)', () => {
+    expect(DECISION_DASHBOARD).not.toContain('tools.cyberdudebivash.com');
+    expect(DECISION_DASHBOARD).toContain('https://cyberdudebivash.in/#pricing');
+  });
+
+  it('sitemap\'s Affiliate Program link points at the real #affiliate-hub section, not the dead /affiliate-hub page (same bug class already fixed in affiliateSystem.js above, missed here)', () => {
+    expect(SITEMAP_PAGE).not.toContain('href="/affiliate-hub"');
+    expect(SITEMAP_PAGE).toContain('href="/#affiliate-hub"');
   });
 });

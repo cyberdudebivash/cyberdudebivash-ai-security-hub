@@ -192,5 +192,60 @@
       "evidence": "Repo-wide grep for partner-staff/sub-account/delegated-admin patterns across workers/src/handlers/ and frontend/*.html returned nothing beyond the existing (single-credential) partner and MSSP-owner roles already captured in CAP-MSSP-001/002."
     },
     "notes": "No implementation found at all — this is a genuine backend gap, not a wiring gap (unlike CAP-MSSP-003)."
+  },
+  {
+    "id": "CAP-MSSP-005",
+    "domain": "mssp",
+    "name": "MSSP Client Portfolio + White-Label Panel (embedded in Executive Hub)",
+    "description": "A SEPARATE, independently-implemented MSSP client-management surface from CAP-MSSP-002 (which covers frontend/partner-portal.html, /api/mssp/revenue, /api/mssp/customers, /api/white-label/theme, /api/partners/domain/*): this one is embedded inside frontend/index.html's #executive-hub section, backed by workers/src/handlers/msspPanel.js's own KV-keyed client roster, aggregate cross-client posture summary, cross-client critical-alert feed, and its own white-label config store — different backend module, different KV key namespace (mssp:clients_index / mssp:client: / mssp:whitelabel / mssp:alerts_feed), different routes (/api/mssp/clients vs /api/mssp/customers, /api/mssp/whitelabel vs /api/white-label/theme). Two parallel, uncoordinated MSSP-facing systems exist in this codebase; this entry catalogs the one that had none at all.",
+    "backend": {
+      "handlers": ["workers/src/handlers/msspPanel.js"],
+      "entry_points": [
+        "handleListClients", "handleOnboardClient", "handleGetClient", "handleUpdateClient",
+        "handleOffboardClient", "handleGetSummary", "handleGetAlerts", "handleSetWhitelabel", "handleGetWhitelabel"
+      ],
+      "routes_sampled": [
+        { "path": "/api/mssp/clients", "method": "GET", "evidence": "workers/src/index.js:6096" },
+        { "path": "/api/mssp/clients", "method": "POST", "evidence": "workers/src/index.js:6100" },
+        { "path": "/api/mssp/clients/{id}", "method": "GET", "evidence": "workers/src/index.js:6104" },
+        { "path": "/api/mssp/clients/{id}", "method": "PUT", "evidence": "workers/src/index.js:6108" },
+        { "path": "/api/mssp/clients/{id}", "method": "DELETE", "evidence": "workers/src/index.js:6112" },
+        { "path": "/api/mssp/summary", "method": "GET", "evidence": "workers/src/index.js:6116" },
+        { "path": "/api/mssp/whitelabel", "method": "POST", "evidence": "workers/src/index.js:6124" },
+        { "path": "/api/mssp/whitelabel", "method": "GET", "evidence": "workers/src/index.js:6128" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "partial",
+      "evidence": "cdbMSSPLoad() calls GET /api/mssp/summary, GET /api/mssp/clients, GET /api/mssp/whitelabel; a real onboard modal (#p3-onboard-modal) POSTs to /api/mssp/clients (line ~20406); cdbSaveWhitelabel() POSTs config. NOT wired to any UI: the individual client detail/PUT/DELETE routes (client cards render name/domain/sector/status only — no edit or offboard action anywhere in p3RenderMSSPGrid) and GET /api/mssp/alerts (grepped 0 matches in frontend/index.html). So: list, onboard, summary, and white-label are real end-to-end; per-client management and the cross-client alert feed are backend-only."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Embedded within #executive-hub, which itself had zero nav path prior to this same wave's fix (see the parallel executive-hub navigation fix in this PR) — now reachable via the injected 'Executive Hub' nav link for any authenticated user."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["tier:MSSP", "tier:ENTERPRISE"] },
+    "subscription_gated": true,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "Repo-wide search for an import from workers/src/handlers/msspPanel.js under workers/test/**/*.mjs returns zero matches — no dedicated regression test exists for any of its 9 entry points."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-11",
+      "evidence": "Discovered uncatalogued while investigating a customer report about under-built homepage sections (frontend/index.html's #executive-hub section, which embeds this panel alongside the already-catalogued CAP-DASH-002 KPI grid/report generator). Confirmed real and distinct from CAP-MSSP-002 by reading both handler files directly and diffing their route paths, KV key namespaces, and frontend consumers — no code sharing between them beyond the auth pattern. requireMSSP(authCtx) (workers/src/handlers/msspPanel.js:27-33) correctly requires tier MSSP or ENTERPRISE on every one of the 9 entry points — confirmed by direct code read, not assumed; no auth/authorization gap found here (unlike the sibling CAP-MASOC-002 finding discovered in the same investigation). One latent, unverified-depth concern noted in this entry's notes rather than fixed here (out of scope for a registry-cataloging pass): handleListClients and others key their KV storage on `authCtx?.userId || authCtx?.orgId || 'default_mssp'` — if resolveAuthV5 ever produced an authCtx with tier MSSP/ENTERPRISE but neither userId nor orgId set, multiple such callers would collide on the same shared 'default_mssp' KV bucket. Not confirmed to be reachable in practice (would require a specific resolveAuthV5 code path not chased down in this pass) — flagged for a dedicated tenant-isolation review, the same theme this codebase already has multiple dedicated test files for on the OTHER MSSP system (workers/test/msspTenantIsolation.test.mjs, workers/test/msspPartnerSessionScoping.test.mjs, workers/test/msspIsolation.test.mjs) but not yet for this one."
+    },
+    "notes": "Two independent, uncoordinated MSSP client-management systems now both exist in the registry (this entry and CAP-MSSP-002) — a consolidation candidate for a future dedicated pass, not attempted here (higher risk/scope than a cataloging fix: would mean picking one KV schema and migrating or deleting the other's live data model). Residual gaps, not fixed in this pass: (1) zero test coverage (test_coverage.evidence); (2) potential shared-bucket tenant collision if userId/orgId are ever both absent for an MSSP-tier caller (verification.evidence); (3) per-client update/offboard and the cross-client alerts feed are backend-only with no UI consumer anywhere."
   }
 ]
