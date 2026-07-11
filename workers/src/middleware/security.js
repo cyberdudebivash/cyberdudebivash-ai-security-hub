@@ -95,7 +95,18 @@ const BLOCKED_PATTERNS = [
   /javascript\s*:/i,
   /vbscript\s*:/i,
   /data\s*:\s*text\/html/i,
-  /on\w{2,20}\s*=/i,                     // onerror=, onload=, onclick=
+  // \b anchors "on" to a real word start — bare /on\w{2,20}\s*=/i also matched
+  // any legitimate identifier that merely *contains* "on" followed by more
+  // word chars and "=", e.g. query params session_id=, context=, component=,
+  // month=, min_confidence= (found live: "sessi-ON_id=", "c-ON-text=" etc.
+  // all matched) — blocking real requests to conversionTriggers.js, revenue.js,
+  // eop/uptime.js, threatFusionEngine.js and enterpriseTransformHandler.js
+  // with a raw {"error":"Bad request"} 400 before the request ever reached
+  // routing. A real inline-event-handler injection (onerror=, onload=,
+  // onclick=) is always preceded by whitespace, a quote, or a tag boundary —
+  // never by a word character — so anchoring to a word boundary here loses
+  // no real detection coverage.
+  /\bon\w{2,20}\s*=/i,                   // onerror=, onload=, onclick=
 
   // SQL injection
   /\bunion\b.{0,20}\bselect\b/i,
